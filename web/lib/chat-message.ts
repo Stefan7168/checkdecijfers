@@ -101,11 +101,15 @@ export interface ChatMessage {
    * THIS message's own follow-up/rescue chips bind to, so a click on an
    * older message's chip resolves against ITS OWN carrier and never the
    * newest one, even when two messages carry a byte-identical chip label
-   * (the G4 "Vergelijk met Nederland" case). Set in the SAME state update
+   * (the G4 "Vergelijk met Nederland" case). Strong-tier review HIGH-3: a
+   * CLARIFICATION carries its own open round here too. It used to be null on
+   * the reasoning that a clarification IS the open round — true only while it
+   * is the newest message; a superseded clarification's one-click option then
+   * fell through to the LIVE pending and was sent (and billed) against a
+   * different round. Set in the SAME state update
    * that appends the message (chat.tsx) — never a render behind, or a chip
    * could briefly render with no bound carrier. `null` on user messages, on
-   * an answer/refusal with no rescueOnly pending, on a clarification (an
-   * open round is not a carrier — see chat.tsx's chipRef), and on EVERY
+   * an answer/refusal with no rescueOnly pending, and on EVERY
    * replayed/resumed message (ADR 033 ⟨A6⟩: carriers are not restored on
    * resume — replay-assemble.ts has no live pending to put here, so it
    * always sets `null`, never a guess). The former per-message `threadId`

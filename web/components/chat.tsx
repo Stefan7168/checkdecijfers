@@ -123,7 +123,11 @@ export interface ChatPack {
 }
 
 /** R2.2: the smallest pack (by credits) that covers this turn's shortfall
- * (`required - balance`) — a pure SELECTION among numbers the server itself
+ * (`required - balance`). CLAUDE.md #68 (the client never recomputes a cost or
+ * a balance) is respected: this subtraction is not a cost or balance being
+ * derived, it is a comparison-only pick among numbers the server already
+ * returned — nothing computed here is ever displayed as, or charged as, an
+ * amount. It is a pure SELECTION among numbers the server itself
  * returned (the GatedResponse's own balance/required, the pack list's own
  * credits counts), never a recomputed cost or balance (#68). Falls back to
  * the largest available pack when none fully covers the shortfall, and to
@@ -494,6 +498,11 @@ export function Chat({
   // `pending` again. Consulted only while the sent text is still the clicked
   // label byte for byte; edited text is typed text and keeps the live pending.
   const chipRef = useRef<({ label: string } & Carrier) | null>(null);
+  // Strong-tier review HIGH-3(b): an in-flight-send latch that is NOT React
+  // state. `busy` only reaches the next render, so two clicks in one tick
+  // both saw `busy === false` and both sent (two requests, two charges).
+  // Set synchronously at the top of `sendText`, cleared in its `finally`.
+  const sendingRef = useRef(false);
 
   function toggleSource(key: string): void {
     setSelectedSources((prev) => {
@@ -636,7 +645,12 @@ export function Chat({
   // the existing typed-submit path is byte-identical — same guard order, same
   // body, just parameterized on `text` instead of reading `input` inline.
   async function sendText(text: string) {
-    if (!text || busy || nothingSelected) return;
+    // Strong-tier review HIGH-3(b): `busy` is React state, so two clicks in the
+    // same tick both read the pre-render `false` and both fire a request (two
+    // billed turns). `sendingRef` is set SYNCHRONOUSLY here and cleared in the
+    // `finally` below, so the second click returns before any await.
+    if (!text || busy || sendingRef.current || nothingSelected) return;
+    sendingRef.current = true;
 
     // WP135 (blocker fix): the generation this submit belongs to. If a
     // nieuwe-chat / thread-switch bumps it while the action is in flight, the
@@ -796,15 +810,24 @@ export function Chat({
           : response.kind === 'refusal' || response.kind === 'answer'
             ? (response.pending ?? null)
             : null;
-      // #73 v2 follow-up (moved onto ChatMessage, session 76): only an
-      // answer/refusal's carried pending is a CARRIER a later chip binds to —
-      // a clarification IS the open round itself, not a carrier (its own
-      // chips take the live `pending` route below instead, exactly as
-      // before). Computed HERE, before the message literal below, so it lands
-      // in the SAME setMessages call that appends the message — never a
-      // render behind, or a chip could briefly render with no bound carrier.
+      // #73 v2 follow-up (moved onto ChatMessage, session 76): an
+      // answer/refusal's carried rescue pending is a CARRIER a later chip
+      // binds to. Strong-tier review HIGH-3: a CLARIFICATION now snapshots its
+      // own open round here too. It used to be `null` on the reasoning that a
+      // clarification IS the open round — true while it is the newest message,
+      // but a superseded clarification (scrolled up after a newer round
+      // opened) then fell through to the LIVE `pending`, so its one-click
+      // option would have been sent as a reply to a DIFFERENT round: a
+      // wrong-carrier reply, and billed. Each clarification carrying its own
+      // snapshot makes a click resolve against the round the user is looking
+      // at. Computed HERE, before the message literal below, so it lands in
+      // the SAME setMessages call that appends the message — never a render
+      // behind, or a chip could briefly render with no bound carrier. Resumed
+      // messages keep `carrier: null` (ADR 033 ⟨A6⟩, replay-assemble.ts never
+      // guesses one) — the click handler treats that as fill-don't-send.
       const carrier: ChatMessage['carrier'] =
-        carried && (response.kind === 'answer' || response.kind === 'refusal')
+        carried &&
+        (response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification')
           ? { pending: carried }
           : null;
       setMessages((m) => [
@@ -898,6 +921,7 @@ export function Chat({
         setError(t('chat.genericError'));
       }
     } finally {
+      sendingRef.current = false;
       setBusy(false);
     }
   }
@@ -1137,8 +1161,13 @@ export function Chat({
                       ? `${t('chat.insufficientCreditsBuyPack', { packLabel: pack.label })} `
                       : `${t('chat.insufficientCreditsBuyGeneric')} `;
                   })()}
+                  {/* The link's accessible name is a real phrase ("Credits
+                    * kopen" / "Buy credits", the SAME header.credits string
+                    * the site header uses) rather than the raw path — a
+                    * screen-reader link list of "/credits" says nothing about
+                    * where it goes. */}
                   <NextLink href="/credits" className="underline">
-                    /credits
+                    {t('header.credits')}
                   </NextLink>
                   .
                 </p>
@@ -1258,7 +1287,13 @@ export function Chat({
                       // instead of filling the input for a second click.
                       // Answer follow-up chips and refusal retry chips keep
                       // the #75 fill-don't-send convention unchanged.
-                      if (message.kind === 'clarification') {
+                      // Strong-tier review HIGH-3: sending is bound to THIS
+                      // message's own carrier (set just above, exactly like
+                      // the fill path). A clarification with NO carrier is a
+                      // resumed thread — there is no round to reply to, so it
+                      // falls back to fill-don't-send rather than sending the
+                      // label against whatever round happens to be live.
+                      if (message.kind === 'clarification' && message.carrier) {
                         void sendText(question);
                       } else {
                         setInput(question);

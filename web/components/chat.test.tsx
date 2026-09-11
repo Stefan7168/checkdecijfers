@@ -1890,6 +1890,20 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
+  // ADR 037 D10 fix #1, restored after R8 collapsed the four entry points into
+  // this one chip: an EXACT-value className comparison, not a weaker
+  // toBeDisabled()-only check — a widened className or a hidden-but-present
+  // node would pass a weaker assertion while breaking real byte-identity.
+  // Pinned against the literal string so any future edit to this markup is a
+  // deliberate, reviewed diff to this test, not a silent drift.
+  it('the collapsed "Eigen data (binnenkort)" chip is byte-identical in className', () => {
+    render(<Chat />);
+    const button = screen.getByRole('button', { name: 'Eigen data (binnenkort)' });
+    expect(button.className).toBe(
+      'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed',
+    );
+  });
+
   it('enables "Upload file" and wires it to onUploadFile when attachments is present', async () => {
     const onUploadFile = vi.fn().mockResolvedValue({ ok: true });
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
@@ -2081,14 +2095,88 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
       const chip = await screen.findByRole('button', { name: 'Amsterdam' });
       fireEvent.click(chip);
       expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
-      // The label sent is byte-identical to the offered option; carrier bound
-      // exactly as the existing handler does (a clarification's own round has
-      // no `carrier` — see chat-message.ts — so it rides the live `pending`).
+      // The label sent is byte-identical to the offered option, and it goes out
+      // against THIS clarification's own carrier (strong-tier review HIGH-3 —
+      // a clarification now snapshots its open round on the message).
       expect(replyToClarification).toHaveBeenCalledWith(
         { questionNl: 'Welke regio?' },
         'Amsterdam',
         expect.any(String),
       );
+    });
+
+    // Strong-tier review HIGH-3(a): the bug. A clarification used to carry
+    // `carrier: null`, so a click on a SUPERSEDED clarification (scrolled up
+    // after a newer round opened) fell through to the LIVE `pending` and was
+    // sent — and billed — as a reply to a DIFFERENT round.
+    it('clicking an OLDER clarification\'s option replies against THAT round, not the newest one', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Amsterdam'])),
+      );
+      replyToClarification
+        .mockResolvedValueOnce(outcome(fakeClarificationWithOptions('Welk jaar?', ['2024'])))
+        .mockResolvedValueOnce(outcome(fakeAnswer('Amsterdam telt 900.000 inwoners.')));
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      const older = await screen.findByRole('button', { name: 'Amsterdam' });
+
+      // A reply opens a NEWER round; the live `pending` is now 'Welk jaar?'.
+      fireEvent.change(screen.getByPlaceholderText('Welke regio?'), { target: { value: 'iets anders' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+      await screen.findByRole('button', { name: '2024' });
+
+      // Now click the OLDER clarification's option.
+      fireEvent.click(older);
+      expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
+      expect(replyToClarification.mock.calls[1]![0]).toEqual({ questionNl: 'Welke regio?' });
+      expect(replyToClarification.mock.calls[1]![1]).toBe('Amsterdam');
+    });
+
+    // Strong-tier review HIGH-3(b): `busy` is React state, so two clicks in
+    // the same tick both passed the guard and sent twice (two charges). The
+    // synchronous `sendingRef` latch is what stops the second.
+    it('double-clicking an option sends exactly once', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Amsterdam'])),
+      );
+      replyToClarification.mockResolvedValue(outcome(fakeAnswer('Amsterdam telt 900.000 inwoners.')));
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      const chip = await screen.findByRole('button', { name: 'Amsterdam' });
+      fireEvent.click(chip);
+      fireEvent.click(chip);
+      expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
+      expect(replyToClarification).toHaveBeenCalledTimes(1);
+    });
+
+    // Strong-tier review HIGH-3(a), the resumed case: replay-assemble.ts never
+    // restores a carrier (ADR 033 ⟨A6⟩), so a resumed clarification has no
+    // round to reply to. It must FILL rather than send the label against
+    // whatever round happens to be live.
+    it('a RESUMED clarification (carrier null) fills the input instead of sending', async () => {
+      const resumed: ChatMessage = {
+        role: 'assistant',
+        kind: 'clarification',
+        text: 'Welke regio?',
+        chart: null,
+        cost: 10,
+        citation: null,
+        card: null,
+        csv: null,
+        proof: null,
+        answerView: null,
+        provisional: false,
+        suggestions: ['Amsterdam'],
+        auditId: null,
+        webSection: null,
+        carrier: null,
+        insufficientCredits: null,
+      };
+      render(<Chat initialMessages={[resumed]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Amsterdam' }));
+      expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Amsterdam');
+      expect(replyToClarification).not.toHaveBeenCalled();
+      expect(askQuestion).not.toHaveBeenCalled();
     });
 
     it('an answer\'s follow-up chip still only FILLS the input (fill-don\'t-send unchanged)', async () => {
@@ -2126,7 +2214,8 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
       expect(await screen.findByText(/5 over, 20 nodig/)).toBeInTheDocument();
       // shortfall = 15 -> smallest covering pack is 'small' (50 credits).
       expect(screen.getByText(/Koop bijvoorbeeld 50 credits — €5 via/)).toBeInTheDocument();
-      const link = screen.getByRole('link', { name: '/credits' });
+      // The link's accessible name is the real phrase, not the raw path.
+      const link = screen.getByRole('link', { name: 'Credits kopen' });
       expect(link).toHaveAttribute('href', '/credits');
     });
 
@@ -2143,7 +2232,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
       await submit('Wat was de inflatie in 2024?');
       expect(await screen.findByText(/0 over, 1 nodig/)).toBeInTheDocument();
       expect(screen.getByText(/Koop credits via/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: '/credits' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Credits kopen' })).toBeInTheDocument();
     });
   });
 
