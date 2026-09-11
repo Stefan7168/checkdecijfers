@@ -159,6 +159,33 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(onChange).toHaveBeenCalledWith({ valueLabels: 'hidden' });
   });
 
+  it('the Punten radiogroup offers three modes in order — Alle punten, Eerste en laatste, Alleen voorlopige — and emits ends', () => {
+    const onChange = vi.fn();
+    render(<ChartConfigPanel resolved={resolvePresentation(lineCtx, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    const group = screen.getByRole('radiogroup', { name: 'Punten' });
+    const names = [...group.querySelectorAll('[role="radio"]')].map((r) => r.textContent);
+    expect(names).toEqual(['Alle punten', 'Eerste en laatste', 'Alleen voorlopige']);
+    expect(screen.getByRole('radio', { name: 'Eerste en laatste' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('radio', { name: 'Alle punten' }));
+    expect(onChange).toHaveBeenCalledWith({ markers: 'all' });
+  });
+  it('the area-fill toggle is offered in area form only, pressed by default, and emits flat', () => {
+    const onChange = vi.fn();
+    const { unmount } = render(<ChartConfigPanel resolved={resolvePresentation({ ...lineCtx, form: 'area' }, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    const toggle = screen.getByRole('button', { name: 'Verloop in het vlak' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(toggle);
+    expect(onChange).toHaveBeenCalledWith({ areaFill: 'flat' });
+    unmount();
+    render(<ChartConfigPanel resolved={resolvePresentation(lineCtx, {})} seriesMeta={[]} onChange={onChange} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    expect(screen.queryByRole('button', { name: 'Verloop in het vlak' })).toBeNull();
+  });
+  it('English: the new option and toggle read First and last / Gradient fill', () => {
+    render(<ChartConfigPanel lang="en" resolved={resolvePresentation({ ...lineCtx, form: 'area' }, {})} seriesMeta={[]} onChange={() => {}} onReset={() => {}} idPrefix="p" open onOpenChange={() => {}} triggerId="t" />);
+    expect(screen.getByRole('radio', { name: 'First and last' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gradient fill' })).toBeTruthy();
+  });
+
   it('bar form: locked controls are disabled with a readable reason; inapplicable ones are absent', () => {
     const resolved = resolvePresentation(barCtx, {});
     render(
@@ -1159,7 +1186,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     openFrameTab();
     fireEvent.click(screen.getByRole('radio', { name: 'Verloop' }));
     expect(onChange).toHaveBeenCalledWith({
-      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+      frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' },
     });
   });
 
@@ -1167,7 +1194,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     const onChange = vi.fn();
     render(
       <Harness
-        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' } })}
         seriesMeta={colorMeta}
         onChange={onChange}
         onReset={vi.fn()}
@@ -1193,7 +1220,7 @@ describe('ChartConfigPanel — Frame tab', () => {
   it('round 2: a preset that would refuse (Oceaan, inset off) is disabled with the reason accessible via aria-describedby; a legible one (Leisteen) stays enabled', () => {
     render(
       <Harness
-        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } })}
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' } })}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
         onReset={vi.fn()}
@@ -1219,7 +1246,7 @@ describe('ChartConfigPanel — Frame tab', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {
-          frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' },
+          frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f9a8d4' },
           frameInset: 'small',
         })}
         seriesMeta={colorMeta}

@@ -23,7 +23,7 @@ hex values or raw palette classes for surfaces and text. Generated primitives li
 | `text-ink` / `text-ink-soft` / `text-ink-muted` (3 levels) | `text-foreground` / `text-muted-foreground` (2 levels — shadcn's own hierarchy) |
 | Hairlines `border-line`, `border-line-strong` | `border-border` (inputs: `border-input`) |
 | The one ink-blue accent `bg-accent`, `text-accent` | Neutral primary: `bg-primary text-primary-foreground`, `text-primary`; focus `outline-ring` |
-| `--series-1..4` colour-blind-safe chart palette + dash patterns | Recharts' stock example palette (see Charts below) |
+| `--series-1..4` colour-blind-safe chart palette + dash patterns | Recharts' stock example palette (session 87) → since session 95 the designed `DEFAULT_PALETTE`, colour-blind-safe again, no dash patterns (see Charts below, ADR 042) |
 | Serif display headings (Newsreader), `.font-display` | Sans everywhere — **Inter** for interface text (the chosen mockup's face), Geist Mono for code |
 | Semantic `text-ok` / `text-warn` / `bg-warn-soft` / `text-danger` | `text-success` / `text-warning` / `bg-warning-soft` / `text-destructive` |
 
@@ -59,9 +59,22 @@ and caveat lines and a green for "payment landed". Both light and dark values ar
   from the chat screen; the logged-out landing page keeps its own copy).
 - Structure is unchanged from ADR 033: sidebar / chat column / right-hand dock at ≥ lg with ≥ 1 visual.
 
-## Charts (Recharts, stock look)
+## Charts (Recharts, the designed default — ADR 042)
 
-Owner decision (session 87): **use Recharts' basic/default styling.** Grid, axes and tick text use Recharts'
+**Since session 95 (2026-09-11), ADR [042](decisions/042-designed-default-chart.md) — pending the owner's PR
+review:** the default look is a designed one, not Recharts' examples. Series colours are `DEFAULT_PALETTE`
+(`#0072b2`, `#d55e00`, `#009e73`, `#cc79a7`, then four more in the same luminance band; Okabe–Ito-anchored,
+colour-blind-safe for the first four, every colour ≥ 3:1 on both the light and the dark card — test-pinned);
+a horizontal-only grid at the two labelled values with a hairline baseline in the grid colour; no axis lines;
+markers on the first and last plotted point plus every provisional point ("Eerste en laatste"); a gradient
+area fill; 12 px value labels with a card-coloured halo; a height that follows the card's width (256–360 px,
+measured, never CSS `aspect-ratio`); a 300 ms fade/rise of the chart container on mount (`motion-reduce`
+honoured; Recharts' own animation stays off); a `text-base font-semibold` title over one muted unit + dims
+line; chip-style legend entries; a faint solid crosshair (never dashed — the dashed vocabulary belongs to
+event markers and the story ring). The session-87 "basic Recharts" look survives as `CLASSIC_PRESENTATION` /
+`RECHARTS_PALETTE` for the Classic template. Everything below this paragraph is the history of that decision.
+
+**Superseded (session 87 → session 95):** Owner decision (session 87): **use Recharts' basic/default styling.** Grid, axes and tick text use Recharts'
 own defaults; series colours are the palette from Recharts' documentation examples
 (`RECHARTS_PALETTE` in [web/components/chart.tsx](../web/components/chart.tsx): `#8884d8`, `#82ca9d`,
 `#ffc658`, `#ff7300`, …, cycling). The #197 colour-blind-safe palette and dash patterns are **not** kept —
@@ -91,7 +104,7 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 ## House rules (current)
 
 1. **Tokens, not colours.** Surfaces/text/borders come from the shadcn utilities above; no hex, no raw
-   `zinc-*`/`blue-*` classes. Chart series colours (`RECHARTS_PALETTE`) and the stat-card SVG export (white
+   `zinc-*`/`blue-*` classes. Chart series colours (`DEFAULT_PALETTE`, and `RECHARTS_PALETTE` for the Classic look — ADR 042) and the stat-card SVG export (white
    card, fixed greys — the exported PNG must look the same everywhere) are the sanctioned literal-hex spots.
 2. **Every number is tabular.** `.tnum` / `data-numeric` / tables get `font-variant-numeric: tabular-nums`
    globally (#91, owner-approved). This is a product convention, not part of the retired identity.
@@ -124,4 +137,8 @@ The product's public claim: *"elk getal herleidbaar tot een officiële CBS-tabel
   accent, light-first. Retired in session 87.
 - **Session 69 (#197):** colour-blind-safe chart series palette + dash patterns. Superseded in session 87 by
   the stock Recharts look (owner decision).
+- **Session 87:** the stock Recharts look (owner: "use the basic Recharts style"). Superseded in session 95
+  (2026-09-11) by the designed default, ADR [042](decisions/042-designed-default-chart.md) — the owner's
+  session-94 words ("a graph is just a basic graph, which needs more styling") revised the decision; the
+  stock look stays available as the Classic template's literals.
 - **Session 87 (2026-09-07):** shadcn/ui neutral, light + dark, mockup Option B "Inset Cards" — this document.

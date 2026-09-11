@@ -80,7 +80,8 @@ export default async function RootLayout({
                   wiring, renders nothing. Mounted once here so it's live for
                   every page, not tied to any one chart mount. */}
               <ChartUsageTracker />
-              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+              {/* ADR 042: [scrollbar-gutter:stable] keeps this scrollbar's appear/disappear from changing the width a chart's height-follows-width rule reacts to. */}
+              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">{children}</div>
               <SiteFooter />
             </StylePanelOwnerProvider>
           </ThemeProvider>

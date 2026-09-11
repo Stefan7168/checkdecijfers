@@ -72,7 +72,13 @@ must not touch `src/` or any `web/backend/` (`src/` symlink) code at all).
 - **Message bubbles**: user messages as a subtle/outlined card aligned
   right; assistant messages as plain text aligned left. Replaces today's
   bordered-box-for-every-message style.
-- **Charts**: keep Recharts as the library. Use Recharts' **basic/default**
+- **Charts** — **SUPERSEDED 2026-09-11 (session 95, ADR
+  [042](../../decisions/042-designed-default-chart.md)): the default is now a
+  designed look (colour-blind-safe `DEFAULT_PALETTE`, horizontal grid with a
+  hairline baseline, first-and-last markers, gradient area fill, haloed
+  labels, height follows width); the "basic Recharts" literals below survive
+  only as the Classic look. Kept as written for the history of the
+  decision:** keep Recharts as the library. Use Recharts' **basic/default**
   styling (default categorical palette, default gridlines/axis labels) —
   explicitly **do not** design or keep a custom restyled palette. This
   supersedes an earlier in-chat exploration of a custom neutral-palette

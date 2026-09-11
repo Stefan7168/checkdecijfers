@@ -118,7 +118,7 @@ only, which is the safe direction.
   presentation rule, WHAT they say is never computed here), a colour-blind-safe series palette
   (`--series-1..4`, dash patterns as the non-colour channel — **superseded session 87: now Recharts' own
   stock example colours, `RECHARTS_PALETTE` in `web/components/chart.tsx`, dash patterns dropped, an
-  accepted trade-off of the owner's "basic Recharts style" decision, see [12-huisstijl.md](../12-huisstijl.md)**),
+  accepted trade-off of the owner's "basic Recharts style" decision, see [12-huisstijl.md](../12-huisstijl.md); superseded again session 95 (2026-09-11), ADR [042](042-designed-default-chart.md): the default is the designed, colour-blind-safe `DEFAULT_PALETTE` in `web/lib/chart-presentation.ts`, still no dash patterns; `RECHARTS_PALETTE` survives only for the Classic look**),
   hatch fill for provisional bars (unchanged — honesty marking, not styling), an
   accessible name + announced tooltip, tap-to-pin on touch devices, and `initialDimension` on the
   responsive container (which is also what lets jsdom render the real svg in the component tests).

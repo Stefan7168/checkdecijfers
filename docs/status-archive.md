@@ -1,5 +1,50 @@
 # STATUS archive — the session log
 
+**Session 95 (2026-09-11 by the machine clock — GitHub stamps PR #10 as the evening of 2026-09-10 UTC; the
+two clocks disagree by a few hours — AUTONOMOUS overnight, owner asleep) — VISUAL UPGRADE PHASE 1 BUILT:
+THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN FOR REVIEW; PHASE-2 PLAN WRITTEN.**
+
+1. **Kickoff:** [session-briefs/2026-09-10-overnight-visual-upgrade-kickoff.md](session-briefs/2026-09-10-overnight-visual-upgrade-kickoff.md)
+   — priority order designed default → templates v1 → Story stage, with the plan's §9 decisions
+   pre-resolved (3D = depth around a FLAT chart, retire "basic Recharts", templates = looks only, zero
+   libraries, auto-play off, spotlight without zoom, migrations 028/029 owner steps, branch + PR never
+   `main`). Branched `visual-designed-default` from `main` `e2d5039` (PR #9 still open, so the tracker
+   docs will conflict with whichever merges second — expected).
+2. **Palette as arithmetic:** a 60-line node script (WCAG contrast vs both cards, Machado 2009 CVD
+   matrices, OKLab distance, sRGB gamut) chose `DEFAULT_PALETTE` (`#0072b2 #d55e00 #009e73 #cc79a7
+   #b8860b #3a8fc4 #6a5acd #6f8d2a`): every colour ≥ 3:1 on both cards (weakest 3.06 light / 3.38 dark),
+   first four ≥ 0.07 apart under protanopia/deuteranopia/tritanopia; found that the old `sand` preset
+   would refuse the first default colour on every chart (retuned, with `dawn`). All pinned as tests.
+3. **Plan + SDD:** [superpowers/plans/2026-09-11-designed-default-chart.md](superpowers/plans/2026-09-11-designed-default-chart.md)
+   (5 tasks). Implementers sonnet, reviewers opus on `chart.tsx` tasks / sonnet elsewhere, haiku for
+   fix rounds as FRESH implementers (no `SendMessage` in this harness), final review on fable. Per-task
+   reviews found two real Important issues: hidden interior markers kept keyboard focus (→
+   `circle[data-marker="hidden"]:focus-visible { opacity: 1 }`), and the plan's dashed crosshair was
+   pixel-identical to the curated event marker (→ solid, faint). Task 4 surfaced a pre-existing red pin
+   from Task 1's preset retune in the panel test file (fixed in Task 5). Whole-branch review: no
+   Critical; six Important fixed in one wave (export guard also strips `.recharts-active-dot`; the
+   frame-aspect seam test; `scrollbar-gutter: stable` on the dock and app scroll containers; stale
+   "basic Recharts is current" comments; small multiples' baseline; the plan's stale crosshair line).
+4. **Commits** `7db14fd..bf5cf44` (13): plan · presentation model `8cfab71` · marks `6f68ab5` + fix
+   `3fcd96c` · baseline/cursor `373436f` + fix `a21a507` · height/entrance/header/legend `0108596` ·
+   panel `2d7186b` · fix wave `e498e0d` · docs `fe1c226`, `9e5b8eb`, `bf5cf44`.
+5. **Verification on `e498e0d` (measured):** root tsc + web tsc clean; backend suite 142 files / 2200
+   tests green (solo, docs excluded) then `test:docs` 11/11; benchmark 14/14 + 6/6 + 0 fabricated; web
+   89 files / 1338 tests; real `next build` clean; `/code-review` LOW 0 findings. Real browser via the
+   Browser pane + the `web-db` dev server against the live DB: light/dark 1280 px, phone 375 px —
+   hydration, measured height (`style.height` set, `h-64` gone), hollow provisional markers, halo,
+   baseline confirmed; the hidden pane needed a synthetic `resize` event before Recharts measured.
+   Three PNGs (before/after) rasterised from the live SVGs with `sharp` for the PR.
+6. **PR #10** opened against `main` ("Visual upgrade phase 1: the designed default chart look (ADR
+   042)"), plain-English body with the images. **CI: pending when this entry was written — check
+   `gh pr checks 10`.**
+7. **Docs:** ADR 042 (new), ADR 014 note, 12-huisstijl, the session-87 spec's superseded note,
+   08-build-plan (new "Visual upgrade programme" section + WP218 invariant note), 03-mvp-scope,
+   04-architecture, open-questions #232–#234, RUNBOOK go-live note, lessons-learned session 95.
+8. **Phase 2 plan written, not built at this entry:**
+   [superpowers/plans/2026-09-11-chart-templates-v1.md](superpowers/plans/2026-09-11-chart-templates-v1.md)
+   (six looks + a Brand card, Templates tab first, six `template_*` counter events, derived thumbs).
+
 **Session 94 (2026-09-10, owner present, continuing session 93's embed-charts PR review) — THREE OWNER
 UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/#223 MOSTLY), INSIGHTS
 (ADR 041) BUILT AND MERGED TO `main`, PR #9's MERGE CONFLICT RESOLVED TWICE.**

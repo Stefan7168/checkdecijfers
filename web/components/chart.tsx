@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import {
   Area,
   AreaChart,
@@ -41,17 +41,21 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  chartHeightForWidth,
+  DEFAULT_PALETTE,
   dotGeometry,
   findFont,
   fontStack,
   LINE_WIDTH_PX,
-  RECHARTS_PALETTE,
+  markerVisible,
   resolvePresentation,
   seriesColor,
   withAccountDefault,
   xAxisHeight,
   xLabelOverhang,
 } from '../lib/chart-presentation.ts';
+import type { ChartPresentation, MarkerMode, SeriesEndpoints } from '../lib/chart-presentation.ts';
+import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import {
@@ -128,30 +132,33 @@ export interface SeriesMeta {
   color: string;
 }
 
-// Series palette — session 87 visual redesign (owner decision, docs/
-// superpowers/specs/2026-09-07-chat-chart-visual-redesign-design.md): "use the
-// basic Recharts style". Recharts has no built-in categorical palette (every
-// series would default to the same #3182bd), so "basic Recharts" means the
-// colours its own documentation examples use — the look everyone recognises
-// as a stock Recharts chart. This supersedes the #197 colour-blind-safe token
-// palette + dash patterns (session 69): the owner accepted that the default
-// palette may be colour-blind-unsafe as a trade-off of this decision; the
-// hollow/hatched provisional marker (R11) is untouched — that is honesty, not
-// styling. The palette cycles for series nine and up; the Tabel view remains
-// the honest surface for many series.
-export { RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
+// Series palette — ADR 042 (2026-09-11): the default is now `DEFAULT_PALETTE`,
+// a colour-blind-safe set (Okabe-Ito's first four, hand-tuned entries beyond
+// that) chosen for the designed default look. The session-87 "basic
+// Recharts" palette (owner decision, docs/superpowers/specs/2026-09-07-chat-
+// chart-visual-redesign-design.md — the colours Recharts' own documentation
+// examples use) is kept as `RECHARTS_PALETTE` for the Classic look and the
+// continuity pins that still exercise it. The hollow/hatched provisional
+// marker (R11) is unchanged either way — that is honesty, not styling. The
+// palette cycles for series nine and up; the Tabel view remains the honest
+// surface for many series.
+export { RECHARTS_PALETTE, DEFAULT_PALETTE } from '../lib/chart-presentation.ts';
 
 export function seriesStyle(index: number): { color: string } {
-  return { color: RECHARTS_PALETTE[index % RECHARTS_PALETTE.length]! };
+  return { color: DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]! };
 }
 
 // Axis + grid colours (session 87 deep review): Recharts' own defaults are
 // literal light-mode greys (#666 axis/ticks, #ccc grid) that it hardcodes on
 // the SVG, so in dark mode the x-axis period labels rendered at ~3:1 against
-// the card and the grid became the brightest thing on the chart. The
-// geometry stays Recharts-default (the "basic Recharts look"); only the
-// colours ride the theme tokens, like every other text in the product. One
-// definition, reused by UserChartView and ChartSmallMultiples.
+// the card and the grid became the brightest thing on the chart — these two
+// colours ride the theme tokens, like every other text in the product. The
+// geometry itself is now the ADR 042 designed default (2026-09-11):
+// horizontal-only grid, axis lines hidden by default with a hairline
+// baseline in their place (`baselineAxisLine` below), and `DEFAULT_PALETTE`
+// for series colour. Session 87's "basic Recharts look" survives only as
+// the Classic look. One definition, reused by UserChartView and
+// ChartSmallMultiples.
 export const AXIS_COLOR = 'var(--muted-foreground)';
 export const GRID_COLOR = 'var(--border)';
 
@@ -167,6 +174,17 @@ export const GRID_COLOR = 'var(--border)';
 // start at zero.
 export function yAxisDomain(kind: ChartSpec['kind']): [0 | 'auto', 'auto'] {
   return kind === 'bar' ? [0, 'auto'] : ['auto', 'auto'];
+}
+
+/** ADR 042: the category (period/region) axis line. With Aslijnen on it is
+ * the full axis line in AXIS_COLOR (Recharts' `true`); with Aslijnen off a
+ * hairline BASELINE in the grid colour is still drawn as long as any grid
+ * is shown — a quiet chart keeps its ground; grid none + axis lines off is
+ * a bare plot, as a reader would expect. The number axis follows
+ * `axisLines` alone. Recharts accepts SVG props for `axisLine`. */
+export function baselineAxisLine(pres: Pick<ChartPresentation, 'axisLines' | 'grid'>): boolean | { stroke: string } {
+  if (pres.axisLines === 'shown') return true;
+  return pres.grid === 'none' ? false : { stroke: GRID_COLOR };
 }
 
 /** Keeps a Vanaf/Tot period-range selection always non-empty: moving one
@@ -677,9 +695,14 @@ function SeriesLegend({
               onClick={() => onToggle(s.key)}
               title={lockedTitle}
               aria-describedby={disabled ? disabledReasonId : undefined}
+              // ADR 042: the series (hide/show) button is a chip — rounded-
+              // full, bordered — so the legend reads as a set of toggleable
+              // tags rather than plain text links. The highlight button
+              // right below keeps its quiet text style; only this one
+              // becomes a chip.
               className={
-                'inline-flex min-h-6 items-center gap-1.5 rounded-md px-1.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
-                (hidden ? 'text-muted-foreground line-through' : 'text-foreground')
+                'inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ' +
+                (hidden ? 'border-border text-muted-foreground line-through' : 'border-border bg-background text-foreground hover:bg-muted')
               }
             >
               <span
@@ -715,6 +738,14 @@ function SeriesLegend({
   );
 }
 
+// ADR 042: value labels are 12 px with a card-coloured halo (paint-order
+// stroke), so they stay legible where they cross a line or bar; the export
+// inliner resolves var(--card) against the light card (#222). Shared by all
+// three value-label `<text>` elements below (SeriesDot's end label,
+// SeriesBar's bar label, RegionBar's bar label) so the five attributes never
+// drift apart between them.
+const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: 'var(--card)', strokeWidth: 3, strokeLinejoin: 'round' } as const;
+
 /** Line-chart point marker: filled in the series colour, hollow when
  * provisional (R11, same convention as render.ts), plus the #197 end-of-line
  * label on the series' last plotted point. Recharts passes the Line's own
@@ -739,15 +770,17 @@ function SeriesDot(
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
-  // WP218 (ADR 039) Phase 0: r/ring follow the resolved line width (R11: the
-  // hollow ring must stay legible at every stroke width — see `dotGeometry`)
-  // and `hideFinal` draws every NON-provisional marker invisible
-  // (opacity 0, never removed from the DOM) when the "alleen voorlopig"
-  // marker mode is chosen, so the `[data-point]` count, keyboard walking
-  // (#212) and click-to-annotate all keep working identically either way.
-  // Defaulted to today's literal geometry (r 4, ring 2, hideFinal false) so
-  // every existing call site/test keeps its current arity and rendering.
-  geometry: { r: number; ring: number; hideFinal: boolean } = { ...dotGeometry('normal'), hideFinal: false },
+  // WP218 (ADR 039) Phase 0 / ADR 042: r/ring follow the resolved line width
+  // (R11: the hollow ring must stay legible at every stroke width — see
+  // `dotGeometry`); `markers`/`ends` together decide which NON-provisional
+  // markers draw invisible (opacity 0, never removed from the DOM) via the
+  // pure `markerVisible` (all / ends / provisionalOnly), so the
+  // `[data-point]` count, keyboard walking (#212) and click-to-annotate all
+  // keep working identically regardless of mode. Defaulted to today's
+  // literal geometry (r 4, ring 2) with `markers: 'all'`/`ends: null` (every
+  // marker visible) so every existing call site/test keeps its current
+  // arity and rendering.
+  geometry: { r: number; ring: number; markers: MarkerMode; ends: SeriesEndpoints | null } = { ...dotGeometry('normal'), markers: 'all', ends: null },
   lang: Lang = 'nl',
   // Story mode (session 92): the periodCode of the point the active story
   // step tells about, or null. Draws ONE extra ring OUTSIDE the point's own
@@ -767,14 +800,10 @@ function SeriesDot(
     const color = props.stroke ?? 'currentColor';
     const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
-    // Final-review fix (R11): a ringed point must never look like the
-    // hollow provisional marker (opacity 0, `data-marker="hidden"`) — the
-    // ring itself already carries its own dashed stroke (below) as a
-    // distinct visual channel, but the point's OWN filled marker also has
-    // to stay visible inside it, so `hideFinal` (the "alleen voorlopige"
-    // marker mode) is suppressed for the point the story is currently
-    // pointing at.
-    const hiddenFinal = geometry.hideFinal && !provisional && !isStory;
+    // ADR 042: which markers are drawn follows the resolved marker mode
+    // (all / ends / provisionalOnly) via the pure `markerVisible`; the point
+    // the story ring is on is always drawn (final-review fix, kept).
+    const hiddenFinal = !markerVisible(geometry.markers, Boolean(provisional), String(payload.periodCode), geometry.ends) && !isStory;
     // Task 6 keyboard-operability fix (#212 follow-up): a synthetic
     // role="button" on an SVG element gets no native Enter/Space activation
     // from the browser the way a real <button> would, so onKeyDown has to
@@ -836,7 +865,7 @@ function SeriesDot(
           <text
             x={cx + 8}
             y={cy + 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="start"
             data-role="end-label"
@@ -950,7 +979,7 @@ function SeriesBar(
           <text
             x={x + width / 2}
             y={negative ? y + height + 12 : y - 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="middle"
             data-role="bar-label"
@@ -1044,7 +1073,7 @@ function RegionBar(
           <text
             x={x + width + 4}
             y={y + height / 2 + 4}
-            fontSize={11}
+            {...VALUE_LABEL_PROPS}
             fill="var(--foreground)"
             textAnchor="start"
             data-role="bar-label"
@@ -1134,10 +1163,12 @@ function useCoarsePointer(): boolean {
 // control a mouse user does, so the same explanation must be reachable both
 // ways.
 
-/** Approximate text width at the 11px label font — layout only, so the plot
- * leaves room for the end-of-line label instead of clipping it. */
+/** Approximate text width at the 12px value-label font plus its halo stroke
+ * (ADR 042, VALUE_LABEL_PROPS below) — layout only, so the plot leaves room
+ * for the end-of-line label instead of clipping it. Deliberately generous:
+ * this only reserves margin, it never affects what's actually drawn. */
 function labelWidthPx(text: string): number {
-  return Math.ceil(text.length * 6.5) + 12;
+  return Math.ceil(text.length * 7.5) + 16;
 }
 
 export function ChartView({
@@ -1419,6 +1450,14 @@ export function ChartView({
     base,
   );
   const pres = resolved.values;
+  // ADR 042: the chart's height follows the card's measured width (a pure
+  // rule, chartHeightForWidth) whenever nothing else sizes the box — no
+  // frame aspect ratio (ChartFrame sets the height then), no small
+  // multiples (its own grid grows), not the table. 0 until measured →
+  // the h-64 floor, so SSR/jsdom render exactly as before.
+  const autoHeight = pres.frameAspect === 'auto' && !(smallMultiples && smallMultiplesAvailable) && state.form !== 'table';
+  const measuredWidth = useElementWidth(chartContainerRef, autoHeight);
+  const autoHeightPx = autoHeight && measuredWidth > 0 ? chartHeightForWidth(measuredWidth) : null;
   // This is the one Hook `pres` feeds, so it must run unconditionally on
   // every render — ABOVE the schemaVersion guard below, which a live spec
   // swap on this same mounted instance (see the specIdentity block above)
@@ -1593,6 +1632,13 @@ export function ChartView({
   const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
+  // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
+  // from the DISPLAYED spec (a zoomed window's own ends get the markers).
+  const endpointsByKey = new Map<string, SeriesEndpoints>();
+  displaySpec.series.forEach((series, i) => {
+    const plotted = series.points.filter((p) => p.value !== null && p.formattedValue !== null);
+    if (plotted.length > 0) endpointsByKey.set(`s${i}`, { first: plotted[0]!.periodCode, last: plotted[plotted.length - 1]!.periodCode });
+  });
   const barLabelsByKey = new Map<string, Map<string, PointLabel>>();
   for (const label of plan.barLabels) {
     const byPeriod = barLabelsByKey.get(label.seriesKey) ?? new Map<string, PointLabel>();
@@ -1856,18 +1902,26 @@ export function ChartView({
     (active
       ? 'border-transparent bg-secondary text-foreground'
       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');
+  // ADR 042: the export container's font override and auto height merged
+  // into one style object — `undefined` (not `{}`) when neither applies, so
+  // the stock DOM stays attribute-identical to before this task.
+  const containerStyle: CSSProperties = {
+    ...(fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : {}),
+    ...(autoHeightPx !== null ? { height: autoHeightPx } : {}),
+  };
 
   return (
     <div className={frameClass}>
-      <div role="heading" aria-level={3} className="text-sm font-semibold text-foreground">
+      <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
         {displaySpec.title}
       </div>
-      {dimEntries.length > 0 ? (
-        <div className="text-xs text-muted-foreground">
-          {dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}
-        </div>
-      ) : null}
-      <div className="text-xs text-muted-foreground">{displaySpec.unit}</div>
+      {/* ADR 042: one muted subtitle line — the unit first, then the pinned
+        * dimensions — as separate spans (tests and the digit scan read them
+        * per text node). */}
+      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+        <span>{displaySpec.unit}</span>
+        {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
+      </div>
       {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
         * Weergave tablist and the Opmaak trigger share one row — the trigger
         * (`ChartConfigTrigger`, rendered directly here — see the review-fix
@@ -2108,7 +2162,11 @@ export function ChartView({
         aria-label={t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
         className={
-          'mt-2 w-full touch-pan-y ' +
+          // ADR 042: a 300 ms fade/rise of the export CONTAINER on mount —
+          // outside the exported <svg>, so a download can never capture it;
+          // Recharts' own animation stays off (the recorded refusal).
+          // motion-reduce: honours prefers-reduced-motion.
+          'animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none mt-2 w-full touch-pan-y ' +
           // The combined chart's ResponsiveContainer sizes to 100% of a
           // fixed-height parent; small multiples lays out its own h-24
           // panels in a grid and needs the parent to grow with them
@@ -2121,12 +2179,17 @@ export function ChartView({
           // (h-auto) even when a frame aspect ratio is set — h-full would
           // instead force the small-multiples grid into the frame's fixed
           // aspect box, clipping panels past a handful of series exactly
-          // like the original h-64 bug this comment describes.
+          // like the original h-64 bug this comment describes. ADR 042:
+          // once the card's own width is measured, `autoHeightPx` sets an
+          // explicit height (below) and no class needs to claim one here —
+          // until then (SSR/jsdom, or unmeasured) the h-64 floor stands.
           (pres.frameAspect !== 'auto' && !(smallMultiples && smallMultiplesAvailable)
             ? 'h-full'
             : smallMultiples && smallMultiplesAvailable
               ? 'h-auto'
-              : 'h-64')
+              : autoHeightPx !== null
+                ? ''
+                : 'h-64')
         }
         data-tooltip-trigger={tooltipTrigger}
         // WP218: SVG <text> inherits font-family via CSS, so setting it once
@@ -2134,8 +2197,10 @@ export function ChartView({
         // drawn below; chart-download.tsx's inlineComputedPaint writes the
         // computed family onto every text node, so the PNG/SVG export
         // carries it too. undefined (the stock look: no font override)
-        // leaves the page's own font untouched, same as today.
-        style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
+        // leaves the page's own font untouched, same as today. ADR 042:
+        // merged with the auto height (also undefined when absent, so the
+        // stock DOM stays attribute-identical when neither applies).
+        style={Object.keys(containerStyle).length > 0 ? containerStyle : undefined}
       >
         {smallMultiples && smallMultiplesAvailable ? (
           <ChartSmallMultiples
@@ -2154,11 +2219,14 @@ export function ChartView({
               desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
-              {/* Recharts' own default grid + axis geometry (session 87: the
-                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
-                * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. WP218: horizontal/vertical/no-grid-at-all
-                * follow `pres.grid`. */}
+              {/* ADR 042 designed default (2026-09-11): the grid honours
+                * `pres.grid` (horizontal/vertical/none, WP218) and the
+                * category axis line follows `baselineAxisLine` — hidden by
+                * default with a hairline baseline in its place — all in
+                * theme colours (AXIS_COLOR/GRID_COLOR: dark mode). The
+                * session-87 "basic Recharts look" survives only as the
+                * Classic look; only the honesty-bound custom ticks and
+                * labels below are ours. */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -2174,7 +2242,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2195,7 +2263,12 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              {/* ADR 042: a faint SOLID crosshair — never dashed, so it can't be read as the dashed event marker or the dashed story ring; the export drops it anyway (chart-download.tsx). */}
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeOpacity: 0.35 }}
+              />
               {/* #170(4): curated event markers — drawn before the series so
                 * they sit visually behind the data (paint order = JSX order
                 * in Recharts' own layering). No inline Recharts label: the
@@ -2232,10 +2305,11 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
-                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
+                      activeDot={false}
                       isAnimationActive={false}
                     />
                   );
@@ -2258,6 +2332,18 @@ export function ChartView({
               desc={t(chartLang, 'chart.keyboardHint')}
               aria-label={accessibleName}
             >
+              {/* ADR 042: a vertical gradient fill per series (colour at the
+                * top, almost nothing at the zero baseline). The <defs> ride
+                * inside the exported <svg>, so the PNG/SVG keeps it; `url(#…)`
+                * needs no paint resolution (chart-download.tsx). */}
+              <defs>
+                {seriesMeta.map((s) => (
+                  <linearGradient key={s.key} id={`fill-${domId}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.color} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
+                  </linearGradient>
+                ))}
+              </defs>
               {pres.grid !== 'none' ? (
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal vertical={pres.grid === 'both'} />
               ) : null}
@@ -2265,7 +2351,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2281,7 +2367,11 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ stroke: 'var(--muted-foreground)', strokeWidth: 1, strokeOpacity: 0.35 }}
+              />
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
@@ -2296,8 +2386,8 @@ export function ChartView({
                       dataKey={s.key}
                       name={s.label}
                       stroke={s.color}
-                      fill={s.color}
-                      fillOpacity={dimmed ? 0.1 : 0.25}
+                      fill={pres.areaFill === 'gradient' ? `url(#fill-${domId}-${s.key})` : s.color}
+                      fillOpacity={pres.areaFill === 'gradient' ? (dimmed ? 0.4 : 1) : dimmed ? 0.1 : 0.25}
                       strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
                       strokeOpacity={dimmed ? 0.25 : 1}
                       data-series-dimmed={dimmed ? 'true' : undefined}
@@ -2308,7 +2398,7 @@ export function ChartView({
                         dimmed ? 0.25 : 1,
                         s.label,
                         (p) => setPendingPoint(p),
-                        { ...dotGeometry(pres.lineWidth), hideFinal: pres.markers === 'provisionalOnly' },
+                        { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
@@ -2374,10 +2464,14 @@ export function ChartView({
                 interval={0}
                 tick={RegionAxisTick}
                 stroke={AXIS_COLOR}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<RegionTooltip periodLabel={regionPeriodLabel} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<RegionTooltip periodLabel={regionPeriodLabel} />}
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }}
+              />
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
@@ -2406,12 +2500,17 @@ export function ChartView({
                   </pattern>
                 ))}
               </defs>
-              {/* Recharts' own default grid + axis geometry (session 87: the
-                * "basic Recharts look") in theme colours (AXIS_COLOR/GRID_COLOR:
-                * dark mode); only the honesty-bound custom ticks and labels
-                * below are ours. WP218: grid/axis props mirror the line
-                * branch above; the Y domain stays unconditionally zero-based
-                * here (bar honesty rule, never overridden by zeroBaseline). */}
+              {/* ADR 042 designed default (2026-09-11): the grid honours
+                * `pres.grid` (horizontal/vertical/none, WP218) and the
+                * category axis line follows `baselineAxisLine` — hidden by
+                * default with a hairline baseline in its place — all in
+                * theme colours (AXIS_COLOR/GRID_COLOR: dark mode). The
+                * session-87 "basic Recharts look" survives only as the
+                * Classic look; only the honesty-bound custom ticks and
+                * labels below are ours. WP218: grid/axis props mirror the
+                * line branch above; the Y domain stays unconditionally
+                * zero-based here (bar honesty rule, never overridden by
+                * zeroBaseline). */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -2427,7 +2526,7 @@ export function ChartView({
                 dataKey="periodLabel"
                 stroke={AXIS_COLOR}
                 tick={{ fill: AXIS_COLOR }}
-                axisLine={pres.axisLines === 'shown'}
+                axisLine={baselineAxisLine(pres)}
                 tickLine={pres.axisLines === 'shown'}
                 angle={pres.xLabels === 'tilted' ? -45 : 0}
                 textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
@@ -2441,7 +2540,11 @@ export function ChartView({
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
               />
-              <Tooltip trigger={tooltipTrigger} content={<ChartTooltip seriesMeta={seriesMeta} />} />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }}
+              />
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {

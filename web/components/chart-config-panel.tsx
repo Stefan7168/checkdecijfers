@@ -206,6 +206,7 @@ const RADIO_GROUPS: readonly { key: RadioKey; groupLabelKey: MessageKey; options
     groupLabelKey: 'chart.panel.markers',
     options: [
       { value: 'all', labelKey: 'chart.panel.markersOption.all' },
+      { value: 'ends', labelKey: 'chart.panel.markersOption.ends' },
       { value: 'provisionalOnly', labelKey: 'chart.panel.markersOption.provisionalOnly' },
     ],
   },
@@ -436,7 +437,7 @@ function FrameHexField({
   );
 }
 
-type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline';
+type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline' | 'areaFill';
 interface ToggleDef {
   key: ToggleKey;
   label: string;
@@ -449,6 +450,7 @@ function buildToggles(lang: Lang): ToggleDef[] {
     { key: 'axisLines', label: t(lang, 'chart.panel.axisLines'), onValue: 'shown', offValue: 'hidden' },
     { key: 'valueLabels', label: t(lang, 'chart.panel.valueLabels'), onValue: 'shown', offValue: 'hidden' },
     { key: 'zeroBaseline', label: t(lang, 'chart.panel.zeroBaseline'), onValue: 'zero', offValue: 'auto' },
+    { key: 'areaFill', label: t(lang, 'chart.panel.areaFill'), onValue: 'gradient', offValue: 'flat' },
   ];
 }
 
@@ -1314,9 +1316,10 @@ export function ChartConfigPanel({
               {seriesMeta.map((series, index) => {
                 const draft = liveDrafts[series.key];
                 const displayText = draft !== undefined ? draft.text : series.color;
-                // Warn only about a colour the reader CHOSE: the stock palette's own
-                // weak entries (e.g. the yellow on white) are the owner's accepted
-                // session-87 trade-off, not something to nag about untouched.
+                // Warn only about a colour the reader CHOSE: every DEFAULT_PALETTE
+                // entry clears the warning line untouched (test-pinned) — the rule
+                // exists because the Classic palette (RECHARTS_PALETTE, e.g. its
+                // yellow on white) has weak entries, and a chosen colour may too.
                 const settled = settledColorFor(series.key, series.color);
                 const chosen = resolved.values.seriesColors[index] !== undefined || settled !== series.color;
                 const warning = chosen ? warningFor(settled) : null;
