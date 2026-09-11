@@ -14,16 +14,28 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 95, autonomous overnight — refreshed at the end
-of the night).** Read [session-briefs/2026-09-11-session-96-kickoff.md](session-briefs/2026-09-11-session-96-kickoff.md).
-Current state: **the whole overnight visual-upgrade programme is BUILT and verified, in three STACKED pull
-requests waiting for the owner — none merged, none live:** PR #10 = phase 1, the designed default chart
-look (ADR [042](decisions/042-designed-default-chart.md), branch `visual-designed-default`, base `main`);
-PR #11 = phase 2, templates v1 (ADR [043](decisions/043-chart-templates.md), branch `visual-templates-v1`,
-base = PR #10's branch); PR #12 = phase 3, the Story stage (ADR [044](decisions/044-story-stage.md), branch
-`visual-story-stage`, base = PR #11's branch). Merge in that order. PR #9 (embed) is still open too — it
-touches the same tracker docs and `chart.tsx`; whichever merges second needs the session-94 conflict
-playbook. Owner steps unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner present).** Read
+[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
+Current state (all verified against GitHub / `main` / production on 2026-09-11): **the whole visual-upgrade
+programme is MERGED + LIVE** — PR #10 `ca5ba19`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on each, production
+answering (200). WP218 (PR #7, `05ec8ed`) live since 2026-09-09. **Still open: PR #9 (embed) — `MERGEABLE` / `CLEAN`
+at head `d427cdd`; Live re-render inside it stays gated closed until a creator-email lookup exists.** Owner steps
+unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, `EMBED_TOKEN_SECRET` on merge.
+**Next up = the Journey programme** ([08-build-plan.md § Journey programme](08-build-plan.md), [#238](open-questions.md)):
+phase 0 first (apply 028, the read-only usage report, decide the audit re-run), then the first-question bundle; the
+money-path item R3 needs an explicit owner go. **In parallel, the positioning thread** ([#237](open-questions.md)):
+the ICP now lives in [01-product-vision.md](01-product-vision.md) (defined by the job; four segments in go-to-market
+order; direction = chat from official-statistics research to an embedded, sourced chart, CBS first, Eurostat second);
+it still needs its own ADR + roadmap re-phasing, the [#205](open-questions.md) Pro-plan brainstorm (live embeds =
+the Pro reason), and a landing page + public gallery as the cheapest test of the message.
+
+**▶ SESSION 96 (2026-09-11, owner present) — STRATEGY + SANITY CHECK, DOCS ONLY (no code).** Competitive brief on
+LocalFocus + Flourish (two Sonnet research agents), a `/deep-research` run (105 agents; its verify + synthesize
+phases hit the account's weekly usage limit — the session re-verified the 10 Eurostat claims and 2 wrongly-refuted
+claims itself against the live pages), the ICP decided with the owner, the direction recorded, the parallel
+session's experience plan sanity-checked (11/11 code claims TRUE) and adopted into the build plan with working
+defaults. Commits: `fcf5c4f`, `79f62e3`, + this one. Full entry: [status-archive.md](status-archive.md).
+
 
 **▶ SESSION 95 (2026-09-11, AUTONOMOUS overnight — the owner's kickoff pre-resolved the plan's open
 decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (ADR 042), PR #10 OPEN.**
