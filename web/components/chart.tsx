@@ -1163,10 +1163,12 @@ function useCoarsePointer(): boolean {
 // control a mouse user does, so the same explanation must be reachable both
 // ways.
 
-/** Approximate text width at the 11px label font — layout only, so the plot
- * leaves room for the end-of-line label instead of clipping it. */
+/** Approximate text width at the 12px value-label font plus its halo stroke
+ * (ADR 042, VALUE_LABEL_PROPS below) — layout only, so the plot leaves room
+ * for the end-of-line label instead of clipping it. Deliberately generous:
+ * this only reserves margin, it never affects what's actually drawn. */
 function labelWidthPx(text: string): number {
-  return Math.ceil(text.length * 6.5) + 12;
+  return Math.ceil(text.length * 7.5) + 16;
 }
 
 export function ChartView({
@@ -2307,6 +2309,7 @@ export function ChartView({
                         chartLang,
                         activeStoryStep?.point?.seriesKey === s.key ? activeStoryStep.point.periodCode : null,
                       )}
+                      activeDot={false}
                       isAnimationActive={false}
                     />
                   );
