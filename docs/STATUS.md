@@ -14,6 +14,14 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**Branch note (session 96, 2026-09-11, owner present):** this branch (`visual-story-motion`) carries a
+follow-up visual pass on the Story stage — motion/atmosphere upgrade — built after the owner's explicit
+"move the needle" feedback on an initial too-small attempt. Own PR, not yet merged to `main`. Full detail:
+ADR [044](decisions/044-story-stage.md)'s addendum and [open-questions #239](open-questions.md). Full
+verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark 28/28, `test:docs` 11/11,
+real build, LOW code-review 0 findings, a real-browser check across both themes/phone/reduced-motion that
+caught and fixed one real mobile overlap bug before shipping).
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner present).** Read
 [session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
 Current state (all verified against GitHub / `main` / production on 2026-09-11): **the whole visual-upgrade

@@ -6,6 +6,56 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 96 (continued) — 2026-09-11 — the multi-agent Story-stage visual-motion upgrade
+
+- **A first pass scoped for safety, not impact, drew direct owner pushback — and that was the correct
+  correction, not a wasted first wave.** Given "spawn multiple agents... for hours" with no further spec,
+  the first instinct was three small, independent, low-risk items (a bug fix, a 4-6px "breathing" wobble, a
+  research question). All three were real, well-executed, and worth keeping — but none of them were what
+  "move the needle" meant. The owner's blunt correction arrived exactly when it was needed (right as the
+  small wave finished) rather than hours into a bigger misdirected effort. Lesson: for an open-ended
+  "impress me" ask, the FIRST move should be to name a concrete ambition level in the kickoff/brief itself
+  (cite a comparable bar — here, "The Pudding / NYT graphics desk", already in this repo's own prior
+  planning doc) rather than defaulting to the safest possible interpretation and letting the owner correct
+  scope after the fact.
+- **Checking for a "repeatedly refused" decision before building on top of a plausible-sounding idea saved a
+  wasted subagent run.** "Have the chart draw itself in" sounded like an obvious way to add life to the
+  stage — a `grep` across `docs/` first found it explicitly, repeatedly refused (ADR 042, 08-build-plan's own
+  invariants list, the session-90 architecture synthesis: "Animation — REFUSED — export-at-click-time and
+  reduced motion"). Cheap to check, expensive to discover after a subagent had already built and tested it.
+- **Sequential-with-shared-infrastructure beat parallel for creative work touching the same file.** Wave 1
+  (three genuinely independent items: a hook fix, a pure-function tweak, a research question) parallelized
+  cleanly. Wave 2 (three creative/visual upgrades all touching the same ~450-line component) was
+  deliberately run as ONE foundational task (an ambient layer establishing a shared `--stage-accent` CSS
+  variable) followed by TWO parallel tasks that both consumed it — giving visual coherence (one color
+  language across all three effects) that three blind, simultaneous rewrites would likely not have produced,
+  at a real but bounded wall-clock cost (roughly 1.3x the parallel-only time, not 3x, since only the
+  foundational piece was serialized).
+- **A confirmed, reproducible harness quirk: a fresh isolated worktree agent may not actually start on the
+  branch you told it to.** All three wave-2 subagents independently found their worktree began on a scratch
+  branch pointing at plain `main`, not the shared feature branch the brief named — each caught it only
+  because the brief explicitly instructed "check `git log` for these N named commits before writing any
+  code, branch by name if missing." Without that instruction, at least one would likely have silently built
+  on stale code. Worth stating explicitly in every brief for a multi-agent chain that depends on a shared,
+  evolving base branch — do not assume the isolation mechanism started where you asked it to.
+- **A real regression only a real browser could catch, and jsdom's own suite stayed green throughout.** New
+  editorial caption styling used a negative-inset backdrop scrim for legibility over a new background layer;
+  on the phone/stacked layout (not the desktop side-by-side one), the scrim could bleed into the sticky
+  pinned chart's own attribution line when `scrollIntoView({block:'center'})` centred a panel close to the
+  sticky boundary — invisible to jsdom (no real layout/geometry), and neither task's own component tests
+  caught it since they don't assert cross-element visual overlap. Found via a throwaway fixture route +
+  Playwright screenshots at 375px, fixed with `scroll-margin-top` (the CSS property purpose-built for
+  exactly this "sticky header + scrollIntoView" interaction) in about two iterations. This is the second
+  time this session ADR 044's own "the real proof is a browser, not jsdom" note has been proven right in
+  practice, not just stated as policy.
+- **No `DATABASE_URL`/`web/.env.local` in a fresh remote session means no real chart data — a throwaway
+  fixture route (with a temporary, reverted `proxy.ts` allowlist entry) is a legitimate, cheap way to get a
+  REAL browser rendering a REAL component without a database.** Two gotchas hit along the way, both fixed
+  fast once diagnosed: Next.js treats any `app/` folder starting with `_` as a private, unrouted segment (a
+  leading-underscore debug folder silently 404s, not an error message pointing at the cause); and the
+  session-auth proxy middleware redirects anything not on its allowlist to `/login` before the route handler
+  ever runs, so a debug page needs a temporary allowlist entry, not just to exist.
+
 ## Session 96 (2026-09-11, owner present) — strategy / research session, docs only
 
 - **A research agent's "related" is not "theirs".** A Sonnet agent reported a co-founder's SVDJ Incubator project as

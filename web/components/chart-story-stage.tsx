@@ -632,7 +632,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                       }}
                       data-stage-step={i}
                       aria-current={i === index ? 'step' : undefined}
-                      className="flex min-h-[85vh] flex-col justify-center"
+                      className="flex min-h-[85vh] scroll-mt-[52vh] flex-col justify-center lg:scroll-mt-0"
                     >
                       {/* Editorial reveal (visual upgrade, task 2 of the
                         * chain — captions): the old bordered `bg-card` box
