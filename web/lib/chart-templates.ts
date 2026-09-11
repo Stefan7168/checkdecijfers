@@ -94,16 +94,31 @@ function sameValue(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** The most specific template whose EVERY override equals the effective
- * value — a tweaked chart matches nothing (it is no longer that look).
- * 'standard' is just the template with the most keys (the full stock
- * look), so it wins on its own merits only when the chart wears it. */
-export function matchTemplate(values: ChartPresentation): ChartTemplateId | null {
+/** The most specific template whose EVERY (non-form-locked) override equals
+ * the effective value — a tweaked chart matches nothing (it is no longer
+ * that look). 'standard' is just the template with the most keys (the full
+ * stock look), so it wins on its own merits only when the chart wears it.
+ *
+ * `locks` (resolvePresentation's own return value) excludes a key from the
+ * comparison when the chart's FORM forces it regardless of any template or
+ * user choice — e.g. `zeroBaseline` is pinned to `'zero'` on bar/hbar/area
+ * (a real R6-adjacent honesty rule, not a "look"). Without this, 'standard'
+ * (whose overrides carry the STOCK default `zeroBaseline: 'auto'`) could
+ * never match on those forms even immediately after being applied, since
+ * the resolved value is always `'zero'` there. */
+export function matchTemplate(
+  values: ChartPresentation,
+  locks: Partial<Record<PresentationKey, string>> = {},
+): ChartTemplateId | null {
   let best: ChartTemplate | null = null;
+  let bestCheckedKeys = 0;
   for (const t of CHART_TEMPLATES) {
-    const keys = Object.keys(t.overrides) as PresentationKey[];
+    const keys = (Object.keys(t.overrides) as PresentationKey[]).filter((key) => !(key in locks));
     const wears = keys.every((key) => sameValue(values[key], t.overrides[key]));
-    if (wears && (best === null || keys.length > Object.keys(best.overrides).length)) best = t;
+    if (wears && (best === null || keys.length > bestCheckedKeys)) {
+      best = t;
+      bestCheckedKeys = keys.length;
+    }
   }
   return best?.id ?? null;
 }

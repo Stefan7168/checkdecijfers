@@ -550,12 +550,16 @@ const ARROW_KEYS = ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'];
  * ref-based versions elsewhere (chart.tsx, chart-toggle.tsx) in behaviour. */
 function onRadioGroupKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
   if (!ARROW_KEYS.includes(event.key)) return;
-  event.preventDefault();
   const radios = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
-  if (radios.length === 0) return;
-  const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
   const currentIdx = radios.indexOf(document.activeElement as HTMLButtonElement);
-  const nextIdx = ((currentIdx === -1 ? 0 : currentIdx) + dir + radios.length) % radios.length;
+  // Focus isn't on one of this group's own radios (e.g. the Templates tab's
+  // non-radio Brand card button) — an arrow key there isn't this handler's
+  // to act on; treating -1 as "the first radio" used to silently move focus
+  // to, and CLICK, an arbitrary template whenever the key bubbled up.
+  if (currentIdx === -1) return;
+  event.preventDefault();
+  const dir = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
+  const nextIdx = (currentIdx + dir + radios.length) % radios.length;
   radios[nextIdx].focus();
   radios[nextIdx].click();
 }
@@ -747,7 +751,7 @@ export function ChartConfigPanel({
   // currently match — drives the "Huidig" badge and each card's
   // aria-checked (the gallery is a radiogroup). Recomputed every render
   // straight from resolved.values, no local copy of the pick.
-  const currentTemplate = matchTemplate(resolved.values);
+  const currentTemplate = matchTemplate(resolved.values, resolved.locks);
   const [activeTab, setActiveTab] = useState<TabKey>('chart');
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same

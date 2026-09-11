@@ -111,6 +111,19 @@ describe('matchTemplate — which template the chart currently wears', () => {
     const both = resolvePresentation(lineCtx, { ...templateById('minimal').overrides, framePadding: 'small' }).values;
     expect(matchTemplate(both)).toBe('minimal');
   });
+  it('standard still matches on bar/hbar/area forms, where zeroBaseline is honesty-locked to "zero" regardless of the template (a real form constraint, not a "look")', () => {
+    const hbarCtx: PresentationContext = { kind: 'bar', form: 'hbar', seriesCount: 3, hasProvisional: true };
+    const areaCtx: PresentationContext = { kind: 'line', form: 'area', seriesCount: 1, hasProvisional: true };
+    for (const ctx of [barCtx, hbarCtx, areaCtx]) {
+      const resolved = resolvePresentation(ctx, templateById('standard').overrides);
+      expect(resolved.values.zeroBaseline, ctx.form).toBe('zero');
+      expect(matchTemplate(resolved.values, resolved.locks), ctx.form).toBe('standard');
+    }
+  });
+  it('a locked key does not let an otherwise-mismatched template match — only the locked key itself is excused', () => {
+    const resolved = resolvePresentation(barCtx, { ...templateById('standard').overrides, lineWidth: 'thin' });
+    expect(matchTemplate(resolved.values, resolved.locks)).toBeNull();
+  });
   it('an account default shaped like Klassiek is matched as classic; applying standard on top of it matches standard', () => {
     const classicBase = { ...STOCK_PRESENTATION, ...templateById('classic').overrides };
     const values = resolvePresentation(lineCtx, {}, classicBase).values;
