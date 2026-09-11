@@ -4,7 +4,7 @@
 // renders English under <LangProvider lang="en">, and both variants (the
 // stripped /login+landing header and the workspace header with a balance)
 // carry the NL|EN switch next to the account button / wordmark.
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { SiteHeader } from './site-header.tsx';
@@ -59,5 +59,37 @@ describe('SiteHeader — the NL|EN switch sits next to the account button', () =
     render(<SiteHeader balance={10} />);
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+  });
+});
+
+// R9.2 (#214, journey WP-C): below `sm` the bar's "Credits kopen"/"Geschiedenis"
+// links hide (a Tailwind class only — jsdom applies no layout, so the pin here
+// is the className itself) and reappear as the account menu's first two items.
+describe('SiteHeader — R9.2 phone header (#214)', () => {
+  it('the bar links carry the phone-hidden classes; the account menu, once opened, lists them first with the same hrefs', () => {
+    render(<SiteHeader balance={10} />);
+    const barCredits = screen.getByRole('link', { name: 'Credits kopen' });
+    const barHistory = screen.getByRole('link', { name: 'Geschiedenis' });
+    expect(barCredits.className).toMatch(/\bhidden\b/);
+    expect(barCredits.className).toMatch(/\bsm:inline\b/);
+    expect(barHistory.className).toMatch(/\bhidden\b/);
+    expect(barHistory.className).toMatch(/\bsm:inline\b/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+    const menu = screen.getByRole('menu');
+    const menuLinks = within(menu).getAllByRole('link');
+    expect(menuLinks[0]).toHaveAttribute('href', '/credits');
+    expect(menuLinks[0]).toHaveTextContent('Credits kopen');
+    expect(menuLinks[0].className).toMatch(/\bsm:hidden\b/);
+    expect(menuLinks[1]).toHaveAttribute('href', '/geschiedenis');
+    expect(menuLinks[1]).toHaveTextContent('Geschiedenis');
+    expect(menuLinks[1].className).toMatch(/\bsm:hidden\b/);
+  });
+
+  it('wordmark, balance badge and the NL|EN switch stay unconditionally visible (no phone-hidden class)', () => {
+    render(<SiteHeader balance={10} />);
+    expect(screen.getByRole('link', { name: 'Check de Cijfers' }).className.split(/\s+/)).not.toContain('hidden');
+    expect(screen.getByText('10 credits').className.split(/\s+/)).not.toContain('hidden');
+    expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
   });
 });

@@ -116,8 +116,10 @@ const nl = {
   // workspace.tsx.
   'workspace.newChatTitle': 'Nieuwe chat',
   'workspace.chatSectionLabel': 'Chat',
-  'workspace.purchaseSuccessMessage':
-    'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.',
+  // R2.4 (journey WP-C): the page no longer tells the reader to refresh —
+  // the poll (Workspace's own router.refresh() loop, onboarding-live-status's
+  // pattern) does that for them.
+  'workspace.purchaseSuccessMessage': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
   'workspace.purchaseSuccessDismiss': 'Sluiten',
 
   // visual-dock.tsx.
@@ -220,7 +222,7 @@ const nl = {
   'credits.pageHeading': 'Credits — Check de Cijfers',
   'credits.balancePrefix': 'Je huidige saldo:',
   'credits.creditsWord': 'credits.',
-  'credits.purchaseSuccess': 'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.',
+  'credits.purchaseSuccess': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
   'credits.purchaseCancelled': 'Betaling geannuleerd.',
   'credits.buy': 'Kopen',
   'credits.unknownPack': 'Onbekend of niet meer beschikbaar pakket.',
@@ -638,6 +640,17 @@ const nl = {
   'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
   'landing.step4Title': '4. Publiceer',
   'landing.step4Body': 'Kies een sjabloon, download of embed — bron en datum reizen mee.',
+  // WP-C (journey programme, session 96): R10 credits-page pack copy, R2.4
+  // purchase poll banner, R9.2 phone-header account-menu labels (reusing
+  // header.credits/header.history text, no new keys needed there), and R5.3
+  // the anonymous-Insights login line. Digit-free where noted — the packQuestions
+  // and packPricePerQuestion strings carry the ONLY digits (via {n}/{price},
+  // computed server-side from the pack's own priceCents/credits, never
+  // hardcoded), and neither can appear inside a chart card.
+  'credits.packQuestions': '≈ {n} gewone vragen',
+  'credits.packPricePerQuestion': '{price} per vraag',
+  'credits.neverExpires': 'Credits verlopen nooit. Geen abonnement.',
+  'chart.story.loginForInsights': 'Log in voor AI-verwoorde inzichten.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -733,8 +746,7 @@ const en: Messages = {
 
   'workspace.newChatTitle': 'New chat',
   'workspace.chatSectionLabel': 'Chat',
-  'workspace.purchaseSuccessMessage':
-    'Payment successful — your credits will be added once Stripe confirms the payment (usually a few seconds). Refresh the page afterwards to see your new balance.',
+  'workspace.purchaseSuccessMessage': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
   'workspace.purchaseSuccessDismiss': 'Close',
 
   'dock.header': 'Charts',
@@ -825,7 +837,7 @@ const en: Messages = {
   'credits.pageHeading': 'Credits — Check de Cijfers',
   'credits.balancePrefix': 'Your current balance:',
   'credits.creditsWord': 'credits.',
-  'credits.purchaseSuccess': 'Payment successful — your credits will be added once Stripe confirms the payment.',
+  'credits.purchaseSuccess': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
   'credits.purchaseCancelled': 'Payment cancelled.',
   'credits.buy': 'Buy',
   'credits.unknownPack': 'Unknown or no longer available pack.',
@@ -1168,6 +1180,12 @@ const en: Messages = {
   'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
   'landing.step4Title': '4. Publish',
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
+  // WP-C (journey programme, session 96): mirrors the Dutch block above —
+  // R10 credits-page pack copy, R5.3 the anonymous-Insights login line.
+  'credits.packQuestions': '≈ {n} simple questions',
+  'credits.packPricePerQuestion': '{price} per question',
+  'credits.neverExpires': 'Credits never expire. No subscription.',
+  'chart.story.loginForInsights': 'Log in for AI-phrased insights.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
