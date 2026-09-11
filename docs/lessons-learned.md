@@ -6,6 +6,31 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 96 — 2026-09-11 — continued past the first wrap-up: the owner asked to keep going with
+Story-mode work in "a fresh session," but no new session actually started — CLAUDE.md's ritual fired
+again on the same conversation, and the designated branch and the PR-13 work branch diverged docs
+
+- **"Let's do it in a fresh session" doesn't guarantee a fresh session actually starts.** The owner asked
+  to move Story-mode visual work to a new session after this one wrapped; the very next real message
+  ("Ready>" → "Start Story-mode work here") continued the SAME conversation instead. The work was correctly
+  redirected onto a dedicated feature branch + PR (`visual-story-motion` → PR #13, never the designated
+  session branch, per #118(b)'s autonomous-work rule) rather than assuming the designated branch was still
+  the right target — but this means the designated branch's own tracker docs (STATUS/lessons/open-questions)
+  and PR #13's tracker doc edits are now two independently-updated, unmerged copies of the same files, same
+  pattern as the Thread A/B collision earlier this session. **PR #13's own lessons-learned entry (the
+  multi-agent visual-motion build, its worktree-branching quirk, the real mobile-overlap catch) lives on
+  that branch, not here — read it there, don't assume it's duplicated into this file.** This is deliberate,
+  not an oversight: reconciling it is the same job as every other tracker collision this session, done
+  whichever PR merges to `main` first.
+- **A Claude Code UI preference ("no suggested-task popups") maps to `promptSuggestionEnabled: false` in
+  `~/.claude/settings.json` (global, not project) — found by loading the `update-config` skill and reading
+  its full settings schema rather than guessing a setting name.** Distinct from `spawn_task`/`dismiss_task`
+  (the Claude-Code-Remote MCP tools that create/withdraw a single "Suggested task" desktop-app card) — no
+  listing tool exists for those, so a card can only be dismissed with the exact `task_id` from the `spawn_task`
+  call that created it, in the same session. Asked to remove "the current one" with no `spawn_task` call on
+  record in this conversation, the right move was to say so plainly and ask what the card actually says,
+  not to guess an id or claim to have removed something unverifiable.
+
 ## Session 96 — 2026-09-11 — two concurrent threads on the same repo the same day: PR #9's conflicts +
 experience-improvement-plan quick wins (this sub-section), and a parallel strategy/research session (next
 sub-section) — the collision between them is itself the last lesson below

@@ -1,5 +1,12 @@
 # Story-mode visual polish — multi-agent kickoff (written 2026-09-11, end of session 96, owner present)
 
+> **HISTORICAL — executed, not a live mandate.** The "fresh session" this doc anticipated never actually
+> started; the same conversation continued instead, and this mandate was carried out within it as
+> **PR #13** (branch `visual-story-motion`) — see [STATUS.md](../STATUS.md)'s top block and
+> [ADR 044](../decisions/044-story-stage.md)'s addendum for what actually shipped, which differs from
+> (and goes further than) this doc's own suggested starting points below. Kept for the record, not as
+> instructions to re-run.
+
 **This is the next session's actual mandate**, requested directly by the owner at the end of session 96:
 *"I would really appreciate it if we can get things visual better, in regards to the story mode thing. can
 you spawn multiple agents that start building this for hours and hours autonomously?"* — then, after a

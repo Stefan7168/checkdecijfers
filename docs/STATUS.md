@@ -14,14 +14,27 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, end of session 96, owner present — reconciling two
-concurrent threads on this repo the same day; verified against real git/GitHub state, not recalled).** Read
-[session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md)
-— the next session's actual mandate (Story-mode/Story-stage visual polish, multi-agent, owner-directed,
-"for hours and hours") is there. **Note the two kickoff docs in this directory are NOT the same thing:**
-[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md) was
-written by a *parallel* session (Thread B below) and describes the Journey-programme continuation
-(Phase 0 then Phase 1) — that is tracked-but-not-the-focus for the next session, not its mandate.
+**▶ NEXT SESSION STARTS HERE (rewritten 2026-09-11, end of session 96, owner present — the session ran
+long and did NOT actually end between the two blocks below; "session 96" spans all of it).** Read
+[session-briefs/2026-09-11-session-96-wrapup-kickoff.md](session-briefs/2026-09-11-session-96-wrapup-kickoff.md)
+— the real next-session starting point, written last, after everything below happened. The
+[story-mode-visual-polish-kickoff.md](session-briefs/2026-09-11-story-mode-visual-polish-kickoff.md) doc
+below is now HISTORICAL: its mandate was executed in THIS session (not a fresh one) as **PR #13** — see
+the next paragraph. [session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md) (Thread B,
+the Journey-programme continuation) is still live, tracked-but-not-yet-started.
+
+**PR #13 (Story stage motion/atmosphere upgrade, ADR 044's addendum) is open, branch `visual-story-motion`,
+head `9407440`, base `main` `31f258e`.** Built after the owner's direct pushback that a first, smaller
+attempt ("an auto-play fix, a subtle drift, a research note") didn't "move the needle" — a bigger,
+sequenced rebuild followed (ambient colour-tied atmosphere layer, editorial-scale captions, eased spotlight
+motion), with a real-browser check (not just jsdom) that caught and fixed one genuine mobile regression
+before shipping. Full verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark
+28/28, `test:docs` 11/11, real build, LOW code-review 0 findings). **CI (`gate`) was still `in_progress`
+as of the last check this session (started 13:42:11 UTC) — NOT yet independently confirmed green; verify
+before trusting `mergeable_state`.** A `send_later` check-in (`trig_01Urk5aGhPRDUwAHL8aTYJDt`, ~13:58 UTC)
+and a subscription (`subscribe_pr_activity`) are both active — the next session should still re-verify
+itself rather than assume either fired cleanly. Full detail: ADR 044's own addendum,
+[open-questions #239](open-questions.md).
 
 **PR #10/#11/#12 (the visual-upgrade programme, ADR 042/043/044) are all MERGED into `main`** — confirmed
 via the GitHub API: PR #10 `merged_at 2026-09-11T04:01:02Z`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on

@@ -1,5 +1,51 @@
 # STATUS archive — the session log
 
+**Session 96 continued (2026-09-11, owner present) — STORY-MODE VISUAL UPGRADE, PR #13 OPEN. The owner
+asked to move this to "a fresh session," but the same conversation continued instead — see the entry
+below for the first part of session 96 (PR #9's conflicts, the quick wins, the Thread A/B collision) for
+the earlier history this entry picks up from.**
+
+1. **The ask and the recalibration.** The owner asked to "get things visual better, in regards to the
+   story mode thing" via multiple autonomous agents "for hours and hours." A first, cautiously-scoped
+   wave (an auto-play/scrollbar-drag fix, a 5px chart-plane "breathing" drift, a native-scroll-driven-CSS
+   feasibility check) shipped clean but drew direct owner pushback: "thats not gonna move the fucking
+   needle." Recalibrated to a bigger, sequenced rebuild rather than another round of small parallel items.
+2. **What shipped, on branch `visual-story-motion` (own PR — #118(b): autonomous, multi-hour work never
+   pushes directly to `main`), PR #13:** an ambient background atmosphere layer tinted to the active
+   finding's own series colour (never invented) with a shared `--stage-accent` CSS custom property;
+   editorial-scale caption typography (up to `text-5xl`, borderless, a provable ≤~10%-contamination
+   contrast guarantee replacing the old bordered card); eased spotlight motion (400ms ease-out-back camera
+   move replacing an instant snap) — plus the smaller wave-1 items folded in as plumbing. Sequenced (one
+   foundational task establishing the shared colour variable, then two parallel tasks consuming it) rather
+   than three-way parallel, specifically to keep one coherent visual language instead of three independently
+   blind rewrites of the same file.
+3. **One idea explicitly ruled out before building, with a repo grep, not a guess:** Recharts' own draw-in
+   animation — a repeatedly, deliberately refused idea already on record in ADR 042, 08-build-plan's own
+   invariants, and the session-90 architecture synthesis ("export-at-click-time and reduced motion").
+4. **A real regression caught by an actual browser, not jsdom.** No `DATABASE_URL`/`.env.local` existed in
+   this remote session, so a throwaway fixture route (`web/proxy.ts` temporarily allowlisted, reverted after)
+   plus headless Chromium via Playwright was used to render the Story stage with a real fixture spec, both
+   themes, desktop + phone, reduced motion. Found the new borderless captions could bleed into the chart's
+   own attribution line on phone (`scrollIntoView({block:'center'})` centring a panel near the sticky
+   chart's boundary) — fixed with `scroll-margin-top`, confirmed with a second screenshot. Two harness
+   gotchas hit and fixed along the way: Next.js treats a leading-underscore `app/` folder as unrouted
+   (silent 404, not an error); the session-auth proxy needs a temporary allowlist entry for any debug route.
+5. **Verification (measured):** root + web typecheck clean; web suite 94 files / 1479 tests; backend
+   143 files / 2211 tests; hermetic benchmark 28/28; `test:docs` 11/11; real `next build`; `/code-review`
+   LOW 0 findings. PR #13 opened, `subscribe_pr_activity` active, a `send_later` check-in armed
+   (`trig_01Urk5aGhPRDUwAHL8aTYJDt`, ~13:58 UTC) — **CI (`gate`) was still `in_progress` as of this
+   entry, not yet independently confirmed green.**
+6. **Two Claude Code tooling discoveries, unrelated to the product:** the "no suggested-task popups"
+   preference is `promptSuggestionEnabled: false` in `~/.claude/settings.json` (global); `dismiss_task`
+   needs a `task_id` from a `spawn_task` call in the SAME session — asked to remove a suggestion with none
+   on record, the honest answer was to say so and ask what the card says, not guess. Both in
+   [lessons-learned.md](lessons-learned.md).
+7. **Docs:** this entry; STATUS.md top block rewritten (PR #13's state, the story-mode-visual-polish
+   kickoff doc marked historical/executed); a new session-briefs kickoff for whatever comes next;
+   lessons-learned; ADR 044's addendum and open-questions #239 (written on the PR #13 branch itself, not
+   duplicated here — see that PR for the exact text). Stray subagent worktrees (5) and their now-merged
+   scratch branches removed from the local checkout at wrap-up.
+
 **Session 96 (2026-09-11) — TWO CONCURRENT THREADS ON THE SAME REPO THE SAME DAY: PR #9's FIFTH AND SIXTH
 CONFLICTS RESOLVED + FIVE EXPERIENCE-IMPROVEMENT-PLAN QUICK WINS BUILT (Thread A, owner-present, this
 session), AND STRATEGY/ICP/RESEARCH DOCS-ONLY WORK (Thread B, a parallel session, same day) — see
