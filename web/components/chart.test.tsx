@@ -2446,6 +2446,33 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
   });
 
+  // Strong-tier review MEDIUM-1: R5.2's "open on Sjablonen" gate read only
+  // `resolved.pristine`, which tracks the PER-CHART override — a user with a
+  // saved account default is pristine too, so they landed on the gallery and
+  // never saw "Mijn standaard is actief.", which renders inside the Grafiek
+  // panel. A saved default now suppresses the templates-first open.
+  it('MEDIUM-1: with a SAVED account default the panel opens on Grafiek (so the "Mijn standaard is actief." hint is visible), not on Sjablonen', () => {
+    render(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+  });
+
+  it('MEDIUM-1: with NO saved account default a pristine chart still opens on Sjablonen (R5.2 unchanged)', () => {
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
+  });
+
   it('clicking Dun then Standaard returns to 3 px — the account default, not stock', () => {
     const { container } = render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>

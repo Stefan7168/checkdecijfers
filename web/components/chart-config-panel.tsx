@@ -689,7 +689,9 @@ export interface ChartConfigPanelProps {
   onApplyTemplate?: (id: ChartTemplateId) => void;
   /** R5.2 (journey WP-C, ADR 043 decision 6 revisit): when true AND
    * `resolved.pristine` (the per-chart override object is empty — no
-   * template applied, no hand tweak yet), the panel's initial tab is
+   * template applied, no hand tweak yet) AND the templates tabpanel is
+   * actually applicable to this form (`resolved.applicable.has('grid')`, the
+   * same gate the tabpanel itself carries — MEDIUM-2), the panel's initial tab is
    * Sjablonen instead of Grafiek — a first-time reader sees the looks
    * gallery, not the raw controls. Computed once at mount (a lazy
    * `useState` initializer), so a tweak made AFTER opening never flips the
@@ -767,8 +769,14 @@ export function ChartConfigPanel({
   // R5.2 (ADR 043 decision 6 revisit): lazy initializer — evaluated once at
   // mount only, so a later tweak (which flips `resolved.pristine` false on a
   // re-render) never yanks the panel back to Sjablonen mid-session.
+  // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
+  // `resolved.applicable.has('grid')` (see its render below), so without the
+  // same gate here a table form could select a tab whose panel never renders
+  // — a selected tab with no panel.
   const [activeTab, setActiveTab] = useState<TabKey>(() =>
-    openTemplatesWhenPristine && resolved.pristine ? 'templates' : 'chart',
+    openTemplatesWhenPristine && resolved.pristine && resolved.applicable.has('grid')
+      ? 'templates'
+      : 'chart',
   );
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same

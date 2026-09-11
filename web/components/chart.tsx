@@ -2780,7 +2780,13 @@ export function ChartView({
           // instead of the raw Grafiek controls — `resolved.pristine`
           // already tracks exactly that (the overrides object passed in is
           // empty), evaluated once at the panel's own mount.
-          openTemplatesWhenPristine
+          // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
+          // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
+          // and used to land on Sjablonen — never seeing "Mijn standaard is
+          // actief", which renders inside the Grafiek panel. A saved default
+          // IS a deliberate look already chosen, so the gallery is not what
+          // that reader needs first: open on Grafiek instead.
+          openTemplatesWhenPristine={accountStyle === null}
           onChange={(patch) => {
             // Final-review fix (Fix 5): ChartConfigPanel now refuses a
             // frame background/inset change UP FRONT (its own contrast

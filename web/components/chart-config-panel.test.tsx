@@ -1926,6 +1926,35 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
   });
+
+  // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
+  // `resolved.applicable.has('grid')`, but the initial-tab computation was
+  // not — a form without `grid` (table) opened with Sjablonen SELECTED and no
+  // panel rendered for it. The initializer now carries the same gate.
+  it('MEDIUM-2: a form whose templates tabpanel is not applicable never opens SELECTED on Sjablonen', () => {
+    const tableCtx: PresentationContext = { kind: 'line', form: 'table', seriesCount: 2, hasProvisional: false };
+    render(
+      <Harness
+        resolved={resolvePresentation(tableCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="t-medium2"
+        onApplyTemplate={vi.fn()}
+        openTemplatesWhenPristine
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const templatesTab = screen.queryByRole('tab', { name: 'Sjablonen' });
+    if (templatesTab !== null) {
+      expect(templatesTab).toHaveAttribute('aria-selected', 'false');
+    }
+    // Whatever tab IS selected, its panel exists — never a selected tab with
+    // no tabpanel.
+    const selected = screen.getAllByRole('tab').find((tab) => tab.getAttribute('aria-selected') === 'true');
+    expect(selected).toBeDefined();
+    expect(document.getElementById(selected!.getAttribute('aria-controls')!)).not.toBeNull();
+  });
   it('marks the current template with aria-checked and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
     const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
     openTab('Sjablonen');
