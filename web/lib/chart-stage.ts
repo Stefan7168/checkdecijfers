@@ -119,14 +119,42 @@ export function planeTransform(entryTransform: string, driftPx: number): string 
   return driftPx === 0 ? entryTransform : `${entryTransform} translateY(${driftPx}px)`;
 }
 
-/** A caption panel fades and rises into place as its centre approaches the
- * viewport centre (`distance` in viewport heights). */
-export function captionStyle(distance: number, reducedMotion: boolean): { opacity: number; transform: string } {
-  if (reducedMotion) return { opacity: 1, transform: 'translate3d(0, 0px, 0)' };
+// Editorial reveal (visual upgrade, task 2 of the chain — captions): on top
+// of the existing fade + rise, a far panel is also a touch SOFTER (out of
+// focus) and a touch SMALLER, both resolving to nothing by the moment its own
+// centre reaches the viewport centre — "sharpens as the panel becomes
+// active" per the brief. The opacity and Y-translate formulas below are
+// BYTE-IDENTICAL to before this task (only additive fields were introduced),
+// so every existing caller of those two numbers — including the component's
+// own `caption(i).style.opacity` assertions — is unaffected by this change;
+// what changed is the return SHAPE (a new `filter` field) and the
+// `transform` string, which now has a `scale(...)` trailing the existing
+// `translate3d(...)` — the same append-a-further-transform-function technique
+// `planeTransform` already uses on the chart plane, just inlined here since
+// there is only ever one caller.
+const CAPTION_BLUR_PEAK_PX = 6; // soft, never illegible — distance 0 (the only distance a caption is actually READ at) is always exactly 0
+const CAPTION_SCALE_MIN = 0.96; // "a subtle scale" per the brief — a held breath, not a zoom
+
+/** A caption panel fades, rises, softly blurs and shrinks a touch into place
+ * as its centre approaches the viewport centre (`distance` in viewport
+ * heights). The active panel (distance 0) is always fully opaque, perfectly
+ * sharp, unscaled and untranslated — the one state a reader is ever actually
+ * reading text in; distance ≥ 1 is faint, translated, gently defocused and a
+ * touch smaller, never harder to read than the plain fade already was.
+ * Reduced motion collapses to that exact same flat, sharp, at-rest style at
+ * EVERY distance — the guarantee this function must never weaken. */
+export function captionStyle(distance: number, reducedMotion: boolean): { opacity: number; transform: string; filter: string } {
+  if (reducedMotion) return { opacity: 1, transform: 'translate3d(0, 0px, 0)', filter: 'blur(0px)' };
   const d = clamp01(Math.abs(distance));
   const opacity = Math.round((1 - 0.7 * d) * 100) / 100;
   const y = Math.round(24 * d);
-  return { opacity, transform: `translate3d(0, ${y}px, 0)` };
+  const scale = Math.round((1 - (1 - CAPTION_SCALE_MIN) * d) * 1000) / 1000;
+  const blur = Math.round(CAPTION_BLUR_PEAK_PX * d * 100) / 100;
+  return {
+    opacity,
+    transform: `translate3d(0, ${y}px, 0) scale(${scale})`,
+    filter: `blur(${blur}px)`,
+  };
 }
 
 /** Where the spotlight vignette sits, as percentages of the chart box. */

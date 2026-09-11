@@ -143,12 +143,51 @@ describe('planeTransform — composes the drift onto the entry transform as a fu
   });
 });
 
-describe('captionStyle — the active panel is fully shown, far panels fade and sit lower', () => {
-  it('distance 0 is fully opaque and untranslated; distance ≥ 1 is faint; reduced motion is always shown', () => {
-    expect(captionStyle(0, false)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0)' });
-    expect(captionStyle(1, false).opacity).toBeLessThan(0.5);
-    expect(captionStyle(1, false).transform).not.toBe('translate3d(0, 0px, 0)');
-    expect(captionStyle(1, true)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0)' });
+// Editorial reveal (visual upgrade, task 2 of the chain — captions): the
+// opacity and Y-translate formulas below are UNCHANGED from before this
+// task; only the return SHAPE grew a `filter` field and `transform` grew a
+// trailing `scale(...)`. Every number pinned here that existed before this
+// task (the opacity curve, the translate distances) is the exact same
+// number as before — this task only ADDED the blur/scale fields, verified
+// separately below.
+describe('captionStyle — the active panel is fully shown, sharp and true size; far panels fade, blur softly and shrink a touch', () => {
+  it('distance 0 is fully opaque, untranslated, unscaled and perfectly sharp — the ONLY state a reader is actually reading text in', () => {
+    expect(captionStyle(0, false)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0) scale(1)', filter: 'blur(0px)' });
+  });
+  it('distance 1 is faint, translated, gently blurred and a touch smaller — the opacity/translate numbers are exactly what they were before this task', () => {
+    const far = captionStyle(1, false);
+    expect(far.opacity).toBeLessThan(0.5);
+    expect(far.transform).toBe('translate3d(0, 24px, 0) scale(0.96)');
+    expect(far.filter).toBe('blur(6px)');
+  });
+  it('the blur and the scale-down grow smoothly with distance, matching a plain linear ramp of the same peaks used at distance 1', () => {
+    expect(captionStyle(0.25, false).filter).toBe('blur(1.5px)');
+    expect(captionStyle(0.5, false).filter).toBe('blur(3px)');
+    expect(captionStyle(0.75, false).filter).toBe('blur(4.5px)');
+    expect(captionStyle(0.25, false).transform).toBe('translate3d(0, 6px, 0) scale(0.99)');
+    expect(captionStyle(0.5, false).transform).toBe('translate3d(0, 12px, 0) scale(0.98)');
+    expect(captionStyle(0.75, false).transform).toBe('translate3d(0, 18px, 0) scale(0.97)');
+    for (let d = 0; d <= 1; d += 0.1) {
+      expect(captionStyle(d, false).filter).toBe(`blur(${Math.round(6 * d * 100) / 100}px)`);
+    }
+  });
+  it('the scale-down is deliberately subtle — never below the small floor the brief calls for ("a subtle scale", not a zoom), at any distance', () => {
+    for (let d = 0; d <= 1; d += 0.05) {
+      const scale = Number(/scale\(([\d.]+)\)/.exec(captionStyle(d, false).transform)![1]);
+      expect(scale).toBeGreaterThanOrEqual(0.96);
+      expect(scale).toBeLessThanOrEqual(1);
+    }
+  });
+  it('clamps distance outside [-1, 1] exactly like the other stage functions — never more blur or a smaller scale than the distance-1 peak', () => {
+    expect(captionStyle(3, false)).toEqual(captionStyle(1, false));
+    expect(captionStyle(-3, false)).toEqual(captionStyle(1, false));
+  });
+  it('reduced motion is always the exact flat, sharp, unscaled resting style, at every distance — opacity 1, no blur, no scale, no translate: the one guarantee this function must never weaken', () => {
+    const rest = { opacity: 1, transform: 'translate3d(0, 0px, 0)', filter: 'blur(0px)' };
+    expect(captionStyle(0, true)).toEqual(rest);
+    expect(captionStyle(0.5, true)).toEqual(rest);
+    expect(captionStyle(1, true)).toEqual(rest);
+    expect(captionStyle(-1, true)).toEqual(rest);
   });
 });
 

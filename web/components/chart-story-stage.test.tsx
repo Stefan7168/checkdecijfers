@@ -610,6 +610,100 @@ describe('ChartStoryStage', () => {
     }
   });
 
+  // Editorial reveal (visual upgrade, task 2 of the chain — captions): the
+  // active caption must be the EXACT sharp/unscaled/untranslated resting
+  // style — the hard constraint this task must not weaken — while an
+  // off-centre one carries the new blur + scale exactly as `captionStyle`
+  // (chart-stage.ts, pinned on its own there) computes them. This proves the
+  // WIRING between the component and the pure function, the same pattern
+  // the entranceStyle/planeDriftPx/spotlightStyle tests already use.
+  it('the active caption sits at the exact sharp, unscaled resting style; an off-centre one blurs, shrinks and fades to match captionStyle exactly', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      scrollStage(scroller, 800); // centred on the first panel
+      const rest = captionStyle(0, false);
+      expect(caption(0).style.opacity).toBe(String(rest.opacity));
+      expect(caption(0).style.transform).toBe(rest.transform);
+      expect(caption(0).style.filter).toBe(rest.filter);
+      const far = captionStyle(1, false);
+      expect(caption(1).style.transform).toBe(far.transform);
+      expect(caption(1).style.filter).toBe(far.filter);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  // The hard constraint, restated at the component level: reduced motion
+  // must yield the unchanged simple style — opacity 1, no blur, no scale, no
+  // translate — for EVERY caption regardless of scroll position, on the
+  // SAME staticMotion gate the plane/atmosphere tests already exercise, not
+  // a second/different one.
+  it('reduced motion: every caption sits at the exact flat, sharp resting style regardless of distance', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const rest = captionStyle(0, true);
+      for (let i = 0; i < steps.length; i++) {
+        expect(caption(i).style.opacity).toBe(String(rest.opacity));
+        expect(caption(i).style.transform).toBe(rest.transform);
+        expect(caption(i).style.filter).toBe(rest.filter);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // Chrome decision: the old bordered, opaque `bg-card` box is gone —
+  // replaced by plain text over a borderless, decorative scrim. Guards
+  // against silently regressing back to the small-card look.
+  it('the caption no longer sits in a bordered card', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    expect(caption(0).className).not.toContain('border');
+    expect(caption(0).className).not.toContain('bg-card');
+  });
+
+  // The scrim and the accent rule are purely decorative chrome behind/around
+  // the text — no semantic content, never a click target, matching how the
+  // atmosphere layer itself is already proven inert elsewhere in this file.
+  it('the caption’s decorative scrim and accent rule are aria-hidden and never focusable', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const decorative = Array.from(caption(0).querySelectorAll('[aria-hidden="true"]')) as HTMLElement[];
+    expect(decorative.length).toBeGreaterThanOrEqual(2); // the scrim + the accent rule
+    const dialog = screen.getByRole('dialog');
+    for (const el of decorative) expect(focusables(dialog)).not.toContain(el);
+  });
+
+  // The accent rule is the ONLY colour tie the caption makes to the active
+  // finding — reusing `--stage-accent` exactly as the atmosphere task's own
+  // doc comment asks, never a re-derived colour (the hard constraint in the
+  // brief).
+  it('the caption’s accent rule reuses --stage-accent rather than a re-derived colour', () => {
+    render(<ChartStoryStage {...baseProps({ index: 1 })} />);
+    const rule = caption(1).querySelector('[aria-hidden="true"]') as HTMLElement | null;
+    expect(rule).not.toBeNull();
+    // The scrim is the first aria-hidden child (no inline colour of its
+    // own); the accent rule is the second and carries `--stage-accent`.
+    const accentRule = Array.from(caption(1).querySelectorAll('[aria-hidden="true"]'))[1] as HTMLElement;
+    expect(accentRule.style.backgroundColor).toBe('var(--stage-accent)');
+  });
+
+  // Typography: the title must read as a designed headline, not a small
+  // card label — the primary ask of this task.
+  it('the title reads as a designed headline — large, bold, tight tracking — not a small card label', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const title = screen.getByText(steps[0]!.title);
+    expect(title.className).toMatch(/text-(3xl|4xl|5xl)/);
+    expect(title.className).toContain('font-bold');
+    expect(title.className).toContain('tracking-tight');
+  });
+
   // Item 5: Recharts measures itself asynchronously, so the marker often
   // does not exist yet when the step effect reads it on open — the first
   // step of every presentation came up with no vignette at all.

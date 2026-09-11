@@ -585,9 +585,48 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                       aria-current={i === index ? 'step' : undefined}
                       className="flex min-h-[85vh] flex-col justify-center"
                     >
-                      <div className="max-w-md rounded-lg border border-border bg-card p-4" style={style}>
-                        <p className="text-base font-semibold text-foreground">{s.title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{s.caption}</p>
+                      {/* Editorial reveal (visual upgrade, task 2 of the
+                        * chain — captions): the old bordered `bg-card` box
+                        * read as UI chrome (a tooltip), wrong for a
+                        * full-viewport, magazine-style presentation. The
+                        * text now sits directly over the atmosphere layer;
+                        * a borderless, blurred `bg-background/70` scrim
+                        * (never a hard-edged card) sits BEHIND it via a
+                        * negative inset, purely for legibility — a real,
+                        * provable alpha blend, not a shadow trick, so
+                        * contrast holds regardless of which series colour
+                        * the atmosphere is currently tinted to:
+                        * ATMOSPHERE_MIX_MAX_PERCENT (chart-stage.ts) caps
+                        * the atmosphere layer itself at 30% colour toward
+                        * `--stage-accent`; this scrim is only 30%
+                        * see-through on top of THAT, so under 10% of the
+                        * accent colour can ever reach the pixels directly
+                        * behind this text — against a foreground/background
+                        * pair that is already near-pure black-on-white (or
+                        * white-on-black) to begin with (globals.css).
+                        * `backdrop-blur-md` additionally smooths whatever
+                        * texture shows through the remaining 30%, so there
+                        * is never a hard colour edge under a letterform.
+                        * The small accent rule above the title is the ONLY
+                        * colour tie to the active finding —
+                        * `var(--stage-accent)` reused exactly as the
+                        * atmosphere task's own doc comment asks, never a
+                        * re-derived colour. NOT verified in a real browser
+                        * in this task — see the task's report for what a
+                        * human should re-check (both themes, the blur
+                        * reveal's actual feel). */}
+                      <div className="relative max-w-xl" style={style}>
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -inset-x-6 -inset-y-6 -z-10 rounded-3xl bg-background/70 backdrop-blur-md sm:-inset-x-9 sm:-inset-y-8"
+                        />
+                        <div
+                          aria-hidden="true"
+                          className="mb-3 h-[3px] w-10 rounded-full sm:mb-4 sm:w-12"
+                          style={{ backgroundColor: 'var(--stage-accent)' }}
+                        />
+                        <p className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">{s.title}</p>
+                        <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg md:text-xl">{s.caption}</p>
                       </div>
                     </li>
                   );
@@ -595,12 +634,25 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
               </ol>
             </div>
           </div>
-          {/* Position dots — never "N of M". */}
+          {/* Position dots — never "N of M". A small premium touch (visual
+            * upgrade, task 2 of the chain): the active dot grows slightly
+            * and sits inside a soft glow ring in the SAME `--stage-accent`
+            * the caption's own rule and the atmosphere layer use — never a
+            * new colour, so the one piece of chrome outside the caption
+            * still reads as part of the same system. Digit-free, as
+            * required; `duration-300` keeps it inside the brief's
+            * 300-500ms family. */}
           <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
             {steps.map((s, i) => (
               <li key={s.id}>
                 <button type="button" aria-label={s.title} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
-                  <span className={'block size-2.5 rounded-full ' + (i === index ? 'bg-foreground' : 'bg-border hover:bg-muted-foreground')} />
+                  <span
+                    className={
+                      'block size-2.5 rounded-full transition-[transform,background-color,box-shadow] duration-300 ' +
+                      (i === index ? 'scale-125 bg-foreground' : 'bg-border hover:bg-muted-foreground')
+                    }
+                    style={i === index ? { boxShadow: '0 0 0 4px color-mix(in oklab, var(--stage-accent) 35%, transparent)' } : undefined}
+                  />
                 </button>
               </li>
             ))}
