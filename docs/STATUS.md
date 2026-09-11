@@ -29,12 +29,12 @@ attempt ("an auto-play fix, a subtle drift, a research note") didn't "move the n
 sequenced rebuild followed (ambient colour-tied atmosphere layer, editorial-scale captions, eased spotlight
 motion), with a real-browser check (not just jsdom) that caught and fixed one genuine mobile regression
 before shipping. Full verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark
-28/28, `test:docs` 11/11, real build, LOW code-review 0 findings). **CI (`gate`) was still `in_progress`
-as of the last check this session (started 13:42:11 UTC) — NOT yet independently confirmed green; verify
-before trusting `mergeable_state`.** A `send_later` check-in (`trig_01Urk5aGhPRDUwAHL8aTYJDt`, ~13:58 UTC)
-and a subscription (`subscribe_pr_activity`) are both active — the next session should still re-verify
-itself rather than assume either fired cleanly. Full detail: ADR 044's own addendum,
-[open-questions #239](open-questions.md).
+28/28, `test:docs` 11/11, real build, LOW code-review 0 findings). **CI (`gate`) CONFIRMED PASS** —
+`conclusion: "success"`, completed `2026-09-11T13:53:42Z` (~11.5 min run), `mergeable_state: "clean"`,
+verified via the GitHub API and a `check_suite.completed` webhook event, not assumed. Green and mergeable,
+now simply waiting on the owner's review — not on any further session action. A `subscribe_pr_activity`
+subscription stays active to catch any later review comment or conflict. Full detail: ADR 044's own
+addendum, [open-questions #239](open-questions.md).
 
 **PR #10/#11/#12 (the visual-upgrade programme, ADR 042/043/044) are all MERGED into `main`** — confirmed
 via the GitHub API: PR #10 `merged_at 2026-09-11T04:01:02Z`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on

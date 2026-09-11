@@ -22,12 +22,13 @@ historical — read the banner at its top) and complementing (not replacing)
   (`trig_01HBFeL8Xiz2GRXKo2SRV17z`, next fire ~2026-09-11T15:14 UTC) is armed — re-verify it actually fired
   and re-armed, don't assume.
 - **PR #13** (`Stefan7168/checkdecijfers#13`, Story stage motion/atmosphere upgrade, ADR 044's addendum,
-  branch `visual-story-motion`) — opened 2026-09-11T13:42:05Z, head `9407440`. **CI (`gate`) was still
-  `in_progress` as of the last check this session (started 13:42:11Z) — NOT independently confirmed green.**
-  A `send_later` check-in (`trig_01Urk5aGhPRDUwAHL8aTYJDt`, fired ~13:58 UTC) and a `subscribe_pr_activity`
-  subscription are both active — check whether either actually delivered before assuming the PR's state.
-  This PR was opened and is driven by this session per CLAUDE.md's PR rules: **do not leave it unaddressed**
-  if CI is red or there's an unresolved review thread — push a fix, or say once what's blocking, per the
+  branch `visual-story-motion`) — opened 2026-09-11T13:42:05Z, head `9407440`. **CI (`gate`) CONFIRMED
+  PASS** (`conclusion: "success"`, completed `2026-09-11T13:53:42Z`, ~11.5 min run), `mergeable_state:
+  "clean"` — green and mergeable as of the end of this session, waiting on the owner's review, not on any
+  further session action. A `subscribe_pr_activity` subscription stays active for any later review comment
+  or conflict. This PR was opened and is driven by this session per CLAUDE.md's PR rules: **do not leave it
+  unaddressed** if a future check finds CI red or an unresolved review thread — push a fix, or say once
+  what's blocking, per the
   drive-to-green rules. If it's green and mergeable, it's simply waiting on the owner's review from there.
 
 ## What's tracked but not started

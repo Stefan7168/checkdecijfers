@@ -32,9 +32,9 @@ the earlier history this entry picks up from.**
    (silent 404, not an error); the session-auth proxy needs a temporary allowlist entry for any debug route.
 5. **Verification (measured):** root + web typecheck clean; web suite 94 files / 1479 tests; backend
    143 files / 2211 tests; hermetic benchmark 28/28; `test:docs` 11/11; real `next build`; `/code-review`
-   LOW 0 findings. PR #13 opened, `subscribe_pr_activity` active, a `send_later` check-in armed
-   (`trig_01Urk5aGhPRDUwAHL8aTYJDt`, ~13:58 UTC) — **CI (`gate`) was still `in_progress` as of this
-   entry, not yet independently confirmed green.**
+   LOW 0 findings. PR #13 opened, `subscribe_pr_activity` active. **CI (`gate`) CONFIRMED PASS**
+   (`conclusion: "success"`, completed `2026-09-11T13:53:42Z`, ~11.5 min run), `mergeable_state: "clean"` —
+   green and mergeable, waiting on the owner's review.
 6. **Two Claude Code tooling discoveries, unrelated to the product:** the "no suggested-task popups"
    preference is `promptSuggestionEnabled: false` in `~/.claude/settings.json` (global); `dismiss_task`
    needs a `task_id` from a `spawn_task` call in the SAME session — asked to remove a suggestion with none
