@@ -5,7 +5,7 @@
 // ChartView (stage mode) driven by the active step; every animated property
 // is a transform/opacity on a wrapper OUTSIDE the exported svg (there is no
 // export here anyway). Zero libraries: CSS 3D + useStageScroll.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { ChartSpec } from '../backend/chart/types.ts';
@@ -16,6 +16,29 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 import { useStageScroll } from '../lib/use-stage-scroll.ts';
 import { ChartView } from './chart.tsx';
 import { Button } from './ui/button.tsx';
+
+// useStageScroll's progress/entry state updates on nearly every rAF-throttled
+// scroll frame while the reader is scrolling; without this wrapper, the
+// inline `<ChartView spec={spec} stage={{ step, overrides }} />` below built a
+// brand-new `stage` object every one of those ticks, and ChartView (a plain,
+// unmemoized component) re-ran its full body — resolvePresentation, row/
+// series-meta building, its own effects/ResizeObservers — on every tick
+// instead of only on an actual step change. `spec`/`step`/`overrides` are
+// each already stable across a scroll session (they only change on a real
+// step transition), so a shallow-compared memo here is safe and correct: it
+// changes nothing about what other ChartView callers do (this wrapper is
+// local to the stage, ChartView itself is untouched).
+const StageChart = memo(function StageChart({
+  spec,
+  step,
+  overrides,
+}: {
+  spec: ChartSpec;
+  step: StoryStep | null;
+  overrides: PresentationOverrides;
+}) {
+  return <ChartView spec={spec} stage={{ step, overrides }} />;
+});
 
 export interface ChartStoryStageProps {
   open: boolean;
@@ -267,8 +290,15 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     }
     // Fix round 2 (item 1): keys the stage does NOT handle (PageDown, Home,
     // End, Space) scroll the column natively — that is the reader driving,
-    // so the hook's index reports become authoritative from here on.
-    if (event.key !== 'Tab' && event.key !== 'Shift') readerScrolled.current = true;
+    // so the hook's index reports become authoritative from here on. Also
+    // stop auto-play here (ADR 044 decision 7 / #236(g): "stops on any user
+    // scroll/key") — without this, auto-play's own timer kept firing and
+    // yanked the reader back via scrollIntoView shortly after they navigated
+    // with one of these keys.
+    if (event.key !== 'Tab' && event.key !== 'Shift') {
+      readerScrolled.current = true;
+      setAutoplay(false);
+    }
     if (event.key === 'Tab') {
       const dialog = dialogRef.current;
       if (!dialog) return;
@@ -356,7 +386,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
             data-stage-plane="true"
           >
             <div ref={chartBoxRef} className="relative">
-              <ChartView spec={spec} stage={{ step, overrides }} />
+              <StageChart spec={spec} step={step} overrides={overrides} />
               {spot && plot && !staticMotion ? (
                 <div
                   aria-hidden="true"

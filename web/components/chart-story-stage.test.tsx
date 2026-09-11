@@ -313,6 +313,21 @@ describe('ChartStoryStage', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
   });
 
+  // ADR 044 decision 7 / #236(g) promise "stops on any ... key" — not just
+  // the arrows handled above. PageDown/Home/End/Space fall through to the
+  // native-scroll branch, which used to arm the reader-scroll guard without
+  // also stopping the timer, so auto-play kept firing and yanked the reader
+  // back shortly after they navigated with one of these keys.
+  it('a native-scroll key (PageDown, not an arrow) also switches auto-play off', () => {
+    vi.useFakeTimers();
+    render(<Harness />);
+    const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'PageDown' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('locks document.body.style.overflow while open and restores it on unmount', () => {
     document.body.style.overflow = 'scroll';
     const { unmount } = render(<ChartStoryStage {...baseProps()} />);
