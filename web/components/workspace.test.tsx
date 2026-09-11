@@ -78,7 +78,7 @@ vi.stubGlobal(
 );
 
 const FOOTER_EXACT =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project';
+  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project · Werkwijze · Privacy';
 
 beforeEach(() => {
   actions.listMyThreads.mockResolvedValue([]);
@@ -145,7 +145,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
       </>,
     );
     const footer = document.querySelector('footer')!;
-    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
   });
 
@@ -163,12 +163,15 @@ describe('Workspace — WP135 shell (flag on)', () => {
     // textContent ignores the icon (an aria-hidden svg without text), so the
     // owner's sentence is pinned byte-for-byte.
     expect(footer.textContent).toBe(FOOTER_EXACT);
-    expect(FOOTER_PREFIX + FOOTER_ABOUT_LABEL).toBe(FOOTER_EXACT);
+    // FOOTER_EXACT = the byte-pinned attribution prefix + about-label, now
+    // followed by the WP-B Werkwijze/Privacy links (checked separately below).
+    expect(FOOTER_EXACT.startsWith(FOOTER_PREFIX + FOOTER_ABOUT_LABEL)).toBe(true);
     expect(footer.querySelector('a[href="#over-dit-project"]')?.textContent).toBe(FOOTER_ABOUT_LABEL);
     const gear = footer.querySelector('a[href="/systeemoverzicht"]');
     expect(gear).not.toBeNull();
     expect(gear!.getAttribute('aria-label')).toBe('Systeemoverzicht');
-    expect(footer.textContent).not.toMatch(/privacy/i);
+    expect(footer.querySelector('a[href="/werkwijze"]')?.textContent).toBe('Werkwijze');
+    expect(footer.querySelector('a[href="/privacy"]')?.textContent).toBe('Privacy');
   });
 
   it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', async () => {
@@ -180,7 +183,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
     pathname.current = '/credits';
     render(<SiteFooter />);
     const footer = document.querySelector('footer')!;
-    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
     expect(footer.querySelector('a[href="/systeemoverzicht"]')).not.toBeNull();
     pathname.current = '/';

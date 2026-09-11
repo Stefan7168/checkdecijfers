@@ -105,7 +105,9 @@ export async function Landing() {
           </div>
         </section>
 
-        {/* How it works — the honest mechanism, in three steps */}
+        {/* How it works — the honest mechanism, now in four steps
+            (WP-B, journey programme phase 3 R5.4: a fourth "Publiceer"/
+            "Publish" step). 2x2 on `sm`+ so the grid stays balanced at 4. */}
         <section id="hoe-het-werkt" className="border-b border-border py-12">
           {/* `over-dit-project` is the site footer's "Over dit project" anchor
               (site-footer.tsx renders it on "/"): the logged-in workspace has
@@ -114,7 +116,7 @@ export async function Landing() {
           <h2 id="over-dit-project" className="text-2xl text-foreground">
             {t(lang, 'landing.howItWorksHeading')}
           </h2>
-          <ol className="mt-6 grid gap-6 sm:grid-cols-3">
+          <ol className="mt-6 grid gap-6 sm:grid-cols-2">
             <li>
               <p className="tnum text-sm font-semibold text-primary">1</p>
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step1Title')}</h3>
@@ -129,6 +131,11 @@ export async function Landing() {
               <p className="tnum text-sm font-semibold text-primary">3</p>
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step3Title')}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step3Body')}</p>
+            </li>
+            <li>
+              <p className="tnum text-sm font-semibold text-primary">4</p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step4Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step4Body')}</p>
             </li>
           </ol>
         </section>
