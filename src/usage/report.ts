@@ -176,15 +176,22 @@ export async function topRefusalReasonsReport(db: Db, limit = 10): Promise<Refus
  * on them. "Started" = every row ever created; "delivered"/"failed" map to
  * the table's own `status` values ('failed' folds in 'unanswerable' — both
  * are non-delivery terminal outcomes from the requester's point of view).
- * Credit cost = the sum of the `onboarding_cost` ledger debits those rows
- * reserved (`credit_transactions.reason = 'onboarding_cost'`, migration 012's
- * ledger widening) — reported as a POSITIVE credit amount (the ledger stores
- * debits as negative deltas). */
+ * `creditsSpent` = NET credits spent, AFTER refunds: the sum of the
+ * `onboarding_cost` ledger debits those rows reserved
+ * (`credit_transactions.reason = 'onboarding_cost'`, migration 012's ledger
+ * widening) MINUS every `compensation` row that reversed one of them
+ * (`related_transaction_id`, migration 005; migration 023 bounds a
+ * compensation to reversing exactly such a debit). Strong-tier review
+ * MEDIUM-3: summing the debits alone counted a REFUNDED failed fetch as
+ * spend, which is exactly the number the owner would read as cost. Reported
+ * as a POSITIVE credit amount (the ledger stores debits as negative deltas,
+ * compensations as positive ones). */
 export interface OnDemandFetchReport {
   started: number;
   delivered: number;
   failed: number;
   pendingOrRunning: number;
+  /** Net credits spent (after refunds) — see the doc comment above. */
   creditsSpent: number;
 }
 
@@ -203,10 +210,18 @@ export async function onDemandFetchesReport(db: Db): Promise<OnDemandFetchReport
     else if (r.status === 'failed' || r.status === 'unanswerable') failed += n;
     else pendingOrRunning += n;
   }
+  // MEDIUM-3: net of refunds. Migration 005's partial unique index on
+  // `related_transaction_id where reason = 'compensation'` guarantees at most
+  // ONE compensation per debit, so the left join can never multiply a debit
+  // row. A debit's delta is negative and its compensation's positive, so
+  // `-d.delta - c.delta` is 0 for a fully refunded fetch.
   const { rows: costRows } = await db.query(
-    `select coalesce(sum(-delta), 0)::int as spent
-       from credit_transactions
-      where reason = 'onboarding_cost'`,
+    `select coalesce(sum(-d.delta - coalesce(c.delta, 0)), 0)::int as spent
+       from credit_transactions d
+       left join credit_transactions c
+         on c.related_transaction_id = d.id
+        and c.reason = 'compensation'
+      where d.reason = 'onboarding_cost'`,
   );
   return {
     started,

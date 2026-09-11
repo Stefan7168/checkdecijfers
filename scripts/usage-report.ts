@@ -62,7 +62,7 @@ function printReport(report: UsageReport): void {
   console.log(`  delivered: ${report.onDemandFetches.delivered}`);
   console.log(`  failed: ${report.onDemandFetches.failed}`);
   console.log(`  pending/running: ${report.onDemandFetches.pendingOrRunning}`);
-  console.log(`  credits spent: ${report.onDemandFetches.creditsSpent}`);
+  console.log(`  net credits spent (after refunds): ${report.onDemandFetches.creditsSpent}`);
 
   printWeeklyTable('Trial questions', report.trial.questions);
   console.log(`  trial visitors who later signed up: ${report.trial.visitorsWhoSignedUp}`);

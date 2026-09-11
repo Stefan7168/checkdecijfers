@@ -247,6 +247,45 @@ describe('onDemandFetchesReport', () => {
       expect(report.creditsSpent).toBe(300);
     });
   });
+
+  // Strong-tier review MEDIUM-3: creditsSpent is NET of refunds. A failed
+  // fetch whose debit was compensated (migration 005's related_transaction_id,
+  // bounded by migration 023) cost the user nothing, so it must not be
+  // reported as spend.
+  it('nets out the compensation credits that refunded a failed fetch', async () => {
+    await withDb(async (db) => {
+      const u1 = randomUUID();
+      const delivered = await insertLedger(db, {
+        userId: u1,
+        delta: -100,
+        reason: 'onboarding_cost',
+        requestId: randomUUID(),
+        createdAt: RECENT,
+      });
+      const refunded = await insertLedger(db, {
+        userId: u1,
+        delta: -100,
+        reason: 'onboarding_cost',
+        requestId: randomUUID(),
+        createdAt: RECENT,
+      });
+      await insertLedger(db, {
+        userId: u1,
+        delta: 100,
+        reason: 'compensation',
+        relatedId: refunded,
+        createdAt: RECENT,
+      });
+      await insertPendingRequest(db, { userId: u1, status: 'delivered', debitTransactionId: delivered, createdAt: RECENT });
+      await insertPendingRequest(db, { userId: u1, status: 'failed', debitTransactionId: refunded, createdAt: RECENT });
+
+      const report = await onDemandFetchesReport(db);
+      expect(report.started).toBe(2);
+      expect(report.failed).toBe(1);
+      // 200 debited, 100 refunded ⇒ 100 net, not 200.
+      expect(report.creditsSpent).toBe(100);
+    });
+  });
 });
 
 describe('trialReport', () => {
