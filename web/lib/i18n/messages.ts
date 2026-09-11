@@ -589,6 +589,55 @@ const nl = {
   'chart.panel.frameBgRefused': 'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
   'chart.panel.close': 'Sluiten',
   'chart.panel.dialogLabel': 'Opmaak',
+
+  // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
+  // links and the landing "Publiceer" step. Added as one block at the tail
+  // per the WP-B brief (this file is edited in parallel by another WP).
+  'footer.werkwijzeLabel': 'Werkwijze',
+  'footer.privacyLabel': 'Privacy',
+  'trust.draftNote': 'Concept — wordt nog nagekeken.',
+  'werkwijze.pageTitle': 'Werkwijze — Check de Cijfers',
+  'werkwijze.heading': 'Hoe we werken',
+  'werkwijze.publicClaim':
+    'Elk getal dat we tonen is herleidbaar naar een officiële CBS-cel, met bron en datum erbij getoond.',
+  'werkwijze.step1Title': '1. Je stelt een vraag',
+  'werkwijze.step1Body':
+    'Een taalmodel leest alleen wat je vraagt — het rekent nooit en verzint nooit een cijfer. Het herkent welk CBS-onderwerp, welke regio en welke periode je bedoelt.',
+  'werkwijze.step2Title': '2. Deterministische code haalt het cijfer op',
+  'werkwijze.step2Body':
+    'De vraag wordt vertaald naar een exacte opzoeking in onze eigen database met vooraf ingeladen CBS-tabellen. Geen enkel getal komt uit het taalmodel zelf.',
+  'werkwijze.step3Title': '3. We tonen het antwoord met bron en datum',
+  'werkwijze.step3Body':
+    'Elk antwoord vermeldt de CBS-tabel, de synchronisatiedatum en de licentie (CC BY 4.0), zodat je het zelf kunt naslaan.',
+  'werkwijze.provisionalHeading': 'Wat betekent "voorlopig"?',
+  'werkwijze.provisionalBody':
+    'CBS publiceert sommige cijfers eerst als voorlopig of nader voorlopig voordat ze definitief worden. Als een cijfer niet definitief is, zeggen we dat er expliciet bij. Een definitief cijfer kan later alsnog door CBS worden herzien — dat gebeurt af en toe bij grote revisies.',
+  'werkwijze.refusalHeading': 'Wat betekent een weigering?',
+  'werkwijze.refusalBody':
+    'Als een vraag niet eenduidig is, buiten onze geladen gegevens valt, of om een voorspelling of mening vraagt, weigeren we liever te antwoorden dan te gokken. Je krijgt dan uitleg en, waar mogelijk, een bruikbaar alternatief.',
+  'werkwijze.notCoveredHeading': 'Wat de claim niet dekt',
+  'werkwijze.notCoveredBody':
+    'De herleidbaarheidsclaim geldt voor CBS-cijfers uit ons register. Ze geldt niet voor je eigen geüploade data, voor internetresultaten (apart gemarkeerd als niet geverifieerd), of voor andere bronnen — die kunnen in de toekomst worden toegevoegd, maar zijn dat vandaag niet.',
+  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.heading': 'Privacy',
+  'privacy.storedHeading': 'Wat we bewaren',
+  'privacy.storedBody':
+    'We bewaren je vragen en antwoorden als een auditspoor (zodat elk getal herleidbaar blijft) en je accountgegevens (e-mailadres). Vragen van bezoekers zonder account bewaren we losstaand van je account.',
+  'privacy.retentionHeading': 'Hoe lang we het bewaren',
+  'privacy.retentionBody':
+    'Vraaggeschiedenis bij een account bewaren we 2 jaar; vragen van anonieme bezoekers (proefvragen) bewaren we 90 dagen. Je kunt je eigen vraaggeschiedenis altijd zelf verwijderen via het accountmenu.',
+  'privacy.llmHeading': 'Verwerking door een taalmodel',
+  'privacy.llmBody':
+    'Je vraag wordt verwerkt door een taalmodel van Anthropic om de vraag te begrijpen en het antwoord te verwoorden — nooit de ruwe CBS-cijfers zelf, die komen altijd uit onze eigen database.',
+  'privacy.paymentHeading': 'Betalingen',
+  'privacy.paymentBody': 'Stripe verwerkt betalingen als onze betaaldienstverlener. Wij slaan geen kaart- of bankgegevens op.',
+  'privacy.cookiesHeading': 'Cookies',
+  'privacy.cookiesBody': 'We gebruiken geen trackingcookies of analytics — alleen een noodzakelijk sessiecookie om je ingelogd te houden.',
+  'privacy.contactHeading': 'Contact',
+  'privacy.contactBody': 'Vragen over je gegevens? Mail [contact e-mail — eigenaar vult dit aan].',
+  'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
+  'landing.step4Title': '4. Publiceer',
+  'landing.step4Body': 'Kies een sjabloon, download of embed — bron en datum reizen mee.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1070,6 +1119,55 @@ const en: Messages = {
   'chart.panel.frameBgRefused': 'This background would make a series unreadable. Choose another colour or turn the inset card on.',
   'chart.panel.close': 'Close',
   'chart.panel.dialogLabel': 'Style',
+
+  // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
+  // links and the landing "Publish" step. Added as one block at the tail
+  // per the WP-B brief (this file is edited in parallel by another WP).
+  'footer.werkwijzeLabel': 'How we work',
+  'footer.privacyLabel': 'Privacy',
+  'trust.draftNote': 'Draft — under review.',
+  'werkwijze.pageTitle': 'How we work — Check de Cijfers',
+  'werkwijze.heading': 'How we work',
+  'werkwijze.publicClaim':
+    'Every number we show is traceable to an official CBS cell, with source and date shown alongside it.',
+  'werkwijze.step1Title': '1. You ask a question',
+  'werkwijze.step1Body':
+    'A language model only reads what you ask — it never calculates and never invents a number. It recognises which CBS topic, region and period you mean.',
+  'werkwijze.step2Title': '2. Deterministic code looks up the number',
+  'werkwijze.step2Body':
+    'The question is translated into an exact lookup in our own database of pre-loaded CBS tables. No number ever comes from the language model itself.',
+  'werkwijze.step3Title': '3. We show the answer with source and date',
+  'werkwijze.step3Body':
+    'Every answer states the CBS table, the sync date and the licence (CC BY 4.0), so you can look it up yourself.',
+  'werkwijze.provisionalHeading': 'What does "provisional" mean?',
+  'werkwijze.provisionalBody':
+    'CBS first publishes some figures as provisional before they become definitive. When a figure is not definitive, we say so explicitly. A definitive figure can still be revised by CBS later — this happens occasionally with large revisions.',
+  'werkwijze.refusalHeading': 'What does a refusal mean?',
+  'werkwijze.refusalBody':
+    'If a question is ambiguous, falls outside our loaded data, or asks for a prediction or opinion, we would rather refuse than guess. You get an explanation and, where possible, a usable alternative.',
+  'werkwijze.notCoveredHeading': 'What the claim does not cover',
+  'werkwijze.notCoveredBody':
+    'The traceability claim applies to CBS figures from our registry. It does not apply to your own uploaded data, to internet results (marked separately as unverified), or to other sources — those may be added later, but are not covered today.',
+  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.heading': 'Privacy',
+  'privacy.storedHeading': 'What we store',
+  'privacy.storedBody':
+    'We store your questions and answers as an audit trail (so every number stays traceable) and your account details (e-mail address). Questions from visitors without an account are stored separately from your account.',
+  'privacy.retentionHeading': 'How long we keep it',
+  'privacy.retentionBody':
+    'Question history tied to an account is kept for 2 years; questions from anonymous visitors (trial questions) are kept for 90 days. You can always delete your own question history yourself via the account menu.',
+  'privacy.llmHeading': 'Processing by a language model',
+  'privacy.llmBody':
+    'Your question is processed by a language model from Anthropic to understand the question and phrase the answer — never the raw CBS figures themselves, which always come from our own database.',
+  'privacy.paymentHeading': 'Payments',
+  'privacy.paymentBody': 'Stripe processes payments as our payment provider. We do not store card or bank details.',
+  'privacy.cookiesHeading': 'Cookies',
+  'privacy.cookiesBody': 'We do not use tracking cookies or analytics — only a necessary session cookie to keep you logged in.',
+  'privacy.contactHeading': 'Contact',
+  'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
+  'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
+  'landing.step4Title': '4. Publish',
+  'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
