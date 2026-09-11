@@ -646,7 +646,7 @@ const nl = {
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Vragen over je gegevens? Mail [contact e-mail — eigenaar vult dit aan].',
   'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
-  'landing.step4Title': '4. Publiceer',
+  'landing.step4Title': 'Publiceer',
   'landing.step4Body': 'Kies een sjabloon, download of embed — bron en datum reizen mee.',
   // WP-C (journey programme, session 96): R10 credits-page pack copy, R2.4
   // purchase poll banner, R9.2 phone-header account-menu labels (reusing
@@ -1234,7 +1234,7 @@ const en: Messages = {
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
   'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
-  'landing.step4Title': '4. Publish',
+  'landing.step4Title': 'Publish',
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
   // WP-C (journey programme, session 96): mirrors the Dutch block above —
   // R10 credits-page pack copy, R5.3 the anonymous-Insights login line.

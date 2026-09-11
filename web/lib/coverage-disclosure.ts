@@ -24,6 +24,8 @@ import { freshestForCanonical } from '../backend/query/run.ts';
 import { periodCodeToNl } from '../backend/answer/respond/period-nl.ts';
 import { getDb } from './db.ts';
 
+const curatedKeys = new Set(CANONICAL_MEASURES.map((m) => m.key));
+
 const TTL_MS = 30 * 60 * 1000;
 
 export interface CoverageDisclosureTable {
@@ -90,7 +92,11 @@ async function buildDisclosure(): Promise<CoverageDisclosure> {
       id: table.id,
       title: table.title,
       syncedOn: dateOnly(table.lastSyncAt),
-      concepts: table.measures.map((m) => m.label),
+      // Only CURATED measures become concepts: an on-demand table's
+      // uncurated measures fall back to raw CBS measure titles ("Een zeer
+      // slecht moment, Zeer onwaarschijnlijk…" — seen in the session-97
+      // browser pass), which read as noise, not as topics a reader can ask.
+      concepts: table.measures.filter((m) => curatedKeys.has(m.key)).map((m) => m.label),
       example: await exampleForTable(table.id),
     })),
   );

@@ -125,11 +125,11 @@ describe('loadCoverageDisclosure', () => {
     expect(disclosure!.tables[0]!.example).toBeNull();
   });
 
-  it('carries the table concepts through as the measure labels', async () => {
+  it('carries only CURATED measures through as concepts (an uncurated on-demand measure is noise, not a topic)', async () => {
     buildCoverageReport.mockResolvedValue(report());
     freshestForCanonical.mockResolvedValue(null);
     const disclosure = await loadCoverageDisclosure();
-    expect(disclosure!.tables[0]!.concepts).toEqual(['inflatie (CPI)', 'consumentenprijsindex']);
+    expect(disclosure!.tables[0]!.concepts).toEqual(['inflatie (CPI)']);
   });
 
   it('builds once and serves from cache within the TTL', async () => {

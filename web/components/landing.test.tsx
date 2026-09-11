@@ -44,7 +44,7 @@ describe('Landing — nl (default)', () => {
   it('renders the fourth "Publiceer" step', async () => {
     getLang.mockResolvedValue('nl');
     render(await Landing());
-    expect(screen.getByRole('heading', { name: '4. Publiceer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Publiceer' })).toBeInTheDocument();
     expect(screen.getByText('Kies een sjabloon, download of embed — bron en datum reizen mee.')).toBeInTheDocument();
   });
 });
@@ -77,7 +77,7 @@ describe('Landing — en', () => {
   it('renders the fourth "Publish" step alongside the original three', async () => {
     getLang.mockResolvedValue('en');
     render(await Landing());
-    expect(screen.getByRole('heading', { name: '4. Publish' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Publish' })).toBeInTheDocument();
     expect(screen.getByText('Pick a template, download or embed — source and date travel with it.')).toBeInTheDocument();
   });
 
