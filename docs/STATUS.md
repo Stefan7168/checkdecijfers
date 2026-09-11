@@ -43,8 +43,8 @@ decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (AD
   answerable, 6/6 refusal/clarify, 0 fabricated; web 89 files / 1338 tests green; real `next build`
   clean; `/code-review` LOW 0 findings. Real browser (local dev server against the live DB, the homepage's
   five charts): light + dark at 1280 px, phone at 375 px — hydration, the measured-height path, hollow
-  provisional markers, halo and baseline confirmed. **CI on PR #10: pending at the time of writing —
-  verify with `gh pr checks 10`.**
+  provisional markers, halo and baseline confirmed. **CI on PR #10: gate PASS (10m20s) on its head `4b66379` — verified
+  with `gh pr checks 10` at the end of the night.**
 - **Docs:** ADR 042 (new) + ADR 014 note; 12-huisstijl (Charts rewritten, history kept); the session-87
   redesign spec (superseded note); 08-build-plan ("Visual upgrade programme" section + WP218 note);
   03-mvp-scope; 04-architecture row; open-questions #232–#234; RUNBOOK go-live note; lessons (session 95);
@@ -62,7 +62,7 @@ decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (AD
   docs excluded); benchmark 14/14 + 6/6 + 0 fabricated; web 91 files / 1366 tests; real `next build` clean
   (re-run solo on the phase-2 head after an overlapping phase-3 RED step invalidated the chain's first build
   result); `/code-review` LOW 0 findings; the Templates tab and an applied Presentatie look checked in a real
-  browser on the dev server. **CI on PR #11: pending at the time of writing — `gh pr checks 11`.**
+  browser on the dev server. **CI on PR #11: gate PASS (11m23s) on its head `c1df16c` — verified with `gh pr checks 11`.**
 - **Phase 3 — the Story stage (ADR [044](decisions/044-story-stage.md)) — BUILT the same night, branch
   `visual-story-stage` stacked on phase 2, PR #12 open for the owner's review (base = PR #11's branch).**
   "Present" on the Insights panel opens a full-screen, scroll-driven presentation: the chart pinned left as
@@ -88,8 +88,8 @@ decisions) — VISUAL UPGRADE PHASE 1 BUILT: THE DESIGNED DEFAULT CHART LOOK (AD
   lands on 3; boundary scroll crossfades captions with the plane flat; auto-play 1→2→3 across a `scroll`
   event, stops on wheel, off at the last finding; Escape/focus/lock; phone 375 px (50vh pinned area,
   card scrolls inside, top reachable, no tilt, no overflow); dark legible; desktop entry tilt 8° at the top.
-  Not checked: classic scrollbars, smooth-scroll motion itself. CI on PR #12: pending when written —
-  `gh pr checks 12`.**
+  Not checked: classic scrollbars, smooth-scroll motion itself. CI on PR #12: gate PASS (11m27s) on `7f57f40`, verified with
+  `gh pr checks 12`; a docs-only commit follows it.**
 - **Known debt carried:** this file is still the multi-session dump session 94 flagged; not fixed here.
 
 **▶ SESSION 94 (2026-09-10, owner present, continuing session 93's embed-charts branch review) — PR #9

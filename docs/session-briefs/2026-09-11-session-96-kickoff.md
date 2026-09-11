@@ -12,7 +12,8 @@ docs/08-build-plan.md § "Visual upgrade programme" → ADR 042/043/044.
   - **PR #11** — phase 2, templates v1 (ADR 043), branch `visual-templates-v1`, base =
     `visual-designed-default`. CI gate PASS.
   - **PR #12** — phase 3, the Story stage (ADR 044), branch `visual-story-stage`, base =
-    `visual-templates-v1`. CI was pending when this was written: `gh pr checks 12`.
+    `visual-templates-v1`. CI gate PASS (11m27s) on `7f57f40`; the final docs-only commit after it gets its
+    own run — confirm with `gh pr checks 12`.
   Merge order: #10 → #11 → #12 (each PR's base is the previous branch; after #10 merges, retarget #11
   to `main` — GitHub does this automatically for stacked PRs when the base branch is deleted on merge —
   then #12 the same way).
