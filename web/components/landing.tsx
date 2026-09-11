@@ -41,15 +41,17 @@
 // untouched (see docs/superpowers/specs/2026-09-09-language-switch-design.md
 // §1).
 import Link from 'next/link';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t } from '../lib/i18n/messages.ts';
+import { CoverageDisclosureView } from './coverage-disclosure.tsx';
 import { OntdekSectie } from './ontdek.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
 
-export async function Landing() {
+export async function Landing({ coverage = null }: { coverage?: CoverageDisclosure | null } = {}) {
   const lang = await getLang();
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -142,6 +144,19 @@ export async function Landing() {
 
         {/* Free discovery charts — deterministic, LLM-free (ADR 035) */}
         <OntdekSectie />
+
+        {/* WP-E (R4): the coverage disclosure — no example handler is passed
+          * here, so CoverageDisclosureView renders each example as plain
+          * text ("bijvoorbeeld: …") instead of a click-to-fill button; the
+          * landing page has no composer to fill. */}
+        {coverage ? (
+          <section className="border-b border-border py-12">
+            <h2 className="text-2xl text-foreground">{t(lang, 'coverage.landingHeading')}</h2>
+            <div className="mt-4 max-w-xl">
+              <CoverageDisclosureView coverage={coverage} />
+            </div>
+          </section>
+        ) : null}
 
         {/* Credits, plainly */}
         <section className="py-12">

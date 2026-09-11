@@ -679,6 +679,21 @@ const nl = {
   'chat.ownDataComingSoon': 'Eigen data (binnenkort)',
   'chat.ownDataComingSoonTitle':
     'Binnenkort beschikbaar: koppel eigen data (bestand, spreadsheet of database)',
+  // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
+  // R4: the coverage disclosure — collapsed by default, one row per served
+  // CBS table (title, MEASURED sync date, concepts, an optional example
+  // question), plus an honest "Eurostat — coming" group that never claims to
+  // answer anything (principle c). Digit-free chrome — the sync date and
+  // example question are CONTENT (measured/registry-built), not chart-card
+  // chrome, so they are exempt from the whole-card digit scan.
+  'coverage.summary': 'Welke bronnen zijn ingebouwd?',
+  'coverage.cbsHeading': 'CBS',
+  'coverage.syncedOn': 'gesynchroniseerd {date}',
+  'coverage.exampleLabel': 'bijvoorbeeld: {question}',
+  'coverage.onRequestLine': 'Andere CBS-onderwerpen halen we op verzoek op.',
+  'coverage.eurostatHeading': 'Eurostat — binnenkort',
+  'coverage.eurostatBody': 'We werken aan Eurostat-cijfers als aanvullende bron.',
+  'coverage.landingHeading': 'Dit weten we nu',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1224,6 +1239,15 @@ const en: Messages = {
   'chat.slowWaitNotice': 'This is taking a little longer than usual; we are still checking the answer.',
   'chat.ownDataComingSoon': 'Own data (coming soon)',
   'chat.ownDataComingSoonTitle': 'Coming soon: connect your own data (file, spreadsheet or database)',
+  // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
+  'coverage.summary': 'Which sources are built in?',
+  'coverage.cbsHeading': 'CBS',
+  'coverage.syncedOn': 'synced {date}',
+  'coverage.exampleLabel': 'e.g.: {question}',
+  'coverage.onRequestLine': 'Other CBS topics we fetch on request.',
+  'coverage.eurostatHeading': 'Eurostat — coming',
+  'coverage.eurostatBody': 'We are working on Eurostat figures as an additional source.',
+  'coverage.landingHeading': 'What we know today',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

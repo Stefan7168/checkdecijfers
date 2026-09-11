@@ -18,6 +18,7 @@ import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
@@ -98,6 +99,7 @@ export function Workspace({
   attachments,
   chartStyle,
   packs,
+  coverage,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -132,6 +134,11 @@ export function Workspace({
    * covering-pack lookup. Absent/empty ⇒ that message's buy line stays
    * generic (byte-safe for call sites not yet passing it). */
   packs?: ChatPack[];
+  /** WP-E (R4): the coverage disclosure, read server-side (page.tsx,
+   * `loadCoverageDisclosure`) and passed through unchanged into Chat's own
+   * `coverage` prop. Null when the registry read has never once succeeded;
+   * that's Chat's own "render nothing" case, not Workspace's concern. */
+  coverage?: CoverageDisclosure | null;
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -421,6 +428,7 @@ export function Workspace({
         <Chat
           onOutcome={handleOutcome}
           packs={packs}
+          coverage={coverage}
           pricing={{
             simple: simplePrice,
             clarification: clarificationPrice,

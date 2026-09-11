@@ -80,4 +80,37 @@ describe('Landing — en', () => {
     expect(screen.getByRole('heading', { name: '4. Publish' })).toBeInTheDocument();
     expect(screen.getByText('Pick a template, download or embed — source and date travel with it.')).toBeInTheDocument();
   });
+
 });
+
+describe('Landing — coverage disclosure (WP-E, R4)', () => {
+  it('renders the "Dit weten we nu" section with the example as plain text (no composer to fill)', async () => {
+    getLang.mockResolvedValue('nl');
+    render(
+      await Landing({
+        coverage: {
+          tables: [
+            {
+              id: '86141NED',
+              title: 'Consumentenprijzen; prijsindex 2015=100',
+              syncedOn: '2026-07-03',
+              concepts: ['inflatie (CPI)'],
+              example: 'Wat was de inflatie in 2025?',
+            },
+          ],
+        },
+      }),
+    );
+    expect(screen.getByRole('heading', { name: 'Dit weten we nu' })).toBeInTheDocument();
+    expect(screen.getByText('Welke bronnen zijn ingebouwd?')).toBeInTheDocument();
+    expect(screen.getByText('bijvoorbeeld: Wat was de inflatie in 2025?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /inflatie/ })).toBeNull();
+  });
+
+  it('renders no coverage section when coverage is null', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await Landing());
+    expect(screen.queryByText('Welke bronnen zijn ingebouwd?')).toBeNull();
+  });
+});
+

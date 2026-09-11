@@ -29,6 +29,7 @@ import { getUserChartStyle } from '../backend/chart/user-styles.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { Landing } from '../components/landing.tsx';
 import { getDb } from '../lib/db.ts';
+import { loadCoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
 
 export default async function Home({
@@ -42,13 +43,19 @@ export default async function Home({
   // history reads below.
   const { [PURCHASE_PARAM]: purchase } = await searchParams;
   const userId = await currentUserId();
+  // WP-E (R4): the coverage disclosure is read in BOTH branches below —
+  // logged-out (Landing's "Dit weten we nu" section) and logged-in (the
+  // chat composer's collapsed link) — from its own 30-min cache
+  // (web/lib/coverage-disclosure.ts), so a single server read serves the
+  // whole request regardless of which branch runs.
+  const coverage = await loadCoverageDisclosure();
   if (userId === null) {
     // Session-51 owner decision: '/' is the product's public face. A
     // logged-out visitor gets the landing (no chargeable entry point; its
     // only data reads are the cached, fail-safe Ontdek discovery charts —
     // session 52, ADR 035) instead of a context-free login redirect;
     // proxy.ts allowlists '/' exact-match to let them reach it.
-    return <Landing />;
+    return <Landing coverage={coverage} />;
   }
 
   const db = getDb();
@@ -107,6 +114,7 @@ export default async function Home({
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
         chartStyle={wsChartStyle?.style ?? null}
         packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
+        coverage={coverage}
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}

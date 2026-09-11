@@ -33,6 +33,7 @@ import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCopy, escapeHtml as escapeHtmlForCopy } from '../lib/copy-answer.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
 import { sourceTableUrl } from '../lib/statline.ts';
@@ -50,6 +51,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
 import { AnswerProof } from './answer-proof.tsx';
 import { ChartView } from './chart.tsx';
+import { CoverageDisclosureView } from './coverage-disclosure.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -340,6 +342,7 @@ export function Chat({
   pricing,
   attachments,
   packs,
+  coverage,
   // WP135 (ADR 033): workspace wiring. ALL optional — a prop-less / Dashboard
   // call site is byte-identical to today (no threadId ever leaves the client,
   // the dock never engages, the reset effect no-ops). `onThreadId`'s PRESENCE
@@ -363,6 +366,11 @@ export function Chat({
   /** R2.2 (WP-D): the covering-pack lookup for the insufficient-credits
    * message. Absent ⇒ that message's buy line stays generic (no named pack). */
   packs?: ChatPack[];
+  /** WP-E (R4): the coverage disclosure ("which sources are built in"),
+   * read server-side (page.tsx, `loadCoverageDisclosure`) and rendered
+   * collapsed directly under the price line. Absent/null ⇒ nothing renders
+   * — the empty state stays a bare composer otherwise (session 87). */
+  coverage?: CoverageDisclosure | null;
   /** ≥ lg AND the workspace is active: visuals move to the right-pane dock and
    * render here as an in-flow reference chip instead (each visual exactly
    * once). Below lg / on the Dashboard this is false and visuals render inline
@@ -569,6 +577,11 @@ export function Chat({
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // WP-E (R4): the coverage-disclosure example click fills the input (the
+  // #75 fill-don't-send convention, like every other example/follow-up
+  // chip) and moves focus there so the click reads as "now edit or send",
+  // not a silent no-op.
+  const composerInputRef = useRef<HTMLInputElement>(null);
 
   // WP202b preview (owner request, session 86): "Link toevoegen" opens the
   // inline URL row the original design sketched (D10), so the intended flow
@@ -1429,6 +1442,7 @@ export function Chat({
       ) : null}
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
+          ref={composerInputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -1452,6 +1466,15 @@ export function Chat({
           {lowBalance ? t('chat.lowBalanceSuffix') : ''}
         </p>
       ) : null}
+      {/* WP-E (R4): collapsed by default — the empty state stays a bare
+        * composer (session 87) unless the visitor opens this themselves. */}
+      <CoverageDisclosureView
+        coverage={coverage}
+        onPickExample={(question) => {
+          setInput(question);
+          composerInputRef.current?.focus();
+        }}
+      />
         </div>
       </div>
     </div>

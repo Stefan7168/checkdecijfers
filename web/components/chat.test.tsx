@@ -2221,3 +2221,27 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
     });
   });
 });
+
+describe('Chat — coverage disclosure (WP-E, R4)', () => {
+  it('fills the input (never sends) when a coverage example is clicked', () => {
+    render(
+      <Chat
+        coverage={{
+          tables: [
+            {
+              id: '86141NED',
+              title: 'Consumentenprijzen; prijsindex 2015=100',
+              syncedOn: '2026-07-03',
+              concepts: ['inflatie (CPI)'],
+              example: 'Wat was de inflatie in 2025?',
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText('Welke bronnen zijn ingebouwd?'));
+    fireEvent.click(screen.getByRole('button', { name: 'Wat was de inflatie in 2025?' }));
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was de inflatie in 2025?');
+    expect(askQuestion).not.toHaveBeenCalled();
+  });
+});
