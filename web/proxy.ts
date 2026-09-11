@@ -35,6 +35,12 @@ const PUBLIC_EXACT_PATHS = [
   // The public, noindexed architecture reference page — no DB reads, no
   // account needed, reachable via the footer's gear icon by design.
   '/systeemoverzicht',
+  // The two trust pages (journey programme R6, ADR 045): public by nature —
+  // a privacy policy behind a login is no policy. Static catalogue copy,
+  // no DB reads. Exact match, like the system map (found in the session-97
+  // browser pass: the pages 307'd to /login until listed here).
+  '/werkwijze',
+  '/privacy',
 ];
 
 const PUBLIC_PATH_PREFIXES = [
