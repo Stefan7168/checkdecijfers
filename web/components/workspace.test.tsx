@@ -332,9 +332,14 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 });
 
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
-  it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
+  // R8 (#211, WP-D, session 97): without `attachments`, chat.tsx collapses
+  // the "Bestand uploaden" chip (and its three siblings) into ONE disabled
+  // "Eigen data (binnenkort)" chip — see chat.test.tsx for the full R8
+  // coverage; this test just confirms ingestFile stays unwired through Workspace.
+  it('without the attachments prop, no upload entry point renders and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Bestand uploaden' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Eigen data (binnenkort)' })).toBeDisabled();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
