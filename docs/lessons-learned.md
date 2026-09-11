@@ -78,7 +78,38 @@ literal pins, a stale `.next` cache, and fix rounds without SendMessage
   whole container is gone** — "no legend buttons" passed because stage mode removed the legend group
   entirely; assert the presence of the replacement first, then the absence inside it. (4) **A brief that
   says "four call sites" when the code has three is a brief bug the implementer should report, not
-  absorb** — this one did, and the reviewer confirmed the fourth site never existed.
+  absorb** — this one did, and the reviewer confirmed the fourth site never existed. (5) **The hidden
+  Browser pane can show a page that never "arrives" — zero-width chart containers, no Recharts svg, JS
+  calls timing out at 45 s — and the cause is React 19's streaming, not the pane.** Diagnosed at the end of
+  the night: the page's Suspense boundary was still a `<template id="B:0">` + `<div hidden id="S:0">` pair;
+  React's inline `$RC` reveal function batches boundaries and schedules the actual swap (`$RV($RB)`) through
+  `requestAnimationFrame` — which NEVER fires in a hidden document, so a background tab shows the shell
+  forever (the `main` element lays out, the streamed content stays `display: none`). The synthetic-`resize`
+  trick only fixes the second failure mode (Recharts measuring at width 0 after a reveal). Workaround that
+  worked: `const rb = $RB; $RB = []; $RV(rb.slice(0, 2));` from `javascript_tool`, then the resize loop —
+  the content reveals, Recharts measures, hydration completes. Also keep a page-level rAF shim
+  (`requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16)`) for rAF-driven code under
+  test in a hidden tab, and expect timers throttled to ≥ 1 s. Next time: run the browser pass EARLY in a
+  phase and again right after the fix wave, and when a page "never renders" in the pane, check for a
+  pending `template[id^="B:"]` before blaming the pane. (6) **The cheap `/code-review` LOW pass found a real bug
+  after three review seats had passed it** — the post-loop two-line fix bound the scroller's `scroll`
+  event to the shared gesture handler, so auto-play's OWN advance (`go()` → `scrollIntoView` → `scroll`)
+  switched auto-play off after its first step in a real browser; jsdom stubs `scrollIntoView`, so every
+  test stayed green. A diff-only read with no plan context saw what the reviewers reading the whole
+  component did not: an event fired by the code's own action reaching a handler meant for the user. Two
+  lessons: any listener on an event the component itself can raise must distinguish self-raised from
+  user-raised (or be split); and a "tiny post-loop fix the controller reads itself" is exactly where
+  the mandatory LOW pass earns its keep — never skip it for a diff that looks too small to matter.
+  (7) **"Every test green" and "the suite passed" are different claims — vitest exits 1 on UNHANDLED
+  errors even with 0 failed tests.** The branch's web suite reported 1427 passed AND `Errors 28 errors`
+  (exit 1) for two commits; the verification chain printed only the `Tests` summary line, so nobody
+  saw it and CI would have gone red on the PR. Cause: the fix wave stubbed `requestAnimationFrame` per
+  test with `vi.stubGlobal` and unstubbed it in `finally`, but Recharts' Redux Toolkit store captures rAF
+  at creation and its real-timer fallback calls the global `cancelAnimationFrame` after `cleanup()` has
+  unmounted the chart under real timers (afterEach hooks run in stack order, so the file-level cleanup
+  runs AFTER `vi.useRealTimers()`). Fix: polyfill rAF/cAF once per test file and never remove it. Rules:
+  a verification chain must print the exit code of every step (`EXIT=$?`) and grep for `Errors` next to
+  `Tests`; never `vi.stubGlobal` an API a third-party store captures at creation time.
 
 ## Session 94 — 2026-09-10 — owner present: Insights (AI-phrased outlier findings) replaces Story mode's
 selection; a parallel-branch ADR/open-questions numbering collision (hit twice); hand-tracing the scoring
