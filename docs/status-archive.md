@@ -55,8 +55,10 @@ discovered and reconciled.**
    `open-questions.md`) — the same #224/#225-vs-#230/#231-style numbering collision as the fourth conflict
    above, resolved the same way; Thread B's new #237/#238 rows merged in cleanly. Confirmed docs-only via
    `git status`, ran `test:docs` (11/11) rather than the full block (reasoned in the commit message: no code
-   files touched), pushed as `6f80459`. CI (`gate`) was still `in_progress` as of the last check this
-   session — **not independently confirmed green**; left for the next session to verify.
+   files touched), pushed as `6f80459`. CI (`gate`) was `in_progress` at that point; re-checked later the
+   same session (wrap-up, via the GitHub API) and **confirmed PASS** (`gate` `conclusion: "success"`,
+   completed `2026-09-11T11:45:54Z`) with `mergeable_state: "clean"` — PR #9 is green and mergeable, now
+   waiting on the owner (`EMBED_TOKEN_SECRET` + review), not on any further session action.
 6. **Docs:** this file, STATUS.md top block (PR #10/11/12's actual merged state corrected — the session-95
    kickoff note had gone stale within hours; later rewritten again post-discovery to cover Thread B, the
    sixth conflict, and the held-off Journey-programme phases), open-questions #237 renumbered to **#239**
