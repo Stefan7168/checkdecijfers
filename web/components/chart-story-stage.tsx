@@ -221,19 +221,42 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     if (!open) return undefined;
     const el = scrollRef.current;
     if (!el) return undefined;
-    const onReaderGesture = (): void => {
+    // Shared by both listeners below so a later change to how auto-play is
+    // stopped only has to be made once.
+    const stopAutoplay = (): void => {
       readerScrolled.current = true;
       setAutoplay((on) => (on ? false : on));
     };
+    const onReaderGesture = (): void => {
+      stopAutoplay();
+    };
     // `scroll` fires for the stage's OWN moves too — `go()` → `scrollIntoView`
-    // (auto-play, dots, arrow keys) and the open-at-step scroll — so it may
-    // only arm the reader-scroll guard, never stop auto-play: bound to the
-    // gesture handler it switched auto-play off after its first advance
-    // (jsdom stubs `scrollIntoView`, which is why no test caught it).
-    // Accepted gap: a scrollbar-thumb drag arms the guard without stopping
-    // auto-play on browsers where no pointerdown reaches the scroller.
+    // (auto-play, dots, arrow keys) and the open-at-step scroll — so binding
+    // it straight to the gesture handler switched auto-play off after its own
+    // first advance (jsdom stubs `scrollIntoView`, which is why no test
+    // caught it). Fix (this task): `useStageScroll` now exposes
+    // `isProgrammatic()`, a live read of the same ref `beginProgrammatic()`
+    // sets — true only while a scroll the STAGE itself caused has not yet
+    // settled. A `scroll` event that is NOT programmatic — a scrollbar-thumb
+    // drag included, which fires only this event and none of
+    // wheel/touch/pointerdown — is the reader taking over, so it now also
+    // stops auto-play (pinned by the two regression tests below). This
+    // closes the common case of the scrollbar-drag gap ADR 044's as-built
+    // section recorded as "accepted" — an ISOLATED drag, not overlapping an
+    // in-flight programmatic scroll, now stops auto-play like any other
+    // gesture. Residual (code-review finding, not fixed here — the ref this
+    // reads has no way to attribute a `scroll` event to a CAUSE, only to a
+    // time window): a drag that starts while a stage-caused scroll is still
+    // settling — e.g. the reader grabs the thumb during auto-play's own
+    // ~150ms+ settle window right after `go()` — keeps `isProgrammatic()`
+    // true throughout (the drag's own events re-arm the same settle timer
+    // the animation's tail was already re-arming, indistinguishably), so
+    // auto-play is not stopped until the reader's drag pauses for 150ms.
+    // Narrower than the original bug (which affected every scrollbar drag,
+    // any time), not eliminated by it.
     const onAnyScroll = (): void => {
       readerScrolled.current = true;
+      if (!scroll.isProgrammatic()) stopAutoplay();
     };
     el.addEventListener('wheel', onReaderGesture, { passive: true });
     el.addEventListener('touchmove', onReaderGesture, { passive: true });
@@ -245,6 +268,7 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
       el.removeEventListener('pointerdown', onReaderGesture);
       el.removeEventListener('scroll', onAnyScroll);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `scroll.isProgrammatic` is stable across renders (it closes over a ref, not state); re-running this effect on every scroll-driven re-render would repeatedly detach/reattach the listeners.
   }, [open]);
 
   // Auto-play: advance every STAGE_AUTOPLAY_MS, stop at the end.

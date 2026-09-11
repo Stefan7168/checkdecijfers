@@ -655,6 +655,72 @@ describe('ChartStoryStage', () => {
     expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
   });
 
+  // NEW regression test (scrollbar-drag auto-play fix): a scrollbar-thumb
+  // drag fires only a `scroll` DOM event — no wheel/touch/pointerdown — and
+  // (unlike go()'s own advance below) is never preceded by the hook's
+  // beginProgrammatic(). ADR 044's as-built section recorded this as an
+  // "accepted gap" (auto-play kept running through a scrollbar drag);
+  // useStageScroll now exposes isProgrammatic() so onAnyScroll can tell the
+  // two kinds of `scroll` event apart, and a non-programmatic one must stop
+  // auto-play like any other reader gesture.
+  it('a scrollbar-driven scroll (no beginProgrammatic) stops auto-play when it is on', () => {
+    useStageScrollTimers();
+    try {
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const scroller = layoutStage();
+      fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+
+      // The same scrollStage() helper the "reader scrolls via scrollbar"
+      // test above uses: a bare `scroll` event, scrollTop set directly —
+      // exactly what a scrollbar-thumb drag raises, and never routed through
+      // beginProgrammatic() the way go()'s own scrollIntoView advance is.
+      scrollStage(scroller, 1600);
+
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
+      onAdvance.mockClear();
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS * 3);
+      });
+      expect(onAdvance).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // NEW regression test (scrollbar-drag auto-play fix): unlike
+  // 'auto-play survives the scroll events its own advances raise' above
+  // (which raises the browser's `scroll` event as a separate, later step),
+  // this drives the exact causal chain go() uses — beginProgrammatic()
+  // immediately followed by scrollIntoView — by making the scrollIntoView
+  // mock itself raise the `scroll` event synchronously, the way a real
+  // browser would. isProgrammatic() must read true at that exact moment so
+  // auto-play is not stopped: the guard against re-introducing the
+  // session-95 regression (auto-play switching itself off after its own
+  // first advance) while the scrollbar-drag gap above is being closed.
+  it("auto-play's own beginProgrammatic() → scrollIntoView scroll does not stop it", () => {
+    vi.useFakeTimers();
+    const onAdvance = vi.fn();
+    render(<Harness onAdvance={onAdvance} />);
+    const scroller = document.querySelector('[data-stage-scroller]') as HTMLElement;
+    // Overrides the generic no-op stub from beforeEach for this test only
+    // (afterEach restores the true original regardless of this override).
+    Element.prototype.scrollIntoView = vi.fn(() => {
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+    });
+
+    expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+    expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   // Item 8: the vignette used to cover the whole card — the title, the
   // legend and the source line dimmed along with the chart. It is now
   // positioned over the plot box alone.
