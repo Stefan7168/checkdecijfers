@@ -33,7 +33,8 @@ steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH 
    login; covered by tests only): the chat chips/captions, the credits page, the purchase poll, the phone header.
 5. **Docs:** ADR 045 (new); open-questions #14(d), #75, #207, #211, #214, #238; build plan; 12-huisstijl; 04-architecture
    row; RUNBOOK "Usage report"; the ADR 043 decision-6 note; lessons; this entry; the session-98 kickoff.
-6. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
+6. **PR #14** (`journey-programme` → `main`): CI gate PASS (11m31s) on `633db3f`, `MERGEABLE`, verified with `gh pr checks 14`.
+7. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
    kickoff and is open, MERGEABLE; `refusal (internal) 7` all-time in the report deserves a look (error log).
 
 **Session 96 (2026-09-11, owner present throughout — started as "how do we obliterate LocalFocus") — STRATEGY,

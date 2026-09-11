@@ -30,7 +30,7 @@ owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open
 work packages (usage report; trust pages + landing; credits/poll/header/panel/insights; the chat bundle; the
 coverage disclosure), an Opus whole-branch review (3 HIGH fixed) + a scoped WP-E review, `/code-review` LOW 0,
 the full verification block green (backend 144 files / 2222 tests, benchmark PASS, web 98 files / 1492 tests,
-`next build`), a real-browser pass that found three more defects (fixed). Full entry:
+`next build`), a real-browser pass that found three more defects (fixed); **PR #14 open, CI gate PASS (11m31s) on `633db3f`, MERGEABLE.** Full entry:
 [status-archive.md](status-archive.md).
 
 **▶ SESSION 96 (2026-09-11, owner present) — STRATEGY + SANITY CHECK, DOCS ONLY (no code).** Competitive brief on

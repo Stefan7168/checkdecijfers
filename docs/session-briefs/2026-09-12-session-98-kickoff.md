@@ -7,7 +7,7 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
 ## Where things stand (verified 2026-09-12)
 
 - `main` is live: the visual-upgrade programme (PRs #10–#12) and WP218 (PR #7).
-- **Branch `journey-programme` — PR open for the owner's review, NOT merged, NOT live.** It carries the Journey
+- **Branch `journey-programme` — PR #14 open for the owner's review (CI gate PASS on `633db3f`), NOT merged, NOT live.** It carries the Journey
   programme phases 0, 1, 3, 4, 5 (ADR 045): the usage report, the first-question bundle, the coverage disclosure and
   findability copy, the two draft trust pages, the one-click clarification options, the chips collapse, the phone
   header. Fully verified (see the PR body). Verify with `gh pr list` before saying anything about its state.
