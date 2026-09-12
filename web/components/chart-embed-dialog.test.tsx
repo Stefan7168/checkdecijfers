@@ -81,6 +81,30 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(liveSwitch).toHaveAccessibleDescription(/pro/i);
   });
 
+  // Session 101 (open-questions #237(b)/#205): the visible Pro pitch and its
+  // interest-only "upgrade" click — no charge, a real click count.
+  it('shows the price and an upgrade CTA when pro is false, tracks pro_upgrade_click and shows thanks on click, and shows neither when pro is true', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    expect(screen.getByText(/€19\/month/)).toBeInTheDocument();
+    const upgradeButton = screen.getByRole('button', { name: /interested in pro/i });
+    fireEvent.click(upgradeButton);
+    expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click');
+    expect(screen.getByText(/thanks/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /interested in pro/i })).toBeNull();
+  });
+
+  it('shows neither the Pro price nor the upgrade CTA when pro is true', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: true });
+    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    expect(screen.queryByText(/€19\/month/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /interested in pro/i })).toBeNull();
+  });
+
   it('enables the Live switch when pro is true, and the code gains &live=1 when it is toggled on', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: true });
     render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);

@@ -248,6 +248,19 @@ describe('/embed/[token] — frozen render', () => {
   it('sets noindex via the exported metadata', () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
+
+  // Session 101 (open-questions #237(b)/#205): the Pro pitch on the frozen
+  // page, deliberately digit-free (the digit-honesty scan below covers why).
+  it('shows a digit-free "go Pro" pitch in both languages on the frozen render', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/go pro/i)).toBeInTheDocument();
+    cleanup();
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(screen.getByText(/ga pro/i)).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -490,6 +503,10 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     // by temporarily reverting `spec={finalSpec}` to `spec={spec}` in
     // page.tsx: this assertion (and only this one of the three) then fails.
     expect(screen.queryByText(/2026-08-26/)).not.toBeInTheDocument();
+    // Session 101: pitching Pro to an owner who already has it (and whose
+    // chart IS live) would be nonsensical — the frozen-only pitch must not
+    // survive a successful live re-run.
+    expect(screen.queryByText(/go pro/i)).not.toBeInTheDocument();
   });
 
   it('defaults the live-success footer to Dutch ("Live · gegevens van") when ?lang is absent', async () => {

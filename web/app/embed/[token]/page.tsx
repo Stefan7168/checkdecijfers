@@ -174,8 +174,24 @@ export default async function EmbedPage({
   }
 
   const spec = response.chart;
+  // Session 101 (open-questions #237(b)/#205): the Pro pitch is visible to
+  // every visitor of a frozen embed, not just its creator — "probably right
+  // on a frozen embed's own page" per the kickoff brief. No new link: it
+  // rides the SAME existing "checkdecijfers.nl" backlink right after it
+  // (chart.tsx's embedFooter rendering), so this stays a plain string change
+  // here rather than touching that file's own JSX. Deliberately dropped by
+  // BOTH Pro branches below (a successful live re-run, and a Pro owner whose
+  // live re-run failed) — pitching Pro to someone who already has it, or
+  // whose chart IS live, would be nonsensical. Deliberately NO price here
+  // (unlike the dialog's own `chart.embed.proPrice`): this page's own test
+  // asserts every digit in the render traces to the chart spec — a real
+  // fabrication guard, not one to work around — so the pitch stays digit-free.
   const footerText =
-    (lang === 'en' ? 'Frozen on ' : 'Bevroren op ') + formatEmbedDate(record.createdAt, lang) + ' ·';
+    (lang === 'en' ? 'Frozen on ' : 'Bevroren op ') +
+    formatEmbedDate(record.createdAt, lang) +
+    ' · ' +
+    (lang === 'en' ? 'Never go stale — go Pro' : 'Nooit meer verouderd — ga Pro') +
+    ' ·';
 
   // Task 6 (spec Part B3 "Live" branch): re-run the stored intent live, but
   // only for a Pro OWNER, never for the anonymous visitor loading this

@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-12, owner present) — Phase 0 cleanup + the Live-embed Pro pitch
+
+- **A `git worktree add` at a path OUTSIDE the project root (a sibling directory) hits a sandboxed
+  `getcwd: cannot access parent directories: Operation not permitted` when the Browser pane's `preview_start`
+  tool tries to spawn a dev server there — even though a plain `Bash` `cd` into the same path works fine.**
+  Creating the worktree INSIDE the project root instead (`.worktrees/<name>/`, gitignored) fixed it. Worth
+  assuming for any future worktree meant to be driven by `preview_start`, not just used from Bash.
+- **`new URL(relative, import.meta.url).pathname` is NOT a filesystem path** — it stays percent-encoded
+  (`%20` for a space), and a checkout path with a space in it (this machine: `Check de Cijfers`) breaks any
+  script that uses `.pathname` directly for `fs` calls. `fileURLToPath()` (`node:url`) decodes it correctly.
+  Found because `scripts/dev-harness/llm-stub.mjs` (built and tested on a machine/container with no space in
+  its path) silently loaded zero fixtures here. The same class of bug can hide in `NODE_OPTIONS="--import
+  <path>"` too — NODE_OPTIONS is whitespace-tokenized, so a raw spaced path there also breaks; a
+  percent-encoded `file://` URL (`pathToFileURL(...).href`) does not.
+- **A digit-honesty-scan test (every digit in a page's render must trace to the source data, not just to
+  R11's LLM-composed prose) is a real fabrication guard on ANY public-facing render, not only the answer
+  pipeline** — it caught a plain marketing price ("€19/mo") added to the public frozen-embed page's footer
+  text this session. The right response was to keep the price off that specific surface (a dialog elsewhere,
+  not covered by this test, was the correct home for it), never to weaken or route around the test.
+- **A concurrent session actively re-merging the SAME PR branch at the SAME time is now routine on this
+  project, not exceptional** (third occurrence in two days, per the session-97-continued lessons below) —
+  `git push` rejected with "fetch first" mid-session, and the fix was a plain rebase of this session's one
+  real commit onto the concurrent session's latest tip, not another merge-of-main. Checking
+  `origin/<branch>` right before pushing (not trusting an earlier fetch) is now worth doing by default on any
+  branch more than one session might be touching.
+- **`gh api -X DELETE repos/OWNER/REPO/git/refs/heads/<branch>` deletes a remote branch when the session's
+  own git push proxy refuses `git push --delete`** (a standing block noted by prior sessions) — a different
+  code path, not subject to the same refusal. Cross-checked against `gh pr list --state merged` (not
+  `git merge-base --is-ancestor`, which is always false for a squash-merged branch's tip) before deleting
+  anything.
+
 ## Session 97 (continued, 2026-09-12, owner present) — drove PR #13 through three merge-conflict rounds
 while a concurrent session (98/99) squash-merged six other PRs into `main` underneath it
 

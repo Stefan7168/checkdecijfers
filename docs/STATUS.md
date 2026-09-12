@@ -14,21 +14,16 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**Branch note (session 96, 2026-09-11, owner present):** this branch (`visual-story-motion`) carries a
-follow-up visual pass on the Story stage — motion/atmosphere upgrade — built after the owner's explicit
-"move the needle" feedback on an initial too-small attempt. Own PR, not yet merged to `main`. Full detail:
-ADR [044](decisions/044-story-stage.md)'s addendum and [open-questions #239](open-questions.md). Full
-verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark 28/28, `test:docs` 11/11,
-real build, LOW code-review 0 findings, a real-browser check across both themes/phone/reduced-motion that
-caught and fixed one real mobile overlap bug before shipping).
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
-[session-briefs/2026-09-12-session-101-move-mountains-kickoff.md](session-briefs/2026-09-12-session-101-move-mountains-kickoff.md)
-first — it restates the Phase-0 owner steps below as step zero, then names the actual next big bet: **PR #15's
-creator-e-mail lookup (merged today) just removed the only reason Live embeds couldn't ship** — the owner already
-decided live embeds ARE the Pro plan's reason to exist ([#237](open-questions.md)(b), [#205](open-questions.md));
-nobody has built the actual tier yet. Build the mechanism (gate, upgrade path, upgrade moment) behind a flag —
-never wire real Stripe pricing without an explicit owner go on the number.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 101, owner present).** PR #13 (Story stage motion) is
+MERGED (`e2979d2`) — walked at 375px in both themes via the local dev-harness first, which found and fixed a REAL
+bug (the last finding's caption overlapped the pinned chart's source line at rest; `docs/decisions/044-story-stage.md`'s
+addendum has the mechanism). The 9 branches GitHub had listed as merged-but-undeleted are gone. The Live-embed Pro
+pitch (price + an interest-only "upgrade" click, no real charge) is built and pushed straight to `main` — see
+[ADR 041](decisions/041-public-embed-pages.md)'s session-101 addendum and [open-questions #237](open-questions.md)(b)/[#205](open-questions.md).
+**`hasProPlan` is UNCHANGED (still the allowlist)** — a real self-serve/paid tier needs the owner's sign-off on
+price + Stripe structure first; nothing here grants free access. **Owner steps still open** (unchanged from
+session 99/100): `npm run db:migrate` for 028+029 then `npm run usage:report`; the trust-page contact e-mail
+(owner: leave the placeholder for now); set `EMBED_TOKEN_SECRET` in Vercel; the `auth.users` read check.
 
 **▶ SESSION 99 (2026-09-12, owner present).** Read
 [session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) for the

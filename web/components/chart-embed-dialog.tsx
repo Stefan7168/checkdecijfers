@@ -135,6 +135,13 @@ function ChartEmbedDialog({
   const [chartType, setChartType] = useState<ChartTypeOption>('as-shown');
   const [live, setLive] = useState(false);
   const [copied, setCopied] = useState(false);
+  // Session 101 (open-questions #237(b)/#205): the Pro pitch is visible to
+  // everyone now, with no real Stripe product behind it yet — clicking
+  // "interested" only counts a real click (`pro_upgrade_click`, the same
+  // anonymous chart_style_usage counter every other event here uses), never
+  // a charge or a real upgrade. Local-only state: a fresh dialog open always
+  // shows the CTA again, exactly like `copied` above never persisting either.
+  const [upgradeClicked, setUpgradeClicked] = useState(false);
   const liveSwitchId = useId();
   const liveReasonId = useId();
 
@@ -238,10 +245,32 @@ function ChartEmbedDialog({
               </label>
               {!result.pro ? (
                 <span id={liveReasonId} className="text-xs text-muted-foreground">
-                  {t(lang, 'chart.embed.liveProOnly')}
+                  {t(lang, 'chart.embed.liveProOnly')} {t(lang, 'chart.embed.proPrice')}
                 </span>
               ) : null}
             </div>
+
+            {!result.pro ? (
+              <div>
+                {upgradeClicked ? (
+                  <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.proUpgradeThanks')}</p>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      // A real click count, no charge and no real upgrade —
+                      // see the `upgradeClicked` declaration above.
+                      trackChartStyleEvent('pro_upgrade_click');
+                      setUpgradeClicked(true);
+                    }}
+                  >
+                    {t(lang, 'chart.embed.proUpgradeCta')}
+                  </Button>
+                )}
+              </div>
+            ) : null}
 
             <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{code}</pre>
             <div className="flex justify-end gap-2">

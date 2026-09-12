@@ -54,6 +54,12 @@ export const CHART_STYLE_EVENTS = [
   // 6-step story is one event, not six).
   'stage_open',
   'stage_autoplay',
+  // Session 101 (open-questions #237(b)/#205): the Live-embed Pro pitch is
+  // now visible to non-Pro users (dialog + frozen embed page), with no real
+  // Stripe product behind it yet — cheapest-mechanism-first (CLAUDE.md):
+  // count real interest before ever building payment. Once per "Upgrade to
+  // Pro" click in the embed dialog.
+  'pro_upgrade_click',
 ] as const;
 export type ChartStyleEvent = (typeof CHART_STYLE_EVENTS)[number];
 
