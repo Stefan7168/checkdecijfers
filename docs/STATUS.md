@@ -19,7 +19,9 @@
 **Session 99 merged the whole stack — six PRs, all squash-merged to `main` on green `gate`, in this order:**
 PR #14 Journey programme phases 0/1/3/4/5 (`677c5fb`) → PR #18 public face + `/galerij` (`ac14392`) → PR #19 phone
 journey (`189d36b`) → PR #20 sessions 97–98 docs + `scripts/dev-harness/` (`524b63f`) → PR #9 embed (`650d664`) →
-PR #15 creator-e-mail lookup for Live embeds (`8d0f0d4`). `main` deploys on push; the last run owns the deploy.
+PR #15 creator-e-mail lookup for Live embeds (`8d0f0d4`). **Production runs the full stack since `bfc243a`
+(run 34687239506, deploy + smoke check green 10:12 UTC)** — that commit also fixes a CI trap where a docs-only push on
+top of a code merge left production undeployed (RUNBOOK "Merging a queue", lessons).
 **Owner steps now due (the merges made them live-relevant):** (1) `npm run db:migrate` for 028 + 029 (live DDL,
 owner-supervised), then `npm run usage:report` once; (2) read `/werkwijze` + `/privacy`, fill in the contact e-mail,
 drop the draft notes; (3) set `EMBED_TOKEN_SECRET` in Vercel and run the one-line `auth.users` read check (RUNBOOK) so

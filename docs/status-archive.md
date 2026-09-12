@@ -15,7 +15,12 @@ Every later "conflict" was the squash-stack artefact and was recorded with `git 
 verifying the trees identical (RUNBOOK "Merging a queue", lessons). Timeline: 08:25 start, 08:28 first push, 08:43
 first merge, 09:42 last merge. `main` CI: runs on `677c5fb` and `189d36b` show `cancelled` (superseded by the next
 merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` cancelled the same way;
-`8d0f0d4` (run 34686517400) green with `deploy` run — the head that owns production. NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
+`8d0f0d4` (run 34686517400) gate green but its `deploy` job SKIPPED every Vercel step ("main has moved on" — the
+wrap-up docs push `a483979` had landed on top and, being docs-only, had no run of its own): production was still on
+the old build. Fixed in `bfc243a` (ci: the stand-down ignores docs-only successors + `workflow_dispatch`; `/code-review`
+LOW found one finding — a failed tip fetch would have stood down silently — fixed before push). Run 34687239506 on
+`bfc243a`: gate green, deploy built + deployed + post-deploy smoke check green at 10:12 UTC — **production now runs the
+full merged stack.** NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
 Dependabot #16/#17, and session 96's stranded branch `claude/checkdecijfers-embed-pr-review-acbrd5` (its docs
 cherry-picks conflict in every tracker; its code commit `038ecd9` is superseded by PR #14 — left as a record).
 Branch deletion via the session's git proxy silently fails — listed for the owner. Docs this session: STATUS top
