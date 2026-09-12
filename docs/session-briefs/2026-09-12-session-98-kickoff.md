@@ -18,10 +18,16 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
 - The product is live and handles money (#118): owner present → push to `main` after the full verification block;
   autonomous → branch + PR. **R3 (confirm before a 100-credit fetch) = money path = branch + PR + explicit owner go.**
 
-## The single next priority
+## The single next priority (owner, 2026-09-12: "do it in the prompt for the next session" — the merge was deliberately
+## NOT done in session 97 even though the owner was present at its end)
 
-1. If the owner is present: walk him through the PR (plain English, one screen at a time), merge, deploy, then the
-   owner steps above. The draft notes on the trust pages come off only after his read.
+1. **Merge PR #14** (`gh pr checks 14` must still be green; a fresh `main` may have moved — rebase/merge `main` in first if
+   so, re-run the verification block on the result). Then check production answers (200) and the two new pages serve.
+   Then ask the owner, in plain sentences, one at a time: (a) confirm-before-fetch chip yes/no (R3); (b) signup grant
+   larger than one fetch — a number, or "keep 100"; (c) the contact e-mail for `/privacy`, and whether the two draft
+   texts may lose their draft note. Then the owner-only commands: `npm run db:migrate` (028 + 029), `npm run usage:report`.
+   Then look into the 7 all-time `internal` refusals (error log / `audit_answers` refusal_reason = internal) before
+   building anything new.
 2. Then, with the owner's explicit go: **phase 2 / R3** — one chip "Haal op voor 100 credits" before an on-demand
    fetch, plus the larger signup grant (decision 5, a config value). Money path: branch + PR, debit-before-run with
    full compensation stays (ADR 026), idempotent `requestId`, the finder-side guards re-run at the take.

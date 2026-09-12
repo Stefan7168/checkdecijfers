@@ -23,7 +23,8 @@ Also open: PR #9 (embed, `EMBED_TOKEN_SECRET` on merge) and PR #13 (Story stage 
 unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`; new: read the two draft
 trust pages (`/werkwijze`, `/privacy`, contact e-mail placeholder), run `npm run usage:report` once after 028.
 **Deliberately NOT built: phase 2 / R3 (confirm before a 100-credit fetch) — the money path needs an explicit owner
-go; the larger signup grant (decision 5) is a config value for the owner.** Next up after the merge: R3 with the
+go; the larger signup grant (decision 5) is a config value for the owner.** **Owner (2026-09-12, end of session 97): the merge + owner steps are deferred to session 98 — its kickoff lists them
+as step 1.** Next up after the merge: R3 with the
 owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open-questions.md)).
 
 **▶ SESSION 97 (2026-09-12, AUTONOMOUS) — JOURNEY PROGRAMME BUILT, BRANCH + PR.** Five parallel worktrees, five
