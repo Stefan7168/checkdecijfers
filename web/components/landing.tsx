@@ -45,7 +45,7 @@ import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t } from '../lib/i18n/messages.ts';
 import { CoverageDisclosureView } from './coverage-disclosure.tsx';
-import { OntdekSectie } from './ontdek.tsx';
+import { GalleryTeaser } from './gallery.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
@@ -63,14 +63,20 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
             {t(lang, 'landing.heroTitle')}
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
-            {t(lang, 'landing.heroSubtitle')}
+            {t(lang, 'landing.heroSubtitleV2')}
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/login"
               className="rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {t(lang, 'landing.ctaStart')}
+            </Link>
+            <Link
+              href="/galerij"
+              className="rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted"
+            >
+              {t(lang, 'landing.ctaGallery')}
             </Link>
             <a
               href="#hoe-het-werkt"
@@ -142,8 +148,17 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
           </ol>
         </section>
 
-        {/* Free discovery charts — deterministic, LLM-free (ADR 035) */}
-        <OntdekSectie />
+        {/* #237/ADR 046: the gallery teaser replaces the old Ontdek section
+            on the landing — same deterministic, LLM-free curated-chart
+            pipeline (ADR 035), now presented as sourced stories around the
+            positioning sentence rather than a bare discovery grid.
+            web/components/ontdek.tsx (fix-wave finding 2: it compiles, but
+            NOTHING mounts it any more — the component, its own test suite,
+            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys are
+            dead code, deliberately left in place rather than deleted on
+            this branch; see open-questions.md's follow-up row for the exact
+            deletion list) is not referenced from here or anywhere else. */}
+        <GalleryTeaser />
 
         {/* WP-E (R4): the coverage disclosure — no example handler is passed
           * here, so CoverageDisclosureView renders each example as plain

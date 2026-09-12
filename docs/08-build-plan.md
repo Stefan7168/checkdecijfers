@@ -722,6 +722,10 @@ findings) — see [STATUS.md](STATUS.md) for the exact numbers. Merged to `main`
 
 **Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN`, head `6f80459`) should merge before phase 3 so the "Publiceer" step has something real to point at.
 
+**Session 98 (2026-09-12, autonomous) — BUILT the parallel-positioning item (d) on branch `journey-public-face`, stacked on `journey-programme` (PR for the owner, not merged): the landing rebuilt around the positioning sentence in both languages (new subtitle + a second "Bekijk de galerij"/"See the gallery" CTA), and a public gallery of TWELVE real curated stories on the live `ChartView` at `/galerij` — Present/Style/Insights all working, zero AI spend, zero server-action calls on the public pages. Recorded in [ADR 046](decisions/046-public-gallery-and-positioning-landing.md). The landing's old Ontdek section is no longer mounted (replaced by a 3-story gallery teaser + a link to the full gallery); `ontdek.tsx` stays compiling, unused there. Not built: items (a)(b)(c) above (the repositioning ADR itself, the Pro-plan brainstorm, Eurostat); embed code on the gallery cards (PR #9 not merged into this branch's base — tracked in [#237](open-questions.md)).
+
+**Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
+
 **Session 97 update (2026-09-12): phases 0, 1, 3, 4, 5 are BUILT — PR #14**,
 51 files / +3567 −264 / 22 commits, branch `journey-programme`, head `2c4ec80`. CI green (`gate`: success),
 `mergeable_state: clean`, **but zero reviews and zero comments as of this update — nobody has looked at it yet.**
@@ -733,7 +737,7 @@ deliberately excluded — still needs an explicit owner go per the rule above. P
 merge + real usage. **Next step is the owner's, not a session's:** review PR #14 (its body lists the three owner
 steps — read/fill in `/werkwijze` + `/privacy`, run `npm run db:migrate` for 028+029 then `npm run usage:report`,
 decide R3), then merge. **Do not start rebuilding any of phases 0/1/3/4/5** — a sibling session independently
-(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #239](open-questions.md)
+(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #241](open-questions.md)
 and [lessons-learned.md](lessons-learned.md) (session 97) for the process fix.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

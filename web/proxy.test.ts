@@ -48,6 +48,10 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/api/health/details')).toBe(false);
     expect(isPublicPath('/systeemoverzicht-debug')).toBe(false);
     expect(isPublicPath('/systeemoverzicht/details')).toBe(false);
+    // #237/ADR 046: the public gallery — exact match, like the pages above.
+    expect(isPublicPath('/galerij')).toBe(true);
+    expect(isPublicPath('/galerij-debug')).toBe(false);
+    expect(isPublicPath('/galerij/anything')).toBe(false);
   });
 
   it('allows the auth-flow paths', () => {

@@ -705,6 +705,45 @@ const nl = {
   'coverage.eurostatHeading': 'Eurostat — binnenkort',
   'coverage.eurostatBody': 'We werken aan Eurostat-cijfers als aanvullende bron.',
   'coverage.landingHeading': 'Dit weten we nu',
+
+  // #237/ADR 046 (session 98, journey programme "public face"): the
+  // positioning sentence — chatten van officieel CBS-onderzoek naar een
+  // ingesloten, gesourcete grafiek — and the public gallery of curated
+  // stories that shows it live. Digit-free throughout (messages.test.ts's
+  // digit-parity rule, plus the whole-card chart digit scans): no card here
+  // ever states a number, the live ChartView underneath does that.
+  // Fix-wave finding 7: "ingesloten"/embedded promised a feature that does
+  // not ship on this branch (PR #9 not merged) — softened to what is
+  // actually true today: a chart with its source shown, ready to share.
+  'landing.heroSubtitleV2':
+    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een grafiek met bron erbij, klaar om te delen.',
+  'landing.ctaGallery': 'Bekijk de galerij',
+  'gallery.teaserHeading': 'Verhalen uit de galerij',
+  'gallery.teaserAllLink': 'Alle verhalen',
+  'gallery.pageTitle': 'Galerij — Check de Cijfers',
+  'gallery.heading': 'De galerij',
+  // Fix-wave finding 7: "gesourcete" is not Dutch, and the claim must match
+  // what actually ships on this branch — built from real CBS-cijfers, with
+  // bron en datum, never "gesourcet" or "echt" as vague marketing filler.
+  'gallery.intro':
+    'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
+  'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
+  // Fix-wave finding 4: every title is now the QUESTION a reader would have
+  // typed in chat — it demonstrates the positioning sentence directly and
+  // never repeats the chart's own on-screen title one line below. The
+  // separate "lead" line was dropped: the question already says it.
+  'gallery.story.consumentenvertrouwen.title': 'Hoe optimistisch zijn Nederlanders?',
+  'gallery.story.economische-groei.title': 'Hoe hard groeide de economie?',
+  'gallery.story.inflatie.title': 'Wat deed de inflatie?',
+  'gallery.story.huizenprijzen.title': 'Wat kostte een huis?',
+  'gallery.story.werkloosheid.title': 'Hoe hoog was de werkloosheid?',
+  'gallery.story.faillissementen.title': 'Hoeveel bedrijven gingen failliet?',
+  'gallery.story.producentenprijzen.title': 'Wat deden de producentenprijzen?',
+  'gallery.story.detailhandelsomzet.title': 'Hoe deed de detailhandel het?',
+  'gallery.story.supermarktomzet.title': 'Hoe deden de supermarkten het?',
+  'gallery.story.consumptie-huishoudens.title': 'Hoeveel gaven huishoudens uit?',
+  'gallery.story.werkloosheid-maandelijks.title': 'Hoe ontwikkelde de werkloosheid zich per maand?',
+  'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1261,6 +1300,36 @@ const en: Messages = {
   'coverage.eurostatHeading': 'Eurostat — coming',
   'coverage.eurostatBody': 'We are working on Eurostat figures as an additional source.',
   'coverage.landingHeading': 'What we know today',
+
+  // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
+  // originals (messages.test.ts's digit-parity rule).
+  'landing.heroSubtitleV2':
+    'Ask your question in plain language and chat your way from official CBS research to a sourced chart, ready to share.',
+  'landing.ctaGallery': 'See the gallery',
+  'gallery.teaserHeading': 'Stories from the gallery',
+  'gallery.teaserAllLink': 'All stories',
+  'gallery.pageTitle': 'Gallery — Check de Cijfers',
+  'gallery.heading': 'The gallery',
+  // Fix-wave finding 7: matches the truer, on-message nl copy — built from
+  // real CBS figures, with source and date, never vague "real/sourced"
+  // marketing filler.
+  'gallery.intro':
+    'Every card below is built from official CBS figures, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
+  'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
+  // Fix-wave finding 4: every title is the QUESTION a reader would have
+  // typed — the separate "lead" line was dropped, the question says it.
+  'gallery.story.consumentenvertrouwen.title': 'How optimistic are the Dutch?',
+  'gallery.story.economische-groei.title': 'How fast did the economy grow?',
+  'gallery.story.inflatie.title': 'What did inflation do?',
+  'gallery.story.huizenprijzen.title': 'What did a house cost?',
+  'gallery.story.werkloosheid.title': 'How high was unemployment?',
+  'gallery.story.faillissementen.title': 'How many businesses went bankrupt?',
+  'gallery.story.producentenprijzen.title': 'What did producer prices do?',
+  'gallery.story.detailhandelsomzet.title': 'How did retail do?',
+  'gallery.story.supermarktomzet.title': 'How did supermarkets do?',
+  'gallery.story.consumptie-huishoudens.title': 'How much did households spend?',
+  'gallery.story.werkloosheid-maandelijks.title': 'How did unemployment move month by month?',
+  'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
