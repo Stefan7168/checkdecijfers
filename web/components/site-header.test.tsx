@@ -31,6 +31,21 @@ describe('SiteHeader — Dutch by default', () => {
   });
 });
 
+describe('SiteHeader — phone layout (R9.1, #238)', () => {
+  // Browser-only regression: at 375px the wordmark used to wrap onto two
+  // lines and blow out the header's fixed h-12 height, clipping the row
+  // below it (verified with a real Chromium screenshot, not reproducible in
+  // jsdom since it has no layout engine). This pins the CSS contract that
+  // prevents the wrap — a real browser check that the classes are present.
+  it('keeps the wordmark and balance chip from wrapping', () => {
+    render(<SiteHeader balance={42} />);
+    const wordmark = screen.getByRole('link', { name: 'Check de Cijfers' });
+    expect(wordmark.className).toContain('whitespace-nowrap');
+    expect(wordmark.className).toContain('shrink-0');
+    expect(screen.getByText('42 credits').className).toContain('whitespace-nowrap');
+  });
+});
+
 describe('SiteHeader — English under LangProvider', () => {
   it('renders the workspace variant in English', () => {
     render(

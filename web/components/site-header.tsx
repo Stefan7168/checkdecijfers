@@ -76,15 +76,18 @@ export function SiteHeader({
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-      <Link href="/" className="text-sm font-semibold text-foreground">
+    <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3 sm:px-4">
+      {/* R9.1 (#238): whitespace-nowrap + shrink-0 keep the wordmark on one
+        * line at 375px — it used to wrap to two lines and blow out the
+        * fixed h-12 header height, clipping the row below it. */}
+      <Link href="/" className="shrink-0 whitespace-nowrap text-sm font-semibold text-foreground">
         {WORDMARK}
       </Link>
-      <div className="flex items-center gap-3 text-sm">
+      <div className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
         {/* ADR 006: the balance is read live and passed in — never a hardcoded
           * number. .tnum so digits align (the #91 FT/NRC convention). */}
         {balance !== undefined ? (
-          <Badge variant="secondary" className="tnum font-normal text-muted-foreground">
+          <Badge variant="secondary" className="tnum shrink-0 whitespace-nowrap font-normal text-muted-foreground">
             {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
