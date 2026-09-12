@@ -81,6 +81,10 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+  # Manual escape hatch (added 2026-09-12, session 99): re-run the gate + deploy
+  # for the current tip of main without pushing anything — e.g. when a deploy was
+  # skipped and the tip is docs-only on top of the last code commit.
+  workflow_dispatch:
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -189,8 +193,26 @@ jobs:
           echo "this run: ${GITHUB_SHA}  main tip: ${tip}"
           if [ -z "$tip" ]; then echo "could not read the tip of main"; exit 1; fi
           if [ "$tip" != "$GITHUB_SHA" ]; then
-            echo "stale=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::main is already at ${tip}; that commit's own run deploys it. Skipping this deploy."
+            # Docs-only pushes skip this workflow entirely (paths-ignore above),
+            # so a docs commit landing on top of this one has NO run of its own —
+            # if this run also stood down, nothing would deploy the code (it
+            # happened 2026-09-12, session 99: six merged PRs, then a docs push,
+            # production stayed on the old build). Only stand down when the
+            # newer tip actually changes something outside docs/markdown.
+            # Fail LOUDLY if the tip cannot be fetched or compared — a silent
+            # stand-down here is the very failure this block exists to prevent.
+            git fetch --quiet --depth=1 origin "$tip" || { echo "::error::could not fetch main tip ${tip}"; exit 1; }
+            git cat-file -e "${tip}^{commit}" || { echo "::error::main tip ${tip} is not a commit after fetch"; exit 1; }
+            set +e
+            git diff --quiet "$GITHUB_SHA" "$tip" -- . ':(exclude)docs/**' ':(exclude,glob)**/*.md'
+            rc=$?
+            set -e
+            case "$rc" in
+              0) echo "::notice::main is at ${tip}, which differs from this run only in docs/markdown; this run still owns the deploy." ;;
+              1) echo "stale=true" >> "$GITHUB_OUTPUT"
+                 echo "::notice::main is already at ${tip} with code changes; that commit's own run deploys it. Skipping this deploy." ;;
+              *) echo "::error::git diff against main tip ${tip} failed (exit ${rc})"; exit 1 ;;
+            esac
           fi
       #
       # Commands run from the repo ROOT (no --cwd web) and rely entirely on

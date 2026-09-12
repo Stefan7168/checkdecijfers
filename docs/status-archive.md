@@ -14,8 +14,8 @@ the journey stack (`chart.tsx` keeps both `initialPresentation` and `initialForm
 Every later "conflict" was the squash-stack artefact and was recorded with `git merge -s ours origin/main` after
 verifying the trees identical (RUNBOOK "Merging a queue", lessons). Timeline: 08:25 start, 08:28 first push, 08:43
 first merge, 09:42 last merge. `main` CI: runs on `677c5fb` and `189d36b` show `cancelled` (superseded by the next
-merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` and `8d0f0d4` running at
-wrap-up. NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
+merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` cancelled the same way;
+`8d0f0d4` (run 34686517400) green with `deploy` run — the head that owns production. NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
 Dependabot #16/#17, and session 96's stranded branch `claude/checkdecijfers-embed-pr-review-acbrd5` (its docs
 cherry-picks conflict in every tracker; its code commit `038ecd9` is superseded by PR #14 — left as a record).
 Branch deletion via the session's git proxy silently fails — listed for the owner. Docs this session: STATUS top

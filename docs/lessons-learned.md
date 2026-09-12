@@ -9,6 +9,14 @@ on top.
 ## Session 99 (2026-09-12, owner present) — merged the six-PR journey + embed stack in one sitting; the
 squash-merge stacking trick, an open-questions number collision, and a wrap-up that claimed lessons it never wrote
 
+- **A docs-only push right after a code merge left production UNDEPLOYED — a latent bug in the session-91 CI design.**
+  The `deploy` job stands down when `main`'s tip ≠ its own SHA ("that commit's own run deploys it"), but docs-only
+  pushes skip the workflow entirely (`paths-ignore`), so the docs commit had no run and the code commit's run had
+  stood down: `8d0f0d4`'s `deploy` = every step skipped, green. Caught only because the wrap-up checked the run's
+  JOBS, not just its conclusion. Fixed the same session in `.github/workflows/ci.yml`: the check now fetches the tip
+  and stands down only if `git diff` between the two shows changes outside `docs/**` and `*.md`; plus a
+  `workflow_dispatch` trigger as the manual escape hatch. Rule for wrap-ups: after the last code merge, push docs
+  FIRST or verify the deploy job actually ran its Vercel steps — "green" is not "deployed".
 - **Stacked PRs + squash merges = every later PR turns `dirty` the moment the one below it lands — and the fix is
   mechanical, not a real merge.** After `gh`-style squash of PR A, `main`'s TREE is byte-identical to A's head, but
   git sees a new commit with no shared history, so PR B (which contains A's commits) conflicts on every hunk A
