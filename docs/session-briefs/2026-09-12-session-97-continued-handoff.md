@@ -1,7 +1,7 @@
 # Session 97 (continued) handoff — PR #14 already covers the Journey programme (written 2026-09-12, owner present)
 
 Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) top block → this file →
-[08-build-plan.md § Journey programme](../08-build-plan.md) → [PR #14 itself](https://github.com/Stefan7168/checkdecijfers/pull/14)
+[08-build-plan.md § Journey programme](../08-build-plan.md) → PR #14 itself on GitHub
 (read its body in full — it is the actual spec of what shipped).
 
 ## The one correction that matters
