@@ -51,14 +51,14 @@ const pathname = vi.hoisted(() => ({ current: '/' }));
 // onboarding-live-status.test.tsx precedent's shape.
 const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: routerRefresh }) }));
-// Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
-// boundary. jsdom renders client-side, where React cannot resolve an async
-// component — the boundary never settles and the root's passive effects
-// (incl. the footer's anchor-target probe) never run. In production Landing
-// is server-rendered HTML, so the probe simply finds the section. Stub the
-// section here; the Landing assertions that matter (the anchor target, the
-// copy) live outside it.
-vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
+// Landing embeds GalleryTeaser (#237/ADR 046, replacing the old
+// OntdekSectie), an ASYNC Server Component. jsdom renders client-side,
+// where React cannot resolve an async component nested as plain JSX — the
+// render never settles and the root's passive effects (incl. the footer's
+// anchor-target probe) never run. In production Landing is server-rendered
+// HTML, so the probe simply finds the section. Stub it here; the Landing
+// assertions that matter (the anchor target, the copy) live outside it.
+vi.mock('./gallery.tsx', () => ({ GalleryTeaser: () => null }));
 // WP218 phase 4 (#219): Landing is now an async Server Component (await
 // getLang()) — jsdom has no Next.js request context for the real
 // cookies()/headers() reads, so it's mocked here the way every other
