@@ -14,6 +14,43 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 98, autonomous).** Read
+[session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md) first.
+**Nothing merged in session 98 (owner away; money path = owner review).** Six PRs wait, in stacking order:
+**PR #14** (`journey-programme` → `main`, phases 0/1/3/4/5, CI green) → **PR #18** (`journey-public-face`, the public
+face: landing around the positioning sentence + `/galerij` with twelve real stories on the live ChartView, ADR 046,
+CI green, Opus-reviewed + fix wave, real-browser pass) → **PR #19** (`journey-phone`, the whole journey walked at
+375 px light + dark in a real browser: header wrap, six tap targets, the Present stage's phone captions — CI green
+on head `16dc9fc`) → **PR #9** (embed) → **PR #15** (`embed-live-creator-lookup` → `embed-charts`,
+the creator-e-mail lookup that lets Live embeds activate, CI green) → **PR #20** (this docs line + `scripts/dev-harness/`).
+Also open: #13, Dependabot #16/#17.
+**New tooling:** [scripts/dev-harness/](../scripts/dev-harness/README.md) + RUNBOOK §"Local real-browser harness" —
+the whole app, logged in, with benchmark questions, locally, with no secrets and no LLM spend. Owner steps on the
+merges: read/fill in `/werkwijze` + `/privacy`; `npm run db:migrate` (028 + 029); `npm run usage:report`; R3 go/no;
+`EMBED_TOKEN_SECRET`; the one-line `auth.users` read check (RUNBOOK) for Live. Session-98 entry:
+[status-archive.md](status-archive.md).
+
+**▶ SESSION 97 AUTONOMOUS — handoff block as written then (superseded by the session-99 kickoff above).** Read
+[session-briefs/2026-09-12-session-98-kickoff.md](session-briefs/2026-09-12-session-98-kickoff.md).
+Current state (verified against `main` / GitHub on 2026-09-12): the visual-upgrade programme (PRs #10–#12) and
+WP218 (PR #7) are LIVE; **the Journey programme phases 0, 1, 3, 4, 5 are BUILT on branch `journey-programme`
+(ADR [045](decisions/045-journey-programme-first-five-minutes.md)) — PR open for the owner, NOT merged, NOT live.**
+Also open: PR #9 (embed, `EMBED_TOKEN_SECRET` on merge) and PR #13 (Story stage motion pass). Owner steps
+unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`; new: read the two draft
+trust pages (`/werkwijze`, `/privacy`, contact e-mail placeholder), run `npm run usage:report` once after 028.
+**Deliberately NOT built: phase 2 / R3 (confirm before a 100-credit fetch) — the money path needs an explicit owner
+go; the larger signup grant (decision 5) is a config value for the owner.** **Owner (2026-09-12, end of session 97): the merge + owner steps are deferred to session 98 — its kickoff lists them
+as step 1.** Next up after the merge: R3 with the
+owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open-questions.md)).
+
+**▶ SESSION 97 (2026-09-12, AUTONOMOUS) — JOURNEY PROGRAMME BUILT, BRANCH + PR.** Five parallel worktrees, five
+work packages (usage report; trust pages + landing; credits/poll/header/panel/insights; the chat bundle; the
+coverage disclosure), an Opus whole-branch review (3 HIGH fixed) + a scoped WP-E review, `/code-review` LOW 0,
+the full verification block green (backend 144 files / 2222 tests, benchmark PASS, web 98 files / 1492 tests,
+`next build`), a real-browser pass that found three more defects (fixed); **PR #14 open, CI gate PASS (11m31s) on `633db3f`, MERGEABLE.** Full entry:
+[status-archive.md](status-archive.md).
+
+**▶ SESSION 97 CONTINUED (2026-09-12, owner present) — handoff block as written then (superseded by the session-98 kickoff above).** Read
 **▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
 [session-briefs/2026-09-12-session-97-continued-handoff.md](session-briefs/2026-09-12-session-97-continued-handoff.md)
 first — it corrects the prior [session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).

@@ -54,7 +54,6 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
   no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
   test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
   string rather than through the i18n key that produced it.
-
 ## Session 97 (2026-09-12, autonomous) — the Journey programme built via parallel worktrees + one fix wave
 
 - **Five parallel worktrees with SYMLINKED `node_modules` (root + web) worked** — no `npm install` per worktree, no

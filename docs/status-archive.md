@@ -1,5 +1,46 @@
 # STATUS archive — the session log
 
+**Session 98 (2026-09-12, AUTONOMOUS — the owner's session-98 kickoff "big-build variant": build on top of PR #14,
+merge nothing on the money path) — the public face + gallery (PR #18), the phone journey walked and fixed (PR #19),
+Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
+
+1. **Harness first.** The cloud container has no `DATABASE_URL`, no Supabase keys, no LLM key. Built
+   `scripts/dev-harness/`: a Node `--import` preload restores the CI fixture snapshot into PGlite and feeds
+   `web/lib/db.ts`'s dev seam (`global.__checkdecijfersDb`); a local Supabase-Auth stand-in (JWKS + `/auth/v1/user`,
+   one test user with the signup grant); an Anthropic-API stand-in replaying `tests/fixtures/llm/**`. Logged-in
+   workspace, a B4 answer with chart, a B16 clarification, a B18 refusal and the credits wall all walk locally with
+   zero LLM spend. A first attempt (local Postgres + self-signed cert appended to the pinned CA) was refused by the
+   tool's safety classifier as a TLS weakening and would not have worked anyway (`next.config.ts` bakes the CA).
+   RUNBOOK section written; Turbopack's symlinked-`node_modules` refusal (hard-link copies instead) and `next dev`
+   rewriting `web/CLAUDE.md` recorded.
+2. **PR #18 — the public face** (Sonnet implementer, Opus whole-branch review, one fix wave): `GALLERY_STORIES`
+   (12 stories over registry keys, built through the same `runQuery → buildChartSpec` pipeline, hermetic gate pins
+   slug → table, grain, window, attribution, ≥ 1 finding); the feed factory in `web/lib/ontdek.ts`; `ChartView`
+   props `initialPresentation` / `initialPanel`; `openStory` no longer fires `generateInsights` for anonymous
+   visitors and an auto-open never counts as a `story_open` event (the review's HIGH: twelve
+   `countChartStyleEvent` server-action DB writes per anonymous load); `/galerij` public + noindex + proxy test;
+   landing subtitle around the positioning sentence (no "embedded" overclaim), a gallery CTA, a compact three-story
+   teaser replacing Ontdek; question-style digit-free titles in nl + en; ADR 046; #237/#239/#240. Measured: root +
+   web tsc clean, test:chart 195, test:docs 11, benchmark 14/14 + 6/6 + 0 fabricated, web 100 files / 1517 tests,
+   real build; browser pass at 375 light/dark nl/en + 1280. CI `gate` success on `5340623`.
+3. **PR #19 — the phone journey** (Sonnet, resumed twice: the first pass was a slice, the second waved a real
+   defect through): the full step list walked at 375 px light + dark; fixed the wordmark wrap in the workspace
+   header, six sub-44 px tap targets (`sm`-only utilities, desktop pixel-identical), and the Present stage's phone
+   captions sitting below the fold (`min-h-[45dvh] lg:min-h-[85vh]`). Findings doc
+   `session-briefs/2026-09-12-phone-walk-findings.md`. Measured: tsc clean, test:docs 11, web 98 files / 1499
+   tests, real build. CI `gate` success on `16dc9fc`.
+4. **PR #15 — Live embeds unblocked** (Sonnet): design note (`session-briefs/2026-09-12-live-embed-creator-lookup-
+   design.md`) → `lookupUserEmail` reads `auth.users.email` through the existing pool, UUID-validated, fail-closed,
+   never logged; the embed route's Live gate uses it; ADR 041 as-built; RUNBOOK owner check. Measured: tsc clean,
+   test:billing 148, test:chart 208, test:docs 11, web 98 files / 1536 tests, real build. CI `gate` success on
+   `a5dafca`. Assumption: the pooler role can read `auth.users` (normally true on Supabase).
+5. **Docs line** (this branch, `claude/checkdecijfers-journey-programme-rvvipe`): merged `journey-programme` into the
+   session-97 docs line (five doc conflicts, both sides kept), the harness + RUNBOOK section, lessons (session 98),
+   STATUS top block, this entry, the session-99 kickoff. Not done: merging anything; applying 028/029; the trial
+   section in the harness; R3.
+6. **Model tiers:** session model planned, built the harness, reviewed every diff + screenshot, opened the PRs;
+   three Sonnet implementers; one Opus reviewer (10 findings, 1 HIGH, all fixed).
+
 **Session 97 (2026-09-11→12, owner present, continued after context compaction) — Journey-programme R8+R9 built
 in-chat, then superseded by discovering PR #14 already covers the whole programme; session wrapped and handed off.**
 
@@ -72,7 +113,6 @@ in-chat, then superseded by discovering PR #14 already covers the whole programm
 10. **Docs updated in this same change:** this entry; `STATUS.md`'s top block (PR #14's existence/state as the
     now-primary fact, the corrected PR #9 SHA, the `journey-programme-v1` redundancy note); `docs/open-questions.md`
     #238; `docs/08-build-plan.md`'s Journey programme section; `docs/lessons-learned.md`.
-
 **Session 97 (2026-09-12, AUTONOMOUS — the owner's kickoff: "work autonomously for hours, multiple agents, big
 steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH `journey-programme`, PR FOR THE OWNER.**
 
