@@ -2003,11 +2003,15 @@ export function ChartView({
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
+  // R9.1 (#238): at 375px these tabs measured only 24px tall — well under
+  // the 44px minimum tap target. `min-h-11 sm:min-h-6` widens the tap target
+  // only below the `sm` breakpoint, so the desktop (1280px) control stays
+  // pixel-identical to before.
   const segmentTab = (active: boolean): string =>
-    'min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
+    'min-h-11 sm:min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
     (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
-    'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
+    'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
       ? 'border-transparent bg-secondary text-foreground'
       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');

@@ -107,4 +107,15 @@ describe('SiteHeader — R9.2 phone header (#214)', () => {
     expect(screen.getByText('10 credits').className.split(/\s+/)).not.toContain('hidden');
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
   });
+
+  // R9.1 (#238): "Log uit" measured 20px tall at 375px — under the 44px
+  // minimum tap target — while 1280px had to stay pixel-identical. Pinned as
+  // a CSS-contract test (jsdom has no layout engine to measure real pixels).
+  it('gives "Log uit" a 44px tap target only below sm', () => {
+    render(<SiteHeader balance={10} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+    const logout = screen.getByRole('button', { name: 'Log uit' });
+    expect(logout.className).toContain('min-h-11');
+    expect(logout.className).toContain('sm:min-h-0');
+  });
 });

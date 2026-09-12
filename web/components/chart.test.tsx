@@ -4089,3 +4089,18 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
     expect(container.querySelector('[role="tablist"]')).toBeNull();
   });
 });
+
+// R9.1 (#238): the Lijn/Vlak/Staaf/Liggend/Tabel tabs measured only 24px
+// tall at 375px — under the 44px minimum tap target — while 1280px had to
+// stay pixel-identical. Pinned as a CSS-contract test (jsdom has no layout
+// engine to measure real pixels).
+describe('ChartView — phone tap targets (R9.1, #238)', () => {
+  it('gives each form tab a 44px tap target only below sm', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    for (const name of ['Lijn', 'Tabel']) {
+      const className = screen.getByRole('tab', { name }).className;
+      expect(className).toContain('min-h-11');
+      expect(className).toContain('sm:min-h-6');
+    }
+  });
+});
