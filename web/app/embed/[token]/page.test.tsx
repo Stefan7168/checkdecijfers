@@ -30,8 +30,11 @@ vi.mock('../../../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('../../../lib/db.ts', () => ({ getDb }));
 
-const { hasProPlan } = vi.hoisted(() => ({ hasProPlan: vi.fn(() => false) }));
-vi.mock('../../../backend/billing/pro.ts', () => ({ hasProPlan }));
+const { hasProPlan, lookupUserEmail } = vi.hoisted(() => ({
+  hasProPlan: vi.fn(() => false),
+  lookupUserEmail: vi.fn(async () => null as string | null),
+}));
+vi.mock('../../../backend/billing/index.ts', () => ({ hasProPlan, lookupUserEmail }));
 
 const { rerunLive } = vi.hoisted(() => ({ rerunLive: vi.fn() }));
 vi.mock('../../../backend/chart/embed-live.ts', () => ({ rerunLive }));
@@ -417,22 +420,37 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     expect(rerunLive).not.toHaveBeenCalled();
   });
 
-  it('passes the row\'s real userId and a null email to hasProPlan (never the anonymous visitor)', async () => {
+  it('passes the row\'s real userId and the looked-up email to hasProPlan (never the anonymous visitor)', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     hasProPlan.mockReturnValue(false);
+    lookupUserEmail.mockResolvedValue('owner@example.com');
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'owner-42' }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
-    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: null });
+    expect(lookupUserEmail).toHaveBeenCalledWith(expect.anything(), 'owner-42');
+    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: 'owner@example.com' });
   });
 
-  it('falls back to an empty-string id (never null/undefined) when the row has no owner (anonymous/benchmark row)', async () => {
+  it('falls back to an empty-string id and skips the lookup entirely when the row has no owner (anonymous/benchmark row)', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     hasProPlan.mockReturnValue(false);
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: null }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(lookupUserEmail).not.toHaveBeenCalled();
     expect(hasProPlan).toHaveBeenCalledWith({ id: '', email: null });
+  });
+
+  it('a lookup failure (null email) falls back to the frozen render exactly like a non-Pro owner', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(false);
+    lookupUserEmail.mockResolvedValue(null);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'owner-42' }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: null });
+    expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
+    expect(rerunLive).not.toHaveBeenCalled();
   });
 
   it('a Pro owner whose live re-run succeeds renders the FRESH spec with a "Live · data as of" footer', async () => {

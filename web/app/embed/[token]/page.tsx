@@ -16,6 +16,12 @@
 // (spec: "a copied 'live' code stops being live when Pro lapses"), with a
 // distinguishing footer message when a Pro owner's live re-run itself fails.
 //
+// The row's owner is resolved to an email via `lookupUserEmail`
+// (src/billing/creator-email.ts, added 2026-09-12 — ADR 041 revisit trigger,
+// open-questions #224) before the Pro check, so Live can now actually
+// activate for an owner listed in `PRO_ACCOUNT_EMAILS`, once the owner
+// verifies the lookup's read against the live project (docs/RUNBOOK.md).
+//
 // The minimal-layout half of spec Part B3 (no site header/footer, <html
 // lang> from ?lang) is handled by web/proxy.ts + web/app/layout.tsx (fix
 // round, Piece 1/2) — this file only ever owned its OWN strings (the
@@ -46,7 +52,7 @@ import type { Metadata } from 'next';
 import { loadAuditRecord } from '../../../backend/answer/audit/index.ts';
 import { verifyEmbedToken } from '../../../backend/chart/embed-token.ts';
 import { rerunLive } from '../../../backend/chart/embed-live.ts';
-import { hasProPlan } from '../../../backend/billing/pro.ts';
+import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
 import { isChartForm, type ChartForm } from '../../../lib/chart-view-state.ts';
@@ -193,25 +199,26 @@ export default async function EmbedPage({
     // email from; this one, rendering days later for an anonymous visitor,
     // does not).
     //
-    // Searched for an existing "look up a user's email by id" mechanism
-    // before writing this (src/billing/*, web/lib/current-user.ts,
-    // src/billing/stripe-webhook.ts, and a repo-wide grep for
-    // `auth.admin`/`service_role`/`getUserById`/`admin.getUser`) and found
-    // none: this app's only Supabase client (web/lib/supabase-server.ts) is
-    // built from the PUBLISHABLE key, and no `SUPABASE_SERVICE_ROLE_KEY` (or
-    // equivalent) is configured anywhere (.env.example, web/.env.local,
-    // web/.env.production) for an admin client to use even if the code
-    // existed. Building that admin-API plumbing — a new privileged Supabase
-    // client construction, a new secret to provision, RLS-bypassing surface
-    // — is a real scope expansion this task's own brief says to stop short
-    // of rather than improvise. So Live is gated CLOSED here: `email: null`
-    // makes `hasProPlan` return `false` for every row (its own documented
-    // fail-closed contract), meaning `?live=1` is safely unreachable — never
-    // wrong/stale data, never a leak — rather than silently broken some
-    // other way. This is a known, deliberate limitation for the owner to
-    // resolve (build the lookup, then pass its result here in place of
-    // `null`), not a bug introduced by this task.
-    const pro = hasProPlan({ id: record.userId ?? '', email: null });
+    // 2026-09-12 (ADR 041 revisit trigger, open-questions #224, design note
+    // docs/session-briefs/2026-09-12-live-embed-creator-lookup-design.md):
+    // resolved via `lookupUserEmail` (src/billing/creator-email.ts), which
+    // reads `auth.users.email` through this app's EXISTING pg pool
+    // (DATABASE_URL — the same Supabase Postgres project GoTrue's own auth
+    // schema lives in) rather than a new Supabase admin/service-role client
+    // (a new privileged secret) or a mirrored+trigger-synced email column (a
+    // schema change and a second copy of personal data). It fails closed to
+    // `null` on ANY error — no `auth` schema, denied privilege, an unknown
+    // or malformed id — so an unverified or denied read degrades to exactly
+    // this gate's prior always-frozen behaviour, never a thrown error.
+    // **Assumption (unverified against the live project by this change —
+    // see docs/RUNBOOK.md's "verify the pooler role can read auth.users"
+    // step):** the pooler role backing DATABASE_URL can SELECT from
+    // `auth.users`; on Supabase the `postgres` role normally can. Until the
+    // owner confirms this on production, Live still stays frozen — nothing
+    // breaks either way. A row with no owner (`record.userId === null`,
+    // e.g. a benchmark/anonymous row) never needs a lookup at all.
+    const email = record.userId === null ? null : await lookupUserEmail(getDb(), record.userId);
+    const pro = hasProPlan({ id: record.userId ?? '', email });
     if (pro) {
       const liveSpec = await rerunLive(getDb(), record, { lang });
       if (liveSpec !== null) {
