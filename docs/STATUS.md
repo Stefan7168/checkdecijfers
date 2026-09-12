@@ -14,8 +14,17 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 99, owner present).** Read
-[session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) first.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
+[session-briefs/2026-09-12-session-101-move-mountains-kickoff.md](session-briefs/2026-09-12-session-101-move-mountains-kickoff.md)
+first — it restates the Phase-0 owner steps below as step zero, then names the actual next big bet: **PR #15's
+creator-e-mail lookup (merged today) just removed the only reason Live embeds couldn't ship** — the owner already
+decided live embeds ARE the Pro plan's reason to exist ([#237](open-questions.md)(b), [#205](open-questions.md));
+nobody has built the actual tier yet. Build the mechanism (gate, upgrade path, upgrade moment) behind a flag —
+never wire real Stripe pricing without an explicit owner go on the number.
+
+**▶ SESSION 99 (2026-09-12, owner present).** Read
+[session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) for the
+detailed Phase-0 owner-steps list (superseded as "next priority" by the block above, still accurate as a checklist).
 **Session 99 merged the whole stack — six PRs, all squash-merged to `main` on green `gate`, in this order:**
 PR #14 Journey programme phases 0/1/3/4/5 (`677c5fb`) → PR #18 public face + `/galerij` (`ac14392`) → PR #19 phone
 journey (`189d36b`) → PR #20 sessions 97–98 docs + `scripts/dev-harness/` (`524b63f`) → PR #9 embed (`650d664`) →
