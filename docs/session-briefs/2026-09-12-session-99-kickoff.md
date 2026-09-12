@@ -6,7 +6,7 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
 ## Where things stand (verified against GitHub on 2026-09-12)
 
 - `main` is live: the visual-upgrade programme (PRs #10–#12) and WP218 (PR #7). Nothing was merged in session 98.
-- **Five PRs wait for the owner, in this stacking order:**
+- **Six PRs wait for the owner, in this stacking order:**
   1. **PR #14** `journey-programme` → `main` — Journey programme phases 0/1/3/4/5 (ADR 045). CI green. Owner steps on merge:
      read + fill in `/werkwijze` and `/privacy` (contact e-mail), `npm run db:migrate` (028 + 029), `npm run usage:report`
      once, say go/no on R3.

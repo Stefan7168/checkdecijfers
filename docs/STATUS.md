@@ -16,7 +16,7 @@
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 98, autonomous).** Read
 [session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md) first.
-**Nothing merged in session 98 (owner away; money path = owner review).** Five PRs wait, in stacking order:
+**Nothing merged in session 98 (owner away; money path = owner review).** Six PRs wait, in stacking order:
 **PR #14** (`journey-programme` → `main`, phases 0/1/3/4/5, CI green) → **PR #18** (`journey-public-face`, the public
 face: landing around the positioning sentence + `/galerij` with twelve real stories on the live ChartView, ADR 046,
 CI green, Opus-reviewed + fix wave, real-browser pass) → **PR #19** (`journey-phone`, the whole journey walked at
