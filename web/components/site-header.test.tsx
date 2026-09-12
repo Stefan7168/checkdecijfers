@@ -31,6 +31,21 @@ describe('SiteHeader — Dutch by default', () => {
   });
 });
 
+describe('SiteHeader — phone layout (R9.1, #238)', () => {
+  // Browser-only regression: at 375px the wordmark used to wrap onto two
+  // lines and blow out the header's fixed h-12 height, clipping the row
+  // below it (verified with a real Chromium screenshot, not reproducible in
+  // jsdom since it has no layout engine). This pins the CSS contract that
+  // prevents the wrap — a real browser check that the classes are present.
+  it('keeps the wordmark and balance chip from wrapping', () => {
+    render(<SiteHeader balance={42} />);
+    const wordmark = screen.getByRole('link', { name: 'Check de Cijfers' });
+    expect(wordmark.className).toContain('whitespace-nowrap');
+    expect(wordmark.className).toContain('shrink-0');
+    expect(screen.getByText('42 credits').className).toContain('whitespace-nowrap');
+  });
+});
+
 describe('SiteHeader — English under LangProvider', () => {
   it('renders the workspace variant in English', () => {
     render(
@@ -91,5 +106,16 @@ describe('SiteHeader — R9.2 phone header (#214)', () => {
     expect(screen.getByRole('link', { name: 'Check de Cijfers' }).className.split(/\s+/)).not.toContain('hidden');
     expect(screen.getByText('10 credits').className.split(/\s+/)).not.toContain('hidden');
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
+  });
+
+  // R9.1 (#238): "Log uit" measured 20px tall at 375px — under the 44px
+  // minimum tap target — while 1280px had to stay pixel-identical. Pinned as
+  // a CSS-contract test (jsdom has no layout engine to measure real pixels).
+  it('gives "Log uit" a 44px tap target only below sm', () => {
+    render(<SiteHeader balance={10} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+    const logout = screen.getByRole('button', { name: 'Log uit' });
+    expect(logout.className).toContain('min-h-11');
+    expect(logout.className).toContain('sm:min-h-0');
   });
 });
