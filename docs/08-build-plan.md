@@ -736,6 +736,11 @@ decide R3), then merge. **Do not start rebuilding any of phases 0/1/3/4/5** — 
 (re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #239](open-questions.md)
 and [lessons-learned.md](lessons-learned.md) (session 97) for the process fix.
 
+**Session 98 (2026-09-12, autonomous) — stacked on PR #14, nothing merged:** (d) the public face + gallery is BUILT (PR #18,
+ADR 046); R9.1 the full phone walk is DONE with fixes (PR #19); the creator-e-mail lookup for Live embeds is BUILT
+(PR #15, stacked on PR #9). Still not built: phase 2 / R3 (owner go), decision 5, the 028 apply, the audit re-run,
+Eurostat. See [session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md).
+
 **Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

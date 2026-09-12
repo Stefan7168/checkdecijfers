@@ -14,7 +14,22 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97, autonomous).** Read
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 98, autonomous).** Read
+[session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md) first.
+**Nothing merged in session 98 (owner away; money path = owner review).** Five PRs wait, in stacking order:
+**PR #14** (`journey-programme` → `main`, phases 0/1/3/4/5, CI green) → **PR #18** (`journey-public-face`, the public
+face: landing around the positioning sentence + `/galerij` with twelve real stories on the live ChartView, ADR 046,
+CI green, Opus-reviewed + fix wave, real-browser pass) → **PR #19** (`journey-phone`, the whole journey walked at
+375 px light + dark in a real browser: header wrap, six tap targets, the Present stage's phone captions — CI still
+running at wrap-up, head `16dc9fc`) → **PR #9** (embed) → **PR #15** (`embed-live-creator-lookup` → `embed-charts`,
+the creator-e-mail lookup that lets Live embeds activate, CI green). Also open: #13, Dependabot #16/#17.
+**New tooling:** [scripts/dev-harness/](../scripts/dev-harness/README.md) + RUNBOOK §"Local real-browser harness" —
+the whole app, logged in, with benchmark questions, locally, with no secrets and no LLM spend. Owner steps on the
+merges: read/fill in `/werkwijze` + `/privacy`; `npm run db:migrate` (028 + 029); `npm run usage:report`; R3 go/no;
+`EMBED_TOKEN_SECRET`; the one-line `auth.users` read check (RUNBOOK) for Live. Session-98 entry:
+[status-archive.md](status-archive.md).
+
+**▶ SESSION 97 AUTONOMOUS — handoff block as written then (superseded by the session-99 kickoff above).** Read
 [session-briefs/2026-09-12-session-98-kickoff.md](session-briefs/2026-09-12-session-98-kickoff.md).
 Current state (verified against `main` / GitHub on 2026-09-12): the visual-upgrade programme (PRs #10–#12) and
 WP218 (PR #7) are LIVE; **the Journey programme phases 0, 1, 3, 4, 5 are BUILT on branch `journey-programme`
