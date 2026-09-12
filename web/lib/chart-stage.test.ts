@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { captionStyle, entranceStyle, entryProgress, spotlightStyle, STAGE_AUTOPLAY_MS, STAGE_TILT_DEG, stageProgress } from './chart-stage.ts';
+import { DEFAULT_PALETTE, seriesColor } from './chart-presentation.ts';
+import {
+  atmosphereState,
+  ATMOSPHERE_INTENSITY_ACTIVE,
+  ATMOSPHERE_INTENSITY_OVERVIEW,
+  ATMOSPHERE_MIX_MAX_PERCENT,
+  captionStyle,
+  entranceStyle,
+  entryProgress,
+  highlightSeriesIndex,
+  planeDriftPx,
+  planeTransform,
+  spotlightGlowStyle,
+  spotlightStyle,
+  STAGE_AUTOPLAY_MS,
+  STAGE_ATMOSPHERE_TRANSITION_MS,
+  STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT,
+  STAGE_SPOTLIGHT_GLOW_BACKGROUND,
+  STAGE_SPOTLIGHT_TRANSITION_EASING,
+  STAGE_SPOTLIGHT_TRANSITION_MS,
+  STAGE_TILT_DEG,
+  stageProgress,
+} from './chart-stage.ts';
 
 describe('stageProgress — which step the viewport centre is on, and how far toward the next', () => {
   const offsets = [0, 800, 1600, 2400];
@@ -73,12 +95,104 @@ describe('entranceStyle — tilted and lifted on entry, flat once read', () => {
   });
 });
 
-describe('captionStyle — the active panel is fully shown, far panels fade and sit lower', () => {
-  it('distance 0 is fully opaque and untranslated; distance ≥ 1 is faint; reduced motion is always shown', () => {
-    expect(captionStyle(0, false)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0)' });
-    expect(captionStyle(1, false).opacity).toBeLessThan(0.5);
-    expect(captionStyle(1, false).transform).not.toBe('translate3d(0, 0px, 0)');
-    expect(captionStyle(1, true)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0)' });
+// ADR 044 §"As built": the plan's §3.4 parallax was not built. This is the
+// small, safe substitute — a per-step vertical "breathing" drift on the SAME
+// plane wrapper the entry tilt uses, driven by `stageProgress`'s per-step
+// progress rather than `entryProgress`. The exact curve is pinned at every
+// progress the brief calls out (0, 0.25, 0.5, 0.75, 1) since this is exactly
+// the kind of motion a real browser check cannot get from jsdom.
+describe('planeDriftPx — a small vertical breathing drift, never a rotation, never a pan toward a point', () => {
+  it('is 0 at a step’s own centre, peaks at 5px around the boundary with the next step, and returns to 0', () => {
+    expect(planeDriftPx(0, false)).toBe(0);
+    expect(planeDriftPx(0.25, false)).toBe(3.54);
+    expect(planeDriftPx(0.5, false)).toBe(5);
+    expect(planeDriftPx(0.75, false)).toBe(3.54);
+    expect(planeDriftPx(1, false)).toBe(0);
+  });
+  it('is symmetric around progress 0.5 (the sine shape, not a linear ramp)', () => {
+    expect(planeDriftPx(0.3, false)).toBe(planeDriftPx(0.7, false));
+    expect(planeDriftPx(0.1, false)).toBe(planeDriftPx(0.9, false));
+  });
+  it('never exceeds the small peak (well under the caption/lift magnitudes elsewhere in this module)', () => {
+    for (let p = 0; p <= 1; p += 0.05) expect(planeDriftPx(p, false)).toBeLessThanOrEqual(5);
+  });
+  it('clamps progress outside [0, 1] exactly like the other stage functions', () => {
+    expect(planeDriftPx(-3, false)).toBe(planeDriftPx(0, false));
+    expect(planeDriftPx(7, false)).toBe(planeDriftPx(1, false));
+  });
+  it('reduced motion is always 0, at every progress — the same gate entranceStyle honours, not a second mechanism', () => {
+    expect(planeDriftPx(0, true)).toBe(0);
+    expect(planeDriftPx(0.5, true)).toBe(0);
+    expect(planeDriftPx(1, true)).toBe(0);
+  });
+});
+
+describe('planeTransform — composes the drift onto the entry transform as a further translateY', () => {
+  const entry = entranceStyle(1, false).transform; // the settled, flat entry transform
+
+  it('is byte-identical to the entry transform when there is no drift (0px): the entry’s own behaviour is unaffected', () => {
+    expect(planeTransform(entry, 0)).toBe(entry);
+  });
+  it('appends a translateY for a non-zero drift, leaving the entry transform’s own text untouched', () => {
+    const composed = planeTransform(entry, 3.54);
+    expect(composed).toBe(`${entry} translateY(3.54px)`);
+    expect(composed.startsWith(entry)).toBe(true);
+  });
+  it('composes with the tilted (non-flat) entry transform exactly the same way', () => {
+    const tilted = entranceStyle(0, false).transform;
+    expect(planeTransform(tilted, 5)).toBe(`${tilted} translateY(5px)`);
+  });
+  it('round-trips a full step boundary: settled entry + the peak drift', () => {
+    expect(planeTransform(entry, planeDriftPx(0.5, false))).toBe(`${entry} translateY(5px)`);
+    expect(planeTransform(entry, planeDriftPx(0, false))).toBe(entry);
+  });
+});
+
+// Editorial reveal (visual upgrade, task 2 of the chain — captions): the
+// opacity and Y-translate formulas below are UNCHANGED from before this
+// task; only the return SHAPE grew a `filter` field and `transform` grew a
+// trailing `scale(...)`. Every number pinned here that existed before this
+// task (the opacity curve, the translate distances) is the exact same
+// number as before — this task only ADDED the blur/scale fields, verified
+// separately below.
+describe('captionStyle — the active panel is fully shown, sharp and true size; far panels fade, blur softly and shrink a touch', () => {
+  it('distance 0 is fully opaque, untranslated, unscaled and perfectly sharp — the ONLY state a reader is actually reading text in', () => {
+    expect(captionStyle(0, false)).toEqual({ opacity: 1, transform: 'translate3d(0, 0px, 0) scale(1)', filter: 'blur(0px)' });
+  });
+  it('distance 1 is faint, translated, gently blurred and a touch smaller — the opacity/translate numbers are exactly what they were before this task', () => {
+    const far = captionStyle(1, false);
+    expect(far.opacity).toBeLessThan(0.5);
+    expect(far.transform).toBe('translate3d(0, 24px, 0) scale(0.96)');
+    expect(far.filter).toBe('blur(6px)');
+  });
+  it('the blur and the scale-down grow smoothly with distance, matching a plain linear ramp of the same peaks used at distance 1', () => {
+    expect(captionStyle(0.25, false).filter).toBe('blur(1.5px)');
+    expect(captionStyle(0.5, false).filter).toBe('blur(3px)');
+    expect(captionStyle(0.75, false).filter).toBe('blur(4.5px)');
+    expect(captionStyle(0.25, false).transform).toBe('translate3d(0, 6px, 0) scale(0.99)');
+    expect(captionStyle(0.5, false).transform).toBe('translate3d(0, 12px, 0) scale(0.98)');
+    expect(captionStyle(0.75, false).transform).toBe('translate3d(0, 18px, 0) scale(0.97)');
+    for (let d = 0; d <= 1; d += 0.1) {
+      expect(captionStyle(d, false).filter).toBe(`blur(${Math.round(6 * d * 100) / 100}px)`);
+    }
+  });
+  it('the scale-down is deliberately subtle — never below the small floor the brief calls for ("a subtle scale", not a zoom), at any distance', () => {
+    for (let d = 0; d <= 1; d += 0.05) {
+      const scale = Number(/scale\(([\d.]+)\)/.exec(captionStyle(d, false).transform)![1]);
+      expect(scale).toBeGreaterThanOrEqual(0.96);
+      expect(scale).toBeLessThanOrEqual(1);
+    }
+  });
+  it('clamps distance outside [-1, 1] exactly like the other stage functions — never more blur or a smaller scale than the distance-1 peak', () => {
+    expect(captionStyle(3, false)).toEqual(captionStyle(1, false));
+    expect(captionStyle(-3, false)).toEqual(captionStyle(1, false));
+  });
+  it('reduced motion is always the exact flat, sharp, unscaled resting style, at every distance — opacity 1, no blur, no scale, no translate: the one guarantee this function must never weaken', () => {
+    const rest = { opacity: 1, transform: 'translate3d(0, 0px, 0)', filter: 'blur(0px)' };
+    expect(captionStyle(0, true)).toEqual(rest);
+    expect(captionStyle(0.5, true)).toEqual(rest);
+    expect(captionStyle(1, true)).toEqual(rest);
+    expect(captionStyle(-1, true)).toEqual(rest);
   });
 });
 
@@ -91,9 +205,138 @@ describe('spotlightStyle — the vignette centre as percentages of the chart box
   });
 });
 
+// Spotlight-motion task: `spotlightGlowStyle` turns `spotlightStyle`'s own
+// percentage output into the moving glow's fixed size + `transform`. Real
+// motion (does the eased translate3d actually read as a camera move) is not
+// checkable here — see this task's own report — but the geometry is pure
+// and fully pinned: a fixed square, generously larger than the box, and an
+// UNDISTORTED px mapping of the marker's position (asserted two ways below:
+// worked examples for one box, and a box-independent delta check).
+describe('spotlightGlowStyle — the moving glow’s fixed size and transform toward the marker', () => {
+  const box = { width: 640, height: 256 };
+
+  it('null exactly when there is nothing to show: no spot, no box, or a zero/negative box', () => {
+    expect(spotlightGlowStyle(null, box)).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, null)).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, { width: 0, height: 0 })).toBeNull();
+    expect(spotlightGlowStyle({ left: '25%', top: '25%' }, { width: -10, height: 256 })).toBeNull();
+  });
+
+  it('is always a square, and generous — larger than the box’s own larger side, so the fixed gradient stops (chart-story-stage.tsx) read as a natural circle even with the marker at a corner', () => {
+    const g = spotlightGlowStyle({ left: '10%', top: '90%' }, box);
+    expect(g).not.toBeNull();
+    expect(g!.width).toBe(g!.height);
+    expect(Number.parseFloat(g!.width)).toBeGreaterThan(Math.max(box.width, box.height));
+  });
+
+  it('places the glow by an exact px offset for a known marker position (640×256 box)', () => {
+    // diameter = max(640, 256) × the fixed factor = 832 — an exact integer
+    // for this box, so no rounding ambiguity muddies the worked numbers.
+    expect(spotlightGlowStyle({ left: '0%', top: '0%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(-416px, -416px, 0)' });
+    expect(spotlightGlowStyle({ left: '50%', top: '50%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(-96px, -288px, 0)' });
+    expect(spotlightGlowStyle({ left: '100%', top: '100%' }, box)).toEqual({ width: '832px', height: '832px', transform: 'translate3d(224px, -160px, 0)' });
+  });
+
+  it('moving the marker across the full width/height moves the transform by exactly that many px — an undistorted, direct mapping (holds regardless of the diameter factor’s own value)', () => {
+    const parse = (t: string): [number, number] => {
+      const m = /translate3d\((-?\d+)px, (-?\d+)px, 0\)/.exec(t);
+      return [Number(m![1]), Number(m![2])];
+    };
+    const [leftX] = parse(spotlightGlowStyle({ left: '0%', top: '50%' }, box)!.transform);
+    const [rightX] = parse(spotlightGlowStyle({ left: '100%', top: '50%' }, box)!.transform);
+    const [, topY] = parse(spotlightGlowStyle({ left: '50%', top: '0%' }, box)!.transform);
+    const [, bottomY] = parse(spotlightGlowStyle({ left: '50%', top: '100%' }, box)!.transform);
+    expect(rightX - leftX).toBe(box.width);
+    expect(bottomY - topY).toBe(box.height);
+  });
+
+  it('clamps an out-of-range percentage to the box edge, exactly like spotlightStyle’s own clamp', () => {
+    expect(spotlightGlowStyle({ left: '150%', top: '-20%' }, box)).toEqual(spotlightGlowStyle({ left: '100%', top: '0%' }, box));
+  });
+});
+
 describe('constants', () => {
   it('auto-play advances every four seconds; the tilt stays under the spec cap', () => {
     expect(STAGE_AUTOPLAY_MS).toBe(4000);
     expect(STAGE_TILT_DEG).toBeLessThanOrEqual(12);
+  });
+  it('the atmosphere colour transition is within the brief’s 400-600ms band, and its peak mix stays conservative (a glow, never a wash)', () => {
+    expect(STAGE_ATMOSPHERE_TRANSITION_MS).toBeGreaterThanOrEqual(400);
+    expect(STAGE_ATMOSPHERE_TRANSITION_MS).toBeLessThanOrEqual(600);
+    expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeGreaterThan(0);
+    expect(ATMOSPHERE_MIX_MAX_PERCENT).toBeLessThanOrEqual(40);
+  });
+  it('the spotlight glow’s move is within the brief’s 300-500ms family, eased (not linear), and its accent tint stays a conservative minority blend of the SAME --stage-accent the atmosphere layer sets', () => {
+    expect(STAGE_SPOTLIGHT_TRANSITION_MS).toBeGreaterThanOrEqual(300);
+    expect(STAGE_SPOTLIGHT_TRANSITION_MS).toBeLessThanOrEqual(500);
+    expect(STAGE_SPOTLIGHT_TRANSITION_EASING).not.toBe('linear');
+    expect(STAGE_SPOTLIGHT_TRANSITION_EASING).toContain('cubic-bezier');
+    expect(STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT).toBeGreaterThan(0);
+    expect(STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT).toBeLessThanOrEqual(30);
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('var(--stage-accent)');
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('var(--card)');
+    expect(STAGE_SPOTLIGHT_GLOW_BACKGROUND).toContain('circle at 50% 50%');
+  });
+});
+
+// Ambient atmosphere layer (visual upgrade, task 1 of a chain): only the
+// colour-resolution logic and the reduced-motion branch are testable
+// without a browser — the brief's own instruction. The actual drifting,
+// blurred CSS this feeds is asserted only for WIRING in
+// chart-story-stage.test.tsx (e.g. that `--stage-accent` is set to exactly
+// what this module resolves); its motion and contrast in a real browser are
+// out of reach here — see the task's report.
+describe('highlightSeriesIndex — a story step’s highlight key (s<index>) to the series index seriesColor wants', () => {
+  it('parses s<N> for any series index', () => {
+    expect(highlightSeriesIndex('s0')).toBe(0);
+    expect(highlightSeriesIndex('s3')).toBe(3);
+    expect(highlightSeriesIndex('s12')).toBe(12);
+  });
+  it('an overview step (highlight null) falls back to the first series — never a different, invented index', () => {
+    expect(highlightSeriesIndex(null)).toBe(0);
+  });
+  it('a malformed key falls back to the first series rather than throwing or returning NaN', () => {
+    expect(highlightSeriesIndex('nope')).toBe(0);
+    expect(highlightSeriesIndex('s')).toBe(0);
+    expect(highlightSeriesIndex('sX')).toBe(0);
+    expect(highlightSeriesIndex('')).toBe(0);
+  });
+});
+
+describe('atmosphereState — the ambient layer’s colour, intensity and motion gate (never an invented colour)', () => {
+  it('resolves the accent through the SAME seriesColor the chart itself draws from, for a custom series colour', () => {
+    const overrides = { seriesColors: { 1: '#123456' } };
+    expect(atmosphereState(overrides, 's1', false).accent).toBe(seriesColor({ seriesColors: overrides.seriesColors }, 1));
+    expect(atmosphereState(overrides, 's1', false).accent).toBe('#123456');
+  });
+  it('an un-overridden series falls back to the same DEFAULT_PALETTE entry the chart itself uses, for every series index', () => {
+    for (let i = 0; i < DEFAULT_PALETTE.length; i++) {
+      expect(atmosphereState({}, `s${i}`, false).accent).toBe(DEFAULT_PALETTE[i]);
+    }
+  });
+  it('an overview step (highlight null) uses the FIRST series’ own colour, at reduced intensity — never a different hue', () => {
+    const overview = atmosphereState({ seriesColors: { 0: '#abcdef' } }, null, false);
+    expect(overview.accent).toBe('#abcdef');
+    expect(overview.intensity).toBe(ATMOSPHERE_INTENSITY_OVERVIEW);
+    expect(overview.intensity).toBeLessThan(ATMOSPHERE_INTENSITY_ACTIVE);
+  });
+  it('a step that highlights a real series gets full intensity', () => {
+    expect(atmosphereState({}, 's0', false).intensity).toBe(ATMOSPHERE_INTENSITY_ACTIVE);
+    expect(atmosphereState({}, 's4', false).intensity).toBe(ATMOSPHERE_INTENSITY_ACTIVE);
+  });
+  it('the reduced-motion branch: animated is false exactly when staticMotion is true, independent of the highlight or colour', () => {
+    expect(atmosphereState({}, 's0', true).animated).toBe(false);
+    expect(atmosphereState({}, null, true).animated).toBe(false);
+    expect(atmosphereState({}, 's0', false).animated).toBe(true);
+    expect(atmosphereState({}, null, false).animated).toBe(true);
+  });
+  it('static motion never changes the colour or intensity — only whether it animates', () => {
+    const overrides = { seriesColors: { 2: '#654321' } };
+    const animated = atmosphereState(overrides, 's2', false);
+    const staticVariant = atmosphereState(overrides, 's2', true);
+    expect(staticVariant.accent).toBe(animated.accent);
+    expect(staticVariant.intensity).toBe(animated.intensity);
+    expect(staticVariant.animated).toBe(false);
+    expect(animated.animated).toBe(true);
   });
 });

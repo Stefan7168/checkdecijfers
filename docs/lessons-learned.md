@@ -157,6 +157,20 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
   no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
   test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
   string rather than through the i18n key that produced it.
+- **A merge conflict on a still-open PR is discoverable only by re-checking `mergeable_state`, not by anything
+  pushed to `main` announcing it.** Two docs-only pushes to `main` (this session's own #238/#239 open-questions
+  rows, landed as part of the PR #14 write-up) collided with PR #13's own independent #239 row — both branches
+  picked the same "next free" row number off the same base, unaware of each other, and PR #13 silently flipped
+  from `mergeable_state: clean` to `dirty` with no notification beyond the next scheduled check-in noticing the
+  field had changed. Caught only because a check-in re-fetched `pull_request_read` (`get`) rather than trusting
+  the previous check-in's cached "still clean" claim. Resolved by keeping the row that already had the most
+  outside cross-references (row #236, ADR 044, STATUS.md's branch note all already pointed at PR #13's #239)
+  and renumbering the newer, less-referenced row to #240 instead — minimizing the blast radius of the rename.
+  Lesson: a numbered, append-only doc list (open-questions.md) is exactly the kind of shared mutable state that
+  two parallel branches will collide on without either side doing anything wrong; a merge-conflict resolution
+  should renumber the LESS cross-referenced row, and should grep for the OLD number across every doc (not just
+  the conflicted file) before considering the fix complete.
+
 ## Session 97 (2026-09-12, autonomous) — the Journey programme built via parallel worktrees + one fix wave
 
 - **Five parallel worktrees with SYMLINKED `node_modules` (root + web) worked** — no `npm install` per worktree, no
@@ -183,6 +197,56 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
 - **`preview_start` looks for `.claude/launch.json` in the session's ORIGINAL scratch workspace** after a
   `change_directory`; spawning `next dev -p 3010` from Bash with the root `.env` loaded and `navigate`-ing to it
   worked fine. `next dev` also rewrites `web/CLAUDE.md` (the agent-rules block) — `git checkout` it before committing.
+
+## Session 96 (continued) — 2026-09-11 — the multi-agent Story-stage visual-motion upgrade
+
+- **A first pass scoped for safety, not impact, drew direct owner pushback — and that was the correct
+  correction, not a wasted first wave.** Given "spawn multiple agents... for hours" with no further spec,
+  the first instinct was three small, independent, low-risk items (a bug fix, a 4-6px "breathing" wobble, a
+  research question). All three were real, well-executed, and worth keeping — but none of them were what
+  "move the needle" meant. The owner's blunt correction arrived exactly when it was needed (right as the
+  small wave finished) rather than hours into a bigger misdirected effort. Lesson: for an open-ended
+  "impress me" ask, the FIRST move should be to name a concrete ambition level in the kickoff/brief itself
+  (cite a comparable bar — here, "The Pudding / NYT graphics desk", already in this repo's own prior
+  planning doc) rather than defaulting to the safest possible interpretation and letting the owner correct
+  scope after the fact.
+- **Checking for a "repeatedly refused" decision before building on top of a plausible-sounding idea saved a
+  wasted subagent run.** "Have the chart draw itself in" sounded like an obvious way to add life to the
+  stage — a `grep` across `docs/` first found it explicitly, repeatedly refused (ADR 042, 08-build-plan's own
+  invariants list, the session-90 architecture synthesis: "Animation — REFUSED — export-at-click-time and
+  reduced motion"). Cheap to check, expensive to discover after a subagent had already built and tested it.
+- **Sequential-with-shared-infrastructure beat parallel for creative work touching the same file.** Wave 1
+  (three genuinely independent items: a hook fix, a pure-function tweak, a research question) parallelized
+  cleanly. Wave 2 (three creative/visual upgrades all touching the same ~450-line component) was
+  deliberately run as ONE foundational task (an ambient layer establishing a shared `--stage-accent` CSS
+  variable) followed by TWO parallel tasks that both consumed it — giving visual coherence (one color
+  language across all three effects) that three blind, simultaneous rewrites would likely not have produced,
+  at a real but bounded wall-clock cost (roughly 1.3x the parallel-only time, not 3x, since only the
+  foundational piece was serialized).
+- **A confirmed, reproducible harness quirk: a fresh isolated worktree agent may not actually start on the
+  branch you told it to.** All three wave-2 subagents independently found their worktree began on a scratch
+  branch pointing at plain `main`, not the shared feature branch the brief named — each caught it only
+  because the brief explicitly instructed "check `git log` for these N named commits before writing any
+  code, branch by name if missing." Without that instruction, at least one would likely have silently built
+  on stale code. Worth stating explicitly in every brief for a multi-agent chain that depends on a shared,
+  evolving base branch — do not assume the isolation mechanism started where you asked it to.
+- **A real regression only a real browser could catch, and jsdom's own suite stayed green throughout.** New
+  editorial caption styling used a negative-inset backdrop scrim for legibility over a new background layer;
+  on the phone/stacked layout (not the desktop side-by-side one), the scrim could bleed into the sticky
+  pinned chart's own attribution line when `scrollIntoView({block:'center'})` centred a panel close to the
+  sticky boundary — invisible to jsdom (no real layout/geometry), and neither task's own component tests
+  caught it since they don't assert cross-element visual overlap. Found via a throwaway fixture route +
+  Playwright screenshots at 375px, fixed with `scroll-margin-top` (the CSS property purpose-built for
+  exactly this "sticky header + scrollIntoView" interaction) in about two iterations. This is the second
+  time this session ADR 044's own "the real proof is a browser, not jsdom" note has been proven right in
+  practice, not just stated as policy.
+- **No `DATABASE_URL`/`web/.env.local` in a fresh remote session means no real chart data — a throwaway
+  fixture route (with a temporary, reverted `proxy.ts` allowlist entry) is a legitimate, cheap way to get a
+  REAL browser rendering a REAL component without a database.** Two gotchas hit along the way, both fixed
+  fast once diagnosed: Next.js treats any `app/` folder starting with `_` as a private, unrouted segment (a
+  leading-underscore debug folder silently 404s, not an error message pointing at the cause); and the
+  session-auth proxy middleware redirects anything not on its allowlist to `/login` before the route handler
+  ever runs, so a debug page needs a temporary allowlist entry, not just to exist.
 
 ## Session 96 (2026-09-11, owner present) — strategy / research session, docs only
 

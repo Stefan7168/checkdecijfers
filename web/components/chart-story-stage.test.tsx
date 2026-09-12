@@ -11,7 +11,7 @@ import { useState, type ReactNode } from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { captionStyle, entranceStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
+import { atmosphereState, captionStyle, entranceStyle, planeDriftPx, planeTransform, spotlightGlowStyle, spotlightStyle, STAGE_AUTOPLAY_MS } from '../lib/chart-stage.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryStage, type ChartStoryStageProps } from './chart-story-stage.tsx';
 
@@ -415,7 +415,14 @@ describe('ChartStoryStage', () => {
   // Landing on it via `rerender` — a plain step-index change, exactly what a
   // real "Volgende"/dot click does — sidesteps the race without weakening
   // what's asserted.
-  it('the spotlight centres on the ringed marker, as a percentage of the chart box', () => {
+  //
+  // Spotlight-motion task: the marker's position is no longer embedded in
+  // `[data-stage-spotlight]`'s own `background` (that element is now just
+  // the plot-box confinement box — see the "confined to the plot box" test
+  // below) — it drives the CHILD glow's `transform` instead
+  // (`[data-stage-spotlight-glow]`), via the real `spotlightGlowStyle`, the
+  // same self-consistency style this test already used for `spotlightStyle`.
+  it('the spotlight glow centres on the ringed marker, as a transform derived from the chart box', () => {
     const original = Element.prototype.getBoundingClientRect;
     const chartBoxRect = { left: 0, top: 0, width: 640, height: 256, right: 640, bottom: 256, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
     const markerRect = { left: 156, top: 60, width: 8, height: 8, right: 164, bottom: 68, x: 156, y: 60, toJSON: () => ({}) } as DOMRect;
@@ -436,12 +443,14 @@ describe('ChartStoryStage', () => {
       // ChartView stage-mode tests use to get exactly one [data-story-marker].
       const { rerender } = render(<ChartStoryStage {...baseProps({ index: 0 })} />);
       rerender(<ChartStoryStage {...baseProps({ index: 1 })} />);
-      const spotlight = document.querySelector('[data-stage-spotlight]');
-      expect(spotlight).not.toBeNull();
-      const background = (spotlight as HTMLElement).style.background;
-      expect(background).toContain('25%');
-      const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
-      expect(background).toContain(`${expected!.left} ${expected!.top}`);
+      const glow = document.querySelector('[data-stage-spotlight-glow]') as HTMLElement | null;
+      expect(glow).not.toBeNull();
+      const expectedSpot = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
+      expect(expectedSpot).toEqual({ left: '25%', top: '25%' });
+      const expectedGlow = spotlightGlowStyle(expectedSpot, { width: 640, height: 256 });
+      expect(glow!.style.transform).toBe(expectedGlow!.transform);
+      expect(glow!.style.width).toBe(expectedGlow!.width);
+      expect(glow!.style.height).toBe(expectedGlow!.height);
     } finally {
       Element.prototype.getBoundingClientRect = original;
     }
@@ -539,6 +548,72 @@ describe('ChartStoryStage', () => {
     }
   });
 
+  // Task: the story-stage motion plane drift (ADR 044 §"As built" — v1 has no
+  // parallax; this is the small, safe substitute). Driven by `scroll.progress`
+  // (per-step, nearest-centre), deliberately not `scroll.entry` — so it must
+  // never show up while the entry above is still tilting, and only ever
+  // appear as an appended `translateY` once the plane is flat. The exact
+  // curve itself is pinned in chart-stage.test.ts; this proves the hook,
+  // `planeDriftPx` and `planeTransform` are wired together correctly here.
+  it('drifts the settled plane a few px toward each step boundary, and never while the entry is still tilting', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      const settled = entranceStyle(1, false).transform;
+
+      // Still inside the entry window: `stageProgress` clamps a step's own
+      // progress to 0 for as long as `entry` has not yet reached 1 (proven in
+      // chart-stage.ts's own doc comment), so no drift term is appended —
+      // byte-identical to the plain (tilted) entry transform.
+      scrollStage(scroller, 400);
+      expect(plane().style.transform).toBe(entranceStyle(0.5, false).transform);
+
+      // Entry has just settled, still at the first step's own centre
+      // (progress 0): no drift yet either.
+      scrollStage(scroller, 800);
+      expect(plane().style.transform).toBe(settled);
+      expect(plane().style.transform).toBe(planeTransform(settled, planeDriftPx(0, false)));
+
+      // A quarter of the way to the next step's centre (progress 0.25): a
+      // small translateY is now appended, matching `planeDriftPx` exactly.
+      scrollStage(scroller, 1000);
+      const quarterDrift = planeDriftPx(0.25, false);
+      expect(quarterDrift).toBeGreaterThan(0);
+      expect(plane().style.transform).toBe(planeTransform(settled, quarterDrift));
+      expect(plane().style.transform).toBe(`${settled} translateY(${quarterDrift}px)`);
+
+      // The boundary itself (progress 0.5): the peak of the breathing curve.
+      scrollStage(scroller, 1200);
+      const peakDrift = planeDriftPx(0.5, false);
+      expect(peakDrift).toBeGreaterThan(quarterDrift);
+      expect(plane().style.transform).toBe(planeTransform(settled, peakDrift));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  it('reduced motion suppresses the drift too, on the same staticMotion gate the entry tilt already uses', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      // The same scroll position that produced the peak 5px drift above.
+      scrollStage(scroller, 1200);
+      expect(plane().style.transform).toBe(entranceStyle(0, true).transform);
+      expect(plane().style.transform).not.toContain('translateY(');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it('the captions hand over continuously instead of popping at each boundary', () => {
     useStageScrollTimers();
     try {
@@ -559,6 +634,100 @@ describe('ChartStoryStage', () => {
       vi.unstubAllGlobals();
       vi.useRealTimers();
     }
+  });
+
+  // Editorial reveal (visual upgrade, task 2 of the chain — captions): the
+  // active caption must be the EXACT sharp/unscaled/untranslated resting
+  // style — the hard constraint this task must not weaken — while an
+  // off-centre one carries the new blur + scale exactly as `captionStyle`
+  // (chart-stage.ts, pinned on its own there) computes them. This proves the
+  // WIRING between the component and the pure function, the same pattern
+  // the entranceStyle/planeDriftPx/spotlightStyle tests already use.
+  it('the active caption sits at the exact sharp, unscaled resting style; an off-centre one blurs, shrinks and fades to match captionStyle exactly', () => {
+    useStageScrollTimers();
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const scroller = layoutStage();
+      scrollStage(scroller, 800); // centred on the first panel
+      const rest = captionStyle(0, false);
+      expect(caption(0).style.opacity).toBe(String(rest.opacity));
+      expect(caption(0).style.transform).toBe(rest.transform);
+      expect(caption(0).style.filter).toBe(rest.filter);
+      const far = captionStyle(1, false);
+      expect(caption(1).style.transform).toBe(far.transform);
+      expect(caption(1).style.filter).toBe(far.filter);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
+  // The hard constraint, restated at the component level: reduced motion
+  // must yield the unchanged simple style — opacity 1, no blur, no scale, no
+  // translate — for EVERY caption regardless of scroll position, on the
+  // SAME staticMotion gate the plane/atmosphere tests already exercise, not
+  // a second/different one.
+  it('reduced motion: every caption sits at the exact flat, sharp resting style regardless of distance', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const rest = captionStyle(0, true);
+      for (let i = 0; i < steps.length; i++) {
+        expect(caption(i).style.opacity).toBe(String(rest.opacity));
+        expect(caption(i).style.transform).toBe(rest.transform);
+        expect(caption(i).style.filter).toBe(rest.filter);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // Chrome decision: the old bordered, opaque `bg-card` box is gone —
+  // replaced by plain text over a borderless, decorative scrim. Guards
+  // against silently regressing back to the small-card look.
+  it('the caption no longer sits in a bordered card', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    expect(caption(0).className).not.toContain('border');
+    expect(caption(0).className).not.toContain('bg-card');
+  });
+
+  // The scrim and the accent rule are purely decorative chrome behind/around
+  // the text — no semantic content, never a click target, matching how the
+  // atmosphere layer itself is already proven inert elsewhere in this file.
+  it('the caption’s decorative scrim and accent rule are aria-hidden and never focusable', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const decorative = Array.from(caption(0).querySelectorAll('[aria-hidden="true"]')) as HTMLElement[];
+    expect(decorative.length).toBeGreaterThanOrEqual(2); // the scrim + the accent rule
+    const dialog = screen.getByRole('dialog');
+    for (const el of decorative) expect(focusables(dialog)).not.toContain(el);
+  });
+
+  // The accent rule is the ONLY colour tie the caption makes to the active
+  // finding — reusing `--stage-accent` exactly as the atmosphere task's own
+  // doc comment asks, never a re-derived colour (the hard constraint in the
+  // brief).
+  it('the caption’s accent rule reuses --stage-accent rather than a re-derived colour', () => {
+    render(<ChartStoryStage {...baseProps({ index: 1 })} />);
+    const rule = caption(1).querySelector('[aria-hidden="true"]') as HTMLElement | null;
+    expect(rule).not.toBeNull();
+    // The scrim is the first aria-hidden child (no inline colour of its
+    // own); the accent rule is the second and carries `--stage-accent`.
+    const accentRule = Array.from(caption(1).querySelectorAll('[aria-hidden="true"]'))[1] as HTMLElement;
+    expect(accentRule.style.backgroundColor).toBe('var(--stage-accent)');
+  });
+
+  // Typography: the title must read as a designed headline, not a small
+  // card label — the primary ask of this task.
+  it('the title reads as a designed headline — large, bold, tight tracking — not a small card label', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const title = screen.getByText(steps[0]!.title);
+    expect(title.className).toMatch(/text-(3xl|4xl|5xl)/);
+    expect(title.className).toContain('font-bold');
+    expect(title.className).toContain('tracking-tight');
   });
 
   // Item 5: Recharts measures itself asynchronously, so the marker often
@@ -672,9 +841,88 @@ describe('ChartStoryStage', () => {
     expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
   });
 
+  // NEW regression test (scrollbar-drag auto-play fix): a scrollbar-thumb
+  // drag fires only a `scroll` DOM event — no wheel/touch/pointerdown — and
+  // (unlike go()'s own advance below) is never preceded by the hook's
+  // beginProgrammatic(). ADR 044's as-built section recorded this as an
+  // "accepted gap" (auto-play kept running through a scrollbar drag);
+  // useStageScroll now exposes isProgrammatic() so onAnyScroll can tell the
+  // two kinds of `scroll` event apart, and a non-programmatic one must stop
+  // auto-play like any other reader gesture.
+  it('a scrollbar-driven scroll (no beginProgrammatic) stops auto-play when it is on', () => {
+    useStageScrollTimers();
+    try {
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const scroller = layoutStage();
+      fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+
+      // The same scrollStage() helper the "reader scrolls via scrollbar"
+      // test above uses: a bare `scroll` event, scrollTop set directly —
+      // exactly what a scrollbar-thumb drag raises, and never routed through
+      // beginProgrammatic() the way go()'s own scrollIntoView advance is.
+      scrollStage(scroller, 1600);
+
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
+      onAdvance.mockClear();
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS * 3);
+      });
+      expect(onAdvance).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // NEW regression test (scrollbar-drag auto-play fix): unlike
+  // 'auto-play survives the scroll events its own advances raise' above
+  // (which raises the browser's `scroll` event as a separate, later step),
+  // this drives the exact causal chain go() uses — beginProgrammatic()
+  // immediately followed by scrollIntoView — by making the scrollIntoView
+  // mock itself raise the `scroll` event synchronously, the way a real
+  // browser would. isProgrammatic() must read true at that exact moment so
+  // auto-play is not stopped: the guard against re-introducing the
+  // session-95 regression (auto-play switching itself off after its own
+  // first advance) while the scrollbar-drag gap above is being closed.
+  it("auto-play's own beginProgrammatic() → scrollIntoView scroll does not stop it", () => {
+    vi.useFakeTimers();
+    const onAdvance = vi.fn();
+    render(<Harness onAdvance={onAdvance} />);
+    const scroller = document.querySelector('[data-stage-scroller]') as HTMLElement;
+    // Overrides the generic no-op stub from beforeEach for this test only
+    // (afterEach restores the true original regardless of this override).
+    Element.prototype.scrollIntoView = vi.fn(() => {
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+    });
+
+    expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+    expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   // Item 8: the vignette used to cover the whole card — the title, the
   // legend and the source line dimmed along with the chart. It is now
   // positioned over the plot box alone.
+  //
+  // Spotlight-motion task: this geometry contract is split, deliberately,
+  // across the two elements the confinement now actually lives in — the
+  // OUTER `[data-stage-spotlight]` box (unchanged: still exactly the plot
+  // box in px, still `overflow-hidden` so nothing can bleed past it) and the
+  // INNER `[data-stage-spotlight-glow]`, whose moving `transform` is what
+  // the old single element's `background` used to encode. Both are checked
+  // below, so "confined to the plot box, never the title or the source
+  // line" still holds in full — the outer box's geometry, unchanged, AND
+  // the fact that the visible glow is clipped to that same box via
+  // `overflow: hidden` (the glow's own size/position routinely exceed the
+  // box — that's `SPOTLIGHT_GLOW_DIAMETER_FACTOR`, by design — so it is the
+  // CROP, not the glow's own bounds, that keeps the promise now).
   it('the vignette is confined to the plot box, never the title or the source line', () => {
     const original = Element.prototype.getBoundingClientRect;
     const chartBoxRect = { left: 0, top: 0, width: 640, height: 400, right: 640, bottom: 400, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
@@ -695,10 +943,18 @@ describe('ChartStoryStage', () => {
       expect(spotlight!.style.height).toBe('256px');
       expect(spotlight!.style.left).toBe('0px');
       expect(spotlight!.style.width).toBe('640px');
+      // `overflow-hidden` is a Tailwind CLASS (compiled stylesheet), not an
+      // inline style — jsdom's `.style` never sees it; `.className` is the
+      // established way this file checks a Tailwind-only property (see the
+      // plane's own `transition-[...]` class assertions above).
+      expect(spotlight!.className).toContain('overflow-hidden');
       // The centre is measured against the PLOT box: the marker's centre
       // (160, 104) sits 64 px below the plot's own top edge.
       const expected = spotlightStyle({ cx: 160, cy: 64 }, { width: 640, height: 256 });
-      expect(spotlight!.style.background).toContain(`${expected!.left} ${expected!.top}`);
+      const glow = spotlight!.querySelector('[data-stage-spotlight-glow]') as HTMLElement | null;
+      expect(glow).not.toBeNull();
+      const expectedGlow = spotlightGlowStyle(expected, { width: 640, height: 256 });
+      expect(glow!.style.transform).toBe(expectedGlow!.transform);
     } finally {
       Element.prototype.getBoundingClientRect = original;
     }
@@ -726,5 +982,96 @@ describe('ChartStoryStage', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // ─── Ambient atmosphere layer (visual upgrade, task 1 of a chain) ───────
+  // Colour-resolution and the reduced-motion branch are pinned exactly in
+  // chart-stage.test.ts (the brief's own testable surface); these prove the
+  // WIRING — that the component actually sets `--stage-accent` from
+  // `atmosphereState`, updates it when the active step changes, and gates
+  // the blobs' animation the same way. Real motion, blur and contrast in a
+  // browser are out of reach here — see the task's report.
+
+  it('sets --stage-accent on the dialog root to the active step’s own highlighted-series colour — the shared infrastructure later tasks reuse', () => {
+    // steps[1] ('high-s0') highlights 's0'; with no overrides that resolves
+    // through the DEFAULT_PALETTE, exactly like atmosphereState itself.
+    render(<ChartStoryStage {...baseProps({ index: 1 })} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe(atmosphereState({}, 's0', false).accent);
+  });
+
+  it('an overview step (no highlight) still sets a real --stage-accent — the first series’ own colour, never missing or invented', () => {
+    // steps[0] ('overview') and steps[2] ('explore') both have highlight: null.
+    render(<ChartStoryStage {...baseProps({ index: 0 })} />);
+    const dialog = screen.getByRole('dialog');
+    const accent = dialog.style.getPropertyValue('--stage-accent');
+    expect(accent).toBe(atmosphereState({}, null, false).accent);
+    expect(accent).not.toBe('');
+  });
+
+  it('the accent follows the ACTIVE step’s own highlighted series and updates the moment the step changes', () => {
+    const twoHighlights: StoryStep[] = [
+      { id: 'a', kind: 'series', title: 'Serie A', caption: 'a', highlight: 's0', point: null },
+      { id: 'b', kind: 'series', title: 'Serie B', caption: 'b', highlight: 's1', point: null },
+    ];
+    const overrides = { seriesColors: { 0: '#111111', 1: '#222222' } };
+    const { rerender } = render(<ChartStoryStage {...baseProps({ steps: twoHighlights, index: 0, overrides })} />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe('#111111');
+    rerender(<ChartStoryStage {...baseProps({ steps: twoHighlights, index: 1, overrides })} />);
+    expect(dialog.style.getPropertyValue('--stage-accent')).toBe('#222222');
+  });
+
+  it('the atmosphere layer sits behind everything (first child, negative z-index) and is purely decorative: aria-hidden, unclickable, never focusable', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const dialog = screen.getByRole('dialog');
+    const layer = dialog.firstElementChild as HTMLElement;
+    expect(layer).toHaveAttribute('data-stage-atmosphere', 'true');
+    expect(layer).toHaveAttribute('aria-hidden', 'true');
+    expect(layer.className).toContain('pointer-events-none');
+    expect(layer.className).toContain('-z-10');
+    expect(focusables(dialog)).not.toContain(layer);
+  });
+
+  it('animated motion runs a continuous drift loop and a background-colour transition on every blob', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const blobs = Array.from(document.querySelectorAll('[data-stage-atmosphere-blob]')) as HTMLElement[];
+    expect(blobs.length).toBeGreaterThanOrEqual(2);
+    for (const blob of blobs) {
+      expect(blob.style.animation).not.toBe('none');
+      expect(blob.style.animation).toContain('infinite');
+      expect(blob.style.transition).toContain('background-color');
+      expect(blob.style.backgroundColor).toContain('color-mix(');
+      expect(blob.style.backgroundColor).toContain('var(--stage-accent)');
+    }
+  });
+
+  it('under static motion (reduced motion / (hover: none) / < lg — the SAME gate the entry tilt uses) the atmosphere shows an instant tint, never a broken or missing layer', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      render(<ChartStoryStage {...baseProps()} />);
+      const blobs = Array.from(document.querySelectorAll('[data-stage-atmosphere-blob]')) as HTMLElement[];
+      expect(blobs.length).toBeGreaterThanOrEqual(2);
+      for (const blob of blobs) {
+        expect(blob.style.animation).toBe('none');
+        expect(blob.style.transition).toBe('none');
+        // Still a real, visible tint — never an empty/missing background.
+        expect(blob.style.backgroundColor).toContain('color-mix(');
+      }
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('the atmosphere keyframes live in document.head, never document.body — the whole-card digit scan (chart.test.tsx) walks only document.body’s own text nodes', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    const headStyles = Array.from(document.head.querySelectorAll('style'));
+    expect(headStyles.some((s) => s.textContent?.includes('stage-atmosphere-drift'))).toBe(true);
+    const bodyStyles = Array.from(document.body.querySelectorAll('style'));
+    expect(bodyStyles.some((s) => s.textContent?.includes('stage-atmosphere-drift'))).toBe(false);
   });
 });
