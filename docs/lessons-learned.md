@@ -46,7 +46,13 @@ while a concurrent session (98/99) squash-merged six other PRs into `main` under
   the working directory while a backgrounded test or build against that same directory is still in flight — wait
   for it, or use a separate worktree, if a branch switch is needed in the meantime.** (A related, smaller version of
   this: `git checkout main` after a push must be followed by `git pull` — a bare checkout only moves to the local
-  branch ref, which can already be behind `origin/main` if the local branch itself hasn't been fast-forwarded.)
+  branch ref, which can already be behind `origin/main` if the local branch itself hasn't been fast-forwarded. **Proven
+  again minutes after writing this bullet:** `git fetch origin main` updates the remote-tracking ref
+  (`origin/main`) but NOT the local `main` branch itself — committing this very wrap-up on top of a
+  fetched-but-not-fast-forwarded local `main` produced a real non-fast-forward push rejection, fixed with
+  `git pull --rebase`. `fetch` alone is never enough before committing to a branch that tracks a remote everyone
+  else can also push to; always `pull` (or `fetch` + explicit fast-forward) immediately before committing, not
+  just before pushing.)
 - **Two independent sessions shipping what looks like "the same" phone-layout fix are not automatically
   duplicates — check what each actually fixes before assuming one supersedes the other.** PR #19's `min-h`
   fix and this branch's `scroll-mt` fix both touch phone rendering of the same Story-stage panel, but address
