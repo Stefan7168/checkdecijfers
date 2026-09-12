@@ -29,6 +29,28 @@ const chartStyleActions = vi.hoisted(() => ({
   lookupBrand: vi.fn(),
 }));
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
+// Task 4 (spec Part B1): ChartEmbedButton (mounted in the footer whenever
+// `embed` is passed) calls this same 'use server' action on open — mocked
+// here for the same reason as chartStyleActions above, so the Embed-button
+// wiring tests below never touch a real db/auth boundary.
+const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
+vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
+// Final review (Important #1): chart-embed-dialog.tsx's exported `APP_URL`
+// is a MODULE-SCOPE constant (`process.env.NEXT_PUBLIC_APP_URL ?? '...'`),
+// computed once when that module first loads — vitest leaves
+// NEXT_PUBLIC_APP_URL unset in this suite, so without this stub APP_URL
+// would resolve to the SAME hardcoded fallback string
+// ('https://checkdecijfers.nl') the embed-footer backlink used to hardcode
+// directly, making a naive "not the old hardcode" assertion pass even on a
+// reverted regression. `vi.hoisted` runs before any import below is
+// evaluated (the same mechanism the two blocks above rely on), so this
+// genuinely lands before chart-embed-dialog.tsx's `const APP_URL = ...`
+// line runs — proving the backlink really reads through the env var, not
+// just happening to match its own fallback.
+vi.hoisted(() => {
+  process.env.NEXT_PUBLIC_APP_URL = 'https://embed-test.example';
+});
+import { APP_URL } from './chart-embed-dialog.tsx';
 
 // R5.3 (journey WP-C): chart-insights-actions.ts is a Server Action module
 // too — mocked here so the anonymous-Insights login line can be exercised
@@ -1939,6 +1961,37 @@ function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): vo
   }
 }
 
+/** Task 3 (embed, spec Part B3): every `scanForUnboundDigits` call site below
+ * used to build this exact allow-list inline, by hand, with small
+ * (accidental, not meaningful) differences between copies — e.g. only the
+ * hbar-form copy included each series' own `label` (region names appear as
+ * axis-tick text there), and a couple of copies omitted `definitionLine`/
+ * `provisionalNote`/`nullNotes` simply because the spec under test in THAT
+ * describe block happened not to set them. Widening any one copy to the
+ * union every copy might need is safe — scanForUnboundDigits only checks
+ * that a rendered digit token has SOME matching source, so a field this
+ * particular spec left unset just contributes an empty string, dropped by
+ * `.filter(Boolean)` below, never a false pass for a token that has no real
+ * source. Folded into one shared helper here (rather than adding a SEVENTH
+ * hand-copied literal for the new embed tests) so every call site — old and
+ * new — draws from the one definition of "every string this spec makes
+ * true". */
+function harvestSpecStrings(s: ChartSpec): string[] {
+  return [
+    s.title,
+    s.unit,
+    s.attributionLine,
+    s.attribution.tableId,
+    s.attribution.syncedAt,
+    s.definitionLine ?? '',
+    s.provisionalNote ?? '',
+    ...s.nullNotes,
+    ...Object.keys(s.dimLabels),
+    ...Object.values(s.dimLabels),
+    ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
+  ].filter(Boolean);
+}
+
 describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
@@ -2144,22 +2197,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // actually visited, Sjablonen included.
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
-      scanForUnboundDigits(
-        lineContainer,
-        [
-          lineSpec.title,
-          lineSpec.unit,
-          lineSpec.attributionLine,
-          lineSpec.attribution.tableId,
-          lineSpec.attribution.syncedAt,
-          lineSpec.definitionLine ?? '',
-          lineSpec.provisionalNote ?? '',
-          ...lineSpec.nullNotes,
-          ...Object.keys(lineSpec.dimLabels),
-          ...Object.values(lineSpec.dimLabels),
-          ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-        ].filter(Boolean),
-      );
+      scanForUnboundDigits(lineContainer, harvestSpecStrings(lineSpec));
     }
     cleanup();
 
@@ -2168,19 +2206,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
-      scanForUnboundDigits(
-        barContainer,
-        [
-          barSpec.title,
-          barSpec.unit,
-          barSpec.attributionLine,
-          barSpec.attribution.tableId,
-          barSpec.attribution.syncedAt,
-          ...Object.keys(barSpec.dimLabels),
-          ...Object.values(barSpec.dimLabels),
-          ...barSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-        ].filter(Boolean),
-      );
+      scanForUnboundDigits(barContainer, harvestSpecStrings(barSpec));
     }
   });
 
@@ -2859,21 +2885,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
         <ChartView spec={s} />
       </LangProvider>,
     );
-    scanForUnboundDigits(
-      container,
-      [
-        s.title,
-        s.unit,
-        s.attributionLine,
-        s.attribution.tableId,
-        s.attribution.syncedAt,
-        s.provisionalNote ?? '',
-        ...s.nullNotes,
-        ...Object.keys(s.dimLabels),
-        ...Object.values(s.dimLabels),
-        ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-      ].filter(Boolean),
-    );
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('bakes the ENGLISH attribution line into the export markup, matching what the card shows', async () => {
@@ -3131,20 +3143,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     });
     const { container } = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
-    const specStrings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      s.definitionLine ?? '',
-      s.provisionalNote ?? '',
-      ...s.nullNotes,
-      ...Object.keys(s.dimLabels),
-      ...Object.values(s.dimLabels),
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
-    scanForUnboundDigits(container, specStrings);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('area form fills with a vertical gradient by default (a <linearGradient> per series, fill url(#…)), and flat when areaFill is flat', () => {
@@ -3231,17 +3230,7 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     const s = multiRegionBarSpec();
     const { container } = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
-    const specStrings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      ...Object.keys(s.dimLabels),
-      ...Object.values(s.dimLabels),
-      ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])]),
-    ].filter(Boolean);
-    scanForUnboundDigits(container, specStrings);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
   it('the SVG export contains the region labels and the value labels', async () => {
@@ -3420,15 +3409,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('with the story open the whole card still shows only spec digits, in Dutch and in English', () => {
     const s = threePointSpec({ provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.' });
-    const strings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      s.provisionalNote ?? '',
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
+    const strings = harvestSpecStrings(s);
     const nl = render(<ChartView spec={s} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
@@ -3449,14 +3430,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // spec's own strings, in Dutch and in English.
   it('with a frame on, the whole card still shows only spec digits, in Dutch and in English', () => {
     const s = threePointSpec();
-    const strings = [
-      s.title,
-      s.unit,
-      s.attributionLine,
-      s.attribution.tableId,
-      s.attribution.syncedAt,
-      ...s.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
-    ].filter(Boolean);
+    const strings = harvestSpecStrings(s);
     const framedStyle = { frameBackground: { kind: 'gradient' as const, from: '#fde68a', to: '#f472b6' }, frameInset: 'large' as const };
     const nl = render(
       <ChartStyleProvider initial={framedStyle}>
@@ -3952,6 +3926,247 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3 (embed, spec Part B3): ChartView grows embed/embedMode/embedFooter.
+// embedMode is true ONLY for the public /embed/[token] route's own render
+// (Tasks 5/6 build that route) and strips every interactive control this
+// component owns — the Weergave tablist, the Opmaak/Inzichten triggers, the
+// Vanaf/Tot zoom selects, the small-multiples toggle, click-to-annotate
+// notes, and Download — replacing them with the route-built `embedFooter`
+// sentence plus a checkdecijfers.nl backlink. The chart itself, its title/
+// unit, the R4 attribution line and the SourceBadge are UNCHANGED. The
+// `embed` prop (Task 4's own ChartEmbedButton, mounted at the comment-marked
+// point in the footer below) does not exist as a component yet — the
+// Download half of the "hides Download and Embed" test below is this task's
+// real, load-bearing assertion; the Embed half is a forward guard that
+// becomes meaningful the moment Task 4 lands.
+// ---------------------------------------------------------------------------
+
+describe('embed mode (spec Part B3)', () => {
+  it('hides the Weergave tablist, the Opmaak trigger and the Inzichten trigger in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inzichten' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
+  });
+
+  it('hides Download in embedMode, even when an embed prop is also passed', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embed={{ auditId: 1 }} embedFooter="x" />);
+    expect(screen.queryByRole('button', { name: /download/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /embed/i })).toBeNull();
+  });
+
+  it('hides the Vanaf/Tot zoom selects and the small-multiples toggle in embedMode', () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.getByLabelText('Vanaf')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.queryByLabelText('Vanaf')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).toBeNull();
+  });
+
+  it('hides ChartNotes in embedMode: clicking a chart point opens no note-entry form', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    fireEvent.click(document.querySelector('circle[data-point="value"]')!);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    fireEvent.click(document.querySelector('circle[data-point="value"]')!);
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  // Review fix: ChartNotes (the notes PANEL) was already gated off above, but
+  // onPointClick was still passed unconditionally at every marker call site,
+  // so each chart point stayed a focusable, ARIA-labeled phantom control with
+  // nothing to open -- a confusing dead end for keyboard/screen-reader users
+  // on the public embed page, and a direct contradiction of embedMode's own
+  // JSDoc. This asserts the point sheds role/tabIndex/aria-label entirely,
+  // not just that clicking it does nothing.
+  it('a chart point loses its role, tabIndex and note aria-label in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    const dotBefore = document.querySelector('circle[data-point="value"]')!;
+    expect(dotBefore).toHaveAttribute('role', 'button');
+    expect(dotBefore).toHaveAttribute('tabindex', '0');
+    expect(dotBefore.getAttribute('aria-label')).toMatch(/voeg notitie toe/i);
+    cleanup();
+
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const dotAfter = document.querySelector('circle[data-point="value"]')!;
+    expect(dotAfter).not.toHaveAttribute('role');
+    expect(dotAfter).not.toHaveAttribute('tabindex');
+    expect(dotAfter).not.toHaveAttribute('aria-label');
+    expect(screen.queryByRole('button', { name: /voeg notitie toe/i })).toBeNull();
+  });
+
+  it('renders the embedFooter sentence with a backlink to the real app URL, not the hardcoded parked domain', () => {
+    render(<ChartView spec={threePointSpec()} embedMode embedFooter="Frozen on 10 September 2026 ·" />);
+    expect(screen.getByText(/Frozen on 10 September 2026/)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /checkdecijfers\.nl/i });
+    // Final review (Important #1): the file-top vi.hoisted stub set
+    // NEXT_PUBLIC_APP_URL to a distinctive, non-default value BEFORE
+    // chart-embed-dialog.tsx's module-scope APP_URL constant was computed —
+    // asserting against BOTH the literal stubbed value and the imported
+    // APP_URL constant proves the backlink genuinely reads through the env
+    // var (the same one the embed dialog's iframe src already uses), not
+    // just happening to match a hardcoded fallback by coincidence.
+    expect(APP_URL).toBe('https://embed-test.example');
+    expect(link).toHaveAttribute('href', 'https://embed-test.example');
+    expect(link).toHaveAttribute('href', APP_URL);
+    expect(link.getAttribute('href')).not.toBe('https://checkdecijfers.nl');
+    // Review fix: this link is the ONE way out of a third-party <iframe> (the
+    // whole point of the embed feature) -- without target="_blank" it loads
+    // checkdecijfers.nl INTO the iframe box instead of the reader's top page,
+    // trapping the site in a chart-sized frame. Same convention as
+    // SourceBadge's own outbound link (source-badge.tsx).
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.getAttribute('rel')).toMatch(/noopener/);
+  });
+
+  it('renders NO embed footer when embedMode is false, regardless of embedFooter', () => {
+    render(<ChartView spec={threePointSpec()} embedFooter="should not appear" />);
+    expect(screen.queryByText(/should not appear/)).toBeNull();
+  });
+
+  it('still shows the R4 attribution line and the SourceBadge in embedMode', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    expect(screen.getByText(s.attributionLine)).toBeInTheDocument();
+    // The attribution <p> and the SourceBadge each independently render the
+    // table id as their own text — two occurrences proves BOTH survived
+    // embedMode, not just the <p> (a plain getByText would throw here on
+    // "multiple elements", which is itself the reason this uses getAllByText).
+    expect(screen.getAllByText(new RegExp(s.attribution.tableId)).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// Task 4 (spec Part B1): the real ChartEmbedButton now mounts at the footer
+// marker Task 3 left — chart-embed-dialog.test.tsx covers the button/dialog
+// in isolation; these cover its WIRING into ChartView itself: the `embed`
+// gate (absent by default, present once passed, calling createEmbedCode with
+// the right auditId) and gating parity with ChartDownloadMenu, its
+// immediate footer sibling, which already owns the identical compound gate
+// (state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable)).
+describe('Embed button wiring (spec Part B1, Task 4)', () => {
+  afterEach(() => vi.clearAllMocks());
+
+  it('is absent with no `embed` prop, appears once `embed` is passed, and opens the dialog on click', async () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} />);
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+    cleanup();
+
+    createEmbedCode.mockReturnValue(new Promise(() => {}));
+    render(<ChartView spec={s} embed={{ auditId: 7 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(createEmbedCode).toHaveBeenCalledWith(7);
+  });
+
+  it('hides Embed in small-multiples view and brings it back on leaving it, exactly like Download', () => {
+    render(<ChartView spec={twoSeriesSpec()} embed={{ auditId: 1 }} />);
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('hides Embed on the Tabel tab', () => {
+    render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+  });
+});
+
+describe('embed digit-token scan (extends the existing whole-card scan)', () => {
+  it('every digit in an embedMode render traces to a spec string or the embedFooter prop itself', () => {
+    const s = threePointSpec();
+    const footer = 'Frozen on 10 September 2026 ·';
+    const { container } = render(<ChartView spec={s} embedMode embedFooter={footer} />);
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fix round (Task 5 review, Piece 3): `initialFormOverride` — a one-shot
+// initial-form seam for the /embed/[token] route's own `?form=`, wired
+// through the SAME lineFormAllowed/areaFormAllowed/hbarFormAllowed guards the
+// Weergave tablist itself already uses. Deliberately independent of every
+// embedMode test above: these render WITHOUT embedMode at all, to prove the
+// prop stands on its own and isn't accidentally coupled to it.
+// ---------------------------------------------------------------------------
+describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)', () => {
+  it('switches to the requested form on mount, with no tab click, when the guard allows it', () => {
+    // twoSeriesLineSpec is kind: 'line' — its own default render (no prop at
+    // all) is Lijn. 'bar' is never gated (fallbackForm's own convention), so
+    // this also proves the override applies even for the "always allowed"
+    // forms, not just the ones with a real guard.
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="bar" />);
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('applies a genuinely GUARDED form (hbar) on mount when the spec allows it (a multi-region comparison)', () => {
+    // multiRegionBarSpec is kind: 'bar', 3 series — hbarFormAllowed is true,
+    // but its OWN default render (no prop) is the vertical Staaf form, same
+    // as the "horizontal bar form" describe block's own spec. Asserting the
+    // rect[data-point] shape that block uses (not .recharts-bar, which is
+    // the VERTICAL bar's own class) proves this really landed on Liggend,
+    // not just "some bar-shaped thing".
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} initialFormOverride="hbar" />);
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does NOT override when the guard disallows it — e.g. requesting hbar on a non-comparison (line-kind) spec', () => {
+    // twoSeriesLineSpec is kind: 'line' — hbarFormAllowed requires kind ===
+    // 'bar', so this must silently fall through to the spec's own default
+    // (Lijn), never forcing a form the honesty rules forbid.
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="hbar" />);
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(container.querySelectorAll('rect[data-point="value"]')).toHaveLength(0);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('is a no-op when absent — byte-identical to every existing ChartView render with no prop at all', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    expect(container.querySelector('.recharts-line')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does not disturb any of the six existing embedMode gating sites when combined with embedMode', () => {
+    const s = multiRegionBarSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" initialFormOverride="hbar" />);
+    // The override still applies (Liggend rendered on mount)...
+    expect(document.querySelectorAll('rect[data-point="value"]')).toHaveLength(3);
+    // ...and every embedMode-gated control is still gone, exactly as the
+    // "embed mode (spec Part B3)" describe block above already covers.
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
   });
 });
 

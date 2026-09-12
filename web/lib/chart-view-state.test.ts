@@ -5,6 +5,7 @@ import {
   fallbackForm,
   hbarFormAllowed,
   initialViewState,
+  isChartForm,
   lineFormAllowed,
   windowSpec,
   type ChartViewState,
@@ -266,6 +267,24 @@ describe('chartViewReducer — setForm accepts the two new forms (no other chang
   it('setForm switches to hbar', () => {
     const next = chartViewReducer(initialViewState('bar'), { type: 'setForm', form: 'hbar' });
     expect(next.form).toBe('hbar');
+  });
+});
+
+// Fix round (Task 5 review, Piece 3): the embed route's own `?form=` guard.
+describe('isChartForm (fix round, Piece 3)', () => {
+  it('accepts every real ChartForm member', () => {
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table']) {
+      expect(isChartForm(form)).toBe(true);
+    }
+  });
+
+  it('rejects anything else, including near-misses and non-strings', () => {
+    expect(isChartForm('Line')).toBe(false);
+    expect(isChartForm('pie')).toBe(false);
+    expect(isChartForm('')).toBe(false);
+    expect(isChartForm(undefined)).toBe(false);
+    expect(isChartForm(null)).toBe(false);
+    expect(isChartForm(42)).toBe(false);
   });
 });
 

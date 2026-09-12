@@ -263,17 +263,67 @@ FIXES (#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
   keyboard nav, point-ring, series-highlight, snapshot/restore — is UNCHANGED; only the content source
   swapped. Trigger threshold lowered `>=3` steps → `>=1` finding (every Insights finding is real content;
   the old count included non-data overview/explore filler). Left deliberately open, tracked:
-  [#224](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
-  in this change); [#225](open-questions.md) no server-side rate/spend cap on Insights generation yet.
+  [#230](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
+  in this change); [#231](open-questions.md) no server-side rate/spend cap on Insights generation yet.
+  (Renumbered from #224/#225 at merge — Embed's branch had already claimed those numbers for its own,
+  unrelated open questions; see the numbering note in [08-build-plan.md](08-build-plan.md).)
 - **Verification (this session, own branch `claude/checkdecijfers-embed-pr-review-acbrd5`), full block,
   all green:** typecheck ×2 clean; web suite 88 files / 1304 tests; backend suite (solo) 143 files / 2211
   tests; hermetic benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS; real
   `next build` clean; `test:docs` 11/11; `/code-review` LOW pass — 0 findings. Merged to `main` same
   session (owner present, confirmed via AskUserQuestion: push straight to `main` once green, per #118).
 
+**▶ SESSION 93 (2026-09-10, autonomous — owner away for the build, checked in once mid-session: "ok
+wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT (8
+TASKS + A WHOLE-BRANCH REVIEW + ONE FINAL FIX WAVE), PUSHED AS A PR, NOT MERGED.**
+- **What shipped:** a signed, stateless `/embed/[token]` public route (frozen render by default), the
+  Embed button + pop-up dialog, framing headers (`X-Frame-Options`/CSP `frame-ancestors`), and a fully
+  built + tested Live re-render path. Zero new migration (rides the existing chart-usage counter table).
+  Full detail, as-built: ADR [041](decisions/041-public-embed-pages.md); the plan:
+  [superpowers/plans/2026-09-10-embed.md](superpowers/plans/2026-09-10-embed.md).
+- **The one fact to carry forward: Live re-render is real, shipped, and tested — but GATED CLOSED,
+  permanently, until a "look up a user's email by id" lookup is built** (none exists in this codebase
+  today; building one needs new Supabase admin/service-role plumbing, correctly out of this plan's
+  scope). See [#224](open-questions.md).
+- **A whole-branch review (opus) caught a Critical the 8-task plan itself never accounted for:**
+  `web/proxy.ts`'s session-auth allowlist had no `/embed/` entry, so every anonymous visitor — the
+  entire point of a *public* embed — was redirected to `/login`. Fixed (with regression tests) before
+  the PR opened; no per-task test suite could have caught it (the route's own tests call the page
+  function directly, bypassing middleware). Also found and fixed at the same gate: a dead backlink
+  (hardcoded to a domain that resolves to registrar parking, not the real app), `?theme=light` (the
+  dialog's own default) silently doing nothing because `next-themes` read the reader's own OS
+  preference regardless, and a redaction-guard test that never isolated the ONE check actually
+  protecting the public route in production. All fixed, re-reviewed clean.
+  See [lessons-learned.md](lessons-learned.md) (session 93) for the full account, incl. a recurring
+  "the UI promises a control the backend doesn't honor" bug shape that hit 3 times independently.
+- **Verified before the PR:** typecheck ×2, web 1380/1380 (91 files), backend 2229/2229 (145 files,
+  solo, ~10.5 min), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, real `next build`, docs 11/11 — all
+  run once more, together, as one final pass after every fix.
+- **Pushed as branch `embed-charts`; the PR is open against `main` for owner review** (autonomous
+  session, #118(b) — not merged). CI's `gate` job green (run `34433304606`); `deploy` correctly did not
+  run (PRs never deploy, only pushes to `main` do, per ADR 018).
+- **New tracked residuals (open-questions):** [#224](open-questions.md) (the Pro-owner-email lookup,
+  the big one), [#225](open-questions.md) (a trusted-header hygiene fix, done), [#226](open-questions.md)
+  (the `?theme=` fix, done), [#227](open-questions.md) (`isRedacted` triplicated across 3 files, not
+  consolidated), [#228](open-questions.md) (a Live embed's query never counts toward table-eviction
+  demand — moot until #224), [#229](open-questions.md) (a pre-existing, narrow gap: a >15-series chart
+  can still embed as a Table view outside the `?form=` path this plan controls).
+- **Owner steps, unchanged from before this session, still pending:** migrations 028 + 029
+  (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, WP202a go-live steps 2–6. **New owner steps
+  once the PR is reviewed and merged:** set `EMBED_TOKEN_SECRET` (Vercel, Production, Sensitive) for
+  Embed to activate at all; optionally `PRO_ACCOUNT_EMAILS` (does **not** by itself turn Live on — see
+  above). RUNBOOK § "Embed go-live" has the full checklist + a concrete smoke test.
+- Also this session: verified the session-92 kickoff's "a follow-up chip reached the model" question
+  was a testing-methodology artifact, not a regression (two structurally different chip mechanisms in
+  `chat.tsx` were conflated) — no code change needed, see lessons-learned.
+Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 92 (2026-09-09, owner present all day) — THREE FEATURES BUILT, REVIEWED, VERIFIED AND LIVE
 ON `main` THE SAME DAY, EACH VIA SUBAGENT-DRIVEN DEVELOPMENT: STORY MODE, THE CHAT POLISH BATCH,
-FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not built — the next build.**
+FRAME STYLING + THE FLOATING STYLE PANEL. Embed (spec Part B) DESIGNED this session — BUILT since,
+not yet merged; see correction below.**
+- **Embed correction:** the line above is stale — see the session 93 entry at the top of this file
+  (and ADR [041](decisions/041-public-embed-pages.md)) for what actually shipped.
 - **Kickoff item 0:** Dependabot's sharp bump merged (`474d62b`, CI `34334007143` green, health ok).
 - **Story mode (ADR 039 addendum; spec Part A; plan `2026-09-09-story-mode.md`):** a gradient-ring
   "Verhaal / Story mode" trigger beside Style opens a story panel under the chart — code-built steps
@@ -320,8 +370,9 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   chart present, no horizontal overflow. Remaining observation: the exported attribution line is one
   line and can be cut off at the right on a narrow chart (pre-existing; a follow-up).
 - **Owner steps unchanged:** migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`,
-  WP202a go-live steps 2–6. **Next build:** Embed (spec Part B) — needs the owner to set
-  `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`) when it ships.
+  WP202a go-live steps 2–6. Embed (spec Part B) is BUILT since (see correction above, branch
+  `embed-charts`) — owner go-live steps are `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`)
+  plus merging the branch; Live re-render stays gated closed regardless ([#224](open-questions.md)).
 Full session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 91 (2026-09-09, started AUTONOMOUS — "Start executing, work autonomously … I expect

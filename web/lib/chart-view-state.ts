@@ -8,6 +8,17 @@ import type { PresentationOverrides } from './chart-presentation.ts';
 
 export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table';
 
+/** Fix round (Task 5 review, Piece 3): guards an arbitrary value (e.g. the
+ * embed route's own `?form=` query-string param) down to a real ChartForm —
+ * same convention as messages.ts's own `isLang`. Confirms only that the
+ * string is one of the five real enum members; it says nothing about
+ * whether that form is actually ALLOWED for a given spec — see
+ * lineFormAllowed/areaFormAllowed/hbarFormAllowed for that (ChartView's own
+ * `initialFormOverride` prop applies both checks, in that order). */
+export function isChartForm(x: unknown): x is ChartForm {
+  return x === 'line' || x === 'area' || x === 'bar' || x === 'hbar' || x === 'table';
+}
+
 export interface ChartViewState {
   form: ChartForm;
   hiddenKeys: Set<string>;
