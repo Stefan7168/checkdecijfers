@@ -4,8 +4,9 @@
 import http from 'node:http';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 const PORT = 9912;
-const ROOT = new URL('../../tests/fixtures/llm', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../tests/fixtures/llm', import.meta.url));
 const fixtures = [];
 (function walk(d) { for (const e of readdirSync(d)) { const f = join(d, e); if (statSync(f).isDirectory()) walk(f); else if (f.endsWith('.json')) { try { const j = JSON.parse(readFileSync(f, 'utf8')); if (j.request && j.response) fixtures.push({ ...j, file: f.slice(ROOT.length + 1) }); } catch {} } } })(ROOT);
 console.log(`[llm-stub] ${fixtures.length} fixtures loaded`);

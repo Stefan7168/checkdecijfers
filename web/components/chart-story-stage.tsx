@@ -610,8 +610,15 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                 </div>
               </div>
             </div>
-            {/* The steps: one full-height panel each; the scroll position picks the step. */}
-            <div className="px-4 pb-[40vh] lg:px-10 lg:pt-[20vh]">
+            {/* The steps: one full-height panel each; the scroll position picks the step.
+              * Bottom padding must clear the LAST step's own `scroll-mt-[52vh]` below
+              * (session-101 real-browser find): with only 40vh of trailing room,
+              * `scrollIntoView({block:'center'})` on the final panel hits the
+              * container's hard scroll end before it can honour the 52vh offset,
+              * so the last caption's title overlaps the pinned chart's attribution
+              * line at rest, not just mid-transition. 56vh clears it with margin;
+              * `lg:pb-[40vh]` keeps the desktop value (no scroll-mt there) unchanged. */}
+            <div className="px-4 pb-[56vh] lg:px-10 lg:pb-[40vh] lg:pt-[20vh]">
               <p className="mb-2 text-xs text-muted-foreground">{t(lang, 'chart.stage.scrollHint')}</p>
               <ol role="list" aria-label={t(lang, 'chart.stage.stepsLabel')} className="m-0 list-none p-0">
                 {steps.map((s, i) => {
