@@ -1,12 +1,13 @@
 // #237/ADR 046: the gallery's card grid — real ChartView (Present/Style/
 // Insights all present, this is the product's own chart component, not a
 // picture of one), every digit on the page traceable to a spec string or
-// the gallery's own i18n copy (principle a), and — the public-page rule —
-// zero generateInsights calls for an anonymous visitor even though every
-// card mounts with initialPanel="story" (Insights open by default).
+// the gallery's own i18n copy (principle a), zero generateInsights calls
+// for an anonymous visitor, and zero usage-tracking calls for the
+// auto-opened first card (fix-wave finding 1).
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { setChartUsageSink } from '../lib/chart-usage-client.ts';
 
 const { getGalleryStories } = vi.hoisted(() => ({ getGalleryStories: vi.fn() }));
 vi.mock('../lib/ontdek.ts', () => ({ getGalleryStories }));
@@ -90,24 +91,44 @@ afterEach(() => {
 });
 
 describe('GalleryGrid', () => {
-  it('renders every built story with its title, lead and chart', async () => {
+  it('renders every built story with its question title and chart', async () => {
     render(await GalleryGrid());
-    expect(screen.getByText('Consumentenvertrouwen')).toBeInTheDocument();
-    expect(
-      screen.getByText('Hoe optimistisch het Nederlandse publiek is over de economie, maand na maand.'),
-    ).toBeInTheDocument();
+    // Fix-wave finding 4: the card title is the QUESTION, never a repeat of
+    // the chart's own on-screen title — both are visible, on different text.
+    expect(screen.getByText('Hoe optimistisch zijn Nederlanders?')).toBeInTheDocument();
+    expect(screen.getByText('Wat kostte een huis?')).toBeInTheDocument();
     expect(screen.getByText('Testreeks')).toBeInTheDocument();
     expect(screen.getByText('Andere reeks')).toBeInTheDocument();
   });
 
-  it('mounts each chart with Insights already open (initialPanel="story")', async () => {
+  // Fix-wave finding 5: twelve (here, four) open Insights panels at once
+  // made the real page unreadable — only the FIRST card pre-opens as the
+  // worked example.
+  it('pre-opens Insights on the FIRST card only — every other card opens on its own trigger', async () => {
     render(await GalleryGrid());
-    expect(screen.getAllByRole('region', { name: 'Inzichten bij de grafiek' }).length).toBe(FOUR_CHARTS.length);
+    expect(screen.getAllByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveLength(1);
+    // Every card still HAS the trigger — the other three are simply closed.
+    expect(screen.getAllByRole('button', { name: 'Inzichten' })).toHaveLength(FOUR_CHARTS.length);
   });
 
   it('never triggers generateInsights for an anonymous visitor, across every card', async () => {
     render(await GalleryGrid());
     expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
+  });
+
+  // Fix-wave finding 1: the auto-open (initialPanel="story" on the first
+  // card only) must NOT count as a story_open usage event — that would fire
+  // the site-wide countChartStyleEvent server action (an unauthenticated DB
+  // write) on every anonymous page view.
+  it('never sends a usage event for the auto-opened Insights panel', async () => {
+    const sink = vi.fn();
+    setChartUsageSink(sink);
+    try {
+      render(await GalleryGrid());
+      expect(sink).not.toHaveBeenCalled();
+    } finally {
+      setChartUsageSink(null);
+    }
   });
 
   it('every digit on the page is bound to a spec string or the gallery copy', async () => {
@@ -132,21 +153,34 @@ describe('GalleryGrid', () => {
   it('renders in English too', async () => {
     getLang.mockResolvedValue('en');
     render(await GalleryGrid());
-    expect(screen.getByText('Consumer confidence')).toBeInTheDocument();
-    expect(
-      screen.getByText('How optimistic the Dutch public is about the economy, month after month.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('How optimistic are the Dutch?')).toBeInTheDocument();
+    expect(screen.getByText('What did a house cost?')).toBeInTheDocument();
   });
 });
 
 describe('GalleryTeaser', () => {
-  it('shows only the first three stories, plus a link to the full gallery', async () => {
+  it('shows only the first three stories, compact (no Insights pre-opened), plus a link to the full gallery', async () => {
     render(await GalleryTeaser());
     expect(screen.getByText('Testreeks')).toBeInTheDocument();
     expect(screen.getByText('Andere reeks')).toBeInTheDocument();
     expect(screen.getByText('Nog een reeks')).toBeInTheDocument();
     expect(screen.queryByText('Vierde reeks')).toBeNull();
+    // Fix-wave finding 6: compact — no card pre-opens Insights, even the
+    // first, so the teaser stays a short taste rather than a full panel.
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Alle verhalen' })).toHaveAttribute('href', '/galerij');
+  });
+
+  it('never sends a usage event or triggers generateInsights (nothing pre-opens)', async () => {
+    const sink = vi.fn();
+    setChartUsageSink(sink);
+    try {
+      render(await GalleryTeaser());
+      expect(sink).not.toHaveBeenCalled();
+      expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
+    } finally {
+      setChartUsageSink(null);
+    }
   });
 
   it('renders nothing when no stories built', async () => {

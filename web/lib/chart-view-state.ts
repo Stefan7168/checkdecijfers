@@ -45,7 +45,20 @@ export function initialViewState(
   initialForm: ChartForm,
   initialPresentation: PresentationOverrides = {},
 ): ChartViewState {
-  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null, presentation: initialPresentation };
+  // Fix-wave finding 9: copy, never store the caller's object by reference —
+  // the gallery passes `templateById(look).overrides`, a SHARED module
+  // constant every card with the same look points at. `setPresentation`'s
+  // own merge (`{ ...state.presentation, ...patch }`) never mutates in
+  // place, so this was never actually corrupted by a later edit, but storing
+  // the reference directly was still one accidental in-place mutation away
+  // from silently reskinning every other chart sharing that template.
+  return {
+    form: initialForm,
+    hiddenKeys: new Set(),
+    highlightedKey: null,
+    periodRange: null,
+    presentation: { ...initialPresentation },
+  };
 }
 
 export function chartViewReducer(state: ChartViewState, action: ChartViewAction): ChartViewState {

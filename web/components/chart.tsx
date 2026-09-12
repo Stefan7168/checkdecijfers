@@ -1525,8 +1525,10 @@ export function ChartView({
   // (useChartStyle()'s no-provider default) or an account with no saved
   // default both resolve exactly as before this task. Per-chart overrides
   // (`state.presentation`) still win over the account default (owner E is
-  // untouched: a spec swap clears `state.presentation`, not `accountStyle`,
-  // so "Standaard" and a fresh chart both fall back to THIS base, not stock).
+  // untouched: a spec swap resets `state.presentation` to `{}` — or to
+  // `initialPresentation` when the chart was given one, #237/ADR 046 — never
+  // to `accountStyle`, so "Standaard" and a fresh chart both fall back to
+  // THIS base, not stock).
   const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
@@ -1943,7 +1945,16 @@ export function ChartView({
   const storyLockId = `${domId}-story-lock`;
   const storyLockedTitle = storyOpen ? t(chartLang, 'chart.story.controlsLocked') : undefined;
 
-  function openStory(): void {
+  // #237/ADR 046 fix-wave finding 1: `initialPanel="story"` auto-opens the
+  // panel on mount via THIS function — unconditionally counting that as a
+  // `story_open` would fire the site-wide `countChartStyleEvent` server
+  // action (an unauthenticated DB write, `web/app/usage-actions.ts`) once
+  // per gallery card per anonymous page view, inflating the owner's usage
+  // counter with opens nobody clicked and doing exactly the per-card
+  // server-action call this WP's zero-server-action-calls rule exists to
+  // avoid. `track` defaults to true (every OTHER call site — the trigger
+  // click, toggleStory — is a real reader action and keeps counting).
+  function openStory(opts?: { track?: boolean }): void {
     storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
     // setView BEFORE setOpenPanel: so the first render of the OPEN story
     // already shows the first step's own highlight/full-range view, never a
@@ -1951,7 +1962,7 @@ export function ChartView({
     dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
     setStoryIndex(0);
     setOpenPanel('story');
-    trackChartStyleEvent('story_open');
+    if (opts?.track !== false) trackChartStyleEvent('story_open');
     // Insights (session 94): fired once per findings set (the null check),
     // on open rather than eagerly on every render — cheapest-viable-
     // mechanism (a chart nobody opens the panel for never spends a token).
@@ -1999,7 +2010,7 @@ export function ChartView({
     if (openedInitialPanelRef.current) return;
     if (initialPanel !== 'story' || !storyAvailable) return;
     openedInitialPanelRef.current = true;
-    openStory();
+    openStory({ track: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPanel, storyAvailable]);
 

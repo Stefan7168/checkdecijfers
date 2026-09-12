@@ -28,7 +28,7 @@ describe('GaleryPage — nl', () => {
     expect(screen.getByRole('heading', { name: 'De galerij', level: 1 })).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Elke kaart hieronder is een echte, gesourcete grafiek — gebouwd door dezelfde deterministische motor die ook antwoorden geeft in de chat. Stel de vraag, zie de grafiek, en volg meteen wat erin opvalt.',
+        'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Zelf inline insluiten komt binnenkort.')).toBeInTheDocument();

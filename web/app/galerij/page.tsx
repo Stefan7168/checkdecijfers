@@ -29,7 +29,11 @@ export default async function GaleryPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader stripped />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
+      {/* Fix-wave finding 3: max-w-3xl (768px) never let gallery.tsx's
+          `lg:grid-cols-2` fire — the desktop page rendered as one very
+          tall column. max-w-6xl gives the two-column grid room; the intro
+          paragraph below keeps its own narrower max-w-xl for readability. */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12">
         <h1 className="text-2xl text-foreground">{t(lang, 'gallery.heading')}</h1>
         <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'gallery.intro')}</p>
         <p className="mt-2 text-sm text-muted-foreground">{t(lang, 'gallery.embedComingSoon')}</p>

@@ -712,48 +712,38 @@ const nl = {
   // stories that shows it live. Digit-free throughout (messages.test.ts's
   // digit-parity rule, plus the whole-card chart digit scans): no card here
   // ever states a number, the live ChartView underneath does that.
+  // Fix-wave finding 7: "ingesloten"/embedded promised a feature that does
+  // not ship on this branch (PR #9 not merged) — softened to what is
+  // actually true today: a chart with its source shown, ready to share.
   'landing.heroSubtitleV2':
-    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een ingesloten grafiek met bron, klaar om te delen.',
+    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een grafiek met bron erbij, klaar om te delen.',
   'landing.ctaGallery': 'Bekijk de galerij',
   'gallery.teaserHeading': 'Verhalen uit de galerij',
   'gallery.teaserAllLink': 'Alle verhalen',
   'gallery.pageTitle': 'Galerij — Check de Cijfers',
   'gallery.heading': 'De galerij',
+  // Fix-wave finding 7: "gesourcete" is not Dutch, and the claim must match
+  // what actually ships on this branch — built from real CBS-cijfers, with
+  // bron en datum, never "gesourcet" or "echt" as vague marketing filler.
   'gallery.intro':
-    'Elke kaart hieronder is een echte, gesourcete grafiek — gebouwd door dezelfde deterministische motor die ook antwoorden geeft in de chat. Stel de vraag, zie de grafiek, en volg meteen wat erin opvalt.',
+    'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
   'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
-  'gallery.story.consumentenvertrouwen.title': 'Consumentenvertrouwen',
-  'gallery.story.consumentenvertrouwen.lead':
-    'Hoe optimistisch het Nederlandse publiek is over de economie, maand na maand.',
-  'gallery.story.economische-groei.title': 'Economische groei',
-  'gallery.story.economische-groei.lead': 'De volumegroei van de Nederlandse economie, per kwartaal.',
-  'gallery.story.inflatie.title': 'Inflatie',
-  'gallery.story.inflatie.lead': 'Hoeveel duurder het leven werd, jaar op jaar.',
-  'gallery.story.huizenprijzen.title': 'Huizenprijzen',
-  'gallery.story.huizenprijzen.lead':
-    'De ontwikkeling van de gemiddelde verkoopprijs van bestaande koopwoningen.',
-  'gallery.story.werkloosheid.title': 'Werkloosheid',
-  'gallery.story.werkloosheid.lead':
-    'Het seizoengecorrigeerde werkloosheidspercentage, per kwartaal.',
-  'gallery.story.faillissementen.title': 'Faillissementen',
-  'gallery.story.faillissementen.lead':
-    'Hoeveel bedrijven en instellingen failliet gingen, maand na maand.',
-  'gallery.story.producentenprijzen.title': 'Producentenprijzen',
-  'gallery.story.producentenprijzen.lead':
-    'De prijsontwikkeling die producenten in rekening brengen, jaar op jaar.',
-  'gallery.story.detailhandelsomzet.title': 'Omzet detailhandel',
-  'gallery.story.detailhandelsomzet.lead': 'Hoe de omzet van de detailhandel zich ontwikkelde, jaar op jaar.',
-  'gallery.story.supermarktomzet.title': 'Omzet supermarkten',
-  'gallery.story.supermarktomzet.lead':
-    'Hoe de omzet van supermarkten en warenhuizen zich ontwikkelde, jaar op jaar.',
-  'gallery.story.consumptie-huishoudens.title': 'Consumptie huishoudens',
-  'gallery.story.consumptie-huishoudens.lead': 'De groei van de bestedingen van huishoudens, jaar op jaar.',
-  'gallery.story.werkloosheid-maandelijks.title': 'Werkloosheid per maand',
-  'gallery.story.werkloosheid-maandelijks.lead':
-    'Het seizoengecorrigeerde werkloosheidspercentage, maand na maand.',
-  'gallery.story.zonnestroom.title': 'Zonnestroom',
-  'gallery.story.zonnestroom.lead':
-    'De groei van de Nederlandse elektriciteitsproductie uit zonnepanelen, jaar na jaar.',
+  // Fix-wave finding 4: every title is now the QUESTION a reader would have
+  // typed in chat — it demonstrates the positioning sentence directly and
+  // never repeats the chart's own on-screen title one line below. The
+  // separate "lead" line was dropped: the question already says it.
+  'gallery.story.consumentenvertrouwen.title': 'Hoe optimistisch zijn Nederlanders?',
+  'gallery.story.economische-groei.title': 'Hoe hard groeide de economie?',
+  'gallery.story.inflatie.title': 'Wat deed de inflatie?',
+  'gallery.story.huizenprijzen.title': 'Wat kostte een huis?',
+  'gallery.story.werkloosheid.title': 'Hoe hoog was de werkloosheid?',
+  'gallery.story.faillissementen.title': 'Hoeveel bedrijven gingen failliet?',
+  'gallery.story.producentenprijzen.title': 'Wat deden de producentenprijzen?',
+  'gallery.story.detailhandelsomzet.title': 'Hoe deed de detailhandel het?',
+  'gallery.story.supermarktomzet.title': 'Hoe deden de supermarkten het?',
+  'gallery.story.consumptie-huishoudens.title': 'Hoeveel gaven huishoudens uit?',
+  'gallery.story.werkloosheid-maandelijks.title': 'Hoe ontwikkelde de werkloosheid zich per maand?',
+  'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1314,40 +1304,32 @@ const en: Messages = {
   // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
   // originals (messages.test.ts's digit-parity rule).
   'landing.heroSubtitleV2':
-    'Ask your question in plain language and chat your way from official CBS research to an embedded, sourced chart, ready to share.',
+    'Ask your question in plain language and chat your way from official CBS research to a sourced chart, ready to share.',
   'landing.ctaGallery': 'See the gallery',
   'gallery.teaserHeading': 'Stories from the gallery',
   'gallery.teaserAllLink': 'All stories',
   'gallery.pageTitle': 'Gallery — Check de Cijfers',
   'gallery.heading': 'The gallery',
+  // Fix-wave finding 7: matches the truer, on-message nl copy — built from
+  // real CBS figures, with source and date, never vague "real/sourced"
+  // marketing filler.
   'gallery.intro':
-    'Every card below is a real, sourced chart — built by the same deterministic engine that answers questions in chat. Ask the question, see the chart, and follow what stands out right away.',
+    'Every card below is built from official CBS figures, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
   'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
-  'gallery.story.consumentenvertrouwen.title': 'Consumer confidence',
-  'gallery.story.consumentenvertrouwen.lead':
-    'How optimistic the Dutch public is about the economy, month after month.',
-  'gallery.story.economische-groei.title': 'Economic growth',
-  'gallery.story.economische-groei.lead': "The volume growth of the Dutch economy, quarter by quarter.",
-  'gallery.story.inflatie.title': 'Inflation',
-  'gallery.story.inflatie.lead': 'How much more expensive life became, year on year.',
-  'gallery.story.huizenprijzen.title': 'House prices',
-  'gallery.story.huizenprijzen.lead': 'How the average sale price of existing homes has moved.',
-  'gallery.story.werkloosheid.title': 'Unemployment',
-  'gallery.story.werkloosheid.lead': 'The seasonally adjusted unemployment rate, quarter by quarter.',
-  'gallery.story.faillissementen.title': 'Bankruptcies',
-  'gallery.story.faillissementen.lead': 'How many businesses and institutions went bankrupt, month after month.',
-  'gallery.story.producentenprijzen.title': 'Producer prices',
-  'gallery.story.producentenprijzen.lead': 'The price changes producers charge, year on year.',
-  'gallery.story.detailhandelsomzet.title': 'Retail turnover',
-  'gallery.story.detailhandelsomzet.lead': 'How retail turnover has moved, year on year.',
-  'gallery.story.supermarktomzet.title': 'Supermarket turnover',
-  'gallery.story.supermarktomzet.lead': 'How supermarket and department-store turnover has moved, year on year.',
-  'gallery.story.consumptie-huishoudens.title': 'Household consumption',
-  'gallery.story.consumptie-huishoudens.lead': 'The growth of household spending, year on year.',
-  'gallery.story.werkloosheid-maandelijks.title': 'Monthly unemployment',
-  'gallery.story.werkloosheid-maandelijks.lead': 'The seasonally adjusted unemployment rate, month after month.',
-  'gallery.story.zonnestroom.title': 'Solar power',
-  'gallery.story.zonnestroom.lead': 'The growth of Dutch electricity production from solar panels, year after year.',
+  // Fix-wave finding 4: every title is the QUESTION a reader would have
+  // typed — the separate "lead" line was dropped, the question says it.
+  'gallery.story.consumentenvertrouwen.title': 'How optimistic are the Dutch?',
+  'gallery.story.economische-groei.title': 'How fast did the economy grow?',
+  'gallery.story.inflatie.title': 'What did inflation do?',
+  'gallery.story.huizenprijzen.title': 'What did a house cost?',
+  'gallery.story.werkloosheid.title': 'How high was unemployment?',
+  'gallery.story.faillissementen.title': 'How many businesses went bankrupt?',
+  'gallery.story.producentenprijzen.title': 'What did producer prices do?',
+  'gallery.story.detailhandelsomzet.title': 'How did retail do?',
+  'gallery.story.supermarktomzet.title': 'How did supermarkets do?',
+  'gallery.story.consumptie-huishoudens.title': 'How much did households spend?',
+  'gallery.story.werkloosheid-maandelijks.title': 'How did unemployment move month by month?',
+  'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

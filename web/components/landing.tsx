@@ -150,10 +150,14 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
 
         {/* #237/ADR 046: the gallery teaser replaces the old Ontdek section
             on the landing — same deterministic, LLM-free curated-chart
-            pipeline (ADR 035), now presented as sourced, embeddable stories
-            around the positioning sentence rather than a bare discovery
-            grid. web/components/ontdek.tsx stays compiling (referenced
-            elsewhere) but is no longer mounted here. */}
+            pipeline (ADR 035), now presented as sourced stories around the
+            positioning sentence rather than a bare discovery grid.
+            web/components/ontdek.tsx (fix-wave finding 2: it compiles, but
+            NOTHING mounts it any more — the component, its own test suite,
+            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys are
+            dead code, deliberately left in place rather than deleted on
+            this branch; see open-questions.md's follow-up row for the exact
+            deletion list) is not referenced from here or anywhere else. */}
         <GalleryTeaser />
 
         {/* WP-E (R4): the coverage disclosure — no example handler is passed

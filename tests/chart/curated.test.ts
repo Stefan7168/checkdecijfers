@@ -27,6 +27,15 @@ const EXPECTED_TABLES: Record<string, string> = {
   inflatie: '86141NED',
   huizenprijzen: '85773NED',
   werkloosheid: '85224NED',
+  // #237/ADR 046, fix-wave finding 10: the seven GALLERY_STORIES-only slugs,
+  // pinned the same way as the five ONTDEK_CHARTS slugs above.
+  faillissementen: '82242NED',
+  producentenprijzen: '85770NED',
+  detailhandelsomzet: '85828NED',
+  supermarktomzet: '85828NED',
+  'consumptie-huishoudens': '85937NED',
+  'werkloosheid-maandelijks': '80590ned',
+  zonnestroom: '82610NED',
 };
 
 let db: Db;
@@ -303,6 +312,14 @@ describe('GALLERY_STORIES (hermetic, fixture DB)', () => {
       expect(() => chartSpecSchema.parse(chart.spec)).not.toThrow();
       expect(chart.spec.attribution.tableId.length).toBeGreaterThan(0);
       expect(chart.spec.attribution.syncedAt.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every story resolves to its pinned table — a registry re-point is a conscious edit here', () => {
+    for (const chart of galleryOutcome.charts) {
+      const expected = EXPECTED_TABLES[chart.slug];
+      expect(expected, `EXPECTED_TABLES is missing an entry for gallery slug "${chart.slug}"`).toBeDefined();
+      expect(chart.spec.attribution.tableId).toBe(expected);
     }
   });
 
