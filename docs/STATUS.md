@@ -15,8 +15,9 @@
 > pointer, the way this convention has always intended.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
-[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md), then this
-correction: **the Journey programme is already built.** PR #14 ("Journey programme: phases 0, 1, 3, 4, 5", ADR
+[session-briefs/2026-09-12-session-97-continued-handoff.md](session-briefs/2026-09-12-session-97-continued-handoff.md)
+first — it corrects the prior [session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
+**The short version: the Journey programme is already built.** PR #14 ("Journey programme: phases 0, 1, 3, 4, 5", ADR
 [045](decisions/045-journey-programme-first-five-minutes.md), branch `journey-programme`, head `2c4ec80`) covers
 phases 0/1/3/4/5 of the plan below — CI green (`gate`: success), `mergeable_state: clean`, but **zero reviews, zero
 comments, sitting untouched since 2026-09-11T18:27 UTC.** Read its PR body first — it lists exactly what shipped,
