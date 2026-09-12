@@ -39,3 +39,4 @@ benchmark/validation-run.json
 .superpowers/
 .playwright-mcp/
 scripts/dev-harness/session-cookie.json
+.worktrees/
