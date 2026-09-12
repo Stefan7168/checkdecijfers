@@ -45,7 +45,7 @@ function LogoutButton() {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="text-left text-muted-foreground hover:text-foreground disabled:opacity-60"
+      className="flex min-h-11 sm:min-h-0 w-full items-center text-left text-muted-foreground hover:text-foreground disabled:opacity-60"
     >
       {pending ? t('header.busy') : t('header.logout')}
     </button>
@@ -76,15 +76,18 @@ export function SiteHeader({
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-      <Link href="/" className="text-sm font-semibold text-foreground">
+    <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border px-3 sm:px-4">
+      {/* R9.1 (#238): whitespace-nowrap + shrink-0 keep the wordmark on one
+        * line at 375px — it used to wrap to two lines and blow out the
+        * fixed h-12 header height, clipping the row below it. */}
+      <Link href="/" className="shrink-0 whitespace-nowrap text-sm font-semibold text-foreground">
         {WORDMARK}
       </Link>
-      <div className="flex items-center gap-3 text-sm">
+      <div className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
         {/* ADR 006: the balance is read live and passed in — never a hardcoded
           * number. .tnum so digits align (the #91 FT/NRC convention). */}
         {balance !== undefined ? (
-          <Badge variant="secondary" className="tnum font-normal text-muted-foreground">
+          <Badge variant="secondary" className="tnum shrink-0 whitespace-nowrap font-normal text-muted-foreground">
             {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
@@ -118,10 +121,15 @@ export function SiteHeader({
               {/* R9.2 (#214): the phone-hidden bar links, reappearing here as
                 * the menu's first two items — same targets, same copy, `sm:hidden`
                 * so they vanish again the moment the bar has room for them. */}
-              <Link href="/credits" className="text-muted-foreground hover:text-foreground sm:hidden">
+              {/* R9.1 (#238): these menu items were plain text links/buttons
+                * with no padding — only 16-20px tall, well under the 44px
+                * minimum tap target on a phone. `flex min-h-11 items-center`
+                * gives each a real touch target without changing how the
+                * text looks. */}
+              <Link href="/credits" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground sm:hidden">
                 {t('header.credits')}
               </Link>
-              <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground sm:hidden">
+              <Link href="/geschiedenis" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground sm:hidden">
                 {t('header.history')}
               </Link>
               {/* The genuinely-new logout: a server action via a form so it

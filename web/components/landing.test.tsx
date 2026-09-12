@@ -3,15 +3,18 @@
 // ontdek.test.tsx precedent), never `<Landing/>` directly — jsdom's client
 // renderer cannot invoke an async function component itself.
 //
-// ontdek.tsx and trial.tsx are mocked out: both mount their OWN async
-// Server Component behind a Suspense boundary (OntdekCharts / TrialGate),
-// which is exactly the "render the pure part" carve-out the brief allows —
-// their own suites already cover that subtree in isolation.
+// gallery.tsx and trial.tsx are mocked out: both mount their OWN async
+// Server Component reads (GalleryTeaser / TrialGate), which is exactly the
+// "render the pure part" carve-out the brief allows — their own suites
+// already cover that subtree in isolation. #237/ADR 046: the landing's old
+// Ontdek section (ontdek.tsx) was replaced by the gallery teaser; ontdek.tsx
+// itself stays compiling (still used elsewhere) but is no longer mounted
+// here, so this suite no longer mocks it.
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
+vi.mock('./gallery.tsx', () => ({ GalleryTeaser: () => null }));
 vi.mock('./trial.tsx', () => ({ TrialSectie: () => null }));
 
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));

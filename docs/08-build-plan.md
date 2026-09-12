@@ -722,6 +722,12 @@ findings) — see [STATUS.md](STATUS.md) for the exact numbers. Merged to `main`
 
 **Session 97 (2026-09-12, autonomous) — BUILT on branch `journey-programme` (PR for the owner, not merged): phases 0 (report only), 1, 3, 4, 5 per the working defaults; recorded in [ADR 045](decisions/045-journey-programme-first-five-minutes.md). Not built: phase 2 / R3 (explicit owner go), decision 5 (config value), the 028 apply, the audit re-run, the full R9.1 journey walk. Phase 6 waits for 028 + a first report run.**
 
+**Session 98 (2026-09-12, autonomous) — BUILT the parallel-positioning item (d) on branch `journey-public-face`, stacked on `journey-programme` (PR for the owner, not merged): the landing rebuilt around the positioning sentence in both languages (new subtitle + a second "Bekijk de galerij"/"See the gallery" CTA), and a public gallery of TWELVE real curated stories on the live `ChartView` at `/galerij` — Present/Style/Insights all working, zero AI spend, zero server-action calls on the public pages. Recorded in [ADR 046](decisions/046-public-gallery-and-positioning-landing.md). The landing's old Ontdek section is no longer mounted (replaced by a 3-story gallery teaser + a link to the full gallery); `ontdek.tsx` stays compiling, unused there. Not built: items (a)(b)(c) above (the repositioning ADR itself, the Pro-plan brainstorm, Eurostat); embed code on the gallery cards (PR #9 not merged into this branch's base — tracked in [#237](open-questions.md)).
+
+**Session 98 (2026-09-12, autonomous) — R9.1 (the full phone walk) BUILT on branch `journey-phone`, stacked on `journey-programme`: every step in the kickoff brief walked at 375px, light + dark, in real Chromium — landing/login/workspace, the sources disclosure, an answer round trip with chart, all five chart-form tabs + Vanaf/Tot, the Style panel, Insights, the Present stage, a clarification round, a refusal, insufficient credits, the purchase-success banner, `/geschiedenis`, the sidebar/thread list, the Account menu + delete-history flow, theme persistence, an EN spot-check. Six tap-target bugs found and fixed (header wordmark wrap, Account menu items, chart form tabs, NL\|EN switch, theme toggle, delete-history confirm buttons) — all gated with a responsive class so 1280px stays pixel-identical; each has a regression test. Full verification green (typecheck, web:typecheck, test:docs, 98 files/1498 web:test, web:build). Not fixed: the sidebar's `icon-xs`/`icon-sm` shared Button-token buttons, also under 44px but a shared design-system primitive with a wider blast radius than this WP — left for its own pass. See [session-briefs/2026-09-12-phone-walk-findings.md](session-briefs/2026-09-12-phone-walk-findings.md).**
+
+**Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
+
 **Session 97 update (2026-09-12): phases 0, 1, 3, 4, 5 are BUILT — PR #14**,
 51 files / +3567 −264 / 22 commits, branch `journey-programme`, head `2c4ec80`. CI green (`gate`: success),
 `mergeable_state: clean`, **but zero reviews and zero comments as of this update — nobody has looked at it yet.**
@@ -733,7 +739,7 @@ deliberately excluded — still needs an explicit owner go per the rule above. P
 merge + real usage. **Next step is the owner's, not a session's:** review PR #14 (its body lists the three owner
 steps — read/fill in `/werkwijze` + `/privacy`, run `npm run db:migrate` for 028+029 then `npm run usage:report`,
 decide R3), then merge. **Do not start rebuilding any of phases 0/1/3/4/5** — a sibling session independently
-(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #239](open-questions.md)
+(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #241](open-questions.md)
 and [lessons-learned.md](lessons-learned.md) (session 97) for the process fix.
 
 **Session 98 (2026-09-12, autonomous) — stacked on PR #14, nothing merged:** (d) the public face + gallery is BUILT (PR #18,
