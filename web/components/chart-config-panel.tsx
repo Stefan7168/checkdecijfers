@@ -687,6 +687,19 @@ export interface ChartConfigPanelProps {
    * panel only reports the pick, it never resolves or applies anything
    * itself. Optional so every existing render call keeps compiling. */
   onApplyTemplate?: (id: ChartTemplateId) => void;
+  /** R5.2 (journey WP-C, ADR 043 decision 6 revisit): when true AND
+   * `resolved.pristine` (the per-chart override object is empty — no
+   * template applied, no hand tweak yet) AND the templates tabpanel is
+   * actually applicable to this form (`resolved.applicable.has('grid')`, the
+   * same gate the tabpanel itself carries — MEDIUM-2), the panel's initial tab is
+   * Sjablonen instead of Grafiek — a first-time reader sees the looks
+   * gallery, not the raw controls. Computed once at mount (a lazy
+   * `useState` initializer), so a tweak made AFTER opening never flips the
+   * tab back — "once anything was changed, keep current behaviour" per the
+   * spec. Optional and OFF by default so every existing render call (test
+   * or otherwise) that doesn't pass it keeps opening on Grafiek exactly as
+   * before this task. */
+  openTemplatesWhenPristine?: boolean;
 }
 
 /** The "Opmaak"/"Style" trigger button — split out of `ChartConfigPanel` by
@@ -745,6 +758,7 @@ export function ChartConfigPanel({
   frameImage = null,
   onFrameImage = () => {},
   onApplyTemplate,
+  openTemplatesWhenPristine = false,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   // ADR 043: which of the six named looks (if any) the resolved values
@@ -752,7 +766,18 @@ export function ChartConfigPanel({
   // aria-checked (the gallery is a radiogroup). Recomputed every render
   // straight from resolved.values, no local copy of the pick.
   const currentTemplate = matchTemplate(resolved.values, resolved.locks);
-  const [activeTab, setActiveTab] = useState<TabKey>('chart');
+  // R5.2 (ADR 043 decision 6 revisit): lazy initializer — evaluated once at
+  // mount only, so a later tweak (which flips `resolved.pristine` false on a
+  // re-render) never yanks the panel back to Sjablonen mid-session.
+  // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
+  // `resolved.applicable.has('grid')` (see its render below), so without the
+  // same gate here a table form could select a tab whose panel never renders
+  // — a selected tab with no panel.
+  const [activeTab, setActiveTab] = useState<TabKey>(() =>
+    openTemplatesWhenPristine && resolved.pristine && resolved.applicable.has('grid')
+      ? 'templates'
+      : 'chart',
+  );
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same
   // panel instance) and the outcome status line persists until the next

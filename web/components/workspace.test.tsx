@@ -2,7 +2,7 @@
 // byte-pinned attribution string, the header presence rules (stripped vs full),
 // the account menu holding "Log uit" (signOut) + the relocated delete-history
 // control, and that the workspace fetches its thread list on mount.
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoadedThread } from '../app/actions.ts';
 
@@ -45,7 +45,12 @@ const pathname = vi.hoisted(() => ({ current: '/' }));
 // WP218 phase 4 (#219): SiteHeader now renders <LanguageSwitch/>, which calls
 // useRouter() (router.refresh() after the language cookie is set) — added
 // here alongside the pre-existing usePathname mock the site footer needs.
-vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: vi.fn() }) }));
+// R2.4: `refresh` is a STABLE hoisted spy (not a fresh vi.fn() per render) —
+// the purchase poll's effect depends on the router object, so a fresh one
+// every render would reset the poll's interval each render, mirroring the
+// onboarding-live-status.test.tsx precedent's shape.
+const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => pathname.current, useRouter: () => ({ refresh: routerRefresh }) }));
 // Landing embeds OntdekCharts, an ASYNC Server Component inside a Suspense
 // boundary. jsdom renders client-side, where React cannot resolve an async
 // component — the boundary never settles and the root's passive effects
@@ -78,7 +83,7 @@ vi.stubGlobal(
 );
 
 const FOOTER_EXACT =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project';
+  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel · Over dit project · Werkwijze · Privacy';
 
 beforeEach(() => {
   actions.listMyThreads.mockResolvedValue([]);
@@ -116,6 +121,81 @@ function renderWorkspace(
   );
 }
 
+// R2.4 (journey WP-C): the ?purchase=success poll — mirrors
+// onboarding-live-status.test.tsx's shape (fake timers, a stable hoisted
+// `routerRefresh` spy, hidden-tab handling), proving: no poll without
+// purchaseSuccess; ticks every 3s while the banner shows; stops once
+// dismissed; stops on its own after the ~30s bound; and a rerender with a
+// fresh `initialBalance` (what a real router.refresh() produces) reaches
+// the displayed balance chip without any client-side recomputation.
+describe('Workspace — R2.4 purchase poll', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (document as { visibilityState?: unknown }).visibilityState;
+  });
+
+  function advance(ms: number): void {
+    act(() => {
+      vi.advanceTimersByTime(ms);
+    });
+  }
+
+  it('does not poll when purchaseSuccess is unset', () => {
+    renderWorkspace();
+    advance(30_000);
+    expect(routerRefresh).not.toHaveBeenCalled();
+  });
+
+  it('polls router.refresh() every ~3s while the banner shows, and stops once dismissed', () => {
+    render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+    expect(routerRefresh).not.toHaveBeenCalled();
+    advance(3_000);
+    expect(routerRefresh).toHaveBeenCalledTimes(1);
+    advance(3_000);
+    expect(routerRefresh).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
+    advance(9_000);
+    expect(routerRefresh).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops on its own after the ~30s bound', () => {
+    render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+    advance(60_000);
+    // 10 ticks at 3s each ≈ 30s, then the interval clears itself.
+    expect(routerRefresh).toHaveBeenCalledTimes(10);
+  });
+
+  // Regression (strong-tier review HIGH-1): `tick` doubles as the
+  // visibilitychange handler, so the bound must stop BOTH the interval and
+  // the listener — otherwise every tab focus after the bound refreshed
+  // forever, since the banner only closes on dismiss.
+  it('does not refresh on a tab focus after the bound is reached', () => {
+    render(<Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />);
+    advance(60_000);
+    expect(routerRefresh).toHaveBeenCalledTimes(10);
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(routerRefresh).toHaveBeenCalledTimes(10);
+  });
+
+  it('reflects a refreshed balance without any client-side recomputation', () => {
+    const { rerender } = render(
+      <Workspace initialBalance={100} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />,
+    );
+    expect(screen.getByText('100 credits')).toBeInTheDocument();
+    // A real router.refresh() would re-render page.tsx -> Workspace with the
+    // freshly-read balance; simulated here as a rerender with a new prop.
+    rerender(
+      <Workspace initialBalance={340} simplePrice={20} clarificationPrice={10} initialThreads={[]} purchaseSuccess />,
+    );
+    expect(screen.getByText('340 credits')).toBeInTheDocument();
+  });
+});
+
 describe('Workspace — WP135 shell (flag on)', () => {
   it('renders English under the language provider (WP218 phase 4): the purchase banner dismiss reads Close', () => {
     render(
@@ -145,7 +225,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
       </>,
     );
     const footer = document.querySelector('footer')!;
-    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
   });
 
@@ -163,12 +243,15 @@ describe('Workspace — WP135 shell (flag on)', () => {
     // textContent ignores the icon (an aria-hidden svg without text), so the
     // owner's sentence is pinned byte-for-byte.
     expect(footer.textContent).toBe(FOOTER_EXACT);
-    expect(FOOTER_PREFIX + FOOTER_ABOUT_LABEL).toBe(FOOTER_EXACT);
+    // FOOTER_EXACT = the byte-pinned attribution prefix + about-label, now
+    // followed by the WP-B Werkwijze/Privacy links (checked separately below).
+    expect(FOOTER_EXACT.startsWith(FOOTER_PREFIX + FOOTER_ABOUT_LABEL)).toBe(true);
     expect(footer.querySelector('a[href="#over-dit-project"]')?.textContent).toBe(FOOTER_ABOUT_LABEL);
     const gear = footer.querySelector('a[href="/systeemoverzicht"]');
     expect(gear).not.toBeNull();
     expect(gear!.getAttribute('aria-label')).toBe('Systeemoverzicht');
-    expect(footer.textContent).not.toMatch(/privacy/i);
+    expect(footer.querySelector('a[href="/werkwijze"]')?.textContent).toBe('Werkwijze');
+    expect(footer.querySelector('a[href="/privacy"]')?.textContent).toBe('Privacy');
   });
 
   it('the home-page anchor target exists on the logged-OUT home too (Landing) — no dead link for visitors', async () => {
@@ -180,7 +263,7 @@ describe('Workspace — WP135 shell (flag on)', () => {
     pathname.current = '/credits';
     render(<SiteFooter />);
     const footer = document.querySelector('footer')!;
-    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(footer.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
     expect(footer.querySelector('a[href="#over-dit-project"]')).toBeNull();
     expect(footer.querySelector('a[href="/systeemoverzicht"]')).not.toBeNull();
     pathname.current = '/';
@@ -332,9 +415,14 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 });
 
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
-  it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
+  // R8 (#211, WP-D, session 97): without `attachments`, chat.tsx collapses
+  // the "Bestand uploaden" chip (and its three siblings) into ONE disabled
+  // "Eigen data (binnenkort)" chip — see chat.test.tsx for the full R8
+  // coverage; this test just confirms ingestFile stays unwired through Workspace.
+  it('without the attachments prop, no upload entry point renders and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Bestand uploaden' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Eigen data (binnenkort)' })).toBeDisabled();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 

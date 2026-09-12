@@ -41,15 +41,17 @@
 // untouched (see docs/superpowers/specs/2026-09-09-language-switch-design.md
 // §1).
 import Link from 'next/link';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t } from '../lib/i18n/messages.ts';
+import { CoverageDisclosureView } from './coverage-disclosure.tsx';
 import { OntdekSectie } from './ontdek.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
 
-export async function Landing() {
+export async function Landing({ coverage = null }: { coverage?: CoverageDisclosure | null } = {}) {
   const lang = await getLang();
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -105,7 +107,9 @@ export async function Landing() {
           </div>
         </section>
 
-        {/* How it works — the honest mechanism, in three steps */}
+        {/* How it works — the honest mechanism, now in four steps
+            (WP-B, journey programme phase 3 R5.4: a fourth "Publiceer"/
+            "Publish" step). 2x2 on `sm`+ so the grid stays balanced at 4. */}
         <section id="hoe-het-werkt" className="border-b border-border py-12">
           {/* `over-dit-project` is the site footer's "Over dit project" anchor
               (site-footer.tsx renders it on "/"): the logged-in workspace has
@@ -114,7 +118,7 @@ export async function Landing() {
           <h2 id="over-dit-project" className="text-2xl text-foreground">
             {t(lang, 'landing.howItWorksHeading')}
           </h2>
-          <ol className="mt-6 grid gap-6 sm:grid-cols-3">
+          <ol className="mt-6 grid gap-6 sm:grid-cols-2">
             <li>
               <p className="tnum text-sm font-semibold text-primary">1</p>
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step1Title')}</h3>
@@ -130,11 +134,29 @@ export async function Landing() {
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step3Title')}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step3Body')}</p>
             </li>
+            <li>
+              <p className="tnum text-sm font-semibold text-primary">4</p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step4Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step4Body')}</p>
+            </li>
           </ol>
         </section>
 
         {/* Free discovery charts — deterministic, LLM-free (ADR 035) */}
         <OntdekSectie />
+
+        {/* WP-E (R4): the coverage disclosure — no example handler is passed
+          * here, so CoverageDisclosureView renders each example as plain
+          * text ("bijvoorbeeld: …") instead of a click-to-fill button; the
+          * landing page has no composer to fill. */}
+        {coverage ? (
+          <section className="border-b border-border py-12">
+            <h2 className="text-2xl text-foreground">{t(lang, 'coverage.landingHeading')}</h2>
+            <div className="mt-4 max-w-xl">
+              <CoverageDisclosureView coverage={coverage} />
+            </div>
+          </section>
+        ) : null}
 
         {/* Credits, plainly */}
         <section className="py-12">

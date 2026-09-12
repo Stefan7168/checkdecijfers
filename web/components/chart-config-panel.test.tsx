@@ -1873,7 +1873,7 @@ describe('ChartConfigPanel — inline region', () => {
 });
 
 describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
-  it('is the first tab, the panel still opens on Grafiek, and the gallery lists the six templates in order with their descriptions', () => {
+  it('is the first tab; the panel opens on Grafiek when the caller does not opt into R5.2 (openTemplatesWhenPristine unset), and the gallery lists the six templates in order with their descriptions', () => {
     render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
@@ -1889,6 +1889,71 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     expect(gallery.className).toContain('@md:grid-cols-3');
     expect(gallery.className).not.toContain('sm:grid-cols-3');
     expect(gallery.parentElement?.className).toContain('@container');
+  });
+  // R5.2 (journey WP-C, ADR 043 decision 6 revisit): chart.tsx now passes
+  // `openTemplatesWhenPristine` for real — when the current chart has no
+  // per-chart tweaks yet (`resolved.pristine`), the panel opens straight on
+  // Sjablonen; once a hand tweak or template pick lands (pristine flips to
+  // false), it opens on Grafiek exactly as before this task.
+  it('R5.2: with openTemplatesWhenPristine, a pristine chart opens the panel on Sjablonen; a tweaked chart still opens on Grafiek', () => {
+    const { unmount } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="t"
+        onApplyTemplate={vi.fn()}
+        openTemplatesWhenPristine
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'false');
+    unmount();
+
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="t2"
+        onApplyTemplate={vi.fn()}
+        openTemplatesWhenPristine
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
+  // `resolved.applicable.has('grid')`, but the initial-tab computation was
+  // not — a form without `grid` (table) opened with Sjablonen SELECTED and no
+  // panel rendered for it. The initializer now carries the same gate.
+  it('MEDIUM-2: a form whose templates tabpanel is not applicable never opens SELECTED on Sjablonen', () => {
+    const tableCtx: PresentationContext = { kind: 'line', form: 'table', seriesCount: 2, hasProvisional: false };
+    render(
+      <Harness
+        resolved={resolvePresentation(tableCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="t-medium2"
+        onApplyTemplate={vi.fn()}
+        openTemplatesWhenPristine
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const templatesTab = screen.queryByRole('tab', { name: 'Sjablonen' });
+    if (templatesTab !== null) {
+      expect(templatesTab).toHaveAttribute('aria-selected', 'false');
+    }
+    // Whatever tab IS selected, its panel exists — never a selected tab with
+    // no tabpanel.
+    const selected = screen.getAllByRole('tab').find((tab) => tab.getAttribute('aria-selected') === 'true');
+    expect(selected).toBeDefined();
+    expect(document.getElementById(selected!.getAttribute('aria-controls')!)).not.toBeNull();
   });
   it('marks the current template with aria-checked and a "Huidig" badge: standard when pristine, newsroom when the chart wears it, none when tweaked', () => {
     const { unmount } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);

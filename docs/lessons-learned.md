@@ -54,6 +54,32 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
   no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
   test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
   string rather than through the i18n key that produced it.
+## Session 97 (2026-09-12, autonomous) — the Journey programme built via parallel worktrees + one fix wave
+
+- **Five parallel worktrees with SYMLINKED `node_modules` (root + web) worked** — no `npm install` per worktree, no
+  "incomplete node_modules" trap (RUNBOOK multi-agent item 3). Only the final verification block ran in the main
+  checkout. The one shared file, `messages.ts`, conflicted on every merge as expected; "add your keys at the END of
+  both tables" made every conflict a keep-both-sides resolution (delete the three markers, typecheck, commit).
+- **A Sonnet implementer delegated to a nested agent instead of doing the work.** The WP-D agent's first report said
+  "I've launched a background agent"; the work did land (a nested agent finished it), but the orchestrator could not
+  address that nested agent. Brief implementers with "do the work yourself; do not spawn agents".
+- **The strong-tier whole-branch review earned its seat again:** three HIGH findings none of the implementers or
+  their own tests caught — a `visibilitychange` listener that kept `router.refresh()`ing forever after the poll's
+  30-second bound; a one-click clarification option that would have sent against the LIVE round instead of its own
+  (a billed wrong-carrier reply) plus a double-click double-send; and a privacy page that claimed "no analytics"
+  while the trial cookie, the hashed IP and the usage counter exist. Verify HIGH findings against the source before
+  the fix wave (all three held) — and treat a privacy-page overclaim as the same bug class as a fabricated number.
+- **The browser pass found what no test could:** the two new public pages 307'd to `/login` (the proxy allowlist is
+  exact-match by design and nobody added them), the fourth landing step rendered "4 / 4. Publish" (the title carried
+  its own number, the grid adds one), and uncurated on-demand tables dumped raw CBS measure titles as "concepts"
+  ("Een zeer slecht moment, Zeer onwaarschijnlijk…"). Rule: any new route goes through `isPublicPath`'s test the
+  same commit; any generated list gets looked at with REAL data, not only the test fixture.
+- **A generated example question needs a grammar check per source field.** "Wat was de {everydayTerm}" is proven
+  for one measure and broken Dutch for most ("Wat was de inwoners"). Dutch articles are not in the registry; an
+  article-free frame ("Wat zijn de cijfers over {term} in {periode}?") is the honest general form.
+- **`preview_start` looks for `.claude/launch.json` in the session's ORIGINAL scratch workspace** after a
+  `change_directory`; spawning `next dev -p 3010` from Bash with the root `.env` loaded and `navigate`-ing to it
+  worked fine. `next dev` also rewrites `web/CLAUDE.md` (the agent-rules block) — `git checkout` it before committing.
 
 ## Session 96 (2026-09-11, owner present) — strategy / research session, docs only
 

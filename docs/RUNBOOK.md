@@ -1442,6 +1442,41 @@ The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09b
    - **The enabled-but-secret-missing signature:** clicking the button then yields a raw JSON 400 at the authorize URL — `{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: missing OAuth secret"}`. That exact message means the toggle saved but the secret field did not — re-paste and Save.
 3. ✅ **Live verification — DONE + PASSED (2026-07-10, owner present, both halves, read-only SQL before AND after each login):** (a) Google login with the EXISTING magic-link e-mail → user count unchanged, that user's identities went `[email]` → `[email, google]`, signup grants unchanged (NO duplicate — the ADR 028 D2 linking verified); (b) fresh-e-mail Google login → exactly ONE new user (google-only identity) + exactly ONE +100 grant written in the same instant (the migration-005 trigger fired once). The fresh-e-mail login deliberately created a real account with a real grant — it doubles as the new-user path check. **Cosmetic residual → [#7](open-questions.md):** the Google consent screen shows the raw Supabase project domain until a custom auth domain is configured with the future product domain.
 
+## Usage report (WP-A, added session 2026-09-12)
+
+`npm run usage:report` — a read-only CLI that prints usage aggregates over the
+live database: the last 12 ISO weeks plus an all-time total for each metric.
+No writes, no LLM calls; it is a plain wrapper around `src/usage/report.ts`'s
+pure aggregation functions (unit-tested against PGlite in
+`tests/usage/report.test.ts`, same pattern as `scripts/gdpr-purge.ts`).
+
+```
+npm run usage:report            human-readable tables
+npm run usage:report -- --json  the same report as JSON
+npm run usage:report -- --help  usage text
+```
+
+What it prints: signups (`credit_transactions` `signup_grant` rows); distinct
+users with >=1 real question; the first-question outcome mix (answer /
+clarification / refusal-by-reason) versus later questions in the same
+history; the top refusal reasons ranked all-time; on-demand CBS-table fetches
+started/delivered/failed plus the credits spent on them; trial questions
+(anonymous visitors) — trial-visitors-who-later-signed-up is reported as "not
+measurable" because the trial's anonymous cookie id shares no join key with
+an account id, and adding one would mean tracking new personal data, which
+is out of scope for this report; 👍/👎 feedback counts; users active on >=2
+distinct calendar days; and users sitting at zero credit balance who never
+bought a pack.
+
+**GDPR posture (#14):** this report is **aggregates only** — counts and group
+labels (ISO week strings, refusal-reason codes, status enums). It never
+prints a question's text, an e-mail address, or a raw user/visitor id; the
+underlying SQL only ever selects `count(...)`/`count(distinct user_id)`-style
+aggregates, never a `user_id` (or any other identifier) column itself. The
+privacy test in `tests/usage/report.test.ts` pins this by asserting the
+JSON output contains no `@`, no seeded question text, and no seeded
+user/visitor UUID.
+
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).

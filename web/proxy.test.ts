@@ -34,6 +34,10 @@ describe('proxy isPublicPath allowlist', () => {
     // The architecture reference page — no DB reads, no account, reachable
     // via the footer's gear icon by design.
     expect(isPublicPath('/systeemoverzicht')).toBe(true);
+    // Journey programme R6 (ADR 045): the trust pages are public, exact-match.
+    expect(isPublicPath('/werkwijze')).toBe(true);
+    expect(isPublicPath('/privacy')).toBe(true);
+    expect(isPublicPath('/privacy/details')).toBe(false);
     // EXACT, not prefix: a future sibling under an existing cron's name must
     // NOT inherit the session exemption (review finding — `startsWith` alone
     // would have shipped it public by accident).
