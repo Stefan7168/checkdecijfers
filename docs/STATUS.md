@@ -22,7 +22,30 @@ verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark
 real build, LOW code-review 0 findings, a real-browser check across both themes/phone/reduced-motion that
 caught and fixed one real mobile overlap bug before shipping).
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 98, autonomous).** Read
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 99, owner present).** Read
+[session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) first.
+**Session 99 merged the whole stack — six PRs, all squash-merged to `main` on green `gate`, in this order:**
+PR #14 Journey programme phases 0/1/3/4/5 (`677c5fb`) → PR #18 public face + `/galerij` (`ac14392`) → PR #19 phone
+journey (`189d36b`) → PR #20 sessions 97–98 docs + `scripts/dev-harness/` (`524b63f`) → PR #9 embed (`650d664`) →
+PR #15 creator-e-mail lookup for Live embeds (`8d0f0d4`). `main` deploys on push; the last run owns the deploy.
+**Owner steps now due (the merges made them live-relevant):** (1) `npm run db:migrate` for 028 + 029 (live DDL,
+owner-supervised), then `npm run usage:report` once; (2) read `/werkwijze` + `/privacy`, fill in the contact e-mail,
+drop the draft notes; (3) set `EMBED_TOKEN_SECRET` in Vercel and run the one-line `auth.users` read check (RUNBOOK) so
+Live embeds can activate; (4) say go/no on R3 (phase 2, confirm-before-fetch — NOT built, money path); (5) delete the
+merged branches in GitHub (`journey-programme`, `journey-programme-v1`, `journey-public-face`, `journey-phone`,
+`claude/checkdecijfers-journey-programme-rvvipe`, `embed-charts`, `embed-live-creator-lookup`, plus the three already-merged
+`visual-*` branches) — the session's git proxy refuses ref deletions.
+**Still open:** PR #13 (Story stage motion) — CI green on its own head but conflicts for real with PR #19's phone
+caption fix in `chart-story-stage.tsx`; needs a phone-width browser check after a manual merge, not a text merge.
+Dependabot #16/#17 (untouched). Branch `claude/checkdecijfers-embed-pr-review-acbrd5` holds session 96's wrap-up docs
++ a superseded quick-wins code commit — kept as a record, not to be merged (lessons, session 99).
+**Next build candidates (cheapest first, each branch + PR unless the owner is present):** [#240](open-questions.md)
+delete the unmounted Ontdek section; copy-able embed code per gallery card ([#237](open-questions.md)(d)); the
+sidebar tap-target audit ([#238](open-questions.md)); `agentRules: false` in `web/next.config.ts` (RUNBOOK harness
+section); the repositioning ADR + roadmap re-phasing ([#237](open-questions.md)(a), docs only). Phase 6 (re-measure)
+waits for real usage. Session-99 entry: [status-archive.md](status-archive.md).
+
+**▶ SESSION 98 — handoff block as written then (superseded by session 99 above).** Read
 [session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md) first.
 **Nothing merged in session 98 (owner away; money path = owner review).** Six PRs wait, in stacking order:
 **PR #14** (`journey-programme` → `main`, phases 0/1/3/4/5, CI green) → **PR #18** (`journey-public-face`, the public

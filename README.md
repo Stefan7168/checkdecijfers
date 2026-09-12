@@ -1,6 +1,6 @@
 # checkdecijfers.nl
 
-**AI-assisted Q&A over official Dutch statistics (CBS) — where the AI never does the math.** A user asks a question in plain Dutch; deterministic code computes the answer from CBS data ingested into our own database; the AI only parses the question and phrases the result. Every number is traceable to an official CBS cell, with source table and freshness date shown. When data is missing, ambiguous, or stale, the product refuses or asks — it never guesses. The interface itself is bilingual (a Dutch/English switch in the header), every chart can be restyled — per chart or as an account default — and any chart can be embedded on another site, frozen with attribution and a backlink by default.
+**AI-assisted Q&A over official Dutch statistics (CBS) — where the AI never does the math.** A user asks a question in plain Dutch; deterministic code computes the answer from CBS data ingested into our own database; the AI only parses the question and phrases the result. Every number is traceable to an official CBS cell, with source table and freshness date shown. When data is missing, ambiguous, or stale, the product refuses or asks — it never guesses. The interface itself is bilingual (a Dutch/English switch in the header), every chart can be restyled — per chart or as an account default — and any chart can be embedded on another site, frozen with attribution and a backlink by default. A public gallery (`/galerij`) shows real, sourced stories on the same chart engine.
 
 ## Why
 

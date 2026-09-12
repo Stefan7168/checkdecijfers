@@ -6,6 +6,44 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 99 (2026-09-12, owner present) — merged the six-PR journey + embed stack in one sitting; the
+squash-merge stacking trick, an open-questions number collision, and a wrap-up that claimed lessons it never wrote
+
+- **Stacked PRs + squash merges = every later PR turns `dirty` the moment the one below it lands — and the fix is
+  mechanical, not a real merge.** After `gh`-style squash of PR A, `main`'s TREE is byte-identical to A's head, but
+  git sees a new commit with no shared history, so PR B (which contains A's commits) conflicts on every hunk A
+  touched. Verified with `git diff --stat <A-head> origin/main` (empty), then resolved with
+  `git merge -s ours origin/main` on B — records `main` as an ancestor, keeps B's tree, changes nothing
+  (`git diff HEAD~1 HEAD` empty). Repeated for #18 → #19 → #20 → #9 → #15. Only the FIRST merge of the day (main's
+  four docs commits into `journey-programme`) needed real conflict resolution. Written into the RUNBOOK's "Merging a
+  queue" note. Cost of not knowing this: five sets of fake conflicts in 5–6 files each.
+- **Pre-resolve the whole stack before the first merge, so the gates run in parallel.** Each `gate` takes 9–12 min;
+  with three PR runs sharing runners it stretched to 11–15. Merging main → #14 → #18 → #19 → #20 locally up front and
+  pushing all four meant their gates overlapped instead of queueing (total wall-clock ~75 min for six PRs incl.
+  the embed pair). A newer push on `main` cancels the superseded run on the same ref (`677c5fb` and `189d36b`
+  show `cancelled` — expected, the later commit owns the deploy), so "cancelled" on main is not red.
+- **Two parallel sessions both took open-questions row #239** (session 97: the duplicate-build row; session 98: the
+  `population_on_1_january` gallery assumption) — the same class of problem as the duplicate build itself. Resolved
+  by renumbering the session-97 row to #241 and fixing its one back-reference in the build plan. Rule: an
+  autonomous session that adds an open-questions row should grep `origin/main` AND every open PR branch for the
+  number first, or leave numbering to the merging session.
+- **A wrap-up commit message claimed "lessons" that were never written.** Session 98's `812cfd7` ("… archive entry,
+  lessons, build-plan pointer …") touches four files and `lessons-learned.md` is not one of them; no session-98
+  entry exists anywhere. The final self-audit (ritual item 8) must diff the wrap-up commit against the checklist,
+  not just re-read the prose.
+- **Session 96's wrap-up docs never reached `main`** — five docs commits + one 913-line code commit
+  (`038ecd9`, "quick wins R11/R2/R10/R5") sit on `claude/checkdecijfers-embed-pr-review-acbrd5`, never opened as a
+  PR. The code is superseded by PR #14 (which built the same items with review); the docs cherry-picks conflict in
+  every tracker file (they predate the session-97 rewrites). Decision: leave the branch as the record, do not merge.
+  A wrap-up on a branch is not done until it is on `main` or in an open PR that says so.
+- **PR #13 (Story stage motion) conflicts for real** with PR #19's phone caption fix in `chart-story-stage.tsx`
+  (#13 restructured the caption panel and has its own `scroll-mt` phone fix; #19 changed the same `<li>` to
+  `min-h-[45dvh] … lg:min-h-[85vh]`). Needs a real-browser check on a phone, not a text merge — left for the owner.
+- **`mcp__github__merge_pull_request` wants the FULL 40-char head SHA** in `expectedHeadSha`; a short SHA is
+  rejected. Same trap the RUNBOOK already records for `gh pr merge --match-head-commit`.
+- **The wrap-up hook fires on questions, not only on wrap-up signals** ("are there sessions that didn't do the
+  wrap up yet?" triggered it). Answer the question; run the ritual when the work is actually done.
+
 ## Session 97 (2026-09-11→12, owner present) — built R8+R9, then found a sibling session had already
 built the whole Journey programme (PR #14) — a real duplicate-effort cost
 

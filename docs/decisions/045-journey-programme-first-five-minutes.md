@@ -70,3 +70,7 @@ audit re-run (real spend), the trust-page wording sign-off, and the whole positi
 Two conventions now have one exception each and the docs that state them were updated in the same change ([#75](../open-questions.md)
 → decision 3; the session-86/90 chips → decision 4). The privacy page is the first public statement of what the product
 stores; every future cookie, counter or store MUST update it in the same change (same rule as the system map).
+
+## As built
+
+**MERGED + LIVE 2026-09-12 (session 99, owner present): PR #14, squash `677c5fb` on `main`, `gate` green.** Owner steps still open after the merge: apply migrations 028 + 029 (`npm run db:migrate`), run `npm run usage:report` once, read/fill in `/werkwijze` + `/privacy` (contact e-mail; draft note comes off after), decide R3 (phase 2 — not built). The phone journey follow-up (R9.1, PR #19, `189d36b`) and the public face (ADR 046, PR #18, `ac14392`) merged the same session.
