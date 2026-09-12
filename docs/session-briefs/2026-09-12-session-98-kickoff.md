@@ -56,3 +56,24 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
 Session model (Fable) planned, merged, resolved conflicts, fixed WP-E's review items, ran the browser pass and the
 verification; five Sonnet implementers (one delegated to a nested agent — brief "do it yourself"); two Opus reviewers
 (whole-branch + scoped) and one Opus fix wave.
+
+## Autonomous big-build variant (owner ask, 2026-09-12: "starts building top-notch progress on the webapp")
+
+If the session runs autonomously (owner away), it does NOT merge PR #14 (an autonomous merge of a money-path branch is
+outside #118(b)); it builds on top of it. Order, each as its own branch stacked on `journey-programme` with a PR, full
+verification block + `/code-review` LOW + a real-browser pass before "done", multiple worktree agents, big steps:
+
+1. **The public face** ([#237](../open-questions.md)(d), decision 12): the landing page rebuilt around the positioning
+   sentence ("chat from official-statistics research to an embedded, sourced chart") and a **public gallery of ~10 real
+   stories** — curated charts through the SAME `ChartView` (templates, Insights, Present all live on them), each with
+   its source badge, a template applied, an Insights story, and a copy-able embed once PR #9 is in. Registry-built,
+   deterministic captions only; no AI spend on the public page. Both languages. Noindex stays until the owner lifts it.
+2. **The whole journey on a phone** (R9.1, [#238](../open-questions.md)): landing → trial → login → first question →
+   clarification → answer card → chart → Style → Insights → Present → credits → history at 375 px, light + dark, in a
+   real browser (Playwright allowed); fix everything broken; the footer/theme-toggle overlap included.
+3. **Unblock Live embeds** ([#224](../open-questions.md), PR #9): the creator-e-mail lookup that lets the gated Live
+   re-render activate — its own small design note first, no schema change if avoidable.
+4. Only with an explicit owner go in the chat: **R3** confirm-before-fetch + the larger grant (money path).
+
+Not for an autonomous session: applying 028/029, real LLM spend, lifting noindex, the trust-page draft notes, Eurostat
+as a source (never named as answering before it does).
