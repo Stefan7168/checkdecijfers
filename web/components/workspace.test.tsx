@@ -332,9 +332,10 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 });
 
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
-  it('without the attachments prop, "Upload file" stays disabled and ingestFile is never wired', () => {
+  it('without the attachments prop, upload stays collapsed into the disabled "Eigen data" chip and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Eigen data (binnenkort)' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Bestand uploaden' })).not.toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 

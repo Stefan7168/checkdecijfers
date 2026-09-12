@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, Globe, PanelRight, Paperclip } from 'lucide-react';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -518,24 +518,6 @@ export function Chat({
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // WP202b preview (owner request, session 86): "Link toevoegen" opens the
-  // inline URL row the original design sketched (D10), so the intended flow
-  // is visible for demos, WITHOUT a working backend behind it (url_html
-  // ingest has no `src/attachments/` module yet — no SSRF guard exists to
-  // fetch anything through safely). Submitting shows an honest "not yet"
-  // message, never a fake fetch — principle (c), same posture as every other
-  // disabled-with-a-reason button in this row. Pure UI state, no dependency
-  // on `attachments`/any flag — appended after every existing hook, per this
-  // file's own convention.
-  const [linkRowOpen, setLinkRowOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState('');
-  const [linkComingSoon, setLinkComingSoon] = useState(false);
-
-  function handleLinkSubmit(e: React.FormEvent): void {
-    e.preventDefault();
-    setLinkComingSoon(true);
-  }
 
   async function handleFileChosen(e: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = e.target.files?.[0];
@@ -1194,29 +1176,14 @@ export function Chat({
           </button>
         </>
       ) : null}
-      {/* #201/#202 (open-questions, session 83 scoping): attachment entry
-        * points. "Databron verbinden" stays disabled regardless of
-        * `attachments` (D5: OAuth data sources have no backend at all yet)
-        * — disabled with an explanatory title rather than removed, so the
-        * button honestly signals "coming soon" instead of silently doing
-        * nothing or pretending to work (principle c: never fake it).
-        * "Link toevoegen" (session 86, owner request) is clickable — it
-        * opens the inline URL row below, so the intended flow is visible
-        * for demos, but url_html ingest itself still has no backend (WP202b,
-        * not built): submitting shows the same honest "not yet" message
-        * rather than fetching anything. "Bestand uploaden" is the ADR 037
-        * D10 presence-driven exception: enabled ONLY when `attachments` is
-        * present; byte-identical to today (same disabled button, same
-        * title, no file input in the DOM at all) when it is absent. */}
-        <button
-          type="button"
-          onClick={() => setLinkRowOpen((open) => !open)}
-          aria-expanded={linkRowOpen}
-          className={CHIP_OFF}
-        >
-          <Link2 aria-hidden="true" className="size-3.5" />
-          {t('chat.addLink')}
-        </button>
+      {/* #201/#202 (open-questions, session 83 scoping; R8 collapse, session
+        * 97, decision 10): "Link toevoegen"/"Sheet koppelen"/"Data koppelen"
+        * and the disabled "Bestand uploaden" placeholder used to be four
+        * separate chips — collapsed into one honest "coming soon" chip
+        * (principle c: disabled with a reason, never a fake working button)
+        * since none of them had a backend. ADR 037 D10's presence-driven
+        * exception is unchanged: once `attachments` is present, "Bestand
+        * uploaden" alone appears, live — the collapsed chip disappears. */}
         {attachments ? (
           <>
             <input
@@ -1240,67 +1207,16 @@ export function Chat({
           <button
             type="button"
             disabled
-            title={t('chat.uploadFileComingSoonTitle')}
+            title={t('chat.ownDataComingSoonTitle')}
             className={CHIP_SOON}
           >
             <Paperclip aria-hidden="true" className="size-3.5" />
-            {t('chat.uploadFile')}
+            {t('chat.ownData')}
           </button>
         )}
-        {/* Session 90 (owner request, in chat): a "Link with sheet" entry
-          * point BEFORE "Connect database" — a spreadsheet link (Google
-          * Sheets and the like) is a different, lighter ask than a database
-          * connection, so it gets its own chip. Same honest "coming soon"
-          * treatment as its neighbour: disabled with an explanatory title,
-          * no backend yet (WP202b territory). "Connect database"'s example
-          * moved from Google Sheets to a real database now that sheets have
-          * their own chip. */}
-        <button
-          type="button"
-          disabled
-          title={t('chat.linkWithSheetComingSoonTitle')}
-          className={CHIP_SOON}
-        >
-          <FileSpreadsheet aria-hidden="true" className="size-3.5" />
-          {t('chat.linkWithSheet')}
-        </button>
-        <button
-          type="button"
-          disabled
-          title={t('chat.connectDatabaseComingSoonTitle')}
-          className={CHIP_SOON}
-        >
-          <Plug aria-hidden="true" className="size-3.5" />
-          {t('chat.connectDatabase')}
-        </button>
       </div>
       {nothingSelected ? (
         <p className="text-xs text-destructive">{t('chat.nothingSelectedHint')}</p>
-      ) : null}
-      {linkRowOpen ? (
-        <form
-          onSubmit={handleLinkSubmit}
-          className="flex flex-wrap items-center gap-2"
-        >
-          <Input
-            type="url"
-            value={linkUrl}
-            onChange={(e) => {
-              setLinkUrl(e.target.value);
-              setLinkComingSoon(false);
-            }}
-            placeholder={t('chat.linkUrlPlaceholder')}
-            className="min-w-0 flex-1 bg-background"
-          />
-          <Button type="submit" variant="outline" disabled={!linkUrl.trim()}>
-            {t('chat.fetchButton')}
-          </Button>
-        </form>
-      ) : null}
-      {linkComingSoon ? (
-        <p className="text-xs text-muted-foreground">
-          {t('chat.linkComingSoonMessage')}
-        </p>
       ) : null}
       {attachments && uploadBusy ? (
         <p className="text-xs text-muted-foreground">{t('chat.fileReading')}</p>

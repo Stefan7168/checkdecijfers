@@ -17,6 +17,14 @@
 // renders the same Dutch as before when there is no LangProvider above it
 // (useLang()'s own default). Both variants — the workspace header and the
 // stripped /login + landing one — also get the NL|EN switch.
+//
+// Journey programme R9 (session 97): below the `sm` breakpoint (matches
+// Tailwind's 640px), "Credits kopen"/"Geschiedenis" move into the Account
+// menu instead of crowding the bar — same live balance, same links, same
+// order, just relocated. Reuses the existing useMediaQuery hook (already
+// proven for workspace.tsx's `lg` dock split) rather than a new mechanism.
+// Only one copy of each link is ever rendered, so accessible names stay
+// unique for both users and tests.
 'use client';
 
 import Link from 'next/link';
@@ -24,6 +32,7 @@ import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { signOut } from '../app/actions.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
+import { useMediaQuery } from '../lib/use-media-query.ts';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
 import { LanguageSwitch } from './language-switch.tsx';
 import { Badge } from './ui/badge.tsx';
@@ -63,6 +72,7 @@ export function SiteHeader({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const t = useT();
+  const narrow = useMediaQuery('(max-width: 639px)');
 
   if (stripped) {
     return (
@@ -88,12 +98,16 @@ export function SiteHeader({
             {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
-        <Link href="/credits" className="text-muted-foreground hover:text-foreground">
-          {t('header.credits')}
-        </Link>
-        <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
-          {t('header.history')}
-        </Link>
+        {narrow ? null : (
+          <>
+            <Link href="/credits" className="text-muted-foreground hover:text-foreground">
+              {t('header.credits')}
+            </Link>
+            <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
+              {t('header.history')}
+            </Link>
+          </>
+        )}
         <LanguageSwitch />
         <div className="relative">
           <Button
@@ -111,6 +125,16 @@ export function SiteHeader({
               role="menu"
               className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-md"
             >
+              {narrow ? (
+                <div className="flex flex-col gap-2 border-b border-border pb-2">
+                  <Link href="/credits" className="text-muted-foreground hover:text-foreground">
+                    {t('header.credits')}
+                  </Link>
+                  <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
+                    {t('header.history')}
+                  </Link>
+                </div>
+              ) : null}
               {/* The genuinely-new logout: a server action via a form so it
                 * works without client JS wiring and can redirect server-side.
                 * The submit lives in <LogoutButton/> so useFormStatus can show a

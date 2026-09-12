@@ -4,8 +4,14 @@
 // renders English under <LangProvider lang="en">, and both variants (the
 // stripped /login+landing header and the workspace header with a balance)
 // carry the NL|EN switch next to the account button / wordmark.
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+//
+// Journey programme R9 (session 97): jsdom has no matchMedia by default (see
+// workspace.test.tsx), so useMediaQuery's own guard makes every test above
+// this comment implicitly exercise the "wide" (matches: false) rendering —
+// that's why they still find the links in the main row unmodified. The
+// narrow describe block below stubs matchMedia to prove the relocation.
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { SiteHeader } from './site-header.tsx';
 
@@ -59,5 +65,35 @@ describe('SiteHeader — the NL|EN switch sits next to the account button', () =
     render(<SiteHeader balance={10} />);
     expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+  });
+});
+
+describe('SiteHeader — narrow viewport (R9) relocates the nav links into the Account menu', () => {
+  beforeEach(() => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 639px)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  });
+
+  it('omits the links from the main row and shows them only once the Account menu opens', () => {
+    render(<SiteHeader balance={10} />);
+    expect(screen.queryByRole('link', { name: 'Credits kopen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Geschiedenis' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+
+    expect(screen.getByRole('link', { name: 'Credits kopen' })).toHaveAttribute('href', '/credits');
+    expect(screen.getByRole('link', { name: 'Geschiedenis' })).toHaveAttribute('href', '/geschiedenis');
+  });
+
+  it('keeps the balance badge and language switch in the main row regardless of width', () => {
+    render(<SiteHeader balance={10} />);
+    expect(screen.getByText('10 credits')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Taal' })).toBeInTheDocument();
   });
 });

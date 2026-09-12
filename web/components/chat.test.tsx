@@ -1250,13 +1250,6 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(internetChip.querySelector('svg.lucide-check')).not.toBeNull();
   });
 
-  it('"Add link" reads the same as an unselected source chip, not the always-on action style', () => {
-    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100, websearch: { enabled: true, addonPrice: 10 } }} />);
-    const addLink = screen.getByRole('button', { name: 'Link toevoegen' });
-    const internetChip = screen.getByRole('button', { name: 'Internet' }); // starts unselected (CHIP_OFF)
-    expect(addLink.className).toBe(internetChip.className);
-  });
-
   it('sends the selection payload as the 4th arg on submit (default: cbs, web:false)', async () => {
     askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
     render(<Chat pricing={pricing} />);
@@ -1875,55 +1868,29 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
   });
 });
 
-describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
-  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Add link" is clickable', () => {
+describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10; R8 collapse session 97)', () => {
+  // R8 (decision 10): "Link toevoegen"/"Sheet koppelen"/"Data koppelen" and
+  // the disabled "Bestand uploaden" placeholder collapsed into one honest
+  // "coming soon" chip — pinned as an EXACT-value comparison (not a weaker
+  // toBeDisabled()-only check) so a widened className or a stray leftover
+  // chip is a deliberate, reviewed diff to this test, not silent drift.
+  it('collapses the inert entry points into one disabled "Eigen data (binnenkort)" chip when attachments is absent', () => {
     render(<Chat />);
-    for (const [name, hint] of [
-      ['Bestand uploaden', 'upload een bestand'],
-      ['Sheet koppelen', 'koppel een spreadsheet'],
-      ['Data koppelen', 'verbind een databron'],
-    ] as const) {
-      const button = screen.getByRole('button', { name });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute('title', expect.stringContaining(hint));
-    }
-    const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
-    expect(linkButton).not.toBeDisabled();
-    expect(linkButton).not.toHaveAttribute('title');
-  });
-
-  it('"Link sheet" sits directly before "Connect data" in the chip row (owner request, session 90)', () => {
-    render(<Chat />);
-    const sheet = screen.getByRole('button', { name: 'Sheet koppelen' });
-    const database = screen.getByRole('button', { name: 'Data koppelen' });
-    expect(sheet.nextElementSibling).toBe(database);
-    expect(sheet.className).toBe(database.className);
-  });
-
-  it('"Connect data" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Data koppelen' });
-    expect(within(button).queryByText('Soon')).toBeNull();
-  });
-
-  // D10 fix #1: EXACT-value comparison, not a weaker toBeDisabled()-only
-  // check — a widened className or a hidden-but-present node would pass a
-  // weaker assertion while breaking real byte-identity. Pinned against the
-  // literal strings so any future edit to this markup is a deliberate,
-  // reviewed diff to this test, not a silent drift.
-  it('the "Upload file" button is byte-identical to before D10 when attachments is absent', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
-    // Session 87 restyle: the "soon" chip (dashed outline, dimmed) — still one
-    // literal string, so any future markup edit is a deliberate diff here.
+    const button = screen.getByRole('button', { name: 'Eigen data (binnenkort)' });
     expect(button.className).toBe(
       'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed',
     );
-    expect(button.getAttribute('title')).toBe('Binnenkort beschikbaar: upload een bestand (bijv. PDF)');
+    expect(button.getAttribute('title')).toBe(
+      'Binnenkort beschikbaar: koppel je eigen data (bestand, sheet of database)',
+    );
     expect(button).toBeDisabled();
     // No attachment-related DOM node exists AT ALL — not merely hidden.
     expect(document.querySelector('input[type="file"]')).toBeNull();
     expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument();
+    // The four reversed chips are gone, not just relabelled.
+    for (const name of ['Link toevoegen', 'Bestand uploaden', 'Sheet koppelen', 'Data koppelen']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
   });
 
   it('enables "Upload file" and wires it to onUploadFile when attachments is present', async () => {
@@ -1962,47 +1929,11 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Connect data" stays disabled even when attachments is present; "Add link" stays clickable', () => {
+  it('the collapsed placeholder chip disappears entirely once attachments is present — nothing stays disabled', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Data koppelen' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
-  });
-});
-
-describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
-  it('is closed by default, with no URL input in the tree', () => {
-    render(<Chat />);
-    expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
-  });
-
-  it('opens the URL row on click and closes it again on a second click', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Link toevoegen' });
-    fireEvent.click(button);
-    expect(screen.getByPlaceholderText('https://example.com/page-with-a-table')).toBeInTheDocument();
-    fireEvent.click(button);
-    expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
-  });
-
-  it('the Fetch button stays disabled until a URL is typed', () => {
-    render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
-    expect(screen.getByRole('button', { name: 'Ophalen' })).toBeDisabled();
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
-      target: { value: 'https://example.com/tabel' },
-    });
-    expect(screen.getByRole('button', { name: 'Ophalen' })).not.toBeDisabled();
-  });
-
-  it('submitting shows an honest "not yet available" message and never calls any network/backend function', () => {
-    render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
-      target: { value: 'https://example.com/tabel' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Ophalen' }));
-    expect(screen.getByText('Dit is nog niet beschikbaar — binnenkort wel.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Eigen data (binnenkort)' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).not.toBeDisabled();
   });
 });
 
@@ -2044,15 +1975,12 @@ describe('Chat — en', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 
-  it('renders the English attachment chip labels', () => {
+  it('renders the English collapsed own-data chip label', () => {
     render(
       <LangProvider lang="en">
         <Chat />
       </LangProvider>,
     );
-    expect(screen.getByRole('button', { name: 'Add link' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Upload file' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Link sheet' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Own data (coming soon)' })).toBeInTheDocument();
   });
 });

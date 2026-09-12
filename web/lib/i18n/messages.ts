@@ -70,17 +70,13 @@ const nl = {
   // languages; still catalogued (every literal string goes through t()).
   'chat.sourceDataSuffix': '{name} data',
   'chat.internetChip': 'Internet',
-  'chat.addLink': 'Link toevoegen',
   'chat.uploadFile': 'Bestand uploaden',
-  'chat.uploadFileComingSoonTitle': 'Binnenkort beschikbaar: upload een bestand (bijv. PDF)',
-  'chat.linkWithSheet': 'Sheet koppelen',
-  'chat.linkWithSheetComingSoonTitle': 'Binnenkort beschikbaar: koppel een spreadsheet (bijv. Google Sheets)',
-  'chat.connectDatabase': 'Data koppelen',
-  'chat.connectDatabaseComingSoonTitle': 'Binnenkort beschikbaar: verbind een databron (bijv. een Postgres-database)',
-  // A URL example, not language-dependent prose — same value both languages.
-  'chat.linkUrlPlaceholder': 'https://example.com/page-with-a-table',
-  'chat.fetchButton': 'Ophalen',
-  'chat.linkComingSoonMessage': 'Dit is nog niet beschikbaar — binnenkort wel.',
+  // R8 (session 97, decision 10): the collapsed placeholder chip that
+  // replaces "Link toevoegen"/"Sheet koppelen"/"Data koppelen" and the
+  // disabled "Bestand uploaden" until ATTACHMENTS_ENABLED is on.
+  'chat.ownData': 'Eigen data (binnenkort)',
+  'chat.ownDataComingSoonTitle':
+    'Binnenkort beschikbaar: koppel je eigen data (bestand, sheet of database)',
   'chat.fileReading': 'Bestand wordt gelezen…',
   'chat.fileReadError': 'Er ging iets mis bij het lezen van dat bestand. Probeer het opnieuw.',
   // The pre-send pricing line (WP20 #82; WP129+130 added the Internet
@@ -643,16 +639,9 @@ const en: Messages = {
   'chat.suggestionsHint': 'Suggested follow-up questions:',
   'chat.sourceDataSuffix': '{name} data',
   'chat.internetChip': 'Internet',
-  'chat.addLink': 'Add link',
   'chat.uploadFile': 'Upload file',
-  'chat.uploadFileComingSoonTitle': 'Coming soon: upload a file (e.g. PDF)',
-  'chat.linkWithSheet': 'Link sheet',
-  'chat.linkWithSheetComingSoonTitle': 'Coming soon: connect a spreadsheet (e.g. Google Sheets)',
-  'chat.connectDatabase': 'Connect data',
-  'chat.connectDatabaseComingSoonTitle': 'Coming soon: connect a data source (e.g. a Postgres database)',
-  'chat.linkUrlPlaceholder': 'https://example.com/page-with-a-table',
-  'chat.fetchButton': 'Fetch',
-  'chat.linkComingSoonMessage': "This isn't available yet — coming soon.",
+  'chat.ownData': 'Own data (coming soon)',
+  'chat.ownDataComingSoonTitle': 'Coming soon: connect your own data (file, sheet, or database)',
   'chat.fileReading': 'Reading file…',
   'chat.fileReadError': 'Something went wrong reading that file. Please try again.',
   'chat.pricingBoth':
