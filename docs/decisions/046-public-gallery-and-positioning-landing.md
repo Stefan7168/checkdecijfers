@@ -78,7 +78,7 @@ charts per page load than the landing ever did.
    and its dedicated cache slot in `web/lib/ontdek.ts`, and the now-unused `landing.heroSubtitle` key are all dead,
    left in place deliberately on this branch rather than deleted mid-review — see the open-questions.md follow-up
    row this finding added for the exact deletion list a later, dedicated cleanup should work from.
-9. **No embed code ships on this branch, and the copy says so honestly.** PR #9 (the embed feature) is not merged
+9. **No embed code ships on this branch, and the copy says so honestly.** PR #9 (the embed feature) was not merged when this was written (**both merged 2026-09-12, session 99 — the per-card embed code is now the follow-up, [#237](../open-questions.md)**)
    into this branch's base; the gallery's intro carries an honest, source-free "coming soon" line
    (`gallery.embedComingSoon`) rather than naming what's coming, per the Public-claim rule and principle (c).
    **Fix-wave finding 7 (correction): the landing subtitle's first draft over-promised anyway** — it said
@@ -156,3 +156,7 @@ charts per page load than the landing ever did.
   falls back to `'standard'`; if that fallback ever surprises the owner, consider a test that fails loudly instead.
 - A dedicated cleanup session actually deleting `ontdek.tsx` and its dead surroundings (see the open-questions.md
   follow-up row) — do it in its own change, not folded into an unrelated one, so the diff is easy to review.
+
+## As built
+
+**MERGED + LIVE 2026-09-12 (session 99, owner present): PR #18, squash `ac14392` on `main`, `gate` green.** Follow-ups unchanged: copy-able embed code per gallery card now that PR #9 + #15 are in ([#237](../open-questions.md)); delete the unmounted Ontdek section ([#240](../open-questions.md)).

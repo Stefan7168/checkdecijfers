@@ -58,3 +58,7 @@ Built session 93 (2026-09-10), autonomous (the owner is away for an extended per
 - **The real #205 Pro plan** replacing `PRO_ACCOUNT_EMAILS` — every caller already reads through `hasProPlan`, so this is a one-function change when it lands, EXCEPT it does not, by itself, resolve the Pro-owner-email lookup gap above: a real plan still needs a way to resolve "this row's owner" to "is that owner's account Pro," which is the same missing plumbing, not automatically solved by the plan existing.
 - **The `isRedacted` triplication** (Consequences) — small, contained, worth a future cleanup pass, not urgent. (The header-stripping hygiene gap that used to sit alongside this one was closed in the final review, Bundle A — see Consequences.)
 - **The eviction-GC blind spot** — worth the owner's specific attention once Live is ever actually opened up (moot until then, but recorded now so it is not rediscovered from scratch).
+
+## As built — merge
+
+**MERGED + LIVE 2026-09-12 (session 99, owner present): PR #9, squash `650d664` on `main`; PR #15 (the Pro-owner e-mail lookup that lets Live re-render activate, point 10, [#224](../open-questions.md)) squash-merged right after it as `8d0f0d4`.** Owner steps: set `EMBED_TOKEN_SECRET` in Vercel; run the one-line `auth.users` read check as the `DATABASE_URL` role (RUNBOOK) — no error ⇒ Live works for `PRO_ACCOUNT_EMAILS` owners.

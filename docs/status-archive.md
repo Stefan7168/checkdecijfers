@@ -1,5 +1,30 @@
 # STATUS archive — the session log
 
+**Session 99 (2026-09-12, owner present — "you are the expert, continue") — the six-PR journey + embed stack
+MERGED to `main`; nothing new built.** Started as a "which session is latest / what needs merging" check: session 98
+(`session_0156n8jxBx7PXFHAiX9vf4c8`) was the latest and had wrapped; no other session was still working. Then, with
+the owner present (#118 standing authorization), merged in the planned stacking order, each on a green `gate` on its
+final head: PR #14 (`journey-programme`, squash `677c5fb`) → PR #18 (`journey-public-face`, `ac14392`) → PR #19
+(`journey-phone`, `189d36b`) → PR #20 (docs line + `scripts/dev-harness/`, `524b63f`) → PR #9 (`embed-charts`,
+`650d664`) → PR #15 (`embed-live-creator-lookup`, `8d0f0d4`). Real conflict work: `main`'s four session-97 docs
+commits into `journey-programme` (5 tracker files; open-questions row-number collision #239 → the session-97
+duplicate-build row renumbered #241); #18 and #19 docs + `chart.test.tsx` (kept both describe blocks); #9 against
+the journey stack (`chart.tsx` keeps both `initialPresentation` and `initialFormOverride`; `messages.ts` and
+`chart.test.tsx` keep both sides) — web `tsc` clean, web suite 104 files / 1628 tests green on that merge before push.
+Every later "conflict" was the squash-stack artefact and was recorded with `git merge -s ours origin/main` after
+verifying the trees identical (RUNBOOK "Merging a queue", lessons). Timeline: 08:25 start, 08:28 first push, 08:43
+first merge, 09:42 last merge. `main` CI: runs on `677c5fb` and `189d36b` show `cancelled` (superseded by the next
+merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` and `8d0f0d4` running at
+wrap-up. NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
+Dependabot #16/#17, and session 96's stranded branch `claude/checkdecijfers-embed-pr-review-acbrd5` (its docs
+cherry-picks conflict in every tracker; its code commit `038ecd9` is superseded by PR #14 — left as a record).
+Branch deletion via the session's git proxy silently fails — listed for the owner. Docs this session: STATUS top
+block, this entry, lessons (7), RUNBOOK stacked-PR mechanics, build plan session-99 line (+ a duplicated "Order /
+rule" paragraph from the merge removed), ADR 041/045/046 as-built notes, architecture rows, open-questions
+#214/#224/#238/#240/#241, session-100 kickoff. Note found: session 98's wrap commit `812cfd7` says "lessons" but
+touched no lessons file — recorded in lessons, not reconstructed. Model tiers: the session model did everything
+(merges, conflict resolution, verification); no subagents.
+
 **Session 98 (2026-09-12, AUTONOMOUS — the owner's session-98 kickoff "big-build variant": build on top of PR #14,
 merge nothing on the money path) — the public face + gallery (PR #18), the phone journey walked and fixed (PR #19),
 Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
