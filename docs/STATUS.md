@@ -22,12 +22,23 @@ verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark
 real build, LOW code-review 0 findings, a real-browser check across both themes/phone/reduced-motion that
 caught and fixed one real mobile overlap bug before shipping).
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 99, owner present).** Read
-[session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) first.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
+[session-briefs/2026-09-12-session-101-move-mountains-kickoff.md](session-briefs/2026-09-12-session-101-move-mountains-kickoff.md)
+first — it restates the Phase-0 owner steps below as step zero, then names the actual next big bet: **PR #15's
+creator-e-mail lookup (merged today) just removed the only reason Live embeds couldn't ship** — the owner already
+decided live embeds ARE the Pro plan's reason to exist ([#237](open-questions.md)(b), [#205](open-questions.md));
+nobody has built the actual tier yet. Build the mechanism (gate, upgrade path, upgrade moment) behind a flag —
+never wire real Stripe pricing without an explicit owner go on the number.
+
+**▶ SESSION 99 (2026-09-12, owner present).** Read
+[session-briefs/2026-09-12-session-100-kickoff.md](session-briefs/2026-09-12-session-100-kickoff.md) for the
+detailed Phase-0 owner-steps list (superseded as "next priority" by the block above, still accurate as a checklist).
 **Session 99 merged the whole stack — six PRs, all squash-merged to `main` on green `gate`, in this order:**
 PR #14 Journey programme phases 0/1/3/4/5 (`677c5fb`) → PR #18 public face + `/galerij` (`ac14392`) → PR #19 phone
 journey (`189d36b`) → PR #20 sessions 97–98 docs + `scripts/dev-harness/` (`524b63f`) → PR #9 embed (`650d664`) →
-PR #15 creator-e-mail lookup for Live embeds (`8d0f0d4`). `main` deploys on push; the last run owns the deploy.
+PR #15 creator-e-mail lookup for Live embeds (`8d0f0d4`). **Production runs the full stack since `bfc243a`
+(run 34687239506, deploy + smoke check green 10:12 UTC)** — that commit also fixes a CI trap where a docs-only push on
+top of a code merge left production undeployed (RUNBOOK "Merging a queue", lessons).
 **Owner steps now due (the merges made them live-relevant):** (1) `npm run db:migrate` for 028 + 029 (live DDL,
 owner-supervised), then `npm run usage:report` once; (2) read `/werkwijze` + `/privacy`, fill in the contact e-mail,
 drop the draft notes; (3) set `EMBED_TOKEN_SECRET` in Vercel and run the one-line `auth.users` read check (RUNBOOK) so
@@ -35,8 +46,16 @@ Live embeds can activate; (4) say go/no on R3 (phase 2, confirm-before-fetch —
 merged branches in GitHub (`journey-programme`, `journey-programme-v1`, `journey-public-face`, `journey-phone`,
 `claude/checkdecijfers-journey-programme-rvvipe`, `embed-charts`, `embed-live-creator-lookup`, plus the three already-merged
 `visual-*` branches) — the session's git proxy refuses ref deletions.
-**Still open:** PR #13 (Story stage motion) — CI green on its own head but conflicts for real with PR #19's phone
-caption fix in `chart-story-stage.tsx`; needs a phone-width browser check after a manual merge, not a text merge.
+**Still open:** PR #13 (Story stage motion) — **the manual merge is DONE (session 97 continued, 2026-09-12, owner
+present):** main absorbed PR #14/#18/#19/#20/#9/#15 in three waves while PR #13 sat open, each wave needing its own
+conflict resolution; the real one was `chart-story-stage.tsx`, where PR #19's responsive `min-h-[45dvh]
+lg:min-h-[85vh]` phone fix and this branch's own `scroll-mt-[52vh] lg:scroll-mt-0` fix land in the same className —
+git's auto-merge silently kept only this branch's side with no conflict marker at all, so the merge needed a
+by-hand check, not just "no markers left". Both fixes are now combined (they address different symptoms of the
+same pinned-chart-at-top phone layout, not alternatives) — **still not walked in a real phone browser**, so that
+check from the STATUS line above still applies before merge. CI green, `mergeable_state: clean` at head `27c33d3`,
+independently re-confirmed against the current `main` tip (`9fb9b19`) via `git merge-tree` (0 conflicts). Full
+account: [status-archive.md](status-archive.md), session 97 continued entry; [lessons-learned.md](lessons-learned.md).
 Dependabot #16/#17 (untouched). Branch `claude/checkdecijfers-embed-pr-review-acbrd5` holds session 96's wrap-up docs
 + a superseded quick-wins code commit — kept as a record, not to be merged (lessons, session 99).
 **Next build candidates (cheapest first, each branch + PR unless the owner is present):** [#240](open-questions.md)

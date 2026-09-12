@@ -1,5 +1,51 @@
 # STATUS archive — the session log
 
+**Session 97 (continued, 2026-09-12, owner present) — drove PR #13 through three merge-conflict rounds as a
+concurrent session (98/99) squash-merged six other PRs into `main` underneath it; no new features built.**
+Resumed from the prior segment's compaction (PR #14-already-exists discovery, journey-programme-v1 flagged
+redundant). This segment's own work was entirely PR-#13-firefighting plus routine PR #9/#13 CI check-ins (`send_later`
+self-scheduled, re-armed silently on every unchanged cycle per the standing rule) — no code was written beyond
+merge-conflict resolutions. Three rounds, each triggered by `main` moving out from under `visual-story-motion`
+while it sat open for owner review:
+1. **`a30c490`, 01:12 UTC** — this session's own earlier docs pushes (open-questions #238/#239) collided with
+   PR #13's own #239 row (Story stage). Docs-only (STATUS.md, lessons-learned.md, open-questions.md); kept #239 for
+   Story stage (more cross-referenced), renumbered the newer row to #240. Full verification green (root+web
+   typecheck, `test:docs` 11/11, web 94 files / 1479 tests, backend 143 files / 2211 tests, benchmark GATE PASS,
+   real build).
+2. **`fa79870`, 09:44 UTC** — `main` had absorbed PR #14/#18/#19/#20/#9 (squash-merged by the owner + session 98/99,
+   verified live via `mcp__github__pull_request_read` and `git log`, not assumed). Same open-questions collision
+   recurred (#239 vs. a new session-98 row); same resolution pattern, renumbered to #242 this time (#240/#241 already
+   taken by then). The real work was a genuine code conflict in `web/components/chart-story-stage.tsx`: PR #19's
+   phone-layout fix and this branch's own phone-layout fix land in the same `className`, and git's auto-merge
+   silently kept only this branch's side with **no conflict marker at all** — caught by re-reading the merged file
+   against both branches' actual diffs, not by trusting "no markers = correct". Combined both fixes (they address
+   different symptoms of the same pinned-chart-at-top phone layout, not alternatives) — see
+   [lessons-learned.md](lessons-learned.md) for the full mechanism. Full verification green again (web 104 files /
+   1677 tests, backend 147 files / 2258 tests, benchmark, real build with `/embed/[token]`, `/galerij`, `/privacy`,
+   `/werkwijze` all correctly registered).
+3. **`27c33d3`, 09:54 UTC** — `main` advanced twice more (PR #15, then a docs-only "session 99 wrap" commit) before
+   the second push had even finished landing. Same open-questions collision a third time (renumbered to #242 for
+   real this round, folding in session 99's own newer status updates to rows #238/#240/#241); STATUS.md's stacked
+   "NEXT SESSION STARTS HERE" blocks merged by keeping both sides, newest first, per the file's own convention.
+   `chart-story-stage.tsx` and `08-build-plan.md`/`lessons-learned.md` auto-merged clean this round (already
+   reconciled). Full verification green a third time (web 1677 tests unchanged, benchmark, build). CI `gate`
+   confirmed `success` independently via `pull_request_read` after each push (never trusted the webhook comment
+   alone) — one local backend-suite run was invalidated by a self-inflicted race (see lessons); not re-run locally
+   since the prior round's own clean backend-suite pass (147 files / 2258 tests) plus CI's own green `gate` on the
+   actual pushed head were already sufficient evidence.
+**Also discovered mid-session** (via `mcp__Claude_Code_Remote__list_sessions`, prompted by the owner asking "is this
+the latest session?"): a much more advanced concurrent session (`session_0156n8jxBx7PXFHAiX9vf4c8`, "checkdecijfers.nl
+journey programme") had reached session 98, then the owner drove it to session 99 and merged the whole six-PR stack
+directly (see session 99's own entry above/below) — corrected an earlier-segment mistake of having tried to
+`SendMessage` the WRONG session ID for this same session (a bridge-type session with an unrelated title, not this
+one); `ListAgents` still shows no reachable peers from this cloud session regardless, so cross-session ping remains
+unavailable here by any ID.
+**Final verified state (2026-09-12T14:24 UTC):** `main` at `9fb9b19` (a session-99 docs commit); PR #13 clean/green
+at `27c33d3`, independently re-confirmed against the current `main` tip via `git merge-tree` (0 conflicts) after
+`main` advanced twice more post-fix with no PR #13 impact; PR #9 MERGED (`650d664`, by the owner); only PR #13 and
+Dependabot #16/#17 remain open. STATUS.md's stale "PR #13 needs a manual merge" claim corrected in place. Next-session
+brief: [session-briefs/2026-09-12-session-97-continued-part2-handoff.md](session-briefs/2026-09-12-session-97-continued-part2-handoff.md).
+
 **Session 99 (2026-09-12, owner present — "you are the expert, continue") — the six-PR journey + embed stack
 MERGED to `main`; nothing new built.** Started as a "which session is latest / what needs merging" check: session 98
 (`session_0156n8jxBx7PXFHAiX9vf4c8`) was the latest and had wrapped; no other session was still working. Then, with
@@ -14,8 +60,13 @@ the journey stack (`chart.tsx` keeps both `initialPresentation` and `initialForm
 Every later "conflict" was the squash-stack artefact and was recorded with `git merge -s ours origin/main` after
 verifying the trees identical (RUNBOOK "Merging a queue", lessons). Timeline: 08:25 start, 08:28 first push, 08:43
 first merge, 09:42 last merge. `main` CI: runs on `677c5fb` and `189d36b` show `cancelled` (superseded by the next
-merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` and `8d0f0d4` running at
-wrap-up. NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
+merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` cancelled the same way;
+`8d0f0d4` (run 34686517400) gate green but its `deploy` job SKIPPED every Vercel step ("main has moved on" — the
+wrap-up docs push `a483979` had landed on top and, being docs-only, had no run of its own): production was still on
+the old build. Fixed in `bfc243a` (ci: the stand-down ignores docs-only successors + `workflow_dispatch`; `/code-review`
+LOW found one finding — a failed tip fetch would have stood down silently — fixed before push). Run 34687239506 on
+`bfc243a`: gate green, deploy built + deployed + post-deploy smoke check green at 10:12 UTC — **production now runs the
+full merged stack.** NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
 Dependabot #16/#17, and session 96's stranded branch `claude/checkdecijfers-embed-pr-review-acbrd5` (its docs
 cherry-picks conflict in every tracker; its code commit `038ecd9` is superseded by PR #14 — left as a record).
 Branch deletion via the session's git proxy silently fails — listed for the owner. Docs this session: STATUS top
