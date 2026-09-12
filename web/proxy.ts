@@ -41,6 +41,11 @@ const PUBLIC_EXACT_PATHS = [
   // browser pass: the pages 307'd to /login until listed here).
   '/werkwijze',
   '/privacy',
+  // #237/ADR 046: the public gallery of curated chart stories — same
+  // posture as the two trust pages above (session-97 lesson: a new public
+  // route 307's to /login until it's listed here). No AI spend, no server
+  // actions, only the deterministic curated-chart feed (web/lib/ontdek.ts).
+  '/galerij',
 ];
 
 const PUBLIC_PATH_PREFIXES = [

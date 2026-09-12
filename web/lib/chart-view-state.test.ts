@@ -335,6 +335,28 @@ describe('presentation slice (WP218)', () => {
     s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });
     expect(s.presentation).toEqual({});
   });
+
+  // #237/ADR 046: a chart mounted with `initialPresentation` (the gallery's
+  // story template) must fall back to THAT on a spec swap, not to `{}` —
+  // otherwise a gallery story that ever re-mounted with a new spec on the
+  // same instance would drop its look. Owner decision E above is untouched:
+  // `onReset` (the "Standaard" button, `resetPresentation`) still always
+  // clears to `{}` regardless of what the chart mounted with.
+  it('initialViewState honours an initial presentation, and reset falls back to it (not {}) when given one', () => {
+    const initial = { markers: 'ends' as const };
+    let s = initialViewState('line', initial);
+    expect(s.presentation).toEqual(initial);
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line', initialPresentation: initial });
+    expect(s.presentation).toEqual(initial);
+  });
+
+  it('reset with no initialPresentation still clears to {} (unchanged default)', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });
+    expect(s.presentation).toEqual({});
+  });
 });
 
 describe('setView (story mode: restore the reader\'s own view in one action)', () => {

@@ -5,11 +5,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { buildCuratedCharts } = vi.hoisted(() => ({ buildCuratedCharts: vi.fn() }));
-vi.mock('../backend/chart/index.ts', () => ({ buildCuratedCharts }));
+vi.mock('../backend/chart/index.ts', () => ({
+  buildCuratedCharts,
+  ONTDEK_CHARTS: [],
+  GALLERY_STORIES: [],
+}));
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('./db.ts', () => ({ getDb }));
 
-import { getOntdekCharts, resetOntdekCache } from './ontdek.ts';
+import { getGalleryStories, getOntdekCharts, resetOntdekCache } from './ontdek.ts';
 import { ANONYMOUS_READ_DEADLINE_MS } from './deadline.ts';
 
 const chartA = { slug: 'a', spec: { title: 'A' } };
@@ -159,5 +163,44 @@ describe('a SYNCHRONOUS build failure must not latch the in-flight slot', () => 
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
     await expect(getOntdekCharts()).resolves.toEqual([chartA]);
     expect(buildCuratedCharts).toHaveBeenCalledTimes(1);
+  });
+});
+
+// #237/ADR 046: getGalleryStories() shares makeCuratedFeed with
+// getOntdekCharts() but must be an INDEPENDENT cache slot — a build failure
+// or cache hit on one feed must never leak into the other.
+describe('getGalleryStories (#237) — an independent cache slot from getOntdekCharts', () => {
+  it('builds and serves its own chart set', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
+  });
+
+  it('a cache hit on one feed does not satisfy the other — each triggers its own build', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await getOntdekCharts();
+    buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
+    await expect(getGalleryStories()).resolves.toEqual([chartB]);
+    expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
+    // Ontdek's own cache is untouched by the gallery build.
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
+  });
+
+  it('a failed gallery build does not disturb a healthy ontdek cache, and vice versa', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await getOntdekCharts();
+    buildCuratedCharts.mockRejectedValue(new Error('down'));
+    await expect(getGalleryStories()).resolves.toEqual([]);
+    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+  });
+
+  it('resetOntdekCache() clears both feeds', async () => {
+    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
+    await getOntdekCharts();
+    await getGalleryStories();
+    resetOntdekCache();
+    buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
+    await expect(getOntdekCharts()).resolves.toEqual([chartB]);
+    await expect(getGalleryStories()).resolves.toEqual([chartB]);
   });
 });

@@ -4104,3 +4104,36 @@ describe('ChartView — phone tap targets (R9.1, #238)', () => {
     }
   });
 });
+
+// #237/ADR 046 (public gallery): initialPresentation/initialPanel let a
+// chart mount already wearing a look and with Insights open — without
+// either, a gallery of ~10 stories would need a click per chart to show
+// anything, and no way to give each one its own template.
+describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
+  it('initialPresentation is applied as the starting per-chart overrides', () => {
+    render(<ChartView spec={threePointSpec()} initialPresentation={{ markers: 'ends' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    // "Standaard" is disabled only on a pristine (no-override) panel — an
+    // initialPresentation is itself an override, so it must render enabled
+    // from the first open, without the reader having touched anything.
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeEnabled();
+  });
+
+  it('initialPanel="story" opens Insights at step 0 on mount, without a click', () => {
+    render(<ChartView spec={threePointSpec()} initialPanel="story" />);
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+  });
+
+  it('without initialPanel, Insights stays closed on mount (unchanged default)', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+  });
+
+  it('public-page rule: an anonymous visitor never triggers generateInsights, even with initialPanel="story"', async () => {
+    chartInsightsActions.generateInsights.mockClear();
+    render(<ChartView spec={threePointSpec()} initialPanel="story" />);
+    await screen.findByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' });
+    expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
+  });
+});

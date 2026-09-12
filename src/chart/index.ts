@@ -3,7 +3,7 @@
 export { buildChartSpec, PROVISIONAL_NOTE } from './build.ts';
 export { CHART_ANNOTATIONS, selectAnnotations } from './annotations.ts';
 export type { ChartAnnotationDefinition } from './annotations.ts';
-export { buildCuratedCharts, ONTDEK_CHARTS, periodStepsBack } from './curated.ts';
+export { buildCuratedCharts, GALLERY_STORIES, ONTDEK_CHARTS, periodStepsBack } from './curated.ts';
 export type {
   CuratedChart,
   CuratedChartAlternateReading,
