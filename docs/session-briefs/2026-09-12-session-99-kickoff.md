@@ -14,13 +14,14 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
      `/galerij` with twelve real stories on the live `ChartView` (ADR 046). CI green (`gate`), Opus-reviewed + fix wave,
      real-browser pass. No AI spend, no server action on the public pages (test-pinned). Noindex stays.
   3. **PR #19** `journey-phone` → `journey-programme` — the whole journey walked at 375 px light + dark in a real browser;
-     header wrap, six tap targets, the Present stage's phone captions fixed. CI was still running at wrap-up — check
-     `gate` on its head `16dc9fc` before saying anything about it.
+     header wrap, six tap targets, the Present stage's phone captions fixed. CI green (`gate`) on head `16dc9fc`.
   4. **PR #9** `embed-charts` → `main` — embeds (needs `EMBED_TOKEN_SECRET` on merge).
   5. **PR #15** `embed-live-creator-lookup` → `embed-charts` — the creator-e-mail lookup that lets Live embeds activate
      (reads `auth.users.email` through the existing pool; fail-closed). CI green. Owner step after merge: run
      `select email from auth.users limit 1;` as the `DATABASE_URL` role once (RUNBOOK) — no error ⇒ Live works for
      `PRO_ACCOUNT_EMAILS` owners.
+  6. **PR #20** `claude/checkdecijfers-journey-programme-rvvipe` → `journey-programme` — the sessions 97–98 docs line +
+     `scripts/dev-harness/` (no production code). Merge it with or after #14.
   Also open: PR #13 (Story stage motion pass), Dependabot #16/#17.
 - **New tooling:** [scripts/dev-harness/](../../scripts/dev-harness/README.md) + RUNBOOK §"Local real-browser harness" —
   the whole app, logged-in and with benchmark questions, locally with no secrets and no LLM spend. Use it for every

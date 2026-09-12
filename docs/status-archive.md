@@ -28,7 +28,7 @@ Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
    header, six sub-44 px tap targets (`sm`-only utilities, desktop pixel-identical), and the Present stage's phone
    captions sitting below the fold (`min-h-[45dvh] lg:min-h-[85vh]`). Findings doc
    `session-briefs/2026-09-12-phone-walk-findings.md`. Measured: tsc clean, test:docs 11, web 98 files / 1499
-   tests, real build. CI in progress at wrap-up (head `16dc9fc`).
+   tests, real build. CI `gate` success on `16dc9fc`.
 4. **PR #15 — Live embeds unblocked** (Sonnet): design note (`session-briefs/2026-09-12-live-embed-creator-lookup-
    design.md`) → `lookupUserEmail` reads `auth.users.email` through the existing pool, UUID-validated, fail-closed,
    never logged; the embed route's Live gate uses it; ADR 041 as-built; RUNBOOK owner check. Measured: tsc clean,
