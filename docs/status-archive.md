@@ -10,7 +10,8 @@ while it sat open for owner review:
 1. **`a30c490`, 01:12 UTC** — this session's own earlier docs pushes (open-questions #238/#239) collided with
    PR #13's own #239 row (Story stage). Docs-only (STATUS.md, lessons-learned.md, open-questions.md); kept #239 for
    Story stage (more cross-referenced), renumbered the newer row to #240. Full verification green (root+web
-   typecheck, `test:docs` 11/11, web 94→104 files, backend 143 files/2211 tests, benchmark GATE PASS, real build).
+   typecheck, `test:docs` 11/11, web 94 files / 1479 tests, backend 143 files / 2211 tests, benchmark GATE PASS,
+   real build).
 2. **`fa79870`, 09:44 UTC** — `main` had absorbed PR #14/#18/#19/#20/#9 (squash-merged by the owner + session 98/99,
    verified live via `mcp__github__pull_request_read` and `git log`, not assumed). Same open-questions collision
    recurred (#239 vs. a new session-98 row); same resolution pattern, renumbered to #242 this time (#240/#241 already
@@ -29,7 +30,9 @@ while it sat open for owner review:
    `chart-story-stage.tsx` and `08-build-plan.md`/`lessons-learned.md` auto-merged clean this round (already
    reconciled). Full verification green a third time (web 1677 tests unchanged, benchmark, build). CI `gate`
    confirmed `success` independently via `pull_request_read` after each push (never trusted the webhook comment
-   alone) — one local backend-suite run was invalidated by a self-inflicted race (see lessons) and re-run.
+   alone) — one local backend-suite run was invalidated by a self-inflicted race (see lessons); not re-run locally
+   since the prior round's own clean backend-suite pass (147 files / 2258 tests) plus CI's own green `gate` on the
+   actual pushed head were already sufficient evidence.
 **Also discovered mid-session** (via `mcp__Claude_Code_Remote__list_sessions`, prompted by the owner asking "is this
 the latest session?"): a much more advanced concurrent session (`session_0156n8jxBx7PXFHAiX9vf4c8`, "checkdecijfers.nl
 journey programme") had reached session 98, then the owner drove it to session 99 and merged the whole six-PR stack
