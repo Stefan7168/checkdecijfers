@@ -6,6 +6,57 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 97 (continued, 2026-09-12, owner present) — drove PR #13 through three merge-conflict rounds
+while a concurrent session (98/99) squash-merged six other PRs into `main` underneath it
+
+- **Git can silently drop one side's real fix in a 3-way merge, with ZERO conflict markers.** `chart-story-stage.tsx`:
+  PR #19 added a responsive `min-h-[45dvh] lg:min-h-[85vh]` phone fix; this branch (session 96's motion upgrade) had
+  independently redesigned the same `<li>`'s whole surrounding block (new caption styling) and added its own,
+  unrelated `scroll-mt-[52vh] lg:scroll-mt-0` phone fix in the same `className`. Because this branch's diff replaced
+  the entire containing hunk while PR #19's was a small, localized edit inside what the 3-way merge saw as
+  "unchanged" context, `git merge` auto-resolved the hunk by picking this branch's side wholesale — no `<<<<<<<`,
+  no warning, just PR #19's fix silently gone. Caught only by deliberately re-reading the merged file against BOTH
+  original branches' actual intent, not by trusting "no markers left = correct merge". **The absence of conflict
+  markers is not proof of a correct merge when two branches touch the same logical property through
+  differently-shaped diffs — diff the merged result against each side's intent, especially around any line a
+  recent PR is known to have touched.**
+- **`git merge-tree <merge-base> <A> <B>` is a cheap, non-destructive way to re-verify true mergeability** without
+  checking out or committing anything — used this to independently confirm GitHub's `mergeable_state: clean` was
+  real (not a stale cache) after `main` had advanced twice more mid-review, cross-checking an API field against a
+  local, from-first-principles answer in under a second. Worth reaching for whenever `mergeable_state` has been
+  flapping (clean → dirty → unknown → unstable) and a firm answer is needed before writing anything down.
+- **The open-questions.md row-number collision recurred THREE times in about an hour, across two independently
+  working sessions, on the SAME number (#239) each time** — this session's own two later merges (`fa79870`,
+  `27c33d3`) each hit a fresh collision (Story stage vs. a session-98 registry-assumption row) even after the first
+  one (session 97's original #239/#240 clash) was already fixed. Root cause is structural, not carelessness: "next
+  free number" is unsynchronized shared mutable state, and this repo had two sessions committing to it concurrently
+  for most of a morning. Resolution pattern held up each time: keep the number for whichever row already has
+  outside cross-references (grep the WHOLE repo, not just the conflicted file, before deciding), renumber the
+  newer/less-referenced row, fix its one external reference. **Given this is now a THIRD recurrence in one day, a
+  numbered append-only list under concurrent multi-session editing should be expected to collide almost every time
+  two sessions touch it in the same window — treat the resolution steps above as routine, not exceptional.**
+- **A `git checkout` to a different local branch while a long-running background test is still reading files from
+  that same working directory produces a confusing, self-inflicted false failure that looks exactly like a real
+  regression.** Backgrounded `npm test` (root) was still running against `visual-story-motion`'s checkout when this
+  session ran `git checkout main` for an unrelated reason; the swapped-out files mid-run produced `Cannot find
+  module '.../tests/billing/creator-email.test.ts'` — a file that (correctly) does exist on `main`, just not in the
+  half-swapped working tree at the instant vitest tried to read it. Diagnosed by checking whether the file exists
+  in the target commit's tree (`git show <sha>:<path>`) before concluding anything was actually missing — it was
+  present at every relevant commit, proving the failure was the race, not a gap. **Never `git checkout`/`switch`
+  the working directory while a backgrounded test or build against that same directory is still in flight — wait
+  for it, or use a separate worktree, if a branch switch is needed in the meantime.** (A related, smaller version of
+  this: `git checkout main` after a push must be followed by `git pull` — a bare checkout only moves to the local
+  branch ref, which can already be behind `origin/main` if the local branch itself hasn't been fast-forwarded.)
+- **Two independent sessions shipping what looks like "the same" phone-layout fix are not automatically
+  duplicates — check what each actually fixes before assuming one supersedes the other.** PR #19's `min-h`
+  fix and this branch's `scroll-mt` fix both touch phone rendering of the same Story-stage panel, but address
+  different symptoms (panel height vs. scroll-target/attribution-line overlap) of the same root cause (the chart
+  pinned at the top, capped at 50vh, on narrow screens) — both were needed together, not either-or. This is the
+  mirror image of session 97's earlier R8/R9 lesson ("check before independently rebuilding something another
+  session already shipped") — that lesson warns against assuming *no* overlap; this one warns against assuming
+  *full* overlap. Read what a same-looking fix actually does before either skipping it as redundant or discarding
+  it as superseded.
+
 ## Session 99 (2026-09-12, owner present) — merged the six-PR journey + embed stack in one sitting; the
 squash-merge stacking trick, an open-questions number collision, and a wrap-up that claimed lessons it never wrote
 

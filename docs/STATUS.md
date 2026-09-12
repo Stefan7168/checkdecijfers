@@ -29,8 +29,16 @@ Live embeds can activate; (4) say go/no on R3 (phase 2, confirm-before-fetch —
 merged branches in GitHub (`journey-programme`, `journey-programme-v1`, `journey-public-face`, `journey-phone`,
 `claude/checkdecijfers-journey-programme-rvvipe`, `embed-charts`, `embed-live-creator-lookup`, plus the three already-merged
 `visual-*` branches) — the session's git proxy refuses ref deletions.
-**Still open:** PR #13 (Story stage motion) — CI green on its own head but conflicts for real with PR #19's phone
-caption fix in `chart-story-stage.tsx`; needs a phone-width browser check after a manual merge, not a text merge.
+**Still open:** PR #13 (Story stage motion) — **the manual merge is DONE (session 97 continued, 2026-09-12, owner
+present):** main absorbed PR #14/#18/#19/#20/#9/#15 in three waves while PR #13 sat open, each wave needing its own
+conflict resolution; the real one was `chart-story-stage.tsx`, where PR #19's responsive `min-h-[45dvh]
+lg:min-h-[85vh]` phone fix and this branch's own `scroll-mt-[52vh] lg:scroll-mt-0` fix land in the same className —
+git's auto-merge silently kept only this branch's side with no conflict marker at all, so the merge needed a
+by-hand check, not just "no markers left". Both fixes are now combined (they address different symptoms of the
+same pinned-chart-at-top phone layout, not alternatives) — **still not walked in a real phone browser**, so that
+check from the STATUS line above still applies before merge. CI green, `mergeable_state: clean` at head `27c33d3`,
+independently re-confirmed against the current `main` tip (`9fb9b19`) via `git merge-tree` (0 conflicts). Full
+account: [status-archive.md](status-archive.md), session 97 continued entry; [lessons-learned.md](lessons-learned.md).
 Dependabot #16/#17 (untouched). Branch `claude/checkdecijfers-embed-pr-review-acbrd5` holds session 96's wrap-up docs
 + a superseded quick-wins code commit — kept as a record, not to be merged (lessons, session 99).
 **Next build candidates (cheapest first, each branch + PR unless the owner is present):** [#240](open-questions.md)

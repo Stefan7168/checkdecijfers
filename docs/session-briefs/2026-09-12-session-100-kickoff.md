@@ -23,10 +23,13 @@ Read in this order: [CLAUDE.md](../../CLAUDE.md) → [STATUS.md](../STATUS.md) t
      `journey-programme-v1`, `journey-public-face`, `journey-phone`, `claude/checkdecijfers-journey-programme-rvvipe`,
      `embed-charts`, `embed-live-creator-lookup`, `visual-designed-default`, `visual-templates-v1`, `visual-story-stage`.
 - **Still open, deliberately:**
-  - PR #13 (Story stage motion/atmosphere) — CI green on its own head, but it conflicts for real with PR #19's phone
-    caption fix in `web/components/chart-story-stage.tsx` (#13 restructured the caption panel and carries its own
-    `scroll-mt` phone fix; #19 changed the same `<li>` to `min-h-[45dvh] … lg:min-h-[85vh]`). Resolve by hand, then
-    walk the Present stage at 375 px in the local harness before merging. Owner's call whether the motion pass is wanted.
+  - PR #13 (Story stage motion/atmosphere) — **the by-hand merge is DONE** (session 97 continued, `27c33d3`): #13's
+    own `scroll-mt` phone fix and #19's `min-h-[45dvh] … lg:min-h-[85vh]` fix are both kept in
+    `web/components/chart-story-stage.tsx` (different symptoms of the same pinned-chart phone layout, not
+    alternatives — git's own auto-merge had silently dropped #19's side with no conflict marker; caught and fixed
+    by hand). CI green, `mergeable_state: clean`, re-verified against the current `main` tip. **Still needed before
+    merging:** walk the Present stage at 375 px in the local harness — neither branch's own real-browser pass
+    covered the combined result. Owner's call whether the motion pass is wanted at all.
   - Dependabot #16 / #17 — untouched; the monthly maintenance session's job.
   - Branch `claude/checkdecijfers-embed-pr-review-acbrd5` — session 96's wrap-up docs + one superseded code commit
     (`038ecd9`). Kept as a record; do not merge (its docs conflict in every tracker, its code is in PR #14 already).
