@@ -53,8 +53,12 @@ export interface ChatMessage {
    * live receive path, which only appends 'user'/'assistant'. */
   role: 'user' | 'assistant' | 'redacted';
   /** WP23 (#84): message-type styling. Null on user messages; 'info' for
-   * the gated non-'ok' kinds and the meta/smalltalk/onboarding acknowledgments. */
-  kind: 'answer' | 'clarification' | 'refusal' | 'info' | null;
+   * the gated non-'ok' kinds and the meta/smalltalk/onboarding acknowledgments.
+   * 'insufficient_credits' (WP-D, R2.2, #69) is the one gated kind that gets
+   * its OWN render branch instead of the generic 'info' bubble — set directly
+   * by chat.tsx (never via `messageKind`, which only classifies real
+   * ComposedResponse kinds), so it never appears on a replayed message. */
+  kind: 'answer' | 'clarification' | 'refusal' | 'info' | 'insufficient_credits' | null;
   text: string;
   chart: ChartSpec | null;
   /** Credits charged for this turn (GatedResponse.netCost live; the ledger
@@ -97,11 +101,15 @@ export interface ChatMessage {
    * THIS message's own follow-up/rescue chips bind to, so a click on an
    * older message's chip resolves against ITS OWN carrier and never the
    * newest one, even when two messages carry a byte-identical chip label
-   * (the G4 "Vergelijk met Nederland" case). Set in the SAME state update
+   * (the G4 "Vergelijk met Nederland" case). Strong-tier review HIGH-3: a
+   * CLARIFICATION carries its own open round here too. It used to be null on
+   * the reasoning that a clarification IS the open round — true only while it
+   * is the newest message; a superseded clarification's one-click option then
+   * fell through to the LIVE pending and was sent (and billed) against a
+   * different round. Set in the SAME state update
    * that appends the message (chat.tsx) — never a render behind, or a chip
    * could briefly render with no bound carrier. `null` on user messages, on
-   * an answer/refusal with no rescueOnly pending, on a clarification (an
-   * open round is not a carrier — see chat.tsx's chipRef), and on EVERY
+   * an answer/refusal with no rescueOnly pending, and on EVERY
    * replayed/resumed message (ADR 033 ⟨A6⟩: carriers are not restored on
    * resume — replay-assemble.ts has no live pending to put here, so it
    * always sets `null`, never a guess). The former per-message `threadId`
@@ -110,6 +118,13 @@ export interface ChatMessage {
    * `threadId` state or null at send time, so a click-time carrier lookup
    * needs no thread id of its own — chat.tsx sends the live `threadId`. */
   carrier: { pending: PendingClarification } | null;
+  /** R2.2 (WP-D, #69/#75/#211): the balance/required snapshot from THIS
+   * turn's `insufficient_credits` GatedResponse — present only when
+   * `kind === 'insufficient_credits'`, so the dedicated render branch can
+   * name the covering pack and link `/credits` without a second read. `null`
+   * on every other message, including every other 'info' message and every
+   * replayed message (an old stored turn never had this kind live). */
+  insufficientCredits: { balance: number; required: number } | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

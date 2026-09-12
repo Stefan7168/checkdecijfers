@@ -1588,8 +1588,15 @@ export function ChartView({
   // an error state, never a loading placeholder that could read as "no
   // number" (R3): the panel is always complete from the first open.
   const [phrasedCaptions, setPhrasedCaptions] = useState<Map<string, string> | null>(null);
+  // R5.3 (journey WP-C): true once a `generateInsights` call comes back
+  // `{ ok: false, reason: 'unauthenticated' }` — an anonymous visitor
+  // opened Insights. Reset alongside `phrasedCaptions` on a findings change
+  // so a signed-out visitor who logs in and reopens a fresh chart doesn't
+  // keep seeing a stale login line.
+  const [insightsUnauthenticated, setInsightsUnauthenticated] = useState(false);
   useEffect(() => {
     setPhrasedCaptions(null);
+    setInsightsUnauthenticated(false);
   }, [findings]);
   const storySteps: StoryStep[] = useMemo(
     () =>
@@ -1939,6 +1946,10 @@ export function ChartView({
     if (phrasedCaptions === null && findings.length > 0) {
       void generateInsights(spec).then((result) => {
         if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+        // R5.3: an anonymous visitor gets one honest line in the panel
+        // instead of a silently-failed phrasing attempt — the deterministic
+        // captions still render underneath regardless.
+        else if (result.reason === 'unauthenticated') setInsightsUnauthenticated(true);
       });
     }
   }
@@ -2704,6 +2715,7 @@ export function ChartView({
           idPrefix={domId}
           lang={chartLang}
           onPresent={!inStage ? openStage : undefined}
+          insightsUnauthenticated={insightsUnauthenticated}
         />
       ) : null}
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
@@ -2763,6 +2775,18 @@ export function ChartView({
           triggerId={styleTriggerId}
           frameImage={frameImage}
           onFrameImage={setFrameImage}
+          // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart
+          // tweaks yet opens the Style panel on the Sjablonen gallery
+          // instead of the raw Grafiek controls — `resolved.pristine`
+          // already tracks exactly that (the overrides object passed in is
+          // empty), evaluated once at the panel's own mount.
+          // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
+          // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
+          // and used to land on Sjablonen — never seeing "Mijn standaard is
+          // actief", which renders inside the Grafiek panel. A saved default
+          // IS a deliberate look already chosen, so the gallery is not what
+          // that reader needs first: open on Grafiek instead.
+          openTemplatesWhenPristine={accountStyle === null}
           onChange={(patch) => {
             // Final-review fix (Fix 5): ChartConfigPanel now refuses a
             // frame background/inset change UP FRONT (its own contrast

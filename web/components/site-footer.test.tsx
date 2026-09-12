@@ -15,22 +15,26 @@ describe('SiteFooter', () => {
   // off the home page the footer is the bare attribution again. The
   // home-page variant (attribution + "Over dit project" anchor) stays pinned
   // byte-for-byte in workspace.test.tsx.
-  it('shows only the plain attribution off the home page', () => {
+  it('shows the plain attribution + Werkwijze/Privacy links off the home page', () => {
     render(<SiteFooter />);
-    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
+    expect(screen.getByRole('link', { name: 'Werkwijze' })).toHaveAttribute('href', '/werkwijze');
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
   });
 });
 
 // WP218 phase 4 (#219): proves the language switch reaches the gear link —
 // FOOTER_ATTRIBUTION itself stays byte-pinned Dutch (never translated).
+// WP-B (journey programme): the Werkwijze/Privacy labels DO translate.
 describe('SiteFooter — en', () => {
-  it('translates the gear-link label/title but not the attribution', () => {
+  it('translates the gear-link label/title and the trust-page links, but not the attribution', () => {
     render(
       <LangProvider lang="en">
         <SiteFooter />
       </LangProvider>,
     );
-    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION);
+    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION + ' · How we work · Privacy');
     expect(screen.getByRole('link', { name: 'System map' })).toHaveAttribute('title', 'System map');
+    expect(screen.getByRole('link', { name: 'How we work' })).toHaveAttribute('href', '/werkwijze');
   });
 });

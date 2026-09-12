@@ -88,10 +88,14 @@ export function SiteHeader({
             {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
-        <Link href="/credits" className="text-muted-foreground hover:text-foreground">
+        {/* R9.2 (#214, journey WP-C): below `sm` these two links move into
+          * the Account menu instead (first two items there) — the bar at
+          * 375px was too cramped otherwise. Wordmark, balance chip and
+          * NL|EN stay visible at every width. */}
+        <Link href="/credits" className="hidden text-muted-foreground hover:text-foreground sm:inline">
           {t('header.credits')}
         </Link>
-        <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground">
+        <Link href="/geschiedenis" className="hidden text-muted-foreground hover:text-foreground sm:inline">
           {t('header.history')}
         </Link>
         <LanguageSwitch />
@@ -111,6 +115,15 @@ export function SiteHeader({
               role="menu"
               className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-md"
             >
+              {/* R9.2 (#214): the phone-hidden bar links, reappearing here as
+                * the menu's first two items — same targets, same copy, `sm:hidden`
+                * so they vanish again the moment the bar has room for them. */}
+              <Link href="/credits" className="text-muted-foreground hover:text-foreground sm:hidden">
+                {t('header.credits')}
+              </Link>
+              <Link href="/geschiedenis" className="text-muted-foreground hover:text-foreground sm:hidden">
+                {t('header.history')}
+              </Link>
               {/* The genuinely-new logout: a server action via a form so it
                 * works without client JS wiring and can redirect server-side.
                 * The submit lives in <LogoutButton/> so useFormStatus can show a
