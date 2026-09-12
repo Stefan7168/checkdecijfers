@@ -116,8 +116,10 @@ const nl = {
   // workspace.tsx.
   'workspace.newChatTitle': 'Nieuwe chat',
   'workspace.chatSectionLabel': 'Chat',
-  'workspace.purchaseSuccessMessage':
-    'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.',
+  // R2.4 (journey WP-C): the page no longer tells the reader to refresh —
+  // the poll (Workspace's own router.refresh() loop, onboarding-live-status's
+  // pattern) does that for them.
+  'workspace.purchaseSuccessMessage': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
   'workspace.purchaseSuccessDismiss': 'Sluiten',
 
   // visual-dock.tsx.
@@ -220,7 +222,7 @@ const nl = {
   'credits.pageHeading': 'Credits — Check de Cijfers',
   'credits.balancePrefix': 'Je huidige saldo:',
   'credits.creditsWord': 'credits.',
-  'credits.purchaseSuccess': 'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt.',
+  'credits.purchaseSuccess': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
   'credits.purchaseCancelled': 'Betaling geannuleerd.',
   'credits.buy': 'Kopen',
   'credits.unknownPack': 'Onbekend of niet meer beschikbaar pakket.',
@@ -589,6 +591,184 @@ const nl = {
   'chart.panel.frameBgRefused': 'Deze achtergrond maakt een reeks onleesbaar. Kies een andere kleur of zet de kaart aan.',
   'chart.panel.close': 'Sluiten',
   'chart.panel.dialogLabel': 'Opmaak',
+  // Embed (session 92, spec 2026-09-09-story-mode-and-embed-design.md Part
+  // B1): the footer button + pop-up that generates an <iframe> embed code.
+  // `chart.embed.languageNl`/`languageEn` deliberately reuse the existing
+  // `chart.panel.language*` self-name proper nouns rather than duplicating
+  // them under a new key (the panel's own convention above already
+  // catalogues 'Nederlands'/'English' for this exact concept).
+  'chart.embed.trigger': 'Insluiten',
+  'chart.embed.dialogTitle': 'Grafiek insluiten',
+  'chart.embed.dialogExplain': 'Plak deze code in een artikel om deze grafiek te tonen, met bronvermelding.',
+  'chart.embed.languageLabel': 'Taal',
+  'chart.embed.colourLabel': 'Kleuren',
+  'chart.embed.colourLight': 'Licht',
+  'chart.embed.colourDark': 'Donker',
+  'chart.embed.colourAuto': 'Volgt apparaat van de lezer',
+  'chart.embed.chartTypeLabel': 'Grafiektype',
+  'chart.embed.chartTypeAsShown': 'Zoals getoond',
+  'chart.embed.chartTypeDefault': 'Standaard',
+  'chart.embed.liveLabel': 'Live insluiten',
+  'chart.embed.liveProOnly':
+    'Onderdeel van Pro. De ingesloten grafiek werkt zichzelf automatisch bij wanneer het CBS de cijfers corrigeert of aanvult.',
+  'chart.embed.copyCode': 'Kopieer code',
+  'chart.embed.copyCodeCopied': 'Gekopieerd!',
+  'chart.embed.close': 'Sluiten',
+  'chart.embed.unavailable': 'Insluiten is nu niet beschikbaar.',
+  'chart.embed.loading': 'Code wordt gemaakt…',
+
+  // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
+  // links and the landing "Publiceer" step. Added as one block at the tail
+  // per the WP-B brief (this file is edited in parallel by another WP).
+  'footer.werkwijzeLabel': 'Werkwijze',
+  'footer.privacyLabel': 'Privacy',
+  'trust.draftNote': 'Concept — wordt nog nagekeken.',
+  'werkwijze.pageTitle': 'Werkwijze — Check de Cijfers',
+  'werkwijze.heading': 'Hoe we werken',
+  'werkwijze.publicClaim':
+    'Elk getal dat we tonen is herleidbaar naar een officiële CBS-cel, met bron en datum erbij getoond.',
+  'werkwijze.step1Title': '1. Je stelt een vraag',
+  'werkwijze.step1Body':
+    'Een taalmodel leest alleen wat je vraagt — het rekent nooit en verzint nooit een cijfer. Het herkent welk CBS-onderwerp, welke regio en welke periode je bedoelt.',
+  'werkwijze.step2Title': '2. Deterministische code haalt het cijfer op',
+  'werkwijze.step2Body':
+    'De vraag wordt vertaald naar een exacte opzoeking in onze eigen database met vooraf ingeladen CBS-tabellen. Geen enkel getal komt uit het taalmodel zelf.',
+  'werkwijze.step3Title': '3. We tonen het antwoord met bron en datum',
+  'werkwijze.step3Body':
+    'Elk antwoord vermeldt de CBS-tabel, de synchronisatiedatum en de licentie (CC BY 4.0), zodat je het zelf kunt naslaan.',
+  'werkwijze.provisionalHeading': 'Wat betekent "voorlopig"?',
+  'werkwijze.provisionalBody':
+    'CBS publiceert sommige cijfers eerst als voorlopig of nader voorlopig voordat ze definitief worden. Als een cijfer niet definitief is, zeggen we dat er expliciet bij. Een definitief cijfer kan later alsnog door CBS worden herzien — dat gebeurt af en toe bij grote revisies.',
+  'werkwijze.refusalHeading': 'Wat betekent een weigering?',
+  'werkwijze.refusalBody':
+    'Als een vraag niet eenduidig is, buiten onze geladen gegevens valt, of om een voorspelling of mening vraagt, weigeren we liever te antwoorden dan te gokken. Je krijgt dan uitleg en, waar mogelijk, een bruikbaar alternatief.',
+  'werkwijze.notCoveredHeading': 'Wat de claim niet dekt',
+  'werkwijze.notCoveredBody':
+    'De herleidbaarheidsclaim geldt voor CBS-cijfers uit ons register. Ze geldt niet voor je eigen geüploade data, voor internetresultaten (apart gemarkeerd als niet geverifieerd), of voor andere bronnen — die kunnen in de toekomst worden toegevoegd, maar zijn dat vandaag niet.',
+  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.heading': 'Privacy',
+  'privacy.storedHeading': 'Wat we bewaren',
+  'privacy.storedBody':
+    'We bewaren je vragen en antwoorden als een auditspoor (zodat elk getal herleidbaar blijft) en je accountgegevens (e-mailadres). Vragen van bezoekers zonder account bewaren we losstaand van je account.',
+  'privacy.retentionHeading': 'Hoe lang we het bewaren',
+  'privacy.retentionBody':
+    'Vraaggeschiedenis bij een account bewaren we 2 jaar; vragen van anonieme bezoekers (proefvragen) bewaren we 90 dagen. Je kunt je eigen vraaggeschiedenis altijd zelf verwijderen via het accountmenu.',
+  'privacy.llmHeading': 'Verwerking door een taalmodel',
+  'privacy.llmBody':
+    'Je vraag wordt verwerkt door een taalmodel van Anthropic om de vraag te begrijpen en het antwoord te verwoorden — nooit de ruwe CBS-cijfers zelf, die komen altijd uit onze eigen database.',
+  'privacy.paymentHeading': 'Betalingen',
+  'privacy.paymentBody': 'Stripe verwerkt betalingen als onze betaaldienstverlener. Wij slaan geen kaart- of bankgegevens op.',
+  'privacy.cookiesHeading': 'Cookies',
+  // Strong-tier review HIGH-2: this used to claim "no tracking cookies or
+  // analytics — only a session cookie", which the build contradicts. As
+  // built: the anonymous trial sets a per-browser visitor_id cookie (ADR 036
+  // D2) and stores a hashed IP (trial_questions.ip_hash, migration 020) for
+  // abuse limits, purged after 90 days; the chart-style counter
+  // (app/usage-actions.ts, ADR 039 / #220) records aggregate per-day event
+  // counts with no user id and no IP. All of that is disclosed here.
+  'privacy.cookiesBody':
+    'Om je ingelogd te houden gebruiken we één noodzakelijk sessiecookie. Gebruik je de proefversie zonder account, dan zetten we daarnaast een cookie met een willekeurig bezoekersnummer en bewaren we een versleutelde (gehashte) versie van je IP-adres — allebei alleen om misbruik van de gratis proef te beperken, en na 90 dagen verwijderd. Daarnaast tellen we per dag hoe vaak bepaalde acties gebeuren, als kale aantallen zonder account, gebruikersnaam of IP-adres, dus niet herleidbaar naar een persoon. Verder geen trackingcookies en geen analytics van derden.',
+  'privacy.contactHeading': 'Contact',
+  'privacy.contactBody': 'Vragen over je gegevens? Mail [contact e-mail — eigenaar vult dit aan].',
+  'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
+  'landing.step4Title': 'Publiceer',
+  'landing.step4Body': 'Kies een sjabloon, download of embed — bron en datum reizen mee.',
+  // WP-C (journey programme, session 96): R10 credits-page pack copy, R2.4
+  // purchase poll banner, R9.2 phone-header account-menu labels (reusing
+  // header.credits/header.history text, no new keys needed there), and R5.3
+  // the anonymous-Insights login line. Digit-free where noted — the packQuestions
+  // and packPricePerQuestion strings carry the ONLY digits (via {n}/{price},
+  // computed server-side from the pack's own priceCents/credits, never
+  // hardcoded), and neither can appear inside a chart card.
+  'credits.packQuestions': '≈ {n} gewone vragen',
+  'credits.packPricePerQuestion': '{price} per vraag',
+  'credits.neverExpires': 'Credits verlopen nooit. Geen abonnement.',
+  'chart.story.loginForInsights': 'Log in voor AI-verwoorde inzichten.',
+  // ---- WP-D (journey programme, 2026-09-12, session 97) -----------------
+  // R2.1: the chip caption now varies by message kind — a clarification's
+  // chips are the WP26 options ("kies een optie"), a refusal retry chip
+  // offers an alternative ("probeer dit in plaats daarvan"), an answer's
+  // follow-up chips keep the existing `chat.suggestionsHint` unchanged.
+  'chat.clarificationOptionsHint': 'Kies een optie:',
+  'chat.refusalRetryHint': 'Probeer in plaats daarvan:',
+  // R2.2 (#69/#75/#211): the insufficient-credits message, split into a
+  // base sentence (unchanged numbers, `chat.insufficientCredits` below kept
+  // for the deploy-window / generic fallback) and a buy line that renders
+  // `/credits` as a REAL link — with or without a named covering pack,
+  // depending on whether `packs` was threaded in.
+  'chat.insufficientCreditsBase': 'Je hebt niet genoeg credits ({balance} over, {required} nodig).',
+  'chat.insufficientCreditsBuyPack': 'Koop bijvoorbeeld {packLabel} via',
+  'chat.insufficientCreditsBuyGeneric': 'Koop credits via',
+  // R2.3 (#69): appended to the pre-send price line, amber-tinted, only when
+  // `simple <= balance < 2 * simple` — the #68 rule allows comparing the
+  // server's own numbers, never recomputing a cost.
+  'chat.lowBalanceSuffix': ' Genoeg voor nog één vraag.',
+  // R11: an honest elapsed-time reassurance line — real wait time, never a
+  // fabricated pipeline stage (#211 addendum) — after 8 real seconds of busy.
+  'chat.slowWaitNotice': 'Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.',
+  // R8: the collapsed "own data" entry point when `attachments` is off —
+  // replaces the four separate Link/Sheet/Database/Upload chips with one
+  // honest disabled chip (session 86's per-chip titles retired with it).
+  'chat.ownDataComingSoon': 'Eigen data (binnenkort)',
+  'chat.ownDataComingSoonTitle':
+    'Binnenkort beschikbaar: koppel eigen data (bestand, spreadsheet of database)',
+  // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
+  // R4: the coverage disclosure — collapsed by default, one row per served
+  // CBS table (title, MEASURED sync date, concepts, an optional example
+  // question), plus an honest "Eurostat — coming" group that never claims to
+  // answer anything (principle c). Digit-free chrome — the sync date and
+  // example question are CONTENT (measured/registry-built), not chart-card
+  // chrome, so they are exempt from the whole-card digit scan.
+  'coverage.summary': 'Welke bronnen zijn ingebouwd?',
+  'coverage.cbsHeading': 'CBS',
+  'coverage.syncedOn': 'gesynchroniseerd {date}',
+  // The example question itself stays DUTCH in both languages: the answer
+  // pipeline parses Dutch (CLAUDE.md language carve-out) — translating it
+  // would break the parse, not localise it.
+  'coverage.exampleLabel': 'bijvoorbeeld: {question}',
+  'coverage.onRequestLine': 'Andere CBS-onderwerpen halen we op verzoek op.',
+  'coverage.eurostatHeading': 'Eurostat — binnenkort',
+  'coverage.eurostatBody': 'We werken aan Eurostat-cijfers als aanvullende bron.',
+  'coverage.landingHeading': 'Dit weten we nu',
+
+  // #237/ADR 046 (session 98, journey programme "public face"): the
+  // positioning sentence — chatten van officieel CBS-onderzoek naar een
+  // ingesloten, gesourcete grafiek — and the public gallery of curated
+  // stories that shows it live. Digit-free throughout (messages.test.ts's
+  // digit-parity rule, plus the whole-card chart digit scans): no card here
+  // ever states a number, the live ChartView underneath does that.
+  // Fix-wave finding 7: "ingesloten"/embedded promised a feature that does
+  // not ship on this branch (PR #9 not merged) — softened to what is
+  // actually true today: a chart with its source shown, ready to share.
+  'landing.heroSubtitleV2':
+    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een grafiek met bron erbij, klaar om te delen.',
+  'landing.ctaGallery': 'Bekijk de galerij',
+  'gallery.teaserHeading': 'Verhalen uit de galerij',
+  'gallery.teaserAllLink': 'Alle verhalen',
+  'gallery.pageTitle': 'Galerij — Check de Cijfers',
+  'gallery.heading': 'De galerij',
+  // Fix-wave finding 7: "gesourcete" is not Dutch, and the claim must match
+  // what actually ships on this branch — built from real CBS-cijfers, with
+  // bron en datum, never "gesourcet" or "echt" as vague marketing filler.
+  'gallery.intro':
+    'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
+  'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
+  // Fix-wave finding 4: every title is now the QUESTION a reader would have
+  // typed in chat — it demonstrates the positioning sentence directly and
+  // never repeats the chart's own on-screen title one line below. The
+  // separate "lead" line was dropped: the question already says it.
+  'gallery.story.consumentenvertrouwen.title': 'Hoe optimistisch zijn Nederlanders?',
+  'gallery.story.economische-groei.title': 'Hoe hard groeide de economie?',
+  'gallery.story.inflatie.title': 'Wat deed de inflatie?',
+  'gallery.story.huizenprijzen.title': 'Wat kostte een huis?',
+  'gallery.story.werkloosheid.title': 'Hoe hoog was de werkloosheid?',
+  'gallery.story.faillissementen.title': 'Hoeveel bedrijven gingen failliet?',
+  'gallery.story.producentenprijzen.title': 'Wat deden de producentenprijzen?',
+  'gallery.story.detailhandelsomzet.title': 'Hoe deed de detailhandel het?',
+  'gallery.story.supermarktomzet.title': 'Hoe deden de supermarkten het?',
+  'gallery.story.consumptie-huishoudens.title': 'Hoeveel gaven huishoudens uit?',
+  'gallery.story.werkloosheid-maandelijks.title': 'Hoe ontwikkelde de werkloosheid zich per maand?',
+  'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -684,8 +864,7 @@ const en: Messages = {
 
   'workspace.newChatTitle': 'New chat',
   'workspace.chatSectionLabel': 'Chat',
-  'workspace.purchaseSuccessMessage':
-    'Payment successful — your credits will be added once Stripe confirms the payment (usually a few seconds). Refresh the page afterwards to see your new balance.',
+  'workspace.purchaseSuccessMessage': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
   'workspace.purchaseSuccessDismiss': 'Close',
 
   'dock.header': 'Charts',
@@ -776,7 +955,7 @@ const en: Messages = {
   'credits.pageHeading': 'Credits — Check de Cijfers',
   'credits.balancePrefix': 'Your current balance:',
   'credits.creditsWord': 'credits.',
-  'credits.purchaseSuccess': 'Payment successful — your credits will be added once Stripe confirms the payment.',
+  'credits.purchaseSuccess': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
   'credits.purchaseCancelled': 'Payment cancelled.',
   'credits.buy': 'Buy',
   'credits.unknownPack': 'Unknown or no longer available pack.',
@@ -1070,6 +1249,130 @@ const en: Messages = {
   'chart.panel.frameBgRefused': 'This background would make a series unreadable. Choose another colour or turn the inset card on.',
   'chart.panel.close': 'Close',
   'chart.panel.dialogLabel': 'Style',
+  'chart.embed.trigger': 'Embed',
+  'chart.embed.dialogTitle': 'Embed this chart',
+  'chart.embed.dialogExplain': 'Paste this code into an article to show this chart, with attribution.',
+  'chart.embed.languageLabel': 'Language',
+  'chart.embed.colourLabel': 'Colours',
+  'chart.embed.colourLight': 'Light',
+  'chart.embed.colourDark': 'Dark',
+  'chart.embed.colourAuto': "Reader's device",
+  'chart.embed.chartTypeLabel': 'Chart type',
+  'chart.embed.chartTypeAsShown': 'As shown',
+  'chart.embed.chartTypeDefault': 'Default',
+  'chart.embed.liveLabel': 'Live embed',
+  'chart.embed.liveProOnly': 'Part of Pro. The embedded chart updates automatically when CBS corrects or extends the data.',
+  'chart.embed.copyCode': 'Copy code',
+  'chart.embed.copyCodeCopied': 'Copied!',
+  'chart.embed.close': 'Close',
+  'chart.embed.unavailable': 'Embedding is not available right now.',
+  'chart.embed.loading': 'Generating code…',
+
+  // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
+  // links and the landing "Publish" step. Added as one block at the tail
+  // per the WP-B brief (this file is edited in parallel by another WP).
+  'footer.werkwijzeLabel': 'How we work',
+  'footer.privacyLabel': 'Privacy',
+  'trust.draftNote': 'Draft — under review.',
+  'werkwijze.pageTitle': 'How we work — Check de Cijfers',
+  'werkwijze.heading': 'How we work',
+  'werkwijze.publicClaim':
+    'Every number we show is traceable to an official CBS cell, with source and date shown alongside it.',
+  'werkwijze.step1Title': '1. You ask a question',
+  'werkwijze.step1Body':
+    'A language model only reads what you ask — it never calculates and never invents a number. It recognises which CBS topic, region and period you mean.',
+  'werkwijze.step2Title': '2. Deterministic code looks up the number',
+  'werkwijze.step2Body':
+    'The question is translated into an exact lookup in our own database of pre-loaded CBS tables. No number ever comes from the language model itself.',
+  'werkwijze.step3Title': '3. We show the answer with source and date',
+  'werkwijze.step3Body':
+    'Every answer states the CBS table, the sync date and the licence (CC BY 4.0), so you can look it up yourself.',
+  'werkwijze.provisionalHeading': 'What does "provisional" mean?',
+  'werkwijze.provisionalBody':
+    'CBS first publishes some figures as provisional before they become definitive. When a figure is not definitive, we say so explicitly. A definitive figure can still be revised by CBS later — this happens occasionally with large revisions.',
+  'werkwijze.refusalHeading': 'What does a refusal mean?',
+  'werkwijze.refusalBody':
+    'If a question is ambiguous, falls outside our loaded data, or asks for a prediction or opinion, we would rather refuse than guess. You get an explanation and, where possible, a usable alternative.',
+  'werkwijze.notCoveredHeading': 'What the claim does not cover',
+  'werkwijze.notCoveredBody':
+    'The traceability claim applies to CBS figures from our registry. It does not apply to your own uploaded data, to internet results (marked separately as unverified), or to other sources — those may be added later, but are not covered today.',
+  'privacy.pageTitle': 'Privacy — Check de Cijfers',
+  'privacy.heading': 'Privacy',
+  'privacy.storedHeading': 'What we store',
+  'privacy.storedBody':
+    'We store your questions and answers as an audit trail (so every number stays traceable) and your account details (e-mail address). Questions from visitors without an account are stored separately from your account.',
+  'privacy.retentionHeading': 'How long we keep it',
+  'privacy.retentionBody':
+    'Question history tied to an account is kept for 2 years; questions from anonymous visitors (trial questions) are kept for 90 days. You can always delete your own question history yourself via the account menu.',
+  'privacy.llmHeading': 'Processing by a language model',
+  'privacy.llmBody':
+    'Your question is processed by a language model from Anthropic to understand the question and phrase the answer — never the raw CBS figures themselves, which always come from our own database.',
+  'privacy.paymentHeading': 'Payments',
+  'privacy.paymentBody': 'Stripe processes payments as our payment provider. We do not store card or bank details.',
+  'privacy.cookiesHeading': 'Cookies',
+  // Mirrors the Dutch block above (strong-tier review HIGH-2).
+  'privacy.cookiesBody':
+    'To keep you signed in we use one necessary session cookie. If you use the trial without an account, we also set a cookie holding a random visitor number and store an encrypted (hashed) version of your IP address — both only to limit abuse of the free trial, and deleted after 90 days. We also count how often certain actions happen per day, as bare totals with no account, user name or IP address, so they cannot be traced back to a person. Beyond that: no tracking cookies and no third-party analytics.',
+  'privacy.contactHeading': 'Contact',
+  'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
+  'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
+  'landing.step4Title': 'Publish',
+  'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
+  // WP-C (journey programme, session 96): mirrors the Dutch block above —
+  // R10 credits-page pack copy, R5.3 the anonymous-Insights login line.
+  'credits.packQuestions': '≈ {n} simple questions',
+  'credits.packPricePerQuestion': '{price} per question',
+  'credits.neverExpires': 'Credits never expire. No subscription.',
+  'chart.story.loginForInsights': 'Log in for AI-phrased insights.',
+  // ---- WP-D (journey programme, 2026-09-12, session 97) -----------------
+  'chat.clarificationOptionsHint': 'Pick an option:',
+  'chat.refusalRetryHint': 'Try instead:',
+  'chat.insufficientCreditsBase': 'You do not have enough credits ({balance} left, {required} needed).',
+  'chat.insufficientCreditsBuyPack': 'Buy e.g. {packLabel} via',
+  'chat.insufficientCreditsBuyGeneric': 'Buy credits via',
+  'chat.lowBalanceSuffix': ' Enough for one more question.',
+  'chat.slowWaitNotice': 'This is taking a little longer than usual; we are still checking the answer.',
+  'chat.ownDataComingSoon': 'Own data (coming soon)',
+  'chat.ownDataComingSoonTitle': 'Coming soon: connect your own data (file, spreadsheet or database)',
+  // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
+  'coverage.summary': 'Which sources are built in?',
+  'coverage.cbsHeading': 'CBS',
+  'coverage.syncedOn': 'synced {date}',
+  'coverage.exampleLabel': 'e.g.: {question}',
+  'coverage.onRequestLine': 'Other CBS topics we fetch on request.',
+  'coverage.eurostatHeading': 'Eurostat — coming',
+  'coverage.eurostatBody': 'We are working on Eurostat figures as an additional source.',
+  'coverage.landingHeading': 'What we know today',
+
+  // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
+  // originals (messages.test.ts's digit-parity rule).
+  'landing.heroSubtitleV2':
+    'Ask your question in plain language and chat your way from official CBS research to a sourced chart, ready to share.',
+  'landing.ctaGallery': 'See the gallery',
+  'gallery.teaserHeading': 'Stories from the gallery',
+  'gallery.teaserAllLink': 'All stories',
+  'gallery.pageTitle': 'Gallery — Check de Cijfers',
+  'gallery.heading': 'The gallery',
+  // Fix-wave finding 7: matches the truer, on-message nl copy — built from
+  // real CBS figures, with source and date, never vague "real/sourced"
+  // marketing filler.
+  'gallery.intro':
+    'Every card below is built from official CBS figures, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
+  'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
+  // Fix-wave finding 4: every title is the QUESTION a reader would have
+  // typed — the separate "lead" line was dropped, the question says it.
+  'gallery.story.consumentenvertrouwen.title': 'How optimistic are the Dutch?',
+  'gallery.story.economische-groei.title': 'How fast did the economy grow?',
+  'gallery.story.inflatie.title': 'What did inflation do?',
+  'gallery.story.huizenprijzen.title': 'What did a house cost?',
+  'gallery.story.werkloosheid.title': 'How high was unemployment?',
+  'gallery.story.faillissementen.title': 'How many businesses went bankrupt?',
+  'gallery.story.producentenprijzen.title': 'What did producer prices do?',
+  'gallery.story.detailhandelsomzet.title': 'How did retail do?',
+  'gallery.story.supermarktomzet.title': 'How did supermarkets do?',
+  'gallery.story.consumptie-huishoudens.title': 'How much did households spend?',
+  'gallery.story.werkloosheid-maandelijks.title': 'How did unemployment move month by month?',
+  'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

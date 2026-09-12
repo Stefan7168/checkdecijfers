@@ -1,5 +1,46 @@
 # STATUS archive — the session log
 
+**Session 98 (2026-09-12, AUTONOMOUS — the owner's session-98 kickoff "big-build variant": build on top of PR #14,
+merge nothing on the money path) — the public face + gallery (PR #18), the phone journey walked and fixed (PR #19),
+Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
+
+1. **Harness first.** The cloud container has no `DATABASE_URL`, no Supabase keys, no LLM key. Built
+   `scripts/dev-harness/`: a Node `--import` preload restores the CI fixture snapshot into PGlite and feeds
+   `web/lib/db.ts`'s dev seam (`global.__checkdecijfersDb`); a local Supabase-Auth stand-in (JWKS + `/auth/v1/user`,
+   one test user with the signup grant); an Anthropic-API stand-in replaying `tests/fixtures/llm/**`. Logged-in
+   workspace, a B4 answer with chart, a B16 clarification, a B18 refusal and the credits wall all walk locally with
+   zero LLM spend. A first attempt (local Postgres + self-signed cert appended to the pinned CA) was refused by the
+   tool's safety classifier as a TLS weakening and would not have worked anyway (`next.config.ts` bakes the CA).
+   RUNBOOK section written; Turbopack's symlinked-`node_modules` refusal (hard-link copies instead) and `next dev`
+   rewriting `web/CLAUDE.md` recorded.
+2. **PR #18 — the public face** (Sonnet implementer, Opus whole-branch review, one fix wave): `GALLERY_STORIES`
+   (12 stories over registry keys, built through the same `runQuery → buildChartSpec` pipeline, hermetic gate pins
+   slug → table, grain, window, attribution, ≥ 1 finding); the feed factory in `web/lib/ontdek.ts`; `ChartView`
+   props `initialPresentation` / `initialPanel`; `openStory` no longer fires `generateInsights` for anonymous
+   visitors and an auto-open never counts as a `story_open` event (the review's HIGH: twelve
+   `countChartStyleEvent` server-action DB writes per anonymous load); `/galerij` public + noindex + proxy test;
+   landing subtitle around the positioning sentence (no "embedded" overclaim), a gallery CTA, a compact three-story
+   teaser replacing Ontdek; question-style digit-free titles in nl + en; ADR 046; #237/#239/#240. Measured: root +
+   web tsc clean, test:chart 195, test:docs 11, benchmark 14/14 + 6/6 + 0 fabricated, web 100 files / 1517 tests,
+   real build; browser pass at 375 light/dark nl/en + 1280. CI `gate` success on `5340623`.
+3. **PR #19 — the phone journey** (Sonnet, resumed twice: the first pass was a slice, the second waved a real
+   defect through): the full step list walked at 375 px light + dark; fixed the wordmark wrap in the workspace
+   header, six sub-44 px tap targets (`sm`-only utilities, desktop pixel-identical), and the Present stage's phone
+   captions sitting below the fold (`min-h-[45dvh] lg:min-h-[85vh]`). Findings doc
+   `session-briefs/2026-09-12-phone-walk-findings.md`. Measured: tsc clean, test:docs 11, web 98 files / 1499
+   tests, real build. CI `gate` success on `16dc9fc`.
+4. **PR #15 — Live embeds unblocked** (Sonnet): design note (`session-briefs/2026-09-12-live-embed-creator-lookup-
+   design.md`) → `lookupUserEmail` reads `auth.users.email` through the existing pool, UUID-validated, fail-closed,
+   never logged; the embed route's Live gate uses it; ADR 041 as-built; RUNBOOK owner check. Measured: tsc clean,
+   test:billing 148, test:chart 208, test:docs 11, web 98 files / 1536 tests, real build. CI `gate` success on
+   `a5dafca`. Assumption: the pooler role can read `auth.users` (normally true on Supabase).
+5. **Docs line** (this branch, `claude/checkdecijfers-journey-programme-rvvipe`): merged `journey-programme` into the
+   session-97 docs line (five doc conflicts, both sides kept), the harness + RUNBOOK section, lessons (session 98),
+   STATUS top block, this entry, the session-99 kickoff. Not done: merging anything; applying 028/029; the trial
+   section in the harness; R3.
+6. **Model tiers:** session model planned, built the harness, reviewed every diff + screenshot, opened the PRs;
+   three Sonnet implementers; one Opus reviewer (10 findings, 1 HIGH, all fixed).
+
 **Session 97 (2026-09-11→12, owner present, continued after context compaction) — Journey-programme R8+R9 built
 in-chat, then superseded by discovering PR #14 already covers the whole programme; session wrapped and handed off.**
 
@@ -72,6 +113,42 @@ in-chat, then superseded by discovering PR #14 already covers the whole programm
 10. **Docs updated in this same change:** this entry; `STATUS.md`'s top block (PR #14's existence/state as the
     now-primary fact, the corrected PR #9 SHA, the `journey-programme-v1` redundancy note); `docs/open-questions.md`
     #238; `docs/08-build-plan.md`'s Journey programme section; `docs/lessons-learned.md`.
+**Session 97 (2026-09-12, AUTONOMOUS — the owner's kickoff: "work autonomously for hours, multiple agents, big
+steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH `journey-programme`, PR FOR THE OWNER.**
+
+1. **Plan** ([superpowers/plans/2026-09-12-journey-programme.md](superpowers/plans/2026-09-12-journey-programme.md)):
+   five work packages in five parallel git worktrees (symlinked node_modules), Sonnet implementers, TDD per package,
+   then merged into one branch (four `messages.ts` tail conflicts, all keep-both). Phase 2 / R3 (the money path)
+   deliberately NOT built — explicit owner go required; the larger grant, the 028 apply and the audit re-run are
+   owner steps.
+2. **Built:** WP-A the read-only usage report (`npm run usage:report`, `src/usage/report.ts`, 11 tests, aggregates
+   only; trial→signup conversion honestly "not measurable"; fetch spend NET of refunds) — RUN ONCE against the live
+   DB: 4 signups, 2 users with questions, 4 fetches (3 delivered / 1 failed / 300 net credits), 7 `internal`
+   refusals all-time; WP-B `/werkwijze` + `/privacy` as visibly-marked drafts + footer links + the Ontdek caption + a
+   fourth landing step "Publiceer"; WP-C credits-page per-pack copy (server-side maths), the purchase poll (3 s ×
+   10, hidden-tab aware), the phone header (#214 → Account menu), Sjablonen as the opening tab for an untweaked
+   chart without a saved default, the anonymous Insights login line; WP-D chip captions by kind, the linked
+   insufficient-credits message naming the covering pack, the amber low-balance line (#69 rule), the 8-second
+   honest waiting line, one-click clarification options (revises #75 for one kind), the four inert chips → one
+   "Eigen data (binnenkort)"; WP-E the collapsed coverage disclosure (registry read, 30-min cache, one example per
+   table, Eurostat "binnenkort" only) under the price line and as "Dit weten we nu" on the landing.
+3. **Reviews:** an Opus whole-branch review (3 HIGH / 3 MEDIUM / 5 LOW — all fixed in one Opus fix wave: the poll
+   listener leak, the wrong-carrier one-click send + double-send latch, the privacy cookie overclaim, the saved-default
+   panel tab, the templates-tab gate, net fetch spend, metadata, locale euro format, the link's accessible name, the
+   D10 className pin) and an Opus scoped review of WP-E (the example-frame grammar, fixed by the session). `/code-review`
+   LOW: 0 findings.
+4. **Verification (measured):** full block on `8c3fc38` — root + web tsc clean; backend 144 files / 2222 tests;
+   benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated, GATE PASS; web 98 files / 1492 tests; `next build`
+   clean. After the three browser-pass commits (web-only): web tsc clean, web 98 files / 1492 tests, `next build`
+   clean on `ff8fbda`. Real browser (local `next dev -p 3010` against the live DB), light + dark, 1280 px + 375 px:
+   landing coverage section + example questions, both trust pages (after the proxy fix), footer links, Ontdek caption,
+   step 4, the Style panel opening on Templates, the anonymous Insights login line. NOT walked in a browser (needs a
+   login; covered by tests only): the chat chips/captions, the credits page, the purchase poll, the phone header.
+5. **Docs:** ADR 045 (new); open-questions #14(d), #75, #207, #211, #214, #238; build plan; 12-huisstijl; 04-architecture
+   row; RUNBOOK "Usage report"; the ADR 043 decision-6 note; lessons; this entry; the session-98 kickoff.
+6. **PR #14** (`journey-programme` → `main`): CI gate PASS (11m31s) on `633db3f`, `MERGEABLE`, verified with `gh pr checks 14`.
+7. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
+   kickoff and is open, MERGEABLE; `refusal (internal) 7` all-time in the report deserves a look (error log).
 
 **Session 96 (2026-09-11, owner present throughout — started as "how do we obliterate LocalFocus") — STRATEGY,
 ICP, RESEARCH, SANITY CHECK; DOCS ONLY, NO CODE.**
@@ -303,6 +380,176 @@ UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/
     correction); lessons-learned (session 94, 8 entries — 6 from the original wrap-up, 2 more from this
     later same-day pass); STATUS (corrected PR #9 status + this continuation noted); this entry;
     the session-95 kickoff (refreshed twice — once for the third conflict, once more for this pass).
+
+**Session 93 (2026-09-10, autonomous — owner away for the build, "Be gone for many hours... work
+autonomously... don't stop until I give you the sign to stop"; checked in once mid-session with "ok
+wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT: 8
+TASKS, A WHOLE-BRANCH REVIEW, ONE FINAL FIX WAVE, PUSHED AS A PR AGAINST `main` — NOT MERGED.**
+
+1. **Kickoff:** read CLAUDE.md → STATUS → the session-93 kickoff brief → archive (session-92 entry) →
+   lessons-learned (session-92 entries) → the story-mode-and-embed spec (Part B) → ADR 039 (both
+   session-92 addenda) + ADR 040, per the kickoff's own reading order. Item 0 (the Anthropic key cap
+   alert + "did a follow-up chip reach the model" question): resolved by reading `chat.tsx`'s own
+   extensive inline comments rather than reproducing anything (the key was still capped) — two
+   structurally different chip mechanisms share one render path: WP26's clarification-option chips
+   (genuinely zero-LLM, gated on an OPEN `pending` round) and WP29's "Suggested follow-up questions"
+   chips (shown under an ordinary answer; sending one is exactly like typing a new question, by design,
+   always parses through the model). The session-93 kickoff's framing conflated the two; the alert is
+   most plausibly just ordinary usage from an extensive battle-testing session exhausting an
+   already-near-capped monthly quota, with the last call happening to be a WP29 chip. No code change —
+   a kickoff-framing correction, not a regression. A dark-mode glance at the new panels (Playwright,
+   production): no low-contrast text found via a canvas-based contrast scan of the Style/Frame panel
+   (the panel's own dark-mode `lab()`-format colors needed a proper canvas readback, not a regex parse,
+   to check for real — a `rgb()` regex silently skipped every element and would have reported a false
+   clean pass).
+2. **Plan:** `superpowers:writing-plans` → `docs/superpowers/plans/2026-09-10-embed.md` (8 tasks: the
+   embed token, the Pro-check + `createEmbedCode` action, `ChartView`'s embed props, the button +
+   dialog, the public route's frozen render, its live re-render, framing headers, the docs sweep),
+   argued from the owner-approved spec's Part B. Branch `embed-charts` cut from `main` at the
+   session-92 wrap-up commit (`7cea0ad`) — autonomous session, #118(b): branch + PR, not a direct push.
+   Worked in the main checkout, not a separate worktree directory (`EnterWorktree` is explicitly
+   self-gated to an explicit user/CLAUDE.md request, neither given; matches sessions 89/91/92's own
+   precedent of a plain branch for autonomous SDD builds).
+3. **Executed as `superpowers:subagent-driven-development`, 8 tasks + a pre-flight conflict scan (clean)
+   + a whole-branch review + one final fix wave** — a fresh implementer per task (cheap tier for
+   complete-code tasks, standard tier for judgment tasks), a fresh task reviewer per task (opus
+   specifically for every task touching `chart.tsx`, the public route, or `proxy.ts`, given this
+   codebase's own history of whole-branch reviews finding what task reviews structurally can't), fix
+   rounds + scoped re-reviews where findings arose. Per-task detail:
+   - **Task 1** (`e45619f`): `src/chart/embed-token.ts` — signed, stateless HMAC token
+     (`{auditId}.{signature}`, constant-time verify). Review: clean first pass, 3 minors parked
+     (inherited from the plan's own reference code, none load-bearing).
+   - **Task 2** (`59acad0` + fix `7cc5668`, `c90198a` review clean): `src/billing/pro.ts` +
+     `web/app/embed-actions.ts`. The implementer found `npm run web:test` phantom-failing on any NEW
+     backend test file under a `src/` subdirectory the web suite's glob had never matched a test file
+     in before (`web/backend -> ../src`'s symlink walked into by Vite's `/@fs/` resolution) and
+     initially spawned an out-of-scope task chip for it — ruled this was actually load-bearing (every
+     remaining task in this exact plan was about to add more `src/` test files) and fixed it directly:
+     `web/vitest.config.ts` gained `exclude: [...configDefaults.exclude, "backend/**"]`. 3 minors
+     parked (match this codebase's own dominant conventions elsewhere).
+   - **Task 3** (`4d139cf` + fix `f2ea3d5`): `ChartView` gains `embed`/`embedMode`/`embedFooter` props,
+     6 chrome elements gated on `!embedMode`. Opus review (extra scrutiny — `chart.tsx`'s own ADR 039
+     history) found 2 Important on the first pass: the embed backlink missing `target="_blank"` (would
+     navigate the IFRAME itself, trapping the site inside the embed box) and `embedMode`'s own new
+     JSDoc claiming it "strips click-to-annotate" when every chart point still rendered a focusable,
+     ARIA-labeled phantom "Add a note" button. Both fixed in one round, re-reviewed clean.
+   - **Task 4** (`6f834c3` + fix `c90198a`… — largest single task, 6 files): `ChartEmbedButton`/
+     `ChartEmbedDialog` (shadcn `dialog`, one local import-path patch for Vite/vitest's missing `@/`
+     alias), wired into `chat.tsx`/`visual-dock.tsx`/`dock-visuals.ts`, `CHART_STYLE_EVENTS` += 2, new
+     i18n keys. Opus review: `embed_copy` fired (and showed "Copied!") even when the clipboard write
+     FAILED — violated this exact file's own established precedent (`default_saved`/`default_forgotten`
+     only fire inside `if (r.ok)`) — plus the entire copy path had zero test coverage. Fixed, bundled 2
+     cheap minors (a missing `.catch` on the mint action, the shadcn patch's own misleading comment),
+     re-reviewed clean.
+   - **Task 5** (`87e4789` + 2 fix rounds `2fce336`/`cf013c0`, `67ac454` unrelated fix folded in): the
+     public `/embed/[token]` route, frozen render — the first dynamic route and first fully public
+     no-auth page this app has ever had. **Opus review found a CRITICAL the whole 8-task plan never
+     accounted for: `web/proxy.ts`'s session-auth allowlist had no `/embed/` entry, so every anonymous
+     visitor — the entire point of a public embed — was redirected to `/login`.** Invisible to every
+     test (the route's own tests call the page function directly, bypassing middleware). Also found in
+     the same round: `web/app/layout.tsx` unconditionally rendered `<SiteFooter/>` inside every embed
+     (violating "no site header/footer"); `?theme=`/`?form=` from the already-shipped dialog were
+     silently ignored. Fixed in one consolidated round: `/embed/` added to `PUBLIC_PATH_PREFIXES`
+     (with regression tests incl. a spot-check other routes stay protected); a new `x-embed-route`/
+     `x-embed-lang` proxy-header mechanism lets the root layout conditionally suppress the footer and
+     set `<html lang>` for embed routes; `ChartView` gained `initialFormOverride` for `?form=`;
+     `?theme=dark` got a best-effort `.dark`-wrapper fix (superseded properly in the final fix wave —
+     see below). Deviation worth recording: the fix implementer deviated from the controller's literal
+     "clone headers once" instruction, mutating shared `request.headers` directly instead — the
+     re-reviewer independently REPRODUCED (real probes against the installed Next runtime, not just
+     reading code) that the literal instruction would have shipped STALE refreshed session cookies on
+     every session refresh; the deviation was the right call. 4 minors parked, 2 flagged for the final
+     review as worth fixing (the header-stripping hygiene gap, the `?theme=dark` comment's wrong
+     attribution).
+   - **Task 6** (`baa3124` + fix `67ac454`): `src/chart/embed-live.ts` (`parseStoredIntent`/
+     `rerunLive`) — the most architecturally novel piece: no existing function in this codebase re-runs
+     a STORED, possibly-days-old `StructuredIntent` through the live query pipeline. Resolved the
+     Pro-owner-email-lookup question (does an "email by another user's id" mechanism exist, since the
+     Pro-gate must check the audit row's OWNER, not the anonymous visitor) by exhaustive search: it does
+     not, and building one needs new unprovisioned Supabase admin/service-role plumbing — correctly
+     gated Live closed (`hasProPlan({ id: record.userId, email: null })`, always `false`, per the
+     brief's own pre-authorized stop condition) rather than inventing a workaround. Opus review found 2
+     Important, both about test rigor not behavior: the live-success test couldn't actually distinguish
+     a fresh live spec from the frozen one (the canonical regression — reverting the one-line
+     `spec={finalSpec}` back to `spec={spec}` — passed all 28 tests unchanged), and the "mutation-
+     tested" claim for `parseStoredIntent` was overstated (2 guards had no test proving they mattered).
+     Both fixed with real TDD (temporarily reverting the production code, confirming the strengthened
+     test genuinely fails, restoring, confirming it passes), re-reviewed clean. **A harness quirk hit
+     twice near this task**: the implementer's own `run_in_background` bash job (the ~35-min backend
+     suite) made it look permanently stuck after its turn ended — no way to resume a specific subagent
+     in this harness — but it resumed and finished on its own while a separately-dispatched
+     "completion" replacement was already running; caught via `TaskStop` before any conflict, only
+     because `git log`/`ps aux` were checked directly rather than trusted from either agent's narration.
+   - **Task 7** (`d60cb5b` + fix `20e3d98`/`810d727`): `web/next.config.ts` framing headers —
+     `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` everywhere except `/embed/:path+`
+     (`frame-ancestors *`, no stale XFO). Proven against Next 16.3.4's REAL compiled matcher (traced
+     the exact vendored `path-to-regexp` module + options, then independently re-confirmed via the
+     built `routes-manifest.json` AND real `curl` against a real `next start`). Opus review found the
+     new config comment overclaimed zero overlap between the two header groups (bare `/embed`, no
+     token, matched both) and an unflagged sibling (case-insensitive header matching vs. case-sensitive
+     real routing). Fixed: `:path*` → `:path+` closes the bare-path overlap outright; the
+     case-insensitivity quirk documented + pinned as a known, accepted, harmless gap (closing it needs
+     `experimental.caseSensitiveRoutes`, correctly out of scope for one route).
+   - **Task 8** (`746d95a` + fix `6293553`): ADR 041 + the docs sweep (03-mvp-scope, 06-roadmap,
+     open-questions, RUNBOOK, both READMEs, a stale-sweep correction on the original spec doc). Review
+     found `docs/STATUS.md`'s own top block — this repo's #1-precedence doc, and the exact doc this
+     task's own edited README told every reader to check first — still falsely said Embed was merely
+     "DESIGNED... not built," directly contradicting the ADR this same commit wrote; `08-build-plan.md`
+     had the identical stale framing. Both fixed, consistent with ADR 041.
+4. **Final whole-branch review (opus, main `7cea0ad`..`6293553`, 18 commits, ~584 KB diff):** ready to
+   merge WITH FIXES, no Critical. Confirmed the proxy fix held undisturbed through 3 more tasks;
+   `embedMode` composes correctly with everything Tasks 4/6 added later (incl. `onPointClick` hoisting
+   and `initialFormOverride` re-using the same form guards); the Pro-gate cannot be reached by a
+   redacted or foreign-owned row; no new migration needed (confirmed against the real `chart_style_usage`
+   CHECK constraint). 3 Important, all genuinely NEW cross-seam findings no task review could have
+   seen: (1) the embed backlink hardcoded `https://checkdecijfers.nl`, which resolves to Namecheap
+   PARKING, not the real app (production is `checkdecijfers.vercel.app`) — every embed's only outbound
+   link was dead; (2) `?theme=light` — the dialog's own DEFAULT option — silently did nothing, because
+   `next-themes` reads the reader's OWN OS preference regardless of `?theme=`, and the earlier
+   `.dark`-wrapper fix only ever addressed the `dark` half; (3) the route's redaction-guard test never
+   isolated `isRedacted` (both fixtures set `chart: null` AND `redacted: true` together), and the REAL
+   production redaction envelope has `chart` entirely ABSENT (not null) — meaning `isRedacted` alone
+   protects this public route in production, untested in isolation.
+5. **Final fix wave (`ce96349`, `f56b15a`):** all 3 Important + 3 bundled items (proxy header-stripping
+   hygiene, a `?form=table` exclusion the plan's own rule required, an ADR risk-description correction)
+   fixed in one wave, per the process's own "no second fix wave" rule. The backlink now uses the real
+   `NEXT_PUBLIC_APP_URL` (same source the dialog's own iframe `src` already used). `?theme=` now uses a
+   real `forcedTheme` mechanism — a new `x-embed-theme` proxy header alongside the existing
+   `x-embed-lang`, threaded to `next-themes`' own documented override API — replacing the earlier
+   wrapper-div hack entirely and correctly closing BOTH directions (light-on-dark-OS, dark-on-light-OS
+   with a real page background this time). Final re-review (opus) independently read `next-themes`
+   0.4.6's actual minified source (not just its types) to trace `forcedTheme` through the pre-hydration
+   script, the reactive system-listener guard, and the post-hydration apply effect before trusting the
+   mechanism — all 6 items ADDRESSED, no new Critical/Important breakage. 3 residual minors + 1
+   pre-existing (not introduced here) out-of-scope observation adjudicated directly by the controller
+   (parked; recorded a new open-questions row, [#229](open-questions.md), for the pre-existing one) —
+   no further review loop, per the skill's own rule.
+6. **Final verification block, run once on the branch's true final state, all green:** `npm run
+   typecheck` clean; `npm run web:typecheck` clean; web suite **1380/1380** (91 files); backend suite
+   **2229/2229** (145 files, solo, ~10.5 min — faster than the historical ~35 min estimate, no
+   contention); hermetic benchmark **14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS**;
+   real `next build` clean (`/embed/[token]` registered dynamic); `npm run test:docs` 11/11. (Ran `npm
+   ci` in root + `web/` first — `npm outdated` showed installed `node_modules` had drifted behind both
+   lockfiles, a documented RUNBOOK gotcha; lockfiles/`package.json` untouched, `node_modules` gitignored
+   both places, confirmed via `git status` before and after.)
+7. **Pushed and opened as a PR, not merged** (autonomous session, #118(b)): branch `embed-charts` pushed
+   to `origin`; the PR opened against `main` with a full summary (the Live-gated-closed limitation
+   stated first, before anything else) — the session avoided writing the literal PR number into any
+   `docs/` file per this repo's own doc-convention test. A wrap-up docs-only commit (`ec99486`, adding
+   the lessons/archive/STATUS entries + a RUNBOOK fix caught on re-read — see item 8) superseded and
+   cancelled the first CI run; the second run (`34433304606`) completed green: `gate` passed in
+   10m16s, `deploy` correctly did not run (PRs never deploy, only a push to `main` does, per ADR 018).
+8. **Docs:** ADR 041 (+ the final-review corrections), 03-mvp-scope, 06-roadmap, open-questions (#224
+   through #229), RUNBOOK (2 new secret rows + an "Embed go-live" section), README + web/README, the
+   original spec doc's own as-built correction, STATUS (this entry + the lean top block), lessons-
+   learned (session 93 — the proxy-allowlist Critical, the "UI promises what the backend doesn't
+   honor" bug shape recurring 3 times, the background-job harness quirk, the session-92 alert
+   correction, the value of opus-tier review on request/render-boundary files), memory, this entry, the
+   session-94 kickoff.
+9. **Left for the owner:** review and decide on the PR; if merged, set `EMBED_TOKEN_SECRET` (Vercel,
+   Production, Sensitive) for Embed to activate at all, optionally `PRO_ACCOUNT_EMAILS` (does NOT by
+   itself turn Live on); migrations 028 + 029 and `BRANDFETCH_API_KEY` remain pending from before this
+   session, untouched.
 
 **Session 92 (2026-09-09, owner present) — STORY MODE, THE CHAT POLISH BATCH AND FRAME STYLING + THE
 FLOATING STYLE PANEL BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT, WHOLE-BRANCH-REVIEWED, VERIFIED AND LIVE;

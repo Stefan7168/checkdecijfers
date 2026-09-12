@@ -246,6 +246,23 @@ describe('ChartStoryStage', () => {
     expect(dialog.querySelector('[data-stage-step="2"]')).not.toHaveAttribute('aria-current');
   });
 
+  // R9.1 (#238) fix round 2: below `lg` the pinned chart card caps at 50vh
+  // (not the lg two-column layout's full-height left rail), so an 85vh
+  // caption block put the active caption's centre ~42vh into a column with
+  // only ~50vh of free space under the card — mostly below the fold, with a
+  // blank gap above it. Each step panel must now be sized to the free space
+  // under the pinned card below `lg`, and only regain `min-h-[85vh]` at `lg`
+  // and up (jsdom has no layout engine, so this pins the responsive class
+  // pair rather than measuring real pixels).
+  it('sizes each step panel to the free space under the pinned card below lg, and back to a full viewport height at lg (#238)', () => {
+    render(<ChartStoryStage {...baseProps()} />);
+    for (let i = 0; i < steps.length; i++) {
+      const panel = document.querySelector(`[data-stage-step="${i}"]`) as HTMLElement;
+      expect(panel.className).toContain('min-h-[45dvh]');
+      expect(panel.className).toContain('lg:min-h-[85vh]');
+    }
+  });
+
   it('Escape calls onClose and returns focus to #triggerId', () => {
     const onClose = vi.fn();
     render(<ChartStoryStage {...baseProps({ onClose })} />);

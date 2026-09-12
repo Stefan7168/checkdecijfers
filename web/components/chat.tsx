@@ -12,7 +12,8 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, Globe, PanelRight, Paperclip, Plug } from 'lucide-react';
+import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { askQuestion, replyToClarification } from '../app/actions.ts';
@@ -32,6 +33,7 @@ import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCopy, escapeHtml as escapeHtmlForCopy } from '../lib/copy-answer.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
 import { sourceTableUrl } from '../lib/statline.ts';
@@ -49,6 +51,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
 import { AnswerProof } from './answer-proof.tsx';
 import { ChartView } from './chart.tsx';
+import { CoverageDisclosureView } from './coverage-disclosure.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -104,6 +107,37 @@ export interface ChatPricing {
 export interface ChatAttachments {
   enabled: true;
   onUploadFile: (file: File) => Promise<{ ok: boolean; message?: string }>;
+}
+
+/** R2.2 (WP-D, #69/#75/#211): the plain, serialisable pack shape threaded
+ * `page.tsx` (server read of `getActivePacks`, ADR 006) → `Workspace` →
+ * `Chat` — deliberately narrower than the real `CreditPack` (id/label/
+ * priceCents/currency/credits): the insufficient-credits message only ever
+ * NAMES a pack, it never prices one (that stays `/credits`'s job). Absent or
+ * empty ⇒ the generic (packless) buy line renders instead — byte-safe for
+ * every call site that doesn't pass this prop yet. */
+export interface ChatPack {
+  id: string;
+  label: string;
+  credits: number;
+}
+
+/** R2.2: the smallest pack (by credits) that covers this turn's shortfall
+ * (`required - balance`). CLAUDE.md #68 (the client never recomputes a cost or
+ * a balance) is respected: this subtraction is not a cost or balance being
+ * derived, it is a comparison-only pick among numbers the server already
+ * returned — nothing computed here is ever displayed as, or charged as, an
+ * amount. It is a pure SELECTION among numbers the server itself
+ * returned (the GatedResponse's own balance/required, the pack list's own
+ * credits counts), never a recomputed cost or balance (#68). Falls back to
+ * the largest available pack when none fully covers the shortfall, and to
+ * `null` when no packs were threaded in at all. */
+function coveringPack(packs: ChatPack[] | undefined, balance: number, required: number): ChatPack | null {
+  if (!packs || packs.length === 0) return null;
+  const shortfall = required - balance;
+  const covering = [...packs].filter((p) => p.credits >= shortfall).sort((a, b) => a.credits - b.credits);
+  if (covering.length > 0) return covering[0]!;
+  return [...packs].sort((a, b) => b.credits - a.credits)[0]!;
 }
 
 /** Citation links render DOMAIN-ONLY (Q3): the hostname minus a leading
@@ -311,6 +345,8 @@ export function Chat({
   onOutcome,
   pricing,
   attachments,
+  packs,
+  coverage,
   // WP135 (ADR 033): workspace wiring. ALL optional — a prop-less / Dashboard
   // call site is byte-identical to today (no threadId ever leaves the client,
   // the dock never engages, the reset effect no-ops). `onThreadId`'s PRESENCE
@@ -331,6 +367,14 @@ export function Chat({
   onOutcome?: (gated: GatedResponse) => void;
   pricing?: ChatPricing;
   attachments?: ChatAttachments;
+  /** R2.2 (WP-D): the covering-pack lookup for the insufficient-credits
+   * message. Absent ⇒ that message's buy line stays generic (no named pack). */
+  packs?: ChatPack[];
+  /** WP-E (R4): the coverage disclosure ("which sources are built in"),
+   * read server-side (page.tsx, `loadCoverageDisclosure`) and rendered
+   * collapsed directly under the price line. Absent/null ⇒ nothing renders
+   * — the empty state stays a bare composer otherwise (session 87). */
+  coverage?: CoverageDisclosure | null;
   /** ≥ lg AND the workspace is active: visuals move to the right-pane dock and
    * render here as an in-flow reference chip instead (each visual exactly
    * once). Below lg / on the Dashboard this is false and visuals render inline
@@ -392,6 +436,12 @@ export function Chat({
   const [context, setContext] = useState<ConversationContext | null>(initialContext ?? null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  // R11 (#211, WP-D): an HONEST elapsed-time reassurance line — real wait
+  // time, never a fabricated pipeline stage (the #211 addendum rejected
+  // fake "staged" busy text for exactly that reason). Starts a real 8s timer
+  // only while busy, cleared the moment busy ends (a fast answer never shows
+  // it) or the component resets to a different generation.
+  const [showSlowWait, setShowSlowWait] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // WP22 (#96a): a fresh deploy invalidates Server Action ids in already-open
   // tabs -- the first submit then fails with Next's UnrecognizedActionError
@@ -448,6 +498,11 @@ export function Chat({
   // `pending` again. Consulted only while the sent text is still the clicked
   // label byte for byte; edited text is typed text and keeps the live pending.
   const chipRef = useRef<({ label: string } & Carrier) | null>(null);
+  // Strong-tier review HIGH-3(b): an in-flight-send latch that is NOT React
+  // state. `busy` only reaches the next render, so two clicks in one tick
+  // both saw `busy === false` and both sent (two requests, two charges).
+  // Set synchronously at the top of `sendText`, cleared in its `finally`.
+  const sendingRef = useRef(false);
 
   function toggleSource(key: string): void {
     setSelectedSources((prev) => {
@@ -501,6 +556,19 @@ export function Chat({
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
+  // R11: a real 8s timer, started only while busy and cleared the instant
+  // busy flips back to false (a fast turn, or a nieuwe-chat/thread-switch
+  // reset, both of which set busy false via handleSubmit's own `finally`
+  // before or shortly after this effect's cleanup runs).
+  useEffect(() => {
+    if (!busy) {
+      setShowSlowWait(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowSlowWait(true), 8000);
+    return () => clearTimeout(timer);
+  }, [busy]);
+
   // WP135 (ADR 033 D4): report the dockable visuals derived from the messages
   // so the workspace can render the dock and its tabs; a no-op without the
   // callback (the Dashboard / test call sites).
@@ -518,6 +586,11 @@ export function Chat({
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // WP-E (R4): the coverage-disclosure example click fills the input (the
+  // #75 fill-don't-send convention, like every other example/follow-up
+  // chip) and moves focus there so the click reads as "now edit or send",
+  // not a silent no-op.
+  const composerInputRef = useRef<HTMLInputElement>(null);
 
   // WP202b preview (owner request, session 86): "Link toevoegen" opens the
   // inline URL row the original design sketched (D10), so the intended flow
@@ -560,8 +633,24 @@ export function Chat({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const text = input.trim();
-    if (!text || busy || nothingSelected) return;
+    await sendText(input.trim());
+  }
+
+  // R7 (WP-D, #75/#211): extracted from handleSubmit so a one-click
+  // clarification-option chip can send directly (the label IS the reply —
+  // there is nothing left for the user to edit), rather than filling the
+  // input and waiting for a second click on Verstuur. `handleSubmit` above
+  // is now a thin wrapper reading the input's own trimmed value; every other
+  // caller (chip clicks) passes the label text straight through. Behavior for
+  // the existing typed-submit path is byte-identical — same guard order, same
+  // body, just parameterized on `text` instead of reading `input` inline.
+  async function sendText(text: string) {
+    // Strong-tier review HIGH-3(b): `busy` is React state, so two clicks in the
+    // same tick both read the pre-render `false` and both fire a request (two
+    // billed turns). `sendingRef` is set SYNCHRONOUSLY here and cleared in the
+    // `finally` below, so the second click returns before any await.
+    if (!text || busy || sendingRef.current || nothingSelected) return;
+    sendingRef.current = true;
 
     // WP135 (blocker fix): the generation this submit belongs to. If a
     // nieuwe-chat / thread-switch bumps it while the action is in flight, the
@@ -571,7 +660,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null },
     ]);
     setInput('');
     setBusy(true);
@@ -654,25 +743,50 @@ export function Chat({
       onOutcome?.(gated);
 
       if (gated.kind !== 'ok') {
+        // R2.2 (#69/#75/#211): insufficient_credits gets its OWN kind + a
+        // structured snapshot instead of the generic 'info' bubble, so the
+        // render below can name the covering pack and link /credits for
+        // real — keyed on the kind, never on parsing gatedMessageText's
+        // string. Every other non-'ok' kind is unchanged.
         setMessages((m) => [
           ...m,
-          {
-            role: 'assistant',
-            kind: 'info',
-            text: gatedMessageText(gated, t),
-            chart: null,
-            cost: null,
-            citation: null,
-            card: null,
-            csv: null,
-            proof: null,
-            answerView: null,
-            provisional: false,
-            suggestions: [],
-            auditId: null,
-            webSection: null,
-            carrier: null,
-          },
+          gated.kind === 'insufficient_credits'
+            ? {
+                role: 'assistant' as const,
+                kind: 'insufficient_credits' as const,
+                text: gatedMessageText(gated, t),
+                chart: null,
+                cost: null,
+                citation: null,
+                card: null,
+                csv: null,
+                proof: null,
+                answerView: null,
+                provisional: false,
+                suggestions: [],
+                auditId: null,
+                webSection: null,
+                carrier: null,
+                insufficientCredits: { balance: gated.balance, required: gated.required },
+              }
+            : {
+                role: 'assistant' as const,
+                kind: 'info' as const,
+                text: gatedMessageText(gated, t),
+                chart: null,
+                cost: null,
+                citation: null,
+                card: null,
+                csv: null,
+                proof: null,
+                answerView: null,
+                provisional: false,
+                suggestions: [],
+                auditId: null,
+                webSection: null,
+                carrier: null,
+                insufficientCredits: null,
+              },
         ]);
         // None of these kinds change the pending clarification state;
         // `finally` below still clears `busy`.
@@ -696,15 +810,24 @@ export function Chat({
           : response.kind === 'refusal' || response.kind === 'answer'
             ? (response.pending ?? null)
             : null;
-      // #73 v2 follow-up (moved onto ChatMessage, session 76): only an
-      // answer/refusal's carried pending is a CARRIER a later chip binds to —
-      // a clarification IS the open round itself, not a carrier (its own
-      // chips take the live `pending` route below instead, exactly as
-      // before). Computed HERE, before the message literal below, so it lands
-      // in the SAME setMessages call that appends the message — never a
-      // render behind, or a chip could briefly render with no bound carrier.
+      // #73 v2 follow-up (moved onto ChatMessage, session 76): an
+      // answer/refusal's carried rescue pending is a CARRIER a later chip
+      // binds to. Strong-tier review HIGH-3: a CLARIFICATION now snapshots its
+      // own open round here too. It used to be `null` on the reasoning that a
+      // clarification IS the open round — true while it is the newest message,
+      // but a superseded clarification (scrolled up after a newer round
+      // opened) then fell through to the LIVE `pending`, so its one-click
+      // option would have been sent as a reply to a DIFFERENT round: a
+      // wrong-carrier reply, and billed. Each clarification carrying its own
+      // snapshot makes a click resolve against the round the user is looking
+      // at. Computed HERE, before the message literal below, so it lands in
+      // the SAME setMessages call that appends the message — never a render
+      // behind, or a chip could briefly render with no bound carrier. Resumed
+      // messages keep `carrier: null` (ADR 033 ⟨A6⟩, replay-assemble.ts never
+      // guesses one) — the click handler treats that as fill-don't-send.
       const carrier: ChatMessage['carrier'] =
-        carried && (response.kind === 'answer' || response.kind === 'refusal')
+        carried &&
+        (response.kind === 'answer' || response.kind === 'refusal' || response.kind === 'clarification')
           ? { pending: carried }
           : null;
       setMessages((m) => [
@@ -777,6 +900,7 @@ export function Chat({
           // omits the field); it renders keyed on this value, never the kind.
           webSection: response.webSection ?? null,
           carrier,
+          insufficientCredits: null,
         },
       ]);
       // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
@@ -797,6 +921,7 @@ export function Chat({
         setError(t('chat.genericError'));
       }
     } finally {
+      sendingRef.current = false;
       setBusy(false);
     }
   }
@@ -827,6 +952,15 @@ export function Chat({
             balance: pricing.balance,
             clarification: pricing.clarification,
           });
+
+  // R2.3 (#69): amber-tint the price line and append an honest one-more-
+  // question warning when the balance covers this question but not a
+  // second one. The ONLY arithmetic here is the comparison the #68 rule
+  // explicitly allows (balance vs. simple, both server-returned numbers) —
+  // no cost or balance is recomputed or displayed beyond what pricingHint
+  // above already renders.
+  const lowBalance =
+    !!pricing && pricing.balance >= pricing.simple && pricing.balance < 2 * pricing.simple;
 
   return (
     // Session 87 visual redesign: no frame of its own — the workspace card
@@ -1001,6 +1135,43 @@ export function Chat({
                   </div>
                 </CardFooter>
               </Card>
+            ) : message.kind === 'insufficient_credits' && message.insufficientCredits ? (
+              // R2.2 (#69/#75/#211): a dedicated render branch, keyed on the
+              // message KIND (never on parsing `text`) — a real `<Link>` to
+              // /credits, naming the smallest pack (from `packs`, if any)
+              // that covers this turn's shortfall. `text` still carries the
+              // old plain-string fallback (gatedMessageText) for anything
+              // reading it (screen readers via accessible name fallbacks,
+              // stale replay paths) but is not itself rendered here.
+              <div className="max-w-full text-sm text-[15px] leading-relaxed text-foreground">
+                <p>
+                  {t('chat.insufficientCreditsBase', {
+                    balance: message.insufficientCredits.balance,
+                    required: message.insufficientCredits.required,
+                  })}
+                </p>
+                <p>
+                  {(() => {
+                    const pack = coveringPack(
+                      packs,
+                      message.insufficientCredits!.balance,
+                      message.insufficientCredits!.required,
+                    );
+                    return pack
+                      ? `${t('chat.insufficientCreditsBuyPack', { packLabel: pack.label })} `
+                      : `${t('chat.insufficientCreditsBuyGeneric')} `;
+                  })()}
+                  {/* The link's accessible name is a real phrase ("Credits
+                    * kopen" / "Buy credits", the SAME header.credits string
+                    * the site header uses) rather than the raw path — a
+                    * screen-reader link list of "/credits" says nothing about
+                    * where it goes. */}
+                  <NextLink href="/credits" className="underline">
+                    {t('header.credits')}
+                  </NextLink>
+                  .
+                </p>
+              </div>
             ) : (
               <>
                 <div
@@ -1047,7 +1218,12 @@ export function Chat({
                 ) : null}
               </>
             )}
-            {!dockMode && message.chart ? <ChartView spec={message.chart} /> : null}
+            {!dockMode && message.chart ? (
+              <ChartView
+                spec={message.chart}
+                embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+              />
+            ) : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
               * The web section still renders below this (ADR 032). */}
@@ -1076,7 +1252,19 @@ export function Chat({
               * the pre-send cost line (#82) and presses Verstuur themselves. */}
             {message.suggestions.length > 0 ? (
               <>
-                <p className="mt-2 text-xs text-muted-foreground">{t('chat.suggestionsHint')}</p>
+                {/* R2.1 (#211, WP-D): the caption varies by message kind —
+                  * a clarification's chips are the WP26 proven-answerable
+                  * OPTIONS ("kies een optie"), a refusal's chip is a retry
+                  * with a different, working ask ("probeer in plaats
+                  * daarvan"), an answer's follow-up chips keep the existing
+                  * hint. Message kind is on the message object (chat-message.ts). */}
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {message.kind === 'clarification'
+                    ? t('chat.clarificationOptionsHint')
+                    : message.kind === 'refusal'
+                      ? t('chat.refusalRetryHint')
+                      : t('chat.suggestionsHint')}
+                </p>
                 <div className="mt-1 flex flex-wrap gap-2">
                 {message.suggestions.map((question) => (
                   <button
@@ -1085,19 +1273,36 @@ export function Chat({
                     onClick={() => {
                       // #73 v2 review: remember THIS message's own carrier
                       // (message.carrier, chat-message.ts) with the clicked
-                      // label; handleSubmit binds the send to it only if the
-                      // label goes out unedited (an older answer's or
-                      // refusal's chip takes against ITS carrier, not the
-                      // latest one). Nothing is re-bound here — `pending`
-                      // stays what it is, so an open clarification round
-                      // survives a glance at an older chip. A message without
-                      // a carrier (a resumed thread, a clarification's own
-                      // option) records nothing — chipRef stays null and the
-                      // send below falls through to the live `pending`.
+                      // label; handleSubmit/sendText binds the send to it
+                      // only if the label goes out unedited (an older
+                      // answer's or refusal's chip takes against ITS
+                      // carrier, not the latest one). Nothing is re-bound
+                      // here — `pending` stays what it is, so an open
+                      // clarification round survives a glance at an older
+                      // chip. A message without a carrier (a resumed thread,
+                      // a clarification's own option) records nothing —
+                      // chipRef stays null and the send below falls through
+                      // to the live `pending`.
                       chipRef.current = message.carrier
                         ? { label: question, ...message.carrier }
                         : null;
-                      setInput(question);
+                      // R7 (#211, WP-D): a clarification's own chips are
+                      // proven-answerable OPTIONS (WP26 mechanism A) — the
+                      // label IS the reply, so a click SENDS it immediately
+                      // instead of filling the input for a second click.
+                      // Answer follow-up chips and refusal retry chips keep
+                      // the #75 fill-don't-send convention unchanged.
+                      // Strong-tier review HIGH-3: sending is bound to THIS
+                      // message's own carrier (set just above, exactly like
+                      // the fill path). A clarification with NO carrier is a
+                      // resumed thread — there is no round to reply to, so it
+                      // falls back to fill-don't-send rather than sending the
+                      // label against whatever round happens to be live.
+                      if (message.kind === 'clarification' && message.carrier) {
+                        void sendText(question);
+                      } else {
+                        setInput(question);
+                      }
                     }}
                     className={PILL}
                   >
@@ -1131,6 +1336,9 @@ export function Chat({
                   : t('chat.busyCbsOnly')}
             </div>
             <AnswerSkeleton />
+            {showSlowWait ? (
+              <p className="text-left text-xs text-muted-foreground">{t('chat.slowWaitNotice')}</p>
+            ) : null}
           </>
         ) : null}
         {error ? <div className="text-sm text-destructive">{error}</div> : null}
@@ -1194,29 +1402,19 @@ export function Chat({
           </button>
         </>
       ) : null}
-      {/* #201/#202 (open-questions, session 83 scoping): attachment entry
-        * points. "Databron verbinden" stays disabled regardless of
-        * `attachments` (D5: OAuth data sources have no backend at all yet)
-        * — disabled with an explanatory title rather than removed, so the
-        * button honestly signals "coming soon" instead of silently doing
-        * nothing or pretending to work (principle c: never fake it).
-        * "Link toevoegen" (session 86, owner request) is clickable — it
-        * opens the inline URL row below, so the intended flow is visible
-        * for demos, but url_html ingest itself still has no backend (WP202b,
-        * not built): submitting shows the same honest "not yet" message
-        * rather than fetching anything. "Bestand uploaden" is the ADR 037
-        * D10 presence-driven exception: enabled ONLY when `attachments` is
-        * present; byte-identical to today (same disabled button, same
-        * title, no file input in the DOM at all) when it is absent. */}
-        <button
-          type="button"
-          onClick={() => setLinkRowOpen((open) => !open)}
-          aria-expanded={linkRowOpen}
-          className={CHIP_OFF}
-        >
-          <Link2 aria-hidden="true" className="size-3.5" />
-          {t('chat.addLink')}
-        </button>
+      {/* R8 (#211, WP-D): the four separate entry points ("Link toevoegen",
+        * "Bestand uploaden", "Sheet koppelen", "Data koppelen" — #201/#202,
+        * session 83/86/90) collapse into ONE disabled "Eigen data
+        * (binnenkort)" chip, since none of the four had a real backend
+        * except the ADR 037 D10 upload exception — a wall of four
+        * indistinguishable "coming soon" chips was choice-noise, not
+        * honesty. When `attachments` IS present the live "Bestand
+        * uploaden" chip shows alone instead (unchanged behavior, ADR 037
+        * D10's presence-driven exception). The demo URL row (session 86,
+        * `linkRowOpen`/`handleLinkSubmit`) has no entry point left in the
+        * UI — its state/handler stay in the file, dead but restorable in
+        * one line, rather than deleted, per that session's own "visible for
+        * demos" intent; `linkComingSoon` can likewise never become true now. */}
         {attachments ? (
           <>
             <input
@@ -1240,39 +1438,13 @@ export function Chat({
           <button
             type="button"
             disabled
-            title={t('chat.uploadFileComingSoonTitle')}
+            title={t('chat.ownDataComingSoonTitle')}
             className={CHIP_SOON}
           >
-            <Paperclip aria-hidden="true" className="size-3.5" />
-            {t('chat.uploadFile')}
+            <Plug aria-hidden="true" className="size-3.5" />
+            {t('chat.ownDataComingSoon')}
           </button>
         )}
-        {/* Session 90 (owner request, in chat): a "Link with sheet" entry
-          * point BEFORE "Connect database" — a spreadsheet link (Google
-          * Sheets and the like) is a different, lighter ask than a database
-          * connection, so it gets its own chip. Same honest "coming soon"
-          * treatment as its neighbour: disabled with an explanatory title,
-          * no backend yet (WP202b territory). "Connect database"'s example
-          * moved from Google Sheets to a real database now that sheets have
-          * their own chip. */}
-        <button
-          type="button"
-          disabled
-          title={t('chat.linkWithSheetComingSoonTitle')}
-          className={CHIP_SOON}
-        >
-          <FileSpreadsheet aria-hidden="true" className="size-3.5" />
-          {t('chat.linkWithSheet')}
-        </button>
-        <button
-          type="button"
-          disabled
-          title={t('chat.connectDatabaseComingSoonTitle')}
-          className={CHIP_SOON}
-        >
-          <Plug aria-hidden="true" className="size-3.5" />
-          {t('chat.connectDatabase')}
-        </button>
       </div>
       {nothingSelected ? (
         <p className="text-xs text-destructive">{t('chat.nothingSelectedHint')}</p>
@@ -1310,6 +1482,7 @@ export function Chat({
       ) : null}
       <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
+          ref={composerInputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -1327,7 +1500,21 @@ export function Chat({
           {t('chat.send')}
         </Button>
       </form>
-      {pricingHint ? <p className="mb-2 text-xs text-muted-foreground">{pricingHint}</p> : null}
+      {pricingHint ? (
+        <p className={'mb-2 text-xs ' + (lowBalance ? 'text-warning' : 'text-muted-foreground')}>
+          {pricingHint}
+          {lowBalance ? t('chat.lowBalanceSuffix') : ''}
+        </p>
+      ) : null}
+      {/* WP-E (R4): collapsed by default — the empty state stays a bare
+        * composer (session 87) unless the visitor opens this themselves. */}
+      <CoverageDisclosureView
+        coverage={coverage}
+        onPickExample={(question) => {
+          setInput(question);
+          composerInputRef.current?.focus();
+        }}
+      />
         </div>
       </div>
     </div>

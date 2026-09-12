@@ -93,6 +93,8 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `TRIAL_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-17, Production — #53 go-live, session 52**) | Not secret — the literal value `1`. The trial master switch: while unset the whole homepage trial renders NOTHING (dormant, byte-identical landing). **Removing it is the instant kill-switch** |
 | `SLOT_PHRASING_ENABLED` | Nowhere (**NOT SET — PERMANENTLY; the [#162](open-questions.md) slot-phrasing experiment CLOSED 2026-09-06, session 83, owner: "Accept as final"**) | Not secret — the literal value `1`. The number-free-phrasing experiment rung ([session-briefs/2026-07-19-adr-draft-slot-filling.md](session-briefs/2026-07-19-adr-draft-slot-filling.md)): while unset every compose call runs the see-and-echo ladder **byte-identically** (test-pinned). **Do NOT set it — the owner-supervised A/B ran twice (rounds 4 and 5) and FAILED both phrasing gates both times, round 5 worse than round 4; the owner accepted round 5 as the experiment's final verdict.** The ADR-draft is NOT promoted to an accepted ADR. This is a closed experiment, not a paused one — re-opening it would be a fresh decision, not a "finish what's pending" continuation. Unsetting is (and remains) a complete rollback (the legacy fixtures never left the repo) |
 | `BRANDFETCH_API_KEY` | Nowhere yet (**NOT SET — WP218 phase 3, built 2026-09-09, session 91; the owner sets it in the WP218 go-live section further down, only if brand lookup is wanted**) | Real secret. developers.brandfetch.com → register (free, no card) → Developer Dashboard → API key → Vercel env store (Production, Sensitive) → redeploy. Rotation: new key in the dashboard → replace in Vercel → redeploy → revoke the old one. Without it the Kleuren tab says brand lookup is not possible; nothing else changes. Spend belt: one call per website per 30 days (cache), five lookups per user per day, signed-in only, **and a hard global cap of 100 real lookups per calendar month across all users (owner decision 2026-09-09) — the app enforces this itself, counted in `chart_style_usage` (event `brand_fetch`), so the free tier is never exceeded and no paid plan is needed.** |
+| `EMBED_TOKEN_SECRET` | Nowhere yet (**NOT SET — Embed feature built 2026-09-10, session 93, branch `embed-charts`, not yet merged; the owner sets it in the Embed go-live section further down**) | Real secret you invent yourself (password-manager generator, or `openssl rand -base64 32` — a long random string). HMAC-signs/verifies every embed token (`src/chart/embed-token.ts`). Missing → `createEmbedCode` returns `unavailable` (the Embed dialog says embedding isn't available right now) and every `/embed/[token]` URL 404s — fail closed, no error pages. **Rotation is NOT benign like `TRIAL_IP_HASH_SECRET`:** replacing this value invalidates every embed code ever minted, wherever it was pasted — each one starts showing the "no longer available" page instead of the chart. This is the ONLY revocation mechanism embeds have today (ADR [041](decisions/041-public-embed-pages.md) — no per-embed table exists); rotate deliberately, not routinely, and only when you actually want every existing embed to stop working at once |
+| `PRO_ACCOUNT_EMAILS` | Nowhere yet (**NOT SET — built 2026-09-10, session 93; optional, the owner sets it in the Embed go-live section further down only if a Live-embed demo is wanted**) | Not a real secret needing rotation in the usual sense — a comma-separated, case-insensitive list of email addresses (`src/billing/pro.ts`'s `hasProPlan`), the [#205](open-questions.md) Pro-plan demo allowlist. Edit the list directly in Vercel (Production; plain, not Sensitive — it's just addresses) + redeploy to add/remove a demo account. **⚠ Setting this does NOT make Live embeds actually update:** it only affects what the Embed dialog shows as available to the account MINTING a new embed code. The render-time Live check needs to resolve an embed's OWNER to their email, and no code in this app can look up an arbitrary user's email by user id today — so regardless of this variable, every `?live=1` embed silently and permanently renders frozen (ADR 041, [#224](open-questions.md)). See the Embed go-live section below before expecting Live to work |
 
 **Note on `NEXT_PUBLIC_*` vars and the Vercel env store (2026-07-04, production outage post-mortem):** this Vercel team enforces the **sensitive environment-variables policy** — every env var added to the project becomes write-only, no matter how it is added (dashboard or CLI; verified against the API: every var reports `type: sensitive`). Write-only is fine for real runtime secrets (`DATABASE_URL`, `ANTHROPIC_API_KEY`, `STRIPE_*` — Vercel injects them into the running functions), but it is **fatally incompatible with `NEXT_PUBLIC_*`** vars: those must be readable at *build* time, and our builds run in GitHub Actions via `vercel pull`, which receives sensitive values as **empty strings**. Result: the middleware was compiled with empty Supabase credentials and every route returned Internal Server Error — while the deploy job stayed green (a build succeeding says nothing about the app running; the CI deploy job now ends with a post-deploy smoke check for exactly this). The three public values therefore live in **`web/.env.production`, committed to git on purpose** (they ship in every browser bundle by design — same reasoning as the committed CA certificate, ADR 018). Never add a `NEXT_PUBLIC_` var to the Vercel env store expecting CI builds to see it, and never put a real secret in `web/.env.production`.
 
@@ -283,6 +285,29 @@ threads that cost credits. The logged-out homepage carries five live CBS charts:
 Playwright MCP (`browser_run_code_unsafe`) — Story mode, the Style panel, downloads via
 `page.waitForEvent('download')`, file uploads via `setInputFiles`, at 1280 and 375 px. Zero API spend.
 Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
+
+## Embed go-live (⏳ NOT YET RUN, written 2026-09-10, session 93, autonomous — branch `embed-charts`, not yet merged)
+
+**Status when this section was written:** the whole feature (a signed per-chart embed token, the Embed button + pop-up dialog, the public `/embed/[token]` route frozen by default, framing headers so it can actually be framed, and a Live re-render code path) is built and tested on branch `embed-charts` — not yet merged into `main`, nothing live. ADR [041](decisions/041-public-embed-pages.md) is the full as-built record. **Read step 3 before setting anything — `PRO_ACCOUNT_EMAILS` alone does NOT turn Live embeds on.**
+
+1. Merge `embed-charts` and deploy (this branch's own remaining work — not part of this docs-only session).
+2. **Set `EMBED_TOKEN_SECRET`** — Vercel env store, Production, mark Sensitive, a long random string (`openssl rand -base64 32`, or your password manager's generator). Without this the Embed button's dialog says embedding isn't available, and every `/embed/...` URL 404s — the feature is invisible, not broken.
+3. **Optionally set `PRO_ACCOUNT_EMAILS`** (Vercel, Production, plain — not Sensitive, it's just a list of addresses) only if you want the Live-embed toggle to show as available when an account in that list MINTS a new embed code. **This does NOT make Live embeds actually update.** The live re-render's Pro check needs to know the embed's OWNER's email at render time — days or weeks after minting, for an anonymous visitor with no session of their own — and no code in this app can look up an arbitrary user's email by user id today. So regardless of this variable, every `?live=1` embed silently and permanently renders frozen. This is the single open item blocking Live (ADR 041, open-questions [#224](open-questions.md)) — do not expect Live to work from setting env vars alone; there is no env var that fixes it.
+4. Redeploy.
+5. **Smoke test (you, logged in, on a chart you asked yourself):**
+   - Open a chart's footer → Embed → let the dialog load → copy the generated code. The `<iframe src="...">` origin comes from `NEXT_PUBLIC_APP_URL` (currently `https://checkdecijfers.vercel.app` — see `web/.env.production`; `checkdecijfers.nl` itself still resolves to Namecheap's parking nameservers as of this writing, per [#7](open-questions.md), so it is NOT the deployed app yet) — confirm the code you copied actually points at the real deployed origin, not a stale/parked domain, before testing it.
+   - Paste it into a plain local `.html` file as the only content and open that file directly in a browser (double-click it, or `open the-file.html` on macOS) — no server needed. Confirm: the chart renders, with its attribution line, source badge, and a "Frozen on {date} · checkdecijfers.nl" footer whose link opens the real app origin above in a new tab (the link text always reads "checkdecijfers.nl" regardless of which real origin it points at — that's a cosmetic label, not the `href`).
+   - Toggle the Live switch in the dialog (only enabled if the minting account is in `PRO_ACCOUNT_EMAILS`), copy that code instead, and open it the same way. **Expected, correct behavior today:** it still shows the frozen render (step 3 above) — this is NOT a bug to chase, it is this session's own documented, deliberate limitation.
+   - Delete the source chat (or otherwise let/force it through GDPR redaction) and reload the SAME embed URL — confirm it now shows the digit-free "this chart is no longer available" page (both languages), not an error.
+6. **Header proof** — a live-browser check a unit test cannot fully substitute for (the same reasoning as Task 7's own verification step): against the REAL deployed origin (`https://checkdecijfers.vercel.app` today — confirm the current `NEXT_PUBLIC_APP_URL` value first if this has changed since this section was written), run
+   ```
+   curl -sI https://checkdecijfers.vercel.app/
+   curl -sI https://checkdecijfers.vercel.app/embed/<a-real-token-from-step-5>
+   ```
+   Confirm the first response shows `x-frame-options: DENY` and `content-security-policy: frame-ancestors 'none'`; the second shows NO `x-frame-options` header at all and `content-security-policy: frame-ancestors *`.
+7. **Rollback:** remove `EMBED_TOKEN_SECRET` and redeploy — every embed URL 404s immediately and the button/dialog degrade to "not available," a complete kill switch. `PRO_ACCOUNT_EMAILS` (if set) can be removed independently with no other effect. No database rows to clean up either way — the whole feature is stateless by design (ADR 041; the only way to invalidate an already-shared embed short of this kill switch is rotating `EMBED_TOKEN_SECRET`, which invalidates ALL embeds at once, not just one).
+
+**Counters:** `embed_open`/`embed_copy` ride the SAME `chart_style_usage` table the WP218 section below adds (migration 028) — if that migration has not yet been applied, these two also silently count nothing; no separate migration is needed for Embed itself.
 
 ## WP218 chart styling — the supervised go-live (⏳ NOT YET RUN, written 2026-09-09, session 91, autonomous)
 
@@ -1442,6 +1467,41 @@ The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09b
    - **The enabled-but-secret-missing signature:** clicking the button then yields a raw JSON 400 at the authorize URL — `{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: missing OAuth secret"}`. That exact message means the toggle saved but the secret field did not — re-paste and Save.
 3. ✅ **Live verification — DONE + PASSED (2026-07-10, owner present, both halves, read-only SQL before AND after each login):** (a) Google login with the EXISTING magic-link e-mail → user count unchanged, that user's identities went `[email]` → `[email, google]`, signup grants unchanged (NO duplicate — the ADR 028 D2 linking verified); (b) fresh-e-mail Google login → exactly ONE new user (google-only identity) + exactly ONE +100 grant written in the same instant (the migration-005 trigger fired once). The fresh-e-mail login deliberately created a real account with a real grant — it doubles as the new-user path check. **Cosmetic residual → [#7](open-questions.md):** the Google consent screen shows the raw Supabase project domain until a custom auth domain is configured with the future product domain.
 
+## Usage report (WP-A, added session 2026-09-12)
+
+`npm run usage:report` — a read-only CLI that prints usage aggregates over the
+live database: the last 12 ISO weeks plus an all-time total for each metric.
+No writes, no LLM calls; it is a plain wrapper around `src/usage/report.ts`'s
+pure aggregation functions (unit-tested against PGlite in
+`tests/usage/report.test.ts`, same pattern as `scripts/gdpr-purge.ts`).
+
+```
+npm run usage:report            human-readable tables
+npm run usage:report -- --json  the same report as JSON
+npm run usage:report -- --help  usage text
+```
+
+What it prints: signups (`credit_transactions` `signup_grant` rows); distinct
+users with >=1 real question; the first-question outcome mix (answer /
+clarification / refusal-by-reason) versus later questions in the same
+history; the top refusal reasons ranked all-time; on-demand CBS-table fetches
+started/delivered/failed plus the credits spent on them; trial questions
+(anonymous visitors) — trial-visitors-who-later-signed-up is reported as "not
+measurable" because the trial's anonymous cookie id shares no join key with
+an account id, and adding one would mean tracking new personal data, which
+is out of scope for this report; 👍/👎 feedback counts; users active on >=2
+distinct calendar days; and users sitting at zero credit balance who never
+bought a pack.
+
+**GDPR posture (#14):** this report is **aggregates only** — counts and group
+labels (ISO week strings, refusal-reason codes, status enums). It never
+prints a question's text, an e-mail address, or a raw user/visitor id; the
+underlying SQL only ever selects `count(...)`/`count(distinct user_id)`-style
+aggregates, never a `user_id` (or any other identifier) column itself. The
+privacy test in `tests/usage/report.test.ts` pins this by asserting the
+JSON output contains no `@`, no seeded question text, and no seeded
+user/visitor UUID.
+
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).
@@ -1507,6 +1567,51 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   (the pane has none → "Page not found"); a `file://` page opens as a "static snapshot" that none of the read
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
+
+## Local real-browser harness — the whole product with NO secrets (added session 98, 2026-09-12, autonomous)
+
+**Why.** A remote (cloud) session has no `DATABASE_URL`, no Supabase keys and no LLM key, and an autonomous session
+may not touch production or spend LLM budget — yet "a real-browser pass before done" is a hard rule. Session 98 built
+a harness that runs the ENTIRE web app locally, logged-out and logged-in, questions included, from the repo alone:
+[scripts/dev-harness/](../scripts/dev-harness/README.md).
+
+**How it works (three stand-ins, all local, all fake, nothing to rotate).**
+1. **Database:** `pglite-preload.mjs` is a Node `--import` preload that restores the hermetic CBS fixture snapshot
+   (`tests/helpers/fixture-snapshot.ts` — the exact database CI tests against, 17 seed tables) into an in-process
+   PGlite and hands it to `web/lib/db.ts`'s own documented dev seam `global.__checkdecijfersDb` (the HMR cache;
+   read only when `NODE_ENV !== 'production'`). It also applies the pricing defaults and the signup grant for the
+   harness user. **No TLS is involved at all** — that matters: `web/next.config.ts` bakes the pinned Supabase CA into
+   the bundle, so a local Postgres behind a self-signed certificate CANNOT be made to work without editing the pinned
+   CA (tried first; correctly refused as a TLS weakening — don't go that way again).
+2. **Auth:** `auth-stub.mjs` (:9911) serves a JWKS + `/auth/v1/user` for one fixed user and writes the `@supabase/ssr`
+   session cookie (`sb-localhost-auth-token`, `base64-`+base64url JSON) that Playwright injects; `getClaims()` verifies
+   the RS256 token against the stub's JWKS. `/auth/v1/otp` answers 200 so the magic-link form's "sent" state renders.
+3. **LLM:** `llm-stub.mjs` (:9912) replays `tests/fixtures/llm/**` on `/v1/messages`, matched on (model, system,
+   question) with a question-only fallback. The Anthropic SDK is pointed at it via `ANTHROPIC_BASE_URL`. Consequence:
+   ONLY the benchmark questions (`benchmark/tasks.json`, B1–B20) answer end to end — B4 gives an answer WITH a chart,
+   B15/B16 a clarification with one-click options (`c-b16-utrecht` answers the Utrecht option), B17–B20 refuse. The
+   semantic check has no fixture for most answers → fail-open, as in production. Anything else returns a 400 the
+   pipeline turns into an honest error message — that is the harness, not a bug.
+
+**Recipe.** `node scripts/dev-harness/auth-stub.mjs & node scripts/dev-harness/llm-stub.mjs &`, then from `web/`:
+`source ../scripts/dev-harness/env.sh && npx next dev -p 3102`. Screenshots: `shot.mjs` (grows the viewport to the
+app's INNER scroll container — the body is `h-dvh`, so Playwright's `fullPage` alone captures one screen — and prints
+`scrollWidth` + console errors); `ask.mjs` types a question and screenshots the answer. Set `COOKIES=<session-cookie.json>`
+for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwright.
+
+**Gotchas found while building it.**
+- **Turbopack refuses a symlinked `node_modules`** ("Symlink [project]/web/node_modules is invalid, it points out of the
+  filesystem root"). The session-97 worktree recipe (symlink `node_modules`) is fine for vitest/tsc but NOT for
+  `next dev`/`next build` in a worktree — use a hard-linked copy instead: `cp -al <main>/web/node_modules <worktree>/web/node_modules`
+  (seconds, ~no disk).
+- **`next dev` and `next build` REWRITE `web/CLAUDE.md`** (Next 16 "agent rules" block; `AGENTS.md` is a symlink to it,
+  so the block lands in the committed file). `git checkout -- web/CLAUDE.md` before every commit; a future session may
+  set `agentRules: false` in `next.config.ts` to stop it at the source.
+- The black round "N" badge bottom-left of every dev screenshot is Next's dev-tools button, not the product. (The
+  session-97 note "the footer's Cijfers: prefix sits under the theme toggle at 375 px" was very likely this badge.)
+- Local Postgres 16 IS installed in the cloud container (`/usr/lib/postgresql/16/bin`, runs only as a non-root user)
+  and the fixture ingest runs fine against it (`src/db/migrate.ts` + `FixtureSource` + `syncTable`, ~30 s) — useful
+  for CLI scripts, useless for the web app because of the pinned-CA point above.
 
 ## The designed default chart look (ADR 042) — what changes on merge (written 2026-09-11, session 95, autonomous)
 

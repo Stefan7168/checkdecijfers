@@ -22,6 +22,43 @@ verification green (typecheck ×2, web 1479 tests, backend 2211 tests, benchmark
 real build, LOW code-review 0 findings, a real-browser check across both themes/phone/reduced-motion that
 caught and fixed one real mobile overlap bug before shipping).
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 98, autonomous).** Read
+[session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md) first.
+**Nothing merged in session 98 (owner away; money path = owner review).** Six PRs wait, in stacking order:
+**PR #14** (`journey-programme` → `main`, phases 0/1/3/4/5, CI green) → **PR #18** (`journey-public-face`, the public
+face: landing around the positioning sentence + `/galerij` with twelve real stories on the live ChartView, ADR 046,
+CI green, Opus-reviewed + fix wave, real-browser pass) → **PR #19** (`journey-phone`, the whole journey walked at
+375 px light + dark in a real browser: header wrap, six tap targets, the Present stage's phone captions — CI green
+on head `16dc9fc`) → **PR #9** (embed) → **PR #15** (`embed-live-creator-lookup` → `embed-charts`,
+the creator-e-mail lookup that lets Live embeds activate, CI green) → **PR #20** (this docs line + `scripts/dev-harness/`).
+Also open: #13, Dependabot #16/#17.
+**New tooling:** [scripts/dev-harness/](../scripts/dev-harness/README.md) + RUNBOOK §"Local real-browser harness" —
+the whole app, logged in, with benchmark questions, locally, with no secrets and no LLM spend. Owner steps on the
+merges: read/fill in `/werkwijze` + `/privacy`; `npm run db:migrate` (028 + 029); `npm run usage:report`; R3 go/no;
+`EMBED_TOKEN_SECRET`; the one-line `auth.users` read check (RUNBOOK) for Live. Session-98 entry:
+[status-archive.md](status-archive.md).
+
+**▶ SESSION 97 AUTONOMOUS — handoff block as written then (superseded by the session-99 kickoff above).** Read
+[session-briefs/2026-09-12-session-98-kickoff.md](session-briefs/2026-09-12-session-98-kickoff.md).
+Current state (verified against `main` / GitHub on 2026-09-12): the visual-upgrade programme (PRs #10–#12) and
+WP218 (PR #7) are LIVE; **the Journey programme phases 0, 1, 3, 4, 5 are BUILT on branch `journey-programme`
+(ADR [045](decisions/045-journey-programme-first-five-minutes.md)) — PR open for the owner, NOT merged, NOT live.**
+Also open: PR #9 (embed, `EMBED_TOKEN_SECRET` on merge) and PR #13 (Story stage motion pass). Owner steps
+unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`; new: read the two draft
+trust pages (`/werkwijze`, `/privacy`, contact e-mail placeholder), run `npm run usage:report` once after 028.
+**Deliberately NOT built: phase 2 / R3 (confirm before a 100-credit fetch) — the money path needs an explicit owner
+go; the larger signup grant (decision 5) is a config value for the owner.** **Owner (2026-09-12, end of session 97): the merge + owner steps are deferred to session 98 — its kickoff lists them
+as step 1.** Next up after the merge: R3 with the
+owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open-questions.md)).
+
+**▶ SESSION 97 (2026-09-12, AUTONOMOUS) — JOURNEY PROGRAMME BUILT, BRANCH + PR.** Five parallel worktrees, five
+work packages (usage report; trust pages + landing; credits/poll/header/panel/insights; the chat bundle; the
+coverage disclosure), an Opus whole-branch review (3 HIGH fixed) + a scoped WP-E review, `/code-review` LOW 0,
+the full verification block green (backend 144 files / 2222 tests, benchmark PASS, web 98 files / 1492 tests,
+`next build`), a real-browser pass that found three more defects (fixed); **PR #14 open, CI gate PASS (11m31s) on `633db3f`, MERGEABLE.** Full entry:
+[status-archive.md](status-archive.md).
+
+**▶ SESSION 97 CONTINUED (2026-09-12, owner present) — handoff block as written then (superseded by the session-98 kickoff above).** Read
 **▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
 [session-briefs/2026-09-12-session-97-continued-handoff.md](session-briefs/2026-09-12-session-97-continued-handoff.md)
 first — it corrects the prior [session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
@@ -46,6 +83,26 @@ the ICP now lives in [01-product-vision.md](01-product-vision.md) (defined by th
 order; direction = chat from official-statistics research to an embedded, sourced chart, CBS first, Eurostat second);
 it still needs its own ADR + roadmap re-phasing, the [#205](open-questions.md) Pro-plan brainstorm (live embeds =
 the Pro reason), and a landing page + public gallery as the cheapest test of the message.
+
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97, autonomous).** Read
+[session-briefs/2026-09-12-session-98-kickoff.md](session-briefs/2026-09-12-session-98-kickoff.md).
+Current state (verified against `main` / GitHub on 2026-09-12): the visual-upgrade programme (PRs #10–#12) and
+WP218 (PR #7) are LIVE; **the Journey programme phases 0, 1, 3, 4, 5 are BUILT on branch `journey-programme`
+(ADR [045](decisions/045-journey-programme-first-five-minutes.md)) — PR open for the owner, NOT merged, NOT live.**
+Also open: PR #9 (embed, `EMBED_TOKEN_SECRET` on merge) and PR #13 (Story stage motion pass). Owner steps
+unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`; new: read the two draft
+trust pages (`/werkwijze`, `/privacy`, contact e-mail placeholder), run `npm run usage:report` once after 028.
+**Deliberately NOT built: phase 2 / R3 (confirm before a 100-credit fetch) — the money path needs an explicit owner
+go; the larger signup grant (decision 5) is a config value for the owner.** **Owner (2026-09-12, end of session 97): the merge + owner steps are deferred to session 98 — its kickoff lists them
+as step 1.** Next up after the merge: R3 with the
+owner's go, phase 6 (re-run the report), and the positioning thread ([#237](open-questions.md)).
+
+**▶ SESSION 97 (2026-09-12, AUTONOMOUS) — JOURNEY PROGRAMME BUILT, BRANCH + PR.** Five parallel worktrees, five
+work packages (usage report; trust pages + landing; credits/poll/header/panel/insights; the chat bundle; the
+coverage disclosure), an Opus whole-branch review (3 HIGH fixed) + a scoped WP-E review, `/code-review` LOW 0,
+the full verification block green (backend 144 files / 2222 tests, benchmark PASS, web 98 files / 1492 tests,
+`next build`), a real-browser pass that found three more defects (fixed); **PR #14 open, CI gate PASS (11m31s) on `633db3f`, MERGEABLE.** Full entry:
+[status-archive.md](status-archive.md).
 
 **▶ SESSION 97 (2026-09-11→12, owner present) — Journey-programme R8+R9 built, then discovered PR #14 already
 covers the whole programme; handed off.** Started the session-97 kickoff's mandate directly in-chat (R9: phone
@@ -214,17 +271,67 @@ FIXES (#222/#223), AND INSIGHTS (ADR 041) BUILT AND MERGED TO `main`.**
   keyboard nav, point-ring, series-highlight, snapshot/restore — is UNCHANGED; only the content source
   swapped. Trigger threshold lowered `>=3` steps → `>=1` finding (every Insights finding is real content;
   the old count included non-data overview/explore filler). Left deliberately open, tracked:
-  [#224](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
-  in this change); [#225](open-questions.md) no server-side rate/spend cap on Insights generation yet.
+  [#230](open-questions.md) `chart-story.ts`'s old selection code is now dead (kept for now, not deleted
+  in this change); [#231](open-questions.md) no server-side rate/spend cap on Insights generation yet.
+  (Renumbered from #224/#225 at merge — Embed's branch had already claimed those numbers for its own,
+  unrelated open questions; see the numbering note in [08-build-plan.md](08-build-plan.md).)
 - **Verification (this session, own branch `claude/checkdecijfers-embed-pr-review-acbrd5`), full block,
   all green:** typecheck ×2 clean; web suite 88 files / 1304 tests; backend suite (solo) 143 files / 2211
   tests; hermetic benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS; real
   `next build` clean; `test:docs` 11/11; `/code-review` LOW pass — 0 findings. Merged to `main` same
   session (owner present, confirmed via AskUserQuestion: push straight to `main` once green, per #118).
 
+**▶ SESSION 93 (2026-09-10, autonomous — owner away for the build, checked in once mid-session: "ok
+wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT (8
+TASKS + A WHOLE-BRANCH REVIEW + ONE FINAL FIX WAVE), PUSHED AS A PR, NOT MERGED.**
+- **What shipped:** a signed, stateless `/embed/[token]` public route (frozen render by default), the
+  Embed button + pop-up dialog, framing headers (`X-Frame-Options`/CSP `frame-ancestors`), and a fully
+  built + tested Live re-render path. Zero new migration (rides the existing chart-usage counter table).
+  Full detail, as-built: ADR [041](decisions/041-public-embed-pages.md); the plan:
+  [superpowers/plans/2026-09-10-embed.md](superpowers/plans/2026-09-10-embed.md).
+- **The one fact to carry forward: Live re-render is real, shipped, and tested — but GATED CLOSED,
+  permanently, until a "look up a user's email by id" lookup is built** (none exists in this codebase
+  today; building one needs new Supabase admin/service-role plumbing, correctly out of this plan's
+  scope). See [#224](open-questions.md).
+- **A whole-branch review (opus) caught a Critical the 8-task plan itself never accounted for:**
+  `web/proxy.ts`'s session-auth allowlist had no `/embed/` entry, so every anonymous visitor — the
+  entire point of a *public* embed — was redirected to `/login`. Fixed (with regression tests) before
+  the PR opened; no per-task test suite could have caught it (the route's own tests call the page
+  function directly, bypassing middleware). Also found and fixed at the same gate: a dead backlink
+  (hardcoded to a domain that resolves to registrar parking, not the real app), `?theme=light` (the
+  dialog's own default) silently doing nothing because `next-themes` read the reader's own OS
+  preference regardless, and a redaction-guard test that never isolated the ONE check actually
+  protecting the public route in production. All fixed, re-reviewed clean.
+  See [lessons-learned.md](lessons-learned.md) (session 93) for the full account, incl. a recurring
+  "the UI promises a control the backend doesn't honor" bug shape that hit 3 times independently.
+- **Verified before the PR:** typecheck ×2, web 1380/1380 (91 files), backend 2229/2229 (145 files,
+  solo, ~10.5 min), benchmark 14/14 + 6/6 + 0 fabricated GATE PASS, real `next build`, docs 11/11 — all
+  run once more, together, as one final pass after every fix.
+- **Pushed as branch `embed-charts`; the PR is open against `main` for owner review** (autonomous
+  session, #118(b) — not merged). CI's `gate` job green (run `34433304606`); `deploy` correctly did not
+  run (PRs never deploy, only pushes to `main` do, per ADR 018).
+- **New tracked residuals (open-questions):** [#224](open-questions.md) (the Pro-owner-email lookup,
+  the big one), [#225](open-questions.md) (a trusted-header hygiene fix, done), [#226](open-questions.md)
+  (the `?theme=` fix, done), [#227](open-questions.md) (`isRedacted` triplicated across 3 files, not
+  consolidated), [#228](open-questions.md) (a Live embed's query never counts toward table-eviction
+  demand — moot until #224), [#229](open-questions.md) (a pre-existing, narrow gap: a >15-series chart
+  can still embed as a Table view outside the `?form=` path this plan controls).
+- **Owner steps, unchanged from before this session, still pending:** migrations 028 + 029
+  (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, WP202a go-live steps 2–6. **New owner steps
+  once the PR is reviewed and merged:** set `EMBED_TOKEN_SECRET` (Vercel, Production, Sensitive) for
+  Embed to activate at all; optionally `PRO_ACCOUNT_EMAILS` (does **not** by itself turn Live on — see
+  above). RUNBOOK § "Embed go-live" has the full checklist + a concrete smoke test.
+- Also this session: verified the session-92 kickoff's "a follow-up chip reached the model" question
+  was a testing-methodology artifact, not a regression (two structurally different chip mechanisms in
+  `chat.tsx` were conflated) — no code change needed, see lessons-learned.
+Full session entry: [status-archive.md](status-archive.md).
+
 **▶ SESSION 92 (2026-09-09, owner present all day) — THREE FEATURES BUILT, REVIEWED, VERIFIED AND LIVE
 ON `main` THE SAME DAY, EACH VIA SUBAGENT-DRIVEN DEVELOPMENT: STORY MODE, THE CHAT POLISH BATCH,
-FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not built — the next build.**
+FRAME STYLING + THE FLOATING STYLE PANEL. Embed (spec Part B) DESIGNED this session — BUILT since,
+not yet merged; see correction below.**
+- **Embed correction:** the line above is stale — see the session 93 entry at the top of this file
+  (and ADR [041](decisions/041-public-embed-pages.md)) for what actually shipped.
 - **Kickoff item 0:** Dependabot's sharp bump merged (`474d62b`, CI `34334007143` green, health ok).
 - **Story mode (ADR 039 addendum; spec Part A; plan `2026-09-09-story-mode.md`):** a gradient-ring
   "Verhaal / Story mode" trigger beside Style opens a story panel under the chart — code-built steps
@@ -271,8 +378,9 @@ FRAME STYLING + THE FLOATING STYLE PANEL. Embed is DESIGNED (spec Part B), not b
   chart present, no horizontal overflow. Remaining observation: the exported attribution line is one
   line and can be cut off at the right on a narrow chart (pre-existing; a follow-up).
 - **Owner steps unchanged:** migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`,
-  WP202a go-live steps 2–6. **Next build:** Embed (spec Part B) — needs the owner to set
-  `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`) when it ships.
+  WP202a go-live steps 2–6. Embed (spec Part B) is BUILT since (see correction above, branch
+  `embed-charts`) — owner go-live steps are `EMBED_TOKEN_SECRET` (+ optionally `PRO_ACCOUNT_EMAILS`)
+  plus merging the branch; Live re-render stays gated closed regardless ([#224](open-questions.md)).
 Full session entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 91 (2026-09-09, started AUTONOMOUS — "Start executing, work autonomously … I expect

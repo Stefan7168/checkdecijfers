@@ -93,6 +93,27 @@ describe('DeleteHistoryButton — one click + confirmation step (owner decision,
   });
 });
 
+// R9.1 (#238): the trigger and the two confirm/cancel buttons measured
+// 16-20px tall at 375px — well under the 44px minimum tap target — and
+// pixel-identical at 1280px was a hard constraint, so the fix is a
+// responsive class (`min-h-11 sm:min-h-0`), pinned here as a CSS-contract
+// test (jsdom has no layout engine to measure real pixel heights).
+describe('DeleteHistoryButton — phone tap targets (R9.1, #238)', () => {
+  it('gives the trigger and the confirm/cancel buttons a 44px tap target only below sm', () => {
+    render(<DeleteHistoryButton />);
+    const trigger = screen.getByRole('button', { name: 'Verwijder mijn vraaggeschiedenis' });
+    expect(trigger.className).toContain('min-h-11');
+    expect(trigger.className).toContain('sm:min-h-0');
+    fireEvent.click(trigger);
+    const yes = screen.getByRole('button', { name: 'Ja, verwijder' });
+    const cancel = screen.getByRole('button', { name: 'Annuleren' });
+    for (const button of [yes, cancel]) {
+      expect(button.className).toContain('min-h-11');
+      expect(button.className).toContain('sm:min-h-0');
+    }
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface.
 describe('DeleteHistoryButton — en', () => {
   it('renders the English trigger and confirmation under LangProvider lang="en"', () => {

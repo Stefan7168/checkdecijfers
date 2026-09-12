@@ -33,6 +33,13 @@ export interface DockVisual {
   chart: ChatMessage['chart'];
   card: ChatMessage['card'];
   userChart: UserChartSpec | null;
+  /** Task 4 (spec Part B1): the audit_answers row id ChartEmbedButton signs
+   * an embed token against — same field, same null-on-non-answer contract as
+   * `ChatMessage['auditId']` itself. Always null for a `userChart` visual
+   * (DatasetChatMessage, deriveDatasetVisuals below, has no audit row at
+   * all — a user-uploaded dataset chart is never an audited CBS answer, so
+   * there is nothing for an embed token to sign). */
+  auditId: number | null;
 }
 
 const QUESTION_MAX_LENGTH = 48;
@@ -86,6 +93,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         chart: message.chart,
         card: null,
         userChart: null,
+        auditId: message.auditId,
       });
     } else if (message.card !== null) {
       cardCount += 1;
@@ -97,6 +105,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         chart: null,
         card: message.card,
         userChart: null,
+        auditId: message.auditId,
       });
     }
   });
@@ -125,6 +134,11 @@ export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual
       chart: null,
       card: null,
       userChart: message.chart,
+      // DatasetChatMessage (backend/attachments/replay.ts) carries no
+      // auditId at all — a user-uploaded dataset chart is never an audited
+      // CBS answer row, so there is no id an embed token could sign. See
+      // the DockVisual.auditId doc comment above.
+      auditId: null,
     });
   });
   return visuals;

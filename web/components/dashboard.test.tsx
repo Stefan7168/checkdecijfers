@@ -117,8 +117,11 @@ describe('Dashboard — WP129+130 websearch prop threading', () => {
 // credits the ledger, not the redirect), dismissible, and dismissing strips
 // the query flag so a reload cannot resurrect it.
 describe('Dashboard — purchase-success banner (#95)', () => {
-  const BANNER =
-    'Betaling gelukt — je credits worden bijgeschreven zodra Stripe de betaling bevestigt (meestal een paar seconden). Ververs daarna de pagina om je nieuwe saldo te zien.';
+  // R2.4 (journey WP-C): copy updated — the page no longer tells the reader
+  // to refresh manually (Workspace's own poll does that now); Dashboard is
+  // the legacy WORKSPACE_ENABLED=off variant and shares the same message
+  // key, so it picks up the new copy too even though it has no poll itself.
+  const BANNER = 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.';
 
   it('shows the banner only when the page loaded from the success redirect', () => {
     renderDashboard(100, true);
@@ -137,9 +140,13 @@ describe('Dashboard — purchase-success banner (#95)', () => {
     replaceState.mockRestore();
   });
 
-  it('never promises a fixed crediting time (the honest "meestal" hedge)', () => {
+  // R2.4 (journey WP-C): the "meestal een paar seconden" hedge is gone —
+  // the new copy ("...zodra Stripe de betaling bevestigt") makes no time
+  // promise at all rather than hedging one, which is the stronger honest
+  // claim. Still never claims an instant/fixed crediting time.
+  it('never promises a fixed or instant crediting time', () => {
     renderDashboard(100, true);
-    expect(screen.getByText(/meestal een paar seconden/)).toBeInTheDocument();
+    expect(screen.getByText(BANNER)).toBeInTheDocument();
     expect(screen.queryByText(/direct bijgeschreven|onmiddellijk/)).toBeNull();
   });
 
@@ -158,9 +165,7 @@ describe('Dashboard — purchase-success banner (#95)', () => {
       </LangProvider>,
     );
     expect(
-      screen.getByText(
-        'Payment successful — your credits will be added once Stripe confirms the payment (usually a few seconds). Refresh the page afterwards to see your new balance.',
-      ),
+      screen.getByText('Thanks! Your balance will appear here once Stripe confirms the payment.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });

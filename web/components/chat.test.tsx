@@ -4,11 +4,12 @@
 // WP15 (ADR 021): askQuestion/replyToClarification now return an AskOutcome
 // ({ gated, context }), not a bare GatedResponse — the chat must hold the
 // context across turns and thread it back as askQuestion's third argument.
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AskOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
@@ -121,6 +122,50 @@ function fakeClarification(text: string, netCost = 10): GatedResponse {
     response: { kind: 'clarification', text, pending: { questionNl: text } } as unknown as ComposedResponse,
   };
 }
+
+/** A minimal, real ChartSpec (same discipline as fakeAnswerResponse above) —
+ * for Task 4's embed-wiring tests only, which need `message.chart !== null`
+ * on top of an otherwise-ordinary fakeAnswerResponse() (whose OWN `chart` is
+ * hardcoded null, since no other existing test here needed a chart). */
+const CHART_SPEC: ChartSpec = {
+  schemaVersion: 1,
+  kind: 'line',
+  title: 'Testreeks',
+  dims: { Kenmerk: '000000' },
+  dimLabels: { Kenmerk: 'Alle kenmerken' },
+  unit: '%',
+  series: [
+    {
+      label: 'Nederland',
+      regionCode: 'NL01',
+      points: [
+        {
+          resultId: 'r1',
+          periodCode: '2024JJ00',
+          periodLabel: '2024',
+          value: 42,
+          formattedValue: '42,0',
+          decimals: 1,
+          status: 'Definitief',
+          provisional: false,
+          valueAttribute: 'None',
+        },
+      ],
+    },
+  ],
+  provisionalNote: null,
+  nullNotes: [],
+  definitionLine: null,
+  attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+  attribution: {
+    tableId: '12345NED',
+    tableTitle: 'Test',
+    tableVersion: 1,
+    syncedAt: '2026-07-01',
+    coveredPeriods: { from: '2020', to: '2024' },
+    license: 'CC BY 4.0',
+  },
+};
 
 /** A minimal, registry-shaped ConversationContext for testing propagation
  * only — chat.tsx never inspects its fields, only holds and forwards the
@@ -1085,6 +1130,32 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
   });
 });
 
+// Task 4 (spec Part B1): chat.tsx's own inline ChartView call
+// (`embed={message.auditId !== null ? { auditId: message.auditId } : undefined}`)
+// mirrors the WP128 FeedbackButtons conditional immediately above it — same
+// "auditId null vs a real number" gate, same reason (the audit write can
+// fail independently of the answer itself). These prove that mirror holds at
+// the real Chat component, not just in chart.tsx/visual-dock.tsx isolation.
+describe('Chat — Embed button wiring on the inline chart (Task 4)', () => {
+  it('an answer with a chart AND an auditId shows the Insluiten/Embed button', async () => {
+    const response = { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 5, netCost: 20, response }));
+    render(<Chat />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('an answer with a chart but whose audit write failed (auditId null) shows NO Insluiten/Embed button', async () => {
+    const response = { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: null, netCost: 20, response }));
+    render(<Chat />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+  });
+});
+
 // Session 91 (owner-chosen "Option B — answer card"): an answer message now
 // renders inside a shadcn Card, with a CardFooter carrying the source (left)
 // and the actions — feedback, proof, citation, CSV, cost — in that order
@@ -1202,6 +1273,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       auditId: 9,
       webSection: null,
       carrier: null,
+      insufficientCredits: null,
     };
     render(<Chat initialMessages={[legacyMessage]} />);
     expect(screen.getByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
@@ -1248,13 +1320,6 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     expect(internetChip.querySelector('svg.lucide-check')).toBeNull();
     fireEvent.click(internetChip);
     expect(internetChip.querySelector('svg.lucide-check')).not.toBeNull();
-  });
-
-  it('"Add link" reads the same as an unselected source chip, not the always-on action style', () => {
-    render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100, websearch: { enabled: true, addonPrice: 10 } }} />);
-    const addLink = screen.getByRole('button', { name: 'Link toevoegen' });
-    const internetChip = screen.getByRole('button', { name: 'Internet' }); // starts unselected (CHIP_OFF)
-    expect(addLink.className).toBe(internetChip.className);
   });
 
   it('sends the selection payload as the 4th arg on submit (default: cbs, web:false)', async () => {
@@ -1876,54 +1941,38 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
 });
 
 describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
-  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Add link" is clickable', () => {
+  // R8 (#211, WP-D, session 97): the four separate entry points collapse
+  // into ONE disabled "Eigen data (binnenkort)" chip when `attachments` is
+  // absent — replacing the per-chip byte-identity pins above (Link
+  // toevoegen/Sheet koppelen/Data koppelen no longer exist in the DOM at
+  // all, not merely hidden).
+  it('renders ONE disabled "Eigen data (binnenkort)" chip, with an honest title, when attachments is absent', () => {
     render(<Chat />);
-    for (const [name, hint] of [
-      ['Bestand uploaden', 'upload een bestand'],
-      ['Sheet koppelen', 'koppel een spreadsheet'],
-      ['Data koppelen', 'verbind een databron'],
-    ] as const) {
-      const button = screen.getByRole('button', { name });
-      expect(button).toBeDisabled();
-      expect(button).toHaveAttribute('title', expect.stringContaining(hint));
-    }
-    const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
-    expect(linkButton).not.toBeDisabled();
-    expect(linkButton).not.toHaveAttribute('title');
+    const button = screen.getByRole('button', { name: 'Eigen data (binnenkort)' });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toBe(
+      'Binnenkort beschikbaar: koppel eigen data (bestand, spreadsheet of database)',
+    );
+    // The four former separate entry points are gone from the DOM entirely.
+    expect(screen.queryByRole('button', { name: 'Link toevoegen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Bestand uploaden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sheet koppelen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Data koppelen' })).toBeNull();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
-  it('"Link sheet" sits directly before "Connect data" in the chip row (owner request, session 90)', () => {
+  // ADR 037 D10 fix #1, restored after R8 collapsed the four entry points into
+  // this one chip: an EXACT-value className comparison, not a weaker
+  // toBeDisabled()-only check — a widened className or a hidden-but-present
+  // node would pass a weaker assertion while breaking real byte-identity.
+  // Pinned against the literal string so any future edit to this markup is a
+  // deliberate, reviewed diff to this test, not a silent drift.
+  it('the collapsed "Eigen data (binnenkort)" chip is byte-identical in className', () => {
     render(<Chat />);
-    const sheet = screen.getByRole('button', { name: 'Sheet koppelen' });
-    const database = screen.getByRole('button', { name: 'Data koppelen' });
-    expect(sheet.nextElementSibling).toBe(database);
-    expect(sheet.className).toBe(database.className);
-  });
-
-  it('"Connect data" no longer shows a "Soon" badge (owner feedback, session 88)', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Data koppelen' });
-    expect(within(button).queryByText('Soon')).toBeNull();
-  });
-
-  // D10 fix #1: EXACT-value comparison, not a weaker toBeDisabled()-only
-  // check — a widened className or a hidden-but-present node would pass a
-  // weaker assertion while breaking real byte-identity. Pinned against the
-  // literal strings so any future edit to this markup is a deliberate,
-  // reviewed diff to this test, not a silent drift.
-  it('the "Upload file" button is byte-identical to before D10 when attachments is absent', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Bestand uploaden' });
-    // Session 87 restyle: the "soon" chip (dashed outline, dimmed) — still one
-    // literal string, so any future markup edit is a deliberate diff here.
+    const button = screen.getByRole('button', { name: 'Eigen data (binnenkort)' });
     expect(button.className).toBe(
       'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed',
     );
-    expect(button.getAttribute('title')).toBe('Binnenkort beschikbaar: upload een bestand (bijv. PDF)');
-    expect(button).toBeDisabled();
-    // No attachment-related DOM node exists AT ALL — not merely hidden.
-    expect(document.querySelector('input[type="file"]')).toBeNull();
-    expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument();
   });
 
   it('enables "Upload file" and wires it to onUploadFile when attachments is present', async () => {
@@ -1962,47 +2011,26 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Connect data" stays disabled even when attachments is present; "Add link" stays clickable', () => {
+  // R8: with `attachments` present, only the live "Bestand uploaden" chip
+  // shows — the collapsed "own data" chip does not render alongside it.
+  it('shows ONLY the live "Bestand uploaden" chip when attachments is present — no collapsed chip alongside it', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Data koppelen' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).not.toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Eigen data (binnenkort)' })).toBeNull();
   });
 });
 
-describe('Chat — "Add link" preview row (session 86, no backend yet)', () => {
-  it('is closed by default, with no URL input in the tree', () => {
+// R8 (session 97): the demo URL row (session 86) has no entry point left in
+// the UI at all — `linkRowOpen` never becomes true, so the row can never
+// render; the handler code stays in chat.tsx, dead but restorable in one
+// line (comment there), rather than deleted.
+describe('Chat — "Add link" preview row (session 86, no backend yet; UI entry point removed session 97 per R8)', () => {
+  it('never renders the URL input — no entry point reaches it any more', () => {
     render(<Chat />);
     expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
-  });
-
-  it('opens the URL row on click and closes it again on a second click', () => {
-    render(<Chat />);
-    const button = screen.getByRole('button', { name: 'Link toevoegen' });
-    fireEvent.click(button);
-    expect(screen.getByPlaceholderText('https://example.com/page-with-a-table')).toBeInTheDocument();
-    fireEvent.click(button);
+    render(<Chat attachments={{ enabled: true, onUploadFile: vi.fn() }} />);
     expect(screen.queryByPlaceholderText('https://example.com/page-with-a-table')).not.toBeInTheDocument();
-  });
-
-  it('the Fetch button stays disabled until a URL is typed', () => {
-    render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
-    expect(screen.getByRole('button', { name: 'Ophalen' })).toBeDisabled();
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
-      target: { value: 'https://example.com/tabel' },
-    });
-    expect(screen.getByRole('button', { name: 'Ophalen' })).not.toBeDisabled();
-  });
-
-  it('submitting shows an honest "not yet available" message and never calls any network/backend function', () => {
-    render(<Chat />);
-    fireEvent.click(screen.getByRole('button', { name: 'Link toevoegen' }));
-    fireEvent.change(screen.getByPlaceholderText('https://example.com/page-with-a-table'), {
-      target: { value: 'https://example.com/tabel' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Ophalen' }));
-    expect(screen.getByText('Dit is nog niet beschikbaar — binnenkort wel.')).toBeInTheDocument();
   });
 });
 
@@ -2044,15 +2072,336 @@ describe('Chat — en', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
   });
 
-  it('renders the English attachment chip labels', () => {
+  it('renders the English "own data" chip label (R8 collapse)', () => {
     render(
       <LangProvider lang="en">
         <Chat />
       </LangProvider>,
     );
-    expect(screen.getByRole('button', { name: 'Add link' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Upload file' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Link sheet' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Own data (coming soon)' })).toBeInTheDocument();
+  });
+});
+
+// WP-D (journey programme, 2026-09-12, session 97): R2.1 chip captions,
+// R2.2 the linked insufficient-credits pack hint, R2.3 the amber low-balance
+// price line, R7 one-click clarification chips, R11 the honest slow-wait
+// line. R8 (chip collapse) is covered above alongside its own describe
+// blocks (attachment entry points / en).
+describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
+  /** A clarification 'ok' outcome whose chips are the WP26 mechanism-A
+   * proven-answerable OPTIONS (structural `suggestions`, same field an
+   * answer's follow-up chips ride). */
+  function fakeClarificationWithOptions(text: string, options: string[]): GatedResponse {
+    return {
+      kind: 'ok',
+      auditId: 10,
+      netCost: 10,
+      response: {
+        kind: 'clarification',
+        text,
+        pending: { questionNl: text },
+        suggestions: options,
+      } as unknown as ComposedResponse,
+    };
+  }
+
+  describe('R2.1 chip captions by message kind', () => {
+    it('a clarification\'s chips are captioned "Kies een optie:"', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Nederland', 'Amsterdam'])),
+      );
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      await screen.findByRole('button', { name: 'Nederland' });
+      expect(screen.getByText('Kies een optie:')).toBeInTheDocument();
+    });
+
+    it('a refusal retry chip is captioned "Probeer in plaats daarvan:"', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome({
+          kind: 'ok',
+          auditId: 11,
+          netCost: 0,
+          response: {
+            kind: 'refusal',
+            reason: 'freshness',
+            text: 'Zo recent heb ik de cijfers nog niet.',
+            suggestions: ['Wat was inflatie in 2025?'],
+          } as unknown as ComposedResponse,
+        }),
+      );
+      render(<Chat />);
+      await submit('Wat was de inflatie in 2027?');
+      await screen.findByRole('button', { name: 'Wat was inflatie in 2025?' });
+      expect(screen.getByText('Probeer in plaats daarvan:')).toBeInTheDocument();
+    });
+
+    it('an answer\'s follow-up chips keep the existing hint', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome({
+          kind: 'ok',
+          auditId: 12,
+          netCost: 20,
+          response: fakeAnswerResponse({
+            body: 'De inflatie bedroeg in 2024 3,3%.',
+            suggestions: ['Wat was inflatie in 2025?'],
+          }) as ComposedResponse,
+        }),
+      );
+      render(<Chat />);
+      await submit('Wat was de inflatie in 2024?');
+      await screen.findByRole('button', { name: 'Wat was inflatie in 2025?' });
+      expect(screen.getByText('Suggesties voor een vervolgvraag:')).toBeInTheDocument();
+    });
+  });
+
+  describe('R7 one-click clarification options', () => {
+    it('clicking a clarification chip SENDS it immediately — no second click on Verstuur', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Nederland', 'Amsterdam'])),
+      );
+      replyToClarification.mockResolvedValueOnce(outcome(fakeAnswer('Amsterdam telt 900.000 inwoners.')));
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      const chip = await screen.findByRole('button', { name: 'Amsterdam' });
+      fireEvent.click(chip);
+      expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
+      // The label sent is byte-identical to the offered option, and it goes out
+      // against THIS clarification's own carrier (strong-tier review HIGH-3 —
+      // a clarification now snapshots its open round on the message).
+      expect(replyToClarification).toHaveBeenCalledWith(
+        { questionNl: 'Welke regio?' },
+        'Amsterdam',
+        expect.any(String),
+      );
+    });
+
+    // Strong-tier review HIGH-3(a): the bug. A clarification used to carry
+    // `carrier: null`, so a click on a SUPERSEDED clarification (scrolled up
+    // after a newer round opened) fell through to the LIVE `pending` and was
+    // sent — and billed — as a reply to a DIFFERENT round.
+    it('clicking an OLDER clarification\'s option replies against THAT round, not the newest one', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Amsterdam'])),
+      );
+      replyToClarification
+        .mockResolvedValueOnce(outcome(fakeClarificationWithOptions('Welk jaar?', ['2024'])))
+        .mockResolvedValueOnce(outcome(fakeAnswer('Amsterdam telt 900.000 inwoners.')));
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      const older = await screen.findByRole('button', { name: 'Amsterdam' });
+
+      // A reply opens a NEWER round; the live `pending` is now 'Welk jaar?'.
+      fireEvent.change(screen.getByPlaceholderText('Welke regio?'), { target: { value: 'iets anders' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+      await screen.findByRole('button', { name: '2024' });
+
+      // Now click the OLDER clarification's option.
+      fireEvent.click(older);
+      expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
+      expect(replyToClarification.mock.calls[1]![0]).toEqual({ questionNl: 'Welke regio?' });
+      expect(replyToClarification.mock.calls[1]![1]).toBe('Amsterdam');
+    });
+
+    // Strong-tier review HIGH-3(b): `busy` is React state, so two clicks in
+    // the same tick both passed the guard and sent twice (two charges). The
+    // synchronous `sendingRef` latch is what stops the second.
+    it('double-clicking an option sends exactly once', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome(fakeClarificationWithOptions('Welke regio?', ['Amsterdam'])),
+      );
+      replyToClarification.mockResolvedValue(outcome(fakeAnswer('Amsterdam telt 900.000 inwoners.')));
+      render(<Chat />);
+      await submit('Hoeveel inwoners?');
+      const chip = await screen.findByRole('button', { name: 'Amsterdam' });
+      fireEvent.click(chip);
+      fireEvent.click(chip);
+      expect(await screen.findByText('Amsterdam telt 900.000 inwoners.')).toBeInTheDocument();
+      expect(replyToClarification).toHaveBeenCalledTimes(1);
+    });
+
+    // Strong-tier review HIGH-3(a), the resumed case: replay-assemble.ts never
+    // restores a carrier (ADR 033 ⟨A6⟩), so a resumed clarification has no
+    // round to reply to. It must FILL rather than send the label against
+    // whatever round happens to be live.
+    it('a RESUMED clarification (carrier null) fills the input instead of sending', async () => {
+      const resumed: ChatMessage = {
+        role: 'assistant',
+        kind: 'clarification',
+        text: 'Welke regio?',
+        chart: null,
+        cost: 10,
+        citation: null,
+        card: null,
+        csv: null,
+        proof: null,
+        answerView: null,
+        provisional: false,
+        suggestions: ['Amsterdam'],
+        auditId: null,
+        webSection: null,
+        carrier: null,
+        insufficientCredits: null,
+      };
+      render(<Chat initialMessages={[resumed]} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Amsterdam' }));
+      expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Amsterdam');
+      expect(replyToClarification).not.toHaveBeenCalled();
+      expect(askQuestion).not.toHaveBeenCalled();
+    });
+
+    it('an answer\'s follow-up chip still only FILLS the input (fill-don\'t-send unchanged)', async () => {
+      askQuestion.mockResolvedValueOnce(
+        outcome({
+          kind: 'ok',
+          auditId: 13,
+          netCost: 20,
+          response: fakeAnswerResponse({
+            body: 'De inflatie bedroeg in 2024 3,3%.',
+            suggestions: ['Wat was inflatie in 2025?'],
+          }) as ComposedResponse,
+        }),
+      );
+      render(<Chat />);
+      await submit('Wat was de inflatie in 2024?');
+      const chip = await screen.findByRole('button', { name: 'Wat was inflatie in 2025?' });
+      fireEvent.click(chip);
+      expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was inflatie in 2025?');
+      expect(askQuestion).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('R2.2 insufficient-credits: a real /credits Link naming the covering pack', () => {
+    const packs = [
+      { id: 'small', label: '50 credits — €5', credits: 50 },
+      { id: 'medium', label: '150 credits — €12', credits: 150 },
+      { id: 'large', label: '500 credits — €35', credits: 500 },
+    ];
+
+    it('names the smallest pack that covers the shortfall and links /credits', async () => {
+      askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 5, required: 20 }));
+      render(<Chat packs={packs} />);
+      await submit('Wat was de inflatie in 2024?');
+      expect(await screen.findByText(/5 over, 20 nodig/)).toBeInTheDocument();
+      // shortfall = 15 -> smallest covering pack is 'small' (50 credits).
+      expect(screen.getByText(/Koop bijvoorbeeld 50 credits — €5 via/)).toBeInTheDocument();
+      // The link's accessible name is the real phrase, not the raw path.
+      const link = screen.getByRole('link', { name: 'Credits kopen' });
+      expect(link).toHaveAttribute('href', '/credits');
+    });
+
+    it('falls back to the largest pack when none fully covers the shortfall', async () => {
+      askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 0, required: 1000 }));
+      render(<Chat packs={packs} />);
+      await submit('Wat was de inflatie in 2024?');
+      expect(screen.getByText(/Koop bijvoorbeeld 500 credits — €35 via/)).toBeInTheDocument();
+    });
+
+    it('falls back to the generic buy line when no packs are threaded in', async () => {
+      askQuestion.mockResolvedValue(outcome({ kind: 'insufficient_credits', balance: 0, required: 1 }));
+      render(<Chat />);
+      await submit('Wat was de inflatie in 2024?');
+      expect(await screen.findByText(/0 over, 1 nodig/)).toBeInTheDocument();
+      expect(screen.getByText(/Koop credits via/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Credits kopen' })).toBeInTheDocument();
+    });
+  });
+
+  describe('R2.3 the pre-send price line, amber-tinted on a low balance', () => {
+    it('tints amber and appends the one-more-question note when simple ≤ balance < 2×simple', () => {
+      render(<Chat pricing={{ simple: 20, clarification: 10, balance: 25 }} />);
+      const line = screen.getByText(/Een vraag kost ~20 credits/);
+      expect(line.className).toContain('text-warning');
+      expect(line.textContent).toContain('Genoeg voor nog één vraag.');
+    });
+
+    it('stays muted when the balance covers 2 or more questions', () => {
+      render(<Chat pricing={{ simple: 20, clarification: 10, balance: 100 }} />);
+      const line = screen.getByText(/Een vraag kost ~20 credits/);
+      expect(line.className).not.toContain('text-warning');
+      expect(line.textContent).not.toContain('Genoeg voor nog één vraag.');
+    });
+
+    it('stays muted when the balance is below the simple price (a separate insufficient-credits concern)', () => {
+      render(<Chat pricing={{ simple: 20, clarification: 10, balance: 10 }} />);
+      const line = screen.getByText(/Een vraag kost ~20 credits/);
+      expect(line.className).not.toContain('text-warning');
+    });
+  });
+
+  describe('R11 honest waiting line after 8 real seconds', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('appears only after 8s of busy, and clears the moment busy ends', async () => {
+      let resolveOutcome!: (v: AskOutcome) => void;
+      askQuestion.mockReturnValue(
+        new Promise<AskOutcome>((resolve) => {
+          resolveOutcome = resolve;
+        }),
+      );
+      render(<Chat />);
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), {
+        target: { value: 'Wat was de inflatie in 2024?' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(7999);
+      });
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(screen.getByText(/Dit duurt iets langer/)).toBeInTheDocument();
+
+      await act(async () => {
+        resolveOutcome(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+        await vi.runOnlyPendingTimersAsync();
+      });
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+    });
+
+    it('never appears for a fast turn', async () => {
+      askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+      render(<Chat />);
+      fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), {
+        target: { value: 'Wat was de inflatie in 2024?' },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+        await vi.runOnlyPendingTimersAsync();
+      });
+      expect(screen.queryByText(/Dit duurt iets langer/)).toBeNull();
+    });
+  });
+});
+
+describe('Chat — coverage disclosure (WP-E, R4)', () => {
+  it('fills the input (never sends) when a coverage example is clicked', () => {
+    render(
+      <Chat
+        coverage={{
+          tables: [
+            {
+              id: '86141NED',
+              title: 'Consumentenprijzen; prijsindex 2015=100',
+              syncedOn: '2026-07-03',
+              concepts: ['inflatie (CPI)'],
+              example: 'Wat was de inflatie in 2025?',
+            },
+          ],
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText('Welke bronnen zijn ingebouwd?'));
+    fireEvent.click(screen.getByRole('button', { name: 'Wat was de inflatie in 2025?' }));
+    expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was de inflatie in 2025?');
+    expect(askQuestion).not.toHaveBeenCalled();
   });
 });

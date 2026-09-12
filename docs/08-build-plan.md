@@ -620,24 +620,28 @@ entries.
   owner-supervised), then the owner-supervised migration apply + the actual
   `ATTACHMENTS_ENABLED=1` flip + go-live.
 
-## Session 92 (2026-09-09) — Story mode ✅ LIVE, chat polish ✅ LIVE, frame styling + floating Style panel ✅ LIVE; Embed DESIGNED, next
+## Session 92 (2026-09-09) — Story mode ✅ LIVE, chat polish ✅ LIVE, frame styling + floating Style panel ✅ LIVE; Embed ✅ BUILT (session 93, 2026-09-10, branch `embed-charts`, not merged — see below)
 
 Spec: [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](superpowers/specs/2026-09-09-story-mode-and-embed-design.md)
 (Part A Story mode, Part B Embed, Part C Frame). Plans: `2026-09-09-story-mode.md`, `2026-09-09-chat-polish.md`,
 `2026-09-09-chart-frame.md` under [superpowers/plans/](superpowers/plans/). As built: ADR [039](decisions/039-chart-presentation-panel.md)
 addenda (Story mode; Frame styling + floating panel), ADR [040](decisions/040-interface-language-switch.md) addendum.
-**Next WP: Embed (Part B)** — write its plan with writing-plans, build via SDD; owner-set env vars `EMBED_TOKEN_SECRET`
-(signing secret) and optionally `PRO_ACCOUNT_EMAILS` (the Pro demo switch) at go-live; framing headers; a public
-`/embed/[token]` route; the Live toggle Pro-gated (#205). Follow-ups recorded in the spec (story in the embed, map chart
-type, homepage embeds, sizes). **Superseded 2026-09-10 (session 93/94): Embed is BUILT** (session 93,
-autonomous, branch `embed-charts`, its own ADR 041 "public-embed-pages" on THAT branch — not yet
-merged, PR #9 open for owner review; a session-94 push to `main` put a real conflict on it, resolved and
-pushed `da6b328`, PR mergeable again). **Numbering note:** this session's own branch independently used
-ADR number 041 for a different decision (chart-insights, below) — the two 041s will collide at merge
-time and one needs renumbering then; not fixable now since the other file doesn't exist on this branch.
+**Embed (Part B) — ✅ BUILT**, all 8 plan tasks (token signing, the dialog, framing headers, the public
+`/embed/[token]` route with a frozen render): session 93 (2026-09-10), autonomous, branch `embed-charts`,
+not yet merged, PR for owner review. The Live re-render path is real, tested and code-complete but
+**GATED CLOSED** — it cannot turn on for anyone because the Pro-owner-email lookup it depends on doesn't
+exist yet ([#224](open-questions.md)). Owner steps pending: set `EMBED_TOKEN_SECRET` (+ optionally
+`PRO_ACCOUNT_EMAILS`) and merge the branch (RUNBOOK § "Embed go-live"). Full mechanism: ADR
+[041](decisions/041-public-embed-pages.md). Follow-ups recorded in the spec and in ADR 041's Revisit
+triggers (story in the embed, map chart type, homepage embeds, sizes, per-embed revocation, the real
+#205 Pro plan). **Numbering note:** a second, unrelated ADR 041 ("chart-insights", session 94, below)
+exists on a different branch that also merges here — two different files both numbered 041
+(`041-public-embed-pages.md` / `041-chart-insights.md`); harmless as distinct filenames, but a future
+session should renumber one to keep the sequence clean.
 
-## Session 94 (2026-09-10) — three owner UI fixes ✅ LIVE, PR #9 conflict resolved, the visual "next level" plan
-written (not built), two export fixes (#222 ✅/#223 mostly) ✅ LIVE, Insights ✅ BUILT (own branch, not yet on `main`)
+## Session 94 (2026-09-10) — three owner UI fixes ✅ LIVE, PR #9 conflict resolved (twice — once here, at
+this same merge), the visual "next level" plan written (not built), two export fixes (#222 ✅/#223 mostly)
+✅ LIVE, Insights ✅ BUILT (own branch, merged to `main`)
 
 Owner-present, continuing session 93's embed-charts PR review. Three small UI fixes (Style panel floating→inline,
 the docked-chart chip restyled into the footer action row, answer-box margin, chat width `2xl→4xl→3xl` after
@@ -645,15 +649,19 @@ owner feedback) merged to `main` directly (owner: "yes push to main"). **Visual 
 [session-briefs/2026-09-10-visual-next-level-plan.md](session-briefs/2026-09-10-visual-next-level-plan.md) —
 Fable 5.1's brief for a CSS-3D/scroll "Story stage", a designed default chart, a template system; its own
 addendum identifies the reference demo as a 3D municipality map + scroll story + generator, via the Vercel API.
-**Insights** (owner ask, replacing Story mode's selection; ADR [041](decisions/041-chart-insights.md), own
-branch `claude/checkdecijfers-embed-pr-review-acbrd5`, not yet merged to `main`): `src/chart/insights.ts`
+**Insights** (owner ask, replacing Story mode's selection; ADR [041](decisions/041-chart-insights.md), built
+on branch `claude/checkdecijfers-embed-pr-review-acbrd5`, merged to `main`): `src/chart/insights.ts`
 (deterministic outlier/jump ranking) + `src/chart/insights-phrase.ts` (AI phrasing via the digit-free
 slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
 action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
-built here: [#224](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#225](open-questions.md)
+built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#231](open-questions.md)
 no rate limit on Insights generation yet. Full verification block green (typecheck ×2, web 1304 tests,
 backend 2211 tests solo, benchmark 14/14+6/6+0 fabricated, real build, docs 11/11, code-review LOW 0
-findings) — see [STATUS.md](STATUS.md) for the exact numbers. Merged to `main` same session.
+findings) — see [STATUS.md](STATUS.md) for the exact numbers. **This push put PR #9 (embed-charts) into a
+real conflict TWICE** — once on the first push (docs/open-questions.md only, resolved same session), and
+again on this second push (this file, lessons-learned.md, open-questions.md, and chart.tsx — resolved in
+this same merge, including renumbering #224/#225 to #230/#231 to avoid colliding with Embed's own
+pre-existing #224-229 range).
 
 ## Visual upgrade programme (owner ask, session 94, 2026-09-10 — "lift the chart thing to the next level for our ICP") — ALL THREE PHASES ✅ MERGED + LIVE (2026-09-11: PR #10 `ca5ba19`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on each `main` commit, production answering — verified session 96; built session 95 autonomous, every phase verified in a real browser on the dev server)
 
@@ -720,7 +728,13 @@ findings) — see [STATUS.md](STATUS.md) for the exact numbers. Merged to `main`
 | 6 — re-measure | Run the phase-0 report again; judge the next round and the §5 items on numbers. | — | — | — |
 | **Parallel, positioning ([#237](open-questions.md))** | (a) an ADR for the repositioning ("chat from official-statistics research to an embedded, sourced chart"; European + Dutch official data, CBS first, Eurostat second, RIVM/Kadaster after — revises the vision's "answer first, studio later" framing and the roadmap's Phase 2/3 split); (b) the [#205](open-questions.md) Pro-plan brainstorm with **live embeds as the Pro reason**, plus the creator-email lookup that unblocks Live in PR #9's embed work; (c) Eurostat as source two through the WP30 narrow waist, demand-driven, **never named publicly before it answers**; (d) the landing page around the positioning sentence + the public gallery (decision 12). | (a)(b) none; (c) ingestion + registry work, no LLM; (d) none | (a) ½ day · (b) design round · (c) its own WP · (d) 1–2 days | owner reads (a); (b) and (c) each need their own design round |
 
-**Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN`, head `6f80459`) should merge before phase 3 so the "Publiceer" step has something real to point at.
+**Session 97 (2026-09-12, autonomous) — BUILT on branch `journey-programme` (PR for the owner, not merged): phases 0 (report only), 1, 3, 4, 5 per the working defaults; recorded in [ADR 045](decisions/045-journey-programme-first-five-minutes.md). Not built: phase 2 / R3 (explicit owner go), decision 5 (config value), the 028 apply, the audit re-run, the full R9.1 journey walk. Phase 6 waits for 028 + a first report run.**
+
+**Session 98 (2026-09-12, autonomous) — BUILT the parallel-positioning item (d) on branch `journey-public-face`, stacked on `journey-programme` (PR for the owner, not merged): the landing rebuilt around the positioning sentence in both languages (new subtitle + a second "Bekijk de galerij"/"See the gallery" CTA), and a public gallery of TWELVE real curated stories on the live `ChartView` at `/galerij` — Present/Style/Insights all working, zero AI spend, zero server-action calls on the public pages. Recorded in [ADR 046](decisions/046-public-gallery-and-positioning-landing.md). The landing's old Ontdek section is no longer mounted (replaced by a 3-story gallery teaser + a link to the full gallery); `ontdek.tsx` stays compiling, unused there. Not built: items (a)(b)(c) above (the repositioning ADR itself, the Pro-plan brainstorm, Eurostat); embed code on the gallery cards (PR #9 not merged into this branch's base — tracked in [#237](open-questions.md)).
+
+**Session 98 (2026-09-12, autonomous) — R9.1 (the full phone walk) BUILT on branch `journey-phone`, stacked on `journey-programme`: every step in the kickoff brief walked at 375px, light + dark, in real Chromium — landing/login/workspace, the sources disclosure, an answer round trip with chart, all five chart-form tabs + Vanaf/Tot, the Style panel, Insights, the Present stage, a clarification round, a refusal, insufficient credits, the purchase-success banner, `/geschiedenis`, the sidebar/thread list, the Account menu + delete-history flow, theme persistence, an EN spot-check. Six tap-target bugs found and fixed (header wordmark wrap, Account menu items, chart form tabs, NL\|EN switch, theme toggle, delete-history confirm buttons) — all gated with a responsive class so 1280px stays pixel-identical; each has a regression test. Full verification green (typecheck, web:typecheck, test:docs, 98 files/1498 web:test, web:build). Not fixed: the sidebar's `icon-xs`/`icon-sm` shared Button-token buttons, also under 44px but a shared design-system primitive with a wider blast radius than this WP — left for its own pass. See [session-briefs/2026-09-12-phone-walk-findings.md](session-briefs/2026-09-12-phone-walk-findings.md).**
+
+**Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
 
 **Session 97 update (2026-09-12): phases 0, 1, 3, 4, 5 are BUILT — PR #14**,
 51 files / +3567 −264 / 22 commits, branch `journey-programme`, head `2c4ec80`. CI green (`gate`: success),
@@ -733,7 +747,14 @@ deliberately excluded — still needs an explicit owner go per the rule above. P
 merge + real usage. **Next step is the owner's, not a session's:** review PR #14 (its body lists the three owner
 steps — read/fill in `/werkwijze` + `/privacy`, run `npm run db:migrate` for 028+029 then `npm run usage:report`,
 decide R3), then merge. **Do not start rebuilding any of phases 0/1/3/4/5** — a sibling session independently
-(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #240](open-questions.md)
+(re)built two of PR #14's phase-5 items before this was discovered; see [open-questions #241](open-questions.md)
 and [lessons-learned.md](lessons-learned.md) (session 97) for the process fix.
+
+**Session 98 (2026-09-12, autonomous) — stacked on PR #14, nothing merged:** (d) the public face + gallery is BUILT (PR #18,
+ADR 046); R9.1 the full phone walk is DONE with fixes (PR #19); the creator-e-mail lookup for Live embeds is BUILT
+(PR #15, stacked on PR #9). Still not built: phase 2 / R3 (owner go), decision 5, the 028 apply, the audit re-run,
+Eurostat. See [session-briefs/2026-09-12-session-99-kickoff.md](session-briefs/2026-09-12-session-99-kickoff.md).
+
+**Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

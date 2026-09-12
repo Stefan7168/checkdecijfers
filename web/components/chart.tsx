@@ -78,6 +78,7 @@ import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
@@ -1214,7 +1215,13 @@ export interface ChartStageMode {
 export function ChartView({
   spec,
   frameless = false,
+  embed,
+  embedMode = false,
+  embedFooter,
+  initialFormOverride,
   stage,
+  initialPresentation,
+  initialPanel,
 }: {
   spec: ChartSpec;
   /** Session 87 (purely presentational): drop the component's own card frame
@@ -1222,12 +1229,63 @@ export function ChartView({
    * card is the one thing the shadcn direction says not to do. Inline in the
    * conversation and on Ontdek the frame stays. */
   frameless?: boolean;
+  /** Spec Part B1: when present, the card footer shows an Embed button next
+   * to Download for THIS answer's own audit row. Never combine with
+   * embedMode=true (the public embed page never re-offers its own embed
+   * button) — ChartEmbedButton's own render guard enforces this too. */
+  embed?: { auditId: number };
+  /** Spec Part B3: true ONLY for the /embed/[token] public route's own
+   * render. Strips the Weergave tablist, the Opmaak/Verhaal (Style/Story)
+   * triggers, the zoom selects, the small-multiples toggle, the
+   * click-to-annotate affordance, Download and Embed, replacing them with
+   * `embedFooter`. The chart, its title/unit, the R4 attribution line and
+   * SourceBadge are UNCHANGED — and SeriesLegend's hide/highlight buttons
+   * intentionally STAY interactive (a reading aid; the spec only bars the
+   * embed URL from ENCODING a hide/highlight selection, not disabling one
+   * during viewing). An embed is the same honest card, minus the controls
+   * a third-party page has no business exposing. */
+  embedMode?: boolean;
+  /** Spec Part B3: the embed page's own footer sentence, built by the
+   * ROUTE (it alone knows frozen-vs-live and the relevant date) — e.g.
+   * "Frozen on 10 September 2026 ·" or "Live · data as of 26 August
+   * 2026 ·". ChartView appends the checkdecijfers.nl backlink itself, so
+   * every embed footer has byte-identical link markup. Ignored unless
+   * embedMode is true. */
+  embedFooter?: string;
+  /** Fix round (Task 5 review, Piece 3): a one-shot override for the
+   * INITIAL form, set only by the /embed/[token] route (its own `?form=`,
+   * already emitted by Task 4's embed dialog for "As shown" but never wired
+   * anywhere until now) — honours the reader's own on-screen form at the
+   * moment they generated the embed code. Applied once, on mount, and ONLY
+   * when the spec's own lineFormAllowed/areaFormAllowed/hbarFormAllowed
+   * guards allow it — an invalid request (e.g. `hbar` on a non-comparison
+   * spec) is silently ignored, same as every other stale/disallowed-form
+   * fallback in this file; it never forces a form the honesty rules forbid.
+   * A new, independent, additive prop — deliberately does not touch any of
+   * the six embedMode gating sites elsewhere in this component (those hide
+   * CONTROLS; this only ever seeds the initial VALUE those controls would
+   * otherwise start from). Ignored (no effect at all) when absent. */
+  initialFormOverride?: ChartForm;
   /** Task 3 (ADR 044): when present, this instance renders in stage mode —
    * chrome-less (no tablist/triggers/selects/toggles/panels/notes/legend
    * buttons/download), driven purely by `stage.step`, wearing
    * `stage.overrides` instead of the reader's own per-chart tweaks. See
    * `ChartStageMode` above. */
   stage?: ChartStageMode;
+  /** #237/ADR 046: the chart's initial per-chart presentation overrides —
+   * e.g. a gallery story's template (`templateById(look).overrides`) — so it
+   * mounts already wearing that look. "Standaard" (`onReset`) still clears
+   * to `{}` exactly as before; only the SPEC-SWAP reset path (a fresh spec
+   * on this same mounted instance) falls back to this value instead of `{}`
+   * when it is provided. Omitted everywhere else in the app — behaviour
+   * there is unchanged. */
+  initialPresentation?: PresentationOverrides;
+  /** #237/ADR 046: mount with a panel already open. Only 'story' exists
+   * today — opens the Insights panel at step 0, as if the reader had
+   * clicked its trigger, so a gallery story shows its caption without an
+   * extra click. Applied once, on mount, never re-applied on a later spec
+   * swap. */
+  initialPanel?: 'story';
 }) {
   // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
   // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
@@ -1249,7 +1307,31 @@ export function ChartView({
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
   const initialForm = inStage ? spec.kind : spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
-  const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
+  const [state, dispatch] = useReducer(
+    chartViewReducer,
+    initialForm,
+    (form: ChartForm) => initialViewState(form, initialPresentation),
+  );
+  // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
+  // once, on mount — never on a later spec swap (that's the `specIdentity`
+  // block further down, and `reset` there deliberately preserves state.form
+  // instead of re-reading this prop, so a reader's own subsequent tab choice
+  // is never clobbered by a stale query-string value). Guarded by the SAME
+  // allow functions the tablist below uses, so this can never render a form
+  // the honesty rules forbid for this spec.
+  useEffect(() => {
+    if (initialFormOverride === undefined) return;
+    const allowed =
+      initialFormOverride === 'line'
+        ? lineFormAllowed(spec, spec.series.length)
+        : initialFormOverride === 'area'
+          ? areaFormAllowed(spec, spec.series.length)
+          : initialFormOverride === 'hbar'
+            ? hbarFormAllowed(spec)
+            : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+    if (allowed) dispatch({ type: 'setForm', form: initialFormOverride });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately once-on-mount only: initialFormOverride is a one-shot prop from the embed route, never expected to change on a live instance, and a later spec swap is this component's own `reset` action's job (below), not this effect re-firing.
+  }, []);
   const lineTabRef = useRef<HTMLButtonElement>(null);
   const areaTabRef = useRef<HTMLButtonElement>(null);
   const barTabRef = useRef<HTMLButtonElement>(null);
@@ -1265,6 +1347,19 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
+  // RegionBar call site shares the SAME handler, rather than each of the
+  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
+  // A truthy onPointClick is what makes those components render
+  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
+  // function's own ternaries) — undefined here removes all of that at
+  // once. Without this, embedMode still left every chart point a
+  // focusable, ARIA-labeled phantom control with nothing to open, since
+  // ChartNotes (the panel, gated below) is a different thing from the
+  // per-point click/focus affordance built into the markers themselves.
+  // Task 3 (ADR 044): also undefined in stage mode — the full-viewport
+  // stage is a step-driven presentation surface, not a note-taking one.
+  const onPointClick = embedMode || inStage ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -1401,7 +1496,7 @@ export function ChartView({
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
-    dispatch({ type: 'reset', initialForm: state.form });
+    dispatch({ type: 'reset', initialForm: state.form, initialPresentation });
     setSmallMultiples(false);
     setAxisMode('shared');
     setNotes([]);
@@ -1505,8 +1600,10 @@ export function ChartView({
   // (useChartStyle()'s no-provider default) or an account with no saved
   // default both resolve exactly as before this task. Per-chart overrides
   // (`state.presentation`) still win over the account default (owner E is
-  // untouched: a spec swap clears `state.presentation`, not `accountStyle`,
-  // so "Standaard" and a fresh chart both fall back to THIS base, not stock).
+  // untouched: a spec swap resets `state.presentation` to `{}` — or to
+  // `initialPresentation` when the chart was given one, #237/ADR 046 — never
+  // to `accountStyle`, so "Standaard" and a fresh chart both fall back to
+  // THIS base, not stock).
   const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
@@ -1588,8 +1685,15 @@ export function ChartView({
   // an error state, never a loading placeholder that could read as "no
   // number" (R3): the panel is always complete from the first open.
   const [phrasedCaptions, setPhrasedCaptions] = useState<Map<string, string> | null>(null);
+  // R5.3 (journey WP-C): true once a `generateInsights` call comes back
+  // `{ ok: false, reason: 'unauthenticated' }` — an anonymous visitor
+  // opened Insights. Reset alongside `phrasedCaptions` on a findings change
+  // so a signed-out visitor who logs in and reopens a fresh chart doesn't
+  // keep seeing a stale login line.
+  const [insightsUnauthenticated, setInsightsUnauthenticated] = useState(false);
   useEffect(() => {
     setPhrasedCaptions(null);
+    setInsightsUnauthenticated(false);
   }, [findings]);
   const storySteps: StoryStep[] = useMemo(
     () =>
@@ -1916,7 +2020,16 @@ export function ChartView({
   const storyLockId = `${domId}-story-lock`;
   const storyLockedTitle = storyOpen ? t(chartLang, 'chart.story.controlsLocked') : undefined;
 
-  function openStory(): void {
+  // #237/ADR 046 fix-wave finding 1: `initialPanel="story"` auto-opens the
+  // panel on mount via THIS function — unconditionally counting that as a
+  // `story_open` would fire the site-wide `countChartStyleEvent` server
+  // action (an unauthenticated DB write, `web/app/usage-actions.ts`) once
+  // per gallery card per anonymous page view, inflating the owner's usage
+  // counter with opens nobody clicked and doing exactly the per-card
+  // server-action call this WP's zero-server-action-calls rule exists to
+  // avoid. `track` defaults to true (every OTHER call site — the trigger
+  // click, toggleStory — is a real reader action and keeps counting).
+  function openStory(opts?: { track?: boolean }): void {
     storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
     // setView BEFORE setOpenPanel: so the first render of the OPEN story
     // already shows the first step's own highlight/full-range view, never a
@@ -1924,7 +2037,7 @@ export function ChartView({
     dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
     setStoryIndex(0);
     setOpenPanel('story');
-    trackChartStyleEvent('story_open');
+    if (opts?.track !== false) trackChartStyleEvent('story_open');
     // Insights (session 94): fired once per findings set (the null check),
     // on open rather than eagerly on every render — cheapest-viable-
     // mechanism (a chart nobody opens the panel for never spends a token).
@@ -1937,11 +2050,44 @@ export function ChartView({
     // are translation-invariant (built from periodCode/kind/seriesKey, never
     // a label), so they still map back onto `findings` correctly either way.
     if (phrasedCaptions === null && findings.length > 0) {
-      void generateInsights(spec).then((result) => {
-        if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
-      });
+      // #237/ADR 046: on a public page (ChartStyleContext's no-provider
+      // default, `signedIn === false`) `generateInsights` would only ever
+      // come back `{ ok: false, reason: 'unauthenticated' }` — a wasted
+      // server-action round trip for a result already known ahead of time.
+      // A gallery page mounts ~10 charts, so unconditionally firing this
+      // would be ten anonymous server-action calls per page load, which is
+      // exactly the cost this WP's zero-server-action-calls rule for public
+      // pages exists to avoid. Set the same R5.3 honest line directly
+      // instead; the deterministic captions still render underneath either
+      // way.
+      if (!signedIn) {
+        setInsightsUnauthenticated(true);
+      } else {
+        void generateInsights(spec).then((result) => {
+          if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+          // R5.3: an anonymous visitor gets one honest line in the panel
+          // instead of a silently-failed phrasing attempt — the
+          // deterministic captions still render underneath regardless.
+          else if (result.reason === 'unauthenticated') setInsightsUnauthenticated(true);
+        });
+      }
     }
   }
+
+  // #237/ADR 046: `initialPanel="story"` opens the Insights panel at step 0
+  // on mount, as if the reader had clicked its trigger — the gallery's own
+  // caption is this panel, never a separate copy. Guarded by a ref so it
+  // fires ONCE per mounted instance, never again on a later spec swap (a
+  // gallery page never swaps specs on a mounted ChartView, but the guard
+  // costs nothing and keeps this honest for any future reuse).
+  const openedInitialPanelRef = useRef(false);
+  useEffect(() => {
+    if (openedInitialPanelRef.current) return;
+    if (initialPanel !== 'story' || !storyAvailable) return;
+    openedInitialPanelRef.current = true;
+    openStory({ track: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPanel, storyAvailable]);
 
   function closeStory(): void {
     const snapshot = storySnapshot.current;
@@ -1992,11 +2138,15 @@ export function ChartView({
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
+  // R9.1 (#238): at 375px these tabs measured only 24px tall — well under
+  // the 44px minimum tap target. `min-h-11 sm:min-h-6` widens the tap target
+  // only below the `sm` breakpoint, so the desktop (1280px) control stays
+  // pixel-identical to before.
   const segmentTab = (active: boolean): string =>
-    'min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
+    'min-h-11 sm:min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
     (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
-    'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
+    'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
       ? 'border-transparent bg-secondary text-foreground'
       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');
@@ -2027,134 +2177,140 @@ export function ChartView({
         * not a child of it — the tablist's own `mt-3` moved up onto this
         * wrapper so the row keeps its original top spacing regardless of
         * whether the trigger is offered. */}
-      {!inStage ? (
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <div
-          role="tablist"
-          aria-label={t(chartLang, 'chart.weergaveLabel')}
-          onKeyDown={onFormTabKeyDown}
-          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
-        >
-          <button
-            ref={lineTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeForm === 'line'}
-            aria-controls={panelId}
-            aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
-            tabIndex={activeForm === 'line' ? 0 : -1}
-            disabled={!canUseLine}
-            title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
-            onClick={() => selectForm('line')}
-            className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+      {/* Spec Part B3 + Task 3 (ADR 044): the ENTIRE Weergave tablist + Style/
+        * Story trigger row is a viewer-only control surface — an embed has
+        * no reader to flip between Lijn/Staaf/Tabel or open the Opmaak/
+        * Verhaal panels, and the full-viewport stage drives the chart purely
+        * from its own step index — so the whole row (not each control
+        * separately) is gated on both `!embedMode` and `!inStage`. */}
+      {!embedMode && !inStage ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div
+            role="tablist"
+            aria-label={t(chartLang, 'chart.weergaveLabel')}
+            onKeyDown={onFormTabKeyDown}
+            className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
           >
-            {t(chartLang, 'chart.tabLine')}
-          </button>
-          <button
-            ref={areaTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeForm === 'area'}
-            aria-controls={panelId}
-            aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
-            tabIndex={activeForm === 'area' ? 0 : -1}
-            disabled={!canUseArea}
-            title={canUseArea ? undefined : areaDisabledReason}
-            onClick={() => selectForm('area')}
-            className={segmentTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
-          >
-            {t(chartLang, 'chart.form.area')}
-          </button>
-          <button
-            ref={barTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeForm === 'bar'}
-            aria-controls={panelId}
-            tabIndex={activeForm === 'bar' ? 0 : -1}
-            onClick={() => selectForm('bar')}
-            className={segmentTab(activeForm === 'bar')}
-          >
-            {t(chartLang, 'chart.tabBar')}
-          </button>
-          <button
-            ref={hbarTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeForm === 'hbar'}
-            aria-controls={panelId}
-            aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
-            tabIndex={activeForm === 'hbar' ? 0 : -1}
-            disabled={!canUseHbar}
-            title={canUseHbar ? undefined : hbarDisabledReason}
-            onClick={() => selectForm('hbar')}
-            className={segmentTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
-          >
-            {t(chartLang, 'chart.form.hbar')}
-          </button>
-          <button
-            ref={tableTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeForm === 'table'}
-            aria-controls={panelId}
-            tabIndex={activeForm === 'table' ? 0 : -1}
-            onClick={() => selectForm('table')}
-            className={segmentTab(activeForm === 'table')}
-          >
-            {t(chartLang, 'chart.tabTable')}
-          </button>
+            <button
+              ref={lineTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeForm === 'line'}
+              aria-controls={panelId}
+              aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
+              tabIndex={activeForm === 'line' ? 0 : -1}
+              disabled={!canUseLine}
+              title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
+              onClick={() => selectForm('line')}
+              className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.tabLine')}
+            </button>
+            <button
+              ref={areaTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeForm === 'area'}
+              aria-controls={panelId}
+              aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
+              tabIndex={activeForm === 'area' ? 0 : -1}
+              disabled={!canUseArea}
+              title={canUseArea ? undefined : areaDisabledReason}
+              onClick={() => selectForm('area')}
+              className={segmentTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.area')}
+            </button>
+            <button
+              ref={barTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeForm === 'bar'}
+              aria-controls={panelId}
+              tabIndex={activeForm === 'bar' ? 0 : -1}
+              onClick={() => selectForm('bar')}
+              className={segmentTab(activeForm === 'bar')}
+            >
+              {t(chartLang, 'chart.tabBar')}
+            </button>
+            <button
+              ref={hbarTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeForm === 'hbar'}
+              aria-controls={panelId}
+              aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
+              tabIndex={activeForm === 'hbar' ? 0 : -1}
+              disabled={!canUseHbar}
+              title={canUseHbar ? undefined : hbarDisabledReason}
+              onClick={() => selectForm('hbar')}
+              className={segmentTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.hbar')}
+            </button>
+            <button
+              ref={tableTabRef}
+              type="button"
+              role="tab"
+              aria-selected={activeForm === 'table'}
+              aria-controls={panelId}
+              tabIndex={activeForm === 'table' ? 0 : -1}
+              onClick={() => selectForm('table')}
+              className={segmentTab(activeForm === 'table')}
+            >
+              {t(chartLang, 'chart.tabTable')}
+            </button>
+          </div>
+          {/* Reachable via the disabled Lijn tab's aria-describedby above — a
+            * plain `title` (kept, for pointer users) is invisible to a screen
+            * reader, and a disabled control still needs its reason available
+            * to whoever reaches it by keyboard/AT. */}
+          {!canUseLine ? (
+            <span id={`${domId}-line-reason`} className="sr-only">
+              {t(chartLang, 'chart.lineDisabledReason')}
+            </span>
+          ) : null}
+          {!canUseArea ? (
+            <span id={`${domId}-area-reason`} className="sr-only">
+              {areaDisabledReason}
+            </span>
+          ) : null}
+          {!canUseHbar ? (
+            <span id={`${domId}-hbar-reason`} className="sr-only">
+              {hbarDisabledReason}
+            </span>
+          ) : null}
+          {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
+            * renders directly here as a row-mate of the Weergave tablist — no
+            * portal, no placeholder node. Final-review fix: table form gets NO
+            * frame and NO Style panel (as before the Frame-tab feature) — a
+            * framed table would need its own export path, so the trigger stays
+            * gated on `state.form !== 'table'` exactly like the ChartConfigPanel
+            * mount further down. */}
+          {state.form !== 'table' ? (
+            <ChartConfigTrigger
+              open={styleOpen}
+              onToggle={toggleStylePanel}
+              controlsId={styleControlsId}
+              triggerId={styleTriggerId}
+              lang={chartLang}
+            />
+          ) : null}
+          {/* Story mode (session 92): the colourful trigger sits in the same
+            * row as Opmaak — a code-built story is offered whenever there is
+            * one (storyAvailable, computed above next to styleControlsId). */}
+          {storyAvailable ? (
+            <ChartStoryTrigger
+              open={storyOpen}
+              onToggle={toggleStory}
+              controlsId={storyControlsId}
+              triggerId={storyTriggerId}
+              lang={chartLang}
+            />
+          ) : null}
         </div>
-        {/* Reachable via the disabled Lijn tab's aria-describedby above — a
-          * plain `title` (kept, for pointer users) is invisible to a screen
-          * reader, and a disabled control still needs its reason available
-          * to whoever reaches it by keyboard/AT. */}
-        {!canUseLine ? (
-          <span id={`${domId}-line-reason`} className="sr-only">
-            {t(chartLang, 'chart.lineDisabledReason')}
-          </span>
-        ) : null}
-        {!canUseArea ? (
-          <span id={`${domId}-area-reason`} className="sr-only">
-            {areaDisabledReason}
-          </span>
-        ) : null}
-        {!canUseHbar ? (
-          <span id={`${domId}-hbar-reason`} className="sr-only">
-            {hbarDisabledReason}
-          </span>
-        ) : null}
-        {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
-          * renders directly here as a row-mate of the Weergave tablist — no
-          * portal, no placeholder node. Final-review fix: table form gets NO
-          * frame and NO Style panel (as before the Frame-tab feature) — a
-          * framed table would need its own export path, so the trigger stays
-          * gated on `state.form !== 'table'` exactly like the ChartConfigPanel
-          * mount further down. */}
-        {state.form !== 'table' ? (
-          <ChartConfigTrigger
-            open={styleOpen}
-            onToggle={toggleStylePanel}
-            controlsId={styleControlsId}
-            triggerId={styleTriggerId}
-            lang={chartLang}
-          />
-        ) : null}
-        {/* Story mode (session 92): the colourful trigger sits in the same
-          * row as Opmaak — a code-built story is offered whenever there is
-          * one (storyAvailable, computed above next to styleControlsId). */}
-        {storyAvailable ? (
-          <ChartStoryTrigger
-            open={storyOpen}
-            onToggle={toggleStory}
-            controlsId={storyControlsId}
-            triggerId={storyTriggerId}
-            lang={chartLang}
-          />
-        ) : null}
-      </div>
       ) : null}
-      {!inStage && zoomAvailable ? (
+      {zoomAvailable && !embedMode && !inStage ? (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
           <select
@@ -2408,7 +2564,7 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        inStage ? undefined : (p) => setPendingPoint(p),
+                        onPointClick,
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
@@ -2501,7 +2657,7 @@ export function ChartView({
                         pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
-                        inStage ? undefined : (p) => setPendingPoint(p),
+                        onPointClick,
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
                         chartLang,
                         ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
@@ -2579,7 +2735,7 @@ export function ChartView({
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
-                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, inStage ? undefined : (p) => setPendingPoint(p), chartLang)}
+                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, onPointClick, chartLang)}
               />
             </BarChart>
           ) : (
@@ -2669,7 +2825,7 @@ export function ChartView({
                         barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
                         dimmed ? 0.25 : 1,
                         s.label,
-                        inStage ? undefined : (p) => setPendingPoint(p),
+                        onPointClick,
                         chartLang,
                         ringStep?.point?.seriesKey === s.key ? ringStep.point.periodCode : null,
                       )}
@@ -2704,6 +2860,7 @@ export function ChartView({
           idPrefix={domId}
           lang={chartLang}
           onPresent={!inStage ? openStage : undefined}
+          insightsUnauthenticated={insightsUnauthenticated}
         />
       ) : null}
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
@@ -2763,6 +2920,18 @@ export function ChartView({
           triggerId={styleTriggerId}
           frameImage={frameImage}
           onFrameImage={setFrameImage}
+          // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart
+          // tweaks yet opens the Style panel on the Sjablonen gallery
+          // instead of the raw Grafiek controls — `resolved.pristine`
+          // already tracks exactly that (the overrides object passed in is
+          // empty), evaluated once at the panel's own mount.
+          // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
+          // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
+          // and used to land on Sjablonen — never seeing "Mijn standaard is
+          // actief", which renders inside the Grafiek panel. A saved default
+          // IS a deliberate look already chosen, so the gallery is not what
+          // that reader needs first: open on Grafiek instead.
+          openTemplatesWhenPristine={accountStyle === null}
           onChange={(patch) => {
             // Final-review fix (Fix 5): ChartConfigPanel now refuses a
             // frame background/inset change UP FRONT (its own contrast
@@ -2915,7 +3084,7 @@ export function ChartView({
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
       {zoomDisclosure ? <p className="mt-1 text-xs text-muted-foreground">{zoomDisclosure.trim()}</p> : null}
-      {!inStage && state.form !== 'table' && smallMultiplesAvailable ? (
+      {state.form !== 'table' && smallMultiplesAvailable && !embedMode && !inStage ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -2988,8 +3157,10 @@ export function ChartView({
         * rendered here can never be scanned as chart data or exported by
         * construction, with no separate exemption to maintain. Only offered
         * for chart forms (state.form !== 'table'): notes anchor to a clicked
-        * chart point, not a table cell. */}
-      {!inStage && state.form !== 'table' ? (
+        * chart point, not a table cell. Spec Part B3: also off in embedMode
+        * — click-to-annotate is a viewer's own reading aid, session-only and
+        * never part of the honest card an embed re-publishes elsewhere. */}
+      {state.form !== 'table' && !embedMode && !inStage ? (
         <ChartNotes
           notes={notes}
           pendingPoint={pendingPoint}
@@ -3033,7 +3204,7 @@ export function ChartView({
           * still true, so the old `!smallMultiples` guard hid Download on
           * an ordinary bar/area chart with no way back except returning to
           * Lijn and toggling small multiples off. */}
-        {!inStage && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) ? (
+        {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
@@ -3043,7 +3214,34 @@ export function ChartView({
             frameImage={frameImage}
           />
         ) : null}
+        {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+          <ChartEmbedButton auditId={embed.auditId} tableId={spec.attribution.tableId} lang={chartLang} currentForm={state.form} />
+        ) : null}
       </div>
+      {embedMode && embedFooter ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {embedFooter}{' '}
+          {/* Review fix: this link is the ONE way out of a third-party
+            * <iframe> (the whole point of the embed feature) -- without
+            * target="_blank" it would load checkdecijfers.nl INTO the
+            * iframe box instead of the reader's top page, trapping the
+            * site in a chart-sized frame. Same convention as SourceBadge's
+            * own outbound link (source-badge.tsx).
+            *
+            * Final review (Important #1): `href` is the SAME resolved
+            * `NEXT_PUBLIC_APP_URL` origin the embed dialog already uses for
+            * its iframe `src` (chart-embed-dialog.tsx's exported `APP_URL`)
+            * -- not a hardcoded `https://checkdecijfers.nl`, which today
+            * resolves to Namecheap's parked nameservers, not this app. The
+            * VISIBLE label stays the brand name regardless (same convention
+            * as that dialog's own generated `title="checkdecijfers.nl —
+            * ..."` attribute, independent of what APP_URL actually
+            * resolves to). */}
+          <a href={APP_URL} target="_blank" rel="noopener noreferrer" className="underline">
+            checkdecijfers.nl
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

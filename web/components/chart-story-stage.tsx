@@ -632,7 +632,22 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                       }}
                       data-stage-step={i}
                       aria-current={i === index ? 'step' : undefined}
-                      className="flex min-h-[85vh] scroll-mt-[52vh] flex-col justify-center lg:scroll-mt-0"
+                      // R9.1 (#238) fix round 2: `min-h-[85vh]` is right for the
+                      // lg two-column layout (chart pinned LEFT at full height,
+                      // captions scroll on the RIGHT). Below `lg` the chart is
+                      // pinned at the TOP instead, capped at 50vh — an 85vh
+                      // caption block put the active caption's centre ~42vh
+                      // into a column with only ~50vh of free space under the
+                      // pinned card. `min-h-[45dvh]` sizes the block to that
+                      // free space (`dvh` so mobile address-bar chrome doesn't
+                      // throw the maths off). `scroll-mt-[52vh]` (session 96's
+                      // own phone fix) is independent: it keeps
+                      // scrollIntoView({block:'center'}) from centring a panel
+                      // close enough to the sticky chart's bottom edge that
+                      // this borderless caption bleeds into its attribution
+                      // line — both fixes address different phone symptoms
+                      // and are needed together.
+                      className="flex min-h-[45dvh] scroll-mt-[52vh] flex-col justify-center lg:min-h-[85vh] lg:scroll-mt-0"
                     >
                       {/* Editorial reveal (visual upgrade, task 2 of the
                         * chain — captions): the old bordered `bg-card` box
