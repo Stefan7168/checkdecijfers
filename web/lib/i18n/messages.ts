@@ -705,6 +705,55 @@ const nl = {
   'coverage.eurostatHeading': 'Eurostat — binnenkort',
   'coverage.eurostatBody': 'We werken aan Eurostat-cijfers als aanvullende bron.',
   'coverage.landingHeading': 'Dit weten we nu',
+
+  // #237/ADR 046 (session 98, journey programme "public face"): the
+  // positioning sentence — chatten van officieel CBS-onderzoek naar een
+  // ingesloten, gesourcete grafiek — and the public gallery of curated
+  // stories that shows it live. Digit-free throughout (messages.test.ts's
+  // digit-parity rule, plus the whole-card chart digit scans): no card here
+  // ever states a number, the live ChartView underneath does that.
+  'landing.heroSubtitleV2':
+    'Stel je vraag in gewone taal en chat zo van officieel CBS-onderzoek naar een ingesloten grafiek met bron, klaar om te delen.',
+  'landing.ctaGallery': 'Bekijk de galerij',
+  'gallery.teaserHeading': 'Verhalen uit de galerij',
+  'gallery.teaserAllLink': 'Alle verhalen',
+  'gallery.pageTitle': 'Galerij — Check de Cijfers',
+  'gallery.heading': 'De galerij',
+  'gallery.intro':
+    'Elke kaart hieronder is een echte, gesourcete grafiek — gebouwd door dezelfde deterministische motor die ook antwoorden geeft in de chat. Stel de vraag, zie de grafiek, en volg meteen wat erin opvalt.',
+  'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
+  'gallery.story.consumentenvertrouwen.title': 'Consumentenvertrouwen',
+  'gallery.story.consumentenvertrouwen.lead':
+    'Hoe optimistisch het Nederlandse publiek is over de economie, maand na maand.',
+  'gallery.story.economische-groei.title': 'Economische groei',
+  'gallery.story.economische-groei.lead': 'De volumegroei van de Nederlandse economie, per kwartaal.',
+  'gallery.story.inflatie.title': 'Inflatie',
+  'gallery.story.inflatie.lead': 'Hoeveel duurder het leven werd, jaar op jaar.',
+  'gallery.story.huizenprijzen.title': 'Huizenprijzen',
+  'gallery.story.huizenprijzen.lead':
+    'De ontwikkeling van de gemiddelde verkoopprijs van bestaande koopwoningen.',
+  'gallery.story.werkloosheid.title': 'Werkloosheid',
+  'gallery.story.werkloosheid.lead':
+    'Het seizoengecorrigeerde werkloosheidspercentage, per kwartaal.',
+  'gallery.story.faillissementen.title': 'Faillissementen',
+  'gallery.story.faillissementen.lead':
+    'Hoeveel bedrijven en instellingen failliet gingen, maand na maand.',
+  'gallery.story.producentenprijzen.title': 'Producentenprijzen',
+  'gallery.story.producentenprijzen.lead':
+    'De prijsontwikkeling die producenten in rekening brengen, jaar op jaar.',
+  'gallery.story.detailhandelsomzet.title': 'Omzet detailhandel',
+  'gallery.story.detailhandelsomzet.lead': 'Hoe de omzet van de detailhandel zich ontwikkelde, jaar op jaar.',
+  'gallery.story.supermarktomzet.title': 'Omzet supermarkten',
+  'gallery.story.supermarktomzet.lead':
+    'Hoe de omzet van supermarkten en warenhuizen zich ontwikkelde, jaar op jaar.',
+  'gallery.story.consumptie-huishoudens.title': 'Consumptie huishoudens',
+  'gallery.story.consumptie-huishoudens.lead': 'De groei van de bestedingen van huishoudens, jaar op jaar.',
+  'gallery.story.werkloosheid-maandelijks.title': 'Werkloosheid per maand',
+  'gallery.story.werkloosheid-maandelijks.lead':
+    'Het seizoengecorrigeerde werkloosheidspercentage, maand na maand.',
+  'gallery.story.zonnestroom.title': 'Zonnestroom',
+  'gallery.story.zonnestroom.lead':
+    'De groei van de Nederlandse elektriciteitsproductie uit zonnepanelen, jaar na jaar.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1261,6 +1310,44 @@ const en: Messages = {
   'coverage.eurostatHeading': 'Eurostat — coming',
   'coverage.eurostatBody': 'We are working on Eurostat figures as an additional source.',
   'coverage.landingHeading': 'What we know today',
+
+  // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
+  // originals (messages.test.ts's digit-parity rule).
+  'landing.heroSubtitleV2':
+    'Ask your question in plain language and chat your way from official CBS research to an embedded, sourced chart, ready to share.',
+  'landing.ctaGallery': 'See the gallery',
+  'gallery.teaserHeading': 'Stories from the gallery',
+  'gallery.teaserAllLink': 'All stories',
+  'gallery.pageTitle': 'Gallery — Check de Cijfers',
+  'gallery.heading': 'The gallery',
+  'gallery.intro':
+    'Every card below is a real, sourced chart — built by the same deterministic engine that answers questions in chat. Ask the question, see the chart, and follow what stands out right away.',
+  'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
+  'gallery.story.consumentenvertrouwen.title': 'Consumer confidence',
+  'gallery.story.consumentenvertrouwen.lead':
+    'How optimistic the Dutch public is about the economy, month after month.',
+  'gallery.story.economische-groei.title': 'Economic growth',
+  'gallery.story.economische-groei.lead': "The volume growth of the Dutch economy, quarter by quarter.",
+  'gallery.story.inflatie.title': 'Inflation',
+  'gallery.story.inflatie.lead': 'How much more expensive life became, year on year.',
+  'gallery.story.huizenprijzen.title': 'House prices',
+  'gallery.story.huizenprijzen.lead': 'How the average sale price of existing homes has moved.',
+  'gallery.story.werkloosheid.title': 'Unemployment',
+  'gallery.story.werkloosheid.lead': 'The seasonally adjusted unemployment rate, quarter by quarter.',
+  'gallery.story.faillissementen.title': 'Bankruptcies',
+  'gallery.story.faillissementen.lead': 'How many businesses and institutions went bankrupt, month after month.',
+  'gallery.story.producentenprijzen.title': 'Producer prices',
+  'gallery.story.producentenprijzen.lead': 'The price changes producers charge, year on year.',
+  'gallery.story.detailhandelsomzet.title': 'Retail turnover',
+  'gallery.story.detailhandelsomzet.lead': 'How retail turnover has moved, year on year.',
+  'gallery.story.supermarktomzet.title': 'Supermarket turnover',
+  'gallery.story.supermarktomzet.lead': 'How supermarket and department-store turnover has moved, year on year.',
+  'gallery.story.consumptie-huishoudens.title': 'Household consumption',
+  'gallery.story.consumptie-huishoudens.lead': 'The growth of household spending, year on year.',
+  'gallery.story.werkloosheid-maandelijks.title': 'Monthly unemployment',
+  'gallery.story.werkloosheid-maandelijks.lead': 'The seasonally adjusted unemployment rate, month after month.',
+  'gallery.story.zonnestroom.title': 'Solar power',
+  'gallery.story.zonnestroom.lead': 'The growth of Dutch electricity production from solar panels, year after year.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
