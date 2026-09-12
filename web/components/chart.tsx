@@ -1215,6 +1215,8 @@ export function ChartView({
   spec,
   frameless = false,
   stage,
+  initialPresentation,
+  initialPanel,
 }: {
   spec: ChartSpec;
   /** Session 87 (purely presentational): drop the component's own card frame
@@ -1228,6 +1230,20 @@ export function ChartView({
    * `stage.overrides` instead of the reader's own per-chart tweaks. See
    * `ChartStageMode` above. */
   stage?: ChartStageMode;
+  /** #237/ADR 046: the chart's initial per-chart presentation overrides —
+   * e.g. a gallery story's template (`templateById(look).overrides`) — so it
+   * mounts already wearing that look. "Standaard" (`onReset`) still clears
+   * to `{}` exactly as before; only the SPEC-SWAP reset path (a fresh spec
+   * on this same mounted instance) falls back to this value instead of `{}`
+   * when it is provided. Omitted everywhere else in the app — behaviour
+   * there is unchanged. */
+  initialPresentation?: PresentationOverrides;
+  /** #237/ADR 046: mount with a panel already open. Only 'story' exists
+   * today — opens the Insights panel at step 0, as if the reader had
+   * clicked its trigger, so a gallery story shows its caption without an
+   * extra click. Applied once, on mount, never re-applied on a later spec
+   * swap. */
+  initialPanel?: 'story';
 }) {
   // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
   // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
@@ -1249,7 +1265,11 @@ export function ChartView({
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
   const initialForm = inStage ? spec.kind : spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
-  const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
+  const [state, dispatch] = useReducer(
+    chartViewReducer,
+    initialForm,
+    (form: ChartForm) => initialViewState(form, initialPresentation),
+  );
   const lineTabRef = useRef<HTMLButtonElement>(null);
   const areaTabRef = useRef<HTMLButtonElement>(null);
   const barTabRef = useRef<HTMLButtonElement>(null);
@@ -1401,7 +1421,7 @@ export function ChartView({
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
-    dispatch({ type: 'reset', initialForm: state.form });
+    dispatch({ type: 'reset', initialForm: state.form, initialPresentation });
     setSmallMultiples(false);
     setAxisMode('shared');
     setNotes([]);
@@ -1944,15 +1964,44 @@ export function ChartView({
     // are translation-invariant (built from periodCode/kind/seriesKey, never
     // a label), so they still map back onto `findings` correctly either way.
     if (phrasedCaptions === null && findings.length > 0) {
-      void generateInsights(spec).then((result) => {
-        if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
-        // R5.3: an anonymous visitor gets one honest line in the panel
-        // instead of a silently-failed phrasing attempt — the deterministic
-        // captions still render underneath regardless.
-        else if (result.reason === 'unauthenticated') setInsightsUnauthenticated(true);
-      });
+      // #237/ADR 046: on a public page (ChartStyleContext's no-provider
+      // default, `signedIn === false`) `generateInsights` would only ever
+      // come back `{ ok: false, reason: 'unauthenticated' }` — a wasted
+      // server-action round trip for a result already known ahead of time.
+      // A gallery page mounts ~10 charts, so unconditionally firing this
+      // would be ten anonymous server-action calls per page load, which is
+      // exactly the cost this WP's zero-server-action-calls rule for public
+      // pages exists to avoid. Set the same R5.3 honest line directly
+      // instead; the deterministic captions still render underneath either
+      // way.
+      if (!signedIn) {
+        setInsightsUnauthenticated(true);
+      } else {
+        void generateInsights(spec).then((result) => {
+          if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+          // R5.3: an anonymous visitor gets one honest line in the panel
+          // instead of a silently-failed phrasing attempt — the
+          // deterministic captions still render underneath regardless.
+          else if (result.reason === 'unauthenticated') setInsightsUnauthenticated(true);
+        });
+      }
     }
   }
+
+  // #237/ADR 046: `initialPanel="story"` opens the Insights panel at step 0
+  // on mount, as if the reader had clicked its trigger — the gallery's own
+  // caption is this panel, never a separate copy. Guarded by a ref so it
+  // fires ONCE per mounted instance, never again on a later spec swap (a
+  // gallery page never swaps specs on a mounted ChartView, but the guard
+  // costs nothing and keeps this honest for any future reuse).
+  const openedInitialPanelRef = useRef(false);
+  useEffect(() => {
+    if (openedInitialPanelRef.current) return;
+    if (initialPanel !== 'story' || !storyAvailable) return;
+    openedInitialPanelRef.current = true;
+    openStory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPanel, storyAvailable]);
 
   function closeStory(): void {
     const snapshot = storySnapshot.current;
