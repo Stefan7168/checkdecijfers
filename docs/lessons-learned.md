@@ -6,6 +6,81 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 97 (2026-09-11→12, owner present) — built R8+R9, then found a sibling session had already
+built the whole Journey programme (PR #14) — a real duplicate-effort cost
+
+- **Check for existing open PRs and sibling-session work on the SAME plan before starting autonomous build
+  work — every time, not just when something feels off.** This session spent real effort independently
+  building two features (composer chip collapse, phone header) that a different session had already built,
+  reviewed (Opus whole-branch + real-browser pass), tested more thoroughly, and shipped in an open, green,
+  mergeable PR #14 six hours earlier. A one-line `mcp__github__list_pull_requests` check at the START of the
+  "Progres?" pivot — before writing any code — would have surfaced this immediately. The earlier lesson this
+  same session had already internalized ("I wrote a kickoff doc but never arranged for a session to execute
+  it") should have prompted the check "...or did some OTHER session already pick it up?", not just "let me do
+  it myself." Rule going forward: before starting ANY autonomous, multi-hour, plan-driven build task, check (a)
+  open PRs on the repo, (b) `docs/STATUS.md`'s own top block for anything more recent than what's in hand, and
+  (c) — if named sessions are ever mentioned by the user — whether one already exists via `list_sessions`
+  before assuming a fresh start is needed.
+- **`ListAgents` and `mcp__Claude_Code_Remote__list_sessions` are NOT the same visibility surface, and both are
+  needed.** `ListAgents` only found this session's own two subagents; it did not surface a real, `"connected"`,
+  idle sibling session on the account. `list_sessions` (with `mine: true`) found it immediately, by title,
+  alongside full metadata (git branch, timestamps, status). When a user refers to "the chat named X" and
+  `ListAgents` comes up empty, check `list_sessions` before concluding no such session exists.
+- **A session being listed as `"connection_status": "connected"` in `list_sessions` does NOT mean `SendMessage`
+  can reach it.** Two attempts — by exact title, then by raw session ID — both returned a clean "not reachable"
+  error. The likely cause: it is a `"bridge"`-type session (the owner's own local machine via Remote Control),
+  and `ListAgents`' cross-session reach explicitly requires "Remote Control... connected **here**" (in the
+  sending session), which was evidently not the case. Lesson: don't assume any session found via `list_sessions`
+  is pingable — attempt it, and if it fails, tell the user plainly rather than retrying variations on the
+  address (title case, partial ID, etc.) that are very unlikely to be the actual problem.
+- **A stale committed SHA in STATUS.md (PR #9: `d427cdd`) silently diverged from the live PR head (`6f80459`)**
+  and would have been repeated a third time if this session had trusted the doc instead of re-fetching the PR.
+  Exactly the Golden Rule's whole point — caught only because this session was already re-verifying PR state
+  for a different reason (PR #14) and checked PR #9 alongside it "while there," not because anything flagged
+  the drift on its own. Worth considering whether a future session should spot-check every open-PR SHA
+  mentioned in STATUS.md's top block against live GitHub as a matter of routine, not only when convenient.
+- **Ran `npm run test:docs` AFTER pushing docs to `main`, not before — twice in a row, in this very wrap-up.**
+  Wrote several live `[PR #14](https://github.com/.../pull/14)` markdown links into `open-questions.md` and
+  `08-build-plan.md` while documenting this session's own PR #14 discovery — the exact violation of
+  [open-questions #132](open-questions.md) interim rule (i) this session had already cited from memory a few
+  paragraphs earlier in the same conversation. Pushed twice before catching it on a final self-audit pass, and
+  had to ship a third doc-only commit just to fix it. Since docs-only pushes skip CI (2026-09-09 rule), nothing
+  but the session's own diligence would ever have caught this — `test:docs` needs to run BEFORE every docs
+  push, not as a post-hoc check, precisely because CI cannot backstop it here.
+- **Running the full test suite (not just the files touched) caught a real regression a targeted grep missed.**
+  After removing four i18n keys tied to the deleted composer chips, a grep for those exact key names across the
+  repo found every affected test EXCEPT one: `workspace.test.tsx` asserted the OLD disabled "Bestand uploaden"
+  button by its literal rendered string, with no i18n-key trace to grep for. Only running `npx vitest run` with
+  no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
+  test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
+  string rather than through the i18n key that produced it.
+## Session 97 (2026-09-12, autonomous) — the Journey programme built via parallel worktrees + one fix wave
+
+- **Five parallel worktrees with SYMLINKED `node_modules` (root + web) worked** — no `npm install` per worktree, no
+  "incomplete node_modules" trap (RUNBOOK multi-agent item 3). Only the final verification block ran in the main
+  checkout. The one shared file, `messages.ts`, conflicted on every merge as expected; "add your keys at the END of
+  both tables" made every conflict a keep-both-sides resolution (delete the three markers, typecheck, commit).
+- **A Sonnet implementer delegated to a nested agent instead of doing the work.** The WP-D agent's first report said
+  "I've launched a background agent"; the work did land (a nested agent finished it), but the orchestrator could not
+  address that nested agent. Brief implementers with "do the work yourself; do not spawn agents".
+- **The strong-tier whole-branch review earned its seat again:** three HIGH findings none of the implementers or
+  their own tests caught — a `visibilitychange` listener that kept `router.refresh()`ing forever after the poll's
+  30-second bound; a one-click clarification option that would have sent against the LIVE round instead of its own
+  (a billed wrong-carrier reply) plus a double-click double-send; and a privacy page that claimed "no analytics"
+  while the trial cookie, the hashed IP and the usage counter exist. Verify HIGH findings against the source before
+  the fix wave (all three held) — and treat a privacy-page overclaim as the same bug class as a fabricated number.
+- **The browser pass found what no test could:** the two new public pages 307'd to `/login` (the proxy allowlist is
+  exact-match by design and nobody added them), the fourth landing step rendered "4 / 4. Publish" (the title carried
+  its own number, the grid adds one), and uncurated on-demand tables dumped raw CBS measure titles as "concepts"
+  ("Een zeer slecht moment, Zeer onwaarschijnlijk…"). Rule: any new route goes through `isPublicPath`'s test the
+  same commit; any generated list gets looked at with REAL data, not only the test fixture.
+- **A generated example question needs a grammar check per source field.** "Wat was de {everydayTerm}" is proven
+  for one measure and broken Dutch for most ("Wat was de inwoners"). Dutch articles are not in the registry; an
+  article-free frame ("Wat zijn de cijfers over {term} in {periode}?") is the honest general form.
+- **`preview_start` looks for `.claude/launch.json` in the session's ORIGINAL scratch workspace** after a
+  `change_directory`; spawning `next dev -p 3010` from Bash with the root `.env` loaded and `navigate`-ing to it
+  worked fine. `next dev` also rewrites `web/CLAUDE.md` (the agent-rules block) — `git checkout` it before committing.
+
 ## Session 96 (2026-09-11, owner present) — strategy / research session, docs only
 
 - **A research agent's "related" is not "theirs".** A Sonnet agent reported a co-founder's SVDJ Incubator project as

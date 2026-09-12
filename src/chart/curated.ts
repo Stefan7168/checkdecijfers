@@ -91,6 +91,12 @@ export interface CuratedChartDefinition {
   /** Button label for the PRIMARY reading's toggle button. Only meaningful
    * together with alternateReading. */
   primaryReadingLabel?: string;
+  /** #237/ADR 046: which chart-template "look" the public gallery mounts
+   * this story with (web/lib/chart-templates.ts's ChartTemplateId — kept as
+   * a bare string here so src/ never imports from web/lib, per the module
+   * boundary in ADR 001). Meaningless outside the gallery — ONTDEK_CHARTS
+   * entries never set it and the discovery-section renderer ignores it. */
+  look?: string;
 }
 
 /** The owner-approved discovery set (session 51): the four series named in
@@ -144,6 +150,113 @@ export const ONTDEK_CHARTS: CuratedChartDefinition[] = [
       label: 'oorspronkelijke, ongecorrigeerde cijfers',
       dims: { SeizoenEnWerkdagcorrectie: 'A042501' },
     },
+  },
+];
+
+// #237/ADR 046: the public gallery's ~10 stories (docs/decisions/046-public-
+// gallery-and-positioning-landing.md), built through the IDENTICAL pipeline
+// as ONTDEK_CHARTS above — same freshestForCanonical → StructuredIntent →
+// runQuery → buildChartSpec path, same skip-never-guess posture. Every entry
+// targets a canonical key whose table+grain are present in the committed
+// fixtures (tests/fixtures/cbs, SEED_TABLES) so the gate test in
+// tests/chart/curated.test.ts can pin all ten against the hermetic DB. Five
+// of these reuse ONTDEK_CHARTS definitions (by re-listing, not importing —
+// each needs its own `look`); ONTDEK_CHARTS itself stays byte-identical.
+export const GALLERY_STORIES: CuratedChartDefinition[] = [
+  {
+    slug: 'consumentenvertrouwen',
+    canonicalKey: 'consumer_confidence_seasonally_adjusted',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'newsroom',
+  },
+  {
+    slug: 'economische-groei',
+    canonicalKey: 'gdp_growth_yoy_volume',
+    grain: 'KW',
+    windowLength: 12,
+    look: 'presentation',
+  },
+  {
+    slug: 'inflatie',
+    canonicalKey: 'cpi_yearly_inflation',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'classic',
+  },
+  {
+    slug: 'huizenprijzen',
+    canonicalKey: 'average_existing_home_sale_price',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'minimal',
+  },
+  {
+    slug: 'werkloosheid',
+    canonicalKey: 'unemployment_rate_seasonally_adjusted',
+    grain: 'KW',
+    windowLength: 12,
+    look: 'social',
+  },
+  {
+    slug: 'faillissementen',
+    canonicalKey: 'bankruptcies_businesses',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'standard',
+  },
+  {
+    slug: 'producentenprijzen',
+    canonicalKey: 'producer_prices_yoy',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'newsroom',
+  },
+  {
+    slug: 'detailhandelsomzet',
+    canonicalKey: 'retail_turnover_yoy',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'presentation',
+  },
+  {
+    slug: 'supermarktomzet',
+    canonicalKey: 'supermarket_turnover_yoy',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'social',
+  },
+  {
+    slug: 'consumptie-huishoudens',
+    canonicalKey: 'household_consumption_growth',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'classic',
+  },
+  {
+    slug: 'werkloosheid-maandelijks',
+    canonicalKey: 'monthly_unemployment_seasonally_adjusted',
+    grain: 'MM',
+    windowLength: 24,
+    look: 'minimal',
+  },
+  {
+    // #237/ADR 046: population_on_1_january was tried here first but the
+    // table is regional (RegioS) with no default region pinned in the
+    // registry entry — a bare canonical query on it refuses
+    // needs_clarification (correctly: principle c, no silent region
+    // default), so it cannot serve as a curated (no-user-input) story
+    // without adding a registry-level default this WP does not own. Solar
+    // production is yearly like population, has a fully-pinned dims coordinate
+    // (no clarification needed), and gives the gallery its long-window
+    // yearly example. **Assumption**, mirrored in open-questions.md: a
+    // regional-default convention for population-style canonical keys is a
+    // separate, later decision, not implied by this substitution.
+    slug: 'zonnestroom',
+    canonicalKey: 'solar_electricity_production',
+    grain: 'JJ',
+    windowLength: 10,
+    look: 'standard',
   },
 ];
 
@@ -327,8 +440,11 @@ async function buildOne(
   };
 }
 
-export async function buildCuratedCharts(db: Db): Promise<CuratedChartsOutcome> {
-  const results = await Promise.all(ONTDEK_CHARTS.map((def) => buildOne(db, def)));
+export async function buildCuratedCharts(
+  db: Db,
+  definitions: CuratedChartDefinition[] = ONTDEK_CHARTS,
+): Promise<CuratedChartsOutcome> {
+  const results = await Promise.all(definitions.map((def) => buildOne(db, def)));
   const outcome: CuratedChartsOutcome = { charts: [], skipped: [], toggleSkipped: [] };
   for (const result of results) {
     if ('spec' in result) {

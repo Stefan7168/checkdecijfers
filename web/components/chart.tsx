@@ -1220,6 +1220,8 @@ export function ChartView({
   embedFooter,
   initialFormOverride,
   stage,
+  initialPresentation,
+  initialPanel,
 }: {
   spec: ChartSpec;
   /** Session 87 (purely presentational): drop the component's own card frame
@@ -1270,6 +1272,20 @@ export function ChartView({
    * `stage.overrides` instead of the reader's own per-chart tweaks. See
    * `ChartStageMode` above. */
   stage?: ChartStageMode;
+  /** #237/ADR 046: the chart's initial per-chart presentation overrides —
+   * e.g. a gallery story's template (`templateById(look).overrides`) — so it
+   * mounts already wearing that look. "Standaard" (`onReset`) still clears
+   * to `{}` exactly as before; only the SPEC-SWAP reset path (a fresh spec
+   * on this same mounted instance) falls back to this value instead of `{}`
+   * when it is provided. Omitted everywhere else in the app — behaviour
+   * there is unchanged. */
+  initialPresentation?: PresentationOverrides;
+  /** #237/ADR 046: mount with a panel already open. Only 'story' exists
+   * today — opens the Insights panel at step 0, as if the reader had
+   * clicked its trigger, so a gallery story shows its caption without an
+   * extra click. Applied once, on mount, never re-applied on a later spec
+   * swap. */
+  initialPanel?: 'story';
 }) {
   // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
   // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
@@ -1291,7 +1307,11 @@ export function ChartView({
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
   const initialForm = inStage ? spec.kind : spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
-  const [state, dispatch] = useReducer(chartViewReducer, initialForm, initialViewState);
+  const [state, dispatch] = useReducer(
+    chartViewReducer,
+    initialForm,
+    (form: ChartForm) => initialViewState(form, initialPresentation),
+  );
   // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
   // once, on mount — never on a later spec swap (that's the `specIdentity`
   // block further down, and `reset` there deliberately preserves state.form
@@ -1476,7 +1496,7 @@ export function ChartView({
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
-    dispatch({ type: 'reset', initialForm: state.form });
+    dispatch({ type: 'reset', initialForm: state.form, initialPresentation });
     setSmallMultiples(false);
     setAxisMode('shared');
     setNotes([]);
@@ -1580,8 +1600,10 @@ export function ChartView({
   // (useChartStyle()'s no-provider default) or an account with no saved
   // default both resolve exactly as before this task. Per-chart overrides
   // (`state.presentation`) still win over the account default (owner E is
-  // untouched: a spec swap clears `state.presentation`, not `accountStyle`,
-  // so "Standaard" and a fresh chart both fall back to THIS base, not stock).
+  // untouched: a spec swap resets `state.presentation` to `{}` — or to
+  // `initialPresentation` when the chart was given one, #237/ADR 046 — never
+  // to `accountStyle`, so "Standaard" and a fresh chart both fall back to
+  // THIS base, not stock).
   const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
@@ -1663,8 +1685,15 @@ export function ChartView({
   // an error state, never a loading placeholder that could read as "no
   // number" (R3): the panel is always complete from the first open.
   const [phrasedCaptions, setPhrasedCaptions] = useState<Map<string, string> | null>(null);
+  // R5.3 (journey WP-C): true once a `generateInsights` call comes back
+  // `{ ok: false, reason: 'unauthenticated' }` — an anonymous visitor
+  // opened Insights. Reset alongside `phrasedCaptions` on a findings change
+  // so a signed-out visitor who logs in and reopens a fresh chart doesn't
+  // keep seeing a stale login line.
+  const [insightsUnauthenticated, setInsightsUnauthenticated] = useState(false);
   useEffect(() => {
     setPhrasedCaptions(null);
+    setInsightsUnauthenticated(false);
   }, [findings]);
   const storySteps: StoryStep[] = useMemo(
     () =>
@@ -1991,7 +2020,16 @@ export function ChartView({
   const storyLockId = `${domId}-story-lock`;
   const storyLockedTitle = storyOpen ? t(chartLang, 'chart.story.controlsLocked') : undefined;
 
-  function openStory(): void {
+  // #237/ADR 046 fix-wave finding 1: `initialPanel="story"` auto-opens the
+  // panel on mount via THIS function — unconditionally counting that as a
+  // `story_open` would fire the site-wide `countChartStyleEvent` server
+  // action (an unauthenticated DB write, `web/app/usage-actions.ts`) once
+  // per gallery card per anonymous page view, inflating the owner's usage
+  // counter with opens nobody clicked and doing exactly the per-card
+  // server-action call this WP's zero-server-action-calls rule exists to
+  // avoid. `track` defaults to true (every OTHER call site — the trigger
+  // click, toggleStory — is a real reader action and keeps counting).
+  function openStory(opts?: { track?: boolean }): void {
     storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
     // setView BEFORE setOpenPanel: so the first render of the OPEN story
     // already shows the first step's own highlight/full-range view, never a
@@ -1999,7 +2037,7 @@ export function ChartView({
     dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
     setStoryIndex(0);
     setOpenPanel('story');
-    trackChartStyleEvent('story_open');
+    if (opts?.track !== false) trackChartStyleEvent('story_open');
     // Insights (session 94): fired once per findings set (the null check),
     // on open rather than eagerly on every render — cheapest-viable-
     // mechanism (a chart nobody opens the panel for never spends a token).
@@ -2012,11 +2050,44 @@ export function ChartView({
     // are translation-invariant (built from periodCode/kind/seriesKey, never
     // a label), so they still map back onto `findings` correctly either way.
     if (phrasedCaptions === null && findings.length > 0) {
-      void generateInsights(spec).then((result) => {
-        if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
-      });
+      // #237/ADR 046: on a public page (ChartStyleContext's no-provider
+      // default, `signedIn === false`) `generateInsights` would only ever
+      // come back `{ ok: false, reason: 'unauthenticated' }` — a wasted
+      // server-action round trip for a result already known ahead of time.
+      // A gallery page mounts ~10 charts, so unconditionally firing this
+      // would be ten anonymous server-action calls per page load, which is
+      // exactly the cost this WP's zero-server-action-calls rule for public
+      // pages exists to avoid. Set the same R5.3 honest line directly
+      // instead; the deterministic captions still render underneath either
+      // way.
+      if (!signedIn) {
+        setInsightsUnauthenticated(true);
+      } else {
+        void generateInsights(spec).then((result) => {
+          if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
+          // R5.3: an anonymous visitor gets one honest line in the panel
+          // instead of a silently-failed phrasing attempt — the
+          // deterministic captions still render underneath regardless.
+          else if (result.reason === 'unauthenticated') setInsightsUnauthenticated(true);
+        });
+      }
     }
   }
+
+  // #237/ADR 046: `initialPanel="story"` opens the Insights panel at step 0
+  // on mount, as if the reader had clicked its trigger — the gallery's own
+  // caption is this panel, never a separate copy. Guarded by a ref so it
+  // fires ONCE per mounted instance, never again on a later spec swap (a
+  // gallery page never swaps specs on a mounted ChartView, but the guard
+  // costs nothing and keeps this honest for any future reuse).
+  const openedInitialPanelRef = useRef(false);
+  useEffect(() => {
+    if (openedInitialPanelRef.current) return;
+    if (initialPanel !== 'story' || !storyAvailable) return;
+    openedInitialPanelRef.current = true;
+    openStory({ track: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPanel, storyAvailable]);
 
   function closeStory(): void {
     const snapshot = storySnapshot.current;
@@ -2067,11 +2138,15 @@ export function ChartView({
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
+  // R9.1 (#238): at 375px these tabs measured only 24px tall — well under
+  // the 44px minimum tap target. `min-h-11 sm:min-h-6` widens the tap target
+  // only below the `sm` breakpoint, so the desktop (1280px) control stays
+  // pixel-identical to before.
   const segmentTab = (active: boolean): string =>
-    'min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
+    'min-h-11 sm:min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
     (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
-    'min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
+    'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
       ? 'border-transparent bg-secondary text-foreground'
       : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground');
@@ -2785,6 +2860,7 @@ export function ChartView({
           idPrefix={domId}
           lang={chartLang}
           onPresent={!inStage ? openStage : undefined}
+          insightsUnauthenticated={insightsUnauthenticated}
         />
       ) : null}
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
@@ -2844,6 +2920,18 @@ export function ChartView({
           triggerId={styleTriggerId}
           frameImage={frameImage}
           onFrameImage={setFrameImage}
+          // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart
+          // tweaks yet opens the Style panel on the Sjablonen gallery
+          // instead of the raw Grafiek controls — `resolved.pristine`
+          // already tracks exactly that (the overrides object passed in is
+          // empty), evaluated once at the panel's own mount.
+          // Strong-tier review MEDIUM-1: `pristine` tracks ONLY the per-chart
+          // override, so a user with a SAVED ACCOUNT DEFAULT is pristine too
+          // and used to land on Sjablonen — never seeing "Mijn standaard is
+          // actief", which renders inside the Grafiek panel. A saved default
+          // IS a deliberate look already chosen, so the gallery is not what
+          // that reader needs first: open on Grafiek instead.
+          openTemplatesWhenPristine={accountStyle === null}
           onChange={(patch) => {
             // Final-review fix (Fix 5): ChartConfigPanel now refuses a
             // frame background/inset change UP FRONT (its own contrast

@@ -428,7 +428,24 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
                   }}
                   data-stage-step={i}
                   aria-current={i === index ? 'step' : undefined}
-                  className="flex min-h-[85vh] flex-col justify-center"
+                  // R9.1 (#238) fix round 2: `min-h-[85vh]` is right for the
+                  // lg two-column layout (chart pinned LEFT at full height,
+                  // captions scroll on the RIGHT — a full viewport height of
+                  // scroll room per step reads naturally there). Below `lg`
+                  // the chart is pinned at the TOP instead, capped at 50vh —
+                  // an 85vh caption block put the active caption's centre
+                  // ~42vh into a column that only has ~50vh of free space
+                  // under the pinned card, so the caption sat at the very
+                  // bottom edge, mostly below the fold, with a blank gap
+                  // above it. `min-h-[45dvh]` sizes the block to roughly the
+                  // free space left under the 50vh pinned card (`dvh` so a
+                  // mobile browser's address-bar chrome doesn't throw the
+                  // maths off); `justify-center` (unchanged) then centres
+                  // the caption within that space instead of within 85vh of
+                  // it. The nearest-centre scroll math (`chart-stage.ts`)
+                  // reads panel offsetTop/offsetHeight straight from the
+                  // DOM, so it needs no change for a shorter panel.
+                  className="flex min-h-[45dvh] flex-col justify-center lg:min-h-[85vh]"
                 >
                   <div className="max-w-md rounded-lg border border-border bg-card p-4" style={style}>
                     <p className="text-base font-semibold text-foreground">{s.title}</p>

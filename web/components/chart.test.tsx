@@ -51,6 +51,17 @@ vi.hoisted(() => {
   process.env.NEXT_PUBLIC_APP_URL = 'https://embed-test.example';
 });
 import { APP_URL } from './chart-embed-dialog.tsx';
+
+// R5.3 (journey WP-C): chart-insights-actions.ts is a Server Action module
+// too — mocked here so the anonymous-Insights login line can be exercised
+// deterministically, instead of relying on generateInsights's real
+// currentUserId() call throwing outside a request context (it does, but
+// that lands on the 'error' branch, not 'unauthenticated' — not what this
+// task is about).
+const chartInsightsActions = vi.hoisted(() => ({
+  generateInsights: vi.fn().mockResolvedValue({ ok: true, phrased: {} }),
+}));
+vi.mock('../app/chart-insights-actions.ts', () => chartInsightsActions);
 import {
   annotationMarkers,
   BAR_LABEL_MAX,
@@ -889,6 +900,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
     expect(yLine()).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     expect(xLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
     expect(yLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
@@ -1984,6 +1996,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
@@ -2015,6 +2028,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container } = render(<ChartView spec={s} />);
     const before = container.querySelectorAll('[data-point="value"]').length;
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     expect(container.querySelectorAll('[data-point="value"]').length).toBe(before);
     expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(before - 1);
@@ -2027,6 +2041,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     const flatBottom = Number(
@@ -2070,6 +2085,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container } = render(<ChartView spec={s} />);
     const beforeY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Y-as vanaf nul' }));
     const afterY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
     // The exact pixel is Recharts' own scale math; the meaningful, large
@@ -2129,6 +2145,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('a spec swap on the same mounted chart clears the presentation (owner E)', () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
     rerender(<ChartView spec={threePointSpec({ title: 'Ander' })} />);
@@ -2158,6 +2175,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // selector is ambiguous in this card now that the panel is mounted.
     const stock = container.querySelector('svg.recharts-surface')!.outerHTML;
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
     expect(container.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
@@ -2282,6 +2300,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('the SVG export carries the chosen stroke-width verbatim', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     const svg = container.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
     const markup = attributedSvgMarkup(svg, 'x', () => ({}));
@@ -2317,6 +2336,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
   it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
@@ -2407,6 +2427,7 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
     render(<ChartView spec={threePointSpec()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     expect(sink).toHaveBeenCalledTimes(1);
     expect(sink).toHaveBeenCalledWith('panel_open');
 
@@ -2445,9 +2466,37 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('button', { name: 'Standaard' })).toBeDisabled();
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+  });
+
+  // Strong-tier review MEDIUM-1: R5.2's "open on Sjablonen" gate read only
+  // `resolved.pristine`, which tracks the PER-CHART override — a user with a
+  // saved account default is pristine too, so they landed on the gallery and
+  // never saw "Mijn standaard is actief.", which renders inside the Grafiek
+  // panel. A saved default now suppresses the templates-first open.
+  it('MEDIUM-1: with a SAVED account default the panel opens on Grafiek (so the "Mijn standaard is actief." hint is visible), not on Sjablonen', () => {
+    render(
+      <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
+  });
+
+  it('MEDIUM-1: with NO saved account default a pristine chart still opens on Sjablonen (R5.2 unchanged)', () => {
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={threePointSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('clicking Dun then Standaard returns to 3 px — the account default, not stock', () => {
@@ -2457,6 +2506,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
@@ -2472,6 +2522,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
 
@@ -2551,6 +2602,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         </ChartStyleProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
 
       expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
@@ -3076,6 +3128,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     render(<ChartView spec={areaSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     const toggle = screen.getByRole('button', { name: 'Y-as vanaf nul' });
     expect(toggle).toBeDisabled();
     const reasonId = toggle.getAttribute('aria-describedby')!;
@@ -3104,6 +3157,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     const area = container.querySelector('.recharts-area-area');
     expect(area?.getAttribute('fill')).toBe(`url(#${gradient!.getAttribute('id')})`);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Verloop in het vlak' }));
     expect(container.querySelector('.recharts-area-area')?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
@@ -3219,6 +3273,18 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
   });
 
+  // R5.3 (journey WP-C): an anonymous visitor's generateInsights call comes
+  // back `{ ok: false, reason: 'unauthenticated' }` — the panel shows one
+  // honest, digit-free login line instead of pretending AI phrasing was
+  // attempted, and the deterministic step captions still render.
+  it('R5.3: shows a login-for-insights line when generateInsights reports unauthenticated', async () => {
+    chartInsightsActions.generateInsights.mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' });
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const link = await screen.findByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' });
+    expect(link).toHaveAttribute('href', '/login');
+  });
+
   it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
@@ -3275,6 +3341,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   it('the story ring never looks like the hollow provisional marker, even in "alleen voorlopige" mode', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // threePointSpec's first finding (chart-insights.ts) already rings "lo"
     // the moment the panel opens — no "Volgende" click needed (unlike the
@@ -3697,6 +3764,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     try {
       render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
       expect(events).toEqual(['panel_open', 'option_changed']);
     } finally {
@@ -4234,5 +4302,53 @@ describe('ChartView stage mode (ADR 044) — chrome-less, driven by a step', () 
     const { container } = render(<ChartView spec={s} stage={{ step: null, overrides: {} }} />);
     expect(container.querySelector('[role="tabpanel"]')).toBeNull();
     expect(container.querySelector('[role="tablist"]')).toBeNull();
+  });
+});
+
+// R9.1 (#238): the Lijn/Vlak/Staaf/Liggend/Tabel tabs measured only 24px
+// tall at 375px — under the 44px minimum tap target — while 1280px had to
+// stay pixel-identical. Pinned as a CSS-contract test (jsdom has no layout
+// engine to measure real pixels).
+describe('ChartView — phone tap targets (R9.1, #238)', () => {
+  it('gives each form tab a 44px tap target only below sm', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    for (const name of ['Lijn', 'Tabel']) {
+      const className = screen.getByRole('tab', { name }).className;
+      expect(className).toContain('min-h-11');
+      expect(className).toContain('sm:min-h-6');
+    }
+  });
+});
+
+// #237/ADR 046 (public gallery): initialPresentation/initialPanel let a
+// chart mount already wearing a look and with Insights open — without
+// either, a gallery of ~10 stories would need a click per chart to show
+// anything, and no way to give each one its own template.
+describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
+  it('initialPresentation is applied as the starting per-chart overrides', () => {
+    render(<ChartView spec={threePointSpec()} initialPresentation={{ markers: 'ends' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    // "Standaard" is disabled only on a pristine (no-override) panel — an
+    // initialPresentation is itself an override, so it must render enabled
+    // from the first open, without the reader having touched anything.
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeEnabled();
+  });
+
+  it('initialPanel="story" opens Insights at step 0 on mount, without a click', () => {
+    render(<ChartView spec={threePointSpec()} initialPanel="story" />);
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+  });
+
+  it('without initialPanel, Insights stays closed on mount (unchanged default)', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+  });
+
+  it('public-page rule: an anonymous visitor never triggers generateInsights, even with initialPanel="story"', async () => {
+    chartInsightsActions.generateInsights.mockClear();
+    render(<ChartView spec={threePointSpec()} initialPanel="story" />);
+    await screen.findByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' });
+    expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
   });
 });

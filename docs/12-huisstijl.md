@@ -56,7 +56,11 @@ and caveat lines and a green for "payment landed". Both light and dark values ar
   Squared chips: selected = filled `bg-secondary` + checkmark, unselected = outlined, "coming soon" = dashed
   + dimmed.
 - **Empty state:** a bare composer — no explanatory copy, no example-question chips (the #75 chips were removed
-  from the chat screen; the logged-out landing page keeps its own copy).
+  from the chat screen; the logged-out landing page keeps its own copy). **Since the journey programme (branch
+  `journey-programme`, session 97, ADR [045](decisions/045-journey-programme-first-five-minutes.md)): one COLLAPSED
+  "Welke bronnen zijn ingebouwd?" disclosure under the price line (opens a registry-built list with one example per
+  table, fill-don't-send) — the composer stays bare otherwise; the four inert attachment chips are one disabled
+  "Eigen data (binnenkort)" chip until uploads are on; a clarification's option chips SEND on one click.**
 - Structure is unchanged from ADR 033: sidebar / chat column / right-hand dock at ≥ lg with ≥ 1 visual.
 
 ## Charts (Recharts, the designed default — ADR 042)
