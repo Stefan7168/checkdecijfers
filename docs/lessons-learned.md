@@ -39,6 +39,14 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
   for a different reason (PR #14) and checked PR #9 alongside it "while there," not because anything flagged
   the drift on its own. Worth considering whether a future session should spot-check every open-PR SHA
   mentioned in STATUS.md's top block against live GitHub as a matter of routine, not only when convenient.
+- **Ran `npm run test:docs` AFTER pushing docs to `main`, not before — twice in a row, in this very wrap-up.**
+  Wrote several live `[PR #14](https://github.com/.../pull/14)` markdown links into `open-questions.md` and
+  `08-build-plan.md` while documenting this session's own PR #14 discovery — the exact violation of
+  [open-questions #132](open-questions.md) interim rule (i) this session had already cited from memory a few
+  paragraphs earlier in the same conversation. Pushed twice before catching it on a final self-audit pass, and
+  had to ship a third doc-only commit just to fix it. Since docs-only pushes skip CI (2026-09-09 rule), nothing
+  but the session's own diligence would ever have caught this — `test:docs` needs to run BEFORE every docs
+  push, not as a post-hoc check, precisely because CI cannot backstop it here.
 - **Running the full test suite (not just the files touched) caught a real regression a targeted grep missed.**
   After removing four i18n keys tied to the deleted composer chips, a grep for those exact key names across the
   repo found every affected test EXCEPT one: `workspace.test.tsx` asserted the OLD disabled "Bestand uploaden"
