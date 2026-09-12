@@ -14,20 +14,47 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-11, session 96, owner present).** Read
-[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md).
-Current state (all verified against GitHub / `main` / production on 2026-09-11): **the whole visual-upgrade
-programme is MERGED + LIVE** — PR #10 `ca5ba19`, PR #11 `696c1c3`, PR #12 `29aadde`, CI green on each, production
-answering (200). WP218 (PR #7, `05ec8ed`) live since 2026-09-09. **Still open: PR #9 (embed) — `MERGEABLE` / `CLEAN`
-at head `d427cdd`; Live re-render inside it stays gated closed until a creator-email lookup exists.** Owner steps
-unchanged: migrations 028 + 029 (`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, `EMBED_TOKEN_SECRET` on merge.
-**Next up = the Journey programme** ([08-build-plan.md § Journey programme](08-build-plan.md), [#238](open-questions.md)):
-phase 0 first (apply 028, the read-only usage report, decide the audit re-run), then the first-question bundle; the
-money-path item R3 needs an explicit owner go. **In parallel, the positioning thread** ([#237](open-questions.md)):
+**▶ NEXT SESSION STARTS HERE (written 2026-09-12, session 97 continued, owner present).** Read
+[session-briefs/2026-09-11-session-97-kickoff.md](session-briefs/2026-09-11-session-97-kickoff.md), then this
+correction: **the Journey programme is already built.** PR #14 ("Journey programme: phases 0, 1, 3, 4, 5", ADR
+[045](decisions/045-journey-programme-first-five-minutes.md), branch `journey-programme`, head `2c4ec80`) covers
+phases 0/1/3/4/5 of the plan below — CI green (`gate`: success), `mergeable_state: clean`, but **zero reviews, zero
+comments, sitting untouched since 2026-09-11T18:27 UTC.** Read its PR body first — it lists exactly what shipped,
+what still needs a real-browser walk (chat chips/captions, credits page, purchase poll, phone header, one-click
+options — all unit-tested only), and the three owner steps on merge (read+fill-in `/werkwijze` + `/privacy`, run
+`npm run db:migrate` for 028+029 then `npm run usage:report`, say go/no on R3). **Do not rebuild any of phases
+0/1/3/4/5 — review PR #14 first.** Phase 2 (R3, the money-path confirm-before-fetch chip) is deliberately excluded
+from it and still needs an explicit owner go before anyone builds it. Phase 6 (re-measure) is likely premature
+until real usage accumulates post-merge. **A separate branch `journey-programme-v1` (commit `cdda907`) exists with
+a redundant, independently-built copy of two of PR #14's phase-5 items (chip collapse, phone header) — a session-97
+duplicate-effort mistake, fully green (web 1425/1425, backend 2211/2211, typecheck, build) but superseded by PR
+#14's more thoroughly reviewed version. Safe to delete; not opened as a PR.** Also still open: **PR #9 (embed)** —
+`MERGEABLE` / `CLEAN` at head `6f80459` (corrected — the previous `d427cdd` was stale); Live re-render inside it
+stays gated closed until a creator-email lookup exists. Owner steps unchanged: migrations 028 + 029
+(`npm run db:migrate`), optional `BRANDFETCH_API_KEY`, `EMBED_TOKEN_SECRET` on merge. **In parallel, the positioning
+thread** ([#237](open-questions.md)):
 the ICP now lives in [01-product-vision.md](01-product-vision.md) (defined by the job; four segments in go-to-market
 order; direction = chat from official-statistics research to an embedded, sourced chart, CBS first, Eurostat second);
 it still needs its own ADR + roadmap re-phasing, the [#205](open-questions.md) Pro-plan brainstorm (live embeds =
 the Pro reason), and a landing page + public gallery as the cheapest test of the message.
+
+**▶ SESSION 97 (2026-09-11→12, owner present) — Journey-programme R8+R9 built, then discovered PR #14 already
+covers the whole programme; handed off.** Started the session-97 kickoff's mandate directly in-chat (R9: phone
+header moves nav links into the Account menu via the existing `useMediaQuery` hook; R8: the four inert composer
+chips collapse into one "Eigen data (binnenkort)" chip) — both fully verified (web 1425/1425, backend 2211/2211,
+typecheck ×2, real build) and pushed to `journey-programme-v1` (`cdda907`). Mid-flight, the owner said a *different*,
+already-further-along session ("Checkdecijfers.nl journey programme") should own this thread, and asked this
+session to wrap up and ping it to start. Checking live GitHub state (not memory) surfaced **PR #14**, already open
+since 2026-09-11T18:15, CI green, `mergeable_state: clean`, zero reviews — a full, reviewed build of Journey
+programme phases 0/1/3/4/5 (ADR 045) that already includes this session's own R8/R9 work, more thoroughly (Opus
+whole-branch review + partial real-browser pass). `journey-programme-v1` is therefore redundant and was NOT opened
+as a PR. `SendMessage` to that session failed both by title and by session ID (`session_01UUikD32UxTi2gieiZJWhzk`)
+— "not reachable" — it is a local/bridge-connected session `ListAgents` does not surface, not something this cloud
+session can message directly; the owner was told to switch to it themselves. Also corrected a stale PR #9 head SHA
+in this file (`d427cdd` → the real `6f80459`) caught only by re-checking GitHub instead of trusting the prior entry.
+Lesson: check for existing open PRs / sibling-session work on the SAME plan before starting autonomous build work,
+every time — see [lessons-learned.md](lessons-learned.md). Commit: `cdda907` (on `journey-programme-v1`, unmerged
+by design). Full entry: [status-archive.md](status-archive.md).
 
 **▶ SESSION 96 (2026-09-11, owner present) — STRATEGY + SANITY CHECK, DOCS ONLY (no code).** Competitive brief on
 LocalFocus + Flourish (two Sonnet research agents), a `/deep-research` run (105 agents; its verify + synthesize
