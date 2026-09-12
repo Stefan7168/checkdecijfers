@@ -6,6 +6,68 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 97 (2026-09-11→12, owner present) — built R8+R9, then found a sibling session had already
+built the whole Journey programme (PR #14) — a real duplicate-effort cost
+
+- **Check for existing open PRs and sibling-session work on the SAME plan before starting autonomous build
+  work — every time, not just when something feels off.** This session spent real effort independently
+  building two features (composer chip collapse, phone header) that a different session had already built,
+  reviewed (Opus whole-branch + real-browser pass), tested more thoroughly, and shipped in an open, green,
+  mergeable PR #14 six hours earlier. A one-line `mcp__github__list_pull_requests` check at the START of the
+  "Progres?" pivot — before writing any code — would have surfaced this immediately. The earlier lesson this
+  same session had already internalized ("I wrote a kickoff doc but never arranged for a session to execute
+  it") should have prompted the check "...or did some OTHER session already pick it up?", not just "let me do
+  it myself." Rule going forward: before starting ANY autonomous, multi-hour, plan-driven build task, check (a)
+  open PRs on the repo, (b) `docs/STATUS.md`'s own top block for anything more recent than what's in hand, and
+  (c) — if named sessions are ever mentioned by the user — whether one already exists via `list_sessions`
+  before assuming a fresh start is needed.
+- **`ListAgents` and `mcp__Claude_Code_Remote__list_sessions` are NOT the same visibility surface, and both are
+  needed.** `ListAgents` only found this session's own two subagents; it did not surface a real, `"connected"`,
+  idle sibling session on the account. `list_sessions` (with `mine: true`) found it immediately, by title,
+  alongside full metadata (git branch, timestamps, status). When a user refers to "the chat named X" and
+  `ListAgents` comes up empty, check `list_sessions` before concluding no such session exists.
+- **A session being listed as `"connection_status": "connected"` in `list_sessions` does NOT mean `SendMessage`
+  can reach it.** Two attempts — by exact title, then by raw session ID — both returned a clean "not reachable"
+  error. The likely cause: it is a `"bridge"`-type session (the owner's own local machine via Remote Control),
+  and `ListAgents`' cross-session reach explicitly requires "Remote Control... connected **here**" (in the
+  sending session), which was evidently not the case. Lesson: don't assume any session found via `list_sessions`
+  is pingable — attempt it, and if it fails, tell the user plainly rather than retrying variations on the
+  address (title case, partial ID, etc.) that are very unlikely to be the actual problem.
+- **A stale committed SHA in STATUS.md (PR #9: `d427cdd`) silently diverged from the live PR head (`6f80459`)**
+  and would have been repeated a third time if this session had trusted the doc instead of re-fetching the PR.
+  Exactly the Golden Rule's whole point — caught only because this session was already re-verifying PR state
+  for a different reason (PR #14) and checked PR #9 alongside it "while there," not because anything flagged
+  the drift on its own. Worth considering whether a future session should spot-check every open-PR SHA
+  mentioned in STATUS.md's top block against live GitHub as a matter of routine, not only when convenient.
+- **Ran `npm run test:docs` AFTER pushing docs to `main`, not before — twice in a row, in this very wrap-up.**
+  Wrote several live `[PR #14](https://github.com/.../pull/14)` markdown links into `open-questions.md` and
+  `08-build-plan.md` while documenting this session's own PR #14 discovery — the exact violation of
+  [open-questions #132](open-questions.md) interim rule (i) this session had already cited from memory a few
+  paragraphs earlier in the same conversation. Pushed twice before catching it on a final self-audit pass, and
+  had to ship a third doc-only commit just to fix it. Since docs-only pushes skip CI (2026-09-09 rule), nothing
+  but the session's own diligence would ever have caught this — `test:docs` needs to run BEFORE every docs
+  push, not as a post-hoc check, precisely because CI cannot backstop it here.
+- **Running the full test suite (not just the files touched) caught a real regression a targeted grep missed.**
+  After removing four i18n keys tied to the deleted composer chips, a grep for those exact key names across the
+  repo found every affected test EXCEPT one: `workspace.test.tsx` asserted the OLD disabled "Bestand uploaden"
+  button by its literal rendered string, with no i18n-key trace to grep for. Only running `npx vitest run` with
+  no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
+  test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
+  string rather than through the i18n key that produced it.
+- **A merge conflict on a still-open PR is discoverable only by re-checking `mergeable_state`, not by anything
+  pushed to `main` announcing it.** Two docs-only pushes to `main` (this session's own #238/#239 open-questions
+  rows, landed as part of the PR #14 write-up) collided with PR #13's own independent #239 row — both branches
+  picked the same "next free" row number off the same base, unaware of each other, and PR #13 silently flipped
+  from `mergeable_state: clean` to `dirty` with no notification beyond the next scheduled check-in noticing the
+  field had changed. Caught only because a check-in re-fetched `pull_request_read` (`get`) rather than trusting
+  the previous check-in's cached "still clean" claim. Resolved by keeping the row that already had the most
+  outside cross-references (row #236, ADR 044, STATUS.md's branch note all already pointed at PR #13's #239)
+  and renumbering the newer, less-referenced row to #240 instead — minimizing the blast radius of the rename.
+  Lesson: a numbered, append-only doc list (open-questions.md) is exactly the kind of shared mutable state that
+  two parallel branches will collide on without either side doing anything wrong; a merge-conflict resolution
+  should renumber the LESS cross-referenced row, and should grep for the OLD number across every doc (not just
+  the conflicted file) before considering the fix complete.
+
 ## Session 96 (continued) — 2026-09-11 — the multi-agent Story-stage visual-motion upgrade
 
 - **A first pass scoped for safety, not impact, drew direct owner pushback — and that was the correct
