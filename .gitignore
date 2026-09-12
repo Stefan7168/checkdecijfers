@@ -38,3 +38,4 @@ benchmark/validation-run.json
 # wasn't ignored — nothing had actually been committed, caught before it was).
 .superpowers/
 .playwright-mcp/
+scripts/dev-harness/session-cookie.json

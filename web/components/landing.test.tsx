@@ -3,15 +3,18 @@
 // ontdek.test.tsx precedent), never `<Landing/>` directly — jsdom's client
 // renderer cannot invoke an async function component itself.
 //
-// ontdek.tsx and trial.tsx are mocked out: both mount their OWN async
-// Server Component behind a Suspense boundary (OntdekCharts / TrialGate),
-// which is exactly the "render the pure part" carve-out the brief allows —
-// their own suites already cover that subtree in isolation.
+// gallery.tsx and trial.tsx are mocked out: both mount their OWN async
+// Server Component reads (GalleryTeaser / TrialGate), which is exactly the
+// "render the pure part" carve-out the brief allows — their own suites
+// already cover that subtree in isolation. #237/ADR 046: the landing's old
+// Ontdek section (ontdek.tsx) was replaced by the gallery teaser; ontdek.tsx
+// itself stays compiling (still used elsewhere) but is no longer mounted
+// here, so this suite no longer mocks it.
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock('./ontdek.tsx', () => ({ OntdekSectie: () => null }));
+vi.mock('./gallery.tsx', () => ({ GalleryTeaser: () => null }));
 vi.mock('./trial.tsx', () => ({ TrialSectie: () => null }));
 
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
@@ -40,6 +43,13 @@ describe('Landing — nl (default)', () => {
     expect(screen.getByText(/Het consumentenvertrouwen in Nederland was in juni 2026/)).toBeInTheDocument();
     expect(screen.getByText(/Bron: CBS StatLine, tabel 83693NED/)).toBeInTheDocument();
   });
+
+  it('renders the fourth "Publiceer" step', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await Landing());
+    expect(screen.getByRole('heading', { name: 'Publiceer' })).toBeInTheDocument();
+    expect(screen.getByText('Kies een sjabloon, download of embed — bron en datum reizen mee.')).toBeInTheDocument();
+  });
 });
 
 describe('Landing — en', () => {
@@ -64,4 +74,46 @@ describe('Landing — en', () => {
     expect(screen.getByText(/Het consumentenvertrouwen in Nederland was in juni 2026/)).toBeInTheDocument();
     expect(screen.queryByText(/Consumer confidence/)).toBeNull();
   });
+
+  // WP-B (journey programme phase 3 R5.4): the fourth "Publish" step joins
+  // the original three how-it-works steps.
+  it('renders the fourth "Publish" step alongside the original three', async () => {
+    getLang.mockResolvedValue('en');
+    render(await Landing());
+    expect(screen.getByRole('heading', { name: 'Publish' })).toBeInTheDocument();
+    expect(screen.getByText('Pick a template, download or embed — source and date travel with it.')).toBeInTheDocument();
+  });
+
 });
+
+describe('Landing — coverage disclosure (WP-E, R4)', () => {
+  it('renders the "Dit weten we nu" section with the example as plain text (no composer to fill)', async () => {
+    getLang.mockResolvedValue('nl');
+    render(
+      await Landing({
+        coverage: {
+          tables: [
+            {
+              id: '86141NED',
+              title: 'Consumentenprijzen; prijsindex 2015=100',
+              syncedOn: '2026-07-03',
+              concepts: ['inflatie (CPI)'],
+              example: 'Wat was de inflatie in 2025?',
+            },
+          ],
+        },
+      }),
+    );
+    expect(screen.getByRole('heading', { name: 'Dit weten we nu' })).toBeInTheDocument();
+    expect(screen.getByText('Welke bronnen zijn ingebouwd?')).toBeInTheDocument();
+    expect(screen.getByText('bijvoorbeeld: Wat was de inflatie in 2025?')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /inflatie/ })).toBeNull();
+  });
+
+  it('renders no coverage section when coverage is null', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await Landing());
+    expect(screen.queryByText('Welke bronnen zijn ingebouwd?')).toBeNull();
+  });
+});
+

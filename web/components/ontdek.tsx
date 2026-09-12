@@ -22,6 +22,10 @@ export async function OntdekCharts() {
   return (
     <section className="border-b border-border py-12">
       <h2 className="text-2xl text-foreground">{t(lang, 'ontdek.heading')}</h2>
+      {/* WP-B (journey programme phase 3 R5.4): naming the three verbs a
+          visitor can try right away on any chart — Opmaak/Format,
+          Inzichten/Insights, Presenteren/Present. */}
+      <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.ontdekCaption')}</p>
       <p className="mt-3 max-w-xl text-muted-foreground">{t(lang, 'ontdek.body')}</p>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {charts.map((chart) =>

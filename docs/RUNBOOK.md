@@ -1467,6 +1467,41 @@ The "Doorgaan met Google" button is **merged + deployed** (PR #23, merge `e8b09b
    - **The enabled-but-secret-missing signature:** clicking the button then yields a raw JSON 400 at the authorize URL — `{"code":400,"error_code":"validation_failed","msg":"Unsupported provider: missing OAuth secret"}`. That exact message means the toggle saved but the secret field did not — re-paste and Save.
 3. ✅ **Live verification — DONE + PASSED (2026-07-10, owner present, both halves, read-only SQL before AND after each login):** (a) Google login with the EXISTING magic-link e-mail → user count unchanged, that user's identities went `[email]` → `[email, google]`, signup grants unchanged (NO duplicate — the ADR 028 D2 linking verified); (b) fresh-e-mail Google login → exactly ONE new user (google-only identity) + exactly ONE +100 grant written in the same instant (the migration-005 trigger fired once). The fresh-e-mail login deliberately created a real account with a real grant — it doubles as the new-user path check. **Cosmetic residual → [#7](open-questions.md):** the Google consent screen shows the raw Supabase project domain until a custom auth domain is configured with the future product domain.
 
+## Usage report (WP-A, added session 2026-09-12)
+
+`npm run usage:report` — a read-only CLI that prints usage aggregates over the
+live database: the last 12 ISO weeks plus an all-time total for each metric.
+No writes, no LLM calls; it is a plain wrapper around `src/usage/report.ts`'s
+pure aggregation functions (unit-tested against PGlite in
+`tests/usage/report.test.ts`, same pattern as `scripts/gdpr-purge.ts`).
+
+```
+npm run usage:report            human-readable tables
+npm run usage:report -- --json  the same report as JSON
+npm run usage:report -- --help  usage text
+```
+
+What it prints: signups (`credit_transactions` `signup_grant` rows); distinct
+users with >=1 real question; the first-question outcome mix (answer /
+clarification / refusal-by-reason) versus later questions in the same
+history; the top refusal reasons ranked all-time; on-demand CBS-table fetches
+started/delivered/failed plus the credits spent on them; trial questions
+(anonymous visitors) — trial-visitors-who-later-signed-up is reported as "not
+measurable" because the trial's anonymous cookie id shares no join key with
+an account id, and adding one would mean tracking new personal data, which
+is out of scope for this report; 👍/👎 feedback counts; users active on >=2
+distinct calendar days; and users sitting at zero credit balance who never
+bought a pack.
+
+**GDPR posture (#14):** this report is **aggregates only** — counts and group
+labels (ISO week strings, refusal-reason codes, status enums). It never
+prints a question's text, an e-mail address, or a raw user/visitor id; the
+underlying SQL only ever selects `count(...)`/`count(distinct user_id)`-style
+aggregates, never a `user_id` (or any other identifier) column itself. The
+privacy test in `tests/usage/report.test.ts` pins this by asserting the
+JSON output contains no `@`, no seeded question text, and no seeded
+user/visitor UUID.
+
 ## Your recurring duties
 
 - **Sign-offs** at the gates in [STATUS.md](STATUS.md).
@@ -1532,6 +1567,51 @@ themselves are verified hermetically on the gate (`tests/chart/curated.test.ts`)
   (the pane has none → "Page not found"); a `file://` page opens as a "static snapshot" that none of the read
   tools can inspect while the pane is hidden; scrolled screenshots come back blank (session-68 lesson) — use
   a tall `resize_window` + one screenshot, and verify interactions through `javascript_tool` DOM queries.
+
+## Local real-browser harness — the whole product with NO secrets (added session 98, 2026-09-12, autonomous)
+
+**Why.** A remote (cloud) session has no `DATABASE_URL`, no Supabase keys and no LLM key, and an autonomous session
+may not touch production or spend LLM budget — yet "a real-browser pass before done" is a hard rule. Session 98 built
+a harness that runs the ENTIRE web app locally, logged-out and logged-in, questions included, from the repo alone:
+[scripts/dev-harness/](../scripts/dev-harness/README.md).
+
+**How it works (three stand-ins, all local, all fake, nothing to rotate).**
+1. **Database:** `pglite-preload.mjs` is a Node `--import` preload that restores the hermetic CBS fixture snapshot
+   (`tests/helpers/fixture-snapshot.ts` — the exact database CI tests against, 17 seed tables) into an in-process
+   PGlite and hands it to `web/lib/db.ts`'s own documented dev seam `global.__checkdecijfersDb` (the HMR cache;
+   read only when `NODE_ENV !== 'production'`). It also applies the pricing defaults and the signup grant for the
+   harness user. **No TLS is involved at all** — that matters: `web/next.config.ts` bakes the pinned Supabase CA into
+   the bundle, so a local Postgres behind a self-signed certificate CANNOT be made to work without editing the pinned
+   CA (tried first; correctly refused as a TLS weakening — don't go that way again).
+2. **Auth:** `auth-stub.mjs` (:9911) serves a JWKS + `/auth/v1/user` for one fixed user and writes the `@supabase/ssr`
+   session cookie (`sb-localhost-auth-token`, `base64-`+base64url JSON) that Playwright injects; `getClaims()` verifies
+   the RS256 token against the stub's JWKS. `/auth/v1/otp` answers 200 so the magic-link form's "sent" state renders.
+3. **LLM:** `llm-stub.mjs` (:9912) replays `tests/fixtures/llm/**` on `/v1/messages`, matched on (model, system,
+   question) with a question-only fallback. The Anthropic SDK is pointed at it via `ANTHROPIC_BASE_URL`. Consequence:
+   ONLY the benchmark questions (`benchmark/tasks.json`, B1–B20) answer end to end — B4 gives an answer WITH a chart,
+   B15/B16 a clarification with one-click options (`c-b16-utrecht` answers the Utrecht option), B17–B20 refuse. The
+   semantic check has no fixture for most answers → fail-open, as in production. Anything else returns a 400 the
+   pipeline turns into an honest error message — that is the harness, not a bug.
+
+**Recipe.** `node scripts/dev-harness/auth-stub.mjs & node scripts/dev-harness/llm-stub.mjs &`, then from `web/`:
+`source ../scripts/dev-harness/env.sh && npx next dev -p 3102`. Screenshots: `shot.mjs` (grows the viewport to the
+app's INNER scroll container — the body is `h-dvh`, so Playwright's `fullPage` alone captures one screen — and prints
+`scrollWidth` + console errors); `ask.mjs` types a question and screenshots the answer. Set `COOKIES=<session-cookie.json>`
+for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwright.
+
+**Gotchas found while building it.**
+- **Turbopack refuses a symlinked `node_modules`** ("Symlink [project]/web/node_modules is invalid, it points out of the
+  filesystem root"). The session-97 worktree recipe (symlink `node_modules`) is fine for vitest/tsc but NOT for
+  `next dev`/`next build` in a worktree — use a hard-linked copy instead: `cp -al <main>/web/node_modules <worktree>/web/node_modules`
+  (seconds, ~no disk).
+- **`next dev` and `next build` REWRITE `web/CLAUDE.md`** (Next 16 "agent rules" block; `AGENTS.md` is a symlink to it,
+  so the block lands in the committed file). `git checkout -- web/CLAUDE.md` before every commit; a future session may
+  set `agentRules: false` in `next.config.ts` to stop it at the source.
+- The black round "N" badge bottom-left of every dev screenshot is Next's dev-tools button, not the product. (The
+  session-97 note "the footer's Cijfers: prefix sits under the theme toggle at 375 px" was very likely this badge.)
+- Local Postgres 16 IS installed in the cloud container (`/usr/lib/postgresql/16/bin`, runs only as a non-root user)
+  and the fixture ingest runs fine against it (`src/db/migrate.ts` + `FixtureSource` + `syncTable`, ~30 s) — useful
+  for CLI scripts, useless for the web app because of the pinned-CA point above.
 
 ## The designed default chart look (ADR 042) — what changes on merge (written 2026-09-11, session 95, autonomous)
 

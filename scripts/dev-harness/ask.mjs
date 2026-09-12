@@ -1,0 +1,22 @@
+// usage: COOKIES=session-cookie.json node ask.mjs <base> "<question>" <out.png> [width]
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
+import { readFileSync } from 'node:fs';
+const [base, question, out, w = '375'] = process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const ctx = await browser.newContext({ viewport: { width: Number(w), height: 812 }, deviceScaleFactor: 2, isMobile: Number(w) < 500, hasTouch: Number(w) < 500, locale: 'nl-NL' });
+await ctx.addCookies(JSON.parse(readFileSync(process.env.COOKIES, 'utf8')).map((c) => ({ ...c, url: base })));
+await ctx.addCookies([{ name: 'lang', value: 'nl', url: base }]);
+const page = await ctx.newPage();
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+await page.goto(base + '/', { waitUntil: 'networkidle', timeout: 120000 });
+await page.getByPlaceholder('Stel een vraag…').fill(question);
+await page.getByRole('button', { name: 'Verstuur' }).click();
+await page.waitForTimeout(500);
+await page.waitForFunction(() => !document.body.innerText.includes('Bezig'), null, { timeout: 120000 }).catch(() => {});
+await page.waitForTimeout(1500);
+const text = await page.evaluate(() => document.body.innerText);
+await page.screenshot({ path: out, fullPage: false });
+console.log(text.slice(0, 1500));
+console.log(JSON.stringify({ errors }));
+await browser.close();

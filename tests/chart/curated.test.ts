@@ -8,9 +8,11 @@ import type { Db } from '../../src/db/types.ts';
 import {
   buildCuratedCharts,
   chartSpecSchema,
+  GALLERY_STORIES,
   ONTDEK_CHARTS,
   periodStepsBack,
   renderChartSvg,
+  scoreFindings,
 } from '../../src/chart/index.ts';
 import type { CuratedChartsOutcome } from '../../src/chart/index.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
@@ -25,6 +27,15 @@ const EXPECTED_TABLES: Record<string, string> = {
   inflatie: '86141NED',
   huizenprijzen: '85773NED',
   werkloosheid: '85224NED',
+  // #237/ADR 046, fix-wave finding 10: the seven GALLERY_STORIES-only slugs,
+  // pinned the same way as the five ONTDEK_CHARTS slugs above.
+  faillissementen: '82242NED',
+  producentenprijzen: '85770NED',
+  detailhandelsomzet: '85828NED',
+  supermarktomzet: '85828NED',
+  'consumptie-huishoudens': '85937NED',
+  'werkloosheid-maandelijks': '80590ned',
+  zonnestroom: '82610NED',
 };
 
 let db: Db;
@@ -261,5 +272,61 @@ describe('buildCuratedCharts — #170(4) event annotations', () => {
     const svg = renderChartSvg(withAnnotation);
     expect(svg).toContain('data-annotation="marker"');
     expect(svg).toContain('Testmarkering');
+  });
+});
+
+// #237/ADR 046: the public gallery's story set — a SEPARATE gate from
+// ONTDEK_CHARTS above (different definition list, same buildCuratedCharts
+// pipeline). Pins that every story builds against the fixtures with the
+// designed grain/window, carries R4 attribution, and yields at least one
+// deterministic Insights finding (scoreFindings) — the gallery's story text
+// is these findings, never invented copy.
+describe('GALLERY_STORIES (hermetic, fixture DB)', () => {
+  let galleryOutcome: CuratedChartsOutcome;
+
+  beforeAll(async () => {
+    galleryOutcome = await buildCuratedCharts(db, GALLERY_STORIES);
+  }, 120_000);
+
+  it('builds every gallery story — zero skips', () => {
+    expect(galleryOutcome.skipped).toEqual([]);
+    expect(galleryOutcome.charts).toHaveLength(GALLERY_STORIES.length);
+  });
+
+  it('every story matches its designed grain and window length', () => {
+    const bySlug = new Map(galleryOutcome.charts.map((c) => [c.slug, c]));
+    for (const def of GALLERY_STORIES) {
+      const chart = bySlug.get(def.slug);
+      expect(chart, `missing chart for ${def.slug}`).toBeDefined();
+      const points = chart!.spec.series[0]!.points;
+      expect(points.length).toBe(def.windowLength);
+      for (const point of points) {
+        const parsed = parsePeriodCode(point.periodCode);
+        expect(parsed?.grain).toBe(def.grain);
+      }
+    }
+  });
+
+  it('every story carries full R4 attribution and validates against the chart spec schema', () => {
+    for (const chart of galleryOutcome.charts) {
+      expect(() => chartSpecSchema.parse(chart.spec)).not.toThrow();
+      expect(chart.spec.attribution.tableId.length).toBeGreaterThan(0);
+      expect(chart.spec.attribution.syncedAt.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('every story resolves to its pinned table — a registry re-point is a conscious edit here', () => {
+    for (const chart of galleryOutcome.charts) {
+      const expected = EXPECTED_TABLES[chart.slug];
+      expect(expected, `EXPECTED_TABLES is missing an entry for gallery slug "${chart.slug}"`).toBeDefined();
+      expect(chart.spec.attribution.tableId).toBe(expected);
+    }
+  });
+
+  it('every story has at least 8 plotted points and yields at least one deterministic finding', () => {
+    for (const chart of galleryOutcome.charts) {
+      expect(chart.spec.series[0]!.points.length).toBeGreaterThanOrEqual(8);
+      expect(scoreFindings(chart.spec).length).toBeGreaterThanOrEqual(1);
+    }
   });
 });

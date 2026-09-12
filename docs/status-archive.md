@@ -1,5 +1,155 @@
 # STATUS archive — the session log
 
+**Session 98 (2026-09-12, AUTONOMOUS — the owner's session-98 kickoff "big-build variant": build on top of PR #14,
+merge nothing on the money path) — the public face + gallery (PR #18), the phone journey walked and fixed (PR #19),
+Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
+
+1. **Harness first.** The cloud container has no `DATABASE_URL`, no Supabase keys, no LLM key. Built
+   `scripts/dev-harness/`: a Node `--import` preload restores the CI fixture snapshot into PGlite and feeds
+   `web/lib/db.ts`'s dev seam (`global.__checkdecijfersDb`); a local Supabase-Auth stand-in (JWKS + `/auth/v1/user`,
+   one test user with the signup grant); an Anthropic-API stand-in replaying `tests/fixtures/llm/**`. Logged-in
+   workspace, a B4 answer with chart, a B16 clarification, a B18 refusal and the credits wall all walk locally with
+   zero LLM spend. A first attempt (local Postgres + self-signed cert appended to the pinned CA) was refused by the
+   tool's safety classifier as a TLS weakening and would not have worked anyway (`next.config.ts` bakes the CA).
+   RUNBOOK section written; Turbopack's symlinked-`node_modules` refusal (hard-link copies instead) and `next dev`
+   rewriting `web/CLAUDE.md` recorded.
+2. **PR #18 — the public face** (Sonnet implementer, Opus whole-branch review, one fix wave): `GALLERY_STORIES`
+   (12 stories over registry keys, built through the same `runQuery → buildChartSpec` pipeline, hermetic gate pins
+   slug → table, grain, window, attribution, ≥ 1 finding); the feed factory in `web/lib/ontdek.ts`; `ChartView`
+   props `initialPresentation` / `initialPanel`; `openStory` no longer fires `generateInsights` for anonymous
+   visitors and an auto-open never counts as a `story_open` event (the review's HIGH: twelve
+   `countChartStyleEvent` server-action DB writes per anonymous load); `/galerij` public + noindex + proxy test;
+   landing subtitle around the positioning sentence (no "embedded" overclaim), a gallery CTA, a compact three-story
+   teaser replacing Ontdek; question-style digit-free titles in nl + en; ADR 046; #237/#239/#240. Measured: root +
+   web tsc clean, test:chart 195, test:docs 11, benchmark 14/14 + 6/6 + 0 fabricated, web 100 files / 1517 tests,
+   real build; browser pass at 375 light/dark nl/en + 1280. CI `gate` success on `5340623`.
+3. **PR #19 — the phone journey** (Sonnet, resumed twice: the first pass was a slice, the second waved a real
+   defect through): the full step list walked at 375 px light + dark; fixed the wordmark wrap in the workspace
+   header, six sub-44 px tap targets (`sm`-only utilities, desktop pixel-identical), and the Present stage's phone
+   captions sitting below the fold (`min-h-[45dvh] lg:min-h-[85vh]`). Findings doc
+   `session-briefs/2026-09-12-phone-walk-findings.md`. Measured: tsc clean, test:docs 11, web 98 files / 1499
+   tests, real build. CI `gate` success on `16dc9fc`.
+4. **PR #15 — Live embeds unblocked** (Sonnet): design note (`session-briefs/2026-09-12-live-embed-creator-lookup-
+   design.md`) → `lookupUserEmail` reads `auth.users.email` through the existing pool, UUID-validated, fail-closed,
+   never logged; the embed route's Live gate uses it; ADR 041 as-built; RUNBOOK owner check. Measured: tsc clean,
+   test:billing 148, test:chart 208, test:docs 11, web 98 files / 1536 tests, real build. CI `gate` success on
+   `a5dafca`. Assumption: the pooler role can read `auth.users` (normally true on Supabase).
+5. **Docs line** (this branch, `claude/checkdecijfers-journey-programme-rvvipe`): merged `journey-programme` into the
+   session-97 docs line (five doc conflicts, both sides kept), the harness + RUNBOOK section, lessons (session 98),
+   STATUS top block, this entry, the session-99 kickoff. Not done: merging anything; applying 028/029; the trial
+   section in the harness; R3.
+6. **Model tiers:** session model planned, built the harness, reviewed every diff + screenshot, opened the PRs;
+   three Sonnet implementers; one Opus reviewer (10 findings, 1 HIGH, all fixed).
+
+**Session 97 (2026-09-11→12, owner present, continued after context compaction) — Journey-programme R8+R9 built
+in-chat, then superseded by discovering PR #14 already covers the whole programme; session wrapped and handed off.**
+
+1. **Resumed from a compacted summary** carrying the session-97 kickoff mandate (`docs/session-briefs/2026-09-11-session-97-kickoff.md`)
+   and an in-flight design for R9 (the phone-width header fix), mid-way through checking `web/vitest.setup.ts` for a
+   `matchMedia` mock before implementing.
+2. **R9 (phone header, decision 11):** found jsdom has no `matchMedia` by default (confirmed via `workspace.test.tsx`'s
+   own comment) and, better, that a reusable `useMediaQuery` hook already existed (`web/lib/use-media-query.ts`,
+   `useSyncExternalStore`-based, already proven for `workspace.tsx`'s `lg` dock split) — reused it directly rather
+   than writing a new `useNarrowHeader` hook as originally drafted pre-compaction. Below `(max-width: 639px)`,
+   "Credits kopen"/"Geschiedenis" move from `site-header.tsx`'s main row into the existing Account menu; only one
+   copy of each link ever renders, so accessible names stay unique. Added a narrow-viewport `describe` block to
+   `site-header.test.tsx` (matchMedia stub pattern copied from `workspace.test.tsx`); all 4 pre-existing tests kept
+   passing unmodified since the hook's own `matchMedia`-undefined guard defaults to "wide".
+3. **R8 (composer chip collapse, decision 10):** collapsed "Link toevoegen"/"Sheet koppelen"/"Data koppelen" and the
+   disabled "Bestand uploaden" placeholder in `chat.tsx` into one honest `CHIP_SOON`-styled "Eigen data (binnenkort)"
+   chip (new i18n keys `chat.ownData`/`chat.ownDataComingSoonTitle`, both languages), removing the now-dead
+   `linkRowOpen`/`linkUrl`/`linkComingSoon` state, the URL-entry demo form, three now-unused lucide icon imports, and
+   the i18n keys behind them. When `attachments` is present, "Bestand uploaden" alone still appears, live (ADR 037
+   D10 unchanged). Rewrote/removed the now-obsolete tests in `chat.test.tsx` (the "Add link" preview-row describe
+   block, the attachment-entry-points describe block's four-separate-chips assertions, the English chip-label test)
+   and fixed one more break in `workspace.test.tsx` that a keyword grep for the removed i18n keys had missed (a
+   plain-text `'Bestand uploaden'` assertion with no i18n-key trace) — caught only by running the FULL web suite,
+   not just the two files touched directly.
+4. **Verification (this session's own commit, before the PR#14 discovery):** web suite 1425/1425 (94 files), web
+   `tsc --noEmit` clean, root `tsc --noEmit` clean, `test:docs` 11/11, a real `next build` (had to `rm -rf .next`
+   first — a stale build-cache `validator.ts` referenced an earlier, already-deleted debug route from a prior
+   segment's real-browser testing pass), and — completed only after the redirect below — the full backend suite,
+   143 files / 2211 tests, all green (confirms the UI-only diff never touched `src/`). Local `eslint` errored with
+   a pre-existing `TypeError: Cannot read properties of undefined (reading 'Cjs')` from `typescript-eslint`/`eslint-config-next`
+   version mismatch — reproduced identically on a clean `origin/main` checkout (`git stash` + re-run), so NOT
+   introduced by this change; flagged as an environment issue for a maintenance session, not fixed here (CI's own
+   clean install is presumably unaffected — not independently confirmed this session).
+5. Committed `cdda907` ("Journey programme R8+R9: collapse inert composer chips, move nav links off narrow header")
+   and pushed to a new branch `journey-programme-v1` (branched fresh off `origin/main` at `31f258e`, confirmed no
+   drift via `git log --oneline origin/main` before branching).
+6. **The redirect.** Mid-flight (while dispatching two Explore agents to ground the next pieces, R4's sources
+   disclosure and R5's Sjablonen-tab-default + "Publiceer" landing step, and starting to design the Phase 0
+   usage-report script), the owner interjected: *"Actually, we should have continued in the chat named
+   checkdecijfers.nl journey programme kickoff"*, then *"Can you wraup up this session and ping that session to
+   start"* [sic]. Stopped all new-feature work immediately — no usage-report code had been written yet, nothing to
+   revert.
+7. **The PR #14 discovery.** `ListAgents` showed no session by that name (only this session's own two running
+   subagents) — per its own description, Remote Control sessions on other machines only surface "when Remote
+   Control is connected here," which it evidently was not for the target (a `"bridge"`-type session per its own
+   metadata, i.e. the owner's local machine, not this session's cloud sandbox). `mcp__Claude_Code_Remote__list_sessions`
+   (the account-wide listing, which `ListAgents` does not fully mirror) found it as `session_01UUikD32UxTi2gieiZJWhzk`,
+   titled "Checkdecijfers.nl journey programme", **idle since 2026-09-11T18:27:30Z** — almost the same instant
+   `mcp__github__list_pull_requests` showed **PR #14** ("Journey programme: phases 0, 1, 3, 4, 5 (ADR 045) — usage
+   report, first-question bundle, coverage disclosure, trust-page drafts, one-click options, phone header", branch
+   `journey-programme`, head `2c4ec80`) was last updated (18:27:12Z) — a 51-file, +3567/-264, 22-commit PR. Verified
+   independently rather than trusting the timestamp coincidence alone: `pull_request_read` (`get`) confirmed
+   `mergeable_state: "clean"`; `get_check_runs` confirmed the `gate` check `conclusion: "success"` (its `get_status`
+   equivalent showed zero legacy commit statuses — this repo's CI reports via GitHub Actions check-runs, not the
+   older statuses API, so the right call had to be the check-runs one); `get_reviews` and `get_comments` both
+   returned empty arrays — a fully green, mergeable, comprehensive PR that had been sitting completely unreviewed
+   for ~6 hours. PR #14's own body confirmed it already includes BOTH of this session's just-built R8 ("the four
+   inert chips collapse into one 'Eigen data (binnenkort)'") and R9 ("below sm 'Credits kopen' and 'Geschiedenis'
+   move into the Account menu") — built there with a full Opus whole-branch review and a partial real-browser pass,
+   strictly more thorough verification than this session gave its own copy.
+8. **Also caught in the same GitHub check:** `STATUS.md`'s recorded PR #9 head SHA (`d427cdd`) did not match the
+   live PR (`6f804592...`, i.e. `6f80459`) — corrected here rather than propagated forward; `mergeable_state: clean`
+   confirmed unchanged.
+9. **Resolution:** did not open a PR from `journey-programme-v1` — it would duplicate PR #14's more mature version;
+   the branch stays pushed but unused, flagged in STATUS.md as safe to delete. Attempted `SendMessage` to the idle
+   session twice — by its exact title and by its raw session ID — both returned `"No agent named '...' is
+   reachable."`; concluded it is a local/bridge-connected session outside this cloud session's cross-session
+   messaging reach (not listed by `ListAgents`, unlike this session's own subagents), and that the owner would need
+   to switch to it directly rather than have it pinged programmatically from here.
+10. **Docs updated in this same change:** this entry; `STATUS.md`'s top block (PR #14's existence/state as the
+    now-primary fact, the corrected PR #9 SHA, the `journey-programme-v1` redundancy note); `docs/open-questions.md`
+    #238; `docs/08-build-plan.md`'s Journey programme section; `docs/lessons-learned.md`.
+**Session 97 (2026-09-12, AUTONOMOUS — the owner's kickoff: "work autonomously for hours, multiple agents, big
+steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH `journey-programme`, PR FOR THE OWNER.**
+
+1. **Plan** ([superpowers/plans/2026-09-12-journey-programme.md](superpowers/plans/2026-09-12-journey-programme.md)):
+   five work packages in five parallel git worktrees (symlinked node_modules), Sonnet implementers, TDD per package,
+   then merged into one branch (four `messages.ts` tail conflicts, all keep-both). Phase 2 / R3 (the money path)
+   deliberately NOT built — explicit owner go required; the larger grant, the 028 apply and the audit re-run are
+   owner steps.
+2. **Built:** WP-A the read-only usage report (`npm run usage:report`, `src/usage/report.ts`, 11 tests, aggregates
+   only; trial→signup conversion honestly "not measurable"; fetch spend NET of refunds) — RUN ONCE against the live
+   DB: 4 signups, 2 users with questions, 4 fetches (3 delivered / 1 failed / 300 net credits), 7 `internal`
+   refusals all-time; WP-B `/werkwijze` + `/privacy` as visibly-marked drafts + footer links + the Ontdek caption + a
+   fourth landing step "Publiceer"; WP-C credits-page per-pack copy (server-side maths), the purchase poll (3 s ×
+   10, hidden-tab aware), the phone header (#214 → Account menu), Sjablonen as the opening tab for an untweaked
+   chart without a saved default, the anonymous Insights login line; WP-D chip captions by kind, the linked
+   insufficient-credits message naming the covering pack, the amber low-balance line (#69 rule), the 8-second
+   honest waiting line, one-click clarification options (revises #75 for one kind), the four inert chips → one
+   "Eigen data (binnenkort)"; WP-E the collapsed coverage disclosure (registry read, 30-min cache, one example per
+   table, Eurostat "binnenkort" only) under the price line and as "Dit weten we nu" on the landing.
+3. **Reviews:** an Opus whole-branch review (3 HIGH / 3 MEDIUM / 5 LOW — all fixed in one Opus fix wave: the poll
+   listener leak, the wrong-carrier one-click send + double-send latch, the privacy cookie overclaim, the saved-default
+   panel tab, the templates-tab gate, net fetch spend, metadata, locale euro format, the link's accessible name, the
+   D10 className pin) and an Opus scoped review of WP-E (the example-frame grammar, fixed by the session). `/code-review`
+   LOW: 0 findings.
+4. **Verification (measured):** full block on `8c3fc38` — root + web tsc clean; backend 144 files / 2222 tests;
+   benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated, GATE PASS; web 98 files / 1492 tests; `next build`
+   clean. After the three browser-pass commits (web-only): web tsc clean, web 98 files / 1492 tests, `next build`
+   clean on `ff8fbda`. Real browser (local `next dev -p 3010` against the live DB), light + dark, 1280 px + 375 px:
+   landing coverage section + example questions, both trust pages (after the proxy fix), footer links, Ontdek caption,
+   step 4, the Style panel opening on Templates, the anonymous Insights login line. NOT walked in a browser (needs a
+   login; covered by tests only): the chat chips/captions, the credits page, the purchase poll, the phone header.
+5. **Docs:** ADR 045 (new); open-questions #14(d), #75, #207, #211, #214, #238; build plan; 12-huisstijl; 04-architecture
+   row; RUNBOOK "Usage report"; the ADR 043 decision-6 note; lessons; this entry; the session-98 kickoff.
+6. **PR #14** (`journey-programme` → `main`): CI gate PASS (11m31s) on `633db3f`, `MERGEABLE`, verified with `gh pr checks 14`.
+7. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
+   kickoff and is open, MERGEABLE; `refusal (internal) 7` all-time in the report deserves a look (error log).
+
 **Session 96 (2026-09-11, owner present throughout — started as "how do we obliterate LocalFocus") — STRATEGY,
 ICP, RESEARCH, SANITY CHECK; DOCS ONLY, NO CODE.**
 

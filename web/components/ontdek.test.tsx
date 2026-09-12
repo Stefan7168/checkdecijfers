@@ -129,4 +129,14 @@ describe('OntdekCharts — en', () => {
     expect(screen.getByText('Discover the Netherlands in charts')).toBeInTheDocument();
     expect(screen.getByText(/Straight from our database of official CBS figures/)).toBeInTheDocument();
   });
+
+  // WP-B (journey programme phase 3 R5.4): the caption naming the three verbs.
+  it('renders the "try it now" caption naming Format/Insights/Present', async () => {
+    getLang.mockResolvedValue('en');
+    getOntdekCharts.mockResolvedValue([{ slug: 'inflatie', spec: spec('Jaarmutatie CPI', '86141NED') }]);
+    render(await OntdekCharts());
+    expect(
+      screen.getByText('Try it right away: Format (templates), Insights, Present — and download as PNG.'),
+    ).toBeInTheDocument();
+  });
 });

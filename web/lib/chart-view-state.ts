@@ -44,10 +44,32 @@ export type ChartViewAction =
    * would render three intermediate views. `form` and `presentation` are
    * deliberately not part of this: the story never touches them. */
   { type: 'setView'; view: Pick<ChartViewState, 'hiddenKeys' | 'highlightedKey' | 'periodRange'> }
-  | { type: 'reset'; initialForm: ChartForm };
+  | /** #237/ADR 046: `initialPresentation` is the gallery's `initialPresentation`
+     * prop (ChartView), so a spec-swap reset (a fresh chart mounted on the
+     * SAME instance) lands back on the STORY's look, not a bare stock chart —
+     * distinct from `onReset` ("Standaard"), which always clears to `{}`
+     * regardless of what the chart mounted with. Omitted (undefined) behaves
+     * exactly as before this field existed. */
+  { type: 'reset'; initialForm: ChartForm; initialPresentation?: PresentationOverrides };
 
-export function initialViewState(initialForm: ChartForm): ChartViewState {
-  return { form: initialForm, hiddenKeys: new Set(), highlightedKey: null, periodRange: null, presentation: {} };
+export function initialViewState(
+  initialForm: ChartForm,
+  initialPresentation: PresentationOverrides = {},
+): ChartViewState {
+  // Fix-wave finding 9: copy, never store the caller's object by reference —
+  // the gallery passes `templateById(look).overrides`, a SHARED module
+  // constant every card with the same look points at. `setPresentation`'s
+  // own merge (`{ ...state.presentation, ...patch }`) never mutates in
+  // place, so this was never actually corrupted by a later edit, but storing
+  // the reference directly was still one accidental in-place mutation away
+  // from silently reskinning every other chart sharing that template.
+  return {
+    form: initialForm,
+    hiddenKeys: new Set(),
+    highlightedKey: null,
+    periodRange: null,
+    presentation: { ...initialPresentation },
+  };
 }
 
 export function chartViewReducer(state: ChartViewState, action: ChartViewAction): ChartViewState {
@@ -84,7 +106,7 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
         periodRange: action.view.periodRange,
       };
     case 'reset':
-      return initialViewState(action.initialForm);
+      return initialViewState(action.initialForm, action.initialPresentation);
     default:
       return state;
   }

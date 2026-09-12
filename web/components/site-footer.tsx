@@ -9,11 +9,14 @@
 //     copy); the logged-out Landing still does. The footer can't know which
 //     of the two '/' renders, so it checks for the anchor target itself.
 //   - one gear-icon link to the internal /systeemoverzicht page (mirrors the
-//     gear-icon footer entry point on the owner's other project).
+//     gear-icon footer entry point on the owner's other project);
+//   - "Werkwijze" and "Privacy" links, always shown, next to the attribution
+//     sentence (WP-B, journey programme phase 4 R6 — /werkwijze and
+//     /privacy now exist, so #14(d)'s "no dead links" deferral is resolved).
 // Until 2026-09-03 the workspace ALSO rendered its own footer with the same
 // sentence directly above this one — two footer bars on the logged-in page
 // (owner report, session 71). The workspace footer is gone; this is the only
-// one. /privacy and /over still don't exist (#14(d)).
+// one.
 // Session 88 (#211) also appended the chat's pre-send pricing line here via a
 // PricingHintContext; session 90 moved that line back into the composer
 // (directly under the input, owner request) and removed the context — the
@@ -64,6 +67,14 @@ export function SiteFooter() {
             {t('footer.aboutLabel')}
           </a>
         ) : null}
+        {' · '}
+        <Link href="/werkwijze" className="underline underline-offset-2 hover:text-foreground">
+          {t('footer.werkwijzeLabel')}
+        </Link>
+        {' · '}
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+          {t('footer.privacyLabel')}
+        </Link>
       </span>
       <Link
         href="/systeemoverzicht"
