@@ -1190,13 +1190,25 @@ export function ChartConfigPanel({
         * own visible <label> dropped; the select already carried an
         * identical `aria-label`, so removing the label line loses no
         * accessible name). Previously the language select lived inside the
-        * Grafiek tabpanel only. */}
-      <div className="flex items-center justify-between gap-2">
+        * Grafiek tabpanel only.
+        *
+        * Two rows, not one (session 101 UI-review fix): this used to be a
+        * single `justify-between` row, which fit while the panel had the
+        * full card width to itself. Now that ChartEditModal confines it to a
+        * 22rem column, that one row (5 tabs + the language select + the
+        * Close button) measured 500px wide in Dutch against a 352px column —
+        * a confirmed, reproducible overflow that pushed the select and the
+        * Close button off the visible edge entirely (not merely redundant
+        * with the Dialog's own X, per the earlier code-review note, but
+        * unreachable by mouse). The tablist gets its own wrapping row; the
+        * select and Close button share a second row that never competes with
+        * it for width. */}
+      <div className="flex flex-col gap-2">
         <div
           role="tablist"
           aria-label={copy.tabsLabel}
           onKeyDown={onTabsKeyDown}
-          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+          className="inline-flex flex-wrap items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
           {tabButton('templates', copy.tabTemplates)}
           {tabButton('chart', copy.tabChart)}
@@ -1204,29 +1216,31 @@ export function ChartConfigPanel({
           {tabButton('font', copy.tabFont)}
           {tabButton('frame', copy.tabFrame)}
         </div>
-        {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
-          * preselects the chart's CURRENT language — `resolved.values.language
-          * ?? lang`, i.e. the per-chart override if one is set, else the
-          * resolved language the chart is actually showing right now (`lang`,
-          * which chart.tsx already computes as `pres.language ?? appLang`).
-          * Every pick is an explicit per-chart choice (`{ language: value }`);
-          * `null` — "follow the app" — remains the untouched default a chart
-          * starts with, it's just never produced by this control any more.
-          * Always applicable/never locked (chart-presentation.ts), so this
-          * renders identically on every form, table included. */}
-        <select
-          id={`${idPrefix}-style-language`}
-          aria-label={copy.languageLabel}
-          value={resolved.values.language ?? lang}
-          onChange={(e) => onChange({ language: e.target.value as Lang })}
-          className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
-        >
-          <option value="nl">{copy.languageNl}</option>
-          <option value="en">{copy.languageEn}</option>
-        </select>
-        <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
-          <X aria-hidden="true" />
-        </Button>
+        <div className="flex items-center justify-between gap-2">
+          {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
+            * preselects the chart's CURRENT language — `resolved.values.language
+            * ?? lang`, i.e. the per-chart override if one is set, else the
+            * resolved language the chart is actually showing right now (`lang`,
+            * which chart.tsx already computes as `pres.language ?? appLang`).
+            * Every pick is an explicit per-chart choice (`{ language: value }`);
+            * `null` — "follow the app" — remains the untouched default a chart
+            * starts with, it's just never produced by this control any more.
+            * Always applicable/never locked (chart-presentation.ts), so this
+            * renders identically on every form, table included. */}
+          <select
+            id={`${idPrefix}-style-language`}
+            aria-label={copy.languageLabel}
+            value={resolved.values.language ?? lang}
+            onChange={(e) => onChange({ language: e.target.value as Lang })}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            <option value="nl">{copy.languageNl}</option>
+            <option value="en">{copy.languageEn}</option>
+          </select>
+          <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
       {/* ADR 043: gated on `grid` (present for every non-table form) rather

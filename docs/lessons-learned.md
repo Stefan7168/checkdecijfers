@@ -52,6 +52,18 @@ on top.
   itself had a latent risk (a passive effect racing Base UI's own initial-focus handling) and that the fix's
   own doc comment now contradicted the actual call site (documented "pass sr-only for Style," the code passed
   a plain visible string) — both from changes made in direct response to round 1's own findings.
+- **A fully green jsdom suite proves the DOM is right, not that the layout fits — a fixed-width column is
+  exactly the gap.** All 326 chart.tsx/chart-config-panel.tsx tests kept passing straight through the header
+  row overflowing the modal's 22rem column by 100-150px in real Chromium (tabs + language select + close
+  button, pushed clean off the visible edge) — jsdom has no layout engine, so nothing in the suite could ever
+  have caught it, pass or fail. Only launching the real dev server with Playwright against the actual
+  pre-installed Chromium (a temporary, unrouted fixture page rendering `ChartView` directly, bypassing the
+  missing local `DATABASE_URL`) surfaced it, and only measuring `scrollWidth` vs `clientWidth` in-browser
+  (not eyeballing a screenshot) turned "looks a bit tight" into a confirmed, quantified bug. Same lesson as
+  this project's standing "test in a browser for UI changes" rule, sharpened by a concrete case: moving
+  existing, previously-fine chrome into a NEWLY narrow container is a specific, repeatable way for jsdom
+  green to mean nothing, worth a real-browser look every time regardless of how small the surrounding diff
+  looks.
 
 ## Session 101 (2026-09-13, owner present, a SECOND concurrent session-101 thread) — composer chip revert + footer fix
 
