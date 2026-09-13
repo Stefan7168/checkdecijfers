@@ -59,8 +59,12 @@ and caveat lines and a green for "payment landed". Both light and dark values ar
   from the chat screen; the logged-out landing page keeps its own copy). **Since the journey programme (branch
   `journey-programme`, session 97, ADR [045](decisions/045-journey-programme-first-five-minutes.md)): one COLLAPSED
   "Welke bronnen zijn ingebouwd?" disclosure under the price line (opens a registry-built list with one example per
-  table, fill-don't-send) — the composer stays bare otherwise; the four inert attachment chips are one disabled
-  "Eigen data (binnenkort)" chip until uploads are on; a clarification's option chips SEND on one click.**
+  table, fill-don't-send) — the composer stays bare otherwise; a clarification's option chips SEND on one click.**
+  **Reverted session 101 (2026-09-13, owner present): ADR 045 decision 4's collapse of the four
+  inert attachment chips into one "Eigen data (binnenkort)" chip is undone — the owner read the single chip as
+  things having quietly disappeared, not as a simplification. The composer is back to the four separate chips
+  the first bullet above describes ("Add link", "Upload file", "Link with sheet", "Connect database"); that
+  bullet was accurate the whole time and needed no change. See ADR 045's as-built note on decision 4.**
 - Structure is unchanged from ADR 033: sidebar / chat column / right-hand dock at ≥ lg with ≥ 1 visual.
 
 ## Charts (Recharts, the designed default — ADR 042)

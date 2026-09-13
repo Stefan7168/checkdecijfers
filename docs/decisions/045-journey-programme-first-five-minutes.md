@@ -26,9 +26,17 @@ ADR records the decisions that REVISE an earlier owner decision, so the next ses
    intent holds. Each clarification message carries its own carrier snapshot; the click sends the byte-identical label
    against THAT round (never the live one), a send latch prevents double sends, and a resumed clarification (no
    carrier) falls back to fill-don't-send. Answer follow-ups and refusal retry chips keep fill-don't-send.
-4. **The four inert composer chips collapse into one disabled "Eigen data (binnenkort)"** (R8) until attachments are
+4. ~~**The four inert composer chips collapse into one disabled "Eigen data (binnenkort)"** (R8) until attachments are
    on — then only the live "Bestand uploaden" shows. This knowingly reverses the session-86 demo-link and session-90
-   sheet/database chip requests (decision 10, working default); the demo URL-row handler stays in the file, unreachable.
+   sheet/database chip requests (decision 10, working default); the demo URL-row handler stays in the file, unreachable.~~
+   **Reverted, session 101 (2026-09-13, owner present):** the owner saw the single collapsed chip live and reported
+   it as things having quietly disappeared ("the 'Connect with CSV sheet' button and the other button are gone"),
+   not as a simplification — explicit instruction: "Reverse how that ui was before." The composer is back to four
+   separate chips ("Link toevoegen", "Bestand uploaden", "Sheet koppelen", "Data koppelen"), byte-identical to the
+   pre-R8 code this decision replaced; the demo URL-row handler is reachable again via "Link toevoegen". This is a
+   live product-feel judgment call the owner is entitled to override by direct observation — not a data-integrity
+   or invariant question, so no new ADR was needed to reverse it; this note is the as-built record. See
+   [12-huisstijl.md](../12-huisstijl.md) composer section and [08-build-plan.md](../08-build-plan.md) decision 10.
 5. **The low-balance warning lives on the pre-send price line** (R2.3): amber and "Genoeg voor nog één vraag" when
    `simple ≤ balance < 2 × simple` — the [#69](../open-questions.md) rule, moved from the never-rendered dashboard
    panel to where the reader already looks. The client compares the server's two numbers; it computes nothing ([#68](../open-questions.md)).

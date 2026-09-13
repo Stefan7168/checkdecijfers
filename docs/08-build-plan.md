@@ -713,7 +713,7 @@ pre-existing #224-229 range).
 | 7 | Style panel opens on Sjablonen for an untweaked chart | **yes** | judgment call, no counter data yet |
 | 8 | Fourth landing step "Publiceer" + Ontdek caption | **now, not with the tagline** | "from research to embedded chart" is the direction |
 | 9 | Review privacy + methodology pages | **owner reads; session drafts from the docs** | legal read on the privacy text |
-| 10 | Collapse the four inert composer chips into one "Eigen data (binnenkort)" | **yes** | reverses the session-86/90 chip requests knowingly |
+| 10 | Collapse the four inert composer chips into one "Eigen data (binnenkort)" | **yes, then reverted session 101** | reverses the session-86/90 chip requests knowingly — owner then saw the single chip live, read it as things vanishing, and asked for the four chips back (ADR 045 decision 4 as-built note) |
 | 11 | Phone header | **move "Credits kopen" + "Geschiedenis" into the Account menu** | cheapest |
 | 12 | Bigger journey items stay in later phases | **yes, one exception: a public gallery of ~10 real embedded stories moves forward** | the cheapest test of the new message ([#237](open-questions.md)) |
 

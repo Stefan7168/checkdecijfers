@@ -13,6 +13,16 @@
 //   - "Werkwijze" and "Privacy" links, always shown, next to the attribution
 //     sentence (WP-B, journey programme phase 4 R6 — /werkwijze and
 //     /privacy now exist, so #14(d)'s "no dead links" deferral is resolved).
+// Owner report (session 101): on a phone-width viewport, the attribution
+// sentence already wraps to 2 lines on its own (pre-existing, not new), and
+// adding the home-page "Over dit project" anchor on top of that pushed the
+// homepage footer to 3 lines — visibly "too high" against the chat/composer
+// below it. The anchor link collapses below `sm` (`hidden sm:inline`, text
+// stays in the DOM so the byte-pinned tests are unaffected): it is the one
+// homepage-only convenience jump to a section the visitor already scrolled
+// past to reach the footer, not a distinct destination, so hiding it on
+// mobile doesn't reintroduce a dead link (D6) the way dropping Werkwijze/
+// Privacy would.
 // Until 2026-09-03 the workspace ALSO rendered its own footer with the same
 // sentence directly above this one — two footer bars on the logged-in page
 // (owner report, session 71). The workspace footer is gone; this is the only
@@ -61,11 +71,14 @@ export function SiteFooter() {
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
       <span>
-        {showAbout ? FOOTER_PREFIX : FOOTER_ATTRIBUTION}
+        {FOOTER_ATTRIBUTION}
         {showAbout ? (
-          <a href={`#${ABOUT_ANCHOR_ID}`} className="underline underline-offset-2 hover:text-foreground">
-            {t('footer.aboutLabel')}
-          </a>
+          <span className="hidden sm:inline">
+            {' · '}
+            <a href={`#${ABOUT_ANCHOR_ID}`} className="underline underline-offset-2 hover:text-foreground">
+              {t('footer.aboutLabel')}
+            </a>
+          </span>
         ) : null}
         {' · '}
         <Link href="/werkwijze" className="underline underline-offset-2 hover:text-foreground">

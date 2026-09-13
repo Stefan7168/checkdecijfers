@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Copy, Database, Download, Globe, PanelRight, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
 import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -1402,19 +1402,43 @@ export function Chat({
           </button>
         </>
       ) : null}
-      {/* R8 (#211, WP-D): the four separate entry points ("Link toevoegen",
-        * "Bestand uploaden", "Sheet koppelen", "Data koppelen" — #201/#202,
-        * session 83/86/90) collapse into ONE disabled "Eigen data
-        * (binnenkort)" chip, since none of the four had a real backend
-        * except the ADR 037 D10 upload exception — a wall of four
-        * indistinguishable "coming soon" chips was choice-noise, not
-        * honesty. When `attachments` IS present the live "Bestand
-        * uploaden" chip shows alone instead (unchanged behavior, ADR 037
-        * D10's presence-driven exception). The demo URL row (session 86,
-        * `linkRowOpen`/`handleLinkSubmit`) has no entry point left in the
-        * UI — its state/handler stay in the file, dead but restorable in
-        * one line, rather than deleted, per that session's own "visible for
-        * demos" intent; `linkComingSoon` can likewise never become true now. */}
+      {/* #201/#202 (open-questions, session 83 scoping): attachment entry
+        * points. "Databron verbinden" stays disabled regardless of
+        * `attachments` (D5: OAuth data sources have no backend at all yet)
+        * — disabled with an explanatory title rather than removed, so the
+        * button honestly signals "coming soon" instead of silently doing
+        * nothing or pretending to work (principle c: never fake it).
+        * "Link toevoegen" (session 86, owner request) is clickable — it
+        * opens the inline URL row below, so the intended flow is visible
+        * for demos, but url_html ingest itself still has no backend (WP202b,
+        * not built): submitting shows the same honest "not yet" message
+        * rather than fetching anything. "Bestand uploaden" is the ADR 037
+        * D10 presence-driven exception: enabled ONLY when `attachments` is
+        * present; byte-identical to today (same disabled button, same
+        * title, no file input in the DOM at all) when it is absent.
+        * Restored (owner request, 2026-09-13) after the R8 collapse into a
+        * single "Eigen data (binnenkort)" chip read as things having
+        * quietly disappeared rather than as an honest simplification. */}
+        <button
+          type="button"
+          onClick={() => {
+            // Closing the row also clears its transient state, so
+            // reopening it always starts fresh instead of showing a
+            // "not available yet" message with no form in sight.
+            setLinkRowOpen((open) => {
+              if (open) {
+                setLinkUrl('');
+                setLinkComingSoon(false);
+              }
+              return !open;
+            });
+          }}
+          aria-expanded={linkRowOpen}
+          className={CHIP_OFF}
+        >
+          <Link2 aria-hidden="true" className="size-3.5" />
+          {t('chat.addLink')}
+        </button>
         {attachments ? (
           <>
             <input
@@ -1438,13 +1462,39 @@ export function Chat({
           <button
             type="button"
             disabled
-            title={t('chat.ownDataComingSoonTitle')}
+            title={t('chat.uploadFileComingSoonTitle')}
             className={CHIP_SOON}
           >
-            <Plug aria-hidden="true" className="size-3.5" />
-            {t('chat.ownDataComingSoon')}
+            <Paperclip aria-hidden="true" className="size-3.5" />
+            {t('chat.uploadFile')}
           </button>
         )}
+        {/* Session 90 (owner request, in chat): a "Link with sheet" entry
+          * point BEFORE "Connect database" — a spreadsheet link (Google
+          * Sheets and the like) is a different, lighter ask than a database
+          * connection, so it gets its own chip. Same honest "coming soon"
+          * treatment as its neighbour: disabled with an explanatory title,
+          * no backend yet (WP202b territory). "Connect database"'s example
+          * moved from Google Sheets to a real database now that sheets have
+          * their own chip. */}
+        <button
+          type="button"
+          disabled
+          title={t('chat.linkWithSheetComingSoonTitle')}
+          className={CHIP_SOON}
+        >
+          <FileSpreadsheet aria-hidden="true" className="size-3.5" />
+          {t('chat.linkWithSheet')}
+        </button>
+        <button
+          type="button"
+          disabled
+          title={t('chat.connectDatabaseComingSoonTitle')}
+          className={CHIP_SOON}
+        >
+          <Plug aria-hidden="true" className="size-3.5" />
+          {t('chat.connectDatabase')}
+        </button>
       </div>
       {nothingSelected ? (
         <p className="text-xs text-destructive">{t('chat.nothingSelectedHint')}</p>

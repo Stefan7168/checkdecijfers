@@ -709,12 +709,6 @@ const nl = {
   // R11: an honest elapsed-time reassurance line — real wait time, never a
   // fabricated pipeline stage (#211 addendum) — after 8 real seconds of busy.
   'chat.slowWaitNotice': 'Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.',
-  // R8: the collapsed "own data" entry point when `attachments` is off —
-  // replaces the four separate Link/Sheet/Database/Upload chips with one
-  // honest disabled chip (session 86's per-chip titles retired with it).
-  'chat.ownDataComingSoon': 'Eigen data (binnenkort)',
-  'chat.ownDataComingSoonTitle':
-    'Binnenkort beschikbaar: koppel eigen data (bestand, spreadsheet of database)',
   // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
   // R4: the coverage disclosure — collapsed by default, one row per served
   // CBS table (title, MEASURED sync date, concepts, an optional example
@@ -1338,8 +1332,6 @@ const en: Messages = {
   'chat.insufficientCreditsBuyGeneric': 'Buy credits via',
   'chat.lowBalanceSuffix': ' Enough for one more question.',
   'chat.slowWaitNotice': 'This is taking a little longer than usual; we are still checking the answer.',
-  'chat.ownDataComingSoon': 'Own data (coming soon)',
-  'chat.ownDataComingSoonTitle': 'Coming soon: connect your own data (file, spreadsheet or database)',
   // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
   'coverage.summary': 'Which sources are built in?',
   'coverage.cbsHeading': 'CBS',
