@@ -2,7 +2,7 @@
 // reason/delta-sign CHECK, signup-grant idempotency, and the idempotent
 // debit/compensate primitives gate.ts relies on.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   compensate,
   debitDataset,
@@ -19,13 +19,60 @@ import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
+// Perf (docs/session-briefs/2026-09-13-build-performance-diagnosis.md): this
+// file used to call createTestDb() (fresh PGlite boot, ~2.4-3.7s) inside
+// EVERY one of its ~58 it()s via withDb(). Booting is by far the expensive
+// part (migration replay itself is nearly free); resetting an already-booted
+// instance with TRUNCATE costs ~30-45ms. So the file now boots ONE PGlite
+// instance for the whole run (beforeAll/afterAll) and withDb() below no
+// longer creates/closes a db per test — it just hands every test the shared
+// instance, freshly truncated by beforeEach. Every it() body is unchanged.
+//
+// Truncate list, and why:
+//  - credit_transactions: every test in this file writes here (debits,
+//    compensations, grants, raw CHECK-violation inserts) — must be emptied
+//    every test. No migration seed data, so TRUNCATE reproduces a fresh
+//    migrated table exactly.
+//  - action_class_prices / credit_packs: not migration-seeded either (only
+//    populated by applyPricingDefaults(), which some tests call and others
+//    deliberately don't — e.g. "fails loudly ... when pricing has never been
+//    applied" relies on action_class_prices being genuinely empty). TRUNCATE
+//    to empty matches the fresh-migration state exactly; no reseed needed.
+//    credit_packs is included because applyPricingDefaults() writes it too,
+//    even though no test in this file reads it back.
+//  - signup_grant_config: THE ONE EXCEPTION. Migration 005 seeds this
+//    singleton table with one row (credits=100) as part of table creation —
+//    a fresh migrated db is NOT the same as an empty signup_grant_config.
+//    Several tests here mutate its `credits` value with a raw UPDATE (never
+//    INSERT/DELETE) and other tests rely on the original default of 100
+//    (e.g. "grants the configured signup amount exactly once"). So this
+//    table is truncated like the others AND explicitly reseeded with the
+//    same row migration 005 inserts, keeping every test's starting state
+//    identical to a freshly-migrated database.
+async function resetDb(db: Db): Promise<void> {
+  await db.query(
+    'truncate table credit_transactions, action_class_prices, credit_packs, signup_grant_config restart identity cascade',
+  );
+  await db.query('insert into signup_grant_config (credits) values (100)');
+}
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 describe('credit_transactions — append-only, structurally enforced', () => {

@@ -1,3 +1,5 @@
+One route is intentionally public with no session: `/embed/[token]` serves a shared, read-only chart page for third-party embedding (ADR [041](../docs/decisions/041-public-embed-pages.md)) — see `docs/RUNBOOK.md`'s Embed go-live section for its env vars.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

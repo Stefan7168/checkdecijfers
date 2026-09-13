@@ -43,10 +43,11 @@
 # charts against the frozen key, spec determinism, renderer provenance); since
 # WP10 R8 is real and the invariant suite carries ZERO todos — all eleven
 # invariants are tested.
-# WP12 (ADR 018): the chat UI (`web/`) adds two hermetic gate steps — its own
-# typecheck and its own component test suite (jsdom, no network) — plus a
-# second job, `deploy`, gated on `gate` via `needs:` so a red gate structurally
-# blocks the deploy. `deploy` runs only on a direct push to main (this repo has
+# WP12 (ADR 018): the chat UI (`web/`) adds two hermetic steps to the `web`
+# job below — its own typecheck and its own component test suite (jsdom, no
+# network) — plus a third job, `deploy`, gated on `[backend, web]` via
+# `needs:` so a red run on either structurally blocks the deploy. `deploy`
+# runs only on a direct push to main (this repo has
 # no PRs/branch protection — CLAUDE.md, deliberate — so a `needs:` dependency
 # is the only real deploy-blocking mechanism available). It is intentionally
 # NOT hermetic: it calls the real Vercel CLI/API. The Vercel project has no
@@ -59,11 +60,28 @@
 # deployed Next.js app's node_modules are self-contained, causing two failed
 # real deploy attempts before this fix. `web/backend` (a symlink to `../src`)
 # is how it still reaches backend source code with zero package-level coupling.
-# This workflow's `gate` job is hermetic: no secrets, no network beyond npm —
-# which is why the ingestion tests run on PGlite (ADR 009), never against
-# Supabase, and why `gate` runs `web`'s typecheck/tests but not `next build`
-# (which fetches fonts over the network at build time; that only happens
-# inside `deploy`'s `vercel build`, downstream of a green gate).
+# The `backend` and `web` jobs are both hermetic: no secrets, no network
+# beyond npm — which is why the ingestion tests run on PGlite (ADR 009), never
+# against Supabase, and why `web` runs its own typecheck/tests but not
+# `next build` (which fetches fonts over the network at build time; that only
+# happens inside `deploy`'s `vercel build`, downstream of a green run).
+# Sharding addendum (session 101, 2026-09-13, open-questions #245): the eleven
+# domain steps above used to run as sequential named steps inside one `gate`
+# job — a real diagnosis (docs/session-briefs/2026-09-13-build-performance-diagnosis.md)
+# found this bounded the gate by the SUM of its slowest files rather than
+# letting them share the runner's cores, and that `tests/attachments`/
+# `tests/usage` had no CI step at all. `gate` is now `backend` (a 3-way
+# `vitest run --shard=N/3` matrix over every file under tests/ — including the
+# two previously-uncovered directories, for free) plus a separate parallel
+# `web` job; the benchmark run+score pair rides on shard 1 rather than its own
+# step, since it doesn't depend on the other domain suites having run first in
+# the same job. Every check above still runs on every push/PR, in the same
+# process (`vitest run`), just distributed instead of sequential — nothing is
+# skipped. Trade-off accepted per the diagnosis: the Actions UI no longer shows
+# one named step per domain (mitigated with `--reporter=github-actions` for
+# inline failure annotations); if a shard's timing skews badly (today's
+# hash-based split, not yet duration-balanced — Tier 3-B in the diagnosis),
+# revisit before adding a 4th shard.
 name: CI
 
 # Minute-saving triggers (owner request, 2026-09-09, session 91 — GitHub bills
@@ -81,6 +99,10 @@ on:
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
+  # Manual escape hatch (added 2026-09-12, session 99): re-run the gate + deploy
+  # for the current tip of main without pushing anything — e.g. when a deploy was
+  # skipped and the tip is docs-only on top of the last code commit.
+  workflow_dispatch:
   pull_request:
     paths-ignore:
       - 'docs/**'
@@ -91,8 +113,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gate:
+  backend:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -107,43 +133,45 @@ jobs:
             web/package-lock.json
       - run: npm ci
       - name: Typecheck
+        if: matrix.shard == 1
         run: npm run typecheck
-      - name: Ingestion fixture tests
-        run: npm run test:ingestion
-      - name: Invariant tests
-        run: npm run test:invariants
-      - name: Benchmark structure tests
-        run: npm run test:benchmark
-      - name: Registry tests
-        run: npm run test:registry
-      - name: Query + benchmark-intent tests
-        run: npm run test:query
-      - name: Answer/intent tests (LLM replay fixtures)
-        run: npm run test:answer
-      - name: Chart tests (spec builder + dumb renderer)
-        run: npm run test:chart
-      - name: Audit record tests (R8)
-        run: npm run test:audit
-      - name: Billing tests (credit ledger, pricing config, Stripe webhook — WP13)
-        run: npm run test:billing
-      - name: Catalog tests (table discovery — FTS recall + rerank allowlist, WP16)
-        run: npm run test:catalog
-      - name: DB tests (shared client + migration harness)
-        run: npm run test:db
-      - name: Sources tests (source registry + conformance harness, WP30a/b)
-        run: npm run test:sources
-      - name: Websearch tests (WP129+130 pins)
-        run: npm run test:websearch
-      - name: Threads tests (chat workspace threads + replay, WP135)
-        run: npm run test:threads
-      # Quoted: the step name contains a colon-space, which YAML would
-      # otherwise read as the start of a mapping (this broke run 30197192763).
-      - name: 'Doc-convention tests (#132 interim rule (i): no live PR links in docs)'
-        run: npm run test:docs
+      # Covers every file under tests/ (ingestion, invariants, benchmark
+      # structure, registry, query, answer, chart, audit, billing, catalog,
+      # db, sources, websearch, threads, docs, attachments, usage — see the
+      # sharding addendum above) split 3-way by vitest's own hash-based
+      # sharding. github-actions reporter gives inline failure annotations
+      # since the per-domain step names are gone (trade-off accepted above).
+      - name: Backend tests (shard ${{ matrix.shard }}/3)
+        run: npx vitest run --shard=${{ matrix.shard }}/3 --reporter=default --reporter=github-actions
       - name: Benchmark run (hermetic, audited pipeline)
+        if: matrix.shard == 1
         run: npm run benchmark:run
       - name: Benchmark scorer (audit records vs frozen key)
+        if: matrix.shard == 1
         run: npm run benchmark:score
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            web/package-lock.json
+      # Root install too, not just web's own — web/backend (a symlink to
+      # ../src) means some of what web's tests import has its REAL path
+      # under the repo root (zod/pg/@anthropic-ai/sdk are declared in BOTH
+      # package.jsons for exactly this reason, ADR 018 point 9). The old
+      # single `gate` job got this for free (one root `npm ci` at the top,
+      # shared by every later step in the same job); splitting `web` into
+      # its own job dropped it — caught by a real CI failure (session 101):
+      # "Failed to resolve import zod from src/chart/brandfetch.ts". The
+      # `deploy` job below already does this same root install for the
+      # identical reason.
+      - run: npm ci
       - name: Web app install (own, independent lockfile)
         run: npm run web:ci
       - name: Web app typecheck
@@ -152,7 +180,7 @@ jobs:
         run: npm run web:test
 
   deploy:
-    needs: gate
+    needs: [backend, web]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -189,8 +217,26 @@ jobs:
           echo "this run: ${GITHUB_SHA}  main tip: ${tip}"
           if [ -z "$tip" ]; then echo "could not read the tip of main"; exit 1; fi
           if [ "$tip" != "$GITHUB_SHA" ]; then
-            echo "stale=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::main is already at ${tip}; that commit's own run deploys it. Skipping this deploy."
+            # Docs-only pushes skip this workflow entirely (paths-ignore above),
+            # so a docs commit landing on top of this one has NO run of its own —
+            # if this run also stood down, nothing would deploy the code (it
+            # happened 2026-09-12, session 99: six merged PRs, then a docs push,
+            # production stayed on the old build). Only stand down when the
+            # newer tip actually changes something outside docs/markdown.
+            # Fail LOUDLY if the tip cannot be fetched or compared — a silent
+            # stand-down here is the very failure this block exists to prevent.
+            git fetch --quiet --depth=1 origin "$tip" || { echo "::error::could not fetch main tip ${tip}"; exit 1; }
+            git cat-file -e "${tip}^{commit}" || { echo "::error::main tip ${tip} is not a commit after fetch"; exit 1; }
+            set +e
+            git diff --quiet "$GITHUB_SHA" "$tip" -- . ':(exclude)docs/**' ':(exclude,glob)**/*.md'
+            rc=$?
+            set -e
+            case "$rc" in
+              0) echo "::notice::main is at ${tip}, which differs from this run only in docs/markdown; this run still owns the deploy." ;;
+              1) echo "stale=true" >> "$GITHUB_OUTPUT"
+                 echo "::notice::main is already at ${tip} with code changes; that commit's own run deploys it. Skipping this deploy." ;;
+              *) echo "::error::git diff against main tip ${tip} failed (exit ${rc})"; exit 1 ;;
+            esac
           fi
       #
       # Commands run from the repo ROOT (no --cwd web) and rely entirely on

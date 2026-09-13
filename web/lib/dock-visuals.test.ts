@@ -64,6 +64,10 @@ describe('deriveDatasetVisuals', () => {
       chart: null,
       card: null,
       userChart: CHART_SPEC,
+      // Task 4 (spec Part B1): DatasetChatMessage carries no auditId at all
+      // (a user-uploaded dataset chart is never an audited CBS answer), so
+      // every userChart visual gets a hardcoded null — never an embed token.
+      auditId: null,
     });
     expect(visuals[1]!.id).toBe('visual-3');
     expect(visuals[1]!.label).toBe('Your chart 2');

@@ -64,7 +64,17 @@ const USER_CHART_SPEC: UserChartSpec = {
 };
 
 function chartVisual(overrides: Partial<DockVisual> = {}): DockVisual {
-  return { id: 'visual-0', kind: 'chart', label: 'Grafiek 1', question: 'hoeveel', chart: CHART_SPEC, card: null, userChart: null, ...overrides };
+  return {
+    id: 'visual-0',
+    kind: 'chart',
+    label: 'Grafiek 1',
+    question: 'hoeveel',
+    chart: CHART_SPEC,
+    card: null,
+    userChart: null,
+    auditId: null,
+    ...overrides,
+  };
 }
 
 describe('VisualDock — chart/card visuals stay byte-identical (userChart: null)', () => {
@@ -88,6 +98,7 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
       chart: null,
       userChart: null,
       card: { value: '42,0', unitSuffix: '%', measureTitle: 'Test', context: 'Nederland', provisional: false, tableId: '12345NED', sourceLabel: 'CBS StatLine', syncedDate: '2026-07-01' },
+      auditId: null,
     };
     render(<VisualDock visuals={[cardVisual]} activeVisualId="visual-1" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByText('42,0')).toBeInTheDocument();
@@ -103,9 +114,25 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
   });
 });
 
+// Task 4 (spec Part B1): the docked ChartView now receives `embed` whenever
+// the active visual carries a real auditId, exactly like chat.tsx's own
+// inline ChartView call — proven here the same observable way chart.test.tsx
+// proves it: the footer's Embed button only exists when `embed` was passed.
+describe('VisualDock — threads auditId into ChartView\'s embed prop (Task 4)', () => {
+  it('shows the Insluiten/Embed button when the active chart visual carries an auditId', () => {
+    render(<VisualDock visuals={[chartVisual({ auditId: 9 })]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('shows no Insluiten/Embed button when the active chart visual has no auditId (null, the default)', () => {
+    render(<VisualDock visuals={[chartVisual({ auditId: null })]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
+    expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
+  });
+});
+
 describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
   it('renders UserChartView (its H2 badge/chrome) for a userChart visual', () => {
-    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, card: null, userChart: USER_CHART_SPEC };
+    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, card: null, userChart: USER_CHART_SPEC, auditId: null };
     render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByRole('tab', { name: /Your chart 1/ })).toBeInTheDocument();
     expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
@@ -113,7 +140,10 @@ describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
 
   it('a userChart tab sits alongside CBS tabs, switching renders the right component for each', () => {
     const onSelect = vi.fn();
-    const visuals = [chartVisual({ id: 'visual-0', label: 'Grafiek 1' }), { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, card: null, userChart: USER_CHART_SPEC }];
+    const visuals = [
+      chartVisual({ id: 'visual-0', label: 'Grafiek 1' }),
+      { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, card: null, userChart: USER_CHART_SPEC, auditId: null },
+    ];
     const { rerender } = render(<VisualDock visuals={visuals} activeVisualId="visual-0" onSelect={onSelect} busy={false} />);
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
     rerender(<VisualDock visuals={visuals} activeVisualId="visual-1" onSelect={onSelect} busy={false} />);

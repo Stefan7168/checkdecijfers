@@ -46,7 +46,7 @@ export function DeleteHistoryButton() {
             type="button"
             onClick={handleConfirm}
             disabled={stage === 'deleting'}
-            className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+            className="min-h-11 sm:min-h-0 rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
           >
             {stage === 'deleting' ? t('header.busy') : t('deleteHistory.confirmYes')}
           </button>
@@ -54,7 +54,7 @@ export function DeleteHistoryButton() {
             type="button"
             onClick={() => setStage('idle')}
             disabled={stage === 'deleting'}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
+            className="min-h-11 sm:min-h-0 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
           >
             {t('deleteHistory.cancel')}
           </button>
@@ -68,7 +68,7 @@ export function DeleteHistoryButton() {
       <button
         type="button"
         onClick={() => setStage('confirming')}
-        className="text-left text-xs text-destructive underline"
+        className="flex min-h-11 sm:min-h-0 w-full items-center text-left text-xs text-destructive underline"
       >
         {t('deleteHistory.trigger')}
       </button>

@@ -5,6 +5,7 @@ import {
   fallbackForm,
   hbarFormAllowed,
   initialViewState,
+  isChartForm,
   lineFormAllowed,
   windowSpec,
   type ChartViewState,
@@ -269,6 +270,24 @@ describe('chartViewReducer — setForm accepts the two new forms (no other chang
   });
 });
 
+// Fix round (Task 5 review, Piece 3): the embed route's own `?form=` guard.
+describe('isChartForm (fix round, Piece 3)', () => {
+  it('accepts every real ChartForm member', () => {
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table']) {
+      expect(isChartForm(form)).toBe(true);
+    }
+  });
+
+  it('rejects anything else, including near-misses and non-strings', () => {
+    expect(isChartForm('Line')).toBe(false);
+    expect(isChartForm('pie')).toBe(false);
+    expect(isChartForm('')).toBe(false);
+    expect(isChartForm(undefined)).toBe(false);
+    expect(isChartForm(null)).toBe(false);
+    expect(isChartForm(42)).toBe(false);
+  });
+});
+
 describe('windowSpec', () => {
   it('returns the same reference when range is null', () => {
     const s = spec('line', [series('NL', [point('2020', 1), point('2021', 2)])]);
@@ -330,6 +349,28 @@ describe('presentation slice (WP218)', () => {
     expect(s.hiddenKeys.has('s0')).toBe(true);
   });
   it('reset (a spec swap on the same mounted chart) clears the presentation — owner decision E: each chart starts fresh', () => {
+    let s = initialViewState('line');
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });
+    expect(s.presentation).toEqual({});
+  });
+
+  // #237/ADR 046: a chart mounted with `initialPresentation` (the gallery's
+  // story template) must fall back to THAT on a spec swap, not to `{}` —
+  // otherwise a gallery story that ever re-mounted with a new spec on the
+  // same instance would drop its look. Owner decision E above is untouched:
+  // `onReset` (the "Standaard" button, `resetPresentation`) still always
+  // clears to `{}` regardless of what the chart mounted with.
+  it('initialViewState honours an initial presentation, and reset falls back to it (not {}) when given one', () => {
+    const initial = { markers: 'ends' as const };
+    let s = initialViewState('line', initial);
+    expect(s.presentation).toEqual(initial);
+    s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
+    s = chartViewReducer(s, { type: 'reset', initialForm: 'line', initialPresentation: initial });
+    expect(s.presentation).toEqual(initial);
+  });
+
+  it('reset with no initialPresentation still clears to {} (unchanged default)', () => {
     let s = initialViewState('line');
     s = chartViewReducer(s, { type: 'setPresentation', patch: { lineWidth: 'thick' } });
     s = chartViewReducer(s, { type: 'reset', initialForm: 'line' });

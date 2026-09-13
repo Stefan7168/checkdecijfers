@@ -6,6 +6,313 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-13, owner present, continued further) — the R3 confirm-first fetch (#109 reversed)
+
+- **An existing client-trust pattern (WP26's clickable clarification options) does NOT
+  automatically generalize to a new feature that LOOKS similar — the safety argument
+  behind it is specific to what the token authorizes.** `validate-pending.ts`'s own header
+  comment states its safety case precisely: a forged clarification option can only become
+  "a normally-billed, fully-validated query over other real CBS data" — no more dangerous
+  than typing a different question. The temptation, building R3, was to copy that shape
+  exactly: hand the client the finder's `tableId`/`confidence` envelope, shape-validate it
+  on return, trust it. That would have been a real regression: unlike a query, what R3's
+  confirm click authorizes is a 100-credit debit AND a real external ingestion job — a
+  forged `confidence` value would let a client bypass the confident-≥-0.8 gate entirely and
+  spend real infrastructure cost on a topic the finder never actually found with confidence.
+  The fix: HMAC-sign the offer (mirroring `src/chart/embed-token.ts`, ADR 041) so the
+  payload can be verified as genuinely server-minted rather than merely shape-checked —
+  closing exactly the gap the copied pattern would have reopened. Lesson: before reusing a
+  trust-boundary pattern, re-derive ITS safety argument for the new payload, don't just
+  match its shape.
+- **A `GatedResponse` outcome doesn't need an audit row if it carries no data value and
+  nothing to reconstruct — R8 governs ANSWERS, not every billing-status message.** The
+  first draft of `confirmOnboardingFetch`'s "started" case tried to fabricate a
+  `ComposedResponse`/`AuditedResponse` by hand to carry its acknowledgment text, which
+  would have created an R8-relevant "answer" with no real audit write behind it — exactly
+  the class of gap `respond-audited.ts`'s fail-closed policy exists to prevent. The fix
+  was to notice `GatedResponse` already has a precedent for this shape:
+  `insufficient_credits`/`duplicate_request`/`unauthenticated` are real, meaningful outcomes
+  with NO audit trail, because none carries a data value. `ConfirmOnboardingOutcome` follows
+  that precedent instead of inventing a new one — a `{kind, text, netCost}` result the
+  client renders directly, no fabricated envelope.
+- **A "deliberately NOT built... only the owner can decide" open-question row is a flagged
+  decision point, not a permanent no — recognize the moment it gets its answer.** #109
+  (session 66) had already done the hard design work and named exactly what was missing: an
+  explicit owner call on reversing the automatic-fetch UX. When this session asked the owner
+  a plain, concrete question about that exact mechanism and got a direct "yes, add a confirm
+  button," that WAS #109's missing piece arriving — not a new decision overriding an old one,
+  and not something to re-litigate. Worth stating explicitly because a rushed session could
+  easily read the ALL-CAPS "Deliberately NOT built" and stop, when the row's own text already
+  explained precisely what would unblock it.
+- **Cheapest-viable-mechanism first also means checking whether a schema change is even
+  needed before assuming it is.** The natural persisted-state design (a `pending_table_
+  requests` row for "offered, not yet confirmed") was rejected on direct inspection of
+  migration 012: `debit_transaction_id bigint not null` carries an explicit comment that a
+  pending row can never exist without its debit already landed — a real existing invariant a
+  persisted pre-debit offer would have had to break, needing a migration purely to hold state
+  a signed token already holds for free. Checking the actual schema constraint before
+  reaching for `npm run db:migrate` avoided an unnecessary owner-supervised DDL step for a
+  feature that didn't need one.
+- **Adding a new REQUIRED field to a widely-constructed TypeScript interface (`ChatMessage`,
+  `AskOutcome`) is well-served by making it required (not optional) and lettting `tsc`
+  enumerate every call site as a checklist**, rather than grepping for construction sites by
+  hand. This project's own `ChatMessage` fields are consistently required, explicit-per-
+  literal (no spreads/defaults) by established convention — matching it surfaced every
+  missing site (4 in `actions.ts`, 2 helper functions, 2 inline test literals, one narrowing
+  bug in a JSX closure) as compiler errors, none missed by a manual sweep.
+- **A second `Agent` tool call does NOT continue a previously spawned background agent —
+  `SendMessage` to its agentId does.** Tried to nudge a background research agent that
+  reported an incomplete-sounding result ("I'll wait for the monitor's next event," which a
+  one-shot agent invocation cannot actually do) by calling `Agent` again with a similar
+  prompt — this spawns an entirely fresh agent with no memory of the original investigation,
+  wasting a full dispatch. The correct continuation mechanism is `SendMessage({to:
+  <agentId>, message: ...})`, which resumes the same agent from its own transcript.
+- **A docs-only commit made while checked out on a feature branch lands on that branch, not
+  `main` — and a `git push -u origin main` run from the wrong branch can silently report
+  "Everything up-to-date" instead of erroring.** Ended the build-performance-report work still
+  on `journey-r3-fetch-confirm` and committed the new session-brief + open-questions row there;
+  the immediately following `git push -u origin main` reported success with nothing pushed,
+  because the local `main` ref itself hadn't moved — a red flag that could easily read as "must
+  already be pushed" rather than "wrong branch." Caught by treating that message as suspicious
+  rather than trusting it, then confirming with `git fetch origin main` (untouched) and `git
+  status`/`git branch` (still on the feature branch). Fixed without touching PR #21: `git
+  checkout main` → `git cherry-pick <sha>` (clean, new SHA on `main`) → push → `git checkout
+  journey-r3-fetch-confirm` → `git reset --hard` back to the branch's own last real commit
+  (verified never pushed to `origin/journey-r3-fetch-confirm` first, so nothing on the open PR
+  was at risk). Lesson: after any commit, confirm the current branch BEFORE pushing — especially
+  mid-session after switching branches for a side task — and treat an unexpectedly-instant
+  push result as a signal to check `git status`/`branch`, not as confirmation.
+
+## Session 101 (2026-09-13, owner present, continued) — Style panel becomes a real modal popup (#243)
+
+- **"Move a live, stateful subtree into a modal" is safer as a relocation than a duplication.** The
+  temptation, converting an always-rendered chart into "also show it inside a popup," is to render the canvas
+  TWICE (once behind, dimmed, once inside the modal) — but Recharts mints `<defs>` ids (gradient fills,
+  provisional-hatch patterns) from one `domId` computed once per `ChartView` instance; two simultaneously-live
+  copies sharing that value would mint duplicate SVG ids, a real correctness risk for the R11 honesty-bound
+  hatch fill, not a cosmetic one. The fix that avoids the whole bug class: lift the canvas/legend/notes JSX
+  into local consts and render that SAME value in exactly ONE of two possible tree positions per render
+  (`{!styleOpen ? canvasNode : null}` in the dock, the same `canvasNode` again inside the modal's `chartSlot`)
+  — ordinary React reconciliation unmounts-here/mounts-there on the render where the boolean flips, no second
+  instance ever exists, so there is nothing to keep ids apart from in the first place. Considered and rejected:
+  parameterizing every `${domId}-...` interpolation across a ~470-line render block to make two copies
+  ID-safe — mechanically far riskier (many call sites, several already only reachable in table/hbar branches
+  the modal doesn't need to duplicate) for the same outcome relocation gets for free.
+- **Testing Library's `container`-scoped queries silently stop covering content the moment it starts
+  portaling — and this can hide a REAL correctness gap, not just break a query.** ~25 of chart.test.tsx's
+  failures after the modal conversion were `container.querySelector(...)` calls now missing content that
+  portaled into the Dialog. The dangerous version of this same bug: a core R1 honesty-invariant test
+  (`scanForUnboundDigits(container, ...)`, scanning the whole card for any digit that isn't a bound spec
+  string) would have kept "passing" after the conversion — not because the panel's content was honest, but
+  because the scan was no longer looking at it at all. A green assertion that stopped checking anything is
+  worse than a red one; caught only by re-reading what the scan target actually contained after the change,
+  not by trusting the mechanical "make it green again" fix. The retarget itself needed its own care: scanning
+  the whole `document.body` (the obvious fix) picked up Recharts' own persistent, hidden text-measurement
+  scratch node (`#recharts_measurement_span`), which carries STALE digit content across unrelated tests —
+  scoping to the dialog itself (`screen.getByRole('dialog', ...)`) was both the more precise fix and the one
+  immune to that node.
+- **A well-briefed test-fixing subagent can surface a genuine product finding, not just paper over red
+  tests, when explicitly told to flag rather than route around anything that looks like a real bug.** Fixing
+  `StylePanelOwnerProvider`'s "without a provider" test surfaced a real interaction gap: two independent
+  `ChartView`s with no shared provider keep correctly-independent `openPanel` state, but Base UI's own dialog
+  stacking has no notion the two popups are "the same feature on different charts" and buries the
+  first-opened one inert behind the second. Traced (not assumed) to be unreachable in production today —
+  `web/app/layout.tsx` wraps the whole app in the provider, and WITH it chart B's own open already closes
+  chart A's via the app's own exclusivity logic before Base UI's stacking is ever relevant — then filed as
+  [open-questions #244](open-questions.md) rather than silently fixed or silently ignored.
+- **Re-running the code-review pass after fixing its own findings is not optional busywork — it caught
+  real issues the fix round introduced.** Round 1 flagged a real focus-order UX gap (Base UI's default
+  autofocus would land on a control in the chart pane, not the Style tabs a reader actually opened the panel
+  for) and a genuinely stale doc comment (an early draft's "duplicate the chart with an id suffix" plan,
+  never actually built, left uncorrected in the shipped file's own header comment once the design changed to
+  relocation). Fixing the focus gap via a plain `useEffect` swap-in prompted round 2, which found the FIX
+  itself had a latent risk (a passive effect racing Base UI's own initial-focus handling) and that the fix's
+  own doc comment now contradicted the actual call site (documented "pass sr-only for Style," the code passed
+  a plain visible string) — both from changes made in direct response to round 1's own findings.
+- **A fully green jsdom suite proves the DOM is right, not that the layout fits — a fixed-width column is
+  exactly the gap.** All 326 chart.tsx/chart-config-panel.tsx tests kept passing straight through the header
+  row overflowing the modal's 22rem column by 100-150px in real Chromium (tabs + language select + close
+  button, pushed clean off the visible edge) — jsdom has no layout engine, so nothing in the suite could ever
+  have caught it, pass or fail. Only launching the real dev server with Playwright against the actual
+  pre-installed Chromium (a temporary, unrouted fixture page rendering `ChartView` directly, bypassing the
+  missing local `DATABASE_URL`) surfaced it, and only measuring `scrollWidth` vs `clientWidth` in-browser
+  (not eyeballing a screenshot) turned "looks a bit tight" into a confirmed, quantified bug. Same lesson as
+  this project's standing "test in a browser for UI changes" rule, sharpened by a concrete case: moving
+  existing, previously-fine chrome into a NEWLY narrow container is a specific, repeatable way for jsdom
+  green to mean nothing, worth a real-browser look every time regardless of how small the surrounding diff
+  looks.
+
+## Session 101 (2026-09-13, owner present, a SECOND concurrent session-101 thread) — composer chip revert + footer fix
+
+- **Reverting UI from git history byte-for-byte is necessary but not sufficient — every doc/test that
+  DESCRIBES the old state needs its own explicit stale-reference sweep, separate from restoring the code.**
+  Restoring `chat.tsx`/`messages.ts` from `git show <sha>^:<path>` (the commit before the collapsing
+  squash-merge) was mechanical and exact, but a plain `grep -rn` for the collapsed feature's old name
+  ("Eigen data (binnenkort)") turned up a live, currently-read style guide (`docs/12-huisstijl.md`) still
+  describing the now-reverted collapsed state as current fact, plus a whole `describe()` block in
+  `chat.test.tsx` asserting "no entry point reaches it any more" — a test that still mechanically PASSED
+  post-revert (the row starts closed either way) while its name and body were now false. A test suite going
+  green is not proof a revert is complete; grep the repo for the feature's old name/description, not just for
+  compile errors.
+- **A vague live-product complaint ("the footer is too high") is worth reproducing with a real screenshot at
+  the actual breakpoint before hypothesizing a fix from reading code alone.** Reading `site-footer.tsx`
+  suggested the newly-added "Werkwijze"/"Privacy" links were the whole story; a real Chromium screenshot at
+  390px (Playwright, `/opt/pw-browsers/chromium`) of the CURRENT component against a git-extracted copy of the
+  PRE-change component (swapped in, screenshotted, swapped back — never committed) showed the base 2-line wrap
+  already existed before those links were added on every non-home page, and the actual regression was
+  narrower: only the home page's extra "Over dit project" anchor tipped the wrap from 2 lines to 3. Fixing the
+  wrong (broader) diagnosis would have removed links D6 requires to always stay visible; the narrow, correct
+  fix touched only the one already-conditional, homepage-only link.
+- **The mandatory pre-push LOW `/code-review` pass earned its keep again**: it caught a real, reintroduced bug
+  (closing the restored "Link toevoegen" row after a submit left the "not available yet" message orphaned on
+  screen, no reset) that the byte-for-byte revert faithfully reproduced from the original session-86 code, and
+  a false "pulled in cleanly; no conflicts" claim written into STATUS.md BEFORE the pull had actually
+  happened — caught by the reviewer re-running `git fetch`/`git rev-parse` itself rather than trusting the
+  diff's own prose. Both would have shipped unnoticed otherwise.
+- **Two Claude sessions both self-identifying as "session 101" were active on this repo at the same time**,
+  working disjoint product surfaces (this thread: composer chips + footer CSS; the other: the Live-embed Pro
+  pitch) that nonetheless both write to the same shared mutable file, `STATUS.md`'s top block — the one real
+  merge conflict on `git pull --rebase origin main` was there, not in any code file. Resolved by keeping both
+  threads' accounts as clearly labeled sibling sections rather than picking one, and rewriting the one
+  paragraph that had prematurely claimed the sync as already-clean before it had happened. Matches the OTHER
+  session's own independently-recorded lesson below ("a concurrent session actively re-merging the SAME PR
+  branch... is now routine, not exceptional") — worth elevating from a per-session observation to a standing
+  default: check `origin/main` immediately before any push, every time, on this project specifically.
+
+## Session 101 (2026-09-12, owner present) — Phase 0 cleanup + the Live-embed Pro pitch
+
+- **A `git worktree add` at a path OUTSIDE the project root (a sibling directory) hits a sandboxed
+  `getcwd: cannot access parent directories: Operation not permitted` when the Browser pane's `preview_start`
+  tool tries to spawn a dev server there — even though a plain `Bash` `cd` into the same path works fine.**
+  Creating the worktree INSIDE the project root instead (`.worktrees/<name>/`, gitignored) fixed it. Worth
+  assuming for any future worktree meant to be driven by `preview_start`, not just used from Bash.
+- **`new URL(relative, import.meta.url).pathname` is NOT a filesystem path** — it stays percent-encoded
+  (`%20` for a space), and a checkout path with a space in it (this machine: `Check de Cijfers`) breaks any
+  script that uses `.pathname` directly for `fs` calls. `fileURLToPath()` (`node:url`) decodes it correctly.
+  Found because `scripts/dev-harness/llm-stub.mjs` (built and tested on a machine/container with no space in
+  its path) silently loaded zero fixtures here. The same class of bug can hide in `NODE_OPTIONS="--import
+  <path>"` too — NODE_OPTIONS is whitespace-tokenized, so a raw spaced path there also breaks; a
+  percent-encoded `file://` URL (`pathToFileURL(...).href`) does not.
+- **A digit-honesty-scan test (every digit in a page's render must trace to the source data, not just to
+  R11's LLM-composed prose) is a real fabrication guard on ANY public-facing render, not only the answer
+  pipeline** — it caught a plain marketing price ("€19/mo") added to the public frozen-embed page's footer
+  text this session. The right response was to keep the price off that specific surface (a dialog elsewhere,
+  not covered by this test, was the correct home for it), never to weaken or route around the test.
+- **A concurrent session actively re-merging the SAME PR branch at the SAME time is now routine on this
+  project, not exceptional** (third occurrence in two days, per the session-97-continued lessons below) —
+  `git push` rejected with "fetch first" mid-session, and the fix was a plain rebase of this session's one
+  real commit onto the concurrent session's latest tip, not another merge-of-main. Checking
+  `origin/<branch>` right before pushing (not trusting an earlier fetch) is now worth doing by default on any
+  branch more than one session might be touching.
+- **`gh api -X DELETE repos/OWNER/REPO/git/refs/heads/<branch>` deletes a remote branch when the session's
+  own git push proxy refuses `git push --delete`** (a standing block noted by prior sessions) — a different
+  code path, not subject to the same refusal. Cross-checked against `gh pr list --state merged` (not
+  `git merge-base --is-ancestor`, which is always false for a squash-merged branch's tip) before deleting
+  anything.
+
+## Session 97 (continued, 2026-09-12, owner present) — drove PR #13 through three merge-conflict rounds
+while a concurrent session (98/99) squash-merged six other PRs into `main` underneath it
+
+- **Git can silently drop one side's real fix in a 3-way merge, with ZERO conflict markers.** `chart-story-stage.tsx`:
+  PR #19 added a responsive `min-h-[45dvh] lg:min-h-[85vh]` phone fix; this branch (session 96's motion upgrade) had
+  independently redesigned the same `<li>`'s whole surrounding block (new caption styling) and added its own,
+  unrelated `scroll-mt-[52vh] lg:scroll-mt-0` phone fix in the same `className`. Because this branch's diff replaced
+  the entire containing hunk while PR #19's was a small, localized edit inside what the 3-way merge saw as
+  "unchanged" context, `git merge` auto-resolved the hunk by picking this branch's side wholesale — no `<<<<<<<`,
+  no warning, just PR #19's fix silently gone. Caught only by deliberately re-reading the merged file against BOTH
+  original branches' actual intent, not by trusting "no markers left = correct merge". **The absence of conflict
+  markers is not proof of a correct merge when two branches touch the same logical property through
+  differently-shaped diffs — diff the merged result against each side's intent, especially around any line a
+  recent PR is known to have touched.**
+- **`git merge-tree <merge-base> <A> <B>` is a cheap, non-destructive way to re-verify true mergeability** without
+  checking out or committing anything — used this to independently confirm GitHub's `mergeable_state: clean` was
+  real (not a stale cache) after `main` had advanced twice more mid-review, cross-checking an API field against a
+  local, from-first-principles answer in under a second. Worth reaching for whenever `mergeable_state` has been
+  flapping (clean → dirty → unknown → unstable) and a firm answer is needed before writing anything down.
+- **The open-questions.md row-number collision recurred THREE times in about an hour, across two independently
+  working sessions, on the SAME number (#239) each time** — this session's own two later merges (`fa79870`,
+  `27c33d3`) each hit a fresh collision (Story stage vs. a session-98 registry-assumption row) even after the first
+  one (session 97's original #239/#240 clash) was already fixed. Root cause is structural, not carelessness: "next
+  free number" is unsynchronized shared mutable state, and this repo had two sessions committing to it concurrently
+  for most of a morning. Resolution pattern held up each time: keep the number for whichever row already has
+  outside cross-references (grep the WHOLE repo, not just the conflicted file, before deciding), renumber the
+  newer/less-referenced row, fix its one external reference. **Given this is now a THIRD recurrence in one day, a
+  numbered append-only list under concurrent multi-session editing should be expected to collide almost every time
+  two sessions touch it in the same window — treat the resolution steps above as routine, not exceptional.**
+- **A `git checkout` to a different local branch while a long-running background test is still reading files from
+  that same working directory produces a confusing, self-inflicted false failure that looks exactly like a real
+  regression.** Backgrounded `npm test` (root) was still running against `visual-story-motion`'s checkout when this
+  session ran `git checkout main` for an unrelated reason; the swapped-out files mid-run produced `Cannot find
+  module '.../tests/billing/creator-email.test.ts'` — a file that (correctly) does exist on `main`, just not in the
+  half-swapped working tree at the instant vitest tried to read it. Diagnosed by checking whether the file exists
+  in the target commit's tree (`git show <sha>:<path>`) before concluding anything was actually missing — it was
+  present at every relevant commit, proving the failure was the race, not a gap. **Never `git checkout`/`switch`
+  the working directory while a backgrounded test or build against that same directory is still in flight — wait
+  for it, or use a separate worktree, if a branch switch is needed in the meantime.** (A related, smaller version of
+  this: `git checkout main` after a push must be followed by `git pull` — a bare checkout only moves to the local
+  branch ref, which can already be behind `origin/main` if the local branch itself hasn't been fast-forwarded. **Proven
+  again minutes after writing this bullet:** `git fetch origin main` updates the remote-tracking ref
+  (`origin/main`) but NOT the local `main` branch itself — committing this very wrap-up on top of a
+  fetched-but-not-fast-forwarded local `main` produced a real non-fast-forward push rejection, fixed with
+  `git pull --rebase`. `fetch` alone is never enough before committing to a branch that tracks a remote everyone
+  else can also push to; always `pull` (or `fetch` + explicit fast-forward) immediately before committing, not
+  just before pushing.)
+- **Two independent sessions shipping what looks like "the same" phone-layout fix are not automatically
+  duplicates — check what each actually fixes before assuming one supersedes the other.** PR #19's `min-h`
+  fix and this branch's `scroll-mt` fix both touch phone rendering of the same Story-stage panel, but address
+  different symptoms (panel height vs. scroll-target/attribution-line overlap) of the same root cause (the chart
+  pinned at the top, capped at 50vh, on narrow screens) — both were needed together, not either-or. This is the
+  mirror image of session 97's earlier R8/R9 lesson ("check before independently rebuilding something another
+  session already shipped") — that lesson warns against assuming *no* overlap; this one warns against assuming
+  *full* overlap. Read what a same-looking fix actually does before either skipping it as redundant or discarding
+  it as superseded.
+
+## Session 99 (2026-09-12, owner present) — merged the six-PR journey + embed stack in one sitting; the
+squash-merge stacking trick, an open-questions number collision, and a wrap-up that claimed lessons it never wrote
+
+- **A docs-only push right after a code merge left production UNDEPLOYED — a latent bug in the session-91 CI design.**
+  The `deploy` job stands down when `main`'s tip ≠ its own SHA ("that commit's own run deploys it"), but docs-only
+  pushes skip the workflow entirely (`paths-ignore`), so the docs commit had no run and the code commit's run had
+  stood down: `8d0f0d4`'s `deploy` = every step skipped, green. Caught only because the wrap-up checked the run's
+  JOBS, not just its conclusion. Fixed the same session in `.github/workflows/ci.yml`: the check now fetches the tip
+  and stands down only if `git diff` between the two shows changes outside `docs/**` and `*.md`; plus a
+  `workflow_dispatch` trigger as the manual escape hatch. Rule for wrap-ups: after the last code merge, push docs
+  FIRST or verify the deploy job actually ran its Vercel steps — "green" is not "deployed".
+- **Stacked PRs + squash merges = every later PR turns `dirty` the moment the one below it lands — and the fix is
+  mechanical, not a real merge.** After `gh`-style squash of PR A, `main`'s TREE is byte-identical to A's head, but
+  git sees a new commit with no shared history, so PR B (which contains A's commits) conflicts on every hunk A
+  touched. Verified with `git diff --stat <A-head> origin/main` (empty), then resolved with
+  `git merge -s ours origin/main` on B — records `main` as an ancestor, keeps B's tree, changes nothing
+  (`git diff HEAD~1 HEAD` empty). Repeated for #18 → #19 → #20 → #9 → #15. Only the FIRST merge of the day (main's
+  four docs commits into `journey-programme`) needed real conflict resolution. Written into the RUNBOOK's "Merging a
+  queue" note. Cost of not knowing this: five sets of fake conflicts in 5–6 files each.
+- **Pre-resolve the whole stack before the first merge, so the gates run in parallel.** Each `gate` takes 9–12 min;
+  with three PR runs sharing runners it stretched to 11–15. Merging main → #14 → #18 → #19 → #20 locally up front and
+  pushing all four meant their gates overlapped instead of queueing (total wall-clock ~75 min for six PRs incl.
+  the embed pair). A newer push on `main` cancels the superseded run on the same ref (`677c5fb` and `189d36b`
+  show `cancelled` — expected, the later commit owns the deploy), so "cancelled" on main is not red.
+- **Two parallel sessions both took open-questions row #239** (session 97: the duplicate-build row; session 98: the
+  `population_on_1_january` gallery assumption) — the same class of problem as the duplicate build itself. Resolved
+  by renumbering the session-97 row to #241 and fixing its one back-reference in the build plan. Rule: an
+  autonomous session that adds an open-questions row should grep `origin/main` AND every open PR branch for the
+  number first, or leave numbering to the merging session.
+- **A wrap-up commit message claimed "lessons" that were never written.** Session 98's `812cfd7` ("… archive entry,
+  lessons, build-plan pointer …") touches four files and `lessons-learned.md` is not one of them; no session-98
+  entry exists anywhere. The final self-audit (ritual item 8) must diff the wrap-up commit against the checklist,
+  not just re-read the prose.
+- **Session 96's wrap-up docs never reached `main`** — five docs commits + one 913-line code commit
+  (`038ecd9`, "quick wins R11/R2/R10/R5") sit on `claude/checkdecijfers-embed-pr-review-acbrd5`, never opened as a
+  PR. The code is superseded by PR #14 (which built the same items with review); the docs cherry-picks conflict in
+  every tracker file (they predate the session-97 rewrites). Decision: leave the branch as the record, do not merge.
+  A wrap-up on a branch is not done until it is on `main` or in an open PR that says so.
+- **PR #13 (Story stage motion) conflicts for real** with PR #19's phone caption fix in `chart-story-stage.tsx`
+  (#13 restructured the caption panel and has its own `scroll-mt` phone fix; #19 changed the same `<li>` to
+  `min-h-[45dvh] … lg:min-h-[85vh]`). Needs a real-browser check on a phone, not a text merge — left for the owner.
+- **`mcp__github__merge_pull_request` wants the FULL 40-char head SHA** in `expectedHeadSha`; a short SHA is
+  rejected. Same trap the RUNBOOK already records for `gh pr merge --match-head-commit`.
+- **The wrap-up hook fires on questions, not only on wrap-up signals** ("are there sessions that didn't do the
+  wrap up yet?" triggered it). Answer the question; run the ritual when the work is actually done.
+
 ## Session 97 (2026-09-11→12, owner present) — built R8+R9, then found a sibling session had already
 built the whole Journey programme (PR #14) — a real duplicate-effort cost
 
@@ -54,6 +361,96 @@ built the whole Journey programme (PR #14) — a real duplicate-effort cost
   no path filter surfaced it. Lesson holds from earlier sessions too, worth restating: a keyword grep across
   test files is necessary but not sufficient when a UI element's accessible name is asserted as a literal
   string rather than through the i18n key that produced it.
+- **A merge conflict on a still-open PR is discoverable only by re-checking `mergeable_state`, not by anything
+  pushed to `main` announcing it.** Two docs-only pushes to `main` (this session's own #238/#239 open-questions
+  rows, landed as part of the PR #14 write-up) collided with PR #13's own independent #239 row — both branches
+  picked the same "next free" row number off the same base, unaware of each other, and PR #13 silently flipped
+  from `mergeable_state: clean` to `dirty` with no notification beyond the next scheduled check-in noticing the
+  field had changed. Caught only because a check-in re-fetched `pull_request_read` (`get`) rather than trusting
+  the previous check-in's cached "still clean" claim. Resolved by keeping the row that already had the most
+  outside cross-references (row #236, ADR 044, STATUS.md's branch note all already pointed at PR #13's #239)
+  and renumbering the newer, less-referenced row to #240 instead — minimizing the blast radius of the rename.
+  Lesson: a numbered, append-only doc list (open-questions.md) is exactly the kind of shared mutable state that
+  two parallel branches will collide on without either side doing anything wrong; a merge-conflict resolution
+  should renumber the LESS cross-referenced row, and should grep for the OLD number across every doc (not just
+  the conflicted file) before considering the fix complete.
+
+## Session 97 (2026-09-12, autonomous) — the Journey programme built via parallel worktrees + one fix wave
+
+- **Five parallel worktrees with SYMLINKED `node_modules` (root + web) worked** — no `npm install` per worktree, no
+  "incomplete node_modules" trap (RUNBOOK multi-agent item 3). Only the final verification block ran in the main
+  checkout. The one shared file, `messages.ts`, conflicted on every merge as expected; "add your keys at the END of
+  both tables" made every conflict a keep-both-sides resolution (delete the three markers, typecheck, commit).
+- **A Sonnet implementer delegated to a nested agent instead of doing the work.** The WP-D agent's first report said
+  "I've launched a background agent"; the work did land (a nested agent finished it), but the orchestrator could not
+  address that nested agent. Brief implementers with "do the work yourself; do not spawn agents".
+- **The strong-tier whole-branch review earned its seat again:** three HIGH findings none of the implementers or
+  their own tests caught — a `visibilitychange` listener that kept `router.refresh()`ing forever after the poll's
+  30-second bound; a one-click clarification option that would have sent against the LIVE round instead of its own
+  (a billed wrong-carrier reply) plus a double-click double-send; and a privacy page that claimed "no analytics"
+  while the trial cookie, the hashed IP and the usage counter exist. Verify HIGH findings against the source before
+  the fix wave (all three held) — and treat a privacy-page overclaim as the same bug class as a fabricated number.
+- **The browser pass found what no test could:** the two new public pages 307'd to `/login` (the proxy allowlist is
+  exact-match by design and nobody added them), the fourth landing step rendered "4 / 4. Publish" (the title carried
+  its own number, the grid adds one), and uncurated on-demand tables dumped raw CBS measure titles as "concepts"
+  ("Een zeer slecht moment, Zeer onwaarschijnlijk…"). Rule: any new route goes through `isPublicPath`'s test the
+  same commit; any generated list gets looked at with REAL data, not only the test fixture.
+- **A generated example question needs a grammar check per source field.** "Wat was de {everydayTerm}" is proven
+  for one measure and broken Dutch for most ("Wat was de inwoners"). Dutch articles are not in the registry; an
+  article-free frame ("Wat zijn de cijfers over {term} in {periode}?") is the honest general form.
+- **`preview_start` looks for `.claude/launch.json` in the session's ORIGINAL scratch workspace** after a
+  `change_directory`; spawning `next dev -p 3010` from Bash with the root `.env` loaded and `navigate`-ing to it
+  worked fine. `next dev` also rewrites `web/CLAUDE.md` (the agent-rules block) — `git checkout` it before committing.
+
+## Session 96 (continued) — 2026-09-11 — the multi-agent Story-stage visual-motion upgrade
+
+- **A first pass scoped for safety, not impact, drew direct owner pushback — and that was the correct
+  correction, not a wasted first wave.** Given "spawn multiple agents... for hours" with no further spec,
+  the first instinct was three small, independent, low-risk items (a bug fix, a 4-6px "breathing" wobble, a
+  research question). All three were real, well-executed, and worth keeping — but none of them were what
+  "move the needle" meant. The owner's blunt correction arrived exactly when it was needed (right as the
+  small wave finished) rather than hours into a bigger misdirected effort. Lesson: for an open-ended
+  "impress me" ask, the FIRST move should be to name a concrete ambition level in the kickoff/brief itself
+  (cite a comparable bar — here, "The Pudding / NYT graphics desk", already in this repo's own prior
+  planning doc) rather than defaulting to the safest possible interpretation and letting the owner correct
+  scope after the fact.
+- **Checking for a "repeatedly refused" decision before building on top of a plausible-sounding idea saved a
+  wasted subagent run.** "Have the chart draw itself in" sounded like an obvious way to add life to the
+  stage — a `grep` across `docs/` first found it explicitly, repeatedly refused (ADR 042, 08-build-plan's own
+  invariants list, the session-90 architecture synthesis: "Animation — REFUSED — export-at-click-time and
+  reduced motion"). Cheap to check, expensive to discover after a subagent had already built and tested it.
+- **Sequential-with-shared-infrastructure beat parallel for creative work touching the same file.** Wave 1
+  (three genuinely independent items: a hook fix, a pure-function tweak, a research question) parallelized
+  cleanly. Wave 2 (three creative/visual upgrades all touching the same ~450-line component) was
+  deliberately run as ONE foundational task (an ambient layer establishing a shared `--stage-accent` CSS
+  variable) followed by TWO parallel tasks that both consumed it — giving visual coherence (one color
+  language across all three effects) that three blind, simultaneous rewrites would likely not have produced,
+  at a real but bounded wall-clock cost (roughly 1.3x the parallel-only time, not 3x, since only the
+  foundational piece was serialized).
+- **A confirmed, reproducible harness quirk: a fresh isolated worktree agent may not actually start on the
+  branch you told it to.** All three wave-2 subagents independently found their worktree began on a scratch
+  branch pointing at plain `main`, not the shared feature branch the brief named — each caught it only
+  because the brief explicitly instructed "check `git log` for these N named commits before writing any
+  code, branch by name if missing." Without that instruction, at least one would likely have silently built
+  on stale code. Worth stating explicitly in every brief for a multi-agent chain that depends on a shared,
+  evolving base branch — do not assume the isolation mechanism started where you asked it to.
+- **A real regression only a real browser could catch, and jsdom's own suite stayed green throughout.** New
+  editorial caption styling used a negative-inset backdrop scrim for legibility over a new background layer;
+  on the phone/stacked layout (not the desktop side-by-side one), the scrim could bleed into the sticky
+  pinned chart's own attribution line when `scrollIntoView({block:'center'})` centred a panel close to the
+  sticky boundary — invisible to jsdom (no real layout/geometry), and neither task's own component tests
+  caught it since they don't assert cross-element visual overlap. Found via a throwaway fixture route +
+  Playwright screenshots at 375px, fixed with `scroll-margin-top` (the CSS property purpose-built for
+  exactly this "sticky header + scrollIntoView" interaction) in about two iterations. This is the second
+  time this session ADR 044's own "the real proof is a browser, not jsdom" note has been proven right in
+  practice, not just stated as policy.
+- **No `DATABASE_URL`/`web/.env.local` in a fresh remote session means no real chart data — a throwaway
+  fixture route (with a temporary, reverted `proxy.ts` allowlist entry) is a legitimate, cheap way to get a
+  REAL browser rendering a REAL component without a database.** Two gotchas hit along the way, both fixed
+  fast once diagnosed: Next.js treats any `app/` folder starting with `_` as a private, unrouted segment (a
+  leading-underscore debug folder silently 404s, not an error message pointing at the cause); and the
+  session-auth proxy middleware redirects anything not on its allowlist to `/login` before the route handler
+  ever runs, so a debug page needs a temporary allowlist entry, not just to exist.
 
 ## Session 96 (2026-09-11, owner present) — strategy / research session, docs only
 
@@ -222,16 +619,22 @@ ambiguous UI ask; never switch branches while a background verification is still
   elsewhere in this exact codebase" saved what would likely have been the single largest chunk of this
   session's effort, and produced a smaller, safer result.
 - **A parallel, unmerged branch's ADR numbering silently collides — caught only by trying to link to the
-  file.** This session's own branch used ADR 041 for a new decision (chart-insights); the still-unmerged
+  file, and the SAME collision then hit open-questions.md's row numbers for real, twice, at actual merge
+  time.** This session's own branch used ADR 041 for a new decision (chart-insights); the still-unmerged
   `embed-charts` branch (a DIFFERENT session) had already used 041 for Embed. Writing a build-plan.md
   cross-reference to `decisions/041-public-embed-pages.md` would have been a broken link on this branch
   (the file only exists on `embed-charts`) — caught by noticing the reference pointed at a file that
-  hadn't actually been read/confirmed to exist HERE, not by any tooling. `docs/open-questions.md` already
-  had a real, resolved version of this same collision class this session (rows #224-229 landing on `main`
-  from `embed-charts` while this branch independently continued past #223) — ADRs have the identical
-  exposure and no existing convention names it. Lesson: when citing an ADR/open-questions number from a
-  DIFFERENT branch's PR body or docs, verify the file actually exists on the current branch before linking
-  it — don't assume a number seen in a PR description is safe to reference locally.
+  hadn't actually been read/confirmed to exist HERE, not by any tooling. This session ALSO independently
+  picked open-questions.md rows #224/#225 for its own two new questions, not knowing `embed-charts` had
+  already claimed #224-229 for entirely different questions — invisible until the second merge of main
+  into embed-charts actually happened and git flagged a real content conflict on the numbered rows
+  (resolved by renumbering this session's rows to #230/#231, keeping Embed's pre-existing, cross-referenced
+  #224-229 untouched). Two DIFFERENT numbering schemes (ADRs, open-questions rows) hit the identical
+  collision class in one session, from the same root cause. Lesson: when two branches are being developed
+  in parallel and will eventually merge, a NEW sequence number (ADR, open-questions row, migration) picked
+  on one branch is only PROVISIONAL until merge — verify the number is still free against the other
+  branch's HEAD before treating it as final, or expect to renumber, and when citing a number from a
+  DIFFERENT branch's PR body or docs, verify the file/row actually exists on the current branch first.
 - **One tight clarifying question beats three guesses on a genuinely ambiguous UI ask — and "never mind"
   is a complete, valid answer.** "Make sure the graph always shows first, and the card comes second" had
   at least three materially different, defensible readings (swap the panel's left/right position; reorder
@@ -270,6 +673,96 @@ ambiguous UI ask; never switch branches while a background verification is still
   `git push origin main`) went through without issue on the identical commit. Lesson: when a push to
   `main` is denied, don't retry the same command or treat it as a hard block — try the ordinary
   checkout-and-fast-forward form before escalating to the owner.
+
+## Session 93 — 2026-09-10 — autonomous (owner away "many hours", checked in once mid-session to say
+"wrap up when done"): the whole Embed feature (spec Part B) built via Subagent-Driven Development, 8
+tasks + a whole-branch review + one final fix wave, pushed as a PR; a harness quirk cost one duplicate
+dispatch; the API-key-cap alert from session 92 turned out to be a testing-methodology artifact, not
+a regression
+
+- **A whole-branch review at opus tier found a Critical the entire 8-task plan never accounted for:
+  the feature was completely non-functional for its actual audience.** `web/proxy.ts`'s auth
+  middleware had no allowlist entry for `/embed/*` — every anonymous visitor (the whole point of a
+  *public* embed) was redirected to `/login` instead of seeing the chart. Every per-task test suite
+  stayed green because the route's own unit tests call the page function directly in jsdom, bypassing
+  middleware entirely; only a review that thought about the REQUEST PATH as a whole, not just the
+  route file, could catch it. Lesson: when a plan adds a new public surface to an app that already has
+  session-gating middleware, the middleware's own allowlist is part of that surface's scope by
+  necessity — name it explicitly in the plan next time, don't rely on review to catch the omission.
+- **The same review pattern repeated at smaller scale three more times**: a dead backlink (hardcoded to
+  a domain that resolves to registrar parking, not the real app — the literal string came from the
+  plan's own code sketch, not an implementer slip), a chart-type/theme option the dialog had already
+  shipped that the route silently ignored (twice — `?theme=`/`?form=` the first time, only `?form=`
+  circled back correctly; `?theme=light`, the dialog's own DEFAULT, was still silently broken the
+  *second* time because the real cause was `next-themes` reading the reader's OS preference, not the
+  `frameless` card background the first fix's own comment blamed), and a redaction-guard test whose
+  two fixtures both set `chart: null` AND `redacted: true`, so neither the code path nor the test ever
+  distinguished them, and the REAL production redaction envelope has `chart` absent, not null — meaning
+  the untested half was the only one actually load-bearing in production. **Lesson: "the UI already
+  promises a control, does the backend actually honor it" is worth checking explicitly as its own
+  review pass on any feature with a dialog/route split — it recurred 3 times in one branch and each
+  instance had a different root cause, so it isn't a single bug class to grep for, it's a shape of bug
+  to keep asking about.**
+- **A subagent's own internally-backgrounded shell command can make it look permanently stuck when it
+  isn't — twice, differently, in the same session.** Task 6's implementer ended its turn mid-way
+  through a ~35-minute backend suite it had started with `run_in_background`; the task-notification
+  system's own doc string ("fires when this agent stops with no live background children") reads as
+  "this agent is done," but a subagent's OS-level background process is apparently NOT tracked as a
+  "live child" by that system, so the notification fires while real work is still running unsupervised.
+  Assumed it was orphaned (no way to resume a specific subagent in this harness), verified via
+  `ps`/`git status` that its background process really was still running, waited it out with a
+  controller-owned wait-loop, then dispatched a fresh completion agent — which turned out to be an
+  unintended duplicate, because the ORIGINAL agent woke back up on its own and finished the job for
+  real (commit and all) while the replacement was still in its first few tool calls. Caught cheaply via
+  `TaskStop` before any conflicting commit happened, only because `git log`/`git status`/`ps aux` were
+  checked directly rather than trusted from either agent's own narration. **Lesson: when a subagent's
+  final message describes itself as "waiting for a background job," check the ACTUAL repo/process
+  state yourself before concluding it's stuck and dispatching a replacement — it may resume and
+  re-notify on its own, and if it does, running a second agent on the same task risks a genuine
+  conflict, not just wasted compute. The later verification-block dispatch hit the identical pattern a
+  third time and was left alone rather than replaced, on this same reasoning, and it also finished on
+  its own.**
+- **The session-92 alert (the Anthropic key hitting its monthly cap right as a follow-up chip fired)
+  was a testing-methodology artifact, not a product regression — confirmed by reading the code, not by
+  reproducing it (the key was still capped, so reproduction was never an option).** This session's
+  kickoff flagged it as "a follow-up chip (a zero-LLM click take) reached the model — verify before
+  assuming a regression." Reading `web/components/chat.tsx`'s own extensive inline history comments
+  settled it directly: there are TWO structurally different chip mechanisms sharing one render path —
+  WP26's clarification-option chips (a genuine zero-LLM deterministic resolution, gated on an OPEN
+  `pending` clarification round) and WP29's "Suggested follow-up questions" chips (shown under an
+  ordinary ANSWER, which only ever fill the input — sending one is exactly like typing a brand-new
+  question, by design, and always parses through the model). The kickoff's framing conflated the two.
+  Given the battle-testing session asked many real chart questions across desktop/mobile/light/dark/
+  gradient/image-export combinations, the most likely account is that ordinary LLM usage from that
+  extensive a session simply used up an already-nearly-exhausted monthly quota, and the very last call
+  happened to be a WP29 chip click — not evidence of a broken zero-LLM path. **Lesson: when this
+  project's own code comments already fully explain a mechanism (and they usually do, at real length,
+  in this codebase), read them before assuming an external report's framing is accurate — the kickoff
+  brief itself can be the thing that's slightly wrong, not just the code.**
+- **A one-line vitest config gap (a missing `exclude` for the `web/backend -> ../src` symlink) only
+  surfaced the moment a NEW test file landed in a `src/` subdirectory that had never had one before** —
+  it silently affected zero pre-existing tests, so it was invisible until this branch's very first
+  task added `src/chart/embed-token.test.ts`. An implementer flagged it correctly as real but then
+  spawned an out-of-scope task chip for a SEPARATE session to fix it later — the right instinct
+  (flagging, not silently patching) applied to the wrong bucket, since every later task in this exact
+  plan was about to add more `src/` test files and would have hit the identical failure repeatedly.
+  **Lesson: "is this in scope for THIS task" and "is this in scope for THIS session/plan" are different
+  questions — a config bug that will recur on every remaining task of the very plan you're executing is
+  never "someone else's session" material, even when it's technically outside the one task that found
+  it.**
+- **Reviews at the highest available model tier (opus) earned their cost repeatedly on this branch,
+  specifically on the files/mechanisms carrying the most risk** (`chart.tsx`, `proxy.ts`'s auth
+  allowlist, the public `/embed/[token]` route, the final whole-branch pass) — every one of those
+  reviews found at least one Important-or-above finding that a same-tier sonnet pass on an earlier,
+  smaller task had NOT surfaced on comparable code. The reviews also repeatedly went and independently
+  *reproduced* a claim rather than reading it — starting a real built server and curling it, reading an
+  installed dependency's actual minified source to trace a prop through three code paths, running a
+  probe script against Node's real `timingSafeEqual`/`path-to-regexp` behavior — rather than trusting
+  either the implementer's report or the reviewer's own first-pass reasoning. **Lesson: budget the
+  highest tier specifically for the request-boundary and rendering-boundary files on any web app with
+  session middleware, not just for files this project already knows are historically bug-prone (like
+  `chart.tsx`) — the proxy/auth-allowlist Critical this session found was in a file with NO prior
+  history of hiding bugs, precisely because nothing had ever added a new public route before.**
 
 ## Session 92 — 2026-09-09 — owner present: three features shipped in one session (Story mode, the chat
 polish batch, frame styling + the floating Style panel) via Subagent-Driven Development; the whole-branch

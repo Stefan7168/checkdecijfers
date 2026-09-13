@@ -48,6 +48,7 @@ function redactedMessage(): ChatMessage {
     // ADR 033 ⟨A6⟩: carriers are not restored on resume — a redacted row has
     // no envelope to guess one from anyway.
     carrier: null,
+    insufficientCredits: null,
   };
 }
 
@@ -69,6 +70,7 @@ function userMessage(text: string): ChatMessage {
     webSection: null,
     // A user turn never carried a carrier live either.
     carrier: null,
+    insufficientCredits: null,
   };
 }
 
@@ -122,6 +124,7 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     // guess. A resumed message's own question-shaped chips (suggestions
     // above) still render; they just fill the input instead of taking.
     carrier: null,
+    insufficientCredits: null,
   };
 }
 

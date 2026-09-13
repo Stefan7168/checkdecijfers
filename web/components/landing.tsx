@@ -1,9 +1,12 @@
 // The public face of checkdecijfers.nl — what a logged-out visitor sees at '/'
 // (session-51 owner decision: the homepage IS the product, not a bare login
 // redirect). Server component: NO LLM, NO chargeable entry point. The ONLY
-// data reads are the deterministic Ontdek discovery charts (session 52,
+// data reads are the deterministic curated-chart pipeline (session 52,
 // ADR 035 — cached, fail-safe, LLM-free; they amend the original "no data
-// reads" framing of #98, see the reconciled row). The example answer below is
+// reads" framing of #98, see the reconciled row), served here through
+// GalleryTeaser/getGalleryStories (#237/ADR 046) rather than the original
+// Ontdek section, which mounted the same pipeline directly and is now
+// deleted (#240). The example answer below is
 // a REAL, live-verified CBS cell (frozen verification task CC1:
 // consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
 // re-verified LLM-free on production 2026-07-17) rendered in the product's
@@ -41,15 +44,17 @@
 // untouched (see docs/superpowers/specs/2026-09-09-language-switch-design.md
 // §1).
 import Link from 'next/link';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t } from '../lib/i18n/messages.ts';
-import { OntdekSectie } from './ontdek.tsx';
+import { CoverageDisclosureView } from './coverage-disclosure.tsx';
+import { GalleryTeaser } from './gallery.tsx';
 import { SiteHeader } from './site-header.tsx';
 import { TrialSectie } from './trial.tsx';
 
 const EXAMPLE_QUESTION = 'Wat is het consumentenvertrouwen in juni 2026?';
 
-export async function Landing() {
+export async function Landing({ coverage = null }: { coverage?: CoverageDisclosure | null } = {}) {
   const lang = await getLang();
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -61,14 +66,20 @@ export async function Landing() {
             {t(lang, 'landing.heroTitle')}
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">
-            {t(lang, 'landing.heroSubtitle')}
+            {t(lang, 'landing.heroSubtitleV2')}
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/login"
               className="rounded-md bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               {t(lang, 'landing.ctaStart')}
+            </Link>
+            <Link
+              href="/galerij"
+              className="rounded-md border border-border bg-card px-5 py-2.5 font-medium text-foreground hover:bg-muted"
+            >
+              {t(lang, 'landing.ctaGallery')}
             </Link>
             <a
               href="#hoe-het-werkt"
@@ -105,7 +116,9 @@ export async function Landing() {
           </div>
         </section>
 
-        {/* How it works — the honest mechanism, in three steps */}
+        {/* How it works — the honest mechanism, now in four steps
+            (WP-B, journey programme phase 3 R5.4: a fourth "Publiceer"/
+            "Publish" step). 2x2 on `sm`+ so the grid stays balanced at 4. */}
         <section id="hoe-het-werkt" className="border-b border-border py-12">
           {/* `over-dit-project` is the site footer's "Over dit project" anchor
               (site-footer.tsx renders it on "/"): the logged-in workspace has
@@ -114,7 +127,7 @@ export async function Landing() {
           <h2 id="over-dit-project" className="text-2xl text-foreground">
             {t(lang, 'landing.howItWorksHeading')}
           </h2>
-          <ol className="mt-6 grid gap-6 sm:grid-cols-3">
+          <ol className="mt-6 grid gap-6 sm:grid-cols-2">
             <li>
               <p className="tnum text-sm font-semibold text-primary">1</p>
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step1Title')}</h3>
@@ -130,11 +143,35 @@ export async function Landing() {
               <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step3Title')}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step3Body')}</p>
             </li>
+            <li>
+              <p className="tnum text-sm font-semibold text-primary">4</p>
+              <h3 className="mt-1 text-lg text-foreground">{t(lang, 'landing.step4Title')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'landing.step4Body')}</p>
+            </li>
           </ol>
         </section>
 
-        {/* Free discovery charts — deterministic, LLM-free (ADR 035) */}
-        <OntdekSectie />
+        {/* #237/ADR 046: the gallery teaser replaces the old Ontdek section
+            on the landing — same deterministic, LLM-free curated-chart
+            pipeline (ADR 035), now presented as sourced stories around the
+            positioning sentence rather than a bare discovery grid. The old
+            component (web/components/ontdek.tsx), its test suite,
+            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys were
+            dead code and are now deleted (#240). */}
+        <GalleryTeaser />
+
+        {/* WP-E (R4): the coverage disclosure — no example handler is passed
+          * here, so CoverageDisclosureView renders each example as plain
+          * text ("bijvoorbeeld: …") instead of a click-to-fill button; the
+          * landing page has no composer to fill. */}
+        {coverage ? (
+          <section className="border-b border-border py-12">
+            <h2 className="text-2xl text-foreground">{t(lang, 'coverage.landingHeading')}</h2>
+            <div className="mt-4 max-w-xl">
+              <CoverageDisclosureView coverage={coverage} />
+            </div>
+          </section>
+        ) : null}
 
         {/* Credits, plainly */}
         <section className="py-12">

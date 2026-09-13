@@ -48,4 +48,16 @@ describe('LanguageSwitch', () => {
     await waitFor(() => expect(setLanguage).toHaveBeenCalledWith('en'));
     await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
   });
+
+  // R9.1 (#238): NL/EN measured 24px tall at 375px — under the 44px minimum
+  // tap target — while 1280px had to stay pixel-identical. Pinned as a
+  // CSS-contract test (jsdom has no layout engine to measure real pixels).
+  it('gives each option a 44px tap target only below sm', () => {
+    render(<LanguageSwitch />);
+    for (const name of ['NL', 'EN']) {
+      const className = screen.getByRole('button', { name }).className;
+      expect(className).toContain('h-11');
+      expect(className).toContain('sm:h-6');
+    }
+  });
 });

@@ -16,6 +16,7 @@ export const maxDuration = 90;
 
 import {
   getActionClassPrice,
+  getActivePacks,
   getBalance,
   getQuestionHistory,
   getSignupGrantCredits,
@@ -28,6 +29,7 @@ import { getUserChartStyle } from '../backend/chart/user-styles.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { Landing } from '../components/landing.tsx';
 import { getDb } from '../lib/db.ts';
+import { loadCoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
 
 export default async function Home({
@@ -41,13 +43,22 @@ export default async function Home({
   // history reads below.
   const { [PURCHASE_PARAM]: purchase } = await searchParams;
   const userId = await currentUserId();
+  // WP-E (R4): the coverage disclosure is read in BOTH branches below —
+  // logged-out (Landing's "Dit weten we nu" section) and logged-in (the
+  // chat composer's collapsed link) — from its own 30-min cache
+  // (web/lib/coverage-disclosure.ts), so a single server read serves the
+  // whole request regardless of which branch runs.
+  const coverage = await loadCoverageDisclosure();
   if (userId === null) {
     // Session-51 owner decision: '/' is the product's public face. A
     // logged-out visitor gets the landing (no chargeable entry point; its
     // only data reads are the cached, fail-safe Ontdek discovery charts —
-    // session 52, ADR 035) instead of a context-free login redirect;
+    // session 52, ADR 035 — and, since the journey programme (session 97,
+    // R4), the equally cached, fail-safe coverage disclosure: one registry
+    // read + one freshest-period read per measure every 30 minutes, never
+    // per request) instead of a context-free login redirect;
     // proxy.ts allowlists '/' exact-match to let them reach it.
-    return <Landing />;
+    return <Landing coverage={coverage} />;
   }
 
   const db = getDb();
@@ -76,7 +87,7 @@ export default async function Home({
   if (process.env.WORKSPACE_ENABLED === '1') {
     // Threads read server-side (like every other page read), handed to the
     // workspace as initialThreads — no client fetch-on-mount.
-    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle] =
+    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle, wsPacks] =
       await Promise.all([
         getBalance(db, userId),
         getActionClassPrice(db, 'simple'),
@@ -91,6 +102,11 @@ export default async function Home({
         // down the whole workspace page the way an un-caught Promise.all
         // rejection would.
         getUserChartStyle(db, userId).catch(() => null),
+        // R2.2 (WP-D, #69/#75/#211): the same server read /credits/page.tsx
+        // already does (ADR 006), narrowed to the plain {id, label, credits}
+        // shape Chat's insufficient-credits message needs — never priced
+        // client-side, /credits stays the one place that quotes € amounts.
+        getActivePacks(db),
       ]);
     return (
       <Workspace
@@ -100,6 +116,8 @@ export default async function Home({
         initialThreads={wsThreads}
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
         chartStyle={wsChartStyle?.style ?? null}
+        packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
+        coverage={coverage}
         {...(websearchEnabled && wsWebAddonPrice !== null
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}

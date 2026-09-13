@@ -1,5 +1,278 @@
 # STATUS archive — the session log
 
+**Session 101 (2026-09-13, owner present, continued further — wrap-up covers this entry) — chart Style panel
+became a real modal popup (#243), a real-browser review found and fixed a genuine overflow bug, R3/#109's
+confirm-first onboarding fetch was built and opened as PR #21, and a build/CI performance diagnosis was
+recorded.** Verified against reality at wrap-up time (2026-09-13): `git log`, `gh`-equivalent GitHub MCP calls
+against PR #21 and the relevant CI runs, `git status`/`git worktree list`. This entry picks up exactly where
+the "Thread A / Thread B" entry immediately below (never itself archived — same "known debt" this file's own
+header note already names) leaves off.
+
+- **#243, chart Style panel → real modal popup.** Owner instruction, picked up mid-session: "Start with making
+  the graphs edit and embed things in a popup instead of inside the right panel" (previously recorded then
+  explicitly deferred earlier the same session). Built `web/components/chart-edit-modal.tsx` (`ChartEditModal`)
+  — a real Base UI Dialog (page inert behind it, backdrop/Escape close), chart on the left, `ChartConfigPanel`'s
+  existing tabs on the right, stacked below `lg`. The chart canvas/legend/click-to-annotate notes RELOCATE into
+  the popup (the same live `ChartView` instance, moved between its dock slot and the modal by a boolean, never
+  duplicated — avoids a duplicate-SVG-id risk from Recharts' per-instance `domId`). Embed assessed against the
+  same ask and left unchanged: it has been a real popup since session 93, it just has no live chart preview yet
+  (a scoped, not-yet-built follow-up). A background subagent fixing the ~25 affected tests surfaced a genuine
+  near-miss: a core R1 honesty-invariant digit-scan test would have silently stopped checking anything once its
+  target portaled into the dialog — fixed, not just made green. Two LOW code-review passes (a focus-order gap,
+  a stale doc comment, both fixed) plus a real product finding — two independent `ChartView`s with no shared
+  `StylePanelOwnerProvider` can leave one popup stacked inert behind another — filed as
+  [open-questions #244](open-questions.md), judged not reachable in production (`web/app/layout.tsx` always
+  provides the shared provider). Full as-built: ADR [039](decisions/039-chart-presentation-panel.md)'s
+  2026-09-13 addendum, [open-questions #243](open-questions.md). Verified: typecheck ×2, web 104 files/1683
+  tests, backend 148 files/2262 tests (unaffected, no backend files touched), benchmark 14/14+6/6+0 fabricated,
+  real build. Pushed directly to `main` (owner present) — **`7e71e5a`, CI run #220 (`34738453682`) `gate` +
+  `deploy` green, deployed 04:54:14 UTC.**
+- **Follow-up same day — a real-browser review found a genuine overflow bug jsdom could never have caught.**
+  The owner's mid-conversation garbled message was clarified into "review the new chart modal"; rather than
+  read code alone, this session launched the real dev server (Playwright + the pre-installed Chromium against
+  a temporary, unrouted fixture page bypassing the missing local `DATABASE_URL`) and looked at it. The Style
+  panel's shared header row (tablist + per-chart language select + close button — fine at the panel's old full
+  card width) overflowed the modal's new ~22rem column badly enough to push the language select and close
+  button off the visible edge entirely — measured 500px of content against a 352px column in Dutch via
+  `scrollWidth`/`clientWidth`, not eyeballed. Fixed by splitting the row into two (tablist keeps its own
+  wrapping row; select + close button share a second row) — no behaviour/attribute change. All 326
+  chart.tsx/chart-config-panel.tsx tests had kept passing throughout the break, since jsdom never renders
+  actual layout width — captured as its own [lessons-learned.md](lessons-learned.md) entry. Verified: typecheck
+  ×2, web 104 files/1683 tests, backend 148 files/2262 tests, benchmark 14/14+6/6+0 fabricated, real build.
+  Pushed directly to `main` — **`5aa02c7`, CI run #221 (`34743197172`) `gate` + `deploy` green, deployed
+  06:47:32 UTC.**
+- **R3 / [open-questions #109](open-questions.md) reversed — the confirm-first onboarding-fetch chip, built
+  and opened as PR #21, NOT merged.** #109 (session 66) had already done the diagnosis and named exactly what
+  was missing: an explicit owner call on reversing the automatic-100-credit-fetch UX. This session asked the
+  owner directly, in plain language, whether that should change — answered **yes** (decision 4: add a confirm
+  button) and **no change** to the 100-credit signup grant (decision 5); both decisions recorded first as their
+  own docs-only commit (`774154b`) before any code was written. Mechanism: a confident finder verdict now mints
+  a signed, stateless offer token (`src/ingestion/onboarding-offer-token.ts`, HMAC-SHA256, modeled on the
+  existing `src/chart/embed-token.ts`) instead of triggering the fetch immediately; a new
+  `confirmOnboardingFetch` server action verifies the token, cross-checks its `userId` against the real
+  session, and only then calls the existing, UNCHANGED `triggerOnboarding`. A persisted pre-debit database row
+  was considered and rejected on inspecting migration 012 (`debit_transaction_id bigint not null` is a
+  deliberate existing invariant) — the signed token needed no schema change, so no owner-supervised DDL step.
+  All three of #109's honesty guards preserved (confidence gate before minting, unchanged byte-pinned
+  acknowledgment text now shown only post-confirm, unchanged refund-on-refusal). New required secret, not yet
+  set anywhere: `ONBOARDING_OFFER_SECRET` ([RUNBOOK](RUNBOOK.md) Secrets register) — fails closed to an honest
+  "not available right now" if unset, never a silent revert to automatic charging. Two LOW code-review passes;
+  the second found a real bug (a reused length guard sized for raw question text, 2000 chars, was too small for
+  the token itself, which a 2000-char question inflates to ~3091 chars) — fixed with a dedicated,
+  correctly-sized bound. One pre-existing test (`app/onboarding-wiring.test.ts`, a source-text "wiring pin"
+  suite) failed honestly on the redesign and was rewritten to pin the NEW two-function shape rather than
+  patched to merely pass again. Verified: typecheck ×2, backend 149 files/2273 tests (11 new), web 104
+  files/1693 tests, benchmark 14/14+6/6+0 fabricated, real build. **Per the build plan's own rule this decision
+  always gets branch + PR + explicit owner go, with no exception for an owner-present session** — branch
+  `journey-r3-fetch-confirm`, commit `976b87a`, **PR #21 opened, CI run #222 (`34745805896`) green
+  (07:50:35 UTC), NOT merged as of this wrap-up.** Owner confirmed setting `ONBOARDING_OFFER_SECRET` in Vercel
+  in chat; merging PR #21 is the one remaining step. Full as-built: ADR
+  [026](decisions/026-on-demand-fetch-job-architecture.md)'s 2026-09-13 addendum, reversed
+  [open-questions #109](open-questions.md), [08-build-plan.md](08-build-plan.md) Journey programme phase 2.
+- **Build/CI performance diagnosis — owner ask, analysis only, nothing built.** The owner asked, mid-session,
+  to diagnose why the build/dev experience felt slower. Dispatched a Fable 5.1 agent; a second agent dispatch
+  (a genuine mistake — `Agent` was called again instead of `SendMessage` to continue the first one, spawning an
+  unrelated fresh investigation with no shared memory) independently found the repo's own leftover measurement
+  scripts and produced real, freshly-measured numbers (a 776.8-second full local backend-suite run; the exact
+  finding that `tests/billing/ledger.test.ts` boots a fresh in-memory Postgres inside a `beforeEach` — 58 times
+  for 58 tests — against a measured 60–100× cost difference versus a `TRUNCATE`-reset of an already-booted
+  instance). Both reports' findings were reconciled (they agreed on root cause, diverged on which fix to lead
+  with) into one report, published as an artifact
+  (`https://claude.ai/code/artifact/eab275e6-c890-4d31-a3bc-11f21c686d58`), then — on the owner's explicit
+  follow-up ask ("do we have to do anything to apply this report?" → "yes, save it") — saved as a durable copy,
+  [session-briefs/2026-09-13-build-performance-diagnosis.md](session-briefs/2026-09-13-build-performance-diagnosis.md),
+  and tracked as [open-questions #245](open-questions.md) (3 sub-questions only the owner can answer before the
+  CI-sharding tier specifically is worth scheduling; the "first 3 actions" don't need to wait on them). Docs-only,
+  pushed directly to `main` — **`186ecdd`** (a git-workflow mistake caught and fixed in the same turn: the
+  first attempt landed on the `journey-r3-fetch-confirm` feature branch instead of `main`; cherry-picked onto
+  `main` and pushed there, then the stray unpushed commit removed from the feature branch via `git reset
+  --hard` back to `976b87a` — verified safe since it was never pushed to `origin/journey-r3-fetch-confirm`, so
+  PR #21 was never affected).
+- **Housekeeping note carried forward:** Dependabot PRs #16/#17 remain open, untouched, not this session's
+  concern. `journey-programme-v1`, `visual-story-motion`, `embed-charts`, and
+  `claude/checkdecijfers-journey-programme-rvvipe` branches were not touched this session — pre-existing from
+  other threads, cleanup of those is not in scope here.
+- **Wrap-up ritual addendum (same session, immediately after the block above was written):** the ritual's own
+  ✅/⏭️ doc-freshness sweep found the "PR pending review" phrasing still live in `open-questions.md`/`RUNBOOK.md`/
+  `08-build-plan.md` (needed updating to name PR #21 + green CI) and no persistent cross-session `MEMORY.md`
+  mechanism at all in this remote/cloud container (recorded as a genuine environment fact in RUNBOOK, not a
+  bug — see lessons-learned). Committed those fixes docs-only to `main` (**`ac08356`**) — correctly checked the
+  branch first this time, unlike the `186ecdd` mistake two bullets up. That push, however, touched the SAME doc
+  sections PR #21 itself had edited, which flipped PR #21 to `mergeable_state: dirty` — a real, if minor,
+  self-inflicted side effect of doing docs wrap-up work while a same-topic PR sits open. **Fixed in the same
+  turn:** merged `main` into `journey-r3-fetch-confirm` (merge commit **`79b7649`**, no rebase/force-push — the
+  four resulting conflicts were all "which side is current," resolved by keeping the freshly-verified wrap-up
+  text throughout), pushed. `mergeable_state` returned to `unstable` (conflict gone, just awaiting CI) with the
+  `gate` check (run `34748057564`) confirmed `in_progress` on the new head SHA at 08:35 UTC — this session
+  subscribed to PR #21's activity so a red result still gets a pushed fix per this repo's own PR-stewardship
+  rule, rather than being left unresolved after the session's own wrap-up text was written.
+
+**Session 101 (2026-09-12, owner present) — Phase 0 cleared (PR #13 merged, a real phone bug found+fixed, 9
+branches deleted), then the Live-embed Pro pitch built and pushed to `main`.**
+- Landed on the stale `journey-programme` branch (17 commits behind `main` — sessions 98-100 had already merged
+  everything there); switched to `main`.
+- **Phase 0:** PR #13 (Story stage motion) walked at 375px in both themes via the local dev-harness (no prod DB,
+  no LLM spend) before merging, per the kickoff's own instruction — found a REAL bug the docs asked this session to
+  check for: the LAST finding's caption overlapped the pinned chart's source-attribution line at rest (not just
+  mid-transition), because `scroll-mt-[52vh]` needed more trailing scroll room than the container's `pb-[40vh]`
+  gave it. Fixed (`pb-[56vh]` on mobile, `lg:pb-[40vh]` unchanged on desktop) and verified via a real wheel-scroll
+  pass and a direct `scrollTop` check, in `web/components/chart-story-stage.tsx`. Also fixed a harness bug found
+  while setting up the local dev server: `llm-stub.mjs` used a `file://` URL's raw `.pathname` as a filesystem
+  path, which stays percent-encoded and broke fixture loading on this machine's checkout path (`Check de
+  Cijfers`, contains a space) — `fileURLToPath` fixes it. Added a node-based harness launcher
+  (`scripts/dev-harness/run-next-dev.mjs`) for `.claude/launch.json`'s `preview_start`, after the shell-script
+  form hit a sandboxed `getcwd: Operation not permitted` and `NODE_OPTIONS`'s whitespace-tokenizing broke on the
+  same spaced path. A CONCURRENT session (98→99's own thread) was independently re-merging `main` into the same
+  branch at the same time — rebased this session's one real commit onto their latest tip instead of adding a
+  fifth redundant merge-of-main commit. Full verification green (typecheck ×2, backend 148 files/2262 tests, web
+  104 files/1677 tests, benchmark 14/14+6/6+0 fabricated, `test:docs` 11/11, real build, `/code-review` LOW 0
+  findings), pushed, PR #13's `gate` green (11m26s), squash-merged (`e2979d2`). The 9 branches GitHub listed as
+  merged-but-undeleted (confirmed against `gh pr list --state merged`, not guessed) were deleted via `gh api -X
+  DELETE`, working around the git-proxy's standing refusal to delete refs; `journey-programme-v1` left alone
+  (not tied to any merged PR, docs disagree on whether it's already gone).
+- **Owner decisions (asked in chat, since this was a genuine blocker per the kickoff brief's own instruction):**
+  leave the trust-page contact e-mail placeholder for now; Pro price shown as €19/month; the upgrade pitch goes
+  on both the embed dialog and the frozen embed page; ships visible to real users now, no real Stripe checkout.
+- **Phase 1 — the Live-embed Pro pitch (ADR 041's session-101 addendum, open-questions #237(b)/#205):** the
+  embed dialog's existing `liveProOnly` explanation now also shows the price and an "I'm interested in Pro"
+  button; clicking it fires `pro_upgrade_click` through the same anonymous `chart_style_usage` counter every
+  other embed/story/template event already uses (`src/chart/user-styles.ts`) and swaps to a thanks message — a
+  real click count, never a charge, never a real upgrade. The frozen embed page's own footer now also carries a
+  digit-free "go Pro" pitch for every visitor (not just the creator), riding the existing "checkdecijfers.nl"
+  backlink rather than adding a new one — deliberately NO price there, since that page has its own
+  digit-honesty-scan test (every digit in the render must trace to the chart spec) which this session correctly
+  worked around rather than weakened. **`hasProPlan` is deliberately UNCHANGED** — every version of "a real
+  signup flow" that doesn't charge money either grants real Pro access to anyone who clicks a button (giving away
+  the paid tier for free with no owner sign-off) or is just a second placeholder no more real than the allowlist
+  it would replace; treated as a separate, still-open call from "is the pitch visible." 2 new tests + 1 new/1
+  extended test added. Full verification green again after this change (same suites, web now 104 files/1680
+  tests — +3 for the new/extended tests — everything else unchanged), `/code-review` LOW 0 findings, pushed
+  directly to `main` after a real (though smaller) merge-conflict resolve in `docs/open-questions.md` against
+  the same concurrent session's own PR #13 wrap-up landing in between.
+- **Owner steps still open, unchanged:** `npm run db:migrate` for 028+029 then `npm run usage:report`; set
+  `EMBED_TOKEN_SECRET` in Vercel; the `auth.users` read check; the trust-page contact e-mail (deferred by the
+  owner this session).
+- Model tier: session model (Sonnet) did all of it directly — no subagents; every step (real-browser diagnosis,
+  the scroll-margin bug, the digit-honesty-scan interaction, the concurrent-session rebase) needed full context
+  in one head.
+
+**Session 97 (continued, 2026-09-12, owner present) — drove PR #13 through three merge-conflict rounds as a
+concurrent session (98/99) squash-merged six other PRs into `main` underneath it; no new features built.**
+Resumed from the prior segment's compaction (PR #14-already-exists discovery, journey-programme-v1 flagged
+redundant). This segment's own work was entirely PR-#13-firefighting plus routine PR #9/#13 CI check-ins (`send_later`
+self-scheduled, re-armed silently on every unchanged cycle per the standing rule) — no code was written beyond
+merge-conflict resolutions. Three rounds, each triggered by `main` moving out from under `visual-story-motion`
+while it sat open for owner review:
+1. **`a30c490`, 01:12 UTC** — this session's own earlier docs pushes (open-questions #238/#239) collided with
+   PR #13's own #239 row (Story stage). Docs-only (STATUS.md, lessons-learned.md, open-questions.md); kept #239 for
+   Story stage (more cross-referenced), renumbered the newer row to #240. Full verification green (root+web
+   typecheck, `test:docs` 11/11, web 94 files / 1479 tests, backend 143 files / 2211 tests, benchmark GATE PASS,
+   real build).
+2. **`fa79870`, 09:44 UTC** — `main` had absorbed PR #14/#18/#19/#20/#9 (squash-merged by the owner + session 98/99,
+   verified live via `mcp__github__pull_request_read` and `git log`, not assumed). Same open-questions collision
+   recurred (#239 vs. a new session-98 row); same resolution pattern, renumbered to #242 this time (#240/#241 already
+   taken by then). The real work was a genuine code conflict in `web/components/chart-story-stage.tsx`: PR #19's
+   phone-layout fix and this branch's own phone-layout fix land in the same `className`, and git's auto-merge
+   silently kept only this branch's side with **no conflict marker at all** — caught by re-reading the merged file
+   against both branches' actual diffs, not by trusting "no markers = correct". Combined both fixes (they address
+   different symptoms of the same pinned-chart-at-top phone layout, not alternatives) — see
+   [lessons-learned.md](lessons-learned.md) for the full mechanism. Full verification green again (web 104 files /
+   1677 tests, backend 147 files / 2258 tests, benchmark, real build with `/embed/[token]`, `/galerij`, `/privacy`,
+   `/werkwijze` all correctly registered).
+3. **`27c33d3`, 09:54 UTC** — `main` advanced twice more (PR #15, then a docs-only "session 99 wrap" commit) before
+   the second push had even finished landing. Same open-questions collision a third time (renumbered to #242 for
+   real this round, folding in session 99's own newer status updates to rows #238/#240/#241); STATUS.md's stacked
+   "NEXT SESSION STARTS HERE" blocks merged by keeping both sides, newest first, per the file's own convention.
+   `chart-story-stage.tsx` and `08-build-plan.md`/`lessons-learned.md` auto-merged clean this round (already
+   reconciled). Full verification green a third time (web 1677 tests unchanged, benchmark, build). CI `gate`
+   confirmed `success` independently via `pull_request_read` after each push (never trusted the webhook comment
+   alone) — one local backend-suite run was invalidated by a self-inflicted race (see lessons); not re-run locally
+   since the prior round's own clean backend-suite pass (147 files / 2258 tests) plus CI's own green `gate` on the
+   actual pushed head were already sufficient evidence.
+**Also discovered mid-session** (via `mcp__Claude_Code_Remote__list_sessions`, prompted by the owner asking "is this
+the latest session?"): a much more advanced concurrent session (`session_0156n8jxBx7PXFHAiX9vf4c8`, "checkdecijfers.nl
+journey programme") had reached session 98, then the owner drove it to session 99 and merged the whole six-PR stack
+directly (see session 99's own entry above/below) — corrected an earlier-segment mistake of having tried to
+`SendMessage` the WRONG session ID for this same session (a bridge-type session with an unrelated title, not this
+one); `ListAgents` still shows no reachable peers from this cloud session regardless, so cross-session ping remains
+unavailable here by any ID.
+**Final verified state (2026-09-12T14:24 UTC):** `main` at `9fb9b19` (a session-99 docs commit); PR #13 clean/green
+at `27c33d3`, independently re-confirmed against the current `main` tip via `git merge-tree` (0 conflicts) after
+`main` advanced twice more post-fix with no PR #13 impact; PR #9 MERGED (`650d664`, by the owner); only PR #13 and
+Dependabot #16/#17 remain open. STATUS.md's stale "PR #13 needs a manual merge" claim corrected in place. Next-session
+brief: [session-briefs/2026-09-12-session-97-continued-part2-handoff.md](session-briefs/2026-09-12-session-97-continued-part2-handoff.md).
+
+**Session 99 (2026-09-12, owner present — "you are the expert, continue") — the six-PR journey + embed stack
+MERGED to `main`; nothing new built.** Started as a "which session is latest / what needs merging" check: session 98
+(`session_0156n8jxBx7PXFHAiX9vf4c8`) was the latest and had wrapped; no other session was still working. Then, with
+the owner present (#118 standing authorization), merged in the planned stacking order, each on a green `gate` on its
+final head: PR #14 (`journey-programme`, squash `677c5fb`) → PR #18 (`journey-public-face`, `ac14392`) → PR #19
+(`journey-phone`, `189d36b`) → PR #20 (docs line + `scripts/dev-harness/`, `524b63f`) → PR #9 (`embed-charts`,
+`650d664`) → PR #15 (`embed-live-creator-lookup`, `8d0f0d4`). Real conflict work: `main`'s four session-97 docs
+commits into `journey-programme` (5 tracker files; open-questions row-number collision #239 → the session-97
+duplicate-build row renumbered #241); #18 and #19 docs + `chart.test.tsx` (kept both describe blocks); #9 against
+the journey stack (`chart.tsx` keeps both `initialPresentation` and `initialFormOverride`; `messages.ts` and
+`chart.test.tsx` keep both sides) — web `tsc` clean, web suite 104 files / 1628 tests green on that merge before push.
+Every later "conflict" was the squash-stack artefact and was recorded with `git merge -s ours origin/main` after
+verifying the trees identical (RUNBOOK "Merging a queue", lessons). Timeline: 08:25 start, 08:28 first push, 08:43
+first merge, 09:42 last merge. `main` CI: runs on `677c5fb` and `189d36b` show `cancelled` (superseded by the next
+merge on the same ref — the rule since session 91), `ac14392` / `524b63f` green; `650d664` cancelled the same way;
+`8d0f0d4` (run 34686517400) gate green but its `deploy` job SKIPPED every Vercel step ("main has moved on" — the
+wrap-up docs push `a483979` had landed on top and, being docs-only, had no run of its own): production was still on
+the old build. Fixed in `bfc243a` (ci: the stand-down ignores docs-only successors + `workflow_dispatch`; `/code-review`
+LOW found one finding — a failed tip fetch would have stood down silently — fixed before push). Run 34687239506 on
+`bfc243a`: gate green, deploy built + deployed + post-deploy smoke check green at 10:12 UTC — **production now runs the
+full merged stack.** NOT merged: PR #13 (real conflict in `chart-story-stage.tsx` with #19's phone fix — owner/browser call),
+Dependabot #16/#17, and session 96's stranded branch `claude/checkdecijfers-embed-pr-review-acbrd5` (its docs
+cherry-picks conflict in every tracker; its code commit `038ecd9` is superseded by PR #14 — left as a record).
+Branch deletion via the session's git proxy silently fails — listed for the owner. Docs this session: STATUS top
+block, this entry, lessons (7), RUNBOOK stacked-PR mechanics, build plan session-99 line (+ a duplicated "Order /
+rule" paragraph from the merge removed), ADR 041/045/046 as-built notes, architecture rows, open-questions
+#214/#224/#238/#240/#241, session-100 kickoff. Note found: session 98's wrap commit `812cfd7` says "lessons" but
+touched no lessons file — recorded in lessons, not reconstructed. Model tiers: the session model did everything
+(merges, conflict resolution, verification); no subagents.
+
+**Session 98 (2026-09-12, AUTONOMOUS — the owner's session-98 kickoff "big-build variant": build on top of PR #14,
+merge nothing on the money path) — the public face + gallery (PR #18), the phone journey walked and fixed (PR #19),
+Live embeds unblocked (PR #15), a secrets-free real-browser harness committed.**
+
+1. **Harness first.** The cloud container has no `DATABASE_URL`, no Supabase keys, no LLM key. Built
+   `scripts/dev-harness/`: a Node `--import` preload restores the CI fixture snapshot into PGlite and feeds
+   `web/lib/db.ts`'s dev seam (`global.__checkdecijfersDb`); a local Supabase-Auth stand-in (JWKS + `/auth/v1/user`,
+   one test user with the signup grant); an Anthropic-API stand-in replaying `tests/fixtures/llm/**`. Logged-in
+   workspace, a B4 answer with chart, a B16 clarification, a B18 refusal and the credits wall all walk locally with
+   zero LLM spend. A first attempt (local Postgres + self-signed cert appended to the pinned CA) was refused by the
+   tool's safety classifier as a TLS weakening and would not have worked anyway (`next.config.ts` bakes the CA).
+   RUNBOOK section written; Turbopack's symlinked-`node_modules` refusal (hard-link copies instead) and `next dev`
+   rewriting `web/CLAUDE.md` recorded.
+2. **PR #18 — the public face** (Sonnet implementer, Opus whole-branch review, one fix wave): `GALLERY_STORIES`
+   (12 stories over registry keys, built through the same `runQuery → buildChartSpec` pipeline, hermetic gate pins
+   slug → table, grain, window, attribution, ≥ 1 finding); the feed factory in `web/lib/ontdek.ts`; `ChartView`
+   props `initialPresentation` / `initialPanel`; `openStory` no longer fires `generateInsights` for anonymous
+   visitors and an auto-open never counts as a `story_open` event (the review's HIGH: twelve
+   `countChartStyleEvent` server-action DB writes per anonymous load); `/galerij` public + noindex + proxy test;
+   landing subtitle around the positioning sentence (no "embedded" overclaim), a gallery CTA, a compact three-story
+   teaser replacing Ontdek; question-style digit-free titles in nl + en; ADR 046; #237/#239/#240. Measured: root +
+   web tsc clean, test:chart 195, test:docs 11, benchmark 14/14 + 6/6 + 0 fabricated, web 100 files / 1517 tests,
+   real build; browser pass at 375 light/dark nl/en + 1280. CI `gate` success on `5340623`.
+3. **PR #19 — the phone journey** (Sonnet, resumed twice: the first pass was a slice, the second waved a real
+   defect through): the full step list walked at 375 px light + dark; fixed the wordmark wrap in the workspace
+   header, six sub-44 px tap targets (`sm`-only utilities, desktop pixel-identical), and the Present stage's phone
+   captions sitting below the fold (`min-h-[45dvh] lg:min-h-[85vh]`). Findings doc
+   `session-briefs/2026-09-12-phone-walk-findings.md`. Measured: tsc clean, test:docs 11, web 98 files / 1499
+   tests, real build. CI `gate` success on `16dc9fc`.
+4. **PR #15 — Live embeds unblocked** (Sonnet): design note (`session-briefs/2026-09-12-live-embed-creator-lookup-
+   design.md`) → `lookupUserEmail` reads `auth.users.email` through the existing pool, UUID-validated, fail-closed,
+   never logged; the embed route's Live gate uses it; ADR 041 as-built; RUNBOOK owner check. Measured: tsc clean,
+   test:billing 148, test:chart 208, test:docs 11, web 98 files / 1536 tests, real build. CI `gate` success on
+   `a5dafca`. Assumption: the pooler role can read `auth.users` (normally true on Supabase).
+5. **Docs line** (this branch, `claude/checkdecijfers-journey-programme-rvvipe`): merged `journey-programme` into the
+   session-97 docs line (five doc conflicts, both sides kept), the harness + RUNBOOK section, lessons (session 98),
+   STATUS top block, this entry, the session-99 kickoff. Not done: merging anything; applying 028/029; the trial
+   section in the harness; R3.
+6. **Model tiers:** session model planned, built the harness, reviewed every diff + screenshot, opened the PRs;
+   three Sonnet implementers; one Opus reviewer (10 findings, 1 HIGH, all fixed).
+
 **Session 97 (2026-09-11→12, owner present, continued after context compaction) — Journey-programme R8+R9 built
 in-chat, then superseded by discovering PR #14 already covers the whole programme; session wrapped and handed off.**
 
@@ -72,6 +345,42 @@ in-chat, then superseded by discovering PR #14 already covers the whole programm
 10. **Docs updated in this same change:** this entry; `STATUS.md`'s top block (PR #14's existence/state as the
     now-primary fact, the corrected PR #9 SHA, the `journey-programme-v1` redundancy note); `docs/open-questions.md`
     #238; `docs/08-build-plan.md`'s Journey programme section; `docs/lessons-learned.md`.
+**Session 97 (2026-09-12, AUTONOMOUS — the owner's kickoff: "work autonomously for hours, multiple agents, big
+steps") — THE JOURNEY PROGRAMME BUILT (phases 0, 1, 3, 4, 5; ADR 045), BRANCH `journey-programme`, PR FOR THE OWNER.**
+
+1. **Plan** ([superpowers/plans/2026-09-12-journey-programme.md](superpowers/plans/2026-09-12-journey-programme.md)):
+   five work packages in five parallel git worktrees (symlinked node_modules), Sonnet implementers, TDD per package,
+   then merged into one branch (four `messages.ts` tail conflicts, all keep-both). Phase 2 / R3 (the money path)
+   deliberately NOT built — explicit owner go required; the larger grant, the 028 apply and the audit re-run are
+   owner steps.
+2. **Built:** WP-A the read-only usage report (`npm run usage:report`, `src/usage/report.ts`, 11 tests, aggregates
+   only; trial→signup conversion honestly "not measurable"; fetch spend NET of refunds) — RUN ONCE against the live
+   DB: 4 signups, 2 users with questions, 4 fetches (3 delivered / 1 failed / 300 net credits), 7 `internal`
+   refusals all-time; WP-B `/werkwijze` + `/privacy` as visibly-marked drafts + footer links + the Ontdek caption + a
+   fourth landing step "Publiceer"; WP-C credits-page per-pack copy (server-side maths), the purchase poll (3 s ×
+   10, hidden-tab aware), the phone header (#214 → Account menu), Sjablonen as the opening tab for an untweaked
+   chart without a saved default, the anonymous Insights login line; WP-D chip captions by kind, the linked
+   insufficient-credits message naming the covering pack, the amber low-balance line (#69 rule), the 8-second
+   honest waiting line, one-click clarification options (revises #75 for one kind), the four inert chips → one
+   "Eigen data (binnenkort)"; WP-E the collapsed coverage disclosure (registry read, 30-min cache, one example per
+   table, Eurostat "binnenkort" only) under the price line and as "Dit weten we nu" on the landing.
+3. **Reviews:** an Opus whole-branch review (3 HIGH / 3 MEDIUM / 5 LOW — all fixed in one Opus fix wave: the poll
+   listener leak, the wrong-carrier one-click send + double-send latch, the privacy cookie overclaim, the saved-default
+   panel tab, the templates-tab gate, net fetch spend, metadata, locale euro format, the link's accessible name, the
+   D10 className pin) and an Opus scoped review of WP-E (the example-frame grammar, fixed by the session). `/code-review`
+   LOW: 0 findings.
+4. **Verification (measured):** full block on `8c3fc38` — root + web tsc clean; backend 144 files / 2222 tests;
+   benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated, GATE PASS; web 98 files / 1492 tests; `next build`
+   clean. After the three browser-pass commits (web-only): web tsc clean, web 98 files / 1492 tests, `next build`
+   clean on `ff8fbda`. Real browser (local `next dev -p 3010` against the live DB), light + dark, 1280 px + 375 px:
+   landing coverage section + example questions, both trust pages (after the proxy fix), footer links, Ontdek caption,
+   step 4, the Style panel opening on Templates, the anonymous Insights login line. NOT walked in a browser (needs a
+   login; covered by tests only): the chat chips/captions, the credits page, the purchase poll, the phone header.
+5. **Docs:** ADR 045 (new); open-questions #14(d), #75, #207, #211, #214, #238; build plan; 12-huisstijl; 04-architecture
+   row; RUNBOOK "Usage report"; the ADR 043 decision-6 note; lessons; this entry; the session-98 kickoff.
+6. **PR #14** (`journey-programme` → `main`): CI gate PASS (11m31s) on `633db3f`, `MERGEABLE`, verified with `gh pr checks 14`.
+7. **Observed, not this session's scope:** PR #13 (`visual-story-motion`, Story stage motion pass) appeared after the
+   kickoff and is open, MERGEABLE; `refusal (internal) 7` all-time in the report deserves a look (error log).
 
 **Session 96 (2026-09-11, owner present throughout — started as "how do we obliterate LocalFocus") — STRATEGY,
 ICP, RESEARCH, SANITY CHECK; DOCS ONLY, NO CODE.**
@@ -303,6 +612,176 @@ UI FIXES LIVE, THE "NEXT LEVEL" VISUAL PLAN WRITTEN, TWO EXPORT FIXES (#222 ✅/
     correction); lessons-learned (session 94, 8 entries — 6 from the original wrap-up, 2 more from this
     later same-day pass); STATUS (corrected PR #9 status + this continuation noted); this entry;
     the session-95 kickoff (refreshed twice — once for the third conflict, once more for this pass).
+
+**Session 93 (2026-09-10, autonomous — owner away for the build, "Be gone for many hours... work
+autonomously... don't stop until I give you the sign to stop"; checked in once mid-session with "ok
+wrap up when done") — THE WHOLE EMBED FEATURE (spec Part B) BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT: 8
+TASKS, A WHOLE-BRANCH REVIEW, ONE FINAL FIX WAVE, PUSHED AS A PR AGAINST `main` — NOT MERGED.**
+
+1. **Kickoff:** read CLAUDE.md → STATUS → the session-93 kickoff brief → archive (session-92 entry) →
+   lessons-learned (session-92 entries) → the story-mode-and-embed spec (Part B) → ADR 039 (both
+   session-92 addenda) + ADR 040, per the kickoff's own reading order. Item 0 (the Anthropic key cap
+   alert + "did a follow-up chip reach the model" question): resolved by reading `chat.tsx`'s own
+   extensive inline comments rather than reproducing anything (the key was still capped) — two
+   structurally different chip mechanisms share one render path: WP26's clarification-option chips
+   (genuinely zero-LLM, gated on an OPEN `pending` round) and WP29's "Suggested follow-up questions"
+   chips (shown under an ordinary answer; sending one is exactly like typing a new question, by design,
+   always parses through the model). The session-93 kickoff's framing conflated the two; the alert is
+   most plausibly just ordinary usage from an extensive battle-testing session exhausting an
+   already-near-capped monthly quota, with the last call happening to be a WP29 chip. No code change —
+   a kickoff-framing correction, not a regression. A dark-mode glance at the new panels (Playwright,
+   production): no low-contrast text found via a canvas-based contrast scan of the Style/Frame panel
+   (the panel's own dark-mode `lab()`-format colors needed a proper canvas readback, not a regex parse,
+   to check for real — a `rgb()` regex silently skipped every element and would have reported a false
+   clean pass).
+2. **Plan:** `superpowers:writing-plans` → `docs/superpowers/plans/2026-09-10-embed.md` (8 tasks: the
+   embed token, the Pro-check + `createEmbedCode` action, `ChartView`'s embed props, the button +
+   dialog, the public route's frozen render, its live re-render, framing headers, the docs sweep),
+   argued from the owner-approved spec's Part B. Branch `embed-charts` cut from `main` at the
+   session-92 wrap-up commit (`7cea0ad`) — autonomous session, #118(b): branch + PR, not a direct push.
+   Worked in the main checkout, not a separate worktree directory (`EnterWorktree` is explicitly
+   self-gated to an explicit user/CLAUDE.md request, neither given; matches sessions 89/91/92's own
+   precedent of a plain branch for autonomous SDD builds).
+3. **Executed as `superpowers:subagent-driven-development`, 8 tasks + a pre-flight conflict scan (clean)
+   + a whole-branch review + one final fix wave** — a fresh implementer per task (cheap tier for
+   complete-code tasks, standard tier for judgment tasks), a fresh task reviewer per task (opus
+   specifically for every task touching `chart.tsx`, the public route, or `proxy.ts`, given this
+   codebase's own history of whole-branch reviews finding what task reviews structurally can't), fix
+   rounds + scoped re-reviews where findings arose. Per-task detail:
+   - **Task 1** (`e45619f`): `src/chart/embed-token.ts` — signed, stateless HMAC token
+     (`{auditId}.{signature}`, constant-time verify). Review: clean first pass, 3 minors parked
+     (inherited from the plan's own reference code, none load-bearing).
+   - **Task 2** (`59acad0` + fix `7cc5668`, `c90198a` review clean): `src/billing/pro.ts` +
+     `web/app/embed-actions.ts`. The implementer found `npm run web:test` phantom-failing on any NEW
+     backend test file under a `src/` subdirectory the web suite's glob had never matched a test file
+     in before (`web/backend -> ../src`'s symlink walked into by Vite's `/@fs/` resolution) and
+     initially spawned an out-of-scope task chip for it — ruled this was actually load-bearing (every
+     remaining task in this exact plan was about to add more `src/` test files) and fixed it directly:
+     `web/vitest.config.ts` gained `exclude: [...configDefaults.exclude, "backend/**"]`. 3 minors
+     parked (match this codebase's own dominant conventions elsewhere).
+   - **Task 3** (`4d139cf` + fix `f2ea3d5`): `ChartView` gains `embed`/`embedMode`/`embedFooter` props,
+     6 chrome elements gated on `!embedMode`. Opus review (extra scrutiny — `chart.tsx`'s own ADR 039
+     history) found 2 Important on the first pass: the embed backlink missing `target="_blank"` (would
+     navigate the IFRAME itself, trapping the site inside the embed box) and `embedMode`'s own new
+     JSDoc claiming it "strips click-to-annotate" when every chart point still rendered a focusable,
+     ARIA-labeled phantom "Add a note" button. Both fixed in one round, re-reviewed clean.
+   - **Task 4** (`6f834c3` + fix `c90198a`… — largest single task, 6 files): `ChartEmbedButton`/
+     `ChartEmbedDialog` (shadcn `dialog`, one local import-path patch for Vite/vitest's missing `@/`
+     alias), wired into `chat.tsx`/`visual-dock.tsx`/`dock-visuals.ts`, `CHART_STYLE_EVENTS` += 2, new
+     i18n keys. Opus review: `embed_copy` fired (and showed "Copied!") even when the clipboard write
+     FAILED — violated this exact file's own established precedent (`default_saved`/`default_forgotten`
+     only fire inside `if (r.ok)`) — plus the entire copy path had zero test coverage. Fixed, bundled 2
+     cheap minors (a missing `.catch` on the mint action, the shadcn patch's own misleading comment),
+     re-reviewed clean.
+   - **Task 5** (`87e4789` + 2 fix rounds `2fce336`/`cf013c0`, `67ac454` unrelated fix folded in): the
+     public `/embed/[token]` route, frozen render — the first dynamic route and first fully public
+     no-auth page this app has ever had. **Opus review found a CRITICAL the whole 8-task plan never
+     accounted for: `web/proxy.ts`'s session-auth allowlist had no `/embed/` entry, so every anonymous
+     visitor — the entire point of a public embed — was redirected to `/login`.** Invisible to every
+     test (the route's own tests call the page function directly, bypassing middleware). Also found in
+     the same round: `web/app/layout.tsx` unconditionally rendered `<SiteFooter/>` inside every embed
+     (violating "no site header/footer"); `?theme=`/`?form=` from the already-shipped dialog were
+     silently ignored. Fixed in one consolidated round: `/embed/` added to `PUBLIC_PATH_PREFIXES`
+     (with regression tests incl. a spot-check other routes stay protected); a new `x-embed-route`/
+     `x-embed-lang` proxy-header mechanism lets the root layout conditionally suppress the footer and
+     set `<html lang>` for embed routes; `ChartView` gained `initialFormOverride` for `?form=`;
+     `?theme=dark` got a best-effort `.dark`-wrapper fix (superseded properly in the final fix wave —
+     see below). Deviation worth recording: the fix implementer deviated from the controller's literal
+     "clone headers once" instruction, mutating shared `request.headers` directly instead — the
+     re-reviewer independently REPRODUCED (real probes against the installed Next runtime, not just
+     reading code) that the literal instruction would have shipped STALE refreshed session cookies on
+     every session refresh; the deviation was the right call. 4 minors parked, 2 flagged for the final
+     review as worth fixing (the header-stripping hygiene gap, the `?theme=dark` comment's wrong
+     attribution).
+   - **Task 6** (`baa3124` + fix `67ac454`): `src/chart/embed-live.ts` (`parseStoredIntent`/
+     `rerunLive`) — the most architecturally novel piece: no existing function in this codebase re-runs
+     a STORED, possibly-days-old `StructuredIntent` through the live query pipeline. Resolved the
+     Pro-owner-email-lookup question (does an "email by another user's id" mechanism exist, since the
+     Pro-gate must check the audit row's OWNER, not the anonymous visitor) by exhaustive search: it does
+     not, and building one needs new unprovisioned Supabase admin/service-role plumbing — correctly
+     gated Live closed (`hasProPlan({ id: record.userId, email: null })`, always `false`, per the
+     brief's own pre-authorized stop condition) rather than inventing a workaround. Opus review found 2
+     Important, both about test rigor not behavior: the live-success test couldn't actually distinguish
+     a fresh live spec from the frozen one (the canonical regression — reverting the one-line
+     `spec={finalSpec}` back to `spec={spec}` — passed all 28 tests unchanged), and the "mutation-
+     tested" claim for `parseStoredIntent` was overstated (2 guards had no test proving they mattered).
+     Both fixed with real TDD (temporarily reverting the production code, confirming the strengthened
+     test genuinely fails, restoring, confirming it passes), re-reviewed clean. **A harness quirk hit
+     twice near this task**: the implementer's own `run_in_background` bash job (the ~35-min backend
+     suite) made it look permanently stuck after its turn ended — no way to resume a specific subagent
+     in this harness — but it resumed and finished on its own while a separately-dispatched
+     "completion" replacement was already running; caught via `TaskStop` before any conflict, only
+     because `git log`/`ps aux` were checked directly rather than trusted from either agent's narration.
+   - **Task 7** (`d60cb5b` + fix `20e3d98`/`810d727`): `web/next.config.ts` framing headers —
+     `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'` everywhere except `/embed/:path+`
+     (`frame-ancestors *`, no stale XFO). Proven against Next 16.3.4's REAL compiled matcher (traced
+     the exact vendored `path-to-regexp` module + options, then independently re-confirmed via the
+     built `routes-manifest.json` AND real `curl` against a real `next start`). Opus review found the
+     new config comment overclaimed zero overlap between the two header groups (bare `/embed`, no
+     token, matched both) and an unflagged sibling (case-insensitive header matching vs. case-sensitive
+     real routing). Fixed: `:path*` → `:path+` closes the bare-path overlap outright; the
+     case-insensitivity quirk documented + pinned as a known, accepted, harmless gap (closing it needs
+     `experimental.caseSensitiveRoutes`, correctly out of scope for one route).
+   - **Task 8** (`746d95a` + fix `6293553`): ADR 041 + the docs sweep (03-mvp-scope, 06-roadmap,
+     open-questions, RUNBOOK, both READMEs, a stale-sweep correction on the original spec doc). Review
+     found `docs/STATUS.md`'s own top block — this repo's #1-precedence doc, and the exact doc this
+     task's own edited README told every reader to check first — still falsely said Embed was merely
+     "DESIGNED... not built," directly contradicting the ADR this same commit wrote; `08-build-plan.md`
+     had the identical stale framing. Both fixed, consistent with ADR 041.
+4. **Final whole-branch review (opus, main `7cea0ad`..`6293553`, 18 commits, ~584 KB diff):** ready to
+   merge WITH FIXES, no Critical. Confirmed the proxy fix held undisturbed through 3 more tasks;
+   `embedMode` composes correctly with everything Tasks 4/6 added later (incl. `onPointClick` hoisting
+   and `initialFormOverride` re-using the same form guards); the Pro-gate cannot be reached by a
+   redacted or foreign-owned row; no new migration needed (confirmed against the real `chart_style_usage`
+   CHECK constraint). 3 Important, all genuinely NEW cross-seam findings no task review could have
+   seen: (1) the embed backlink hardcoded `https://checkdecijfers.nl`, which resolves to Namecheap
+   PARKING, not the real app (production is `checkdecijfers.vercel.app`) — every embed's only outbound
+   link was dead; (2) `?theme=light` — the dialog's own DEFAULT option — silently did nothing, because
+   `next-themes` reads the reader's OWN OS preference regardless of `?theme=`, and the earlier
+   `.dark`-wrapper fix only ever addressed the `dark` half; (3) the route's redaction-guard test never
+   isolated `isRedacted` (both fixtures set `chart: null` AND `redacted: true` together), and the REAL
+   production redaction envelope has `chart` entirely ABSENT (not null) — meaning `isRedacted` alone
+   protects this public route in production, untested in isolation.
+5. **Final fix wave (`ce96349`, `f56b15a`):** all 3 Important + 3 bundled items (proxy header-stripping
+   hygiene, a `?form=table` exclusion the plan's own rule required, an ADR risk-description correction)
+   fixed in one wave, per the process's own "no second fix wave" rule. The backlink now uses the real
+   `NEXT_PUBLIC_APP_URL` (same source the dialog's own iframe `src` already used). `?theme=` now uses a
+   real `forcedTheme` mechanism — a new `x-embed-theme` proxy header alongside the existing
+   `x-embed-lang`, threaded to `next-themes`' own documented override API — replacing the earlier
+   wrapper-div hack entirely and correctly closing BOTH directions (light-on-dark-OS, dark-on-light-OS
+   with a real page background this time). Final re-review (opus) independently read `next-themes`
+   0.4.6's actual minified source (not just its types) to trace `forcedTheme` through the pre-hydration
+   script, the reactive system-listener guard, and the post-hydration apply effect before trusting the
+   mechanism — all 6 items ADDRESSED, no new Critical/Important breakage. 3 residual minors + 1
+   pre-existing (not introduced here) out-of-scope observation adjudicated directly by the controller
+   (parked; recorded a new open-questions row, [#229](open-questions.md), for the pre-existing one) —
+   no further review loop, per the skill's own rule.
+6. **Final verification block, run once on the branch's true final state, all green:** `npm run
+   typecheck` clean; `npm run web:typecheck` clean; web suite **1380/1380** (91 files); backend suite
+   **2229/2229** (145 files, solo, ~10.5 min — faster than the historical ~35 min estimate, no
+   contention); hermetic benchmark **14/14 answerable + 6/6 refusal/clarify + 0 fabricated, GATE PASS**;
+   real `next build` clean (`/embed/[token]` registered dynamic); `npm run test:docs` 11/11. (Ran `npm
+   ci` in root + `web/` first — `npm outdated` showed installed `node_modules` had drifted behind both
+   lockfiles, a documented RUNBOOK gotcha; lockfiles/`package.json` untouched, `node_modules` gitignored
+   both places, confirmed via `git status` before and after.)
+7. **Pushed and opened as a PR, not merged** (autonomous session, #118(b)): branch `embed-charts` pushed
+   to `origin`; the PR opened against `main` with a full summary (the Live-gated-closed limitation
+   stated first, before anything else) — the session avoided writing the literal PR number into any
+   `docs/` file per this repo's own doc-convention test. A wrap-up docs-only commit (`ec99486`, adding
+   the lessons/archive/STATUS entries + a RUNBOOK fix caught on re-read — see item 8) superseded and
+   cancelled the first CI run; the second run (`34433304606`) completed green: `gate` passed in
+   10m16s, `deploy` correctly did not run (PRs never deploy, only a push to `main` does, per ADR 018).
+8. **Docs:** ADR 041 (+ the final-review corrections), 03-mvp-scope, 06-roadmap, open-questions (#224
+   through #229), RUNBOOK (2 new secret rows + an "Embed go-live" section), README + web/README, the
+   original spec doc's own as-built correction, STATUS (this entry + the lean top block), lessons-
+   learned (session 93 — the proxy-allowlist Critical, the "UI promises what the backend doesn't
+   honor" bug shape recurring 3 times, the background-job harness quirk, the session-92 alert
+   correction, the value of opus-tier review on request/render-boundary files), memory, this entry, the
+   session-94 kickoff.
+9. **Left for the owner:** review and decide on the PR; if merged, set `EMBED_TOKEN_SECRET` (Vercel,
+   Production, Sensitive) for Embed to activate at all, optionally `PRO_ACCOUNT_EMAILS` (does NOT by
+   itself turn Live on); migrations 028 + 029 and `BRANDFETCH_API_KEY` remain pending from before this
+   session, untouched.
 
 **Session 92 (2026-09-09, owner present) — STORY MODE, THE CHAT POLISH BATCH AND FRAME STYLING + THE
 FLOATING STYLE PANEL BUILT VIA SUBAGENT-DRIVEN DEVELOPMENT, WHOLE-BRANCH-REVIEWED, VERIFIED AND LIVE;

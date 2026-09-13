@@ -6,6 +6,7 @@
 // (no privacy link until the #14(d) policy exists — no dead links).
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { deleteMyThread, listMyThreads, loadMyThread } from '../app/actions.ts';
 import { ingestFile } from '../app/dataset-actions.ts';
@@ -17,10 +18,12 @@ import type { DatasetProfile, DatasetStatus } from '../backend/attachments/types
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
+import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { useMediaQuery } from '../lib/use-media-query.ts';
 import { Chat } from './chat.tsx';
+import type { ChatPack } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
@@ -49,6 +52,50 @@ type Handoff =
 
 const EMPTY_HANDOFF: Handoff = { kind: 'cbs', messages: [], context: null, threadId: null };
 
+// R2.4 (journey WP-C): the ?purchase=success poll — same architecture as
+// onboarding-live-status.tsx's router.refresh() poll (chosen there for the
+// same reasons: zero new API surface, the refresh re-runs the SAME
+// server reads page.tsx already does, so the delivered balance itself
+// arrives in one step rather than a status-only endpoint that would still
+// need a follow-up full render). Bounded (~30s) rather than open-ended like
+// onboarding's — a Stripe webhook typically lands in seconds, and an
+// unbounded poll here would hammer the server for a payment that failed
+// silently. Hidden-tab aware: a tick is skipped while the tab isn't visible,
+// and returning to the tab ticks immediately instead of waiting out the
+// interval (the same visibilitychange-doubles-as-tick trick).
+const PURCHASE_POLL_INTERVAL_MS = 3_000;
+const PURCHASE_POLL_MAX_TICKS = 10; // 10 × 3s ≈ 30s bound.
+
+/** Polls `router.refresh()` while `active` is true, up to `PURCHASE_POLL_MAX_TICKS`
+ * ticks, then stops on its own. The caller decides when `active` goes false
+ * (here: the banner's own dismiss button, or the bound running out). */
+function usePurchasePoll(active: boolean): void {
+  const router = useRouter();
+  useEffect(() => {
+    if (!active) return;
+    let ticks = 0;
+    const tick = (): void => {
+      // The bound is checked FIRST: `tick` doubles as the visibilitychange
+      // handler, so without this guard a tab focus after the bound would keep
+      // refreshing forever (the banner only closes on dismiss).
+      if (ticks >= PURCHASE_POLL_MAX_TICKS) return;
+      if (document.visibilityState === 'hidden') return;
+      ticks += 1;
+      router.refresh();
+      if (ticks >= PURCHASE_POLL_MAX_TICKS) {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', tick);
+      }
+    };
+    const interval = setInterval(tick, PURCHASE_POLL_INTERVAL_MS);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [active, router]);
+}
+
 export function Workspace({
   initialBalance,
   simplePrice,
@@ -58,6 +105,8 @@ export function Workspace({
   websearch,
   attachments,
   chartStyle,
+  packs,
+  coverage,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -86,6 +135,17 @@ export function Workspace({
    * itself, so an account with no saved style yet still gets offered the
    * "Bewaar als mijn standaard" row. */
   chartStyle?: unknown;
+  /** R2.2 (WP-D, #69/#75/#211): the active credit packs, read server-side
+   * (page.tsx, `getActivePacks`) and passed through unchanged — threaded
+   * into Chat's own `packs` prop for the insufficient-credits message's
+   * covering-pack lookup. Absent/empty ⇒ that message's buy line stays
+   * generic (byte-safe for call sites not yet passing it). */
+  packs?: ChatPack[];
+  /** WP-E (R4): the coverage disclosure, read server-side (page.tsx,
+   * `loadCoverageDisclosure`) and passed through unchanged into Chat's own
+   * `coverage` prop. Null when the registry read has never once succeeded;
+   * that's Chat's own "render nothing" case, not Workspace's concern. */
+  coverage?: CoverageDisclosure | null;
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -96,6 +156,15 @@ export function Workspace({
   const [activeVisualId, setActiveVisualId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPurchaseBanner, setShowPurchaseBanner] = useState(purchaseSuccess);
+  // R2.4: while the banner shows, poll router.refresh() so a delivered
+  // Stripe payment's new balance appears without a manual reload — the
+  // refresh re-runs page.tsx's own getBalance read, which lands in the
+  // `initialBalance` prop below; synced into local state by the effect
+  // right after it (never a client-side recomputation of the balance).
+  usePurchasePoll(showPurchaseBanner);
+  useEffect(() => {
+    setBalance(initialBalance);
+  }, [initialBalance]);
   const t = useT();
   // WP135 (blocker fix): the chat reports its in-flight state here so the
   // sidebar's thread-switch / nieuwe-chat controls are disabled while a submit
@@ -365,6 +434,8 @@ export function Workspace({
       ) : (
         <Chat
           onOutcome={handleOutcome}
+          packs={packs}
+          coverage={coverage}
           pricing={{
             simple: simplePrice,
             clarification: clarificationPrice,

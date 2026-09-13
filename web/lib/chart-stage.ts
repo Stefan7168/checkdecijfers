@@ -2,7 +2,10 @@
 // the stage animates is a wrapper OUTSIDE the exported <svg> (the honesty
 // scans and the export never see a transform); these functions turn a scroll
 // position into (a) the active step + progress toward the next, (b) the
-// chart plane's entry tilt, (c) a caption's reveal, (d) the spotlight centre.
+// chart plane's entry tilt, (c) a caption's reveal, (d) the spotlight centre,
+// (e) the ambient atmosphere layer's colour + motion gate.
+import { seriesColor, type PresentationOverrides } from './chart-presentation.ts';
+
 export const STAGE_TILT_DEG = 8; // < the spec's 12° cap; only during the FIRST step's entry
 export const STAGE_AUTOPLAY_MS = 4000;
 
@@ -75,14 +78,83 @@ export function entranceStyle(progress: number, reducedMotion: boolean): { trans
   };
 }
 
-/** A caption panel fades and rises into place as its centre approaches the
- * viewport centre (`distance` in viewport heights). */
-export function captionStyle(distance: number, reducedMotion: boolean): { opacity: number; transform: string } {
-  if (reducedMotion) return { opacity: 1, transform: 'translate3d(0, 0px, 0)' };
+// The plan's §3.4 wanted continued motion "between steps" too (parallax);
+// ADR 044 §"As built" recorded that as not built — a full multi-layer
+// parallax needs Recharts to stop being one SVG. What follows is the small,
+// safe substitute: a per-step vertical "breathing" drift on the SAME plane
+// wrapper the entry tilt already uses, so the plane is not perfectly static
+// for the whole reading. It is driven by `stageProgress`'s PER-STEP
+// nearest-centre progress, never `entryProgress` (that ramp is fully spent
+// settling the entry tilt before the first caption is read — see above) —
+// and it is a translateY only, never rotateX: the tilt stays confined to the
+// entry window exactly as ADR 044 decision 4 requires, and this never
+// touches it.
+const PLANE_DRIFT_PEAK_PX = 5; // small "breathing" peak, well inside the brief's 4-6px band
+
+/** How far the chart plane drifts vertically once it has settled: 0 at a
+ * step's own centre (`progress` 0), peaking at `PLANE_DRIFT_PEAK_PX` around
+ * the boundary with the next step (`progress` 0.5), back to 0 at `progress`
+ * 1 — a sine keeps the motion smooth at both ends so it never pops. Nothing
+ * here reads a marker's position (unlike the dropped translate-to-centre pan,
+ * ADR 044 decision 5): the direction and magnitude depend only on scroll
+ * progress, never on where anything is drawn, so it cannot drift toward a
+ * data point. Because `stageProgress` clamps a step's own `progress` to 0
+ * until the viewport centre passes that step's centre, this is also always
+ * exactly 0 for the whole entry window (`entryProgress` < 1) — the drift and
+ * the tilt never run at the same time by construction, not by a guard here. */
+export function planeDriftPx(progress: number, reducedMotion: boolean): number {
+  if (reducedMotion) return 0;
+  const p = clamp01(progress);
+  return Math.round(Math.sin(p * Math.PI) * PLANE_DRIFT_PEAK_PX * 100) / 100;
+}
+
+/** Composes the drift onto the entry transform as a further `translateY`.
+ * Appending is equivalent to folding the px into the entry's own
+ * `translate3d` Y component (pure translations commute), but keeps
+ * `entranceStyle`'s own string untouched so a future change to one cannot
+ * silently break the other — and is byte-identical to `entryTransform` when
+ * there is no drift to apply (0 px, or reduced motion), so the entry's own
+ * behaviour is provably unaffected in that case. */
+export function planeTransform(entryTransform: string, driftPx: number): string {
+  return driftPx === 0 ? entryTransform : `${entryTransform} translateY(${driftPx}px)`;
+}
+
+// Editorial reveal (visual upgrade, task 2 of the chain — captions): on top
+// of the existing fade + rise, a far panel is also a touch SOFTER (out of
+// focus) and a touch SMALLER, both resolving to nothing by the moment its own
+// centre reaches the viewport centre — "sharpens as the panel becomes
+// active" per the brief. The opacity and Y-translate formulas below are
+// BYTE-IDENTICAL to before this task (only additive fields were introduced),
+// so every existing caller of those two numbers — including the component's
+// own `caption(i).style.opacity` assertions — is unaffected by this change;
+// what changed is the return SHAPE (a new `filter` field) and the
+// `transform` string, which now has a `scale(...)` trailing the existing
+// `translate3d(...)` — the same append-a-further-transform-function technique
+// `planeTransform` already uses on the chart plane, just inlined here since
+// there is only ever one caller.
+const CAPTION_BLUR_PEAK_PX = 6; // soft, never illegible — distance 0 (the only distance a caption is actually READ at) is always exactly 0
+const CAPTION_SCALE_MIN = 0.96; // "a subtle scale" per the brief — a held breath, not a zoom
+
+/** A caption panel fades, rises, softly blurs and shrinks a touch into place
+ * as its centre approaches the viewport centre (`distance` in viewport
+ * heights). The active panel (distance 0) is always fully opaque, perfectly
+ * sharp, unscaled and untranslated — the one state a reader is ever actually
+ * reading text in; distance ≥ 1 is faint, translated, gently defocused and a
+ * touch smaller, never harder to read than the plain fade already was.
+ * Reduced motion collapses to that exact same flat, sharp, at-rest style at
+ * EVERY distance — the guarantee this function must never weaken. */
+export function captionStyle(distance: number, reducedMotion: boolean): { opacity: number; transform: string; filter: string } {
+  if (reducedMotion) return { opacity: 1, transform: 'translate3d(0, 0px, 0)', filter: 'blur(0px)' };
   const d = clamp01(Math.abs(distance));
   const opacity = Math.round((1 - 0.7 * d) * 100) / 100;
   const y = Math.round(24 * d);
-  return { opacity, transform: `translate3d(0, ${y}px, 0)` };
+  const scale = Math.round((1 - (1 - CAPTION_SCALE_MIN) * d) * 1000) / 1000;
+  const blur = Math.round(CAPTION_BLUR_PEAK_PX * d * 100) / 100;
+  return {
+    opacity,
+    transform: `translate3d(0, ${y}px, 0) scale(${scale})`,
+    filter: `blur(${blur}px)`,
+  };
 }
 
 /** Where the spotlight vignette sits, as percentages of the chart box. */
@@ -90,4 +162,163 @@ export function spotlightStyle(marker: { cx: number; cy: number } | null, box: {
   if (marker === null || box.width <= 0 || box.height <= 0) return null;
   const pct = (v: number, max: number): string => `${Math.round(clamp01(v / max) * 100)}%`;
   return { left: pct(marker.cx, box.width), top: pct(marker.cy, box.height) };
+}
+
+// ─── Spotlight glow motion (theatrical camera move between findings) ──────
+//
+// A plain CSS `transition` does not reliably interpolate between two
+// different `radial-gradient(...)` VALUES across browsers — the exact
+// reason the ambient atmosphere layer below transitions a solid
+// `background-color` instead of its own gradient (see
+// STAGE_ATMOSPHERE_TRANSITION_MS's doc comment, and the matching one in
+// chart-story-stage.tsx). The spotlight's moving glow follows the same
+// principle: its gradient shape never changes
+// (`STAGE_SPOTLIGHT_GLOW_BACKGROUND` below is always `at 50% 50%` of
+// ITSELF), and the marker's position instead drives a `transform:
+// translate3d(...)` on the glow element — an ordinary, universally,
+// smoothly animatable property, the same one the chart plane's own
+// entry/drift transition already relies on (chart-story-stage.tsx).
+
+// × the plot box's larger side. Big enough that the fixed 22%/60% gradient
+// stops below still read as a natural circular falloff wherever the marker
+// sits, including a corner — the glow's own container stays clipped to the
+// plot box exactly as before (`overflow: hidden` in chart-story-stage.tsx),
+// so a corner marker's glow crops at the plot edge exactly as the old
+// single-gradient version did (that was always painted directly onto an
+// identically plot-sized box, so it was already cropped there too — this
+// preserves that same character through a different mechanism, not a new
+// one).
+const SPOTLIGHT_GLOW_DIAMETER_FACTOR = 1.3;
+
+/** The glow's own fixed size and its `transform: translate3d(...)` — the
+ * ONLY thing that changes between two calls with a different `spot`, and
+ * therefore the only thing that needs a CSS transition (chart-story-stage.tsx
+ * puts one on `transform` alone). `spot` is `spotlightStyle`'s own output
+ * (percentages of the plot box); `box` is that same plot box in pixels —
+ * both already held in the component's existing `spot`/`plot` state, so
+ * this needs no new DOM read (`readSpot` itself is unchanged, per the
+ * brief). Null exactly when there is nothing to show (no marker, or a
+ * zero/negative box) — the same cases the caller already gates rendering
+ * on. */
+export function spotlightGlowStyle(
+  spot: { left: string; top: string } | null,
+  box: { width: number; height: number } | null,
+): { width: string; height: string; transform: string } | null {
+  if (spot === null || box === null || box.width <= 0 || box.height <= 0) return null;
+  const fx = clamp01(Number.parseFloat(spot.left) / 100);
+  const fy = clamp01(Number.parseFloat(spot.top) / 100);
+  const diameter = Math.max(box.width, box.height) * SPOTLIGHT_GLOW_DIAMETER_FACTOR;
+  const x = Math.round(fx * box.width - diameter / 2);
+  const y = Math.round(fy * box.height - diameter / 2);
+  return {
+    width: `${Math.round(diameter)}px`,
+    height: `${Math.round(diameter)}px`,
+    transform: `translate3d(${x}px, ${y}px, 0)`,
+  };
+}
+
+/** How strongly the vignette's dim colour leans toward `--stage-accent`
+ * (the rest is `--card`, the same neutral base the vignette always dimmed
+ * toward). Conservative and fixed, so the dim reads as a subtly COLOURED
+ * stage light, not a colour wash, and never independently invents a hue:
+ * always a minority blend of the SAME accent the atmosphere layer sets. */
+export const STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT = 20;
+
+/** The glow's own gradient: fixed shape, fixed colour formula, always
+ * centred on ITSELF (`circle at 50% 50%`) — the element's own `transform`
+ * carries the marker's position instead (`spotlightGlowStyle` above), so
+ * this string never changes across a step change and therefore never needs
+ * to be the thing that gets transitioned. */
+export const STAGE_SPOTLIGHT_GLOW_BACKGROUND = `radial-gradient(circle at 50% 50%, transparent 0, transparent 22%, color-mix(in oklab, color-mix(in oklab, var(--stage-accent) ${STAGE_SPOTLIGHT_ACCENT_MIX_PERCENT}%, var(--card)) 55%, transparent) 60%)`;
+
+/** The glow's move between findings — within the brief's 300–500ms family
+ * (the plane's own entry/drift transition: 200ms; the atmosphere colour
+ * transition: 500ms). */
+export const STAGE_SPOTLIGHT_TRANSITION_MS = 400;
+/** A slight "ease-out-back" overshoot: the glow eases toward the new
+ * marker and settles very slightly past it before easing back — a small,
+ * free "arrival" flourish from the curve alone. A separate size/brightness
+ * pulse was considered (the brief's own suggestion) and deliberately
+ * skipped: one eased, overshooting move already reads as a deliberate
+ * camera move without stacking a second animated property on top of it. */
+export const STAGE_SPOTLIGHT_TRANSITION_EASING = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+// ─── Ambient atmosphere layer (visual upgrade, task 1 of a chain) ──────────
+//
+// A full-viewport, purely decorative backdrop behind the chart/caption
+// content (chart-story-stage.tsx's `data-stage-atmosphere` layer) — the
+// brief was "make the stage feel like a real presentation, not a plain
+// overlay". Only the COLOUR + MOTION-GATE inputs to that CSS live here
+// (pure, testable without a browser); the actual blurred, drifting shapes
+// are plain CSS in the component, because jsdom cannot verify motion at all
+// — see this module's own header comment and the component's doc comments
+// for what is and isn't checked by a test.
+
+/** `StoryStep.highlight` (chart-story.ts) is `s<index>` — buildRows' own
+ * positional series key — or null for an overview step with nothing
+ * highlighted. Parses that key into the series index `seriesColor` wants.
+ * A null or malformed key (there should never be one, but this never
+ * throws) falls back to the FIRST series (index 0) rather than inventing an
+ * index out of thin air — `atmosphereState` below is what actually keeps an
+ * overview step undramatic (reduced intensity), never a different colour. */
+export function highlightSeriesIndex(highlight: string | null): number {
+  if (highlight === null) return 0;
+  const match = /^s(\d+)$/.exec(highlight);
+  return match ? Number(match[1]) : 0;
+}
+
+/** The atmosphere's intensity for an overview step (`highlight` null) —
+ * "reasonable and undramatic": the same colour as an actively highlighted
+ * step would use (never an invented hue), just far less present. */
+export const ATMOSPHERE_INTENSITY_OVERVIEW = 0.4;
+/** The atmosphere's intensity for a step that highlights a real series. */
+export const ATMOSPHERE_INTENSITY_ACTIVE = 1;
+
+/** The atmosphere glow's peak colour-mix percentage (at intensity 1) —
+ * deliberately conservative. Every piece of REAL text this product's R4
+ * requires to stay legible (the source/attribution line, the caveat notes,
+ * the captions) sits inside an OPAQUE `bg-card` container that this layer
+ * never shows through regardless of the percentage chosen here, by
+ * construction — see the component's doc comment. This cap instead bounds
+ * the one thing that ISN'T behind an opaque card: the close/auto-play
+ * button chrome, so a glow passing behind that corner never meaningfully
+ * moves its contrast. Multiplied by `AtmosphereState.intensity`. */
+export const ATMOSPHERE_MIX_MAX_PERCENT = 30;
+
+/** The colour transition's duration when the active step's colour changes —
+ * within the brief's 400-600ms band. */
+export const STAGE_ATMOSPHERE_TRANSITION_MS = 500;
+
+export interface AtmosphereState {
+  /** A raw colour value (e.g. `'#0072b2'`) — never invented: always the
+   * active step's own highlighted-series colour, resolved through the
+   * SAME `seriesColor` the chart itself draws from, so the glow always
+   * matches what is actually drawn. This is the value
+   * chart-story-stage.tsx sets `--stage-accent` to. */
+  accent: string;
+  /** 0-1 multiplier the atmosphere's own colour-mix percentages scale by —
+   * `ATMOSPHERE_INTENSITY_OVERVIEW` for a null highlight (an overview
+   * step), else `ATMOSPHERE_INTENSITY_ACTIVE`. */
+  intensity: number;
+  /** False under the SAME `staticMotion` gate `entranceStyle`/
+   * `captionStyle`/`planeDriftPx` already use (prefers-reduced-motion,
+   * (hover: none), < lg) — not a second motion switch. When false the
+   * component shows an instant, static tint with no drift loop and no
+   * colour-transition animation (never a missing/broken layer). */
+  animated: boolean;
+}
+
+/** Resolves the atmosphere layer's colour, intensity and motion gate from
+ * the active step's `highlight` key, the chart's own series-colour
+ * overrides, and the stage's existing motion gate — pure, so both the
+ * colour-resolution logic and the reduced-motion branch are testable
+ * without a browser (chart-stage.test.ts pins both; the actual drifting,
+ * blurred CSS this feeds cannot be verified outside one — see
+ * chart-story-stage.tsx and this task's own report). */
+export function atmosphereState(overrides: PresentationOverrides, highlight: string | null, staticMotion: boolean): AtmosphereState {
+  return {
+    accent: seriesColor({ seriesColors: overrides.seriesColors ?? {} }, highlightSeriesIndex(highlight)),
+    intensity: highlight === null ? ATMOSPHERE_INTENSITY_OVERVIEW : ATMOSPHERE_INTENSITY_ACTIVE,
+    animated: !staticMotion,
+  };
 }
