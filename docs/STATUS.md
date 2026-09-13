@@ -18,7 +18,7 @@
 everything summarized below: [status-archive.md](status-archive.md)'s top two entries; the older Thread A/B
 prose that used to live in this block moved there verbatim, since it had never actually been archived.)**
 
-**The one open action: merge PR #21.** [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21) (R3 —
+**The one open action: merge PR #21** (R3 —
 the confirm-first chip before the automatic 100-credit onboarding fetch, reversing
 [open-questions #109](open-questions.md)) is open, **not merged as of this wrap-up**. The owner confirmed in
 chat that `ONBOARDING_OFFER_SECRET` is set in Vercel. **Self-inflicted wrinkle, fixed same session:** this

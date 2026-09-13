@@ -11,7 +11,7 @@ brief. Don't re-derive anything below from memory; it's already verified.
 
 ## Current state (verified 2026-09-13, session 101 wrap-up)
 
-**One open action, owner's to take: merge [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21).**
+**One open action, owner's to take: merge PR #21.**
 It's R3 — the confirm-first chip before the automatic 100-credit onboarding fetch, reversing
 [open-questions #109](../open-questions.md). Decisions 4 (yes, add a confirm button) and 5 (no
 change to the 100-credit signup grant) were answered directly by the owner in chat — don't
