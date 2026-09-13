@@ -14,35 +14,46 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101, owner present — wrap-up. Full detail for
-everything summarized below: [status-archive.md](status-archive.md)'s top two entries; the older Thread A/B
-prose that used to live in this block moved there verbatim, since it had never actually been archived.)**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101 continued, owner present, ~09:59 UTC).** Full
+detail for the prior wrap-up: [status-archive.md](status-archive.md)'s top two entries.
 
-**The one open action: merge PR #21** (R3 —
-the confirm-first chip before the automatic 100-credit onboarding fetch, reversing
-[open-questions #109](open-questions.md)) is open, **not merged as of this wrap-up**. The owner confirmed in
-chat that `ONBOARDING_OFFER_SECRET` is set in Vercel. **Self-inflicted wrinkle, fixed same session:** this
-wrap-up's own docs-only push to `main` (`ac08356`) touched the same doc sections PR #21 had edited, which
-briefly flipped the PR to `mergeable_state: dirty`. Fixed by merging `main` into `journey-r3-fetch-confirm`
-(merge commit `79b7649`, no rebase, code diff untouched) and re-pushing — `mergeable_state` is `unstable` again
-(conflict gone, just waiting on CI) as of 08:35 UTC, with the `gate` check (run `34748057564`) in progress on
-the new head SHA at that moment — this session is subscribed to the PR and will act on a red result; a plain
-green completion needs no further action. Once CI confirms green: nothing else is blocking — merging is the
-next step, whenever the owner reviews it (branch + PR + explicit owner go is this decision's own standing
-rule, not a formality to skip even in an owner-present session — see the build plan). After merge: ask a
-question about an uncovered topic and confirm the offer button appears, confirm it charges 100 credits on
-click, confirm declining spends nothing (PR body's own test plan).
+**The one open action, unchanged: merge PR #21** (R3 — the confirm-first chip before the automatic 100-credit
+onboarding fetch, reversing [open-questions #109](open-questions.md)). Verified live against GitHub this
+session: `mergeable_state: CLEAN`/`MERGEABLE`. **The red CI the prior wrap-up flagged (run `34748057564`,
+doc-convention rule #132: live PR links in 5 docs) was real and is now fixed** — on `main` (`4a9c8eb`) and
+merged into the PR branch (`d19fec80c`). **A separate wrinkle hit after that: the PR's re-triggered run sat
+`queued` 45+ minutes with no runner assigned** (repo confirmed public — `private:false` — so not the
+Actions-minutes pattern in RUNBOOK's "CI red that is NOT code" entry, but the same *symptom* the RUNBOOK
+already documents as a variant: "queued indefinitely, no billing annotation"). Fixed the RUNBOOK's own
+prescribed way — merged `main` into `journey-r3-fetch-confirm` again (zero file overlap with `main`'s new
+commits, clean merge, `b8b5b41`) to force a fresh check run; that run is in progress as of this writing. Once
+it confirms green: **still needs the owner's explicit go to merge** — branch + PR + explicit go is this
+decision's own standing rule, no exception for an owner-present session (see the build plan).
 
-**Also shipped and live in production this session, no action needed:** the chart Style panel is now a real
-modal popup (#243, `7e71e5a`, deployed 04:54:14 UTC) with a real-browser-review follow-up fix for a header-row
-overflow bug jsdom couldn't have caught (`5aa02c7`, deployed 06:47:32 UTC).
-
-**Recorded but not built — [open-questions #245](open-questions.md):** a build/CI performance diagnosis (owner
-ask). Full report: [session-briefs/2026-09-13-build-performance-diagnosis.md](session-briefs/2026-09-13-build-performance-diagnosis.md).
-The report's own "first 3 actions" (fix `tests/billing/ledger.test.ts` + `tests/ingestion/ingestion.test.ts`
-booting a fresh Postgres per test instead of per file; shard the CI gate 3-way; generalize into a full
-call-site sweep) don't need to wait on the report's 3 owner sub-questions — those only gate whether/how far to
-take the CI-sharding tier specifically.
+**Also shipped, verified via real CI + deploy this session, live in production, no action needed:**
+- **ADR [047](decisions/047-repositioning-embedded-sourced-chart.md)** (`dbeca08`, docs-only) formalizes the
+  session-96/97 repositioning direction — addenda on [01-product-vision.md](01-product-vision.md) Q1 and
+  [06-roadmap.md](06-roadmap.md) Phase 2/3; [open-questions #237](open-questions.md) updated to point here.
+- **Sidebar tap-target fix** (`17c84de`, [#238](open-questions.md) follow-up): `icon-xs`/`icon-sm` widened to
+  44px below `sm` in `thread-sidebar.tsx` (3 call sites), scoped per an investigation that found the shared
+  Dialog-close-button token itself was higher-risk to touch. Web suite 1686/1686, typecheck clean,
+  `/code-review` LOW 0 findings.
+- **[#245](open-questions.md) action 1 — test-DB boot perf** (`0503a62`): `ledger.test.ts` and
+  `ingestion.test.ts` now boot PGlite once per file (`beforeAll`) + `TRUNCATE`-reset per test, instead of a
+  fresh boot per test. Measured: ledger 126.9s→~24-34s (58/58 pass), ingestion 71.0s→8.25s (29/29 pass), full
+  backend suite 148 files/2262 tests unchanged pass count, no cross-file leakage. Verified three independent
+  ways (a subagent's own full-suite run, a manual read of the truncate-list logic, a second local re-run).
+- **[#245](open-questions.md) action 2 — CI 3-way sharding** (`9132052` + a same-session fix `9e4e7df`): the
+  eleven sequential backend domain steps replaced with a `backend` job (3-way `vitest run --shard=N/3` matrix,
+  closing the `tests/attachments`/`tests/usage` no-CI-step gap for free) plus a separate parallel `web` job;
+  benchmark run+score rides shard 1. **The first push broke `web`** — splitting the job dropped the shared
+  root `npm ci` its tests need via the `web/backend` symlink (ADR 018 point 9) — caught live on run
+  `34750330671` ("Failed to resolve import zod from src/chart/brandfetch.ts"), fixed same session
+  (`9e4e7df`). Re-run `34750430890` confirmed fully green end-to-end: `web` ✓, `backend (1/2/3)` ✓, `deploy` ✓
+  — production is now running the sharded workflow.
+- **Investigated, correctly NOT built — [#237](open-questions.md)(d) embed code per gallery card:** needs a
+  real second token kind + anonymous-safe mint path (curated gallery charts carry no `auditId` the existing
+  embed dialog needs), not a drop-in reuse. Scope recorded for a future session.
 
 **Owner steps still open, carried forward unchanged (not touched this session):** `npm run db:migrate` for
 migrations 028+029 then `npm run usage:report`; the trust-page contact e-mail (owner: leave the placeholder for
