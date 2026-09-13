@@ -7,13 +7,45 @@
 // answering) as docs/05 requires.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+
+// Perf (docs/session-briefs/2026-09-13-build-performance-diagnosis.md): booting
+// a fresh PGlite instance costs ~2.4-3.7s regardless of migration replay cost,
+// vs ~30-45ms to TRUNCATE an already-booted one back to clean. Every test in
+// this file used to pay the full boot cost individually (createTestDb() per
+// it()); now the file boots ONE PGlite instance for the whole run and resets
+// it between tests with a plain TRUNCATE. Only tables the tests in this file
+// actually write to are listed — registerTables/syncTable/runCli write
+// exclusively to cbs_tables, ingestion_batches, dimension_labels and
+// observations (migrations/001_ingestion_schema.sql); none of the four carry
+// migration-seeded rows, so a fresh TRUNCATE reproduces a freshly-migrated
+// table exactly, no re-seeding needed. schema_migrations is deliberately
+// NEVER truncated: it's migrate.ts's own bookkeeping table (read, never
+// written, by these tests), and the #154 last_seen_batch_id logic in
+// pipeline.ts reads it (`where version = 21`) to gate a transition-window
+// approximation — truncating it would silently break that read.
+let db: Db;
+let closeDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db, close: closeDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeDb();
+});
+
+beforeEach(async () => {
+  await db.query(
+    'truncate table observations, dimension_labels, ingestion_batches, cbs_tables restart identity cascade',
+  );
+});
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -61,8 +93,6 @@ async function observationsChecksum(db: Db, tableId: string): Promise<string> {
 
 describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipeline)', () => {
   it('renamed dimension -> batch fails with schema-fingerprint reason; table marked needs_review and excluded from answering', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
 
@@ -103,14 +133,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const checksumAfter = await observationsChecksum(db, '85224NED');
       expect(checksumAfter).toBe(checksumBefore);
-    } finally {
-      await close();
-    }
   });
 
   it('unparseable period code -> batch fails at period parsing', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
 
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
@@ -143,15 +168,10 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const count = (await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])).rows[0];
       expect(count?.n).toBe(0);
-    } finally {
-      await close();
-    }
   });
 
   describe('unknown dimension code', () => {
     it('(a) one observation coordinate not present in any code list -> fails dimension_mapping', async () => {
-      const { db, close } = await createTestDb();
-      try {
         const docs = clone(await loadDocs('85224NED'));
         const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
         obsPages[0].value[0].SeizoenEnWerkdagcorrectie = 'X999999';
@@ -170,14 +190,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
           await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])
         ).rows[0];
         expect(count?.n).toBe(0);
-      } finally {
-        await close();
-      }
     });
 
     it('(b) municipal-reorg style new code -> fails dimension_mapping naming the code; acceptNewCodes:true succeeds and labels it', async () => {
-      const { db, close } = await createTestDb();
-      try {
         const cleanDocs = await loadDocs('85224NED');
         const cleanSource = new FixtureSource(cleanDocs);
         await registerTables(db, cleanSource, [table('85224NED')]);
@@ -228,15 +243,10 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
           )
         ).rows[0];
         expect(label?.label).toBe('Nieuwe correctiemethode');
-      } finally {
-        await close();
-      }
     });
   });
 
   it('changed unit vs registry -> batch fails/flags at unit consistency', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -261,14 +271,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['85224NED'])).rows[0];
       expect(row?.status).toBe('needs_review');
-    } finally {
-      await close();
-    }
   });
 
   it('implausible row count (truncated sync) -> batch fails row plausibility; observation content unchanged', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -293,14 +298,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const checksumAfter = await observationsChecksum(db, '85224NED');
       expect(checksumAfter).toBe(checksumBefore);
-    } finally {
-      await close();
-    }
   });
 
   it('empty measure (first sync, no previous count) -> batch fails row plausibility naming the measure', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
       // Werkloosheidspercentage (M001906) — remove every row for this measure.
@@ -321,14 +321,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
         await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])
       ).rows[0];
       expect(count?.n).toBe(0);
-    } finally {
-      await close();
-    }
   });
 
   it('null value with CBS reason ingests as a valid row; null with reason "None" fails row plausibility', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
       const target = obsPages[0].value.find(
@@ -358,14 +353,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
       expect(stored?.value_attribute).toBe('Onbekend');
       expect(stored?.unit).toBe('%');
       expect(stored?.status).toBeTruthy();
-    } finally {
-      await close();
-    }
   });
 
   it('null value with ValueAttribute "None" (no reason) fails row plausibility', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
       const target = obsPages[0].value.find(
@@ -389,14 +379,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
         await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])
       ).rows[0];
       expect(count?.n).toBe(0);
-    } finally {
-      await close();
-    }
   });
 
   it('same sync run twice -> identical row content (checksum), not just counts (idempotency)', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = await loadDocs('85224NED');
       const source = new FixtureSource(docs);
       await registerTables(db, source, [table('85224NED')]);
@@ -420,14 +405,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
         ])
       ).rows[0];
       expect(batchRows?.n).toBe(2);
-    } finally {
-      await close();
-    }
   });
 
   it('second sync with one changed historical cell -> correction log names exactly that cell', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -467,14 +447,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
         )
       ).rows[0];
       expect(batchRow?.corrections).toEqual(result.corrections);
-    } finally {
-      await close();
-    }
   });
 
   it('ingestion CLI: failure is non-zero exit + plain-language summary; success is zero exit + row counts', async () => {
-    const { db, close } = await createTestDb();
-    try {
       // Positive control: clean docs, exit 0, row counts printed.
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
@@ -522,14 +497,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
         logSpy.mockRestore();
         errorSpy.mockRestore();
       }
-    } finally {
-      await close();
-    }
   });
 
   it('changed decimals only (unit unchanged) vs registry -> batch fails/flags at unit consistency', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -554,14 +524,9 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['85224NED'])).rows[0];
       expect(row?.status).toBe('needs_review');
-    } finally {
-      await close();
-    }
   });
 
   it('small number of new observation rows (new period) on second sync -> succeeds within the row-count tolerance', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -611,16 +576,11 @@ describe('ingestion validation fixtures (docs/05-data-rules.md, validation pipel
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['85224NED'])).rows[0];
       expect(row?.status).toBe('active');
-    } finally {
-      await close();
-    }
   });
 });
 
 describe('sync semantics', () => {
   it('R11 plumbing: 82610NED M002264_1/E006590/2024JJ00 has status NaderVoorlopig, value 21822, unit mln kWh', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = await loadDocs('82610NED');
       const source = new FixtureSource(docs);
       await registerTables(db, source, [table('82610NED')]);
@@ -639,14 +599,9 @@ describe('sync semantics', () => {
       expect(Number(row?.value)).toBe(21822);
       expect(row?.unit).toBe('mln kWh');
       expect(row?.status).toBe('NaderVoorlopig');
-    } finally {
-      await close();
-    }
   });
 
   it('quarantined table: syncTable without rebaseline throws mentioning quarantine; rebaseline:true against clean docs succeeds and clears it', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -687,9 +642,6 @@ describe('sync semantics', () => {
         )
       ).rows[0];
       expect(batchRow?.rebaselined).toBe(true);
-    } finally {
-      await close();
-    }
   });
 
   it('#34(c): two concurrent rebaselines of the SAME table never crash or leave dimension_labels torn', async () => {
@@ -713,8 +665,6 @@ describe('sync semantics', () => {
     // pin is the observable contract (never crash, never tear the label
     // set) that the lock exists to guarantee against a real multi-connection
     // pg.Pool in production, which this hermetic suite cannot reproduce.
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -761,14 +711,9 @@ describe('sync semantics', () => {
         await db.query('select status from cbs_tables where id = $1', ['85224NED'])
       ).rows[0];
       expect(rowAfter?.status).toBe('active');
-    } finally {
-      await close();
-    }
   });
 
   it('rebaseline that fails a later check leaves the registry baseline untouched', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const cleanDocs = await loadDocs('85224NED');
       const cleanSource = new FixtureSource(cleanDocs);
       await registerTables(db, cleanSource, [table('85224NED')]);
@@ -832,14 +777,9 @@ describe('sync semantics', () => {
       ).rows[0]!;
       expect(rowRecovered.status).toBe('active');
       expect(rowRecovered.version).toBe((baselineBefore.version as number) + 1);
-    } finally {
-      await close();
-    }
   });
 
   it('period without a publication status -> batch fails at period parsing, nothing defaulted', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
       const observedPeriod = obsPages[0].value[0].Perioden as string;
@@ -862,14 +802,9 @@ describe('sync semantics', () => {
         await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])
       ).rows[0];
       expect(count?.n).toBe(0);
-    } finally {
-      await close();
-    }
   });
 
   it('duplicate fetched cell (same measure + coordinates twice) -> batch fails row plausibility', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const obsPages = docs.observationPages as { value: Record<string, unknown>[] }[];
       obsPages[0].value.push({ ...obsPages[0].value[0], Id: -1 });
@@ -889,14 +824,9 @@ describe('sync semantics', () => {
         await db.query('select count(*)::int as n from observations where table_id = $1', ['85224NED'])
       ).rows[0];
       expect(count?.n).toBe(0);
-    } finally {
-      await close();
-    }
   });
 
   it('trailing-space defense: padded code + padded observation coordinate both end up trimmed', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('85224NED'));
       const codeList = (docs.codes as Record<string, { value: Record<string, unknown>[] }>)
         .SeizoenEnWerkdagcorrectie;
@@ -946,9 +876,6 @@ describe('sync semantics', () => {
         )
       ).rows[0];
       expect(obsRow).toBeDefined();
-    } finally {
-      await close();
-    }
   });
 });
 
@@ -963,8 +890,6 @@ describe('doc consistency (keeps this scaffold honest)', () => {
 
 describe('#167 — curated phantom-measure exclusion (Phase0Table.excludeMeasures, session 50)', () => {
   it('85880NED full ingest succeeds WITH the curated exclusion: 17 metadata-only measures skipped, headline registered, 22,230 fixture rows in', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const source = new FixtureSource(await loadDocs('85880NED'));
       const seed = SEED_TABLES.find((t) => t.id === '85880NED');
       if (!seed) throw new Error('85880NED missing from SEED_TABLES');
@@ -987,14 +912,9 @@ describe('#167 — curated phantom-measure exclusion (Phase0Table.excludeMeasure
 
       const n = await db.query(`select count(*)::int c from observations where table_id = $1`, ['85880NED']);
       expect(Number(n.rows[0]!.c)).toBe(22230);
-    } finally {
-      await close();
-    }
   });
 
   it('strictness unchanged WITHOUT a curated list: a metadata-only measure on an unexcluded table still quarantines at row_plausibility', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const docs = clone(await loadDocs('82235NED'));
       const measureDocs = (docs.measureCodes as { value: Record<string, unknown>[] }).value;
       // Wire-shaped phantom: clone a REAL entry so the parser accepts it, then
@@ -1013,9 +933,6 @@ describe('#167 — curated phantom-measure exclusion (Phase0Table.excludeMeasure
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
       expect(row.status).toBe('needs_review');
-    } finally {
-      await close();
-    }
   });
 });
 
@@ -1089,8 +1006,6 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
   }
 
   it('#34(b): registration and rebaseline write the labels batched with content identical to the fetched code lists', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const source = new FixtureSource(await loadDocs('85224NED'));
       await registerTables(db, source, [table('85224NED')]);
 
@@ -1109,14 +1024,9 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       const rebaselined = await syncTable(db, source, '85224NED', { rebaseline: true });
       expect(rebaselined.outcome).toBe('succeeded');
       expect(await dbLabelRows(db, '85224NED')).toEqual(expected);
-    } finally {
-      await close();
-    }
   });
 
   it('#34(b): a code list larger than CHUNK_SIZE registers across multiple chunks with nothing dropped', async () => {
-    const { db, close } = await createTestDb();
-    try {
       // CHUNK_SIZE is 5000 (pipeline.ts); 5100 synthetic codes force the
       // flattened label array over one chunk. Registration alone writes
       // labels, so no synthetic observations are needed.
@@ -1140,14 +1050,9 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       const expected = await sourceLabelRows(source, '85224NED');
       expect(expected.length).toBeGreaterThan(5000); // multi-chunk actually exercised
       expect(await dbLabelRows(db, '85224NED')).toEqual(expected);
-    } finally {
-      await close();
-    }
   });
 
   it('#34(c)(ii): a version bump committed between validation and the lock aborts the rebaseline loudly — nothing overwritten, batch recorded failed', async () => {
-    const { db, close } = await createTestDb();
-    try {
       const source = new FixtureSource(await loadDocs('85224NED'));
       await registerTables(db, source, [table('85224NED')]);
       expect((await syncTable(db, source, '85224NED')).outcome).toBe('succeeded');
@@ -1208,14 +1113,9 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       expect(
         Number((await db.query('select version from cbs_tables where id = $1', ['85224NED'])).rows[0]!.version),
       ).toBe(versionBefore + 2);
-    } finally {
-      await close();
-    }
   });
 
   it("#34(c)(i): a concurrent ordinary sync's committed row count (no version bump) fails the post-lock re-validation at row_plausibility", async () => {
-    const { db, close } = await createTestDb();
-    try {
       const source = new FixtureSource(await loadDocs('85224NED'));
       await registerTables(db, source, [table('85224NED')]);
       const first = await syncTable(db, source, '85224NED');
@@ -1267,9 +1167,6 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       ).rows[0]!;
       expect(batch.outcome).toBe('failed');
       expect(batch.failure_stage).toBe('row_plausibility');
-    } finally {
-      await close();
-    }
   });
 
   it('#34(c)(ii): of two concurrent rebaselines, exactly one wins — the loser fails loudly with rebaseline_conflict, version bumps once', async () => {
@@ -1280,8 +1177,6 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
     // enqueued on the mutex ahead of both transactions), so whichever
     // transaction commits second holds a genuinely stale pre-lock read —
     // exactly the ordering the version guard closes.
-    const { db, close } = await createTestDb();
-    try {
       const source = new FixtureSource(await loadDocs('85224NED'));
       await registerTables(db, source, [table('85224NED')]);
       expect((await syncTable(db, source, '85224NED')).outcome).toBe('succeeded');
@@ -1324,8 +1219,5 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       expect(Number(after.version)).toBe(versionBefore + 1);
       expect(after.status).toBe('active');
       expect(await dbLabelRows(db, '85224NED')).toEqual(labelsBefore);
-    } finally {
-      await close();
-    }
   });
 });
