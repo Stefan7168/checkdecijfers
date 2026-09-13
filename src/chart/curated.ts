@@ -203,7 +203,7 @@ export const GALLERY_STORIES: CuratedChartDefinition[] = [
     canonicalKey: 'bankruptcies_businesses',
     grain: 'MM',
     windowLength: 24,
-    look: 'standard',
+    look: 'warm',
   },
   {
     slug: 'producentenprijzen',
@@ -231,7 +231,7 @@ export const GALLERY_STORIES: CuratedChartDefinition[] = [
     canonicalKey: 'household_consumption_growth',
     grain: 'MM',
     windowLength: 24,
-    look: 'classic',
+    look: 'earth',
   },
   {
     slug: 'werkloosheid-maandelijks',

@@ -14,7 +14,7 @@ import {
   type PresentationOverrides,
 } from './chart-presentation.ts';
 
-export type ChartTemplateId = 'standard' | 'classic' | 'newsroom' | 'presentation' | 'social' | 'minimal';
+export type ChartTemplateId = 'standard' | 'classic' | 'newsroom' | 'presentation' | 'social' | 'minimal' | 'warm' | 'earth';
 
 export interface ChartTemplate {
   id: ChartTemplateId;
@@ -26,6 +26,8 @@ export interface ChartTemplate {
 }
 
 const ocean = FRAME_GRADIENT_PRESETS.find((p) => p.id === 'ocean')!;
+const dawn = FRAME_GRADIENT_PRESETS.find((p) => p.id === 'dawn')!;
+const sand = FRAME_GRADIENT_PRESETS.find((p) => p.id === 'sand')!;
 
 function template(id: ChartTemplateId, overrides: PresentationOverrides): ChartTemplate {
   return { id, nameKey: `chart.template.${id}` as MessageKey, descriptionKey: `chart.template.${id}Description` as MessageKey, overrides };
@@ -84,6 +86,35 @@ export const CHART_TEMPLATES: readonly ChartTemplate[] = [
   }),
   // Nothing but the line, the labels and the honesty ring.
   template('minimal', { grid: 'none', axisLines: 'hidden', markers: 'provisionalOnly', valueLabels: 'shown' }),
+  // A warm, editorial gradient card — same inset-card reasoning as
+  // presentation/social (the contrast gate holds by construction).
+  template('warm', {
+    lineWidth: 'normal',
+    markers: 'ends',
+    grid: 'horizontal',
+    axisLines: 'hidden',
+    valueLabels: 'shown',
+    frameBackground: { kind: 'gradient', from: dawn.from, to: dawn.to },
+    frameInset: 'small',
+    framePadding: 'medium',
+    frameCorners: 'rounded',
+    frameShadow: 'soft',
+  }),
+  // A bold square card on the sand preset — thicker line, sparser markers,
+  // no grid, for a poster-like single-glance read.
+  template('earth', {
+    lineWidth: 'thick',
+    markers: 'provisionalOnly',
+    grid: 'none',
+    axisLines: 'hidden',
+    valueLabels: 'shown',
+    frameBackground: { kind: 'gradient', from: sand.from, to: sand.to },
+    frameInset: 'small',
+    framePadding: 'medium',
+    frameCorners: 'veryRounded',
+    frameShadow: 'strong',
+    frameAspect: '1:1',
+  }),
 ];
 
 export function templateById(id: ChartTemplateId): ChartTemplate {
