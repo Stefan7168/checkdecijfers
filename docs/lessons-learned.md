@@ -67,6 +67,21 @@ on top.
   prompt — this spawns an entirely fresh agent with no memory of the original investigation,
   wasting a full dispatch. The correct continuation mechanism is `SendMessage({to:
   <agentId>, message: ...})`, which resumes the same agent from its own transcript.
+- **A docs-only commit made while checked out on a feature branch lands on that branch, not
+  `main` — and a `git push -u origin main` run from the wrong branch can silently report
+  "Everything up-to-date" instead of erroring.** Ended the build-performance-report work still
+  on `journey-r3-fetch-confirm` and committed the new session-brief + open-questions row there;
+  the immediately following `git push -u origin main` reported success with nothing pushed,
+  because the local `main` ref itself hadn't moved — a red flag that could easily read as "must
+  already be pushed" rather than "wrong branch." Caught by treating that message as suspicious
+  rather than trusting it, then confirming with `git fetch origin main` (untouched) and `git
+  status`/`git branch` (still on the feature branch). Fixed without touching PR #21: `git
+  checkout main` → `git cherry-pick <sha>` (clean, new SHA on `main`) → push → `git checkout
+  journey-r3-fetch-confirm` → `git reset --hard` back to the branch's own last real commit
+  (verified never pushed to `origin/journey-r3-fetch-confirm` first, so nothing on the open PR
+  was at risk). Lesson: after any commit, confirm the current branch BEFORE pushing — especially
+  mid-session after switching branches for a side task — and treat an unexpectedly-instant
+  push result as a signal to check `git status`/`branch`, not as confirmation.
 
 ## Session 101 (2026-09-13, owner present, continued) — Style panel becomes a real modal popup (#243)
 

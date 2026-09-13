@@ -14,59 +14,35 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-12/13, session 101, owner present — two concurrent session-101
-threads, merged below; see the "Housekeeping" note at the end of the second block for how they reconcile).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101, owner present — wrap-up. Full detail for
+everything summarized below: [status-archive.md](status-archive.md)'s top two entries; the older Thread A/B
+prose that used to live in this block moved there verbatim, since it had never actually been archived.)**
 
-**Thread A — Story stage + Live-embed Pro pitch.** PR #13 (Story stage motion) is MERGED (`e2979d2`) — walked at
-375px in both themes via the local dev-harness first, which found and fixed a REAL bug (the last finding's caption
-overlapped the pinned chart's source line at rest; `docs/decisions/044-story-stage.md`'s addendum has the
-mechanism). The 9 branches GitHub had listed as merged-but-undeleted are gone. The Live-embed Pro pitch (price + an
-interest-only "upgrade" click, no real charge) is built and pushed straight to `main` (`be064ed`) — see
-[ADR 041](decisions/041-public-embed-pages.md)'s session-101 addendum and [open-questions #237](open-questions.md)(b)/[#205](open-questions.md).
-**`hasProPlan` is UNCHANGED (still the allowlist)** — a real self-serve/paid tier needs the owner's sign-off on
-price + Stripe structure first; nothing here grants free access. **Owner steps still open** (unchanged from
-session 99/100): `npm run db:migrate` for 028+029 then `npm run usage:report`; the trust-page contact e-mail
-(owner: leave the placeholder for now); set `EMBED_TOKEN_SECRET` in Vercel; the `auth.users` read check.
+**The one open action: merge PR #21.** [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21) (R3 —
+the confirm-first chip before the automatic 100-credit onboarding fetch, reversing
+[open-questions #109](open-questions.md)) is open, CI green (`gate` run `34745805896`), `mergeable_state:
+clean`, **not merged as of this wrap-up**. The owner confirmed in chat that `ONBOARDING_OFFER_SECRET` is set in
+Vercel. Nothing else is blocking — merging is the next step, whenever the owner reviews it (branch + PR +
+explicit owner go is this decision's own standing rule, not a formality to skip even in an owner-present
+session — see the build plan). After merge: ask a question about an uncovered topic and confirm the offer
+button appears, confirm it charges 100 credits on click, confirm declining spends nothing (PR body's own test
+plan).
 
-**Thread B — composer chip revert + footer fix.** The owner looked at the live
-product and reported two regressions from recently-merged work: (1) the composer's four attachment chips
-("Link toevoegen", "Bestand uploaden", "Sheet koppelen", "Data koppelen") had been collapsed into one
-"Eigen data (binnenkort)" chip by ADR 045 decision 4 (R8, session 97/99, PR #14) — the owner read this as
-things having quietly disappeared, not a simplification ("I don't even remember it now because I'm so
-pissed"), and asked to reverse it. **Done:** `web/components/chat.tsx`/`messages.ts`/`chat.test.tsx`/
-`workspace.test.tsx` restored to the exact pre-R8 four-chip code (verified via `git show <sha>^:<path>` against
-the parent of PR #14's squash-merge `677c5fb`); ADR 045 decision 4 struck through with an as-built reversal
-note, [08-build-plan.md](08-build-plan.md) decision 10 updated, [12-huisstijl.md](12-huisstijl.md) composer
-section corrected (it still described the collapsed single chip). (2) The site footer looked "too high" —
-confirmed in a real Chromium screenshot at 390px width: PR #14 added "Werkwijze"/"Privacy" links to the
-one-line footer sentence, which pushed the **home-page** variant (attribution + "Over dit project" anchor +
-the two new links) from 2 lines/53px to 3 lines/69px. **Fix:** the home-page-only "Over dit project" anchor
-(already conditionally rendered, D6-safe to hide since the section is reachable by scrolling past it to reach
-the footer) collapses below `sm` (`hidden sm:inline` in `web/components/site-footer.tsx`); byte-pinned tests
-unaffected since jsdom's `textContent` ignores CSS `display`. Re-measured: back to 53px, matching every other
-page's baseline (which was NOT touched — that 2-line wrap predates this session and is not a regression).
-Both fixes verified together (re-verified again after the Thread A/B rebase below): typecheck ×2 clean,
-`test:docs` 11/11, web 104 files/1687 tests, backend 148 files/2262 tests (re-run post-rebase, confirmed
-unchanged from pre-rebase — no backend files touched by either thread), benchmark
-14/14 + 6/6 + 0 fabricated (GATE PASS), real build, real Chromium screenshots before/after at desktop + mobile
-widths. **Style-panel-to-popup (#243), recorded then later the same session actually started and shipped:**
-first recorded as explicitly deferred per owner instruction ("make note of that, do not execute it now, our
-context window is too large"), then picked up on the plain follow-up instruction "Start with making the graphs
-edit and embed things in a popup instead of inside the right panel." **Done:** the Style panel now opens as a
-real modal (`web/components/chart-edit-modal.tsx`, `ChartEditModal` — a Base UI Dialog, page inert behind it,
-matching the pre-existing Embed dialog rather than reviving session 92's non-modal floating panel) with the
-chart (+ legend + click-to-annotate notes) relocated into its left pane and `ChartConfigPanel`'s existing tabs
-on the right; stacked below `lg`. Embed was assessed against the same ask and left unchanged — it has been a
-real popup (its own Base UI Dialog) since session 93, it just has no live chart preview yet (a natural
-follow-up, not done here). Full as-built: ADR [039](decisions/039-chart-presentation-panel.md)'s 2026-09-13
-addendum, [open-questions #243](open-questions.md).
-**Housekeeping:** `origin/main` moved (`be064ed`, Thread A above) while this session (Thread B) was mid-flight on
-a separate, unrelated part of the product — a different, concurrent session-101 thread, not this one; this
-session was told "its not the time to focus on it" for that same Pro-plan work and did not touch it. Synced via
-`git pull --rebase origin main` after Thread B's own work was fully verified; the two threads touched disjoint
-files (chat.tsx/messages.ts/site-footer.tsx vs. the embed dialog/page) except for this STATUS.md paragraph and
-the composer-chip build-plan/ADR entries, resolved by hand into the merged account above. Nothing broken by
-either thread; flagging only that two sessions were active on overlapping product surfaces at once.
+**Also shipped and live in production this session, no action needed:** the chart Style panel is now a real
+modal popup (#243, `7e71e5a`, deployed 04:54:14 UTC) with a real-browser-review follow-up fix for a header-row
+overflow bug jsdom couldn't have caught (`5aa02c7`, deployed 06:47:32 UTC).
+
+**Recorded but not built — [open-questions #245](open-questions.md):** a build/CI performance diagnosis (owner
+ask). Full report: [session-briefs/2026-09-13-build-performance-diagnosis.md](session-briefs/2026-09-13-build-performance-diagnosis.md).
+The report's own "first 3 actions" (fix `tests/billing/ledger.test.ts` + `tests/ingestion/ingestion.test.ts`
+booting a fresh Postgres per test instead of per file; shard the CI gate 3-way; generalize into a full
+call-site sweep) don't need to wait on the report's 3 owner sub-questions — those only gate whether/how far to
+take the CI-sharding tier specifically.
+
+**Owner steps still open, carried forward unchanged (not touched this session):** `npm run db:migrate` for
+migrations 028+029 then `npm run usage:report`; the trust-page contact e-mail (owner: leave the placeholder for
+now); set `EMBED_TOKEN_SECRET` in Vercel + the `auth.users` read check (RUNBOOK) for Live embeds. Dependabot PRs
+#16/#17 remain open, untouched.
 
 **Branch note (session 96, 2026-09-11, owner present, SUPERSEDED — this PR merged as #13, see `git log`):**
 this branch (`visual-story-motion`) carries a

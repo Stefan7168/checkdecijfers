@@ -1,5 +1,98 @@
 # STATUS archive — the session log
 
+**Session 101 (2026-09-13, owner present, continued further — wrap-up covers this entry) — chart Style panel
+became a real modal popup (#243), a real-browser review found and fixed a genuine overflow bug, R3/#109's
+confirm-first onboarding fetch was built and opened as PR #21, and a build/CI performance diagnosis was
+recorded.** Verified against reality at wrap-up time (2026-09-13): `git log`, `gh`-equivalent GitHub MCP calls
+against PR #21 and the relevant CI runs, `git status`/`git worktree list`. This entry picks up exactly where
+the "Thread A / Thread B" entry immediately below (never itself archived — same "known debt" this file's own
+header note already names) leaves off.
+
+- **#243, chart Style panel → real modal popup.** Owner instruction, picked up mid-session: "Start with making
+  the graphs edit and embed things in a popup instead of inside the right panel" (previously recorded then
+  explicitly deferred earlier the same session). Built `web/components/chart-edit-modal.tsx` (`ChartEditModal`)
+  — a real Base UI Dialog (page inert behind it, backdrop/Escape close), chart on the left, `ChartConfigPanel`'s
+  existing tabs on the right, stacked below `lg`. The chart canvas/legend/click-to-annotate notes RELOCATE into
+  the popup (the same live `ChartView` instance, moved between its dock slot and the modal by a boolean, never
+  duplicated — avoids a duplicate-SVG-id risk from Recharts' per-instance `domId`). Embed assessed against the
+  same ask and left unchanged: it has been a real popup since session 93, it just has no live chart preview yet
+  (a scoped, not-yet-built follow-up). A background subagent fixing the ~25 affected tests surfaced a genuine
+  near-miss: a core R1 honesty-invariant digit-scan test would have silently stopped checking anything once its
+  target portaled into the dialog — fixed, not just made green. Two LOW code-review passes (a focus-order gap,
+  a stale doc comment, both fixed) plus a real product finding — two independent `ChartView`s with no shared
+  `StylePanelOwnerProvider` can leave one popup stacked inert behind another — filed as
+  [open-questions #244](open-questions.md), judged not reachable in production (`web/app/layout.tsx` always
+  provides the shared provider). Full as-built: ADR [039](decisions/039-chart-presentation-panel.md)'s
+  2026-09-13 addendum, [open-questions #243](open-questions.md). Verified: typecheck ×2, web 104 files/1683
+  tests, backend 148 files/2262 tests (unaffected, no backend files touched), benchmark 14/14+6/6+0 fabricated,
+  real build. Pushed directly to `main` (owner present) — **`7e71e5a`, CI run #220 (`34738453682`) `gate` +
+  `deploy` green, deployed 04:54:14 UTC.**
+- **Follow-up same day — a real-browser review found a genuine overflow bug jsdom could never have caught.**
+  The owner's mid-conversation garbled message was clarified into "review the new chart modal"; rather than
+  read code alone, this session launched the real dev server (Playwright + the pre-installed Chromium against
+  a temporary, unrouted fixture page bypassing the missing local `DATABASE_URL`) and looked at it. The Style
+  panel's shared header row (tablist + per-chart language select + close button — fine at the panel's old full
+  card width) overflowed the modal's new ~22rem column badly enough to push the language select and close
+  button off the visible edge entirely — measured 500px of content against a 352px column in Dutch via
+  `scrollWidth`/`clientWidth`, not eyeballed. Fixed by splitting the row into two (tablist keeps its own
+  wrapping row; select + close button share a second row) — no behaviour/attribute change. All 326
+  chart.tsx/chart-config-panel.tsx tests had kept passing throughout the break, since jsdom never renders
+  actual layout width — captured as its own [lessons-learned.md](lessons-learned.md) entry. Verified: typecheck
+  ×2, web 104 files/1683 tests, backend 148 files/2262 tests, benchmark 14/14+6/6+0 fabricated, real build.
+  Pushed directly to `main` — **`5aa02c7`, CI run #221 (`34743197172`) `gate` + `deploy` green, deployed
+  06:47:32 UTC.**
+- **R3 / [open-questions #109](open-questions.md) reversed — the confirm-first onboarding-fetch chip, built
+  and opened as PR #21, NOT merged.** #109 (session 66) had already done the diagnosis and named exactly what
+  was missing: an explicit owner call on reversing the automatic-100-credit-fetch UX. This session asked the
+  owner directly, in plain language, whether that should change — answered **yes** (decision 4: add a confirm
+  button) and **no change** to the 100-credit signup grant (decision 5); both decisions recorded first as their
+  own docs-only commit (`774154b`) before any code was written. Mechanism: a confident finder verdict now mints
+  a signed, stateless offer token (`src/ingestion/onboarding-offer-token.ts`, HMAC-SHA256, modeled on the
+  existing `src/chart/embed-token.ts`) instead of triggering the fetch immediately; a new
+  `confirmOnboardingFetch` server action verifies the token, cross-checks its `userId` against the real
+  session, and only then calls the existing, UNCHANGED `triggerOnboarding`. A persisted pre-debit database row
+  was considered and rejected on inspecting migration 012 (`debit_transaction_id bigint not null` is a
+  deliberate existing invariant) — the signed token needed no schema change, so no owner-supervised DDL step.
+  All three of #109's honesty guards preserved (confidence gate before minting, unchanged byte-pinned
+  acknowledgment text now shown only post-confirm, unchanged refund-on-refusal). New required secret, not yet
+  set anywhere: `ONBOARDING_OFFER_SECRET` ([RUNBOOK](RUNBOOK.md) Secrets register) — fails closed to an honest
+  "not available right now" if unset, never a silent revert to automatic charging. Two LOW code-review passes;
+  the second found a real bug (a reused length guard sized for raw question text, 2000 chars, was too small for
+  the token itself, which a 2000-char question inflates to ~3091 chars) — fixed with a dedicated,
+  correctly-sized bound. One pre-existing test (`app/onboarding-wiring.test.ts`, a source-text "wiring pin"
+  suite) failed honestly on the redesign and was rewritten to pin the NEW two-function shape rather than
+  patched to merely pass again. Verified: typecheck ×2, backend 149 files/2273 tests (11 new), web 104
+  files/1693 tests, benchmark 14/14+6/6+0 fabricated, real build. **Per the build plan's own rule this decision
+  always gets branch + PR + explicit owner go, with no exception for an owner-present session** — branch
+  `journey-r3-fetch-confirm`, commit `976b87a`, **PR #21 opened, CI run #222 (`34745805896`) green
+  (07:50:35 UTC), NOT merged as of this wrap-up.** Owner confirmed setting `ONBOARDING_OFFER_SECRET` in Vercel
+  in chat; merging PR #21 is the one remaining step. Full as-built: ADR
+  [026](decisions/026-on-demand-fetch-job-architecture.md)'s 2026-09-13 addendum, reversed
+  [open-questions #109](open-questions.md), [08-build-plan.md](08-build-plan.md) Journey programme phase 2.
+- **Build/CI performance diagnosis — owner ask, analysis only, nothing built.** The owner asked, mid-session,
+  to diagnose why the build/dev experience felt slower. Dispatched a Fable 5.1 agent; a second agent dispatch
+  (a genuine mistake — `Agent` was called again instead of `SendMessage` to continue the first one, spawning an
+  unrelated fresh investigation with no shared memory) independently found the repo's own leftover measurement
+  scripts and produced real, freshly-measured numbers (a 776.8-second full local backend-suite run; the exact
+  finding that `tests/billing/ledger.test.ts` boots a fresh in-memory Postgres inside a `beforeEach` — 58 times
+  for 58 tests — against a measured 60–100× cost difference versus a `TRUNCATE`-reset of an already-booted
+  instance). Both reports' findings were reconciled (they agreed on root cause, diverged on which fix to lead
+  with) into one report, published as an artifact
+  (`https://claude.ai/code/artifact/eab275e6-c890-4d31-a3bc-11f21c686d58`), then — on the owner's explicit
+  follow-up ask ("do we have to do anything to apply this report?" → "yes, save it") — saved as a durable copy,
+  [session-briefs/2026-09-13-build-performance-diagnosis.md](session-briefs/2026-09-13-build-performance-diagnosis.md),
+  and tracked as [open-questions #245](open-questions.md) (3 sub-questions only the owner can answer before the
+  CI-sharding tier specifically is worth scheduling; the "first 3 actions" don't need to wait on them). Docs-only,
+  pushed directly to `main` — **`186ecdd`** (a git-workflow mistake caught and fixed in the same turn: the
+  first attempt landed on the `journey-r3-fetch-confirm` feature branch instead of `main`; cherry-picked onto
+  `main` and pushed there, then the stray unpushed commit removed from the feature branch via `git reset
+  --hard` back to `976b87a` — verified safe since it was never pushed to `origin/journey-r3-fetch-confirm`, so
+  PR #21 was never affected).
+- **Housekeeping note carried forward:** Dependabot PRs #16/#17 remain open, untouched, not this session's
+  concern. `journey-programme-v1`, `visual-story-motion`, `embed-charts`, and
+  `claude/checkdecijfers-journey-programme-rvvipe` branches were not touched this session — pre-existing from
+  other threads, cleanup of those is not in scope here.
+
 **Session 101 (2026-09-12, owner present) — Phase 0 cleared (PR #13 merged, a real phone bug found+fixed, 9
 branches deleted), then the Live-embed Pro pitch built and pushed to `main`.**
 - Landed on the stale `journey-programme` branch (17 commits behind `main` — sessions 98-100 had already merged
