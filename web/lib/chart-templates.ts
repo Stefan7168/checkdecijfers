@@ -100,11 +100,14 @@ export const CHART_TEMPLATES: readonly ChartTemplate[] = [
     frameCorners: 'rounded',
     frameShadow: 'soft',
   }),
-  // A bold square card on the sand preset — thicker line, sparser markers,
-  // no grid, for a poster-like single-glance read.
+  // A bold square card on the sand preset — thicker line, end markers only,
+  // no grid, for a poster-like single-glance read. (markers: 'ends', not
+  // minimal's 'provisionalOnly' — earth's override set must stay distinct
+  // from minimal's, not reproduce it value-for-value as a subset; 'ends'
+  // fits the poster framing just as well, anchoring the first/last point.)
   template('earth', {
     lineWidth: 'thick',
-    markers: 'provisionalOnly',
+    markers: 'ends',
     grid: 'none',
     axisLines: 'hidden',
     valueLabels: 'shown',

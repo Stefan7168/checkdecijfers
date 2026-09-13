@@ -21,9 +21,10 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // decision 2026-09-09). 'story_open' and 'story_step' joined for story
   // mode (session 92). 'frame_changed' joined for the frame task (phase 5).
   // 'embed_open'/'embed_copy' joined for the embed feature (Task 4, spec
-  // Part B1). 'template_*' joined for chart templates (ADR 043). 'stage_open'
-  // and 'stage_autoplay' joined for the full-viewport Story stage (ADR 044,
-  // Story-stage plan Task 4).
+  // Part B1). 'template_*' joined for chart templates (ADR 043); 'template_warm'
+  // and 'template_earth' joined when those two looks were added (chart-visual-
+  // embed-pass plan, Task 2). 'stage_open' and 'stage_autoplay' joined for the
+  // full-viewport Story stage (ADR 044, Story-stage plan Task 4).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -42,6 +43,8 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'template_presentation',
     'template_social',
     'template_minimal',
+    'template_warm',
+    'template_earth',
     'stage_open',
     'stage_autoplay',
   ],
@@ -83,6 +86,8 @@ describe('countChartStyleEvent', () => {
     'template_presentation',
     'template_social',
     'template_minimal',
+    'template_warm',
+    'template_earth',
     'stage_open',
     'stage_autoplay',
   ] as const)(
