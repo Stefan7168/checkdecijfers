@@ -6,6 +6,43 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-13, owner present, a SECOND concurrent session-101 thread) — composer chip revert + footer fix
+
+- **Reverting UI from git history byte-for-byte is necessary but not sufficient — every doc/test that
+  DESCRIBES the old state needs its own explicit stale-reference sweep, separate from restoring the code.**
+  Restoring `chat.tsx`/`messages.ts` from `git show <sha>^:<path>` (the commit before the collapsing
+  squash-merge) was mechanical and exact, but a plain `grep -rn` for the collapsed feature's old name
+  ("Eigen data (binnenkort)") turned up a live, currently-read style guide (`docs/12-huisstijl.md`) still
+  describing the now-reverted collapsed state as current fact, plus a whole `describe()` block in
+  `chat.test.tsx` asserting "no entry point reaches it any more" — a test that still mechanically PASSED
+  post-revert (the row starts closed either way) while its name and body were now false. A test suite going
+  green is not proof a revert is complete; grep the repo for the feature's old name/description, not just for
+  compile errors.
+- **A vague live-product complaint ("the footer is too high") is worth reproducing with a real screenshot at
+  the actual breakpoint before hypothesizing a fix from reading code alone.** Reading `site-footer.tsx`
+  suggested the newly-added "Werkwijze"/"Privacy" links were the whole story; a real Chromium screenshot at
+  390px (Playwright, `/opt/pw-browsers/chromium`) of the CURRENT component against a git-extracted copy of the
+  PRE-change component (swapped in, screenshotted, swapped back — never committed) showed the base 2-line wrap
+  already existed before those links were added on every non-home page, and the actual regression was
+  narrower: only the home page's extra "Over dit project" anchor tipped the wrap from 2 lines to 3. Fixing the
+  wrong (broader) diagnosis would have removed links D6 requires to always stay visible; the narrow, correct
+  fix touched only the one already-conditional, homepage-only link.
+- **The mandatory pre-push LOW `/code-review` pass earned its keep again**: it caught a real, reintroduced bug
+  (closing the restored "Link toevoegen" row after a submit left the "not available yet" message orphaned on
+  screen, no reset) that the byte-for-byte revert faithfully reproduced from the original session-86 code, and
+  a false "pulled in cleanly; no conflicts" claim written into STATUS.md BEFORE the pull had actually
+  happened — caught by the reviewer re-running `git fetch`/`git rev-parse` itself rather than trusting the
+  diff's own prose. Both would have shipped unnoticed otherwise.
+- **Two Claude sessions both self-identifying as "session 101" were active on this repo at the same time**,
+  working disjoint product surfaces (this thread: composer chips + footer CSS; the other: the Live-embed Pro
+  pitch) that nonetheless both write to the same shared mutable file, `STATUS.md`'s top block — the one real
+  merge conflict on `git pull --rebase origin main` was there, not in any code file. Resolved by keeping both
+  threads' accounts as clearly labeled sibling sections rather than picking one, and rewriting the one
+  paragraph that had prematurely claimed the sync as already-clean before it had happened. Matches the OTHER
+  session's own independently-recorded lesson below ("a concurrent session actively re-merging the SAME PR
+  branch... is now routine, not exceptional") — worth elevating from a per-session observation to a standing
+  default: check `origin/main` immediately before any push, every time, on this project specifically.
+
 ## Session 101 (2026-09-12, owner present) — Phase 0 cleanup + the Live-embed Pro pitch
 
 - **A `git worktree add` at a path OUTSIDE the project root (a sibling directory) hits a sandboxed

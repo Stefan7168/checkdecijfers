@@ -45,9 +45,12 @@ the two new links) from 2 lines/53px to 3 lines/69px. **Fix:** the home-page-onl
 the footer) collapses below `sm` (`hidden sm:inline` in `web/components/site-footer.tsx`); byte-pinned tests
 unaffected since jsdom's `textContent` ignores CSS `display`. Re-measured: back to 53px, matching every other
 page's baseline (which was NOT touched — that 2-line wrap predates this session and is not a regression).
-Both fixes verified together: typecheck ×2 clean, `test:docs` 11/11, web 104 files/1684 tests, backend 148
-files/2262 tests, benchmark 14/14 + 6/6 + 0 fabricated (GATE PASS), real Chromium screenshots before/after at
-desktop + mobile widths. **Also recorded, explicitly NOT built per owner instruction ("make note of that, do
+Both fixes verified together (re-verified again after the Thread A/B rebase below): typecheck ×2 clean,
+`test:docs` 11/11, web 104 files/1687 tests, backend 148 files/2262 tests pre-rebase (post-rebase backend
+re-run was in flight — no backend files changed by either thread, so no change expected; confirm before
+trusting this line if it still says "in flight"), benchmark
+14/14 + 6/6 + 0 fabricated (GATE PASS), real build, real Chromium screenshots before/after at desktop + mobile
+widths. **Also recorded, explicitly NOT built per owner instruction ("make note of that, do
 not execute it now, our context window is too large"):** a Style-panel redesign from the current inline card
 into a pop-up/modal (chart left, styling controls right) — see [open-questions #243](open-questions.md).
 **Housekeeping:** `origin/main` moved (`be064ed`, Thread A above) while this session (Thread B) was mid-flight on
