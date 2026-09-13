@@ -90,6 +90,11 @@ export function ThreadSidebar({
           type="button"
           variant="ghost"
           size="icon-sm"
+          // size-11 sm:size-7: widens the 28px icon-sm tap target to the 44px
+          // accessible minimum only below `sm`, same pattern as
+          // theme-toggle.tsx/language-switch.tsx (phone-walk findings,
+          // session 98 — this control was left for its own audit then).
+          className="size-11 sm:size-7"
           onClick={onToggleCollapse}
           aria-label={t('sidebar.collapsedExpandLabel')}
         >
@@ -112,6 +117,9 @@ export function ThreadSidebar({
           type="button"
           variant="ghost"
           size="icon-xs"
+          // size-11 sm:size-6: widens the 24px icon-xs tap target to the 44px
+          // accessible minimum only below `sm` (phone-walk findings, session 98).
+          className="size-11 sm:size-6"
           onClick={onToggleCollapse}
           aria-label={t('sidebar.collapseLabel')}
         >
@@ -210,7 +218,14 @@ export function ThreadSidebar({
                                 aria-label={t('sidebar.optionsLabel')}
                                 aria-describedby={titleId}
                                 disabled={busy}
-                                className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
+                                // size-11 sm:size-6: widens the 24px icon-xs tap
+                                // target to the 44px accessible minimum only
+                                // below `sm` (phone-walk findings, session 98).
+                                // The dropdown's own `w-auto` anchor-width
+                                // tracking (see the comment below) still lands
+                                // under its `min-w-36` floor at either size, so
+                                // this doesn't change the menu's rendered width.
+                                className="shrink-0 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100 size-11 sm:size-6"
                               />
                             }
                           >

@@ -149,6 +149,35 @@ describe('ThreadSidebar — session 90: plus icon, per-row ⋯ menu, delete with
     expect(button.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
   });
 
+  // Phone-walk findings (session 98) deferred these three: icon-xs/icon-sm
+  // stay 24/28px on desktop, but were under the 44px accessible tap-target
+  // minimum on phone. Pinned as a CSS-contract, same pattern as
+  // theme-toggle.test.tsx/delete-history-button.test.tsx.
+  it('the collapsed-state expand button widens to a 44px tap target below `sm`', () => {
+    render(
+      <ThreadSidebar threads={[]} activeThreadId={null} collapsed={true} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
+    );
+    const button = screen.getByRole('button', { name: 'Toon gesprekken' });
+    expect(button.className).toContain('size-11');
+    expect(button.className).toContain('sm:size-7');
+  });
+
+  it('the collapse button widens to a 44px tap target below `sm`', () => {
+    render(
+      <ThreadSidebar threads={[]} activeThreadId={null} collapsed={false} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
+    );
+    const button = screen.getByRole('button', { name: 'Verberg gesprekken' });
+    expect(button.className).toContain('size-11');
+    expect(button.className).toContain('sm:size-6');
+  });
+
+  it('the per-thread options (⋯) button widens to a 44px tap target below `sm`', () => {
+    renderWithDelete(vi.fn());
+    const options = screen.getByRole('button', { name: 'Chatopties' });
+    expect(options.className).toContain('size-11');
+    expect(options.className).toContain('sm:size-6');
+  });
+
   it('without onDelete there is no options button in the tree at all (rows byte-identical to before)', () => {
     render(
       <ThreadSidebar threads={[cbsThread()]} activeThreadId={null} collapsed={false} onSelect={vi.fn()} onNewChat={vi.fn()} onToggleCollapse={vi.fn()} />,
