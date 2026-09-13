@@ -6,6 +6,48 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-13, owner present, continued much further) — CI sharding, ADR 047, the Pro-plan brainstorm/plan/build
+
+- **Splitting one CI job into a matrix breaks whatever LATER steps implicitly relied on an
+  EARLIER step in the same job.** The old `gate` job did root `npm ci` once, then every later
+  step (backend tests, `web`'s own steps) inherited that install for free since they shared a
+  filesystem. Splitting `gate` into `backend`(×3)+`web` dropped this silently — `web`'s tests
+  broke on a real CI run ("Failed to resolve import zod from src/chart/brandfetch.ts", since
+  `web/backend` symlinks into root `src/`) because nothing re-installed root deps in the new,
+  separate `web` job. Caught live, fixed same session. **Lesson: before splitting any monolithic
+  job, list every later step's implicit dependency on an earlier step's side effects (installs,
+  generated files, env) — a job boundary is also a filesystem-isolation boundary.**
+- **A backgrounded `vitest run` inside a subagent's own sandbox can be silently killed mid-run,
+  with no error, no output — just nothing happening.** Cost ~20 minutes of apparent "hang" on
+  Task 1 of the Pro-subscription plan before the implementer's own status check caught it and
+  re-ran in the foreground successfully. Now standing guidance in every SDD implementer dispatch
+  this session: run the FINAL pre-commit verification in the foreground, not backgrounded.
+- **A "resets monthly, unused lost" allowance cannot be safely implemented as a clawback against
+  a shared, fungible ledger balance if that balance also holds never-expiring funds.** Traced a
+  concrete mixed-balance scenario during the Pro-subscription-tier brainstorm: clawing back "the
+  size of last month's grant" from a shared balance can wrongly debit a purchased credit pack
+  that's supposed to be permanent, because the ledger has no FIFO/lot tracking of which credits
+  are which. Fix: track the expiring allowance in its own isolated ledger (tagged by a rotating
+  grant id), never touch the shared balance to implement the reset. General lesson for any
+  future "this bucket resets, that one doesn't" feature on a fungible-balance system.
+- **This project has no central `tests/db/migrations.test.ts`** — migrations are auto-discovered
+  by filename regex (`src/db/migrate.ts`) and each gets its own `tests/db/migration-NNN.test.ts`
+  sibling file (migrations 012/018/027's own precedent). The Pro-subscription-tier plan's Step 3
+  assumed the central file existed and told the implementer to edit it — wrong, caught by the
+  implementer reading the actual repo rather than trusting the plan text, ruled correct by the
+  controller. A plan author should verify a referenced test file actually exists before writing
+  a step that names it, the same discipline already applied to every code signature in a plan.
+- **Reading the real call sites before writing an implementation plan measurably prevents
+  rework.** During writing-plans' self-review for the Pro-subscription-tier plan, going and
+  reading (not guessing) `web/app/actions.ts`'s web-search billing closure, `dataset-gate.ts`,
+  and `pending_table_requests`'s actual schema surfaced three real gaps before any subagent was
+  dispatched: a NOT-NULL FK column that would have blocked onboarding's bucket-eligibility (fixed
+  by a deliberate scope-exclusion, not forced), the exact `webDebitHolder`/`settleWebAddon` diff
+  Task 6 needed (no "grep first" placeholder left in the plan), and the embed dialog's real prop
+  shape (no server-provided flag prop exists, so the Upgrade button must call the server action
+  directly). Task 1's actual execution then found exactly ONE remaining plan-text/reality
+  mismatch (the migrations.test.ts item above) — everything else matched on the first pass.
+
 ## Session 101 (2026-09-13, owner present, continued further) — the R3 confirm-first fetch (#109 reversed)
 
 - **An existing client-trust pattern (WP26's clickable clarification options) does NOT

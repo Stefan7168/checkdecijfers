@@ -14,51 +14,38 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101 continued, owner present, ~09:59 UTC).** Full
-detail for the prior wrap-up: [status-archive.md](status-archive.md)'s top two entries.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101 continued much further, owner present,
+wrap-up ~13:41 UTC).** Full detail: [status-archive.md](status-archive.md)'s top entry.
 
-**The one open action, unchanged: merge PR #21** (R3 — the confirm-first chip before the automatic 100-credit
-onboarding fetch, reversing [open-questions #109](open-questions.md)). Verified live against GitHub this
-session: `mergeable_state: CLEAN`/`MERGEABLE`. **The red CI the prior wrap-up flagged (run `34748057564`,
-doc-convention rule #132: live PR links in 5 docs) was real and is now fixed** — on `main` (`4a9c8eb`) and
-merged into the PR branch (`d19fec80c`). **A separate wrinkle hit after that: the PR's re-triggered run sat
-`queued` 45+ minutes with no runner assigned** (repo confirmed public — `private:false` — so not the
-Actions-minutes pattern in RUNBOOK's "CI red that is NOT code" entry, but the same *symptom* the RUNBOOK
-already documents as a variant: "queued indefinitely, no billing annotation"). Fixed the RUNBOOK's own
-prescribed way — merged `main` into `journey-r3-fetch-confirm` again (zero file overlap with `main`'s new
-commits, clean merge, `b8b5b41`) to force a fresh check run; that run is in progress as of this writing. Once
-it confirms green: **still needs the owner's explicit go to merge** — branch + PR + explicit go is this
-decision's own standing rule, no exception for an owner-present session (see the build plan).
+**Two open actions, both the owner's to take — nothing else is blocking either:**
+1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified at wrap-up:
+   `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE`, CI green (run `34750329451`, success). The
+   session's own CI wrinkles (a real red-CI doc-convention failure, then a 45+min stuck queue —
+   both fixed, see the archive entry) are resolved. Branch + PR + explicit owner go is this
+   decision's own standing rule, no exception for an owner-present session.
+2. **Continue or redirect the Pro subscription tier build** ([#205](open-questions.md)) — owner
+   approved the design and the 13-task plan; build running via subagent-driven-development,
+   **paused after Task 4 of 13** (money-path core-debit wiring, done + tested, not yet reviewed)
+   for this wrap-up. Lives on a kept worktree, `.claude/worktrees/pro-subscription-tier`
+   (branch `worktree-pro-subscription-tier`), **not pushed to origin, not merged** — exactly the
+   money-path posture. To resume: read the SDD ledger at
+   `.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`
+   — it has the exact next step (dispatch Task 4's task reviewer) and every ruling made so far.
+   Full design: [superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md).
+   Full plan: [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
 
 **Also shipped, verified via real CI + deploy this session, live in production, no action needed:**
-- **ADR [047](decisions/047-repositioning-embedded-sourced-chart.md)** (`dbeca08`, docs-only) formalizes the
-  session-96/97 repositioning direction — addenda on [01-product-vision.md](01-product-vision.md) Q1 and
-  [06-roadmap.md](06-roadmap.md) Phase 2/3; [open-questions #237](open-questions.md) updated to point here.
-- **Sidebar tap-target fix** (`17c84de`, [#238](open-questions.md) follow-up): `icon-xs`/`icon-sm` widened to
-  44px below `sm` in `thread-sidebar.tsx` (3 call sites), scoped per an investigation that found the shared
-  Dialog-close-button token itself was higher-risk to touch. Web suite 1686/1686, typecheck clean,
-  `/code-review` LOW 0 findings.
-- **[#245](open-questions.md) action 1 — test-DB boot perf** (`0503a62`): `ledger.test.ts` and
-  `ingestion.test.ts` now boot PGlite once per file (`beforeAll`) + `TRUNCATE`-reset per test, instead of a
-  fresh boot per test. Measured: ledger 126.9s→~24-34s (58/58 pass), ingestion 71.0s→8.25s (29/29 pass), full
-  backend suite 148 files/2262 tests unchanged pass count, no cross-file leakage. Verified three independent
-  ways (a subagent's own full-suite run, a manual read of the truncate-list logic, a second local re-run).
-- **[#245](open-questions.md) action 2 — CI 3-way sharding** (`9132052` + a same-session fix `9e4e7df`): the
-  eleven sequential backend domain steps replaced with a `backend` job (3-way `vitest run --shard=N/3` matrix,
-  closing the `tests/attachments`/`tests/usage` no-CI-step gap for free) plus a separate parallel `web` job;
-  benchmark run+score rides shard 1. **The first push broke `web`** — splitting the job dropped the shared
-  root `npm ci` its tests need via the `web/backend` symlink (ADR 018 point 9) — caught live on run
-  `34750330671` ("Failed to resolve import zod from src/chart/brandfetch.ts"), fixed same session
-  (`9e4e7df`). Re-run `34750430890` confirmed fully green end-to-end: `web` ✓, `backend (1/2/3)` ✓, `deploy` ✓
-  — production is now running the sharded workflow.
-- **Investigated, correctly NOT built — [#237](open-questions.md)(d) embed code per gallery card:** needs a
-  real second token kind + anonymous-safe mint path (curated gallery charts carry no `auditId` the existing
-  embed dialog needs), not a drop-in reuse. Scope recorded for a future session.
+ADR [047](decisions/047-repositioning-embedded-sourced-chart.md) (repositioning, formalized);
+sidebar tap-target fix ([#238](open-questions.md)); [#245](open-questions.md) actions 1+2 (test-DB
+perf fix + CI 3-way sharding — one real bug found and fixed live on the sharding push, see the
+archive entry for the full account); Dependabot #16/#17 merged (repo has zero open Dependabot PRs
+now); README.md's stale "ADRs 001–009" pointer corrected. Investigated, correctly NOT built:
+[#237](open-questions.md)(d) embed code per gallery card — needs real new token/route plumbing,
+scope recorded.
 
 **Owner steps still open, carried forward unchanged (not touched this session):** `npm run db:migrate` for
 migrations 028+029 then `npm run usage:report`; the trust-page contact e-mail (owner: leave the placeholder for
-now); set `EMBED_TOKEN_SECRET` in Vercel + the `auth.users` read check (RUNBOOK) for Live embeds. Dependabot PRs
-#16/#17 remain open, untouched.
+now); set `EMBED_TOKEN_SECRET` in Vercel + the `auth.users` read check (RUNBOOK) for Live embeds.
 
 **Branch note (session 96, 2026-09-11, owner present, SUPERSEDED — this PR merged as #13, see `git log`):**
 this branch (`visual-story-motion`) carries a

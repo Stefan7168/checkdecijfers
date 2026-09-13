@@ -67,3 +67,14 @@ stands unchanged.
 [12-huisstijl.md](../12-huisstijl.md) (current: shadcn/ui neutral, light + dark) and [open-questions
 #204](../open-questions.md) (resolved, superseding this addendum's premise for VISUALS only). Structural
 decisions here are still unaffected.
+
+**CI structure update (session 101 continued, 2026-09-13, [#245](../open-questions.md)):** the single `gate`
+job point 9's own `web`-steps-share-`gate`'s-root-`npm-ci` structure depended on is SUPERSEDED — a real
+performance diagnosis found the eleven sequential backend domain steps inside `gate` bounded CI wall-clock by
+the sum of their slowest files rather than letting them share the runner's cores. `gate` is now a 3-way
+`vitest run --shard=N/3` matrix job (`backend`) plus a separate parallel `web` job, both feeding `deploy` via
+`needs: [backend, web]`. **A real regression from the split, fixed same session:** splitting `web` out of
+`gate` silently dropped the root `npm ci` its tests need via the `web/backend` symlink (this ADR's own point 9
+explains exactly why that install is required) — caught live on a real CI run, fixed by adding it back as its
+own step in the new `web` job. Nothing else about this ADR's monorepo/symlink/two-lockfile structure changed;
+only how the checks are scheduled across jobs.
