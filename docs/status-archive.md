@@ -92,6 +92,20 @@ header note already names) leaves off.
   concern. `journey-programme-v1`, `visual-story-motion`, `embed-charts`, and
   `claude/checkdecijfers-journey-programme-rvvipe` branches were not touched this session — pre-existing from
   other threads, cleanup of those is not in scope here.
+- **Wrap-up ritual addendum (same session, immediately after the block above was written):** the ritual's own
+  ✅/⏭️ doc-freshness sweep found the "PR pending review" phrasing still live in `open-questions.md`/`RUNBOOK.md`/
+  `08-build-plan.md` (needed updating to name PR #21 + green CI) and no persistent cross-session `MEMORY.md`
+  mechanism at all in this remote/cloud container (recorded as a genuine environment fact in RUNBOOK, not a
+  bug — see lessons-learned). Committed those fixes docs-only to `main` (**`ac08356`**) — correctly checked the
+  branch first this time, unlike the `186ecdd` mistake two bullets up. That push, however, touched the SAME doc
+  sections PR #21 itself had edited, which flipped PR #21 to `mergeable_state: dirty` — a real, if minor,
+  self-inflicted side effect of doing docs wrap-up work while a same-topic PR sits open. **Fixed in the same
+  turn:** merged `main` into `journey-r3-fetch-confirm` (merge commit **`79b7649`**, no rebase/force-push — the
+  four resulting conflicts were all "which side is current," resolved by keeping the freshly-verified wrap-up
+  text throughout), pushed. `mergeable_state` returned to `unstable` (conflict gone, just awaiting CI) with the
+  `gate` check (run `34748057564`) confirmed `in_progress` on the new head SHA at 08:35 UTC — this session
+  subscribed to PR #21's activity so a red result still gets a pushed fix per this repo's own PR-stewardship
+  rule, rather than being left unresolved after the session's own wrap-up text was written.
 
 **Session 101 (2026-09-12, owner present) — Phase 0 cleared (PR #13 merged, a real phone bug found+fixed, 9
 branches deleted), then the Live-embed Pro pitch built and pushed to `main`.**
