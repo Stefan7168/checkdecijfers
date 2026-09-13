@@ -977,6 +977,13 @@ the same shape as `gate.ts`'s `chargeAndRun`, Task 4's already-solved case).
 - [ ] **Step 1: Write the failing tests** — same four-test shape as Task 4, once for
   `reserveWebSearchDebit` (10-credit price) and once for `reserveDatasetDebit` (20-credit price,
   per `09-pricing.md`'s `dataset_turn` price) — 8 new tests total, in `tests/billing/ledger.test.ts`.
+  **Plus one more, specifically for the landmine this task exists to avoid:** call `reserveDebit`
+  for a question under some `requestId` (fully draining an active Pro bucket, so the debit lands
+  in the bucket), then call `reserveWebSearchDebit` with that SAME base `requestId` for the add-on
+  that rides alongside it — assert the add-on is NOT treated as a duplicate of the question's own
+  debit (both succeed as independent debits; total credits removed = both amounts, not one).
+  Without the internal `${requestId}:websearch` disambiguation this test fails exactly the way the
+  Task 4 finding described. 9 new tests total.
 
 - [ ] **Step 2: Run to verify they fail.**
 
@@ -1004,8 +1011,8 @@ export async function reserveWebSearchDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    // NOTE (Task 4 fix rounds 1-2): `requestId` here MUST be distinct from the question debit's
-    // (e.g. `${requestId}:websearch`). pro_bucket_ledger_one_debit_per_request is
+    // NOTE (Task 4 fix rounds 1-2): the id passed to splitDebit here MUST be distinct from the
+    // question debit's own requestId. pro_bucket_ledger_one_debit_per_request is
     // `(user_id, request_id) where reason = 'debit'` with NO action-type scope, so on a shared
     // requestId the add-on's bucket debit reads as a duplicate of the question's and is silently
     // dropped. This is NOT limited to a lapsed subscription — it fires whenever the question debit
@@ -1013,8 +1020,12 @@ export async function reserveWebSearchDebit(
     // add-on that follows resolves to a bucket debit too. And since Task 4's fix, when the bucket
     // is drained by the time the add-on runs, the whole add-on debit short-circuits (ledger leg
     // included) rather than falling back to the ledger — so the under-charge is total, not partial.
-    // A distinct requestId per bucket-eligible debit is the fix; there is no way around it.
-    const split = await splitDebit(tx, userId, requestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId);
+    // Disambiguated HERE, once, so every caller of reserveWebSearchDebit keeps passing the same
+    // requestId it already uses everywhere else (the audit trail, the question's own reserveDebit
+    // call) with zero caller-side changes — the add-on's OWN distinct id never leaks out of this
+    // function.
+    const addonRequestId = `${requestId}:websearch`;
+    const split = await splitDebit(tx, userId, addonRequestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -1023,8 +1034,9 @@ export async function reserveWebSearchDebit(
 }
 ```
 
-(`reserveDatasetDebit` is the identical shape, substituting `DATASET_DEBIT`/`'dataset debit'` and
-its own `ReserveDatasetDebitResult` type.)
+(`reserveDatasetDebit` is the identical shape, substituting `DATASET_DEBIT`/`'dataset debit'`, its
+own `ReserveDatasetDebitResult` type, and its own `${requestId}:dataset` disambiguated id in place
+of `websearch`.)
 
 - [ ] **Step 4: Modify `chargeAndRunDataset` in `dataset-gate.ts`** — apply Task 4 Step 5's exact
   transformation (replace every `debit.id` with `split`, every `compensate(db, userId, debit.id,
