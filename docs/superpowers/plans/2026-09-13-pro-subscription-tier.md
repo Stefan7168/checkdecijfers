@@ -1011,21 +1011,25 @@ export async function reserveWebSearchDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    // NOTE (Task 4 fix rounds 1-2): the id passed to splitDebit here MUST be distinct from the
-    // question debit's own requestId. pro_bucket_ledger_one_debit_per_request is
+    // NOTE (Task 4 fix rounds 1-2, corrected as-built by Task 6): only the pro_bucket_ledger leg
+    // needs a disambiguated id — pro_bucket_ledger_one_debit_per_request is
     // `(user_id, request_id) where reason = 'debit'` with NO action-type scope, so on a shared
     // requestId the add-on's bucket debit reads as a duplicate of the question's and is silently
-    // dropped. This is NOT limited to a lapsed subscription — it fires whenever the question debit
-    // took anything from the bucket, on a perfectly active subscription, and the same-requestId
-    // add-on that follows resolves to a bucket debit too. And since Task 4's fix, when the bucket
-    // is drained by the time the add-on runs, the whole add-on debit short-circuits (ledger leg
-    // included) rather than falling back to the ledger — so the under-charge is total, not partial.
-    // Disambiguated HERE, once, so every caller of reserveWebSearchDebit keeps passing the same
-    // requestId it already uses everywhere else (the audit trail, the question's own reserveDebit
-    // call) with zero caller-side changes — the add-on's OWN distinct id never leaks out of this
-    // function.
-    const addonRequestId = `${requestId}:websearch`;
-    const split = await splitDebit(tx, userId, addonRequestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId);
+    // dropped (not limited to a lapsed subscription — fires whenever the question debit took
+    // anything from the bucket, on a perfectly active subscription). credit_transactions does NOT
+    // need this: its own uniqueness is already reason-scoped (separate partial unique indexes per
+    // reason — question_cost/websearch_cost/dataset_cost/onboarding_cost), so sharing the bare
+    // requestId there is already safe, and MUST be kept — history.ts/threads/index.ts's cost
+    // rollup joins on the ledger leg's real request_id. **As-built (Task 6): the literal string
+    // concatenation shown below does NOT work** — request_id columns are Postgres `uuid` type, so
+    // `${requestId}:websearch` fails at the DB with "invalid input syntax for type uuid". The real
+    // fix is a deterministic, suffix-sensitive UUID derivation (`deriveAddonRequestId`, SHA-256-
+    // based, 128 bits of the digest formatted as a real UUID) applied ONLY to the bucket leg via
+    // splitDebit's own bucket-specific id parameter — the ledger leg keeps the real requestId
+    // unchanged. See the real `src/billing/ledger.ts` for the actual signature; the sketch below
+    // is illustrative of the OLD (broken) approach only, kept for the historical record.
+    const addonRequestId = `${requestId}:websearch`; // ⚠ illustrative only — see note above, does not work as written
+    const split = await splitDebit(tx, userId, requestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId, addonRequestId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -1035,8 +1039,7 @@ export async function reserveWebSearchDebit(
 ```
 
 (`reserveDatasetDebit` is the identical shape, substituting `DATASET_DEBIT`/`'dataset debit'`, its
-own `ReserveDatasetDebitResult` type, and its own `${requestId}:dataset` disambiguated id in place
-of `websearch`.)
+own `ReserveDatasetDebitResult` type, and its own derived bucket-leg id in place of `websearch`'s.)
 
 - [ ] **Step 4: Modify `chargeAndRunDataset` in `dataset-gate.ts`** — apply Task 4 Step 5's exact
   transformation (replace every `debit.id` with `split`, every `compensate(db, userId, debit.id,
