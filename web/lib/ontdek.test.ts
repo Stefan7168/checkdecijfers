@@ -1,19 +1,26 @@
-// The Ontdek feed's two jobs (ADR 035): keep anonymous traffic off the
-// database (TTL cache) and NEVER break the public landing (stale-over-
+// The gallery feed's two jobs (#237/ADR 046): keep anonymous traffic off the
+// database (TTL cache) and NEVER break the public gallery (stale-over-
 // nothing, empty-over-crash). Both behaviors are pinned here with the module
 // boundaries mocked, per web test convention.
+//
+// #240: this file used to also cover a second feed, getOntdekCharts(), for
+// the landing's "Ontdek Nederland in grafieken" section (ADR 035) — removed
+// once the section itself was replaced by the gallery teaser and nothing
+// mounted it any more. The mechanism tests below (TTL, coalescing,
+// stale-over-nothing, the deadline degrade, the synchronous-throw latch fix)
+// exercise the SAME makeCuratedFeed() factory the removed feed used, so they
+// moved onto getGalleryStories() rather than being deleted with it.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { buildCuratedCharts } = vi.hoisted(() => ({ buildCuratedCharts: vi.fn() }));
 vi.mock('../backend/chart/index.ts', () => ({
   buildCuratedCharts,
-  ONTDEK_CHARTS: [],
   GALLERY_STORIES: [],
 }));
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('./db.ts', () => ({ getDb }));
 
-import { getGalleryStories, getOntdekCharts, resetOntdekCache } from './ontdek.ts';
+import { getGalleryStories, resetOntdekCache } from './ontdek.ts';
 import { ANONYMOUS_READ_DEADLINE_MS } from './deadline.ts';
 
 const chartA = { slug: 'a', spec: { title: 'A' } };
@@ -31,15 +38,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('getOntdekCharts', () => {
+describe('getGalleryStories', () => {
   it('returns the built charts and logs skipped series', async () => {
     buildCuratedCharts.mockResolvedValue({
       charts: [chartA],
       skipped: [{ slug: 'b', reason: 'query refused (freshness): too old' }],
     });
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
     expect(console.warn).toHaveBeenCalledWith(
-      "[ontdek] chart 'b' skipped: query refused (freshness): too old",
+      "[galerij] chart 'b' skipped: query refused (freshness): too old",
     );
   });
 
@@ -52,52 +59,52 @@ describe('getOntdekCharts', () => {
       skipped: [],
       toggleSkipped: [{ slug: 'a', reason: 'alternate reading refused (freshness): too old' }],
     });
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
     expect(console.warn).toHaveBeenCalledWith(
-      "[ontdek] chart 'a' toggle skipped: alternate reading refused (freshness): too old",
+      "[galerij] chart 'a' toggle skipped: alternate reading refused (freshness): too old",
     );
   });
 
   it('tolerates a test double that omits toggleSkipped entirely (defensive default)', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
   });
 
   it('caches within the TTL — one DB build for many requests', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
-    await getOntdekCharts();
-    await getOntdekCharts();
+    await getGalleryStories();
+    await getGalleryStories();
+    await getGalleryStories();
     expect(buildCuratedCharts).toHaveBeenCalledTimes(1);
   });
 
   it('rebuilds after the TTL expires', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
+    await getGalleryStories();
     vi.advanceTimersByTime(31 * 60 * 1000);
     buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartB]);
+    await expect(getGalleryStories()).resolves.toEqual([chartB]);
     expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
   });
 
   it('serves the previous set when a rebuild fails (stale over nothing)', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
+    await getGalleryStories();
     vi.advanceTimersByTime(31 * 60 * 1000);
     buildCuratedCharts.mockRejectedValue(new Error('pool down'));
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
   });
 
   it('degrades to an empty list when there is no cache to fall back on', async () => {
     buildCuratedCharts.mockRejectedValue(new Error('no DATABASE_URL'));
-    await expect(getOntdekCharts()).resolves.toEqual([]);
+    await expect(getGalleryStories()).resolves.toEqual([]);
   });
 
   it('retries immediately after a failure once the DB is back', async () => {
     buildCuratedCharts.mockRejectedValue(new Error('down'));
-    await getOntdekCharts();
+    await getGalleryStories();
     buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartB]);
+    await expect(getGalleryStories()).resolves.toEqual([chartB]);
   });
 
   it('coalesces concurrent cache-miss requests onto ONE build', async () => {
@@ -107,8 +114,8 @@ describe('getOntdekCharts', () => {
         release = resolve;
       }),
     );
-    const first = getOntdekCharts();
-    const second = getOntdekCharts();
+    const first = getGalleryStories();
+    const second = getGalleryStories();
     release({ charts: [chartA], skipped: [] });
     await expect(first).resolves.toEqual([chartA]);
     await expect(second).resolves.toEqual([chartA]);
@@ -117,22 +124,22 @@ describe('getOntdekCharts', () => {
 });
 
 // #190(b): rebuild() degrades on a THROWN error but not on a WAIT. Under pool
-// saturation it simply blocks, and the public landing blocked with it — so the
+// saturation it simply blocks, and the public gallery blocked with it — so the
 // section that is designed to be omissible could not omit itself.
 describe('the chart feed degrades instead of waiting (#190b)', () => {
   it('serves an empty section when the build never settles (nothing cached yet)', async () => {
     buildCuratedCharts.mockReturnValue(new Promise(() => {}));
-    const charts = getOntdekCharts();
+    const charts = getGalleryStories();
     await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
     await expect(charts).resolves.toEqual([]);
   });
 
   it('serves the STALE set when a refresh never settles', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
     vi.advanceTimersByTime(31 * 60 * 1000);
     buildCuratedCharts.mockReturnValue(new Promise(() => {}));
-    const stale = getOntdekCharts();
+    const stale = getGalleryStories();
     await vi.advanceTimersByTimeAsync(ANONYMOUS_READ_DEADLINE_MS + 1);
     // Stale-over-nothing, the posture this module already chose for a THROWN
     // failure — now reached for a hung one too.
@@ -157,50 +164,22 @@ describe('a SYNCHRONOUS build failure must not latch the in-flight slot', () => 
       throw new Error('DATABASE_URL is not set');
     });
     // First request: the section degrades to empty, as designed.
-    await expect(getOntdekCharts()).resolves.toEqual([]);
+    await expect(getGalleryStories()).resolves.toEqual([]);
     // Second request, config now fine. Before the fix this returned [] forever
     // and buildCuratedCharts was never called again on this instance.
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
+    await expect(getGalleryStories()).resolves.toEqual([chartA]);
     expect(buildCuratedCharts).toHaveBeenCalledTimes(1);
   });
 });
 
-// #237/ADR 046: getGalleryStories() shares makeCuratedFeed with
-// getOntdekCharts() but must be an INDEPENDENT cache slot — a build failure
-// or cache hit on one feed must never leak into the other.
-describe('getGalleryStories (#237) — an independent cache slot from getOntdekCharts', () => {
-  it('builds and serves its own chart set', async () => {
+describe('resetOntdekCache', () => {
+  it('clears the cache between cases', async () => {
     buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await expect(getGalleryStories()).resolves.toEqual([chartA]);
-  });
-
-  it('a cache hit on one feed does not satisfy the other — each triggers its own build', async () => {
-    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
-    buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
-    await expect(getGalleryStories()).resolves.toEqual([chartB]);
-    expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
-    // Ontdek's own cache is untouched by the gallery build.
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
-    expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
-  });
-
-  it('a failed gallery build does not disturb a healthy ontdek cache, and vice versa', async () => {
-    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
-    buildCuratedCharts.mockRejectedValue(new Error('down'));
-    await expect(getGalleryStories()).resolves.toEqual([]);
-    await expect(getOntdekCharts()).resolves.toEqual([chartA]);
-  });
-
-  it('resetOntdekCache() clears both feeds', async () => {
-    buildCuratedCharts.mockResolvedValue({ charts: [chartA], skipped: [] });
-    await getOntdekCharts();
     await getGalleryStories();
     resetOntdekCache();
     buildCuratedCharts.mockResolvedValue({ charts: [chartB], skipped: [] });
-    await expect(getOntdekCharts()).resolves.toEqual([chartB]);
     await expect(getGalleryStories()).resolves.toEqual([chartB]);
+    expect(buildCuratedCharts).toHaveBeenCalledTimes(2);
   });
 });

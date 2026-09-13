@@ -1,8 +1,6 @@
-// Server-side data feed for the public curated-chart surfaces: the "Ontdek
-// Nederland in grafieken" landing section (ADR 035) AND the public gallery
-// (#237/ADR 046). Both wrap src/chart/curated.ts — the deterministic,
-// LLM-free curated pipeline — with the two things a PUBLIC route needs that
-// chat answers don't:
+// Server-side data feed for the public gallery (#237/ADR 046). Wraps
+// src/chart/curated.ts — the deterministic, LLM-free curated pipeline — with
+// the two things a PUBLIC route needs that chat answers don't:
 //
 //   1. A small in-process TTL cache. '/' and '/galerij' are anonymous-
 //      reachable, so an uncached read would put every drive-by request on
@@ -17,10 +15,14 @@
 //      else to an empty list, which renders as "no section"/"no stories".
 //      Skipped series are logged server-side, never guessed at (principle c).
 //
-// #237: getOntdekCharts() and getGalleryStories() share ONE implementation
-// (makeCuratedFeed) parameterised only by which definition list and cache
-// slot they use — no copy-paste of the cache/coalescing/fail-safe logic.
-import { buildCuratedCharts, GALLERY_STORIES, ONTDEK_CHARTS } from '../backend/chart/index.ts';
+// #240: this used to also serve the landing's "Ontdek Nederland in
+// grafieken" section through a second feed sharing this same
+// makeCuratedFeed() factory (ADR 035); that section was replaced by the
+// gallery teaser (#237) and the feed removed once nothing mounted it any
+// more. The factory stayed generic (parameterised by definition list and
+// cache slot) rather than being collapsed into one hardcoded function, since
+// a second public curated surface has needed it once already.
+import { buildCuratedCharts, GALLERY_STORIES } from '../backend/chart/index.ts';
 import type { CuratedChart } from '../backend/chart/index.ts';
 import { getDb } from './db.ts';
 import { ANONYMOUS_READ_DEADLINE_MS, withDeadline } from './deadline.ts';
@@ -111,22 +113,14 @@ function makeCuratedFeed(label: string, definitions: () => Parameters<typeof bui
   return { get, reset };
 }
 
-const ontdekFeed = makeCuratedFeed('ontdek', () => ONTDEK_CHARTS);
 const galleryFeed = makeCuratedFeed('galerij', () => GALLERY_STORIES);
 
-export function getOntdekCharts(): Promise<CuratedChart[]> {
-  return ontdekFeed.get();
-}
-
-/** #237/ADR 046: the public gallery's story set, served through the SAME
- * cache/coalesce/fail-safe machinery as the landing's Ontdek section, over
- * GALLERY_STORIES instead of ONTDEK_CHARTS. */
+/** #237/ADR 046: the public gallery's story set, over GALLERY_STORIES. */
 export function getGalleryStories(): Promise<CuratedChart[]> {
   return galleryFeed.get();
 }
 
-/** Test seam: reset both module-scope caches between cases. */
+/** Test seam: reset the module-scope cache between cases. */
 export function resetOntdekCache(): void {
-  ontdekFeed.reset();
   galleryFeed.reset();
 }

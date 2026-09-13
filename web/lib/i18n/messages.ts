@@ -183,8 +183,6 @@ const nl = {
   // UNCHANGED verbatim; the English value below is a faithful MEANING
   // translation, not a literal one.
   'landing.heroTitle': 'Chat met de officiële cijfers van Nederland',
-  'landing.heroSubtitle':
-    'Stel je vraag in gewone taal. Check de Cijfers rekent het antwoord uit op officiële CBS-statistieken — elk getal herleidbaar tot een CBS-tabel, met bron en datum erbij.',
   'landing.ctaStart': 'Begin met vragen',
   'landing.ctaHowItWorks': 'Hoe het werkt',
   'landing.exampleLabel': 'Zo antwoordt het product — echt voorbeeld',
@@ -302,11 +300,6 @@ const nl = {
   'trial.submitIdle': 'Vraag',
   'trial.of': 'van',
   'trial.freeQuestionsLeft': 'gratis proefvragen over — geen account nodig.',
-
-  // ontdek.tsx.
-  'ontdek.heading': 'Ontdek Nederland in grafieken',
-  'ontdek.body':
-    'Rechtstreeks uit onze database met officiële CBS-cijfers: consumentenvertrouwen, economische groei, inflatie, de gemiddelde verkoopprijs van woningen en de werkloosheid. Elk punt is herleidbaar tot een CBS-tabel — bron en datum staan erbij.',
 
   // source-badge.tsx (Client — always rendered from chart.tsx/chat.tsx).
   'sourceBadge.syncedLabel': 'gesynchroniseerd {date}',
@@ -919,8 +912,6 @@ const en: Messages = {
   // the Dutch marketing copy — the Dutch headline stays owner-pinned verbatim
   // (see the nl block); this is not a literal word-for-word rendering.
   'landing.heroTitle': "Chat with the Netherlands' official statistics",
-  'landing.heroSubtitle':
-    'Ask your question in plain language. Check de Cijfers computes the answer from official CBS statistics — every figure traceable to a CBS table, with source and date shown.',
   'landing.ctaStart': 'Start asking',
   'landing.ctaHowItWorks': 'How it works',
   'landing.exampleLabel': 'How the product answers — a real example',
@@ -1017,10 +1008,6 @@ const en: Messages = {
   'trial.submitIdle': 'Ask',
   'trial.of': 'of',
   'trial.freeQuestionsLeft': 'free trial questions left — no account needed.',
-
-  'ontdek.heading': 'Discover the Netherlands in charts',
-  'ontdek.body':
-    'Straight from our database of official CBS figures: consumer confidence, economic growth, inflation, the average house sale price and unemployment. Every point is traceable to a CBS table — source and date included.',
 
   'sourceBadge.syncedLabel': 'synced {date}',
 

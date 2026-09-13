@@ -1,9 +1,12 @@
 // The public face of checkdecijfers.nl — what a logged-out visitor sees at '/'
 // (session-51 owner decision: the homepage IS the product, not a bare login
 // redirect). Server component: NO LLM, NO chargeable entry point. The ONLY
-// data reads are the deterministic Ontdek discovery charts (session 52,
+// data reads are the deterministic curated-chart pipeline (session 52,
 // ADR 035 — cached, fail-safe, LLM-free; they amend the original "no data
-// reads" framing of #98, see the reconciled row). The example answer below is
+// reads" framing of #98, see the reconciled row), served here through
+// GalleryTeaser/getGalleryStories (#237/ADR 046) rather than the original
+// Ontdek section, which mounted the same pipeline directly and is now
+// deleted (#240). The example answer below is
 // a REAL, live-verified CBS cell (frozen verification task CC1:
 // consumentenvertrouwen juni 2026 = −39, Definitief, tabel 83693NED —
 // re-verified LLM-free on production 2026-07-17) rendered in the product's
@@ -151,13 +154,10 @@ export async function Landing({ coverage = null }: { coverage?: CoverageDisclosu
         {/* #237/ADR 046: the gallery teaser replaces the old Ontdek section
             on the landing — same deterministic, LLM-free curated-chart
             pipeline (ADR 035), now presented as sourced stories around the
-            positioning sentence rather than a bare discovery grid.
-            web/components/ontdek.tsx (fix-wave finding 2: it compiles, but
-            NOTHING mounts it any more — the component, its own test suite,
-            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys are
-            dead code, deliberately left in place rather than deleted on
-            this branch; see open-questions.md's follow-up row for the exact
-            deletion list) is not referenced from here or anywhere else. */}
+            positioning sentence rather than a bare discovery grid. The old
+            component (web/components/ontdek.tsx), its test suite,
+            getOntdekCharts()'s cache slot, and the ontdek.* i18n keys were
+            dead code and are now deleted (#240). */}
         <GalleryTeaser />
 
         {/* WP-E (R4): the coverage disclosure — no example handler is passed

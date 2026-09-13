@@ -101,8 +101,9 @@ independently re-confirmed against the current `main` tip (`9fb9b19`) via `git m
 account: [status-archive.md](status-archive.md), session 97 continued entry; [lessons-learned.md](lessons-learned.md).
 Dependabot #16/#17 (untouched). Branch `claude/checkdecijfers-embed-pr-review-acbrd5` holds session 96's wrap-up docs
 + a superseded quick-wins code commit — kept as a record, not to be merged (lessons, session 99).
-**Next build candidates (cheapest first, each branch + PR unless the owner is present):** [#240](open-questions.md)
-delete the unmounted Ontdek section; copy-able embed code per gallery card ([#237](open-questions.md)(d)); the
+**Next build candidates (cheapest first, each branch + PR unless the owner is present):** ~~[#240](open-questions.md)
+delete the unmounted Ontdek section~~ **done, session 101 (2026-09-13) — see open-questions #240**; copy-able
+embed code per gallery card ([#237](open-questions.md)(d)); the
 sidebar tap-target audit ([#238](open-questions.md)); `agentRules: false` in `web/next.config.ts` (RUNBOOK harness
 section); the repositioning ADR + roadmap re-phasing ([#237](open-questions.md)(a), docs only). Phase 6 (re-measure)
 waits for real usage. Session-99 entry: [status-archive.md](status-archive.md).
