@@ -4312,6 +4312,80 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
     expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
   });
+
+  // Reviewer regression finding (Task 3 follow-up): `setEmbedOpen` used to
+  // switch `openPanel` straight to 'embed' with no guard for
+  // `openPanel === 'story'` — unlike `toggleStylePanel` and `selectForm`,
+  // which both call `closeStory()` first when leaving Story mode, because
+  // Story takes a snapshot of the reader's hidden/highlighted/zoomed state
+  // (openStory) and ONLY restores it via closeStory(). Without the guard,
+  // opening Embed mid-story silently orphaned that snapshot: the story's own
+  // view-clearing dispatch (hiddenKeys reset to show every series) survived
+  // into the embed preview even though the reader had hidden a series before
+  // ever opening the story. Mirrors the shape of the existing Style/Story
+  // interplay tests above ("choosing another chart form closes the story and
+  // restores the reader's own view").
+  it("opening Embed while a story is open restores the reader's own view (closeStory), not just closes the story panel", () => {
+    createEmbedCode.mockReturnValue(new Promise(() => {})); // never resolves; only the mount/DOM state matters here
+    render(<ChartView spec={twoSeriesFourYearLineSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(document.querySelectorAll('.recharts-line')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    expect(document.querySelectorAll('.recharts-line')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
+    // Note: unlike the "choosing another chart form" variant of this test,
+    // this transition opens a REAL modal (aria-modal) — Base UI makes the
+    // rest of the page inert while it's open, so the background "Inzichten"
+    // trigger itself is no longer reachable by role query here (by design,
+    // same as every other background control); only the story REGION
+    // disappearing and the restored view are asserted.
+    expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+    // The chart now lives inside the portaled Embed dialog (outside
+    // `container`, hence `document` here, same reasoning as the Style-dialog
+    // tests elsewhere in this file) — Utrecht should be hidden again, exactly
+    // as the reader had it before ever opening the story.
+    expect(document.querySelectorAll('.recharts-line')).toHaveLength(1);
+  });
+
+  // Reviewer coverage-gap finding: nothing previously locked in the dock's
+  // no-double-mount gate for `embedOpen` (deleting `&& !embedOpen` from the
+  // render condition still passed every existing test). Mirrors the
+  // Style-dialog portal tests elsewhere in this file (`container` vs
+  // `document` after a portaled dialog opens).
+  it('does not double-mount the chart canvas: opening Embed removes it from its normal dock position', () => {
+    createEmbedCode.mockReturnValue(new Promise(() => {}));
+    const { container } = render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    const totalBefore = document.querySelectorAll('.recharts-surface').length;
+    expect(container.querySelectorAll('.recharts-surface').length).toBe(totalBefore);
+    fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
+    // The chart now lives ONLY inside the portaled Embed dialog — never both
+    // there AND in its normal dock slot at once (the same invariant
+    // canvasNode/legendNode already document for the Style dialog).
+    expect(container.querySelectorAll('.recharts-surface').length).toBe(0);
+    expect(document.querySelectorAll('.recharts-surface').length).toBe(totalBefore);
+  });
+
+  // Reviewer UX-leak finding: the embed preview is meant to be read-only (per
+  // the original task brief: no notesNode in its chartSlot) — but until this
+  // fix, a click on a chart point inside the preview still set `pendingPoint`
+  // via the SAME `onPointClick` handler the dock uses, with nowhere for the
+  // resulting composer to render. Mirrors the existing
+  // "hides ChartNotes in embedMode" / "loses its role, tabIndex and note
+  // aria-label in embedMode" tests above, applied to `embedOpen` instead of
+  // the `embedMode` prop.
+  it('suppresses click-to-annotate while the Embed preview is open: a chart point loses its role/tabIndex/aria-label and a click opens no note-entry form', () => {
+    createEmbedCode.mockReturnValue(new Promise(() => {}));
+    const s = threePointSpec();
+    render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Insluiten' }));
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    expect(dot).not.toHaveAttribute('role');
+    expect(dot).not.toHaveAttribute('tabindex');
+    expect(dot).not.toHaveAttribute('aria-label');
+    fireEvent.click(dot);
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
 });
 
 describe('embed digit-token scan (extends the existing whole-card scan)', () => {

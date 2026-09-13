@@ -1348,19 +1348,6 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
-  // RegionBar call site shares the SAME handler, rather than each of the
-  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
-  // A truthy onPointClick is what makes those components render
-  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
-  // function's own ternaries) — undefined here removes all of that at
-  // once. Without this, embedMode still left every chart point a
-  // focusable, ARIA-labeled phantom control with nothing to open, since
-  // ChartNotes (the panel, gated below) is a different thing from the
-  // per-point click/focus affordance built into the markers themselves.
-  // Task 3 (ADR 044): also undefined in stage mode — the full-viewport
-  // stage is a step-driven presentation surface, not a note-taking one.
-  const onPointClick = embedMode || inStage ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -1434,13 +1421,46 @@ export function ChartView({
     setOpenPanel(open ? 'style' : null);
   };
   // Task 3 (chart-visual-embed-pass plan): Embed shares the same discriminated
-  // `openPanel` slot as Style/Story, but has no Story-mode redirect to
-  // preserve (the embed dialog owns no reader-adjustable chart state to snap
-  // back to) — a plain setter is enough.
+  // `openPanel` slot as Style/Story. Review fix: opening Embed while a story
+  // is showing must restore the reader's own snapshot FIRST (closeStory) —
+  // the same guard `toggleStylePanel` and `selectForm` already apply before
+  // ever landing on a non-story `openPanel` value — otherwise the snapshot
+  // taken by `openStory` is never restored or cleared (it is only ever
+  // consumed by `closeStory`), silently stranding it. `closeStory` is a
+  // function declaration further down this component, so JS hoists it
+  // before this component body runs — calling it here, ahead of its own
+  // textual definition, is safe (same reasoning as `setStyleOpen` above).
   const embedOpen = openPanel === 'embed';
   const setEmbedOpen = (open: boolean): void => {
+    if (open && openPanel === 'story') closeStory();
     setOpenPanel(open ? 'embed' : null);
   };
+  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
+  // RegionBar call site shares the SAME handler, rather than each of the
+  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
+  // A truthy onPointClick is what makes those components render
+  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
+  // function's own ternaries) — undefined here removes all of that at
+  // once. Without this, embedMode still left every chart point a
+  // focusable, ARIA-labeled phantom control with nothing to open, since
+  // ChartNotes (the panel, gated below) is a different thing from the
+  // per-point click/focus affordance built into the markers themselves.
+  // Task 3 (ADR 044): also undefined in stage mode — the full-viewport
+  // stage is a step-driven presentation surface, not a note-taking one.
+  // Task 3 (chart-visual-embed-pass, review fix): also undefined while the
+  // Embed preview is open — the same "read-only preview" reasoning as
+  // notesNode's own `!embedMode` gate below, just applied to the OTHER
+  // "read-only preview" surface this file now has. Without this, clicking a
+  // point inside the embed modal's chart set `pendingPoint` as if starting a
+  // note, but the note composer (`notesNode`) is deliberately not rendered
+  // there, so the click silently did nothing visible until the dialog closed
+  // and the stale pending point's composer appeared back in the dock —
+  // confusing, and the composer is not the right fix (an embed preview is
+  // meant to show exactly what gets published, not double as a scratchpad).
+  // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
+  // to live) purely because `embedOpen` is derived from `openPanel`, which
+  // isn't in scope any earlier in this component.
+  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
   // releases it the moment that stops being true (panel closed, or this
