@@ -256,7 +256,11 @@ export type ReserveOnboardingDebitResult =
  * instead of 'question_cost'. Kept as a separate function rather than a
  * parameterized reserveDebit for the same reason debitOnboarding is separate
  * from debitQuestion above — reserveDebit is the hot path, untouched by this
- * design. */
+ * design. Deliberately excluded from the Pro-bucket spend-first mechanic
+ * (open-questions #205) — see docs/superpowers/plans/2026-09-13-pro-subscription-tier.md
+ * Task 5: onboarding's 100-credit cost and its own refund path
+ * (pending_table_requests.debit_transaction_id, not-null) made bucket-eligibility real
+ * schema growth for a rare, heavy, one-off action; it always spends permanent credits. */
 export async function reserveOnboardingDebit(
   db: Db,
   userId: string,
