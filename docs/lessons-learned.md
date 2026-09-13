@@ -6,6 +6,53 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-13, owner present, continued) — Style panel becomes a real modal popup (#243)
+
+- **"Move a live, stateful subtree into a modal" is safer as a relocation than a duplication.** The
+  temptation, converting an always-rendered chart into "also show it inside a popup," is to render the canvas
+  TWICE (once behind, dimmed, once inside the modal) — but Recharts mints `<defs>` ids (gradient fills,
+  provisional-hatch patterns) from one `domId` computed once per `ChartView` instance; two simultaneously-live
+  copies sharing that value would mint duplicate SVG ids, a real correctness risk for the R11 honesty-bound
+  hatch fill, not a cosmetic one. The fix that avoids the whole bug class: lift the canvas/legend/notes JSX
+  into local consts and render that SAME value in exactly ONE of two possible tree positions per render
+  (`{!styleOpen ? canvasNode : null}` in the dock, the same `canvasNode` again inside the modal's `chartSlot`)
+  — ordinary React reconciliation unmounts-here/mounts-there on the render where the boolean flips, no second
+  instance ever exists, so there is nothing to keep ids apart from in the first place. Considered and rejected:
+  parameterizing every `${domId}-...` interpolation across a ~470-line render block to make two copies
+  ID-safe — mechanically far riskier (many call sites, several already only reachable in table/hbar branches
+  the modal doesn't need to duplicate) for the same outcome relocation gets for free.
+- **Testing Library's `container`-scoped queries silently stop covering content the moment it starts
+  portaling — and this can hide a REAL correctness gap, not just break a query.** ~25 of chart.test.tsx's
+  failures after the modal conversion were `container.querySelector(...)` calls now missing content that
+  portaled into the Dialog. The dangerous version of this same bug: a core R1 honesty-invariant test
+  (`scanForUnboundDigits(container, ...)`, scanning the whole card for any digit that isn't a bound spec
+  string) would have kept "passing" after the conversion — not because the panel's content was honest, but
+  because the scan was no longer looking at it at all. A green assertion that stopped checking anything is
+  worse than a red one; caught only by re-reading what the scan target actually contained after the change,
+  not by trusting the mechanical "make it green again" fix. The retarget itself needed its own care: scanning
+  the whole `document.body` (the obvious fix) picked up Recharts' own persistent, hidden text-measurement
+  scratch node (`#recharts_measurement_span`), which carries STALE digit content across unrelated tests —
+  scoping to the dialog itself (`screen.getByRole('dialog', ...)`) was both the more precise fix and the one
+  immune to that node.
+- **A well-briefed test-fixing subagent can surface a genuine product finding, not just paper over red
+  tests, when explicitly told to flag rather than route around anything that looks like a real bug.** Fixing
+  `StylePanelOwnerProvider`'s "without a provider" test surfaced a real interaction gap: two independent
+  `ChartView`s with no shared provider keep correctly-independent `openPanel` state, but Base UI's own dialog
+  stacking has no notion the two popups are "the same feature on different charts" and buries the
+  first-opened one inert behind the second. Traced (not assumed) to be unreachable in production today —
+  `web/app/layout.tsx` wraps the whole app in the provider, and WITH it chart B's own open already closes
+  chart A's via the app's own exclusivity logic before Base UI's stacking is ever relevant — then filed as
+  [open-questions #244](open-questions.md) rather than silently fixed or silently ignored.
+- **Re-running the code-review pass after fixing its own findings is not optional busywork — it caught
+  real issues the fix round introduced.** Round 1 flagged a real focus-order UX gap (Base UI's default
+  autofocus would land on a control in the chart pane, not the Style tabs a reader actually opened the panel
+  for) and a genuinely stale doc comment (an early draft's "duplicate the chart with an id suffix" plan,
+  never actually built, left uncorrected in the shipped file's own header comment once the design changed to
+  relocation). Fixing the focus gap via a plain `useEffect` swap-in prompted round 2, which found the FIX
+  itself had a latent risk (a passive effect racing Base UI's own initial-focus handling) and that the fix's
+  own doc comment now contradicted the actual call site (documented "pass sr-only for Style," the code passed
+  a plain visible string) — both from changes made in direct response to round 1's own findings.
+
 ## Session 101 (2026-09-13, owner present, a SECOND concurrent session-101 thread) — composer chip revert + footer fix
 
 - **Reverting UI from git history byte-for-byte is necessary but not sufficient — every doc/test that

@@ -5,10 +5,18 @@
 // changed key (the caller's reducer re-resolves from there); a control
 // outside `resolved.applicable` is absent and one inside `resolved.locks` is
 // disabled with a readable reason exposed to assistive tech; Standaard/reset
-// tracks `pristine`; Escape closes the region and returns focus to the
-// trigger; and — the resolver's own honesty invariant, extended to the UI
-// that edits it — no digit ever appears in the panel's rendered text, open,
-// in either language.
+// tracks `pristine`; and — the resolver's own honesty invariant, extended to
+// the UI that edits it — no digit ever appears in the panel's rendered text,
+// open, in either language.
+//
+// Session 101 (2026-09-13): this panel no longer owns any dialog/region
+// semantics of its own (no role, no Escape handling, no focus-on-open) — it
+// renders as a plain, unlabelled block of tabs/controls, and chart.tsx now
+// composes it INSIDE ChartEditModal, a real popup with the chart on the
+// left and this panel on the right (open-questions #243). Escape-to-close,
+// focus-trap, and "is it portaled" are ChartEditModal's contract, covered in
+// chart-edit-modal.test.tsx — not re-tested here against a standalone mount
+// that no longer has any of that behaviour to test.
 import { useState, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -68,7 +76,7 @@ function openTab(tab: 'Kleuren' | 'Lettertype' | 'Sjablonen'): void {
 }
 
 describe('ChartConfigPanel — Grafiek tab', () => {
-  it('is closed by default and opens into a labelled region with five tabs', () => {
+  it('is closed by default and opens into five tabs', () => {
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -80,11 +88,11 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     );
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    expect(within(region).getAllByRole('tab').map((t) => t.textContent)).toEqual([
+    const tablist = screen.getByRole('tablist');
+    expect(within(tablist).getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Sjablonen',
       'Grafiek',
       'Kleuren',
@@ -230,25 +238,6 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(reset).not.toBeDisabled();
     fireEvent.click(reset);
     expect(onReset).toHaveBeenCalledTimes(1);
-  });
-
-  it('Escape closes the region and returns focus to the trigger', () => {
-    render(
-      <Harness
-        resolved={resolvePresentation(lineCtx, {})}
-        seriesMeta={meta}
-        onChange={vi.fn()}
-        onReset={vi.fn()}
-        idPrefix="c"
-      />,
-    );
-    const trigger = screen.getByRole('button', { name: 'Opmaak' });
-    fireEvent.click(trigger);
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    fireEvent.keyDown(region, { key: 'Escape' });
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
-    expect(document.activeElement).toBe(trigger);
   });
 
   it('contains no digit in any text node, open, in either language', () => {
@@ -1802,8 +1791,8 @@ describe('ChartConfigPanel — WP218 phase 2 (owner C): account default row', ()
 // Owner ask (session 94): the panel is an inline region under the chart, in
 // its own card — no more portaling into document.body (Task 6's earlier
 // floating-dialog design, superseded).
-describe('ChartConfigPanel — inline region', () => {
-  it('renders inline, inside the render root — not portaled elsewhere', () => {
+describe('ChartConfigPanel — standalone rendering (no dialog/region of its own)', () => {
+  it('renders inline, inside the render root — this component never portals itself', () => {
     const { container } = render(
       <Harness
         resolved={resolvePresentation(lineCtx, {})}
@@ -1813,11 +1802,16 @@ describe('ChartConfigPanel — inline region', () => {
         idPrefix="portal"
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    // The region is a plain descendant of the component's own render root —
-    // no portal moves it to document.body any more.
-    expect(container.contains(region)).toBe(true);
+    const trigger = screen.getByRole('button', { name: 'Opmaak' });
+    fireEvent.click(trigger);
+    // No role/label of its own any more (that now belongs to whatever wraps
+    // this panel — chart.tsx's ChartEditModal in production) — found via the
+    // trigger's own aria-controls id instead, same id chart.tsx relies on.
+    const content = document.getElementById(trigger.getAttribute('aria-controls')!);
+    expect(content).not.toBeNull();
+    // A plain descendant of the component's own render root — this panel
+    // never portals itself to document.body.
+    expect(container.contains(content)).toBe(true);
   });
 
   it('has a Close button that closes the dialog and returns focus to the trigger', () => {
@@ -1834,7 +1828,7 @@ describe('ChartConfigPanel — inline region', () => {
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole('button', { name: 'Sluiten' }));
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('tablist')).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -1852,23 +1846,7 @@ describe('ChartConfigPanel — inline region', () => {
     fireEvent.click(trigger);
     const controlsId = trigger.getAttribute('aria-controls');
     expect(controlsId).toBeTruthy();
-    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    expect(dialog).toHaveAttribute('id', controlsId);
-  });
-
-  it('focus moves into the dialog when it opens', () => {
-    render(
-      <Harness
-        resolved={resolvePresentation(lineCtx, {})}
-        seriesMeta={meta}
-        onChange={vi.fn()}
-        onReset={vi.fn()}
-        idPrefix="focus"
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    expect(document.activeElement).toBe(dialog);
+    expect(document.getElementById(controlsId!)).not.toBeNull();
   });
 });
 

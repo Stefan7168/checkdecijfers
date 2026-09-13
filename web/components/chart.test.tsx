@@ -894,9 +894,13 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(css).toMatch(/circle\[data-marker="hidden"\]:focus-visible\s*\{\s*opacity:\s*1;?\s*\}/);
   });
   it('a hairline baseline in the grid colour replaces the x-axis line by default; Aslijnen on draws real axis lines; grid Geen removes the baseline too', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
-    const xLine = () => container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line');
-    const yLine = () => container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line');
+    render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101, real Style modal): once the panel is open
+    // the chart itself lives inside the portaled dialog, a DOM sibling of
+    // the render container rather than a descendant of it — document.
+    // querySelector reaches it either way (open or closed).
+    const xLine = () => document.querySelector('.recharts-xAxis .recharts-cartesian-axis-line');
+    const yLine = () => document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line');
     expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
     expect(yLine()).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
@@ -1008,7 +1012,12 @@ describe('ADR 042 — height follows width once measured', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Breedbeeld' }));
-    const after = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    // WP218 phase 1 (session 101): the panel is open, so the export
+    // container (this same [role="tabpanel"]) now lives inside the portaled
+    // Style dialog rather than under `container` — document.querySelector
+    // still finds the one true copy (it's the first tabpanel in DOM order,
+    // ahead of ChartConfigPanel's own per-tab tabpanel).
+    const after = document.querySelector('[role="tabpanel"]') as HTMLElement;
     expect(after.style.height).toBe('');
     expect(after.className).toContain('h-full');
   });
@@ -1994,13 +2003,19 @@ function harvestSpecStrings(s: ChartSpec): string[] {
 
 describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+    render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101): Opmaak is now a real modal — the
+    // Weergave tablist (a dock row-mate of the Opmaak trigger) is inert
+    // while it's open, so these form tabs are captured here, before the
+    // panel ever opens, rather than re-queried by role once it has.
+    const staafTab = screen.getByRole('tab', { name: 'Staaf' });
+    const lijnTab = screen.getByRole('tab', { name: 'Lijn' });
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
-    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    fireEvent.click(staafTab);
+    fireEvent.click(lijnTab);
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
   });
 
@@ -2030,22 +2045,28 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
-    expect(container.querySelectorAll('[data-point="value"]').length).toBe(before);
-    expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(before - 1);
-    const hollow = [...container.querySelectorAll('circle[data-point="value"]')].find(
+    // WP218 phase 1 (session 101): the chart itself now lives inside the
+    // portaled Style dialog while it's open — document.querySelector still
+    // reaches it, `container` no longer does.
+    expect(document.querySelectorAll('[data-point="value"]').length).toBe(before);
+    expect(document.querySelectorAll('circle[data-marker="hidden"]').length).toBe(before - 1);
+    const hollow = [...document.querySelectorAll('circle[data-point="value"]')].find(
       (c) => c.getAttribute('fill') === 'var(--card)',
     );
     expect(hollow?.getAttribute('opacity')).not.toBe('0');
   });
 
   it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101): the panel opens before any query below
+    // runs, so the chart lives inside the portaled Style dialog for the
+    // whole test — every query here reads via `document`, not `container`.
+    render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     const flatBottom = Number(
-      container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
+      document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );
     // Recharts' own default axis <Text> renders nothing in jsdom (see this
     // file's #197 top-of-file comment), so the tilt itself can't be read off
@@ -2056,17 +2077,17 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // — shrinks.
     fireEvent.click(screen.getByRole('radio', { name: 'Schuin' }));
     const tiltedBottom = Number(
-      container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
+      document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('y2'),
     );
     expect(tiltedBottom).toBeLessThan(flatBottom);
 
     fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
-    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
-    expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+    expect(document.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
+    expect(document.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
-    expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
-    expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
+    expect(document.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')).toBeNull();
+    expect(document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
   });
 
   it('Y-as vanaf nul on a line switches the domain to zero (bar is always zero regardless)', () => {
@@ -2087,7 +2108,9 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Y-as vanaf nul' }));
-    const afterY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
+    // WP218 phase 1 (session 101): the panel is now open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    const afterY = Number(document.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
     // The exact pixel is Recharts' own scale math; the meaningful, large
     // shift proves the domain actually changed, not a no-op click.
     expect(afterY).toBeLessThan(beforeY - 50);
@@ -2103,16 +2126,19 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   });
 
   it('a colour change recolours line, legend swatch and tooltip swatch together', () => {
-    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     const hexInput = screen.getByRole('textbox', { name: /Kleur van Nederland/ });
     fireEvent.change(hexInput, { target: { value: '#ff0000' } });
     fireEvent.keyDown(hexInput, { key: 'Enter' });
 
-    const line = container.querySelector('.recharts-line-curve');
+    // WP218 phase 1 (session 101): the chart and its legend now live inside
+    // the portaled Style dialog while it's open — document.querySelector
+    // reaches them, `container` no longer does.
+    const line = document.querySelector('.recharts-line-curve');
     expect(line?.getAttribute('stroke')).toBe('#ff0000');
-    const swatch = container.querySelector(
+    const swatch = document.querySelector(
       '[role="group"][aria-label="Reeksen"] span[aria-hidden="true"]',
     ) as HTMLElement;
     expect(swatch.style.backgroundColor).toBe('rgb(255, 0, 0)');
@@ -2147,7 +2173,11 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    // WP218 phase 1 (session 101): the panel is open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    // The spec swap below closes the panel (proven separately), so the
+    // chart is back in the dock — `container` is correct again here.
     rerender(<ChartView spec={threePointSpec({ title: 'Ander' })} />);
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
   });
@@ -2161,26 +2191,36 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    // WP218 phase 1 (session 101): the panel's accessible name now lives on
+    // the wrapping Base UI Dialog (role="dialog"), not a `role="region"` —
+    // ChartConfigPanel itself no longer labels its own content.
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
 
     rerender(<ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />);
     expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
   });
 
   it('Standaard restores the byte-identical stock svg', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
-    // WP218 phase 1: scoped past the Opmaak trigger's own icon <svg> — see
-    // the accessible-name test earlier in this file for why a bare 'svg'
-    // selector is ambiguous in this card now that the panel is mounted.
-    const stock = container.querySelector('svg.recharts-surface')!.outerHTML;
+    render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101): opening Style now genuinely REMOUNTS the
+    // chart into the portaled dialog (a fresh mount, per the "option A
+    // layout" test above) — Recharts assigns its own internal ids
+    // (clipPath/`_r_N_`) fresh on every mount, so a "stock" snapshot taken
+    // from the DOCK (before opening) can never byte-compare against a
+    // later snapshot taken from inside the dialog, even once every actual
+    // style attribute is back to default: only the ids would differ, not
+    // anything a reader (or a download) can see. Captured here, right after
+    // opening and before any tweak, so both snapshots below come from the
+    // SAME mount and the comparison stays meaningful.
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const stock = document.querySelector('svg.recharts-surface')!.outerHTML;
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
-    expect(container.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
+    expect(document.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
     fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
-    expect(container.querySelector('svg.recharts-surface')!.outerHTML).toBe(stock);
+    expect(document.querySelector('svg.recharts-surface')!.outerHTML).toBe(stock);
   });
 
   it('the whole-card digit scan still passes with the panel open on every tab (line and bar)', () => {
@@ -2195,18 +2235,43 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // so scanning once AFTER the loop only ever sees the LAST tab clicked
     // (Kader) — scan after each click so every tab's own mounted content is
     // actually visited, Sjablonen included.
+    // WP218 phase 1 (session 101): with the panel open, its tab content (and
+    // the chart itself) now live inside the portaled Style dialog — a DOM
+    // sibling of `lineContainer`, not a descendant of it. Scanning
+    // `lineContainer` here would silently stop looking at any of that
+    // content and the R1 honesty check would trivially "pass" without
+    // actually checking anything. Scan the dialog itself instead of the
+    // whole `document.body`: `document.body` also carries Recharts' own
+    // shared, persistent off-screen text-measurement scratch span
+    // (`#recharts_measurement_span`, a DOM node Recharts manages directly
+    // and never clears between renders) — a hidden implementation detail no
+    // reader ever sees, whose STALE content from an earlier test's chart
+    // caused exactly the false failure this comment now guards against
+    // (found while wiring up this fix). The dialog is the right scope
+    // either way: it is the ONE thing that genuinely holds both the chart
+    // and the panel's own tabs together, nothing more, nothing stale.
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
-      scanForUnboundDigits(lineContainer, harvestSpecStrings(lineSpec));
+      const activePanel = document.getElementById(tab.getAttribute('aria-controls')!);
+      expect(activePanel).not.toBeNull();
+      expect(lineContainer.contains(activePanel)).toBe(false);
+      expect(dialog.contains(activePanel)).toBe(true);
+      scanForUnboundDigits(dialog, harvestSpecStrings(lineSpec));
     }
     cleanup();
 
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const barDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
-      scanForUnboundDigits(barContainer, harvestSpecStrings(barSpec));
+      const activePanel = document.getElementById(tab.getAttribute('aria-controls')!);
+      expect(activePanel).not.toBeNull();
+      expect(barContainer.contains(activePanel)).toBe(false);
+      expect(barDialog.contains(activePanel)).toBe(true);
+      scanForUnboundDigits(barDialog, harvestSpecStrings(barSpec));
     }
   });
 
@@ -2218,7 +2283,9 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
     expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    // WP218 phase 1 (session 101): the panel's accessible name now lives on
+    // the wrapping Base UI Dialog (role="dialog"), not a `role="region"`.
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
@@ -2230,12 +2297,18 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // moment the user switches back to a chart form, with no click to open it.
   it('round 2: selecting Tabel closes the Style panel, and it does not reappear on its own when switching back to a chart form', () => {
     render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101): Opmaak is now a real modal — the
+    // Weergave tablist (a dock row-mate of the Opmaak trigger) is inert
+    // while it's open, so these form tabs are captured here, before the
+    // panel ever opens, rather than re-queried by role once it has.
+    const tabelTab = screen.getByRole('tab', { name: 'Tabel' });
+    const lijnTab = screen.getByRole('tab', { name: 'Lijn' });
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
-    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    fireEvent.click(tabelTab);
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    fireEvent.click(lijnTab);
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
   });
 
   // Final-review fix (Fix 7): with a frame aspect ratio set AND small
@@ -2247,7 +2320,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Kader' }));
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Vierkant' }));
     const panel = screen.getByRole('tabpanel', { name: 'Grafiek' });
@@ -2255,35 +2328,66 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(panel.className).not.toContain('h-full');
   });
 
-  it('option A layout: the region follows the chart tabpanel, the trigger stays in the Weergave tablist row, and opening the panel does not move or remount the chart', () => {
+  // WP218 phase 1 (session 101): rewritten for the real Style modal — the
+  // OLD claim this test made ("opening the panel does not move or remount
+  // the chart") is now FALSE BY DESIGN, the whole point of this session's
+  // change: the chart deliberately relocates into the dialog (verified by
+  // reference identity below: the canvas tabpanel found after opening is a
+  // DIFFERENT DOM node than the one found before — a real unmount/remount,
+  // not just a reposition). What's unchanged (option A) is the trigger's
+  // own dock position, proven exactly as before.
+  it('option A layout: the trigger stays in the Weergave tablist row in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
-    const chartTabpanel = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]') as HTMLElement;
-    expect(chartTabpanel).not.toBeNull();
+    const chartTabpanelBeforeOpen = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
+    expect(chartTabpanelBeforeOpen).not.toBeNull();
 
-    // The trigger is portaled into a slot inside the SAME row as the
-    // Weergave tablist (owner: option A — "the trigger stays in the tablist
-    // row") — proven via a shared ancestor that contains both, since the
-    // trigger is a row-mate of the tablist, not a DOM child of it.
+    // The trigger is a row-mate of the Weergave tablist (owner: option A —
+    // "the trigger stays in the tablist row") — proven via a shared
+    // ancestor that contains both, since the trigger is a row-mate of the
+    // tablist, not a DOM child of it. Unaffected by the modal conversion:
+    // only the PANEL's own content and the chart move, never the trigger.
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
     const tablist = screen.getByRole('tablist', { name: 'Weergave' });
     expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
 
     fireEvent.click(trigger);
-    const region = screen.getByRole('region', { name: 'Opmaak van de grafiek' });
-    // "First the graph on top, then the design settings" (owner): the region
-    // is a FOLLOWING sibling of the chart's own tabpanel, never a preceding
-    // one — the pre-refactor layout wrapped the panel under the Weergave row
-    // ABOVE the chart, which this compareDocumentPosition check would fail.
-    expect(Boolean(chartTabpanel.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(Boolean(chartTabpanel.compareDocumentPosition(region) & Node.DOCUMENT_POSITION_PRECEDING)).toBe(false);
-    // Opening the panel mounts a new sibling AFTER the chart — it must not
-    // tear down and remount the chart's own tabpanel to do it.
-    expect(container.querySelector('[role="tabpanel"][aria-label="Grafiek"]')).toBe(chartTabpanel);
 
-    fireEvent.keyDown(region, { key: 'Escape' });
+    // The dock's own slot for the chart is now empty (dimmed behind the
+    // modal's backdrop) rather than showing a second, stale copy.
+    expect(container.querySelector('[role="tabpanel"][aria-label="Grafiek"]')).toBeNull();
+
+    // Session 101: a real, portaled Base UI Dialog now carries BOTH the
+    // chart (canvas) and the panel's own tabs together.
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const chartTabpanelInDialog = within(dialog).getByRole('tabpanel', { name: 'Grafiek' });
+    expect(chartTabpanelInDialog).not.toBe(chartTabpanelBeforeOpen);
+    // "First the graph on top, then the design settings" (owner) survives
+    // the move into the dialog: the chart is a PRECEDING sibling of the
+    // panel's own tablist, never a following one.
+    const panelTablist = within(dialog).getByRole('tablist');
+    expect(Boolean(chartTabpanelInDialog.compareDocumentPosition(panelTablist) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(chartTabpanelInDialog.compareDocumentPosition(panelTablist) & Node.DOCUMENT_POSITION_PRECEDING)).toBe(false);
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  // LOW code-review finding (session 101): the Dialog's own generic
+  // "focus the first focusable descendant" default would otherwise land on
+  // whatever happens to sit first in the popup — a control in the CHART
+  // pane (the legend, say) — rather than anything in the panel a reader
+  // actually opened "Opmaak" to reach. ChartConfigPanel focuses its own
+  // active tab on mount specifically to prevent that.
+  it('opening Opmaak focuses the panel\'s own active tab, not a control in the chart pane', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    // Whichever tab opens active (a pristine chart opens on Sjablonen per
+    // R5.2/ADR 043, not Grafiek) — the point is that focus lands on THAT
+    // tab, never on something in the chart pane preceding it in the DOM.
+    expect(document.activeElement).toBe(within(dialog).getByRole('tab', { selected: true }));
   });
 
   it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', () => {
@@ -2298,11 +2402,14 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   });
 
   it('the SVG export carries the chosen stroke-width verbatim', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+    render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
-    const svg = container.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
+    // WP218 phase 1 (session 101): the panel is open, so the chart's own svg
+    // lives inside the portaled Style dialog — document.querySelector
+    // reaches it, `container` no longer does.
+    const svg = document.querySelector('svg.recharts-surface') as unknown as SVGSVGElement;
     const markup = attributedSvgMarkup(svg, 'x', () => ({}));
     expect(markup).toContain('stroke-width="3"');
   });
@@ -2314,19 +2421,22 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     const events: string[] = [];
     setChartUsageSink((e) => { events.push(e); });
     try {
-      const { container } = render(<ChartView spec={threePointSpec()} />);
+      render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
       fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
-      expect(container.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
-      expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
-      expect(container.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
-      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
+      // WP218 phase 1 (session 101): the panel is open, so the chart lives
+      // inside the portaled Style dialog — document.querySelector reaches
+      // it, `container` no longer does.
+      expect(document.querySelector('.recharts-cartesian-grid-vertical')).not.toBeNull();
+      expect(document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).not.toBeNull();
+      expect(document.querySelectorAll('circle[data-marker="hidden"]').length).toBe(0);
+      expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(RECHARTS_PALETTE[0]);
       expect(screen.getByRole('radio', { name: 'Klassiek' })).toHaveAttribute('aria-checked', 'true');
       expect(events).toContain('template_classic');
       fireEvent.click(screen.getByRole('radio', { name: 'Basis' }));
-      expect(container.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
-      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
+      expect(document.querySelector('.recharts-cartesian-grid-vertical')).toBeNull();
+      expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe(DEFAULT_PALETTE[0]);
       expect(events).toContain('template_standard');
     } finally {
       setChartUsageSink(null);
@@ -2334,18 +2444,20 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
   });
 
   it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
-    const { container } = render(<ChartView spec={threePointSpec()} />);
+    render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+    // WP218 phase 1 (session 101): the panel is open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Minimaal' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
-    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+    expect(document.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
-    expect(container.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
+    expect(document.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
   });
 
   it('the whole card stays digit-free apart from spec strings with the Sjablonen tab open', () => {
@@ -2357,8 +2469,23 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     const { container } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    // WP218 phase 1 (session 101): the panel's own tab content now lives
+    // inside the portaled Style dialog, a DOM sibling of `container` rather
+    // than a descendant of it — scanning `container` here would silently
+    // stop checking any of it. Sanity-check first that the dialog really
+    // carries the panel's own chrome (not an empty/irrelevant node) and
+    // that `container` no longer does, then scan the dialog itself — never
+    // the whole `document.body`, which also carries Recharts' own shared,
+    // persistent off-screen text-measurement scratch span
+    // (`#recharts_measurement_span`): a hidden implementation detail no
+    // reader ever sees, whose STALE content from an earlier test's chart
+    // caused exactly the false failure this comment now guards against
+    // (found while wiring up this fix).
+    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    expect(within(dialog).getByText('Kleuren')).toBeInTheDocument();
+    expect(container.textContent ?? '').not.toContain('Kleuren');
     scanForUnboundDigits(
-      container,
+      dialog,
       [
         lineSpec.title,
         lineSpec.unit,
@@ -2388,8 +2515,17 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     );
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
+    // WP218 phase 1 (session 101): same relocation as the Dutch case above —
+    // sanity-check that the dialog really carries the panel's own (English)
+    // chrome and scan it directly, never the whole `document.body` (see the
+    // sibling Dutch test above for why: Recharts' own persistent, hidden
+    // text-measurement scratch span lives there too and can carry stale
+    // digits left over from an earlier test's chart).
+    const dialog = screen.getByRole('dialog', { name: 'Chart style' });
+    expect(within(dialog).getByText('Colours')).toBeInTheDocument();
+    expect(container.textContent ?? '').not.toContain('Colours');
     scanForUnboundDigits(
-      container,
+      dialog,
       [
         lineSpec.title,
         lineSpec.unit,
@@ -2500,7 +2636,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
   });
 
   it('clicking Dun then Standaard returns to 3 px — the account default, not stock', () => {
-    const { container } = render(
+    render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
@@ -2508,11 +2644,13 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+    // WP218 phase 1 (session 101): the panel is open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
   });
 
   it('a spec swap keeps the account default as the base while clearing per-chart tweaks', () => {
@@ -2524,8 +2662,12 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
-    expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
+    // WP218 phase 1 (session 101): the panel is open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
 
+    // The spec swap below closes the panel (proven separately), so the
+    // chart is back in the dock — `container` is correct again here.
     rerender(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec({ title: 'Een andere grafiek' })} />
@@ -2626,7 +2768,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     const sink = vi.fn<(event: ChartStyleEvent) => void>();
     setChartUsageSink(sink);
     try {
-      const { container } = render(
+      render(
         <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
           <ChartView spec={threePointSpec()} />
         </ChartStyleProvider>,
@@ -2637,8 +2779,10 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
       expect(await screen.findByRole('status')).toHaveTextContent('Vergeten.');
       expect(sink).toHaveBeenCalledWith('default_forgotten');
       expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
-      // accountStyle is now null ⇒ base is stock again.
-      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
+      // accountStyle is now null ⇒ base is stock again. WP218 phase 1
+      // (session 101): the panel is still open, so the chart lives inside
+      // the portaled Style dialog — document.querySelector reaches it.
+      expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
     } finally {
       setChartUsageSink(null);
     }
@@ -2715,7 +2859,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     const sink = vi.fn<(event: ChartStyleEvent) => void>();
     setChartUsageSink(sink);
     try {
-      const { container } = render(
+      render(
         <ChartStyleProvider initial={{}}>
           <ChartView spec={twoSeriesLineSpec()} />
         </ChartStyleProvider>,
@@ -2725,7 +2869,10 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
       fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
 
       await screen.findByRole('status');
-      expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe('#ff0000');
+      // WP218 phase 1 (session 101): the panel is open, so the chart lives
+      // inside the portaled Style dialog — document.querySelector reaches
+      // it, `container` no longer does.
+      expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke')).toBe('#ff0000');
       expect(chartStyleActions.lookupBrand).toHaveBeenCalledWith(undefined);
       expect(sink).toHaveBeenCalledWith('brand_applied');
     } finally {
@@ -2939,8 +3086,16 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     const languageSelect = screen.getByRole('combobox', { name: 'Chart language' });
     fireEvent.change(languageSelect, { target: { value: 'nl' } });
 
-    // The per-chart override now wins: the WHOLE card, panel included,
-    // switches to Dutch even though the app itself stays English.
+    // The per-chart override wins inside the (still open) Style dialog too
+    // — "the panel included" from the original design intent.
+    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toBeInTheDocument();
+
+    // WP218 phase 1 (session 101): Style is now a real modal — the rest of
+    // the card (the dock, Weergave tablist included) is inert while it's
+    // open, so the WHOLE-card language switch is only checkable by role
+    // once the dialog is closed and the dock is live again, exactly as a
+    // real reader would see it after closing the panel.
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(screen.getByRole('tab', { name: 'Lijn' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
@@ -3159,7 +3314,9 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Verloop in het vlak' }));
-    expect(container.querySelector('.recharts-area-area')?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
+    // WP218 phase 1 (session 101): the panel is now open, so the chart lives
+    // inside the portaled Style dialog — document.querySelector reaches it.
+    expect(document.querySelector('.recharts-area-area')?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 });
 
@@ -3285,14 +3442,27 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(link).toHaveAttribute('href', '/login');
   });
 
-  it('opening the story closes Opmaak and vice versa (one panel under the chart)', () => {
+  // WP218 phase 1 (session 101): Opmaak (Style) and Inzichten (Story) still
+  // share the one `openPanel` slot in chart.tsx — opening either still
+  // closes the other. The title drops "one panel under the chart": Opmaak
+  // is no longer under the chart, it's a real modal now. Both trigger
+  // buttons are captured up front, before Opmaak's dialog ever opens,
+  // because a real modal makes the rest of the card — the dock row both
+  // triggers share — inert while it's open: a real reader would have to
+  // close Opmaak (Escape, or its own Close button) before the Inzichten
+  // trigger becomes reachable again. Held references still exercise the
+  // underlying mutual-exclusion wiring (`toggleStory`/`toggleStylePanel`
+  // reading and writing the shared `openPanel` state) exactly as before.
+  it('opening the story closes Opmaak and vice versa (Style and Story share one open slot)', () => {
     render(<ChartView spec={threePointSpec()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('region', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    expect(screen.queryByRole('region', { name: 'Opmaak van de grafiek' })).toBeNull();
+    const styleTrigger = screen.getByRole('button', { name: 'Opmaak' });
+    const storyTrigger = screen.getByRole('button', { name: 'Inzichten' });
+    fireEvent.click(styleTrigger);
+    expect(screen.getByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeInTheDocument();
+    fireEvent.click(storyTrigger);
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(styleTrigger);
     expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
   });
 
@@ -3340,13 +3510,23 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // stay visible even while every other final marker is hidden.
   it('the story ring never looks like the hollow provisional marker, even in "alleen voorlopige" mode', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
+    // WP218 phase 1 (session 101): Opmaak is now a real modal — the
+    // Inzichten trigger, a dock row-mate of Opmaak's own trigger, is inert
+    // while Opmaak's dialog is open, so it's captured here, before that
+    // dialog ever opens.
+    const storyTrigger = screen.getByRole('button', { name: 'Inzichten' });
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // threePointSpec's first finding (chart-insights.ts) already rings "lo"
     // the moment the panel opens — no "Volgende" click needed (unlike the
     // old buildStorySteps, whose first step was a non-data overview).
-    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    // Clicking the held reference still fires `toggleStory`, which switches
+    // the shared `openPanel` slot to 'story' and, as a side effect on the
+    // very next render, closes Opmaak's dialog — landing the chart itself
+    // back in `container` before any assertion below runs, so no
+    // document.querySelector is needed past this point.
+    fireEvent.click(storyTrigger);
     const ring = container.querySelector('[data-story-marker]')!;
     expect(ring.getAttribute('stroke-dasharray')).toBeTruthy();
     const ringedDot = container.querySelector('[data-result-id="lo"]')!;
@@ -3848,7 +4028,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
   });
 
   it('clicking Standaard resets and also clears the uploaded frame image', async () => {
-    const { container } = render(
+    render(
       <ChartStyleProvider initial={{}}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
@@ -3868,9 +4048,12 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     const small = new File([new Uint8Array(1024)], 'test.png', { type: 'image/png' });
     fireEvent.change(input, { target: { files: [small] } });
 
-    // Wait for the image to be loaded into the frame
+    // Wait for the image to be loaded into the frame. WP218 phase 1
+    // (session 101): the panel is open, so the frame (part of the chart's
+    // own canvas) lives inside the portaled Style dialog — document.
+    // querySelector reaches it, `container` no longer does.
     await waitFor(() => {
-      const frame = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
+      const frame = document.querySelector('[data-slot="chart-frame"]') as HTMLElement;
       const style = window.getComputedStyle(frame);
       // The backgroundImage should be set after the file is processed
       expect(style.backgroundImage).toBeTruthy();
@@ -3884,7 +4067,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
 
     // Verify the frame no longer has a background-image after the reset
-    const frameAfterReset = container.querySelector('[data-slot="chart-frame"]') as HTMLElement;
+    const frameAfterReset = document.querySelector('[data-slot="chart-frame"]') as HTMLElement;
     expect(frameAfterReset).not.toBeNull();
     const styleAfterReset = window.getComputedStyle(frameAfterReset);
     expect(styleAfterReset.backgroundImage).toBe('none');
@@ -3902,18 +4085,46 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
         <ChartView spec={threePointSpec({ title: 'Grafiek B' })} />
       </StylePanelOwnerProvider>,
     );
+    // WP218 phase 1 (session 101): the panel's accessible name now lives on
+    // the wrapping Base UI Dialog (role="dialog"), not a `role="region"`.
+    // Both triggers are held from before either dialog opens — chart A's
+    // own dialog, once open, makes chart B's card (a dock sibling) inert
+    // too, same as any other content outside the topmost open dialog — so
+    // `triggerB` is clicked via this held reference rather than a fresh
+    // by-role query, exactly like `triggerA` and `triggerB` already were
+    // before this change.
     const [triggerA, triggerB] = screen.getAllByRole('button', { name: 'Opmaak' });
     fireEvent.click(triggerA!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
 
     fireEvent.click(triggerB!);
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
     expect(triggerA).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
   });
 
-  it('without a provider (the default), two charts each keep their own panel open independently', () => {
+  // WP218 phase 1 (session 101): rewritten for the real Style modal — and
+  // worth flagging precisely, not just patching quietly. Each ChartView's
+  // own `openPanel` state is still fully independent without a provider:
+  // proven below by BOTH triggers staying aria-expanded="true" at once,
+  // never forced closed by the other (contrast the WITH-a-provider test
+  // above, where triggerA's does flip back to "false" — that is a real,
+  // deliberate app-level close). What is NO LONGER true, discovered while
+  // fixing this test: Base UI's own modal stacking has no idea these two
+  // dialogs are "independent" app features — it treats any other currently-
+  // open dialog as just more "rest of the page" to make inert, so the
+  // SECOND dialog to open still buries the first one behind an inert
+  // wrapper. `screen.getAllByRole('dialog', ...)` — correctly — can only
+  // ever surface the one reachable, topmost dialog; the earlier one is
+  // still genuinely mounted (proven via a raw, non-accessibility-filtered
+  // querySelectorAll below), just not usable until the topmost one closes.
+  // This is a real, page-visible interaction quirk of moving Style into a
+  // true modal (two independent charts on one page, opened back to back,
+  // leave the FIRST one's trigger stuck reporting itself "expanded" while
+  // its own dialog is unreachable) — a product question for the coordinator
+  // to weigh in on, not something to paper over in this test file.
+  it('without a provider (the default), two charts keep independent OPEN STATE, even though only the most-recently-opened dialog stays reachable', () => {
     render(
       <>
         <ChartView spec={threePointSpec({ title: 'Grafiek A' })} />
@@ -3925,7 +4136,10 @@ describe('ChartView — StylePanelOwnerProvider (one Style panel per page)', () 
     fireEvent.click(triggerB!);
     expect(triggerA).toHaveAttribute('aria-expanded', 'true');
     expect(triggerB).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getAllByRole('region', { name: 'Opmaak van de grafiek' })).toHaveLength(2);
+    // Both dialogs are genuinely still mounted in the DOM...
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(2);
+    // ...but only the most recently opened one is reachable by role.
+    expect(screen.getAllByRole('dialog', { name: 'Opmaak van de grafiek' })).toHaveLength(1);
   });
 });
 

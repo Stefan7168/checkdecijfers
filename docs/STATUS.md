@@ -49,9 +49,17 @@ Both fixes verified together (re-verified again after the Thread A/B rebase belo
 `test:docs` 11/11, web 104 files/1687 tests, backend 148 files/2262 tests (re-run post-rebase, confirmed
 unchanged from pre-rebase — no backend files touched by either thread), benchmark
 14/14 + 6/6 + 0 fabricated (GATE PASS), real build, real Chromium screenshots before/after at desktop + mobile
-widths. **Also recorded, explicitly NOT built per owner instruction ("make note of that, do
-not execute it now, our context window is too large"):** a Style-panel redesign from the current inline card
-into a pop-up/modal (chart left, styling controls right) — see [open-questions #243](open-questions.md).
+widths. **Style-panel-to-popup (#243), recorded then later the same session actually started and shipped:**
+first recorded as explicitly deferred per owner instruction ("make note of that, do not execute it now, our
+context window is too large"), then picked up on the plain follow-up instruction "Start with making the graphs
+edit and embed things in a popup instead of inside the right panel." **Done:** the Style panel now opens as a
+real modal (`web/components/chart-edit-modal.tsx`, `ChartEditModal` — a Base UI Dialog, page inert behind it,
+matching the pre-existing Embed dialog rather than reviving session 92's non-modal floating panel) with the
+chart (+ legend + click-to-annotate notes) relocated into its left pane and `ChartConfigPanel`'s existing tabs
+on the right; stacked below `lg`. Embed was assessed against the same ask and left unchanged — it has been a
+real popup (its own Base UI Dialog) since session 93, it just has no live chart preview yet (a natural
+follow-up, not done here). Full as-built: ADR [039](decisions/039-chart-presentation-panel.md)'s 2026-09-13
+addendum, [open-questions #243](open-questions.md).
 **Housekeeping:** `origin/main` moved (`be064ed`, Thread A above) while this session (Thread B) was mid-flight on
 a separate, unrelated part of the product — a different, concurrent session-101 thread, not this one; this
 session was told "its not the time to focus on it" for that same Pro-plan work and did not touch it. Synced via

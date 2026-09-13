@@ -66,7 +66,6 @@ export type PanelLang = Lang;
 function buildPanelCopy(lang: Lang) {
   return {
     trigger: t(lang, 'chart.panel.trigger'),
-    regionLabel: t(lang, 'chart.panel.regionLabel'),
     close: t(lang, 'chart.panel.close'),
     tabsLabel: t(lang, 'chart.panel.tabsLabel'),
     tabTemplates: t(lang, 'chart.panel.tabTemplates'),
@@ -899,6 +898,22 @@ export function ChartConfigPanel({
     frame: frameTabRef,
   };
 
+  // LOW code-review finding (session 101): ChartEditModal's Dialog focuses
+  // its popup on open but takes no view on WHICH descendant should end up
+  // focused — left unhandled, Base UI's own "first focusable element" would
+  // land on whatever happens to sit first in the popup's DOM, which could
+  // easily be a control in the chart pane (a legend toggle, the Vanaf/Tot
+  // zoom select) rather than anything in this panel, even though this panel
+  // is the entire reason the reader opened "Opmaak". `[]` deps: this
+  // component remounts fresh every time the modal opens (ChartEditModal
+  // itself renders null while `!open`, and `key={chartEpoch}` remounts it
+  // again on a spec swap), so "on mount" already means "every time this
+  // panel appears" — a real effect, not a one-time-ever curiosity.
+  useEffect(() => {
+    tabRefs[activeTab].current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately mount-only, see comment above.
+  }, []);
+
   // Task 5 (design §C2): the Frame tab's "Own image" refusal lines — which
   // of the two (too large / wrong type) to show, or neither. Local, not
   // derived from `frameImage`: a refusal never changes `frameImage` at all
@@ -1077,34 +1092,21 @@ export function ChartConfigPanel({
   }
 
   const regionId = `${idPrefix}-style`;
-  const headingId = `${idPrefix}-style-heading`;
   const tabId = (key: TabKey) => `${idPrefix}-style-tab-${key}`;
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
 
+  // ChartEditModal (the real Dialog this panel now renders inside) already
+  // owns focus-trap/focus-on-open and Escape-to-close natively — this used
+  // to hand-roll both (a `dialogRef` focus effect + an Escape keydown
+  // handler with its own `stopPropagation`) back when the panel was a plain
+  // `role="region"` in the page flow with no dialog behind it. Keeping both
+  // mechanisms would risk them double-firing on the same Escape keypress;
+  // `closeAndRefocus` survives only for the panel's own explicit "Sluiten"
+  // button.
   function closeAndRefocus(): void {
     onOpenChange(false);
     document.getElementById(triggerId)?.focus();
   }
-
-  function onRegionKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      // React's synthetic events bubble the REACT tree (this region is a
-      // React-tree child of ChartView regardless of DOM position): stop the
-      // synthetic event here so no ancestor (the story region, the page)
-      // ever sees this Escape as its own.
-      event.stopPropagation();
-      closeAndRefocus();
-    }
-  }
-
-  // The region receives focus itself when it opens (never trapped — Tab can
-  // still leave it), so a keyboard user landing here after activating the
-  // trigger doesn't have to hunt for it.
-  const dialogRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (open) dialogRef.current?.focus();
-  }, [open]);
 
   function selectTab(next: TabKey): void {
     setActiveTab(next);
@@ -1166,39 +1168,22 @@ export function ChartConfigPanel({
   const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
   const showGroupLabelId = `${idPrefix}-style-label-show`;
 
-  // Owner ask (session 94): an INLINE region below the chart, in its own
-  // card — not a floating/portaled dialog (Task 6's earlier design, now
-  // superseded). `role="region"` (there was never an outside-click close or
-  // a focus trap — "the chart stays fully interactive behind it" was always
-  // true, it's just no longer a "behind" at all, so "dialog" semantics no
-  // longer fit). `aria-labelledby` keeps pointing at `copy.regionLabel`
-  // ("Opmaak van de grafiek"/"Chart style") — unchanged, so no existing
-  // accessible-name assumption breaks. Renders identically at every
-  // viewport width now (no more `lg:`-gated floating-box-vs-bottom-sheet
-  // split): it flows with the page, the same "chart first, panel under it"
-  // slot the Story panel already uses right below this one.
-  // Known, pre-existing gap `role="region"` makes more visible than
-  // `role="dialog"` did: `copy.regionLabel` is one fixed string, not unique
-  // per chart instance, so a page with several charts open at once (no
-  // `StylePanelOwnerProvider`, e.g. the homepage) can show multiple regions
-  // sharing the identical accessible name "Opmaak van de grafiek" in a
-  // screen reader's landmark/region list, with no way to tell them apart.
-  // Not introduced by this change (the same non-unique name already existed
-  // under "dialog"); worth a per-instance name if it turns out to matter in
-  // practice — not fixed here.
+  // Session 101 (2026-09-13, owner present): this panel's content now
+  // renders INSIDE `ChartEditModal` (chart.tsx mounts it as that shell's
+  // `children`) rather than as its own standalone element — a real modal,
+  // chart on the left, this panel on the right (open-questions #243). Two
+  // earlier designs preceded this: a floating non-modal `role="dialog"`
+  // beside a still-interactive chart (session 92, ADR 039 addendum), then a
+  // plain `role="region"` inline card below the chart (session 94, this
+  // very block, now superseded). Both `role`/`aria-labelledby` and the
+  // sr-only `<h2>` they needed are gone — the wrapping Dialog's own
+  // `DialogTitle` (chart.tsx builds it straight from the same
+  // `chart.panel.regionLabel` key this panel used to render itself) now
+  // carries the accessible name for the whole popup, so there is nothing
+  // left for this panel to label itself; `id={regionId}` survives only
+  // because the Style trigger's `aria-controls` still points at it.
   const dialogContent = open ? (
-    <section
-      ref={dialogRef}
-      id={regionId}
-      role="region"
-      aria-labelledby={headingId}
-      tabIndex={-1}
-      onKeyDown={onRegionKeyDown}
-      className="mt-3 w-full rounded-lg border border-border bg-card p-3 text-xs shadow-sm"
-    >
-      <h2 id={headingId} className="sr-only">
-        {copy.regionLabel}
-      </h2>
+    <div id={regionId} className="w-full text-xs">
       {/* Layout refactor (owner: option A): the region's header row is now
         * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
         * left, "Taal van de grafiek" and a Close button on the right (its
@@ -1828,7 +1813,7 @@ export function ChartConfigPanel({
           ) : null}
         </div>
       ) : null}
-    </section>
+    </div>
   ) : null;
 
   return dialogContent;
