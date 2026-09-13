@@ -353,7 +353,13 @@ export async function splitDebit(
  * taken from it), then the ledger portion — the exact inverse order of
  * splitDebit's consumption, so a full refund (refundCredits === the
  * original `credits`) exactly undoes it, and a partial refund (the
- * clarification-price case) always tops up the bucket before the ledger. */
+ * clarification-price case) always tops up the bucket before the ledger.
+ * Both legs run inside one transaction (coordinator-requested fix,
+ * 2026-09-13): compensateBucket and compensate each accept a plain Db, so —
+ * mirroring reserveDebit's own pattern of passing `tx` into ordinary
+ * Db-typed helpers below — this wraps them in db.withTransaction and passes
+ * `tx` to both, so a failure between the two legs can never leave a partial
+ * refund (bucket reversed, ledger not, or vice versa). */
 export async function compensateSplit(
   db: Db,
   userId: string,
@@ -361,15 +367,17 @@ export async function compensateSplit(
   refundCredits: number,
   auditAnswerId: number | null,
 ): Promise<void> {
-  let remaining = refundCredits;
-  if (split.bucketEntry !== null && remaining > 0) {
-    const amount = Math.min(remaining, split.fromBucket);
-    await compensateBucket(db, userId, split.bucketEntry.id, amount);
-    remaining -= amount;
-  }
-  if (split.ledgerEntry !== null && remaining > 0) {
-    const amount = Math.min(remaining, split.fromLedger);
-    await compensate(db, userId, split.ledgerEntry.id, amount, auditAnswerId);
-    remaining -= amount;
-  }
+  await db.withTransaction(async (tx) => {
+    let remaining = refundCredits;
+    if (split.bucketEntry !== null && remaining > 0) {
+      const amount = Math.min(remaining, split.fromBucket);
+      await compensateBucket(tx, userId, split.bucketEntry.id, amount);
+      remaining -= amount;
+    }
+    if (split.ledgerEntry !== null && remaining > 0) {
+      const amount = Math.min(remaining, split.fromLedger);
+      await compensate(tx, userId, split.ledgerEntry.id, amount, auditAnswerId);
+      remaining -= amount;
+    }
+  });
 }
