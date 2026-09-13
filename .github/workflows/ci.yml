@@ -161,6 +161,17 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             web/package-lock.json
+      # Root install too, not just web's own — web/backend (a symlink to
+      # ../src) means some of what web's tests import has its REAL path
+      # under the repo root (zod/pg/@anthropic-ai/sdk are declared in BOTH
+      # package.jsons for exactly this reason, ADR 018 point 9). The old
+      # single `gate` job got this for free (one root `npm ci` at the top,
+      # shared by every later step in the same job); splitting `web` into
+      # its own job dropped it — caught by a real CI failure (session 101):
+      # "Failed to resolve import zod from src/chart/brandfetch.ts". The
+      # `deploy` job below already does this same root install for the
+      # identical reason.
+      - run: npm ci
       - name: Web app install (own, independent lockfile)
         run: npm run web:ci
       - name: Web app typecheck
