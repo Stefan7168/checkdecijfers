@@ -1417,7 +1417,7 @@ export function ChartView({
   // Story mode (session 92): Style and Story share the slot under the chart —
   // one open at a time, so a single discriminated value replaces the old
   // boolean (`styleOpen` is derived, every existing read of it is unchanged).
-  const [openPanel, setOpenPanel] = useState<'style' | 'story' | null>(null);
+  const [openPanel, setOpenPanel] = useState<'style' | 'story' | 'embed' | null>(null);
   const styleOpen = openPanel === 'style';
   // Final-review fix: a derived setter must route a `false` through the
   // story exactly like `toggleStylePanel` already does — restoring the
@@ -1432,6 +1432,14 @@ export function ChartView({
       return;
     }
     setOpenPanel(open ? 'style' : null);
+  };
+  // Task 3 (chart-visual-embed-pass plan): Embed shares the same discriminated
+  // `openPanel` slot as Style/Story, but has no Story-mode redirect to
+  // preserve (the embed dialog owns no reader-adjustable chart state to snap
+  // back to) — a plain setter is enough.
+  const embedOpen = openPanel === 'embed';
+  const setEmbedOpen = (open: boolean): void => {
+    setOpenPanel(open ? 'embed' : null);
   };
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
@@ -2893,7 +2901,12 @@ export function ChartView({
           </select>
         </div>
       ) : null}
-      {!styleOpen ? canvasNode : null}
+      {/* Task 3 (chart-visual-embed-pass): also suppressed while the Embed
+        * dialog is open — the same canvasNode element is now ALSO passed
+        * into ChartEmbedButton's chartSlot below, and the no-double-mount
+        * invariant this node's own declaration documents (never both at
+        * once) applies just as much to embed as it does to style. */}
+      {!styleOpen && !embedOpen ? canvasNode : null}
       {/* Story mode (session 92): the same slot as the Opmaak region — chart
         * first, the story under it — and, like ChartNotes, OUTSIDE
         * chartContainerRef so no caption can ever enter an export. */}
@@ -3129,7 +3142,10 @@ export function ChartView({
           {spec.attribution.trendHeadline}
         </p>
       ) : null}
-      {!styleOpen ? legendNode : null}
+      {/* Task 3 (chart-visual-embed-pass): same no-double-mount reasoning as
+        * canvasNode above — legendNode is also lifted into the Embed
+        * dialog's chartSlot now. */}
+      {!styleOpen && !embedOpen ? legendNode : null}
       {/* Task 4: shown whenever a period-range zoom is active, independent of
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
@@ -3251,7 +3267,20 @@ export function ChartView({
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          <ChartEmbedButton auditId={embed.auditId} tableId={spec.attribution.tableId} lang={chartLang} currentForm={state.form} />
+          <ChartEmbedButton
+            auditId={embed.auditId}
+            tableId={spec.attribution.tableId}
+            lang={chartLang}
+            currentForm={state.form}
+            open={embedOpen}
+            onOpenChange={setEmbedOpen}
+            chartSlot={
+              <>
+                {canvasNode}
+                {legendNode}
+              </>
+            }
+          />
         ) : null}
       </div>
       {embedMode && embedFooter ? (

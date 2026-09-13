@@ -11,6 +11,7 @@
 // NOT `recordChartStyleEvent`, which was this suite's own placeholder guess
 // before the real call sites were grepped. Mirrored here exactly.
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState, type ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
@@ -21,6 +22,22 @@ vi.mock('../lib/chart-usage-client.ts', () => ({ trackChartStyleEvent }));
 
 import { ChartEmbedButton } from './chart-embed-dialog.tsx';
 
+// Task 3 (chart-visual-embed-pass): ChartEmbedButton became a controlled
+// component (open/onOpenChange lifted into chart.tsx's shared openPanel
+// state) so its real caller can share one slot with Style/Story. This suite
+// is about the dialog's OWN open/close/fetch/field behaviour, not about who
+// owns the boolean, so a small local wrapper reintroduces that state the
+// same way chart.tsx does — every `render(<ChartEmbedButton .../>)` call this
+// suite used to make is now `render(<Uncontrolled .../>)` with otherwise
+// identical props. `chartSlot` defaults to a plain stub div: none of these tests
+// assert on the live-preview content itself (that is a real-browser check,
+// per the task brief), only on the fieldset controls/generated code/dialog
+// mechanics untouched by this task.
+function Uncontrolled(props: Omit<ComponentProps<typeof ChartEmbedButton>, 'open' | 'onOpenChange' | 'chartSlot'>) {
+  const [open, setOpen] = useState(false);
+  return <ChartEmbedButton {...props} open={open} onOpenChange={setOpen} chartSlot={<div>chart preview</div>} />;
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -29,7 +46,7 @@ afterEach(() => {
 describe('ChartEmbedButton / ChartEmbedDialog', () => {
   it('opens the dialog on click and shows a loading state before the code is ready', async () => {
     createEmbedCode.mockReturnValue(new Promise(() => {})); // never resolves in this test
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/generating/i)).toBeInTheDocument();
@@ -37,7 +54,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('fires embed_open exactly once per open, through the real trackChartStyleEvent sink', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByRole('dialog');
     expect(trackChartStyleEvent).toHaveBeenCalledWith('embed_open');
@@ -46,7 +63,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('shows the generated <iframe> code once createEmbedCode resolves', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await waitFor(() => expect(screen.getByText(/<iframe/)).toBeInTheDocument());
     expect(screen.getByText(/42\.abc/)).toBeInTheDocument();
@@ -55,7 +72,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('shows an unavailable message when the action refuses', async () => {
     createEmbedCode.mockResolvedValue({ ok: false, reason: 'unavailable' });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await waitFor(() => expect(screen.getByText(/not available/i)).toBeInTheDocument());
     expect(screen.queryByText(/<iframe/)).toBeNull();
@@ -66,7 +83,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
   // should collapse to the same terminal 'unavailable' state as { ok: false }.
   it('shows the unavailable message (not stuck loading) when createEmbedCode rejects', async () => {
     createEmbedCode.mockRejectedValue(new Error('network error'));
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await waitFor(() => expect(screen.getByText(/not available/i)).toBeInTheDocument());
     expect(screen.queryByText(/generating/i)).toBeNull();
@@ -74,7 +91,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('disables the Live switch with a Pro-only reason when pro is false', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     const liveSwitch = await screen.findByRole('switch', { name: /live/i });
     expect(liveSwitch).toBeDisabled();
@@ -85,7 +102,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
   // interest-only "upgrade" click — no charge, a real click count.
   it('shows the price and an upgrade CTA when pro is false, tracks pro_upgrade_click and shows thanks on click, and shows neither when pro is true', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByRole('dialog');
     expect(screen.getByText(/€19\/month/)).toBeInTheDocument();
@@ -98,7 +115,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('shows neither the Pro price nor the upgrade CTA when pro is true', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: true });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByRole('dialog');
     expect(screen.queryByText(/€19\/month/)).toBeNull();
@@ -107,7 +124,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('enables the Live switch when pro is true, and the code gains &live=1 when it is toggled on', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: true });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     const liveSwitch = await screen.findByRole('switch', { name: /live/i });
     expect(liveSwitch).not.toBeDisabled();
@@ -122,7 +139,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     // therefore rendered as "Insluiten", not "Embed", so it is found here by
     // role alone (it is the only button on the page before the dialog
     // opens), not by an English-only name filter.
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="nl" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="nl" />);
     fireEvent.click(screen.getByRole('button'));
     await screen.findByText(/lang=nl/);
     fireEvent.click(await screen.findByRole('radio', { name: /english|engels/i }));
@@ -131,7 +148,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('changing the colour option changes the code\'s theme= query param', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByText(/theme=light/);
     fireEvent.click(await screen.findByRole('radio', { name: /dark/i }));
@@ -140,7 +157,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('changing the chart-type option to "As shown" adds a form= query param from currentForm', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" currentForm="bar" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" currentForm="bar" />);
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByText(/form=bar/);
     fireEvent.click(await screen.findByRole('radio', { name: /^default$/i }));
@@ -149,7 +166,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('Escape closes the dialog and refocuses the trigger', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     const trigger = screen.getByRole('button', { name: /embed/i });
     fireEvent.click(trigger);
     await screen.findByRole('dialog');
@@ -160,7 +177,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
 
   it('re-fetches a fresh code the next time it is opened after being closed', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
-    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
     const trigger = screen.getByRole('button', { name: /embed/i });
     fireEvent.click(trigger);
     const dialog = await screen.findByRole('dialog');
@@ -184,7 +201,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
       createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
       const writeText = vi.fn().mockResolvedValue(undefined);
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-      render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+      render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
       fireEvent.click(screen.getByRole('button', { name: /embed/i }));
       const pre = await screen.findByText(/<iframe/);
       const expectedCode = pre.textContent;
@@ -204,7 +221,7 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
       createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
       const writeText = vi.fn().mockRejectedValue(new Error('clipboard denied'));
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-      render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+      render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
       fireEvent.click(screen.getByRole('button', { name: /embed/i }));
       await screen.findByText(/<iframe/);
 
