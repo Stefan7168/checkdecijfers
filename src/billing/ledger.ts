@@ -87,7 +87,7 @@ export async function debitQuestion(
 }
 
 export type ReserveDebitResult =
-  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'debited'; split: SplitDebitResult }
   | { kind: 'insufficient'; balance: number }
   | { kind: 'duplicate' };
 
@@ -103,7 +103,34 @@ export type ReserveDebitResult =
  * never contend. Deliberately does NOT wrap the caller's subsequent pipeline
  * call (src/billing/gate.ts's `run()`) — holding a transaction (and a
  * pooled connection) open across a multi-second LLM call would risk
- * exhausting the connection pool under real concurrent traffic. */
+ * exhausting the connection pool under real concurrent traffic.
+ *
+ * Pro bucket integration (Task 4, open-questions #205): the balance check
+ * and the debit itself now both go through the Pro monthly-allowance
+ * bucket, spent first, via getSpendableBalance/splitDebit — both called
+ * from inside this same advisory-locked transaction, so the check-and-debit
+ * stays atomic across bucket AND ledger together, not just the ledger. For
+ * a non-Pro user (getCurrentGrantId returns null — no active subscription
+ * row, or a lapsed one) this collapses to exactly today's behavior: zero
+ * bucket balance, so splitDebit's fromBucket is always 0 and it makes
+ * exactly one debitQuestion call for the full amount, byte-identical to the
+ * pre-Task-4 debitQuestion(tx, userId, requestId, required) call this
+ * replaces.
+ *
+ * Duplicate detection: previously a single `entry === null` check on
+ * debitQuestion's own idempotent `on conflict`. Now splitDebit can write up
+ * to two rows (bucket + ledger) sharing one requestId, written together in
+ * the same transaction on the first call — so on a genuine retry BOTH
+ * `debitBucket` and `debitFn` hit their own idempotent `on conflict` and
+ * return null together. `bucketEntry === null && ledgerEntry === null` is
+ * therefore the correct "this exact request was already fully processed"
+ * signal. A partial-null split (e.g. fromBucket recomputed as 0 on a retry
+ * that originally spent from the bucket) cannot happen from a genuine
+ * retry: requestId uniqueness means recomputing fromBucket/fromLedger
+ * identically requires the account to be unchanged since the original
+ * call — if it DID change (e.g. a renewal landed in between), correctly
+ * treating the retry as a new debit with the currently-correct split is the
+ * desired behavior, not a bug. */
 export async function reserveDebit(
   db: Db,
   userId: string,
@@ -112,12 +139,16 @@ export async function reserveDebit(
 ): Promise<ReserveDebitResult> {
   return db.withTransaction(async (tx) => {
     await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
-    const balance = await getBalance(tx, userId);
+    const grantId = await getCurrentGrantId(tx, userId);
+    const balance = await getSpendableBalance(tx, userId, grantId);
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const entry = await debitQuestion(tx, userId, requestId, required);
-    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+    const split = await splitDebit(tx, userId, requestId, required, debitQuestion, 'question debit', grantId);
+    if (split.bucketEntry === null && split.ledgerEntry === null) {
+      return { kind: 'duplicate' };
+    }
+    return { kind: 'debited', split };
   });
 }
 
