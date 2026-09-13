@@ -6,6 +6,83 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 (2026-09-13, owner present, continued further) — the R3 confirm-first fetch (#109 reversed)
+
+- **An existing client-trust pattern (WP26's clickable clarification options) does NOT
+  automatically generalize to a new feature that LOOKS similar — the safety argument
+  behind it is specific to what the token authorizes.** `validate-pending.ts`'s own header
+  comment states its safety case precisely: a forged clarification option can only become
+  "a normally-billed, fully-validated query over other real CBS data" — no more dangerous
+  than typing a different question. The temptation, building R3, was to copy that shape
+  exactly: hand the client the finder's `tableId`/`confidence` envelope, shape-validate it
+  on return, trust it. That would have been a real regression: unlike a query, what R3's
+  confirm click authorizes is a 100-credit debit AND a real external ingestion job — a
+  forged `confidence` value would let a client bypass the confident-≥-0.8 gate entirely and
+  spend real infrastructure cost on a topic the finder never actually found with confidence.
+  The fix: HMAC-sign the offer (mirroring `src/chart/embed-token.ts`, ADR 041) so the
+  payload can be verified as genuinely server-minted rather than merely shape-checked —
+  closing exactly the gap the copied pattern would have reopened. Lesson: before reusing a
+  trust-boundary pattern, re-derive ITS safety argument for the new payload, don't just
+  match its shape.
+- **A `GatedResponse` outcome doesn't need an audit row if it carries no data value and
+  nothing to reconstruct — R8 governs ANSWERS, not every billing-status message.** The
+  first draft of `confirmOnboardingFetch`'s "started" case tried to fabricate a
+  `ComposedResponse`/`AuditedResponse` by hand to carry its acknowledgment text, which
+  would have created an R8-relevant "answer" with no real audit write behind it — exactly
+  the class of gap `respond-audited.ts`'s fail-closed policy exists to prevent. The fix
+  was to notice `GatedResponse` already has a precedent for this shape:
+  `insufficient_credits`/`duplicate_request`/`unauthenticated` are real, meaningful outcomes
+  with NO audit trail, because none carries a data value. `ConfirmOnboardingOutcome` follows
+  that precedent instead of inventing a new one — a `{kind, text, netCost}` result the
+  client renders directly, no fabricated envelope.
+- **A "deliberately NOT built... only the owner can decide" open-question row is a flagged
+  decision point, not a permanent no — recognize the moment it gets its answer.** #109
+  (session 66) had already done the hard design work and named exactly what was missing: an
+  explicit owner call on reversing the automatic-fetch UX. When this session asked the owner
+  a plain, concrete question about that exact mechanism and got a direct "yes, add a confirm
+  button," that WAS #109's missing piece arriving — not a new decision overriding an old one,
+  and not something to re-litigate. Worth stating explicitly because a rushed session could
+  easily read the ALL-CAPS "Deliberately NOT built" and stop, when the row's own text already
+  explained precisely what would unblock it.
+- **Cheapest-viable-mechanism first also means checking whether a schema change is even
+  needed before assuming it is.** The natural persisted-state design (a `pending_table_
+  requests` row for "offered, not yet confirmed") was rejected on direct inspection of
+  migration 012: `debit_transaction_id bigint not null` carries an explicit comment that a
+  pending row can never exist without its debit already landed — a real existing invariant a
+  persisted pre-debit offer would have had to break, needing a migration purely to hold state
+  a signed token already holds for free. Checking the actual schema constraint before
+  reaching for `npm run db:migrate` avoided an unnecessary owner-supervised DDL step for a
+  feature that didn't need one.
+- **Adding a new REQUIRED field to a widely-constructed TypeScript interface (`ChatMessage`,
+  `AskOutcome`) is well-served by making it required (not optional) and lettting `tsc`
+  enumerate every call site as a checklist**, rather than grepping for construction sites by
+  hand. This project's own `ChatMessage` fields are consistently required, explicit-per-
+  literal (no spreads/defaults) by established convention — matching it surfaced every
+  missing site (4 in `actions.ts`, 2 helper functions, 2 inline test literals, one narrowing
+  bug in a JSX closure) as compiler errors, none missed by a manual sweep.
+- **A second `Agent` tool call does NOT continue a previously spawned background agent —
+  `SendMessage` to its agentId does.** Tried to nudge a background research agent that
+  reported an incomplete-sounding result ("I'll wait for the monitor's next event," which a
+  one-shot agent invocation cannot actually do) by calling `Agent` again with a similar
+  prompt — this spawns an entirely fresh agent with no memory of the original investigation,
+  wasting a full dispatch. The correct continuation mechanism is `SendMessage({to:
+  <agentId>, message: ...})`, which resumes the same agent from its own transcript.
+- **A docs-only commit made while checked out on a feature branch lands on that branch, not
+  `main` — and a `git push -u origin main` run from the wrong branch can silently report
+  "Everything up-to-date" instead of erroring.** Ended the build-performance-report work still
+  on `journey-r3-fetch-confirm` and committed the new session-brief + open-questions row there;
+  the immediately following `git push -u origin main` reported success with nothing pushed,
+  because the local `main` ref itself hadn't moved — a red flag that could easily read as "must
+  already be pushed" rather than "wrong branch." Caught by treating that message as suspicious
+  rather than trusting it, then confirming with `git fetch origin main` (untouched) and `git
+  status`/`git branch` (still on the feature branch). Fixed without touching PR #21: `git
+  checkout main` → `git cherry-pick <sha>` (clean, new SHA on `main`) → push → `git checkout
+  journey-r3-fetch-confirm` → `git reset --hard` back to the branch's own last real commit
+  (verified never pushed to `origin/journey-r3-fetch-confirm` first, so nothing on the open PR
+  was at risk). Lesson: after any commit, confirm the current branch BEFORE pushing — especially
+  mid-session after switching branches for a side task — and treat an unexpectedly-instant
+  push result as a signal to check `git status`/`branch`, not as confirmation.
+
 ## Session 101 (2026-09-13, owner present, continued) — Style panel becomes a real modal popup (#243)
 
 - **"Move a live, stateful subtree into a modal" is safer as a relocation than a duplication.** The
