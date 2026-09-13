@@ -134,8 +134,8 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   language: null,
   frameBackground: 'none',
   framePadding: 'none',
-  frameCorners: 'square',
-  frameShadow: 'none',
+  frameCorners: 'rounded',
+  frameShadow: 'soft',
   frameInset: 'none',
   frameAspect: 'auto',
 };

@@ -92,8 +92,8 @@ describe('the designed default (ADR 042) and the classic session-87 look, both p
       language: null,
       frameBackground: 'none',
       framePadding: 'none',
-      frameCorners: 'square',
-      frameShadow: 'none',
+      frameCorners: 'rounded',
+      frameShadow: 'soft',
       frameInset: 'none',
       frameAspect: 'auto',
     });
@@ -531,7 +531,7 @@ describe('frame', () => {
     expect(frameBackdrops({ frameBackground: { kind: 'image' }, frameInset: 'none' })).toEqual([CARD_LIGHT, CARD_DARK]);
   });
 
-  it('isFramePristine is true only at the stock frame values', () => {
+  it('isFramePristine is true only at the literal bare frame values (frameCorners square, frameShadow none — no longer STOCK_PRESENTATION\'s own default since the chart-chrome polish)', () => {
     expect(
       isFramePristine({
         frameBackground: 'none',

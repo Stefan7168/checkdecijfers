@@ -1508,12 +1508,17 @@ describe('ChartConfigPanel — Frame tab', () => {
     expect(screen.getByRole('button', { name: 'Verwijder afbeelding' })).toBeInTheDocument();
   });
 
-  it('Kader wissen is disabled while pristine and no image, emits the six stock values and clears the image otherwise', () => {
+  it('Kader wissen is disabled at the literal bare frame values and no image, emits the six bare values and clears the image otherwise', () => {
     const onChange = vi.fn();
     const onFrameImage = vi.fn();
+    // Since the chart-chrome default polish, `{}` overrides no longer land on
+    // the bare/`isFramePristine` state — STOCK_PRESENTATION itself now
+    // resolves frameCorners/frameShadow to 'rounded'/'soft'. Force the frame
+    // back to the literal bare state explicitly, so this still tests "Kader
+    // wissen" being disabled when there is truly nothing left to clear.
     const { rerender } = render(
       <Harness
-        resolved={resolvePresentation(lineCtx, {})}
+        resolved={resolvePresentation(lineCtx, { frameCorners: 'square', frameShadow: 'none' })}
         seriesMeta={colorMeta}
         onChange={onChange}
         onReset={vi.fn()}
