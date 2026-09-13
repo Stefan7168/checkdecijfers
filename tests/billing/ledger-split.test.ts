@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { debitQuestion, debitWebSearch, getBalance, reserveDebit } from '../../src/billing/ledger.ts';
+import { getBalance, QUESTION_DEBIT, reserveDebit, WEBSEARCH_DEBIT } from '../../src/billing/ledger.ts';
 import { splitDebit, compensateSplit, getCurrentGrantId, getSpendableBalance } from '../../src/billing/ledger.ts';
 import { grantBucket, getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -64,7 +64,7 @@ describe('splitDebit — non-Pro user (no grant row)', () => {
       await seedSignup(db, userId, 100);
       const requestId = randomUUID();
       const split = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, requestId, 20, debitQuestion, 'question_cost', 'question debit'),
+        splitDebit(tx, userId, requestId, 20, QUESTION_DEBIT, 'question debit'),
       );
       expect(split.fromBucket).toBe(0);
       expect(split.fromLedger).toBe(20);
@@ -83,7 +83,7 @@ describe('splitDebit — Pro user with an active bucket', () => {
       await seedSignup(db, userId, 100);
       await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
       const split = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, randomUUID(), 20, debitQuestion, 'question_cost', 'question debit', grantId),
+        splitDebit(tx, userId, randomUUID(), 20, QUESTION_DEBIT, 'question debit', grantId),
       );
       expect(split.fromBucket).toBe(15);
       expect(split.fromLedger).toBe(5);
@@ -99,7 +99,7 @@ describe('splitDebit — Pro user with an active bucket', () => {
       await seedSignup(db, userId, 100);
       await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
       const split = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, randomUUID(), 20, debitQuestion, 'question_cost', 'question debit', grantId),
+        splitDebit(tx, userId, randomUUID(), 20, QUESTION_DEBIT, 'question debit', grantId),
       );
       expect(split.fromBucket).toBe(20);
       expect(split.fromLedger).toBe(0);
@@ -202,18 +202,47 @@ describe('splitDebit — cross-ledger idempotency (one logical request, one char
       const requestId = randomUUID();
 
       await db.withTransaction((tx) =>
-        splitDebit(tx, userId, requestId, 20, debitQuestion, 'question_cost', 'question debit'),
+        splitDebit(tx, userId, requestId, 20, QUESTION_DEBIT, 'question debit'),
       );
       await seedSubscription(db, userId, grantId);
       await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
 
       const retry = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, requestId, 20, debitQuestion, 'question_cost', 'question debit', grantId),
+        splitDebit(tx, userId, requestId, 20, QUESTION_DEBIT, 'question debit', grantId),
       );
 
       expect(retry).toEqual({ fromBucket: 0, fromLedger: 0, bucketEntry: null, ledgerEntry: null });
       expect(await getBalance(db, userId)).toBe(80);
       expect(await getBucketBalance(db, userId, grantId)).toBe(1000);
+    });
+  });
+
+  it('the bucket-only half stands on its own: an unchanged, fully-funded bucket retried is one charge', async () => {
+    // Isolates the pro_bucket_ledger side of the check from every cross-ledger
+    // case above: the original debit AND the retry both resolve to a
+    // bucket-only charge, subscription active and bucket still covering the
+    // full amount at both moments, so credit_transactions is never involved
+    // at all. Passes with and without the cross-ledger guard (the bucket's own
+    // `on conflict` already covered it) — that is the point: it pins that the
+    // guard's bucket half did not break same-table idempotency, and that the
+    // bucket-only path is idempotent on its own terms.
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSignup(db, userId, 100);
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+
+      const first = await reserveDebit(db, userId, requestId, 20);
+      expect(first.kind).toBe('debited');
+      const retry = await reserveDebit(db, userId, requestId, 20);
+
+      expect(retry).toEqual({ kind: 'duplicate' });
+      expect(await countBucketDebits(db, userId, requestId)).toBe(1);
+      expect(await countLedgerDebits(db, userId, requestId, 'question_cost')).toBe(0);
+      expect(await getBucketBalance(db, userId, grantId)).toBe(980); // 20 once, not 40
+      expect(await getBalance(db, userId)).toBe(100); // permanent balance never touched
     });
   });
 
@@ -224,13 +253,13 @@ describe('splitDebit — cross-ledger idempotency (one logical request, one char
       const requestId = randomUUID();
 
       await db.withTransaction((tx) =>
-        splitDebit(tx, userId, requestId, 20, debitQuestion, 'question_cost', 'question debit'),
+        splitDebit(tx, userId, requestId, 20, QUESTION_DEBIT, 'question debit'),
       );
       // The web-search add-on deliberately rides along on the same requestId
       // as the question it augments (ADR 032) — a distinct, legitimate debit
       // under its own reason, never a duplicate of the question debit.
       const addon = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, requestId, 10, debitWebSearch, 'websearch_cost', 'websearch debit'),
+        splitDebit(tx, userId, requestId, 10, WEBSEARCH_DEBIT, 'websearch debit'),
       );
 
       expect(addon.ledgerEntry).not.toBeNull();
@@ -248,7 +277,7 @@ describe('compensateSplit', () => {
       await seedSignup(db, userId, 100);
       await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
       const split = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, randomUUID(), 20, debitQuestion, 'question_cost', 'question debit', grantId),
+        splitDebit(tx, userId, randomUUID(), 20, QUESTION_DEBIT, 'question debit', grantId),
       );
       await compensateSplit(db, userId, split, 20, null);
       expect(await getBalance(db, userId)).toBe(100);
@@ -263,7 +292,7 @@ describe('compensateSplit', () => {
       await seedSignup(db, userId, 100);
       await grantBucket(db, userId, grantId, 15, `in_${randomUUID()}`);
       const split = await db.withTransaction((tx) =>
-        splitDebit(tx, userId, randomUUID(), 20, debitQuestion, 'question_cost', 'question debit', grantId),
+        splitDebit(tx, userId, randomUUID(), 20, QUESTION_DEBIT, 'question debit', grantId),
       ); // fromBucket=15, fromLedger=5, balances now: ledger=95, bucket=0
       await compensateSplit(db, userId, split, 10, null); // refund 10: 10 back to bucket (capped at fromBucket=15), 0 to ledger
       expect(await getBucketBalance(db, userId, grantId)).toBe(10);

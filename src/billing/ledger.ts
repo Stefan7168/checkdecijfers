@@ -61,6 +61,49 @@ export interface LedgerEntry {
   id: number;
 }
 
+type DebitFn = (db: Db, userId: string, requestId: string, credits: number) => Promise<LedgerEntry | null>;
+
+/** The subset of LedgerReason a DebitFn can write: the four negative-delta,
+ * request_id-scoped reasons, each with its own
+ * `(user_id, request_id)`-partial unique index (migrations 005/012/018/027).
+ * Derived from LedgerReason with Extract so renaming a reason there breaks
+ * here loudly instead of silently drifting. */
+type DebitReason = Extract<
+  LedgerReason,
+  'question_cost' | 'onboarding_cost' | 'websearch_cost' | 'dataset_cost'
+>;
+
+/** A debit primitive bound to the `reason` it writes — ONE value, passed as
+ * one argument, so the reason splitDebit's cross-ledger idempotency check
+ * looks for and the reason the INSERT actually writes cannot drift apart.
+ *
+ * They used to be two independent string literals that merely happened to
+ * match (review finding F2): reserveDebit passed `'question_cost'` to
+ * splitDebit while debitQuestion separately wrote `'question_cost'` into its
+ * own SQL. A future edit changing one and not the other would have silently
+ * reopened the cross-ledger double-charge this module's guard exists to
+ * close — invisible to every existing test, because the check would simply
+ * look in the wrong per-reason index and find nothing. Each descriptor below
+ * takes its `reason` from the very constant its `write` function interpolates
+ * into both halves of its own statement, so there is exactly one source. */
+export interface LedgerDebit {
+  readonly reason: DebitReason;
+  readonly write: DebitFn;
+}
+
+// One constant per debit reason, interpolated into BOTH halves of its own
+// INSERT (the `values` list and the `on conflict ... where` predicate) and
+// handed to the LedgerDebit descriptor beneath the function. Interpolation
+// rather than a bind parameter is deliberate and safe: each value is a
+// compile-time constant of a closed string-literal union, never runtime or
+// user-supplied data, and Postgres CANNOT take a parameter in an ON CONFLICT
+// arbiter predicate — it has to prove the partial unique index's predicate at
+// plan time, which `reason = $n` does not let it do.
+const QUESTION_COST = 'question_cost' satisfies DebitReason;
+const ONBOARDING_COST = 'onboarding_cost' satisfies DebitReason;
+const WEBSEARCH_COST = 'websearch_cost' satisfies DebitReason;
+const DATASET_COST = 'dataset_cost' satisfies DebitReason;
+
 /** Idempotent debit: a repeated (userId, requestId) is a no-op (returns
  * null), never a second charge. src/billing/gate.ts relies on this to detect
  * a client retry (double submit, network retry) BEFORE ever re-running the
@@ -77,14 +120,19 @@ export async function debitQuestion(
 ): Promise<LedgerEntry | null> {
   const { rows } = await db.query(
     `insert into credit_transactions (user_id, delta, reason, request_id, note)
-     values ($1, $2, 'question_cost', $3, 'question debit')
-     on conflict (user_id, request_id) where reason = 'question_cost' do nothing
+     values ($1, $2, '${QUESTION_COST}', $3, 'question debit')
+     on conflict (user_id, request_id) where reason = '${QUESTION_COST}' do nothing
      returning id`,
     [userId, -credits, requestId],
   );
   const row = rows[0];
   return row === undefined ? null : { id: Number(row.id) };
 }
+
+/** debitQuestion bound to the reason it writes — what reserveDebit hands to
+ * splitDebit. See LedgerDebit above for why this is one value and not two
+ * arguments. */
+export const QUESTION_DEBIT: LedgerDebit = { reason: QUESTION_COST, write: debitQuestion };
 
 export type ReserveDebitResult =
   | { kind: 'debited'; split: SplitDebitResult }
@@ -130,7 +178,10 @@ export type ReserveDebitResult =
  * funds the bucket; the SAME requestId is retried, now has bucket balance,
  * and its pro_bucket_ledger insert conflicts with nothing — two real charges
  * for one logical request, and (via gate.ts) the answer pipeline rerun a
- * second time. splitDebit therefore now checks BOTH ledgers for an
+ * second time. That is one of several shapes — the mirror direction and the
+ * partial-overlap case are enumerated on hasCommittedDebit below, and none of
+ * them needs the subscription to have lapsed; a drained bucket on an active
+ * subscription is enough. splitDebit therefore now checks BOTH ledgers for an
  * already-committed debit on this (userId, requestId) BEFORE it decides
  * which leg to write, and returns the same both-entries-null result an
  * ordinary same-table retry produces — so
@@ -150,16 +201,7 @@ export async function reserveDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const split = await splitDebit(
-      tx,
-      userId,
-      requestId,
-      required,
-      debitQuestion,
-      'question_cost',
-      'question debit',
-      grantId,
-    );
+    const split = await splitDebit(tx, userId, requestId, required, QUESTION_DEBIT, 'question debit', grantId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -189,14 +231,19 @@ export async function debitOnboarding(
 ): Promise<LedgerEntry | null> {
   const { rows } = await db.query(
     `insert into credit_transactions (user_id, delta, reason, request_id, note)
-     values ($1, $2, 'onboarding_cost', $3, 'on-demand CBS table onboarding debit')
-     on conflict (user_id, request_id) where reason = 'onboarding_cost' do nothing
+     values ($1, $2, '${ONBOARDING_COST}', $3, 'on-demand CBS table onboarding debit')
+     on conflict (user_id, request_id) where reason = '${ONBOARDING_COST}' do nothing
      returning id`,
     [userId, -credits, requestId],
   );
   const row = rows[0];
   return row === undefined ? null : { id: Number(row.id) };
 }
+
+/** debitOnboarding bound to its reason, ready for Task 6's splitDebit wiring (see
+ * LedgerDebit). Not consumed yet: its own reserve* function still calls the
+ * primitive directly, unchanged. */
+export const ONBOARDING_DEBIT: LedgerDebit = { reason: ONBOARDING_COST, write: debitOnboarding };
 
 export type ReserveOnboardingDebitResult =
   | { kind: 'debited'; entry: LedgerEntry }
@@ -244,14 +291,19 @@ export async function debitWebSearch(
 ): Promise<LedgerEntry | null> {
   const { rows } = await db.query(
     `insert into credit_transactions (user_id, delta, reason, request_id, note)
-     values ($1, $2, 'websearch_cost', $3, 'web search add-on debit')
-     on conflict (user_id, request_id) where reason = 'websearch_cost' do nothing
+     values ($1, $2, '${WEBSEARCH_COST}', $3, 'web search add-on debit')
+     on conflict (user_id, request_id) where reason = '${WEBSEARCH_COST}' do nothing
      returning id`,
     [userId, -credits, requestId],
   );
   const row = rows[0];
   return row === undefined ? null : { id: Number(row.id) };
 }
+
+/** debitWebSearch bound to its reason, ready for Task 6's splitDebit wiring (see
+ * LedgerDebit). Not consumed yet: its own reserve* function still calls the
+ * primitive directly, unchanged. */
+export const WEBSEARCH_DEBIT: LedgerDebit = { reason: WEBSEARCH_COST, write: debitWebSearch };
 
 export type ReserveWebSearchDebitResult =
   | { kind: 'debited'; entry: LedgerEntry }
@@ -302,14 +354,19 @@ export async function debitDataset(
 ): Promise<LedgerEntry | null> {
   const { rows } = await db.query(
     `insert into credit_transactions (user_id, delta, reason, request_id, note)
-     values ($1, $2, 'dataset_cost', $3, 'dataset-chat turn debit')
-     on conflict (user_id, request_id) where reason = 'dataset_cost' do nothing
+     values ($1, $2, '${DATASET_COST}', $3, 'dataset-chat turn debit')
+     on conflict (user_id, request_id) where reason = '${DATASET_COST}' do nothing
      returning id`,
     [userId, -credits, requestId],
   );
   const row = rows[0];
   return row === undefined ? null : { id: Number(row.id) };
 }
+
+/** debitDataset bound to its reason, ready for Task 6's splitDebit wiring (see
+ * LedgerDebit). Not consumed yet: its own reserve* function still calls the
+ * primitive directly, unchanged. */
+export const DATASET_DEBIT: LedgerDebit = { reason: DATASET_COST, write: debitDataset };
 
 export type ReserveDatasetDebitResult =
   | { kind: 'debited'; entry: LedgerEntry }
@@ -365,31 +422,38 @@ export interface SplitDebitResult {
   ledgerEntry: LedgerEntry | null;
 }
 
-type DebitFn = (db: Db, userId: string, requestId: string, credits: number) => Promise<LedgerEntry | null>;
-
-/** The subset of LedgerReason a DebitFn can write: the four negative-delta,
- * request_id-scoped reasons, each with its own
- * `(user_id, request_id)`-partial unique index (migrations 005/012/018/027).
- * Derived from LedgerReason with Extract so renaming a reason there breaks
- * here loudly instead of silently drifting. */
-type DebitReason = Extract<
-  LedgerReason,
-  'question_cost' | 'onboarding_cost' | 'websearch_cost' | 'dataset_cost'
->;
-
 /** Cross-ledger idempotency guard (review finding, 2026-09-14, #205): has
  * this exact (userId, requestId) ALREADY been debited, in EITHER ledger?
  *
  * Each table's own `on conflict ... do nothing` only catches a retry that
- * lands on the SAME table as the original attempt. A retry that lands on the
- * other leg conflicts with nothing there and would insert a second, real
- * charge for one logical request. Both directions are reachable in
- * production: ledger → bucket (an invoice.paid webhook funded the bucket
- * between the attempt and its retry) and bucket → ledger (the bucket was
- * drained by other requests, or the subscription lapsed / the grant rotated,
- * so splitDebit is now called with grantId null). The bucket half therefore
- * runs even when grantId is null — the caller's current Pro state says
- * nothing about where a PREVIOUS attempt's money came from.
+ * lands on the SAME table as the original attempt. A retry that lands
+ * anywhere the original did not conflicts with nothing there and inserts a
+ * second, real charge for one logical request.
+ *
+ * The trigger is simply that the bucket balance MOVED between the attempt
+ * and its retry — in either direction, and for reasons that have nothing to
+ * do with whether the subscription is still active:
+ *   - ledger → bucket: the first attempt found an empty (or absent) bucket
+ *     and debited credit_transactions; an invoice.paid webhook funded the
+ *     bucket; the retry now covers the charge from the bucket.
+ *   - bucket → ledger: the first attempt spent from the bucket, and by the
+ *     retry the bucket no longer covers the charge. **Subscription status is
+ *     irrelevant here.** A perfectly ACTIVE subscription whose bucket is
+ *     merely drained by the user's other requests — grantId still non-null,
+ *     getBucketBalance simply returns less than `credits` — hits this exactly
+ *     as a lapsed subscription or a rotated grant (grantId null) does. The
+ *     lapsed case is the easiest to picture, not the only one, and not even
+ *     the likeliest: a busy Pro user empties the bucket every month.
+ *   - and the partial case in between: an original ledger-only debit retried
+ *     once the bucket covers PART of the charge writes a new bucket row for
+ *     that part while its ledger half conflicts — a smaller overcharge, same
+ *     root cause.
+ *
+ * So both halves of the check run unconditionally: when grantId is null,
+ * when it is non-null with a full bucket, and when it is non-null with an
+ * empty one. The caller's Pro state at retry time says nothing about where a
+ * PREVIOUS attempt's money came from, and neither does the current bucket
+ * balance.
  *
  * Each half asks exactly what that table's own unique index would have
  * caught, so this can never refuse an insert the index itself would have
@@ -440,15 +504,16 @@ async function hasCommittedDebit(
  * (reserveDebit's pattern) — never as a separate statement, or it
  * reintroduces the exact race pg_advisory_xact_lock exists to close, and
  * hasCommittedDebit's check-then-insert above loses its serialization.
- * `debitFn` is the existing, UNCHANGED debit primitive for this action type
- * (debitQuestion, debitOnboarding, debitWebSearch, or debitDataset) — called
- * with ONLY the ledger portion, so a fully-bucket-funded charge writes zero
+ * `debit` is the LedgerDebit descriptor for this action type (QUESTION_DEBIT,
+ * ONBOARDING_DEBIT, WEBSEARCH_DEBIT, DATASET_DEBIT) — one value carrying both
+ * the existing, UNCHANGED debit primitive and the `reason` that primitive
+ * writes, so the idempotency check below and the INSERT cannot look at
+ * different reasons (see LedgerDebit). Its `write` is called with ONLY the
+ * ledger portion, so a fully-bucket-funded charge writes zero
  * credit_transactions rows (the byte-identical-for-non-Pro guarantee: when
  * grantId is null or the bucket is empty, fromBucket is always 0 and this
- * collapses to exactly today's single debitFn call with the full amount).
- * `reason` must be the credit_transactions reason `debitFn` itself writes —
- * it is what scopes the idempotency check on that table (see
- * hasCommittedDebit); `note` is the free-text label for the bucket row.
+ * collapses to exactly today's single debit call with the full amount).
+ * `note` is the free-text label for the bucket row.
  *
  * A request that was already debited (in either ledger, by any earlier
  * attempt) returns {fromBucket: 0, fromLedger: 0, bucketEntry: null,
@@ -461,19 +526,18 @@ export async function splitDebit(
   userId: string,
   requestId: string,
   credits: number,
-  debitFn: DebitFn,
-  reason: DebitReason,
+  debit: LedgerDebit,
   note: string,
   grantId: string | null = null,
 ): Promise<SplitDebitResult> {
-  if (await hasCommittedDebit(tx, userId, requestId, reason)) {
+  if (await hasCommittedDebit(tx, userId, requestId, debit.reason)) {
     return { fromBucket: 0, fromLedger: 0, bucketEntry: null, ledgerEntry: null };
   }
   const bucketBalance = grantId === null ? 0 : await getBucketBalance(tx, userId, grantId);
   const fromBucket = Math.min(credits, bucketBalance);
   const fromLedger = credits - fromBucket;
   const bucketEntry = fromBucket > 0 ? await debitBucket(tx, userId, grantId!, requestId, fromBucket, note) : null;
-  const ledgerEntry = fromLedger > 0 ? await debitFn(tx, userId, requestId, fromLedger) : null;
+  const ledgerEntry = fromLedger > 0 ? await debit.write(tx, userId, requestId, fromLedger) : null;
   return { fromBucket, fromLedger, bucketEntry, ledgerEntry };
 }
 

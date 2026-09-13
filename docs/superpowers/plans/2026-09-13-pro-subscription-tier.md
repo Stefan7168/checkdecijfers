@@ -445,12 +445,15 @@ a non-Pro user's behavior is byte-identical to today.
   `SplitDebitResult` type and `splitDebit(tx, userId, requestId, credits, debitFn, note):
   Promise<SplitDebitResult>`, `compensateSplit(db, userId, split: SplitDebitResult, refundCredits,
   auditAnswerId): Promise<void>` — consumed by Tasks 4-6.
-  **AS BUILT (Task 4 fix round 1, 2026-09-14):** `splitDebit` gained a `reason: LedgerReason`
-  parameter between `debitFn` and `note` — `splitDebit(tx, userId, requestId, credits, debitFn,
-  reason, note, grantId?)`. It is what scopes the new cross-ledger idempotency check on
-  `credit_transactions` (each table's own `on conflict` is blind to a retry that lands on the
-  OTHER table), and it must be the reason `debitFn` itself writes. Task 6's snippets below are
-  updated to match.
+  **AS BUILT (Task 4 fix rounds 1-2, 2026-09-14):** `splitDebit`'s `debitFn` parameter became a
+  `debit: LedgerDebit` descriptor — `splitDebit(tx, userId, requestId, credits, debit, note,
+  grantId?)`. A `LedgerDebit` is `{ reason, write }`: the debit primitive bound to the
+  `credit_transactions` reason it writes. `ledger.ts` exports one per action type —
+  `QUESTION_DEBIT`, `ONBOARDING_DEBIT`, `WEBSEARCH_DEBIT`, `DATASET_DEBIT` — so pass the
+  descriptor, never the bare function. The reason is what scopes the new cross-ledger idempotency
+  check on `credit_transactions` (each table's own `on conflict` is blind to a retry that lands on
+  the OTHER table), and binding it to the primitive makes it structurally impossible for the reason
+  checked and the reason written to drift apart. Task 6's snippets below are updated to match.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -978,9 +981,9 @@ the same shape as `gate.ts`'s `chargeAndRun`, Task 4's already-solved case).
 - [ ] **Step 2: Run to verify they fail.**
 
 - [ ] **Step 3: Modify both functions in `ledger.ts`** — identical shape to Task 4 Step 4,
-  substituting `debitWebSearch`/`'websearch_cost'`/`'websearch debit'` and
-  `debitDataset`/`'dataset_cost'`/`'dataset debit'` respectively (the `reason` argument is
-  Task 4 fix round 1's addition — see Task 3's AS BUILT note):
+  substituting `WEBSEARCH_DEBIT`/`'websearch debit'` and `DATASET_DEBIT`/`'dataset debit'`
+  respectively (those descriptors are Task 4 fix rounds 1-2's addition — see Task 3's AS BUILT
+  note; they already exist and are exported, nothing to define):
 
 ```ts
 export type ReserveWebSearchDebitResult =
@@ -1001,13 +1004,17 @@ export async function reserveWebSearchDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    // NOTE (Task 4 fix round 1): `requestId` here MUST be distinct from the question debit's
-    // (e.g. `${requestId}:websearch`). pro_bucket_ledger_one_debit_per_request is NOT
-    // action-scoped, so a shared requestId makes the second bucket debit read as a duplicate and
-    // silently under-charges the Pro allowance.
-    const split = await splitDebit(
-      tx, userId, requestId, required, debitWebSearch, 'websearch_cost', 'websearch debit', grantId,
-    );
+    // NOTE (Task 4 fix rounds 1-2): `requestId` here MUST be distinct from the question debit's
+    // (e.g. `${requestId}:websearch`). pro_bucket_ledger_one_debit_per_request is
+    // `(user_id, request_id) where reason = 'debit'` with NO action-type scope, so on a shared
+    // requestId the add-on's bucket debit reads as a duplicate of the question's and is silently
+    // dropped. This is NOT limited to a lapsed subscription — it fires whenever the question debit
+    // took anything from the bucket, on a perfectly active subscription, and the same-requestId
+    // add-on that follows resolves to a bucket debit too. And since Task 4's fix, when the bucket
+    // is drained by the time the add-on runs, the whole add-on debit short-circuits (ledger leg
+    // included) rather than falling back to the ledger — so the under-charge is total, not partial.
+    // A distinct requestId per bucket-eligible debit is the fix; there is no way around it.
+    const split = await splitDebit(tx, userId, requestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -1016,8 +1023,8 @@ export async function reserveWebSearchDebit(
 }
 ```
 
-(`reserveDatasetDebit` is the identical shape, substituting
-`debitDataset`/`'dataset_cost'`/`'dataset debit'` and its own `ReserveDatasetDebitResult` type.)
+(`reserveDatasetDebit` is the identical shape, substituting `DATASET_DEBIT`/`'dataset debit'` and
+its own `ReserveDatasetDebitResult` type.)
 
 - [ ] **Step 4: Modify `chargeAndRunDataset` in `dataset-gate.ts`** — apply Task 4 Step 5's exact
   transformation (replace every `debit.id` with `split`, every `compensate(db, userId, debit.id,
