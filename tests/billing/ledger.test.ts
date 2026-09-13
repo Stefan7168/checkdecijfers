@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   compensate,
+  compensateSplit,
   debitDataset,
   debitQuestion,
   debitWebSearch,
@@ -15,6 +16,7 @@ import {
   reserveOnboardingDebit,
   reserveWebSearchDebit,
 } from '../../src/billing/ledger.ts';
+import type { SplitDebitResult } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -871,7 +873,7 @@ describe('debitWebSearch / reserveWebSearchDebit — the web add-on sibling (WP1
         await reserveDebit(db, userId, rid, 20);
         const web = await reserveWebSearchDebit(db, userId, rid, 10);
         // Failed section ⇒ compensate the web debit (settlement rule).
-        await compensate(db, userId, (web as { entry: { id: number } }).entry.id, 10, null);
+        await compensateSplit(db, userId, (web as { split: SplitDebitResult }).split, 10, null);
         expect(await getBalance(db, userId)).toBe(80); // 100 -20 -10 +10
       });
     });
@@ -952,6 +954,145 @@ describe('debitWebSearch / reserveWebSearchDebit — the web add-on sibling (WP1
   });
 });
 
+// Task 6 (open-questions #205): the SAME bucket-first mechanic Task 4 wired into
+// reserveDebit, applied to reserveWebSearchDebit — mirrors "reserveDebit — Pro
+// bucket integration" above, at the web add-on's 10-credit price.
+describe('reserveWebSearchDebit — Pro bucket integration', () => {
+  it('a Pro user with bucket balance spends from the bucket, not the ledger', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'active', now() + interval '20 days', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket, getBucketBalance } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const result = await reserveWebSearchDebit(db, userId, randomUUID(), 10);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(100); // permanent balance untouched
+      expect(await getBucketBalance(db, userId, grantId)).toBe(990);
+    });
+  });
+
+  it('a non-Pro user (no pro_subscriptions row) behaves exactly as before this task', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const result = await reserveWebSearchDebit(db, userId, randomUUID(), 10);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(90);
+    });
+  });
+
+  it('insufficient-credits check counts bucket + ledger together', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 3, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'active', now() + interval '20 days', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 5, `in_${randomUUID()}`);
+      // 3 ledger + 5 bucket = 8 spendable, need 10 -> insufficient
+      const result = await reserveWebSearchDebit(db, userId, randomUUID(), 10);
+      expect(result.kind).toBe('insufficient');
+    });
+  });
+
+  it('a LAPSED subscription (current_period_end in the past) is treated as non-Pro', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'canceled', now() - interval '1 day', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket, getBucketBalance } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const result = await reserveWebSearchDebit(db, userId, randomUUID(), 10);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(90); // spent from the ledger, bucket ignored
+      expect(await getBucketBalance(db, userId, grantId)).toBe(1000); // untouched
+    });
+  });
+});
+
+// The Task 6 landmine (progress.md / Task 4 fix round 2's widened note): the
+// question debit and its same-turn web-search add-on share ONE base requestId
+// by construction (ADR 032 — web/app/actions.ts passes the same `requestId` to
+// both reserveDebit and reserveWebSearchDebit). pro_bucket_ledger's own unique
+// index (`pro_bucket_ledger_one_debit_per_request`, migration 030) is
+// `(user_id, request_id) where reason = 'debit'` with NO action-type scope, so
+// if reserveWebSearchDebit split its bucket portion under that SAME bare
+// requestId, it would read as a duplicate of the question's own bucket debit
+// and silently no-op (or, post-Task-4's cross-ledger guard, short-circuit the
+// whole add-on once the bucket is empty). reserveWebSearchDebit's internal
+// bucket-side-only disambiguation (splitDebit's `bucketRequestId`, derived via
+// deriveAddonRequestId — see reserveWebSearchDebit's own doc comment for why
+// only the bucket leg, never the credit_transactions/ledger leg, is
+// disambiguated) is what this test proves closes it.
+describe('reserveWebSearchDebit — requestId disambiguation from the question debit (Task 6 landmine)', () => {
+  it('a question debit that drains the bucket + a same-base-requestId web-search debit both succeed independently', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'active', now() + interval '20 days', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket, getBucketBalance } = await import('../../src/billing/pro-bucket.ts');
+      // Funded with EXACTLY the question's price, so the question debit fully
+      // drains the bucket — its pro_bucket_ledger row lands under the bare
+      // `requestId`, the SAME value the web-search add-on is about to reuse.
+      await grantBucket(db, userId, grantId, 20, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+
+      const question = await reserveDebit(db, userId, requestId, 20);
+      expect(question.kind).toBe('debited');
+      expect(await getBucketBalance(db, userId, grantId)).toBe(0); // bucket fully drained
+
+      // Same BASE requestId as the question above. Without the internal
+      // disambiguation, hasCommittedDebit would find the question's own
+      // pro_bucket_ledger 'debit' row under this requestId and treat this as
+      // an already-processed retry — kind 'duplicate', zero credits removed,
+      // the add-on silently free.
+      const webAddon = await reserveWebSearchDebit(db, userId, requestId, 10);
+      expect(webAddon.kind).toBe('debited');
+
+      // Both charges landed independently: 20 from the bucket (question), 10
+      // from the permanent ledger (add-on — the bucket was already empty by
+      // the time it ran). Total removed = 30, not 20.
+      expect(await getBalance(db, userId)).toBe(90); // 100 - 10
+      expect(await getBucketBalance(db, userId, grantId)).toBe(0);
+    });
+  });
+});
+
 describe('debitDataset / reserveDatasetDebit — the attachments-tier sibling (WP202a, migration 027, ADR 037)', () => {
   it('debitDataset is idempotent per (user, request): a repeated requestId returns null, never a second charge', async () => {
     await withDb(async (db) => {
@@ -1016,6 +1157,89 @@ describe('debitDataset / reserveDatasetDebit — the attachments-tier sibling (W
       // 999999 is not a real audit_answers id — dataset_gate.ts must always
       // pass null here; this proves the FK itself is the backstop.
       await expect(compensate(db, userId, debit!.id, 10, 999999)).rejects.toThrow();
+    });
+  });
+});
+
+// Task 6 (open-questions #205): the SAME bucket-first mechanic, applied to
+// reserveDatasetDebit — mirrors "reserveWebSearchDebit — Pro bucket
+// integration" above, at the dataset_turn price (20 credits, docs/09-pricing.md).
+describe('reserveDatasetDebit — Pro bucket integration', () => {
+  it('a Pro user with bucket balance spends from the bucket, not the ledger', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'active', now() + interval '20 days', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket, getBucketBalance } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const result = await reserveDatasetDebit(db, userId, randomUUID(), 20);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(100); // permanent balance untouched
+      expect(await getBucketBalance(db, userId, grantId)).toBe(980);
+    });
+  });
+
+  it('a non-Pro user (no pro_subscriptions row) behaves exactly as before this task', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const result = await reserveDatasetDebit(db, userId, randomUUID(), 20);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(80);
+    });
+  });
+
+  it('insufficient-credits check counts bucket + ledger together', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 5, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'active', now() + interval '20 days', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 10, `in_${randomUUID()}`);
+      // 5 ledger + 10 bucket = 15 spendable, need 20 -> insufficient
+      const result = await reserveDatasetDebit(db, userId, randomUUID(), 20);
+      expect(result.kind).toBe('insufficient');
+    });
+  });
+
+  it('a LAPSED subscription (current_period_end in the past) is treated as non-Pro', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, note) values ($1, 100, 'signup_grant', 'seed')`,
+        [userId],
+      );
+      const grantId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_x', 'sub_x', 'canceled', now() - interval '1 day', $2)`,
+        [userId, grantId],
+      );
+      const { grantBucket, getBucketBalance } = await import('../../src/billing/pro-bucket.ts');
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const result = await reserveDatasetDebit(db, userId, randomUUID(), 20);
+      expect(result.kind).toBe('debited');
+      expect(await getBalance(db, userId)).toBe(80); // spent from the ledger, bucket ignored
+      expect(await getBucketBalance(db, userId, grantId)).toBe(1000); // untouched
     });
   });
 });

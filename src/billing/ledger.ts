@@ -8,9 +8,40 @@
 // unique-violation. A Postgres statement error aborts the enclosing
 // transaction even if the JS exception is caught; ON CONFLICT never throws,
 // so it is safe to call from inside or outside a transaction alike.
+import { createHash } from 'node:crypto';
 import type { Db } from '../db/types.ts';
 import type { ActionClass, LedgerReason } from './types.ts';
 import { compensateBucket, debitBucket, getBucketBalance } from './pro-bucket.ts';
+
+/** Derives a distinct, deterministic UUID from a base requestId + a
+ * disambiguating suffix — used by reserveWebSearchDebit/reserveDatasetDebit
+ * below to give their bucket-eligible add-on debit its own identity, distinct
+ * from the question debit's own requestId that rides alongside it (see their
+ * doc comments for why that distinctness matters).
+ *
+ * **Deviation from the plan/brief's literal sample** (a plain
+ * `` `${requestId}:websearch` `` colon-joined string): `credit_transactions.
+ * request_id` (migration 005) AND `pro_bucket_ledger.request_id` (migration
+ * 030) are BOTH declared Postgres `uuid`, which rejects any value that is not
+ * syntactically a UUID — the brief's plain string fails at the database with
+ * `invalid input syntax for type uuid`, confirmed by actually running it
+ * against the real migrated schema (this task's own Step 2 "run to verify
+ * they fail" surfaced it as a hard DB error, not a normal red assertion).
+ * This derives a SHA-256 hash of `requestId:suffix`, formatted into standard
+ * UUID syntax — deterministic (the SAME requestId + suffix always derives
+ * the SAME id, so a genuine retry of the add-on call, which reuses the same
+ * base requestId, stays idempotent) and, by the hash's own collision
+ * resistance, never collides with the base requestId itself or with a
+ * different suffix's derived id. Not RFC 4122 version/variant-compliant (no
+ * version nibble is forced into the hash) — Postgres's `uuid` type does not
+ * check either, only the 8-4-4-4-12 hex shape, so that is not needed for
+ * correctness here. Reuses this codebase's existing
+ * `createHash('sha256')...digest('hex')` idiom (src/answer/llm/client.ts,
+ * src/answer/audit/write.ts) rather than introducing a UUID library. */
+function deriveAddonRequestId(requestId: string, suffix: string): string {
+  const hex = createHash('sha256').update(`${requestId}:${suffix}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 
 export async function getBalance(db: Db, userId: string): Promise<number> {
   const { rows } = await db.query(
@@ -310,7 +341,7 @@ export async function debitWebSearch(
 export const WEBSEARCH_DEBIT: LedgerDebit = { reason: WEBSEARCH_COST, write: debitWebSearch };
 
 export type ReserveWebSearchDebitResult =
-  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'debited'; split: SplitDebitResult }
   | { kind: 'insufficient'; balance: number }
   | { kind: 'duplicate' };
 
@@ -322,7 +353,41 @@ export type ReserveWebSearchDebitResult =
  * balance of 30 in both modes — see ADR 032's worked-out pricing table. Kept a
  * separate function rather than a parameterized reserveDebit for the same
  * reason debitWebSearch is separate from debitQuestion above — reserveDebit is
- * the hot path, untouched by this design. */
+ * the hot path, untouched by this design.
+ *
+ * Pro bucket integration (Task 6, open-questions #205): same
+ * getSpendableBalance/splitDebit wiring as reserveDebit (Task 4) — bucket
+ * spent first, remainder from the ledger via the unchanged debitWebSearch
+ * primitive. For a non-Pro user this collapses to exactly the pre-Task-6
+ * single debitWebSearch call for the full amount.
+ *
+ * **requestId disambiguation (the Task 6 landmine, progress.md / Task 4 fix
+ * round 2) — BUCKET SIDE ONLY:** `pro_bucket_ledger_one_debit_per_request`
+ * (migration 030) is `(user_id, request_id) where reason = 'debit'` with NO
+ * action-type scope. The question debit (reserveDebit) and this add-on debit
+ * are called with the SAME base requestId (ADR 032's own contract — every
+ * caller of reserveWebSearchDebit keeps passing that shared id, unchanged).
+ * If both resolved to a bucket debit under that literal requestId, the
+ * add-on's pro_bucket_ledger insert would conflict with the question's and
+ * silently no-op — and since Task 4's cross-ledger guard (hasCommittedDebit),
+ * an empty bucket at add-on time short-circuits the WHOLE add-on debit,
+ * ledger leg included, not just its bucket half. So splitDebit's
+ * `bucketRequestId` here is `deriveAddonRequestId(requestId, 'websearch')` —
+ * a deterministic UUID derived once, internally — while the PLAIN `requestId`
+ * still goes through unchanged as splitDebit's own `requestId` (the
+ * `credit_transactions`/ledger-leg id). That split matters: this function's
+ * own doc comment on `splitDebit` explains why the ledger leg CANNOT be
+ * disambiguated the same way — src/billing/history.ts and
+ * src/threads/index.ts join a `websearch_cost` row back to its question by an
+ * EXACT `request_id` match to net the turn's displayed cost, so changing the
+ * ledger-leg id would silently break the dashboard/thread-replay cost total
+ * for a partially-or-fully-ledger-funded add-on. (A plain colon-joined string
+ * — the plan/brief's literal sample — was tried first and rejected for a
+ * simpler reason: both `request_id` columns are Postgres `uuid`, which
+ * rejects a non-UUID string outright.) No caller outside this function ever
+ * needs to know about any of this: the audit trail, the question's own
+ * reserveDebit call, and every existing call site in web/app/actions.ts keep
+ * passing the same requestId they always have. */
 export async function reserveWebSearchDebit(
   db: Db,
   userId: string,
@@ -331,12 +396,26 @@ export async function reserveWebSearchDebit(
 ): Promise<ReserveWebSearchDebitResult> {
   return db.withTransaction(async (tx) => {
     await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
-    const balance = await getBalance(tx, userId);
+    const grantId = await getCurrentGrantId(tx, userId);
+    const balance = await getSpendableBalance(tx, userId, grantId);
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const entry = await debitWebSearch(tx, userId, requestId, required);
-    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+    const bucketRequestId = deriveAddonRequestId(requestId, 'websearch');
+    const split = await splitDebit(
+      tx,
+      userId,
+      requestId,
+      required,
+      WEBSEARCH_DEBIT,
+      'websearch debit',
+      grantId,
+      bucketRequestId,
+    );
+    if (split.bucketEntry === null && split.ledgerEntry === null) {
+      return { kind: 'duplicate' };
+    }
+    return { kind: 'debited', split };
   });
 }
 
@@ -373,13 +452,22 @@ export async function debitDataset(
 export const DATASET_DEBIT: LedgerDebit = { reason: DATASET_COST, write: debitDataset };
 
 export type ReserveDatasetDebitResult =
-  | { kind: 'debited'; entry: LedgerEntry }
+  | { kind: 'debited'; split: SplitDebitResult }
   | { kind: 'insufficient'; balance: number }
   | { kind: 'duplicate' };
 
 /** The dataset-chat sibling of reserveDebit (WP202a / ADR 037): same
  * per-user advisory-lock check-and-debit pattern, applied to the
- * 'dataset_cost' reason instead of 'question_cost'. */
+ * 'dataset_cost' reason instead of 'question_cost'.
+ *
+ * Pro bucket integration + requestId disambiguation (Task 6, open-questions
+ * #205): same wiring and same landmine as reserveWebSearchDebit above — see
+ * its doc comment for the full explanation, including why the disambiguation
+ * is BUCKET-SIDE ONLY (`splitDebit`'s `bucketRequestId`), never the ledger
+ * leg. The bucket id passed here is `deriveAddonRequestId(requestId,
+ * 'dataset')`, derived internally so dataset-gate.ts's caller keeps passing
+ * the same requestId it always has, and the plain `requestId` still goes
+ * through unchanged as the `credit_transactions`/ledger-leg id. */
 export async function reserveDatasetDebit(
   db: Db,
   userId: string,
@@ -388,12 +476,26 @@ export async function reserveDatasetDebit(
 ): Promise<ReserveDatasetDebitResult> {
   return db.withTransaction(async (tx) => {
     await tx.query('select pg_advisory_xact_lock(hashtext($1))', [userId]);
-    const balance = await getBalance(tx, userId);
+    const grantId = await getCurrentGrantId(tx, userId);
+    const balance = await getSpendableBalance(tx, userId, grantId);
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const entry = await debitDataset(tx, userId, requestId, required);
-    return entry === null ? { kind: 'duplicate' } : { kind: 'debited', entry };
+    const bucketRequestId = deriveAddonRequestId(requestId, 'dataset');
+    const split = await splitDebit(
+      tx,
+      userId,
+      requestId,
+      required,
+      DATASET_DEBIT,
+      'dataset debit',
+      grantId,
+      bucketRequestId,
+    );
+    if (split.bucketEntry === null && split.ledgerEntry === null) {
+      return { kind: 'duplicate' };
+    }
+    return { kind: 'debited', split };
   });
 }
 
@@ -476,6 +578,16 @@ export interface SplitDebitResult {
  *     insert); a caller that needs two bucket-eligible debits for one turn
  *     must derive a distinct requestId for the add-on.
  *
+ * **Two ids, not one (Task 6, open-questions #205):** `requestId` and
+ * `bucketRequestId` are the SAME value for every caller except
+ * reserveWebSearchDebit/reserveDatasetDebit's add-on debits — see splitDebit's
+ * own doc comment for why those two callers need a distinct bucket-side id
+ * (src/billing/history.ts and src/threads/index.ts join
+ * `credit_transactions` back to `audit_answers` by an EXACT `request_id`
+ * match to net a turn's cost for the dashboard/thread-replay, so the LEDGER
+ * side must keep the caller's original id; only `pro_bucket_ledger`'s
+ * un-scoped unique index forces the bucket side to differ).
+ *
  * Race safety: a SELECT followed by a conditional INSERT is only safe
  * because every caller runs splitDebit inside reserveDebit's existing
  * pg_advisory_xact_lock'd transaction (splitDebit's own contract, below).
@@ -488,16 +600,17 @@ async function hasCommittedDebit(
   tx: Db,
   userId: string,
   requestId: string,
+  bucketRequestId: string,
   reason: DebitReason,
 ): Promise<boolean> {
   const { rows } = await tx.query(
     `select 1 as hit from credit_transactions
-       where user_id = $1 and request_id = $2 and reason = $3
+       where user_id = $1 and request_id = $2 and reason = $4
      union all
      select 1 as hit from pro_bucket_ledger
-       where user_id = $1 and request_id = $2 and reason = 'debit'
+       where user_id = $1 and request_id = $3 and reason = 'debit'
      limit 1`,
-    [userId, requestId, reason],
+    [userId, requestId, bucketRequestId, reason],
   );
   return rows.length > 0;
 }
@@ -519,6 +632,26 @@ async function hasCommittedDebit(
  * collapses to exactly today's single debit call with the full amount).
  * `note` is the free-text label for the bucket row.
  *
+ * `bucketRequestId` (Task 6, open-questions #205) — defaults to `requestId`,
+ * so reserveDebit's own call site is completely unchanged and every
+ * pre-Task-6 behavior (including this function's own signature for every
+ * existing caller) is preserved byte-for-byte. Pass a DIFFERENT value only
+ * when `requestId` itself cannot double as the bucket's own idempotency key —
+ * today that is reserveWebSearchDebit/reserveDatasetDebit's add-on debits,
+ * which are deliberately called with the SAME requestId as the question debit
+ * they ride alongside (ADR 032's contract), and `pro_bucket_ledger`'s own
+ * unique index (`pro_bucket_ledger_one_debit_per_request`, migration 030) is
+ * `(user_id, request_id) where reason = 'debit'` with NO action-type scope —
+ * so a shared requestId's bucket leg would read as a duplicate of the
+ * question's own bucket debit (see hasCommittedDebit's doc comment).
+ * `requestId` itself is UNCHANGED and still goes to `debit.write` (the
+ * `credit_transactions` leg) — that table's per-reason unique index already
+ * disambiguates by `reason`, AND src/billing/history.ts /
+ * src/threads/index.ts's dashboard/thread-replay cost-netting queries match
+ * a `websearch_cost` row back to its question by an EXACT `request_id` join,
+ * so the ledger leg must keep the caller's real requestId no matter what the
+ * bucket leg uses.
+ *
  * A request that was already debited (in either ledger, by any earlier
  * attempt) returns {fromBucket: 0, fromLedger: 0, bucketEntry: null,
  * ledgerEntry: null} — the same both-entries-null shape a same-table `on
@@ -533,14 +666,16 @@ export async function splitDebit(
   debit: LedgerDebit,
   note: string,
   grantId: string | null = null,
+  bucketRequestId: string = requestId,
 ): Promise<SplitDebitResult> {
-  if (await hasCommittedDebit(tx, userId, requestId, debit.reason)) {
+  if (await hasCommittedDebit(tx, userId, requestId, bucketRequestId, debit.reason)) {
     return { fromBucket: 0, fromLedger: 0, bucketEntry: null, ledgerEntry: null };
   }
   const bucketBalance = grantId === null ? 0 : await getBucketBalance(tx, userId, grantId);
   const fromBucket = Math.min(credits, bucketBalance);
   const fromLedger = credits - fromBucket;
-  const bucketEntry = fromBucket > 0 ? await debitBucket(tx, userId, grantId!, requestId, fromBucket, note) : null;
+  const bucketEntry =
+    fromBucket > 0 ? await debitBucket(tx, userId, grantId!, bucketRequestId, fromBucket, note) : null;
   const ledgerEntry = fromLedger > 0 ? await debit.write(tx, userId, requestId, fromLedger) : null;
   return { fromBucket, fromLedger, bucketEntry, ledgerEntry };
 }

@@ -17,6 +17,7 @@
 export type { ActionClass, ActionClassPrice, CreditPack, GatedResponse, LedgerReason } from './types.ts';
 export {
   compensate,
+  compensateSplit,
   debitOnboarding,
   debitQuestion,
   debitWebSearch,
@@ -31,6 +32,7 @@ export type {
   ReserveDebitResult,
   ReserveOnboardingDebitResult,
   ReserveWebSearchDebitResult,
+  SplitDebitResult,
 } from './ledger.ts';
 export { chargeAndRun } from './gate.ts';
 export {

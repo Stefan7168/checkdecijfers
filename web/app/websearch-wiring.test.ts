@@ -44,7 +44,12 @@ describe('WP129+130 websearch gate-placement wiring (source pins)', () => {
   });
 
   it('compensates a taken web debit on the exception path (both actions)', () => {
-    const occurrences = actions.split('await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null)').length - 1;
+    // Task 6 (open-questions #205): the web add-on debit is now bucket-first
+    // (reserveWebSearchDebit / SplitDebitResult), so its refund goes through
+    // compensateSplit — same as the base question debit's own refund path.
+    const occurrences = actions.split(
+      'await compensateSplit(getDb(), userId, webDebitHolder.split, webAddonPrice, null)',
+    ).length - 1;
     // askQuestion + replyToClarification each have one catch-path compensation.
     expect(occurrences).toBe(2);
   });

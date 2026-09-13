@@ -34,12 +34,12 @@ import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import { withValidatedClickOptions } from '../backend/answer/respond/validate-pending.ts';
 import {
   chargeAndRun,
-  compensate,
+  compensateSplit,
   getActionClassPrice,
   getBalance,
   reserveWebSearchDebit,
 } from '../backend/billing/index.ts';
-import type { GatedResponse, LedgerEntry } from '../backend/billing/index.ts';
+import type { GatedResponse, SplitDebitResult } from '../backend/billing/index.ts';
 // WP129+130 (#130, ADR 032): the Anthropic web-search client is constructed
 // HERE (server-only) and injected into the audited pipeline — the barrel is
 // the intended construction seam (its own comment says so). SourceSelection is
@@ -460,7 +460,7 @@ export async function askQuestion(
   // WP129+130 (#130, ADR 032): the taken web debit lives in this holder so the
   // settlement (and the catch) below can keep-or-refund it. The reserve()
   // closure sets it INSIDE the pipeline (debit-before-spend).
-  const webDebitHolder: { entry: LedgerEntry | null } = { entry: null };
+  const webDebitHolder: { split: SplitDebitResult | null } = { split: null };
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerQuestionAudited(getDb(), question, {
@@ -505,7 +505,7 @@ export async function askQuestion(
                 reserve: async (): Promise<boolean> => {
                   const reserved = await reserveWebSearchDebit(getDb(), userId, requestId, webAddonPrice);
                   if (reserved.kind === 'debited') {
-                    webDebitHolder.entry = reserved.entry;
+                    webDebitHolder.split = reserved.split;
                     return true;
                   }
                   // insufficient (a race the upfront check tolerates) or
@@ -552,7 +552,7 @@ export async function askQuestion(
     // ⟨W3⟩ Web add-on settlement on the FINAL gated object (post-onboarding) —
     // keep the +10 iff a cited web section shipped on an audited 'ok' turn,
     // else refund the taken debit (a no-op when none was taken).
-    const settled = await settleWebAddon(finalGated, webDebitHolder.entry, webAddonPrice, userId);
+    const settled = await settleWebAddon(finalGated, webDebitHolder.split, webAddonPrice, userId);
     // WP135 ⟨A1⟩: attach the audited answer to its thread (created lazily if
     // this is a fresh chat). Only runs on a gated-ok outcome with an audit id.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
@@ -561,8 +561,8 @@ export async function askQuestion(
     // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
     // compensated here (the base question debit is already compensated inside
     // chargeAndRun before this rethrow reaches us — ADR 020). Then rethrow.
-    if (webDebitHolder.entry !== null) {
-      await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
+    if (webDebitHolder.split !== null) {
+      await compensateSplit(getDb(), userId, webDebitHolder.split, webAddonPrice, null);
     }
     // Vercel function logs used to be the owner's ONLY visibility into
     // production infra failures (WP12 review) — and their short retention once
@@ -669,18 +669,19 @@ async function maybeTriggerOnboarding(
 //                                     its webSection stripped; paid, unverified
 //                                     web content must never be kept unrecorded)
 // then netCost gains the add-on price. EVERY other shape with a TAKEN web debit
-// ⇒ compensate() the debit — the money invariant: netCost mirrors the
-// compensation actually applied, never drifting from the append-only ledger.
+// ⇒ compensateSplit() the debit (Task 6: bucket-first, same as the base debit) —
+// the money invariant: netCost mirrors the compensation actually applied,
+// never drifting from the append-only ledger.
 // (With the ⟨W3⟩ skip-list an onboarding turn can no longer carry a web debit,
 // but the rule is stated generally so it stays correct if that ever changes.)
 // A null holder (no web debit taken) ⇒ nothing to settle.
 async function settleWebAddon(
   finalGated: GatedResponse,
-  webDebit: LedgerEntry | null,
+  webSplit: SplitDebitResult | null,
   price: number,
   userId: string,
 ): Promise<GatedResponse> {
-  if (webDebit === null) return finalGated;
+  if (webSplit === null) return finalGated;
   const keep =
     finalGated.kind === 'ok' &&
     finalGated.response.webSection?.status === 'ok' &&
@@ -689,7 +690,7 @@ async function settleWebAddon(
     return { ...finalGated, netCost: finalGated.netCost + price };
   }
   const auditId = finalGated.kind === 'ok' ? finalGated.auditId : null;
-  await compensate(getDb(), userId, webDebit.id, price, auditId);
+  await compensateSplit(getDb(), userId, webSplit, price, auditId);
   return finalGated;
 }
 
@@ -754,7 +755,7 @@ export async function replyToClarification(
   }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
   const extraVocabulary = await onboardedVocabulary();
-  const webDebitHolder: { entry: LedgerEntry | null } = { entry: null };
+  const webDebitHolder: { split: SplitDebitResult | null } = { split: null };
   try {
     const gated = await chargeAndRun(getDb(), userId, requestId, () =>
       answerClarificationReplyAudited(getDb(), safePending, reply, {
@@ -791,7 +792,7 @@ export async function replyToClarification(
                 reserve: async (): Promise<boolean> => {
                   const reserved = await reserveWebSearchDebit(getDb(), userId, requestId, webAddonPrice);
                   if (reserved.kind === 'debited') {
-                    webDebitHolder.entry = reserved.entry;
+                    webDebitHolder.split = reserved.split;
                     return true;
                   }
                   return false;
@@ -803,7 +804,7 @@ export async function replyToClarification(
     );
     // ⟨W3⟩ Settlement — no maybeTriggerOnboarding on the reply path (no finder),
     // so the gated object IS final; keep-or-refund the add-on the same way.
-    const settled = await settleWebAddon(gated, webDebitHolder.entry, webAddonPrice, userId);
+    const settled = await settleWebAddon(gated, webDebitHolder.split, webAddonPrice, userId);
     // WP135 ⟨A6⟩: attach the reply to the CAPTURED thread (validatedThreadId),
     // lazily creating one on ownership-validation failure — never a cross-attach.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
@@ -811,8 +812,8 @@ export async function replyToClarification(
   } catch (error) {
     // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
     // base debit is already compensated inside chargeAndRun — ADR 020).
-    if (webDebitHolder.entry !== null) {
-      await compensate(getDb(), userId, webDebitHolder.entry.id, webAddonPrice, null);
+    if (webDebitHolder.split !== null) {
+      await compensateSplit(getDb(), userId, webDebitHolder.split, webAddonPrice, null);
     }
     console.error('replyToClarification failed:', error);
     // #65 / WP25: same durable copy + unchanged rethrow as askQuestion above.
