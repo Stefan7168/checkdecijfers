@@ -34,6 +34,10 @@ Out of scope for v1 but deliberately kept alive (see [06-roadmap.md](06-roadmap.
 
 **Strategic direction recorded the same day (owner, in chat, not yet an ADR):** the company specialises in *"chat your way from official-statistics research to an embedded, sourced chart"* over **European and Dutch official data — CBS first, Eurostat next, other Dutch sources (RIVM, Kadaster) after**, one source at a time, each proven by the benchmark before the next is named publicly. Sources are the roadmap and the marketing; CBS is the first built-in source, never a "subcategory". Research behind it: [session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md](session-briefs/2026-09-11-competitive-research-localfocus-flourish-eurostat.md); tracking row [open-questions #237](open-questions.md). Needs its own ADR + roadmap re-phasing before a session builds toward it. **Companion document, same day:** the [experience improvement plan](session-briefs/2026-09-11-experience-improvement-plan.md) walks segment 1's (Fleur's) whole journey — arriving, first question, trust, publishing, paying, coming back — and is the ICP's first segment in practice.
 
+**Superseded as the current targeting statement by the ICP section above (session 96, 2026-09-11; formalized ADR
+[047](decisions/047-repositioning-embedded-sourced-chart.md)) — kept below verbatim as the accurate record of the
+2026-07-02 interview decision and the pricing reasoning several later decisions still depend on, not deleted.**
+
 **v1 audience: Dutch journalists — freelancers and small newsrooms first** (interview Q2). The Netherlands has roughly 15,000–17,000 active journalists; the underserved segment is freelancers and small/regional newsrooms for whom LocalFocus-style corporate contracts are out of reach. Their documented buying behavior anchors the business model: **€5–7.50 is the maximum for an everyday article; anything under €10 fits newsroom "kleine onkosten" expense rules without approval.** Their alternative — 45 minutes of self-searching StatLine — costs a newsroom €30–45 in time.
 
 Large newsrooms (NOS, DPG Media, Mediahuis) are a later enterprise tier, not v1.
@@ -68,7 +72,7 @@ Decided in the interview (Q3); full phasing in [06-roadmap.md](06-roadmap.md). *
 
 | # | Decision | Stefan's answer | Why |
 |---|---|---|---|
-| Q1 | Product form | **A** — chat Q&A → validated answer + source + freshness + simple chart; exports/studio/alerts later | The trustworthy answer *is* the product; the export studio doesn't test the risky part. Future ideas must be preserved in the roadmap and architecture seams |
+| Q1 | Product form | **A** — chat Q&A → validated answer + source + freshness + simple chart; exports/studio/alerts later | The trustworthy answer *is* the product; the export studio doesn't test the risky part. Future ideas must be preserved in the roadmap and architecture seams. **Addendum (ADR [047](decisions/047-repositioning-embedded-sourced-chart.md), 2026-09-13): this said what to build FIRST, not what the finished loop is FOR. The product's stated specialization, alongside this original framing rather than replacing it, is now "chat your way from official-statistics research to an embedded, sourced chart" — CBS first, Eurostat next, one source at a time (owner, session 96, 2026-09-11).** |
 | Q2 | Audience | **A** — journalists (freelance + small newsrooms) | Where the notes landed after the full journey; sharpest documented pain; expandable later |
 | Q3 | Business model | **A** — credit packs; credits **never expire**; prices indicative and easy to change | Matches irregular demand + expense thresholds; "no subscription, no expiry" is the honest differentiator |
 | Q4 | Phase 0 cut | Delegated to Claude → **confirmed thin slice** incl. refusal behavior + benchmark | Everything else is commodity work that proves nothing about the hard part |
