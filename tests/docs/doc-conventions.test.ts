@@ -80,6 +80,7 @@ const OUTSIDE_DOCS_MARKDOWN = [
   'KICKOFF_PROMPT.md',
   'checkdecijfers.nl.md',
   '.claude/commands/wrap-session.md',
+  'scripts/dev-harness/README.md',
 ];
 
 /** Strip fenced blocks and inline code spans.

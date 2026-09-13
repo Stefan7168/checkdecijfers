@@ -101,7 +101,11 @@ export function VisualDock({
         {busy ? (
           <ChartSkeleton />
         ) : active.kind === 'chart' && active.chart !== null ? (
-          <ChartView spec={active.chart} frameless />
+          <ChartView
+            spec={active.chart}
+            frameless
+            embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
+          />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
           <UserChartView spec={active.userChart} />
         ) : active.card !== null ? (

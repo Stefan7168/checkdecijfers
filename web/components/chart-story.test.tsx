@@ -37,6 +37,7 @@ function Harness(props: Partial<ChartStoryPanelProps> & { onIndexChange?: (i: nu
         idPrefix={idPrefix}
         lang={props.lang}
         onPresent={props.onPresent}
+        insightsUnauthenticated={props.insightsUnauthenticated}
       />
     </>
   );
@@ -186,5 +187,31 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     for (const tok of tokens) {
       expect(allowed.some((str) => str.includes(tok)), `token "${tok}" has no source in the steps`).toBe(true);
     }
+  });
+});
+
+// R5.3 (journey WP-C): the anonymous-Insights honest line — chart.tsx sets
+// this true only after a `generateInsights` call resolves
+// `{ ok: false, reason: 'unauthenticated' }`; the panel itself just renders
+// what it is told, same dumb-and-controlled shape as every other prop here.
+describe('ChartStoryPanel — R5.3 anonymous Insights line', () => {
+  it('renders one honest line with a /login link when insightsUnauthenticated is true; renders nothing extra when false/unset', () => {
+    render(<Harness insightsUnauthenticated />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const link = screen.getByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' });
+    expect(link).toHaveAttribute('href', '/login');
+    // The deterministic captions still render underneath regardless.
+    expect(screen.getByText('Van 2021 tot 2024.')).toBeInTheDocument();
+
+    cleanup();
+    render(<Harness insightsUnauthenticated={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    expect(screen.queryByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' })).toBeNull();
+  });
+
+  it('renders the English line under lang="en"', () => {
+    render(<Harness insightsUnauthenticated lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
+    expect(screen.getByRole('link', { name: 'Log in for AI-phrased insights.' })).toHaveAttribute('href', '/login');
   });
 });

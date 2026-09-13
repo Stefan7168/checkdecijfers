@@ -67,9 +67,27 @@ export interface ChartStoryPanelProps {
    * renders no Present button at all — chart.tsx passes it only when this
    * chart itself isn't already the stage (a stage never opens a stage). */
   onPresent?(): void;
+  /** R5.3 (journey WP-C): true when the last `generateInsights` call
+   * resolved `{ ok: false, reason: 'unauthenticated' }` — an anonymous
+   * visitor opened Insights. Renders one honest, digit-free line with a
+   * `/login` link instead of pretending AI phrasing was attempted; the
+   * deterministic captions (`step.caption`) still render underneath either
+   * way, so the story itself is never empty for an anonymous visitor. */
+  insightsUnauthenticated?: boolean;
 }
 
-export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, triggerId, idPrefix, lang = 'nl', onPresent }: ChartStoryPanelProps): ReactNode {
+export function ChartStoryPanel({
+  steps,
+  index,
+  onIndexChange,
+  open,
+  onClose,
+  triggerId,
+  idPrefix,
+  lang = 'nl',
+  onPresent,
+  insightsUnauthenticated = false,
+}: ChartStoryPanelProps): ReactNode {
   const regionRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
@@ -236,6 +254,13 @@ export function ChartStoryPanel({ steps, index, onIndexChange, open, onClose, tr
         </span>
         <span className="text-xs text-muted-foreground">{t(lang, 'chart.story.hint')}</span>
       </div>
+      {insightsUnauthenticated ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          <a href="/login" className="underline">
+            {t(lang, 'chart.story.loginForInsights')}
+          </a>
+        </p>
+      ) : null}
       <div ref={scrollRef} className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
         {/* Final-review fix (a11y): no `onClick` here — the Vorige/Volgende
           * buttons and the dots below already reach every step, so a

@@ -66,7 +66,6 @@ export type PanelLang = Lang;
 function buildPanelCopy(lang: Lang) {
   return {
     trigger: t(lang, 'chart.panel.trigger'),
-    regionLabel: t(lang, 'chart.panel.regionLabel'),
     close: t(lang, 'chart.panel.close'),
     tabsLabel: t(lang, 'chart.panel.tabsLabel'),
     tabTemplates: t(lang, 'chart.panel.tabTemplates'),
@@ -687,6 +686,19 @@ export interface ChartConfigPanelProps {
    * panel only reports the pick, it never resolves or applies anything
    * itself. Optional so every existing render call keeps compiling. */
   onApplyTemplate?: (id: ChartTemplateId) => void;
+  /** R5.2 (journey WP-C, ADR 043 decision 6 revisit): when true AND
+   * `resolved.pristine` (the per-chart override object is empty — no
+   * template applied, no hand tweak yet) AND the templates tabpanel is
+   * actually applicable to this form (`resolved.applicable.has('grid')`, the
+   * same gate the tabpanel itself carries — MEDIUM-2), the panel's initial tab is
+   * Sjablonen instead of Grafiek — a first-time reader sees the looks
+   * gallery, not the raw controls. Computed once at mount (a lazy
+   * `useState` initializer), so a tweak made AFTER opening never flips the
+   * tab back — "once anything was changed, keep current behaviour" per the
+   * spec. Optional and OFF by default so every existing render call (test
+   * or otherwise) that doesn't pass it keeps opening on Grafiek exactly as
+   * before this task. */
+  openTemplatesWhenPristine?: boolean;
 }
 
 /** The "Opmaak"/"Style" trigger button — split out of `ChartConfigPanel` by
@@ -745,6 +757,7 @@ export function ChartConfigPanel({
   frameImage = null,
   onFrameImage = () => {},
   onApplyTemplate,
+  openTemplatesWhenPristine = false,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   // ADR 043: which of the six named looks (if any) the resolved values
@@ -752,7 +765,18 @@ export function ChartConfigPanel({
   // aria-checked (the gallery is a radiogroup). Recomputed every render
   // straight from resolved.values, no local copy of the pick.
   const currentTemplate = matchTemplate(resolved.values, resolved.locks);
-  const [activeTab, setActiveTab] = useState<TabKey>('chart');
+  // R5.2 (ADR 043 decision 6 revisit): lazy initializer — evaluated once at
+  // mount only, so a later tweak (which flips `resolved.pristine` false on a
+  // re-render) never yanks the panel back to Sjablonen mid-session.
+  // Strong-tier review MEDIUM-2: the templates TABPANEL is gated on
+  // `resolved.applicable.has('grid')` (see its render below), so without the
+  // same gate here a table form could select a tab whose panel never renders
+  // — a selected tab with no panel.
+  const [activeTab, setActiveTab] = useState<TabKey>(() =>
+    openTemplatesWhenPristine && resolved.pristine && resolved.applicable.has('grid')
+      ? 'templates'
+      : 'chart',
+  );
   // WP218 phase 2: shared by both account-row buttons — a save/forget round
   // trip disables both while pending (never two in flight for the same
   // panel instance) and the outcome status line persists until the next
@@ -873,6 +897,22 @@ export function ChartConfigPanel({
     font: fontTabRef,
     frame: frameTabRef,
   };
+
+  // LOW code-review finding (session 101): ChartEditModal's Dialog focuses
+  // its popup on open but takes no view on WHICH descendant should end up
+  // focused — left unhandled, Base UI's own "first focusable element" would
+  // land on whatever happens to sit first in the popup's DOM, which could
+  // easily be a control in the chart pane (a legend toggle, the Vanaf/Tot
+  // zoom select) rather than anything in this panel, even though this panel
+  // is the entire reason the reader opened "Opmaak". `[]` deps: this
+  // component remounts fresh every time the modal opens (ChartEditModal
+  // itself renders null while `!open`, and `key={chartEpoch}` remounts it
+  // again on a spec swap), so "on mount" already means "every time this
+  // panel appears" — a real effect, not a one-time-ever curiosity.
+  useEffect(() => {
+    tabRefs[activeTab].current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately mount-only, see comment above.
+  }, []);
 
   // Task 5 (design §C2): the Frame tab's "Own image" refusal lines — which
   // of the two (too large / wrong type) to show, or neither. Local, not
@@ -1052,34 +1092,21 @@ export function ChartConfigPanel({
   }
 
   const regionId = `${idPrefix}-style`;
-  const headingId = `${idPrefix}-style-heading`;
   const tabId = (key: TabKey) => `${idPrefix}-style-tab-${key}`;
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
 
+  // ChartEditModal (the real Dialog this panel now renders inside) already
+  // owns focus-trap/focus-on-open and Escape-to-close natively — this used
+  // to hand-roll both (a `dialogRef` focus effect + an Escape keydown
+  // handler with its own `stopPropagation`) back when the panel was a plain
+  // `role="region"` in the page flow with no dialog behind it. Keeping both
+  // mechanisms would risk them double-firing on the same Escape keypress;
+  // `closeAndRefocus` survives only for the panel's own explicit "Sluiten"
+  // button.
   function closeAndRefocus(): void {
     onOpenChange(false);
     document.getElementById(triggerId)?.focus();
   }
-
-  function onRegionKeyDown(event: KeyboardEvent<HTMLElement>): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      // React's synthetic events bubble the REACT tree (this region is a
-      // React-tree child of ChartView regardless of DOM position): stop the
-      // synthetic event here so no ancestor (the story region, the page)
-      // ever sees this Escape as its own.
-      event.stopPropagation();
-      closeAndRefocus();
-    }
-  }
-
-  // The region receives focus itself when it opens (never trapped — Tab can
-  // still leave it), so a keyboard user landing here after activating the
-  // trigger doesn't have to hunt for it.
-  const dialogRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (open) dialogRef.current?.focus();
-  }, [open]);
 
   function selectTab(next: TabKey): void {
     setActiveTab(next);
@@ -1141,52 +1168,47 @@ export function ChartConfigPanel({
   const visibleToggles = toggles.filter((toggle) => resolved.applicable.has(toggle.key));
   const showGroupLabelId = `${idPrefix}-style-label-show`;
 
-  // Owner ask (session 94): an INLINE region below the chart, in its own
-  // card — not a floating/portaled dialog (Task 6's earlier design, now
-  // superseded). `role="region"` (there was never an outside-click close or
-  // a focus trap — "the chart stays fully interactive behind it" was always
-  // true, it's just no longer a "behind" at all, so "dialog" semantics no
-  // longer fit). `aria-labelledby` keeps pointing at `copy.regionLabel`
-  // ("Opmaak van de grafiek"/"Chart style") — unchanged, so no existing
-  // accessible-name assumption breaks. Renders identically at every
-  // viewport width now (no more `lg:`-gated floating-box-vs-bottom-sheet
-  // split): it flows with the page, the same "chart first, panel under it"
-  // slot the Story panel already uses right below this one.
-  // Known, pre-existing gap `role="region"` makes more visible than
-  // `role="dialog"` did: `copy.regionLabel` is one fixed string, not unique
-  // per chart instance, so a page with several charts open at once (no
-  // `StylePanelOwnerProvider`, e.g. the homepage) can show multiple regions
-  // sharing the identical accessible name "Opmaak van de grafiek" in a
-  // screen reader's landmark/region list, with no way to tell them apart.
-  // Not introduced by this change (the same non-unique name already existed
-  // under "dialog"); worth a per-instance name if it turns out to matter in
-  // practice — not fixed here.
+  // Session 101 (2026-09-13, owner present): this panel's content now
+  // renders INSIDE `ChartEditModal` (chart.tsx mounts it as that shell's
+  // `children`) rather than as its own standalone element — a real modal,
+  // chart on the left, this panel on the right (open-questions #243). Two
+  // earlier designs preceded this: a floating non-modal `role="dialog"`
+  // beside a still-interactive chart (session 92, ADR 039 addendum), then a
+  // plain `role="region"` inline card below the chart (session 94, this
+  // very block, now superseded). Both `role`/`aria-labelledby` and the
+  // sr-only `<h2>` they needed are gone — the wrapping Dialog's own
+  // `DialogTitle` (chart.tsx builds it straight from the same
+  // `chart.panel.regionLabel` key this panel used to render itself) now
+  // carries the accessible name for the whole popup, so there is nothing
+  // left for this panel to label itself; `id={regionId}` survives only
+  // because the Style trigger's `aria-controls` still points at it.
   const dialogContent = open ? (
-    <section
-      ref={dialogRef}
-      id={regionId}
-      role="region"
-      aria-labelledby={headingId}
-      tabIndex={-1}
-      onKeyDown={onRegionKeyDown}
-      className="mt-3 w-full rounded-lg border border-border bg-card p-3 text-xs shadow-sm"
-    >
-      <h2 id={headingId} className="sr-only">
-        {copy.regionLabel}
-      </h2>
+    <div id={regionId} className="w-full text-xs">
       {/* Layout refactor (owner: option A): the region's header row is now
         * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
         * left, "Taal van de grafiek" and a Close button on the right (its
         * own visible <label> dropped; the select already carried an
         * identical `aria-label`, so removing the label line loses no
         * accessible name). Previously the language select lived inside the
-        * Grafiek tabpanel only. */}
-      <div className="flex items-center justify-between gap-2">
+        * Grafiek tabpanel only.
+        *
+        * Two rows, not one (session 101 UI-review fix): this used to be a
+        * single `justify-between` row, which fit while the panel had the
+        * full card width to itself. Now that ChartEditModal confines it to a
+        * 22rem column, that one row (5 tabs + the language select + the
+        * Close button) measured 500px wide in Dutch against a 352px column —
+        * a confirmed, reproducible overflow that pushed the select and the
+        * Close button off the visible edge entirely (not merely redundant
+        * with the Dialog's own X, per the earlier code-review note, but
+        * unreachable by mouse). The tablist gets its own wrapping row; the
+        * select and Close button share a second row that never competes with
+        * it for width. */}
+      <div className="flex flex-col gap-2">
         <div
           role="tablist"
           aria-label={copy.tabsLabel}
           onKeyDown={onTabsKeyDown}
-          className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+          className="inline-flex flex-wrap items-center gap-0.5 rounded-lg bg-muted p-0.5"
         >
           {tabButton('templates', copy.tabTemplates)}
           {tabButton('chart', copy.tabChart)}
@@ -1194,29 +1216,31 @@ export function ChartConfigPanel({
           {tabButton('font', copy.tabFont)}
           {tabButton('frame', copy.tabFrame)}
         </div>
-        {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
-          * preselects the chart's CURRENT language — `resolved.values.language
-          * ?? lang`, i.e. the per-chart override if one is set, else the
-          * resolved language the chart is actually showing right now (`lang`,
-          * which chart.tsx already computes as `pres.language ?? appLang`).
-          * Every pick is an explicit per-chart choice (`{ language: value }`);
-          * `null` — "follow the app" — remains the untouched default a chart
-          * starts with, it's just never produced by this control any more.
-          * Always applicable/never locked (chart-presentation.ts), so this
-          * renders identically on every form, table included. */}
-        <select
-          id={`${idPrefix}-style-language`}
-          aria-label={copy.languageLabel}
-          value={resolved.values.language ?? lang}
-          onChange={(e) => onChange({ language: e.target.value as Lang })}
-          className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
-        >
-          <option value="nl">{copy.languageNl}</option>
-          <option value="en">{copy.languageEn}</option>
-        </select>
-        <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
-          <X aria-hidden="true" />
-        </Button>
+        <div className="flex items-center justify-between gap-2">
+          {/* WP218 phase 4 (#219, design §4), owner ask (2026-09-09): the select
+            * preselects the chart's CURRENT language — `resolved.values.language
+            * ?? lang`, i.e. the per-chart override if one is set, else the
+            * resolved language the chart is actually showing right now (`lang`,
+            * which chart.tsx already computes as `pres.language ?? appLang`).
+            * Every pick is an explicit per-chart choice (`{ language: value }`);
+            * `null` — "follow the app" — remains the untouched default a chart
+            * starts with, it's just never produced by this control any more.
+            * Always applicable/never locked (chart-presentation.ts), so this
+            * renders identically on every form, table included. */}
+          <select
+            id={`${idPrefix}-style-language`}
+            aria-label={copy.languageLabel}
+            value={resolved.values.language ?? lang}
+            onChange={(e) => onChange({ language: e.target.value as Lang })}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            <option value="nl">{copy.languageNl}</option>
+            <option value="en">{copy.languageEn}</option>
+          </select>
+          <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
       </div>
 
       {/* ADR 043: gated on `grid` (present for every non-table form) rather
@@ -1803,7 +1827,7 @@ export function ChartConfigPanel({
           ) : null}
         </div>
       ) : null}
-    </section>
+    </div>
   ) : null;
 
   return dialogContent;

@@ -32,6 +32,20 @@ describe('ThemeToggle — nl (default)', () => {
   });
 });
 
+// R9.1 (#238): each option measured 24px tall at 375px — under the 44px
+// minimum tap target — while 1280px had to stay pixel-identical. Pinned as a
+// CSS-contract test (jsdom has no layout engine to measure real pixels).
+describe('ThemeToggle — phone tap targets (R9.1, #238)', () => {
+  it('gives each option a 44px tap target only below sm', () => {
+    render(<ThemeToggle />);
+    for (const name of ['Licht thema', 'Donker thema', 'Systeemthema']) {
+      const className = screen.getByRole('button', { name }).className;
+      expect(className).toContain('h-11');
+      expect(className).toContain('sm:h-6');
+    }
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface.
 describe('ThemeToggle — en', () => {
   it('renders the English group label and option labels under LangProvider lang="en"', () => {

@@ -49,7 +49,10 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-pressed={active}
             onClick={() => setTheme(value)}
             className={cn(
-              'inline-flex h-6 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
+              // R9.1 (#238): 24px tall was under the 44px minimum tap target
+              // at 375px; `h-11 sm:h-6` widens it only below `sm`, so the
+              // desktop control stays pixel-identical to before.
+              'inline-flex h-11 sm:h-6 w-11 sm:w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
               active && 'bg-secondary text-foreground',
             )}
           >

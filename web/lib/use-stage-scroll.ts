@@ -20,6 +20,14 @@
 // plane's entry animation has run (`entryProgress`), which unlike `progress`
 // ramps once, continuously, from the top of the column to the moment the
 // first caption is centred. `progress` stays exactly as it was.
+//
+// Fix (scrollbar-drag auto-play gap): `programmatic.current` was internal
+// only — no caller outside this hook could tell the stage's own scroll
+// (`beginProgrammatic()` already called) apart from the reader's. The hook
+// now also returns `isProgrammatic()`, a live read of that same ref, so
+// chart-story-stage.tsx can stop auto-play on a real reader scroll —
+// including a scrollbar-thumb drag, which fires only a `scroll` DOM event —
+// while leaving the stage's own programmatic moves alone.
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { entryProgress, stageProgress, type StageProgress } from './chart-stage.ts';
 
@@ -32,6 +40,27 @@ export interface StageState extends StageProgress {
 
 export interface StageScroll extends StageState {
   beginProgrammatic(): void;
+  /** True from the moment `beginProgrammatic()` is called until 150 ms have
+   * passed with no further `scroll` event — i.e. while a scroll the STAGE
+   * itself caused (a dot/arrow-key jump, auto-play's own `scrollIntoView`)
+   * has not yet finished settling. False once that window has closed, so a
+   * scrollbar-thumb drag (which fires only a `scroll` DOM event, unlike
+   * wheel/touch/pointerdown) reads as non-programmatic and can stop
+   * auto-play the way any other reader gesture does
+   * (chart-story-stage.tsx's `onAnyScroll`).
+   *
+   * This is a TIME-WINDOW read, not a per-event cause read: any `scroll`
+   * event — the stage's own or the reader's — re-arms the same window while
+   * it is open (see `onScroll` below), so a drag that starts WHILE a
+   * programmatic scroll is still settling reads as programmatic too, for as
+   * long as the drag itself keeps producing events under 150 ms apart.
+   * Known, accepted residual (narrower than the gap this method closes):
+   * only an isolated drag — one that does not overlap an in-flight
+   * programmatic scroll — is guaranteed to be told apart.
+   *
+   * Reads the same ref `beginProgrammatic` sets, live at call time — safe to
+   * call from a scroll listener registered outside this hook. */
+  isProgrammatic(): boolean;
 }
 
 const SETTLE_MS = 150;
@@ -60,6 +89,14 @@ export function useStageScroll(
     programmatic.current = true;
     armSettle();
   }, [armSettle]);
+
+  // Fix (scrollbar-drag auto-play gap): a plain accessor over the ref, so a
+  // caller outside this hook (chart-story-stage.tsx's `onAnyScroll`) can tell
+  // its own programmatic scroll apart from the reader's, per-event. Stable
+  // across renders like `beginProgrammatic` above — it closes over the ref,
+  // never over `state` — so it is safe to call from an effect whose deps
+  // deliberately exclude the hook's return value.
+  const isProgrammatic = useCallback((): boolean => programmatic.current, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -105,5 +142,5 @@ export function useStageScroll(
     };
   }, [containerRef, panelRefs, stepCount, enabled, armSettle]);
 
-  return { ...state, beginProgrammatic };
+  return { ...state, beginProgrammatic, isProgrammatic };
 }

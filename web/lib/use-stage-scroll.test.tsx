@@ -1,11 +1,17 @@
 import { act, cleanup, render } from '@testing-library/react';
-import { createElement, useRef } from 'react';
+import { createElement, useRef, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useStageScroll } from './use-stage-scroll.ts';
 
 function Probe({ enabled }: { enabled: boolean }) {
   const container = useRef<HTMLDivElement>(null);
   const panels = useRef<(HTMLElement | null)[]>([]);
+  // Fix (scrollbar-drag auto-play gap): isProgrammatic() is a function, not
+  // state, so reading it into a rendered node needs an explicit snapshot —
+  // a button that copies the CURRENT (live, ref-backed) value into local
+  // state on click, the same way a real caller reads it inside an event
+  // handler (chart-story-stage.tsx's onAnyScroll).
+  const [programmaticLabel, setProgrammaticLabel] = useState('unknown');
   const s = useStageScroll(container, panels, 3, enabled);
   return createElement(
     'div',
@@ -15,11 +21,13 @@ function Probe({ enabled }: { enabled: boolean }) {
     // progress. Its own node so the existing `out` assertions keep pinning
     // exactly what they always did.
     createElement('span', { 'data-testid': 'entry' }, `${s.entry}`),
+    createElement('span', { 'data-testid': 'is-programmatic' }, programmaticLabel),
     // Fix round 1 (item B): a button exposing the hook's own
     // `beginProgrammatic()` so a test can drive a programmatic scroll the
     // same way a real caller (dots/keys/auto-play in chart-story-stage.tsx)
     // does, without reaching into the hook's internals.
     createElement('button', { type: 'button', 'data-testid': 'begin-programmatic', onClick: () => s.beginProgrammatic() }),
+    createElement('button', { type: 'button', 'data-testid': 'check-programmatic', onClick: () => setProgrammaticLabel(String(s.isProgrammatic())) }),
     ...[0, 1, 2].map((i) => createElement('section', { key: i, ref: (el: HTMLElement | null) => { panels.current[i] = el; }, 'data-testid': `p${i}` })),
   );
 }
@@ -149,5 +157,38 @@ describe('useStageScroll', () => {
       vi.advanceTimersByTime(20);
     });
     expect(getByTestId('out').textContent).toBe('0:0');
+  });
+
+  // NEW regression test (scrollbar-drag auto-play fix): isProgrammatic()
+  // exposes the same ref beginProgrammatic() sets — false before it is ever
+  // called, true immediately after, and false again once the settle window
+  // has closed with no further scroll. chart-story-stage.tsx's onAnyScroll
+  // reads exactly this to tell its own programmatic scroll (a dot/arrow-key
+  // jump, auto-play's scrollIntoView) apart from a real reader scroll,
+  // including a scrollbar-thumb drag (which fires only a `scroll` event).
+  it('isProgrammatic() reads true right after beginProgrammatic() and false again once it settles', () => {
+    const { getByTestId } = render(<Probe enabled />);
+    const scroller = getByTestId('scroller');
+    Object.defineProperty(scroller, 'clientHeight', { value: 800, configurable: true });
+    layout(getByTestId('p0'), 0, 800);
+    layout(getByTestId('p1'), 800, 800);
+    layout(getByTestId('p2'), 1600, 800);
+
+    act(() => {
+      (getByTestId('check-programmatic') as HTMLButtonElement).click();
+    });
+    expect(getByTestId('is-programmatic').textContent).toBe('false');
+
+    act(() => {
+      (getByTestId('begin-programmatic') as HTMLButtonElement).click();
+      (getByTestId('check-programmatic') as HTMLButtonElement).click();
+    });
+    expect(getByTestId('is-programmatic').textContent).toBe('true');
+
+    act(() => {
+      vi.advanceTimersByTime(150); // the settle window
+      (getByTestId('check-programmatic') as HTMLButtonElement).click();
+    });
+    expect(getByTestId('is-programmatic').textContent).toBe('false');
   });
 });

@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // testTimeout raised from vitest's 5s default (session 56, 2026-07-25).
 // app/onboarding-cron.test.ts exercises the route by DYNAMICALLY importing it
@@ -29,6 +29,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["**/*.test.{ts,tsx}"],
+    // web/backend is a symlink into ../src (the backend's own test suite); exclude it
+    exclude: [...configDefaults.exclude, "backend/**"],
     setupFiles: ["./vitest.setup.ts"],
     testTimeout: 15_000,
   },

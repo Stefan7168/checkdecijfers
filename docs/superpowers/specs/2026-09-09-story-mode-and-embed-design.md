@@ -261,6 +261,26 @@ Story inside the embed (a `?story=1` that mounts the story panel in embed mode);
 Ontdek/homepage chart embeds (curated specs have no audit row — a second token kind); sizes and
 title hiding; per-embed revocation table; the Pro plan itself (#205).
 
+**As-built correction (2026-09-10, session 93, branch `embed-charts`, ADR
+[041](../../decisions/041-public-embed-pages.md)):** built as designed above, with three points
+where reality diverged from this section's literal text rather than merely extending it — recorded
+here so this design record does not read as still-accurate on these specifics. **(1)** B3's framing
+pattern is `/embed/:path+` (one-or-more segments) in `next.config.ts`, not the `/embed/:path*`
+written above — `:path*` (zero-or-more) let a bare `/embed` URL match BOTH the deny-framing and the
+wide-open header groups at once, confirmed live via `curl` and closed by the one-character fix.
+**(2)** B3's Live branch reads simply as "`hasProPlan` on the row's userId," as if resolving that
+user's email were free — it is not: no mechanism anywhere in this codebase resolves an arbitrary
+user id to that user's email (only the CURRENT session's own email is ever available, via
+`currentUserEmail()`), so **Live is gated CLOSED for every embed today, by construction, until that
+lookup is built** (ADR 041, open-questions [#224](../../open-questions.md)) — a real, deliberate,
+safe limitation surfaced during the build, not an oversight in what shipped. **(3)** B3's
+`revalidate = 3600` was deliberately NOT added: `dynamic = 'force-dynamic'` (needed regardless)
+silently forces Next's own per-fetch revalidate to `0`, so the export as literally written would
+have been a no-op, and unsafe if that precedence relationship ever changed (ADR 041, Decision point
+12). **ADR 041 is the authoritative as-built record for all of Part B** — this design section is
+kept verbatim above as the historical record of what was approved before the build, not updated to
+match it.
+
 ---
 
 ## Verification and workflow
