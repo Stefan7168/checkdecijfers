@@ -10,6 +10,7 @@
 // so it is safe to call from inside or outside a transaction alike.
 import type { Db } from '../db/types.ts';
 import type { ActionClass } from './types.ts';
+import { compensateBucket, debitBucket, getBucketBalance } from './pro-bucket.ts';
 
 export async function getBalance(db: Db, userId: string): Promise<number> {
   const { rows } = await db.query(
@@ -17,6 +18,26 @@ export async function getBalance(db: Db, userId: string): Promise<number> {
     [userId],
   );
   return Number(rows[0]!.balance);
+}
+
+/** null if the user has no active Pro subscription row, or it has lapsed
+ * (current_period_end in the past) — the SAME condition src/billing/pro.ts's
+ * hasProPlan checks for the subscription-row half of its OR (Task 4/7 wires
+ * hasProPlan itself; this is the lower-level DB read splitDebit needs). */
+export async function getCurrentGrantId(db: Db, userId: string): Promise<string | null> {
+  const { rows } = await db.query(
+    `select current_period_grant_id from pro_subscriptions
+     where user_id = $1 and status in ('active', 'trialing', 'past_due') and current_period_end > now()`,
+    [userId],
+  );
+  const row = rows[0];
+  return row === undefined ? null : String(row.current_period_grant_id);
+}
+
+export async function getSpendableBalance(db: Db, userId: string, grantId: string | null): Promise<number> {
+  const permanent = await getBalance(db, userId);
+  const bucket = grantId === null ? 0 : await getBucketBalance(db, userId, grantId);
+  return permanent + bucket;
 }
 
 /** Reads the current price from action_class_prices (migration 006) — never
@@ -289,4 +310,66 @@ export async function compensate(
   );
   const row = rows[0];
   return row === undefined ? null : { id: Number(row.id) };
+}
+
+export interface SplitDebitResult {
+  fromBucket: number;
+  fromLedger: number;
+  bucketEntry: { id: number } | null;
+  ledgerEntry: LedgerEntry | null;
+}
+
+type DebitFn = (db: Db, userId: string, requestId: string, credits: number) => Promise<LedgerEntry | null>;
+
+/** Splits one logical charge between the Pro bucket (spent first) and the
+ * permanent ledger (the remainder). MUST be called inside the same
+ * advisory-locked transaction as the caller's existing balance check
+ * (reserveDebit's pattern) — never as a separate statement, or it
+ * reintroduces the exact race pg_advisory_xact_lock exists to close.
+ * `debitFn` is the existing, UNCHANGED debit primitive for this action type
+ * (debitQuestion, debitOnboarding, debitWebSearch, or debitDataset) — called
+ * with ONLY the ledger portion, so a fully-bucket-funded charge writes zero
+ * credit_transactions rows (the byte-identical-for-non-Pro guarantee: when
+ * grantId is null or the bucket is empty, fromBucket is always 0 and this
+ * collapses to exactly today's single debitFn call with the full amount). */
+export async function splitDebit(
+  tx: Db,
+  userId: string,
+  requestId: string,
+  credits: number,
+  debitFn: DebitFn,
+  note: string,
+  grantId: string | null = null,
+): Promise<SplitDebitResult> {
+  const bucketBalance = grantId === null ? 0 : await getBucketBalance(tx, userId, grantId);
+  const fromBucket = Math.min(credits, bucketBalance);
+  const fromLedger = credits - fromBucket;
+  const bucketEntry = fromBucket > 0 ? await debitBucket(tx, userId, grantId!, requestId, fromBucket, note) : null;
+  const ledgerEntry = fromLedger > 0 ? await debitFn(tx, userId, requestId, fromLedger) : null;
+  return { fromBucket, fromLedger, bucketEntry, ledgerEntry };
+}
+
+/** Refunds a split debit, bucket portion first (capped at what was actually
+ * taken from it), then the ledger portion — the exact inverse order of
+ * splitDebit's consumption, so a full refund (refundCredits === the
+ * original `credits`) exactly undoes it, and a partial refund (the
+ * clarification-price case) always tops up the bucket before the ledger. */
+export async function compensateSplit(
+  db: Db,
+  userId: string,
+  split: SplitDebitResult,
+  refundCredits: number,
+  auditAnswerId: number | null,
+): Promise<void> {
+  let remaining = refundCredits;
+  if (split.bucketEntry !== null && remaining > 0) {
+    const amount = Math.min(remaining, split.fromBucket);
+    await compensateBucket(db, userId, split.bucketEntry.id, amount);
+    remaining -= amount;
+  }
+  if (split.ledgerEntry !== null && remaining > 0) {
+    const amount = Math.min(remaining, split.fromLedger);
+    await compensate(db, userId, split.ledgerEntry.id, amount, auditAnswerId);
+    remaining -= amount;
+  }
 }
