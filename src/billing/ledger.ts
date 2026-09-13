@@ -9,7 +9,7 @@
 // transaction even if the JS exception is caught; ON CONFLICT never throws,
 // so it is safe to call from inside or outside a transaction alike.
 import type { Db } from '../db/types.ts';
-import type { ActionClass } from './types.ts';
+import type { ActionClass, LedgerReason } from './types.ts';
 import { compensateBucket, debitBucket, getBucketBalance } from './pro-bucket.ts';
 
 export async function getBalance(db: Db, userId: string): Promise<number> {
@@ -118,19 +118,25 @@ export type ReserveDebitResult =
  * replaces.
  *
  * Duplicate detection: previously a single `entry === null` check on
- * debitQuestion's own idempotent `on conflict`. Now splitDebit can write up
- * to two rows (bucket + ledger) sharing one requestId, written together in
- * the same transaction on the first call — so on a genuine retry BOTH
- * `debitBucket` and `debitFn` hit their own idempotent `on conflict` and
- * return null together. `bucketEntry === null && ledgerEntry === null` is
- * therefore the correct "this exact request was already fully processed"
- * signal. A partial-null split (e.g. fromBucket recomputed as 0 on a retry
- * that originally spent from the bucket) cannot happen from a genuine
- * retry: requestId uniqueness means recomputing fromBucket/fromLedger
- * identically requires the account to be unchanged since the original
- * call — if it DID change (e.g. a renewal landed in between), correctly
- * treating the retry as a new debit with the currently-correct split is the
- * desired behavior, not a bug. */
+ * debitQuestion's own idempotent `on conflict`. splitDebit can now write up
+ * to two rows (bucket + ledger) sharing one requestId, in two DIFFERENT
+ * tables — and each table's `on conflict` only ever catches a retry that
+ * lands on the same table as the original attempt.
+ *
+ * An earlier version of this comment claimed a retry landing on the other
+ * leg "cannot happen". That was wrong, and was reproduced against a real
+ * migrated database (review finding, 2026-09-14): the first attempt finds an
+ * empty bucket and debits credit_transactions; a Stripe invoice.paid webhook
+ * funds the bucket; the SAME requestId is retried, now has bucket balance,
+ * and its pro_bucket_ledger insert conflicts with nothing — two real charges
+ * for one logical request, and (via gate.ts) the answer pipeline rerun a
+ * second time. splitDebit therefore now checks BOTH ledgers for an
+ * already-committed debit on this (userId, requestId) BEFORE it decides
+ * which leg to write, and returns the same both-entries-null result an
+ * ordinary same-table retry produces — so
+ * `bucketEntry === null && ledgerEntry === null` remains the single "this
+ * exact request was already fully processed" signal, now covering the
+ * cross-ledger case too. */
 export async function reserveDebit(
   db: Db,
   userId: string,
@@ -144,7 +150,16 @@ export async function reserveDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const split = await splitDebit(tx, userId, requestId, required, debitQuestion, 'question debit', grantId);
+    const split = await splitDebit(
+      tx,
+      userId,
+      requestId,
+      required,
+      debitQuestion,
+      'question_cost',
+      'question debit',
+      grantId,
+    );
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -352,26 +367,108 @@ export interface SplitDebitResult {
 
 type DebitFn = (db: Db, userId: string, requestId: string, credits: number) => Promise<LedgerEntry | null>;
 
+/** The subset of LedgerReason a DebitFn can write: the four negative-delta,
+ * request_id-scoped reasons, each with its own
+ * `(user_id, request_id)`-partial unique index (migrations 005/012/018/027).
+ * Derived from LedgerReason with Extract so renaming a reason there breaks
+ * here loudly instead of silently drifting. */
+type DebitReason = Extract<
+  LedgerReason,
+  'question_cost' | 'onboarding_cost' | 'websearch_cost' | 'dataset_cost'
+>;
+
+/** Cross-ledger idempotency guard (review finding, 2026-09-14, #205): has
+ * this exact (userId, requestId) ALREADY been debited, in EITHER ledger?
+ *
+ * Each table's own `on conflict ... do nothing` only catches a retry that
+ * lands on the SAME table as the original attempt. A retry that lands on the
+ * other leg conflicts with nothing there and would insert a second, real
+ * charge for one logical request. Both directions are reachable in
+ * production: ledger → bucket (an invoice.paid webhook funded the bucket
+ * between the attempt and its retry) and bucket → ledger (the bucket was
+ * drained by other requests, or the subscription lapsed / the grant rotated,
+ * so splitDebit is now called with grantId null). The bucket half therefore
+ * runs even when grantId is null — the caller's current Pro state says
+ * nothing about where a PREVIOUS attempt's money came from.
+ *
+ * Each half asks exactly what that table's own unique index would have
+ * caught, so this can never refuse an insert the index itself would have
+ * allowed:
+ *   - credit_transactions' per-reason partial unique indexes on
+ *     (user_id, request_id) — migrations 005/012/018/027. Hence the `reason`
+ *     scope: an add-on debit (e.g. websearch_cost) that deliberately rides
+ *     alongside a question_cost debit on the SAME requestId is a distinct,
+ *     legitimate charge, not a duplicate.
+ *   - pro_bucket_ledger_one_debit_per_request (migration 030), which is
+ *     `(user_id, request_id) where reason = 'debit'` with NO action-type
+ *     scope. Consequence for a future caller: two different action types
+ *     sharing one requestId cannot both spend from the bucket — the second
+ *     reads as a duplicate here. That is the migration's existing behavior,
+ *     not something added here (its `on conflict` already no-op'd the second
+ *     insert); a caller that needs two bucket-eligible debits for one turn
+ *     must derive a distinct requestId for the add-on.
+ *
+ * Race safety: a SELECT followed by a conditional INSERT is only safe
+ * because every caller runs splitDebit inside reserveDebit's existing
+ * pg_advisory_xact_lock'd transaction (splitDebit's own contract, below).
+ * Concurrent calls for the same user serialize on that lock, and READ
+ * COMMITTED gives this statement a fresh snapshot that already includes
+ * whatever the previous lock holder committed. The per-table `on conflict`
+ * clauses stay in place underneath, unchanged, as the structural backstop —
+ * this guard is the primary defense, not a replacement for them. */
+async function hasCommittedDebit(
+  tx: Db,
+  userId: string,
+  requestId: string,
+  reason: DebitReason,
+): Promise<boolean> {
+  const { rows } = await tx.query(
+    `select 1 as hit from credit_transactions
+       where user_id = $1 and request_id = $2 and reason = $3
+     union all
+     select 1 as hit from pro_bucket_ledger
+       where user_id = $1 and request_id = $2 and reason = 'debit'
+     limit 1`,
+    [userId, requestId, reason],
+  );
+  return rows.length > 0;
+}
+
 /** Splits one logical charge between the Pro bucket (spent first) and the
  * permanent ledger (the remainder). MUST be called inside the same
  * advisory-locked transaction as the caller's existing balance check
  * (reserveDebit's pattern) — never as a separate statement, or it
- * reintroduces the exact race pg_advisory_xact_lock exists to close.
+ * reintroduces the exact race pg_advisory_xact_lock exists to close, and
+ * hasCommittedDebit's check-then-insert above loses its serialization.
  * `debitFn` is the existing, UNCHANGED debit primitive for this action type
  * (debitQuestion, debitOnboarding, debitWebSearch, or debitDataset) — called
  * with ONLY the ledger portion, so a fully-bucket-funded charge writes zero
  * credit_transactions rows (the byte-identical-for-non-Pro guarantee: when
  * grantId is null or the bucket is empty, fromBucket is always 0 and this
- * collapses to exactly today's single debitFn call with the full amount). */
+ * collapses to exactly today's single debitFn call with the full amount).
+ * `reason` must be the credit_transactions reason `debitFn` itself writes —
+ * it is what scopes the idempotency check on that table (see
+ * hasCommittedDebit); `note` is the free-text label for the bucket row.
+ *
+ * A request that was already debited (in either ledger, by any earlier
+ * attempt) returns {fromBucket: 0, fromLedger: 0, bucketEntry: null,
+ * ledgerEntry: null} — the same both-entries-null shape a same-table `on
+ * conflict` retry has always produced, which reserveDebit reads as
+ * `kind: 'duplicate'`. Nothing is written, and the caller must not re-run
+ * whatever the original charge paid for. */
 export async function splitDebit(
   tx: Db,
   userId: string,
   requestId: string,
   credits: number,
   debitFn: DebitFn,
+  reason: DebitReason,
   note: string,
   grantId: string | null = null,
 ): Promise<SplitDebitResult> {
+  if (await hasCommittedDebit(tx, userId, requestId, reason)) {
+    return { fromBucket: 0, fromLedger: 0, bucketEntry: null, ledgerEntry: null };
+  }
   const bucketBalance = grantId === null ? 0 : await getBucketBalance(tx, userId, grantId);
   const fromBucket = Math.min(credits, bucketBalance);
   const fromLedger = credits - fromBucket;
