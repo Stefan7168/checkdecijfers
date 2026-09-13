@@ -14,34 +14,63 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-13, session 101 continued much further, owner present,
-wrap-up ~13:41 UTC).** Full detail: [status-archive.md](status-archive.md)'s top entry.
+**▶ IN PROGRESS (written 2026-09-13/14, session 101 continued overnight, autonomous — owner asleep,
+explicit "keep going, make great progress, use the time fully").** Chart visual/embed pass DONE and
+pushed to `main` (`b86556f`..`841cb83`, 7 commits); now resuming the Pro-subscription-tier build.
+Full detail on both: [status-archive.md](status-archive.md)'s top entry (session 101's own wrap-up)
+plus this block below, updated live as overnight work lands.
 
-**Two open actions, both the owner's to take — nothing else is blocking either:**
-1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified at wrap-up:
-   `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE`, CI green (run `34750329451`, success). The
-   session's own CI wrinkles (a real red-CI doc-convention failure, then a 45+min stuck queue —
-   both fixed, see the archive entry) are resolved. Branch + PR + explicit owner go is this
-   decision's own standing rule, no exception for an owner-present session.
-2. **Continue or redirect the Pro subscription tier build** ([#205](open-questions.md)) — owner
-   approved the design and the 13-task plan; build running via subagent-driven-development,
-   **paused after Task 4 of 13** (money-path core-debit wiring, done + tested, not yet reviewed)
-   for this wrap-up. Lives on a kept worktree, `.claude/worktrees/pro-subscription-tier`
-   (branch `worktree-pro-subscription-tier`), **not pushed to origin, not merged** — exactly the
-   money-path posture. To resume: read the SDD ledger at
-   `.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`
-   — it has the exact next step (dispatch Task 4's task reviewer) and every ruling made so far.
-   Full design: [superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md).
-   Full plan: [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
+**Just shipped (2026-09-13/14, autonomous, pushed to `main`, no PR — chart/UI, not money-path):**
+a 3-task chart visual + embed plan
+([superpowers/plans/2026-09-13-chart-visual-embed-pass.md](superpowers/plans/2026-09-13-chart-visual-embed-pass.md),
+full SDD ledger + every task/scoped/final review at `.superpowers/sdd/2026-09-13-chart-visual-embed-pass/`):
+(1) the default chart chrome (`STOCK_PRESENTATION`) gets a soft shadow + rounded corners instead of
+literally none — every unstyled chart everywhere, including the gallery/landing; (2) two new chart
+templates, **Warm** and **Earth** (ADR 043's mechanism, using the previously-unused `dawn`/`sand`
+frame-gradient presets), surfaced on 2 of the 12 public gallery stories; (3) the Embed dialog gets a
+live chart preview, closing the two residuals ADR [039](decisions/039-chart-presentation-panel.md)'s
+prior addendum flagged as not-done (no preview; Style/Embed not mutually exclusive — now free, since
+they share one `openPanel` slot). Real bugs found and fixed via task review before push: a build-
+breaking `tsc` error (a fixed event-name roster not extended for the new templates), a distinctness
+violation (Earth's overrides exactly duplicated Minimal's), a story-snapshot leak and a click-to-
+annotate leak in the embed preview — all with regression tests, independently re-verified by a
+scoped re-reviewer who reran the actual test suite rather than trusting reports. Final whole-branch
+review (opus) plus a manual LOW-effort code-review pass: 0 outstanding findings. Full verification
+block green: root+web typecheck, root chart tests 213/213, full web suite 1691/1691, real `next
+build`. A real-browser check on the actual `/galerij` page (not just jsdom) confirmed the new
+templates render correctly and distinctly. **Still open, flagged not fixed:** a pre-existing (not
+newly introduced) Escape-focus gap on the Embed trigger; the embed preview shows the reader's live
+on-screen state but the actual `/embed/[token]` URL doesn't encode style/zoom/hidden-series overrides
+— worth an owner product decision, not a silent fix. [Open-questions #243](open-questions.md)
+updated with the full as-built.
 
-**Also shipped, verified via real CI + deploy this session, live in production, no action needed:**
+**Now resuming (2026-09-13/14, autonomous, per the owner's explicit go-ahead to continue overnight):
+the Pro subscription tier build** ([#205](open-questions.md)) — owner-approved design + 13-task
+plan, on the kept worktree `.claude/worktrees/pro-subscription-tier`
+(branch `worktree-pro-subscription-tier`). Per the money-path git-workflow rule ([#118](open-questions.md)),
+this build proceeds all the way to an **open PR — never a merge** — without further owner input,
+exactly as the plan's own final step already specifies. SDD ledger:
+`.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`.
+Full design: [superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md).
+Full plan: [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
+
+**Two open actions still the owner's alone to take:**
+1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified at session 101's wrap-up:
+   `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE`, CI green (run `34750329451`, success). Branch +
+   PR + explicit owner go is this decision's own standing rule, no exception for an owner-present
+   session — and no exception for an autonomous one either.
+2. **Give the go on the Pro-subscription-tier PR**, once opened overnight — same standing rule.
+
+**Also shipped earlier in session 101 (owner present), verified via real CI + deploy, live in
+production, no action needed:**
 ADR [047](decisions/047-repositioning-embedded-sourced-chart.md) (repositioning, formalized);
 sidebar tap-target fix ([#238](open-questions.md)); [#245](open-questions.md) actions 1+2 (test-DB
 perf fix + CI 3-way sharding — one real bug found and fixed live on the sharding push, see the
 archive entry for the full account); Dependabot #16/#17 merged (repo has zero open Dependabot PRs
 now); README.md's stale "ADRs 001–009" pointer corrected. Investigated, correctly NOT built:
 [#237](open-questions.md)(d) embed code per gallery card — needs real new token/route plumbing,
-scope recorded.
+scope recorded (unrelated to the Embed *preview* built overnight, above — #237(d) is about embed
+code from a gallery card directly, still not built).
 
 **Owner steps still open, carried forward unchanged (not touched this session):** `npm run db:migrate` for
 migrations 028+029 then `npm run usage:report`; the trust-page contact e-mail (owner: leave the placeholder for
