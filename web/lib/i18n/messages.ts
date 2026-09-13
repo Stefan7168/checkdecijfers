@@ -52,6 +52,11 @@ const nl = {
   // matches the original template literal exactly.
   'chat.replyCostSuffix': ' · antwoorden op de wedervraag kost ~{price} credits',
   'chat.costCredits': '{n} credits',
+  // ADR 026 addendum (session 101): the confirm-first offer's own button
+  // (#109's reversal, owner decision 4) — a chat.tsx-owned label, unlike the
+  // byte-pinned pipeline copy (ONBOARDING_OFFER_TEXT) it sits next to, since
+  // it's chrome (a button caption), not the CBS pipeline's own Dutch output.
+  'chat.onboardingOfferButton': 'Haal op voor {n} credits',
   'chat.dockedChipChart': 'Grafiek in het paneel →',
   'chat.dockedChipCard': 'Kaart in het paneel →',
   // The owner-mandated busy-text honesty distinction (CBS vs web vs both) —
@@ -799,6 +804,7 @@ const en: Messages = {
   'chat.provisionalBadge': 'provisional',
   'chat.replyCostSuffix': ' · answering the follow-up question costs ~{price} credits',
   'chat.costCredits': '{n} credits',
+  'chat.onboardingOfferButton': 'Fetch for {n} credits',
   'chat.dockedChipChart': 'Chart in panel →',
   'chat.dockedChipCard': 'Card in panel →',
   'chat.busyBoth': 'Searching CBS figures and the web…',

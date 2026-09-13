@@ -50,7 +50,7 @@ afterEach(() => {
 function outcome(gated: GatedResponse): AskOutcome {
   // WP135: AskOutcome gained threadId; the Dashboard never sends a threadId
   // (not thread-aware), so it is null here.
-  return { gated, context: null, threadId: null };
+  return { gated, context: null, threadId: null, onboardingOffer: null };
 }
 
 /** Same documented narrow-cast discipline as chat.test.tsx, via the shared

@@ -16,7 +16,7 @@ import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRi
 import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { askQuestion, replyToClarification } from '../app/actions.ts';
+import { askQuestion, confirmOnboardingFetch, replyToClarification } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
@@ -660,7 +660,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
     ]);
     setInput('');
     setBusy(true);
@@ -768,6 +768,7 @@ export function Chat({
                 webSection: null,
                 carrier: null,
                 insufficientCredits: { balance: gated.balance, required: gated.required },
+                onboardingOffer: null,
               }
             : {
                 role: 'assistant' as const,
@@ -786,6 +787,7 @@ export function Chat({
                 webSection: null,
                 carrier: null,
                 insufficientCredits: null,
+                onboardingOffer: null,
               },
         ]);
         // None of these kinds change the pending clarification state;
@@ -901,6 +903,11 @@ export function Chat({
           webSection: response.webSection ?? null,
           carrier,
           insufficientCredits: null,
+          // ADR 026 addendum (session 101): `?? null` guards the same
+          // deploy-window skew every other optional AskOutcome field does (an
+          // old server bundle omits the key) — a current server always sets
+          // it, null on every outcome except a fresh confirm-first offer.
+          onboardingOffer: outcome.onboardingOffer ?? null,
         },
       ]);
       // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
@@ -916,6 +923,57 @@ export function Chat({
       if (unstable_isUnrecognizedActionError(err)) {
         // Structurally true no-charge claim: the action never ran, and the
         // debit lives inside it (the billing gate is the action's first step).
+        setStaleDeploy(true);
+      } else {
+        setError(t('chat.genericError'));
+      }
+    } finally {
+      sendingRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  // ADR 026 addendum (session 101): the confirm-first offer's own click
+  // handler (#109's reversal, owner decision 4) — deliberately separate from
+  // sendText rather than routed through it: there is no new USER-authored
+  // message to prepend (the "input" here is a button click, not typed text),
+  // no thread/pending/carrier semantics (confirmOnboardingFetch produces no
+  // new pipeline turn to carry any of that), just one outcome to append.
+  // Reuses `busy`/`error`/`staleDeploy` and the SAME unrecognized-action-error
+  // convention sendText's catch block already established, so a stale
+  // deploy or a generic failure looks and behaves identically either way.
+  async function confirmOnboardingOffer(token: string) {
+    if (busy || sendingRef.current) return;
+    sendingRef.current = true;
+    setBusy(true);
+    setError(null);
+    setStaleDeploy(false);
+    try {
+      const result = await confirmOnboardingFetch(token);
+      if (result.kind === 'unauthenticated') {
+        setMessages((m) => [
+          ...m,
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+        ]);
+        return;
+      }
+      if (result.kind === 'insufficient_credits') {
+        setMessages((m) => [
+          ...m,
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
+        ]);
+        return;
+      }
+      // 'started' | 'duplicate': both show the pipeline's own byte-pinned
+      // acknowledgment text, unchanged from the pre-addendum flow — only
+      // 'started' actually charged anything (netCost 0 on a duplicate, same
+      // "asking twice must not cost twice" invariant design §2/§5 always had).
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+      ]);
+    } catch (err) {
+      if (unstable_isUnrecognizedActionError(err)) {
         setStaleDeploy(true);
       } else {
         setError(t('chat.genericError'));
@@ -1246,6 +1304,26 @@ export function Chat({
                 {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
               </button>
             ) : null}
+            {/* ADR 026 addendum (session 101): the confirm-first offer's own
+              * button (#109's reversal, owner decision 4) — a real Button,
+              * not a PILL, since unlike every fill-the-input/send-again chip
+              * on this screen, clicking this one directly spends credits with
+              * no further confirmation step of its own. `busy` disables it
+              * the same way it disables the composer's own send button. */}
+            {(() => {
+              // Narrowed to a local const: TypeScript does not carry a
+              // property-narrowing (`message.onboardingOffer !== null`)
+              // through into a nested closure like `onClick` below.
+              const offer = message.onboardingOffer;
+              if (offer === null) return null;
+              return (
+                <div className="mt-2">
+                  <Button type="button" size="sm" disabled={busy} onClick={() => void confirmOnboardingOffer(offer.token)}>
+                    {t('chat.onboardingOfferButton', { n: offer.priceCredits })}
+                  </Button>
+                </div>
+              );
+            })()}
             {/* WP29 (#73, ADR 029 D3): follow-up chips — styled exactly like
               * the #75 example chips, and the click handler IS the #75
               * behavior verbatim: fill the input, never send. The user sees
