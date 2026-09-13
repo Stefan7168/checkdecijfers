@@ -18,15 +18,20 @@
 everything summarized below: [status-archive.md](status-archive.md)'s top two entries; the older Thread A/B
 prose that used to live in this block moved there verbatim, since it had never actually been archived.)**
 
-**The one open action: merge PR #21.** [PR #21](https://github.com/Stefan7168/checkdecijfers/pull/21) (R3 —
+**The one open action: merge PR #21** (R3 —
 the confirm-first chip before the automatic 100-credit onboarding fetch, reversing
-[open-questions #109](open-questions.md)) is open, CI green (`gate` run `34745805896`), `mergeable_state:
-clean`, **not merged as of this wrap-up**. The owner confirmed in chat that `ONBOARDING_OFFER_SECRET` is set in
-Vercel. Nothing else is blocking — merging is the next step, whenever the owner reviews it (branch + PR +
-explicit owner go is this decision's own standing rule, not a formality to skip even in an owner-present
-session — see the build plan). After merge: ask a question about an uncovered topic and confirm the offer
-button appears, confirm it charges 100 credits on click, confirm declining spends nothing (PR body's own test
-plan).
+[open-questions #109](open-questions.md)) is open, **not merged as of this wrap-up**. The owner confirmed in
+chat that `ONBOARDING_OFFER_SECRET` is set in Vercel. **Self-inflicted wrinkle, fixed same session:** this
+wrap-up's own docs-only push to `main` (`ac08356`) touched the same doc sections PR #21 had edited, which
+briefly flipped the PR to `mergeable_state: dirty`. Fixed by merging `main` into `journey-r3-fetch-confirm`
+(merge commit `79b7649`, no rebase, code diff untouched) and re-pushing — `mergeable_state` is `unstable` again
+(conflict gone, just waiting on CI) as of 08:35 UTC, with the `gate` check (run `34748057564`) in progress on
+the new head SHA at that moment — this session is subscribed to the PR and will act on a red result; a plain
+green completion needs no further action. Once CI confirms green: nothing else is blocking — merging is the
+next step, whenever the owner reviews it (branch + PR + explicit owner go is this decision's own standing
+rule, not a formality to skip even in an owner-present session — see the build plan). After merge: ask a
+question about an uncovered topic and confirm the offer button appears, confirm it charges 100 credits on
+click, confirm declining spends nothing (PR body's own test plan).
 
 **Also shipped and live in production this session, no action needed:** the chart Style panel is now a real
 modal popup (#243, `7e71e5a`, deployed 04:54:14 UTC) with a real-browser-review follow-up fix for a header-row
