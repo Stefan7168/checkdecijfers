@@ -66,7 +66,8 @@ repo runs this many review passes:**
    currentCatalogStatuses value existed for it) — also fixed, with a regression test that exercises the
    scoping directly rather than relying on Eurostat's own current (empty) settings to mask it.
 
-**Verification (measured, on the PR's final commit, `cda9d41`):** root + web typecheck clean; backend
+**Verification (measured, on code commit `cda9d41`; `ffab6f0` on top is docs-only — a stale-doc-sweep
+fix found during wrap-up, no re-verification needed):** root + web typecheck clean; backend
 suite 160 files / 2427 tests green (solo run, the 8GB-machine OOM-avoidance convention); web suite 106
 files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure from resource
 contention both times it was tried, confirmed gone on solo re-runs); hermetic benchmark 14/14 answerable

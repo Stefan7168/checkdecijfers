@@ -58,7 +58,8 @@ call), then run the one owner-supervised follow-up** — `npm run fixtures:captu
 never executed) — which is what actually lets E1 be measured against ADR 048's own bar. See
 [open-questions #249](open-questions.md).
 
-**Full verification (measured, on the PR's final commit `cda9d41`):** root + web typecheck
+**Full verification (measured, on code commit `cda9d41`; `ffab6f0` on top is docs-only — a
+stale-doc-sweep fix, no re-verification needed):** root + web typecheck
 clean; backend suite 160 files / 2427 tests green (solo, the 8GB-machine OOM-avoidance convention);
 web suite 106 files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure
 from resource contention, confirmed gone on a solo re-run); hermetic benchmark 14/14 + 6/6 + 0
