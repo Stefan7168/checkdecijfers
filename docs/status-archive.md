@@ -1,5 +1,109 @@
 # STATUS archive — the session log
 
+**Session 101 continuation, AUTONOMOUS overnight (2026-09-14/15, owner asleep/away) — WP30c phase E1
+(the Eurostat adapter + internal explorer, ADR 048) built end to end, PR #23 open, not merged.**
+
+Followed this repo's own WP27/WP30 precedent exactly: ADR 048 (already design-level adversarially
+reviewed) → turned into a line-by-line executor brief
+([session-briefs/2026-09-14-wp30c-e1-executor-brief.md](session-briefs/2026-09-14-wp30c-e1-executor-brief.md))
+→ a SECOND, independent 4-lens adversarial review of that frozen brief (data integrity, rollout
+enforceability, technical feasibility, architecture-fit — 8 raw findings, 6 confirmed, one cross-lens
+corroborated, folded in as Amendments B1–B6) → built via parallel subagents into a git worktree
+(`.claude/worktrees/wp30c-e1-eurostat`, branch `wp30c-e1-eurostat-adapter`) → a whole-branch integration
+pass by the orchestrating session itself → a required LOW-effort `/code-review` pass → a dedicated,
+separate final whole-branch review agent → the PR.
+
+**What shipped:** `src/eurostat-adapter/` (a JSON-stat 2.0 parser, a live `StatisticsApiSource` never
+invoked with a real URL this session, fixture replay — modelled on `cbs-adapter/`, zero waist change per
+ADR 048 D1); the `eurostat` source registry entry + `adapterFor('eurostat')`; a source-scoped catalog
+prune (an existing cross-source bug this build's own Task 5 had to fix first); two file-only migrations
+(031 per-dataset DOI columns, 032 `ingestion_batches.request_urls`) — not applied; an unconditional deny
+gate in `src/catalog/recall.ts` keeping any `eurostat:`-id result out of live NL chat; an internal,
+`EUROSTAT_EXPLORER_ENABLED`-gated explorer (`web/app/eurostat-explorer/`) reusing the real
+query/chart/CSV/proof-panel pipeline, zero LLM calls, noindexed, honestly empty (no real tables
+registered).
+
+**"Constraint 0" — a deliberate, disclosed scoping decision, this session's own, needing owner
+confirmation:** [08-build-plan.md](08-build-plan.md)'s WP30c entry pairs "any real Eurostat API spend"
+with "Live DDL... never autonomous"; this session read that literally — no live HTTP call to the real
+Eurostat Statistics/Catalogue API happened at all, even a free read-only one. Every fixture is hand-built
+and explicitly `"synthetic": true`; zero real Eurostat tables are registered anywhere. ADR 048's own E1
+done-definition (real captures, a live smoke probe, ≥3 real datasets rendered) is therefore NOT met — a
+narrower, disclosed done-definition in the brief was met instead. If this reading was overly
+conservative, that is the owner's call to make on PR review, not this session's to assume.
+
+**Four real defects found, one per review layer, none caught by any earlier layer — the whole reason this
+repo runs this many review passes:**
+1. **Found by the orchestrator's own integration pass, not either adversarial review:** merely
+   registering the `eurostat` source made `web/components/chat.tsx`'s existing WP129+130 dynamic
+   source-chip row render and default-select a live "Eurostat data" chip for every real chat user — a
+   genuine D3(b)/(c) violation with zero Eurostat data involved. Fixed with a new
+   `SourceInfo.chatSelectable` field (`true` for cbs, `false` for eurostat), applied at both the chip UI
+   and the server's untrusted-selection validator in `web/app/actions.ts` (which previously accepted any
+   registered key, not just chat-selectable ones).
+2. An implementer subagent reported wiring `adapterFor('eurostat')` in `src/sources/adapters.ts` as done;
+   grepping the file directly showed it had not been touched at all. Caught only by independently
+   re-verifying every claim rather than trusting the report — the standing
+   [[feedback_verify_agent_evidence]] lesson, reconfirmed on a fresh example.
+3. A stray null byte inside a hand-edited file (`src/eurostat-adapter/statistics-api.ts`) made `git diff`
+   report it as binary — noticed only during the required `/code-review` pass, when the diff literally
+   printed "Binary files differ" for a `.ts` file. Fixed (replaced with the intended space character);
+   the same pass also found and fixed a decimals-counting bug for exponential-notation numbers.
+4. **Most serious, caught only by a SEPARATE, dedicated final whole-branch review agent** (not a
+   continuation of the orchestrator's own running review — a fresh context, explicitly told what was
+   already fixed so it wouldn't waste time re-finding those): the live-chat deny gate (Task 4's
+   Amendment-3 guard, `src/catalog/recall.ts`) was originally built gated on
+   `EUROSTAT_EXPLORER_ENABLED` — the SAME flag the internal explorer route uses for its own visibility.
+   Flipping the explorer flag on (exactly what this same build's own new RUNBOOK section instructs doing,
+   to check the explorer against a real registered table) would ALSO have lifted the only protection
+   keeping a registered Eurostat row out of live chat — a real D3(c) violation ("never announced before
+   it answers"), reachable with no code change at all, just the documented next step. Fixed: the deny
+   gate is now unconditional, no flag — confirmed safe because the internal explorer reaches a table via
+   an explicit-target intent that bypasses discovery/recall entirely (verified directly: grepped the
+   whole repo, `eurostat-explorer.ts` never calls `recallCandidates`). The same review pass found a
+   related, lower-severity, currently-dormant scoping gap in the pre-existing #108 catalog status-flip
+   detection (a registered table from a different source could spuriously "flip" once a real
+   currentCatalogStatuses value existed for it) — also fixed, with a regression test that exercises the
+   scoping directly rather than relying on Eurostat's own current (empty) settings to mask it.
+
+**Verification (measured, on the PR's final commit, `cda9d41`):** root + web typecheck clean; backend
+suite 160 files / 2427 tests green (solo run, the 8GB-machine OOM-avoidance convention); web suite 106
+files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure from resource
+contention both times it was tried, confirmed gone on solo re-runs); hermetic benchmark 14/14 answerable
++ 6/6 refusal/clarify + 0 fabricated, GATE PASS, byte-identical to before this build (zero prompt bytes
+touched anywhere in E1); a real `next build` succeeds with `/eurostat-explorer` appearing as a dynamic
+route. `/code-review` LOW: 2 findings, 1 fixed + regression-tested, 1 consciously skipped (a duplicated
+`nativeIdFrom` helper across 4 files — matches this codebase's own established "no cross-adapter/registry
+import" convention, not an oversight).
+
+**PR #23 opened** (https://github.com/Stefan7168/checkdecijfers/pull/23), branch
+`wp30c-e1-eurostat-adapter` → `main`, NOT merged (autonomous, core-product code, #118(b) — branch + PR is
+the rule regardless of how much review already happened before opening it). **CI confirmed green**
+(`gh pr checks 23`, run `34885657335`: `backend (1/2/3)` and `web` all `pass`; `deploy` correctly
+`skipping` — PRs never deploy, only pushes to `main` do).
+
+**New residuals recorded:** [#249](open-questions.md) (Constraint 0's owner-decision + the
+fixture-capture follow-up — [RUNBOOK.md](RUNBOOK.md)'s new "WP30c E1" section has the exact sequence),
+[#250](open-questions.md) (two small Dutch-wording/catalog-status sign-offs, routine), [#251](open-questions.md)
+(every Eurostat cell renders maximally provisional until a scoped `pipeline.ts` change lands, required
+before E2 — a real gap this build's own adversarial review found and safely papered over, not silently
+missed), [#252](open-questions.md) (`request_urls` not wired into the live-chat proof panel, only
+replay/history views — a coverage gap, not Eurostat-specific, applies to CBS too).
+
+**Docs touched in the same change:** ADR 048's new "As-built" section (naming Constraint 0 and all four
+defects explicitly); the 08-build-plan WP30c entry + its parent WP30 header line + the #237
+positioning-thread row; STATUS.md's top block; five new open-questions rows (#249–252); four new
+lessons-learned entries; RUNBOOK's new "WP30c E1" owner-supervised-step section; CLAUDE.md + ADR 001's
+module list (`eurostat-adapter/` joins the as-built set); freshness pointers in 04-architecture.md,
+06-roadmap.md and 03-mvp-scope.md; a next-session kickoff brief
+([session-briefs/2026-09-15-session-102-kickoff.md](session-briefs/2026-09-15-session-102-kickoff.md)).
+
+**Not started this session, a good next autonomous target if there's appetite:** the CI health-check gap
+the prior kickoff brief flagged (`/api/health`'s smoke check skips flag-gated tables it shouldn't for
+`pro_subscriptions` — the exact blind spot that let session 101's own real production incident happen).
+
+---
+
 **Session 101 continued, owner present (2026-09-14) — the CBS highlight link, a 6-item UI polish
 batch, Eurostat chosen + ADR 048 + its adversarial review + WP30c scheduled, both open PRs merged,
 and a real production-outage risk found and fixed.** Verified against reality at wrap-up time
