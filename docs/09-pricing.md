@@ -83,6 +83,18 @@ The price-per-credit steps down by exactly €0.005 per tier — a deliberate, c
 
 In euro terms, a `simple` question costs **€0.50 → €0.30** depending which pack the credits came from (unchanged from the pre-rescale numbers — the whole scale was multiplied by 20 specifically so the euro price a user actually pays stayed the same).
 
+## Pro subscription (open-questions [#205](open-questions.md) — flag-gated, `PRO_SUBSCRIPTIONS_ENABLED`, off by default)
+
+| Plan | Price | Credits included | Resets? |
+|---|---|---|---|
+| Pro | **€19.99/month** | **1000**, granted on every successful renewal (`invoice.paid`) | **Yes — unused credits are lost at the next renewal**, not carried over |
+
+Also includes unlimited Live chart embeds (ADR [041](decisions/041-public-embed-pages.md)) at no extra credit cost — a plan feature, not a priced action class.
+
+**Why this one allowance resets while every other credit in this doc never expires:** a deliberate, acknowledged exception scoped ONLY to this monthly allowance — purchased packs and the signup grant above are completely unaffected and stay exactly as permanent as ever. The allowance is tracked in its own, fully isolated `pro_bucket_ledger` table (migration 030), spent *before* the permanent balance on every debit, specifically so a monthly reset can never claw back a purchased pack's credits in a mixed-balance month — seeing why (the fairness bug a simpler "clawback from the shared balance" design would have had) is worth reading in [docs/superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md) §2 rather than re-deriving it. ADR [006](decisions/006-auth-billing-seams.md)/[020](decisions/020-credit-ledger-and-billing-gate.md) carry the revision notes for why a real subscription now coexists with the "no subscription, credits never expire" decisions those ADRs originally recorded.
+
+**Not live yet:** built and tested, but behind `PRO_SUBSCRIPTIONS_ENABLED` (off until the owner explicitly flips it) — see [docs/RUNBOOK.md](RUNBOOK.md)'s Pro subscription go-live section for the checklist.
+
 ## What's easy to change vs. what isn't
 
 - **Easy (config-table edit, no migration):** any credit amount above — action-class prices, pack prices/credits, the signup grant.
