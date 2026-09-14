@@ -49,12 +49,10 @@ describe('CoverageDisclosureView — nl (default)', () => {
     expect(screen.queryByRole('button', { name: /inflatie/ })).toBeNull();
   });
 
-  it('renders the "on request" line and an Eurostat group that never claims to answer anything', () => {
+  it('renders the "on request" line and never mentions Eurostat (ADR 048 D3: never announced before it answers)', () => {
     render(<CoverageDisclosureView coverage={coverage()} />);
     expect(screen.getByText('Andere CBS-onderwerpen halen we op verzoek op.')).toBeInTheDocument();
-    expect(screen.getByText('Eurostat — binnenkort')).toBeInTheDocument();
-    const eurostatBody = screen.getByText('We werken aan Eurostat-cijfers als aanvullende bron.');
-    expect(eurostatBody.textContent).not.toMatch(/beantwoord|antwoord/i);
+    expect(screen.queryByText(/eurostat/i)).toBeNull();
   });
 
   it('renders nothing when coverage is null (never a build has succeeded)', () => {
@@ -73,6 +71,6 @@ describe('CoverageDisclosureView — en', () => {
     expect(screen.getByText('Which sources are built in?')).toBeInTheDocument();
     expect(screen.getByText(/synced 2026-07-03/)).toBeInTheDocument();
     expect(screen.getByText('Other CBS topics we fetch on request.')).toBeInTheDocument();
-    expect(screen.getByText('Eurostat — coming')).toBeInTheDocument();
+    expect(screen.queryByText(/eurostat/i)).toBeNull();
   });
 });

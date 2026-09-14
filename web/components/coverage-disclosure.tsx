@@ -1,12 +1,18 @@
 // WP-E (journey programme, 2026-09-12, phase 3 R4): the coverage disclosure
 // — "which sources are built in" — a collapsed <details> (question-history.tsx
-// precedent) that opens onto a plain grouped list: CBS today (one row per
-// served table: title, MEASURED sync date, concepts, an optional
-// click-to-fill example) and Eurostat as a second group that never claims to
-// answer anything (principle c — never name/imply a source answers before it
-// actually does). Client component (the example click needs onPickExample),
-// but the data itself is a plain serialisable prop built server-side by
-// web/lib/coverage-disclosure.ts.
+// precedent) that opens onto a plain grouped list: CBS today, one row per
+// served table (title, MEASURED sync date, concepts, an optional
+// click-to-fill example). Client component (the example click needs
+// onPickExample), but the data itself is a plain serialisable prop built
+// server-side by web/lib/coverage-disclosure.ts.
+//
+// ADR 048 D3 (2026-09-14, adversarial-review finding, owner decision): this
+// used to have a second, static "Eurostat — coming" group. Principle (c) says
+// never name/imply a source before it actually answers — that group itself
+// was already such a naming, shipped before D3's "never announced" rule
+// existed. Removed rather than reworded: the owner chose silence over a
+// narrowed disclosure. Do not re-add a source name here before that source
+// has actually served a real answer.
 'use client';
 
 import { useT } from '../lib/i18n/lang-provider.tsx';
@@ -65,10 +71,6 @@ export function CoverageDisclosureView({
             })}
           </ul>
           <p className="mt-2">{t('coverage.onRequestLine')}</p>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">{t('coverage.eurostatHeading')}</p>
-          <p className="mt-1">{t('coverage.eurostatBody')}</p>
         </div>
       </div>
     </details>

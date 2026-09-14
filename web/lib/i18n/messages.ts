@@ -738,8 +738,6 @@ const nl = {
   // would break the parse, not localise it.
   'coverage.exampleLabel': 'bijvoorbeeld: {question}',
   'coverage.onRequestLine': 'Andere CBS-onderwerpen halen we op verzoek op.',
-  'coverage.eurostatHeading': 'Eurostat — binnenkort',
-  'coverage.eurostatBody': 'We werken aan Eurostat-cijfers als aanvullende bron.',
   'coverage.landingHeading': 'Dit weten we nu',
 
   // #237/ADR 046 (session 98, journey programme "public face"): the
@@ -1362,8 +1360,6 @@ const en: Messages = {
   'coverage.syncedOn': 'synced {date}',
   'coverage.exampleLabel': 'e.g.: {question}',
   'coverage.onRequestLine': 'Other CBS topics we fetch on request.',
-  'coverage.eurostatHeading': 'Eurostat — coming',
-  'coverage.eurostatBody': 'We are working on Eurostat figures as an additional source.',
   'coverage.landingHeading': 'What we know today',
 
   // #237/ADR 046 — faithful MEANING translations, digit-free like the nl
