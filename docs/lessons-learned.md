@@ -8,6 +8,20 @@ on top.
 
 ## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
 
+- **Two sessions sharing one literal checkout (not separate worktrees) means `git add <file>`
+  silently absorbs the OTHER session's uncommitted edits into your own commit.** A peer session
+  (`check-de-cijfers-70`) had two uncommitted edits sitting on disk in `docs/RUNBOOK.md` and
+  `docs/STATUS.md` when this session's own wrap-up ritual read and then staged those same files —
+  `git add` stages a file's entire current content, not just the edits made via this session's own
+  Edit-tool calls, so the peer's changes rode along into this session's commit (`204df3d`) without
+  either session intending it. Worked out fine here (content didn't conflict, verified by re-reading
+  the committed result line-by-line against the peer's own description before replying) — but it's
+  pure luck it didn't silently corrupt or half-overwrite something. **When told (or when it becomes
+  apparent) that another session shares the exact same working directory: verify the ACTUAL current
+  file content and `git log`/`git blame` before trusting any claim about "uncommitted state,
+  " including your own recollection of what you wrote — a shared checkout means neither session's
+  memory of "what I changed" is reliable evidence of what's actually on disk.**
+
 - **No Stripe MCP tool is connected/available in this environment** (a `ToolSearch` for
   "stripe webhook price product" returned only an unrelated Resend-webhooks toolset) — a future
   session checking Stripe-side state (webhook event subscriptions, Price/Product objects) cannot do
