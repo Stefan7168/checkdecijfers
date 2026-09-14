@@ -11,6 +11,20 @@ vi.mock('../lib/current-user.ts', () => ({ currentUserId, currentUserEmail }));
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn<() => Db>() }));
 vi.mock('../lib/db.ts', () => ({ getDb }));
 
+// Task 7 (#205): hasProPlan is no longer mocked here (it never was — this
+// file always exercised the real src/billing/pro.ts) but it now DOES touch
+// the db once the email allowlist misses, so getDb() must return something
+// query()-able rather than the bare `undefined` a plain `vi.fn<() => Db>()`
+// yields with no return value configured — a real `pro_subscriptions` table
+// isn't stood up in this hermetic unit test, so an empty result set (no
+// subscription row) is the correct stand-in for "not Pro via the DB".
+function noSubscriptionDb(): Db {
+  return {
+    query: vi.fn().mockResolvedValue({ rows: [] }),
+    withTransaction: vi.fn(),
+  } as unknown as Db;
+}
+
 const { loadAuditRecord } = vi.hoisted(() => ({ loadAuditRecord: vi.fn() }));
 vi.mock('../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
 
@@ -95,6 +109,7 @@ describe('createEmbedCode', () => {
   it('mints a token and reports pro:false when the caller is not Pro', async () => {
     currentUserId.mockResolvedValue('user-1');
     currentUserEmail.mockResolvedValue('user1@example.com');
+    getDb.mockReturnValue(noSubscriptionDb());
     loadAuditRecord.mockResolvedValue(baseRecord());
     const result = await createEmbedCode(42);
     expect(result.ok).toBe(true);
@@ -108,6 +123,7 @@ describe('createEmbedCode', () => {
     process.env.PRO_ACCOUNT_EMAILS = 'user1@example.com';
     currentUserId.mockResolvedValue('user-1');
     currentUserEmail.mockResolvedValue('user1@example.com');
+    getDb.mockReturnValue(noSubscriptionDb());
     loadAuditRecord.mockResolvedValue(baseRecord());
     const result = await createEmbedCode(42);
     expect(result.ok).toBe(true);

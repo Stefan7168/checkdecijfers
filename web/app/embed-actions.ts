@@ -32,7 +32,8 @@ export async function createEmbedCode(auditId: number): Promise<CreateEmbedCodeR
   if (!secret) return { ok: false, reason: 'unavailable' };
 
   try {
-    const record = await loadAuditRecord(getDb(), auditId);
+    const db = getDb();
+    const record = await loadAuditRecord(db, auditId);
     if (record === null) return { ok: false, reason: 'not_found' };
 
     if (
@@ -45,7 +46,7 @@ export async function createEmbedCode(auditId: number): Promise<CreateEmbedCodeR
     }
 
     const email = await currentUserEmail();
-    const pro = hasProPlan({ id: userId, email });
+    const pro = await hasProPlan(db, { id: userId, email });
     return { ok: true, token: signEmbedToken(auditId, secret), pro };
   } catch (e) {
     await reportError('createEmbedCode', e, { userId, extra: { auditId } });
