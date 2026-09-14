@@ -53,5 +53,10 @@ describe('buildProSubscriptionCheckoutParams', () => {
     expect(params.success_url).toBe('https://example.com/success');
     expect(params.cancel_url).toBe('https://example.com/cancel');
     expect(params.metadata).toEqual({ userId: 'user-123' });
+    // Bug fix (post-Task-9 review): Stripe does not copy session metadata
+    // onto the Subscription object it creates — the webhook handler reads
+    // subscription.metadata, which only ever gets populated via
+    // subscription_data.metadata on the Checkout Session.
+    expect(params.subscription_data?.metadata).toEqual({ userId: 'user-123' });
   });
 });

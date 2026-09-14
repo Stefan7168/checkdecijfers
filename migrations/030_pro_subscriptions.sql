@@ -21,7 +21,22 @@ create table pro_subscriptions (
   current_period_end timestamptz not null,
   current_period_grant_id uuid not null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Amended before this migration was ever applied anywhere (Task 9 code
+  -- review, #205): DISTINCT from `updated_at`, which stays ordinary
+  -- "wall-clock time of the last DB write" (every other table in this
+  -- codebase relies on that plain meaning, and Task 10's invoice.paid
+  -- handler writes this same row too). `last_event_at` instead holds the
+  -- Stripe EVENT's own `created` timestamp (unix seconds, top-level on
+  -- every Stripe event, separate from any timestamp on the nested object)
+  -- — the webhook handler's out-of-order-delivery guard
+  -- (src/billing/stripe-webhook.ts's upsertProSubscription) only applies an
+  -- incoming customer.subscription.* write when its event is >= the value
+  -- stored here, so a stale/delayed event can never clobber newer state.
+  -- `default now()` matches this table's other timestamp columns and keeps
+  -- every direct test-fixture INSERT (which predates this column) working
+  -- unchanged.
+  last_event_at timestamptz not null default now()
 );
 
 -- Guarded FK to auth.users, conditional on the auth schema existing —

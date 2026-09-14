@@ -111,23 +111,37 @@ function subscriptionPeriodEnd(subscription: Stripe.Subscription): number {
  *
  * Every Stripe event carries its own top-level `created` (unix seconds,
  * separate from any timestamp on the nested object — confirmed against the
- * Stripe SDK's own type, `Stripe.Event.created: number`). Rather than adding
- * a new column (a migration) to track it, this repurposes the EXISTING
- * `updated_at` column to hold the event's `created` time instead of
- * wall-clock write time — checked that nothing else in the codebase reads
- * `pro_subscriptions.updated_at` (only `status`, `current_period_end`, and
- * `current_period_grant_id` are read elsewhere: src/billing/pro.ts,
- * src/billing/ledger.ts), so this repurposing is safe and needs no schema
- * change — the cheapest viable mechanism, per this repo's own default. The
- * upsert's `where` clause then only applies an incoming event if its
- * `created` is `>=` the stored value, so a genuinely OLDER event is a silent
- * no-op instead of corrupting state. `>=`, not `>`: Stripe's `created` has
+ * Stripe SDK's own type, `Stripe.Event.created: number`). This is tracked in
+ * a DEDICATED column, `pro_subscriptions.last_event_at` (migration 030,
+ * amended for this guard before it was ever applied anywhere — see that
+ * migration's own comment) — NOT the existing `updated_at`, which stays
+ * ordinary "wall-clock time of the last DB write": a first attempt at this
+ * reused `updated_at` directly, but task review (correctly) caught that
+ * `updated_at` already carries that plain meaning for 11+ other direct
+ * writes elsewhere in this codebase, and — more concretely — Task 10's
+ * `invoice.paid` handler writes this SAME row (rotating
+ * `current_period_grant_id`) using ordinary `now()`. At an ordinary
+ * renewal, Stripe fires `invoice.paid` and `customer.subscription.updated`
+ * within the same second; whichever write used real wall-clock time (which,
+ * via ordinary network latency, lands slightly AFTER that event's own
+ * `created` second) would then look newer than the other event's `created`
+ * timestamp under a shared column, incorrectly rejecting a same-second
+ * legitimate write on every ordinary renewal — not a rare race. A separate
+ * column with its own single, consistent meaning (always Stripe's
+ * `event.created`, never wall-clock time) avoids that entirely. The
+ * upsert's `where` clause only applies an incoming event if its `created` is
+ * `>=` the stored value, so a genuinely OLDER event is a silent no-op
+ * instead of corrupting state. `>=`, not `>`: Stripe's `created` has
  * ONE-SECOND resolution, and a `created` event immediately followed by an
  * `updated` event (e.g. a Checkout-driven subscription settling within the
  * same second) commonly share a timestamp — strict `>` would silently drop
- * that legitimate same-second update. `>=` preserves today's plain
- * last-write-wins behavior for ties (verified empirically against PGlite)
- * and only ever rejects a STRICTLY older event. */
+ * that legitimate same-second update. `>=` preserves plain last-write-wins
+ * behavior for ties (verified empirically against PGlite) and only ever
+ * rejects a STRICTLY older event. (Named, accepted residual: `>=` cannot
+ * distinguish two DIFFERENT same-second events from each other — same-second
+ * reordering is not fully resolved, only strictly-older staleness is. Left
+ * as-is; not worth chasing sub-second precision Stripe's own `created` field
+ * doesn't provide.) */
 async function upsertProSubscription(
   db: Db,
   subscription: Stripe.Subscription,
@@ -150,15 +164,16 @@ async function upsertProSubscription(
   // required — rather than trusting "no existing usage in migrations/" alone.
   await db.query(
     `insert into pro_subscriptions
-       (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id, updated_at)
+       (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id, last_event_at)
      values ($1, $2, $3, $4, to_timestamp($5), gen_random_uuid(), to_timestamp($6))
      on conflict (user_id) do update set
        stripe_customer_id = excluded.stripe_customer_id,
        stripe_subscription_id = excluded.stripe_subscription_id,
        status = excluded.status,
        current_period_end = excluded.current_period_end,
-       updated_at = excluded.updated_at
-     where excluded.updated_at >= pro_subscriptions.updated_at`,
+       last_event_at = excluded.last_event_at,
+       updated_at = now()
+     where excluded.last_event_at >= pro_subscriptions.last_event_at`,
     [userId, subscription.customer as string, subscription.id, subscription.status, currentPeriodEnd, eventCreated],
   );
   return { handled: true, alreadyProcessed: false, ledgerId: null };

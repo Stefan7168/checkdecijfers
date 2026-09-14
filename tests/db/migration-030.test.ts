@@ -114,6 +114,57 @@ describe('pro_subscriptions — one row per Pro user', () => {
     });
   });
 
+  it('last_event_at defaults to now() when not supplied (Task 9 review: NOT the same column as updated_at)', async () => {
+    // Amended after Task 9 code review (#205): a dedicated column, separate
+    // from `updated_at`, tracks the Stripe EVENT's own `created` timestamp
+    // for the webhook handler's out-of-order-delivery guard — see
+    // src/billing/stripe-webhook.ts's upsertProSubscription doc and this
+    // migration's own comment. `default now()` keeps every existing direct
+    // insert (this file's and every other test file's) working unchanged.
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      await db.query(
+        `insert into pro_subscriptions
+           (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+         values ($1, 'cus_test', 'sub_last_event_default', 'active', now(), $2)`,
+        [userId, randomUUID()],
+      );
+      const { rows } = await db.query(
+        'select last_event_at, updated_at from pro_subscriptions where user_id = $1',
+        [userId],
+      );
+      expect(rows[0]!.last_event_at).not.toBeNull();
+      expect(rows[0]!.updated_at).not.toBeNull();
+    });
+  });
+
+  it('last_event_at can be set independently of updated_at (a stale-event guard needs its own timeline)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      // An event's `created` far in the past, but the DB write itself
+      // happens "now" — exactly the shape the webhook handler relies on to
+      // tell "when Stripe generated this event" apart from "when we wrote
+      // it."
+      const pastEventSeconds = Math.floor(Date.now() / 1000) - 86400;
+      await db.query(
+        `insert into pro_subscriptions
+           (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id, last_event_at)
+         values ($1, 'cus_test', 'sub_last_event_explicit', 'active', now(), $2, to_timestamp($3))`,
+        [userId, randomUUID(), pastEventSeconds],
+      );
+      const { rows } = await db.query(
+        'select extract(epoch from last_event_at) as last_event_epoch, extract(epoch from updated_at) as updated_epoch ' +
+          'from pro_subscriptions where user_id = $1',
+        [userId],
+      );
+      expect(Math.floor(Number(rows[0]!.last_event_epoch))).toBe(pastEventSeconds);
+      // updated_at (the DB write time, default now()) stays well after the
+      // old event timestamp — proving the two columns carry independent
+      // values, not a repurposed shared one.
+      expect(Number(rows[0]!.updated_epoch)).toBeGreaterThan(pastEventSeconds);
+    });
+  });
+
   it('rejects two users sharing the same stripe_subscription_id (unique)', async () => {
     await withDb(async (db) => {
       await db.query(

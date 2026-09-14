@@ -45,7 +45,20 @@ export function buildCheckoutSessionParams(
  * buildCheckoutSessionParams above). `metadata.userId` is read back by the
  * customer.subscription.created webhook handler (Task 9) to link the new
  * Stripe customer/subscription to this app's user row — Stripe subscription
- * events don't otherwise carry an app-specific user id. */
+ * events don't otherwise carry an app-specific user id.
+ *
+ * **`subscription_data.metadata`, not just the session-level `metadata`
+ * (bug found by task review, fixed post-Task-9):** Stripe does NOT copy a
+ * Checkout Session's own `metadata` onto the Subscription object it
+ * creates — that only lands on the Session/PaymentIntent. The
+ * `customer.subscription.*` webhook handler (src/billing/stripe-webhook.ts)
+ * reads `subscription.metadata.userId`, so without `subscription_data
+ * .metadata` set here, every real subscription webhook would arrive with an
+ * EMPTY `metadata` and the handler's own "missing metadata.userId" guard
+ * would throw for every real paying customer — no `pro_subscriptions` row
+ * would ever get written. The session-level `metadata` is kept too
+ * (harmless, and some Stripe features/reporting read it), but
+ * `subscription_data.metadata` is what actually makes the webhook work. */
 export function buildProSubscriptionCheckoutParams(
   userId: string,
   priceId: string,
@@ -58,5 +71,6 @@ export function buildProSubscriptionCheckoutParams(
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: { userId },
+    subscription_data: { metadata: { userId } },
   };
 }
