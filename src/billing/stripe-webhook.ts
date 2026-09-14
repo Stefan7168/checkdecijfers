@@ -12,8 +12,13 @@ import { grantBucket } from './pro-bucket.ts';
 import { PRO_MONTHLY_CREDITS } from './pro.ts';
 
 export interface StripeWebhookResult {
-  /** False for event types this handler doesn't act on (ignored, not an
-   * error — Stripe accounts emit many event types we don't subscribe to).
+  /** False for anything this handler deliberately does no work for — an
+   * event type it doesn't act on at all (Stripe accounts emit many we don't
+   * subscribe to), and equally an event of a type it DOES handle whose
+   * payload is for a different flow: a non-subscription `invoice.paid`, or a
+   * `mode: 'subscription'` checkout session (whose money is handled by the
+   * subscription branches instead). Not an error either way — the Route
+   * Handler still answers 200, so Stripe does not retry.
    * Also true (not false) for a `checkout.session.completed` whose payment
    * has not settled yet (#146 below) — that IS a recognized, handled event,
    * it just credits nothing this delivery. */
@@ -65,6 +70,50 @@ async function creditPurchase(db: Db, session: Stripe.Checkout.Session): Promise
   return row === undefined
     ? { handled: true, alreadyProcessed: true, ledgerId: null }
     : { handled: true, alreadyProcessed: false, ledgerId: Number(row.id) };
+}
+
+/** Mode guard for the checkout-session branches (#205 final whole-branch
+ * review, HIGH finding — a cross-seam bug neither side could see alone).
+ *
+ * Stripe fires `checkout.session.completed` (and, for a delayed-notification
+ * method, `checkout.session.async_payment_succeeded`) for EVERY completed
+ * Checkout Session, whatever its `mode`. This app now creates two kinds:
+ * one-time credit-pack sessions (`mode: 'payment'`,
+ * `buildCheckoutSessionParams`, metadata `{userId, packId, credits}`) and Pro
+ * subscription sessions (`mode: 'subscription'`,
+ * `buildProSubscriptionCheckoutParams`, metadata `{userId}` only — see
+ * stripe-checkout.ts). Without this guard a real Pro signup's
+ * checkout-completed event falls into `creditPurchase`, which throws on the
+ * missing `packId`/`credits` — the Route Handler turns that into a 400, and
+ * Stripe then retries the event for ~3 days, per signup, against the SAME
+ * webhook destination the live credit-pack flow depends on (a chronically
+ * failing destination is one Stripe may disable outright).
+ *
+ * A subscription checkout has nothing for THIS branch to do: the money side
+ * of a subscription is handled entirely by the dedicated
+ * `customer.subscription.*` (mirror row) and `invoice.paid` (the actual
+ * credit grant) branches below — `invoice.paid` fires for the first period
+ * too, so nothing is missed by ignoring the checkout event. Hence the same
+ * `{handled: false, …}` shape this file already uses for an event it
+ * recognizes but has no work for (see `grantMonthlyAllowance`'s
+ * non-subscription invoice, and the final fall-through) — `handled: false`
+ * still returns HTTP 200, so Stripe stops retrying. Logged because Vercel
+ * logs are the owner's only production visibility (WP12 review), and during
+ * the Pro go-live smoke test this line is the proof the event arrived and was
+ * deliberately ignored rather than silently lost.
+ *
+ * Returns null when the session is NOT subscription-mode, i.e. "carry on with
+ * the ordinary credit-pack path". */
+function subscriptionModeNoOp(
+  session: Stripe.Checkout.Session,
+  eventType: string,
+): StripeWebhookResult | null {
+  if (session.mode !== 'subscription') return null;
+  console.log(
+    `stripe webhook: ${eventType} ${session.id} is a mode='subscription' (Pro) checkout — not a ` +
+      'credit-pack purchase; the subscription is handled by customer.subscription.*/invoice.paid, no-op here',
+  );
+  return { handled: false, alreadyProcessed: false, ledgerId: null };
 }
 
 /** Stripe moved `current_period_end` off the top-level `Subscription` object
@@ -306,6 +355,12 @@ export async function handleStripeEvent(
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
+    // #205 final review: a Pro (mode: 'subscription') checkout fires this
+    // same event type but carries no pack metadata — see subscriptionModeNoOp.
+    // Checked BEFORE the payment_status gate below so a subscription session
+    // never logs a misleading "not settled yet" line either.
+    const notAPackPurchase = subscriptionModeNoOp(session, event.type);
+    if (notAPackPurchase !== null) return notAPackPurchase;
     // #146: only credit a SETTLED payment. For the synchronous methods this
     // account actually offers today (card; iDEAL if ever enabled — verified
     // immediate-notification per Stripe's docs), payment_status is already
@@ -332,7 +387,16 @@ export async function handleStripeEvent(
   // since Stripe event subscriptions are per-webhook-destination Dashboard
   // state, not something this app's own environment controls).
   if (event.type === 'checkout.session.async_payment_succeeded') {
-    return await creditPurchase(db, event.data.object as Stripe.Checkout.Session);
+    const session = event.data.object as Stripe.Checkout.Session;
+    // Same mode guard as `completed` above. The final review named only the
+    // `completed` branch (the one Stripe actually delivers today), but this
+    // branch calls the identical `creditPurchase` on the identical object and
+    // would throw identically the day both a delayed-notification method and
+    // this event subscription are enabled — guarding only one of the two
+    // would leave a known, identical seam two lines away.
+    const notAPackPurchase = subscriptionModeNoOp(session, event.type);
+    if (notAPackPurchase !== null) return notAPackPurchase;
+    return await creditPurchase(db, session);
   }
   if (event.type === 'checkout.session.async_payment_failed') {
     // The payment never arrived — nothing was ever credited for this session

@@ -40,8 +40,44 @@ function checkoutEventPayload(
       object: {
         id: sessionId,
         object: 'checkout.session',
+        // #205 final review: a real one-time credit-pack session always
+        // carries mode: 'payment' (buildCheckoutSessionParams). It was absent
+        // from this fixture before the subscription tier existed, when
+        // 'payment' was the only mode this app ever created; stated
+        // explicitly now that the handler branches on it.
+        mode: 'payment',
         payment_status: paymentStatus,
         metadata: { userId, packId, credits },
+      },
+    },
+  });
+}
+
+/** #205 final whole-branch review: a Pro (`mode: 'subscription'`) Checkout
+ * Session event — the SAME event type Stripe fires for a credit-pack
+ * purchase, but carrying only `metadata.userId`, exactly as
+ * `buildProSubscriptionCheckoutParams` (src/billing/stripe-checkout.ts)
+ * builds it. Deliberately NOT checkoutEventPayload with a flag: the absence
+ * of `packId`/`credits` is the whole point — it is what made the unguarded
+ * pack-purchase handler throw (HTTP 400 → ~3 days of Stripe retries against
+ * the destination the live credit-pack flow shares). */
+function subscriptionCheckoutPayload(
+  type: 'checkout.session.completed' | 'checkout.session.async_payment_succeeded',
+  sessionId: string,
+  userId: string,
+  paymentStatus = 'paid',
+): string {
+  return JSON.stringify({
+    id: `evt_${randomUUID()}`,
+    object: 'event',
+    type,
+    data: {
+      object: {
+        id: sessionId,
+        object: 'checkout.session',
+        mode: 'subscription',
+        payment_status: paymentStatus,
+        metadata: { userId },
       },
     },
   });
@@ -144,6 +180,91 @@ describe('handleStripeEvent — malformed metadata', () => {
         },
       });
       await expect(handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET)).rejects.toThrow(/metadata/);
+    });
+  });
+});
+
+// #205 final whole-branch review (HIGH finding): Stripe fires
+// `checkout.session.completed` for BOTH one-time credit-pack sessions and
+// Pro subscription sessions. Before the mode guard in
+// src/billing/stripe-webhook.ts, a real Pro signup's event fell into the
+// pack-purchase handler and threw on its missing packId/credits metadata —
+// a 400 back to Stripe and ~3 days of retries per signup, against the same
+// webhook destination the live credit-pack flow depends on.
+describe('checkout.session.* for a Pro subscription session (#205 final review)', () => {
+  it("does NOT attempt a credit-pack purchase for a mode: 'subscription' checkout.session.completed", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const sessionId = `cs_test_${randomUUID()}`;
+      const payload = subscriptionCheckoutPayload('checkout.session.completed', sessionId, userId);
+
+      // (1) It must not throw — a throw is exactly what the Route Handler
+      // turns into the 400 that triggers Stripe's 3-day retry storm.
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+
+      // (2) Same "recognized, but no work for this branch" shape this file
+      // already uses for a non-subscription invoice and for an unsubscribed
+      // event type — a 200 back to Stripe, no retries.
+      expect(result).toEqual({ handled: false, alreadyProcessed: false, ledgerId: null });
+
+      // (3) It really did not run the pack-purchase path: no ledger row at
+      // all for this user (a balance check alone could not distinguish a
+      // zero-credit row from no row).
+      expect(await getBalance(db, userId)).toBe(0);
+      const { rows } = await db.query('select 1 from credit_transactions where user_id = $1', [userId]);
+      expect(rows).toHaveLength(0);
+      // Nor did it write anything against the session id under any user.
+      const { rows: bySession } = await db.query(
+        'select 1 from credit_transactions where stripe_checkout_session_id = $1',
+        [sessionId],
+      );
+      expect(bySession).toHaveLength(0);
+    });
+  });
+
+  it("does NOT attempt a credit-pack purchase for a mode: 'subscription' async_payment_succeeded either", async () => {
+    // Dormant today (the destination isn't subscribed to this event type, and
+    // the account is card-only) — guarded anyway: it calls the identical
+    // creditPurchase on the identical object and would throw identically.
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const sessionId = `cs_test_${randomUUID()}`;
+      const payload = subscriptionCheckoutPayload('checkout.session.async_payment_succeeded', sessionId, userId);
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+      expect(result).toEqual({ handled: false, alreadyProcessed: false, ledgerId: null });
+      expect(await getBalance(db, userId)).toBe(0);
+    });
+  });
+
+  it("still credits an ordinary mode: 'payment' pack purchase — the guard is exact, not a truthiness test", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const payload = checkoutCompletedPayload(`cs_test_${randomUUID()}`, userId, 'pack_5', '200');
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+      expect(result).toMatchObject({ handled: true, alreadyProcessed: false });
+      expect(await getBalance(db, userId)).toBe(200);
+    });
+  });
+
+  it('still credits a session with no mode field at all (older/absent mode is not treated as a subscription)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const payload = JSON.stringify({
+        id: `evt_${randomUUID()}`,
+        object: 'event',
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: `cs_test_${randomUUID()}`,
+            object: 'checkout.session',
+            payment_status: 'paid',
+            metadata: { userId, packId: 'pack_5', credits: '200' },
+          },
+        },
+      });
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+      expect(result).toMatchObject({ handled: true, alreadyProcessed: false });
+      expect(await getBalance(db, userId)).toBe(200);
     });
   });
 });
