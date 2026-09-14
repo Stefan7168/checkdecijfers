@@ -80,10 +80,26 @@ into the live-chat proof panel, only replay/history — a coverage gap, not Euro
 **Next steps:** (1) owner reviews and merges PR #23 (or requests changes) — CI is green, nothing blocks
 this on the tooling side; (2) owner decides Constraint 0's reading; (3) if confirmed, run the
 fixture-capture follow-up under supervision, then re-verify against ADR 048's real done-definition;
-(4) WP30c E2 (natural-language querying) is its own future design round — not started, not to be started
-without the owner. A good second autonomous target if there's appetite before the owner is back: the CI
-health-check gap the prior kickoff brief flagged (`/api/health` skips flag-gated tables it shouldn't for
-`pro_subscriptions`).
+(4) owner reviews and merges PR #24 (below) or requests changes; (5) WP30c E2 (natural-language
+querying) is its own future design round — not started, not to be started without the owner.
+
+**Session 102 (2026-09-15, autonomous, owner still away): the second target above is done — PR #24
+open, not merged.** `/api/health`'s flag-gating pattern (skip a table's probe
+when its flag is off) didn't fit `pro_subscriptions`: `PRO_SUBSCRIPTIONS_ENABLED` only gates starting a
+NEW checkout, but the embed page's `hasProPlan` read queries `pro_subscriptions` on every embed view
+regardless — exactly the blind spot that let session 101's real production incident (PR #22 merged
+before migration 030) pass an unchanged smoke check. Fixed: an unconditional `pro-subscription-read`
+probe added, reusing `hasProPlan` itself (`web/app/api/health/route.ts`, `web/app/health.test.ts`).
+Scoped as a small, well-contained fix, not run through the full ADR/executor-brief/adversarial-review
+cycle (reserved for build-plan-sized work) — see [open-questions #114](open-questions.md)'s new
+addendum for the full account. **A pre-existing, unrelated defect surfaced running the full
+verification block:** `tests/docs/doc-conventions.test.ts` failed — session 101's own docs (this file,
+status-archive.md, the session-102 kickoff brief) had live `github.com/.../pull/23` links, violating
+[#132](open-questions.md) interim rule (i), undetected because docs-only pushes skip CI. Fixed directly
+on `main` (`2f3ff3a`, docs-only) before branching PR #24. Verified: root+web typecheck clean; backend
+153 files/2358 tests green (solo, after the doc-conventions fix); web 105 files/1734 tests green
+(solo); hermetic benchmark 14/14+6/6+0 fabricated GATE PASS; real `next build` succeeds; `/code-review`
+LOW: 0 findings.
 
 **▶ SUPERSEDED (written 2026-09-14 ~09:33 UTC, session 101 continued overnight, autonomous — owner
 asleep; superseded same day, see the "continued" block right below).** Both pieces of pre-approved

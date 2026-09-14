@@ -15,6 +15,7 @@ const billing = vi.hoisted(() => ({
   getQuestionHistory: vi.fn(),
   getActionClassPrice: vi.fn(),
   getSignupGrantCredits: vi.fn(),
+  hasProPlan: vi.fn(),
 }));
 vi.mock('../backend/billing/index.ts', () => billing);
 
@@ -35,11 +36,13 @@ beforeEach(() => {
   billing.getQuestionHistory.mockResolvedValue([]);
   billing.getActionClassPrice.mockResolvedValue(20);
   billing.getSignupGrantCredits.mockResolvedValue(100);
+  billing.hasProPlan.mockResolvedValue(false);
   threads.listThreads.mockResolvedValue([]);
   errorReport.reportError.mockResolvedValue(undefined);
   vi.stubEnv('ONBOARDING_ENABLED', '');
   vi.stubEnv('WEBSEARCH_ENABLED', '');
   vi.stubEnv('WORKSPACE_ENABLED', '');
+  vi.stubEnv('PRO_SUBSCRIPTIONS_ENABLED', '');
 });
 
 afterEach(() => {
@@ -66,6 +69,7 @@ describe('#114 /api/health — the dashboard-read probes', () => {
       'pricing-read-simple',
       'pricing-read-clarification',
       'signup-grant-read',
+      'pro-subscription-read',
     ]);
     // The synthetic id, never a session's: this route holds no auth at all.
     expect(billing.getBalance).toHaveBeenCalledWith(fakeDb, NIL);
@@ -74,6 +78,17 @@ describe('#114 /api/health — the dashboard-read probes', () => {
     });
     // A cached health response is a lying one.
     expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('probes pro_subscriptions UNCONDITIONALLY — PRO_SUBSCRIPTIONS_ENABLED off does not skip it, unlike the flag-gated checks', async () => {
+    // Unlike ONBOARDING/WEBSEARCH/WORKSPACE, this flag only gates starting a
+    // new checkout (embed-actions.ts) — the embed page's `hasProPlan` read
+    // runs on every embed view regardless, so the probe must too (the
+    // session-101 incident class: code querying a table before its migration
+    // had run, with no flag to have disabled the query).
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(billing.hasProPlan).toHaveBeenCalledWith(fakeDb, { id: NIL, email: null });
   });
 
   it('mirrors page.tsx flag gating: onboarding flag reaches the history read, websearch/workspace add their probes', async () => {
