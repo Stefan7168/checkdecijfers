@@ -51,11 +51,15 @@ updated with the full as-built.
 to continue overnight):** [#205](open-questions.md), owner-approved design + 13-task plan, built
 on `.claude/worktrees/pro-subscription-tier` (branch `worktree-pro-subscription-tier`), pushed, PR
 #22 open. Every task individually reviewed (several through 1-2 real fix rounds); a final
-whole-branch review found 3 more cross-task-invisible issues, all fixed and re-verified. **Final
-state, verified 2026-09-14 08:29 UTC:** PR #22 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`,
-CI green (run `34822518109`: backend 1/2/3 pass, web pass, deploy correctly skips on a non-main
-PR). Full backend suite 2347/2347 (152 files), web suite 1707/1707 (104 files), both typechecks
-clean, `tests/docs` 11/11. SDD ledger (full record of every task/bug/fix/ruling):
+whole-branch review found 3 more cross-task-invisible issues, all fixed and re-verified. Three
+further docs-only merge-conflict rounds followed (main and the PR branch each independently wrote
+wrap-up documentation over the same files) — resolved each time, re-verified each time. **True
+final state, verified 2026-09-14 ~09:33 UTC (this wrap-up's own last check):** PR #22
+`mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, CI green on the LAST push (run `34828185132`:
+backend 1/2/3 pass, web pass, deploy correctly skips on a non-main PR). Full backend suite
+2347/2347 (152 files), web suite 1707/1707 (104 files), both typechecks clean, `tests/docs` 11/11
+(measured on the code-complete state, unchanged by the docs-only merge rounds). SDD ledger (full
+record of every task/bug/fix/ruling):
 `.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`.
 Full design: [superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md).
 Full plan: [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
@@ -76,7 +80,7 @@ merge-conflict resolution** — this branch predated the chart-work merge to `ma
 touched the same embed-dialog file for an unrelated reason; resolved by hand, re-verified clean.
 
 **Two open actions, both the owner's alone to take:**
-1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified 2026-09-14 08:29 UTC:
+1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified 2026-09-14 ~09:33 UTC:
    `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE`. Branch + PR + explicit owner go is this
    decision's own standing rule, no exception for an owner-present session — and no exception for
    an autonomous one either.

@@ -97,14 +97,17 @@ would have silently shipped a broken or unsafe feature despite every existing te
   test run.
 
 **Final verified state (2026-09-14, checked live, not recalled).** After the code was done and
-reviewed clean, `main` and this PR branch each independently wrote near-duplicate content into
-`docs/STATUS.md`'s top block in the same wrap-up pass, producing one more real (docs-only) merge
-conflict — resolved by taking `main`'s slightly later copy and discarding the duplicate, pushed,
-re-verified: PR #22 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, `state: OPEN`, CI green on
-this final push (run `34827183586`: `backend (1)`/`backend (2)`/`backend (3)` all `pass`, `web`
+reviewed clean, `main` and this PR branch independently wrote near-duplicate documentation content
+into `docs/STATUS.md`, then `docs/RUNBOOK.md`/`docs/open-questions.md`, across THREE separate
+docs-only wrap-up passes on each side — each producing a real merge conflict, each resolved by
+taking whichever side's copy was slightly more current and discarding the duplicate, each
+re-verified. **The true final state, after all three rounds** (merge commits `82f9236` then
+`b8d8a67`): PR #22 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, `state: OPEN`, CI green on
+the LAST push (run `34828185132`: `backend (1)`/`backend (2)`/`backend (3)` all `pass`, `web`
 `pass`, `deploy` correctly `skipping` on a non-main PR). Full backend suite 2347/2347 (152 files),
 web suite 1707/1707 (104 files), both typechecks clean, `tests/docs` 11/11 (all measured on the
-code-complete state, immediately before this final docs-only push).
+code-complete state at commit `7d03553`, unchanged by any of the three subsequent docs-only merge
+rounds — none of them touched a test file).
 
 `PRO_SUBSCRIPTIONS_ENABLED` stays unset — merging this PR alone turns nothing on for real users;
 the owner still needs RUNBOOK's go-live checklist (migration 030, a real Stripe Price object, the
