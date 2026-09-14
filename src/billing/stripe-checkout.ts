@@ -37,3 +37,26 @@ export function buildCheckoutSessionParams(
     metadata: { userId, packId: pack.id, credits: String(pack.credits) },
   };
 }
+
+/** Subscription Checkout (open-questions #205) — `mode: 'subscription'`
+ * referencing a real Stripe Price object (`priceId`, provisioned once in
+ * the Dashboard or via a one-off script, per the design's §4 — subscriptions
+ * cannot use one-time Checkout's inline `price_data`, unlike
+ * buildCheckoutSessionParams above). `metadata.userId` is read back by the
+ * customer.subscription.created webhook handler (Task 9) to link the new
+ * Stripe customer/subscription to this app's user row — Stripe subscription
+ * events don't otherwise carry an app-specific user id. */
+export function buildProSubscriptionCheckoutParams(
+  userId: string,
+  priceId: string,
+  successUrl: string,
+  cancelUrl: string,
+): Stripe.Checkout.SessionCreateParams {
+  return {
+    mode: 'subscription',
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: { userId },
+  };
+}
