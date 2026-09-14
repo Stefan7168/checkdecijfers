@@ -23,6 +23,17 @@ bugs), pushed, PR #22 open, CI green, `mergeable: MERGEABLE`. **Two PRs now awai
 merge-go — nothing else is blocking either.** Full detail on both: [status-archive.md](status-archive.md)'s
 top entry plus this block below.
 
+**Same session continued, 2026-09-14, owner present:** a CBS cell-highlight proof-panel link shipped (#247,
+`10be5db`), a 6-item UI polish batch shipped and deployed (Style-modal download/embed, modal padding, an
+always-visible reset button, theme toggle + history moved into the Account menu, a new `/about` page —
+`1a5c8c0`, CI green incl. `deploy`). **New, bigger: Eurostat is now the chosen second data source** — the owner
+set the EU-wide-destination direction ([#248](open-questions.md)), a design spike + a formal ADR
+([048](decisions/048-eurostat-data-source.md)) followed, with its own pre-build adversarial design review (4
+lenses, 14 findings, 1 confirmed blocker — a premature "Eurostat — coming" homepage notice — found and removed
+same day, `058efdf`; 6 more folded into the ADR). **WP30c (E1: adapter + internal, flag-gated explorer) is now
+execute-ready in [08-build-plan.md](08-build-plan.md).** Not started — no code, no migration applied. E2/E3
+stay unscheduled.
+
 **Just shipped (2026-09-13/14, autonomous, pushed to `main`, no PR — chart/UI, not money-path):**
 a 3-task chart visual + embed plan
 ([superpowers/plans/2026-09-13-chart-visual-embed-pass.md](superpowers/plans/2026-09-13-chart-visual-embed-pass.md),
