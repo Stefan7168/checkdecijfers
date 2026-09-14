@@ -441,17 +441,23 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'owner-42' }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
     expect(lookupUserEmail).toHaveBeenCalledWith(expect.anything(), 'owner-42');
-    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: 'owner@example.com' });
+    expect(hasProPlan).toHaveBeenCalledWith(expect.anything(), { id: 'owner-42', email: 'owner@example.com' });
   });
 
-  it('falls back to an empty-string id and skips the lookup entirely when the row has no owner (anonymous/benchmark row)', async () => {
+  // Task 7 (#205): hasProPlan now reads a real pro_subscriptions row keyed
+  // on a uuid user_id column — passing the old '' placeholder id (never
+  // dereferenced by the allowlist-only check this route used to call) would
+  // now be a genuine invalid-uuid query. page.tsx was updated to skip the
+  // Pro check entirely for an ownerless row instead (same short-circuit it
+  // already applies to the email lookup below) rather than ever calling
+  // hasProPlan with an id that can't name a real subscription row.
+  it('skips both the email lookup and the Pro check entirely when the row has no owner (anonymous/benchmark row)', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
-    hasProPlan.mockReturnValue(false);
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: null }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
     expect(lookupUserEmail).not.toHaveBeenCalled();
-    expect(hasProPlan).toHaveBeenCalledWith({ id: '', email: null });
+    expect(hasProPlan).not.toHaveBeenCalled();
   });
 
   it('a lookup failure (null email) falls back to the frozen render exactly like a non-Pro owner', async () => {
@@ -461,7 +467,7 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     lookupUserEmail.mockResolvedValue(null);
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'owner-42' }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
-    expect(hasProPlan).toHaveBeenCalledWith({ id: 'owner-42', email: null });
+    expect(hasProPlan).toHaveBeenCalledWith(expect.anything(), { id: 'owner-42', email: null });
     expect(screen.queryByText(/live/i)).not.toBeInTheDocument();
     expect(rerunLive).not.toHaveBeenCalled();
   });

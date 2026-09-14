@@ -15,7 +15,7 @@
 // warning, born from a mistake this design caught once already while
 // drafting that migration).
 import type { Db } from '../db/types.ts';
-import { compensate, getActionClassPrice, reserveDatasetDebit } from './ledger.ts';
+import { compensateSplit, getActionClassPrice, reserveDatasetDebit } from './ledger.ts';
 import type { AuditedDatasetTurn, GatedDatasetResponse } from './types.ts';
 
 export async function chargeAndRunDataset(
@@ -35,7 +35,7 @@ export async function chargeAndRunDataset(
     // honestly (the CBS-side chargeAndRun's own rule, applied here).
     return { kind: 'duplicate_request' };
   }
-  const debit = reservation.entry;
+  const split = reservation.split;
 
   try {
     const result = await run();
@@ -44,23 +44,23 @@ export async function chargeAndRunDataset(
       // The delete-vs-write race: no turn was written at all. Nothing was
       // delivered — full refund, same as a refusal, regardless of what
       // kind the (never-persisted) envelope would have been.
-      await compensate(db, userId, debit.id, required, null);
+      await compensateSplit(db, userId, split, required, null);
       netCost = 0;
     } else if (result.envelope.kind === 'clarification') {
       const clarifyPrice = await getActionClassPrice(db, 'clarification');
       const refund = required - clarifyPrice;
       if (refund > 0) {
-        await compensate(db, userId, debit.id, refund, null);
+        await compensateSplit(db, userId, split, refund, null);
         netCost = clarifyPrice;
       }
     } else if (result.envelope.kind === 'refusal') {
-      await compensate(db, userId, debit.id, required, null);
+      await compensateSplit(db, userId, split, required, null);
       netCost = 0;
     }
     // else: 'chart' — keeps the full debit, netCost stays `required`.
     return { kind: 'ok', ...result, netCost };
   } catch (error) {
-    await compensate(db, userId, debit.id, required, null);
+    await compensateSplit(db, userId, split, required, null);
     throw error;
   }
 }

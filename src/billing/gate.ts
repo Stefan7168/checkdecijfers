@@ -25,7 +25,7 @@
 // classifier.
 import type { AuditedResponse } from '../answer/audit/index.ts';
 import type { Db } from '../db/types.ts';
-import { compensate, getActionClassPrice, reserveDebit } from './ledger.ts';
+import { compensateSplit, getActionClassPrice, reserveDebit } from './ledger.ts';
 import type { GatedResponse } from './types.ts';
 
 export async function chargeAndRun(
@@ -52,7 +52,7 @@ export async function chargeAndRun(
     // answer, and there is no cached prior response to replay honestly.
     return { kind: 'duplicate_request' };
   }
-  const debit = reservation.entry;
+  const split = reservation.split;
 
   try {
     const result = await run();
@@ -72,17 +72,17 @@ export async function chargeAndRun(
       // compensate. Never charge MORE than the pre-flight debit; this gate
       // only ever refunds, by construction.
       if (refund > 0) {
-        await compensate(db, userId, debit.id, refund, result.auditId);
+        await compensateSplit(db, userId, split, refund, result.auditId);
         netCost = clarifyPrice;
       }
     } else if (result.response.kind !== 'answer') {
       // Every refusal reason: no value delivered, full refund.
-      await compensate(db, userId, debit.id, required, result.auditId);
+      await compensateSplit(db, userId, split, required, result.auditId);
       netCost = 0;
     }
     return { kind: 'ok', ...result, netCost };
   } catch (error) {
-    await compensate(db, userId, debit.id, required, null);
+    await compensateSplit(db, userId, split, required, null);
     throw error;
   }
 }

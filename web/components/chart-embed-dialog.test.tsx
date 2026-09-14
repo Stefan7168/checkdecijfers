@@ -12,15 +12,26 @@
 // before the real call sites were grepped. Mirrored here exactly.
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
-vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
+const { createEmbedCode, startProSubscriptionCheckout } = vi.hoisted(() => ({
+  createEmbedCode: vi.fn(),
+  startProSubscriptionCheckout: vi.fn(),
+}));
+vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode, startProSubscriptionCheckout }));
 
 const { trackChartStyleEvent } = vi.hoisted(() => ({ trackChartStyleEvent: vi.fn() }));
 vi.mock('../lib/chart-usage-client.ts', () => ({ trackChartStyleEvent }));
 
 import { ChartEmbedButton } from './chart-embed-dialog.tsx';
+
+beforeEach(() => {
+  // Task 11 (#205): the real-world default everywhere except a session that
+  // has explicitly flipped PRO_SUBSCRIPTIONS_ENABLED — every test below that
+  // doesn't care about the flag-on branch gets the exact pre-Task-11
+  // interest-tracking behaviour unchanged.
+  startProSubscriptionCheckout.mockResolvedValue({ ok: false, reason: 'disabled' });
+});
 
 // Task 3 (chart-visual-embed-pass): ChartEmbedButton became a controlled
 // component (open/onOpenChange lifted into chart.tsx's shared openPanel
@@ -99,7 +110,10 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
   });
 
   // Session 101 (open-questions #237(b)/#205): the visible Pro pitch and its
-  // interest-only "upgrade" click — no charge, a real click count.
+  // interest-only "upgrade" click — no charge, a real click count. Task 11:
+  // this is now the FLAG-OFF branch specifically — startProSubscriptionCheckout
+  // resolves `disabled` (the beforeEach default), so the click falls through
+  // to the original tracking-only behaviour, unchanged.
   it('shows the price and an upgrade CTA when pro is false, tracks pro_upgrade_click and shows thanks on click, and shows neither when pro is true', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
@@ -108,8 +122,73 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.getByText(/€19\/month/)).toBeInTheDocument();
     const upgradeButton = screen.getByRole('button', { name: /interested in pro/i });
     fireEvent.click(upgradeButton);
-    expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click');
+    await waitFor(() => expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click'));
+    expect(startProSubscriptionCheckout).toHaveBeenCalledTimes(1);
     expect(screen.getByText(/thanks/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /interested in pro/i })).toBeNull();
+  });
+
+  // Task 11 (#205): PRO_SUBSCRIPTIONS_ENABLED on — the click opens a real
+  // Stripe Checkout redirect instead of the interest-only tracking above.
+  it('redirects to the real Checkout URL when startProSubscriptionCheckout succeeds, without tracking pro_upgrade_click', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    startProSubscriptionCheckout.mockResolvedValue({ ok: true, url: 'https://checkout.stripe.com/session-xyz' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    const upgradeButton = screen.getByRole('button', { name: /interested in pro/i });
+
+    // jsdom's window.location is non-configurable — full-object replacement
+    // is the working idiom (same as chat.test.tsx's own reload() precedent).
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      value: { ...original, href: original.href },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      fireEvent.click(upgradeButton);
+      await waitFor(() => expect(startProSubscriptionCheckout).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(window.location.href).toBe('https://checkout.stripe.com/session-xyz'));
+      expect(trackChartStyleEvent).not.toHaveBeenCalledWith('pro_upgrade_click');
+      expect(screen.queryByText(/thanks/i)).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'location', { value: original, configurable: true, writable: true });
+    }
+  });
+
+  // Task 11: the not_signed_in fail-safe (shouldn't happen — this dialog
+  // only mounts for a signed-in embed creator) still falls through to the
+  // original tracking behaviour rather than leaving the button inert.
+  it('falls through to the interest-tracking behaviour when startProSubscriptionCheckout reports not_signed_in', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    startProSubscriptionCheckout.mockResolvedValue({ ok: false, reason: 'not_signed_in' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: /interested in pro/i }));
+    await waitFor(() => expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click'));
+    expect(screen.getByText(/thanks/i)).toBeInTheDocument();
+  });
+
+  // Review fix round: the concrete bug traced by the reviewer — a transient
+  // Stripe failure (checkout_failed) must reset checkingOut and fall
+  // through exactly like disabled/not_signed_in, never leave the Upgrade
+  // button stuck `disabled` with no message until the dialog is reopened.
+  it('resets checkingOut and falls through to interest-tracking (button not left stuck disabled) when startProSubscriptionCheckout reports checkout_failed', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    startProSubscriptionCheckout.mockResolvedValue({ ok: false, reason: 'checkout_failed' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: /interested in pro/i }));
+    await waitFor(() => expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click'));
+    expect(screen.getByText(/thanks/i)).toBeInTheDocument();
+    // The CTA button is gone once `upgradeClicked` flips (replaced by the
+    // thanks message) — the meaningful assertion is that the flow reached
+    // that state at all, rather than the button staying rendered and
+    // disabled forever (the bug: an uncaught rejection would have aborted
+    // the handler before setCheckingOut(false)/setUpgradeClicked(true) ran).
     expect(screen.queryByRole('button', { name: /interested in pro/i })).toBeNull();
   });
 

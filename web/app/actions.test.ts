@@ -9,7 +9,7 @@
 // stubbed at their modules — so the actions.ts money orchestration is what runs.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../backend/db/types.ts';
-import type { GatedResponse, LedgerEntry } from '../backend/billing/index.ts';
+import type { GatedResponse, SplitDebitResult } from '../backend/billing/index.ts';
 import type { AuditedResponse } from '../backend/answer/audit/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
@@ -26,7 +26,7 @@ vi.mock('../lib/db.ts', () => ({ getDb }));
 // really runs and the ledger is never touched. chargeAndRun is driven per test.
 const billing = vi.hoisted(() => ({
   chargeAndRun: vi.fn(),
-  compensate: vi.fn(),
+  compensateSplit: vi.fn(),
   getActionClassPrice: vi.fn(),
   getBalance: vi.fn(),
   reserveWebSearchDebit: vi.fn(),
@@ -80,6 +80,16 @@ const fakeDb = {} as Db;
 // the billing gate even runs, which would break every test using one.
 const RID = '00000000-0000-4000-8000-000000000001';
 
+// Task 6 (open-questions #205): reserveWebSearchDebit now returns a
+// SplitDebitResult (bucket-first spend, mirroring the base question debit's
+// own reserveDebit/split shape from Task 4) instead of a bare LedgerEntry.
+// This module stubs the billing barrel wholesale, so the exact split shape
+// is this suite's own choice — fixed to a ledger-only split (no bucket
+// portion) since Pro-bucket spend itself is covered at the ledger.ts layer
+// (tests/billing/ledger.test.ts); what this file exercises is that
+// actions.ts passes the split straight through to compensateSplit unchanged.
+const FAKE_WEB_SPLIT: SplitDebitResult = { fromBucket: 0, fromLedger: 10, bucketEntry: null, ledgerEntry: { id: 99 } };
+
 beforeEach(() => {
   currentUserId.mockResolvedValue('user-1');
   getDb.mockReturnValue(fakeDb);
@@ -88,8 +98,8 @@ beforeEach(() => {
     cls === 'web_addon' ? 10 : cls === 'simple' ? 20 : 10,
   );
   billing.getBalance.mockResolvedValue(100);
-  billing.reserveWebSearchDebit.mockResolvedValue({ kind: 'debited', entry: { id: 99 } });
-  billing.compensate.mockResolvedValue({ id: 1 });
+  billing.reserveWebSearchDebit.mockResolvedValue({ kind: 'debited', split: FAKE_WEB_SPLIT });
+  billing.compensateSplit.mockResolvedValue(undefined);
   vi.stubEnv('WEBSEARCH_ENABLED', '1');
   vi.stubEnv('ONBOARDING_ENABLED', '0');
 });
@@ -294,29 +304,29 @@ describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated o
     driveGate(fakeAnswer(okSection), 5, 20);
     const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(gated).toMatchObject({ kind: 'ok', netCost: 30, auditId: 5 });
-    expect(billing.compensate).not.toHaveBeenCalled();
+    expect(billing.compensateSplit).not.toHaveBeenCalled();
   });
 
   it('REFUNDS (compensates) when the web section failed — netCost stays 20', async () => {
     driveGate(fakeAnswer({ status: 'failed', code: 'api_error' }), 5, 20);
     const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect(gated).toMatchObject({ kind: 'ok', netCost: 20 });
-    // compensate(db, userId, debitId=99, price=10, auditId=5)
-    expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, 5);
+    // compensateSplit(db, userId, split, price=10, auditId=5)
+    expect(billing.compensateSplit).toHaveBeenCalledWith(fakeDb, 'user-1', FAKE_WEB_SPLIT, 10, 5);
   });
 
   it('REFUNDS when auditId is null DESPITE an ok section (the ⟨W1⟩ belt)', async () => {
     driveGate(fakeAnswer(okSection), null, 20);
     const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: true });
     expect((gated as { netCost: number }).netCost).toBe(20);
-    expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, null);
+    expect(billing.compensateSplit).toHaveBeenCalledWith(fakeDb, 'user-1', FAKE_WEB_SPLIT, 10, null);
   });
 
   it('does not settle anything when no web debit was taken (web chip off)', async () => {
     driveGate(fakeAnswer(), 1, 20);
     const { gated } = await askQuestion('q', RID, null, { sources: ['cbs'], web: false });
     expect((gated as { netCost: number }).netCost).toBe(20);
-    expect(billing.compensate).not.toHaveBeenCalled();
+    expect(billing.compensateSplit).not.toHaveBeenCalled();
   });
 
   it('compensates a taken web debit on the exception path, then rethrows', async () => {
@@ -337,7 +347,7 @@ describe('askQuestion — ⟨W3⟩/⟨W1⟩ web add-on settlement (final gated o
       await expect(askQuestion('q', RID, null, { sources: ['cbs'], web: true })).rejects.toThrow(
         'pipeline boom',
       );
-      expect(billing.compensate).toHaveBeenCalledWith(fakeDb, 'user-1', 99, 10, null);
+      expect(billing.compensateSplit).toHaveBeenCalledWith(fakeDb, 'user-1', FAKE_WEB_SPLIT, 10, null);
     } finally {
       spy.mockRestore();
     }

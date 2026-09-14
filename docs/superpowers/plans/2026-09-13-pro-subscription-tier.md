@@ -90,6 +90,11 @@ create table pro_subscriptions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- ⚠ As-built correction (Task 9's review + fix round, commit `1068013`): the real migration 030
+-- also has `last_event_at timestamptz not null default now()` — a DEDICATED column for Stripe
+-- webhook out-of-order-delivery detection, added because `updated_at` above must keep its
+-- ordinary wall-clock meaning for every other writer (see Task 9 and Task 10 below). See the real
+-- `migrations/030_pro_subscriptions.sql`.
 
 -- Guarded FK to auth.users, conditional on the auth schema existing —
 -- migration 026's exact pattern (itself migration 019's/005's). No `on
@@ -445,6 +450,15 @@ a non-Pro user's behavior is byte-identical to today.
   `SplitDebitResult` type and `splitDebit(tx, userId, requestId, credits, debitFn, note):
   Promise<SplitDebitResult>`, `compensateSplit(db, userId, split: SplitDebitResult, refundCredits,
   auditAnswerId): Promise<void>` — consumed by Tasks 4-6.
+  **AS BUILT (Task 4 fix rounds 1-2, 2026-09-14):** `splitDebit`'s `debitFn` parameter became a
+  `debit: LedgerDebit` descriptor — `splitDebit(tx, userId, requestId, credits, debit, note,
+  grantId?)`. A `LedgerDebit` is `{ reason, write }`: the debit primitive bound to the
+  `credit_transactions` reason it writes. `ledger.ts` exports one per action type —
+  `QUESTION_DEBIT`, `ONBOARDING_DEBIT`, `WEBSEARCH_DEBIT`, `DATASET_DEBIT` — so pass the
+  descriptor, never the bare function. The reason is what scopes the new cross-ledger idempotency
+  check on `credit_transactions` (each table's own `on conflict` is blind to a retry that lands on
+  the OTHER table), and binding it to the primitive makes it structurally impossible for the reason
+  checked and the reason written to drift apart. Task 6's snippets below are updated to match.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -968,12 +982,20 @@ the same shape as `gate.ts`'s `chargeAndRun`, Task 4's already-solved case).
 - [ ] **Step 1: Write the failing tests** — same four-test shape as Task 4, once for
   `reserveWebSearchDebit` (10-credit price) and once for `reserveDatasetDebit` (20-credit price,
   per `09-pricing.md`'s `dataset_turn` price) — 8 new tests total, in `tests/billing/ledger.test.ts`.
+  **Plus one more, specifically for the landmine this task exists to avoid:** call `reserveDebit`
+  for a question under some `requestId` (fully draining an active Pro bucket, so the debit lands
+  in the bucket), then call `reserveWebSearchDebit` with that SAME base `requestId` for the add-on
+  that rides alongside it — assert the add-on is NOT treated as a duplicate of the question's own
+  debit (both succeed as independent debits; total credits removed = both amounts, not one).
+  Without the internal `${requestId}:websearch` disambiguation this test fails exactly the way the
+  Task 4 finding described. 9 new tests total.
 
 - [ ] **Step 2: Run to verify they fail.**
 
 - [ ] **Step 3: Modify both functions in `ledger.ts`** — identical shape to Task 4 Step 4,
-  substituting `debitWebSearch`/`'websearch debit'` and `debitDataset`/`'dataset debit'`
-  respectively:
+  substituting `WEBSEARCH_DEBIT`/`'websearch debit'` and `DATASET_DEBIT`/`'dataset debit'`
+  respectively (those descriptors are Task 4 fix rounds 1-2's addition — see Task 3's AS BUILT
+  note; they already exist and are exported, nothing to define):
 
 ```ts
 export type ReserveWebSearchDebitResult =
@@ -994,7 +1016,25 @@ export async function reserveWebSearchDebit(
     if (balance < required) {
       return { kind: 'insufficient', balance };
     }
-    const split = await splitDebit(tx, userId, requestId, required, debitWebSearch, 'websearch debit', grantId);
+    // NOTE (Task 4 fix rounds 1-2, corrected as-built by Task 6): only the pro_bucket_ledger leg
+    // needs a disambiguated id — pro_bucket_ledger_one_debit_per_request is
+    // `(user_id, request_id) where reason = 'debit'` with NO action-type scope, so on a shared
+    // requestId the add-on's bucket debit reads as a duplicate of the question's and is silently
+    // dropped (not limited to a lapsed subscription — fires whenever the question debit took
+    // anything from the bucket, on a perfectly active subscription). credit_transactions does NOT
+    // need this: its own uniqueness is already reason-scoped (separate partial unique indexes per
+    // reason — question_cost/websearch_cost/dataset_cost/onboarding_cost), so sharing the bare
+    // requestId there is already safe, and MUST be kept — history.ts/threads/index.ts's cost
+    // rollup joins on the ledger leg's real request_id. **As-built (Task 6): the literal string
+    // concatenation shown below does NOT work** — request_id columns are Postgres `uuid` type, so
+    // `${requestId}:websearch` fails at the DB with "invalid input syntax for type uuid". The real
+    // fix is a deterministic, suffix-sensitive UUID derivation (`deriveAddonRequestId`, SHA-256-
+    // based, 128 bits of the digest formatted as a real UUID) applied ONLY to the bucket leg via
+    // splitDebit's own bucket-specific id parameter — the ledger leg keeps the real requestId
+    // unchanged. See the real `src/billing/ledger.ts` for the actual signature; the sketch below
+    // is illustrative of the OLD (broken) approach only, kept for the historical record.
+    const addonRequestId = `${requestId}:websearch`; // ⚠ illustrative only — see note above, does not work as written
+    const split = await splitDebit(tx, userId, requestId, required, WEBSEARCH_DEBIT, 'websearch debit', grantId, addonRequestId);
     if (split.bucketEntry === null && split.ledgerEntry === null) {
       return { kind: 'duplicate' };
     }
@@ -1003,8 +1043,8 @@ export async function reserveWebSearchDebit(
 }
 ```
 
-(`reserveDatasetDebit` is the identical shape, substituting `debitDataset`/`'dataset debit'` and
-its own `ReserveDatasetDebitResult` type.)
+(`reserveDatasetDebit` is the identical shape, substituting `DATASET_DEBIT`/`'dataset debit'`, its
+own `ReserveDatasetDebitResult` type, and its own derived bucket-leg id in place of `websearch`'s.)
 
 - [ ] **Step 4: Modify `chargeAndRunDataset` in `dataset-gate.ts`** — apply Task 4 Step 5's exact
   transformation (replace every `debit.id` with `split`, every `compensate(db, userId, debit.id,
@@ -1279,6 +1319,13 @@ export function buildProSubscriptionCheckoutParams(
 }
 ```
 
+**⚠ As-built correction (found by Task 9's review, fixed in commit `1068013`): the sketch above is
+BROKEN — session-level `metadata` is never copied onto the Subscription object Stripe creates, so
+every real `customer.subscription.*` webhook would arrive with empty metadata and the whole
+feature would silently never write a `pro_subscriptions` row for a real paying customer.** The real
+implementation also sets `subscription_data: { metadata: { userId } }` (the field Stripe actually
+propagates) alongside the session-level one. See the real `src/billing/stripe-checkout.ts`.
+
 - [ ] **Step 5: Run to verify it passes**
 
 Run: `npx vitest run tests/billing/stripe-checkout.test.ts`
@@ -1338,7 +1385,23 @@ function subscriptionEventPayload(
     },
   });
 }
+```
 
+**⚠ As-built correction (Task 9's review, commit `1068013`, plus Task 10's review of the same
+staleness class): this sketch is now doubly wrong.** (1) `current_period_end` is not top-level on
+`Stripe.Subscription` in the installed SDK — it's per-item (`items.data[].current_period_end`),
+and the real implementation takes the MIN across items. (2) the top-level event envelope needs its
+own real `created` (unix seconds) for the `last_event_at` out-of-order guard to have something
+meaningful to compare — a fixture omitting it doesn't exercise the guard at all. **Every later task
+whose tests need a subscription or invoice event payload (Task 10, Task 13's integration test)
+MUST import and reuse the REAL, already-corrected fixture builders from
+`tests/billing/stripe-webhook.test.ts` (as committed after Task 9/10's fix rounds) rather than
+hand-rolling a new raw JSON literal from this or any other sample in this plan — every raw-JSON
+sample below reproduces this same staleness and has already caused two rounds of "implementer
+independently rediscovers the same Stripe API shape bug."** Read the real test file for the
+authoritative shape.
+
+```ts
 describe('subscription lifecycle webhooks', () => {
   it('customer.subscription.created upserts a pro_subscriptions row', async () => {
     await withDb(async (db) => {
@@ -1431,6 +1494,20 @@ async function upsertProSubscription(db: Db, subscription: Stripe.Subscription):
 }
 ```
 
+**⚠ As-built correction (Task 9's own review + fix round, commit `1068013`):** the sketch above is
+missing the out-of-order-webhook guard the real implementation needed — Stripe does not guarantee
+delivery order, and a stale event landing after a newer one would otherwise clobber the row with
+wrong state. The real `upsertProSubscription` adds a dedicated `last_event_at timestamptz` column
+(migration 030, amended — not `updated_at`, which stays ordinary wall-clock semantics for every
+other writer including Task 10 below) and gates the UPDATE with
+`... on conflict (user_id) do update set ... where excluded.last_event_at >= pro_subscriptions.last_event_at`,
+setting `last_event_at` from the Stripe event's own `event.created` on both INSERT and UPDATE. **Any
+future writer that can CREATE this row (including Task 10 below, if `invoice.paid` ever arrives
+before the subscription's own `created` event and needs to upsert rather than plain-UPDATE) MUST
+set `last_event_at` from its own event's `created` timestamp — never leave it at a bare
+`default now()`, or a genuinely earlier-but-later-delivered event will be wrongly rejected.** See
+the real `src/billing/stripe-webhook.ts` and `migrations/030_pro_subscriptions.sql`.
+
 Add before the final `return { handled: false, alreadyProcessed: false, ledgerId: null };`:
 
 ```ts
@@ -1464,6 +1541,19 @@ git commit -m "billing: webhook — subscription lifecycle events upsert pro_sub
 
 ## Task 10: Webhook — `invoice.paid` (the renewal/grant trigger)
 
+**Global note carried from Task 9's review (commit `1068013`):** Task 9 added an out-of-order-
+delivery guard on `pro_subscriptions` keyed on a dedicated `last_event_at` column — deliberately
+NOT `updated_at`, which stays ordinary wall-clock semantics. **This task's own design already
+avoids the one way that guard could be misapplied: it never creates a `pro_subscriptions` row —
+`grantMonthlyAllowance` below THROWS on an unknown subscription (Step 4) rather than upserting
+one.** Keep it that way. If this function (or anything else) is ever changed to create the row
+itself, it MUST set `last_event_at` from that event's own `event.created`, exactly as Task 9's
+`upsertProSubscription` does — never leave it at a bare `default now()`, or a genuinely-earlier-
+but-later-delivered subscription-lifecycle event would be wrongly rejected afterward. This task's
+own `update ... set current_period_grant_id = ..., updated_at = now()` (Step 4) correctly leaves
+`last_event_at` untouched — grant rotation is a different, independently-idempotent concern
+(`grantBucket`'s own per-invoice-id check) that doesn't participate in that guard at all.
+
 **Files:**
 - Modify: `src/billing/stripe-webhook.ts`
 - Test: `tests/billing/stripe-webhook.test.ts`
@@ -1477,6 +1567,12 @@ git commit -m "billing: webhook — subscription lifecycle events upsert pro_sub
 - [ ] **Step 1: Write the failing tests**
 
 ```ts
+// ⚠ As-built correction (Task 10's review, commit `3b1b9ed`): `Stripe.Invoice` has NO top-level
+// `subscription` field in the installed stripe@22.6.1 SDK (same class of bug as Task 9's
+// current_period_end) — the real path is `invoice.parent.subscription_details.subscription`. The
+// fixture below is the OLD, now-wrong shape; the real implementation reads the nested path. Any
+// future test (including Task 13's integration test) must use the nested shape or this handler
+// will silently grant nothing on every real renewal — see the real `stripe-webhook.ts`/its tests.
 function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: string): string {
   return JSON.stringify({
     id: `evt_${randomUUID()}`,
@@ -1486,7 +1582,7 @@ function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: s
       object: {
         id: invoiceId,
         object: 'invoice',
-        subscription: subscriptionId,
+        parent: { subscription_details: { subscription: subscriptionId } },
         metadata: { userId },
       },
     },
@@ -1602,6 +1698,22 @@ async function grantMonthlyAllowance(db: Db, invoice: Stripe.Invoice): Promise<S
   return { handled: true, alreadyProcessed: false, ledgerId: null };
 }
 ```
+
+**⚠ As-built corrections (Task 10's review, commit `3b1b9ed`), both real:**
+1. `invoice.subscription as string | null` is wrong — that field doesn't exist top-level on the
+   installed SDK's `Stripe.Invoice`. The real code reads
+   `invoice.parent?.subscription_details?.subscription` (a `string | Stripe.Subscription | null |
+   undefined` — narrow to a string id) — see the fixture correction above and the real
+   `stripe-webhook.ts`. **Without this fix every real renewal silently grants nothing** (verified:
+   the handler returns `{handled: false}` on the old shape).
+2. The two `await` calls above (`grantBucket` then the `pro_subscriptions` update) are NOT
+   independent statements in the real implementation — they're wrapped in one `db.withTransaction`.
+   Reasoning: a process crash between them would otherwise strand a committed grant whose id never
+   gets rotated into `current_period_grant_id` — `getCurrentGrantId`/`getSpendableBalance` only
+   ever read the CURRENT grant id, so the newly granted 1000 credits would exist in the ledger but
+   be permanently unspendable (verified by reproducing both the failure and the fix against a real
+   DB). `grantBucket` (Task 2) opens no transaction of its own — confirmed safe to call with an
+   open `tx`, no nesting risk (this codebase's `withTransaction` hard-throws on real nesting).
 
 Add before the final `return { handled: false, ... }`:
 
@@ -1855,6 +1967,16 @@ the mechanism works — flag-gated means no real user reaches either gap until t
 they're ready for a fuller rollout.
 
 ## Task 13: End-to-end integration test
+
+**⚠ Before writing this test, read this note (carried from Task 9/10's reviews, commits `1068013`/
+`3b1b9ed`): the raw JSON event payloads in the sample below use the OLD, now-WRONG Stripe shapes**
+(flat `current_period_end` on a subscription object; flat `subscription` on an invoice object) —
+the installed SDK's real shapes are per-item `current_period_end` (MIN across items) and
+`invoice.parent.subscription_details.subscription`. **Do not hand-roll these payloads from the
+sample below — import and call the real, already-corrected fixture builders
+(`subscriptionEventPayload`, `invoicePaidPayload`, or whatever they're named in the committed
+`tests/billing/stripe-webhook.test.ts`) instead.** This has already cost two review rounds; a
+third would mean this same plan document taught the same bug three times.
 
 **Files:**
 - Create: `tests/billing/pro-subscription-e2e.test.ts`

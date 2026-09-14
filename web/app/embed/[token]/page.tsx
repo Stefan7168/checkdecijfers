@@ -204,13 +204,16 @@ export default async function EmbedPage({
   if (query.live === '1') {
     // The Pro gate checks the audit row's OWNER (`record.userId`), never the
     // anonymous visitor — an embed URL can be viewed by anyone, but "Live" is
-    // a privilege of whoever CREATED it. `hasProPlan({ id, email })`
-    // (src/billing/pro.ts) can only ever match by EMAIL, and the only
+    // a privilege of whoever CREATED it. `hasProPlan(db, { id, email })`
+    // (src/billing/pro.ts) matches on `id` for a real `pro_subscriptions`
+    // row (Task 7, #205) OR on `email` for the owner-set `PRO_ACCOUNT_EMAILS`
+    // testing override — the `id` half needs no lookup (`record.userId` is
+    // already the row's owner), but the `email` half does: the only
     // email-by-user-id lookup this codebase has is `currentUserEmail()`
     // (web/lib/current-user.ts), which reads the CURRENT session's own JWT
     // claims — not an arbitrary OTHER user's (mirrors
     // web/app/embed-actions.ts's `createEmbedCode`, which computes this same
-    // `pro` flag at MINT time via `hasProPlan({ id: userId, email:
+    // `pro` flag at MINT time via `hasProPlan(db, { id: userId, email:
     // currentUserEmail() })` — that call has a live session to read the
     // email from; this one, rendering days later for an anonymous visitor,
     // does not).
@@ -234,7 +237,15 @@ export default async function EmbedPage({
     // breaks either way. A row with no owner (`record.userId === null`,
     // e.g. a benchmark/anonymous row) never needs a lookup at all.
     const email = record.userId === null ? null : await lookupUserEmail(getDb(), record.userId);
-    const pro = hasProPlan({ id: record.userId ?? '', email });
+    // Task 7 (#205): hasProPlan now reads a real `pro_subscriptions` row
+    // keyed on `user_id` (a uuid column) — a row with no owner has no id to
+    // key that lookup on (the old allowlist-only check never touched the
+    // DB, so `record.userId ?? ''` was harmless; the real DB query would
+    // reject '' as an invalid uuid). An ownerless row can never be Pro
+    // regardless, so this skips the call entirely rather than passing an
+    // id the query can't use — same short-circuit `lookupUserEmail` already
+    // gets above, extended to this check too.
+    const pro = record.userId === null ? false : await hasProPlan(getDb(), { id: record.userId, email });
     if (pro) {
       const liveSpec = await rerunLive(getDb(), record, { lang });
       if (liveSpec !== null) {

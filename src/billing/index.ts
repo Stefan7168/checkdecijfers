@@ -17,6 +17,7 @@
 export type { ActionClass, ActionClassPrice, CreditPack, GatedResponse, LedgerReason } from './types.ts';
 export {
   compensate,
+  compensateSplit,
   debitOnboarding,
   debitQuestion,
   debitWebSearch,
@@ -31,6 +32,7 @@ export type {
   ReserveDebitResult,
   ReserveOnboardingDebitResult,
   ReserveWebSearchDebitResult,
+  SplitDebitResult,
 } from './ledger.ts';
 export { chargeAndRun } from './gate.ts';
 export {
@@ -52,8 +54,8 @@ export { getQuestionHistory } from './history.ts';
 export type { QuestionHistoryEntry } from './history.ts';
 export { ACTION_CLASS_PRICES, CREDIT_PACKS, SIGNUP_GRANT_CREDITS } from './pricing-defaults.ts';
 export { getActivePacks, getPack, getSignupGrantCredits } from './pricing-read.ts';
-export { buildCheckoutSessionParams } from './stripe-checkout.ts';
+export { buildCheckoutSessionParams, buildProSubscriptionCheckoutParams } from './stripe-checkout.ts';
 export { handleStripeEvent } from './stripe-webhook.ts';
 export type { StripeWebhookResult } from './stripe-webhook.ts';
-export { hasProPlan } from './pro.ts';
+export { hasProPlan, PRO_MONTHLY_CREDITS } from './pro.ts';
 export { lookupUserEmail } from './creator-email.ts';

@@ -3,7 +3,7 @@
 // `payment_method_types` (Stripe's dynamic payment-method selection is what
 // will surface iDEAL once enabled on the account).
 import { describe, expect, it } from 'vitest';
-import { buildCheckoutSessionParams } from '../../src/billing/stripe-checkout.ts';
+import { buildCheckoutSessionParams, buildProSubscriptionCheckoutParams } from '../../src/billing/stripe-checkout.ts';
 import { CREDIT_PACKS } from '../../src/billing/pricing-defaults.ts';
 
 describe('buildCheckoutSessionParams', () => {
@@ -37,5 +37,26 @@ describe('buildCheckoutSessionParams', () => {
       const params = buildCheckoutSessionParams(pack, 'user-x', 'https://example.com/ok', 'https://example.com/cancel');
       expect(params.line_items![0]!.price_data?.unit_amount).toBe(pack.priceCents);
     }
+  });
+});
+
+describe('buildProSubscriptionCheckoutParams', () => {
+  it('buildProSubscriptionCheckoutParams builds a real subscription-mode session', () => {
+    const params = buildProSubscriptionCheckoutParams(
+      'user-123',
+      'price_pro_monthly_test',
+      'https://example.com/success',
+      'https://example.com/cancel',
+    );
+    expect(params.mode).toBe('subscription');
+    expect(params.line_items).toEqual([{ price: 'price_pro_monthly_test', quantity: 1 }]);
+    expect(params.success_url).toBe('https://example.com/success');
+    expect(params.cancel_url).toBe('https://example.com/cancel');
+    expect(params.metadata).toEqual({ userId: 'user-123' });
+    // Bug fix (post-Task-9 review): Stripe does not copy session metadata
+    // onto the Subscription object it creates — the webhook handler reads
+    // subscription.metadata, which only ever gets populated via
+    // subscription_data.metadata on the Checkout Session.
+    expect(params.subscription_data?.metadata).toEqual({ userId: 'user-123' });
   });
 });

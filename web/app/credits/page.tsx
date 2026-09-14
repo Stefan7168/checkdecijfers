@@ -26,7 +26,7 @@ const EUR_FORMATS = {
 export default async function CreditsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ purchase?: string }>;
+  searchParams: Promise<{ purchase?: string; pro?: string }>;
 }) {
   const userId = await currentUserId();
   if (userId === null) {
@@ -40,7 +40,7 @@ export default async function CreditsPage({
     getActionClassPrice(db, 'simple'),
     getSignupGrantCredits(db),
   ]);
-  const { purchase } = await searchParams;
+  const { purchase, pro } = await searchParams;
   const lang = await getLang();
   const eurFormat = EUR_FORMATS[lang];
 
@@ -75,6 +75,13 @@ export default async function CreditsPage({
         <p className="text-sm text-success">{t(lang, 'credits.purchaseSuccess')}</p>
       ) : null}
       {purchase === 'cancelled' ? <p className="text-sm text-muted-foreground">{t(lang, 'credits.purchaseCancelled')}</p> : null}
+      {/* Task 11 (#205): the Pro subscription Checkout's own success/cancel
+        * pair (web/lib/purchase.ts's proSuccessUrl/proCancelledUrl), on a
+        * SEPARATE `pro` query param so it can never collide with the
+        * one-time credit-pack flow's `purchase` param above — same inline,
+        * no-client-state pattern as that pair, just its own copy. */}
+      {pro === 'success' ? <p className="text-sm text-success">{t(lang, 'credits.proSuccess')}</p> : null}
+      {pro === 'cancelled' ? <p className="text-sm text-muted-foreground">{t(lang, 'credits.proCancelled')}</p> : null}
       <div className="flex flex-col gap-3">
         {packs.map((pack) => {
           // A pack's own questions/€-per-question, from ITS priceCents/credits

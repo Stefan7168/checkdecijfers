@@ -42,7 +42,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { createEmbedCode } from '../app/embed-actions.ts';
+import { createEmbedCode, startProSubscriptionCheckout } from '../app/embed-actions.ts';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import { ChartEditModal } from './chart-edit-modal.tsx';
@@ -157,12 +157,18 @@ function ChartEmbedDialog({
   const [live, setLive] = useState(false);
   const [copied, setCopied] = useState(false);
   // Session 101 (open-questions #237(b)/#205): the Pro pitch is visible to
-  // everyone now, with no real Stripe product behind it yet — clicking
-  // "interested" only counts a real click (`pro_upgrade_click`, the same
-  // anonymous chart_style_usage counter every other event here uses), never
-  // a charge or a real upgrade. Local-only state: a fresh dialog open always
-  // shows the CTA again, exactly like `copied` above never persisting either.
+  // everyone. Task 11 gives the click a real branch: PRO_SUBSCRIPTIONS_ENABLED
+  // on → startProSubscriptionCheckout() redirects to a real Stripe Checkout
+  // session (a charge, a real upgrade); off (or the fail-safe
+  // not-signed-in case, below) → the original interest-only click count
+  // (`pro_upgrade_click`, the same anonymous chart_style_usage counter every
+  // other event here uses), never a charge. Local-only state: a fresh
+  // dialog open always shows the CTA again, exactly like `copied` above
+  // never persisting either.
   const [upgradeClicked, setUpgradeClicked] = useState(false);
+  // Task 11: a slow Checkout-session round trip (network + Stripe) must not
+  // look like a dead click before window.location.href takes over.
+  const [checkingOut, setCheckingOut] = useState(false);
   const liveSwitchId = useId();
   const liveReasonId = useId();
 
@@ -273,9 +279,23 @@ function ChartEmbedDialog({
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => {
-                    // A real click count, no charge and no real upgrade —
-                    // see the `upgradeClicked` declaration above.
+                  disabled={checkingOut}
+                  onClick={async () => {
+                    setCheckingOut(true);
+                    const result = await startProSubscriptionCheckout();
+                    if (result.ok) {
+                      window.location.href = result.url;
+                      return; // navigating away; no need to reset checkingOut
+                    }
+                    // Flag off, not signed in (shouldn't happen — this
+                    // dialog only mounts for a signed-in embed creator,
+                    // but fail safe), or a transient Stripe/checkout
+                    // failure (`checkout_failed` — review fix round) —
+                    // every non-ok reason falls through identically to
+                    // the original interest-tracking behaviour, never
+                    // leaves the button stuck disabled. See the
+                    // `upgradeClicked` declaration above.
+                    setCheckingOut(false);
                     trackChartStyleEvent('pro_upgrade_click');
                     setUpgradeClicked(true);
                   }}
