@@ -16,12 +16,12 @@
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-14, session 101 continued overnight, autonomous —
 owner asleep, explicit "keep going, make great progress, use the time fully").** Both pieces of
-pre-approved overnight work are DONE. Chart visual/embed pass merged to `main`. Pro-subscription-
-tier build fully complete (all 13 tasks + a real merge-conflict resolution + a final whole-branch
-review that found and fixed 3 more real bugs), pushed, PR #22 open, CI green,
-`mergeable: MERGEABLE`. **Two PRs now await only the owner's merge-go — nothing else is blocking
-either.** Full detail on both: [status-archive.md](status-archive.md)'s top entry plus this block
-below.
+pre-approved overnight work are DONE. Chart visual/embed pass merged to `main`
+(`b86556f`..`841cb83`, 7 commits). Pro-subscription-tier build fully complete (all 13 tasks + a
+real merge-conflict resolution + a final whole-branch review that found and fixed 3 more real
+bugs), pushed, PR #22 open, CI green, `mergeable: MERGEABLE`. **Two PRs now await only the owner's
+merge-go — nothing else is blocking either.** Full detail on both: [status-archive.md](status-archive.md)'s
+top entry plus this block below.
 
 **Just shipped (2026-09-13/14, autonomous, pushed to `main`, no PR — chart/UI, not money-path):**
 a 3-task chart visual + embed plan
@@ -50,35 +50,30 @@ updated with the full as-built.
 **Pro subscription tier build — DONE (2026-09-13/14, autonomous, per the owner's explicit go-ahead
 to continue overnight):** [#205](open-questions.md), owner-approved design + 13-task plan, built
 on `.claude/worktrees/pro-subscription-tier` (branch `worktree-pro-subscription-tier`), pushed, PR
-#22 open. Every task individually reviewed (several through 1-2 real fix rounds — see below); a
-final whole-branch review found 3 more cross-task-invisible issues, all fixed and re-verified.
-**Final state, verified 2026-09-14 08:29 UTC:** PR #22 `mergeStateStatus: CLEAN`,
-`mergeable: MERGEABLE`, CI green (run `34822518109`: backend 1/2/3 pass, web pass, deploy
-correctly skips on a non-main PR). Full backend suite 2347/2347 (152 files), web suite 1707/1707
-(104 files), both typechecks clean, `tests/docs` 11/11. SDD ledger (full record of every task,
-every bug found, every fix, every ruling):
+#22 open. Every task individually reviewed (several through 1-2 real fix rounds); a final
+whole-branch review found 3 more cross-task-invisible issues, all fixed and re-verified. **Final
+state, verified 2026-09-14 08:29 UTC:** PR #22 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`,
+CI green (run `34822518109`: backend 1/2/3 pass, web pass, deploy correctly skips on a non-main
+PR). Full backend suite 2347/2347 (152 files), web suite 1707/1707 (104 files), both typechecks
+clean, `tests/docs` 11/11. SDD ledger (full record of every task/bug/fix/ruling):
 `.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`.
 Full design: [superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md).
 Full plan: [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
 **Real bugs found and fixed along the way** (every one caught by actually running code against a
 real migrated database, never by reading a diff alone): a cross-ledger double-charge bug in the
-core debit path (a retry landing on a different ledger than the original attempt escaped both
-tables' own idempotency checks); the identical bug class pre-empted in the plan text itself before
-an implementer ever touched it (the plan's own web-search/dataset sample contradicted its own
-warning comment); two separate Stripe-API-shape bugs where the installed SDK's real field shapes
-differ from the plan's illustrative samples (`Subscription.current_period_end` and
-`Invoice.subscription` both moved/don't exist as shown — each would have silently broken the
-feature in production despite every test passing); two atomicity gaps (a two-leg refund and a
-grant-rotation write, both now wrapped in one transaction); a missing try/catch that would have
-left the embed dialog's Upgrade button stuck on a Stripe outage; and, from the final whole-branch
-review, a real cross-seam bug in the PRE-EXISTING credit-pack webhook handler (a Pro signup's
-`checkout.session.completed` event would have fallen into the pack-purchase handler and thrown,
-retried by Stripe for ~3 days per signup) plus a backwards migration/deploy order in the RUNBOOK
-go-live checklist that would have caused a total outage for every user, not just Pro signups, if
-followed literally. **Also required a real merge-conflict resolution** — this branch predated a
-separate overnight session's chart-work merge to `main`, which touched the same embed-dialog file
-for an unrelated reason (git's own 3-way merge misattributed the conflict region; resolved by hand
-after reading both sides' real content, re-verified with a full clean test run).
+core debit path; the identical bug class pre-empted in the plan text itself before an implementer
+ever touched it; two separate Stripe-API-shape bugs where the installed SDK's real field shapes
+differ from the plan's illustrative samples (`Subscription.current_period_end`,
+`Invoice.subscription` — each would have silently broken the feature in production despite every
+test passing); two atomicity gaps (a two-leg refund, a grant-rotation write), both now wrapped in
+one transaction; a missing try/catch that would have left the embed dialog's Upgrade button stuck
+on a Stripe outage; and, from the final whole-branch review, a real cross-seam bug in the
+PRE-EXISTING credit-pack webhook handler (a Pro signup's `checkout.session.completed` event would
+have fallen into the pack-purchase handler and thrown, retried by Stripe for ~3 days per signup)
+plus a backwards migration/deploy order in the RUNBOOK go-live checklist that would have caused a
+total outage for every user, not just Pro signups, if followed literally. **Also required a real
+merge-conflict resolution** — this branch predated the chart-work merge to `main` above, which
+touched the same embed-dialog file for an unrelated reason; resolved by hand, re-verified clean.
 
 **Two open actions, both the owner's alone to take:**
 1. **Merge PR #21** (R3, [#109](open-questions.md) reversal) — re-verified 2026-09-14 08:29 UTC:
