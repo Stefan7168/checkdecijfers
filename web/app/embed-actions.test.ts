@@ -31,7 +31,26 @@ vi.mock('../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
 
-import { createEmbedCode } from './embed-actions.ts';
+// Task 11 (#205): startProSubscriptionCheckout's own dependencies.
+// next/headers has no request context in jsdom/vitest — same fix as
+// web/app/credits/actions.test.ts uses for the sibling one-time-pack action.
+vi.mock('next/headers', () => ({ headers: vi.fn(async () => ({ get: () => null })) }));
+
+// buildProSubscriptionCheckoutParams (src/billing/stripe-checkout.ts, via the
+// web/backend -> ../src symlink) is a pure builder with its own hermetic
+// tests — run for real here rather than mocked, same call as this file
+// already makes for hasProPlan above (only I/O boundaries get mocked).
+const { checkoutSessionsCreate } = vi.hoisted(() => ({ checkoutSessionsCreate: vi.fn() }));
+vi.mock('stripe', () => ({
+  // `new Stripe(secretKey)` requires a real constructor — an arrow-function
+  // mock implementation is not a valid `new` target (jsdom/vitest throws
+  // "is not a constructor").
+  default: vi.fn().mockImplementation(function StripeMock(this: unknown, key: string) {
+    Object.assign(this as object, { __secretKey: key, checkout: { sessions: { create: checkoutSessionsCreate } } });
+  }),
+}));
+
+import { createEmbedCode, startProSubscriptionCheckout } from './embed-actions.ts';
 
 // `response` is typed loosely here (not `ComposedResponse`, whose
 // discriminated-union members each require a dozen+ fields) because every
@@ -58,6 +77,10 @@ afterEach(() => {
   vi.clearAllMocks();
   delete process.env.EMBED_TOKEN_SECRET;
   delete process.env.PRO_ACCOUNT_EMAILS;
+  delete process.env.PRO_SUBSCRIPTIONS_ENABLED;
+  delete process.env.STRIPE_SECRET_KEY;
+  delete process.env.STRIPE_PRO_PRICE_ID;
+  delete process.env.NEXT_PUBLIC_APP_URL;
 });
 
 describe('createEmbedCode', () => {
@@ -136,5 +159,87 @@ describe('createEmbedCode', () => {
     const result = await createEmbedCode(42);
     expect(result).toEqual({ ok: false, reason: 'error' });
     expect(reportError).toHaveBeenCalledWith('createEmbedCode', expect.any(Error), expect.objectContaining({ userId: 'user-1' }));
+  });
+});
+
+// Task 11 (#205): the flag must fail closed — unset or anything other than
+// exactly '1' returns { ok: false, reason: 'disabled' }, never a crash and
+// never a Stripe call, BEFORE currentUserId() or Stripe are ever touched.
+describe('startProSubscriptionCheckout', () => {
+  it('returns disabled when PRO_SUBSCRIPTIONS_ENABLED is not set', async () => {
+    const original = process.env.PRO_SUBSCRIPTIONS_ENABLED;
+    delete process.env.PRO_SUBSCRIPTIONS_ENABLED;
+    try {
+      const result = await startProSubscriptionCheckout();
+      expect(result).toEqual({ ok: false, reason: 'disabled' });
+    } finally {
+      if (original !== undefined) process.env.PRO_SUBSCRIPTIONS_ENABLED = original;
+    }
+    expect(currentUserId).not.toHaveBeenCalled();
+    expect(checkoutSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns disabled for any value other than the exact string \'1\' (fail closed, never a truthy-string bypass)', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = 'true';
+    const result = await startProSubscriptionCheckout();
+    expect(result).toEqual({ ok: false, reason: 'disabled' });
+    expect(currentUserId).not.toHaveBeenCalled();
+  });
+
+  it('returns not_signed_in when the flag is on but nobody is logged in', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    currentUserId.mockResolvedValue(null);
+    const result = await startProSubscriptionCheckout();
+    expect(result).toEqual({ ok: false, reason: 'not_signed_in' });
+    expect(checkoutSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws (deploy misconfiguration, never a silent user-facing failure) when STRIPE_SECRET_KEY is missing', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    process.env.STRIPE_PRO_PRICE_ID = 'price_123';
+    currentUserId.mockResolvedValue('user-1');
+    await expect(startProSubscriptionCheckout()).rejects.toThrow(/STRIPE_SECRET_KEY/);
+    expect(checkoutSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws when STRIPE_PRO_PRICE_ID is missing', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    currentUserId.mockResolvedValue('user-1');
+    await expect(startProSubscriptionCheckout()).rejects.toThrow(/STRIPE_PRO_PRICE_ID/);
+    expect(checkoutSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a real subscription Checkout session and returns its URL when fully configured', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRO_PRICE_ID = 'price_123';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://checkdecijfers.vercel.app';
+    currentUserId.mockResolvedValue('user-1');
+    checkoutSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/session-xyz' });
+
+    const result = await startProSubscriptionCheckout();
+
+    expect(result).toEqual({ ok: true, url: 'https://checkout.stripe.com/session-xyz' });
+    expect(checkoutSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'subscription',
+        line_items: [{ price: 'price_123', quantity: 1 }],
+        success_url: 'https://checkdecijfers.vercel.app/credits?pro=success',
+        cancel_url: 'https://checkdecijfers.vercel.app/credits?pro=cancelled',
+        metadata: { userId: 'user-1' },
+        subscription_data: { metadata: { userId: 'user-1' } },
+      }),
+    );
+  });
+
+  it('throws when Stripe does not return a Checkout URL', async () => {
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRO_PRICE_ID = 'price_123';
+    currentUserId.mockResolvedValue('user-1');
+    checkoutSessionsCreate.mockResolvedValue({ url: null });
+
+    await expect(startProSubscriptionCheckout()).rejects.toThrow(/did not return a Checkout URL/);
   });
 });

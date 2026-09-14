@@ -222,6 +222,9 @@ const nl = {
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
   'credits.purchaseCancelled': 'Betaling geannuleerd.',
+  // Task 11 (#205): the Pro subscription Checkout's own success/cancel pair.
+  'credits.proSuccess': 'Bedankt! Je Pro-abonnement verschijnt hier zodra Stripe de betaling bevestigt.',
+  'credits.proCancelled': 'Pro-abonnement geannuleerd.',
   'credits.buy': 'Kopen',
   'credits.unknownPack': 'Onbekend of niet meer beschikbaar pakket.',
   'credits.notLoggedIn': 'Je bent niet ingelogd.',
@@ -945,6 +948,9 @@ const en: Messages = {
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
   'credits.purchaseCancelled': 'Payment cancelled.',
+  // Task 11 (#205): the Pro subscription Checkout's own success/cancel pair.
+  'credits.proSuccess': 'Thanks! Your Pro subscription will appear here once Stripe confirms the payment.',
+  'credits.proCancelled': 'Pro subscription cancelled.',
   'credits.buy': 'Buy',
   'credits.unknownPack': 'Unknown or no longer available pack.',
   'credits.notLoggedIn': 'You are not logged in.',

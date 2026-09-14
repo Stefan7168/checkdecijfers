@@ -62,6 +62,20 @@ describe('CreditsPage — nl (default)', () => {
     expect(screen.getByText('Credits verlopen nooit. Geen abonnement.')).toBeInTheDocument();
     expect(screen.getByText(/Bij aanmelding krijg je eenmalig 100 credits/)).toBeInTheDocument();
   });
+
+  // Task 11 (#205): the Pro subscription Checkout's own success/cancel pair
+  // — a SEPARATE `pro` query param from the pack flow's `purchase` above, so
+  // the two banners can never both show for the same redirect.
+  it('renders the Pro success banner for ?pro=success, distinct from the pack purchase banner', async () => {
+    render(await CreditsPage({ searchParams: Promise.resolve({ pro: 'success' }) }));
+    expect(screen.getByText('Bedankt! Je Pro-abonnement verschijnt hier zodra Stripe de betaling bevestigt.')).toBeInTheDocument();
+    expect(screen.queryByText('Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.')).toBeNull();
+  });
+
+  it('renders the Pro cancelled banner for ?pro=cancelled', async () => {
+    render(await CreditsPage({ searchParams: Promise.resolve({ pro: 'cancelled' }) }));
+    expect(screen.getByText('Pro-abonnement geannuleerd.')).toBeInTheDocument();
+  });
 });
 
 describe('CreditsPage — en', () => {

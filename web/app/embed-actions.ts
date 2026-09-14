@@ -5,12 +5,16 @@
 // and this file from the same barrel.
 'use server';
 
+import { headers } from 'next/headers';
+import Stripe from 'stripe';
 import { loadAuditRecord } from '../backend/answer/audit/index.ts';
-import { signEmbedToken } from '../backend/chart/embed-token.ts';
+import { buildProSubscriptionCheckoutParams } from '../backend/billing/index.ts';
 import { hasProPlan } from '../backend/billing/pro.ts';
+import { signEmbedToken } from '../backend/chart/embed-token.ts';
 import { currentUserEmail, currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
+import { proCancelledUrl, proSuccessUrl } from '../lib/purchase.ts';
 
 /** The retention redaction sentinel (`src/answer/audit/retention.ts`'s
  * `redactedResponse()`) lives INSIDE the stored response envelope, not as a
@@ -52,4 +56,56 @@ export async function createEmbedCode(auditId: number): Promise<CreateEmbedCodeR
     await reportError('createEmbedCode', e, { userId, extra: { auditId } });
     return { ok: false, reason: 'error' };
   }
+}
+
+/** Task 11 (open-questions #205): real Pro subscription Checkout, replacing
+ * the embed dialog's interest-only "Upgrade" click when the flag is on.
+ * Fails closed — `PRO_SUBSCRIPTIONS_ENABLED` unset or not exactly `'1'`
+ * always returns `disabled` before anything else runs (never a crash, never
+ * a silent Stripe call), matching the `EMBED_TOKEN_SECRET`/
+ * `ONBOARDING_ENABLED` dormancy pattern used everywhere else in this file's
+ * neighbourhood.
+ *
+ * A missing `STRIPE_SECRET_KEY`/`STRIPE_PRO_PRICE_ID` WHILE the flag is on
+ * is a genuine deploy misconfiguration (RUNBOOK's live-wiring checklist,
+ * Task 12, exists precisely so this never happens) — thrown, not swallowed
+ * into a generic result, so it surfaces loudly in Vercel's function logs
+ * rather than silently presenting as an inert button. */
+export async function startProSubscriptionCheckout(): Promise<
+  { ok: true; url: string } | { ok: false; reason: 'disabled' | 'not_signed_in' }
+> {
+  if (process.env.PRO_SUBSCRIPTIONS_ENABLED !== '1') {
+    return { ok: false, reason: 'disabled' };
+  }
+
+  const userId = await currentUserId();
+  if (userId === null) {
+    return { ok: false, reason: 'not_signed_in' };
+  }
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('PRO_SUBSCRIPTIONS_ENABLED is set but STRIPE_SECRET_KEY is missing');
+  }
+  const priceId = process.env.STRIPE_PRO_PRICE_ID;
+  if (!priceId) {
+    throw new Error('PRO_SUBSCRIPTIONS_ENABLED is set but STRIPE_PRO_PRICE_ID is missing');
+  }
+
+  // Same origin resolution as the existing one-time-pack purchase action
+  // (web/app/credits/actions.ts's createCheckoutSession): NEXT_PUBLIC_APP_URL
+  // wins when set (production), falling back to the request's own Origin
+  // header for local/preview environments where it isn't.
+  const origin = process.env.NEXT_PUBLIC_APP_URL ?? (await headers()).get('origin') ?? '';
+  const params = buildProSubscriptionCheckoutParams(userId, priceId, proSuccessUrl(origin), proCancelledUrl(origin));
+
+  // Same Stripe client construction as createCheckoutSession: a fresh client
+  // per call, no module-level singleton (Stripe's own recommended pattern
+  // for serverless — see that action's own precedent).
+  const stripe = new Stripe(secretKey);
+  const session = await stripe.checkout.sessions.create(params);
+  if (!session.url) {
+    throw new Error('Stripe did not return a Checkout URL for the subscription session');
+  }
+  return { ok: true, url: session.url };
 }
