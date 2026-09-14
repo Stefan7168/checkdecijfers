@@ -1775,14 +1775,21 @@ export function ChartConfigPanel({
         </div>
       ) : null}
 
-      {/* Review fix: this footer (the "why not pie" note + the full
-        * "Standaard" reset) renders only on the Grafiek tab now — on Kleuren
-        * it used to sit beside "Standaardkleuren", showing two resets side
-        * by side. `resolved.pristine` still reflects EVERY tab's overrides
-        * (Standaard, when shown, still resets all of them), this only
-        * changes which tab the button itself is visible on. */}
+      {/* Review fix: this footer (originally the "why not pie" note + the
+        * full "Standaard" reset) renders only on the Grafiek tab now — on
+        * Kleuren it used to sit beside "Standaardkleuren", showing two
+        * resets side by side.
+        * Owner punch-list item 3 (session 102): the "Standaard" reset button
+        * moved OUT of this tab-gated block — Stefan reported "no reset
+        * button" because he was on a tab other than Grafiek. `resolved.
+        * pristine` (and what `onReset` clears) always reflects EVERY tab's
+        * overrides, never just this one's, so gating the button's own
+        * VISIBILITY on `activeTab === 'chart'` was the bug: the control is a
+        * whole-panel concern like the account-default row below, not a
+        * per-tab one. Only the "why not pie" note — genuinely Grafiek-tab
+        * content — stays gated here. */}
       {activeTab === 'chart' ? (
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+        <div className="mt-3 flex items-center border-t border-border pt-3">
           {/* WP218 phase 5 (chart-types plan, Task 3): one collapsed note
             * explaining why pie/donut, stacked, scatter and sorted-by-value
             * forms are never offered — collapsed by default so it doesn't
@@ -1793,11 +1800,22 @@ export function ChartConfigPanel({
             <summary>{copy.whyNotTitle}</summary>
             <p>{copy.whyNotBody}</p>
           </details>
-          <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
-            {copy.reset}
-          </Button>
         </div>
       ) : null}
+
+      {/* Owner punch-list item 3 (session 102): the "Standaard" reset button,
+        * moved from the Grafiek-tab-only block above — visible on EVERY tab
+        * now, and (unlike the account-default row just below) regardless of
+        * sign-in state too, exactly as it always was before this change;
+        * only which tab it appears on has changed. `onReset`'s behaviour,
+        * the `disabled={resolved.pristine}` gate and `copy.reset`'s label
+        * are all unchanged. */}
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
+        <span />
+        <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
+          {copy.reset}
+        </Button>
+      </div>
 
       {/* WP218 phase 2 (owner C): a footer row visible regardless of the
         * active tab (unlike the tabpanel bodies above) — the account

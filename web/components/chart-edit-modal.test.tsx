@@ -77,4 +77,16 @@ describe('ChartEditModal', () => {
     );
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  // Owner punch-list item 2 (session 102): the modal shell inherited the
+  // base DialogContent's p-4 with no override, which read as cramped for a
+  // popup this size — bumped to more breathing room on every viewport.
+  it('gives the popup more padding than the bare DialogContent default (p-4)', () => {
+    render(
+      <ChartEditModal open onClose={() => {}} title="Chart style" chartSlot={<p>chart</p>}>
+        <p>controls</p>
+      </ChartEditModal>,
+    );
+    expect(screen.getByRole('dialog').className).toMatch(/\bp-6\b/);
+  });
 });

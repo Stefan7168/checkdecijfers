@@ -355,16 +355,20 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     ).toBeInTheDocument();
   });
 
-  // Review finding: the footer (the "why not pie" note + the full "Standaard"
-  // reset) is a property of the Grafiek tab only now — on Kleuren it used to
-  // sit right beside "Standaardkleuren", showing two resets side by side.
-  it('the footer\'s Standaard (and the "why not" note) shows only on the Grafiek tab, not on Kleuren or Lettertype', () => {
+  // Owner punch-list item 3 (session 102): Stefan reported "no reset button"
+  // — traced to Standaard being gated on `activeTab === 'chart'`, so it
+  // vanished on every tab but Grafiek even though `onReset`/`resolved.
+  // pristine` always reflect EVERY tab's overrides. Standaard is now visible
+  // (and clickable) on every tab; only the "why not pie" note — genuinely
+  // Grafiek-tab content — stays gated to that one tab, exactly as before.
+  it('the "why not" note shows only on the Grafiek tab; Standaard is visible and clickable on every tab, including Kleuren', () => {
+    const onReset = vi.fn();
     render(
       <Harness
         resolved={resolvePresentation(lineCtx, { lineWidth: 'thick' })}
         seriesMeta={colorMeta}
         onChange={vi.fn()}
-        onReset={vi.fn()}
+        onReset={onReset}
         idPrefix="footer1"
       />,
     );
@@ -373,13 +377,17 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(screen.getByText('Waarom geen taart- of gestapelde grafiek?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
-    expect(screen.queryByRole('button', { name: 'Standaard' })).toBeNull();
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
-    // Kleuren keeps its own, separate reset.
+    // Kleuren keeps its own, separate reset, ALONGSIDE the whole-panel one.
     expect(screen.getByRole('button', { name: 'Standaardkleuren' })).toBeInTheDocument();
+    const resetOnKleuren = screen.getByRole('button', { name: 'Standaard' });
+    expect(resetOnKleuren).toBeInTheDocument();
+    expect(resetOnKleuren).not.toBeDisabled();
+    fireEvent.click(resetOnKleuren);
+    expect(onReset).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
-    expect(screen.queryByRole('button', { name: 'Standaard' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));

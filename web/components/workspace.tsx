@@ -27,7 +27,6 @@ import type { ChatPack } from './chat.tsx';
 import { DatasetChat } from './dataset-chat.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
 import { SiteHeader } from './site-header.tsx';
-import { ThemeToggle } from './theme-toggle.tsx';
 import { ThreadSidebar } from './thread-sidebar.tsx';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './ui/resizable.tsx';
 import { VisualDock } from './visual-dock.tsx';
@@ -385,12 +384,13 @@ export function Workspace({
       aria-label={t('workspace.chatSectionLabel')}
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
     >
+      {/* Owner punch-list item 4 (session 102): the light/dark/system toggle
+        * that used to sit at the right of this row moved into site-header
+        * .tsx's account dropdown menu — see SiteHeader. */}
       <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
         <h1 className="truncate text-[13.5px] font-medium" title={cardTitle}>
           {cardTitle}
         </h1>
-        <div className="flex-1" />
-        <ThemeToggle />
       </div>
       {threadLoading ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">

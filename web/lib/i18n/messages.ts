@@ -19,6 +19,10 @@ const nl = {
   // site-header.tsx (workspace variant + the account menu inside it).
   'header.credits': 'Credits kopen',
   'header.history': 'Geschiedenis',
+  // Owner punch-list item 6 (session 102): the account menu's link to the
+  // new /about page — the menu is becoming the general nav hub (items 4/5
+  // already added the theme toggle and Geschiedenis to it).
+  'header.about': 'Over ons',
   'header.account': 'Account',
   'header.logout': 'Log uit',
   'header.busy': 'Bezig…',
@@ -671,6 +675,18 @@ const nl = {
     'Om je ingelogd te houden gebruiken we één noodzakelijk sessiecookie. Gebruik je de proefversie zonder account, dan zetten we daarnaast een cookie met een willekeurig bezoekersnummer en bewaren we een versleutelde (gehashte) versie van je IP-adres — allebei alleen om misbruik van de gratis proef te beperken, en na 90 dagen verwijderd. Daarnaast tellen we per dag hoe vaak bepaalde acties gebeuren, als kale aantallen zonder account, gebruikersnaam of IP-adres, dus niet herleidbaar naar een persoon. Verder geen trackingcookies en geen analytics van derden.',
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Vragen over je gegevens? Mail [contact e-mail — eigenaar vult dit aan].',
+
+  // /about — owner punch-list item 6 (session 102). Same shell as /privacy;
+  // NOT the placeholder above (that one is unrelated, privacy-specific and
+  // deliberately left as a TODO) — this contact line has a real address.
+  'about.pageTitle': 'Over ons — Check de Cijfers',
+  'about.heading': 'Over ons',
+  'about.introHeading': 'Over Check de Cijfers',
+  'about.introBody':
+    'Check de Cijfers beantwoordt vragen over officiële CBS-statistieken. Een taalmodel leest je vraag, maar rekent zelf nooit: elk cijfer komt uit een database met CBS-data en is te herleiden tot de brontabel en de datum. We maken het voor journalisten, onderzoekers en studenten die snel een betrouwbaar cijfer nodig hebben, met een bron die ze kunnen verantwoorden.',
+  'about.contactHeading': 'Contact',
+  'about.contactIntro': 'Vragen, opmerkingen of feedback? Mail ons op',
+
   'landing.ontdekCaption': 'Probeer het meteen: Opmaak (sjablonen), Inzichten, Presenteren — en download als PNG.',
   'landing.step4Title': 'Publiceer',
   'landing.step4Body': 'Kies een sjabloon, download of embed — bron en datum reizen mee.',
@@ -778,6 +794,7 @@ const en: Messages = {
   'lang.switchLabel': 'Language',
   'header.credits': 'Buy credits',
   'header.history': 'History',
+  'header.about': 'About us',
   'header.account': 'Account',
   'header.logout': 'Log out',
   'header.busy': 'Working…',
@@ -1312,6 +1329,16 @@ const en: Messages = {
     'To keep you signed in we use one necessary session cookie. If you use the trial without an account, we also set a cookie holding a random visitor number and store an encrypted (hashed) version of your IP address — both only to limit abuse of the free trial, and deleted after 90 days. We also count how often certain actions happen per day, as bare totals with no account, user name or IP address, so they cannot be traced back to a person. Beyond that: no tracking cookies and no third-party analytics.',
   'privacy.contactHeading': 'Contact',
   'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
+
+  // Mirrors the Dutch /about block above.
+  'about.pageTitle': 'About us — Check de Cijfers',
+  'about.heading': 'About us',
+  'about.introHeading': 'About Check de Cijfers',
+  'about.introBody':
+    'Check de Cijfers answers questions about official CBS statistics. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
+  'about.contactHeading': 'Contact',
+  'about.contactIntro': 'Questions, comments or feedback? E-mail us at',
+
   'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
   'landing.step4Title': 'Publish',
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',

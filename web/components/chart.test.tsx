@@ -4388,6 +4388,39 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
   });
 });
 
+// Owner punch-list item 1 (session 102): Download and Embed used to live only
+// in the footer, which sits BEHIND the Style modal's backdrop once Style is
+// open (a real, focus-trapped Base UI dialog) — unreachable while styling a
+// chart. Both now also render inside the Style modal itself, reusing the
+// exact same footer props. `styleOpen`/`embedOpen` are two views onto one
+// `openPanel` discriminated state (see chart.tsx around the `openPanel`
+// useState), so opening Embed from inside Style is a single state update:
+// openPanel flips straight from 'style' to 'embed', never passing through a
+// frame where both are true.
+describe('Download and Embed inside the Style modal (owner punch-list item 1)', () => {
+  it('offers Download and Embed inside the open Style modal', () => {
+    render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    expect(within(styleDialog).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('clicking the in-modal Embed control closes Style and opens Embed, never both at once', () => {
+    createEmbedCode.mockReturnValue(new Promise(() => {}));
+    render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    fireEvent.click(within(styleDialog).getByRole('button', { name: 'Insluiten' }));
+    expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // Never two dialogs mounted at once — the Style dialog unmounted
+    // entirely (it renders `null` while `!open`), not just hidden behind
+    // the Embed one.
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+  });
+});
+
 describe('embed digit-token scan (extends the existing whole-card scan)', () => {
   it('every digit in an embedMode render traces to a spec string or the embedFooter prop itself', () => {
     const s = threePointSpec();

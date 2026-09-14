@@ -19,6 +19,7 @@
 // stripped /login + landing one — also get the NL|EN switch.
 'use client';
 
+import { ChevronDownIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
@@ -26,6 +27,7 @@ import { signOut } from '../app/actions.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { DeleteHistoryButton } from './delete-history-button.tsx';
 import { LanguageSwitch } from './language-switch.tsx';
+import { ThemeToggle } from './theme-toggle.tsx';
 import { Badge } from './ui/badge.tsx';
 import { Button } from './ui/button.tsx';
 
@@ -98,9 +100,11 @@ export function SiteHeader({
         <Link href="/credits" className="hidden text-muted-foreground hover:text-foreground sm:inline">
           {t('header.credits')}
         </Link>
-        <Link href="/geschiedenis" className="hidden text-muted-foreground hover:text-foreground sm:inline">
-          {t('header.history')}
-        </Link>
+        {/* Owner punch-list item 5 (session 102): Geschiedenis dropped from
+          * the bar entirely — reachable ONLY from the account menu now (its
+          * own menu copy below no longer carries `sm:hidden`, so it shows
+          * there at every width). Credits keeps its existing bar-link +
+          * mobile-menu-duplicate behaviour unchanged, as scoped. */}
         <LanguageSwitch />
         <div className="relative">
           <Button
@@ -112,15 +116,21 @@ export function SiteHeader({
             onClick={() => setMenuOpen((open) => !open)}
           >
             {t('header.account')}
+            {/* Owner punch-list item 4 (session 102): a decorative
+              * dropdown/chevron next to the label — `aria-hidden` keeps it
+              * out of the button's accessible name, which stays exactly
+              * "Account". */}
+            <ChevronDownIcon aria-hidden="true" className="size-4" />
           </Button>
           {menuOpen ? (
             <div
               role="menu"
               className="absolute right-0 z-10 mt-1 flex w-56 flex-col gap-2 rounded-lg border border-border bg-popover p-3 text-sm text-popover-foreground shadow-md"
             >
-              {/* R9.2 (#214): the phone-hidden bar links, reappearing here as
-                * the menu's first two items — same targets, same copy, `sm:hidden`
-                * so they vanish again the moment the bar has room for them. */}
+              {/* R9.2 (#214): the phone-hidden Credits bar link, reappearing
+                * here as the menu's first item — same target, same copy,
+                * `sm:hidden` so it vanishes again the moment the bar has
+                * room for it. */}
               {/* R9.1 (#238): these menu items were plain text links/buttons
                 * with no padding — only 16-20px tall, well under the 44px
                 * minimum tap target on a phone. `flex min-h-11 items-center`
@@ -129,8 +139,17 @@ export function SiteHeader({
               <Link href="/credits" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground sm:hidden">
                 {t('header.credits')}
               </Link>
-              <Link href="/geschiedenis" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground sm:hidden">
+              {/* Owner punch-list item 5 (session 102): the ONLY copy of
+                * Geschiedenis left — no `sm:hidden` here, since there is no
+                * bar copy anymore for it to hand off to above `sm`. */}
+              <Link href="/geschiedenis" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground">
                 {t('header.history')}
+              </Link>
+              {/* Owner punch-list item 6 (session 102): the account menu is
+                * becoming the general nav hub — a link to the new /about
+                * page. */}
+              <Link href="/about" className="flex min-h-11 items-center text-muted-foreground hover:text-foreground">
+                {t('header.about')}
               </Link>
               {/* The genuinely-new logout: a server action via a form so it
                 * works without client JS wiring and can redirect server-side.
@@ -139,6 +158,13 @@ export function SiteHeader({
               <form action={signOut}>
                 <LogoutButton />
               </form>
+              {/* Owner punch-list item 4 (session 102): the light/dark/system
+                * toggle, moved out of the chat card's own header row
+                * (workspace.tsx) — same `border-t ... pt-2` separator rhythm
+                * as the DeleteHistoryButton block below. */}
+              <div className="border-t border-border pt-2">
+                <ThemeToggle />
+              </div>
               <div className="border-t border-border pt-2">
                 <DeleteHistoryButton />
               </div>

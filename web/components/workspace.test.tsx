@@ -207,6 +207,15 @@ describe('Workspace — WP135 shell (flag on)', () => {
     expect(screen.queryByText('Sluiten')).toBeNull();
   });
 
+  // Owner punch-list item 4 (session 102): the light/dark/system toggle moved
+  // out of the chat card's header row and into the account dropdown
+  // (site-header.test.tsx covers it appearing there) — no longer rendered
+  // directly in Workspace's own chrome.
+  it('no longer renders the theme toggle in the chat card header (moved into the account menu)', () => {
+    renderWorkspace();
+    expect(screen.queryByRole('group', { name: 'Thema' })).toBeNull();
+  });
+
   it('renders NO footer of its own — the site footer is the only one (owner report 2026-09-03)', () => {
     renderWorkspace();
     expect(document.querySelector('footer')).toBeNull();
@@ -269,11 +278,12 @@ describe('Workspace — WP135 shell (flag on)', () => {
     pathname.current = '/';
   });
 
-  it('renders the header: wordmark, live balance chip, Credits kopen, Geschiedenis', () => {
+  it('renders the header: wordmark, live balance chip, Credits kopen (Geschiedenis lives in the account menu — owner punch-list item 5)', () => {
     renderWorkspace();
     expect(screen.getAllByRole('link', { name: 'Check de Cijfers' }).length).toBeGreaterThan(0);
     expect(screen.getByText('100 credits')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Credits kopen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }));
     expect(screen.getByRole('link', { name: 'Geschiedenis' })).toBeInTheDocument();
   });
 
@@ -461,7 +471,8 @@ describe('SiteHeader — WP135 presence rules', () => {
   it('full variant shows the nav; stripped variant is wordmark-only', () => {
     const { rerender } = render(<SiteHeader balance={50} />);
     expect(screen.getByText('50 credits')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Geschiedenis' })).toBeInTheDocument();
+    // Owner punch-list item 5 (session 102): Geschiedenis lives only inside
+    // the account menu now — see site-header.test.tsx for that coverage.
     expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
 
     rerender(<SiteHeader stripped />);

@@ -73,7 +73,7 @@ export function ChartEditModal({
     >
       <DialogContent
         aria-modal="true"
-        className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto sm:max-w-2xl lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
+        className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-6 sm:max-w-2xl sm:p-8 lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
       >
         <DialogTitle className="lg:col-span-2">{title}</DialogTitle>
         <div className="min-w-0">{chartSlot}</div>

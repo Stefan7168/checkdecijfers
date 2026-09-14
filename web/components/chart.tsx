@@ -3150,6 +3150,51 @@ export function ChartView({
             trackChartStyleEvent('brand_applied');
           }}
         />
+        {/* Owner punch-list item 1 (session 102): Download and Embed are
+          * otherwise stranded behind the Style modal's backdrop while it's
+          * open (a real, focus-trapped dialog) — unreachable even though
+          * both controls still exist in the footer below. Rendered here as
+          * a footer row after the panel, reusing the EXACT same props as
+          * the footer's own copies further down this file. `ChartEmbedButton`
+          * here reuses `onOpenChange={setEmbedOpen}` unchanged: `styleOpen`
+          * and `embedOpen` are both derived from the SAME `openPanel`
+          * discriminated state (see its declaration above), so a single
+          * `setEmbedOpen(true)` call flips `openPanel` straight from
+          * 'style' to 'embed' in one update — Style closes and Embed opens
+          * atomically, with no separate "close Style" call needed and no
+          * frame where both could be true at once. `state.form !== 'table'`
+          * is already implied here (this whole modal is gated on it above —
+          * TypeScript narrows `state.form` accordingly, so repeating the
+          * check would be a type error), unlike the footer's own copy of
+          * this gate further down, which sits outside that narrowing. */}
+        {!(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <ChartDownloadMenu
+              containerRef={chartContainerRef}
+              attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
+              filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+              lang={chartLang}
+              frame={pres}
+              frameImage={frameImage}
+            />
+            {embed ? (
+              <ChartEmbedButton
+                auditId={embed.auditId}
+                tableId={spec.attribution.tableId}
+                lang={chartLang}
+                currentForm={state.form}
+                open={embedOpen}
+                onOpenChange={setEmbedOpen}
+                chartSlot={
+                  <>
+                    {canvasNode}
+                    {legendNode}
+                  </>
+                }
+              />
+            ) : null}
+          </div>
+        ) : null}
         </ChartEditModal>
       ) : null}
       {/* Fix round 2 (item 9): no trend headline in the stage. The stage's own
