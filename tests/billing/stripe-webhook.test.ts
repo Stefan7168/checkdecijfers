@@ -144,6 +144,246 @@ describe('handleStripeEvent — malformed metadata', () => {
   });
 });
 
+/** #205 Task 9: `customer.subscription.*` events. Two shape notes vs. the
+ * task brief's original sample (see src/billing/stripe-webhook.ts's doc
+ * comments for the full reasoning):
+ *  - `current_period_end` lives on the subscription's ITEM, not the
+ *    subscription object itself, in this repo's actual `stripe` package
+ *    version (22.6.1, flexible-billing API shape) — `items.data[].
+ *    current_period_end`, not a top-level field.
+ *  - Every event carries its own top-level `created` (unix seconds),
+ *    exercised by the out-of-order-delivery guard tests below; defaults to
+ *    "now" so the brief's original (order-agnostic) tests don't need to
+ *    care about it. */
+function subscriptionEventPayload(
+  type: 'customer.subscription.created' | 'customer.subscription.updated' | 'customer.subscription.deleted',
+  subscriptionId: string,
+  customerId: string,
+  userId: string,
+  status: string,
+  currentPeriodEnd: number, // unix seconds, matches Stripe's own item field shape
+  eventCreated: number = Math.floor(Date.now() / 1000),
+): string {
+  return JSON.stringify({
+    id: `evt_${randomUUID()}`,
+    object: 'event',
+    created: eventCreated,
+    type,
+    data: {
+      object: {
+        id: subscriptionId,
+        object: 'subscription',
+        customer: customerId,
+        status,
+        items: {
+          object: 'list',
+          data: [{ id: `si_${randomUUID()}`, object: 'subscription_item', current_period_end: currentPeriodEnd }],
+        },
+        metadata: { userId },
+      },
+    },
+  });
+}
+
+describe('subscription lifecycle webhooks (#205 Task 9)', () => {
+  it('customer.subscription.created upserts a pro_subscriptions row', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd = Math.floor(Date.now() / 1000) + 20 * 86400;
+      const payload = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd);
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+      expect(result).toEqual({ handled: true, alreadyProcessed: false, ledgerId: null });
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.status).toBe('active');
+      expect(rows[0]!.stripe_subscription_id).toBe('sub_1');
+      expect(Math.floor(new Date(rows[0]!.current_period_end as string).getTime() / 1000)).toBe(periodEnd);
+    });
+  });
+
+  it('customer.subscription.updated updates status and current_period_end for an existing row', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd1 = Math.floor(Date.now() / 1000) + 20 * 86400;
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd1);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      const periodEnd2 = Math.floor(Date.now() / 1000) + 50 * 86400;
+      const updated = subscriptionEventPayload('customer.subscription.updated', 'sub_1', 'cus_1', userId, 'past_due', periodEnd2);
+      await handleStripeEvent(db, updated, sign(updated), WEBHOOK_SECRET);
+
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows[0]!.status).toBe('past_due');
+      expect(Math.floor(new Date(rows[0]!.current_period_end as string).getTime() / 1000)).toBe(periodEnd2);
+    });
+  });
+
+  it('customer.subscription.deleted sets status to canceled', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd = Math.floor(Date.now() / 1000) + 20 * 86400;
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      const deleted = subscriptionEventPayload('customer.subscription.deleted', 'sub_1', 'cus_1', userId, 'canceled', periodEnd);
+      await handleStripeEvent(db, deleted, sign(deleted), WEBHOOK_SECRET);
+
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows[0]!.status).toBe('canceled');
+    });
+  });
+
+  it('a subscription event missing metadata.userId throws (never silently dropped)', async () => {
+    await withDb(async (db) => {
+      const payload = JSON.stringify({
+        id: `evt_${randomUUID()}`,
+        object: 'event',
+        created: Math.floor(Date.now() / 1000),
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_1',
+            object: 'subscription',
+            customer: 'cus_1',
+            status: 'active',
+            items: { object: 'list', data: [{ id: 'si_1', object: 'subscription_item', current_period_end: 0 }] },
+            metadata: {},
+          },
+        },
+      });
+      await expect(handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET)).rejects.toThrow();
+      // Prove it's a real throw, not a vacuous one that happens to reject for
+      // an unrelated reason — no row should ever be written for this user.
+      const { rows } = await db.query("select 1 from pro_subscriptions where stripe_subscription_id = 'sub_1'");
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  it('a subscription with no items throws rather than guessing a current_period_end', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const payload = JSON.stringify({
+        id: `evt_${randomUUID()}`,
+        object: 'event',
+        created: Math.floor(Date.now() / 1000),
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_1',
+            object: 'subscription',
+            customer: 'cus_1',
+            status: 'active',
+            items: { object: 'list', data: [] },
+            metadata: { userId },
+          },
+        },
+      });
+      await expect(handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET)).rejects.toThrow(/no items/);
+    });
+  });
+});
+
+describe('subscription lifecycle webhooks — out-of-order delivery guard (#205 Task 9 investigation)', () => {
+  it('a stale (older) deleted event delivered after a newer created event does not clobber the newer state', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      const oldPeriodEnd = now + 20 * 86400;
+      const newPeriodEnd = now + 30 * 86400;
+
+      // The user's ORIGINAL subscription, created some time ago.
+      const originalCreated = subscriptionEventPayload(
+        'customer.subscription.created',
+        'sub_old',
+        'cus_1',
+        userId,
+        'active',
+        oldPeriodEnd,
+        now - 200,
+      );
+      await handleStripeEvent(db, originalCreated, sign(originalCreated), WEBHOOK_SECRET);
+
+      // The user resubscribes with a NEW Stripe subscription object (Stripe
+      // subscriptions are terminal once canceled) — a genuinely newer event.
+      const resubscribed = subscriptionEventPayload(
+        'customer.subscription.created',
+        'sub_new',
+        'cus_1',
+        userId,
+        'active',
+        newPeriodEnd,
+        now,
+      );
+      await handleStripeEvent(db, resubscribed, sign(resubscribed), WEBHOOK_SECRET);
+
+      // The OLD subscription's cancellation event — generated BEFORE the
+      // resubscribe, but delivered LATE (redelivery after an outage, e.g.).
+      const staleDeleted = subscriptionEventPayload(
+        'customer.subscription.deleted',
+        'sub_old',
+        'cus_1',
+        userId,
+        'canceled',
+        oldPeriodEnd,
+        now - 100,
+      );
+      await handleStripeEvent(db, staleDeleted, sign(staleDeleted), WEBHOOK_SECRET);
+
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows[0]!.status).toBe('active');
+      expect(rows[0]!.stripe_subscription_id).toBe('sub_new');
+      expect(Math.floor(new Date(rows[0]!.current_period_end as string).getTime() / 1000)).toBe(newPeriodEnd);
+    });
+  });
+
+  it('a genuinely newer update still applies even when it arrives in the same second as the prior event (tie -> last wins)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      const periodEnd1 = now + 20 * 86400;
+      const periodEnd2 = now + 50 * 86400;
+
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd1, now);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      // Same top-level `created` second as the row above (Checkout-driven
+      // subscriptions commonly fire created+updated within the same
+      // second) — must NOT be silently dropped by the guard.
+      const updated = subscriptionEventPayload(
+        'customer.subscription.updated',
+        'sub_1',
+        'cus_1',
+        userId,
+        'past_due',
+        periodEnd2,
+        now,
+      );
+      await handleStripeEvent(db, updated, sign(updated), WEBHOOK_SECRET);
+
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows[0]!.status).toBe('past_due');
+      expect(Math.floor(new Date(rows[0]!.current_period_end as string).getTime() / 1000)).toBe(periodEnd2);
+    });
+  });
+
+  it('a retried delivery of the same subscription event is a harmless no-op (same event, same created, idempotent in effect)', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      const periodEnd = now + 20 * 86400;
+      const payload = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd, now);
+      const header = sign(payload);
+
+      await handleStripeEvent(db, payload, header, WEBHOOK_SECRET);
+      await handleStripeEvent(db, payload, header, WEBHOOK_SECRET);
+
+      const { rows } = await db.query('select * from pro_subscriptions where user_id = $1', [userId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.status).toBe('active');
+    });
+  });
+});
+
 describe('handleStripeEvent — delayed-notification payment methods (#146)', () => {
   it("does NOT credit checkout.session.completed while payment_status is not 'paid' (SEPA/Bacs/bank transfer still processing)", async () => {
     await withDb(async (db) => {
