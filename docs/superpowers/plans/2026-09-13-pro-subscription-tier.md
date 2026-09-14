@@ -1385,7 +1385,23 @@ function subscriptionEventPayload(
     },
   });
 }
+```
 
+**⚠ As-built correction (Task 9's review, commit `1068013`, plus Task 10's review of the same
+staleness class): this sketch is now doubly wrong.** (1) `current_period_end` is not top-level on
+`Stripe.Subscription` in the installed SDK — it's per-item (`items.data[].current_period_end`),
+and the real implementation takes the MIN across items. (2) the top-level event envelope needs its
+own real `created` (unix seconds) for the `last_event_at` out-of-order guard to have something
+meaningful to compare — a fixture omitting it doesn't exercise the guard at all. **Every later task
+whose tests need a subscription or invoice event payload (Task 10, Task 13's integration test)
+MUST import and reuse the REAL, already-corrected fixture builders from
+`tests/billing/stripe-webhook.test.ts` (as committed after Task 9/10's fix rounds) rather than
+hand-rolling a new raw JSON literal from this or any other sample in this plan — every raw-JSON
+sample below reproduces this same staleness and has already caused two rounds of "implementer
+independently rediscovers the same Stripe API shape bug."** Read the real test file for the
+authoritative shape.
+
+```ts
 describe('subscription lifecycle webhooks', () => {
   it('customer.subscription.created upserts a pro_subscriptions row', async () => {
     await withDb(async (db) => {
@@ -1551,6 +1567,12 @@ own `update ... set current_period_grant_id = ..., updated_at = now()` (Step 4) 
 - [ ] **Step 1: Write the failing tests**
 
 ```ts
+// ⚠ As-built correction (Task 10's review, commit `3b1b9ed`): `Stripe.Invoice` has NO top-level
+// `subscription` field in the installed stripe@22.6.1 SDK (same class of bug as Task 9's
+// current_period_end) — the real path is `invoice.parent.subscription_details.subscription`. The
+// fixture below is the OLD, now-wrong shape; the real implementation reads the nested path. Any
+// future test (including Task 13's integration test) must use the nested shape or this handler
+// will silently grant nothing on every real renewal — see the real `stripe-webhook.ts`/its tests.
 function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: string): string {
   return JSON.stringify({
     id: `evt_${randomUUID()}`,
@@ -1560,7 +1582,7 @@ function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: s
       object: {
         id: invoiceId,
         object: 'invoice',
-        subscription: subscriptionId,
+        parent: { subscription_details: { subscription: subscriptionId } },
         metadata: { userId },
       },
     },
@@ -1676,6 +1698,22 @@ async function grantMonthlyAllowance(db: Db, invoice: Stripe.Invoice): Promise<S
   return { handled: true, alreadyProcessed: false, ledgerId: null };
 }
 ```
+
+**⚠ As-built corrections (Task 10's review, commit `3b1b9ed`), both real:**
+1. `invoice.subscription as string | null` is wrong — that field doesn't exist top-level on the
+   installed SDK's `Stripe.Invoice`. The real code reads
+   `invoice.parent?.subscription_details?.subscription` (a `string | Stripe.Subscription | null |
+   undefined` — narrow to a string id) — see the fixture correction above and the real
+   `stripe-webhook.ts`. **Without this fix every real renewal silently grants nothing** (verified:
+   the handler returns `{handled: false}` on the old shape).
+2. The two `await` calls above (`grantBucket` then the `pro_subscriptions` update) are NOT
+   independent statements in the real implementation — they're wrapped in one `db.withTransaction`.
+   Reasoning: a process crash between them would otherwise strand a committed grant whose id never
+   gets rotated into `current_period_grant_id` — `getCurrentGrantId`/`getSpendableBalance` only
+   ever read the CURRENT grant id, so the newly granted 1000 credits would exist in the ledger but
+   be permanently unspendable (verified by reproducing both the failure and the fix against a real
+   DB). `grantBucket` (Task 2) opens no transaction of its own — confirmed safe to call with an
+   open `tx`, no nesting risk (this codebase's `withTransaction` hard-throws on real nesting).
 
 Add before the final `return { handled: false, ... }`:
 
@@ -1929,6 +1967,16 @@ the mechanism works — flag-gated means no real user reaches either gap until t
 they're ready for a fuller rollout.
 
 ## Task 13: End-to-end integration test
+
+**⚠ Before writing this test, read this note (carried from Task 9/10's reviews, commits `1068013`/
+`3b1b9ed`): the raw JSON event payloads in the sample below use the OLD, now-WRONG Stripe shapes**
+(flat `current_period_end` on a subscription object; flat `subscription` on an invoice object) —
+the installed SDK's real shapes are per-item `current_period_end` (MIN across items) and
+`invoice.parent.subscription_details.subscription`. **Do not hand-roll these payloads from the
+sample below — import and call the real, already-corrected fixture builders
+(`subscriptionEventPayload`, `invoicePaidPayload`, or whatever they're named in the committed
+`tests/billing/stripe-webhook.test.ts`) instead.** This has already cost two review rounds; a
+third would mean this same plan document taught the same bug three times.
 
 **Files:**
 - Create: `tests/billing/pro-subscription-e2e.test.ts`
