@@ -9,20 +9,35 @@ on top.
 ## Session 101 continuation (2026-09-14/15, autonomous overnight) — WP30c E1 (Eurostat adapter), a second adversarial review round, and two real defects the review process itself did not catch
 
 - **A pre-build adversarial review of an executor brief is not the same as a whole-branch review of what
-  actually got built from it — both are needed, and they catch different things.** This session ran the
-  brief's own required second review (4 lenses, 6 confirmed findings, all genuinely real) BEFORE writing
-  any code, then built exactly to the amended brief. Even so, integrating the four parallel implementer
-  agents' work turned up a real, live-product-affecting bug none of the 8 review agents (4 in the design
-  review + several implementers) had found: merely adding a second `SourceInfo` registry entry made
-  `chat.tsx`'s existing WP129+130 source-chip UI render and default-select a brand-new "Eurostat data"
-  chip for every real chat user — a genuine violation of the "never announced before it answers" rule,
-  with zero Eurostat data involved. The reviews checked the BRIEF's own described tasks against the ADR;
-  none of them (or the implementers) traced what an EXISTING, unrelated feature (#129's dynamic chip row)
-  would do once a second registry key existed. **Lesson: when a change adds a new key/entry to a shared
-  registry/lookup table, explicitly grep for every `Object.keys()`/`Object.values()` iteration over that
-  registry across the whole codebase — not just the files the brief's tasks name — before considering the
-  change complete.** This is now the exact shape of bug a "whole-branch integration pass" step exists to
-  catch, distinct from and in addition to reviewing the brief itself.
+  actually got built from it — both are needed, and they catch different things, and even a DEDICATED
+  final whole-branch review agent found something the orchestrator's own earlier integration pass missed.**
+  This session ran the brief's own required second review (4 lenses, 6 confirmed findings, all genuinely
+  real) BEFORE writing any code, built exactly to the amended brief, ran its own integration review (caught
+  the chip-leak and a stray null byte below), then dispatched a SEPARATE, dedicated final whole-branch
+  review agent as the brief's own required last step — which found a THIRD, more serious defect none of
+  the earlier passes had: the live-chat deny gate (Task 4's Amendment-3 guard) was built gated on the SAME
+  flag the internal explorer's own visibility uses, so enabling the explorer — the documented next step in
+  this very session's own RUNBOOK entry — would have silently re-opened the exact hole the guard existed to
+  close. Four review passes (2 design-level, 2 whole-branch) and it still took the LAST one to catch the
+  most severe issue. **Lesson: never skip the final whole-branch review as "redundant" after enough earlier
+  scrutiny — reserve it, run it as a genuinely separate pass (fresh context, not a continuation of the
+  orchestrator's own running review), and expect it to still find something new.**
+- **When a change adds a new key/entry to a shared registry/lookup table, explicitly grep for every
+  `Object.keys()`/`Object.values()` iteration over that registry across the whole codebase — not just the
+  files the brief's tasks name.** Merely adding a second `SourceInfo` registry entry made `chat.tsx`'s
+  existing WP129+130 source-chip UI render and default-select a brand-new "Eurostat data" chip for every
+  real chat user — a genuine violation of "never announced before it answers," with zero Eurostat data
+  involved. None of the review/implementer agents traced what an EXISTING, unrelated feature (#129's
+  dynamic chip row) would do once a second registry key existed; they checked the brief's own described
+  tasks against the ADR, not every OTHER consumer of the thing the brief's tasks touched.
+- **Two flags with overlapping-sounding names for two DIFFERENT concerns is a real hazard, not just a
+  naming nitpick — check whether a new flag-gated deny gate secretly reuses an existing flag meant for
+  something else.** `EUROSTAT_EXPLORER_ENABLED` was designed as a visibility flag for one internal admin
+  route; the deny-gate task (Task 4) reused it as the ALSO-only thing keeping Eurostat out of live chat,
+  because both "sound like" the right on/off switch for "is Eurostat allowed to do things yet." They
+  weren't the same switch. Any time a task description says "gated on the same flag as X" for a
+  DIFFERENT purpose than X's own, stop and ask whether flipping X for its own stated reason has a side
+  effect on the other thing nobody intended.
 - **Trust but verify a subagent's own "done" report, even a detailed and confident one — one agent in this
   build reported wiring `adapterFor('eurostat')` as done; it hadn't touched the file at all.** Caught only
   because the orchestrator re-grepped the actual file rather than accepting the report at face value (this

@@ -268,4 +268,43 @@ describe('ingestCatalog', () => {
       { table_id: 'eurostat:OTHER', source: 'eurostat' },
     ]);
   });
+
+  // Whole-branch-review fix (found before the PR): the #108 flip-detection
+  // query (`registeredRows`) joined EVERY registered table regardless of
+  // source, but `newStatusByTableId` is only ever populated from THIS
+  // refresh's own source's fetchCatalog() entries — so a registered table
+  // from a DIFFERENT source would always resolve `newStatus` to null (never
+  // actually refreshed by this call), spuriously reporting a flip whenever
+  // it happened to be "current" beforehand. Dormant with the REAL registry
+  // today only because Eurostat's currentCatalogStatuses ships empty
+  // (Constraint 0) — this test proves the SQL scoping fix directly,
+  // independent of that dormancy, using a table registered under a made-up
+  // source key. `sourceKeyForTableId`/`resolveSource`'s A1 fail-direction
+  // falls an UNKNOWN key back to the 'cbs' entry (currentCatalogStatuses:
+  // ['Regulier']) — a real, non-empty list — so `wasCurrent` can genuinely
+  // be true here, exercising the exact branch the empty Eurostat list
+  // currently short-circuits. This test would fail (a false flip reported)
+  // if the `where t.source = $1` predicate were removed.
+  it('#108 flip detection never checks a registered table belonging to a DIFFERENT source', async () => {
+    await db.query(
+      `insert into cbs_tables (id, title, source, expected_dimensions) values ($1, $2, $3, '[]'::jsonb)`,
+      ['othersource:FAKE1', 'othersource:FAKE1', 'othersource'],
+    );
+    await db.query(
+      `insert into cbs_catalog (table_id, title, status, source, refreshed_at) values ($1, $2, $3, $4, now())`,
+      ['othersource:FAKE1', 'Andere bron, geregistreerd', 'Regulier', 'othersource'],
+    );
+
+    const cbsOnly: CbsCatalogEntry = {
+      tableId: 'CBSONLY',
+      title: 'CBS-tabel',
+      summary: '',
+      status: 'Regulier',
+      datasetType: 'Numeric',
+      language: 'nl',
+      modified: null,
+    };
+    const result = await ingestCatalog(db, catalogOnlySource([cbsOnly]), CBS_SOURCE_KEY);
+    expect(result.flips).toEqual([]);
+  });
 });

@@ -510,6 +510,22 @@ core-product code, never auto-merged (#118(b)).
   history do ([#252](../open-questions.md)). Applies to CBS proof panels too, so it is a coverage gap, not an
   Eurostat-specific one.
 
+**A third real defect, found by the required final whole-branch review (after all tasks were built, before
+the PR) — the most serious of the three:** Task 4's live-chat deny gate (`src/catalog/recall.ts`) was
+originally implemented gated on `EUROSTAT_EXPLORER_ENABLED` — the SAME flag the internal explorer route
+checks for its own visibility. That coupling meant flipping the explorer flag on — exactly what this ADR's
+own RUNBOOK follow-up instructs doing, to check the explorer against a real registered table — would ALSO
+have lifted the only protection keeping a registered Eurostat row out of live chat, a direct D3(c) violation
+("never announced before it answers") with no code change needed to trigger it, just the documented next
+step. Fixed: the deny gate is now unconditional, no flag at all — confirmed safe because the explorer never
+depends on it (it reaches a table via an explicit-target intent, bypassing recall/discovery entirely). A
+related, lower-severity gap in the SAME review pass: the pre-existing #108 status-flip detection
+(`src/catalog/ingest.ts`) joined every registered table regardless of source, which would have caused a
+CBS-only refresh to spuriously report every registered Eurostat table as "flipped" the moment a real
+Eurostat catalog capture gives it a non-empty `currentCatalogStatuses` — fixed by scoping that join to the
+refresh's own source, with a regression test that exercises the scoping directly (a real registry-status
+dormancy, per Amendment B1, meant the bug couldn't be demonstrated with Eurostat's own current settings).
+
 **Confirmed still correct, unchanged:** D1 (no new abstraction — the adapter models `cbs-adapter/` exactly),
 D4 (id-prefix discipline), D5's zero-prompt-bytes claim (the benchmark ran byte-identical, 14/14+6/6+0
 fabricated, before and after this build), D8's ingestion posture, and every Alternative/Consequence not named

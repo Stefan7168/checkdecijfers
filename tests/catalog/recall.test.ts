@@ -233,12 +233,22 @@ describe('recallCandidates — Regulier-first quota (WP27 A2)', () => {
 // VACUOUSLY — E1 registers zero real Eurostat tables (Task 7's own honest
 // empty state), so with nothing eurostat:-prefixed in cbs_catalog at all, "no
 // eurostat result is ever returned" would be true regardless of whether the
-// guard code exists. The fix (per Amendment B2): hand-insert a synthetic
-// eurostat: candidate that would otherwise be a STRONG match, then run BOTH
-// a negative case (flag unset → never surfaced, even though it matches) and
-// a positive control (flag set → the SAME candidate IS reachable) — the
-// positive control is what proves the negative case is the guard working,
-// not an accident of the query never matching in the first place.
+// guard code exists. The fix (per Amendment B2, as ORIGINALLY built): hand-
+// insert a synthetic eurostat: candidate that would otherwise be a STRONG
+// match, then prove both a negative case and a positive control.
+//
+// Whole-branch-review correction (found before the PR, see recall.ts's own
+// header comment): the positive control originally toggled
+// EUROSTAT_EXPLORER_ENABLED to show the SAME candidate become reachable —
+// but that made the internal explorer's own visibility flag double as the
+// only thing protecting live chat from an unannounced source, so enabling
+// the explorer (the RUNBOOK's own documented next step) would ALSO have
+// lifted this deny gate. The filter is now UNCONDITIONAL, no flag at all.
+// The positive control is now the search mechanism itself: an
+// otherwise-identical row registered under a non-eurostat source (the third
+// test below) proves the query WOULD match this exact content — so the
+// first test's empty result is the filter actively working, not the
+// search failing to match anything in the first place.
 describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => {
   let db: Db;
   let close: () => Promise<void>;
@@ -256,30 +266,21 @@ describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)',
     });
   });
   afterEach(async () => {
-    delete process.env.EUROSTAT_EXPLORER_ENABLED;
     await close();
   });
 
-  it('negative case: with the flag UNSET, a live-shaped question never recalls the eurostat: candidate, even though it is the only match', async () => {
-    delete process.env.EUROSTAT_EXPLORER_ENABLED;
+  it('an eurostat: candidate is NEVER recalled, unconditionally, even though it is the only match for the term', async () => {
     const got = await recallCandidates(db, 'kwarkproductie', { limit: 10 });
     expect(got).toEqual([]);
     expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(false);
   });
 
-  it('positive control: with the flag SET, the SAME candidate IS reachable — proving the guard is a real, active check', async () => {
-    process.env.EUROSTAT_EXPLORER_ENABLED = '1';
-    const got = await recallCandidates(db, 'kwarkproductie', { limit: 10 });
-    expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(true);
-  });
-
-  it('the gate never touches a CBS candidate for the same term (no over-filtering)', async () => {
+  it('the gate never touches a CBS candidate for the same term (no over-filtering), and the same title IS recalled under a non-eurostat source — proving the search mechanism genuinely matches this content, so the eurostat exclusion above is the filter working, not a query that never matched', async () => {
     await insertRow(db, {
       id: 'CBS_KWARK_TEST',
       title: 'Kwarkproductie kwarkproductie kwarkproductie (CBS)',
       source: CBS_SOURCE_KEY,
     });
-    delete process.env.EUROSTAT_EXPLORER_ENABLED;
     const got = await recallCandidates(db, 'kwarkproductie', { limit: 10 });
     expect(got.some((c) => c.tableId === 'CBS_KWARK_TEST')).toBe(true);
     expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(false);

@@ -27,15 +27,23 @@ ADR 048's new "As-built" section, and the frozen executor brief
 build-plan entry into a line-by-line executor brief, ran a SECOND full pre-build adversarial review (4
 lenses) against that frozen brief (6 confirmed findings folded in as Amendments B1–B6, one cross-lens
 corroborated), built per the amended brief, then ran a whole-branch integration/review pass that found
-**two more real defects neither adversarial review round caught**: (1) merely registering the Eurostat
+**three more real defects neither adversarial review round caught**: (1) merely registering the Eurostat
 source made `chat.tsx`'s existing source-chip UI render and default-select a live "Eurostat data" chip
 for every real user — a genuine D3(b)/(c) violation with zero Eurostat data involved; fixed with a new
 `SourceInfo.chatSelectable` field, applied at both the chip UI and the server's untrusted-payload
 validator. (2) a stray null byte inside a hand-edited source file (`statistics-api.ts`) that made git
 treat it as binary — found by noticing `git diff` printed "Binary files differ" for a `.ts` file, fixed.
-A required LOW-effort `/code-review` pass over the full diff then found and fixed one more real bug
-(a decimals-counting function that mishandled exponential-notation numbers) and flagged one duplicated
-helper as a conscious, disclosed trade-off (architectural convention, not fixed).
+(3) **the most serious: the live-chat deny gate (`src/catalog/recall.ts`) was built gated on the SAME
+flag (`EUROSTAT_EXPLORER_ENABLED`) the internal explorer route uses for its own visibility** — a
+dedicated final whole-branch-review agent caught this after all tasks were built: enabling the explorer
+(exactly what this same session's own RUNBOOK follow-up instructs doing) would ALSO have lifted the only
+protection keeping Eurostat out of live chat, a real D3(c) violation with no code change needed to
+trigger it. Fixed: the deny gate is now unconditional, no flag at all — safe because the explorer never
+depends on it (explicit-target intents bypass discovery entirely). The same review pass found a related,
+lower-severity, currently-dormant scoping gap in the pre-existing #108 status-flip detection, also fixed
+with a regression test. A required LOW-effort `/code-review` pass over the full diff then found and
+fixed one more real bug (a decimals-counting function that mishandled exponential-notation numbers) and
+flagged one duplicated helper as a conscious, disclosed trade-off (architectural convention, not fixed).
 
 **One deliberate, disclosed scoping decision shapes everything built: "Constraint 0" — no live call to
 the real Eurostat API happened this session**, reading the build-plan's own "any real Eurostat API
@@ -49,7 +57,7 @@ never executed) — which is what actually lets E1 be measured against ADR 048's
 [open-questions #249](open-questions.md).
 
 **Full verification (measured, on the final commit before opening the PR):** root + web typecheck
-clean; backend suite 160 files / 2426 tests green (solo, the 8GB-machine OOM-avoidance convention);
+clean; backend suite 160 files / 2427 tests green (solo, the 8GB-machine OOM-avoidance convention);
 web suite 106 files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure
 from resource contention, confirmed gone on a solo re-run); hermetic benchmark 14/14 + 6/6 + 0
 fabricated, GATE PASS, byte-identical to before this build (zero prompt bytes touched anywhere in E1);

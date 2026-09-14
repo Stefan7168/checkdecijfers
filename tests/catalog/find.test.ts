@@ -156,6 +156,16 @@ describe('findTable routing', () => {
 // cannot pass vacuously — a stub rerank that would confidently PICK it if it
 // ever reached Stage 2 proves the guard fires before rerank, not merely that
 // nothing matched.
+//
+// Whole-branch-review correction (found before the PR, see recall.ts's own
+// header comment): the deny gate is now UNCONDITIONAL, no
+// EUROSTAT_EXPLORER_ENABLED flag at all — that flag also gates the internal
+// explorer's own visibility, so tying live-chat exposure to it would have
+// meant enabling the explorer (the RUNBOOK's own documented next step) also
+// lifting the only protection keeping Eurostat out of live chat. The
+// positive control is now a same-content row under a non-eurostat source,
+// proving the recall/rerank mechanism genuinely would have picked this exact
+// candidate had it not been eurostat-sourced.
 describe('findTable — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => {
   let db: Db;
   let close: () => Promise<void>;
@@ -180,24 +190,34 @@ describe('findTable — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => 
     );
   });
   afterEach(async () => {
-    delete process.env.EUROSTAT_EXPLORER_ENABLED;
     await close();
   });
 
-  it('negative case: flag unset — a confident-pick rerank never gets the chance to pick the eurostat: candidate', async () => {
-    delete process.env.EUROSTAT_EXPLORER_ENABLED;
+  it('an eurostat: candidate is NEVER reachable, unconditionally, even to a rerank that would confidently pick it', async () => {
     const outcome = await findTable(db, q('kwarkexport'), { rerank: stubPickFirst(0.99) });
     // Nothing reached the shortlist at all (no CBS competitor for this term).
     expect(outcome).toEqual({ kind: 'none', reason: 'no_recall' });
   });
 
-  it('positive control: flag set — the same candidate becomes reachable and confidently picked', async () => {
-    process.env.EUROSTAT_EXPLORER_ENABLED = '1';
+  it('the SAME title, under a non-eurostat source, IS reachable and confidently picked — proving the mechanism genuinely matches this content, so the exclusion above is the deny gate working, not a query that never matched', async () => {
+    await db.query(
+      `insert into cbs_catalog (table_id, title, summary, status, dataset_type, language, refreshed_at, source)
+       values ($1, $2, $3, $4, $5, $6, now(), $7)`,
+      [
+        'CBS_KWARKEXPORT_TEST',
+        'Kwarkexport kwarkexport kwarkexport (CBS)',
+        'Control row — a non-eurostat source, same content shape.',
+        'Regulier',
+        'Numeric',
+        'nl',
+        CBS_SOURCE_KEY,
+      ],
+    );
     const outcome = await findTable(db, q('kwarkexport'), { rerank: stubPickFirst(0.99) });
     expect(outcome.kind).toBe('confident');
     if (outcome.kind === 'confident') {
-      expect(outcome.pick.tableId).toBe('eurostat:kwarkexport_test');
-      expect(sourceKeyForTableId(outcome.pick.tableId)).toBe(EUROSTAT_SOURCE_KEY);
+      expect(outcome.pick.tableId).toBe('CBS_KWARKEXPORT_TEST');
+      expect(sourceKeyForTableId(outcome.pick.tableId)).toBe(CBS_SOURCE_KEY);
     }
   });
 

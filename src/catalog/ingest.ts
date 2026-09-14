@@ -67,10 +67,24 @@ export async function ingestCatalog(
     // touches cbs_catalog — the only way to detect a flip rather than just
     // the after-state. cbs_tables is small (registered tables only), so this
     // is a cheap join, not a full-catalog scan.
+    //
+    // WP30c/E1 whole-branch-review fix (found before the PR): scoped to THIS
+    // refresh's own sourceKey. Without this, a registered table from a
+    // DIFFERENT source would join in here too, but `newStatusByTableId`
+    // below is built only from THIS source's fetchCatalog() entries — so
+    // that other-source table's `newStatus` would always resolve to null
+    // (never actually refreshed by this call), spuriously reporting a flip
+    // on every run whenever it happened to be "current" beforehand. Dormant
+    // today only because Eurostat's currentCatalogStatuses ships empty
+    // (Constraint 0) — the moment a real capture fills it in AND at least
+    // one Eurostat table is registered, a CBS-only refresh would start
+    // spuriously flagging every registered Eurostat table (and vice versa).
     const { rows: registeredRows } = await tx.query(
       `select t.id as table_id, c.status as old_status
        from cbs_tables t
-       left join cbs_catalog c on c.table_id = t.id`,
+       left join cbs_catalog c on c.table_id = t.id
+       where t.source = $1`,
+      [sourceKey],
     );
     const oldStatusByTableId = new Map(
       (registeredRows as { table_id: string; old_status: string | null }[]).map((r) => [
