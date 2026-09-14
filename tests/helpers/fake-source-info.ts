@@ -15,6 +15,10 @@ export function fakeSourceInfo(overrides: Partial<SourceInfo> = {}): SourceInfo 
     definitiveStatuses: ['Definitief'],
     nullReasonLabels: { Missing: 'door FAKE niet geleverd' },
     currentCatalogStatuses: ['Actueel'],
+    // WP30c/E1: matches CBS's own real entry (true) by default — this
+    // helper models a hypothetical THIRD, already-public source unless a
+    // test explicitly overrides it to exercise the dormant (false) case.
+    chatSelectable: true,
     ...overrides,
   };
 }

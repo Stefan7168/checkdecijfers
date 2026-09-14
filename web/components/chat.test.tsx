@@ -1273,6 +1273,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       card: null,
       csv: { filename: 'antwoord.csv', content: 'a,b\n1,2\n' },
       proof: null,
+      proofRequestUrls: null,
       answerView: null,
       provisional: false,
       suggestions: [],
@@ -1309,6 +1310,18 @@ describe('Chat — WP129+130 source chips (#129)', () => {
     render(<Chat pricing={pricing} />);
     expect(screen.getByRole('button', { name: 'CBS data', pressed: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Internet', pressed: false })).toBeInTheDocument();
+  });
+
+  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): the source registry now
+  // has a SECOND real entry (eurostat, chatSelectable:false). Without this
+  // fix, this row's `Object.keys(SOURCES).map(...)` would render an
+  // "Eurostat data" chip and default-select it purely because the entry
+  // exists — before Eurostat can answer anything. This test proves the live
+  // chat UI stays byte-identical (one chip only) through E1.
+  it('never renders a chip for a registered-but-chat-dormant source (Eurostat, E1)', () => {
+    render(<Chat pricing={pricing} />);
+    expect(screen.queryByRole('button', { name: /Eurostat/ })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /data$/ })).toHaveLength(1);
   });
 
   it('toggles the chips (aria-pressed) on click', () => {
@@ -2304,6 +2317,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
         card: null,
         csv: null,
         proof: null,
+        proofRequestUrls: null,
         answerView: null,
         provisional: false,
         suggestions: ['Amsterdam'],

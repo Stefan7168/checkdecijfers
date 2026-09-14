@@ -293,19 +293,26 @@ function guardOnboardingOfferToken(token: string): void {
 // input (a Server Action argument — attacker-controlled, like every other one
 // here). It is coerced to a SourceSelection BEFORE the billing gate and NEVER
 // throws: any malformed shape degrades to `undefined` (the legacy no-selection
-// behavior, byte-identical to a pre-WP submit). `sources` is filtered to KNOWN
-// registry keys (Object.keys(SOURCES)) — an unknown key is dropped, never
-// trusted; `web` is coerced to a strict boolean. When WEBSEARCH_ENABLED !== '1'
-// the whole selection is FORCED to undefined (the server belt behind the
-// dormant UI): a crafted payload cannot reach the web path while the feature is
-// dormant, so `selection?.web === true` anywhere below already implies the flag
-// is on.
+// behavior, byte-identical to a pre-WP submit). `sources` is filtered to KNOWN,
+// chat-selectable registry keys — an unknown OR a registered-but-dormant key
+// (WP30c/E1: `chatSelectable: false`, e.g. 'eurostat') is dropped, never
+// trusted. This is the SAME gate `chat.tsx`'s chip UI uses (SourceInfo's
+// `chatSelectable`) — deliberately one load-bearing flag, not two independent
+// ones that could drift: a crafted payload naming a real-but-dormant source
+// key must be refused here even though the client UI never offers it, so a
+// future source's public exposure flips on in exactly one place (D3(d)'s
+// owner-signed sweep), never by accident via this validator alone continuing
+// to accept a key nothing else has decided is public yet. `web` is coerced to
+// a strict boolean. When WEBSEARCH_ENABLED !== '1' the whole selection is
+// FORCED to undefined (the server belt behind the dormant UI): a crafted
+// payload cannot reach the web path while the feature is dormant, so
+// `selection?.web === true` anywhere below already implies the flag is on.
 function validateSelection(raw: unknown): SourceSelection | undefined {
   if (process.env.WEBSEARCH_ENABLED !== '1') return undefined;
   if (raw === null || typeof raw !== 'object') return undefined;
   const obj = raw as { sources?: unknown; web?: unknown };
   if (!Array.isArray(obj.sources)) return undefined;
-  const known = new Set(Object.keys(SOURCES));
+  const known = new Set(Object.keys(SOURCES).filter((key) => SOURCES[key]!.chatSelectable));
   const sources = obj.sources.filter((s): s is string => typeof s === 'string' && known.has(s));
   return { sources, web: obj.web === true };
 }
@@ -1151,7 +1158,7 @@ export async function loadMyThread(rawThreadId: unknown): Promise<LoadedThread> 
     const datasetId = await getThreadDatasetId(getDb(), userId, threadId);
     if (datasetId !== null) return loadDatasetThread(userId, threadId, datasetId);
     const rows = await getThreadRows(getDb(), userId, threadId);
-    const messages = assembleMessages(replayParts(rows));
+    const messages = await assembleMessages(replayParts(rows), getDb());
     const rebuilt = await rebuildContext(getDb(), rows);
     const context = await validateConversationContext(getDb(), rebuilt);
     return { kind: 'cbs', threadId, messages, context };

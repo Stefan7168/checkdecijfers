@@ -564,6 +564,10 @@ export async function runQuery(
     // recorded alternates, and every explicit-target answer, serializes no key
     // at all, so all previously stored envelopes stay byte-identical.
     ...(q.alternates.length > 0 ? { alternates: q.alternates } : {}),
+    // WP30c D7(a): present-only, same reasoning as alternates above — every
+    // CBS table (doi is NULL) and every pre-Eurostat stored envelope
+    // serializes no key at all, so nothing existing changes shape (R8).
+    ...(q.table.doi ? { doi: q.table.doi } : {}),
   };
 
   const shape: ResultShape =

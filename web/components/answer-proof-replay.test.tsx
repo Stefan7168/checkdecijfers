@@ -8,11 +8,18 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
+import type { Db } from '../backend/db/types.ts';
 import type { ThreadRow } from '../backend/threads/index.ts';
 import { replayParts } from '../backend/threads/replay.ts';
 import { assembleMessages } from '../lib/replay-assemble.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
+
+// WP30c D7(b): assembleMessages now awaits fetchRequestUrlsByBatch(db, ...)
+// per answer message — this test exercises the panel's own rendering, not
+// the request_urls lookup, so an empty-rows stub is enough (mirrors the
+// no-lookup-wired degrade the byte-parity requirement asks for).
+const fakeDb = { query: async () => ({ rows: [] }) } as unknown as Db;
 
 // jsdom does not implement scrollIntoView (chat.tsx effect) — same stub as
 // chat.test.tsx.
@@ -41,13 +48,13 @@ function row(response: ComposedResponse): ThreadRow {
 }
 
 describe('Chat — #70/#79/#89 on a RESUMED thread', () => {
-  it('renders the trigger for a replayed answer and opens the panel over the replayed envelope', () => {
+  it('renders the trigger for a replayed answer and opens the panel over the replayed envelope', async () => {
     const response = fakeAnswerResponse({
       body: 'De inflatie in 2024 was 3,3%.',
       shape: 'single',
       cells: [fakeCell()],
     }) as unknown as ComposedResponse;
-    const initialMessages = assembleMessages(replayParts([row(response)]));
+    const initialMessages = await assembleMessages(replayParts([row(response)]), fakeDb);
     expect(initialMessages).toHaveLength(2);
     render(<Chat initialMessages={initialMessages} />);
 

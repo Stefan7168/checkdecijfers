@@ -17,8 +17,54 @@ import { ShieldCheck } from 'lucide-react';
 import { memo, useId, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
-import type { AnswerProof as AnswerProofData } from '../lib/answer-proof.ts';
+import type { AnswerProof as AnswerProofData, RequestUrlsByBatch } from '../lib/answer-proof.ts';
 import { Button } from './ui/button.tsx';
+
+/** WP30c D7(b) (ADR 048, Amendment 6): the batch ids this proof's own cells
+ * reference, in first-seen order — the exact set `requestUrlsByBatch` (when
+ * present) may carry an entry for. Deduplicated so a multi-cell answer whose
+ * cells share one batch shows that batch's URL(s) once, not per cell. */
+function distinctBatchIds(proof: AnswerProofData): number[] {
+  return [...new Set(proof.cells.map((cell) => cell.batchId))];
+}
+
+/** WP30c D7(b): the "Opgehaalde URL's" block under Technische details — one
+ * line per batch this proof's cells reference that has a captured
+ * request_urls entry. Renders nothing (not even the heading) when the map is
+ * absent, empty, or has no entry for any of this proof's batches — the exact
+ * degradation the byte-parity requirement asks for: a replay with no lookup
+ * wired (chat.tsx live chat, Amendment B5; a deleted batch row; a batch
+ * ingested before migration 032) must leave the rest of the panel unchanged,
+ * never throw. */
+function RequestUrlsSection({
+  proof,
+  requestUrlsByBatch,
+}: {
+  proof: AnswerProofData;
+  requestUrlsByBatch: RequestUrlsByBatch | null | undefined;
+}) {
+  const t = useT();
+  if (!requestUrlsByBatch) return null;
+  const batchIds = distinctBatchIds(proof).filter((id) => (requestUrlsByBatch[id]?.length ?? 0) > 0);
+  if (batchIds.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.requestUrlsHeading')}</h4>
+      <ul className="space-y-0.5">
+        {batchIds.map((batchId) => (
+          <li key={batchId}>
+            {t('answerProof.requestUrlsBatchLabel', { batchId })}
+            <ul className="ml-4 list-disc space-y-0.5 break-all">
+              {requestUrlsByBatch[batchId]!.map((url, i) => (
+                <li key={i}>{url}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function CellTable({ proof, technical }: { proof: AnswerProofData; technical: boolean }) {
   const t = useT();
@@ -103,7 +149,19 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
 // each keystroke in the input, and an OPEN panel rebuilt its cell table each
 // time; `message.proof` is a stable reference (built once per message), so
 // identity memo is exact.
-export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerProofData }) {
+export const AnswerProof = memo(function AnswerProof({
+  proof,
+  requestUrlsByBatch,
+}: {
+  proof: AnswerProofData;
+  /** WP30c D7(b) (ADR 048, Amendment 6): a live side-lookup, fetched
+   * ALONGSIDE `proof` by the caller — never a field ON `proof` itself, since
+   * `ingestion_batches.request_urls` lives outside the R8-reconstructed
+   * envelope. Optional/nullable: absent on the live chat.tsx call site
+   * (Amendment B5, a named residual) and on any replay where the lookup
+   * found nothing — the panel below renders identically either way. */
+  requestUrlsByBatch?: RequestUrlsByBatch | null;
+}) {
   const [open, setOpen] = useState(false);
   const [technical, setTechnical] = useState(false);
   const panelId = useId();
@@ -162,6 +220,10 @@ export const AnswerProof = memo(function AnswerProof({ proof }: { proof: AnswerP
           <div className="mb-3">
             <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.cellsHeading')}</h4>
             <CellTable proof={proof} technical={technical} />
+            {/* WP30c D7(b): shown alongside the cell table's own "Batch"
+              * column (same technical-only gate) — the per-batch request
+              * URL(s), when the live lookup found any. */}
+            {technical ? <RequestUrlsSection proof={proof} requestUrlsByBatch={requestUrlsByBatch} /> : null}
           </div>
 
           <div>

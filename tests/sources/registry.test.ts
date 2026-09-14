@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CBS_SOURCE_KEY,
+  EUROSTAT_SOURCE_KEY,
   isProvisionalStatus,
   resolveSource,
   resolveSourceForTable,
@@ -151,5 +152,117 @@ describe('display builders are byte-identical for cbs vs absent source (A1)', ()
     };
     expect(series(undefined).nullNotes).toEqual(['Geen waarde voor 2024: Confidential (CBS).']);
     expect(series('cbs').nullNotes).toEqual(series(undefined).nullNotes);
+  });
+});
+
+describe('WP30c/E1 (ADR 048 D6/D7, Amendment B1): the eurostat registry entry', () => {
+  it('resolveSource returns the registered eurostat entry, not the cbs fallback', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    expect(eurostat).toBe(SOURCES[EUROSTAT_SOURCE_KEY]);
+    expect(eurostat).not.toBe(SOURCES[CBS_SOURCE_KEY]);
+    expect(eurostat.displayName).toBe('Eurostat');
+    expect(eurostat.attributionLabel).toBe('Eurostat');
+    expect(eurostat.license).toBe('CC BY 4.0');
+  });
+
+  it('sourceKeyForTableId/resolveSourceForTable route an eurostat: id to the eurostat entry', () => {
+    expect(sourceKeyForTableId('eurostat:demo_test')).toBe(EUROSTAT_SOURCE_KEY);
+    expect(resolveSourceForTable('eurostat:demo_test')).toBe(SOURCES[EUROSTAT_SOURCE_KEY]);
+  });
+
+  it('deep link strips the eurostat: prefix down to the bare native id', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    expect(eurostat.deepLink!('eurostat:demo_test')).toBe(
+      'https://ec.europa.eu/eurostat/databrowser/view/demo_test/default/table',
+    );
+  });
+
+  it('deep link is generic over the first colon only — a multi-colon native id keeps its remaining colons', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    expect(eurostat.deepLink!('eurostat:demo:test')).toBe(
+      'https://ec.europa.eu/eurostat/databrowser/view/demo:test/default/table',
+    );
+  });
+
+  it('Amendment B1: empty definitiveStatuses makes isProvisionalStatus return true unconditionally', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    expect(eurostat.definitiveStatuses).toEqual([]);
+    // Every status string — flagged, unflagged, empty, or unrecognized —
+    // must come back provisional. This is the safe-direction behavior the
+    // empty list exists to guarantee, since pipeline.ts has no per-cell
+    // status path for Eurostat's per-cell flags (only a per-period one).
+    for (const status of ['', 'p', 'e', 's', 'f', 'b', 'c', 'd', 'u', 'n', 'anything-unrecognized']) {
+      expect(isProvisionalStatus(eurostat, status)).toBe(true);
+    }
+  });
+
+  it('D6 null-reason labels are registered for the : / c / z flags', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    expect(eurostat.nullReasonLabels[':']).toBeTruthy();
+    expect(eurostat.nullReasonLabels['c']).toBeTruthy();
+    expect(eurostat.nullReasonLabels['z']).toBeTruthy();
+  });
+
+  it('Constraint 0: currentCatalogStatuses ships empty, pending a live catalog capture', () => {
+    expect(resolveSource(EUROSTAT_SOURCE_KEY).currentCatalogStatuses).toEqual([]);
+  });
+
+  // Integration fix (found in this brief's own whole-branch pass, not by
+  // either adversarial review round): chatSelectable is the ONLY thing
+  // keeping this registered-but-dormant source out of the live chat chip
+  // UI (web/components/chat.tsx) and out of the server's untrusted-payload
+  // validator (web/app/actions.ts's validateSelection) — see chatSelectable's
+  // own doc comment on SourceInfo for why it is load-bearing, not decorative.
+  it('D3(b)/(c): chatSelectable is false — CBS stays the only chat-selectable source in E1', () => {
+    expect(resolveSource(EUROSTAT_SOURCE_KEY).chatSelectable).toBe(false);
+    expect(resolveSource(CBS_SOURCE_KEY).chatSelectable).toBe(true);
+  });
+});
+
+describe('WP30c/E1 Task 6 (ADR 048 D7(a)): buildAttributionLine for a eurostat-sourced row', () => {
+  function eurostatResult(doi: string | undefined): ReturnType<typeof makeResult> {
+    const cell = makeCell({
+      table: 'eurostat:tps00001', measure: 'M1', measureTitle: 'Testmaat',
+      region: null, periodCode: '2024JJ00', periodLabel: '2024', value: 4.2, unit: '%', decimals: 1,
+    });
+    const result = makeResult({ shape: 'single', cells: [cell] });
+    result.attribution.source = EUROSTAT_SOURCE_KEY;
+    if (doi !== undefined) result.attribution.doi = doi;
+    return result;
+  }
+
+  it('a eurostat row WITH a doi renders the D7(a) dataset/DOI sentence verbatim', () => {
+    const line = buildAttributionLine(eurostatResult('10.2908/TPS00001'));
+    expect(line).toBe(
+      'Bron: Eurostat, dataset tps00001 — Testtabel; kerncijfers (DOI 10.2908/TPS00001). ' +
+        'Gegevens gesynchroniseerd op 2026-07-02. Licentie: CC BY 4.0.',
+    );
+  });
+
+  it('a eurostat row WITHOUT a doi still renders the Eurostat sentence, minus the (DOI ...) clause — never throws', () => {
+    const line = buildAttributionLine(eurostatResult(undefined));
+    expect(line).toBe(
+      'Bron: Eurostat, dataset tps00001 — Testtabel; kerncijfers. ' +
+        'Gegevens gesynchroniseerd op 2026-07-02. Licentie: CC BY 4.0.',
+    );
+    expect(line).not.toContain('DOI');
+  });
+
+  it('a non-eurostat (cbs) row ignores a stray doi value and renders the ordinary CBS-shaped sentence, byte-identical', () => {
+    const cell = makeCell({
+      table: '82235NED', measure: 'D002936', measureTitle: 'Beginstand voorraad',
+      region: null, periodCode: '2024JJ00', periodLabel: '2024', value: 8204, unit: 'x 1 000',
+    });
+    const result = makeResult({ shape: 'single', cells: [cell] });
+    result.attribution.source = 'cbs';
+    // A doi should never exist on a real CBS row (migration 031: NULL for
+    // every CBS row forever) — this proves the source check, not the doi
+    // check, gates which sentence renders, in case a stray value ever got
+    // written by mistake.
+    result.attribution.doi = '10.0000/should-be-ignored';
+    expect(buildAttributionLine(result)).toBe(
+      'Bron: CBS StatLine, tabel 82235NED — Testtabel; kerncijfers. ' +
+        'Gegevens gesynchroniseerd op 2026-07-02. Periode: 2024. Licentie: CC BY 4.0.',
+    );
   });
 });

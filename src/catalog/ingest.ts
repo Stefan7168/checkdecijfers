@@ -25,8 +25,8 @@ export interface CatalogIngestResult {
 
 const UPSERT_SQL = `
   insert into cbs_catalog
-    (table_id, title, summary, status, dataset_type, language, cbs_modified, refreshed_at)
-  values ($1, $2, $3, $4, $5, $6, $7, $8)
+    (table_id, title, summary, status, dataset_type, language, cbs_modified, refreshed_at, source)
+  values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
   on conflict (table_id) do update set
     title = excluded.title,
     summary = excluded.summary,
@@ -34,7 +34,8 @@ const UPSERT_SQL = `
     dataset_type = excluded.dataset_type,
     language = excluded.language,
     cbs_modified = excluded.cbs_modified,
-    refreshed_at = excluded.refreshed_at
+    refreshed_at = excluded.refreshed_at,
+    source = excluded.source
 `;
 
 /**
@@ -43,8 +44,20 @@ const UPSERT_SQL = `
  * transaction. A fetch that returns zero rows is treated as suspect and never
  * prunes the mirror to empty (fetchCatalog throws on a real failure, so zero
  * would mean CBS genuinely listed nothing — we refuse to wipe on it).
+ *
+ * `sourceKey` (WP30c E1, Amendment B6) is the caller-supplied source identity
+ * (e.g. `CBS_SOURCE_KEY` from `src/sources/registry.ts`) — never derived
+ * implicitly in here, and never confused with `source`, which remains the
+ * ADAPTER INSTANCE (`CbsSource`). Every row this call upserts is stamped with
+ * `sourceKey` in the migration-016 `source` column, and the prune below is
+ * scoped to that same key, so one source's `catalog:refresh` can never delete
+ * another source's mirror rows.
  */
-export async function ingestCatalog(db: Db, source: CbsSource): Promise<CatalogIngestResult> {
+export async function ingestCatalog(
+  db: Db,
+  source: CbsSource,
+  sourceKey: string,
+): Promise<CatalogIngestResult> {
   const entries = await source.fetchCatalog();
   if (entries.length === 0) {
     return { fetched: 0, upserted: 0, pruned: 0, flips: [] };
@@ -84,12 +97,16 @@ export async function ingestCatalog(db: Db, source: CbsSource): Promise<CatalogI
         e.language,
         e.modified,
         batchTs,
+        sourceKey,
       ]);
     }
 
+    // Scoped by sourceKey (WP30c E1, Amendment B6): a refresh only ever
+    // prunes rows it owns. Without this predicate, a second source's
+    // catalog:refresh would delete every other source's mirror rows too.
     const { rows: prunedRows } = await tx.query(
-      'delete from cbs_catalog where refreshed_at < $1 returning table_id',
-      [batchTs],
+      'delete from cbs_catalog where source = $1 and refreshed_at < $2 returning table_id',
+      [sourceKey, batchTs],
     );
 
     // #108: a REGISTERED table that WAS current (per its own source's

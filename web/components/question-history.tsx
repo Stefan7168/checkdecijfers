@@ -51,7 +51,9 @@
 // client-held flag.
 import type { QuestionHistoryEntry } from '../backend/billing/index.ts';
 import { splitDefinitionForDisplay } from '../lib/definition-display.ts';
-import { buildAnswerProof } from '../lib/answer-proof.ts';
+import { batchIdsForProof, buildAnswerProof, fetchRequestUrlsByBatch } from '../lib/answer-proof.ts';
+import type { AnswerProof as AnswerProofData, RequestUrlsByBatch } from '../lib/answer-proof.ts';
+import { getDb } from '../lib/db.ts';
 import { getLang } from '../lib/i18n/server.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { AnswerProof } from './answer-proof.tsx';
@@ -160,6 +162,36 @@ function creditsLine(lang: Lang, n: number, isTotal: boolean): string {
 // rather than rendering `<QuestionHistory/>` directly (the trial.tsx /
 // ontdek.tsx precedent) -- jsdom's client renderer cannot invoke an async
 // function component itself.
+/** WP30c D7(b) (ADR 048, Amendment 6, brief Task 6): one of the two
+ * genuinely server-side `buildAnswerProof` call sites — built once here,
+ * BEFORE the JSX render below, so the render itself stays a plain
+ * synchronous `.map()` (a React Server Component's `.map()` callback must
+ * not itself be `async`). Keyed by the SAME `${item.source}-${item.id}`
+ * string the JSX already uses as its React key, so the lookup below can
+ * never mismatch a proof to the wrong entry. Never throws:
+ * `fetchRequestUrlsByBatch` already degrades to `{}` on any DB error or
+ * absent batch row (R8: the rest of the panel renders unaffected either
+ * way). */
+async function buildProofsByEntryKey(
+  items: QuestionHistoryEntry[],
+): Promise<Map<string, { proof: AnswerProofData; requestUrls: RequestUrlsByBatch }>> {
+  const withEnvelope = items.filter((item) => item.answerEnvelope !== null);
+  // No answer entries at all (an empty list, an all-onboarding/refusal page)
+  // — never touch the database. Keeps every existing render path that has
+  // nothing to look up exactly as DB-free as it was before this task.
+  if (withEnvelope.length === 0) return new Map();
+  const db = getDb();
+  const entries = await Promise.all(
+    withEnvelope.map(async (item) => {
+      const proof = buildAnswerProof(item.answerEnvelope!);
+      if (proof === null) return null;
+      const requestUrls = await fetchRequestUrlsByBatch(db, batchIdsForProof(proof));
+      return [`${item.source}-${item.id}`, { proof, requestUrls }] as const;
+    }),
+  );
+  return new Map(entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null));
+}
+
 export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[] }) {
   const lang = await getLang();
   if (items.length === 0) {
@@ -169,6 +201,7 @@ export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[]
   const inFlightCount = items.filter(
     (item) => item.onboarding !== null && isInFlight(item.onboarding),
   ).length;
+  const proofsByEntryKey = await buildProofsByEntryKey(items);
 
   return (
     <div className="flex flex-col gap-2">
@@ -267,8 +300,13 @@ export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[]
                   * Without this structural guard, the proof panel could expose
                   * table/measure/region/period info on a deleted entry. */}
                 {item.answerEnvelope !== null ? (() => {
-                  const proof = buildAnswerProof(item.answerEnvelope);
-                  return proof !== null ? <AnswerProof proof={proof} /> : null;
+                  // Pre-computed above (buildProofsByEntryKey), including the
+                  // WP30c D7(b) request_urls side-lookup — this render stays a
+                  // plain synchronous lookup, never an async call inside .map().
+                  const entry = proofsByEntryKey.get(`${item.source}-${item.id}`);
+                  return entry !== undefined ? (
+                    <AnswerProof proof={entry.proof} requestUrlsByBatch={entry.requestUrls} />
+                  ) : null;
                 })() : null}
               </>
             )}

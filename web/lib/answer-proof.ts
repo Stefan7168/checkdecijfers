@@ -17,6 +17,16 @@
 // metadata field (docs/05 R1's own answer-side discipline, adapted to a
 // deterministic — not LLM — surface).
 //
+// WP30c D7(b) (ADR 048, Amendment 6): `buildAnswerProof` itself stays the
+// pure, synchronous, DB-free leaf it always was — a genuinely NEW, separate
+// export, `fetchRequestUrlsByBatch` below, is the only thing in this file
+// that touches a database, and only when a caller explicitly awaits it
+// alongside (never inside) the proof build. `ingestion_batches.request_urls`
+// is ingestion/operational history, not part of the stored answer envelope,
+// so it is a live side-lookup by the envelope's already-stored `batchId` —
+// never denormalized into the R8-reconstructed envelope, and passed to the
+// rendering component as its own extra prop, not merged into `AnswerProof`.
+//
 // D9 (the design brief): difference/max/direction/unit_expansion are shown;
 // first_last is skipped (it carries no value of its own — a binding aid for
 // R9 prose, not something a reader drills into). D2: fields here are the
@@ -40,6 +50,7 @@ import {
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import { isDerivedResult } from '../backend/query/types.ts';
 import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResult } from '../backend/query/types.ts';
+import type { Db } from '../backend/db/types.ts';
 // #170(1): the same measured-date formatter the source badge chip already
 // uses — reused here (not re-derived) so the panel's date can never drift
 // from the chip's.
@@ -362,5 +373,51 @@ export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
     };
   } catch {
     return null;
+  }
+}
+
+/** WP30c D7(b): request URL(s) per ingestion batch, keyed by
+ * `ingestion_batches.id` — the SAME id every `ProofCell.batchId` already
+ * carries. Present-only: a batch with no recorded urls (every batch ingested
+ * before migration 032, or a batch row that no longer exists) is simply
+ * absent from the map, never a thrown error or a fabricated empty array. */
+export type RequestUrlsByBatch = Record<number, string[]>;
+
+/** The distinct batch ids a proof's own cells reference — the exact set
+ * `fetchRequestUrlsByBatch` below queries for. Exported so a caller
+ * assembling many proofs at once (e.g. a whole replayed thread) can batch
+ * the ids across messages into ONE query instead of one per message, while
+ * still deriving the ids from this module's own cell shape. */
+export function batchIdsForProof(proof: AnswerProof): number[] {
+  return [...new Set(proof.cells.map((cell) => cell.batchId))];
+}
+
+/** WP30c D7(b) (ADR 048 Amendment 6): the live, explicit read this module
+ * did not have before — `ingestion_batches.request_urls` for a set of batch
+ * ids, fetched ALONGSIDE (never inside) `buildAnswerProof`. Kept OUTSIDE the
+ * R8-reconstructed envelope: batch rows are ingestion/operational history,
+ * not part of the stored answer, so this is a fresh DB read every time a
+ * proof panel is built, never something replayed from stored JSON. Never
+ * throws — a DB error, or a batch row deleted/absent (the eviction/GDPR
+ * purge paths can remove old batches), degrades to that batch simply being
+ * absent from the returned map; the component already renders correctly
+ * with an empty or partial map (byte-parity requirement: the rest of the
+ * panel is unaffected either way). */
+export async function fetchRequestUrlsByBatch(db: Db, batchIds: readonly number[]): Promise<RequestUrlsByBatch> {
+  const ids = [...new Set(batchIds)];
+  if (ids.length === 0) return {};
+  try {
+    const { rows } = await db.query(
+      'select id, request_urls from ingestion_batches where id = any($1::bigint[])',
+      [ids],
+    );
+    const map: RequestUrlsByBatch = {};
+    for (const row of rows) {
+      const urls = row.request_urls as string[] | null;
+      if (urls !== null && urls.length > 0) map[Number(row.id)] = urls;
+    }
+    return map;
+  } catch {
+    return {};
   }
 }

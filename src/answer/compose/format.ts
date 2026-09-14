@@ -7,7 +7,7 @@
 // it against the result's cells and registered derivations. Formatting may
 // localize; the value may not change (R3).
 import type { ValidatedResult } from '../../query/index.ts';
-import { resolveSource } from '../../sources/registry.ts';
+import { EUROSTAT_SOURCE_KEY, resolveSource } from '../../sources/registry.ts';
 
 /** Canonical form for scanning: NFKC folds fullwidth/compatibility digits
  * (９→9, ¹→1) into ASCII so no digit shape escapes the tokenizer, and
@@ -305,6 +305,17 @@ export function buildAlternatesLine(result: ValidatedResult): string | null {
     : `Er zijn ook andere lezingen beschikbaar: ${labels.join('; ')}.`;
 }
 
+/** WP30c D7(a): the native Eurostat dataset code, stripped of the
+ * `'eurostat:'` identity prefix (D4) — only ever called once the caller has
+ * already confirmed `source === EUROSTAT_SOURCE_KEY`, so a colon is always
+ * present. Mirrors registry.ts's own (private) `nativeIdFrom`, kept local
+ * here since that module is a pure leaf with no exports beyond the lookup
+ * functions themselves (see its header comment). */
+function eurostatDatasetCode(tableId: string): string {
+  const colon = tableId.indexOf(':');
+  return colon >= 0 ? tableId.slice(colon + 1) : tableId;
+}
+
 /** The R4 attribution sentence — the single builder for every surface that
  * displays it: answer text (compose) and chart specs (WP8). One source of
  * truth so the two can never drift apart. */
@@ -314,13 +325,31 @@ export function buildAttributionLine(result: ValidatedResult): string {
   const from = labelByCode.get(a.coveredPeriods.from) ?? a.coveredPeriods.from;
   const to = labelByCode.get(a.coveredPeriods.to) ?? a.coveredPeriods.to;
   const period = from === to ? from : `${from} t/m ${to}`;
+  const syncedAt = a.syncedAt.slice(0, 10);
+  // WP30c D7(a) (ADR 048): a Eurostat-sourced answer renders its own
+  // dataset-shaped sentence (the literal ADR 048 D7(a) template — no
+  // "Periode:" clause, unlike CBS's) instead of the CBS-shaped one below,
+  // for every row whose source genuinely resolves to eurostat — determined
+  // exactly once, via resolveSource (A1's absent→'cbs' fallback keeps every
+  // pre-Eurostat stored envelope on the CBS branch, byte-identical). The
+  // "(DOI ...)" clause is itself conditional on `doi` being present: never
+  // throw on a missing DOI — a Eurostat row whose DOI wasn't captured still
+  // renders the Eurostat sentence, just without that clause (R8-safe,
+  // matching the ADR's own "an absent DOI renders no DOI clause").
+  if (resolveSource(a.source).key === EUROSTAT_SOURCE_KEY) {
+    const doiClause = a.doi ? ` (DOI ${a.doi})` : '';
+    return (
+      `Bron: Eurostat, dataset ${eurostatDatasetCode(a.tableId)} — ${a.tableTitle}${doiClause}. ` +
+      `Gegevens gesynchroniseerd op ${syncedAt}. Licentie: ${a.license}.`
+    );
+  }
   // WP30a (ADR 030 D3): the label comes from the source registry; absent
   // source (every pre-WP30a stored row) resolves to 'cbs' (A1) — the line is
   // byte-identical to the pre-WP30a literal. The license stays the STORED
   // field: old rows re-derive from their own bytes, never from live config.
   return (
     `Bron: ${resolveSource(a.source).attributionLabel}, tabel ${a.tableId} — ${a.tableTitle}. ` +
-    `Gegevens gesynchroniseerd op ${a.syncedAt.slice(0, 10)}. Periode: ${period}. Licentie: ${a.license}.`
+    `Gegevens gesynchroniseerd op ${syncedAt}. Periode: ${period}. Licentie: ${a.license}.`
   );
 }
 

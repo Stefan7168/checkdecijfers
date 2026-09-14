@@ -13,6 +13,7 @@ import {
 import { expandTopicTerms, ALIAS_HINTS } from '../../src/catalog/aliases.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
+import { CBS_SOURCE_KEY } from '../../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -58,7 +59,7 @@ describe('recallCandidates', () => {
 
   beforeEach(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)));
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
   afterEach(async () => {
     await close();

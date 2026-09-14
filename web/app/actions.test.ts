@@ -234,6 +234,19 @@ describe('askQuestion — selection validation (untrusted client payload)', () =
     expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });
   });
 
+  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): 'eurostat' is a REAL,
+  // registered key (not a typo like 'nope'/'wikipedia' above) — it must
+  // still be dropped, because it is chatSelectable:false. This is the
+  // server-side belt behind chat.tsx's chip UI never offering it: a crafted
+  // payload naming a real-but-dormant source must not reach the query path
+  // either. If this test were removed, a registered-but-dormant source
+  // would silently start being honored by this validator alone.
+  it('drops a registered-but-chat-dormant source key even though it is real (not a typo)', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    await askQuestion('q', RID, null, { sources: ['cbs', 'eurostat'], web: false });
+    expect(lastAskOptions().sourceSelection).toEqual({ sources: ['cbs'], web: false });
+  });
+
   it('coerces web to a strict boolean', async () => {
     driveGate(fakeAnswer(), 1, 20);
     // web: 'yes' (a truthy non-boolean) must coerce to false, not true.

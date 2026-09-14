@@ -55,11 +55,38 @@ export interface SourceInfo {
    * CBS row (pinned; find-replay's request hashes prove the shortlist never
    * moved). */
   currentCatalogStatuses: readonly string[];
+  /** WP30c/E1 (ADR 048 D3(b)/(c) integration fix, found in this brief's
+   * whole-branch pass, not by either adversarial review round): whether this
+   * source may appear as a selectable chip in the LIVE chat UI (WP129+130,
+   * `web/components/chat.tsx`'s `Object.keys(SOURCES).map(...)`). That chip
+   * row iterates every REGISTERED source with no other gate — a new registry
+   * entry alone, with zero other code touched, would surface a brand-new
+   * source (and PRE-select it, matching the WP129 default-all-on behavior)
+   * to every real user, which is exactly the "never announced before it
+   * answers" rule D3 exists to enforce. `false` here is therefore load-
+   * bearing, not decorative: it is the ONLY thing keeping a registered-but-
+   * dormant source out of the public chat UI. Flip to `true` only in the
+   * source's own owner-signed E2/public sweep (D3(d)), in the same change
+   * that makes it actually answerable. */
+  chatSelectable: boolean;
 }
 
 /** The one registered source. Phase-0/1 ids are bare CBS ids; future sources
  * register '<sourcekey>:<native-id>' per ADR 030 D4. */
 export const CBS_SOURCE_KEY = 'cbs' as const;
+
+/** WP30c/E1 (ADR 048 D4): Eurostat ids are '<eurostat>:<code>'. */
+export const EUROSTAT_SOURCE_KEY = 'eurostat' as const;
+
+/** D4/registry-owned (never the caller's job): strips a '<key>:' prefix to
+ * recover the native id Eurostat's own data-browser expects. Deliberately
+ * generic over the first colon rather than hardcoding 'eurostat:' — matches
+ * sourceKeyForTableId's own derivation below, so a deep link never drifts
+ * from the id-parsing rule the rest of the registry already enforces. */
+function nativeIdFrom(tableId: string): string {
+  const colon = tableId.indexOf(':');
+  return colon >= 0 ? tableId.slice(colon + 1) : tableId;
+}
 
 export const SOURCES: Readonly<Record<string, SourceInfo>> = {
   [CBS_SOURCE_KEY]: {
@@ -81,6 +108,81 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
       NotAvailable: 'door CBS (nog) niet beschikbaar gesteld',
     },
     currentCatalogStatuses: ['Regulier'],
+    chatSelectable: true,
+  },
+  // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2; Amendment B1 folded in):
+  // second source, registered but E1-inert for everything Constraint 0 or
+  // the pipeline.ts per-period status shape blocks — see the two field-level
+  // comments below before changing either.
+  [EUROSTAT_SOURCE_KEY]: {
+    key: EUROSTAT_SOURCE_KEY,
+    displayName: 'Eurostat',
+    attributionLabel: 'Eurostat',
+    license: 'CC BY 4.0',
+    // Links the dataset's stable data-browser TABLE view (D6), mirroring the
+    // CBS choice to link the table rather than an unstable cell deep-link.
+    // nativeIdFrom strips the 'eurostat:' identity prefix internally — per
+    // D4 this is the registry's own job, never the caller's.
+    deepLink: (tableId: string) => `https://ec.europa.eu/eurostat/databrowser/view/${nativeIdFrom(tableId)}/default/table`,
+    // ADR 048 D6's verbatim observation-flag list, mapped to Dutch suffixes
+    // matching the CBS entries' register above. Amendment 11: owner sign-off
+    // on the exact wording is still OPEN (see docs/open-questions.md) —
+    // routine, not a build blocker, since this is display-only (R11).
+    //
+    // Per Amendment B1: this map is INERT in E1. Nothing today can key into
+    // it per-cell — pipeline.ts's `status` column is derived only from a
+    // per-PERIOD-code lookup (the CBS shape; see isProvisionalStatus below
+    // and definitiveStatuses' own comment), so no Eurostat cell's per-cell
+    // flag ever reaches this lookup yet. Kept only as forward documentation
+    // for when a real per-cell status mechanism exists (a scoped pipeline.ts
+    // change, tracked as a residual in the WP30c/E1 brief).
+    provisionalDisplay: {
+      p: ' (voorlopig cijfer)',
+      e: ' (schatting)',
+      s: ' (schatting door Eurostat)',
+      f: ' (prognose)',
+      b: ' (methodebreuk)',
+      c: ' (vertrouwelijk)',
+      d: ' (afwijkende definitie)',
+      u: ' (lage betrouwbaarheid)',
+      n: ' (niet significant)',
+    },
+    // Amendment B1 (HIGH, confirmed): deliberately EMPTY, NOT `['']` as D6's
+    // literal text says. D6 assumed the unflagged state ('') reaches
+    // isProvisionalStatus as a per-cell status, but pipeline.ts's `status`
+    // column has no per-cell path at all — only periodStatusByCode's
+    // per-PERIOD-code lookup (the CBS shape). An empty list makes
+    // isProvisionalStatus return true UNCONDITIONALLY for every Eurostat
+    // cell, regardless of what periodStatusByCode produces: every cell
+    // renders provisional. This is the safe fail-direction (principle c) —
+    // over-cautious, never under — and needs no pipeline.ts change. Real
+    // per-cell provisional propagation is a follow-up, scoped pipeline.ts
+    // change (tracked as a residual in the WP30c/E1 brief), required before
+    // any Eurostat cell may honestly render as definitive.
+    definitiveStatuses: [],
+    // D6's null-reason flags (R11), Dutch wording matching the CBS entries'
+    // register above (owner sign-off open, same Amendment 11 as above).
+    nullReasonLabels: {
+      ':': 'door Eurostat (nog) niet beschikbaar gesteld',
+      c: 'door Eurostat niet gepubliceerd (vertrouwelijk)',
+      z: 'niet van toepassing volgens Eurostat',
+    },
+    // TODO(WP30c/E1 Constraint 0): Eurostat's Catalogue API "current"
+    // lifecycle status is genuinely unknown without a live catalog call,
+    // which this session cannot make. Left EMPTY rather than guessed.
+    // Verified this degrades gracefully, not silently wrong: in
+    // src/catalog/current-status.ts, buildIsCurrentPredicate's generated
+    // SQL is `coalesce(status, '') = any($n::text[])` against this exact
+    // array — an empty array makes `= any(...)` false for every row, same
+    // as the `else false` fallback the same file uses for an unregistered
+    // source key. Every Eurostat catalog row is "not current" until the
+    // owner's first live catalog capture fills this in.
+    currentCatalogStatuses: [],
+    // D3(b)/(c) (this brief's integration fix): NEVER true in E1 — this is
+    // the sole gate keeping "Eurostat data" out of the live chat chip row
+    // (see the field's own doc comment above). Flips only in E2's
+    // owner-signed sweep, in the same change that makes Eurostat answerable.
+    chatSelectable: false,
   },
 };
 

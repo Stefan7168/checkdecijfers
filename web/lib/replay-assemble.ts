@@ -7,16 +7,30 @@
 // citation/csv/card (and thereby a stat card's dock-tab eligibility)
 // reconstruct byte-identically to a live render, not by a parallel copy.
 //
-// Pure leaf (no React, no 'use client'): safe to run inside the loadMyThread
-// Server Action. Every builder here already imports only client-proven pure
-// leaves, so nothing pulls the Anthropic SDK or a client component onto the
-// server.
+// No React, no 'use client': safe to run inside the loadMyThread Server
+// Action. Every builder here already imports only client-proven pure leaves,
+// so nothing pulls the Anthropic SDK or a client component onto the server.
+//
+// WP30c D7(b) (ADR 048, Amendment 6, WP30c/E1 brief Task 6): this module is
+// no longer itself pure — `assembleMessages` now takes a `db` and awaits
+// ONE genuinely new live read per answer message, `fetchRequestUrlsByBatch`
+// (web/lib/answer-proof.ts), alongside (never inside) the otherwise-still-
+// synchronous `buildAnswerProof` call. The result is a fresh side-lookup,
+// kept OUTSIDE the R8-reconstructed envelope and threaded onto the message
+// as its own `proofRequestUrls` field — never merged into `proof` itself,
+// and never something replayed from stored JSON. This IS one of the two
+// genuinely server-side `buildAnswerProof` call sites the brief names (the
+// other is question-history.tsx); `chat.tsx`'s live-chat call site is
+// `'use client'` and stays without this lookup (Amendment B5, a named
+// residual, not an oversight).
 import type {
   ReplayAssistantPart,
   ReplayPart,
 } from '../backend/threads/replay.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
-import { buildAnswerProof } from './answer-proof.ts';
+import type { Db } from '../backend/db/types.ts';
+import { batchIdsForProof, buildAnswerProof, fetchRequestUrlsByBatch } from './answer-proof.ts';
+import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import type { ChatMessage } from './chat-message.ts';
 import { messageKind } from './chat-message.ts';
@@ -40,6 +54,7 @@ function redactedMessage(): ChatMessage {
     card: null,
     csv: null,
     proof: null,
+    proofRequestUrls: null,
     answerView: null,
     provisional: false,
     suggestions: [],
@@ -65,6 +80,7 @@ function userMessage(text: string): ChatMessage {
     card: null,
     csv: null,
     proof: null,
+    proofRequestUrls: null,
     answerView: null,
     provisional: false,
     suggestions: [],
@@ -77,7 +93,18 @@ function userMessage(text: string): ChatMessage {
   };
 }
 
-function assistantMessage(part: ReplayAssistantPart): ChatMessage {
+/** WP30c D7(b): the request_urls side-lookup for a single proof, or `null`
+ * when there is no proof to look up against (a non-answer, or `buildAnswerProof`
+ * itself returned null — the redacted-envelope / malformed-row belt). Never
+ * throws: `fetchRequestUrlsByBatch` already degrades to `{}` on any DB error
+ * or absent batch row, so the WORST case here is an empty map, never a
+ * rejected promise reaching the caller. */
+async function fetchProofRequestUrls(db: Db, proof: AnswerProof | null): Promise<RequestUrlsByBatch | null> {
+  if (proof === null) return null;
+  return fetchRequestUrlsByBatch(db, batchIdsForProof(proof));
+}
+
+async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<ChatMessage> {
   const response = part.response;
   const isAnswer = response.kind === 'answer';
   const answer = isAnswer ? (response as AnswerResponse) : null;
@@ -103,6 +130,11 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
           // replay without one and the badge shows no date.
           syncedAt: attribution?.syncedAt ?? null,
         };
+  // Built once, synchronously, exactly as before; the live request_urls
+  // lookup below is fetched ALONGSIDE it, never inside buildAnswerProof
+  // itself (Amendment 6 — that builder stays a pure, synchronous leaf).
+  const proof = answer !== null ? buildAnswerProof(answer) : null;
+  const proofRequestUrls = await fetchProofRequestUrls(db, proof);
   return {
     role: 'assistant',
     kind: messageKind(response),
@@ -115,7 +147,8 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     citation: answer !== null ? buildCitation(answer) : null,
     card: answer !== null ? statCardData(answer) : null,
     csv: answer !== null ? buildAnswerCsv(answer) : null,
-    proof: answer !== null ? buildAnswerProof(answer) : null,
+    proof,
+    proofRequestUrls,
     answerView,
     provisional: part.provisional,
     suggestions: part.suggestions,
@@ -137,16 +170,22 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
 }
 
 /** Turn the structural replay parts into the ChatMessage list the workspace
- * hands Chat as `initialMessages`. Deterministic, zero LLM. */
-export function assembleMessages(parts: ReplayPart[]): ChatMessage[] {
-  return parts.map((part) => {
-    switch (part.role) {
-      case 'redacted':
-        return redactedMessage();
-      case 'user':
-        return userMessage(part.text);
-      case 'assistant':
-        return assistantMessage(part);
-    }
-  });
+ * hands Chat as `initialMessages`. Deterministic (zero LLM) except for the
+ * one genuinely new live read this Task adds (WP30c D7(b)): the
+ * request_urls side-lookup per answer message, which is why this is now
+ * `async` and takes `db` — every other builder here is unchanged pure
+ * reconstruction from the stored envelope. */
+export async function assembleMessages(parts: ReplayPart[], db: Db): Promise<ChatMessage[]> {
+  return Promise.all(
+    parts.map((part) => {
+      switch (part.role) {
+        case 'redacted':
+          return redactedMessage();
+        case 'user':
+          return userMessage(part.text);
+        case 'assistant':
+          return assistantMessage(db, part);
+      }
+    }),
+  );
 }

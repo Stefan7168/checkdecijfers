@@ -456,8 +456,13 @@ export function Chat({
   // channel defaults OFF (the cost gate). State is per-session and persists
   // across turns (owner's tag mental model).
   const websearch = pricing?.websearch;
+  // WP30c/E1 (ADR 048 D3(b)/(c) integration fix): only chatSelectable
+  // sources default on / render a chip — a registered-but-dormant source
+  // (e.g. Eurostat in E1) must never surface here, see SourceInfo's own
+  // chatSelectable doc comment for why this is the load-bearing gate.
+  const chatSelectableKeys = Object.keys(SOURCES).filter((key) => SOURCES[key]!.chatSelectable);
   const [selectedSources, setSelectedSources] = useState<Set<string>>(
-    () => new Set(Object.keys(SOURCES)),
+    () => new Set(chatSelectableKeys),
   );
   const [webSelected, setWebSelected] = useState(false);
   // All-deselected (no registry source AND no web) ⇒ send is disabled + an
@@ -660,7 +665,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
     ]);
     setInput('');
     setBusy(true);
@@ -761,6 +766,7 @@ export function Chat({
                 card: null,
                 csv: null,
                 proof: null,
+                proofRequestUrls: null,
                 answerView: null,
                 provisional: false,
                 suggestions: [],
@@ -780,6 +786,7 @@ export function Chat({
                 card: null,
                 csv: null,
                 proof: null,
+                proofRequestUrls: null,
                 answerView: null,
                 provisional: false,
                 suggestions: [],
@@ -852,6 +859,12 @@ export function Chat({
           card: response.kind === 'answer' ? statCardData(response) : null,
           csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
           proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
+          // Amendment B5 (WP30c/E1 brief): this component is 'use client'
+          // with no server execution context — the live request_urls
+          // lookup is wired only at the two server-side call sites
+          // (replay-assemble.ts, question-history.tsx). Always null here,
+          // by design, not an oversight.
+          proofRequestUrls: null,
           answerView:
             response.kind === 'answer'
               ? {
@@ -953,14 +966,14 @@ export function Chat({
       if (result.kind === 'unauthenticated') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
         ]);
         return;
       }
       if (result.kind === 'insufficient_credits') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
         ]);
         return;
       }
@@ -970,7 +983,7 @@ export function Chat({
       // "asking twice must not cost twice" invariant design §2/§5 always had).
       setMessages((m) => [
         ...m,
-        { role: 'assistant', kind: 'info', text: result.text, chart: null, cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
       ]);
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
@@ -1147,7 +1160,9 @@ export function Chat({
                     * this group, so the panel spans the whole footer. */}
                   <div className="flex flex-wrap items-center gap-1 has-[[role=region]]:basis-full has-[[data-slot=feedback-panel]]:basis-full">
                     {message.auditId !== null ? <FeedbackButtons auditId={message.auditId} /> : null}
-                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.proof !== null ? (
+                      <AnswerProof proof={message.proof} requestUrlsByBatch={message.proofRequestUrls} />
+                    ) : null}
                     {/* Owner ask (session 94): the docked-visual reference
                       * trigger moves out of the floated top-of-card pill and
                       * into this action row, styled like every other footer
@@ -1269,7 +1284,9 @@ export function Chat({
                 {message.kind === 'answer' &&
                 (message.citation !== null || message.csv !== null || message.proof !== null) ? (
                   <div className="mt-0.5 flex flex-wrap items-center gap-3">
-                    {message.proof !== null ? <AnswerProof proof={message.proof} /> : null}
+                    {message.proof !== null ? (
+                      <AnswerProof proof={message.proof} requestUrlsByBatch={message.proofRequestUrls} />
+                    ) : null}
                     {message.citation !== null ? <CopyCitationButton citation={message.citation} /> : null}
                     {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
                   </div>
@@ -1454,7 +1471,7 @@ export function Chat({
       <div className="flex flex-wrap items-center gap-1.5">
       {websearch ? (
         <>
-          {Object.keys(SOURCES).map((key) => {
+          {chatSelectableKeys.map((key) => {
             const active = selectedSources.has(key);
             return (
               <button

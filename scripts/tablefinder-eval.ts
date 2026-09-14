@@ -23,6 +23,7 @@ import { FixtureSource, loadCatalogFixture } from '../src/cbs-adapter/fixture-so
 import { candidateWalk, ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG } from '../src/catalog/index.ts';
 import type { FindTableOutcome } from '../src/catalog/index.ts';
 import { createTestDb } from '../tests/helpers/pglite-db.ts';
+import { CBS_SOURCE_KEY } from '../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/tablefinder', import.meta.url));
 const CATALOG_DIR = fileURLToPath(new URL('../tests/fixtures/cbs', import.meta.url));
@@ -117,7 +118,7 @@ async function main(): Promise<void> {
   console.log(`mode=${mode} cases=${set.cases.length} threshold=${DEFAULT_FIND_TABLE_CONFIG.highConfidence}`);
 
   const { db, close } = await createTestDb();
-  await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)));
+  await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)), CBS_SOURCE_KEY);
 
   const client = buildClient(mode);
   const results: Array<{ id: string; kind: string; reason: string | null; pick: string | null; confidence: number | null; pass: boolean; problems: string[] }> = [];

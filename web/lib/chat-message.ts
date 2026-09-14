@@ -9,7 +9,7 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
-import type { AnswerProof } from './answer-proof.ts';
+import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
 
@@ -79,6 +79,18 @@ export interface ChatMessage {
    * validated envelope (answer-proof.ts); null on non-answers, and on a
    * redacted row (#14). */
   proof: AnswerProof | null;
+  /** WP30c D7(b) (ADR 048, Amendment 6): the live `ingestion_batches.
+   * request_urls` lookup for `proof`'s own batch ids, kept OUTSIDE the
+   * R8-reconstructed envelope (a fresh DB read, never something replayed
+   * from stored JSON) and passed to <AnswerProof> as its own extra prop —
+   * never merged into `proof` itself. Wired at BOTH server-side call sites
+   * that can reach a database (replay-assemble.ts, question-history.tsx).
+   * Always `null` on a LIVE chat.tsx message: that component is `'use
+   * client'` with no server execution context to add the lookup into
+   * (Amendment B5, WP30c/E1 brief) — an explicit, named residual, not a
+   * silent gap. Also `null` on every non-answer and on a redacted row, same
+   * as `proof`. */
+  proofRequestUrls: RequestUrlsByBatch | null;
   /** WP23 (#90): structural answer rendering; null on non-answers. */
   answerView: AnswerView | null;
   /** WP23 (#71): any quoted cell is provisional — the amber pill. */

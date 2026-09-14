@@ -16,6 +16,7 @@ import { reserveOnboardingDebit } from '../../src/billing/ledger.ts';
 import { buildOnboardingFinder } from '../../src/ingestion/onboarding-finder.ts';
 import { createPendingRequest } from '../../src/ingestion/onboarding-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { CBS_SOURCE_KEY } from '../../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -46,7 +47,7 @@ describe('buildOnboardingFinder — the production TableFinder closure (WP16 sub
 
   beforeEach(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)));
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
   afterEach(async () => {
     await close();
@@ -218,7 +219,7 @@ describe('#166 — the pre-charge already-ingested guard', () => {
 
   beforeEach(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)));
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
   afterEach(async () => {
     await close();
