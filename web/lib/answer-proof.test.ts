@@ -41,6 +41,9 @@ describe('buildAnswerProof', () => {
 
     expect(proof.cells).toHaveLength(1);
     expect(proof.cells[0]!.valueText).toBe('3,3%');
+    expect(proof.cells[0]!.highlightUrl).toBe(
+      'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table:~:text=2024-,3%2C3',
+    );
     expect(proof.steps).toEqual([
       {
         text: 'Gelezen: 1 cel uit tabel 86141NED: Inflatie (CPI), 2024 → 3,3%.',
@@ -217,6 +220,7 @@ describe('buildAnswerProof', () => {
       'Gelezen: 1 cel uit tabel 86141NED: Inflatie (CPI), 2024 → geen waarde — door CBS niet gepubliceerd (vertrouwelijk).',
     );
     expect(proof.nullNotice).toBe('1 van de 1 cellen heeft geen waarde; de reden van CBS staat per cel in de tabel.');
+    expect(proof.cells[0]!.highlightUrl).toBeNull();
   });
 
   it('(7) a provisional cell carries the suffix on valueText and the verbatim CBS status', () => {

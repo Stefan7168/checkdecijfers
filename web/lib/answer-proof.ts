@@ -44,6 +44,7 @@ import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResul
 // uses — reused here (not re-derived) so the panel's date can never drift
 // from the chip's.
 import { syncDateLabel } from '../components/source-badge.tsx';
+import { cbsHighlightUrl } from './statline.ts';
 
 /** One `response.result.cells[i]`, carrying everything the "De gebruikte
  * cellen" table (Depth 2, #70) shows — human labels always, codes/ids only
@@ -65,6 +66,11 @@ export interface ProofCell {
   status: string;
   provisional: boolean;
   batchId: number;
+  /** Best-effort per-cell highlight link (cbsHighlightUrl) — null for a
+   * null-valued cell, or when the source has no public viewer. See
+   * statline.ts: a browser that can't match the fragment just opens the
+   * plain table page, same as today. */
+  highlightUrl: string | null;
 }
 
 /** One "Stap voor stap" (Depth 3, #79) list item — fully composed Dutch
@@ -124,7 +130,7 @@ function cellValueText(cell: ResultCell): string {
   return `${displayValueUnit(cell.value, cell.decimals, cell.unit)}${provisionalSuffix(cell)}`;
 }
 
-function proofCell(cell: ResultCell): ProofCell {
+function proofCell(cell: ResultCell, tableId: string, source: string | undefined): ProofCell {
   return {
     resultId: cell.resultId,
     measure: cell.measure,
@@ -139,6 +145,7 @@ function proofCell(cell: ResultCell): ProofCell {
     status: cell.status,
     provisional: cell.provisional,
     batchId: cell.batchId,
+    highlightUrl: cbsHighlightUrl(source, tableId, cell.periodLabel, cell.value, cell.decimals),
   };
 }
 
@@ -348,7 +355,7 @@ export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
       reading: attribution.definitionLabel ?? result.cells[0]?.measureTitle ?? 'gevraagde waarde',
       periodSemantics: attribution.periodSemantics,
       alternates: buildAlternates(result),
-      cells: result.cells.map(proofCell),
+      cells: result.cells.map((cell) => proofCell(cell, attribution.tableId, attribution.source)),
       steps,
       nullNotice: buildNullNotice(result),
       marked,

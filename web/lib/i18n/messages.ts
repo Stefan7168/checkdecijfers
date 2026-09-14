@@ -177,6 +177,7 @@ const nl = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'onbekend',
   'answerProof.tableCaption': 'Tabel {tableId} — {tableTitle} · versie {version} · gesynchroniseerd {date} · licentie {license}',
+  'answerProof.highlightLinkTitle': 'Bekijk deze cel bij CBS',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B: pages + shell).
   // landing.tsx. The owner asked (session 90) to keep the Dutch headline
@@ -911,6 +912,7 @@ const en: Messages = {
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'unknown',
   'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · license {license}',
+  'answerProof.highlightLinkTitle': 'View this cell at CBS',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B). Faithful MEANING translations of
   // the Dutch marketing copy — the Dutch headline stays owner-pinned verbatim

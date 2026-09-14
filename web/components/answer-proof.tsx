@@ -66,7 +66,21 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
               {dimKeys.map((key) => (
                 <td key={key} className="py-1 pr-3">{cell.dimLabels[key] ?? cell.dims[key] ?? ''}</td>
               ))}
-              <td className="py-1 pr-3 tnum">{cell.valueText}</td>
+              <td className="py-1 pr-3 tnum">
+                {cell.highlightUrl !== null ? (
+                  <a
+                    href={cell.highlightUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t('answerProof.highlightLinkTitle')}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {cell.valueText}
+                  </a>
+                ) : (
+                  cell.valueText
+                )}
+              </td>
               <td className="py-1 pr-3">{cell.status}</td>
               {technical ? (
                 <>

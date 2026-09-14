@@ -29,6 +29,7 @@ function fakeProofCell(overrides: Partial<ProofCell> = {}): ProofCell {
     status: 'Definitief',
     provisional: false,
     batchId: 7,
+    highlightUrl: 'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table:~:text=2024-,3%2C3',
     ...overrides,
   };
 }
@@ -91,6 +92,26 @@ describe('AnswerProof — open/close', () => {
     expect(screen.getByText('Gebruikte lezing: Inflatie (CPI).')).toBeInTheDocument();
     expect(screen.getByText('Periodebetekenis: jaargemiddelde')).toBeInTheDocument();
     expect(screen.getByText('Gelezen: 1 cel uit tabel 86141NED: Inflatie (CPI), 2024 → 3,3%.')).toBeInTheDocument();
+  });
+
+  it('links the cell value to its CBS highlight URL when one is present', () => {
+    render(<AnswerProof proof={fakeProof()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    const link = screen.getByRole('link', { name: '3,3%' });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://opendata.cbs.nl/statline/#/CBS/nl/dataset/86141NED/table:~:text=2024-,3%2C3',
+    );
+    expect(link).toHaveAttribute('title', 'Bekijk deze cel bij CBS');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders the plain value with no link when highlightUrl is null', () => {
+    const proof = fakeProof({ cells: [fakeProofCell({ highlightUrl: null })] });
+    render(<AnswerProof proof={proof} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    expect(screen.getByText('3,3%')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '3,3%' })).toBeNull();
   });
 
   it('(orchestrator review round 1) the open panel carries order-last and basis-full, so opening it cannot push the trigger/citation/CSV row apart', () => {
