@@ -4,7 +4,11 @@
 recorded at [open-questions #248](../open-questions.md) and in ADR [030](030-multi-source-architecture.md)'s
 revisit-trigger addendum). **Not scheduled, no work-package number, no code.** Per the WP27/WP30 precedent, the
 execute session runs the pre-build adversarial design review BEFORE writing code; the frozen executor brief
-comes out of that review, not out of this ADR alone.
+comes out of that review, not out of this ADR alone. **Pre-build adversarial design review completed same day
+(4 lenses: data integrity/invariants, rollout enforceability, technical feasibility, architecture-fit/regression;
+11 raw findings → 1 confirmed blocker fixed immediately outside this ADR, 5 more confirmed/cross-lens-corroborated
+and folded into D3/D4/D5/D7/D9 below, 2 minor/no-fix-needed, 1 already-handled). See "Amendments from the
+pre-build adversarial design review" below.
 **Deciders:** Stefan (scope, destination, rollout posture); session (the engineering shape).
 **Input:** the design spike [superpowers/specs/2026-09-14-eurostat-v2-design.md](../superpowers/specs/2026-09-14-eurostat-v2-design.md)
 (§3 and §5 are what this ADR commits to; §4 is explicitly outside it — see D10).
@@ -56,7 +60,10 @@ Eurostat URL shapes (ADR [003](003-cbs-access-layer.md) decision 2, applied to s
 names, the `cbs-adapter/` directory and the `cbs_tables`/`cbs_catalog` table names all **stay** — ADR 030 A5
 measured the rename at 31+ files of diff noise on a live money product and deferred it; that verdict is
 unchanged. A later hermetic cleanup (moving both adapters under `src/sources/`, renaming `Cbs*` → `Source*`) is
-its own optional WP, never bundled into the source add.
+its own optional WP, never bundled into the source add. **(Amendment 11):** "no new abstraction, no parallel
+pipeline" is accurate for E1's scope; it is NOT "one line changed forever" — D9 already scopes the
+`adapterFor`/onboarding-cron rewiring (wiring point 4) to E2, a real touch of live money-path code, not E1. A
+session reading only this headline should read D9 before touching that route.
 
 **D2 — Destination and geography sequencing: EU-wide is the settled direction; the taxonomy widens in
 phase E2, and phase E1 ships NL-scoped as a deliberate stepping stone.** Per #248, the region-taxonomy widening
@@ -79,9 +86,11 @@ Eurostat stays demand-driven and is never announced before it answers; E1's expl
 and noindexed, never a public feature.** Concretely: (a) the E1 explorer route ships behind
 `EUROSTAT_EXPLORER_ENABLED` (unset in production; owner + sessions only — the same class of owner-run proving
 surface as `tables:evict --apply` or the coverage-sprint probes); (b) the public site stays **byte-identical**
-through E1 — the existing tests that assert Eurostat is never named as answering
-(`web/components/coverage-disclosure.test.tsx`, `web/app/privacy/page.test.tsx`, `web/app/galerij/page.test.tsx`)
-are the pin, and the "Eurostat — binnenkort / coming" copy in `web/lib/i18n/messages.ts` stays until E2;
+through E1 — pinned by `web/components/coverage-disclosure.test.tsx`, `web/app/privacy/page.test.tsx` and
+`web/app/galerij/page.test.tsx`, all three now asserting Eurostat is genuinely absent (Amendment 1: the
+"Eurostat — binnenkort / coming" coverage-disclosure notice that used to exist here was itself a pre-D3
+announcement, shipped before this rule — removed 2026-09-14, `058efdf`, not narrowed); none of the three
+covers the query/finder path (Amendment 3 covers that gap in E1's done-definition below);
 (c) the first public exposure of Eurostat IS the first served answer: a real question the finder maps to a
 not-yet-loaded Eurostat dataset creates a `pending_table_requests` row and the ADR
 [026](026-on-demand-fetch-job-architecture.md) job fetches → validates → verifies → answers on arrival — the WP16
@@ -93,7 +102,10 @@ first answering dataset — never before. A session that finds itself building a
 section or marketing copy before E2 answers is violating this decision, not interpreting it.
 
 **D4 — Catalog and metadata index: the existing mirror, source-scoped; discovery by the cheapest mechanism
-first.** A scheduled `catalog:refresh` for Eurostat reads the Catalogue API and writes rows into `cbs_catalog`
+first.** In E1, Eurostat's `catalog:refresh` runs the SAME way CBS's own does today — a manual/CLI script, NOT a
+Vercel Cron job (Amendment 9: CBS's refresh has never actually run inside a serverless timeout, so "measure
+against the cron ceiling" was a false baseline; making either source's refresh a real scheduled job is separate,
+later design work). It reads the Catalogue API and writes rows into `cbs_catalog`
 with ids `eurostat:<dataset code>` (ADR 030 D4), `source = 'eurostat'`, `language = 'en'`, the dataset's own
 last-update timestamp in `modified` and its lifecycle status in `status` (the registry's
 `currentCatalogStatuses` for Eurostat declared per A6). **Blocking pre-work:** `ingestCatalog`'s prune is not
@@ -117,9 +129,11 @@ discovery → metadata/dimension validation → disambiguation → query → nor
 (ADR [024](024-answer-first-defaults-and-clickable-options.md)); deterministic SQL + registered derivations (ADR
 011); the attribution line + proof panel. Three Eurostat-specific rules inside those steps: (a) **a new
 ambiguity class — the same statistic exists at CBS and at Eurostat** (ADR 030's "two+ sources covering the
-same statistic" trigger): in E2 the live source chips (#129) decide — CBS pre-checked, Eurostat offered only
-when selected or when CBS has no reading; never a silent cross-source pick; the richer "here are both
-readings" answer (#39/#21) is E3; (b) **a comparability break (Eurostat flag `b`, or a NUTS revision) inside a
+same statistic" trigger): in E2 the live source chips (#129) decide — CBS pre-checked; when CBS has no reading,
+Eurostat is **offered as an explicit clarification chip the reader must select, never auto-fetched** (Amendment
+5: "offered" was ambiguous enough to permit a silent cross-source substitution — an honestly-attributed answer
+the reader never actually asked for is still a guess about which source they meant, principle (c)); the richer
+"here are both readings" answer (#39/#21) is E3; (b) **a comparability break (Eurostat flag `b`, or a NUTS revision) inside a
 requested window is a refusal precondition on the `direction`/`first_last` derivations** in
 `src/query/derivations.ts` — a "trend" across a definition change is a guess (principle (c)); this is the one
 place a source flag legitimately reaches `src/query/`, as a registered-derivation precondition, never an LLM
@@ -171,9 +185,14 @@ column on `cbs_tables` and `cbs_catalog` (the DOI is per dataset, not per source
 prescribes is exactly the sync date R4 already shows; (b) **the request URL(s) the ingestion job actually
 called**, as an additive `request_urls text[]` on `ingestion_batches`, recorded for BOTH sources (it does not
 exist for CBS today either) and shown under the panel's "Technische details" toggle per batch — a record of what
-the out-of-band job fetched, never a link the answer path calls. Both are migrations, additive, R8-safe (batch
-rows are outside the reconstructed envelope; an absent DOI renders no DOI clause; pre-Eurostat rows re-derive
-byte-identically because absent `source` still resolves to `cbs`, ADR 030 A1). The verbatim flag letter appears
+the out-of-band job fetched, never a link the answer path calls. Amendment 6: unlike the DOI, this is NOT a
+drop-in additive field — `answer-proof.ts` (verified by reading it directly) is a pure, synchronous leaf with no
+DB access, called identically at receive- and replay-time for byte-parity, while `request_urls` lives on
+`ingestion_batches`, a table that module never touches; the executor must add an explicit read — a live lookup
+by the already-stored `batchId`, fetched alongside the proof build, kept OUTSIDE the R8-reconstructed envelope
+(never denormalised into it) — not assume the interface just grows a field. Both are migrations, additive,
+R8-safe (batch rows are outside the reconstructed envelope; an absent DOI renders no DOI clause; pre-Eurostat
+rows re-derive byte-identically because absent `source` still resolves to `cbs`, ADR 030 A1). The verbatim flag letter appears
 in the cell table's status column with its registry-resolved meaning alongside (principle (a), R11).
 
 **D8 — Ingestion posture: bulk, out-of-band, our store is the only history.** Principle (b) unchanged. Because
@@ -195,7 +214,13 @@ it):**
   panel underneath; zero LLM). Done: `npx vitest run tests/sources` green with Eurostat as a second positive
   control; 2–3 frozen-key verification tasks per ingested dataset (the 05-data-rules onboarding rule);
   ≥ 3 real datasets rendered on the dev server; the full verification block green; the public site
-  byte-identical (D3(b)'s tests green).
+  byte-identical (D3(b)'s tests green). **Added by the adversarial review:** (Amendment 3) a test proving a live
+  NL chat question can never surface an `eurostat:`-id result while `EUROSTAT_EXPLORER_ENABLED` is unset —
+  scoped by an explicit `source = 'cbs'`/flag check in the live path, not left to the not-yet-lifted language
+  filter as an incidental gate; (Amendment 7) `parseFactorUnit`/`baseLabel` verified against real Eurostat unit
+  strings and region labels — a mismatch must fail open and be logged, never silently accepted; (Amendment 8)
+  the executor brief names the DOI/`request_urls` acceptance mechanism explicitly (a new conformance check, or
+  a documented exception naming the R1 token-scan test as the sole belt per D7) rather than leaving it implicit.
 - **E2 — natural-language querying through the chat pipeline.** The taxonomy widening (D2, own design round),
   discovery steps (i)+(ii) (D4), the cron route via `adapterFor`, compose/refusals threading the result's actual
   source instead of `resolveSource(undefined)` (wiring point 3), the source-chip ambiguity rule (D5a), the
@@ -203,7 +228,10 @@ it):**
   (D8), and ≥ 5 Eurostat benchmark tasks in the frozen key including ≥ 2 refusals (a semester dataset; an
   excepted-geo ask). Done: the new tasks pass at the gate with 14/14 + 6/6 + 0 fabricated unchanged; a live,
   owner-supervised smoke run onboards a real dataset through the job and answers on arrival; every public
-  surface says "official sources" and names Eurostat as answering — in one change.
+  surface says "official sources" and names Eurostat as answering — in one change. **Added by the adversarial
+  review:** (Amendment 4) the interim wait-message shown during an on-demand Eurostat fetch (WP16's
+  `pending_table_requests` loop) must not name the source before the answer itself is ready — generic wait
+  copy, matching CBS's own on-demand wait-messaging, not a source-specific line.
 - **E3 — research-assistant layer.** Saved queries as pointers at audit rows (the #60 saved-charts seam); a
   registered `cross_source_difference` derivation kind (two cells, two sources, unit-checked, marked derived,
   both attributions — the first cross-source computation, [#103](../open-questions.md)'s narrowest slice); a
@@ -217,6 +245,101 @@ regions and years for statistical associations; a deterministic stats module; di
 S1–S10 invariant family; the multiple-testing controls) is a **separate, later, not-yet-scheduled track** with
 its own ADR when — and if — the owner schedules it. It is not designed further here; the spike remains its
 design record. Nothing in D1–D9 depends on it, and nothing in it may ride on E1–E3's work packages.
+
+## Amendments from the pre-build adversarial design review (session, 2026-09-14 — 4 lenses run in parallel:
+data integrity/invariants, rollout enforceability, technical feasibility, architecture-fit/regression; each
+briefed to refute by default and report nothing if nothing survived scrutiny. 14 raw findings → 1 confirmed
+blocker, fixed the same day outside this ADR's own text; 6 more confirmed or cross-lens-corroborated, folded
+into D3–D9 above; 4 real-but-fixable, added as new E1/E2 done-definition items above; 3 minor, noted below with
+no structural fix; 1 already correctly handled by the ADR as written, confirmed not a rubber stamp.
+
+**Amendment 1 — CONFIRMED BLOCKER, fixed immediately (rollout-enforceability lens).** D3(b)'s original text cited
+`coverage-disclosure.test.tsx` as proof the product "never names Eurostat as answering" — but that test actually
+PINNED an "Eurostat — binnenkort / coming" notice as REQUIRED output, the opposite of what it was cited for.
+That notice (`web/components/coverage-disclosure.tsx`), shipped in the Journey programme (PR #14, merged to
+`main` 2026-09-12) before ADR 047 or this ADR existed, was itself already the kind of pre-answer naming D3
+forbids. The session verified this directly (confirmed the component is live on `main`'s homepage, read the
+exact copy, confirmed the test's assertion) before reporting it, then asked the owner rather than deciding
+alone: keep it and narrow the rule, or remove it. **Owner: remove it (2026-09-14).** Fixed same day, TDD (test
+flipped to assert absence, confirmed RED against the still-present chip, then GREEN after removal): the notice
+and its two `coverage.eurostat*` i18n keys deleted, commit `058efdf`, pushed, full suite green (1707/1707). D3(b)
+above reflects the corrected, now-true claim.
+
+**Amendment 2 — real-but-fixable, now resolved by Amendment 1 (rollout-enforceability lens).** The original D3(b)
+also overstated the three cited tests as jointly proving silence, when `coverage-disclosure.test.tsx` asserted a
+materially weaker property before the fix. Moot now that all three genuinely assert absence — noted so a future
+reader doesn't re-introduce a weaker assertion there without noticing the bar it needs to clear.
+
+**Amendment 3 — CONFIRMED, folded into D9's E1 done-definition (rollout-enforceability lens).** E1's only
+protection against a live NL chat question surfacing an `eurostat:`-id result is that the finder's `language =
+'nl'` filter (D4 discovery step i) hasn't been lifted yet — an incidental side effect of unfinished work, not an
+explicit deny-gate. An unrelated future change (broader full-text recall, English-question support) could leak
+Eurostat results into production with nothing catching it. Fix: an explicit `source`/flag-scoped test added to
+E1's done-definition (D9 above).
+
+**Amendment 4 — real-but-fixable, folded into D9's E2 done-definition (rollout-enforceability lens).** D3(c)'s
+"first exposure = first answer" loop didn't specify that the interim wait-message during an on-demand Eurostat
+fetch stays generic. Fix: added to E2's done-definition (D9 above).
+
+**Amendment 5 — CONFIRMED, cross-lens corroborated (data-integrity lens finding 1 + architecture-fit lens
+finding 4), folded into D5(a) above.** "Eurostat offered... when CBS has no reading" didn't specify whether
+"offered" meant click-to-confirm or auto-answered; the auto-answered reading is a guess about which source the
+reader meant (principle c) even though the resulting attribution would be honest. D5(a) above now requires an
+explicit clarification chip, never an automatic fetch.
+
+**Amendment 6 — CONFIRMED, cross-lens corroborated (data-integrity lens finding 2 + architecture-fit lens
+finding 3), folded into D7(b) above.** The original D7(b) described `request_urls` as carrying over "almost as
+-is," alongside the DOI. It doesn't: `answer-proof.ts` is a pure, synchronous, DB-free leaf (verified by reading
+it), while `request_urls` lives on a table that module never touches — a genuinely new read path, not a drop-in
+field. D7(b) above now names the mechanism (a live lookup by the stored `batchId`, outside the R8-reconstructed
+envelope).
+
+**Amendment 7 — real-but-fixable, folded into D9's E1 done-definition (architecture-fit lens finding 2).** ADR
+030's own amendment A7 named `parseFactorUnit` (unit-notation parsing) and `baseLabel` (region-label formatting)
+as source-native grammars with no D2 bullet, explicitly flagged "revisit at WP30c with the first real adapter."
+This is that adapter, and D6's units/measures design doesn't reference either. Not a correctness risk (A7's own
+fail-open behavior holds — nothing gets fabricated), but a real risk of a silently dropped or mis-rendered unit
+chip or region label in E1's own explorer, which exists specifically to prove the adapter on real data. Fix:
+verification added to E1's done-definition (D9 above), fail-open confirmed AND logged, not silently accepted.
+
+**Amendment 8 — real-but-fixable, folded into D9's E1 done-definition (architecture-fit lens finding 3).** The
+conformance harness (F0–F5) checks registry coherence, fixture replay, period round-trip, value/null-reason
+completeness and the ingestion validators — none of them touch D7's new DOI column or `request_urls`. A broken
+capture of either could pass every conformance family and still reach the internal explorer. D7 already names
+the R1 token-scan test as a belt for the DOI; this amendment requires the executor brief to say explicitly
+whether that belt is judged sufficient or a new conformance check is needed — not leave it unstated.
+
+**Amendment 9 — CONFIRMED, folded into D4 above (technical-feasibility lens finding 1).** D4's original text
+framed Eurostat's catalog-refresh runtime as something to "measure against the cron/function ceiling" — which
+implied CBS's own refresh already respects that ceiling. It doesn't: `catalog:refresh` is a manual/CLI script
+today (~19 minutes for ~4,858 rows), never a Vercel Cron job, so it has never actually run inside a serverless
+timeout. A real scheduled job at roughly twice the row count would need genuine design (pagination, incremental
+writes), not just a measurement against a constraint nothing currently respects. D4 above now has E1 run
+Eurostat's refresh the same unscheduled way CBS's runs today; making either a real Cron job is separate, later
+work.
+
+**Amendment 10 — minor, no structural fix (already correctly scoped) (technical-feasibility lens finding 2).**
+D2's "NUTS 3 = the COROP areas... recorded in `dimension_labels`" phrasing reads as a data-only fix; `RegionKind`
+(`src/answer/intent/types.ts`) has no COROP value today, so it is new code across every touch point D2 itself
+lists. No ADR change needed — D2 already scopes this to its own E2 design round — flagged here so the E2
+executor brief doesn't underestimate the lift.
+
+**Amendment 11 — minor, caveat added to D1 above (architecture-fit lens finding 1).** D1's "no new abstraction,
+no parallel pipeline" headline is accurate for E1 but could be misread as "nothing more to design" — D9 already
+scopes the real `adapterFor`/onboarding-cron rewiring (a live money-path route) to E2, not E1. Caveat added to
+D1 above rather than a design change.
+
+**Amendment 12 — real-but-fixable, folded into D9's E1 done-definition (technical-feasibility lens finding 3).**
+The 500k-sync / 5M-async / 413-above cell-count thresholds (Context, above) are research-verified (session-96
+live-site checks), not verified by a real API round-trip from this codebase. Fix: one live smoke probe against
+a real large Eurostat dataset, added to E1's done-definition, before the sync-only fit gate (D6) is treated as
+finalized rather than provisional.
+
+**Not amended — reviewed and confirmed already correctly handled (technical-feasibility lens finding 4).** D6's
+"Eurostat has no per-period publication status... reports every observed period as published" is already named
+as Assumption 4 with an explicit fallback (an ADR-recorded contract amendment if the harness insists on
+per-period status) — the review confirms this is a real, honestly-hedged fit question, not an assertion dressed
+up as settled. No change.
 
 ## Alternatives considered
 
@@ -319,10 +442,10 @@ design record. Nothing in D1–D9 depends on it, and nothing in it may ride on E
 7. **Discovery.** The first 20–30 asked-about datasets are coverable by the alias layer; the pgvector step is
    evaluated on a measured miss rate, never on catalog size alone.
 8. **Catalog freshness.** A daily Catalogue-API refresh is enough (Eurostat updates twice daily); the CBS mirror
-   refresh already takes ~19 minutes for 4,858 rows (ADR 026), so a mirror roughly twice the size has its
-   runtime measured against the cron/function ceiling before scheduling.
-9. **Both-sources ambiguity.** "Source chips decide" (D5a) is acceptable to the owner as the E2 rule; the
-   richer both-readings answer is E3.
+   refresh already takes ~19 minutes for 4,858 rows and is a manual/CLI script, not a Cron job today (Amendment
+   9 above) — E1 keeps Eurostat's refresh the same way; making either a real scheduled job is separate work.
+9. ~~**Both-sources ambiguity.**~~ Resolved by Amendment 5 above, folded into D5(a) as a decision, not an
+   assumption: Eurostat is offered as an explicit clarification chip when CBS has no reading, never auto-fetched.
 10. **Request-URL storage** has no GDPR angle: URLs carry dataset codes and filters, never user data.
 11. **Attribution wording** — the Dutch Eurostat line, the flag suffixes and the null-reason labels — are owner
     sign-offs before E1's registry entry is written.
