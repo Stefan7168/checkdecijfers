@@ -1525,6 +1525,19 @@ git commit -m "billing: webhook — subscription lifecycle events upsert pro_sub
 
 ## Task 10: Webhook — `invoice.paid` (the renewal/grant trigger)
 
+**Global note carried from Task 9's review (commit `1068013`):** Task 9 added an out-of-order-
+delivery guard on `pro_subscriptions` keyed on a dedicated `last_event_at` column — deliberately
+NOT `updated_at`, which stays ordinary wall-clock semantics. **This task's own design already
+avoids the one way that guard could be misapplied: it never creates a `pro_subscriptions` row —
+`grantMonthlyAllowance` below THROWS on an unknown subscription (Step 4) rather than upserting
+one.** Keep it that way. If this function (or anything else) is ever changed to create the row
+itself, it MUST set `last_event_at` from that event's own `event.created`, exactly as Task 9's
+`upsertProSubscription` does — never leave it at a bare `default now()`, or a genuinely-earlier-
+but-later-delivered subscription-lifecycle event would be wrongly rejected afterward. This task's
+own `update ... set current_period_grant_id = ..., updated_at = now()` (Step 4) correctly leaves
+`last_event_at` untouched — grant rotation is a different, independently-idempotent concern
+(`grantBucket`'s own per-invoice-id check) that doesn't participate in that guard at all.
+
 **Files:**
 - Modify: `src/billing/stripe-webhook.ts`
 - Test: `tests/billing/stripe-webhook.test.ts`
