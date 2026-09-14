@@ -9,13 +9,13 @@ freshness date shown. When data is missing, ambiguous, or stale, the product ref
 never guesses. The interface itself is bilingual (a Dutch/English switch in the header), every
 chart can be restyled — per chart or as an account default — and any chart can be embedded on
 another site, frozen with attribution and a backlink by default (a **Live** embed that keeps
-itself current is the paid tier's pitch — the real subscription mechanism behind it is in
-progress, see [docs/STATUS.md](docs/STATUS.md)). A public gallery (`/galerij`) shows real, sourced
+itself current is the paid tier's pitch — the real subscription mechanism behind it is built and
+in review, see [docs/STATUS.md](docs/STATUS.md)). A public gallery (`/galerij`) shows real, sourced
 stories on the same chart engine.
 
 ## Why
 
-CBS StatLine is authoritative but notoriously hard to use; general-purpose AI chatbots are easy to use but invent numbers. For journalists — our first audience — a wrong number is a career risk. The gap: StatLine's trustworthiness at chatbot speed, priced for freelancers (credit packs today, a real monthly Live-embed tier in progress — see [ADR 047](docs/decisions/047-repositioning-embedded-sourced-chart.md) and [open-questions #205](docs/open-questions.md)).
+CBS StatLine is authoritative but notoriously hard to use; general-purpose AI chatbots are easy to use but invent numbers. For journalists — our first audience — a wrong number is a career risk. The gap: StatLine's trustworthiness at chatbot speed, priced for freelancers (credit packs today, a real monthly Live-embed tier built and awaiting the owner's merge-go — see [ADR 047](docs/decisions/047-repositioning-embedded-sourced-chart.md) and [open-questions #205](docs/open-questions.md)).
 
 ## Status
 
