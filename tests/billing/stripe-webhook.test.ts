@@ -3,15 +3,22 @@
 // Stripe's own `generateTestHeaderString` test helper against a hand-authored
 // `checkout.session.completed` fixture. No network, no live Stripe account.
 import { randomUUID } from 'node:crypto';
-import Stripe from 'stripe';
 import { describe, expect, it } from 'vitest';
 import { handleStripeEvent } from '../../src/billing/stripe-webhook.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
 import { getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
-
-const WEBHOOK_SECRET = 'whsec_test_fixture_secret';
+// WEBHOOK_SECRET/sign and the two Stripe-shape-sensitive fixture builders
+// (subscriptionEventPayload, invoicePaidPayload) live in a shared, non-test
+// helper module — not defined locally and exported from here — so that
+// tests/billing/pro-subscription-e2e.test.ts (#205 Task 13) can import and
+// call the real, already-corrected builders instead of re-deriving the
+// installed `stripe` SDK's actual event shapes a second time, WITHOUT that
+// import also re-executing this file's own describe/it suite as a side
+// effect (see tests/helpers/stripe-fixtures.ts's header for why a plain
+// test-to-test import would do that).
+import { WEBHOOK_SECRET, invoicePaidPayload, sign, subscriptionEventPayload } from '../helpers/stripe-fixtures.ts';
 
 /** #146: every checkout-session event now carries `payment_status` — default
  * 'paid' so every EXISTING call site below (a synchronous card/iDEAL-shaped
@@ -48,10 +55,6 @@ function checkoutCompletedPayload(
   paymentStatus = 'paid',
 ): string {
   return checkoutEventPayload('checkout.session.completed', sessionId, userId, packId, credits, paymentStatus);
-}
-
-function sign(payload: string, secret = WEBHOOK_SECRET): string {
-  return Stripe.webhooks.generateTestHeaderString({ payload, secret });
 }
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
@@ -145,47 +148,11 @@ describe('handleStripeEvent — malformed metadata', () => {
   });
 });
 
-/** #205 Task 9: `customer.subscription.*` events. Two shape notes vs. the
- * task brief's original sample (see src/billing/stripe-webhook.ts's doc
- * comments for the full reasoning):
- *  - `current_period_end` lives on the subscription's ITEM, not the
- *    subscription object itself, in this repo's actual `stripe` package
- *    version (22.6.1, flexible-billing API shape) — `items.data[].
- *    current_period_end`, not a top-level field.
- *  - Every event carries its own top-level `created` (unix seconds),
- *    exercised by the out-of-order-delivery guard tests below; defaults to
- *    "now" so the brief's original (order-agnostic) tests don't need to
- *    care about it. */
-function subscriptionEventPayload(
-  type: 'customer.subscription.created' | 'customer.subscription.updated' | 'customer.subscription.deleted',
-  subscriptionId: string,
-  customerId: string,
-  userId: string,
-  status: string,
-  currentPeriodEnd: number, // unix seconds, matches Stripe's own item field shape
-  eventCreated: number = Math.floor(Date.now() / 1000),
-): string {
-  return JSON.stringify({
-    id: `evt_${randomUUID()}`,
-    object: 'event',
-    created: eventCreated,
-    type,
-    data: {
-      object: {
-        id: subscriptionId,
-        object: 'subscription',
-        customer: customerId,
-        status,
-        items: {
-          object: 'list',
-          data: [{ id: `si_${randomUUID()}`, object: 'subscription_item', current_period_end: currentPeriodEnd }],
-        },
-        metadata: { userId },
-      },
-    },
-  });
-}
-
+// #205 Task 9: `customer.subscription.*` events, via subscriptionEventPayload
+// (imported above from tests/helpers/stripe-fixtures.ts — see its header for
+// the shape notes vs. the task brief's original sample: current_period_end
+// lives on the subscription ITEM, and every event carries its own top-level
+// `created`, exercised by the out-of-order-delivery guard tests below).
 describe('subscription lifecycle webhooks (#205 Task 9)', () => {
   it('customer.subscription.created upserts a pro_subscriptions row', async () => {
     await withDb(async (db) => {
@@ -284,34 +251,12 @@ describe('subscription lifecycle webhooks (#205 Task 9)', () => {
   });
 });
 
-/** #205 Task 10: `invoice.paid`. Deviation from the brief's sample, same
- * class of bug Task 9 hit for `Subscription.current_period_end` (see
- * src/billing/stripe-webhook.ts's `invoiceSubscriptionId` doc comment): the
- * brief's original payload puts `subscription` directly on the invoice
- * object, but this repo's actual `stripe` package (22.6.1, flexible-billing
- * API shape) has NO top-level `subscription` field on `Stripe.Invoice` — the
- * real id lives at `invoice.parent.subscription_details.subscription`. This
- * builds the real nested shape so the test exercises the same JSON path a
- * live Stripe webhook delivery actually sends. */
-function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: string): string {
-  return JSON.stringify({
-    id: `evt_${randomUUID()}`,
-    object: 'event',
-    type: 'invoice.paid',
-    data: {
-      object: {
-        id: invoiceId,
-        object: 'invoice',
-        parent: {
-          type: 'subscription_details',
-          subscription_details: { subscription: subscriptionId },
-        },
-        metadata: { userId },
-      },
-    },
-  });
-}
-
+// #205 Task 10: `invoice.paid`, via invoicePaidPayload (imported above from
+// tests/helpers/stripe-fixtures.ts — see its header for the shape deviation
+// vs. the task brief's original sample: the real subscription id lives at
+// `invoice.parent.subscription_details.subscription`, not a top-level
+// `invoice.subscription` field; see also stripe-webhook.ts's own
+// `invoiceSubscriptionId` doc comment).
 describe('invoice.paid — the renewal grant (#205 Task 10)', () => {
   it('grants 1000 credits to a fresh bucket, rotating current_period_grant_id', async () => {
     await withDb(async (db) => {
