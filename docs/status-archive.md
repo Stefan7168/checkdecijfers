@@ -1,5 +1,120 @@
 # STATUS archive — the session log
 
+**Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep — "keep going, make
+great progress, use the [8 hours] fully") — the chart visual/embed pass shipped to `main`, and the
+Pro subscription tier build finished end-to-end from Task 4 through a real PR ready for the
+owner's merge-go.** Verified against reality at wrap-up time (2026-09-14T09:16 UTC): `git log`
+(both `main` and the `pro-subscription-tier` worktree), `gh pr list --state all`, `gh pr view
+21`/`22`, `gh pr checks 21`/`22`, `gh run view`, `git worktree list`, `git status` (both
+checkouts).
+
+**Part 1 — Chart visual + embed pass, MERGED to `main` (`b86556f`..`841cb83`, 7 commits, plus
+`3e92d80` docs).** A 3-task plan
+([superpowers/plans/2026-09-13-chart-visual-embed-pass.md](superpowers/plans/2026-09-13-chart-visual-embed-pass.md)),
+built via subagent-driven-development, not money-path so pushed straight to `main`:
+- The default chart chrome (`STOCK_PRESENTATION` in `web/lib/chart-presentation.ts`) gets a soft
+  shadow + rounded corners instead of literally none — every unstyled chart everywhere (including
+  the gallery/landing) picks this up automatically.
+- Two new chart templates, **Warm** and **Earth** (ADR 043's `template()` mechanism, using the
+  previously-unused `dawn`/`sand` frame-gradient presets), surfaced on 2 of the 12 public gallery
+  stories.
+- The Embed dialog gets a live chart preview (reusing the `ChartEditModal` shell the Style editor
+  already used), closing two residuals ADR [039](decisions/039-chart-presentation-panel.md)'s
+  prior addendum had flagged as not-done — and, as a side effect of sharing one `openPanel` slot,
+  Style and Embed are now mutually exclusive (also previously flagged as not-done).
+- Real bugs found and fixed via task/final review before push: a build-breaking `tsc` error (a
+  fixed event-counter roster not extended for the new templates), a template-distinctness
+  violation (Earth's overrides exactly duplicated Minimal's), a story-snapshot leak and a
+  click-to-annotate leak in the new embed preview — all caught by task review, all fixed with
+  regression tests, all independently re-verified by a scoped re-reviewer who reran the actual
+  test suite rather than trusting reports. A final whole-branch review (opus) plus a manual
+  LOW-effort `/code-review` pass found one more real gap (a stale UI test that silently stopped
+  covering the new template cards) — fixed directly.
+- Full verification at merge: root+web typecheck clean, root chart tests 213/213, full web suite
+  1691/1691, real `next build`, a real-browser check on the actual `/galerij` page (not jsdom)
+  confirming the new templates render correctly and distinctly.
+- **Still open, flagged not fixed (owner product decisions, not silent gaps):** a pre-existing
+  (not newly introduced) Escape-focus restore gap on the Embed trigger; the embed preview shows
+  the reader's live on-screen state but the actual `/embed/[token]` URL doesn't encode
+  style/zoom/hidden-series overrides. [Open-questions #243](open-questions.md) has the full
+  as-built.
+
+**Part 2 — the Pro subscription tier build, PR #22, DONE, awaiting the owner's merge-go.** The
+13-task plan from earlier in session 101 (design + plan already owner-approved) resumed from
+where it paused (Task 4 done, unreviewed) and ran to completion on the kept worktree
+`.claude/worktrees/pro-subscription-tier`. Per the money-path git-workflow rule
+([#118](open-questions.md)), this went all the way to an open PR and stopped — never merged, even
+though this was an autonomous continuation of an owner-present session. Full SDD ledger (every
+task, every finding, every ruling) at
+`.claude/worktrees/pro-subscription-tier/.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`
+(git-ignored, worktree-local).
+
+Real, severe bugs found and fixed along the way — **every single one caught only by actually
+running code against a real migrated database, never by reading a diff alone**, several of which
+would have silently shipped a broken or unsafe feature despite every existing test passing:
+- **Task 4 (the core debit hot path):** a cross-ledger double-charge bug — a retry of the same
+  request that landed on a DIFFERENT ledger (the new Pro bucket vs. the existing permanent ledger)
+  than the original attempt escaped BOTH tables' own idempotency checks. Fixed with a cross-ledger
+  existence check before either write; 2 review rounds, both re-verified with real DB harnesses
+  reproducing the exact bug before and after the fix.
+- **Task 6 (web-search/dataset debits):** the identical bug class, pre-empted before an
+  implementer ever touched it — caught by reading the plan's own illustrative code against its
+  own preceding warning comment and finding a direct contradiction. Fixed in the plan text first,
+  then the real implementer built a MORE correct fix than the plan's own (broken) sample showed —
+  a deterministic derived id for the bucket leg only, since the ledger leg's own uniqueness is
+  already reason-scoped.
+- **Task 9 (subscription lifecycle webhooks) and Task 10 (`invoice.paid`):** two SEPARATE Stripe
+  API shape bugs — `Subscription.current_period_end` and `Invoice.subscription` both don't exist
+  as top-level fields in the installed `stripe@22.6.1` SDK (both moved/nested in the newer
+  flexible-billing API). Each would have silently broken the feature in production despite every
+  test passing, because the test fixtures matched the plan's WRONG illustrative shape too. Task 9
+  also added a genuine out-of-order-webhook-delivery guard (Stripe doesn't guarantee delivery
+  order) — its first version repurposed the `updated_at` column, found by review to conflict with
+  Task 10's own write; fixed with a dedicated `last_event_at` column instead (migration 030
+  amended, not applied to any real environment yet, so safe to amend directly).
+- **Task 10:** a phantom-grant atomicity gap — a crash between granting the bucket and rotating
+  `current_period_grant_id` could strand real granted credits under an unreachable grant id. Fixed
+  by wrapping both in one transaction; verified by reproducing the crash scenario before and after.
+- **Task 11 (the Upgrade button):** a missing try/catch around the Stripe Checkout call would have
+  left the button stuck disabled with no feedback on a transient Stripe failure — found by
+  comparing against the codebase's own established sibling convention, which does catch.
+- **The final whole-branch review** (the step that exists specifically to catch what no single
+  task's diff can show) found two more real issues: a genuine cross-seam bug in the PRE-EXISTING
+  `checkout.session.completed` webhook handler (built long before this plan, for one-time credit
+  packs) — Stripe fires that same event for subscription-mode checkouts too, and the pre-existing
+  handler had no `mode` guard, so a real Pro signup's event would fall into the pack-purchase
+  handler and throw, Stripe retrying for ~3 days per signup against the SAME webhook destination
+  the live credit-pack flow depends on; and a backwards migration/deploy order in Task 12's
+  RUNBOOK go-live checklist that would have caused a TOTAL OUTAGE for every user, not just Pro
+  signups, if followed literally (verified by reproducing against a DB migrated one step behind).
+  Both fixed and re-verified.
+- **A real merge-conflict resolution was also required**, unrelated to any of the above: this
+  branch predated Part 1's chart-work merge to `main`, which touched the same
+  `chart-embed-dialog.tsx` file for an entirely unrelated reason (a live-preview modal shell vs. a
+  Stripe checkout button). `git`'s own 3-way merge misattributed which side's content belonged in
+  which slot — resolved by reading both branches' real pre-merge content directly via `git show`
+  rather than trusting the conflict markers' literal framing, then re-verified with a full clean
+  test run.
+
+**Final verified state (2026-09-14, checked live, not recalled).** After the code was done and
+reviewed clean, `main` and this PR branch each independently wrote near-duplicate content into
+`docs/STATUS.md`'s top block in the same wrap-up pass, producing one more real (docs-only) merge
+conflict — resolved by taking `main`'s slightly later copy and discarding the duplicate, pushed,
+re-verified: PR #22 `mergeStateStatus: CLEAN`, `mergeable: MERGEABLE`, `state: OPEN`, CI green on
+this final push (run `34827183586`: `backend (1)`/`backend (2)`/`backend (3)` all `pass`, `web`
+`pass`, `deploy` correctly `skipping` on a non-main PR). Full backend suite 2347/2347 (152 files),
+web suite 1707/1707 (104 files), both typechecks clean, `tests/docs` 11/11 (all measured on the
+code-complete state, immediately before this final docs-only push).
+
+`PRO_SUBSCRIPTIONS_ENABLED` stays unset — merging this PR alone turns nothing on for real users;
+the owner still needs RUNBOOK's go-live checklist (migration 030, a real Stripe Price object, the
+webhook subscription, then the flag).
+
+**Two PRs now await only the owner's merge-go:** #21 (R3 confirm-first onboarding fetch, unrelated
+to tonight, `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE`, re-verified live) and #22 (above).
+
+---
+
 **Session 101 (2026-09-13, owner present, continued much further — this wrap-up) — ADR 047
 (repositioning), #245 built (test-DB perf + CI 3-way sharding, one real bug found+fixed live),
 Dependabot #16/#17 merged, and the Pro subscription tier brainstormed → spec'd → planned → build

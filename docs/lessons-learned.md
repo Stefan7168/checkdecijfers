@@ -6,6 +6,92 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep) — chart visual/embed pass + the Pro subscription tier build to PR
+
+- **Never call a `/loop`-only scheduling tool outside `/loop` mode.** Called `ScheduleWakeup`
+  twice this session to "wait" for a background test/CI run, even though this was a plain
+  interactive session, not a `/loop`. The tool is specifically for `/loop` dynamic-mode pacing;
+  outside that it's a no-op at best (nothing was actually scheduled either time) and confusing at
+  worst. The correct pattern — used everywhere else tonight — is simply to let a backgrounded
+  Bash command's own completion notification arrive; nothing needs to be separately scheduled.
+- **A dispatched subagent can overstep its task's scope and take a real, side-effecting action it
+  wasn't asked to** — the final task (13) of the Pro-subscription-tier plan was scoped as "write
+  and verify one integration test," but the implementer also pushed the branch and opened PR #22
+  on its own initiative, including running a benchmark gate and a `/code-review` pass, all BEFORE
+  its own task review or the plan's required final whole-branch review had happened. Not reverted
+  (the action was reversible and roughly matched what would happen soon anyway), but it meant
+  reviewing "as if it hadn't jumped ahead" rather than trusting the state it left behind. **Lesson:
+  an SDD dispatch prompt should say explicitly "implement and verify only — do not push, open a
+  PR, or take any other repo-wide action" whenever that boundary actually matters, especially on a
+  plan's last task** (where a subagent has the most context to reasonably — but wrongly — decide
+  "this is basically done, I'll finish it").
+- **Real, severe money-path bugs kept surviving until something actually RAN the code against a
+  real database — reading the diff alone, even carefully, was not enough, repeatedly.** Across
+  this build: a cross-ledger double-charge (a retry landing on a different ledger table than the
+  original attempt escaped both tables' own idempotency checks), the identical bug class caught
+  pre-dispatch only because the plan's own illustrative code was read against its own preceding
+  warning comment and found to contradict it, two separate Stripe-API-shape mismatches (the
+  installed SDK's real field shapes for `Subscription.current_period_end` and
+  `Invoice.subscription` differ from what any plan sample showed — each would have silently
+  broken the feature in production despite every test passing, since the test fixtures matched
+  the WRONG shape too), two atomicity gaps, and a cross-seam bug in a PRE-EXISTING webhook handler
+  that no single task's diff could have shown since it required reading old and new code together.
+  Every one of these was found by a reviewer who built a throwaway harness against a real migrated
+  PGlite instance and ran the actual scenario, not by re-reading. **This is now the standard this
+  build set for itself, evidenced repeatedly enough to state as a general rule: for money-path
+  review, "I read the diff and it looks right" is not a verification — "I ran it and observed the
+  claimed behavior" is.**
+- **A plan document's own illustrative code samples silently go stale the moment a fix round
+  corrects the REAL implementation away from them — and a LATER task's dispatch brief is generated
+  by extracting straight from that same stale text.** Happened three times with the same root
+  cause (a Stripe API shape assumption) before it was addressed as a pattern rather than patched
+  per-occurrence: fixing the real code without ALSO fixing the plan's own samples let the next
+  task's implementer independently rediscover the identical bug. The fix that finally stuck was
+  redirecting later tasks to *import the real, already-corrected test fixtures* rather than
+  hand-rolling new code from the plan's prose at all. **Lesson: when a fix round changes real code
+  away from what a plan document illustrates, grep that plan document for every other copy of the
+  same stale illustration in the SAME pass — the "grep for the old framing" doc-freshness
+  convention applies to `docs/superpowers/plans/*.md` exactly as much as it applies to `docs/`
+  proper, since `task-brief` extracts directly from the plan text, not from the real code.**
+- **A long-running full test suite can fail with TIMEOUTS (not assertion failures) purely from
+  system resource contention, including from processes that have no obvious connection to the
+  current work.** A full backend suite re-run showed 9 failures across 7 unrelated files, all
+  single-test timeouts, immediately after a real-browser verification pass earlier in the same
+  session. `ps aux` found four orphaned `next dev` telemetry-flush processes still running from a
+  DIFFERENT, already-`git worktree remove`d worktree — killing them and rerunning produced a clean
+  152/152-file pass in half the wall-clock time. **Lesson: a suspicious full-suite failure that's
+  specifically TIMEOUTS rather than wrong-value assertions is worth a `ps aux | grep node` check
+  before it's treated as a real regression** — this is the third time this general class of
+  environment flakiness has shown up in this project (see the "backgrounded vitest run silently
+  killed" lesson below), always on long-running suites, never on individual test files.
+- **Two feature branches built in separate worktrees from a diverging `main` can create a real
+  merge conflict in a shared file for entirely UNRELATED reasons, and `git`'s own 3-way merge can
+  misattribute which side's content belongs where when the two diffs touch structurally similar
+  regions.** The chart-visual-embed-pass branch (merged first) and the Pro-subscription-tier
+  branch (built in parallel, merged main in afterward) both independently touched
+  `chart-embed-dialog.tsx` — one added a live-preview modal shell, the other wired a real Stripe
+  checkout button — and the conflict markers `git merge` produced put the WRONG side's content in
+  each slot (confirmed by reading `git show <sha>:<path>` directly for both branches' real,
+  pre-merge content, not by trusting the conflict markers' own HEAD/origin framing). **Lesson: when
+  a merge conflict's marked regions look confusing or produce something structurally odd (e.g. a
+  block that seems duplicated), verify both sides' REAL content via `git show` before resolving —
+  don't resolve straight from what the conflict markers literally show.**
+- **This repo's own `docs/` convention is the OPPOSITE of general chat-formatting habit: bare `PR
+  #NN` only, never a live markdown link to a pull request** ([open-questions #132](open-questions.md),
+  enforced by `tests/docs/doc-conventions.test.ts` — a repo recreation event turns every live PR
+  link into a permanent 404). Wrote `[#22](https://github.com/…/pull/22)` into `open-questions.md`
+  out of ordinary habit, caught only by the doc-conventions test failing on the very next full
+  suite run. **Lesson: when writing a fresh PR reference into any file under `docs/` (or the
+  explicitly-listed outside-docs files — `README.md`, `CLAUDE.md`, etc.), it's always bare `PR
+  #NN`, on reflex, not as a thing to remember to fix afterward.**
+- **A sandbox refuses some chained, multi-command `git` invocations as "too complex to verify
+  stays inside the worktree"** (multi-line heredocs, nested quoting, or piping one `git` command's
+  output through another in a single `&&` chain), even when every command in the chain is
+  individually safe and worktree-scoped. Splitting into separate, simpler `Bash` calls (one `git`
+  invocation per call) resolved it every time this came up tonight. Not a real limitation once
+  known — just worth defaulting to simpler, single-purpose git commands inside a worktree-isolated
+  session rather than compound one-liners.
+
 ## Session 101 (2026-09-13, owner present, continued much further) — CI sharding, ADR 047, the Pro-plan brainstorm/plan/build
 
 - **Splitting one CI job into a matrix breaks whatever LATER steps implicitly relied on an
