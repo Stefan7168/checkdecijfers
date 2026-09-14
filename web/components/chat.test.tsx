@@ -6,7 +6,7 @@
 // context across turns and thread it back as askQuestion's third argument.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AskOutcome } from '../app/actions.ts';
+import type { AskOutcome, ConfirmOnboardingOutcome } from '../app/actions.ts';
 import type { GatedResponse } from '../backend/billing/index.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
@@ -45,7 +45,7 @@ Element.prototype.scrollIntoView = vi.fn();
 // instead of `gated`) would pass both `web:typecheck` and, if chat.tsx
 // happened not to render the mismatched field, `web:test` too. Both gaps
 // stay closed here: the mock is pinned to AskOutcome.
-const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted(() => ({
+const { askQuestion, replyToClarification, submitAnswerFeedback, confirmOnboardingFetch } = vi.hoisted(() => ({
   // WP129+130: the additive optional `rawSelection` 4th arg is included so the
   // 4-arg call sites (chips path) typecheck; the pre-WP 3-arg assertions below
   // still pass unchanged (the chat only passes a 4th arg when a websearch prop
@@ -60,11 +60,16 @@ const { askQuestion, replyToClarification, submitAnswerFeedback } = vi.hoisted((
   // mocked module — typed against the real action's signature.
   submitAnswerFeedback:
     vi.fn<(auditId: number, verdict: 'up' | 'down', feedbackText?: string) => Promise<{ ok: boolean }>>(),
+  // ADR 026 addendum (session 101): the confirm-first offer's own click
+  // action — typed against the real ConfirmOnboardingOutcome, same
+  // field-name-typo protection the other two mocks already have.
+  confirmOnboardingFetch: vi.fn<(token: string) => Promise<ConfirmOnboardingOutcome>>(),
 }));
 vi.mock('../app/actions.ts', () => ({
   askQuestion,
   replyToClarification,
   submitAnswerFeedback,
+  confirmOnboardingFetch,
 }));
 
 afterEach(() => {
@@ -72,6 +77,7 @@ afterEach(() => {
   askQuestion.mockReset();
   replyToClarification.mockReset();
   submitAnswerFeedback.mockReset();
+  confirmOnboardingFetch.mockReset();
 });
 
 /** Wraps a GatedResponse into the AskOutcome shape, with no context —
@@ -84,7 +90,7 @@ function outcome(
 ): AskOutcome {
   // WP135: AskOutcome gained threadId; these pre-existing tests are not
   // thread-aware (no onThreadId), so it defaults to null.
-  return { gated, context, threadId };
+  return { gated, context, threadId, onboardingOffer: null };
 }
 
 async function submit(text: string) {
@@ -1274,6 +1280,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       webSection: null,
       carrier: null,
       insufficientCredits: null,
+      onboardingOffer: null,
     };
     render(<Chat initialMessages={[legacyMessage]} />);
     expect(screen.getByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
@@ -2304,6 +2311,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
         webSection: null,
         carrier: null,
         insufficientCredits: null,
+        onboardingOffer: null,
       };
       render(<Chat initialMessages={[resumed]} />);
       fireEvent.click(screen.getByRole('button', { name: 'Amsterdam' }));
@@ -2465,5 +2473,70 @@ describe('Chat — coverage disclosure (WP-E, R4)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Wat was de inflatie in 2025?' }));
     expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue('Wat was de inflatie in 2025?');
     expect(askQuestion).not.toHaveBeenCalled();
+  });
+});
+
+// ADR 026 addendum (session 101): #109's confirm-first reversal, owner
+// decision 4 — the offer button and its click round-trip through the new
+// confirmOnboardingFetch action.
+describe('Chat — onboarding confirm-first offer (ADR 026 addendum, #109)', () => {
+  function offerOutcome(token = 'tok-1', priceCredits = 100): AskOutcome {
+    return {
+      gated: {
+        kind: 'ok',
+        auditId: 5,
+        netCost: 0,
+        response: {
+          kind: 'refusal',
+          reason: 'onboarding_pending',
+          text: 'Dat onderwerp staat nog niet in onze database. We kunnen de cijfers voor je ophalen bij het CBS en controleren — dat duurt meestal een paar minuten. Wil je dat we dit opzoeken?',
+          offer: null,
+          guidance: null,
+          freshness: null,
+          internalNote: null,
+        } as unknown as ComposedResponse,
+      },
+      context: null,
+      threadId: null,
+      onboardingOffer: { token, priceCredits },
+    };
+  }
+
+  it('renders the confirm button with the live-read price, not the netCost (still 0, nothing charged yet)', async () => {
+    askQuestion.mockResolvedValue(offerOutcome('tok-1', 100));
+    render(<Chat />);
+    await submit('Hoeveel zonnepanelen zijn er?');
+    await screen.findByText(/Wil je dat we dit opzoeken\?/);
+    expect(screen.getByRole('button', { name: 'Haal op voor 100 credits' })).toBeInTheDocument();
+  });
+
+  it('clicking the button calls confirmOnboardingFetch with THIS message\'s own token and appends the started acknowledgment', async () => {
+    askQuestion.mockResolvedValue(offerOutcome('tok-42', 100));
+    confirmOnboardingFetch.mockResolvedValue({
+      kind: 'started',
+      text: 'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij het CBS en controleren ze — meestal een kwestie van minuten. Je krijgt een e-mail zodra je vraag beantwoord kan worden. Heb je ondertussen nog een andere vraag?',
+      netCost: 100,
+    });
+    render(<Chat />);
+    await submit('Hoeveel zonnepanelen zijn er?');
+    fireEvent.click(await screen.findByRole('button', { name: 'Haal op voor 100 credits' }));
+    expect(confirmOnboardingFetch).toHaveBeenCalledWith('tok-42');
+    await screen.findByText(/We vragen de cijfers nu automatisch op/);
+  });
+
+  it('an insufficient_credits result from the confirm click shows the existing insufficient-credits UI', async () => {
+    askQuestion.mockResolvedValue(offerOutcome('tok-1', 100));
+    confirmOnboardingFetch.mockResolvedValue({ kind: 'insufficient_credits', balance: 10, required: 100 });
+    render(<Chat />);
+    await submit('Hoeveel zonnepanelen zijn er?');
+    fireEvent.click(await screen.findByRole('button', { name: 'Haal op voor 100 credits' }));
+    await screen.findByText(/10 over, 100 nodig/);
+  });
+
+  it('a message with no onboardingOffer renders no confirm button (every pre-existing test\'s implicit assumption, made explicit)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(screen.queryByText(/Haal op voor/)).toBeNull();
   });
 });

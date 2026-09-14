@@ -233,6 +233,27 @@ export const ONBOARDING_PENDING_TEXT =
 export const ONBOARDING_ALREADY_PENDING_TEXT =
   'Deze cijfers worden al voor je opgehaald bij het CBS. Je krijgt een e-mail zodra je vraag beantwoord kan worden.';
 
+/** ADR 026 addendum (session 101, 2026-09-13) — #109's confirm-first
+ * reversal, owner decision 4. Shown INSTEAD of `ONBOARDING_PENDING_TEXT` on
+ * the first confident finder verdict; the fetch itself, and the text above,
+ * now happen only after an explicit click (web/app/actions.ts's
+ * confirmOnboardingFetch). Consumed by the web layer, not wired into
+ * buildOnboardingRefusal below (that function still builds the SAME
+ * envelope it always has — the answer module stays unaware of tokens,
+ * billing, or which turn actually gets shown; see the ADR addendum for why).
+ * No digit here BY THE SAME DESIGN as its sibling above — the price renders
+ * separately via the existing `chat.costCredits` caption mechanism, never
+ * baked into this pipeline-owned string. */
+export const ONBOARDING_OFFER_TEXT =
+  'Dat onderwerp staat nog niet in onze database. We kunnen de cijfers voor je ophalen bij het CBS en controleren — dat duurt meestal een paar minuten. Wil je dat we dit opzoeken?';
+
+/** ADR 026 addendum: the fail-closed degrade when `ONBOARDING_OFFER_SECRET`
+ * is not configured — same posture as `createEmbedCode`'s "unavailable"
+ * (RUNBOOK: "fail closed, no error pages"). Nothing is charged and nothing
+ * is queued; the reader is told plainly rather than shown a broken button. */
+export const ONBOARDING_OFFER_UNAVAILABLE_TEXT =
+  'Dat onderwerp staat nog niet in onze database, en het automatisch ophalen is op dit moment niet beschikbaar. Probeer het later nog eens, of stel een andere vraag.';
+
 /** The onboarding acknowledgment builder (design §2). `already` picks between
  * the two verbatim copies; only the first-ask ('onboarding_pending') carries
  * the structured `onboarding` envelope the web action triggers on. */

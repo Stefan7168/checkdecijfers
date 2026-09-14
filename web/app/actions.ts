@@ -49,10 +49,25 @@ import { AnthropicWebSearchClient } from '../backend/websearch/index.ts';
 import type { SourceSelection } from '../backend/websearch/index.ts';
 import { SOURCES } from '../backend/sources/registry.ts';
 import { buildOnboardingFinder } from '../backend/ingestion/onboarding-finder.ts';
-// #148: onboardingPrice is no longer imported here — the 'started' branch
-// below now uses the amount triggerOnboarding actually debited
-// (result.credits) instead of a second, independent price read.
-import { triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
+// #148: the 'started' branch below still uses the amount triggerOnboarding
+// actually debited (result.credits) for netCost, never a second independent
+// price read — that fix is unchanged. onboardingPrice IS imported again as of
+// the ADR 026 addendum (session 101): the confirm-first offer shows an
+// ESTIMATED price before anything is charged (nothing to read result.credits
+// FROM yet), a different case from #148's drift bug — the real charge at
+// confirm time always re-reads the live price itself, same as any other
+// price display in this product.
+import { onboardingPrice, triggerOnboarding } from '../backend/ingestion/onboarding-trigger.ts';
+import {
+  signOnboardingOffer,
+  verifyOnboardingOffer,
+} from '../backend/ingestion/onboarding-offer-token.ts';
+import {
+  ONBOARDING_ALREADY_PENDING_TEXT,
+  ONBOARDING_OFFER_TEXT,
+  ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+  ONBOARDING_PENDING_TEXT,
+} from '../backend/answer/respond/refusals.ts';
 import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
 import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
 // WP135 (ADR 033): the chat-thread entity (Stage A). A NEW top-level backend
@@ -253,6 +268,27 @@ function guardPending(pending: PendingClarification): void {
   }
 }
 
+// ADR 026 addendum (session 101): the onboarding offer token is NOT free text
+// — it never reaches an LLM prompt, so MAX_INPUT_LENGTH's rationale (bounding
+// prompt-driven spend) does not apply to it. But it DOES embed `questionText`
+// (itself bounded to MAX_INPUT_LENGTH by guardLength at mint time) plus the
+// rest of OnboardingOfferPayload, base64url-encoded, plus an HMAC signature —
+// so a plain reuse of `guardLength`'s 2000-char cap is too SMALL and would
+// reject a legitimate token for any question anywhere near that length
+// (code-review finding: a 2000-char question mints a ~3158-char token). 8000
+// comfortably covers the worst realistic case (two ~2000-char string fields,
+// JSON + base64 overhead, the signature) with headroom, while still bounding
+// SOMETHING before any work happens — the same "guard before any billing
+// touches it" discipline guardLength/guardPending already apply, sized
+// correctly for what this string actually is.
+const MAX_ONBOARDING_OFFER_TOKEN_LENGTH = 8000;
+
+function guardOnboardingOfferToken(token: string): void {
+  if (typeof token !== 'string' || token.length === 0 || token.length > MAX_ONBOARDING_OFFER_TOKEN_LENGTH) {
+    throw new Error(`onboarding offer token rejected: not a string within ${MAX_ONBOARDING_OFFER_TOKEN_LENGTH} chars`);
+  }
+}
+
 // WP129+130 (#129, ADR 032): the source-tags selection is UNTRUSTED client
 // input (a Server Action argument — attacker-controlled, like every other one
 // here). It is coerced to a SourceSelection BEFORE the billing gate and NEVER
@@ -356,6 +392,16 @@ export interface AskOutcome {
    * degrades to a threadless-but-audited answer). The client adopts it for the
    * next turn and captures it alongside a pending clarification (⟨A6⟩). */
   threadId: number | null;
+  /** ADR 026 addendum (session 101): present only on the turn where the
+   * finder just confidently matched an unloaded topic and the confirm-first
+   * gate minted a signed offer instead of triggering the fetch immediately
+   * (#109's reversal, owner decision 4). `priceCredits` is a live-read
+   * ESTIMATE for display only — the real charge at confirm time re-reads the
+   * price itself, same as every other price shown in this product. Null on
+   * every other outcome, including 'onboarding_already_pending' (nothing new
+   * to confirm) and a resumed/replayed thread (never reconstructed on
+   * replay, same posture as `carrier` — ADR 033 ⟨A6⟩). */
+  onboardingOffer: { token: string; priceCredits: number } | null;
 }
 
 // WP135 ⟨A1⟩: the ONLY thread write from the request path — a post-hoc UPDATE
@@ -423,7 +469,7 @@ export async function askQuestion(
   guardRequestId(requestId);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null };
   }
   // ⟨A1⟩ READ-ONLY ownership check (never an INSERT); a forged/foreign id
   // coerces to null → a fresh thread, never a cross-attach, never a leak.
@@ -451,7 +497,7 @@ export async function askQuestion(
     if (balance < required) {
       // ⟨W4⟩/⟨A1⟩ early return: no gate, no audit id ⇒ no thread (lazy by
       // construction — an empty thread is never created here).
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null };
     }
   }
   // #112: loaded BEFORE the billing gate — the load is read-only and must
@@ -537,14 +583,16 @@ export async function askQuestion(
           : {}),
       }),
     );
-    // WP16 sub-part 2 (ADR 026, design §2): if the pipeline acknowledged an
-    // onboarding fetch, the gate already fully refunded the 20-credit question
-    // debit (net 0). Now do the MONEY for the fetch — the 100-credit debit +
-    // queue row — atomically, OUTSIDE the answer module. This step never
-    // fabricates: it only reads a refusal the pipeline already produced and
-    // audited, and its own failure degrades to leaving the acknowledgment
-    // shown with the fetch not started.
-    const finalGated = await maybeTriggerOnboarding(gated, {
+    // WP16 sub-part 2 (ADR 026, design §2; confirm-first addendum, session
+    // 101): if the pipeline acknowledged an onboarding fetch, the gate already
+    // fully refunded the 20-credit question debit (net 0). Since #109's
+    // reversal this step no longer spends the 100-credit fetch itself — it
+    // mints a signed, stateless offer instead (confirmOnboardingFetch below
+    // does the actual charge+queue, only on an explicit click). This step
+    // never fabricates: it only reads a refusal the pipeline already produced
+    // and audited, and its own failure (secret unset) degrades to an honest
+    // "not available right now" with nothing charged or queued.
+    const { gated: finalGated, offer } = await maybeTriggerOnboarding(gated, {
       userId,
       requestId,
       question,
@@ -556,7 +604,7 @@ export async function askQuestion(
     // WP135 ⟨A1⟩: attach the audited answer to its thread (created lazily if
     // this is a fresh chat). Only runs on a gated-ok outcome with an audit id.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
-    return { gated: settled, context: await outcomeContext(settled), threadId };
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: offer };
   } catch (error) {
     // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
     // compensated here (the base question debit is already compensated inside
@@ -577,84 +625,81 @@ export async function askQuestion(
   }
 }
 
-// WP16 sub-part 2 (ADR 026, design §2): the money orchestration for an
-// on-demand fetch. Runs AFTER chargeAndRun so the question debit is already
-// refunded (the acknowledgment is a refusal → gate refund → net 0), then
-// charges the 100-credit onboarding cost and queues the fetch in ONE
-// transaction (triggerOnboarding). Only fires on an 'ok' gated result whose
-// response is the 'onboarding_pending' refusal carrying the structured
-// onboarding envelope — every other gated shape (insufficient/duplicate/
-// unauthenticated, or any non-onboarding response) passes through untouched.
+/** The result of the confirm-first onboarding gate: the (possibly rewritten)
+ * gated response, plus the signed offer to show — present only when this
+ * turn just became a "confirm this fetch?" prompt. */
+interface OnboardingGateResult {
+  gated: GatedResponse;
+  offer: { token: string; priceCredits: number } | null;
+}
+
+// WP16 sub-part 2 (ADR 026, design §2; confirm-first addendum, session 101,
+// #109's reversal): runs AFTER chargeAndRun so the question debit is already
+// refunded (the acknowledgment is a refusal → gate refund → net 0). Only
+// fires on an 'ok' gated result whose response is the 'onboarding_pending'
+// refusal carrying the structured onboarding envelope — every other gated
+// shape (insufficient/duplicate/unauthenticated, or any non-onboarding
+// response) passes through untouched, offer null.
+//
+// Since the addendum this NO LONGER charges the 100-credit onboarding cost
+// itself — it mints a signed, stateless offer (src/ingestion/onboarding-
+// offer-token.ts) and rewrites the shown text; confirmOnboardingFetch (below)
+// does the actual charge+queue, only once the user explicitly clicks. Nothing
+// about triggerOnboarding's own billing behavior changed — only WHEN and
+// WHERE it is called (there, not here).
 async function maybeTriggerOnboarding(
   gated: GatedResponse,
   ctx: { userId: string; requestId: string; question: string },
-): Promise<GatedResponse> {
-  if (gated.kind !== 'ok') return gated;
+): Promise<OnboardingGateResult> {
+  if (gated.kind !== 'ok') return { gated, offer: null };
   const response = gated.response;
   if (
     response.kind !== 'refusal' ||
     response.reason !== 'onboarding_pending' ||
     response.onboarding === null
   ) {
-    // 'onboarding_already_pending' also lands here and passes through: the
-    // pipeline already knew a fetch is in flight, so there is NO new debit —
-    // the turn nets 0 (gate refunded the question debit), the acknowledgment
-    // shows as-is. Asking twice must not cost twice (design §2/§5).
-    return gated;
+    // 'onboarding_already_pending' also lands here and passes through
+    // unchanged: the pipeline already knew a fetch is in flight (a REAL one,
+    // from an earlier confirmed offer) — nothing new to offer or confirm.
+    return { gated, offer: null };
   }
 
-  const result = await triggerOnboarding(getDb(), {
-    userId: ctx.userId,
-    requestId: ctx.requestId,
-    questionText: ctx.question,
-    tableId: response.onboarding.tableId,
-    topicTerm: response.onboarding.topicTerm,
-    finderConfidence: response.onboarding.confidence,
-    // WP27 stage B: the candidate chain rides the envelope into the trigger —
-    // the last in-memory link before pending_table_requests.candidate_ids.
-    candidateIds: response.onboarding.candidateIds,
-    ackAuditAnswerId: gated.auditId,
-  });
-
-  switch (result.kind) {
-    case 'started':
-      // #113 kick-on-trigger: the row just committed — fire the cron route so
-      // the delivery re-run starts within minutes (the "kwestie van minuten"
-      // promise), not at the daily 06:00 UTC backstop sweep. after() runs the
-      // kick POST-RESPONSE, so it is strictly post-commit AND can never delay
-      // or alter this returned GatedResponse; kickOnboardingJob is fail-soft
-      // (it cannot throw), so a failed kick just degrades to the backstop.
-      after(() => kickOnboardingJob());
-      // Show the acknowledgment; the caption must read the 100-credit fetch
-      // cost, not the refunded question turn's 0 (design §2/§5).
-      // #148: netCost is the amount triggerOnboarding ACTUALLY debited
-      // (result.credits) — not a second, independent onboardingPrice() read.
-      // A live reprice landing between the debit and this read used to be
-      // able to make the shown netCost drift from the real ledger entry
-      // (display-only; self-heals on refresh; history.ts always renders the
-      // true ledger cost) — mirrors the "never a fresh price read" fix
-      // already applied to src/ingestion/onboarding.ts's refundOnboarding.
-      return { ...gated, netCost: result.credits };
-    case 'duplicate':
-      // #113 kick-on-trigger: an active row already exists — a re-ask is the
-      // natural user retry channel if an earlier kick failed, and the cron
-      // route's claim logic makes a redundant kick harmless (its summary then
-      // reports "processed": null — the route returns OnboardingJobSummary,
-      // not a "claimed" count; comment fixed in the session-30 review).
-      // Same post-response, fail-soft guarantees as 'started'.
-      after(() => kickOnboardingJob());
-      // A concurrent/retried trigger already debited (or an active job already
-      // exists under another request): no second charge. Show the
-      // acknowledgment again; the turn nets 0.
-      return { ...gated, netCost: 0 };
-    case 'insufficient':
-      // Not enough credits for the fetch. Show the EXISTING insufficient-
-      // credits UI with required: 100. The audited acknowledgment exists but
-      // is not rendered (documented decision, design §2): nothing fabricated,
-      // the fetch never started, and the ledger already nets 0 for the turn
-      // (gate refunded the question debit; no onboarding debit happened).
-      return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
+  const secret = process.env.ONBOARDING_OFFER_SECRET;
+  if (!secret) {
+    // Fail closed — same posture as createEmbedCode's "unavailable" (RUNBOOK:
+    // "fail closed, no error pages"). Nothing charged, nothing queued; an
+    // honest message instead of an offer nobody could actually confirm.
+    // Means the confirm-first go-live RUNBOOK step hasn't set this secret yet.
+    return {
+      gated: { ...gated, response: { ...response, text: ONBOARDING_OFFER_UNAVAILABLE_TEXT } },
+      offer: null,
+    };
   }
+
+  const token = signOnboardingOffer(
+    {
+      userId: ctx.userId,
+      requestId: ctx.requestId,
+      tableId: response.onboarding.tableId,
+      topicTerm: response.onboarding.topicTerm,
+      confidence: response.onboarding.confidence,
+      // WP27 stage B: the candidate chain rides the envelope into the token —
+      // the same last in-memory link that used to go straight into the
+      // trigger now waits inside the token for confirmOnboardingFetch instead.
+      candidateIds: response.onboarding.candidateIds,
+      questionText: ctx.question,
+      ackAuditAnswerId: gated.auditId,
+    },
+    secret,
+  );
+  // A live-read ESTIMATE for display, not a debit — see the import comment
+  // above for why this differs from #148's fixed drift bug (no debit exists
+  // yet to read an authoritative amount FROM).
+  const priceCredits = await onboardingPrice(getDb());
+  return {
+    gated: { ...gated, response: { ...response, text: ONBOARDING_OFFER_TEXT } },
+    offer: { token, priceCredits },
+  };
 }
 
 // ⟨W3⟩/⟨W1⟩ (WP129+130, ADR 032): the web add-on settlement. Runs AFTER the
@@ -716,7 +761,7 @@ export async function replyToClarification(
   guardPending(pending);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null };
   }
   const threadAware = rawThreadId !== undefined;
   const validatedThreadId = threadAware
@@ -749,7 +794,7 @@ export async function replyToClarification(
     const required = simplePrice + webAddonPrice;
     const balance = await getBalance(getDb(), userId);
     if (balance < required) {
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null };
     }
   }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
@@ -807,7 +852,10 @@ export async function replyToClarification(
     // WP135 ⟨A6⟩: attach the reply to the CAPTURED thread (validatedThreadId),
     // lazily creating one on ownership-validation failure — never a cross-attach.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
-    return { gated: settled, context: await outcomeContext(settled), threadId };
+    // The reply path never injects a finder (see the comment above this
+    // function's pipeline call), so no turn here can ever be an onboarding
+    // offer — always null, never computed.
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: null };
   } catch (error) {
     // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
     // base debit is already compensated inside chargeAndRun — ADR 020).
@@ -818,6 +866,92 @@ export async function replyToClarification(
     // #65 / WP25: same durable copy + unchanged rethrow as askQuestion above.
     await reportError('replyToClarification', error, { requestId, userId });
     throw error;
+  }
+}
+
+// ADR 026 addendum (session 101): the result of an explicit confirm click.
+// Deliberately NOT AskOutcome — that type's context/threadId are for the NEXT
+// question, and this action produces no new pipeline turn (no question was
+// asked, nothing to reconstruct), so wrapping it in a fabricated
+// ComposedResponse/AuditedResponse would create an R8-relevant "answer" with
+// no audit row behind it. The precedent this follows instead is
+// GatedResponse's OWN 'insufficient_credits'/'duplicate_request'/
+// 'unauthenticated' variants: real, meaningful outcomes with NO audit trail,
+// because none carries a data value or anything worth reconstructing —
+// exactly this action's shape too. `text` rides the result directly (the
+// SAME byte-pinned copy the pre-addendum flow always showed) so chat.tsx
+// never has to import or re-derive pipeline copy itself.
+export type ConfirmOnboardingOutcome =
+  | { kind: 'unauthenticated' }
+  | { kind: 'started'; text: string; netCost: number }
+  | { kind: 'duplicate'; text: string }
+  | { kind: 'insufficient_credits'; balance: number; required: number };
+
+// The explicit-confirmation counterpart to askQuestion's onboarding offer
+// (#109's confirm-first reversal, owner decision 4). Verifies the signed
+// token and, only on success, calls the SAME triggerOnboarding askQuestion
+// used to call unconditionally before this addendum — that function's own
+// billing behavior (the debit+queue transaction, refund-on-refusal via
+// gate.ts) is completely unchanged; only WHEN and from WHERE it is called
+// moved.
+//
+// Reuses the token's ORIGINAL requestId rather than minting a new one, so a
+// double-click or a retried Server Action invocation dedupes on the exact
+// same credit_transactions_one_onboarding_per_request index a retried
+// askQuestion already relied on — no new idempotency logic needed.
+//
+// An invalid/expired/tampered token, or a missing ONBOARDING_OFFER_SECRET,
+// THROWS rather than returning a typed outcome — mirrors guardRequestId/
+// guardPending's existing convention (a malformed or stale input is rejected
+// before anything is charged; chat.tsx already catches a rejected action and
+// shows its normal retry message — the same UI a malformed requestId already
+// gets today).
+export async function confirmOnboardingFetch(token: string): Promise<ConfirmOnboardingOutcome> {
+  guardOnboardingOfferToken(token);
+  const userId = await currentUserId();
+  if (userId === null) return { kind: 'unauthenticated' };
+
+  const secret = process.env.ONBOARDING_OFFER_SECRET;
+  if (!secret) {
+    throw new Error('onboarding offer confirmation unavailable: ONBOARDING_OFFER_SECRET not set');
+  }
+  const payload = verifyOnboardingOffer(token, secret);
+  if (payload === null) {
+    throw new Error('onboarding offer rejected: invalid or expired token');
+  }
+  // The token proves this SERVER minted it for SOME user — cross-check the
+  // embedded userId against the real, currently authenticated session before
+  // trusting anything else in the payload. A token is bound to the user it
+  // was minted for the moment it left the server; nobody else's click can
+  // spend it, however the token itself was obtained.
+  if (payload.userId !== userId) {
+    throw new Error('onboarding offer rejected: token does not belong to this session');
+  }
+
+  const result = await triggerOnboarding(getDb(), {
+    userId,
+    requestId: payload.requestId,
+    questionText: payload.questionText,
+    tableId: payload.tableId,
+    topicTerm: payload.topicTerm,
+    finderConfidence: payload.confidence,
+    candidateIds: payload.candidateIds,
+    ackAuditAnswerId: payload.ackAuditAnswerId,
+  });
+
+  switch (result.kind) {
+    case 'started':
+      // #113 kick-on-trigger, unchanged from the pre-addendum behavior.
+      after(() => kickOnboardingJob());
+      return { kind: 'started', text: ONBOARDING_PENDING_TEXT, netCost: result.credits };
+    case 'duplicate':
+      // An active row already exists (a concurrent confirm click, or a
+      // retried Server Action) — no second charge, same copy the pipeline
+      // itself would have shown for a genuine re-ask.
+      after(() => kickOnboardingJob());
+      return { kind: 'duplicate', text: ONBOARDING_ALREADY_PENDING_TEXT };
+    case 'insufficient':
+      return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
   }
 }
 

@@ -49,6 +49,8 @@ function redactedMessage(): ChatMessage {
     // no envelope to guess one from anyway.
     carrier: null,
     insufficientCredits: null,
+    // ADR 026 addendum: same posture as carrier — never restored on resume.
+    onboardingOffer: null,
   };
 }
 
@@ -71,6 +73,7 @@ function userMessage(text: string): ChatMessage {
     // A user turn never carried a carrier live either.
     carrier: null,
     insufficientCredits: null,
+    onboardingOffer: null,
   };
 }
 
@@ -125,6 +128,11 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     // above) still render; they just fill the input instead of taking.
     carrier: null,
     insufficientCredits: null,
+    // ADR 026 addendum (session 101): same posture as carrier — a token
+    // minted for an earlier session may already be expired, and resume is a
+    // deterministic reconstruction from stored audit rows, never a place to
+    // reconstruct live interactive state. Always null, never a guess.
+    onboardingOffer: null,
   };
 }
 

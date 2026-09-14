@@ -125,6 +125,19 @@ export interface ChatMessage {
    * on every other message, including every other 'info' message and every
    * replayed message (an old stored turn never had this kind live). */
   insufficientCredits: { balance: number; required: number } | null;
+  /** ADR 026 addendum (session 101): present only on the live turn where the
+   * finder just confidently matched an unloaded topic and the confirm-first
+   * gate (#109's reversal, owner decision 4) minted a signed offer instead of
+   * triggering the fetch immediately — AskOutcome.onboardingOffer, carried
+   * straight onto the message it belongs to. `priceCredits` is a live-read
+   * ESTIMATE for display, never the actual charge (nothing is charged until
+   * the button is clicked). `null` on every other message, and on EVERY
+   * replayed/resumed message — same posture as `carrier` (ADR 033 ⟨A6⟩): a
+   * token minted for an earlier session may already be expired, and resume
+   * is a deterministic reconstruction from stored audit rows, never a place
+   * to reconstruct live interactive state. A resumed thread shows the
+   * historical offer text with no button, same as any other closed turn. */
+  onboardingOffer: { token: string; priceCredits: number } | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

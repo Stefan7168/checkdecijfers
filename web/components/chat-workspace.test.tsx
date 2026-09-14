@@ -41,7 +41,7 @@ function outcome(
   context: ConversationContext | null = null,
   threadId: number | null = null,
 ): AskOutcome {
-  return { gated, context, threadId };
+  return { gated, context, threadId, onboardingOffer: null };
 }
 
 const WEB_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';
