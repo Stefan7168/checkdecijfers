@@ -70,9 +70,21 @@ export async function createEmbedCode(auditId: number): Promise<CreateEmbedCodeR
  * is a genuine deploy misconfiguration (RUNBOOK's live-wiring checklist,
  * Task 12, exists precisely so this never happens) — thrown, not swallowed
  * into a generic result, so it surfaces loudly in Vercel's function logs
- * rather than silently presenting as an inert button. */
+ * rather than silently presenting as an inert button.
+ *
+ * A TRANSIENT Stripe failure (network blip, rate limit, brief outage) is a
+ * different case entirely — not a misconfiguration, and not rare enough to
+ * throw: `createCheckoutSession` (web/app/credits/actions.ts, the one-time
+ * pack purchase's own version of this exact call) wraps its
+ * `stripe.checkout.sessions.create` in a try/catch and returns a graceful
+ * failure rather than letting the rejection propagate, and this mirrors
+ * that. An uncaught rejection here would propagate into the embed dialog's
+ * `onClick` handler and abort it BEFORE `setCheckingOut(false)` runs,
+ * leaving the Upgrade button stuck disabled with no message until the
+ * dialog is closed and reopened — exactly what the `'checkout_failed'`
+ * reason exists to prevent (review finding, fix round). */
 export async function startProSubscriptionCheckout(): Promise<
-  { ok: true; url: string } | { ok: false; reason: 'disabled' | 'not_signed_in' }
+  { ok: true; url: string } | { ok: false; reason: 'disabled' | 'not_signed_in' | 'checkout_failed' }
 > {
   if (process.env.PRO_SUBSCRIPTIONS_ENABLED !== '1') {
     return { ok: false, reason: 'disabled' };
@@ -99,13 +111,24 @@ export async function startProSubscriptionCheckout(): Promise<
   const origin = process.env.NEXT_PUBLIC_APP_URL ?? (await headers()).get('origin') ?? '';
   const params = buildProSubscriptionCheckoutParams(userId, priceId, proSuccessUrl(origin), proCancelledUrl(origin));
 
-  // Same Stripe client construction as createCheckoutSession: a fresh client
-  // per call, no module-level singleton (Stripe's own recommended pattern
-  // for serverless — see that action's own precedent).
-  const stripe = new Stripe(secretKey);
-  const session = await stripe.checkout.sessions.create(params);
-  if (!session.url) {
-    throw new Error('Stripe did not return a Checkout URL for the subscription session');
+  // Same Stripe client construction AND try/catch scope as
+  // createCheckoutSession: a fresh client per call (no module-level
+  // singleton, Stripe's own recommended pattern for serverless), and the
+  // API call itself caught rather than left to reject uncaught — see the
+  // function doc comment above for why.
+  let url: string | null;
+  try {
+    const stripe = new Stripe(secretKey);
+    const session = await stripe.checkout.sessions.create(params);
+    url = session.url;
+  } catch (error) {
+    console.error('startProSubscriptionCheckout failed:', error);
+    return { ok: false, reason: 'checkout_failed' };
   }
-  return { ok: true, url: session.url };
+
+  if (!url) {
+    console.error('startProSubscriptionCheckout: Stripe did not return a Checkout URL for the subscription session');
+    return { ok: false, reason: 'checkout_failed' };
+  }
+  return { ok: true, url };
 }

@@ -273,11 +273,14 @@ function ChartEmbedDialog({
                         window.location.href = result.url;
                         return; // navigating away; no need to reset checkingOut
                       }
-                      // Flag off, or not signed in (shouldn't happen — this
+                      // Flag off, not signed in (shouldn't happen — this
                       // dialog only mounts for a signed-in embed creator,
-                      // but fail safe) — fall through to the original
-                      // interest-tracking behaviour, never leave the button
-                      // inert. See the `upgradeClicked` declaration above.
+                      // but fail safe), or a transient Stripe/checkout
+                      // failure (`checkout_failed` — review fix round) —
+                      // every non-ok reason falls through identically to
+                      // the original interest-tracking behaviour, never
+                      // leaves the button stuck disabled. See the
+                      // `upgradeClicked` declaration above.
                       setCheckingOut(false);
                       trackChartStyleEvent('pro_upgrade_click');
                       setUpgradeClicked(true);

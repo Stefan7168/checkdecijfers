@@ -154,6 +154,27 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.getByText(/thanks/i)).toBeInTheDocument();
   });
 
+  // Review fix round: the concrete bug traced by the reviewer — a transient
+  // Stripe failure (checkout_failed) must reset checkingOut and fall
+  // through exactly like disabled/not_signed_in, never leave the Upgrade
+  // button stuck `disabled` with no message until the dialog is reopened.
+  it('resets checkingOut and falls through to interest-tracking (button not left stuck disabled) when startProSubscriptionCheckout reports checkout_failed', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    startProSubscriptionCheckout.mockResolvedValue({ ok: false, reason: 'checkout_failed' });
+    render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: /interested in pro/i }));
+    await waitFor(() => expect(trackChartStyleEvent).toHaveBeenCalledWith('pro_upgrade_click'));
+    expect(screen.getByText(/thanks/i)).toBeInTheDocument();
+    // The CTA button is gone once `upgradeClicked` flips (replaced by the
+    // thanks message) — the meaningful assertion is that the flow reached
+    // that state at all, rather than the button staying rendered and
+    // disabled forever (the bug: an uncaught rejection would have aborted
+    // the handler before setCheckingOut(false)/setUpgradeClicked(true) ran).
+    expect(screen.queryByRole('button', { name: /interested in pro/i })).toBeNull();
+  });
+
   it('shows neither the Pro price nor the upgrade CTA when pro is true', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: true });
     render(<ChartEmbedButton auditId={42} tableId="83693NED" lang="en" />);

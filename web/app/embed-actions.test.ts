@@ -233,13 +233,33 @@ describe('startProSubscriptionCheckout', () => {
     );
   });
 
-  it('throws when Stripe does not return a Checkout URL', async () => {
+  // Review fix round: a transient Stripe failure must be caught and
+  // returned gracefully, never left to reject uncaught — mirrors
+  // createCheckoutSession's (web/app/credits/actions.ts) own try/catch
+  // around this exact call, including its `vi.spyOn(console, 'error')`
+  // convention for the expected log line.
+  it('returns checkout_failed (not a throw) when Stripe does not return a Checkout URL', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
     process.env.STRIPE_SECRET_KEY = 'sk_test_123';
     process.env.STRIPE_PRO_PRICE_ID = 'price_123';
     currentUserId.mockResolvedValue('user-1');
     checkoutSessionsCreate.mockResolvedValue({ url: null });
 
-    await expect(startProSubscriptionCheckout()).rejects.toThrow(/did not return a Checkout URL/);
+    const result = await startProSubscriptionCheckout();
+    expect(result).toEqual({ ok: false, reason: 'checkout_failed' });
+  });
+
+  it('returns checkout_failed (not a throw) when stripe.checkout.sessions.create itself rejects — a transient outage must never abort the caller uncaught', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.PRO_SUBSCRIPTIONS_ENABLED = '1';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRO_PRICE_ID = 'price_123';
+    currentUserId.mockResolvedValue('user-1');
+    checkoutSessionsCreate.mockRejectedValue(new Error('Stripe API error: rate limited'));
+
+    const result = await startProSubscriptionCheckout();
+    expect(result).toEqual({ ok: false, reason: 'checkout_failed' });
+    expect(console.error).toHaveBeenCalledWith('startProSubscriptionCheckout failed:', expect.any(Error));
   });
 });
