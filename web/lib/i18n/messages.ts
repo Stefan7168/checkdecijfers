@@ -187,6 +187,11 @@ const nl = {
   'answerProof.dateUnknown': 'onbekend',
   'answerProof.tableCaption': 'Tabel {tableId} — {tableTitle} · versie {version} · gesynchroniseerd {date} · licentie {license}',
   'answerProof.highlightLinkTitle': 'Bekijk deze cel bij CBS',
+  // WP30c D7(b) (ADR 048): shown under Technische details, only when the
+  // live request_urls lookup found at least one entry (answer-proof.tsx's
+  // RequestUrlsSection).
+  'answerProof.requestUrlsHeading': "Opgehaalde URL's",
+  'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B: pages + shell).
   // landing.tsx. The owner asked (session 90) to keep the Dutch headline
@@ -937,6 +942,8 @@ const en: Messages = {
   'answerProof.dateUnknown': 'unknown',
   'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · license {license}',
   'answerProof.highlightLinkTitle': 'View this cell at CBS',
+  'answerProof.requestUrlsHeading': 'Fetched URLs',
+  'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B). Faithful MEANING translations of
   // the Dutch marketing copy — the Dutch headline stays owner-pinned verbatim

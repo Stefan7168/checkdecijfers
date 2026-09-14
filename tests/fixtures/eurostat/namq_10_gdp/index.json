@@ -1,0 +1,6 @@
+{
+  "_header": "HAND-BUILT fixture manifest (WP30c/E1 brief, Task 3) — NOT captured from the live Eurostat API. See dataset.json's own _synthetic_notice for the full statement.",
+  "synthetic": true,
+  "dataset": "dataset.json",
+  "note": "Quarterly grain, single unit, one 'b'-flagged (break) non-null cell and one ':'-flagged null cell."
+}

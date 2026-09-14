@@ -62,7 +62,8 @@
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
     "pricing:apply": "node --env-file=.env src/billing/pricing-apply.ts",
     "fixtures:capture": "node scripts/capture-cbs-fixtures.ts",
-    "fixtures:capture:catalog": "node scripts/capture-cbs-fixtures.ts --catalog"
+    "fixtures:capture:catalog": "node scripts/capture-cbs-fixtures.ts --catalog",
+    "fixtures:capture:eurostat": "node scripts/capture-eurostat-fixtures.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

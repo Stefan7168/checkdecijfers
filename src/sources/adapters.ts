@@ -20,13 +20,21 @@
 // target on that money path.
 import { ODataV4Source } from '../cbs-adapter/odata-v4.ts';
 import type { CbsSource } from '../cbs-adapter/types.ts';
-import { CBS_SOURCE_KEY } from './registry.ts';
+import { StatisticsApiSource } from '../eurostat-adapter/statistics-api.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY } from './registry.ts';
 
 /** The adapter contract, under its source-neutral name (ADR 030 A5). */
 export type SourceAdapter = CbsSource;
 
 const ADAPTER_FACTORIES: Readonly<Record<string, () => SourceAdapter>> = {
   [CBS_SOURCE_KEY]: () => new ODataV4Source(),
+  // WP30c/E1 (ADR 048 D1): registered so `docs/how-to-add-a-source.md`'s
+  // Step 5 and this brief's Done-definition item 2 are genuinely satisfied
+  // — but per Constraint 0, nothing in E1 actually CALLS this factory with
+  // a real question this session (no Eurostat table is registered/ingested
+  // yet, and the Amendment-3 deny-gate keeps the live query path from ever
+  // reaching a `eurostat:`-id row while the explorer flag is unset).
+  [EUROSTAT_SOURCE_KEY]: () => new StatisticsApiSource(),
 };
 
 /**

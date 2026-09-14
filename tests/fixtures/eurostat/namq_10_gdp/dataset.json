@@ -1,0 +1,37 @@
+{
+  "synthetic": true,
+  "_synthetic_notice": "HAND-BUILT to the public JSON-stat 2.0 spec (https://json-stat.org/format/) for the WP30c/E1 brief's Task 3 — this is NOT a response captured from the live Eurostat Statistics API (Constraint 0). Replace via `npm run fixtures:capture:eurostat` before treating adapter conformance as proven against real data. Covers: a QUARTERLY dataset with a 'b' (break) flag on a NON-null cell (Amendment B1's verbatim-flag-on-a-real-value case) and a ':' (not available) flag on a null cell (R11 null-reason coverage).",
+  "version": "2.0",
+  "class": "dataset",
+  "label": "GDP and main components (quarterly)",
+  "id": ["unit", "geo", "time"],
+  "size": [1, 2, 3],
+  "dimension": {
+    "unit": {
+      "label": "Unit of measure",
+      "category": {
+        "index": { "CLV_PCH_PRE": 0 },
+        "label": { "CLV_PCH_PRE": "Chain linked volumes, percentage change on previous period" }
+      }
+    },
+    "geo": {
+      "label": "Geopolitical entity (reporting)",
+      "category": {
+        "index": { "NL": 0, "DE": 1 },
+        "label": { "NL": "Netherlands", "DE": "Germany" }
+      }
+    },
+    "time": {
+      "label": "Time",
+      "category": {
+        "index": { "2023-Q1": 0, "2023-Q2": 1, "2023-Q3": 2 },
+        "label": { "2023-Q1": "2023-Q1", "2023-Q2": "2023-Q2", "2023-Q3": "2023-Q3" }
+      }
+    }
+  },
+  "value": [0.4, 0.3, null, 0.1, 0.2, 0.5],
+  "status": {
+    "2": ":",
+    "4": "b"
+  }
+}

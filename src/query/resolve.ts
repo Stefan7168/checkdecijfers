@@ -87,6 +87,11 @@ export interface ResolvedQuery {
     updateCadence: string | null;
     slice: CbsSlice | null;
     periodSemantics: Record<string, string> | null;
+    /** WP30c D7(a): the source's DOI for this table, when it has one (a
+     * Eurostat dataset does; a CBS table never has — the column is NULL for
+     * every CBS row and always will be). Read straight off cbs_tables.doi,
+     * the same row title/version/etc. already come from — see fetchTable. */
+    doi: string | null;
   };
 }
 
@@ -191,6 +196,9 @@ interface TableRow {
   periodSemantics: Record<string, string> | null;
   slice: CbsSlice | null;
   units: Record<string, { unit: string; decimals: number; title: string }>;
+  /** WP30c D7(a), migration 031: NULL for every CBS row (no such concept);
+   * a Eurostat dataset's DOI once registered. */
+  doi: string | null;
 }
 
 async function fetchTable(db: Db, tableId: string): Promise<TableRow | null> {
@@ -209,6 +217,7 @@ async function fetchTable(db: Db, tableId: string): Promise<TableRow | null> {
     periodSemantics: parseJsonb(row.period_semantics, null),
     slice: parseJsonb(row.slice, null),
     units: parseJsonb(row.units, {}),
+    doi: (row.doi as string | null) ?? null,
   };
 }
 
@@ -661,6 +670,7 @@ export async function resolveIntent(
           updateCadence: table.updateCadence,
           slice,
           periodSemantics: table.periodSemantics,
+          doi: table.doi,
         },
       },
     };

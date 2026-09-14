@@ -14,7 +14,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   const { db, pool } = connectFromEnv();
   try {
     await applyMigrations(db);
-    const result = await ingestCatalog(db, adapterFor(CBS_SOURCE_KEY));
+    const result = await ingestCatalog(db, adapterFor(CBS_SOURCE_KEY), CBS_SOURCE_KEY);
     console.log(
       `Catalog refresh: fetched ${result.fetched}, upserted ${result.upserted}, pruned ${result.pruned}.`,
     );

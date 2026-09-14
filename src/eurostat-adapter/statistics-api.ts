@@ -1,0 +1,144 @@
+// Live Eurostat SourceAdapter (ADR 048 D1/D6): the Statistics API for
+// observations/schema, the Catalogue API for fetchCatalog. JSON-stat 2.0
+// over REST, synchronous only (D6 — the async submit-and-poll API is
+// deliberately NOT implemented; a dataset over SYNC_CELL_THRESHOLD refuses
+// loudly via AsyncApiRequiredError instead of hanging or truncating).
+//
+// CONSTRAINT 0 (WP30c/E1 brief, this session): this class is written and
+// unit-tested but NEVER INVOKED WITH A REAL URL. Every test injects
+// `fetchFn` — a hand-built stub returning synthetic, clearly-labelled
+// JSON-stat 2.0 payloads — never a live network call. The URL shapes below
+// are consequently this session's best-effort, UNVERIFIED construction from
+// Eurostat's publicly documented API conventions, not measured wire facts
+// (contrast with src/cbs-adapter/odata-v4.ts's BASE, which IS measured).
+// The owner-run `npm run fixtures:capture:eurostat` follow-up is what
+// verifies or corrects them against the real API.
+import type {
+  CbsCatalogEntry,
+  CbsCode,
+  CbsObservationRow,
+  CbsSlice,
+  CbsSource,
+  CbsTableSchema,
+} from '../cbs-adapter/types.ts';
+import { parseJsonStatCatalog, parseJsonStatDataset, type ParsedEurostatDataset } from './jsonstat.ts';
+
+/** UNVERIFIED (Constraint 0) — Eurostat's documented Statistics API
+ * dissemination endpoint convention. */
+const STATISTICS_BASE = 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data';
+/** UNVERIFIED (Constraint 0) — Eurostat's documented Catalogue API "table of
+ * contents" endpoint convention; see parseJsonStatCatalog's own doc comment
+ * in ./jsonstat.ts for the response shape this expects. */
+const CATALOGUE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/catalogue/toc/txt?lang=EN';
+
+const FETCH_ATTEMPTS = 3;
+const RETRY_BACKOFF_MS = 1500;
+
+/** D4: strips the '<key>:' prefix internally (never the caller's job) —
+ * a local copy of the same first-colon rule every other module in this
+ * source's family implements independently (see jsonstat.ts's own copy). */
+function nativeIdFrom(tableId: string): string {
+  const colon = tableId.indexOf(':');
+  return colon >= 0 ? tableId.slice(colon + 1) : tableId;
+}
+
+export type FetchFn = typeof fetch;
+
+export class StatisticsApiSource implements CbsSource {
+  private readonly fetchFn: FetchFn;
+  /** One JSON-stat fetch+parse per (tableId, slice) — schema, code lists and
+   * rows all derive from the SAME response (unlike CBS's four separate
+   * endpoints), so caching avoids re-fetching for fetchTableSchema +
+   * fetchCodeList + fetchObservationCount + fetchObservations on one table. */
+  private readonly cache = new Map<string, Promise<ParsedEurostatDataset>>();
+
+  constructor(fetchFn: FetchFn = fetch) {
+    this.fetchFn = fetchFn;
+  }
+
+  private async fetchJson(url: string): Promise<unknown> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+      try {
+        const res = await this.fetchFn(url, { headers: { Accept: 'application/json' } });
+        if (res.ok) return await res.json();
+        lastError = new Error(`Eurostat request failed: ${res.status} ${res.statusText} for ${url}`);
+      } catch (err) {
+        lastError = err;
+      }
+      if (attempt < FETCH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_BACKOFF_MS * attempt));
+      }
+    }
+    throw new Error(
+      `Eurostat request failed after ${FETCH_ATTEMPTS} attempts for ${url}: ${
+        lastError instanceof Error ? lastError.message : String(lastError)
+      }`,
+    );
+  }
+
+  private loadDataset(tableId: string, slice?: CbsSlice): Promise<ParsedEurostatDataset> {
+    // Keyed on slice too: E1 fetches the whole dataset and filters
+    // CLIENT-SIDE (see fetchAndParse's own note) so two different slices are
+    // two different parsed results even though they hit the same URL —
+    // keying on tableId alone would silently reuse an unrelated slice.
+    const key = `${tableId} ${slice ? JSON.stringify(slice) : ''}`;
+    let cached = this.cache.get(key);
+    if (!cached) {
+      cached = this.fetchAndParse(tableId, slice);
+      this.cache.set(key, cached);
+    }
+    return cached;
+  }
+
+  private async fetchAndParse(tableId: string, slice?: CbsSlice): Promise<ParsedEurostatDataset> {
+    const nativeCode = nativeIdFrom(tableId);
+    // E1 does not attempt server-side dimensionEquals/dimensionPrefixes
+    // filtering in the URL — parseJsonStatDataset applies the FULL slice
+    // (incl. the structural D6 geo restriction) client-side, the same
+    // pattern CBS's own FixtureSource already uses for its slice. A missing
+    // server-side filter degrades to "fetches more than strictly needed",
+    // never to a correctness bug — and E1 never registers a dataset near
+    // the sync threshold in the first place (Constraint 0: nothing is
+    // registered yet).
+    const url = `${STATISTICS_BASE}/${nativeCode}?format=JSON&lang=EN`;
+    const raw = await this.fetchJson(url);
+    return parseJsonStatDataset(raw, tableId, slice);
+  }
+
+  async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
+    return (await this.loadDataset(tableId)).schema;
+  }
+
+  async fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]> {
+    const parsed = await this.loadDataset(tableId);
+    const codes = parsed.codeLists[dimension];
+    if (!codes) {
+      throw new Error(
+        `Eurostat dataset '${tableId}' has no dimension '${dimension}' (known: ` +
+          `${Object.keys(parsed.codeLists).join(', ') || '<none>'})`,
+      );
+    }
+    return codes;
+  }
+
+  async fetchObservationCount(tableId: string): Promise<number | null> {
+    return (await this.loadDataset(tableId)).rows.length;
+  }
+
+  // NB no `dimensionNames` third parameter (unlike CBS's odata-v4.ts): a
+  // JSON-stat response carries its own dimension names inline (`id`), so
+  // there is no separate /Dimensions fetch to short-circuit here — the #156
+  // TOCTOU concern that parameter exists for on the CBS side cannot arise.
+  async *fetchObservations(tableId: string, slice?: CbsSlice): AsyncIterable<CbsObservationRow[]> {
+    // One bounded JSON-stat document (D6: synchronous only, under
+    // SYNC_CELL_THRESHOLD by construction) — one page, nothing to paginate.
+    const parsed = await this.loadDataset(tableId, slice);
+    yield parsed.rows;
+  }
+
+  async fetchCatalog(): Promise<CbsCatalogEntry[]> {
+    const raw = await this.fetchJson(CATALOGUE_URL);
+    return parseJsonStatCatalog(raw);
+  }
+}

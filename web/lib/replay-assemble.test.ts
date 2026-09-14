@@ -4,8 +4,9 @@
 // yields the SAME dock tab; that a meta refusal reclassifies to 'info' via the
 // shared helper; and that a redacted row becomes ONE placeholder, never a
 // user+assistant pair.
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { REDACTED_QUESTION_TEXT } from '../backend/answer/audit/retention.ts';
+import type { Db } from '../backend/db/types.ts';
 import type { ThreadRow } from '../backend/threads/index.ts';
 import { replayParts } from '../backend/threads/replay.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
@@ -15,6 +16,12 @@ import { buildAnswerCsv } from './csv.ts';
 import { deriveVisuals } from './dock-visuals.ts';
 import { assembleMessages } from './replay-assemble.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
+
+// WP30c D7(b): assembleMessages now awaits fetchRequestUrlsByBatch(db, ...)
+// per answer message, alongside (never inside) buildAnswerProof — this
+// suite is about the deterministic reconstruction, not the request_urls
+// lookup itself, so an empty-rows stub is enough everywhere below.
+const fakeDb = { query: async () => ({ rows: [] }) } as unknown as Db;
 
 function row(overrides: Partial<ThreadRow> & { response: ComposedResponse }): ThreadRow {
   return {
@@ -36,8 +43,13 @@ describe('assembleMessages — ⟨A3⟩ replay completeness (stat-card answer)',
     cells: [fakeCell()],
   }) as unknown as ComposedResponse;
 
-  const messages = assembleMessages(replayParts([row({ id: 42, response, creditsCharged: 20 })]));
-  const [userMsg, assistantMsg] = messages;
+  let messages: Awaited<ReturnType<typeof assembleMessages>>;
+  let userMsg: (typeof messages)[number];
+  let assistantMsg: (typeof messages)[number];
+  beforeAll(async () => {
+    messages = await assembleMessages(replayParts([row({ id: 42, response, creditsCharged: 20 })]), fakeDb);
+    [userMsg, assistantMsg] = messages;
+  });
 
   it('emits exactly one user turn then its assistant turn', () => {
     expect(messages).toHaveLength(2);
@@ -91,15 +103,16 @@ describe('assembleMessages — ⟨A3⟩ replay completeness (stat-card answer)',
 });
 
 describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () => {
-  it('a replayed meta refusal becomes kind "info" via the shared helper (no refusal header)', () => {
+  it('a replayed meta refusal becomes kind "info" via the shared helper (no refusal header)', async () => {
     const response = {
       kind: 'refusal',
       reason: 'meta',
       text: 'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.',
       webSection: null,
     } as unknown as ComposedResponse;
-    const [, assistantMsg] = assembleMessages(
+    const [, assistantMsg] = await assembleMessages(
       replayParts([row({ kind: 'refusal', response })]),
+      fakeDb,
     );
     expect(assistantMsg!.kind).toBe('info');
     expect(assistantMsg!.card).toBeNull();
@@ -110,7 +123,7 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
     expect(assistantMsg!.proof).toBeNull();
   });
 
-  it('#134(a): a replayed period-coverage refusal carries its retry chip into the assembled message (parity with the live turn)', () => {
+  it('#134(a): a replayed period-coverage refusal carries its retry chip into the assembled message (parity with the live turn)', async () => {
     const response = {
       kind: 'refusal',
       reason: 'freshness',
@@ -118,7 +131,7 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
       suggestions: ['Wat was inflatie in 2025?'],
       webSection: null,
     } as unknown as ComposedResponse;
-    const [, assistantMsg] = assembleMessages(replayParts([row({ kind: 'refusal', response })]));
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ kind: 'refusal', response })]), fakeDb);
     expect(assistantMsg!.kind).toBe('refusal');
     // The retry chip survives the full replay→assemble chain (regression: replay
     // dropped refusal suggestions, so a resumed thread lost the chip).
@@ -127,10 +140,11 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
 });
 
 describe('assembleMessages — ⟨A7⟩ redacted row is one placeholder', () => {
-  it('a redacted row replays as ONE placeholder message, never a user+assistant pair', () => {
+  it('a redacted row replays as ONE placeholder message, never a user+assistant pair', async () => {
     const response = fakeAnswerResponse({ body: 'ooit een antwoord' }) as unknown as ComposedResponse;
-    const messages = assembleMessages(
+    const messages = await assembleMessages(
       replayParts([row({ question: REDACTED_QUESTION_TEXT, response })]),
+      fakeDb,
     );
     expect(messages).toHaveLength(1);
     expect(messages[0]!.role).toBe('redacted');

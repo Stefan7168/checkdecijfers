@@ -13,17 +13,36 @@ import {
 import { expandTopicTerms, ALIAS_HINTS } from '../../src/catalog/aliases.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY } from '../../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
 async function insertRow(
   db: Db,
-  row: { id: string; title: string; summary?: string; type?: string; lang?: string; status?: string },
+  row: {
+    id: string;
+    title: string;
+    summary?: string;
+    type?: string;
+    lang?: string;
+    status?: string;
+    /** WP30c/E1 (Amendment B2): defaults to 'cbs', matching migration 016's
+     *  own column default — only the deny-gate test below overrides it. */
+    source?: string;
+  },
 ): Promise<void> {
   await db.query(
-    `insert into cbs_catalog (table_id, title, summary, status, dataset_type, language, refreshed_at)
-     values ($1, $2, $3, $4, $5, $6, now())`,
-    [row.id, row.title, row.summary ?? '', row.status ?? 'Regulier', row.type ?? 'Numeric', row.lang ?? 'nl'],
+    `insert into cbs_catalog (table_id, title, summary, status, dataset_type, language, refreshed_at, source)
+     values ($1, $2, $3, $4, $5, $6, now(), $7)`,
+    [
+      row.id,
+      row.title,
+      row.summary ?? '',
+      row.status ?? 'Regulier',
+      row.type ?? 'Numeric',
+      row.lang ?? 'nl',
+      row.source ?? CBS_SOURCE_KEY,
+    ],
   );
 }
 
@@ -58,7 +77,7 @@ describe('recallCandidates', () => {
 
   beforeEach(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)));
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
   afterEach(async () => {
     await close();
@@ -205,5 +224,65 @@ describe('recallCandidates — Regulier-first quota (WP27 A2)', () => {
     expect(got).toHaveLength(5);
     // limit ≤ the Regulier quota → no historic reserve; all slots Regulier.
     expect(got.every((c) => c.status === 'Regulier')).toBe(true);
+  });
+});
+
+// WP30c/E1 (ADR 048, Amendment B2 — the Task 4 "Amendment 3 test"): the deny
+// gate keeping an unannounced source (Eurostat, D3) off the live NL chat
+// finder/query path. As originally scoped this assertion could pass
+// VACUOUSLY — E1 registers zero real Eurostat tables (Task 7's own honest
+// empty state), so with nothing eurostat:-prefixed in cbs_catalog at all, "no
+// eurostat result is ever returned" would be true regardless of whether the
+// guard code exists. The fix (per Amendment B2, as ORIGINALLY built): hand-
+// insert a synthetic eurostat: candidate that would otherwise be a STRONG
+// match, then prove both a negative case and a positive control.
+//
+// Whole-branch-review correction (found before the PR, see recall.ts's own
+// header comment): the positive control originally toggled
+// EUROSTAT_EXPLORER_ENABLED to show the SAME candidate become reachable —
+// but that made the internal explorer's own visibility flag double as the
+// only thing protecting live chat from an unannounced source, so enabling
+// the explorer (the RUNBOOK's own documented next step) would ALSO have
+// lifted this deny gate. The filter is now UNCONDITIONAL, no flag at all.
+// The positive control is now the search mechanism itself: an
+// otherwise-identical row registered under a non-eurostat source (the third
+// test below) proves the query WOULD match this exact content — so the
+// first test's empty result is the filter actively working, not the
+// search failing to match anything in the first place.
+describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => {
+  let db: Db;
+  let close: () => Promise<void>;
+
+  beforeEach(async () => {
+    ({ db, close } = await createTestDb());
+    // A strong, unambiguous match for 'kwarkproductie' — no CBS row competes
+    // for this term, so a non-empty shortlist can ONLY mean the eurostat row
+    // got through.
+    await insertRow(db, {
+      id: 'eurostat:kwarkproductie_test',
+      title: 'Kwarkproductie kwarkproductie kwarkproductie',
+      summary: 'Synthetic Eurostat test row (Amendment B2) — never a real dataset.',
+      source: EUROSTAT_SOURCE_KEY,
+    });
+  });
+  afterEach(async () => {
+    await close();
+  });
+
+  it('an eurostat: candidate is NEVER recalled, unconditionally, even though it is the only match for the term', async () => {
+    const got = await recallCandidates(db, 'kwarkproductie', { limit: 10 });
+    expect(got).toEqual([]);
+    expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(false);
+  });
+
+  it('the gate never touches a CBS candidate for the same term (no over-filtering), and the same title IS recalled under a non-eurostat source — proving the search mechanism genuinely matches this content, so the eurostat exclusion above is the filter working, not a query that never matched', async () => {
+    await insertRow(db, {
+      id: 'CBS_KWARK_TEST',
+      title: 'Kwarkproductie kwarkproductie kwarkproductie (CBS)',
+      source: CBS_SOURCE_KEY,
+    });
+    const got = await recallCandidates(db, 'kwarkproductie', { limit: 10 });
+    expect(got.some((c) => c.tableId === 'CBS_KWARK_TEST')).toBe(true);
+    expect(got.some((c) => c.tableId === 'eurostat:kwarkproductie_test')).toBe(false);
   });
 });

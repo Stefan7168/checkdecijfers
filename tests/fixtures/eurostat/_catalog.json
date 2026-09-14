@@ -1,0 +1,29 @@
+{
+  "_header": "HAND-BUILT, PROVISIONAL Catalogue-API specimen (WP30c/E1 brief, Task 3) — NOT captured from the live Eurostat Catalogue API (Constraint 0: no live Eurostat API call happens this session). The response SHAPE itself ('link.item[]') is this session's best-effort, UNVERIFIED guess at Eurostat's documented 'table of contents' convention (see src/eurostat-adapter/jsonstat.ts's parseJsonStatCatalog doc comment) — it may need correcting, not just re-capturing, once a real response exists. Replace via `npm run fixtures:capture:eurostat` before treating catalog parsing as proven against real data.",
+  "synthetic": true,
+  "link": {
+    "item": [
+      {
+        "code": "demo_pjan",
+        "title": "Population on 1 January",
+        "type": "dataset",
+        "lastUpdate": "2026-01-15",
+        "lastModified": "2026-01-15"
+      },
+      {
+        "code": "namq_10_gdp",
+        "title": "GDP and main components (quarterly)",
+        "type": "dataset",
+        "lastUpdate": "2026-02-01",
+        "lastModified": "2026-02-01"
+      },
+      {
+        "code": "nrg_bal_c",
+        "title": "Energy balance",
+        "type": "dataset",
+        "lastUpdate": "2026-01-20",
+        "lastModified": "2026-01-20"
+      }
+    ]
+  }
+}

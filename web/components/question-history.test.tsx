@@ -19,6 +19,13 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
 vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
 
+// WP30c D7(b): an entry with a real answerEnvelope now makes QuestionHistory
+// look up ingestion_batches.request_urls (buildProofsByEntryKey) — mocked
+// here to an empty-rows stub, since this suite is about the panel's
+// existing behavior, not the new lookup itself (which has its own coverage
+// in registry.test.ts / answer-proof tests).
+vi.mock('../lib/db.ts', () => ({ getDb: () => ({ query: async () => ({ rows: [] }) }) }));
+
 import { QuestionHistory } from './question-history.tsx';
 
 afterEach(() => {

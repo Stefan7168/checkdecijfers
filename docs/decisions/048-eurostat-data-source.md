@@ -468,3 +468,65 @@ up as settled. No change.
   draft there; this ADR is not extended for it (D10).
 - Eurostat announces versioning, an API deprecation or a licence change → the adapter (D1) is the isolation
   seam, exactly as ADR 003 makes the CBS adapter the seam for the SDMX migration.
+
+## As-built (E1, session 101 continuation, autonomous overnight, 2026-09-14/15)
+
+**Built:** `src/eurostat-adapter/` (types, the JSON-stat 2.0 parser, the live `StatisticsApiSource`, the fixture
+replay), an `adapterFor('eurostat')` line, the eurostat `SourceInfo` registry entry, the source-scoped catalog
+prune (wiring point 1), the D7 migrations (031 DOI columns, 032 `request_urls` — file-only, unapplied), the
+D7(a)/(b) attribution and proof-panel code, the Amendment-3 deny gate in `src/catalog/recall.ts`, and the
+internal `EUROSTAT_EXPLORER_ENABLED`-gated explorer (`web/app/eurostat-explorer/`). Full detail, task by task:
+[session-briefs/2026-09-14-wp30c-e1-executor-brief.md](../session-briefs/2026-09-14-wp30c-e1-executor-brief.md)
+(the frozen brief, with its own second adversarial review's Amendments B1–B6 folded in) and
+[STATUS.md](../STATUS.md)'s session-101 entry. Branch `wp30c-e1-eurostat-adapter`, PR pending — autonomous,
+core-product code, never auto-merged (#118(b)).
+
+**Deviated from this ADR, deliberately, and why:**
+- **A new session-level scoping decision, "Constraint 0": no live Eurostat API call happened this session,
+  even a free read-only one** — the build-plan's WP30c entry pairs "any real Eurostat API spend" with "Live
+  DDL... never autonomous," and this session read that literally rather than assuming "spend" meant money
+  only. Consequence: every fixture is hand-built and explicitly `"synthetic": true`, never captured; zero
+  real Eurostat tables are registered; the Amendment-12 live smoke probe and Amendment 7's "verified against
+  real data" half stay open ([#249](../open-questions.md)). This ADR's own D9 E1 done-definition ("≥3 real
+  datasets rendered," a live smoke probe) is therefore NOT met by this build — a narrower, disclosed
+  done-definition in the executor brief was met instead. If this reading is overly conservative, that is the
+  owner's call on PR review, not this session's to assume.
+- **D6's `definitiveStatuses: ['']` is shipped as `[]` instead.** D6 assumed the unflagged status reaches
+  `isProvisionalStatus` as a genuine per-cell status; it doesn't — `src/ingestion/pipeline.ts`'s `status`
+  column has no per-cell path at all, only a per-period-code one (the CBS shape). An empty array makes every
+  Eurostat cell render provisional unconditionally instead — strictly safer, per principle (c), but a real
+  correction to D6's text, not a build detail. A scoped `pipeline.ts` change to carry a genuine per-row status
+  is now a named prerequisite before any Eurostat cell may render as anything but maximally cautious
+  ([#251](../open-questions.md)).
+- **The chip-visibility gap this build actually found, that neither this ADR nor its own pre-build review
+  anticipated:** merely registering a second `SourceInfo` entry made `web/components/chat.tsx`'s existing
+  WP129+130 source-chip row (`Object.keys(SOURCES).map(...)`) render and default-select a new "Eurostat data"
+  chip for every real user — a live violation of D3(b)/(c) that had nothing to do with any Eurostat data
+  existing yet. Fixed with a new `SourceInfo.chatSelectable` field (`true` for cbs, `false` for eurostat,
+  applied at both the chip UI and the server's untrusted-selection validator in `web/app/actions.ts`) — this
+  is now the actual mechanism D3(d)'s "flips on in E2's owner-signed sweep" refers to, not a hypothetical.
+- **`request_urls` (D7(b)) is wired at two of `buildAnswerProof`'s three call sites, not all three** — the
+  live chat proof panel (`chat.tsx`, `'use client'`, no server context) doesn't show it; replay and question
+  history do ([#252](../open-questions.md)). Applies to CBS proof panels too, so it is a coverage gap, not an
+  Eurostat-specific one.
+
+**A third real defect, found by the required final whole-branch review (after all tasks were built, before
+the PR) — the most serious of the three:** Task 4's live-chat deny gate (`src/catalog/recall.ts`) was
+originally implemented gated on `EUROSTAT_EXPLORER_ENABLED` — the SAME flag the internal explorer route
+checks for its own visibility. That coupling meant flipping the explorer flag on — exactly what this ADR's
+own RUNBOOK follow-up instructs doing, to check the explorer against a real registered table — would ALSO
+have lifted the only protection keeping a registered Eurostat row out of live chat, a direct D3(c) violation
+("never announced before it answers") with no code change needed to trigger it, just the documented next
+step. Fixed: the deny gate is now unconditional, no flag at all — confirmed safe because the explorer never
+depends on it (it reaches a table via an explicit-target intent, bypassing recall/discovery entirely). A
+related, lower-severity gap in the SAME review pass: the pre-existing #108 status-flip detection
+(`src/catalog/ingest.ts`) joined every registered table regardless of source, which would have caused a
+CBS-only refresh to spuriously report every registered Eurostat table as "flipped" the moment a real
+Eurostat catalog capture gives it a non-empty `currentCatalogStatuses` — fixed by scoping that join to the
+refresh's own source, with a regression test that exercises the scoping directly (a real registry-status
+dormancy, per Amendment B1, meant the bug couldn't be demonstrated with Eurostat's own current settings).
+
+**Confirmed still correct, unchanged:** D1 (no new abstraction — the adapter models `cbs-adapter/` exactly),
+D4 (id-prefix discipline), D5's zero-prompt-bytes claim (the benchmark ran byte-identical, 14/14+6/6+0
+fabricated, before and after this build), D8's ingestion posture, and every Alternative/Consequence not named
+above.

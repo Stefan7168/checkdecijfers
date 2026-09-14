@@ -18,6 +18,7 @@ import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture
 import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG, candidateWalk } from '../../src/catalog/index.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
+import { CBS_SOURCE_KEY } from '../../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/llm/tablefinder', import.meta.url));
 const CATALOG_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
@@ -56,7 +57,7 @@ describe('table finder — end-to-end replay against the labelled set', () => {
 
   beforeEach(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)));
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)), CBS_SOURCE_KEY);
   });
   afterEach(async () => {
     await close();

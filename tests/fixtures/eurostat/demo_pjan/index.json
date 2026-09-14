@@ -1,0 +1,6 @@
+{
+  "_header": "HAND-BUILT fixture manifest (WP30c/E1 brief, Task 3) — NOT captured from the live Eurostat API. See dataset.json's own _synthetic_notice for the full statement.",
+  "synthetic": true,
+  "dataset": "dataset.json",
+  "note": "Annual grain, single unit (NR), 3 geos x 3 years, no observation flags — the plain-happy-path specimen."
+}

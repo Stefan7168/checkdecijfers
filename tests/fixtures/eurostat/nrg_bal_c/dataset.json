@@ -1,0 +1,33 @@
+{
+  "synthetic": true,
+  "_synthetic_notice": "HAND-BUILT to the public JSON-stat 2.0 spec (https://json-stat.org/format/) for the WP30c/E1 brief's Task 3 — this is NOT a response captured from the live Eurostat Statistics API (Constraint 0). Replace via `npm run fixtures:capture:eurostat` before treating adapter conformance as proven against real data. Covers: the PER-UNIT MEASURE SPLIT (D6) — two distinct 'unit' categories in one dataset, each becoming its own CbsMeasure.",
+  "version": "2.0",
+  "class": "dataset",
+  "label": "Energy balance",
+  "id": ["unit", "geo", "time"],
+  "size": [2, 1, 2],
+  "dimension": {
+    "unit": {
+      "label": "Unit of measure",
+      "category": {
+        "index": { "GWH": 0, "KTOE": 1 },
+        "label": { "GWH": "Gigawatt-hour", "KTOE": "Thousand tonnes of oil equivalent" }
+      }
+    },
+    "geo": {
+      "label": "Geopolitical entity (reporting)",
+      "category": {
+        "index": { "NL": 0 },
+        "label": { "NL": "Netherlands" }
+      }
+    },
+    "time": {
+      "label": "Time",
+      "category": {
+        "index": { "2022": 0, "2023": 1 },
+        "label": { "2022": "2022", "2023": "2023" }
+      }
+    }
+  },
+  "value": [123.4, 130.25, 45, 46.1]
+}

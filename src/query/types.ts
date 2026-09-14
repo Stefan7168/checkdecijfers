@@ -196,6 +196,12 @@ export interface Attribution {
    * consumer resolves via resolveSource(), whose absent→'cbs' fallback (A1)
    * keeps those rows re-deriving byte-identically forever (R8). */
   source?: string;
+  /** WP30c D7(a), ADR 048: the source's DOI for this table, when it has one.
+   * OPTIONAL and additive: absent for every pre-Eurostat stored envelope and
+   * for every CBS table (no DOI concept), and for a Eurostat row whose DOI
+   * was never captured — buildAttributionLine renders the DOI clause only
+   * when present, never throwing on its absence (R8). */
+  doi?: string;
   /** Our last successful sync of this table (ISO timestamp). */
   syncedAt: string;
   /** The period span the cells cover, as CBS codes (equal for single-period). */

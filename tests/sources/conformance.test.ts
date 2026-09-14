@@ -12,6 +12,11 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
+import {
+  EurostatFixtureSource,
+  loadEurostatCatalogFixture,
+  loadEurostatFixtureTree,
+} from '../../src/eurostat-adapter/fixture-source.ts';
 import type { SourceAdapter } from '../../src/sources/adapters.ts';
 import {
   runSourceConformance,
@@ -24,9 +29,17 @@ const FIXTURES_ROOT = fileURLToPath(new URL('../fixtures', import.meta.url));
 
 /** Source key → fixture-replay adapter factory. Source N's author adds ONE
  * line here (the replay adapter must run the source's REAL parse code — the
- * FixtureSource pattern, ADR 003/030 D6). */
+ * FixtureSource pattern, ADR 003/030 D6).
+ *
+ * WP30c/E1 (ADR 048): the 'eurostat' line replays through the REAL
+ * jsonstat.ts parser, same as CBS's own line replays through parse-v4.ts —
+ * but every fixture it reads is HAND-BUILT synthetic data (Constraint 0: no
+ * live Eurostat API call happens this session), not a captured response.
+ * The fixtures/manifest say so themselves (tests/fixtures/eurostat/); this
+ * line proves the CODE PATH, not that real Eurostat data has been seen. */
 const FIXTURE_ADAPTERS: Record<string, (fixtureDir: string) => SourceAdapter> = {
   cbs: (dir) => new FixtureSource(loadFixtureDocsTree(dir), loadCatalogFixture(dir)),
+  eurostat: (dir) => new EurostatFixtureSource(loadEurostatFixtureTree(dir), loadEurostatCatalogFixture(dir)),
 };
 
 function discoverManifests(): Array<{ dir: string; manifest: SourceConformanceManifest }> {
