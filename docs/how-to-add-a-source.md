@@ -137,12 +137,19 @@ plain language — read them, fix the adapter or the declarations, never the har
 4. Migration only if actually needed (016 already widened `platform` and added the `source`
    columns + prefix CHECK) — numbered file, owner applies supervised.
 
-## Known WP30c wiring points (verified landmines — NOT yet wired; plan them into WP30c)
+## Known WP30c wiring points (verified landmines; #1 fixed by WP30c/E1, PR #23 — the rest are NOT yet wired)
 
-1. **`ingestCatalog`'s prune is not source-scoped** (`src/catalog/ingest.ts:66`): a second
-   source's catalog refresh would DELETE the other source's mirror rows. WP30c must scope the
-   prune (id prefix, or the migration-016 `source` column once applied) before any second
-   `catalog:refresh` runs.
+1. **✅ FIXED (WP30c/E1, PR [#23](https://github.com/Stefan7168/checkdecijfers/pull/23), session 101
+   continuation, 2026-09-14/15).** `ingestCatalog`'s prune is now source-scoped: it takes an explicit
+   `sourceKey` parameter and prunes `where source = $1 and refreshed_at < $2` (the migration-016
+   `source` column) — a second source's `catalog:refresh` can no longer delete another source's mirror
+   rows. Every call site (`src/catalog/cli.ts`) updated to pass its own key. The line below is the
+   ORIGINAL landmine text, kept as the historical record of what this fixed.
+
+   ~~`ingestCatalog`'s prune is not source-scoped (`src/catalog/ingest.ts:66`): a second source's
+   catalog refresh would DELETE the other source's mirror rows. WP30c must scope the prune (id
+   prefix, or the migration-016 `source` column once applied) before any second `catalog:refresh`
+   runs.~~
 2. **`recall.ts` filters `language = 'nl'`** — a non-Dutch-language catalog is invisible to the
    finder (interacts with the [#131](open-questions.md) i18n lane).
 3. **Compose display resolves `resolveSource(undefined)`** (`template.ts`, `refusals.ts`) —

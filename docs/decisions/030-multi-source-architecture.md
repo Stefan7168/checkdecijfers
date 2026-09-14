@@ -236,9 +236,10 @@ there). What landed:
    wired through it. **The onboarding-cron route is byte-untouched** — its literal-scan wiring
    pin stays literal; WP30c wires the money path when routing has a real second target.
 5. **The guide** — [docs/how-to-add-a-source.md](../how-to-add-a-source.md), incl. the verified
-   **known WP30c wiring points** (the un-scoped catalog prune wipe at ingest.ts:66, the
-   `language='nl'` finder filter, compose's `resolveSource(undefined)`, the cron-route adapter,
-   the missing region-taxonomy family, the A4 prompt sweep).
+   **known WP30c wiring points** (the un-scoped catalog prune wipe at ingest.ts:66 — **✅ fixed by
+   WP30c/E1, PR #23, session 101 continuation, 2026-09-14/15** — the `language='nl'` finder
+   filter, compose's `resolveSource(undefined)`, the cron-route adapter, the missing
+   region-taxonomy family, the A4 prompt sweep).
 
 **As-built deviations from the frozen brief (both measured in-session):** (a) F2's code-list
 grammar check is scoped to SERVABLE (non-schemaOnly) tables — first harness run caught CBS's own
