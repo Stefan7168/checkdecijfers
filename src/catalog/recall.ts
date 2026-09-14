@@ -4,10 +4,16 @@
 // are excluded (they carry no numbers, so they can never answer a numeric
 // question — principle c). Alias hints broaden the query so a renamed/official
 // title is still recalled from an everyday term.
+//
+// WP30c/E1 (ADR 048, Amendment B2/Amendment 3): this is also THE deny gate
+// keeping an unannounced source (Eurostat, D3) off the live NL chat path —
+// see the explicit EUROSTAT_EXPLORER_ENABLED filter below, right after the
+// SQL fetch.
 import type { Db } from '../db/types.ts';
 import type { CatalogCandidate } from './types.ts';
 import { ALIAS_HINTS, expandTopicTerms, type AliasHint } from './aliases.ts';
 import { buildIsCurrentPredicate } from './current-status.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 
 /** Regulier-first shortlist quotas (WP27 amendment A2, owner-approved
  *  2026-07-08). MEASURED driver: on the live 4,858-row mirror the raw top-20
@@ -78,7 +84,29 @@ export async function recallCandidates(
      where class_pos <= ${limitParam}
      order by is_current desc, class_pos
   `;
-  const { rows } = await db.query(sql, [...terms, limit, ...isCurrent.params]);
+  const { rows: rawRows } = await db.query(sql, [...terms, limit, ...isCurrent.params]);
+
+  // WP30c/E1 (ADR 048, Amendment B2/Amendment 3): THE deny gate on the live
+  // NL chat question's finder/query path. This is an EXPLICIT source/flag
+  // check, not the still-unlifted `language = 'nl'` filter above (which
+  // would happen to exclude Eurostat rows too today, but is D4 discovery
+  // scope, not a source gate, and stays unlifted regardless of this flag —
+  // relying on it here would silently break the moment it lifts). Derived
+  // via sourceKeyForTableId, the SAME id-prefix rule the registry itself
+  // uses (never the DB's own `source` mirror column, so this can never drift
+  // from what resolveSourceForTable would say about the same id) — every
+  // eurostat:-prefixed candidate is removed from the shortlist BEFORE Stage-2
+  // rerank ever sees it, unless EUROSTAT_EXPLORER_ENABLED is set. This is the
+  // ONLY thing standing between a hypothetical future eurostat: catalog row
+  // and a live chat answer while the source stays unannounced (D3); E1
+  // registers zero real Eurostat tables today (Constraint 0), so this gate
+  // is otherwise never exercised in production — proven with a hand-inserted
+  // synthetic candidate in tests/catalog/recall.test.ts.
+  const eurostatExplorerEnabled = process.env.EUROSTAT_EXPLORER_ENABLED === '1';
+  const rows = eurostatExplorerEnabled
+    ? rawRows
+    : rawRows.filter((r) => sourceKeyForTableId(r.table_id as string) !== EUROSTAT_SOURCE_KEY);
+
   const toCandidate = (r: Record<string, unknown>): CatalogCandidate => ({
     tableId: r.table_id as string,
     title: r.title as string,

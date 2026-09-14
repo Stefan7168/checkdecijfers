@@ -9,7 +9,7 @@ import { findTable, DISCLOSE_LIMIT } from '../../src/catalog/find.ts';
 import type { CatalogCandidate, FindTableQuery, RerankFn, RerankResult } from '../../src/catalog/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import type { Db } from '../../src/db/types.ts';
-import { CBS_SOURCE_KEY } from '../../src/sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../src/sources/registry.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
@@ -145,4 +145,60 @@ describe('findTable routing', () => {
     expect(outcome.kind).toBe('disclose');
     if (outcome.kind === 'disclose') expect(outcome.candidates.length).toBeLessThanOrEqual(DISCLOSE_LIMIT);
   });
+});
+
+// WP30c/E1 (ADR 048, Amendment B2/Amendment 3 — the Task 4 "Amendment 3
+// test"): the SAME deny gate proven at the recall.ts unit level
+// (tests/catalog/recall.test.ts), here exercised through the ACTUAL live
+// NL-chat finder entry point (findTable, wired into the chat path via
+// buildOnboardingFinder). A synthetic eurostat: candidate is hand-inserted
+// (mirroring Task 5's cross-source isolation-test pattern) so this assertion
+// cannot pass vacuously — a stub rerank that would confidently PICK it if it
+// ever reached Stage 2 proves the guard fires before rerank, not merely that
+// nothing matched.
+describe('findTable — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => {
+  let db: Db;
+  let close: () => Promise<void>;
+
+  beforeEach(async () => {
+    ({ db, close } = await createTestDb());
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
+    // No CBS table competes for this made-up term — a non-empty outcome can
+    // only mean the eurostat: candidate reached the shortlist.
+    await db.query(
+      `insert into cbs_catalog (table_id, title, summary, status, dataset_type, language, refreshed_at, source)
+       values ($1, $2, $3, $4, $5, $6, now(), $7)`,
+      [
+        'eurostat:kwarkexport_test',
+        'Kwarkexport kwarkexport kwarkexport',
+        'Synthetic Eurostat test row (Amendment B2) — never a real dataset.',
+        'Regulier',
+        'Numeric',
+        'nl',
+        EUROSTAT_SOURCE_KEY,
+      ],
+    );
+  });
+  afterEach(async () => {
+    delete process.env.EUROSTAT_EXPLORER_ENABLED;
+    await close();
+  });
+
+  it('negative case: flag unset — a confident-pick rerank never gets the chance to pick the eurostat: candidate', async () => {
+    delete process.env.EUROSTAT_EXPLORER_ENABLED;
+    const outcome = await findTable(db, q('kwarkexport'), { rerank: stubPickFirst(0.99) });
+    // Nothing reached the shortlist at all (no CBS competitor for this term).
+    expect(outcome).toEqual({ kind: 'none', reason: 'no_recall' });
+  });
+
+  it('positive control: flag set — the same candidate becomes reachable and confidently picked', async () => {
+    process.env.EUROSTAT_EXPLORER_ENABLED = '1';
+    const outcome = await findTable(db, q('kwarkexport'), { rerank: stubPickFirst(0.99) });
+    expect(outcome.kind).toBe('confident');
+    if (outcome.kind === 'confident') {
+      expect(outcome.pick.tableId).toBe('eurostat:kwarkexport_test');
+      expect(sourceKeyForTableId(outcome.pick.tableId)).toBe(EUROSTAT_SOURCE_KEY);
+    }
+  });
+
 });
