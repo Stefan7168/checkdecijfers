@@ -1,0 +1,12 @@
+{
+  "sourceKey": "eurostat",
+  "tables": [
+    { "tableId": "eurostat:demo_pjan" },
+    { "tableId": "eurostat:namq_10_gdp" },
+    { "tableId": "eurostat:nrg_bal_c" }
+  ],
+  "declaredPeriodStatuses": ["Published", "p", "e", "s", "f", "b", "c", "d", "u", "n", "z", ":"],
+  "declaredValueAttributes": ["None", "p", "e", "s", "f", "b", "c", "d", "u", "n", "z", ":"],
+  "declaredCatalogStatuses": [],
+  "declaredDatasetTypes": ["dataset"]
+}

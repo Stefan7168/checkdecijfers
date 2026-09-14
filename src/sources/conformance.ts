@@ -270,9 +270,15 @@ function checkRegistryEntry(
   if (undeclaredProvisional.length > 0) {
     f0(`provisionalDisplay key(s) not in declaredPeriodStatuses: ${undeclaredProvisional.join(', ')}.`);
   }
-  if (info.definitiveStatuses.length === 0) {
-    f0('definitiveStatuses is empty — every cell would render as provisional; declare which verbatim statuses are definitive.');
-  }
+  // WP30c/E1 (ADR 048 Amendment B1): an EMPTY definitiveStatuses is not
+  // automatically an authoring omission — it is the correct, deliberate,
+  // safe fail-direction for a source whose per-cell status has no plumbing
+  // into isProvisionalStatus at all (Eurostat's registry entry: every cell
+  // renders provisional, unconditionally, rather than guessing). This check
+  // used to hard-fail on empty, written back when CBS (which always has a
+  // real per-period status) was the only source; that assumption doesn't
+  // generalize. Nothing is UNSAFE about an empty array — it is strictly
+  // MORE cautious than any non-empty one — so this is no longer a failure.
   const undeclaredDefinitive = info.definitiveStatuses.filter((s) => !periodStatuses.has(s));
   if (undeclaredDefinitive.length > 0) {
     f0(`definitiveStatuses value(s) not in declaredPeriodStatuses: ${undeclaredDefinitive.join(', ')}.`);
@@ -292,9 +298,14 @@ function checkRegistryEntry(
   }
 
   const catalogStatuses = new Set(manifest.declaredCatalogStatuses);
-  if (info.currentCatalogStatuses.length === 0) {
-    f0('currentCatalogStatuses is empty — the finder could never rank any of this source\'s tables as current (A6).');
-  }
+  // WP30c/E1 (ADR 048, this source's own registry-entry comment): EMPTY is
+  // a genuinely valid state here too — Eurostat's catalog lifecycle
+  // vocabulary is unknown without a live Catalogue API call (Constraint 0),
+  // and the registry entry documents exactly how this degrades gracefully
+  // (buildIsCurrentPredicate's `= any(...)` is false for every row, same as
+  // its unregistered-source fallback) rather than guessing a value. This
+  // used to hard-fail on empty for the same reason as definitiveStatuses
+  // above — a CBS-only assumption, not a universal one.
   const undeclaredCurrent = info.currentCatalogStatuses.filter((s) => !catalogStatuses.has(s));
   if (undeclaredCurrent.length > 0) {
     f0(`currentCatalogStatuses value(s) not in declaredCatalogStatuses: ${undeclaredCurrent.join(', ')}.`);
@@ -303,10 +314,19 @@ function checkRegistryEntry(
   if (info.deepLink !== null && manifest.tables.length > 0) {
     const sampleId = manifest.tables[0]!.tableId;
     const url = info.deepLink(sampleId);
+    // D4: a non-CBS source's deep link embeds the NATIVE id (the part after
+    // the first ':'), never the '<sourcekey>:' prefix — every adapter
+    // "strips its own prefix internally" per the how-to-add-a-source guide's
+    // Step 2, and registry.ts's own Eurostat deepLink comment says the same.
+    // For CBS (bare ids, no ':') the native id IS the full id, so this is
+    // byte-identical to the old sampleId-verbatim check for every CBS
+    // fixture — only a prefixed id's check actually changes.
+    const colon = sampleId.indexOf(':');
+    const nativeId = colon >= 0 ? sampleId.slice(colon + 1) : sampleId;
     if (!url.startsWith('https://')) {
       f0(`deepLink('${sampleId}') is not an absolute https URL: '${url}'.`);
-    } else if (!url.includes(sampleId)) {
-      f0(`deepLink('${sampleId}') does not embed the table id verbatim: '${url}'.`);
+    } else if (!url.includes(nativeId)) {
+      f0(`deepLink('${sampleId}') does not embed the table's native id ('${nativeId}') verbatim: '${url}'.`);
     }
   }
 }

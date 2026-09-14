@@ -188,11 +188,17 @@ describe('F0 — registry-entry coherence failures', () => {
     expect(families(report)).toContain('F0_registry');
   });
 
-  it('empty definitiveStatuses, and definitiveStatuses outside the declared vocabulary', async () => {
-    expect(families(await run({ info: fakeSourceInfo({ definitiveStatuses: [] }) }))).toContain('F0_registry');
+  it('definitiveStatuses outside the declared vocabulary (still a real failure)', async () => {
     expect(families(await run({ info: fakeSourceInfo({ definitiveStatuses: ['Vastgesteld'] }) }))).toContain(
       'F0_registry',
     );
+  });
+
+  it('empty definitiveStatuses is NOT a failure (ADR 048 Amendment B1) — it is the deliberate, ' +
+    'strictly-safer-than-any-alternative fail-direction for a source with no per-cell status plumbing ' +
+    'at all (every cell renders provisional, unconditionally); Eurostat\'s own registry entry ships this ' +
+    'way in E1', async () => {
+    expect(families(await run({ info: fakeSourceInfo({ definitiveStatuses: [] }) }))).not.toContain('F0_registry');
   });
 
   it('nullReasonLabels keyed on an undeclared value attribute', async () => {
@@ -202,9 +208,12 @@ describe('F0 — registry-entry coherence failures', () => {
     expect(families(report)).toContain('F0_registry');
   });
 
-  it('empty currentCatalogStatuses', async () => {
+  it('empty currentCatalogStatuses is NOT a failure (ADR 048, this brief) — a source whose catalog ' +
+    'lifecycle vocabulary is genuinely unknown (Eurostat, Constraint 0: no live Catalogue API call) ' +
+    'degrades gracefully to "never ranked current" (src/catalog/current-status.ts\'s own documented ' +
+    'unregistered-source fallback), never to a guess', async () => {
     const report = await run({ info: fakeSourceInfo({ currentCatalogStatuses: [] }) });
-    expect(families(report)).toContain('F0_registry');
+    expect(families(report)).not.toContain('F0_registry');
   });
 
   it('currentCatalogStatuses outside the declared catalog vocabulary', async () => {

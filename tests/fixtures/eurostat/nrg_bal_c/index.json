@@ -1,0 +1,6 @@
+{
+  "_header": "HAND-BUILT fixture manifest (WP30c/E1 brief, Task 3) — NOT captured from the live Eurostat API. See dataset.json's own _synthetic_notice for the full statement.",
+  "synthetic": true,
+  "dataset": "dataset.json",
+  "note": "Annual grain, ONE geo, TWO unit categories (GWH, KTOE) — the per-unit measure-split specimen (D6)."
+}
