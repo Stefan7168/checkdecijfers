@@ -1037,6 +1037,41 @@ way. A true full rollback (hiding existing dataset threads too) would need gatin
 itself, not built and not needed for a same-day flag-flip revert. Migrations 026/027 are harmless
 to leave applied either way.
 
+## WP30c E1 (Eurostat adapter) — the one owner-supervised step (added 2026-09-14/15, session 101 continuation)
+
+E1 was built entirely autonomously on branch `wp30c-e1-eurostat-adapter` (PR pending), but one thing was
+deliberately NOT done autonomously: any live call to the real Eurostat API, even a free/read-only one — see
+[open-questions #249](open-questions.md) and ADR [048](decisions/048-eurostat-data-source.md)'s "As-built"
+section for the full reasoning ("Constraint 0"). Everything built and tested this session used hand-built,
+`"synthetic": true` fixtures instead of real captured responses.
+
+**The supervised step, once the PR is reviewed:**
+
+1. Confirm (or correct) the Constraint 0 reading — if "any real Eurostat API spend" in
+   [08-build-plan.md](08-build-plan.md)'s WP30c entry meant money, not any live call, say so and this step's
+   scope narrows; otherwise proceed as below.
+2. Run `npm run fixtures:capture:eurostat` (written, never executed this session — modelled on
+   `scripts/capture-cbs-fixtures.ts`) against the real Eurostat Statistics + Catalogue APIs. This will very
+   likely need corrections to `src/eurostat-adapter/statistics-api.ts`'s URL shapes and
+   `jsonstat.ts`'s `parseJsonStatCatalog` — both are explicitly commented as UNVERIFIED, best-effort
+   constructions from Eurostat's public docs, not measured wire facts (contrast with CBS's own
+   `odata-v4.ts`, which IS measured).
+3. Re-run `npx vitest run tests/sources` with the real captured fixtures replacing the synthetic ones in
+   `tests/fixtures/eurostat/` — this is also when ADR 048's Amendment-12 live smoke probe (the 500k/5M/413
+   cell-count thresholds) and Amendment 7's "verified against real data" half both become checkable for
+   real, not just structurally exercised.
+4. Only once that's green: register a real Eurostat table or two (through the normal
+   `catalog:refresh`/ingestion CLIs, now source-scoped per this session's Task 5 fix) and check
+   `/eurostat-explorer` (behind `EUROSTAT_EXPLORER_ENABLED=1`, still internal/noindexed) actually renders
+   real data end to end — table, chart, CSV, proof panel.
+5. Migrations 031 (DOI columns) and 032 (`request_urls`) are file-only, unapplied — apply them
+   (`npm run db:migrate`) whenever real Eurostat rows are expected to need them; harmless to apply early
+   (additive, nullable, zero effect on existing CBS rows).
+
+**Nothing here is a public go-live** — `EUROSTAT_EXPLORER_ENABLED` stays unset in production regardless, and
+none of this makes Eurostat answerable from live chat (that's E2, its own future design round + an
+owner-signed public-claim wording sweep, ADR 048 D3(d)).
+
 ## Running the web app locally WITH the real database (added 2026-09-09, session 90)
 
 `npm run web:dev` (or the `web` entry in `.claude/launch.json`) starts `next dev` with only

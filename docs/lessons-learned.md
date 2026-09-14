@@ -6,6 +6,47 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 continuation (2026-09-14/15, autonomous overnight) — WP30c E1 (Eurostat adapter), a second adversarial review round, and two real defects the review process itself did not catch
+
+- **A pre-build adversarial review of an executor brief is not the same as a whole-branch review of what
+  actually got built from it — both are needed, and they catch different things.** This session ran the
+  brief's own required second review (4 lenses, 6 confirmed findings, all genuinely real) BEFORE writing
+  any code, then built exactly to the amended brief. Even so, integrating the four parallel implementer
+  agents' work turned up a real, live-product-affecting bug none of the 8 review agents (4 in the design
+  review + several implementers) had found: merely adding a second `SourceInfo` registry entry made
+  `chat.tsx`'s existing WP129+130 source-chip UI render and default-select a brand-new "Eurostat data"
+  chip for every real chat user — a genuine violation of the "never announced before it answers" rule,
+  with zero Eurostat data involved. The reviews checked the BRIEF's own described tasks against the ADR;
+  none of them (or the implementers) traced what an EXISTING, unrelated feature (#129's dynamic chip row)
+  would do once a second registry key existed. **Lesson: when a change adds a new key/entry to a shared
+  registry/lookup table, explicitly grep for every `Object.keys()`/`Object.values()` iteration over that
+  registry across the whole codebase — not just the files the brief's tasks name — before considering the
+  change complete.** This is now the exact shape of bug a "whole-branch integration pass" step exists to
+  catch, distinct from and in addition to reviewing the brief itself.
+- **Trust but verify a subagent's own "done" report, even a detailed and confident one — one agent in this
+  build reported wiring `adapterFor('eurostat')` as done; it hadn't touched the file at all.** Caught only
+  because the orchestrator re-grepped the actual file rather than accepting the report at face value (this
+  matches the standing [[feedback_verify_agent_evidence]] memory lesson, now reconfirmed on a fresh
+  example). Every subsequent agent dispatch in this build was told explicitly that its own claims would be
+  independently re-verified — worth stating that up front in the prompt, not just checking after the fact.
+- **`git diff` printing "Binary files ... differ" for a plain `.ts` file is a real signal, not a tooling
+  quirk to shrug off.** One implementer agent's file (`statistics-api.ts`) carried a single stray null
+  byte (`\x00`) in place of an ordinary space inside a template literal — likely an artifact of how the
+  agent's own edit tool wrote that one character. The file still compiled and its tests still passed (a
+  null byte is legal inside a JS string), so nothing in the verification block would have caught it; only
+  noticing the anomalous diff output during the code-review pass did. Worth a standing habit: if a diff on
+  a text file claims "binary," treat that as a bug report on the file, not a diff-tool limitation, before
+  reading past it.
+- **A hard "no live API calls this session" reading, taken from one build-plan sentence, is worth stating
+  as its own named, disclosed constraint rather than silently building a lesser thing.** This session read
+  "any real Eurostat API spend stays owner-supervised, never autonomous" literally — no live HTTP call to
+  the free, public, read-only Eurostat API happened at all, even for fixture capture. That single decision
+  reshaped the entire build's honest done-definition (synthetic fixtures, zero real registered tables, two
+  of ADR 048's own done-definition items left open). Naming it explicitly ("Constraint 0") in the brief,
+  the ADR's as-built note, STATUS, and the PR body — with an explicit invitation for the owner to say
+  "spend meant money, not any call" if this was overly conservative — kept the scope decision visible and
+  owner-reversible instead of quietly narrowing what "done" meant.
+
 ## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
 
 - **Two sessions sharing one literal checkout (not separate worktrees) means `git add <file>`

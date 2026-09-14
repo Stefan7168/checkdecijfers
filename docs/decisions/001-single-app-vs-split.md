@@ -15,6 +15,12 @@ The notes repeatedly propose Next.js frontend + a separate Python/FastAPI "orche
 
 **Update (2026-07-12, session 41 — WP135).** `threads/` joins the as-built module set: the persisted chat-workspace conversation entity (ADR [033](033-chat-workspace-redesign.md)), a new top-level `src/` module owning the `chat_threads` read/write SQL + deterministic replay/context-rebuild, reachable web-side as `web/backend/threads` via the `../src` symlink. It sits beside `answer/`/`billing/` and holds the same split-seam intent (`sources/` + `websearch/` — WP129+130, ADR [032](032-websearch-augmentation.md) — likewise joined the set after the session-26 snapshot above; a fuller re-list is a stale-doc-sweep residual — **✅ CLOSED session 57 (2026-07-25): CLAUDE.md now lists `threads/`, `sources/` and `websearch/` alongside the original eight**).
 
+**Update (2026-09-14/15, session 101 continuation — WP30c E1).** `eurostat-adapter/` joins the as-built
+module set, a sibling to `cbs-adapter/` per ADR [048](048-eurostat-data-source.md) D1 ("no new provider
+abstraction, no parallel pipeline" — this is one more `SourceAdapter` behind the existing `sources/`
+waist, not a new boundary). No other module changed shape; `cbs-adapter/`'s own name and `Cbs*` wire-type
+names stay, per ADR 030 A5's unchanged verdict. CLAUDE.md's module list updated in the same change.
+
 ## Evaluation against the kickoff's four criteria
 
 **(a) Does the data layer need Python?** Not in Phase 0. The table operations are: fetch cells, filter by dimension, compare, difference, rank — all native SQL. Pandas earns its keep at multi-source joins, geodata, and statistical transforms; none of that exists before the enrichment phase (roadmap Phase 3+).

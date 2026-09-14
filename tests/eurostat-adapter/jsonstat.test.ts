@@ -90,6 +90,26 @@ describe('parseJsonStatDataset — period grammar over a full dataset', () => {
   });
 });
 
+describe('parseJsonStatDataset — decimals precision (LOW code-review fix)', () => {
+  it('counts decimals correctly for a value small enough that toString() uses exponential notation', () => {
+    // 0.0000001 -> '1e-7' in JS; a naive indexOf('.') scan finds no dot at
+    // all here (or the wrong one for a mantissa like '1.5e-8') and would
+    // report 0 decimals for a genuinely 7-decimal-place figure.
+    const raw = dataset({
+      id: ['unit', 'geo', 'time'],
+      size: [1, 1, 1],
+      dimension: {
+        unit: { category: { index: { PC: 0 } } },
+        geo: { category: { index: { NL: 0 } } },
+        time: { category: { index: { 2024: 0 } } },
+      },
+      value: [0.0000001],
+    });
+    const parsed = parseJsonStatDataset(raw, 'eurostat:tiny_value_test');
+    expect(parsed.schema.measures[0]!.decimals).toBe(7);
+  });
+});
+
 describe('parseJsonStatDataset — per-unit measure synthesis (D6)', () => {
   it('splits a dataset with 2 unit codes into 2 measures, each pinned to its own unit', () => {
     const raw = dataset({

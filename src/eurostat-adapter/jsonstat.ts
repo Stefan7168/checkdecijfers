@@ -234,13 +234,28 @@ function matchesSlice(sliceCoordinates: Record<string, string>, slice: CbsSlice 
   return true;
 }
 
+/** LOW-effort code-review finding, fixed: `v.toString()` can render a small
+ * magnitude in exponential notation (e.g. 1e-7), which has no '.' in the
+ * position a plain-decimal count expects — `decimalsOf` expands that case
+ * explicitly instead of assuming `toString()` never switches notation. */
+function decimalsOf(v: number): number {
+  if (!Number.isFinite(v) || Number.isInteger(v)) return 0;
+  const s = v.toString();
+  const eIndex = s.search(/[eE]/);
+  if (eIndex === -1) {
+    const dot = s.indexOf('.');
+    return dot === -1 ? 0 : s.length - dot - 1;
+  }
+  const mantissa = s.slice(0, eIndex);
+  const exponent = Number(s.slice(eIndex + 1));
+  const dot = mantissa.indexOf('.');
+  const mantissaDecimals = dot === -1 ? 0 : mantissa.length - dot - 1;
+  return Math.max(0, mantissaDecimals - exponent);
+}
+
 function maxDecimals(values: number[]): number {
   let max = 0;
-  for (const v of values) {
-    const s = v.toString();
-    const dot = s.indexOf('.');
-    if (dot !== -1) max = Math.max(max, s.length - dot - 1);
-  }
+  for (const v of values) max = Math.max(max, decimalsOf(v));
   return max;
 }
 

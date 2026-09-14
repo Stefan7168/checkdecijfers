@@ -14,6 +14,62 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-14/15, session 101 continuation, autonomous overnight —
+owner asleep/away, per the kickoff brief's "move mountains" mandate; verify against `git log`/`gh pr
+list` before trusting, since owner-present work may land after this).** WP30c phase E1 (the Eurostat
+adapter + internal explorer, ADR [048](decisions/048-eurostat-data-source.md)) is **BUILT** on branch
+`wp30c-e1-eurostat-adapter` — PR pending (about to be opened), **NOT merged** (autonomous, core-product
+code, [#118](open-questions.md)(b)). Full account: [08-build-plan.md](08-build-plan.md)'s WP30c entry,
+ADR 048's new "As-built" section, and the frozen executor brief
+([session-briefs/2026-09-14-wp30c-e1-executor-brief.md](session-briefs/2026-09-14-wp30c-e1-executor-brief.md)).
+
+**The short version:** this session followed the brief's required process — turned ADR 048 + the
+build-plan entry into a line-by-line executor brief, ran a SECOND full pre-build adversarial review (4
+lenses) against that frozen brief (6 confirmed findings folded in as Amendments B1–B6, one cross-lens
+corroborated), built per the amended brief, then ran a whole-branch integration/review pass that found
+**two more real defects neither adversarial review round caught**: (1) merely registering the Eurostat
+source made `chat.tsx`'s existing source-chip UI render and default-select a live "Eurostat data" chip
+for every real user — a genuine D3(b)/(c) violation with zero Eurostat data involved; fixed with a new
+`SourceInfo.chatSelectable` field, applied at both the chip UI and the server's untrusted-payload
+validator. (2) a stray null byte inside a hand-edited source file (`statistics-api.ts`) that made git
+treat it as binary — found by noticing `git diff` printed "Binary files differ" for a `.ts` file, fixed.
+A required LOW-effort `/code-review` pass over the full diff then found and fixed one more real bug
+(a decimals-counting function that mishandled exponential-notation numbers) and flagged one duplicated
+helper as a conscious, disclosed trade-off (architectural convention, not fixed).
+
+**One deliberate, disclosed scoping decision shapes everything built: "Constraint 0" — no live call to
+the real Eurostat API happened this session**, reading the build-plan's own "any real Eurostat API
+spend stays owner-supervised, never autonomous" line literally rather than assuming "spend" meant money
+only. Consequence: every fixture is hand-built and explicitly `"synthetic": true`; zero real Eurostat
+tables are registered; ADR 048's own E1 done-definition (real captures, a live smoke probe, ≥3 real
+datasets rendered) is **not** met — a narrower, disclosed done-definition in the brief was met instead.
+**Owner action needed on PR review: confirm this reading (or say "spend" meant money, not any live
+call), then run the one owner-supervised follow-up** — `npm run fixtures:capture:eurostat` (written,
+never executed) — which is what actually lets E1 be measured against ADR 048's own bar. See
+[open-questions #249](open-questions.md).
+
+**Full verification (measured, on the final commit before opening the PR):** root + web typecheck
+clean; backend suite 160 files / 2426 tests green (solo, the 8GB-machine OOM-avoidance convention);
+web suite 106 files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure
+from resource contention, confirmed gone on a solo re-run); hermetic benchmark 14/14 + 6/6 + 0
+fabricated, GATE PASS, byte-identical to before this build (zero prompt bytes touched anywhere in E1);
+a real `next build` succeeds with `/eurostat-explorer` as a dynamic route. `/code-review` LOW: 2
+findings, 1 fixed + regression-tested, 1 consciously skipped (a duplicated `nativeIdFrom` helper across
+4 files — this codebase's own established "no cross-adapter/registry import" convention, not an
+oversight).
+
+**New residuals recorded:** [#249](open-questions.md) (Constraint 0's owner-decision + the fixture-
+capture follow-up), [#250](open-questions.md) (two small Dutch-wording/catalog-status sign-offs),
+[#251](open-questions.md) (a real per-cell provisional-status pipeline gap this build's own adversarial
+review found and safely papered over — every Eurostat cell renders maximally provisional until a scoped
+`pipeline.ts` change lands, required before E2), [#252](open-questions.md) (`request_urls` not wired
+into the live-chat proof panel, only replay/history — a coverage gap, not Eurostat-specific).
+
+**Next steps:** (1) owner reviews and merges the PR (or requests changes); (2) owner decides Constraint
+0's reading; (3) if confirmed, run the fixture-capture follow-up under supervision, then re-verify
+against ADR 048's real done-definition; (4) WP30c E2 (natural-language querying) is its own future
+design round — not started, not to be started without the owner.
+
 **▶ SUPERSEDED (written 2026-09-14 ~09:33 UTC, session 101 continued overnight, autonomous — owner
 asleep; superseded same day, see the "continued" block right below).** Both pieces of pre-approved
 overnight work are DONE. Chart visual/embed pass merged to `main` (`b86556f`..`841cb83`, 7
