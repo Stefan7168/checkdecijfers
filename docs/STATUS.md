@@ -48,6 +48,9 @@ tables. No confirmed user-facing errors found in a live log sample, but the inci
 — true impact unconfirmed either way. Full account: [RUNBOOK.md](RUNBOOK.md)'s Pro subscription go-live section
 and [lessons-learned.md](lessons-learned.md). **Remaining Pro-subscription go-live steps (Stripe price object,
 env vars, webhook subscription, smoke test) are still NOT done** — the feature stays flag-gated/dormant.
+Readiness checked same day: existing `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` already set, code
+confirmed real; `STRIPE_PRO_PRICE_ID`/`PRO_SUBSCRIPTIONS_ENABLED` confirmed unset; the webhook
+destination's subscribed events could not be checked (no Stripe tool access) — see RUNBOOK.
 
 **Just shipped (2026-09-13/14, autonomous, pushed to `main`, no PR — chart/UI, not money-path):**
 a 3-task chart visual + embed plan

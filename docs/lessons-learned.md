@@ -8,6 +8,14 @@ on top.
 
 ## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
 
+- **No Stripe MCP tool is connected/available in this environment** (a `ToolSearch` for
+  "stripe webhook price product" returned only an unrelated Resend-webhooks toolset) — a future
+  session checking Stripe-side state (webhook event subscriptions, Price/Product objects) cannot do
+  it via a tool call here; verify what CAN be checked instead (`vercel env ls <env>` lists env var
+  NAMES, never values, which is enough to confirm a secret is set without touching it) and tell the
+  owner plainly which specific check needs their own Stripe Dashboard access, rather than guessing
+  or claiming a check was done that wasn't.
+
 - **A merge broke production for ~30 minutes because a PR's own written go-live checklist wasn't
   checked before merging it.** RUNBOOK.md already had a "Pro subscription go-live" section, written
   the same day PR #22 was built, whose step 1 said in bold: *"Apply migration 030 FIRST — before

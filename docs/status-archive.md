@@ -64,6 +64,16 @@ health check's design never anticipated.
 subscription, the flag) is still a separate, not-yet-done owner-supervised step (RUNBOOK steps 4-8).
 Eurostat/WP30c is scheduled but not started.
 
+**Addendum, same session:** owner asked to confirm the Stripe price/webhook steps were ready to
+run. Checked directly (`vercel env ls production` — names only, never values): `STRIPE_SECRET_KEY`/
+`STRIPE_WEBHOOK_SECRET` already set (72 days old, pre-existing from one-time credit-pack payments);
+`STRIPE_PRO_PRICE_ID`/`PRO_SUBSCRIPTIONS_ENABLED` confirmed not set. Read the checkout/webhook code
+directly and confirmed it's real, no stubs. No Stripe MCP tool is available in this environment, so
+the webhook destination's actual subscribed events (RUNBOOK step 7) could not be checked here — told
+the owner plainly rather than guessing. Owner also asked to stop task-suggestion popups; the one
+pending chip was withdrawn, but no tool exists here to disable the feature globally — told the owner
+that's an app-settings change outside this session's reach.
+
 ---
 
 **Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep — "keep going, make

@@ -363,6 +363,19 @@ Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
     where table_name in ('pro_subscriptions', 'pro_bucket_ledger') and grantee in ('anon', 'authenticated');
    ```
    Confirmed: `relrowsecurity = true` for both tables; zero rows from the second query. Locked down correctly.
+
+**Readiness check, 2026-09-14 (`vercel env ls production`, names only — never values, by design):**
+`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are ALREADY set in Production (72 days old, from the
+existing one-time credit-pack payment feature — nothing new needed for either). `STRIPE_PRO_PRICE_ID`
+and `PRO_SUBSCRIPTIONS_ENABLED` are confirmed NOT set — steps 4-6 below are genuinely still open. The
+code itself was read directly and confirmed real (no stubs/TODOs): `web/app/embed-actions.ts`'s
+`startProSubscriptionCheckout` checks the flag, then `STRIPE_SECRET_KEY`, then `STRIPE_PRO_PRICE_ID`,
+throwing loudly if either is missing while the flag is on; `src/billing/stripe-webhook.ts` dispatches
+real, non-stub branches for `customer.subscription.created/updated/deleted` and `invoice.paid`. **Not
+checkable from here — no Stripe MCP/API access in this environment:** whether the webhook
+destination is actually subscribed to those four event types yet (step 7) — verify in the Stripe
+Dashboard directly.
+
 4. **Create the Stripe Price object** for "Pro — €19.99/month" (Stripe Dashboard → Product catalog, or a one-off provisioning script) — subscriptions need a real recurring `Price` object; `buildProSubscriptionCheckoutParams` (`src/billing/stripe-checkout.ts`) references its ID rather than building `price_data` inline the way the one-time credit packs do. Copy the Price ID (`price_...`).
 5. **Set `STRIPE_PRO_PRICE_ID`** — Vercel env store, Production, plain (not Sensitive — a Price ID is not a credential) — the ID from step 4.
 6. **Set `PRO_SUBSCRIPTIONS_ENABLED=1`** — Vercel env store, Production. Without this, `startProSubscriptionCheckout` always returns `{ ok: false, reason: 'disabled' }` before touching Stripe at all — the embed dialog's Upgrade button keeps today's exact interest-only tracking behavior, never a crash, never a silent charge. With the flag on but `STRIPE_PRO_PRICE_ID`/`STRIPE_SECRET_KEY` missing, the action throws loudly instead (a deploy misconfiguration this checklist exists to prevent, not a graceful dormancy state) — set the price ID and the flag together, never the flag alone.

@@ -28,14 +28,22 @@ below it or in any other doc) → [08-build-plan.md](../08-build-plan.md) → th
 ## Current state (verify against `git log`/`gh pr list`/`gh run list` before trusting — this is a
 ## summary, not a substitute for the Golden Rule)
 
-- `main` is at `204df3d`. Git status clean, no stray worktrees, CI green on the last several
-  commits (docs-only pushes skip CI by design).
+- `main` is at `b427100` (this brief's own commit) plus a small wrap-up-2 addendum right after it —
+  check `git log` for the actual tip. Git status clean, no stray worktrees, CI green on the last
+  several commits (docs-only pushes skip CI by design).
 - Pro subscription tier: code is merged and LIVE but still flag-gated OFF
   (`PRO_SUBSCRIPTIONS_ENABLED` unset). Migration 030 is applied. Remaining go-live steps (4-8 in
   `RUNBOOK.md`'s Pro subscription go-live section) are NOT done: create the real Stripe Price
   object, set `STRIPE_PRO_PRICE_ID`, subscribe the webhook destination to
   `customer.subscription.*`/`invoice.paid`, set the flag, redeploy, smoke test. All owner-supervised
-  — do not do any of this autonomously.
+  — do not do any of this autonomously. **Readiness re-confirmed same day:** `STRIPE_SECRET_KEY`/
+  `STRIPE_WEBHOOK_SECRET` already set (pre-existing, from credit-pack payments), code read directly
+  and confirmed real; `STRIPE_PRO_PRICE_ID`/`PRO_SUBSCRIPTIONS_ENABLED` confirmed unset. **No Stripe
+  MCP tool is available in this environment** — whether the webhook destination is actually
+  subscribed to the four new event types (step 7) could not be checked from a session; that one
+  needs the owner's own Stripe Dashboard.
+- **Never call `spawn_task`** (the suggestion-chip tool) in this project — the owner asked to never
+  see that popup again (2026-09-14). Record real follow-up work as an `open-questions.md` row.
 - Migrations 026-030 are ALL now applied to production (five at once, in this session) — WP202a
   (attachments) and WP218 (chart styling) each had their own go-live checklists whose migration
   step is now also done; their OTHER remaining steps (env vars, flags) are still not done — check
