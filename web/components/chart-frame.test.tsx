@@ -12,18 +12,23 @@ import {
   FRAME_INSET_PX,
   FRAME_PADDING_PX,
   FRAME_SHADOW,
-  STOCK_PRESENTATION,
   type FrameValues,
 } from '../lib/chart-presentation.ts';
 
+// The literal bare/`isFramePristine` state (frameCorners 'square', frameShadow
+// 'none', …) — NOT `STOCK_PRESENTATION`'s frame slice. Since the chart-chrome
+// default polish (STOCK_PRESENTATION now resolves to 'rounded'/'soft'), the
+// two have diverged on purpose: this fixture exercises the "nothing at all"
+// mechanism `isFramePristine`/ChartFrame's fast path implement, independent
+// of whatever look the product currently defaults to.
 function frame(overrides: Partial<FrameValues> = {}): FrameValues {
   return {
-    frameBackground: STOCK_PRESENTATION.frameBackground,
-    framePadding: STOCK_PRESENTATION.framePadding,
-    frameCorners: STOCK_PRESENTATION.frameCorners,
-    frameShadow: STOCK_PRESENTATION.frameShadow,
-    frameInset: STOCK_PRESENTATION.frameInset,
-    frameAspect: STOCK_PRESENTATION.frameAspect,
+    frameBackground: 'none',
+    framePadding: 'none',
+    frameCorners: 'square',
+    frameShadow: 'none',
+    frameInset: 'none',
+    frameAspect: 'auto',
     ...overrides,
   };
 }

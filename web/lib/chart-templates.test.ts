@@ -17,8 +17,10 @@ const lineCtx: PresentationContext = { kind: 'line', form: 'line', seriesCount: 
 const barCtx: PresentationContext = { kind: 'bar', form: 'bar', seriesCount: 3, hasProvisional: true };
 
 describe('CHART_TEMPLATES — the v1 roster (ADR 043), pinned', () => {
-  it('lists the six looks in order with their catalogue keys', () => {
-    expect(CHART_TEMPLATES.map((t) => t.id)).toEqual(['standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal']);
+  it('lists the eight looks in order with their catalogue keys', () => {
+    expect(CHART_TEMPLATES.map((t) => t.id)).toEqual([
+      'standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal', 'warm', 'earth',
+    ]);
     for (const t of CHART_TEMPLATES) {
       expect(t.nameKey).toBe(`chart.template.${t.id}`);
       expect(t.descriptionKey).toBe(`chart.template.${t.id}Description`);

@@ -18,7 +18,7 @@ import {
   wrapAttributionText,
   type FrameExportInput,
 } from './chart-download.tsx';
-import { STOCK_PRESENTATION, type FrameValues } from '../lib/chart-presentation.ts';
+import type { FrameValues } from '../lib/chart-presentation.ts';
 
 afterEach(cleanup);
 
@@ -453,17 +453,21 @@ describe('attributedSvgMarkup — paint resolves against light theme even in dar
 
 // ---------------------------------------------------------------------------
 // Task 4 (design §C3): the frame baked into the export. `pristineFrame` is
-// `STOCK_PRESENTATION`'s frame slice — `isFramePristine` true, no image —
-// the binding case that must stay byte-identical to the pre-frame output.
+// the literal bare/`isFramePristine` state — no image — the binding case
+// that must stay byte-identical to the pre-frame output. Since the chart-
+// chrome default polish this is no longer `STOCK_PRESENTATION`'s own frame
+// slice (that now resolves to 'rounded'/'soft'); it stays hardcoded here so
+// the "nothing at all" baseline these tests build on doesn't drift with
+// whatever look the product currently defaults to.
 // ---------------------------------------------------------------------------
 
 const pristineFrame: FrameValues = {
-  frameBackground: STOCK_PRESENTATION.frameBackground,
-  framePadding: STOCK_PRESENTATION.framePadding,
-  frameCorners: STOCK_PRESENTATION.frameCorners,
-  frameShadow: STOCK_PRESENTATION.frameShadow,
-  frameInset: STOCK_PRESENTATION.frameInset,
-  frameAspect: STOCK_PRESENTATION.frameAspect,
+  frameBackground: 'none',
+  framePadding: 'none',
+  frameCorners: 'square',
+  frameShadow: 'none',
+  frameInset: 'none',
+  frameAspect: 'auto',
 };
 
 describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {

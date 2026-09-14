@@ -1508,12 +1508,17 @@ describe('ChartConfigPanel — Frame tab', () => {
     expect(screen.getByRole('button', { name: 'Verwijder afbeelding' })).toBeInTheDocument();
   });
 
-  it('Kader wissen is disabled while pristine and no image, emits the six stock values and clears the image otherwise', () => {
+  it('Kader wissen is disabled at the literal bare frame values and no image, emits the six bare values and clears the image otherwise', () => {
     const onChange = vi.fn();
     const onFrameImage = vi.fn();
+    // Since the chart-chrome default polish, `{}` overrides no longer land on
+    // the bare/`isFramePristine` state — STOCK_PRESENTATION itself now
+    // resolves frameCorners/frameShadow to 'rounded'/'soft'. Force the frame
+    // back to the literal bare state explicitly, so this still tests "Kader
+    // wissen" being disabled when there is truly nothing left to clear.
     const { rerender } = render(
       <Harness
-        resolved={resolvePresentation(lineCtx, {})}
+        resolved={resolvePresentation(lineCtx, { frameCorners: 'square', frameShadow: 'none' })}
         seriesMeta={colorMeta}
         onChange={onChange}
         onReset={vi.fn()}
@@ -1851,16 +1856,27 @@ describe('ChartConfigPanel — standalone rendering (no dialog/region of its own
 });
 
 describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
-  it('is the first tab; the panel opens on Grafiek when the caller does not opt into R5.2 (openTemplatesWhenPristine unset), and the gallery lists the six templates in order with their descriptions', () => {
+  it('is the first tab; the panel opens on Grafiek when the caller does not opt into R5.2 (openTemplatesWhenPristine unset), and the gallery lists the eight templates in order with their descriptions', () => {
     render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
     expect(tabs[0]).toBe('Sjablonen');
     expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
-    const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal)$/ });
-    expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual(['Basis', 'Klassiek', 'Redactie', 'Presentatie', 'Sociaal', 'Minimaal']);
+    const cards = screen.getAllByRole('radio', { name: /^(Basis|Klassiek|Redactie|Presentatie|Sociaal|Minimaal|Warm|Aards)$/ });
+    expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual([
+      'Basis',
+      'Klassiek',
+      'Redactie',
+      'Presentatie',
+      'Sociaal',
+      'Minimaal',
+      'Warm',
+      'Aards',
+    ]);
     expect(screen.getByText('Publicatieklaar: stevige lijn, geen franje, liggend formaat.')).toBeTruthy();
+    expect(screen.getByText('Een zachte kleurovergang, ideaal voor een redactioneel verhaal.')).toBeTruthy();
+    expect(screen.getByText('Een stevige lijn op een zandkleurige kaart, vierkant formaat.')).toBeTruthy();
     // Browser-pass fix: the column count follows the CARD's width (a container query), not the viewport.
     const gallery = screen.getByRole('radiogroup', { name: 'Sjablonen' });
     expect(gallery.className).toContain('grid-cols-2');

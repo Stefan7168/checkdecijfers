@@ -1,5 +1,102 @@
 # STATUS archive — the session log
 
+**Session 101 (2026-09-13, owner present, continued much further — this wrap-up) — ADR 047
+(repositioning), #245 built (test-DB perf + CI 3-way sharding, one real bug found+fixed live),
+Dependabot #16/#17 merged, and the Pro subscription tier brainstormed → spec'd → planned → build
+started (4 of 13 tasks done via subagent-driven-development, paused mid-review for wrap-up).**
+Verified against reality at wrap-up time (2026-09-13T13:41:50Z): `git log`, `gh pr view 21`,
+`gh run list`, `git worktree list`, `git status`.
+
+- **ADR [047](decisions/047-repositioning-embedded-sourced-chart.md)** (`dbeca08`) formalizes the
+  session-96/97 repositioning direction — *"chat your way from official-statistics research to an
+  embedded, sourced chart," CBS first, Eurostat second* — as an addendum on
+  [01-product-vision.md](01-product-vision.md) Q1 (alongside, not replacing, the original "prove
+  the hard part first" framing) and on [06-roadmap.md](06-roadmap.md) (live embeds as the Pro
+  plan's central pitch; Eurostat named/sequenced ahead of the rest of Phase 3's source list).
+  [Open-questions #237](open-questions.md) updated to point here — its "not yet an ADR" gap is
+  closed. Docs-only, CI-skipped, live immediately.
+- **Sidebar tap-target fix** (`17c84de`, [#238](open-questions.md) follow-up): the three controls
+  the session-98 phone walk deferred (`icon-xs`/`icon-sm`, 24/28px) widened to 44px below `sm` via
+  a scoped `size-11 sm:size-N` override — per an investigation that found only 4 total call sites
+  for those tokens (3 sidebar + the shared Dialog close button) and recommended NOT touching the
+  shared token itself (the Dialog close button and a documented dropdown anchor-width dependency
+  make that higher-risk). Web suite 1686/1686, `/code-review` LOW 0 findings. Deployed.
+- **[#245](open-questions.md) BUILT, both of the report's ready actions** (the diagnosis itself
+  was recorded earlier the same session, [session-briefs/2026-09-13-build-performance-diagnosis.md](session-briefs/2026-09-13-build-performance-diagnosis.md)):
+  - **Action 1, test-DB boot perf** (`0503a62`): `ledger.test.ts`/`ingestion.test.ts` now boot
+    PGlite once per file (`beforeAll`) + `TRUNCATE`-reset per test instead of a fresh boot per
+    test. Measured: ledger 126.9s→~24-34s (58/58 pass), ingestion 71.0s→8.25s (29/29 pass), full
+    backend suite 148 files/2262 tests unchanged pass count, zero cross-file leakage — verified
+    three independent ways (a subagent's own full-suite run, a manual read of the truncate-list
+    logic per-table, a second local re-run).
+  - **Action 2, CI 3-way sharding** (`9132052`, fixed same session by `9e4e7df`): the eleven
+    sequential backend domain steps replaced with a `backend` job (3-way `vitest run --shard=N/3`
+    matrix, closing the `tests/attachments`/`tests/usage` no-CI-step gap for free) plus a
+    separate parallel `web` job; benchmark run+score rides shard 1. **The first push broke `web`**
+    — splitting the job dropped the shared root `npm ci` its tests need via the `web/backend`
+    symlink (ADR 018 point 9) — caught live on run `34750330671` ("Failed to resolve import zod
+    from src/chart/brandfetch.ts"), fixed same session. Re-run `34750430890` confirmed fully
+    green end-to-end (`web` ✓, `backend (1/2/3)` ✓, `deploy` ✓) — production has run the sharded
+    workflow successfully on every push since.
+  - Action 3 (the shared reset helper + full call-site sweep) still waits on the owner's 3
+    sub-questions from the diagnosis — not started.
+- **Dependabot #16/#17 merged** (`0bbf72c`, `11b3f4a`) — both branches updated against current
+  `main` first (to get a fresh CI run against the new sharded workflow, since #16 bumps `vitest`
+  itself), both green, both squash-merged. Deploy `34751634000` confirmed fully green post-merge.
+  Zero Dependabot PRs remain open.
+- **PR #21 (R3, [#109](open-questions.md) reversal): re-verified green, still owner's to merge.**
+  The prior wrap-up's red CI (`34748057564`, doc-convention rule #132 live-PR-links) was already
+  fixed; a NEW wrinkle hit after that — the re-triggered run sat `queued` 45+ minutes with no
+  runner assigned, on a repo directly confirmed PUBLIC (so not the Actions-minutes billing
+  pattern RUNBOOK's "CI red that is NOT code" entry describes — see the RUNBOOK correction below).
+  Fixed the RUNBOOK's own prescribed way (a fresh commit forces a new check run): merged `main`
+  into `journey-r3-fetch-confirm` (`b8b5b41`, zero file overlap, clean). New run `34750329451`
+  completed **success**; `mergeStateStatus: CLEAN`/`mergeable: MERGEABLE` reconfirmed at wrap-up
+  time. **Still not merged — needs the owner's explicit go, no exception for an owner-present
+  session (money path).**
+- **RUNBOOK correction:** the "queued forever" CI symptom entry (originally recorded 2026-08-26,
+  assumed the private-repo Actions-minutes cause) is corrected — the SAME symptom recurred today
+  on a repo confirmed public, so it isn't exclusive to that cause; likely ordinary GitHub-hosted-
+  runner queue variance. The documented fix (a fresh commit) still worked either way — the lesson
+  is not to spend time diagnosing which cause it is before applying the fix.
+- **Pro subscription tier ([open-questions #205](open-questions.md)) — brainstormed, spec'd,
+  planned, build started.** Owner chose to design the real recurring-billing tier (reverses ADR
+  006/020's "no subscription" decision) rather than build behind a flag unreviewed. Full
+  brainstorm → design doc:
+  [session-briefs → superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md)
+  (`9258653`). Owner decisions: scope = Live embeds + a monthly credit allowance (not unlimited
+  chat); price = **€19.99/month, 1000 credits/period**; the allowance **resets, unused lost** (a
+  deliberate, scoped exception to "credits never expire" — implemented via a separate, isolated
+  ledger table so the exception can never leak into permanent/purchased credits, after tracing a
+  real fairness bug in a simpler clawback-based design); cancellation/failed-payment access
+  continues to `current_period_end`; ships **flag-gated off** (`PRO_SUBSCRIPTIONS_ENABLED`), same
+  posture as `EMBED_TOKEN_SECRET` — real mechanism, no real charge possible until the owner flips
+  it. 13-task implementation plan written and self-reviewed (`50830c9`):
+  [superpowers/plans/2026-09-13-pro-subscription-tier.md](superpowers/plans/2026-09-13-pro-subscription-tier.md).
+  **Build started via subagent-driven-development** on a kept worktree
+  (`.claude/worktrees/pro-subscription-tier`, branch `worktree-pro-subscription-tier`, NOT pushed
+  to origin, NOT merged — this is exactly the money-path branch+PR-before-anything-live posture).
+  **Tasks 1-3 complete and reviewed clean** (migration 030: `pro_subscriptions` +
+  `pro_bucket_ledger`; `src/billing/pro-bucket.ts` primitives; `splitDebit`/`compensateSplit` in
+  `ledger.ts`, one real atomicity gap found by the implementer and fixed before review — the
+  two-leg refund now wrapped in one transaction). **Task 4 (wiring `reserveDebit`/`chargeAndRun`,
+  the actual hot path) is DONE (commit `9c7dd75`, full backend suite 151 files/2304 tests green)
+  but NOT YET REVIEWED** — paused here for session wrap-up, a deliberately safe resumption point;
+  the SDD ledger (`.superpowers/sdd/2026-09-13-pro-subscription-tier/progress.md`, inside the
+  worktree) has the exact resume instructions. Tasks 5-13 not started. Tasks 6/7/8/11 are
+  pre-hardened against 3 real gaps a careful plan-writing pass already found and fixed (an
+  onboarding NOT-NULL constraint that would have needed real schema growth for a rare/heavy/
+  one-off action — resolved as a deliberate exclusion, not forced in; the exact
+  `webDebitHolder`/`settleWebAddon` diff for the websearch path; the embed dialog's real prop
+  shape) — so the remaining 9 tasks should need less mid-flight correction than the first 4 did.
+- **README.md corrected** (stale "ADRs 001–009" pointer — actually at ADR 047 now; added the
+  repositioning framing) as part of this wrap-up, since the owner's next step is a Claude-Design
+  slide deck that needs current architecture/direction docs.
+- **Clean state confirmed at wrap-up:** `main` clean, fully pushed, all CI green through the last
+  push (`11b3f4a`, deploy `34751634000` success); one worktree exists
+  (`.claude/worktrees/pro-subscription-tier`) and it's the Pro-plan build-in-progress, not a
+  stray — kept deliberately, documented above and in its own SDD ledger.
+
 **Session 101 (2026-09-13, owner present, continued further — wrap-up covers this entry) — chart Style panel
 became a real modal popup (#243), a real-browser review found and fixed a genuine overflow bug, R3/#109's
 confirm-first onboarding fetch was built and opened as PR #21, and a build/CI performance diagnosis was

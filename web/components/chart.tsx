@@ -1348,19 +1348,6 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
-  // RegionBar call site shares the SAME handler, rather than each of the
-  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
-  // A truthy onPointClick is what makes those components render
-  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
-  // function's own ternaries) — undefined here removes all of that at
-  // once. Without this, embedMode still left every chart point a
-  // focusable, ARIA-labeled phantom control with nothing to open, since
-  // ChartNotes (the panel, gated below) is a different thing from the
-  // per-point click/focus affordance built into the markers themselves.
-  // Task 3 (ADR 044): also undefined in stage mode — the full-viewport
-  // stage is a step-driven presentation surface, not a note-taking one.
-  const onPointClick = embedMode || inStage ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -1417,7 +1404,7 @@ export function ChartView({
   // Story mode (session 92): Style and Story share the slot under the chart —
   // one open at a time, so a single discriminated value replaces the old
   // boolean (`styleOpen` is derived, every existing read of it is unchanged).
-  const [openPanel, setOpenPanel] = useState<'style' | 'story' | null>(null);
+  const [openPanel, setOpenPanel] = useState<'style' | 'story' | 'embed' | null>(null);
   const styleOpen = openPanel === 'style';
   // Final-review fix: a derived setter must route a `false` through the
   // story exactly like `toggleStylePanel` already does — restoring the
@@ -1433,6 +1420,47 @@ export function ChartView({
     }
     setOpenPanel(open ? 'style' : null);
   };
+  // Task 3 (chart-visual-embed-pass plan): Embed shares the same discriminated
+  // `openPanel` slot as Style/Story. Review fix: opening Embed while a story
+  // is showing must restore the reader's own snapshot FIRST (closeStory) —
+  // the same guard `toggleStylePanel` and `selectForm` already apply before
+  // ever landing on a non-story `openPanel` value — otherwise the snapshot
+  // taken by `openStory` is never restored or cleared (it is only ever
+  // consumed by `closeStory`), silently stranding it. `closeStory` is a
+  // function declaration further down this component, so JS hoists it
+  // before this component body runs — calling it here, ahead of its own
+  // textual definition, is safe (same reasoning as `setStyleOpen` above).
+  const embedOpen = openPanel === 'embed';
+  const setEmbedOpen = (open: boolean): void => {
+    if (open && openPanel === 'story') closeStory();
+    setOpenPanel(open ? 'embed' : null);
+  };
+  // Review fix (spec Part B3): hoisted once so every SeriesDot/SeriesBar/
+  // RegionBar call site shares the SAME handler, rather than each of the
+  // four sites re-deriving its own `embedMode ? undefined : ...` ternary.
+  // A truthy onPointClick is what makes those components render
+  // role="button"/tabIndex/the note aria-label/a pointer cursor (see each
+  // function's own ternaries) — undefined here removes all of that at
+  // once. Without this, embedMode still left every chart point a
+  // focusable, ARIA-labeled phantom control with nothing to open, since
+  // ChartNotes (the panel, gated below) is a different thing from the
+  // per-point click/focus affordance built into the markers themselves.
+  // Task 3 (ADR 044): also undefined in stage mode — the full-viewport
+  // stage is a step-driven presentation surface, not a note-taking one.
+  // Task 3 (chart-visual-embed-pass, review fix): also undefined while the
+  // Embed preview is open — the same "read-only preview" reasoning as
+  // notesNode's own `!embedMode` gate below, just applied to the OTHER
+  // "read-only preview" surface this file now has. Without this, clicking a
+  // point inside the embed modal's chart set `pendingPoint` as if starting a
+  // note, but the note composer (`notesNode`) is deliberately not rendered
+  // there, so the click silently did nothing visible until the dialog closed
+  // and the stale pending point's composer appeared back in the dock —
+  // confusing, and the composer is not the right fix (an embed preview is
+  // meant to show exactly what gets published, not double as a scratchpad).
+  // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
+  // to live) purely because `embedOpen` is derived from `openPanel`, which
+  // isn't in scope any earlier in this component.
+  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => setPendingPoint(p);
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
   // releases it the moment that stops being true (panel closed, or this
@@ -2893,7 +2921,12 @@ export function ChartView({
           </select>
         </div>
       ) : null}
-      {!styleOpen ? canvasNode : null}
+      {/* Task 3 (chart-visual-embed-pass): also suppressed while the Embed
+        * dialog is open — the same canvasNode element is now ALSO passed
+        * into ChartEmbedButton's chartSlot below, and the no-double-mount
+        * invariant this node's own declaration documents (never both at
+        * once) applies just as much to embed as it does to style. */}
+      {!styleOpen && !embedOpen ? canvasNode : null}
       {/* Story mode (session 92): the same slot as the Opmaak region — chart
         * first, the story under it — and, like ChartNotes, OUTSIDE
         * chartContainerRef so no caption can ever enter an export. */}
@@ -3129,7 +3162,10 @@ export function ChartView({
           {spec.attribution.trendHeadline}
         </p>
       ) : null}
-      {!styleOpen ? legendNode : null}
+      {/* Task 3 (chart-visual-embed-pass): same no-double-mount reasoning as
+        * canvasNode above — legendNode is also lifted into the Embed
+        * dialog's chartSlot now. */}
+      {!styleOpen && !embedOpen ? legendNode : null}
       {/* Task 4: shown whenever a period-range zoom is active, independent of
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
@@ -3251,7 +3287,20 @@ export function ChartView({
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          <ChartEmbedButton auditId={embed.auditId} tableId={spec.attribution.tableId} lang={chartLang} currentForm={state.form} />
+          <ChartEmbedButton
+            auditId={embed.auditId}
+            tableId={spec.attribution.tableId}
+            lang={chartLang}
+            currentForm={state.form}
+            open={embedOpen}
+            onOpenChange={setEmbedOpen}
+            chartSlot={
+              <>
+                {canvasNode}
+                {legendNode}
+              </>
+            }
+          />
         ) : null}
       </div>
       {embedMode && embedFooter ? (

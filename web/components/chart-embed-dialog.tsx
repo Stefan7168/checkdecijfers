@@ -31,14 +31,22 @@
 // the repo; every other ui/*.tsx file imports only `cn` from the real npm
 // package plus external packages. No hand-rolled modal was needed as a
 // result.
+//
+// Task 3 (chart-visual-embed-pass, session 101): `ChartEmbedDialog` no
+// longer renders `Dialog`/`DialogContent` itself — its content now mounts
+// inside the shared `ChartEditModal` shell (chart-edit-modal.tsx), which
+// wraps this SAME Base UI Dialog primitive and adds the chart-on-the-left/
+// controls-on-the-right split pane, mirroring the Style editor. Everything
+// above about the primitive itself (jsdom/vitest compatibility, the
+// relative-import fix) still applies — it now lives one layer up.
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createEmbedCode, startProSubscriptionCheckout } from '../app/embed-actions.ts';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
+import { ChartEditModal } from './chart-edit-modal.tsx';
 import { Button } from './ui/button.tsx';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog.tsx';
 
 // Exported (final review, Important #1): chart.tsx's own embed-footer
 // backlink needs this SAME resolved origin — before this fix it hardcoded
@@ -82,6 +90,9 @@ export function ChartEmbedButton({
   tableId,
   lang,
   currentForm = null,
+  open,
+  onOpenChange,
+  chartSlot,
 }: {
   auditId: number;
   tableId: string;
@@ -91,13 +102,20 @@ export function ChartEmbedButton({
    * case "As shown" degrades to the spec's own default (same as omitting
    * `form` from the query string). */
   currentForm?: string | null;
+  // Task 3 (chart-visual-embed-pass): controlled, mirroring
+  // ChartConfigPanel's own open/onOpenChange contract — chart.tsx lifts this
+  // into its shared `openPanel` state so Style/Story/Embed share one slot.
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** The live chart canvas + legend, lifted from chart.tsx — rendered inside
+   * the embed modal's left pane, mirroring the Style editor's chartSlot. */
+  chartSlot: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <>
-      <Button ref={triggerRef} type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>
+      <Button ref={triggerRef} type="button" variant="ghost" size="sm" onClick={() => onOpenChange(true)}>
         {t(lang, 'chart.embed.trigger')}
       </Button>
       {open ? (
@@ -106,8 +124,9 @@ export function ChartEmbedButton({
           tableId={tableId}
           lang={lang}
           currentForm={currentForm}
+          chartSlot={chartSlot}
           onClose={() => {
-            setOpen(false);
+            onOpenChange(false);
             triggerRef.current?.focus();
           }}
         />
@@ -121,12 +140,14 @@ function ChartEmbedDialog({
   tableId,
   lang,
   currentForm,
+  chartSlot,
   onClose,
 }: {
   auditId: number;
   tableId: string;
   lang: Lang;
   currentForm: string | null;
+  chartSlot: ReactNode;
   onClose: () => void;
 }) {
   const [result, setResult] = useState<{ token: string; pro: boolean } | 'loading' | 'unavailable'>('loading');
@@ -189,142 +210,134 @@ function ChartEmbedDialog({
         );
 
   return (
-    <Dialog
-      open
-      onOpenChange={(next: boolean) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent aria-modal="true" className="sm:max-w-md">
-        <DialogTitle>{t(lang, 'chart.embed.dialogTitle')}</DialogTitle>
-        <DialogDescription>{t(lang, 'chart.embed.dialogExplain')}</DialogDescription>
+    <ChartEditModal open onClose={onClose} title={t(lang, 'chart.embed.dialogTitle')} chartSlot={chartSlot}>
+      <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
 
-        {result === 'loading' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.loading')}</p> : null}
-        {result === 'unavailable' ? <p className="text-xs text-destructive">{t(lang, 'chart.embed.unavailable')}</p> : null}
+      {result === 'loading' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.loading')}</p> : null}
+      {result === 'unavailable' ? <p className="text-xs text-destructive">{t(lang, 'chart.embed.unavailable')}</p> : null}
 
-        {code !== null && result !== 'loading' && result !== 'unavailable' ? (
-          <>
-            <fieldset>
-              <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.languageLabel')}</legend>
-              <label className="mr-3 text-xs">
-                <input type="radio" name="embed-lang" checked={embedLang === 'nl'} onChange={() => setEmbedLang('nl')} />{' '}
-                {t(lang, 'chart.panel.languageNl')}
+      {code !== null && result !== 'loading' && result !== 'unavailable' ? (
+        <>
+          <fieldset>
+            <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.languageLabel')}</legend>
+            <label className="mr-3 text-xs">
+              <input type="radio" name="embed-lang" checked={embedLang === 'nl'} onChange={() => setEmbedLang('nl')} />{' '}
+              {t(lang, 'chart.panel.languageNl')}
+            </label>
+            <label className="text-xs">
+              <input type="radio" name="embed-lang" checked={embedLang === 'en'} onChange={() => setEmbedLang('en')} />{' '}
+              {t(lang, 'chart.panel.languageEn')}
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.colourLabel')}</legend>
+            {COLOUR_OPTIONS.map((c) => (
+              <label key={c} className="mr-3 text-xs">
+                <input type="radio" name="embed-colour" checked={colour === c} onChange={() => setColour(c)} />{' '}
+                {t(lang, COLOUR_LABEL_KEY[c])}
               </label>
-              <label className="text-xs">
-                <input type="radio" name="embed-lang" checked={embedLang === 'en'} onChange={() => setEmbedLang('en')} />{' '}
-                {t(lang, 'chart.panel.languageEn')}
+            ))}
+          </fieldset>
+
+          <fieldset>
+            <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.chartTypeLabel')}</legend>
+            {CHART_TYPE_OPTIONS.map((ct) => (
+              <label key={ct} className="mr-3 text-xs">
+                <input type="radio" name="embed-type" checked={chartType === ct} onChange={() => setChartType(ct)} />{' '}
+                {t(lang, CHART_TYPE_LABEL_KEY[ct])}
               </label>
-            </fieldset>
+            ))}
+          </fieldset>
 
-            <fieldset>
-              <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.colourLabel')}</legend>
-              {COLOUR_OPTIONS.map((c) => (
-                <label key={c} className="mr-3 text-xs">
-                  <input type="radio" name="embed-colour" checked={colour === c} onChange={() => setColour(c)} />{' '}
-                  {t(lang, COLOUR_LABEL_KEY[c])}
-                </label>
-              ))}
-            </fieldset>
-
-            <fieldset>
-              <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.chartTypeLabel')}</legend>
-              {CHART_TYPE_OPTIONS.map((ct) => (
-                <label key={ct} className="mr-3 text-xs">
-                  <input type="radio" name="embed-type" checked={chartType === ct} onChange={() => setChartType(ct)} />{' '}
-                  {t(lang, CHART_TYPE_LABEL_KEY[ct])}
-                </label>
-              ))}
-            </fieldset>
-
-            <div className="flex items-center gap-2">
-              <input
-                role="switch"
-                type="checkbox"
-                id={liveSwitchId}
-                checked={live}
-                disabled={!result.pro}
-                aria-describedby={!result.pro ? liveReasonId : undefined}
-                onChange={(e) => setLive(e.target.checked)}
-              />
-              <label htmlFor={liveSwitchId} className="text-xs">
-                {t(lang, 'chart.embed.liveLabel')}
-              </label>
-              {!result.pro ? (
-                <span id={liveReasonId} className="text-xs text-muted-foreground">
-                  {t(lang, 'chart.embed.liveProOnly')} {t(lang, 'chart.embed.proPrice')}
-                </span>
-              ) : null}
-            </div>
-
+          <div className="flex items-center gap-2">
+            <input
+              role="switch"
+              type="checkbox"
+              id={liveSwitchId}
+              checked={live}
+              disabled={!result.pro}
+              aria-describedby={!result.pro ? liveReasonId : undefined}
+              onChange={(e) => setLive(e.target.checked)}
+            />
+            <label htmlFor={liveSwitchId} className="text-xs">
+              {t(lang, 'chart.embed.liveLabel')}
+            </label>
             {!result.pro ? (
-              <div>
-                {upgradeClicked ? (
-                  <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.proUpgradeThanks')}</p>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={checkingOut}
-                    onClick={async () => {
-                      setCheckingOut(true);
-                      const result = await startProSubscriptionCheckout();
-                      if (result.ok) {
-                        window.location.href = result.url;
-                        return; // navigating away; no need to reset checkingOut
-                      }
-                      // Flag off, not signed in (shouldn't happen — this
-                      // dialog only mounts for a signed-in embed creator,
-                      // but fail safe), or a transient Stripe/checkout
-                      // failure (`checkout_failed` — review fix round) —
-                      // every non-ok reason falls through identically to
-                      // the original interest-tracking behaviour, never
-                      // leaves the button stuck disabled. See the
-                      // `upgradeClicked` declaration above.
-                      setCheckingOut(false);
-                      trackChartStyleEvent('pro_upgrade_click');
-                      setUpgradeClicked(true);
-                    }}
-                  >
-                    {t(lang, 'chart.embed.proUpgradeCta')}
-                  </Button>
-                )}
-              </div>
+              <span id={liveReasonId} className="text-xs text-muted-foreground">
+                {t(lang, 'chart.embed.liveProOnly')} {t(lang, 'chart.embed.proPrice')}
+              </span>
             ) : null}
+          </div>
 
-            <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{code}</pre>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(code);
-                    // embed_copy counts a real, successful copy only —
-                    // mirrors chart.tsx's own default_saved/default_forgotten
-                    // precedent, which fires its tracking call solely inside
-                    // the `if (r.ok)` branch of a fallible operation, never
-                    // unconditionally after it. Both lines below must stay
-                    // inside this try, after the await above succeeds.
-                    setCopied(true);
-                    trackChartStyleEvent('embed_copy');
-                  } catch {
-                    // Clipboard API unavailable/refused — the visible <pre>
-                    // above is the manual-copy fallback; a caught failure
-                    // just means the button doesn't flip to "Copied!" and
-                    // embed_copy does not fire. Nothing further to do here.
-                  }
-                }}
-              >
-                {copied ? t(lang, 'chart.embed.copyCodeCopied') : t(lang, 'chart.embed.copyCode')}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-                {t(lang, 'chart.embed.close')}
-              </Button>
+          {!result.pro ? (
+            <div>
+              {upgradeClicked ? (
+                <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.proUpgradeThanks')}</p>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={checkingOut}
+                  onClick={async () => {
+                    setCheckingOut(true);
+                    const result = await startProSubscriptionCheckout();
+                    if (result.ok) {
+                      window.location.href = result.url;
+                      return; // navigating away; no need to reset checkingOut
+                    }
+                    // Flag off, not signed in (shouldn't happen — this
+                    // dialog only mounts for a signed-in embed creator,
+                    // but fail safe), or a transient Stripe/checkout
+                    // failure (`checkout_failed` — review fix round) —
+                    // every non-ok reason falls through identically to
+                    // the original interest-tracking behaviour, never
+                    // leaves the button stuck disabled. See the
+                    // `upgradeClicked` declaration above.
+                    setCheckingOut(false);
+                    trackChartStyleEvent('pro_upgrade_click');
+                    setUpgradeClicked(true);
+                  }}
+                >
+                  {t(lang, 'chart.embed.proUpgradeCta')}
+                </Button>
+              )}
             </div>
-          </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+          ) : null}
+
+          <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{code}</pre>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(code);
+                  // embed_copy counts a real, successful copy only —
+                  // mirrors chart.tsx's own default_saved/default_forgotten
+                  // precedent, which fires its tracking call solely inside
+                  // the `if (r.ok)` branch of a fallible operation, never
+                  // unconditionally after it. Both lines below must stay
+                  // inside this try, after the await above succeeds.
+                  setCopied(true);
+                  trackChartStyleEvent('embed_copy');
+                } catch {
+                  // Clipboard API unavailable/refused — the visible <pre>
+                  // above is the manual-copy fallback; a caught failure
+                  // just means the button doesn't flip to "Copied!" and
+                  // embed_copy does not fire. Nothing further to do here.
+                }
+              }}
+            >
+              {copied ? t(lang, 'chart.embed.copyCodeCopied') : t(lang, 'chart.embed.copyCode')}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              {t(lang, 'chart.embed.close')}
+            </Button>
+          </div>
+        </>
+      ) : null}
+    </ChartEditModal>
   );
 }
