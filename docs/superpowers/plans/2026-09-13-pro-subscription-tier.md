@@ -90,6 +90,11 @@ create table pro_subscriptions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- ⚠ As-built correction (Task 9's review + fix round, commit `1068013`): the real migration 030
+-- also has `last_event_at timestamptz not null default now()` — a DEDICATED column for Stripe
+-- webhook out-of-order-delivery detection, added because `updated_at` above must keep its
+-- ordinary wall-clock meaning for every other writer (see Task 9 and Task 10 below). See the real
+-- `migrations/030_pro_subscriptions.sql`.
 
 -- Guarded FK to auth.users, conditional on the auth schema existing —
 -- migration 026's exact pattern (itself migration 019's/005's). No `on
@@ -1314,6 +1319,13 @@ export function buildProSubscriptionCheckoutParams(
 }
 ```
 
+**⚠ As-built correction (found by Task 9's review, fixed in commit `1068013`): the sketch above is
+BROKEN — session-level `metadata` is never copied onto the Subscription object Stripe creates, so
+every real `customer.subscription.*` webhook would arrive with empty metadata and the whole
+feature would silently never write a `pro_subscriptions` row for a real paying customer.** The real
+implementation also sets `subscription_data: { metadata: { userId } }` (the field Stripe actually
+propagates) alongside the session-level one. See the real `src/billing/stripe-checkout.ts`.
+
 - [ ] **Step 5: Run to verify it passes**
 
 Run: `npx vitest run tests/billing/stripe-checkout.test.ts`
@@ -1465,6 +1477,20 @@ async function upsertProSubscription(db: Db, subscription: Stripe.Subscription):
   return { handled: true, alreadyProcessed: false, ledgerId: null };
 }
 ```
+
+**⚠ As-built correction (Task 9's own review + fix round, commit `1068013`):** the sketch above is
+missing the out-of-order-webhook guard the real implementation needed — Stripe does not guarantee
+delivery order, and a stale event landing after a newer one would otherwise clobber the row with
+wrong state. The real `upsertProSubscription` adds a dedicated `last_event_at timestamptz` column
+(migration 030, amended — not `updated_at`, which stays ordinary wall-clock semantics for every
+other writer including Task 10 below) and gates the UPDATE with
+`... on conflict (user_id) do update set ... where excluded.last_event_at >= pro_subscriptions.last_event_at`,
+setting `last_event_at` from the Stripe event's own `event.created` on both INSERT and UPDATE. **Any
+future writer that can CREATE this row (including Task 10 below, if `invoice.paid` ever arrives
+before the subscription's own `created` event and needs to upsert rather than plain-UPDATE) MUST
+set `last_event_at` from its own event's `created` timestamp — never leave it at a bare
+`default now()`, or a genuinely earlier-but-later-delivered event will be wrongly rejected.** See
+the real `src/billing/stripe-webhook.ts` and `migrations/030_pro_subscriptions.sql`.
 
 Add before the final `return { handled: false, alreadyProcessed: false, ledgerId: null };`:
 
