@@ -77,7 +77,7 @@ route. `/code-review` LOW: 2 findings, 1 fixed + regression-tested, 1 consciousl
 `nativeIdFrom` helper across 4 files — matches this codebase's own established "no cross-adapter/registry
 import" convention, not an oversight).
 
-**PR #23 opened** (https://github.com/Stefan7168/checkdecijfers/pull/23), branch
+**PR #23 opened**, branch
 `wp30c-e1-eurostat-adapter` → `main`, NOT merged (autonomous, core-product code, #118(b) — branch + PR is
 the rule regardless of how much review already happened before opening it). **CI confirmed green**
 (`gh pr checks 23`, run `34885657335`: `backend (1/2/3)` and `web` all `pass`; `deploy` correctly

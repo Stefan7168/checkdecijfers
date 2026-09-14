@@ -18,7 +18,7 @@
 owner asleep/away, per the kickoff brief's "move mountains" mandate; verify against `git log`/`gh pr
 list` before trusting, since owner-present work may land after this).** WP30c phase E1 (the Eurostat
 adapter + internal explorer, ADR [048](decisions/048-eurostat-data-source.md)) is **BUILT** on branch
-`wp30c-e1-eurostat-adapter` — **PR [#23](https://github.com/Stefan7168/checkdecijfers/pull/23) open**,
+`wp30c-e1-eurostat-adapter` — **PR #23 open**,
 **NOT merged** (autonomous, core-product code, [#118](open-questions.md)(b)). Full account:
 [08-build-plan.md](08-build-plan.md)'s WP30c entry, ADR 048's new "As-built" section (on the PR branch —
 not yet on `main`), and the frozen executor brief (also on the PR branch:

@@ -7,7 +7,7 @@ the rest as needed.
 
 Session 101 continued with WP30c phase E1 (the Eurostat adapter + an internal, flag-gated explorer, ADR
 [048](../decisions/048-eurostat-data-source.md)) — the recommended target from the prior kickoff brief.
-**Built, PR [#23](https://github.com/Stefan7168/checkdecijfers/pull/23) open against `main`, NOT merged**
+**Built, PR #23 open against `main`, NOT merged**
 (autonomous, core-product code, [#118](../open-questions.md)(b) — branch + PR is the rule regardless of how
 thoroughly it was reviewed before opening).
 
