@@ -95,7 +95,15 @@ Revisit only if a chosen source demands tooling TypeScript genuinely lacks.
 ## Revisit triggers
 
 - A chosen source with daily/weekly/irregular periods → the D2 grain extension design.
-- A chosen source outside Nederland scope → the region-taxonomy decision reopens.
+- A chosen source outside Nederland scope → the region-taxonomy decision reopens. **Trigger fired
+  (owner, 2026-09-14, in chat):** the product's destination is an EU-wide knowledge base — CBS/NL
+  was deliberately the first step, not the final scope. The region taxonomy widening (a country
+  level, a second region-code family, changes to `query/`/`registry/`/`answer/intent/`, a
+  migration) is now the expected direction, not a hypothetical. Exact phasing (widen before or
+  after the first Eurostat adapter ships) is still open — tracked at
+  [open-questions #248](../open-questions.md) and
+  [the Eurostat design doc](../superpowers/specs/2026-09-14-eurostat-v2-design.md) — and still
+  needs its own ADR before code, per ADR 047.
 - A source whose license forbids the current attribution/display pattern → legal check before D3
   entry.
 - Two+ sources covering the SAME statistic → the #39/#21 multi-reading disclosure design (already
