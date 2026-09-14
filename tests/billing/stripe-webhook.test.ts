@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { describe, expect, it } from 'vitest';
 import { handleStripeEvent } from '../../src/billing/stripe-webhook.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
+import { getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -279,6 +280,122 @@ describe('subscription lifecycle webhooks (#205 Task 9)', () => {
         },
       });
       await expect(handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET)).rejects.toThrow(/no items/);
+    });
+  });
+});
+
+/** #205 Task 10: `invoice.paid`. Deviation from the brief's sample, same
+ * class of bug Task 9 hit for `Subscription.current_period_end` (see
+ * src/billing/stripe-webhook.ts's `invoiceSubscriptionId` doc comment): the
+ * brief's original payload puts `subscription` directly on the invoice
+ * object, but this repo's actual `stripe` package (22.6.1, flexible-billing
+ * API shape) has NO top-level `subscription` field on `Stripe.Invoice` — the
+ * real id lives at `invoice.parent.subscription_details.subscription`. This
+ * builds the real nested shape so the test exercises the same JSON path a
+ * live Stripe webhook delivery actually sends. */
+function invoicePaidPayload(invoiceId: string, subscriptionId: string, userId: string): string {
+  return JSON.stringify({
+    id: `evt_${randomUUID()}`,
+    object: 'event',
+    type: 'invoice.paid',
+    data: {
+      object: {
+        id: invoiceId,
+        object: 'invoice',
+        parent: {
+          type: 'subscription_details',
+          subscription_details: { subscription: subscriptionId },
+        },
+        metadata: { userId },
+      },
+    },
+  });
+}
+
+describe('invoice.paid — the renewal grant (#205 Task 10)', () => {
+  it('grants 1000 credits to a fresh bucket, rotating current_period_grant_id', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd = Math.floor(Date.now() / 1000) + 30 * 86400;
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      const invoice = invoicePaidPayload('in_1', 'sub_1', userId);
+      const result = await handleStripeEvent(db, invoice, sign(invoice), WEBHOOK_SECRET);
+      expect(result).toEqual({ handled: true, alreadyProcessed: false, ledgerId: null });
+
+      const { rows } = await db.query('select current_period_grant_id from pro_subscriptions where user_id = $1', [userId]);
+      const grantId = rows[0]!.current_period_grant_id as string;
+      expect(await getBucketBalance(db, userId, grantId)).toBe(1000);
+    });
+  });
+
+  it('a replayed invoice.paid delivery grants exactly once', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd = Math.floor(Date.now() / 1000) + 30 * 86400;
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      const invoice = invoicePaidPayload('in_1', 'sub_1', userId);
+      const first = await handleStripeEvent(db, invoice, sign(invoice), WEBHOOK_SECRET);
+      const second = await handleStripeEvent(db, invoice, sign(invoice), WEBHOOK_SECRET);
+
+      expect(first.alreadyProcessed).toBe(false);
+      expect(second).toEqual({ handled: true, alreadyProcessed: true, ledgerId: null });
+
+      const { rows } = await db.query('select current_period_grant_id from pro_subscriptions where user_id = $1', [userId]);
+      expect(await getBucketBalance(db, userId, rows[0]!.current_period_grant_id as string)).toBe(1000);
+    });
+  });
+
+  it("a second renewal rotates the grant id — the old grant's leftover credits no longer count", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const periodEnd = Math.floor(Date.now() / 1000) + 30 * 86400;
+      const created = subscriptionEventPayload('customer.subscription.created', 'sub_1', 'cus_1', userId, 'active', periodEnd);
+      await handleStripeEvent(db, created, sign(created), WEBHOOK_SECRET);
+
+      const invoice1 = invoicePaidPayload('in_1', 'sub_1', userId);
+      await handleStripeEvent(db, invoice1, sign(invoice1), WEBHOOK_SECRET);
+      const before = (await db.query('select current_period_grant_id from pro_subscriptions where user_id = $1', [userId]))
+        .rows[0]!.current_period_grant_id as string;
+
+      const invoice2 = invoicePaidPayload('in_2', 'sub_1', userId);
+      await handleStripeEvent(db, invoice2, sign(invoice2), WEBHOOK_SECRET);
+      const after = (await db.query('select current_period_grant_id from pro_subscriptions where user_id = $1', [userId]))
+        .rows[0]!.current_period_grant_id as string;
+
+      expect(after).not.toBe(before);
+      expect(await getBucketBalance(db, userId, before)).toBe(1000); // old grant still shows its own history
+      expect(await getBucketBalance(db, userId, after)).toBe(1000); // new grant has its own fresh 1000
+      // getSpendableBalance / getCurrentGrantId only ever look at the CURRENT
+      // grant id, so the old grant's 1000 is invisible to spend once rotated
+      // — this is the "unused credits are lost" behavior, verified
+      // structurally (via the grant ids differing and each bucket's own
+      // balance), not by calling getSpendableBalance directly here.
+    });
+  });
+
+  it('invoice.paid for an unknown subscription throws (never silently dropped)', async () => {
+    await withDb(async (db) => {
+      const payload = invoicePaidPayload('in_1', 'sub_unknown', randomUUID());
+      await expect(handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET)).rejects.toThrow();
+    });
+  });
+
+  it('is a no-op for a non-subscription invoice (e.g. a one-off invoice item)', async () => {
+    await withDb(async (db) => {
+      const payload = JSON.stringify({
+        id: `evt_${randomUUID()}`,
+        object: 'event',
+        type: 'invoice.paid',
+        data: {
+          object: { id: 'in_manual', object: 'invoice', parent: null, metadata: {} },
+        },
+      });
+      const result = await handleStripeEvent(db, payload, sign(payload), WEBHOOK_SECRET);
+      expect(result).toEqual({ handled: false, alreadyProcessed: false, ledgerId: null });
     });
   });
 });

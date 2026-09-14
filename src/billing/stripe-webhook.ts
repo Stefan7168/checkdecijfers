@@ -5,8 +5,11 @@
 // delivery of the same event is a no-op, never a double credit. The Next.js
 // Route Handler (web/app/api/stripe/webhook/route.ts) is a thin adapter over
 // this — raw body + signature header in, nothing else.
+import { randomUUID } from 'node:crypto';
 import Stripe from 'stripe';
 import type { Db } from '../db/types.ts';
+import { grantBucket } from './pro-bucket.ts';
+import { PRO_MONTHLY_CREDITS } from './pro.ts';
 
 export interface StripeWebhookResult {
   /** False for event types this handler doesn't act on (ignored, not an
@@ -179,6 +182,117 @@ async function upsertProSubscription(
   return { handled: true, alreadyProcessed: false, ledgerId: null };
 }
 
+/** Extracts the subscription id an invoice belongs to, or null for a
+ * non-subscription invoice (e.g. a one-off invoice item — `billing_reason`
+ * values like 'manual'). Deviation from the brief, same class of bug Task 9
+ * hit for `Subscription.current_period_end`: the brief's sample reads
+ * `invoice.subscription` directly, but this repo's actual `stripe` package
+ * (22.6.1, flexible-billing API shape) has NO top-level `subscription` field
+ * on `Stripe.Invoice` at all — confirmed against
+ * `node_modules/stripe/cjs/resources/Invoices.d.ts`. The real id now lives at
+ * `invoice.parent.subscription_details.subscription`, and `parent` (and
+ * `subscription_details` within it) is `| null` for an invoice that isn't
+ * tied to a subscription. `subscription_details.subscription` is typed
+ * `string | Stripe.Subscription` (expanded vs. unexpanded); this webhook
+ * never expands it, so it is always the bare id string in practice, but both
+ * shapes are handled rather than assuming. */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const subscription = invoice.parent?.subscription_details?.subscription;
+  if (!subscription) return null;
+  return typeof subscription === 'string' ? subscription : subscription.id;
+}
+
+/** `invoice.paid` — the renewal grant trigger (Task 10, open-questions #205).
+ * Grants `PRO_MONTHLY_CREDITS` to the user's Pro bucket and rotates
+ * `pro_subscriptions.current_period_grant_id` to the fresh grant.
+ *
+ * Deliberately does NOT create a `pro_subscriptions` row itself — throws on
+ * an unknown subscription instead (task brief's carried-forward invariant,
+ * tied to Task 9's out-of-order-delivery guard on `last_event_at`: only
+ * `upsertProSubscription` is allowed to create that row, and only it sets
+ * `last_event_at` from `event.created`. If this function ever needs to
+ * create the row, it MUST do the same — never leave `last_event_at` at a
+ * bare `default now()`, or a genuinely-earlier-but-later-delivered
+ * subscription-lifecycle event would be wrongly rejected by that guard
+ * afterward). In practice `customer.subscription.created` always precedes
+ * `invoice.paid` for a brand-new subscription's first payment (Stripe
+ * invoices immediately, but Checkout confirms the subscription object first),
+ * so an unknown subscription here means a genuinely out-of-order delivery,
+ * not the ordinary case — throwing (not silently dropping) matches principle
+ * (c): never guess, and lets Stripe's own retry mechanism redeliver once
+ * `customer.subscription.created` has landed.
+ *
+ * Idempotency and ordering (task brief's explicit requirement — verified
+ * against the real implementations, not assumed):
+ * - `grantBucket` (pro-bucket.ts) is a single `insert ... on conflict
+ *   (stripe_invoice_id) where reason = 'grant' do nothing returning id`
+ *   statement. A single INSERT with ON CONFLICT is atomic at the database
+ *   level regardless of what transaction wraps it: two concurrent inserts
+ *   racing on the same conflicting key serialize at the unique index — the
+ *   second waits for the first to commit (or abort), then re-evaluates ON
+ *   CONFLICT and returns no row. So a genuinely concurrent replay of the
+ *   SAME invoice can never have both deliveries "pass the check" before
+ *   either commits — at most one ever gets a non-null grant back, and the
+ *   loser takes the `granted === null` branch below and skips the
+ *   `pro_subscriptions` update entirely, exactly per the brief's "order
+ *   matters" note.
+ * - This whole function is additionally wrapped in `db.withTransaction`
+ *   (this codebase's established money-path pattern — see
+ *   `ledger.ts`'s `reserveDebit`/`reserveOnboardingDebit`), which the brief's
+ *   sample code did not do (two bare `db.query` calls). That wrap isn't
+ *   needed for the concurrent-replay race above (already race-free per the
+ *   ON CONFLICT semantics), but it closes a real crash-safety gap the bare
+ *   two-statement version has: if the process died AFTER `grantBucket`
+ *   committed but BEFORE the `pro_subscriptions` update ran, a Stripe retry
+ *   would generate a NEW `grantId`, call `grantBucket` again for the same
+ *   invoice id, get `null` back (already granted, under the FIRST grantId,
+ *   which this retry no longer knows), and skip the update forever — credits
+ *   permanently granted to a `grant_id` `current_period_grant_id` never
+ *   points to. Wrapping both statements in one transaction makes them
+ *   all-or-nothing: either both land, or neither does and a retry starts
+ *   clean. No `pg_advisory_xact_lock` is added (unlike `reserveDebit`): that
+ *   lock exists there to make a balance-check-then-debit sequence atomic
+ *   against a concurrent read of stale state; this function has no such
+ *   check-then-act on mutable state (the `current_period_grant_id` write is
+ *   unconditional, not gated on its current value), so the transaction wrap
+ *   alone is sufficient. */
+async function grantMonthlyAllowance(db: Db, invoice: Stripe.Invoice): Promise<StripeWebhookResult> {
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  if (!subscriptionId) {
+    // Not a subscription invoice (e.g. a one-off invoice item) — nothing for
+    // this feature to do.
+    return { handled: false, alreadyProcessed: false, ledgerId: null };
+  }
+  return db.withTransaction(async (tx) => {
+    const { rows } = await tx.query(
+      'select user_id from pro_subscriptions where stripe_subscription_id = $1',
+      [subscriptionId],
+    );
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error(
+        `${invoice.id}: invoice.paid for unknown subscription ${subscriptionId} — expected ` +
+          'customer.subscription.created to have arrived first',
+      );
+    }
+    const userId = String(row.user_id);
+    const newGrantId = randomUUID();
+    const granted = await grantBucket(tx, userId, newGrantId, PRO_MONTHLY_CREDITS, invoice.id);
+    if (granted === null) {
+      // Replayed delivery of the same invoice — already granted (under
+      // whatever grant id that first delivery used). current_period_grant_id
+      // already points at it; skip the update, per the brief's explicit
+      // "order matters" note.
+      return { handled: true, alreadyProcessed: true, ledgerId: null };
+    }
+    await tx.query(
+      'update pro_subscriptions set current_period_grant_id = $1, updated_at = now() where user_id = $2',
+      [newGrantId, userId],
+    );
+    return { handled: true, alreadyProcessed: false, ledgerId: null };
+  });
+}
+
 export async function handleStripeEvent(
   db: Db,
   rawBody: string,
@@ -239,6 +353,10 @@ export async function handleStripeEvent(
     event.type === 'customer.subscription.deleted'
   ) {
     return await upsertProSubscription(db, event.data.object as Stripe.Subscription, event.created);
+  }
+
+  if (event.type === 'invoice.paid') {
+    return await grantMonthlyAllowance(db, event.data.object as Stripe.Invoice);
   }
 
   return { handled: false, alreadyProcessed: false, ledgerId: null };

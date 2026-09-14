@@ -57,5 +57,5 @@ export { getActivePacks, getPack, getSignupGrantCredits } from './pricing-read.t
 export { buildCheckoutSessionParams, buildProSubscriptionCheckoutParams } from './stripe-checkout.ts';
 export { handleStripeEvent } from './stripe-webhook.ts';
 export type { StripeWebhookResult } from './stripe-webhook.ts';
-export { hasProPlan } from './pro.ts';
+export { hasProPlan, PRO_MONTHLY_CREDITS } from './pro.ts';
 export { lookupUserEmail } from './creator-email.ts';
