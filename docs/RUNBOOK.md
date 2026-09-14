@@ -124,6 +124,38 @@ docs the same day (sources in the session archive entry).
 `CRON_SECRET`-gated fail-closed; the homepage charts are LLM-free behind a 30-min cache. Runaway LLM spend is
 bounded twice (app logic + Anthropic hard caps).
 
+**⚠ Correction + live incident, 2026-09-14 (owner present, separate session — see
+[open-questions.md](open-questions.md) for the row if one gets filed) — the "€25/mo workspace cap"
+row above is STALE and the table's own "structurally impossible" conclusion no longer holds
+as-stated.** Production has been hard-blocked since ~2026-09-14 18:27 UTC — every live chat
+question on checkdecijfers.vercel.app refuses, including the exact question the landing page
+itself demos. `vercel logs checkdecijfers.vercel.app` shows the real cause on every refusal:
+
+```
+ADMIN ALERT: INTERNAL refusal served — Error: 400
+"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."
+```
+
+Confirmed via a full pass through the Anthropic Console (General, Organization, Workspaces,
+Billing, Rate limits, all 3 API keys): total spend this month was **$35.01** against a **$200K org
+spend limit** — already well past the €25/mo figure this table claims, with no error, meaning that
+cap is no longer the live restriction (raised, removed, or superseded at some point after the
+2026-07-18 audit above — not re-derived, just no longer matches reality). Per-minute rate limits
+are generous and unrelated to a monthly reset date; no per-key or per-workspace spend limit is
+visible in the Console; the "quota utilization" detail page hangs and never resolves. This reads as
+an Anthropic-side account restriction **not exposed as an editable number anywhere in the
+Console** — only the hard reset date (2026-10-01 00:00 UTC) is shown. The only Console levers
+found were "Request rate limit increase" (Rate limits page) and "Contact sales" (Billing page, for
+invoicing) — neither confirmed as the right channel for this specific cap.
+
+**The app's own behavior here is correct** — 0 credits charged per refusal, an honest refusal
+rather than a guess (principle c working exactly as intended); this is a real product/business
+problem, not a code bug. **Owner decision, 2026-09-14: hold and revisit later** rather than pursue
+either Console lever now. **How to apply, don't re-investigate from scratch:** before assuming a
+code regression when live questions refuse, check `vercel logs checkdecijfers.vercel.app` for the
+same `ADMIN ALERT: INTERNAL refusal served` line first — if it's there, this is the same,
+already-diagnosed cap, not a new bug.
+
 ### Owner actions (the only three things a session cannot click)
 
 1. **GitHub — the one real 2026 change (do this one):** GitHub replaced the old "$0 spending limit by default"
@@ -316,19 +348,21 @@ Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
 
 **Counters:** `embed_open`/`embed_copy` ride the SAME `chart_style_usage` table the WP218 section below adds (migration 028) — if that migration has not yet been applied, these two also silently count nothing; no separate migration is needed for Embed itself.
 
-## Pro subscription go-live (⏳ NOT YET RUN, written 2026-09-14 — branch `worktree-pro-subscription-tier`, PR #22, not yet merged)
+## Pro subscription go-live (steps 1-3 ✅ DONE 2026-09-14, session 101 continued, owner present; steps 4-8 still pending)
 
-**Status when this section was written:** the whole feature — the `pro_subscriptions` + `pro_bucket_ledger` tables (migration 030), the bucket-first `splitDebit` spend path wired into every debit function (byte-identical for non-Pro users, the existing test suite pins this), `buildProSubscriptionCheckoutParams`, the `customer.subscription.*`/`invoice.paid` webhook handlers, and the embed dialog's "Upgrade" button wired to a real Checkout session (`startProSubscriptionCheckout`, `web/app/embed-actions.ts`) — is built, reviewed, and tested on branch `worktree-pro-subscription-tier` (PR #22, CI green, mergeable), not yet merged into `main`, nothing live. Full design: [docs/superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md); ADR [006](decisions/006-auth-billing-seams.md)/[020](decisions/020-credit-ledger-and-billing-gate.md) carry the revision notes recording this reversal; [open-questions #205](open-questions.md) tracks the row and stays open until the flag below is actually flipped.
+**Status when this section was written:** the whole feature — the `pro_subscriptions` + `pro_bucket_ledger` tables (migration 030), the bucket-first `splitDebit` spend path wired into every debit function (byte-identical for non-Pro users, the existing test suite pins this), `buildProSubscriptionCheckoutParams`, the `customer.subscription.*`/`invoice.paid` webhook handlers, and the embed dialog's "Upgrade" button wired to a real Checkout session (`startProSubscriptionCheckout`, `web/app/embed-actions.ts`) — was built, reviewed, and tested on branch `worktree-pro-subscription-tier` (PR #22). Full design: [docs/superpowers/specs/2026-09-13-pro-subscription-tier-design.md](superpowers/specs/2026-09-13-pro-subscription-tier-design.md); ADR [006](decisions/006-auth-billing-seams.md)/[020](decisions/020-credit-ledger-and-billing-gate.md) carry the revision notes recording this reversal; [open-questions #205](open-questions.md) tracks the row and stays open until the flag in step 6 is actually flipped.
 
-1. **Apply migration 030 FIRST — before merging and deploying.** `npm run db:migrate` (additive only, two brand-new tables, `pro_subscriptions` + `pro_bucket_ledger`, zero changes to `credit_transactions`; the running old code ignores tables it never queries, so this is safe to apply ahead of the deploy). **This order is not optional:** the standing rule for schema-coupled code above applies in full here, and this is the strong form of it — the new code's `reserveDebit`/`hasProPlan` query `pro_subscriptions` *unconditionally*, for every user, not only for Pro signups. Deploying before the migration means every ordinary non-Pro question fails with `relation "pro_subscriptions" does not exist` — a total outage for the whole product, not a dormant feature (measured, not assumed: verified against a database migrated only to 029). Note this is also why `PRO_SUBSCRIPTIONS_ENABLED` is NOT a shield for this step — that flag only gates *starting* a new subscription checkout; the spend path reads the tables either way.
-2. Merge PR #22 and deploy.
-3. **Verify on prod (read-only) that the two new tables inherited the locked-down posture** — the standing per-migration check every prior new-table go-live ran (migration 003's mechanisms are expected to generalize, but are re-checked per table rather than assumed):
+**⚠ Incident, 2026-09-14: this checklist's own step-1-before-step-2 order was violated.** PR #22 was merged (`53c7703`) and auto-deployed BEFORE migration 030 was applied — exactly the "total outage for the whole product" scenario step 1 below warns about, since `reserveDebit`/`hasProPlan` query `pro_subscriptions` unconditionally for every question. Caught during this session's own wrap-up (not by CI or the smoke check — see the lessons-learned entry for why), verified directly against the live database (`pro_subscriptions` confirmed absent), fixed within roughly half an hour of the merge by running the migration immediately. **No confirmed user-facing errors found** in a live Vercel-log sample taken after the fix, but a full historical query of the incident window was not run — actual impact during that window is not fully known. **Root-cause fix for next time:** a future merge of schema-coupled money-path code should apply its migration BEFORE merging, per this checklist's own step 1 — or, better, CI's post-deploy smoke check should be extended to exercise the real spend path (`reserveDebit`), not just reads, so a missing migration fails the deploy loudly instead of silently (a real gap this incident exposed — spun off, see lessons-learned).
+
+1. ✅ **DONE 2026-09-14 (out of order, see incident note above).** `npm run db:migrate` — applied FIVE pending migrations in one run: 026, 027 (WP202a attachments), 028, 029 (WP218 chart styling — see that section below, also now done), and 030 (this feature). All additive; zero changes to `credit_transactions` or any other existing table.
+2. ✅ **DONE 2026-09-14.** PR #22 merged (`53c7703`), CI green, deployed, post-deploy smoke check passed.
+3. ✅ **DONE 2026-09-14, verified directly against production:**
    ```sql
    select relname, relrowsecurity from pg_class where relname in ('pro_subscriptions', 'pro_bucket_ledger');
    select grantee, table_name from information_schema.role_table_grants
     where table_name in ('pro_subscriptions', 'pro_bucket_ledger') and grantee in ('anon', 'authenticated');
    ```
-   Expect `relrowsecurity = true` for both, and zero rows from the second query.
+   Confirmed: `relrowsecurity = true` for both tables; zero rows from the second query. Locked down correctly.
 4. **Create the Stripe Price object** for "Pro — €19.99/month" (Stripe Dashboard → Product catalog, or a one-off provisioning script) — subscriptions need a real recurring `Price` object; `buildProSubscriptionCheckoutParams` (`src/billing/stripe-checkout.ts`) references its ID rather than building `price_data` inline the way the one-time credit packs do. Copy the Price ID (`price_...`).
 5. **Set `STRIPE_PRO_PRICE_ID`** — Vercel env store, Production, plain (not Sensitive — a Price ID is not a credential) — the ID from step 4.
 6. **Set `PRO_SUBSCRIPTIONS_ENABLED=1`** — Vercel env store, Production. Without this, `startProSubscriptionCheckout` always returns `{ ok: false, reason: 'disabled' }` before touching Stripe at all — the embed dialog's Upgrade button keeps today's exact interest-only tracking behavior, never a crash, never a silent charge. With the flag on but `STRIPE_PRO_PRICE_ID`/`STRIPE_SECRET_KEY` missing, the action throws loudly instead (a deploy misconfiguration this checklist exists to prevent, not a graceful dormancy state) — set the price ID and the flag together, never the flag alone.
@@ -341,7 +375,7 @@ Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
    - **Expected in the Vercel logs, not a problem:** one line reading `… is a mode='subscription' (Pro) checkout — not a credit-pack purchase … no-op here`. Stripe fires `checkout.session.completed` for subscription checkouts too, and the handler deliberately ignores it (the credits come from `invoice.paid`); the log line is the proof the event arrived and was recognized. What you should NOT see is a `stripe webhook failed` error for that event.
 10. **Rollback:** unset `PRO_SUBSCRIPTIONS_ENABLED` (or set it to anything other than `'1'`) and redeploy — `startProSubscriptionCheckout` immediately goes back to returning `disabled`, and the Upgrade button reverts to today's interest-only tracking; no NEW subscription can be started. This does **not** retroactively downgrade anyone already subscribed — `hasProPlan` checks the `pro_subscriptions` row directly and never reads this flag, so an existing subscriber's Pro access and bucket grants are untouched (cancelling a live subscription is a separate, Stripe-Dashboard-side action, not part of this kill switch). No database rows need cleanup either way.
 
-## WP218 chart styling — the supervised go-live (⏳ NOT YET RUN, written 2026-09-09, session 91, autonomous)
+## WP218 chart styling — the supervised go-live (step 1 ✅ DONE 2026-09-14; remaining steps still pending)
 
 **Status when this section was written:** the whole programme (phases 0–6: the Opmaak panel, the
 account default, brand colours via Brandfetch, the English/Dutch switch, area + horizontal-bar
@@ -350,7 +384,9 @@ chart types, the anonymous usage counter) is built and tested on branch `wp218-c
 need the database or an outside service is live the moment the PR is merged and deployed: the
 panel, the language switch, the new chart types. Three things wait for you, in this order:
 
-1. **Apply migrations 028 + 029** — `npm run db:migrate` (additive only; run together in one
+1. ✅ **DONE 2026-09-14** (applied together with migrations 026/027/030 in the same
+   `npm run db:migrate` run — see the Pro subscription go-live section's incident note above for
+   why this happened as part of an unrelated fix). **Apply migrations 028 + 029** — `npm run db:migrate` (additive only; run together in one
    invocation, the 016+017 / 022+024+025 precedent — and if 026/027 from the WP202 section are
    still pending they can ride the same invocation). What they add: `user_chart_styles` (one row
    per user: the saved chart style, the applied brand, the daily brand-lookup counter),
@@ -918,14 +954,16 @@ alias; the deploy job's log of each run prints the SHA it shipped (`gh run view 
 the deployment built from the newest commit (the `vercel deploy` line in that run's deploy log). Habit that
 avoids it entirely: after a merge, let its run finish before pushing anything else.
 
-## WP202 eigen data (chat with your own data) — the supervised go-live (⏳ NOT YET RUN, added 2026-09-07, session 86)
+## WP202 eigen data (chat with your own data) — the supervised go-live (migration step ✅ DONE 2026-09-14; remaining steps still pending)
 
 **Status when this section was written:** the entire feature (backend + UI) is built, tested, and
 merged on `main` — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the full commit
-history. Migrations 026/027 are **file-only**, `ATTACHMENTS_ENABLED` does not exist as a Vercel env
-var, and `dataset_ingest`/`dataset_turn` have no price rows at all yet. **No steps below have been
-executed.** This section is written in advance, the WP135/WP26 way, so the actual go-live session
-has a checklist rather than a from-scratch design conversation.
+history. **Update 2026-09-14:** migrations 026/027 are now APPLIED to production (run together with
+028/029/030 in one `npm run db:migrate` — see the Pro subscription go-live section's incident note
+above). `ATTACHMENTS_ENABLED` still does not exist as a Vercel env var, and `dataset_ingest`/
+`dataset_turn` still have no price rows — every other step below is still not executed. This
+section is written in advance, the WP135/WP26 way, so the actual go-live session has a checklist
+rather than a from-scratch design conversation.
 
 **No new secrets needed** (ADR 037 D14/§4): the LLM harness (`instruct/prompt.ts`) reuses the
 existing `ANTHROPIC_API_KEY` on the SAME model family already in production

@@ -6,6 +6,66 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
+
+- **A merge broke production for ~30 minutes because a PR's own written go-live checklist wasn't
+  checked before merging it.** RUNBOOK.md already had a "Pro subscription go-live" section, written
+  the same day PR #22 was built, whose step 1 said in bold: *"Apply migration 030 FIRST — before
+  merging and deploying... deploying before the migration means every ordinary non-Pro question
+  fails... a total outage for the whole product."* The owner asked to merge both open PRs; the
+  session checked CI-green and `mergeable: MERGEABLE` on GitHub, merged, watched CI go green on the
+  merge commit including the post-deploy smoke check — and only caught the actual problem later,
+  during wrap-up, by re-reading the RUNBOOK section for an unrelated reason. **The real lesson: CI
+  green and "mergeable" are necessary, not sufficient — before merging code that has its own
+  RUNBOOK/go-live section, read that section's own prescribed order FIRST.** A PR's CI passing only
+  proves ITS OWN branch is internally consistent; it says nothing about a prerequisite the
+  merge/deploy sequence itself depends on (here: a migration that must land before the code that
+  queries the new table unconditionally). Caught and fixed same session (verified directly against
+  the live DB via Supabase MCP: the table was genuinely absent; fixed by running the migration
+  immediately, ~30 minutes after the merge) — see [RUNBOOK.md](RUNBOOK.md)'s Pro subscription
+  go-live section and [STATUS.md](STATUS.md) for the full incident account. No confirmed
+  user-facing errors were found in a live log sample, but the true impact during that window was
+  never fully confirmed either way — the fix was fast, not proven harmless.
+- **A related, real gap in CI's own smoke check, worth a future follow-up:** `/api/health` was
+  deliberately designed to skip any table gated by a feature flag (to avoid failing deploys for
+  dormant features) — but `pro_subscriptions` is queried UNCONDITIONALLY regardless of
+  `PRO_SUBSCRIPTIONS_ENABLED`, a case the health check's own flag-gating logic doesn't distinguish
+  from a genuinely-dormant table. The smoke check would not have caught this incident even if run
+  again. Not fixed this session (out of scope for an in-progress wrap-up) — worth its own small
+  task: either extend the health check to probe `pro_subscriptions` unconditionally too, or add a
+  standing CI check that a migration referenced by unconditional production code is actually
+  applied before a deploy is considered healthy.
+- **Verify every citation before writing it into a doc — including your own synthesis of review
+  findings, not just a subagent's claims.** While turning four parallel adversarial-review reports
+  into ADR 048's amendments, wrote "(ADR 033 A3)" as the source for a code precedent from memory of
+  the review reports' phrasing — caught it before committing by actually checking `docs/decisions/`
+  (ADR 033 is "chat-workspace-redesign," unrelated) and removed the fabricated citation, keeping
+  the substantive claim (verified by reading the actual file directly) without the wrong reference.
+  Same discipline as verifying a subagent's evidence, applied to my own writing.
+- **Cross-lens corroboration in a multi-lens adversarial review is a real, strong signal — not
+  coincidence.** Four review lenses were dispatched in parallel, each with only its own narrow
+  brief and no visibility into the others' findings. Two separate pairs of findings converged
+  independently on the same two real issues (a consent gap in cross-source ambiguity handling; a
+  proof-panel field needing a genuinely new code path, not a drop-in addition) — mirroring the
+  precedent already recorded in ADR 030's own history ("confirmed independently by TWO lenses" as
+  that review's bar for its strongest findings). Worth continuing to run multiple independent
+  lenses rather than one broader one when the stakes justify it.
+- **A subagent's claim that something is "already live in production" needs independent
+  verification before acting on it or repeating it to the owner — and this time it checked out
+  true.** One review lens claimed a homepage notice announcing Eurostat was already merged to
+  `main` and live. Rather than repeating that claim on faith, verified it directly (`git log`
+  against the actual file, confirmed the PR that shipped it and that it was on `main`'s HEAD)
+  before reporting it as fact — a positive instance of the standing "verify agent evidence" rule,
+  distinct from the ADR-033 mistake above (that one was the session's own unforced error; this one
+  was correctly caught before it could have become one).
+- **`gh pr merge --delete-branch` fails (non-fatally) when the branch is checked out in a git
+  worktree.** The merge itself succeeds on GitHub regardless; only the local branch deletion errors
+  out (`Cannot delete branch '...' checked out at '...'`). Fix: `git worktree list` to find it,
+  confirm it's clean (`git status --short` inside it — nothing uncommitted), `git worktree remove`,
+  then `git branch -d` separately. A `git branch -d` warning about "merged to the remote branch but
+  not yet merged to HEAD" after a squash merge is expected and harmless (squash merges never
+  produce a fast-forward-identical local ancestor) — not a sign anything went wrong.
+
 ## Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep) — chart visual/embed pass + the Pro subscription tier build to PR
 
 - **Never call a `/loop`-only scheduling tool outside `/loop` mode.** Called `ScheduleWakeup`

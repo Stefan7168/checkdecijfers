@@ -1,5 +1,71 @@
 # STATUS archive — the session log
 
+**Session 101 continued, owner present (2026-09-14) — the CBS highlight link, a 6-item UI polish
+batch, Eurostat chosen + ADR 048 + its adversarial review + WP30c scheduled, both open PRs merged,
+and a real production-outage risk found and fixed.** Verified against reality at wrap-up time
+(2026-09-14T14:35 UTC): `date`, `git --no-pager log --date=short`, `gh pr list --state all`,
+`gh pr view 21`/`22`, `gh run list`/`gh run watch`, `git status`, `git worktree list`, and — for the
+incident specifically — the live production database directly via the Supabase MCP (`list_tables`,
+`list_migrations`, `execute_sql`), not assumed from any doc.
+
+**Part 1 — CBS cell-highlight link (#247, `10be5db`).** A best-effort Text Fragment (`#:~:text=`)
+URL on each cell in the "Bewijs dit cijfer" proof panel, scrolling to and highlighting the matching
+value on StatLine's own page in browsers that support it; degrades silently to the existing plain
+table link everywhere else. Live-tested against real StatLine pages before building (thousands
+grouped with a space there vs. a period in this product's own Dutch formatting — converted for the
+fragment only). `web/lib/statline.ts`'s `cbsHighlightUrl`, wired into `answer-proof.ts`/`.tsx`.
+
+**Part 2 — 6-item UI polish batch (`1a5c8c0`), CI green, deployed.** Download/Embed buttons now
+also render inside the chart Style modal (previously unreachable while it was open — the modal is a
+true, backdrop-blocking dialog); more modal padding; the "Standaard" reset button moved out of the
+Grafiek-tab-only gate so it's visible from every tab; the light/dark theme toggle and the
+Geschiedenis link both moved into the Account dropdown (which gained a decorative chevron icon);
+a new `/about` page (`web/app/about/page.tsx`) with a real contact email, `hi@checkdecijfers.nl`.
+
+**Part 3 — Eurostat chosen as the second data source; WP30c scheduled.** The owner, reacting to his
+own Perplexity research on a Eurostat integration, said the product's destination is an EU-wide
+knowledge base, not a Dutch-only one — firing ADR 030's own "a chosen source outside Nederland
+scope" revisit trigger ([open-questions #248](open-questions.md)). A design spike
+([superpowers/specs/2026-09-14-eurostat-v2-design.md](superpowers/specs/2026-09-14-eurostat-v2-design.md))
+became a formal ADR ([048](decisions/048-eurostat-data-source.md)), which then went through a real
+pre-build adversarial design review — 4 parallel lenses (data integrity, rollout enforceability,
+technical feasibility, architecture-fit/regression), 14 raw findings. **The confirmed blocker:** the
+ADR's own "never announced before it answers" claim was already false — a "Eurostat — coming"
+notice had been live on the homepage since the Journey programme (PR #14, before ADR 047/048 ever
+existed); verified directly (not assumed) before reporting it, the owner chose removal over
+narrowing the rule, fixed same day (`058efdf`). Six more findings were confirmed or cross-lens
+corroborated and folded into the ADR's decision text (`36443e0`); WP30c — phase E1 only (adapter +
+an internal, flag-gated explorer; E2/E3 and the separate pattern-discovery track stay unscheduled)
+— is now execute-ready in [08-build-plan.md](08-build-plan.md) (`aa588e4`). Nothing built.
+
+**Part 4 — both open PRs merged (owner: "go ahead and merge the two open PRs"), plus a real
+incident found and fixed the same session.** PR #21 (confirm-first onboarding chip) merged clean,
+`eb15838`, CI green, deployed, smoke check passed. PR #22 (Pro subscription tier) merged, `53c7703`,
+CI green, deployed, smoke check passed — **but merged before its own required migration 030**,
+exactly the "total outage for the whole product" scenario RUNBOOK.md's own pre-written go-live
+checklist explicitly warned about (step 1: "apply migration 030 FIRST — before merging and
+deploying"), because that checklist wasn't checked before merging. Caught during this same wrap-up
+(re-reading RUNBOOK for an unrelated reason), verified directly against the live database (Supabase
+MCP: `pro_subscriptions`/`pro_bucket_ledger` confirmed absent), fixed within roughly 30 minutes by
+running `npm run db:migrate` — which applied FIVE pending migrations at once (026, 027, 028, 029
+were pre-existing known-pending debt from WP202a/WP218, not new today; 030 was the urgent one). RLS
+verified locked down on all seven newly-migrated tables afterward (`relrowsecurity = true`, zero
+`anon`/`authenticated` grants). **No confirmed user-facing errors found** in a live Vercel-log
+sample taken after the fix, but the incident window itself was never fully queried — true impact
+during that ~30-minute gap is not fully known either way. Full account: RUNBOOK.md's Pro
+subscription go-live section (steps 1-3 now marked done, with the incident note), STATUS.md,
+lessons-learned.md. **Follow-up spun off as a task chip, not fixed this session:** CI's
+`/api/health` smoke check deliberately skips flag-gated tables and so would not have caught this
+even if re-run — `pro_subscriptions` is queried unconditionally regardless of its flag, a case the
+health check's design never anticipated.
+
+**End state:** both PRs merged and live; Pro subscription tier code is live but still flag-gated off
+(`PRO_SUBSCRIPTIONS_ENABLED` unset) — real activation (a Stripe Price object, the webhook
+subscription, the flag) is still a separate, not-yet-done owner-supervised step (RUNBOOK steps 4-8).
+Eurostat/WP30c is scheduled but not started.
+
+---
+
 **Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep — "keep going, make
 great progress, use the [8 hours] fully") — the chart visual/embed pass shipped to `main`, and the
 Pro subscription tier build finished end-to-end from Task 4 through a real PR ready for the

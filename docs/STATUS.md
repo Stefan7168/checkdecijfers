@@ -14,16 +14,18 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-14, session 101 continued overnight, autonomous —
-owner asleep, explicit "keep going, make great progress, use the time fully").** Both pieces of
-pre-approved overnight work are DONE. Chart visual/embed pass merged to `main`
-(`b86556f`..`841cb83`, 7 commits). Pro-subscription-tier build fully complete (all 13 tasks + a
-real merge-conflict resolution + a final whole-branch review that found and fixed 3 more real
-bugs), pushed, PR #22 open, CI green, `mergeable: MERGEABLE`. **Two PRs now await only the owner's
-merge-go — nothing else is blocking either.** Full detail on both: [status-archive.md](status-archive.md)'s
-top entry plus this block below.
+**▶ SUPERSEDED (written 2026-09-14 ~09:33 UTC, session 101 continued overnight, autonomous — owner
+asleep; superseded same day, see the "continued" block right below).** Both pieces of pre-approved
+overnight work are DONE. Chart visual/embed pass merged to `main` (`b86556f`..`841cb83`, 7
+commits). Pro-subscription-tier build fully complete (all 13 tasks + a real merge-conflict
+resolution + a final whole-branch review that found and fixed 3 more real bugs), pushed, PR #22
+open, CI green, `mergeable: MERGEABLE` at the time this was written. **✅ Both PR #21 and PR #22
+are now MERGED** (`eb15838`, `53c7703`, confirmed via `git log`). Full detail on both stays in
+[status-archive.md](status-archive.md)'s top entry plus this block, below.
 
-**Same session continued, 2026-09-14, owner present:** a CBS cell-highlight proof-panel link shipped (#247,
+**▶ NEXT SESSION STARTS HERE (same session continued, 2026-09-14, owner present — the most current
+block in this file as of this wrap-up; verify against `git log` before trusting, since further
+owner-present work may have landed after it).** A CBS cell-highlight proof-panel link shipped (#247,
 `10be5db`), a 6-item UI polish batch shipped and deployed (Style-modal download/embed, modal padding, an
 always-visible reset button, theme toggle + history moved into the Account menu, a new `/about` page —
 `1a5c8c0`, CI green incl. `deploy`). **New, bigger: Eurostat is now the chosen second data source** — the owner
@@ -31,8 +33,21 @@ set the EU-wide-destination direction ([#248](open-questions.md)), a design spik
 ([048](decisions/048-eurostat-data-source.md)) followed, with its own pre-build adversarial design review (4
 lenses, 14 findings, 1 confirmed blocker — a premature "Eurostat — coming" homepage notice — found and removed
 same day, `058efdf`; 6 more folded into the ADR). **WP30c (E1: adapter + internal, flag-gated explorer) is now
-execute-ready in [08-build-plan.md](08-build-plan.md).** Not started — no code, no migration applied. E2/E3
-stay unscheduled.
+execute-ready in [08-build-plan.md](08-build-plan.md).** Not started — no Eurostat code, no Eurostat migration
+applied. E2/E3 stay unscheduled.
+
+**Both open PRs merged + deployed, 2026-09-14 (owner present, "go ahead and merge the two open PRs"):** PR #21
+(confirm-first onboarding chip, `eb15838`) and PR #22 (Pro subscription tier, `53c7703`) — CI green, deployed,
+post-deploy smoke check passed on both. **⚠ Incident, caught and fixed same session (~30 min window):** PR #22
+was merged/deployed before its own required migration 030, contrary to the RUNBOOK go-live checklist's explicit
+step order — verified directly against the live database (Supabase MCP: `pro_subscriptions` confirmed absent),
+which would 500 every question (`reserveDebit`/`hasProPlan` query it unconditionally). Fixed by running
+`npm run db:migrate` immediately — applied 5 pending migrations at once (026, 027, 028, 029, 030; the first four
+were pre-existing known-pending debt from WP202a/WP218, not new today), RLS verified locked down on all new
+tables. No confirmed user-facing errors found in a live log sample, but the incident window wasn't fully queried
+— true impact unconfirmed either way. Full account: [RUNBOOK.md](RUNBOOK.md)'s Pro subscription go-live section
+and [lessons-learned.md](lessons-learned.md). **Remaining Pro-subscription go-live steps (Stripe price object,
+env vars, webhook subscription, smoke test) are still NOT done** — the feature stays flag-gated/dormant.
 
 **Just shipped (2026-09-13/14, autonomous, pushed to `main`, no PR — chart/UI, not money-path):**
 a 3-task chart visual + embed plan

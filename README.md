@@ -10,7 +10,7 @@ never guesses. The interface itself is bilingual (a Dutch/English switch in the 
 chart can be restyled — per chart or as an account default — and any chart can be embedded on
 another site, frozen with attribution and a backlink by default (a **Live** embed that keeps
 itself current is the paid tier's pitch — the real subscription mechanism behind it is built and
-in review, see [docs/STATUS.md](docs/STATUS.md)). A public gallery (`/galerij`) shows real, sourced
+merged, still flag-gated off pending its go-live steps, see [docs/STATUS.md](docs/STATUS.md)). A public gallery (`/galerij`) shows real, sourced
 stories on the same chart engine.
 
 ## Why
