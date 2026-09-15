@@ -49,7 +49,7 @@
 // background this file's old wrapper never did.
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { loadAuditRecord } from '../../../backend/answer/audit/index.ts';
+import { isRedacted, loadAuditRecord } from '../../../backend/answer/audit/index.ts';
 import { verifyEmbedToken } from '../../../backend/chart/embed-token.ts';
 import { rerunLive } from '../../../backend/chart/embed-live.ts';
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
@@ -94,18 +94,6 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
-
-/** The retention redaction sentinel (src/answer/audit/retention.ts's
- * `redactedResponse()`) lives INSIDE the stored response envelope, not as a
- * column on `AuditRecord`. Copied byte-for-byte from
- * web/app/embed-actions.ts's `createEmbedCode` guard (itself copied from
- * scripts/verify-audit-rows.ts) rather than imported — this task's scope is
- * pinned to two files (this route + its test) and does not touch
- * embed-actions.ts. A third copy, deliberately; if the sentinel shape ever
- * changes, all three must change together. */
-function isRedacted(response: unknown): boolean {
-  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
-}
 
 /** The exact date convention `buildAttributionLine` uses for this same kind
  * of audit timestamp (src/answer/compose/format.ts:

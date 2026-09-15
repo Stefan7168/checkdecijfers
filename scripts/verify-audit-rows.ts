@@ -42,15 +42,12 @@ import { resolve } from 'node:path';
 import {
   KNOWN_DIVERGENCES,
   classifyKnownDivergence,
+  isRedacted,
   loadAuditRecord,
   reconstructionReport,
   redactionIntegrityReport,
 } from '../src/answer/audit/index.ts';
 import { connectFromEnv } from '../src/db/client.ts';
-
-function isRedacted(response: unknown): boolean {
-  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
-}
 
 function parseIdArg(value: string | undefined, name: string): number {
   const n = Number(value);

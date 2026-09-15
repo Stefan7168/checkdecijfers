@@ -26,6 +26,7 @@ export {
   countPurgeableQuestionHistory,
   twoYearsBefore,
   redactionIntegrityReport,
+  isRedacted,
 } from './retention.ts';
 export type { RedactedRow } from './retention.ts';
 // #189: the purge as a framework-agnostic job, so the CLI and the cron route are

@@ -26,7 +26,13 @@ function noSubscriptionDb(): Db {
 }
 
 const { loadAuditRecord } = vi.hoisted(() => ({ loadAuditRecord: vi.fn() }));
-vi.mock('../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
+// isRedacted is the real, pure implementation (open-questions #227) — it has
+// nothing to stub, and the tests rely on its actual branching behavior.
+vi.mock('../backend/answer/audit/index.ts', () => ({
+  loadAuditRecord,
+  isRedacted: (response: unknown) =>
+    typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true,
+}));
 
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
