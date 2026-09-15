@@ -14,9 +14,57 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-14/15, session 101 continuation, autonomous overnight —
-owner asleep/away, per the kickoff brief's "move mountains" mandate; verify against `git log`/`gh pr
-list` before trusting, since owner-present work may land after this).** WP30c phase E1 (the Eurostat
+**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 102, autonomous — owner asleep/away for the
+whole session; verify against `git log`/`gh pr list` before trusting, since owner-present work may land
+after this).** **Three PRs now open, ALL awaiting owner review, NONE merged — this is purely a review
+wait, nothing blocks any of them on the tooling side:**
+
+- **PR #23** (WP30c E1, Eurostat adapter + internal explorer) — session 101's build, untouched this
+  session. Full detail stays in the block directly below (now superseded, kept for its content).
+  "Constraint 0" still needs the owner's reading confirmed — see [#249](open-questions.md).
+- **PR #24** (`health-check-pro-subscriptions-gap` branch) — the prior kickoff brief's own recommended
+  next autonomous target, now done: `/api/health` probes `pro_subscriptions` UNCONDITIONALLY (it used to
+  skip it under the same flag-gating pattern that correctly skips genuinely-dormant tables, but this
+  table is queried in production regardless of `PRO_SUBSCRIPTIONS_ENABLED` — the exact blind spot that
+  let session 101's own real production incident, PR #22 merged before migration 030, pass an unchanged
+  smoke check). Also fixed, directly on `main` first (`2f3ff3a`, docs-only, no CI needed): a
+  pre-existing, unrelated violation of [#132](open-questions.md)'s "no live PR links in docs" rule
+  (`STATUS.md`/`status-archive.md`/the session-102 kickoff brief had live `github.com/.../pull/23`
+  links) — found only because this PR's own full-suite run was the first since session 101's docs-only
+  commits, which skip CI, let the violation slip through green. See [#114](open-questions.md)'s
+  addendum for the full account.
+- **PR #25** (`cleanup-remove-dead-story-steps` branch) — closes [#230](open-questions.md): deleted
+  `chart-story.ts`'s six functions/constant orphaned by ADR 041 (session 94), `chart-story.test.ts` in
+  full, and the eleven now-unused `chart.story.*` i18n keys (both languages). Verified BEFORE deleting
+  that `pointCaption`/`seriesCaption`/`barCaption`/`provisional` are still live (called by
+  `chart-insights.ts`) — only the eleven keys the row named were actually orphaned.
+
+**Both new PRs, full verification block green:** root+web typecheck clean; PR #24 — backend 153
+files/2358 tests green (solo, after the doc-conventions fix), web 105 files/1734 tests green (solo); PR
+#25 — web 104 files/1715 tests green (down from 105/1734, exactly the deleted file's own 19 tests),
+backend 153 files/2358 tests green (solo). Both: hermetic benchmark 14/14+6/6+0 fabricated GATE PASS,
+real `next build` succeeds, `/code-review` LOW 0 findings. CI confirmed green on both via `gh run list`
+(PR #24 run `34889942615`; PR #25 run `34919300874`) — `gh pr checks` itself misreported "no checks" on
+PR #23 despite that PR's CI having genuinely passed (run `34885657335`); cross-check with `gh run list
+--branch <branch>` when that happens, don't take "no checks reported" at face value.
+
+**Also this session:** removed a stray leftover git worktree (`.claude/worktrees/wp30c-e1-eurostat`,
+fully pushed/clean, redundant with PR #23's own branch) — `git worktree list` now shows only the main
+checkout.
+
+**Deliberately paused here rather than opening a fourth PR:** three unreviewed PRs is a reasonable
+batch for one owner review pass; further open-questions candidates were either owner-judgment items or
+had a larger blast radius (see the search agent's own report, not persisted — re-run a similar search if
+picking up a fourth autonomous target before the owner reviews these three).
+
+**Next steps:** (1) owner reviews PR #23, #24, #25 (merge, request changes, or reject each independently
+— they don't depend on each other); (2) if #23 merges, follow up per Constraint 0's decision (below);
+(3) WP30c E2 (natural-language querying) is its own future design round — not started, not to be started
+without the owner.
+
+**▶ SUPERSEDED (written 2026-09-14/15, session 101 continuation, autonomous overnight —
+owner asleep/away, per the kickoff brief's "move mountains" mandate; superseded by session 102's block
+above; kept for PR #23's full content, still accurate — that PR is still open, unreviewed).** WP30c phase E1 (the Eurostat
 adapter + internal explorer, ADR [048](decisions/048-eurostat-data-source.md)) is **BUILT** on branch
 `wp30c-e1-eurostat-adapter` — **PR #23 open**,
 **NOT merged** (autonomous, core-product code, [#118](open-questions.md)(b)). Full account:

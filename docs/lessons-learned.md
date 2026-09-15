@@ -6,6 +6,43 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 102 (2026-09-15, autonomous, owner away the whole session) — two small PRs, a docs-only-CI-skip blind spot found, a `gh pr checks` false negative
+
+- **The "docs-only pushes skip CI" convention (adopted 2026-09-09 to save Actions minutes) has a real
+  blind spot: it also skips the tests that check the DOCS THEMSELVES.** Session 101's own docs-only
+  commits added live `github.com/.../pull/23` links to `STATUS.md`/`status-archive.md`/a kickoff brief,
+  which `tests/docs/doc-conventions.test.ts` exists specifically to catch (#132's "no live PR links"
+  rule) — but because those commits touched only markdown, CI never ran, so the violation sat on `main`
+  undetected until this session's first CODE push finally ran the full suite. The convention still makes
+  sense (most docs-only changes have nothing a test could catch), but a session should not assume
+  "docs-only" means "risk-free" — a doc-conventions-style test is exactly the case where it isn't. No
+  fix proposed here (the convention itself is a deliberate cost trade-off, not a bug) — just a reason to
+  actually run `tests/docs` occasionally even on a docs-only-feeling change, especially after several
+  such commits have stacked up without a code push in between.
+- **`gh pr checks <n>` can report "no checks reported" for a PR whose CI genuinely ran and passed.**
+  Happened on PR #23 (session 101's own build): `gh pr checks 23` said nothing was reported, but
+  `gh run list --branch wp30c-e1-eurostat-adapter` showed a `completed`/`success` run for that exact PR.
+  Don't take a "no checks" result as "CI hasn't run" — cross-check with `gh run list --branch <branch>`
+  before concluding a PR is unverified.
+- **A delegated subagent's "confirmed X is orphaned" claim is worth re-verifying even when it looks
+  careful** (this repo's own standing practice, applied here without incident): the agent that found
+  [open-questions #230](open-questions.md) explicitly said it checked that `pointCaption`/
+  `seriesCaption`/`barCaption`/`provisional` were NOT orphaned before recommending the cleanup. Re-ran
+  the same grep independently before deleting anything anyway — it confirmed the agent was right, but
+  the check cost thirty seconds against the alternative of deleting four still-live i18n keys and
+  breaking `chart-insights.ts`'s AI-phrased captions in production. Cheap insurance, worth keeping as
+  a reflex even when there's no specific reason to distrust the source.
+- **Three unreviewed autonomous PRs is a reasonable place to stop and report, not a reason to keep
+  hunting for a fourth.** With PR #23 (session 101) already open and PR #24/#25 added this session, all
+  three untouched by the owner, judged that opening more work for one review pass would stack risk
+  (each additional PR is more for the owner to individually evaluate) without a correspondingly strong
+  reason — the remaining open-questions candidates surfaced by triage either needed an owner judgment
+  call or had a larger blast radius than a similarly-sized independent search agent's own report flagged
+  as comfortable for an unsupervised session. No hard rule proposed (this was a judgment call, made
+  explicit rather than justified after the fact) — just recording that "keep finding more autonomous
+  work" is not automatically the right call once a session has already produced a few PRs nobody has
+  looked at yet.
+
 ## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
 
 - **Two sessions sharing one literal checkout (not separate worktrees) means `git add <file>`

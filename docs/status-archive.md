@@ -1,5 +1,80 @@
 # STATUS archive — the session log
 
+**Session 102, AUTONOMOUS (2026-09-15, owner asleep/away the whole session) — two small, well-contained
+fixes shipped as separate PRs, plus a real pre-existing doc-convention violation found and fixed on
+`main`. PR #23 (session 101's WP30c E1) untouched, still open, still awaiting owner review.**
+
+Continued from session 101's own kickoff brief
+([session-briefs/2026-09-15-session-102-kickoff.md](session-briefs/2026-09-15-session-102-kickoff.md)),
+which named the CI health-check gap as the best next autonomous target and explicitly forbade starting
+WP30c E2 without the owner (needs the taxonomy-widening decision, the source-ambiguity chip rule, and an
+owner-signed public-claim wording sweep — none decided). Checked PR #23 first (`gh pr checks 23` / `gh
+pr view 23`): still open, zero reviews/comments, CI genuinely green (confirmed via `gh run list
+--branch wp30c-e1-eurostat-adapter`, run `34885657335`, even though `gh pr checks 23` itself misreports
+"no checks reported" — a CLI quirk, not a CI problem). Left it untouched, as instructed.
+
+**PR #24 — the health-check gap.** `/api/health`'s flag-gating pattern (skip a table's probe when its
+flag is off) doesn't fit `pro_subscriptions`: `PRO_SUBSCRIPTIONS_ENABLED` only gates starting a NEW
+Pro checkout (`embed-actions.ts`), but the embed page's `hasProPlan` read queries `pro_subscriptions` on
+every embed view regardless of the flag — confirmed by tracing every call site of `hasProPlan`
+(`web/app/embed-actions.ts`, `web/app/embed/[token]/page.tsx`) before writing the fix, not assumed from
+the lessons-learned note alone. This is the exact blind spot behind session 101's real production
+incident (PR #22 merged before its required migration 030). Fixed: an unconditional
+`pro-subscription-read` probe added, reusing `hasProPlan` itself (`web/app/api/health/route.ts`,
+`web/app/health.test.ts`).
+
+**A real, unrelated defect surfaced running the full verification block for PR #24** (the first
+full-suite run since session 101's docs-only commits, which skip CI per the 2026-09-09 convention):
+`tests/docs/doc-conventions.test.ts` failed — `STATUS.md`, `status-archive.md`, and the session-102
+kickoff brief all had live `github.com/.../pull/23` links, violating [#132](open-questions.md) interim
+rule (i) (a repo recreate under #132 route (b) would 404 every one of them). The rule's own enforcement
+test existed and would have caught this on the FIRST offending commit — it never ran, because that
+commit was (correctly, by its own convention) treated as docs-only and skipped CI. Fixed directly on
+`main` first (`2f3ff3a`, docs-only, no CI needed) before branching PR #24, so PR #24's own CI could pass
+cleanly. Full verification (measured, PR #24's final commit): root+web typecheck clean; backend 153
+files/2358 tests green (solo); web 105 files/1734 tests green (solo); hermetic benchmark 14/14+6/6+0
+fabricated GATE PASS; real `next build` succeeds; `/code-review` LOW: 0 findings. CI confirmed green via
+`gh run list --branch health-check-pro-subscriptions-gap` (run `34889942615`).
+
+**PR #25 — closing [open-questions #230](open-questions.md).** Used a general-purpose subagent (cheap
+tier, per the delegation-cost-tier convention) to triage `open-questions.md`'s ~166 rows for the next
+autonomous-safe target, explicitly excluding anything needing an owner decision, anything touching the
+still-unmerged PR #23 branch's own residuals, and anything flagged as non-trivial by its own author. It
+recommended #230 (dead `chart-story.ts` step-builder functions, orphaned by ADR 041 since session 94).
+**Verified the agent's evidence directly before acting on it** (per this repo's own standing practice):
+re-read the row, re-read `chart-story.ts`'s header comment (which already named the exact functions to
+delete), and — the one place a careless grep could have caused real damage — independently confirmed
+that `pointCaption`/`seriesCaption`/`barCaption`/`provisional` (similar-looking key names) are NOT
+orphaned, because `chart-insights.ts` still calls them for its own findings' captions; only the eleven
+keys the row explicitly named were actually dead. Deleted the six functions/constant (kept
+`StoryStepKind`/`StoryStep`, the still-shared type), deleted `chart-story.test.ts` in full (302 lines,
+entirely about the removed functions), removed the eleven orphaned i18n keys from both `nl`/`en`.
+Verified: root+web typecheck clean; web suite 104 files/1715 tests green (down from 105/1734 — exactly
+the deleted file's own 19 tests, confirming nothing else moved); backend suite 153 files/2358 tests
+green (solo); hermetic benchmark 14/14+6/6+0 fabricated GATE PASS; real `next build` succeeds;
+`/code-review` LOW: 0 findings. CI confirmed green via `gh run list --branch
+cleanup-remove-dead-story-steps` (run `34919300874`).
+
+**Housekeeping:** removed a stray leftover git worktree (`.claude/worktrees/wp30c-e1-eurostat`,
+verified fully pushed and clean before removal, redundant with PR #23's own branch — `git worktree
+list` now shows only the main checkout). Updated `04-architecture.md` and `08-build-plan.md` (both had
+narrative text describing #230 as still-dead/tracked-not-built, now pointing at PR #25) and
+`RUNBOOK.md`'s Pro-subscription incident note (now pointing at PR #24, explicitly still "not yet
+merged" — the incident class is not actually closed until it lands) — the stale-doc-sweep step of this
+session's own wrap-up ritual, catching exactly the class of drift [#132]/this file's own opening
+paragraphs warn about.
+
+**Deliberately stopped at three open PRs** (#23 untouched + #24 + #25) rather than opening a fourth —
+judged that as a reasonable batch for one owner review pass, with the remaining open-questions
+candidates either needing an owner call or carrying a larger blast radius than this session's own
+mandate (autonomous, no live DDL/spend/env-flags) comfortably covers alone.
+
+**End state:** `main` at `2f3ff3a` plus this session's docs-only wrap-up commits; three PRs open
+(#23, #24, #25), zero merged, zero reviewed by the owner yet; `git status` clean, no stray worktrees,
+CI green on every commit pushed this session.
+
+---
+
 **Session 101 continuation, AUTONOMOUS overnight (2026-09-14/15, owner asleep/away) — WP30c phase E1
 (the Eurostat adapter + internal explorer, ADR 048) built end to end, PR #23 open, not merged.**
 

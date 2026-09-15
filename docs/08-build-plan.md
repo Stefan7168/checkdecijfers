@@ -688,7 +688,8 @@ on branch `claude/checkdecijfers-embed-pr-review-acbrd5`, merged to `main`): `sr
 (deterministic outlier/jump ranking) + `src/chart/insights-phrase.ts` (AI phrasing via the digit-free
 slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
 action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
-built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#231](open-questions.md)
+built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code (**✅ done, session 102,
+2026-09-15, PR #25 open** — see open-questions.md); [#231](open-questions.md)
 no rate limit on Insights generation yet. Full verification block green (typecheck ×2, web 1304 tests,
 backend 2211 tests solo, benchmark 14/14+6/6+0 fabricated, real build, docs 11/11, code-review LOW 0
 findings) — see [STATUS.md](STATUS.md) for the exact numbers. **This push put PR #9 (embed-charts) into a
