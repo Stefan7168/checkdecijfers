@@ -47,8 +47,8 @@ permanently stuck — caught by a regression test rendering under a real `<Stric
 independently confirmed in a real browser via the hermetic dev harness (toggled Frame Inset several times
 on a real fixture-replay chart, read the actual measured width/height at each step). Full verification
 green (backend 153/2358 unaffected, web 105/1736, benchmark 28/28, `test:docs` 11/11, real build,
-`/code-review` LOW 0 findings) — CI was still in progress at the time this was written; check
-`gh run list --branch fix-use-element-width-reparenting` before trusting it silently.
+`/code-review` LOW 0 findings) — **CI confirmed green** (`gh run view` on the PR's run:
+`conclusion: "success"`).
 Full account: [status-archive.md](status-archive.md)'s session 103 entry.
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session

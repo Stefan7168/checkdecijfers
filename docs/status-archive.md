@@ -170,7 +170,8 @@ test.ts` 6/6 (2 new trigger-path tests + 1 new StrictMode-safety test); `chart.t
 (unaffected — no backend files touched, re-run anyway as a sanity check); full web suite, solo: 105 files
 / 1736 tests green; `test:docs` 11/11; hermetic benchmark 28/28 green, gate pass; real `next build`
 succeeds; `/code-review` LOW: 0 findings. Branch `fix-use-element-width-reparenting`, PR #28 — autonomous,
-per [#118](open-questions.md)(b), not merged.
+per [#118](open-questions.md)(b), not merged. **CI confirmed green** (polled to completion via the same
+backgrounded-loop pattern as PR #26/#27 above: `conclusion: "success"`).
 
 **Deliberately left untouched:** the row's other, separate residuals its own "fix opportunistically"
 resolution doesn't ask for — the one-frame stale-width flash on re-enable, the stale `ResponsiveContainer`
