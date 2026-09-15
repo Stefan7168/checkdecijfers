@@ -1,8 +1,9 @@
 # STATUS archive — the session log
 
-**Session 103, AUTONOMOUS (2026-09-15) — two more small PRs opened after fresh open-questions triages
-(#26, then #27 after the owner sent one short "continue to work autonomously" message mid-session, never
-reviewing any PR); PRs #23/#24/#25 all still untouched by the owner throughout.**
+**Session 103, AUTONOMOUS (2026-09-15) — three more small PRs opened after fresh open-questions triages
+(#26, then #27 and #28 after the owner sent "I trust your judgement" then twice "continue to work
+autonomously" mid-session, never reviewing any PR); PRs #23/#24/#25 all still untouched by the owner
+throughout.**
 
 Continued from session 102's kickoff brief
 ([session-briefs/2026-09-15-session-103-kickoff.md](session-briefs/2026-09-15-session-103-kickoff.md)),
@@ -103,6 +104,82 @@ extraction diff. Branch `shared-is-redacted-helper`, PR #27 — autonomous, per
 command mid-turn (a standing feedback-memory rule — that tool is `/loop`-dynamic-mode-only) — caught it
 immediately after the one call, cancelled it (`stop: true`), and relied on the background task's own
 completion notification instead, as the rule says to.
+
+**Owner sent "I trust your judgement," replying to this session's own question of whether to keep going
+or wait for review.** Read as endorsing the recommendation already stated (hold at four PRs), NOT as
+flipping this session into "owner-present" for [#118](open-questions.md)'s git-workflow purposes — a
+five-word passive message is not the sustained, active collaboration that rule describes — and
+specifically not as authorization to merge any open PR (PR #23 still needs the owner's own actual call on
+Constraint 0, [#249](open-questions.md), which no generic trust statement can stand in for). Replied
+explaining this reasoning and held.
+
+**Owner then sent "continue to work autonomously" — twice, once after PR #27 shipped.** Unambiguous each
+time. Re-triaged `docs/open-questions.md` fresh again after each one (a cheap-tier subagent), excluding
+every file already in flux across the growing set of open PR branches.
+
+**Second re-triage → PR #28, closing the actionable half of [#234](open-questions.md).** The triage
+surfaced only one real candidate this round (explicitly told to say "nothing safe found" rather than
+force a weak pick if the backlog was genuinely thin — it wasn't, quite, but only just): `useElementWidth`'s
+stale-ref bug, previously recorded as needing "dedicated attention" rather than a rushed fix. Took that
+literally: read `web/lib/use-element-width.ts`, `web/components/chart-frame.tsx`, and `web/components/
+chart.tsx` in full to understand BOTH named trigger paths precisely (traced React's own reconciliation
+rules by hand for the frame-inset case — confirmed by writing a probe test before touching the fix, not
+assumed) before writing a single line of the fix itself.
+
+**The fix:** `useElementWidth` now re-checks `ref.current` on every render (deliberately no dependency
+array) against a second ref (`observedRef`) tracking what is actually being watched right now — a no-op
+comparison on every render where nothing changed, a tear-down + reattach on the rare render where it did.
+One general mechanism, covering the schema-refusal null→element path and the frame-inset reparenting path
+identically, per the row's own instruction not to patch one narrowly. Confirmed BOTH new regression tests
+(one per trigger path) genuinely catch the bug: reverted the fix, watched both fail with the exact
+predicted assertion mismatch, restored the fix, watched both pass — not just written and trusted.
+
+**Found a further, more subtle real bug in the fix itself before shipping it, via reasoning first and
+then empirical proof.** Next.js's own default (confirmed by reading `node_modules/next/dist/build/
+define-env.js`: `__NEXT_STRICT_MODE_APP` defaults to `true` whenever `next.config.ts` doesn't set
+`reactStrictMode`, which this app's doesn't) is React StrictMode ON in development — every component
+mounts twice (run effects, clean them up, run again) as a diagnostic. Traced by hand what that means for
+a hook split across two effects (a no-deps polling effect plus a `[]`-deps unmount-only effect): if the
+unmount effect's cleanup only calls `.disconnect()` without also resetting `observedRef`/`observerRef`,
+the StrictMode-SIMULATED remount's polling effect sees "nothing changed" (the stale ref still matches)
+and never creates a replacement — the hook ends up PERMANENTLY stuck watching a dead, disconnected
+observer for the rest of the component's REAL lifetime, not just during the StrictMode dance itself. This
+matters precisely because a real browser click-through (done BEFORE finding this, on the almost-right
+version) had shown no problem at all — every interaction that session happened to try also changed the
+ref'd element's identity, which masks this exact failure mode. Wrote a dedicated regression test that
+renders under an ACTUAL `<StrictMode>` wrapper (not a hand-simulated approximation of React's own
+behavior) specifically because reasoning alone had already been shown, by the masked live-browser test, to
+be insufficient here — confirmed it fails against the almost-right version (`live.length` was 0, exactly
+as traced) and passes against the corrected one (reset both refs in the unmount cleanup, not just
+disconnect).
+
+**Verified in a real browser too, on the truly-fixed code** (the hermetic dev harness,
+`scripts/dev-harness/` — `run-next-dev.mjs` specifically, since this checkout's path contains spaces and
+plain `NODE_OPTIONS` whitespace-tokenizing breaks otherwise; `auth-stub.mjs` + `llm-stub.mjs` for a real
+logged-in fixture-replay chat turn, zero live LLM/DB): asked a real question, opened the Style panel's
+Frame tab, and toggled Frame Inset None → Small → Large → None while reading the chart container's actual
+`getBoundingClientRect()` at each step via `javascript_tool` — confirmed correct re-measurement on every
+toggle (592×333 → 568×320 → 544×307 → back to exactly 592×333) and zero console errors beyond the
+harness's own unrelated HMR-websocket noise. This is the SAME general check (does the observer follow a
+reparented ref) the StrictMode test already proved in isolation, but run once more against the real
+app's actual component tree rather than a synthetic probe, per this row's own "dedicated attention" ask.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `use-element-width.
+test.ts` 6/6 (2 new trigger-path tests + 1 new StrictMode-safety test); `chart.test.tsx` +
+`chart-frame.test.tsx` combined with it: 262/262; full backend suite, solo: 153 files / 2358 tests green
+(unaffected — no backend files touched, re-run anyway as a sanity check); full web suite, solo: 105 files
+/ 1736 tests green; `test:docs` 11/11; hermetic benchmark 28/28 green, gate pass; real `next build`
+succeeds; `/code-review` LOW: 0 findings. Branch `fix-use-element-width-reparenting`, PR #28 — autonomous,
+per [#118](open-questions.md)(b), not merged.
+
+**Deliberately left untouched:** the row's other, separate residuals its own "fix opportunistically"
+resolution doesn't ask for — the one-frame stale-width flash on re-enable, the stale `ResponsiveContainer`
+comment, the area-form export-guard test coverage gap, and a stale `chart.tsx` comment about Style-panel
+portaling.
+
+**Housekeeping:** the dev harness's `run-next-dev.mjs`/`auth-stub.mjs`/`llm-stub.mjs` processes and the
+manually-started `next dev` port were all stopped after use; `git status` on `web/CLAUDE.md`/`AGENTS.md`
+(which `next dev` is known to rewrite) confirmed clean before and after — no stray diff to discard.
 
 **Session 102, AUTONOMOUS (2026-09-15, owner asleep/away the whole session) — two small, well-contained
 fixes shipped as separate PRs, plus a real pre-existing doc-convention violation found and fixed on

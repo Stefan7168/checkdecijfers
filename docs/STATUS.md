@@ -14,11 +14,11 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent one
-short "I trust your judgement" / "continue to work autonomously" message mid-session but did not review
-any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may land after
-this).** **Five PRs now open, ALL awaiting owner review, NONE merged — this is purely a review wait,
-nothing blocks any of them on the tooling side:** #23 (WP30c E1 Eurostat), #24 (health-check
+**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent two
+short messages mid-session, "I trust your judgement" then twice "continue to work autonomously," but did
+not review any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may
+land after this).** **Six PRs now open, ALL awaiting owner review, NONE merged — this is purely a review
+wait, nothing blocks any of them on the tooling side:** #23 (WP30c E1 Eurostat), #24 (health-check
 `pro_subscriptions` fix), #25 (dead chart-story cleanup) — all three unchanged since session 102, still
 zero comments/reviews — plus **PR #26** (`attachments-envelope-key-manifest`): closes
 [#209](open-questions.md), builds `tests/attachments/envelope-key-manifest.test.ts` (the CBS-side
@@ -35,8 +35,20 @@ Zero behavior change today (version has never moved past 1); the check now exist
 existing audit `index.ts` — zero behavior change, zero new import paths. Deliberately did NOT touch
 `scripts/verify-dataset-turns.ts`'s own look-alike `isRedacted` (a different, deliberately separate trust
 tier's sentinel — ADR 037 D1). Full verification green (backend 153/2358, web 105/1733, benchmark 28/28,
-`test:docs` 11/11, real build, `/code-review` LOW 0 findings) — **CI confirmed green** on both new PRs
-(run `34924905497` for #26, run `34927043689` for #27, both `conclusion: success`).
+`test:docs` 11/11, real build, `/code-review` LOW 0 findings) — **CI confirmed green** on both PRs
+(run `34924905497` for #26, run `34927043689` for #27, both `conclusion: success`). Plus new **PR #28**
+(`fix-use-element-width-reparenting`): closes the actionable half of [#234](open-questions.md) —
+`useElementWidth`'s stale-ref bug across both named trigger paths (schema-refusal null→element, and
+chart-frame.tsx's Frame Inset toggle reparenting the ref'd node), fixed with one general re-check-every-
+render mechanism. **Found and fixed a further real bug in the fix itself before shipping**: Next.js's own
+StrictMode-on-by-default in development mounts every component twice, and the unmount-cleanup effect had
+to reset BOTH tracking refs (not just disconnect the observer) or the simulated remount would get
+permanently stuck — caught by a regression test rendering under a real `<StrictMode>` wrapper, and
+independently confirmed in a real browser via the hermetic dev harness (toggled Frame Inset several times
+on a real fixture-replay chart, read the actual measured width/height at each step). Full verification
+green (backend 153/2358 unaffected, web 105/1736, benchmark 28/28, `test:docs` 11/11, real build,
+`/code-review` LOW 0 findings) — CI was still in progress at the time this was written; check
+`gh run list --branch fix-use-element-width-reparenting` before trusting it silently.
 Full account: [status-archive.md](status-archive.md)'s session 103 entry.
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session
