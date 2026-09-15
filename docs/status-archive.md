@@ -63,7 +63,7 @@ the plan's own text implied); [04-architecture.md](04-architecture.md) capabilit
 committed asset, held on the first run: 369 municipalities, every code `GM####`, total area ≈37,000 km²);
 [web/README.md](../web/README.md) one line.
 
-**PR:** [#30](https://github.com/Stefan7168/checkdecijfers/pull/30), branch `demo-3d-municipality-map`,
+**PR:** PR #30, branch `demo-3d-municipality-map`,
 per [#118](open-questions.md)(b) — the build itself ran unsupervised in the background even though the
 owner was present in the parent conversation, so it goes through branch+PR review rather than a direct
 push. CI triggered on open (run visible via `gh run list --branch demo-3d-municipality-map`); **not yet
