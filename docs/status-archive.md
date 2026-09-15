@@ -1,9 +1,9 @@
 # STATUS archive — the session log
 
-**Session 103, AUTONOMOUS (2026-09-15) — three more small PRs opened after fresh open-questions triages
+**Session 103, AUTONOMOUS (2026-09-15) — four more small PRs opened after fresh open-questions triages
 (#26, then #27 and #28 after the owner sent "I trust your judgement" then twice "continue to work
-autonomously" mid-session, never reviewing any PR); PRs #23/#24/#25 all still untouched by the owner
-throughout.**
+autonomously" mid-session, then #29 after a third "continue to work autonomously"), never reviewing any
+PR; PRs #23/#24/#25 all still untouched by the owner throughout.**
 
 Continued from session 102's kickoff brief
 ([session-briefs/2026-09-15-session-103-kickoff.md](session-briefs/2026-09-15-session-103-kickoff.md)),
@@ -181,6 +181,67 @@ portaling.
 **Housekeeping:** the dev harness's `run-next-dev.mjs`/`auth-stub.mjs`/`llm-stub.mjs` processes and the
 manually-started `next dev` port were all stopped after use; `git status` on `web/CLAUDE.md`/`AGENTS.md`
 (which `next dev` is known to rewrite) confirmed clean before and after — no stray diff to discard.
+
+**Owner sent "continue to work autonomously" a third time, after being told six PRs was already a large
+review batch and the session would hold there unless told otherwise.** Re-triaged fresh rather than
+reusing PR #28's target list. A cheap-tier (Haiku) subagent's top pick — [#231](open-questions.md),
+adding server-side spend tracking for Insights AI phrasing — was checked before acting on it and
+rejected: the row itself already resolves this as **"accepted as a bounded risk for now... revisit if
+real usage ever shows Insights-generation spend is worth a counter"** — a documented, deliberate
+deferral with zero measured-evidence trigger, not an open gap. Building it now would have second-guessed
+a settled scope call on spec alone, exactly what CLAUDE.md's "escalate only on measured evidence, not
+speculation" convention exists to prevent. Did an independent manual pass of `open-questions.md`'s
+remaining nominally-"Open" rows instead (100, 101, 105, 106, 111, 112, 116, 120, 125, 172, 200, 206, 230,
+231): most turned out already resolved despite an "Open" label surviving in the text (a filtering
+lesson — grepping for "Open" without also excluding "BUILT"/"✅" false-positives), the rest either need a
+supervised prompt-byte re-record (#100), are owner-deferred pricing calls (#101), are operational
+judgment calls with no concrete build task (#105/#106), need live usage data that doesn't exist yet
+(#112, #172), or need owner scope confirmation (#206) — none safe to just build.
+
+**Found a real, unrelated target during that same read: `docs/STATUS.md` itself had drifted stale.**
+Its own file said (session-94 note): sessions 92 downward were "never actually archived," blaming a
+multi-session dump on a missing archival step. Checked before trusting it — wrong. Every one of those
+sessions, and several older ones besides (spot-checked 56, 57, 85, 86, 89, 90 through 99 directly via
+`grep` against `status-archive.md`), already had a full entry here, in every case MORE detailed than the
+STATUS.md copy (e.g. session 89's archive entry is a numbered, multi-part account; the STATUS.md copy
+was one short paragraph). What had actually gone stale was the file itself: never trimmed back to the
+session-41 "lean top block only" convention after each of those sessions' content was safely archived,
+so it grew to 1,307 lines — a real, if slow-moving, instance of exactly the "doc that contradicts a
+newer decision is a bug" problem CLAUDE.md's Doc Freshness section names.
+
+**Built PR #29 (`trim-status-md-duplicate-narrative`).** Removed the ~1,180-line duplicate block (lines
+58-1236 of the pre-change file) after confirming every session inside it had a matching-or-fuller
+archive entry first, rather than trusting the pattern after a handful of spot checks. Checked for
+standing decisions embedded in the historical bloat that might not survive its removal — found one
+(KvK staying parked until the site is finished) and confirmed it already lives independently in
+[#54](open-questions.md), so nothing was actually lost. `docs/STATUS.md` is now ~130 lines: the lean
+top block plus the evergreen Phase 0 checklist / benchmark scoreboard / phase history sections.
+
+**This tripped a real, working guard, exactly as designed** — `tests/docs/doc-conventions.test.ts`'s
+session-71 anti-truncation floor for `docs/STATUS.md` (added after a real incident: the file once
+shipped as a 0-byte file through three green pushes) was calibrated to 200 lines, back when the file's
+"normal" size was far larger than the ~130 lines this legitimate prune leaves it at. Lowered the floor
+to 100 and updated its required marker text (`▶ SESSION` → `▶ NEXT SESSION`, since the string `▶ SESSION`
+only ever matched the now-removed `▶ SESSION NN` headers inside the deleted narrative, not the current
+top block's `▶ NEXT SESSION STARTS HERE` phrasing) — confirmed the test genuinely failed first
+(`docs/STATUS.md has 133 lines — truncated?`), then passed after the recalibration, so this is a real
+verified fix, not an unverified guess that the change was needed.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `test:docs` 11/11
+(1 failing before the floor fix, with the exact expected message, 11/11 after); full backend suite,
+solo: 153 files / 2358 tests green (unaffected — no backend files touched, re-run anyway per convention);
+full web suite, solo: 105 files / 1733 tests green; hermetic benchmark 14/14 answerable + 6/6
+refusal/clarify + 0 fabricated, gate PASS; real `next build` succeeds. `/code-review` LOW: both changed
+files (`docs/STATUS.md`, `tests/docs/doc-conventions.test.ts`) are out of scope for that pass per the
+review skill's own rules — one is docs, the other matches the `*.test.*` exclusion — so no findings to
+report. Branch `trim-status-md-duplicate-narrative`, PR #29 — autonomous, per [#118](open-questions.md)
+(b), not merged. **CI confirmed green** (run `34941368384`, polled to completion via the same
+backgrounded-loop pattern as PRs #26-#28: `conclusion: "success"`).
+
+**Deliberately did not attempt** a similarly thorough sweep of `docs/status-archive.md` itself for
+possible duplication or the older "## Session log" section's own internal consistency — out of scope for
+this pass, which targeted the specific stale claim found in `STATUS.md`'s own text, not a general audit
+of the archive's structure.
 
 **Session 102, AUTONOMOUS (2026-09-15, owner asleep/away the whole session) — two small, well-contained
 fixes shipped as separate PRs, plus a real pre-existing doc-convention violation found and fixed on

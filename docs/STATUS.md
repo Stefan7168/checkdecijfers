@@ -21,7 +21,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent two
 short messages mid-session, "I trust your judgement" then twice "continue to work autonomously," but did
 not review any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may
-land after this).** **Six PRs now open, ALL awaiting owner review, NONE merged — this is purely a review
+land after this).** **Seven PRs now open, ALL awaiting owner review, NONE merged — this is purely a review
 wait, nothing blocks any of them on the tooling side:** #23 (WP30c E1 Eurostat), #24 (health-check
 `pro_subscriptions` fix), #25 (dead chart-story cleanup) — all three unchanged since session 102, still
 zero comments/reviews — plus **PR #26** (`attachments-envelope-key-manifest`): closes
@@ -53,6 +53,18 @@ on a real fixture-replay chart, read the actual measured width/height at each st
 green (backend 153/2358 unaffected, web 105/1736, benchmark 28/28, `test:docs` 11/11, real build,
 `/code-review` LOW 0 findings) — **CI confirmed green** (`gh run view` on the PR's run:
 `conclusion: "success"`).
+Plus new **PR #29** (`trim-status-md-duplicate-narrative`): a fresh open-questions re-triage's top pick
+(row #231, Insights spend tracking) turned out to be a documented, deliberate deferral, not an actual
+gap — rejected it and found this instead: **this file itself** had grown to 1,307 lines by never being
+trimmed after its old session blocks (56 through 99) were archived; the session-94 "known debt" note
+that used to sit above blamed that on those sessions never being archived, which was checked and found
+wrong — every one already had a fuller entry in [status-archive.md](status-archive.md). Removed the
+~1,180-line duplicate (verified each session against its archive entry first; standing decisions inside
+it, e.g. KvK staying parked, already live independently in [#54](open-questions.md)) and recalibrated
+`tests/docs/doc-conventions.test.ts`'s STATUS.md truncation-guard floor (200→100 lines) to match. Full
+verification green (backend 153/2358, web 105/1733, benchmark 14/14+6/6+0 fabricated, `test:docs` 11/11,
+real build; `/code-review` LOW — both changed files are out of scope for that pass, docs + a `*.test.*`
+file) — **CI confirmed green** (run `34941368384`, `conclusion: "success"`).
 Full account: [status-archive.md](status-archive.md)'s session 103 entry.
 
 ## Phase 0 checklist
