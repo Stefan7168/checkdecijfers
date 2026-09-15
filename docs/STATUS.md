@@ -14,6 +14,18 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
+**▶ SESSION 104 IN PROGRESS (2026-09-15/16): PR #32 open, CI running, NOT merged.** The owner reacted very
+negatively to `/bevolking-3d-demo` compared to his own separate reference site
+(`checkdecijfers-3d-demo.vercel.app`) and authorized autonomous overnight rework. Built by a background agent
+in an isolated worktree per [superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md),
+independently re-verified by the orchestrating session (typecheck, 1801/1801 tests, real build, `/code-review`
+LOW — zero findings) rather than trusting the build agent's own report. Full as-built: ADR
+[049](decisions/049-3d-municipality-map-demo.md)'s v2 addendum. Deferred scope (the commuting-flow `/pendel`
+demo the owner also linked, and the other 16 pages on his reference site): [open-questions #258](open-questions.md)
+— not built, not decided, tracked for the owner to triage. **Not obtained: a live screenshot** (the route is
+login-gated and this session has no credentials) — the PR asks the owner to take one look logged in before
+merging. Branch + PR per [#118](open-questions.md)(b) (autonomous, owner not present for the build itself).
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103 — a long session, both autonomous stretches
 and owner-present stretches; verify against `git log`/`gh pr list` before trusting anything below, since
 more may have landed after this was written).** **Two PRs MERGED to `main` this session — PR #30 (the 3D
