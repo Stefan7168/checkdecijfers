@@ -1626,6 +1626,79 @@ describe('ChartView form switch', () => {
   });
 });
 
+describe('chart-card polish (2026-09-15) — a quiet control row and header actions', () => {
+  it('Opmaak is an icon-only header action (name kept), Inzichten sits beside it; neither is inside the Weergave row', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    const opmaak = screen.getByRole('button', { name: 'Opmaak' });
+    const inzichten = screen.getByRole('button', { name: 'Inzichten' });
+    expect(actions).toContainElement(opmaak);
+    expect(actions).toContainElement(inzichten);
+    expect(opmaak.textContent).toBe('');
+    expect(opmaak).toHaveAttribute('title', 'Opmaak');
+    expect(controls).not.toContainElement(opmaak);
+    expect(controls).not.toContainElement(inzichten);
+    expect(controls).toContainElement(screen.getByRole('tablist', { name: 'Weergave' }));
+    // The gradient ring around Inzichten (the product's one gradient) survives the move.
+    expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(inzichten);
+  });
+  it('the Vanaf/Tot selects share the Weergave row — one control row above the plot, not two — and keep their labels', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    expect(controls).toContainElement(screen.getByLabelText('Vanaf'));
+    expect(controls).toContainElement(screen.getByLabelText('Tot'));
+    // DOM order = keyboard order: the control row precedes the chart panel, so a keyboard user reaches the tabs before the chart's own focusable points.
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(controls.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+  it('the form tabs are quiet underline tabs: no muted track, the active tab underlined, the R9.1 tap-target classes kept', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
+    expect(tablist.className).not.toContain('bg-muted');
+    const active = screen.getByRole('tab', { name: 'Lijn' });
+    expect(active).toHaveAttribute('aria-selected', 'true');
+    expect(active.className).toContain('border-foreground');
+    expect(active.className).not.toContain('shadow-sm');
+    const inactive = screen.getByRole('tab', { name: 'Staaf' });
+    expect(inactive.className).toContain('border-transparent');
+    expect(inactive.className).toContain('min-h-11');
+    expect(inactive.className).toContain('sm:min-h-6');
+  });
+  it('the header keeps its shape: the subtitle is still the heading\'s next sibling; the actions cluster is outside that column', () => {
+    const s = spec({ dimLabels: { Geslacht: 'Totaal' } });
+    const { container } = render(<ChartView spec={s} />);
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    expect(heading.nextElementSibling?.textContent).toContain('Geslacht: Totaal');
+    expect(heading.parentElement).not.toContainElement(container.querySelector('[data-slot="chart-card-actions"]'));
+  });
+  it('Tabel form drops the Opmaak action (no Style panel in table form, as before) and keeps Inzichten off there too', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+  });
+  it('embed mode and stage mode render neither the actions cluster nor the control row', () => {
+    const embed = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />).container;
+    expect(embed.querySelector('[data-slot="chart-card-actions"]')).toBeNull();
+    expect(embed.querySelector('[data-slot="chart-controls"]')).toBeNull();
+    cleanup();
+    const stage = render(<ChartView spec={threePointSpec()} stage={{ step: null, overrides: {} }} />).container;
+    expect(stage.querySelector('[data-slot="chart-card-actions"]')).toBeNull();
+    expect(stage.querySelector('[data-slot="chart-controls"]')).toBeNull();
+  });
+  it('the whole-card digit scan still passes with the new header and control row, in Dutch and in English', () => {
+    const s = fourYearLineSpec();
+    const nl = render(<ChartView spec={s} />).container;
+    scanForUnboundDigits(nl, harvestSpecStrings(s));
+    cleanup();
+    const en = render(<LangProvider lang="en"><ChartView spec={s} /></LangProvider>).container;
+    scanForUnboundDigits(en, harvestSpecStrings(s));
+  });
+});
+
 describe('trend headline (#197 idea 4)', () => {
   it('renders the headline when attribution.trendHeadline is set', () => {
     render(
@@ -2380,21 +2453,28 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // change: the chart deliberately relocates into the dialog (verified by
   // reference identity below: the canvas tabpanel found after opening is a
   // DIFFERENT DOM node than the one found before — a real unmount/remount,
-  // not just a reposition). What's unchanged (option A) is the trigger's
-  // own dock position, proven exactly as before.
-  it('option A layout: the trigger stays in the Weergave tablist row in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
+  // not just a reposition).
+  //
+  // Chart-card polish (2026-09-15): the trigger's DOCK POSITION changed by
+  // explicit design — it is no longer a row-mate of the Weergave tablist
+  // ("option A"); it is a header action next to the title
+  // (`data-slot="chart-card-actions"`, see the new "quiet control row and
+  // header actions" describe above, which pins the new position and its
+  // exclusion from the tablist's own row). This one assertion is updated to
+  // match — not weakened, corrected to the plan's own stated new layout;
+  // everything below about the modal relocation is unaffected and unchanged.
+  it('the trigger stays in the card\'s header actions cluster in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const chartTabpanelBeforeOpen = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(chartTabpanelBeforeOpen).not.toBeNull();
 
-    // The trigger is a row-mate of the Weergave tablist (owner: option A —
-    // "the trigger stays in the tablist row") — proven via a shared
-    // ancestor that contains both, since the trigger is a row-mate of the
-    // tablist, not a DOM child of it. Unaffected by the modal conversion:
-    // only the PANEL's own content and the chart move, never the trigger.
+    // The trigger lives in the header's actions cluster (chart-card polish,
+    // 2026-09-15), not the Weergave tablist row. Unaffected by the modal
+    // conversion: only the PANEL's own content and the chart move, never
+    // the trigger.
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
-    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
-    expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
+    const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
+    expect(actions.contains(trigger)).toBe(true);
 
     fireEvent.click(trigger);
 

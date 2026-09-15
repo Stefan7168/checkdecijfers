@@ -2181,9 +2181,14 @@ export function ChartView({
   // the 44px minimum tap target. `min-h-11 sm:min-h-6` widens the tap target
   // only below the `sm` breakpoint, so the desktop (1280px) control stays
   // pixel-identical to before.
-  const segmentTab = (active: boolean): string =>
-    'min-h-11 sm:min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
-    (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
+  // Chart-card polish (2026-09-15): the Weergave tabs are quiet underline
+  // tabs (the dock's own house pattern, 12-huisstijl §Layout) — no filled
+  // track, no raised segment; the active tab is a 2 px underline in the
+  // foreground colour. R9.1 (#238): `min-h-11 sm:min-h-6` keeps the 44 px
+  // phone tap target, pinned by test.
+  const quietTab = (active: boolean): string =>
+    'min-h-11 sm:min-h-6 border-b-2 px-1.5 py-1 text-xs transition-colors disabled:cursor-not-allowed ' +
+    (active ? 'border-foreground font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
     'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
@@ -2717,36 +2722,75 @@ export function ChartView({
 
   return (
     <div className={frameClass}>
-      <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
-        {displaySpec.title}
+      {/* Chart-card polish (2026-09-15): title + subtitle on the left, the
+        * card's two actions (Inzichten, Opmaak) top-right — the universal
+        * card-actions idiom. The heading's next sibling stays the subtitle
+        * (tests read the header by that relationship). Gating is byte-
+        * identical to the old control row: no actions in embed or stage
+        * mode; Opmaak never in Tabel form; Inzichten only when a story
+        * exists. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
+            {displaySpec.title}
+          </div>
+          {/* ADR 042: one muted subtitle line — the unit first, then the pinned
+            * dimensions — as separate spans (tests and the digit scan read them
+            * per text node). */}
+          <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span>{displaySpec.unit}</span>
+            {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
+          </div>
+        </div>
+        {!embedMode && !inStage && (storyAvailable || state.form !== 'table') ? (
+          <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
+            {/* Story mode (session 92): the colourful trigger is offered
+              * whenever there is a code-built story (storyAvailable,
+              * computed above next to styleControlsId). */}
+            {storyAvailable ? (
+              <ChartStoryTrigger
+                open={storyOpen}
+                onToggle={toggleStory}
+                controlsId={storyControlsId}
+                triggerId={storyTriggerId}
+                lang={chartLang}
+              />
+            ) : null}
+            {/* Review fix (chart-panel-layout, option A): table form gets NO
+              * frame and NO Style panel (as before the Frame-tab feature) — a
+              * framed table would need its own export path, so the trigger
+              * stays gated on `state.form !== 'table'` exactly like the
+              * ChartConfigPanel mount further down. */}
+            {state.form !== 'table' ? (
+              <ChartConfigTrigger
+                open={styleOpen}
+                onToggle={toggleStylePanel}
+                controlsId={styleControlsId}
+                triggerId={styleTriggerId}
+                lang={chartLang}
+                compact
+              />
+            ) : null}
+          </div>
+        ) : null}
       </div>
-      {/* ADR 042: one muted subtitle line — the unit first, then the pinned
-        * dimensions — as separate spans (tests and the digit scan read them
-        * per text node). */}
-      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-        <span>{displaySpec.unit}</span>
-        {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
-      </div>
-      {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
-        * Weergave tablist and the Opmaak trigger share one row — the trigger
-        * (`ChartConfigTrigger`, rendered directly here — see the review-fix
-        * comment on `styleOpen` above) is a plain row-mate of the tablist,
-        * not a child of it — the tablist's own `mt-3` moved up onto this
-        * wrapper so the row keeps its original top spacing regardless of
-        * whether the trigger is offered. */}
-      {/* Spec Part B3 + Task 3 (ADR 044): the ENTIRE Weergave tablist + Style/
-        * Story trigger row is a viewer-only control surface — an embed has
-        * no reader to flip between Lijn/Staaf/Tabel or open the Opmaak/
-        * Verhaal panels, and the full-viewport stage drives the chart purely
-        * from its own step index — so the whole row (not each control
-        * separately) is gated on both `!embedMode` and `!inStage`. */}
+      {/* Chart-card polish (2026-09-15): ONE quiet control row above the
+        * plot — the Weergave tablist left, the Vanaf/Tot window right — in
+        * place of the former two rows (tablist + Opmaak + Inzichten, then
+        * Vanaf/Tot). Kept ABOVE the export container on purpose: DOM order
+        * is keyboard order, and every SeriesDot/SeriesBar is a tab stop
+        * (click-to-annotate), so a reader must reach the form switch before
+        * the chart's own points — moving the row under the plot would have
+        * cost a keyboard user one Tab per data point. Spec Part B3 + ADR
+        * 044: the whole row is a viewer-only control surface, gated on both
+        * `!embedMode` and `!inStage` exactly as before. */}
       {!embedMode && !inStage ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2" data-slot="chart-controls">
           <div
             role="tablist"
             aria-label={t(chartLang, 'chart.weergaveLabel')}
             onKeyDown={onFormTabKeyDown}
-            className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+            className="flex flex-wrap items-center gap-1"
           >
             <button
               ref={lineTabRef}
@@ -2759,7 +2803,7 @@ export function ChartView({
               disabled={!canUseLine}
               title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
               onClick={() => selectForm('line')}
-              className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.tabLine')}
             </button>
@@ -2774,7 +2818,7 @@ export function ChartView({
               disabled={!canUseArea}
               title={canUseArea ? undefined : areaDisabledReason}
               onClick={() => selectForm('area')}
-              className={segmentTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.form.area')}
             </button>
@@ -2786,7 +2830,7 @@ export function ChartView({
               aria-controls={panelId}
               tabIndex={activeForm === 'bar' ? 0 : -1}
               onClick={() => selectForm('bar')}
-              className={segmentTab(activeForm === 'bar')}
+              className={quietTab(activeForm === 'bar')}
             >
               {t(chartLang, 'chart.tabBar')}
             </button>
@@ -2801,7 +2845,7 @@ export function ChartView({
               disabled={!canUseHbar}
               title={canUseHbar ? undefined : hbarDisabledReason}
               onClick={() => selectForm('hbar')}
-              className={segmentTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.form.hbar')}
             </button>
@@ -2813,7 +2857,7 @@ export function ChartView({
               aria-controls={panelId}
               tabIndex={activeForm === 'table' ? 0 : -1}
               onClick={() => selectForm('table')}
-              className={segmentTab(activeForm === 'table')}
+              className={quietTab(activeForm === 'table')}
             >
               {t(chartLang, 'chart.tabTable')}
             </button>
@@ -2837,96 +2881,68 @@ export function ChartView({
               {hbarDisabledReason}
             </span>
           ) : null}
-          {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
-            * renders directly here as a row-mate of the Weergave tablist — no
-            * portal, no placeholder node. Final-review fix: table form gets NO
-            * frame and NO Style panel (as before the Frame-tab feature) — a
-            * framed table would need its own export path, so the trigger stays
-            * gated on `state.form !== 'table'` exactly like the ChartConfigPanel
-            * mount further down. */}
-          {state.form !== 'table' ? (
-            <ChartConfigTrigger
-              open={styleOpen}
-              onToggle={toggleStylePanel}
-              controlsId={styleControlsId}
-              triggerId={styleTriggerId}
-              lang={chartLang}
-            />
+          {zoomAvailable ? (
+            <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
+              <select
+                id={`${domId}-from`}
+                aria-label={t(chartLang, 'chart.from')}
+                value={state.periodRange?.[0] ?? allPeriodCodes[0]}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) => {
+                  const [from, clampedTo] = clampVanafChange(
+                    e.target.value,
+                    state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
+                  );
+                  dispatch({
+                    type: 'setPeriodRange',
+                    range:
+                      from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
+                        ? null
+                        : [from, clampedTo],
+                  });
+                }}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {allPeriodCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {periodLabelByCode.get(code)}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
+              <select
+                id={`${domId}-to`}
+                aria-label={t(chartLang, 'chart.to')}
+                value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) => {
+                  const [clampedFrom, to] = clampTotChange(
+                    state.periodRange?.[0] ?? allPeriodCodes[0],
+                    e.target.value,
+                  );
+                  dispatch({
+                    type: 'setPeriodRange',
+                    range:
+                      clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                        ? null
+                        : [clampedFrom, to],
+                  });
+                }}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {allPeriodCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {periodLabelByCode.get(code)}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : null}
-          {/* Story mode (session 92): the colourful trigger sits in the same
-            * row as Opmaak — a code-built story is offered whenever there is
-            * one (storyAvailable, computed above next to styleControlsId). */}
-          {storyAvailable ? (
-            <ChartStoryTrigger
-              open={storyOpen}
-              onToggle={toggleStory}
-              controlsId={storyControlsId}
-              triggerId={storyTriggerId}
-              lang={chartLang}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {zoomAvailable && !embedMode && !inStage ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
-          <select
-            id={`${domId}-from`}
-            aria-label={t(chartLang, 'chart.from')}
-            value={state.periodRange?.[0] ?? allPeriodCodes[0]}
-            disabled={storyOpen}
-            title={storyLockedTitle}
-            aria-describedby={storyOpen ? storyLockId : undefined}
-            onChange={(e) => {
-              const [from, clampedTo] = clampVanafChange(
-                e.target.value,
-                state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
-              );
-              dispatch({
-                type: 'setPeriodRange',
-                range:
-                  from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
-                    ? null
-                    : [from, clampedTo],
-              });
-            }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {allPeriodCodes.map((code) => (
-              <option key={code} value={code}>
-                {periodLabelByCode.get(code)}
-              </option>
-            ))}
-          </select>
-          <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
-          <select
-            id={`${domId}-to`}
-            aria-label={t(chartLang, 'chart.to')}
-            value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
-            disabled={storyOpen}
-            title={storyLockedTitle}
-            aria-describedby={storyOpen ? storyLockId : undefined}
-            onChange={(e) => {
-              const [clampedFrom, to] = clampTotChange(
-                state.periodRange?.[0] ?? allPeriodCodes[0],
-                e.target.value,
-              );
-              dispatch({
-                type: 'setPeriodRange',
-                range:
-                  clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
-                    ? null
-                    : [clampedFrom, to],
-              });
-            }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {allPeriodCodes.map((code) => (
-              <option key={code} value={code}>
-                {periodLabelByCode.get(code)}
-              </option>
-            ))}
-          </select>
         </div>
       ) : null}
       {/* Task 3 (chart-visual-embed-pass): also suppressed while the Embed
