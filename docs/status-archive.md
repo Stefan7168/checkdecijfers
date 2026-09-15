@@ -1,5 +1,61 @@
 # STATUS archive — the session log
 
+**Session 103, AUTONOMOUS (2026-09-15, owner away the whole session) — a fourth small PR opened after a
+fresh open-questions triage; PRs #23/#24/#25 all still untouched by the owner.**
+
+Continued from session 102's kickoff brief
+([session-briefs/2026-09-15-session-103-kickoff.md](session-briefs/2026-09-15-session-103-kickoff.md)),
+which named all three open PRs as awaiting review and explicitly warned against picking a fourth
+autonomous target blind. Confirmed first, live, before doing anything else: all three PRs (`gh pr list
+--state open`) still had zero comments/reviews (`gh pr view <n> --json comments,reviews`); PR #23's own
+CI run (`34885657335`) was re-confirmed genuinely green via `gh run list` (its `mergeStateStatus` reads
+`UNKNOWN` — GitHub simply hasn't recomputed it, not a real problem).
+
+**Re-triaged `docs/open-questions.md` fresh** (a cheap-tier subagent, per the delegation-cost-tier
+convention) against seven hard constraints (no DDL, no live API calls, no env-flag flips, no owner
+judgment call, small blast radius, no overlap with the three open PRs' files, not WP30c E2). It surfaced
+[#209](open-questions.md) — the missing `DatasetTurnEnvelope` key-manifest test — as the best candidate.
+Verified the recommendation against the actual code before trusting it (the row itself said "not urgent,"
+so this needed real judgment, not a rubber stamp): read `src/attachments/types.ts`,
+`src/attachments/reconstruct.ts`, and the existing CBS-side `tests/audit/envelope-key-manifest.test.ts`
+in full first.
+
+**Built `tests/attachments/envelope-key-manifest.test.ts`, PR #26.** `DatasetTurnEnvelope` is a
+discriminated union of three inline object literals (chart/clarification/refusal), not `extends`-linked
+interfaces like the CBS side's `ResponseBase`/`AnswerResponse`/etc. — the existing manifest test's
+`declaredMembers` parser (interface-body only) could not read it, so this file's own
+`declaredEnvelopeVariants` is a sibling parser for the union grammar, including the one field
+(`refusal.reason`) whose own string-literal union genuinely spans multiple source lines. Every field of
+all three variants now has a manifested reconstruct.ts treatment (rederived/shape-checked/ignored, every
+`ignored` with a stated why). `UserChartSpec` did not need its own separate manifest section: it is
+checked as ONE unit (`buildUserChartSpec` rebuilt and compared byte-for-byte against the stored `chart`
+field) — the same granularity the CBS side already gives `AnswerResponse.chart` — so a future
+`UserChartSpec` field is already covered by that rederivation as long as the builder populates it.
+
+**Building the manifest immediately surfaced one real, pre-existing gap it exists to catch:**
+`reconstruct.ts`'s `checkEnvelopeIntegrity` never checked `envelope.schemaVersion` against
+`DATASET_TURN_ENVELOPE_VERSION` — unlike the CBS side's reconstructor, which has always pinned this
+(confirmed by grepping every reference to `DATASET_TURN_ENVELOPE_VERSION`/`envelope.schemaVersion` across
+`src/attachments/`: declared and set at write time, never read back at reconstruct time). Fixed directly
+(one check added to `checkEnvelopeIntegrity`) with a regression test in `reconstruct.test.ts`. Zero
+behavior change today — the version constant has never been bumped past 1, so no stored row can currently
+trip it — but the check now exists before this tier's first real schema bump, which is exactly the moment
+it needs to.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; backend 154 files /
+2366 tests green (solo, up from 153/2358 — the two new tests); web 105 files / 1733 tests green (solo,
+unaffected — zero web files touched); `test:docs` 11/11; hermetic benchmark (`test:benchmark`) 28/28
+green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the one non-test file
+changed (a 5-line addition to `reconstruct.ts`). Branch `attachments-envelope-key-manifest`, PR #26 —
+autonomous, per [#118](open-questions.md)(b), not merged. CI triggered on push, in progress at wrap-up
+(not yet re-checked green — the full LOCAL verification block above is what this session's own claim
+rests on; the next session should confirm CI itself before trusting this as done).
+
+**Note on process:** avoided the mistake of calling `ScheduleWakeup` to "wait" for a backgrounded shell
+command mid-turn (a standing feedback-memory rule — that tool is `/loop`-dynamic-mode-only) — caught it
+immediately after the one call, cancelled it (`stop: true`), and relied on the background task's own
+completion notification instead, as the rule says to.
+
 **Session 102, AUTONOMOUS (2026-09-15, owner asleep/away the whole session) — two small, well-contained
 fixes shipped as separate PRs, plus a real pre-existing doc-convention violation found and fixed on
 `main`. PR #23 (session 101's WP30c E1) untouched, still open, still awaiting owner review.**
