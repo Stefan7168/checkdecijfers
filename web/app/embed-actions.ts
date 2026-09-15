@@ -7,7 +7,7 @@
 
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { loadAuditRecord } from '../backend/answer/audit/index.ts';
+import { isRedacted, loadAuditRecord } from '../backend/answer/audit/index.ts';
 import { buildProSubscriptionCheckoutParams } from '../backend/billing/index.ts';
 import { hasProPlan } from '../backend/billing/pro.ts';
 import { signEmbedToken } from '../backend/chart/embed-token.ts';
@@ -15,14 +15,6 @@ import { currentUserEmail, currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
 import { proCancelledUrl, proSuccessUrl } from '../lib/purchase.ts';
-
-/** The retention redaction sentinel (`src/answer/audit/retention.ts`'s
- * `redactedResponse()`) lives INSIDE the stored response envelope, not as a
- * column on `AuditRecord` — mirrors `scripts/verify-audit-rows.ts`'s own
- * `isRedacted` helper exactly, so a redacted row can never be embedded. */
-function isRedacted(response: unknown): boolean {
-  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
-}
 
 export type CreateEmbedCodeResult =
   | { ok: true; token: string; pro: boolean }

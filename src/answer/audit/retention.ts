@@ -173,6 +173,28 @@ function redactedPendingClarification(): Record<string, unknown> {
   };
 }
 
+/** Does a stored `response` carry the `redactedResponse()` sentinel above?
+ * The shared home for a check that used to be hand-copied three times
+ * (open-questions #227): `web/app/embed-actions.ts`,
+ * `web/app/embed/[token]/page.tsx`, and `scripts/verify-audit-rows.ts` each
+ * independently defined this exact one-liner, correct individually but with
+ * nothing to keep them in sync if `redactedResponse()`'s shape ever changes.
+ * Placed next to `redactedResponse()` (the writer) rather than in
+ * `reconstruct.ts` (the reader) since this file is the one thing all three
+ * call sites already import from (`src/answer/audit/index.ts`).
+ *
+ * Deliberately NOT reused by `scripts/verify-dataset-turns.ts`'s own,
+ * structurally-identical-looking `isRedacted` — that one guards
+ * `RedactedDatasetEnvelope` (`src/attachments/types.ts`), a different trust
+ * tier's own sentinel (ADR 037 D1's deliberate separation from the CBS
+ * pipeline). Sharing this helper across tiers would be a coincidence-of-
+ * shape import, not a real one — the same "no cross-tier import for a
+ * duplicated helper" convention this codebase already applies elsewhere
+ * (e.g. `nativeIdFrom`, duplicated per-adapter on purpose). */
+export function isRedacted(response: unknown): boolean {
+  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
+}
+
 /** One row's before-state, returned so callers can log/count what was
  * touched without a second query. */
 export interface RedactedRow {
