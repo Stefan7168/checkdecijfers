@@ -138,6 +138,29 @@ describe('reconstructDatasetTurn — chart turns', () => {
     });
   });
 
+  it('flags an envelope whose schemaVersion no longer matches DATASET_TURN_ENVELOPE_VERSION', async () => {
+    await withDb(async (db) => {
+      const { dataset, threadId } = await seed(db);
+      await respondToDatasetQuestion(db, {
+        dataset,
+        threadId,
+        question: 'show revenue by year',
+        requestId: randomUUID(),
+        rawState: null,
+        llmOptions: { client: fakeClient(chartInstructionOutput()) },
+      });
+      const turnId = await lastTurnId(db, dataset.id);
+      await db.query(`update dataset_turns set envelope = jsonb_set(envelope, '{schemaVersion}', '99') where id = $1`, [
+        turnId,
+      ]);
+      const record = await getDatasetTurnById(db, turnId);
+      const currentDataset = await getDataset(db, dataset.userId, dataset.id);
+      const report = reconstructDatasetTurn(record!, currentDataset!);
+      expect(report.ok).toBe(false);
+      expect(report.problems).toContain('envelope schemaVersion 99 is not the v1 this reconstructor handles');
+    });
+  });
+
   it('flags a stored instruction that diverges from the envelope', async () => {
     await withDb(async (db) => {
       const { dataset, threadId } = await seed(db);

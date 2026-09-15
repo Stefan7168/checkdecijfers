@@ -17,7 +17,7 @@ import {
   validationClarificationText,
   zeroRowsClarificationText,
 } from './templates.ts';
-import { redactedDatasetEnvelope, REDACTED_DATASET_TEXT, toClientInstruction } from './types.ts';
+import { DATASET_TURN_ENVELOPE_VERSION, redactedDatasetEnvelope, REDACTED_DATASET_TEXT, toClientInstruction } from './types.ts';
 import type { DatasetTurnRecord, UserDataset } from './types.ts';
 
 /** JSON.stringify with recursively sorted object keys — the same shape as
@@ -61,6 +61,11 @@ export interface ReconstructionReport {
 
 function checkEnvelopeIntegrity(record: DatasetTurnRecord, problems: string[]): void {
   const envelope = record.envelope;
+  if (envelope.schemaVersion !== DATASET_TURN_ENVELOPE_VERSION) {
+    problems.push(
+      `envelope schemaVersion ${envelope.schemaVersion} is not the v${DATASET_TURN_ENVELOPE_VERSION} this reconstructor handles`,
+    );
+  }
   if (record.finalText !== envelope.text) {
     problems.push('final_text differs from envelope.text');
   }
