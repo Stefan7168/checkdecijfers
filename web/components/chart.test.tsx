@@ -1699,6 +1699,78 @@ describe('chart-card polish (2026-09-15) — a quiet control row and header acti
   });
 });
 
+describe('chart-card polish (2026-09-15) — the headline figure', () => {
+  it('leads with the last plotted value of a single time series, bound to its resultId, unit and period beside it, above the control row', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    const bound = figure.querySelector('[data-label-for="nl-2021"]') as HTMLElement;
+    expect(bound.textContent).toBe('115');
+    expect(figure.textContent).toContain('%');
+    expect(figure.textContent).toContain('2021');
+    expect(figure.textContent).toContain('Laatste waarde in de grafiek');
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    expect(figure.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Outside the export container by construction (R6: never a new number in the file).
+    expect(container.querySelector('[role="tabpanel"]')).not.toContainElement(figure);
+  });
+  it('follows the Vanaf/Tot window: the window\'s own last point, labelled with its own period', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2020' } });
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    expect(figure.querySelector('[data-label-for="nl-2020"]')?.textContent).toBe('110');
+    expect(figure.querySelector('[data-label-for="nl-2021"]')).toBeNull();
+  });
+  it('a provisional latest value carries the * suffix, and a trailing null is skipped', () => {
+    const s = spec({
+      series: [{
+        label: 'Nederland', regionCode: null,
+        points: [
+          point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+          point({ resultId: 'b', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0', provisional: true, status: 'Voorlopig' }),
+          point({ resultId: 'c', periodCode: '2025JJ00', periodLabel: '2025', value: null, formattedValue: null, valueAttribute: 'Geheim' }),
+        ],
+      }],
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
+      nullNotes: ['2025: geheim.'],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('[data-testid="headline-figure"] [data-label-for="b"]')?.textContent).toBe('2,0*');
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+  it('no headline for a multi-series chart, a comparison, the Tabel form, or stage mode', () => {
+    expect(render(<ChartView spec={twoSeriesFourYearLineSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    expect(render(<ChartView spec={multiRegionBarSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    expect(render(<ChartView spec={fourYearLineSpec()} stage={{ step: null, overrides: {} }} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+  });
+  it('the trend headline sentence sits directly under the figure (above the chart) and is still suppressed under a zoom', () => {
+    const { container } = render(<ChartView spec={trendHeadlineLineSpec()} />);
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    const sentence = screen.getByTestId('trend-headline');
+    expect(figure.nextElementSibling).toBe(sentence);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(sentence.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    expect(screen.queryByTestId('trend-headline')).toBeNull();
+    expect(container.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
+  });
+  it('shows in embed mode (the honest card stands alone there) and the whole-card digit scan passes in both languages', () => {
+    const s = fourYearLineSpec();
+    const nl = render(<ChartView spec={s} embedMode embedFooter="x" />).container;
+    expect(nl.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
+    scanForUnboundDigits(nl, harvestSpecStrings(s));
+    cleanup();
+    const en = render(<LangProvider lang="en"><ChartView spec={s} /></LangProvider>).container;
+    expect(en.textContent).toContain('Latest value on the chart');
+    scanForUnboundDigits(en, harvestSpecStrings(s));
+  });
+});
+
 describe('trend headline (#197 idea 4)', () => {
   it('renders the headline when attribution.trendHeadline is set', () => {
     render(

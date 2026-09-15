@@ -369,6 +369,9 @@ const nl = {
   'chart.provisionalMarkerNote': '○ = voorlopig cijfer',
   'chart.markedInChart': 'Gemarkeerd in de grafiek: {label}',
   'chart.keyboardHint': 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.',
+  // Chart-card polish (2026-09-15): the screen-reader prefix for the large
+  // headline figure above the chart (the figure itself is a spec string).
+  'chart.headline.label': 'Laatste waarde in de grafiek',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1083,6 +1086,7 @@ const en: Messages = {
   'chart.provisionalMarkerNote': '○ = provisional figure',
   'chart.markedInChart': 'Marked in the chart: {label}',
   'chart.keyboardHint': 'Use the arrow keys to move through the chart’s points.',
+  'chart.headline.label': 'Latest value on the chart',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',

@@ -81,6 +81,7 @@ import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
+import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartStoryStage } from './chart-story-stage.tsx';
@@ -1852,6 +1853,13 @@ export function ChartView({
   // below, keeps the claim and the render in sync.
   const markers = annotationMarkers({ ...displaySpec, kind: effectiveKind }, rows);
   const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
+  // Chart-card polish (2026-09-15): the headline figure — the DISPLAYED
+  // spec's last plotted point (single time series only; see
+  // chart-headline.ts). Read from `displaySpec`, like the end label, so a
+  // Vanaf/Tot window leads with its own last point and an English chart
+  // shows the translated period/unit; the value/resultId fields are
+  // untouched by translation (translateSpecForDisplay).
+  const headline = headlineFigure(displaySpec);
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
@@ -2774,6 +2782,35 @@ export function ChartView({
           </div>
         ) : null}
       </div>
+      {/* Chart-card polish (2026-09-15): the number leads, the chart is the
+        * evidence. Outside the export container (chartContainerRef) by
+        * construction — never in a PNG/SVG. Every token is a spec string
+        * already covered by the whole-card digit scan (formattedValue,
+        * unit, periodLabel); the value is bound to its cell via
+        * data-label-for (R1). Not in the table form (it shows everything),
+        * not in stage mode (ADR 044: the caption IS the sentence). */}
+      {headline !== null && !inStage && state.form !== 'table' ? (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-2" data-testid="headline-figure">
+          <span className="sr-only">{t(chartLang, 'chart.headline.label')}</span>
+          <span className="text-3xl font-semibold leading-none tracking-tight text-foreground tabular-nums" data-label-for={headline.resultId}>
+            {headline.value}
+            {headline.provisional ? '*' : ''}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {headline.unit} · {headline.periodLabel}
+          </span>
+        </p>
+      ) : null}
+      {/* #197 idea 4: the deterministic trend sentence, moved up under the
+        * figure (chart-card polish, 2026-09-15) — number in a sentence, the
+        * chart as evidence below. Gating unchanged: never in the stage
+        * (fix round 2, item 9 — the stage's caption is the sentence), never
+        * in the table, never under a zoom (it describes the full range). */}
+      {!inStage && state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
+        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
+          {spec.attribution.trendHeadline}
+        </p>
+      ) : null}
       {/* Chart-card polish (2026-09-15): ONE quiet control row above the
         * plot — the Weergave tablist left, the Vanaf/Tot window right — in
         * place of the former two rows (tablist + Opmaak + Inzichten, then
@@ -3220,16 +3257,6 @@ export function ChartView({
           </div>
         ) : null}
         </ChartEditModal>
-      ) : null}
-      {/* Fix round 2 (item 9): no trend headline in the stage. The stage's own
-        * caption IS the sentence being presented; a second, differently
-        * phrased headline under the same chart competes with the step the
-        * reader is on (and on a phone it pushed the source line out of the
-        * pinned area entirely). */}
-      {!inStage && state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
-        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
-          {spec.attribution.trendHeadline}
-        </p>
       ) : null}
       {/* Task 3 (chart-visual-embed-pass): same no-double-mount reasoning as
         * canvasNode above — legendNode is also lifted into the Embed
