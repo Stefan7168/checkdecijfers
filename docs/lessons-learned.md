@@ -6,6 +6,101 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 103 continuation (2026-09-15) — the 3D municipality map DEMO (PR #30, ADR 049): background-agent wait patterns, jsdom/Vite URL quirks, a Turbopack bundle-measurement gap, and a real-browser workaround
+
+- **A sibling agent's own crisis can silently corrupt THIS session's already-verified results, with no local
+  signal that it happened.** A different autonomous agent, building an unrelated plan in a separate
+  worktree on the same machine, ran a broad `pkill -f "workers/forks.js"` while fighting its own resource
+  contention — which could have killed this session's test-runner processes as collateral damage, mid-run,
+  without producing any error THIS session would necessarily notice (a killed worker can just look like a
+  slow/quiet run rather than an obvious crash). Only caught because the coordinating session relayed it
+  after the fact. The fix applied here: before trusting ANY already-reported "passed" result once such a
+  report arrives, re-run every affected command fresh from a clean process list and require the numbers to
+  match exactly (they did — 153/2358 backend, 114/1771 web, GATE PASS benchmark, both typechecks, the real
+  build — so nothing had actually been corrupted this time, but that had to be CONFIRMED, not assumed). On
+  a shared machine running multiple concurrent agents, "I already verified this" has a shelf life; a
+  same-machine process-management action by ANY agent is a reason to distrust it, not just your own.
+- **Writing ABOUT a live-PR-link-avoidance rule can violate the rule itself, and only CI catches it.** This
+  session's own status-archive.md entry, written to document the fix for the RUNBOOK's very own "avoid live
+  PR links" gotcha, itself contained a live `[#30](https://github.com/…/pull/30)` link — a session
+  documenting a convention is exactly as capable of breaking it as one doing anything else, and a `grep`
+  habit only catches what you remember to grep for. `tests/docs/doc-conventions.test.ts` caught it in CI
+  (not locally, since `npm test` doesn't run from a doc-only edit path the same way, and the session hadn't
+  re-run `test:docs` after that specific edit) — a reminder that `npm run test:docs` is cheap (under a
+  second) and worth running after ANY docs edit that mentions a PR number, not only after a code change.
+- **A subagent cannot rely on "I'll be notified automatically" to resume itself after ending a turn.**
+  Confirmed live during this build: a `run_in_background` bash task's completion notification only
+  actually reaches a session that keeps issuing tool calls in the SAME turn (the notification is delivered
+  as a system event injected between tool calls, not as something that wakes a stopped session back up).
+  Twice this session tried the pattern "end the turn, say I'll be notified" and stalled — a sibling agent
+  building a different plan in a separate worktree hit the identical stall independently. The fix, once a
+  coordinator flagged it: never background a verification command and stop; either let a normal blocking
+  Bash call run to its natural end (up to the tool's own timeout), or if it needs longer, chain another
+  blocking wait/poll call immediately in the SAME response — never end a response hoping to be resumed.
+- **Concurrent `vitest` runs across sibling worktrees on the same machine produce a MISLEADING failure that
+  reads exactly like a real regression** — this repo's own RUNBOOK already documents this
+  (`[vitest-pool-runner]: Timeout waiting for worker to respond` / `Failed to start forks worker`), and this
+  session hit it for real: a full backend-suite run failed with that exact signature while a sibling agent's
+  own `vitest run --maxWorkers=2` was active in a different worktree. Re-running the SAME suite alone, once
+  `pkill -f "<worktree-path>.*vitest"` cleared the stray processes, passed clean (153 files/2358 tests). A
+  test failure with this specific signature is a process-contention artifact, not a finding — check
+  `ps aux | grep vitest` for other worktrees before trusting it.
+- **`new URL(relative, import.meta.url)` breaks under this project's default jsdom vitest environment in a
+  way that is easy to mistake for a real bug**, and it is NOT a one-off — this session hit it twice
+  independently (once following the plan's own literal `asset.test.ts` code, once writing `isolation.test.ts`
+  from scratch) before recognizing the pattern. Vite's `vite:asset-import-meta-url` plugin rewrites that
+  exact syntax into an `http://localhost/@fs/...` URL under a "client"-consumer environment (jsdom is one),
+  so `fileURLToPath(...)` throws "The URL must be of scheme file" — already diagnosed once in this repo at
+  `next.config.test.ts:1-23` via a `// @vitest-environment node` override, but that fix doesn't compose with
+  a file that ALSO needs jsdom for its other tests. The general-purpose fix used here instead:
+  `dirname(fileURLToPath(import.meta.url))` + `path.join(...)` — the exact pattern already at
+  `chart.test.tsx:891` — sidesteps the special-cased syntax entirely and needs no environment override. Grep
+  for `new URL(.*import.meta.url)` before adding a NEW test file that resolves a path under the jsdom
+  environment; this will keep recurring otherwise.
+- **A test file's own source can accidentally match the very regex patterns it asserts against, making the
+  check self-defeating** — `isolation.test.ts` scanned every file in its own directory for strings like
+  `@anthropic-ai`, and (being IN that directory) matched its own literal regex source against itself. Fixed
+  by excluding `*.test.ts(x)` files from that one check (the invariant is about what SHIPS, not about a test
+  quoting the pattern it's checking for). Worth checking for in any new "grep every file in this directory
+  for a forbidden string" test — the test file itself is always one of the files being scanned.
+- **An HTML `<output>` element carries an IMPLICIT ARIA `role="status"`** — not obvious from the element
+  name, and it collided directly with a page's own `role="status"` loading/error paragraph, making
+  `getByRole('status')` ambiguous ("Found multiple elements with the role"). A plain `<span>` has no
+  implicit role; use one for a live-updating VALUE display that isn't itself meant to be an announcement.
+- **A `<label>` that WRAPS both a control and other visible text pulls ALL of that text into the control's
+  accessible name** — a `<label>Year<input/><span>1995</span></label>` pattern made the input's computed
+  accessible name "Year 1995" instead of "Year", breaking `getByLabelText('Year')`. Use `htmlFor`/`id`
+  instead of wrapping whenever a value display sits next to the label text, not only when styling demands
+  it — this bit even though the plan's own literal example code used the wrapping form.
+- **Turbopack's `next build` prints no per-route "First Load JS" table** (the webpack-era feature this
+  plan's own bundle-measurement instructions assumed exists) — route-level JS attribution has to come from
+  each route's own `.next/server/app/<route>/page/react-loadable-manifest.json` instead (list every chunk
+  file it references, then confirm no OTHER route's manifest references the same files). Useful precedent
+  for the next plan that wants to measure a Next 16/Turbopack route's bundle cost.
+- **Turbopack's chunk splitting is not byte-stable across separate `next build` invocations of IDENTICAL
+  code** — a fresh `main`-branch build and a fresh branch rebuild produced non-demo chunk totals that don't
+  net out to the same number, even though the only non-demo source diff was 58 additive doc-comment-style
+  i18n lines. A byte-level "First Load JS is identical before/after" claim (what this plan's own bundle
+  instructions asked for) is therefore not reliably obtainable by diffing two separate builds' chunk
+  directories — the source diff (`git diff --stat`) is the reliable signal for "did this touch that route,"
+  not a bundle-size diff. Recorded honestly in ADR 049 rather than forcing a misleading number.
+- **A real-browser pass is still possible in a sandbox with neither a `playwright` package nor a global
+  Chromium install**, even though this repo's own documented dev-harness recipe (`scripts/dev-harness/`)
+  assumes exactly those two things for its `shot.mjs`/`ask.mjs` helpers. Substitute: run the harness's three
+  local stand-in servers directly via plain `node` (not through `.claude/launch.json`/`preview_start`, which
+  reads from the MAIN checkout's launch.json, not a worktree's own — editing a worktree's copy has no
+  effect), then drive the already-running dev server through the Claude_Browser MCP pane via
+  `preview_start({ url })`. The harness's session cookie (`scripts/dev-harness/auth-stub.mjs`'s
+  `sb-localhost-auth-token`) has no `httpOnly` flag by design (it's meant for Playwright's `addCookies`,
+  which doesn't require page-JS access) — so `document.cookie = "..."` inside the browser pane sets it just
+  as well, and a normal `navigate()` to a login-gated route then authenticates correctly.
+- **Escape-to-unpin only fires once real DOM focus is inside the listening element's subtree** — clicking a
+  `<canvas>` (not itself a focusable element without `tabindex`) does NOT move document focus into its
+  parent `<section onKeyDown=...>`, so a global Escape keypress right after a canvas click does nothing;
+  focusing any actual focusable descendant first (the year slider, in this case) makes it fire correctly.
+  Not a bug in the shipped code — canvases are legitimately not focusable by default — but worth knowing
+  before assuming a keyboard-dismiss handler on a wrapping element "just works" after a canvas interaction.
+
 ## Session 102 (2026-09-15, autonomous, owner away the whole session) — two small PRs, a docs-only-CI-skip blind spot found, a `gh pr checks` false negative
 
 - **The "docs-only pushes skip CI" convention (adopted 2026-09-09 to save Actions minutes) has a real
