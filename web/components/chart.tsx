@@ -59,6 +59,7 @@ import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { templateById } from '../lib/chart-templates.ts';
+import { lastPlottedPoint } from '../lib/chart-plotted-point.ts';
 import {
   translateAttributionLine,
   translateMeasureTitle,
@@ -404,9 +405,11 @@ export function valueLabelPlan(spec: PlottableSpec): ValueLabelPlan {
   const axisTicks = lo.point.value === hi.point.value ? [tick(lo)] : [tick(lo), tick(hi)];
 
   const endLabels: PointLabel[] = spec.series.flatMap((series, i) => {
-    // Spec order is period-ascending (R6: the spec's order IS the render
-    // order), so the last plotted point is the last non-null one.
-    const last = [...series.points].reverse().find((p) => p.value !== null && p.formattedValue !== null);
+    // Code-review fix (2026-09-15): this selection now shares
+    // lastPlottedPoint with chart-headline.ts's headlineFigure, so the
+    // end-of-line label and the card's headline number can never disagree
+    // about which point is "current" — see chart-plotted-point.ts.
+    const last = lastPlottedPoint(series.points);
     if (!last) return [];
     return [
       {
