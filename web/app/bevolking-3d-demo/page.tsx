@@ -13,6 +13,7 @@ import { t } from '../../lib/i18n/messages.ts';
 import { getLang } from '../../lib/i18n/server.ts';
 import { DemoBanner } from './demo-banner.tsx';
 import { Map3dLoader } from './map3d-loader.tsx';
+import { Narrative } from './narrative.tsx';
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: t(await getLang(), 'lab3d.pageTitle'), robots: { index: false, follow: false } };
@@ -28,6 +29,7 @@ export default async function Bevolking3dDemoPage() {
         <h1 className="mt-6 text-2xl text-foreground">{t(lang, 'lab3d.title')}</h1>
         <p className="mt-2 max-w-xl text-muted-foreground">{t(lang, 'lab3d.intro')}</p>
         <div className="mt-6"><Map3dLoader lang={lang} /></div>
+        <Narrative lang={lang} />
         <p className="mt-6 border-t border-border pt-3 text-xs text-muted-foreground">{t(lang, 'lab3d.footer')}</p>
       </main>
     </div>

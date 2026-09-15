@@ -1,6 +1,7 @@
+import { MeshLambertMaterial } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CARD_DARK, CARD_LIGHT, contrastRatio, DEFAULT_PALETTE } from '../../lib/chart-presentation.ts';
-import { formatGrowth, formatPopulation, GROWTH_DOMAIN, GROWTH_HIGH_HEX, GROWTH_LOW_HEX, GROWTH_MID_HEX, growthColor, heightFor, MAX_HEIGHT, MIN_HEIGHT, mixHex } from './scales.ts';
+import { applyGrowthColor, formatGrowth, formatPopulation, GROWTH_DOMAIN, GROWTH_HIGH_HEX, GROWTH_LOW_HEX, GROWTH_MID_HEX, growthColor, heightFor, MAX_HEIGHT, MIN_HEIGHT, mixHex } from './scales.ts';
 
 describe('growth colour scale — the house palette, never an invented one (ADR 049)', () => {
   it('its two ends ARE the first two designed-default palette colours', () => {
@@ -26,6 +27,17 @@ describe('growth colour scale — the house palette, never an invented one (ADR 
     expect(mixHex('#000000', '#ffffff', 0.5)).toBe('#808080');
     expect(mixHex('#000000', '#ffffff', -1)).toBe('#000000');
     expect(mixHex('#000000', '#ffffff', 7)).toBe('#ffffff');
+  });
+});
+
+describe('applyGrowthColor — the D1′ floor/column colour-sharing mechanism (ADR 049 v2)', () => {
+  it('computes growthColor() exactly once and applies the identical hex to every material passed in, against real MeshLambertMaterial instances', () => {
+    const floor = new MeshLambertMaterial();
+    const column = new MeshLambertMaterial();
+    const hex = applyGrowthColor([floor, column], -0.15, 'dark');
+    expect(hex).toBe(growthColor(-0.15, 'dark'));
+    expect(floor.color.getHexString()).toBe(column.color.getHexString());
+    expect(`#${floor.color.getHexString()}`).toBe(hex);
   });
 });
 

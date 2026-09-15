@@ -13,6 +13,59 @@ executed task-by-task via [superpowers:subagent-driven-development](../superpowe
 (the plan's own "Design decisions taken for this plan" section is this ADR's rationale, restated below with the
 as-built numbers this ADR is responsible for recording).
 
+## Addendum — v2, session 104 (2026-09-15/16): D1′–D5′, a visual/UX rework
+
+**Trigger:** the owner compared the built demo unfavourably to `checkdecijfers-3d-demo.vercel.app` — his own
+separate personal showcase site (18 Three.js pages, NOT part of this product), specifically its `/nl-bevolking-3d`
+page (the direct equivalent of this demo). Full context: [open-questions #258](../open-questions.md).
+**Scope:** raising this demo's polish to that reference page — same concept, same D1–D7 invariants below, no new
+ADR. Built autonomously (branch `bevolking-3d-demo-v2`, PR #32) per
+[docs/superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](../superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md)
+(the plan's own D1′–D5′ is this addendum's rationale, restated here with as-built specifics), owner not present for
+the build — branch + PR per [#118](../open-questions.md)(b).
+
+- **D1′ — the flat grey `plate` is gone.** Every municipality now gets TWO paired meshes: a full-footprint FLOOR
+  tile (fixed 0.15-unit depth, never tweened by the year slider — the always-visible choropleth terrain) and the
+  original population COLUMN, now inset 6% toward its own centroid (`columns.ts`'s `buildShapes(f, insetFactor)`,
+  a pure client-side geometry transform, no new dependency) so tall neighbouring columns show a visible seam
+  instead of fusing into one coloured mass. `scales.ts`'s new `applyGrowthColor()` computes `growthColor()` exactly
+  ONCE per municipality/year and applies the identical hex to both meshes' materials — floor/column agreement is
+  structural (one function call, one value), not a convention two call sites could drift apart on; pinned by
+  `columns.test.ts` against real `MeshLambertMaterial` instances.
+- **D2′ — lighting pass, still `MeshLambertMaterial`, no shadow maps.** Added a second, softer fill
+  `DirectionalLight` (intensity 0.5) from roughly the opposite side of the original "sun," and retuned
+  `HemisphereLight`'s ground colour to `GROWTH_MID_HEX[theme]` (the same neutral midpoint `growthColor()` already
+  used at zero growth — not a new colour) instead of a flat `0x444444`.
+- **D3′ — a new `Legend` component** (`legend.tsx`), floating inside the canvas wrapper (top-right desktop,
+  compact under 640px via the existing `useMediaQuery` hook), showing the real `±GROWTH_DOMAIN` bounds via
+  `formatGrowth()` — never hardcoded — plus the existing `GROWTH_LOW_HEX`/`GROWTH_HIGH_HEX` swatch and the height
+  caption. Replaces the old below-canvas gradient bar; every digit still sits under `data-fictional="true"` (D7's
+  digit-scan test extended to cover it).
+- **D4′ — a new `Narrative` component** (`narrative.tsx`), five static dot-paginated steps
+  (`role="tablist"`/`role="tab"`) with Vorige/Volgende (Previous/Next), rendered directly by `page.tsx` (not behind
+  the `three.js` dynamic import — it has nothing to do with WebGL and stays visible even if that chunk is slow or
+  fails). Copy is filled from this demo's own `GROWTH_DOMAIN`/`YEAR_START`/`YEAR_END` constants via `t()`'s
+  `{vars}` mechanism, so the numbers shown can never drift from `scales.ts`/`fake-data.ts`. Ten new `lab3d.narrative*`
+  message keys, both `nl` and `en`. Expository only — does not control the 3D camera or scene state (a materially
+  bigger feature this pass deliberately excludes).
+- **D5′ — control bar consolidated** into a primary row (year value + scrubber + play/pause + municipality picker)
+  and a smaller secondary row (type filter + reset-view) — neither control removed, both de-emphasised relative to
+  the primary row.
+- **Everything else about D1–D7 above is unchanged and re-verified**: `isolation.test.ts` passes untouched, zero
+  new numbers (pure restyle of existing `growthSince()`/`populationIn()` outputs), zero new dependency beyond
+  `three`+`@types/three`, gating/labelling all five layers intact.
+
+**Verification (session 104, independently re-run by the orchestrating session, not just the build agent's own
+report):** typecheck clean; this directory's own suite 13 files/84 tests green; full `web` suite 115 files/1801
+tests green (run solo); a real `next build` succeeds, 16 routes (unchanged count); `/code-review` LOW pass on the
+diff, zero findings. **Bundle (same method as the original measurement above):** the route-private chunk group is
+now ≈592 KB raw / ≈147.9 KB gzip — under the 250 KB ceiling and smaller than the original 229.6 KB measurement
+(this ADR's own bundle-measurement section already documents that Turbopack's chunk output isn't byte-stable
+across separate builds, so this isn't a strict regression comparison, just today's real number, still comfortably
+inside budget). **Not obtained this session:** a live before/after screenshot — the route is login-gated by design
+(D4) and the session had no credentials to complete the login flow; the code-level diff and test coverage are the
+verification record instead.
+
 ## Context
 
 The owner asked for a demo reproducing a reference site he had built himself: every Dutch municipality as an
