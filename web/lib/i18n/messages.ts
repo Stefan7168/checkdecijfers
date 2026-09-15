@@ -787,7 +787,7 @@ const nl = {
   'gallery.story.werkloosheid-maandelijks.title': 'Hoe ontwikkelde de werkloosheid zich per maand?',
   'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
 
-  // --- ADR 049: /bevolking-3d-demo — the 3D municipality DEMO. Every number on that page is fiction; these labels say so. ---
+  // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
   'lab3d.pageTitle': 'Demo: 3D-gemeentekaart (fictieve data) — Check de Cijfers',
   'lab3d.title': 'Nederland groeit, maar niet overal',
   'lab3d.intro': 'Een demonstratie van een 3D-kaart: elke gemeente is een kolom, de hoogte staat voor het aantal inwoners en de kleur voor de groei sinds het startjaar. Alle cijfers zijn verzonnen; alleen de gemeentegrenzen en -namen zijn echt.',
@@ -1433,7 +1433,7 @@ const en: Messages = {
   'gallery.story.werkloosheid-maandelijks.title': 'How did unemployment move month by month?',
   'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
 
-  // --- ADR 049: /bevolking-3d-demo — the 3D municipality DEMO. Every number on that page is fiction; these labels say so. ---
+  // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
   'lab3d.pageTitle': 'Demo: 3D municipality map (fictional data) — Check de Cijfers',
   'lab3d.title': 'The Netherlands is growing, but not everywhere',
   'lab3d.intro': 'A demonstration of a 3D map: every municipality is a column, height stands for population and colour for growth since the start year. Every figure is made up; only the municipal boundaries and names are real.',
