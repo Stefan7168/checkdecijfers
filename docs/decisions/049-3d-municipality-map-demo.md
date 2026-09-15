@@ -56,7 +56,7 @@ test); (3) login-gated by default — not in `web/proxy.ts`'s `PUBLIC_EXACT_PATH
 `/login` with zero proxy change (`isPublicPath('/bevolking-3d-demo') === false`, pinned in `page.test.tsx`); (4)
 no env flag — unlike the Eurostat internal explorer (which must NEVER appear in production), this demo is meant
 to be shown from production by the signed-in owner, so a flag would add a RUNBOOK secret for no honesty gain.
-Whether to ever make it link-shareable to an outsider is [open-questions #250](../open-questions.md) — not
+Whether to ever make it link-shareable to an outsider is [open-questions #256](../open-questions.md) — not
 decided here.
 
 **D5 — The boundary file is a static asset, not a module import.** `web/public/demo/gemeente_2024.topojson`
@@ -67,7 +67,7 @@ Importing it as JSON would have inlined 169 KB into the route's JS chunk; as a s
 parsed off the JS main thread. The `TOPO_OBJECT`/`CODE_KEY`/`NAME_KEY` assumption (that the file names its
 object `gemeente_2024` and its properties `statcode`/`statnaam`) is verified against the real committed file by
 `asset.test.ts`, which decodes it for real and would fail loudly, naming the real keys, if the assumption were
-wrong — see [open-questions #251](../open-questions.md). It held on the first run: 369 municipalities, every
+wrong — see [open-questions #257](../open-questions.md). It held on the first run: 369 municipalities, every
 code matching `GM####`, total area ≈37,000 km² (the real Netherlands).
 
 **D6 — Colours reuse the house palette; the WebGL-only literals are a narrowly sanctioned exception.** The
@@ -103,7 +103,7 @@ alleen ter demonstratie."
   second component-tree paradigm layered over the existing one; nothing in this demo needs `drei`'s helpers.
 - **A fully public route (no login gate).** Rejected for now — the owner asked for a demo, not a marketing page;
   gating it behind the login costs nothing today and is the more conservative default. Recorded as
-  [open-questions #250](../open-questions.md) rather than decided either way, since sharing it externally is a
+  [open-questions #256](../open-questions.md) rather than decided either way, since sharing it externally is a
   real, plausible future ask.
 - **An env flag (mirroring the Eurostat internal explorer's `EUROSTAT_EXPLORER_ENABLED`).** Rejected — that
   flag exists because the explorer must NEVER appear in production; this demo is the opposite case, meant to be
@@ -186,6 +186,6 @@ changed shape.
 - **The route-private chunk group approaches or exceeds 250 kB gzip** (today 229.6 KB, see measurement above) —
   the next addition to this directory that grows the bundle should re-measure before merging, not assume
   headroom remains.
-- **[open-questions #250](../open-questions.md) is answered "yes, make it public"** — implement the two-line
+- **[open-questions #256](../open-questions.md) is answered "yes, make it public"** — implement the two-line
   proxy allowlist change + `proxy.test.ts` pin the plan describes; do not improvise a different gating
   mechanism.

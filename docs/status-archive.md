@@ -58,8 +58,8 @@ alternatives, the measured bundle table, revisit triggers); [08-build-plan.md](0
 (explicitly marked out of the product flow, not a numbered WP); [12-huisstijl.md](12-huisstijl.md) rule 1
 (the demo's WebGL-only literal-hex spots — `scales.ts`, `columns.ts`, `scene.ts`, not only `scales.ts` as
 the plan's own text implied); [04-architecture.md](04-architecture.md) capability row; open-questions
-[#250](open-questions.md) (public-vs-login-gated — undecided, flagged) and
-[#251](open-questions.md) (the TOPO_OBJECT/CODE_KEY/NAME_KEY assumption — verified against the real
+[#256](open-questions.md) (public-vs-login-gated — undecided, flagged) and
+[#257](open-questions.md) (the TOPO_OBJECT/CODE_KEY/NAME_KEY assumption — verified against the real
 committed asset, held on the first run: 369 municipalities, every code `GM####`, total area ≈37,000 km²);
 [web/README.md](../web/README.md) one line.
 
