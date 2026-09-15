@@ -14,21 +14,29 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous — owner away for the whole
-session; verify against `git log`/`gh pr list` before trusting, since owner-present work may land after
-this).** **Four PRs now open, ALL awaiting owner review, NONE merged — this is purely a review wait,
+**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent one
+short "I trust your judgement" / "continue to work autonomously" message mid-session but did not review
+any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may land after
+this).** **Five PRs now open, ALL awaiting owner review, NONE merged — this is purely a review wait,
 nothing blocks any of them on the tooling side:** #23 (WP30c E1 Eurostat), #24 (health-check
 `pro_subscriptions` fix), #25 (dead chart-story cleanup) — all three unchanged since session 102, still
-zero comments/reviews — plus new **PR #26** (`attachments-envelope-key-manifest`): closes
+zero comments/reviews — plus **PR #26** (`attachments-envelope-key-manifest`): closes
 [#209](open-questions.md), builds `tests/attachments/envelope-key-manifest.test.ts` (the CBS-side
 `envelope-key-manifest.test.ts`'s analog for `DatasetTurnEnvelope`, this tier's own R8-analog envelope —
 a discriminated union, needing its own sibling declaration-parser rather than reusing the interface-body
 one) and, in building it, found and fixed a real pre-existing gap: `reconstruct.ts` never checked
 `envelope.schemaVersion` against `DATASET_TURN_ENVELOPE_VERSION` (unlike the CBS side, which always has).
 Zero behavior change today (version has never moved past 1); the check now exists before it's needed.
-Full verification green (backend 154/2366, web 105/1733, benchmark 28/28, `test:docs` 11/11, real build,
-`/code-review` LOW 0 findings) — CI was still in progress at wrap-up, not yet re-confirmed green; the next
-session should check `gh run list --branch attachments-envelope-key-manifest` before trusting it silently.
+**CI confirmed green** (`gh run list --branch attachments-envelope-key-manifest`, run `34924905497`:
+`web`/`backend (1/2/3)` all `success`, `deploy` correctly `skipped`). Plus new **PR #27**
+(`shared-is-redacted-helper`): closes [#227](open-questions.md), extracts the three hand-copied
+`isRedacted` checks (`web/app/embed-actions.ts`, `web/app/embed/[token]/page.tsx`,
+`scripts/verify-audit-rows.ts`) into one export in `src/answer/audit/retention.ts`, re-exported from the
+existing audit `index.ts` — zero behavior change, zero new import paths. Deliberately did NOT touch
+`scripts/verify-dataset-turns.ts`'s own look-alike `isRedacted` (a different, deliberately separate trust
+tier's sentinel — ADR 037 D1). Full LOCAL verification green (backend 153/2358, web 105/1733, benchmark
+28/28, `test:docs` 11/11, real build, `/code-review` LOW 0 findings) — CI was still in progress at the
+time this was written; check `gh run list --branch shared-is-redacted-helper` before trusting it silently.
 Full account: [status-archive.md](status-archive.md)'s session 103 entry.
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session

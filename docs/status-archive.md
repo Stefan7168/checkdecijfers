@@ -1,7 +1,8 @@
 # STATUS archive — the session log
 
-**Session 103, AUTONOMOUS (2026-09-15, owner away the whole session) — a fourth small PR opened after a
-fresh open-questions triage; PRs #23/#24/#25 all still untouched by the owner.**
+**Session 103, AUTONOMOUS (2026-09-15) — two more small PRs opened after fresh open-questions triages
+(#26, then #27 after the owner sent one short "continue to work autonomously" message mid-session, never
+reviewing any PR); PRs #23/#24/#25 all still untouched by the owner throughout.**
 
 Continued from session 102's kickoff brief
 ([session-briefs/2026-09-15-session-103-kickoff.md](session-briefs/2026-09-15-session-103-kickoff.md)),
@@ -47,9 +48,57 @@ it needs to.
 unaffected — zero web files touched); `test:docs` 11/11; hermetic benchmark (`test:benchmark`) 28/28
 green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the one non-test file
 changed (a 5-line addition to `reconstruct.ts`). Branch `attachments-envelope-key-manifest`, PR #26 —
-autonomous, per [#118](open-questions.md)(b), not merged. CI triggered on push, in progress at wrap-up
-(not yet re-checked green — the full LOCAL verification block above is what this session's own claim
-rests on; the next session should confirm CI itself before trusting this as done).
+autonomous, per [#118](open-questions.md)(b), not merged. **CI confirmed green** (`gh run list --branch
+attachments-envelope-key-manifest`, run `34924905497`: `web`/`backend (1/2/3)` all `success`, `deploy`
+correctly `skipped` — polled to completion via a backgrounded `gh run view` loop rather than a manual
+poll or a misused `ScheduleWakeup`, see the process note below). Docs pushed directly to `main`
+(`290879d`) rather than bundled into the PR branch, per the project's own "docs decisions push directly"
+convention — verified with `git merge-tree` that this created no real conflicts on any of the three
+other open PR branches (a `grep` hit on "conflict (table_id)" in one diff was SQL syntax, not a git
+conflict marker).
+
+**Owner sent a message mid-session: "I trust your judgement."** Read as answering the direct question
+this session had just asked (keep going, or wait for review) — not as flipping this session into
+"owner-present" for [#118](open-questions.md)'s git-workflow purposes (a five-word passive message is not
+the sustained, active collaboration that rule describes), and specifically not as authorization to merge
+any of the four open PRs — PR #23 in particular still needs the owner's own actual decision on Constraint
+0 ([#249](open-questions.md)), which no generic trust statement can stand in for. Replied explaining this
+reasoning and held at four open PRs rather than opening a fifth speculative one.
+
+**Owner then sent: "continue to work autonomously."** Unambiguous — re-triaged `docs/open-questions.md`
+fresh again (a cheap-tier subagent), this time also excluding every file already in flux across all FOUR
+open PR branches. It surfaced two candidates: [#246](open-questions.md) (a real Pro-subscription billing
+display gap, money-adjacent, more intricate — explicitly a "fix as a follow-up once #205 ships" item) and
+[#227](open-questions.md) (three hand-copied `isRedacted` checks with no mechanism keeping them in sync).
+Picked #227: purely mechanical, lower risk, and the more clearly "small blast radius" of the two — #246
+stays open for a future session once #205's flag consideration is more live.
+
+**Built PR #27 (`shared-is-redacted-helper`).** Read all three existing copies first (byte-identical
+one-liners, confirmed, not assumed) plus a FOURTH look-alike this row's own text didn't mention:
+`scripts/verify-dataset-turns.ts` has its own `isRedacted`, but for `RedactedDatasetEnvelope` — the
+attachments tier's own, deliberately separate sentinel (ADR 037 D1). Deliberately left that one alone
+rather than pulled into the same shared module — this codebase already has a "no cross-tier import for a
+duplicated helper" convention for exactly this situation (the PR #23/24/25/26 account's own "duplicated
+`nativeIdFrom` across 4 files" precedent). Extracted `isRedacted` into `src/answer/audit/retention.ts`
+next to `redactedResponse()` (the sentinel it checks), re-exported from the existing `index.ts` module all
+three real call sites already imported `loadAuditRecord` (or similar) from — zero new import paths.
+`embed-actions.ts`'s own header comment had flagged a `'use server'`-boundary blocker as the reason this
+was never consolidated before; it turned out not to apply — only EXPORTED functions from a `'use server'`
+file carry server-action machinery, and `isRedacted` was always private/non-exported there, so importing
+a plain function INTO that file needed no special handling. Two test files fully `vi.mock` the audit
+index module; both needed their mock factory taught the real, pure `isRedacted` implementation (not
+stubbed) since several existing tests — including one specifically proving `isRedacted` alone protects
+the public embed route against a real-shaped redacted envelope — rely on its actual branching behavior.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `embed-actions.test.ts`
++ `embed/[token]/page.test.tsx` 46/46 (both files touched, mocks updated); `tests/audit/retention.test.ts`
+24/24; full backend suite, solo: 153 files / 2358 tests green (unchanged counts — genuinely zero behavior
+change); full web suite, solo: 105 files / 1733 tests green; `test:docs` 11/11; hermetic benchmark 28/28
+green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the 4-file, byte-identical
+extraction diff. Branch `shared-is-redacted-helper`, PR #27 — autonomous, per
+[#118](open-questions.md)(b), not merged. CI triggered on push; poll result not yet folded into this
+entry at the time it was written — check `gh run list --branch shared-is-redacted-helper` before trusting
+it silently.
 
 **Note on process:** avoided the mistake of calling `ScheduleWakeup` to "wait" for a backgrounded shell
 command mid-turn (a standing feedback-memory rule — that tool is `/loop`-dynamic-mode-only) — caught it
