@@ -1,5 +1,76 @@
 # STATUS archive — the session log
 
+**Session 103 continuation, AUTONOMOUS (2026-09-15) — PR #30: the 3D municipality map DEMO over fictional
+data (ADR 049), dispatched to run in the background while the owner stayed present in the parent
+conversation.** Executed [the implementation plan](superpowers/plans/2026-09-15-3d-municipality-map-demo.md)
+task-by-task via strict TDD (failing test → run → implement → run → typecheck → commit), 11 commits on
+branch `demo-3d-municipality-map`. **Not part of the product** — ADR [044](decisions/044-story-stage.md)'s
+kickoff already ruled a 3D municipality map OUT of the real Story stage ("a 3D chart makes equal values
+look unequal … a WebGL canvas is invisible to every honesty scan and to the export"); this demo lives
+entirely outside the answer pipeline, in its own directory (`web/app/bevolking-3d-demo/`), and does not
+reopen that decision — see ADR 049 for the full context and revisit triggers.
+
+**Isolation, verified not asserted:** `git diff --stat main -- src/ tests/ benchmark/ migrations/` is
+EMPTY. Outside the demo directory, only `web/lib/i18n/messages.ts` (58 additive lines, zero existing keys
+touched) and `web/package.json`/`web/package-lock.json` (`three`+`@types/three` — confirmed unreferenced
+anywhere outside the demo directory) changed. `isolation.test.ts` pins three things structurally: no file
+outside the directory imports `three`; the route string appears nowhere outside its own directory; nothing
+inside reaches the backend, the database, the Anthropic SDK, a server action, or a live external `fetch`.
+
+**Verification, all measured this session:** root+web `tsc --noEmit` clean; backend suite **153 files /
+2358 tests, all passed** (identical count to before this branch — confirms zero backend impact, run twice,
+the first run hit a real, documented RUNBOOK gotcha — see Lessons); web suite **114 files / 1771 tests, all
+passed**; hermetic benchmark **GATE PASS** — 14/14 answerable (gate ≥12), 6/6 refusal/clarify (gate 6/6), 0
+fabricated numbers; `npm run test:docs` 11/11 (after a real fix — see below); real `next build` (Turbopack)
+succeeds on both `main` and the branch, `/bevolking-3d-demo` listed alongside all 15 pre-existing routes,
+unchanged; `/code-review` LOW effort run twice (mid-build and on the final diff), 0 findings both times.
+
+**Bundle, measured (ADR 049 has the full table):** Turbopack's `next build` prints no per-route "First Load
+JS" table (a webpack-era feature), so route attribution was done from each route's own
+`react-loadable-manifest.json` instead — cross-checked against every other route to confirm exclusivity.
+The route-private chunk group is **229.6 KB gzip** (three.js+OrbitControls 147.6 KB, `zod` — bundled
+client-side for the first time anywhere in this app, previously server-only — 87.3 KB, glue 0.3 KB),
+under the plan's 250 KB ceiling but higher than its ≈150–180 KB estimate, almost entirely because of that
+`zod` cost, which is a one-time app-wide cost this route happens to trigger first, not a `three`-specific
+one. A byte-level "First Load JS identical before/after" comparison for `/`, `/galerij`, `/geschiedenis`
+(what the plan asked for) turned out not to be obtainable: two separate `next build` runs of IDENTICAL
+non-demo code produced chunk totals that don't net out to the same number — Turbopack's chunk splitting is
+not byte-stable across separate build invocations. Recorded honestly in ADR 049 rather than forced; the
+source-diff proof above is the reliable signal instead.
+
+**Real browser pass: DONE**, not skipped and not left to the owner. `scripts/dev-harness/`'s local stand-ins
+(no production database, no Supabase project, no LLM spend — three local fake servers, documented in
+RUNBOOK) were driven through the Claude_Browser MCP pane rather than the harness's own Playwright recipe
+(the sandbox here has neither a `playwright` package nor the global Chromium path the RUNBOOK's recipe
+assumes) — the harness's session cookie has no `httpOnly` flag, so it was injected directly via
+`document.cookie` after starting the three local servers by hand. Verified live: the map renders correctly
+in both light and dark theme; the year slider changes column heights/colours and the details panel's
+fictional numbers; play/pause auto-advances the year; the municipality-type filter dims non-matching
+columns to low opacity; clicking a column raycast-picks the right municipality and pins its details;
+Escape unpins (once real DOM focus is inside the section — see Lessons); Reset view; 375px mobile width
+renders with the banner visible without scrolling and no horizontal overflow; an anonymous visit to
+`/bevolking-3d-demo` correctly 307s to `/login`. Not independently re-verified live: `prefers-reduced-motion`
+(the browser tool has no OS-level emulation for that specific media feature) — covered instead by the
+passing `map3d.test.tsx` unit test, which stubs it directly.
+
+**Docs, same change:** ADR [049](decisions/049-3d-municipality-map-demo.md) (full context, D1–D7,
+alternatives, the measured bundle table, revisit triggers); [08-build-plan.md](08-build-plan.md) entry
+(explicitly marked out of the product flow, not a numbered WP); [12-huisstijl.md](12-huisstijl.md) rule 1
+(the demo's WebGL-only literal-hex spots — `scales.ts`, `columns.ts`, `scene.ts`, not only `scales.ts` as
+the plan's own text implied); [04-architecture.md](04-architecture.md) capability row; open-questions
+[#250](open-questions.md) (public-vs-login-gated — undecided, flagged) and
+[#251](open-questions.md) (the TOPO_OBJECT/CODE_KEY/NAME_KEY assumption — verified against the real
+committed asset, held on the first run: 369 municipalities, every code `GM####`, total area ≈37,000 km²);
+[web/README.md](../web/README.md) one line.
+
+**PR:** [#30](https://github.com/Stefan7168/checkdecijfers/pull/30), branch `demo-3d-municipality-map`,
+per [#118](open-questions.md)(b) — the build itself ran unsupervised in the background even though the
+owner was present in the parent conversation, so it goes through branch+PR review rather than a direct
+push. CI triggered on open (run visible via `gh run list --branch demo-3d-municipality-map`); **not yet
+confirmed green as of this entry — the next session (or this one, later) must check before trusting it.**
+
+---
+
 **Session 103, AUTONOMOUS (2026-09-15) — three more small PRs opened after fresh open-questions triages
 (#26, then #27 and #28 after the owner sent "I trust your judgement" then twice "continue to work
 autonomously" mid-session, never reviewing any PR); PRs #23/#24/#25 all still untouched by the owner

@@ -17,8 +17,9 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent two
 short messages mid-session, "I trust your judgement" then twice "continue to work autonomously," but did
 not review any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may
-land after this).** **Six PRs now open, ALL awaiting owner review, NONE merged — this is purely a review
-wait, nothing blocks any of them on the tooling side:** #23 (WP30c E1 Eurostat), #24 (health-check
+land after this).** **Eight PRs open as of the latest addition below (#23–#30), ALL awaiting owner review,
+NONE merged — this is purely a review wait, nothing blocks any of them on the tooling side.** The original
+six (superseded phrasing, kept for its own content below):** #23 (WP30c E1 Eurostat), #24 (health-check
 `pro_subscriptions` fix), #25 (dead chart-story cleanup) — all three unchanged since session 102, still
 zero comments/reviews — plus **PR #26** (`attachments-envelope-key-manifest`): closes
 [#209](open-questions.md), builds `tests/attachments/envelope-key-manifest.test.ts` (the CBS-side
@@ -49,7 +50,42 @@ on a real fixture-replay chart, read the actual measured width/height at each st
 green (backend 153/2358 unaffected, web 105/1736, benchmark 28/28, `test:docs` 11/11, real build,
 `/code-review` LOW 0 findings) — **CI confirmed green** (`gh run view` on the PR's run:
 `conclusion: "success"`).
-Full account: [status-archive.md](status-archive.md)'s session 103 entry.
+
+**Same-day continuation (2026-09-15, still session 103, dispatched to run in the background while the
+owner stayed present in the parent conversation — goes through branch+PR review per
+[#118](open-questions.md)(b) all the same, since the BUILD itself ran unsupervised): PR #30**
+(`demo-3d-municipality-map`) — the 3D municipality map DEMO the owner asked for after seeing a reference
+site he built himself. **NOT part of the product** — ADR [044](decisions/044-story-stage.md)'s kickoff
+already ruled a 3D municipality map OUT of the real Story stage; this demo does not reopen that decision,
+it lives entirely outside the answer pipeline (`web/app/bevolking-3d-demo/`, one directory, `git diff
+--stat main -- src/ tests/ benchmark/ migrations/` EMPTY). Built task-by-task via strict TDD per the
+plan, 11 commits. `three`+`@types/three` is the one owner-approved library exception, reachable only
+through one `next/dynamic` import — pinned by `isolation.test.ts`. Full verification, all MEASURED this
+session: root+web typecheck clean; backend **153 files/2358 tests** (unchanged — confirms zero backend
+impact); web **114 files/1771 tests**; hermetic benchmark **GATE PASS** (14/14 answerable, 6/6
+refusal/clarify, 0 fabricated); `test:docs` 11/11; real `next build` succeeds, lists `/bevolking-3d-demo`
+alongside all 15 pre-existing routes unchanged; `/code-review` LOW 0 findings (run twice). Route-private
+bundle **229.6 KB gzip** (measured via each route's own `react-loadable-manifest.json`, not Turbopack's
+build output which prints no per-route size table) — under the plan's 250 KB ceiling; ADR 049 records the
+full methodology and a real, non-obvious finding: ~87 KB of that is `zod` being bundled client-side for
+the first time anywhere in the app, not `three` itself. **Real browser pass DONE** — the local dev harness
+(`scripts/dev-harness/`, no live database/Supabase/LLM spend) driven through the Claude_Browser pane
+(Playwright's own global install wasn't present in this sandbox, so the harness's session cookie — not
+httpOnly — was injected via `document.cookie` instead): map renders in both themes, year slider +
+play/pause, type filter dimming, click-to-pin raycast + details panel, Escape-unpin, reset view, 375px
+mobile, the login gate correctly redirects an anonymous visit. Six real bugs found and fixed during the
+build that were NOT in the plan's literal text (a jsdom/Vite `new URL(relative, import.meta.url)` quirk
+hit twice, an `<output>` element's implicit `role="status"` colliding with the page's own status text, a
+wrapping `<label>` pulling extra text into an accessible name, the digit-scan test flagging the incidental
+"3D" in fixed UI copy, `isolation.test.ts` matching its own regexes against its own source, and
+`web/public/demo/README.md` missing from `tests/docs/doc-conventions.test.ts`'s allowlist — the last one a
+real, repo-wide test failure, not demo-scoped). **CI status: PR just opened, not yet confirmed green as of
+this line — check `gh pr checks 30` / `gh run list --branch demo-3d-municipality-map` before trusting.**
+Full account: [status-archive.md](status-archive.md)'s session 103 entry (this same block, appended).
+
+**Also open, not built by this thread:** PR #29 (`trim-status-md-duplicate-narrative`) — a sibling
+autonomous session's work on this same file's own known debt (line 11 above); not reviewed or touched
+here, mentioned so the next session doesn't lose track of it.
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session
 102, autonomous — owner asleep/away for the whole session).** **Three PRs now open, ALL awaiting owner
