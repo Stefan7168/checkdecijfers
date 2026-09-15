@@ -1,5 +1,7 @@
 One route is intentionally public with no session: `/embed/[token]` serves a shared, read-only chart page for third-party embedding (ADR [041](../docs/decisions/041-public-embed-pages.md)) — see `docs/RUNBOOK.md`'s Embed go-live section for its env vars.
 
+`/bevolking-3d-demo` is a standalone, login-gated, noindexed, unlinked DEMO over entirely fictional data — a 3D municipality map, not part of the product (ADR [049](../docs/decisions/049-3d-municipality-map-demo.md)); `three`/`@types/three` is the one owner-approved library exception, reachable only through that route's own dynamic import.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

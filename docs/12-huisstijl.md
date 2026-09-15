@@ -136,6 +136,15 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 1. **Tokens, not colours.** Surfaces/text/borders come from the shadcn utilities above; no hex, no raw
    `zinc-*`/`blue-*` classes. Chart series colours (`DEFAULT_PALETTE`, and `RECHARTS_PALETTE` for the Classic look — ADR 042) and the stat-card SVG export (white
    card, fixed greys — the exported PNG must look the same everywhere) are the sanctioned literal-hex spots.
+   **ADR 049 adds one more, narrowly scoped:** the `/bevolking-3d-demo` DEMO's WebGL scene needs literal hex
+   for its `three.js` `Color`/`Material` values, which cannot read CSS custom properties from inside a canvas.
+   The growth scale's two ENDPOINTS are not new literals — they alias `DEFAULT_PALETTE[0]`/`DEFAULT_PALETTE[1]`
+   (`web/app/bevolking-3d-demo/scales.ts`); the genuinely new literals are the per-theme neutral midpoint and
+   plate colour (`scales.ts`'s `GROWTH_MID_HEX`/`SCENE_COLORS`) plus two small WebGL-only values with no CSS
+   token equivalent — the initial placeholder column colour before the scale first applies
+   (`columns.ts`) and the pure white/black hover-highlight emissive (`scene.ts`). All DOM chrome in that
+   directory (the banner, buttons, labels, the legend swatch background) still uses tokens exclusively — the
+   exception is scoped to actual `three.js` scene objects, never anything rendered as HTML/CSS.
 2. **Every number is tabular.** `.tnum` / `data-numeric` / tables get `font-variant-numeric: tabular-nums`
    globally (#91, owner-approved). This is a product convention, not part of the retired identity.
 3. **Both themes, always.** Any new surface must read in light and dark — use the paired tokens, never a
