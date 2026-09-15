@@ -45,7 +45,7 @@ explicit "Merge both PRs" instruction. Full account: `docs/status-archive.md`'s 
 entries (newest on top) and `docs/lessons-learned.md`'s session-103 entries (two: the original PR
 #30 build, and this continuation covering PR #31 + the reviews + the merges).
 
-**Two process lessons worth reading before dispatching more parallel background builds:**
+**Four process lessons worth reading before dispatching more parallel background builds:**
 1. Subagents cannot "wait" on their own background processes — tell them explicitly, in the
    dispatch prompt itself, to run verification blocking, not backgrounded-and-hoping.
 2. `git merge-tree <base> <a> <b>` needs the REAL merge-base (`git merge-base origin/main
@@ -54,6 +54,9 @@ entries (newest on top) and `docs/lessons-learned.md`'s session-103 entries (two
 3. Parallel worktrees touching `open-questions.md` can collide on row numbers with no visibility
    into each other's claims (or an already-open PR's claims) — check `docs/open-questions.md` for
    the true next-free number right before merging, don't trust what a background build claimed.
+4. A broad `pkill` by an agent fighting resource contention risks killing a SIBLING agent's
+   in-flight process on the same shared machine — name this risk explicitly in a dispatch prompt
+   when running parallel builds, rather than discovering it mid-session.
 
 ## Binding constraints, unchanged
 

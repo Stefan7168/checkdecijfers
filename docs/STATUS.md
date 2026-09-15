@@ -24,7 +24,7 @@ this stretch: #23 (WP30c E1 Eurostat), #24 (health-check `pro_subscriptions` fix
 cleanup), #26 (DatasetTurnEnvelope key manifest, #209), #27 (shared isRedacted helper, #227), #28
 (useElementWidth reparenting fix, #234), #29 (this file's own known-debt trim, line 11 above — still
 not merged, so the debt note above still applies).** Full account, including the merge-conflict story and
-the two process lessons this stretch surfaced: [status-archive.md](status-archive.md)'s session-103
+the four process lessons this stretch surfaced: [status-archive.md](status-archive.md)'s session-103
 entries (two, newest on top — the continuation covering PR #31 + the reviews + the merges, then the
 original PR #30 build entry beneath it).
 
