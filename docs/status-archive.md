@@ -66,8 +66,18 @@ committed asset, held on the first run: 369 municipalities, every code `GM####`,
 **PR:** PR #30, branch `demo-3d-municipality-map`,
 per [#118](open-questions.md)(b) — the build itself ran unsupervised in the background even though the
 owner was present in the parent conversation, so it goes through branch+PR review rather than a direct
-push. CI triggered on open (run visible via `gh run list --branch demo-3d-municipality-map`); **not yet
-confirmed green as of this entry — the next session (or this one, later) must check before trusting it.**
+push. **CI confirmed GREEN on the third run** (`gh run view 34962951564`: `conclusion: "success"`;
+`web`/`backend (1/2/3)` all `pass`, `deploy` correctly `skipping`). The first two runs each caught a real
+bug: run 1 was superseded by a docs-only follow-up push (expected — "a newer push cancels the superseded
+run"); run 2 genuinely FAILED — `tests/docs/doc-conventions.test.ts` caught a live `[#30](https://github.com/…/pull/30)`
+markdown link this session had just written into this same archive entry (#132 interim rule (i) —
+fixed to plain-text `PR #30`, re-verified locally, re-pushed). Separately, mid-verification, the
+coordinating session reported that a sibling autonomous agent (a different plan, a different worktree) had
+run a broad `pkill -f "workers/forks.js"` fighting its own resource contention, which could have silently
+killed this session's own test-runner processes as collateral damage — so every already-claimed-passing
+local result (backend 153/2358, web 114/1771, hermetic benchmark GATE PASS, both typechecks, real build)
+was RE-RUN clean from scratch after that point and matched the earlier numbers exactly, before this PR was
+reported as done. See lessons-learned's session-103-continuation entry for both, in general terms.
 
 ---
 

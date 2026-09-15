@@ -79,8 +79,22 @@ hit twice, an `<output>` element's implicit `role="status"` colliding with the p
 wrapping `<label>` pulling extra text into an accessible name, the digit-scan test flagging the incidental
 "3D" in fixed UI copy, `isolation.test.ts` matching its own regexes against its own source, and
 `web/public/demo/README.md` missing from `tests/docs/doc-conventions.test.ts`'s allowlist — the last one a
-real, repo-wide test failure, not demo-scoped). **CI status: PR just opened, not yet confirmed green as of
-this line — check `gh pr checks 30` / `gh run list --branch demo-3d-municipality-map` before trusting.**
+real, repo-wide test failure, not demo-scoped). **CI confirmed GREEN** (`gh run view 34962951564`:
+`conclusion: "success"`; `web`/`backend (1/2/3)` all `pass`, `deploy` correctly `skipping` on a PR) — but
+only on the THIRD run: the first two pushes each caught a real bug CI itself found (see below), so this is
+the genuinely-final, verified-green state, not the first attempt.
+
+**Two more real things found and fixed AFTER the PR opened, both from things going wrong for real reasons
+worth recording:** (1) CI's own `tests/docs/doc-conventions.test.ts` caught a live `[#30](https://github.com/…/pull/30)`
+markdown link this session had itself just written into `status-archive.md`'s new entry — #132 interim
+rule (i) violation, same class this repo has hit and fixed repeatedly; changed to plain-text `PR #30`,
+re-pushed, re-confirmed clean locally AND in the next CI run. (2) mid-verification, the coordinating
+session flagged that a SIBLING autonomous agent (building the unrelated chart-card-polish plan in a
+separate worktree) had run a broad `pkill -f "workers/forks.js"` while fighting its own resource
+contention, which could have killed this session's own test-runner processes as collateral damage without
+this session noticing — so every already-claimed-passing local result (backend 153/2358, web 114/1771,
+benchmark GATE PASS) was RE-RUN clean from scratch after that point and matched exactly before this PR was
+trusted as done; see Lessons for the general pattern.
 Full account: [status-archive.md](status-archive.md)'s session 103 entry (this same block, appended).
 
 **Also open, not built by this thread:** PR #29 (`trim-status-md-duplicate-narrative`) — a sibling

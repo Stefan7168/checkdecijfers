@@ -8,6 +8,26 @@ on top.
 
 ## Session 103 continuation (2026-09-15) — the 3D municipality map DEMO (PR #30, ADR 049): background-agent wait patterns, jsdom/Vite URL quirks, a Turbopack bundle-measurement gap, and a real-browser workaround
 
+- **A sibling agent's own crisis can silently corrupt THIS session's already-verified results, with no local
+  signal that it happened.** A different autonomous agent, building an unrelated plan in a separate
+  worktree on the same machine, ran a broad `pkill -f "workers/forks.js"` while fighting its own resource
+  contention — which could have killed this session's test-runner processes as collateral damage, mid-run,
+  without producing any error THIS session would necessarily notice (a killed worker can just look like a
+  slow/quiet run rather than an obvious crash). Only caught because the coordinating session relayed it
+  after the fact. The fix applied here: before trusting ANY already-reported "passed" result once such a
+  report arrives, re-run every affected command fresh from a clean process list and require the numbers to
+  match exactly (they did — 153/2358 backend, 114/1771 web, GATE PASS benchmark, both typechecks, the real
+  build — so nothing had actually been corrupted this time, but that had to be CONFIRMED, not assumed). On
+  a shared machine running multiple concurrent agents, "I already verified this" has a shelf life; a
+  same-machine process-management action by ANY agent is a reason to distrust it, not just your own.
+- **Writing ABOUT a live-PR-link-avoidance rule can violate the rule itself, and only CI catches it.** This
+  session's own status-archive.md entry, written to document the fix for the RUNBOOK's very own "avoid live
+  PR links" gotcha, itself contained a live `[#30](https://github.com/…/pull/30)` link — a session
+  documenting a convention is exactly as capable of breaking it as one doing anything else, and a `grep`
+  habit only catches what you remember to grep for. `tests/docs/doc-conventions.test.ts` caught it in CI
+  (not locally, since `npm test` doesn't run from a doc-only edit path the same way, and the session hadn't
+  re-run `test:docs` after that specific edit) — a reminder that `npm run test:docs` is cheap (under a
+  second) and worth running after ANY docs edit that mentions a PR number, not only after a code change.
 - **A subagent cannot rely on "I'll be notified automatically" to resume itself after ending a turn.**
   Confirmed live during this build: a `run_in_background` bash task's completion notification only
   actually reaches a session that keeps issuing tool calls in the SAME turn (the notification is delivered
