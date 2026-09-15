@@ -23,6 +23,13 @@ type Status = 'loading' | 'ready' | 'unavailable' | 'failed';
 type Filter = MunicipalityType | 'all';
 
 function Details({ record, year, lang }: { record: FakeMunicipalityRecord; year: number; lang: Lang }): ReactNode {
+  // `record.fictional` is typed `readonly true` and every caller sources
+  // records only from buildFakeDataset, so this branch is statically
+  // unreachable today (code-review note, 2026-09-15) — kept anyway as
+  // deliberate defense-in-depth: a cheap runtime guard against a future
+  // refactor that loosens the type or pipes in real data by mistake, given
+  // this product's zero-tolerance stance on showing an unlabelled real
+  // number (principle (c)).
   if (!record.fictional) throw new Error('ADR 049: refusing to render a record not marked fictional');
   return (
     <>
@@ -104,6 +111,18 @@ export function Map3d({ lang }: { lang: Lang }): ReactNode {
   }, []);
 
   const frame = useRef<number | null>(null);
+  // Code-review fix (2026-09-15): cancel a pending pointer-move rAF on
+  // unmount — without this, a frame scheduled just before navigating away
+  // still fired after the mount effect's own cleanup disposed the scene,
+  // calling `scene.pick()` on a disposed SceneHandle and `setHover()` on an
+  // unmounted component (the pending callback closes over its own local
+  // `scene` variable, so nulling sceneRef.current on unmount doesn't stop it).
+  useEffect(
+    () => () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
   function onPointerMove(e: ReactPointerEvent<HTMLCanvasElement>): void {
     const scene = sceneRef.current;
     if (!scene || frame.current !== null) return;

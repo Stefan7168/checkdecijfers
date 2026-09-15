@@ -132,7 +132,13 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
 
   const raycaster = new Raycaster();
   const pointer = new Vector2();
-  const meshes = [...byCode.values()].map((v) => v.column.mesh);
+  const allMeshes = [...byCode.values()].map((v) => v.column.mesh);
+  // Code-review fix (2026-09-15): pick() must only raycast against columns
+  // matching the active type filter — otherwise a dimmed (opacity 0.15),
+  // filtered-out column stayed clickable/hoverable, letting the UI show or
+  // pin details for a municipality the filter visually excluded. Rebuilt
+  // only on setFilter, not per pick() call (pointer-move is a hot path).
+  let pickableMeshes = allMeshes;
 
   const handle: SceneHandle = {
     setYear(y, animate) {
@@ -160,12 +166,36 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
     },
     setFilter(f) {
       filter = f;
+      pickableMeshes = f === 'all' ? allMeshes : [...byCode.values()].filter((v) => v.record.type === f).map((v) => v.column.mesh);
       applyColours();
       invalidate();
     },
     setHighlight(code) {
+      // Code-review fix (2026-09-15): only touch the previous and new
+      // highlighted mesh's emissive properties — this used to call
+      // applyColours() (a full colour recompute for every one of ~342
+      // meshes) on every hover-target change, and `hover` includes x/y
+      // coordinates that change on every pointer-move frame, so a mouse
+      // sweep across the map re-ran the full recompute on every frame.
+      if (code === highlighted) return;
+      const prev = highlighted;
       highlighted = code;
-      applyColours();
+      if (prev !== null) {
+        const entry = byCode.get(prev);
+        if (entry) {
+          entry.column.mesh.material.emissive.set('#000000');
+          entry.column.mesh.material.emissiveIntensity = 0;
+          entry.column.mesh.material.needsUpdate = true;
+        }
+      }
+      if (code !== null) {
+        const entry = byCode.get(code);
+        if (entry) {
+          entry.column.mesh.material.emissive.set('#ffffff');
+          entry.column.mesh.material.emissiveIntensity = 0.35;
+          entry.column.mesh.material.needsUpdate = true;
+        }
+      }
       invalidate();
     },
     pick(clientX, clientY) {
@@ -173,7 +203,7 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
       if (r.width === 0 || r.height === 0) return null;
       pointer.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(meshes, false)[0];
+      const hit = raycaster.intersectObjects(pickableMeshes, false)[0];
       const data = hit?.object.userData as { code?: string } | undefined;
       return data?.code ?? null;
     },

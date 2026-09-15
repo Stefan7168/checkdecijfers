@@ -2,9 +2,11 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../../lib/i18n/messages.ts';
 import { DemoBanner } from './demo-banner.tsx';
-import { YEAR_END, YEAR_START } from './fake-data.ts';
+import { buildFakeDataset, growthSince, populationIn, YEAR_END, YEAR_START, type FakeDataset } from './fake-data.ts';
 import { Map3d, TOPOJSON_URL } from './map3d.tsx';
+import { formatGrowth, formatPopulation } from './scales.ts';
 import { TWO_SQUARES_TOPOLOGY } from './test-fixture.ts';
+import { areaKm2, decodeMunicipalities } from './topojson.ts';
 
 function stubMatchMedia(reduced: boolean): void {
   vi.stubGlobal('matchMedia', vi.fn((query: string) => ({ matches: reduced && query.includes('prefers-reduced-motion'), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
@@ -17,22 +19,65 @@ async function renderLoaded(lang: 'nl' | 'en' = 'nl') {
   expect(fetchMock).toHaveBeenCalledWith(TOPOJSON_URL);
   return view;
 }
-/** The demo's own honesty scan: every digit-bearing text node must sit under
- * data-fictional (a fake number, labelled) or data-year (a calendar year).
- * `[role="status"]` is exempt for the same reason the plan already exempts
- * `lab3d.footer` ("CC BY 4.0") from this scan: it is FIXED UI copy — e.g.
- * "This browser cannot show 3D (no WebGL)." — never a number drawn from
- * fake-data.ts, so a digit inside it ("3D") carries no fictional statistic
- * to mislabel. */
-function scanDigits(container: HTMLElement): void {
+
+/** Rebuilds the SAME fictional dataset Map3d builds from the fixture
+ * topology (buildFakeDataset is deterministic — code-review fix,
+ * 2026-09-15), so scanDigits can verify every rendered digit against the
+ * generator's actual output, not merely that it sits in a labelled wrapper. */
+function fixtureDataset(): FakeDataset {
+  const features = decodeMunicipalities(TWO_SQUARES_TOPOLOGY);
+  return buildFakeDataset(features.map((f) => ({ code: f.code, name: f.name, areaKm2: areaKm2(f) })));
+}
+
+/** Every string this demo can legitimately show a digit inside: the fake
+ * dataset's own population/growth output for every year in range and both
+ * languages, every calendar year, and the three FIXED status strings (e.g.
+ * "This browser cannot show 3D (no WebGL)."). Plays the same role
+ * `harvestSpecStrings` plays for the real product's `scanForUnboundDigits`
+ * (chart.test.tsx) — a digit token must trace to something in this list, not
+ * merely sit under the right element. Folding the status strings in here
+ * (rather than a blanket `role="status"` exemption) means a future digit
+ * added to any OTHER status string, or a new role="status" element, is
+ * caught: it simply won't match anything in this frozen list. */
+function harvestFictionalStrings(dataset: FakeDataset): string[] {
+  const out: string[] = [];
+  for (const record of dataset.records) {
+    for (let year = YEAR_START; year <= YEAR_END; year++) {
+      out.push(formatPopulation(populationIn(record, year), 'nl'), formatPopulation(populationIn(record, year), 'en'));
+      out.push(formatGrowth(growthSince(record, year), 'nl'), formatGrowth(growthSince(record, year), 'en'));
+    }
+  }
+  for (let year = YEAR_START; year <= YEAR_END; year++) out.push(String(year));
+  for (const key of ['lab3d.loading', 'lab3d.unavailable', 'lab3d.loadFailed'] as const) {
+    out.push(t('nl', key), t('en', key));
+  }
+  return out;
+}
+
+/** The demo's own honesty scan (code-review fix, 2026-09-15): every digit
+ * TOKEN in the rendered DOM must (a) sit under data-fictional or data-year
+ * — placement — AND (b) match a string `sourceStrings` says the dataset or
+ * fixed copy actually produced — content. (a) alone (the original version)
+ * would pass a corrupted generator output or a pasted-in real number as
+ * long as it sat in the right wrapper; this mirrors chart.test.tsx's
+ * scanForUnboundDigits, adapted for fictional rather than validated data. */
+function scanDigits(container: HTMLElement, sourceStrings: string[]): void {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   let seen = 0;
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-    if (!/\d/.test(node.textContent ?? '')) continue;
-    if (node.parentElement?.closest('[role="status"]')) continue;
+    const text = node.textContent ?? '';
+    if (!/\d/.test(text)) continue;
+    const inStatus = t('nl', 'lab3d.loading') === text || t('en', 'lab3d.loading') === text
+      || t('nl', 'lab3d.unavailable') === text || t('en', 'lab3d.unavailable') === text
+      || t('nl', 'lab3d.loadFailed') === text || t('en', 'lab3d.loadFailed') === text;
+    if (!inStatus) {
+      const el = node.parentElement;
+      expect(el?.closest('[data-fictional="true"], [data-year]'), `digit "${text}" outside a labelled element`).not.toBeNull();
+    }
     seen++;
-    const el = node.parentElement;
-    expect(el?.closest('[data-fictional="true"], [data-year]'), `digit "${node.textContent}" outside a labelled element`).not.toBeNull();
+    for (const tok of text.match(/\d[\d.,]*/g) ?? []) {
+      expect(sourceStrings.some((s) => s.includes(tok)), `numeric token "${tok}" has no source in the fictional dataset or fixed copy`).toBe(true);
+    }
   }
   expect(seen).toBeGreaterThan(0);
 }
@@ -78,7 +123,7 @@ describe('Map3d — labels, controls and the digit lock (ADR 049)', () => {
     expect(details?.textContent).toContain(t('nl', 'lab3d.population'));
     expect(details?.textContent).toContain(t('nl', 'lab3d.growth'));
     expect(details?.textContent).toContain(t('nl', 'lab3d.badge'));
-    scanDigits(container);
+    scanDigits(container, harvestFictionalStrings(fixtureDataset()));
   });
   it('the year slider spans 1995–2025 and play advances one year per tick, stopping at the end', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -95,7 +140,7 @@ describe('Map3d — labels, controls and the digit lock (ADR 049)', () => {
     expect(container.querySelector('[data-year]')?.textContent).toBe(String(YEAR_END));
     await act(async () => { vi.advanceTimersByTime(700); });
     expect(screen.getByRole('button', { name: t('nl', 'lab3d.play') })).toHaveAttribute('aria-pressed', 'false');
-    scanDigits(container);
+    scanDigits(container, harvestFictionalStrings(fixtureDataset()));
   });
   it('reduced motion is read once at mount (no tween, no damping) and the controls still work', async () => {
     stubMatchMedia(true);
