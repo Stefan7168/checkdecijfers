@@ -378,7 +378,13 @@ defaults the owner vetoes by exception; as-built record in [open-questions #197]
   As-built detail: ADR 029 (first as-built note) + ADR 024 (last addendum).
 - **Idea 4 (trend headline) BUILT** (sessions 80-81, 2026-09-05) — see [open-questions #197](open-questions.md)
   and [ADR 014](decisions/014-chart-spec-v1-and-renderer.md)'s as-built notes for the full record; PR #6 open,
-  not yet merged (autonomous session + core-product code, #118(b)). **Ideas 6 (series legend) + 8 (small
+  not yet merged (autonomous session + core-product code, #118(b)). **The number half of "Wat zie ik hier?" —
+  the sentence's own leading idea 4 always described a headline sentence PLUS a number-bearing takeaway, only
+  the sentence half shipped in sessions 80-81 — is now BUILT (session 103, 2026-09-15, chart-card polish,
+  Tasks 1-4 of [superpowers/plans/2026-09-15-chart-card-polish.md](superpowers/plans/2026-09-15-chart-card-polish.md),
+  PR pending owner review, autonomous + core-product code, #118(b)):** `headlineFigure()`
+  (`web/lib/chart-headline.ts`) selects the last plotted point of a single time series and renders it large
+  above the chart, the trend sentence moved directly under it. **Ideas 6 (series legend) + 8 (small
   multiples) BUILT + MERGED + LIVE** (session 79, 2026-09-05). Idea 5 (revision history) still needs a migration
   (owner-supervised), unscheduled. Idea 7 unscheduled.
 

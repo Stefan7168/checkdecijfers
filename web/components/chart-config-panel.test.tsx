@@ -54,6 +54,28 @@ function Harness(props: Omit<ChartConfigPanelProps, 'open' | 'onOpenChange' | 't
   );
 }
 
+describe('ChartConfigTrigger compact (chart-card polish, 2026-09-15)', () => {
+  it('compact renders an icon-only button whose accessible name and title are still Opmaak / Style, with the phone tap-target class', () => {
+    const { unmount } = render(
+      <ChartConfigTrigger open={false} onToggle={() => {}} controlsId="p-style" triggerId="p-style-trigger" compact />,
+    );
+    const button = screen.getByRole('button', { name: 'Opmaak' });
+    expect(button.textContent).toBe('');
+    expect(button).toHaveAttribute('title', 'Opmaak');
+    expect(button).toHaveAttribute('aria-controls', 'p-style');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button.querySelector('svg')).not.toBeNull();
+    expect(button.className).toContain('max-sm:size-11');
+    unmount();
+    render(<ChartConfigTrigger open onToggle={() => {}} controlsId="p-style" triggerId="p-style-trigger" compact lang="en" />);
+    expect(screen.getByRole('button', { name: 'Style' })).toHaveAttribute('aria-expanded', 'true');
+  });
+  it('without compact the trigger still shows its text label (every existing harness test relies on this)', () => {
+    render(<ChartConfigTrigger open={false} onToggle={() => {}} controlsId="p-style" triggerId="p-style-trigger" />);
+    expect(screen.getByRole('button', { name: 'Opmaak' }).textContent).toBe('Opmaak');
+  });
+});
+
 const lineCtx: PresentationContext = { kind: 'line', form: 'line', seriesCount: 2, hasProvisional: false };
 const barCtx: PresentationContext = { kind: 'bar', form: 'bar', seriesCount: 3, hasProvisional: false };
 const meta = [
