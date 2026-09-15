@@ -948,6 +948,52 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(panel().className).toContain('h-64');
     expect(panel().style.height).toBe('');
   });
+  it('chart-card polish (2026-09-15): the grid is a SOLID half-opacity hairline in the grid colour — no dash (the 3 3 dash belongs to event markers alone)', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const lines = [...container.querySelectorAll('.recharts-cartesian-grid-horizontal line')];
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line.getAttribute('stroke-dasharray')).toBeNull();
+      expect(line.getAttribute('stroke')).toBe('var(--border)');
+      expect(line.getAttribute('stroke-opacity')).toBe('0.5');
+    }
+    // The curated event marker keeps its dash — the two vocabularies stay distinct.
+    const annotated = render(<ChartView spec={spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis' }] })} />).container;
+    expect(annotated.querySelector('.recharts-reference-line line')?.getAttribute('stroke-dasharray')).toBe('3 3');
+  });
+  it('chart-card polish: the bar, horizontal-bar and small-multiples grids draw the same solid hairline', () => {
+    const cmp = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' })] },
+        { label: 'Rotterdam', regionCode: 'GM0599', points: [point({ resultId: 'r', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={cmp} />);
+    const barLine = container.querySelector('.recharts-cartesian-grid-horizontal line')!;
+    expect(barLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(barLine.getAttribute('stroke-opacity')).toBe('0.5');
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const hbarLine = container.querySelector('.recharts-cartesian-grid-vertical line')!;
+    expect(hbarLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(hbarLine.getAttribute('stroke-opacity')).toBe('0.5');
+    cleanup();
+    const multi = render(<ChartView spec={twoSeriesSpec()} />).container;
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    const smallLine = multi.querySelector('.recharts-cartesian-grid-horizontal line')!;
+    expect(smallLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(smallLine.getAttribute('stroke-opacity')).toBe('0.5');
+  });
+  it('chart-card polish: the chat card frame pads p-5 / sm:p-6 (was p-4); frameless surfaces still get no frame at all', () => {
+    const framed = render(<ChartView spec={threePointSpec()} />).container.firstElementChild as HTMLElement;
+    expect(framed.className).toContain('p-5');
+    expect(framed.className).toContain('sm:p-6');
+    expect(framed.className).not.toMatch(/\bp-4\b/);
+    expect(framed.className).toContain('rounded-xl');
+    cleanup();
+    const frameless = render(<ChartView spec={threePointSpec()} frameless />).container.firstElementChild as HTMLElement;
+    expect(frameless.className).toBe('');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -9,7 +9,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
-import { AXIS_COLOR, AxisTick, baselineAxisLine, buildRows, GRID_COLOR, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import { AXIS_COLOR, AxisTick, baselineAxisLine, buildRows, GRID_LINE_PROPS, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
 
 /** R11 (WP218 gap fix): the hollow provisional marker, same convention as
  * chart.tsx's SeriesDot — but ONLY for a provisional point; a final point
@@ -120,8 +120,7 @@ export function ChartSmallMultiples({
                     * honesty-bound tick mechanism is custom. */}
                   {presentation.grid !== 'none' ? (
                     <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke={GRID_COLOR}
+                      {...GRID_LINE_PROPS}
                       // Always true: this element only renders inside the
                       // `presentation.grid !== 'none'` branch above, and
                       // GridMode has no vertical-only option.

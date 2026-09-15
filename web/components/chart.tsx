@@ -166,6 +166,15 @@ export function seriesStyle(index: number): { color: string } {
 export const AXIS_COLOR = 'var(--muted-foreground)';
 export const GRID_COLOR = 'var(--border)';
 
+/** Chart-card polish (2026-09-15): the grid is a SOLID hairline at half
+ * opacity. The former `3 3` dash was byte-identical to the curated
+ * event-marker <ReferenceLine> dash below — ADR 042 decision 10 reserved
+ * the dashed vocabulary for event markers and the story ring, and the grid
+ * had been the one exception. One constant shared by every CartesianGrid
+ * (line, area, bar, hbar, ChartSmallMultiples) so the five sites cannot
+ * drift. `pres.grid` still decides WHICH lines exist (ADR 039/042). */
+export const GRID_LINE_PROPS = { stroke: GRID_COLOR, strokeOpacity: 0.5 } as const;
+
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
 // must floor at zero. A line encodes POSITION, so it may zoom to show real
@@ -1295,7 +1304,8 @@ export function ChartView({
   // has no use for. See `ChartStageMode` above for what stage mode is.
   const inStage = stage !== undefined;
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
+  // Chart-card polish (2026-09-15): p-5 / sm:p-6 (was p-4) — the reference card the owner compared against breathes; the dock keeps its own p-4 (visual-dock.tsx), a narrow side panel.
+  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6';
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
@@ -2316,8 +2326,7 @@ export function ChartView({
                 * labels below are ours. */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={GRID_COLOR}
+                  {...GRID_LINE_PROPS}
                   // Always true: this element only renders inside the
                   // `pres.grid !== 'none'` branch above, and GridMode has no
                   // vertical-only option — 'both'/'horizontal' both want it.
@@ -2432,7 +2441,7 @@ export function ChartView({
                 ))}
               </defs>
               {pres.grid !== 'none' ? (
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal vertical={pres.grid === 'both'} />
+                <CartesianGrid {...GRID_LINE_PROPS} horizontal vertical={pres.grid === 'both'} />
               ) : null}
               <XAxis
                 dataKey="periodLabel"
@@ -2534,7 +2543,7 @@ export function ChartView({
                 * literal); the category (region) axis's own gridlines are
                 * the extra ones, only in 'both' mode. */}
               {pres.grid !== 'none' ? (
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical horizontal={pres.grid === 'both'} />
+                <CartesianGrid {...GRID_LINE_PROPS} vertical horizontal={pres.grid === 'both'} />
               ) : null}
               <XAxis
                 type="number"
@@ -2600,8 +2609,7 @@ export function ChartView({
                 * zeroBaseline). */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={GRID_COLOR}
+                  {...GRID_LINE_PROPS}
                   // Always true: this element only renders inside the
                   // `pres.grid !== 'none'` branch above, and GridMode has no
                   // vertical-only option — 'both'/'horizontal' both want it.
