@@ -19,7 +19,7 @@ as-built numbers this ADR is responsible for recording).
 separate personal showcase site (18 Three.js pages, NOT part of this product), specifically its `/nl-bevolking-3d`
 page (the direct equivalent of this demo). Full context: [open-questions #258](../open-questions.md).
 **Scope:** raising this demo's polish to that reference page — same concept, same D1–D7 invariants below, no new
-ADR. Built autonomously (branch `bevolking-3d-demo-v2`, PR [#TBD]) per
+ADR. Built autonomously (branch `bevolking-3d-demo-v2`, PR [#32](https://github.com/Stefan7168/checkdecijfers/pull/32)) per
 [docs/superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](../superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md)
 (the plan's own D1′–D5′ is this addendum's rationale, restated here with as-built specifics), owner not present for
 the build — branch + PR per [#118](../open-questions.md)(b).
