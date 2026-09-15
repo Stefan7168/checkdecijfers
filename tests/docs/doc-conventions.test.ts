@@ -81,6 +81,7 @@ const OUTSIDE_DOCS_MARKDOWN = [
   'checkdecijfers.nl.md',
   '.claude/commands/wrap-session.md',
   'scripts/dev-harness/README.md',
+  'web/public/demo/README.md',
 ];
 
 /** Strip fenced blocks and inline code spans.
