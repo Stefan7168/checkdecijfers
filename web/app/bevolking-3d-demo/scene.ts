@@ -1,13 +1,19 @@
-// ADR 049: the WebGL scene for the 3D municipality demo. Pure three.js, no
-// React. Renders ON DEMAND: a requestAnimationFrame loop runs only while a
-// height tween or OrbitControls damping is active, or something changed —
-// an idle page costs nothing. Everything created here is disposed by
-// `dispose()`. The ONLY numbers this scene shows are the FakeDataset's.
-import { DirectionalLight, Group, HemisphereLight, Mesh, MeshLambertMaterial, PerspectiveCamera, PlaneGeometry, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
+// ADR 049, reworked v2 (D1′/D2′, session 104): the WebGL scene for the 3D
+// municipality demo. Pure three.js, no React. Renders ON DEMAND: a
+// requestAnimationFrame loop runs only while a height tween or OrbitControls
+// damping is active, or something changed — an idle page costs nothing.
+// Everything created here is disposed by `dispose()`. The ONLY numbers this
+// scene shows are the FakeDataset's.
+//
+// v2: the old single flat grey `plate` is gone. Every municipality now gets
+// its OWN floor tile (the choropleth terrain, D1′) directly under its own
+// inset population column, both fed the identical growthColor() value via
+// scales.ts's applyGrowthColor() — they can never visually disagree.
+import { DirectionalLight, Group, HemisphereLight, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import type { ColumnMesh } from './columns.ts';
+import type { ColumnMesh, FloorMesh } from './columns.ts';
 import { growthSince, populationIn, YEAR_START, type FakeDataset, type FakeMunicipalityRecord, type MunicipalityType } from './fake-data.ts';
-import { growthColor, heightFor, MIN_HEIGHT, SCENE_COLORS, type Theme } from './scales.ts';
+import { applyGrowthColor, GROWTH_MID_HEX, heightFor, MIN_HEIGHT, type Theme } from './scales.ts';
 
 export interface SceneOptions {
   theme: Theme;
@@ -24,6 +30,12 @@ export interface SceneHandle {
   dispose(): void;
 }
 
+interface Entry {
+  floor: FloorMesh;
+  column: ColumnMesh;
+  record: FakeMunicipalityRecord;
+}
+
 export const CAMERA_HOME = new Vector3(0, 230, 260);
 export const HEIGHT_TWEEN_MS = 350;
 
@@ -35,7 +47,7 @@ export function hasWebGl(canvas: HTMLCanvasElement): boolean {
   }
 }
 
-export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], dataset: FakeDataset, opts: SceneOptions): SceneHandle | null {
+export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], floors: FloorMesh[], dataset: FakeDataset, opts: SceneOptions): SceneHandle | null {
   if (!hasWebGl(canvas)) return null;
 
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -44,26 +56,34 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
   const camera = new PerspectiveCamera(40, 1, 1, 2000);
   camera.position.copy(CAMERA_HOME);
 
-  const hemi = new HemisphereLight(0xffffff, 0x444444, 1.0);
+  // D2′: a soft sky/ground hemisphere (ground tuned toward the floor's own
+  // neutral midpoint, the same colour growthColor() uses at zero growth —
+  // not a new literal) plus TWO directional lights — the original "sun" and
+  // a softer fill from roughly the opposite side, so the map doesn't read as
+  // lit from one single toy-like direction. Still MeshLambertMaterial, still
+  // no shadow maps (a real-time shadow pass over ~342×2 meshes is a
+  // perf/complexity jump this plan does not sign up for).
+  const hemi = new HemisphereLight(0xffffff, GROWTH_MID_HEX[opts.theme], 1.0);
   const sun = new DirectionalLight(0xffffff, 1.4);
   sun.position.set(120, 220, 160);
-  scene.add(hemi, sun);
+  const fill = new DirectionalLight(0xffffff, 0.5);
+  fill.position.set(-140, 200, -140);
+  scene.add(hemi, sun, fill);
 
-  // Columns are extruded along +z; rotate the whole map so z becomes "up".
+  // Columns/floor are extruded along +z; rotate the whole map so z becomes "up".
   const map = new Group();
   map.rotation.x = -Math.PI / 2;
   scene.add(map);
-  const plate = new Mesh(new PlaneGeometry(420, 420), new MeshLambertMaterial({ color: SCENE_COLORS[opts.theme].plate }));
-  plate.position.z = -0.05;
-  map.add(plate);
 
-  const byCode = new Map<string, { column: ColumnMesh; record: FakeMunicipalityRecord }>();
+  const byCode = new Map<string, Entry>();
   const recordByCode = new Map(dataset.records.map((r) => [r.code, r]));
+  const floorByCode = new Map(floors.map((f) => [f.code, f]));
   for (const column of columns) {
     const record = recordByCode.get(column.code);
-    if (!record) continue; // a boundary without a record is simply not drawn — never a made-up number
-    byCode.set(column.code, { column, record });
-    map.add(column.mesh);
+    const floor = floorByCode.get(column.code);
+    if (!record || !floor) continue; // a boundary without a matching record/floor is simply not drawn — never a made-up number
+    byCode.set(column.code, { floor, column, record });
+    map.add(floor.mesh, column.mesh);
   }
 
   const controls = new OrbitControls(camera, canvas);
@@ -86,16 +106,28 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
   let frame: number | null = null;
   let dirty = true;
 
+  // D1′: growthColor() is computed exactly ONCE per municipality/year and
+  // applied to BOTH the floor tile and the column via scales.ts's
+  // applyGrowthColor() — they read as one continuous colour by construction,
+  // never two separate calls that could drift apart.
   const applyColours = (): void => {
-    for (const [code, { column, record }] of byCode) {
+    for (const { floor, column, record } of byCode.values()) {
       const dim = filter !== 'all' && record.type !== filter;
-      const m = column.mesh.material;
-      m.color.set(growthColor(growthSince(record, year), theme));
-      m.transparent = dim;
-      m.opacity = dim ? 0.15 : 1;
-      m.emissive.set(code === highlighted ? '#ffffff' : '#000000');
-      m.emissiveIntensity = code === highlighted ? 0.35 : 0;
-      m.needsUpdate = true;
+      applyGrowthColor([floor.mesh.material, column.mesh.material], growthSince(record, year), theme);
+      for (const material of [floor.mesh.material, column.mesh.material]) {
+        material.transparent = dim;
+        material.opacity = dim ? 0.15 : 1;
+        material.needsUpdate = true;
+      }
+    }
+  };
+
+  const setEntryEmissive = (entry: Entry | undefined, on: boolean): void => {
+    if (!entry) return;
+    for (const mesh of [entry.floor.mesh, entry.column.mesh]) {
+      mesh.material.emissive.set(on ? '#ffffff' : '#000000');
+      mesh.material.emissiveIntensity = on ? 0.35 : 0;
+      mesh.material.needsUpdate = true;
     }
   };
 
@@ -132,12 +164,14 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
 
   const raycaster = new Raycaster();
   const pointer = new Vector2();
-  const allMeshes = [...byCode.values()].map((v) => v.column.mesh);
-  // Code-review fix (2026-09-15): pick() must only raycast against columns
-  // matching the active type filter — otherwise a dimmed (opacity 0.15),
-  // filtered-out column stayed clickable/hoverable, letting the UI show or
-  // pin details for a municipality the filter visually excluded. Rebuilt
-  // only on setFilter, not per pick() call (pointer-move is a hot path).
+  // v2: raycast against BOTH the column and its floor tile — the floor now
+  // covers the full footprint (D1′), so hovering the visible seam/terrain
+  // around an inset column still picks the right municipality, not nothing.
+  const allMeshes = [...byCode.values()].flatMap((v) => [v.column.mesh, v.floor.mesh]);
+  // Code-review fix (2026-09-15, carried forward): pick() must only raycast
+  // against meshes matching the active type filter — otherwise a dimmed
+  // (opacity 0.15), filtered-out municipality stayed clickable/hoverable.
+  // Rebuilt only on setFilter, not per pick() call (pointer-move is a hot path).
   let pickableMeshes = allMeshes;
 
   const handle: SceneHandle = {
@@ -159,43 +193,26 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
     },
     setTheme(t) {
       theme = t;
-      plate.material.color.set(SCENE_COLORS[t].plate);
+      hemi.groundColor.set(GROWTH_MID_HEX[t]);
       hemi.intensity = t === 'dark' ? 0.7 : 1.0;
       applyColours();
       invalidate();
     },
     setFilter(f) {
       filter = f;
-      pickableMeshes = f === 'all' ? allMeshes : [...byCode.values()].filter((v) => v.record.type === f).map((v) => v.column.mesh);
+      pickableMeshes = f === 'all' ? allMeshes : [...byCode.values()].filter((v) => v.record.type === f).flatMap((v) => [v.column.mesh, v.floor.mesh]);
       applyColours();
       invalidate();
     },
     setHighlight(code) {
-      // Code-review fix (2026-09-15): only touch the previous and new
-      // highlighted mesh's emissive properties — this used to call
-      // applyColours() (a full colour recompute for every one of ~342
-      // meshes) on every hover-target change, and `hover` includes x/y
-      // coordinates that change on every pointer-move frame, so a mouse
-      // sweep across the map re-ran the full recompute on every frame.
+      // Only touch the previous and new highlighted municipality's emissive
+      // properties — a full applyColours() recompute on every hover-target
+      // change would re-run growthColor() for every one of ~342 municipalities
+      // on every pointer-move frame.
       if (code === highlighted) return;
-      const prev = highlighted;
+      setEntryEmissive(highlighted !== null ? byCode.get(highlighted) : undefined, false);
       highlighted = code;
-      if (prev !== null) {
-        const entry = byCode.get(prev);
-        if (entry) {
-          entry.column.mesh.material.emissive.set('#000000');
-          entry.column.mesh.material.emissiveIntensity = 0;
-          entry.column.mesh.material.needsUpdate = true;
-        }
-      }
-      if (code !== null) {
-        const entry = byCode.get(code);
-        if (entry) {
-          entry.column.mesh.material.emissive.set('#ffffff');
-          entry.column.mesh.material.emissiveIntensity = 0.35;
-          entry.column.mesh.material.needsUpdate = true;
-        }
-      }
+      setEntryEmissive(code !== null ? byCode.get(code) : undefined, true);
       invalidate();
     },
     pick(clientX, clientY) {
@@ -225,12 +242,12 @@ export function createScene(canvas: HTMLCanvasElement, columns: ColumnMesh[], da
       if (frame !== null) cancelAnimationFrame(frame);
       controls.removeEventListener('change', invalidate);
       controls.dispose();
-      for (const { column } of byCode.values()) {
+      for (const { floor, column } of byCode.values()) {
         column.mesh.geometry.dispose();
         column.mesh.material.dispose();
+        floor.mesh.geometry.dispose();
+        floor.mesh.material.dispose();
       }
-      plate.geometry.dispose();
-      plate.material.dispose();
       renderer.dispose();
     },
   };

@@ -12,7 +12,6 @@ export const GROWTH_DOMAIN = 0.4;
 export const GROWTH_LOW_HEX = DEFAULT_PALETTE[1]!;
 export const GROWTH_HIGH_HEX = DEFAULT_PALETTE[0]!;
 export const GROWTH_MID_HEX: Record<Theme, string> = { light: '#bfbfbf', dark: '#525252' };
-export const SCENE_COLORS: Record<Theme, { plate: string }> = { light: { plate: '#e5e5e5' }, dark: { plate: '#262626' } };
 
 export const MIN_HEIGHT = 0.4;
 export const MAX_HEIGHT = 40;
@@ -35,6 +34,20 @@ export function growthColor(growth: number, theme: Theme): string {
   const g = Number.isFinite(growth) ? Math.max(-GROWTH_DOMAIN, Math.min(GROWTH_DOMAIN, growth)) : 0;
   const mid = GROWTH_MID_HEX[theme];
   return g < 0 ? mixHex(mid, GROWTH_LOW_HEX, -g / GROWTH_DOMAIN) : mixHex(mid, GROWTH_HIGH_HEX, g / GROWTH_DOMAIN);
+}
+
+// v2 (D1′, session 104): the floor tile and the population column for the
+// SAME municipality/year must never be able to visually disagree — the
+// mechanism is structural, not a convention: growthColor() is computed
+// exactly ONCE here and the identical hex is applied to every material
+// passed in. columns.test.ts pins this against real MeshLambertMaterial
+// instances (both meshes' rendered colour equal, and equal to a direct
+// growthColor() call).
+export interface Colorable { color: { set(value: string): unknown } }
+export function applyGrowthColor(materials: readonly Colorable[], growth: number, theme: Theme): string {
+  const hex = growthColor(growth, theme);
+  for (const m of materials) m.color.set(hex);
+  return hex;
 }
 
 export function heightFor(population: number, maxPopulation: number): number {
