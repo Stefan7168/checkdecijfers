@@ -96,9 +96,8 @@ the public embed route against a real-shaped redacted envelope — rely on its a
 change); full web suite, solo: 105 files / 1733 tests green; `test:docs` 11/11; hermetic benchmark 28/28
 green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the 4-file, byte-identical
 extraction diff. Branch `shared-is-redacted-helper`, PR #27 — autonomous, per
-[#118](open-questions.md)(b), not merged. CI triggered on push; poll result not yet folded into this
-entry at the time it was written — check `gh run list --branch shared-is-redacted-helper` before trusting
-it silently.
+[#118](open-questions.md)(b), not merged. **CI confirmed green** (`gh run view 34927043689`:
+`conclusion: "success"`, polled to completion via the same backgrounded-loop pattern as PR #26 above).
 
 **Note on process:** avoided the mistake of calling `ScheduleWakeup` to "wait" for a backgrounded shell
 command mid-turn (a standing feedback-memory rule — that tool is `/loop`-dynamic-mode-only) — caught it

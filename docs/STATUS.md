@@ -34,9 +34,9 @@ Zero behavior change today (version has never moved past 1); the check now exist
 `scripts/verify-audit-rows.ts`) into one export in `src/answer/audit/retention.ts`, re-exported from the
 existing audit `index.ts` — zero behavior change, zero new import paths. Deliberately did NOT touch
 `scripts/verify-dataset-turns.ts`'s own look-alike `isRedacted` (a different, deliberately separate trust
-tier's sentinel — ADR 037 D1). Full LOCAL verification green (backend 153/2358, web 105/1733, benchmark
-28/28, `test:docs` 11/11, real build, `/code-review` LOW 0 findings) — CI was still in progress at the
-time this was written; check `gh run list --branch shared-is-redacted-helper` before trusting it silently.
+tier's sentinel — ADR 037 D1). Full verification green (backend 153/2358, web 105/1733, benchmark 28/28,
+`test:docs` 11/11, real build, `/code-review` LOW 0 findings) — **CI confirmed green** on both new PRs
+(run `34924905497` for #26, run `34927043689` for #27, both `conclusion: success`).
 Full account: [status-archive.md](status-archive.md)'s session 103 entry.
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session
