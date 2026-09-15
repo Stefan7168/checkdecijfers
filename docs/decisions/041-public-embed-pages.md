@@ -1,6 +1,6 @@
 # ADR 041 — Public embed pages: signed stateless chart URLs, frozen by default, live for Pro
 
-**Status:** accepted, 2026-09-10 (session 93, autonomous — owner away, branch `embed-charts`, not yet merged) — spec Part B as built; design in [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](../superpowers/specs/2026-09-09-story-mode-and-embed-design.md) Part B (session 92, owner-approved in chat).
+**Status:** accepted and MERGED + LIVE, 2026-09-10 (session 93, autonomous — owner away, branch `embed-charts`, PR #9, merged 2026-09-12 — found stale 2026-09-15, session 103, in the same stale-doc sweep that caught ADR 042/043's identical wording) — spec Part B as built; design in [superpowers/specs/2026-09-09-story-mode-and-embed-design.md](../superpowers/specs/2026-09-09-story-mode-and-embed-design.md) Part B (session 92, owner-approved in chat).
 
 ## Context
 

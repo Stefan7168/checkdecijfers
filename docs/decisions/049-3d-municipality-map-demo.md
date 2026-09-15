@@ -1,9 +1,11 @@
 # ADR 049 — 3D municipality map demo over fictional data
 
-**Status:** built, session 103 (2026-09-15, autonomous — the owner was present in the parent conversation that
-dispatched this build, but the build itself ran unsupervised in the background, so it goes through branch + PR
+**Status:** built and MERGED, session 103 (2026-09-15, autonomous — the owner was present in the parent conversation that
+dispatched this build, but the build itself ran unsupervised in the background, so it went through branch + PR
 review per [open-questions #118](../open-questions.md)(b), not a direct push). Branch `demo-3d-municipality-map`,
-PR open, not merged. **Not part of the product** — see Context.
+independently code-reviewed (7 findings, all fixed and re-verified — see [lessons-learned.md](../lessons-learned.md)),
+squash-merged to `main` (`49cd975`) on the owner's explicit in-chat instruction, owner present (#118(a)).
+**Not part of the product** — see Context.
 **Deciders:** Stefan (the demo concept, seeing a reference site he built himself, and the go-ahead to build it);
 session (the engineering shape, written up here as the plan's own "Design decisions taken for this plan" section,
 executed task-by-task via [superpowers:subagent-driven-development](../superpowers/plans/2026-09-15-3d-municipality-map-demo.md)).

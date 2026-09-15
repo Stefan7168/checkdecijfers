@@ -14,92 +14,19 @@
 > should migrate everything below the session-94 block into status-archive.md and leave only a lean
 > pointer, the way this convention has always intended.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103, autonomous throughout — owner sent two
-short messages mid-session, "I trust your judgement" then twice "continue to work autonomously," but did
-not review any PR; verify against `git log`/`gh pr list` before trusting, since owner-present work may
-land after this).** **Eight PRs open as of the latest addition below (#23–#30), ALL awaiting owner review,
-NONE merged — this is purely a review wait, nothing blocks any of them on the tooling side.** The original
-six (superseded phrasing, kept for its own content below):** #23 (WP30c E1 Eurostat), #24 (health-check
-`pro_subscriptions` fix), #25 (dead chart-story cleanup) — all three unchanged since session 102, still
-zero comments/reviews — plus **PR #26** (`attachments-envelope-key-manifest`): closes
-[#209](open-questions.md), builds `tests/attachments/envelope-key-manifest.test.ts` (the CBS-side
-`envelope-key-manifest.test.ts`'s analog for `DatasetTurnEnvelope`, this tier's own R8-analog envelope —
-a discriminated union, needing its own sibling declaration-parser rather than reusing the interface-body
-one) and, in building it, found and fixed a real pre-existing gap: `reconstruct.ts` never checked
-`envelope.schemaVersion` against `DATASET_TURN_ENVELOPE_VERSION` (unlike the CBS side, which always has).
-Zero behavior change today (version has never moved past 1); the check now exists before it's needed.
-**CI confirmed green** (`gh run list --branch attachments-envelope-key-manifest`, run `34924905497`:
-`web`/`backend (1/2/3)` all `success`, `deploy` correctly `skipped`). Plus new **PR #27**
-(`shared-is-redacted-helper`): closes [#227](open-questions.md), extracts the three hand-copied
-`isRedacted` checks (`web/app/embed-actions.ts`, `web/app/embed/[token]/page.tsx`,
-`scripts/verify-audit-rows.ts`) into one export in `src/answer/audit/retention.ts`, re-exported from the
-existing audit `index.ts` — zero behavior change, zero new import paths. Deliberately did NOT touch
-`scripts/verify-dataset-turns.ts`'s own look-alike `isRedacted` (a different, deliberately separate trust
-tier's sentinel — ADR 037 D1). Full verification green (backend 153/2358, web 105/1733, benchmark 28/28,
-`test:docs` 11/11, real build, `/code-review` LOW 0 findings) — **CI confirmed green** on both PRs
-(run `34924905497` for #26, run `34927043689` for #27, both `conclusion: success`). Plus new **PR #28**
-(`fix-use-element-width-reparenting`): closes the actionable half of [#234](open-questions.md) —
-`useElementWidth`'s stale-ref bug across both named trigger paths (schema-refusal null→element, and
-chart-frame.tsx's Frame Inset toggle reparenting the ref'd node), fixed with one general re-check-every-
-render mechanism. **Found and fixed a further real bug in the fix itself before shipping**: Next.js's own
-StrictMode-on-by-default in development mounts every component twice, and the unmount-cleanup effect had
-to reset BOTH tracking refs (not just disconnect the observer) or the simulated remount would get
-permanently stuck — caught by a regression test rendering under a real `<StrictMode>` wrapper, and
-independently confirmed in a real browser via the hermetic dev harness (toggled Frame Inset several times
-on a real fixture-replay chart, read the actual measured width/height at each step). Full verification
-green (backend 153/2358 unaffected, web 105/1736, benchmark 28/28, `test:docs` 11/11, real build,
-`/code-review` LOW 0 findings) — **CI confirmed green** (`gh run view` on the PR's run:
-`conclusion: "success"`).
-
-**Same-day continuation (2026-09-15, still session 103, dispatched to run in the background while the
-owner stayed present in the parent conversation — goes through branch+PR review per
-[#118](open-questions.md)(b) all the same, since the BUILD itself ran unsupervised): PR #30**
-(`demo-3d-municipality-map`) — the 3D municipality map DEMO the owner asked for after seeing a reference
-site he built himself. **NOT part of the product** — ADR [044](decisions/044-story-stage.md)'s kickoff
-already ruled a 3D municipality map OUT of the real Story stage; this demo does not reopen that decision,
-it lives entirely outside the answer pipeline (`web/app/bevolking-3d-demo/`, one directory, `git diff
---stat main -- src/ tests/ benchmark/ migrations/` EMPTY). Built task-by-task via strict TDD per the
-plan, 11 commits. `three`+`@types/three` is the one owner-approved library exception, reachable only
-through one `next/dynamic` import — pinned by `isolation.test.ts`. Full verification, all MEASURED this
-session: root+web typecheck clean; backend **153 files/2358 tests** (unchanged — confirms zero backend
-impact); web **114 files/1771 tests**; hermetic benchmark **GATE PASS** (14/14 answerable, 6/6
-refusal/clarify, 0 fabricated); `test:docs` 11/11; real `next build` succeeds, lists `/bevolking-3d-demo`
-alongside all 15 pre-existing routes unchanged; `/code-review` LOW 0 findings (run twice). Route-private
-bundle **229.6 KB gzip** (measured via each route's own `react-loadable-manifest.json`, not Turbopack's
-build output which prints no per-route size table) — under the plan's 250 KB ceiling; ADR 049 records the
-full methodology and a real, non-obvious finding: ~87 KB of that is `zod` being bundled client-side for
-the first time anywhere in the app, not `three` itself. **Real browser pass DONE** — the local dev harness
-(`scripts/dev-harness/`, no live database/Supabase/LLM spend) driven through the Claude_Browser pane
-(Playwright's own global install wasn't present in this sandbox, so the harness's session cookie — not
-httpOnly — was injected via `document.cookie` instead): map renders in both themes, year slider +
-play/pause, type filter dimming, click-to-pin raycast + details panel, Escape-unpin, reset view, 375px
-mobile, the login gate correctly redirects an anonymous visit. Six real bugs found and fixed during the
-build that were NOT in the plan's literal text (a jsdom/Vite `new URL(relative, import.meta.url)` quirk
-hit twice, an `<output>` element's implicit `role="status"` colliding with the page's own status text, a
-wrapping `<label>` pulling extra text into an accessible name, the digit-scan test flagging the incidental
-"3D" in fixed UI copy, `isolation.test.ts` matching its own regexes against its own source, and
-`web/public/demo/README.md` missing from `tests/docs/doc-conventions.test.ts`'s allowlist — the last one a
-real, repo-wide test failure, not demo-scoped). **CI confirmed GREEN** (`gh run view 34962951564`:
-`conclusion: "success"`; `web`/`backend (1/2/3)` all `pass`, `deploy` correctly `skipping` on a PR) — but
-only on the THIRD run: the first two pushes each caught a real bug CI itself found (see below), so this is
-the genuinely-final, verified-green state, not the first attempt.
-
-**Two more real things found and fixed AFTER the PR opened, both from things going wrong for real reasons
-worth recording:** (1) CI's own `tests/docs/doc-conventions.test.ts` caught a live `[#30](https://github.com/…/pull/30)`
-markdown link this session had itself just written into `status-archive.md`'s new entry — #132 interim
-rule (i) violation, same class this repo has hit and fixed repeatedly; changed to plain-text `PR #30`,
-re-pushed, re-confirmed clean locally AND in the next CI run. (2) mid-verification, the coordinating
-session flagged that a SIBLING autonomous agent (building the unrelated chart-card-polish plan in a
-separate worktree) had run a broad `pkill -f "workers/forks.js"` while fighting its own resource
-contention, which could have killed this session's own test-runner processes as collateral damage without
-this session noticing — so every already-claimed-passing local result (backend 153/2358, web 114/1771,
-benchmark GATE PASS) was RE-RUN clean from scratch after that point and matched exactly before this PR was
-trusted as done; see Lessons for the general pattern.
-Full account: [status-archive.md](status-archive.md)'s session 103 entry (this same block, appended).
-
-**Also open, not built by this thread:** PR #29 (`trim-status-md-duplicate-narrative`) — a sibling
-autonomous session's work on this same file's own known debt (line 11 above); not reviewed or touched
-here, mentioned so the next session doesn't lose track of it.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103 — a long session, both autonomous stretches
+and owner-present stretches; verify against `git log`/`gh pr list` before trusting anything below, since
+more may have landed after this was written).** **Two PRs MERGED to `main` this session — PR #30 (the 3D
+municipality map DEMO, `49cd975`) and PR #31 (chart-card polish, `f733db7`) — both after an independent
+`/code-review` pass (8 finder angles, 1-vote verify) found 9 real, confirmed issues across the two PRs,
+all fixed and re-verified before merging, CI green on every step. Seven PRs remain open, untouched by
+this stretch: #23 (WP30c E1 Eurostat), #24 (health-check `pro_subscriptions` fix), #25 (dead chart-story
+cleanup), #26 (DatasetTurnEnvelope key manifest, #209), #27 (shared isRedacted helper, #227), #28
+(useElementWidth reparenting fix, #234), #29 (this file's own known-debt trim, line 11 above — still
+not merged, so the debt note above still applies).** Full account, including the merge-conflict story and
+the two process lessons this stretch surfaced: [status-archive.md](status-archive.md)'s session-103
+entries (two, newest on top — the continuation covering PR #31 + the reviews + the merges, then the
+original PR #30 build entry beneath it).
 
 **Session 102's own block, superseded but still accurate for PRs #23–#25 (written 2026-09-15, session
 102, autonomous — owner asleep/away for the whole session).** **Three PRs now open, ALL awaiting owner
