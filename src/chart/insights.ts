@@ -145,9 +145,15 @@ function dedupeByPoint(candidates: Scored[]): Scored[] {
   return [...bestByPoint.values()];
 }
 
+/** Dedupe + rank by score, descending — shared by scoreFindings (which caps
+ * and re-sorts chronologically below) and topFinding (which just takes the
+ * winner). */
+function rankByScore(candidates: Scored[]): Scored[] {
+  return dedupeByPoint(candidates).sort((a, b) => b.score - a.score);
+}
+
 function rankAndCap(candidates: Scored[]): ScoredFinding[] {
-  const ranked = dedupeByPoint(candidates).sort((a, b) => b.score - a.score);
-  const capped = ranked.slice(0, INSIGHTS_MAX_FINDINGS);
+  const capped = rankByScore(candidates).slice(0, INSIGHTS_MAX_FINDINGS);
   // Chronological order reads more naturally than score order once selected
   // (the score only decided WHICH points made the cut, not the telling
   // order) — mirrors the spec's own period-ascending order (R6).
@@ -156,9 +162,9 @@ function rankAndCap(candidates: Scored[]): ScoredFinding[] {
     .map(({ score: _score, ...finding }) => finding);
 }
 
-function timeSeriesFindings(spec: ChartSpec): ScoredFinding[] {
+function timeSeriesCandidates(spec: ChartSpec): Scored[] {
   const points = plotted(spec.series[0]!.points);
-  return rankAndCap(candidatesForSeries(spec.series[0]!.label, 0, points, spec.unit, false));
+  return candidatesForSeries(spec.series[0]!.label, 0, points, spec.unit, false);
 }
 
 /** Multi-series: each series scored independently against its OWN mean/
@@ -166,7 +172,7 @@ function timeSeriesFindings(spec: ChartSpec): ScoredFinding[] {
  * each tells whether ITS OWN movement is unusual), capped per series first
  * so one wild series cannot crowd out every other series, then re-ranked
  * together for the global cap. */
-function multiSeriesFindings(spec: ChartSpec): ScoredFinding[] {
+function multiSeriesCandidates(spec: ChartSpec): Scored[] {
   const PER_SERIES_CAP = 2;
   const all: Scored[] = [];
   spec.series.forEach((series, index) => {
@@ -176,14 +182,14 @@ function multiSeriesFindings(spec: ChartSpec): ScoredFinding[] {
       .slice(0, PER_SERIES_CAP);
     all.push(...seriesCandidates);
   });
-  return rankAndCap(all);
+  return all;
 }
 
 /** Comparison (bar): one point per series — ranked by deviation from the
  * cross-series mean, the direct bar-chart analog of the level z-score above.
  * `multiSeries` here means "name the region" (barCaption always does, via
  * its own {label}), which is every bar chart with >1 bar by construction. */
-function comparisonFindings(spec: ChartSpec): ScoredFinding[] {
+function comparisonCandidates(spec: ChartSpec): Scored[] {
   const bars = spec.series
     .map((series, index) => ({ series, index, point: plotted(series.points)[0] }))
     .filter((entry): entry is { series: ChartSpec['series'][number]; index: number; point: Plotted } => entry.point !== undefined);
@@ -219,7 +225,13 @@ function comparisonFindings(spec: ChartSpec): ScoredFinding[] {
       score,
     };
   });
-  return rankAndCap(candidates);
+  return candidates;
+}
+
+function buildCandidates(spec: ChartSpec): Scored[] {
+  if (spec.series.length === 0) return [];
+  if (spec.kind === 'bar') return comparisonCandidates(spec);
+  return spec.series.length === 1 ? timeSeriesCandidates(spec) : multiSeriesCandidates(spec);
 }
 
 /** The top 3-5 findings for a chart, or `[]` when there is nothing to tell
@@ -227,7 +239,18 @@ function comparisonFindings(spec: ChartSpec): ScoredFinding[] {
  * period here is a verbatim projection of the spec's own values (R1/R6),
  * never computed or estimated by an LLM. */
 export function scoreFindings(spec: ChartSpec): ScoredFinding[] {
-  if (spec.series.length === 0) return [];
-  if (spec.kind === 'bar') return comparisonFindings(spec);
-  return spec.series.length === 1 ? timeSeriesFindings(spec) : multiSeriesFindings(spec);
+  return rankAndCap(buildCandidates(spec));
+}
+
+/** The single most notable finding for a chart — by SCORE, unlike
+ * scoreFindings' own chronological display order (rankAndCap re-sorts the
+ * capped set chronologically for the Insights panel once the winners are
+ * chosen). A caller that needs "the one headline-worthy point," not an
+ * ordered panel of up to 5, needs this, not scoreFindings(spec)[0]. Same
+ * scoring/dedup as scoreFindings; null when there's nothing to report. */
+export function topFinding(spec: ChartSpec): ScoredFinding | null {
+  const ranked = rankByScore(buildCandidates(spec));
+  if (ranked.length === 0) return null;
+  const { score: _score, ...finding } = ranked[0]!;
+  return finding;
 }

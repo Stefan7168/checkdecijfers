@@ -665,7 +665,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
     ]);
     setInput('');
     setBusy(true);
@@ -761,6 +761,7 @@ export function Chat({
                 kind: 'insufficient_credits' as const,
                 text: gatedMessageText(gated, t),
                 chart: null,
+                chartAlternates: [],
                 cost: null,
                 citation: null,
                 card: null,
@@ -781,6 +782,7 @@ export function Chat({
                 kind: 'info' as const,
                 text: gatedMessageText(gated, t),
                 chart: null,
+                chartAlternates: [],
                 cost: null,
                 citation: null,
                 card: null,
@@ -854,6 +856,7 @@ export function Chat({
           kind: messageKind(response),
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
+          chartAlternates: response.kind === 'answer' ? response.chartAlternates : [],
           cost: gated.netCost,
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
@@ -966,14 +969,14 @@ export function Chat({
       if (result.kind === 'unauthenticated') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
         ]);
         return;
       }
       if (result.kind === 'insufficient_credits') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
         ]);
         return;
       }
@@ -983,7 +986,7 @@ export function Chat({
       // "asking twice must not cost twice" invariant design §2/§5 always had).
       setMessages((m) => [
         ...m,
-        { role: 'assistant', kind: 'info', text: result.text, chart: null, cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
       ]);
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
@@ -1296,6 +1299,7 @@ export function Chat({
             {!dockMode && message.chart ? (
               <ChartView
                 spec={message.chart}
+                alternates={message.chartAlternates}
                 embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
               />
             ) : null}

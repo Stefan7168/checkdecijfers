@@ -61,6 +61,13 @@ export interface ChatMessage {
   kind: 'answer' | 'clarification' | 'refusal' | 'info' | 'insufficient_credits' | null;
   text: string;
   chart: ChartSpec | null;
+  /** #254 alternate-reading toggle: every registered alternate reading of the
+   * answered measure, straight from AnswerResponse.chartAlternates (Task 2) —
+   * same null-safety posture as `chart`. [] on user messages, non-answers,
+   * and every non-'ok' gated outcome. On a replayed/resumed message,
+   * replay-assemble.ts reads it straight off the stored envelope
+   * (part.response), the same way it already does for citation/card/csv. */
+  chartAlternates: { label: string; spec: ChartSpec }[];
   /** Credits charged for this turn (GatedResponse.netCost live; the ledger
    * join's creditsCharged on replay) -- null on user messages and on any
    * non-'ok' gated outcome (nothing was charged). */

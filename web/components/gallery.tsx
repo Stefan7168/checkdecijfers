@@ -52,7 +52,7 @@ function GalleryCard({
 }) {
   const titleKey = `gallery.story.${chart.slug}.title` as MessageKey;
   return (
-    <article className="rounded-xl border border-border bg-card p-4">
+    <article className="rounded-xl border border-border bg-card p-5 sm:p-6">
       <h3 className="text-lg text-foreground">{t(lang, titleKey)}</h3>
       <div className="mt-3">
         <ChartView

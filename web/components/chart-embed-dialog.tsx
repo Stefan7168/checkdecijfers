@@ -93,6 +93,7 @@ export function ChartEmbedButton({
   open,
   onOpenChange,
   chartSlot,
+  disabled = false,
 }: {
   auditId: number;
   tableId: string;
@@ -110,14 +111,44 @@ export function ChartEmbedButton({
   /** The live chart canvas + legend, lifted from chart.tsx — rendered inside
    * the embed modal's left pane, mirroring the Style editor's chartSlot. */
   chartSlot: ReactNode;
+  /** #254 Task 6 addendum: true while a non-primary reading is selected. An
+   * embed always republishes the PRIMARY reading (the stored audit row
+   * carries no reading selection — `/embed/[token]` has no chartAlternates
+   * concept at all, deliberately out of scope for this feature), but the
+   * dialog's live preview shows whatever is currently on screen — which,
+   * once a reader can switch readings, could be an alternate. Without this,
+   * a reader could switch to an alternate, click Embed, see the alternate's
+   * own data in the preview, and copy code believing it publishes THAT —
+   * when it always publishes the primary instead. Same disabled-with-a-
+   * reason convention as chart.tsx's own Lijn/Vlak/Liggend tabs and story
+   * lock: `disabled` + `title` (pointer) + `aria-describedby` (screen
+   * reader/keyboard) pointing at a co-located `sr-only` reason span, both
+   * owned entirely by this component so the caller only ever passes the one
+   * boolean. */
+  disabled?: boolean;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const disabledReasonId = useId();
 
   return (
     <>
-      <Button ref={triggerRef} type="button" variant="ghost" size="sm" onClick={() => onOpenChange(true)}>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        title={disabled ? t(lang, 'chart.embed.readingDisabledReason') : undefined}
+        aria-describedby={disabled ? disabledReasonId : undefined}
+        onClick={() => onOpenChange(true)}
+      >
         {t(lang, 'chart.embed.trigger')}
       </Button>
+      {disabled ? (
+        <span id={disabledReasonId} className="sr-only">
+          {t(lang, 'chart.embed.readingDisabledReason')}
+        </span>
+      ) : null}
       {open ? (
         <ChartEmbedDialog
           auditId={auditId}

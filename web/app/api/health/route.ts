@@ -38,6 +38,7 @@ import {
   getBalance,
   getQuestionHistory,
   getSignupGrantCredits,
+  hasProPlan,
 } from '../../../backend/billing/index.ts';
 import { listThreads } from '../../../backend/threads/index.ts';
 import { getDb } from '../../../lib/db.ts';
@@ -74,6 +75,13 @@ export async function GET(): Promise<Response> {
     ['pricing-read-clarification', () => getActionClassPrice(db, 'clarification')],
     // signup_grant_config (the Dashboard explainer copy's live read).
     ['signup-grant-read', () => getSignupGrantCredits(db)],
+    // pro_subscriptions: UNCONDITIONAL, not behind PRO_SUBSCRIPTIONS_ENABLED —
+    // that flag only gates starting a NEW Pro checkout (embed-actions.ts); the
+    // embed page's `hasProPlan` read runs on every embed view regardless of
+    // the flag, so unlike the flag-gated checks below, skipping this one while
+    // the flag is off would miss exactly the session-101 incident class (code
+    // querying the table before its migration had run).
+    ['pro-subscription-read', () => hasProPlan(db, { id: SYNTHETIC_USER_ID, email: null })],
   ];
   if (websearchEnabled) {
     checks.push(['pricing-read-web-addon', () => getActionClassPrice(db, 'web_addon')]);

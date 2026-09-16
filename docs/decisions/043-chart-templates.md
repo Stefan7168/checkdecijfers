@@ -1,6 +1,6 @@
 # ADR 043 — Chart templates v1: named looks over the presentation overrides
 
-**Status:** accepted, 2026-09-11 (session 95, autonomous overnight — the owner's kickoff pre-resolved "templates v1 = looks only, starter charts are v2"). Built on branch `visual-templates-v1`, stacked on the ADR [042](042-designed-default-chart.md) branch; a pull request is open for the owner's review per CLAUDE.md #118(b). Plan: [superpowers/plans/2026-09-11-chart-templates-v1.md](../superpowers/plans/2026-09-11-chart-templates-v1.md). Spec: [session-briefs/2026-09-10-visual-next-level-plan.md](../session-briefs/2026-09-10-visual-next-level-plan.md) §5.
+**Status:** accepted and MERGED + LIVE, 2026-09-11 (session 95, autonomous overnight — the owner's kickoff pre-resolved "templates v1 = looks only, starter charts are v2"). Built on branch `visual-templates-v1`, stacked on the ADR [042](042-designed-default-chart.md) branch, PR #11, merged 2026-09-11 (`gh pr view 11`; found stale 2026-09-15, session 103, in the same stale-doc sweep that caught ADR 042's identical wording). Plan: [superpowers/plans/2026-09-11-chart-templates-v1.md](../superpowers/plans/2026-09-11-chart-templates-v1.md). Spec: [session-briefs/2026-09-10-visual-next-level-plan.md](../session-briefs/2026-09-10-visual-next-level-plan.md) §5.
 
 ## Context
 

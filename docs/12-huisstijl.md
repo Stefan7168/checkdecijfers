@@ -90,6 +90,20 @@ signed-in visitors that points to the Colours tab. A template is a bundle of the
 a spec change — and the panel still opens on Grafiek. Everything below this paragraph is the history of the
 session-87 decision.
 
+**Chart-card polish (session 103, 2026-09-15), ADR 042 addendum, PR pending owner review — Tasks 1-4 of
+[superpowers/plans/2026-09-15-chart-card-polish.md](../superpowers/plans/2026-09-15-chart-card-polish.md):**
+four presentation-only refinements over the designed default above, none of which touch `STOCK_PRESENTATION`.
+(1) The grid is a **solid hairline at half opacity**, not a `3 3` dash — the dash is now reserved for event
+markers alone (closing the one exception decision 10 above had left standing). (2) The chat/trial card and the
+gallery article pad **`p-5 sm:p-6`** (was `p-4`); the dock's own narrow side panel stays `p-4` by design.
+(3) The Weergave tabs are now **quiet underline tabs** (no filled track, no raised segment) sharing one control
+row with the Vanaf/Tot selects; `Opmaak` moved into the card's **header** as an icon-only button next to
+`Inzichten` — see "Answer card and chart panel layout" below, corrected in the same session. (4) A **headline
+figure** leads the card: the last plotted value of a single-series line chart, large above the chart, with the
+existing trend-headline sentence moved directly under it — a selection over the spec, never a computation, null
+for multi-series/comparison/table/stage. Not built in this pass (owner-gated, Task 5): a small frame padding
+default so the plot doesn't sit flush against the rounded, shadowed frame edge `b86556f` introduced.
+
 **Superseded (session 87 → session 95):** Owner decision (session 87): **use Recharts' basic/default styling.** Grid, axes and tick text use Recharts'
 own defaults; series colours are the palette from Recharts' documentation examples
 (`RECHARTS_PALETTE` in [web/components/chart.tsx](../web/components/chart.tsx): `#8884d8`, `#82ca9d`,
@@ -115,13 +129,22 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
 
 - **Answers** in the chat render as a shadcn `Card` (`web/components/chat.tsx`): the answer text and its honesty lines in the body; a footer (`border-t`, `bg-muted/40`) with the full source sentence + source badge on the left and the actions on the right — like/dislike FIRST (outline buttons on `bg-background` with `shadow-sm`, lucide thumbs + visible labels), then proof, then (when docked) the "Chart/Card in panel" reference trigger (outline/secondary toggle via `aria-pressed`, mirroring the thumbs' toggle pattern), then citation / CSV as `ghost` buttons with icons, then the cost. Refusals and clarifications keep their plain rendering. **Superseded 2026-09-10 (owner UI feedback, session 94):** the docked reference trigger used to be a `float-right` pill at the top of the card body — it moved into this footer row.
 - **The chart's Opmaak panel** opens as a real, modal popup (`ChartEditModal`, `role="dialog"`, `aria-modal`, Base UI's Dialog portaled to `document.body`) — the chart (+ its legend and click-to-annotate notes) on the left, the panel's own tabs on the right; stacked (chart on top) below `lg`. It keeps (since session 95, ADR 043) a first tab Sjablonen/Templates ahead of Grafiek/Kleuren/Lettertype, and a fourth tab Kader/Frame — background (None / Colour / Gradient / Own image), padding (None / Small / Medium / Large), corners (Square / Rounded / Very rounded), shadow (None / Soft / Strong), inset (None / Small / Large), aspect ratio (Auto / 16:9 / 4:5 / 1:1 / 1.91:1). The chart-language select sits in the panel header, the "why no pie chart" note + `Standaard` in a footer on the Grafiek tab only. **Superseded 2026-09-13 (owner UI feedback, session 101):** the panel used to be a plain inline region (`role="region"`) in its own card directly below the chart (session 94) — before that, a portaled non-modal dialog floating beside the chart (session 92) — see ADR 039's dated addenda for the full as-built history.
-- **Story mode (session 92):** the "Verhaal / Story mode" trigger is the product's ONE gradient — a 2 px ring (`linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)`) around a ghost button with the lucide `WandSparkles` icon, a row-mate of the Weergave tabs after Opmaak. The story panel opens in the Opmaak slot under the chart (one open at a time) as bordered step cards in a short scroll area with Previous / Next and a dotted step list. No other control gets a gradient. **Story stage (session 95, ADR [044](decisions/044-story-stage.md), built on branch `visual-story-stage`, PR #12 MERGED + LIVE 2026-09-11, `29aadde`):** a "Presenteren / Present" button on that panel opens the same story as a full-viewport `role="dialog"` overlay — the chart pinned (a second, chrome-less `ChartView`), one full-height caption panel per finding scrolling past it, a CSS-3D tilt on entry that settles flat, a spotlight vignette on the step's point, position dots (never "N of M"), an auto-play toggle off by default, Escape/Close returning focus; reduced motion = no tilt/parallax. CSS 3D + a scroll hook, no library.
+- **Story mode (session 92):** the "Verhaal / Story mode" trigger is the product's ONE gradient — a 2 px ring (`linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)`) around a ghost button with the lucide `WandSparkles` icon. **Superseded 2026-09-15 (chart-card polish, session 103):** Inzichten and Opmaak are no longer row-mates of the Weergave tabs — they sit together in the card's header actions cluster (`data-slot="chart-card-actions"`), top-right next to the title; the Weergave tablist shares its own quiet control row with the Vanaf/Tot selects instead. The story panel still opens in the Opmaak slot under the chart (one open at a time) as bordered step cards in a short scroll area with Previous / Next and a dotted step list. No other control gets a gradient. **Story stage (session 95, ADR [044](decisions/044-story-stage.md), built on branch `visual-story-stage`, PR #12 MERGED + LIVE 2026-09-11, `29aadde`):** a "Presenteren / Present" button on that panel opens the same story as a full-viewport `role="dialog"` overlay — the chart pinned (a second, chrome-less `ChartView`), one full-height caption panel per finding scrolling past it, a CSS-3D tilt on entry that settles flat, a spotlight vignette on the step's point, position dots (never "N of M"), an auto-play toggle off by default, Escape/Close returning focus; reduced motion = no tilt/parallax. CSS 3D + a scroll hook, no library.
 
 ## House rules (current)
 
 1. **Tokens, not colours.** Surfaces/text/borders come from the shadcn utilities above; no hex, no raw
    `zinc-*`/`blue-*` classes. Chart series colours (`DEFAULT_PALETTE`, and `RECHARTS_PALETTE` for the Classic look — ADR 042) and the stat-card SVG export (white
    card, fixed greys — the exported PNG must look the same everywhere) are the sanctioned literal-hex spots.
+   **ADR 049 adds one more, narrowly scoped:** the `/bevolking-3d-demo` DEMO's WebGL scene needs literal hex
+   for its `three.js` `Color`/`Material` values, which cannot read CSS custom properties from inside a canvas.
+   The growth scale's two ENDPOINTS are not new literals — they alias `DEFAULT_PALETTE[0]`/`DEFAULT_PALETTE[1]`
+   (`web/app/bevolking-3d-demo/scales.ts`); the genuinely new literals are the per-theme neutral midpoint and
+   plate colour (`scales.ts`'s `GROWTH_MID_HEX`/`SCENE_COLORS`) plus two small WebGL-only values with no CSS
+   token equivalent — the initial placeholder column colour before the scale first applies
+   (`columns.ts`) and the pure white/black hover-highlight emissive (`scene.ts`). All DOM chrome in that
+   directory (the banner, buttons, labels, the legend swatch background) still uses tokens exclusively — the
+   exception is scoped to actual `three.js` scene objects, never anything rendered as HTML/CSS.
 2. **Every number is tabular.** `.tnum` / `data-numeric` / tables get `font-variant-numeric: tabular-nums`
    globally (#91, owner-approved). This is a product convention, not part of the retired identity.
 3. **Both themes, always.** Any new surface must read in light and dark — use the paired tokens, never a

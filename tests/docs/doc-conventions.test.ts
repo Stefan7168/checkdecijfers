@@ -81,6 +81,7 @@ const OUTSIDE_DOCS_MARKDOWN = [
   'checkdecijfers.nl.md',
   '.claude/commands/wrap-session.md',
   'scripts/dev-harness/README.md',
+  'web/public/demo/README.md',
 ];
 
 /** Strip fenced blocks and inline code spans.
@@ -228,12 +229,20 @@ describe('#132 interim rule (i): PR references in docs are plain text, never liv
 // reading it) and shipped empty through three green pushes: nothing on this
 // gate asserted that the load-bearing docs HAVE content. A fresh session reads
 // STATUS.md first; an empty one would have sent it to the archive to guess.
-// Floors are deliberately far below today's sizes (STATUS ~630 lines, the
-// archive ~2,300, the RUNBOOK ~1,100, ~150 live open-questions rows) so a
-// normal prune never trips them, while a truncation always does.
+// Floors are deliberately far below today's sizes so a normal prune never
+// trips them, while a truncation always does.
+//
+// STATUS.md's own floor was recalibrated session 103 (2026-09-15): the file
+// had grown to 1,307 lines of duplicate session narrative that already lived
+// (in fuller form) in status-archive.md — exactly the multi-session-dump the
+// session-41 convention exists to prevent, not a truncation. Verified every
+// duplicated session (56 through 99) against its status-archive.md entry
+// before trimming; the file is now ~130 lines (lean top block + the evergreen
+// checklist/scoreboard/history sections), so the floor moved down with it —
+// still comfortably above zero, still enough to catch a real accidental wipe.
 describe('the plan-of-record docs are present and not truncated', () => {
   const floors: Array<{ file: string; minLines: number; mustContain: string[] }> = [
-    { file: 'docs/STATUS.md', minLines: 200, mustContain: ['# STATUS', '▶ SESSION'] },
+    { file: 'docs/STATUS.md', minLines: 100, mustContain: ['# STATUS', '▶ NEXT SESSION'] },
     { file: 'docs/status-archive.md', minLines: 800, mustContain: ['# STATUS archive'] },
     { file: 'docs/open-questions.md', minLines: 60, mustContain: ['| # | Area |'] },
     { file: 'docs/RUNBOOK.md', minLines: 400, mustContain: ['## Moving to a new machine'] },

@@ -36,6 +36,25 @@ const FOOTER_FONT = 'system-ui, -apple-system, sans-serif';
 // the single-line FOOTER_HEIGHT above already covers one line's own height.
 const FOOTER_LINE_HEIGHT = 14;
 const FOOTER_TEXT_MARGIN_X = 12; // the footer text's x position AND its right-edge inset — one constant for both, so they can't drift apart
+// Final-review fix (Finding 2): the headline is drawn larger/heavier (15px
+// semibold) than the footer (11px regular) it was modeled on, so it needs
+// its own, taller line height — 14px of leading is too tight for 15px text
+// and adjacent wrapped lines would visually collide. Used for BOTH the
+// headline's height reservation and its per-line y offset; the footer's own
+// FOOTER_LINE_HEIGHT usage is completely unchanged.
+const HEADLINE_LINE_HEIGHT = 20;
+// Final-review fix (Finding 1): wrapAttributionText's AVG_CHAR_WIDTH (6.5) is
+// calibrated for the footer's 11px regular-weight text, not the headline's
+// 15px semibold — semibold-at-15px characters are roughly 8.5px wide on
+// average, so reusing the footer's per-character estimate lets too many
+// characters onto a line and the rendered text runs past the SVG's right
+// edge. Scaling the available width down by this ratio (footer font size /
+// headline font size) makes wrapAttributionText compute breaks as if it were
+// working with the headline's own, wider characters — without touching
+// wrapAttributionText itself or the footer's own call to it.
+const HEADLINE_FONT_SIZE = 15;
+const FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE = 11;
+const HEADLINE_WIDTH_SCALE = FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE / HEADLINE_FONT_SIZE;
 const PNG_SCALE = 2;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -225,6 +244,12 @@ function buildAttributedClone(
   // ground this clone used to paint first is skipped in that case. Defaults
   // to true so the unframed/pristine export stays byte-identical to before.
   paintWhiteBg = true,
+  // Task 8: the journalist headline (Task 6/7) drawn as a title line ABOVE
+  // the chart, baked into the export markup itself — same "carries proof
+  // once it leaves this page" reasoning as the footer attribution, applied
+  // to the headline sentence. Absent/null/empty and the export is byte-
+  // identical to before this parameter existed.
+  headlineText?: string | null,
 ): { clone: SVGSVGElement; width: number; totalHeight: number } {
   const { width, totalHeight: baseHeight } = measureSvg(svg);
   // #223: FOOTER_HEIGHT (baked into baseHeight by measureSvg) already fits
@@ -232,7 +257,30 @@ function buildAttributedClone(
   // attribution that already fit stays byte-identical to before this fix.
   const footerLines = wrapAttributionText(attributionText, width - FOOTER_TEXT_MARGIN_X * 2);
   const extraLines = Math.max(0, footerLines.length - 1);
-  const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT;
+
+  // Task 8: reserve room at the TOP for the headline, using the same
+  // wrapAttributionText word-wrapping machinery the footer already uses
+  // below (rather than a second word-wrapping implementation) — but scaled
+  // to the headline's own, larger font size (Finding 1) and its own, taller
+  // line height (Finding 2 — HEADLINE_LINE_HEIGHT, not FOOTER_LINE_HEIGHT).
+  // HEADLINE_TOP_MARGIN covers one line's own height plus breathing room;
+  // each additional wrapped line grows the reservation exactly like the
+  // footer's own `extraLines` does, so a long headline that wraps to two or
+  // three lines still gets full room instead of overlapping the chart.
+  const HEADLINE_TOP_MARGIN = 32;
+  // Finding 1: the width budget is scaled down before it reaches
+  // wrapAttributionText, so the wrapper's fixed 6.5px-per-char estimate
+  // (tuned for the footer's smaller/lighter font) breaks lines as if it were
+  // measuring the headline's actual, wider 15px-semibold characters instead.
+  const headlineLines = headlineText
+    ? wrapAttributionText(headlineText, (width - FOOTER_TEXT_MARGIN_X * 2) * HEADLINE_WIDTH_SCALE)
+    : [];
+  const headlineExtraLines = Math.max(0, headlineLines.length - 1);
+  // Finding 2: HEADLINE_LINE_HEIGHT, not FOOTER_LINE_HEIGHT — see that
+  // constant's own comment.
+  const headlineHeight = headlineLines.length > 0 ? HEADLINE_TOP_MARGIN + headlineExtraLines * HEADLINE_LINE_HEIGHT : 0;
+
+  const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT + headlineHeight;
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   // Resolve paint BEFORE adding the footer nodes, so clone and original still
@@ -246,6 +294,26 @@ function buildAttributedClone(
   // a white ring marking the last tapped point, which would be drawn ON TOP
   // of the hollow provisional marker (R11) in the file.
   for (const cursor of clone.querySelectorAll('.recharts-tooltip-cursor, .recharts-active-dot')) cursor.remove();
+
+  // Task 8: shift the chart's OWN content (everything cloned from the live
+  // svg — chart paths, axes, etc.) down by headlineHeight, so the headline
+  // text drawn below has room above the chart and nothing overlaps. Same
+  // reserve-space-then-shift-content approach buildFrame's `contentY`
+  // already uses for its own top padding (see buildFrame above) — applied
+  // here via a wrapping <g transform="translate(...)">, the plain-SVG-
+  // element equivalent of buildFrame's x/y positioning of a nested <svg>,
+  // since the clone's children here are ordinary chart markup, not a
+  // nested <svg> of their own. Done BEFORE the width/height/viewBox
+  // attributes are overwritten below and BEFORE the white background and
+  // footer/headline text nodes are added, so only the original chart
+  // content is what actually moves.
+  if (headlineHeight > 0) {
+    const shiftGroup = document.createElementNS(SVG_NS, 'g');
+    shiftGroup.setAttribute('transform', `translate(0, ${headlineHeight})`);
+    while (clone.firstChild) shiftGroup.appendChild(clone.firstChild);
+    clone.appendChild(shiftGroup);
+  }
+
   clone.setAttribute('xmlns', SVG_NS);
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(totalHeight));
@@ -275,6 +343,23 @@ function buildAttributedClone(
     // space or other whitespace quirk in the source string can never change
     // the common case's output.
     text.textContent = footerLines.length === 1 ? attributionText : line;
+    clone.appendChild(text);
+  });
+
+  // Task 8: the headline title line, stacking downward from the top margin
+  // exactly like the footer stacks upward from the bottom. Marked with
+  // `data-headline-line` so downstream code/tests can identify it without
+  // depending on styling.
+  headlineLines.forEach((line, i) => {
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', String(FOOTER_TEXT_MARGIN_X));
+    text.setAttribute('y', String(20 + i * HEADLINE_LINE_HEIGHT));
+    text.setAttribute('font-family', FOOTER_FONT);
+    text.setAttribute('font-size', '15');
+    text.setAttribute('font-weight', '600');
+    text.setAttribute('fill', '#18181b');
+    text.setAttribute('data-headline-line', 'true');
+    text.textContent = line;
     clone.appendChild(text);
   });
 
@@ -548,6 +633,10 @@ export function framedSvgMarkup(
   attributionText: string,
   resolvePaint: PaintResolver = defaultResolvePaint,
   frame?: FrameExportInput,
+  // Task 8: forwarded straight to buildAttributedClone — see its own doc
+  // comment. Optional and defaults to nothing drawn, so every existing
+  // caller (no headline argument) stays byte-identical.
+  headlineText?: string | null,
 ): FramedExport {
   const isFramed = frame !== undefined && !(isFramePristine(frame.values) && frame.image === null);
   // Round-2 fix: the clone's own white ground is skipped only when
@@ -561,7 +650,7 @@ export function framedSvgMarkup(
     bg !== 'none' && (bg.kind === 'solid' || bg.kind === 'gradient' || (bg.kind === 'image' && frame!.image !== null));
   const insetEnabled = isFramed && frame!.values.frameInset !== 'none';
   const paintWhiteBg = !(backgroundPaints || insetEnabled);
-  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint, paintWhiteBg);
+  const { clone, width, totalHeight } = buildAttributedClone(svg, attributionText, resolvePaint, paintWhiteBg, headlineText);
   if (!isFramed) {
     return { markup: new XMLSerializer().serializeToString(clone), width, height: totalHeight, canvasFill: '#ffffff' };
   }
@@ -583,8 +672,10 @@ export function attributedSvgMarkup(
   attributionText: string,
   resolvePaint: PaintResolver = defaultResolvePaint,
   frame?: FrameExportInput,
+  // Task 8: forwarded straight to framedSvgMarkup — see its own doc comment.
+  headlineText?: string | null,
 ): string {
-  return framedSvgMarkup(svg, attributionText, resolvePaint, frame).markup;
+  return framedSvgMarkup(svg, attributionText, resolvePaint, frame, headlineText).markup;
 }
 
 function triggerDownload(blob: Blob, filename: string): void {
@@ -602,9 +693,10 @@ function downloadSvg(
   filenameBase: string,
   onFailure: () => void,
   frame?: FrameExportInput,
+  headlineText?: string | null,
 ): void {
   try {
-    const markup = attributedSvgMarkup(svg, attributionText, undefined, frame);
+    const markup = attributedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
     triggerDownload(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }), `${filenameBase}.svg`);
   } catch {
     // Matches downloadPng: every failure surfaces the same user-visible
@@ -624,8 +716,9 @@ function downloadPng(
   filenameBase: string,
   onFailure: () => void,
   frame?: FrameExportInput,
+  headlineText?: string | null,
 ): void {
-  const { markup, width, height, canvasFill } = framedSvgMarkup(svg, attributionText, undefined, frame);
+  const { markup, width, height, canvasFill } = framedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
   const svgUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
   const image = new Image();
   image.onerror = () => {
@@ -668,6 +761,7 @@ export function ChartDownloadMenu({
   lang = 'nl',
   frame,
   frameImage = null,
+  headlineText = null,
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
    * its own <svg> dynamically, so the live node is found at click time
@@ -685,6 +779,12 @@ export function ChartDownloadMenu({
    * keeps today's unframed export byte-identical. */
   frame?: FrameValues;
   frameImage?: string | null;
+  /** Task 8: the journalist headline (Task 6) currently shown for this
+   * chart, if any — drawn as a title line above the chart in the export.
+   * Optional: an existing direct render (a test with no `headlineText`)
+   * keeps today's export byte-identical, and null/undefined both mean "no
+   * headline to draw". */
+  headlineText?: string | null;
 }) {
   const frameInput: FrameExportInput | undefined = frame === undefined ? undefined : { values: frame, image: frameImage };
   const [open, setOpen] = useState(false);
@@ -768,7 +868,9 @@ export function ChartDownloadMenu({
             role="menuitem"
             className={MENU_ITEM_CLASS}
             onClick={() =>
-              withLiveSvg((svg) => downloadPng(svg, attributionText, filenameBase, () => setFailed(true), frameInput))
+              withLiveSvg((svg) =>
+                downloadPng(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+              )
             }
           >
             {t(lang, 'chart.download.png')}
@@ -779,7 +881,9 @@ export function ChartDownloadMenu({
             role="menuitem"
             className={MENU_ITEM_CLASS}
             onClick={() =>
-              withLiveSvg((svg) => downloadSvg(svg, attributionText, filenameBase, () => setFailed(true), frameInput))
+              withLiveSvg((svg) =>
+                downloadSvg(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+              )
             }
           >
             {t(lang, 'chart.download.svg')}

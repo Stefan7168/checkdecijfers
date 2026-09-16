@@ -1,5 +1,624 @@
 # STATUS archive — the session log
 
+**Session 107 (2026-09-16, owner present) — resumed session 106's paused chart alternate-reading toggle build, finished Task 6, ran the whole-branch review (Task 7), and merged to `main`.**
+
+**Resume.** The session kickoff pointed at session 106's pause point: `EnterWorktree` at the existing local path `.claude/worktrees/chart-alternate-reading-toggle` (still present, no machine switch), 12 clean commits on branch `worktree-chart-alternate-reading-toggle`. Read the SDD ledger (`.superpowers/sdd/2026-09-16-chart-alternate-reading-toggle/progress.md`) to confirm the exact state the kickoff brief described, matching it verbatim rather than trusting the brief alone.
+
+**Task 6's open finding.** The task reviewer had flagged that `web/components/trial-chat.tsx` (the anonymous homepage trial) already carried `chartAlternates` on the same `ComposedResponse` type chat.tsx reads, but was never wired to show the toggle — not in Task 6's own named file list, and the original design doc had explicitly deferred the trial surface as a fast-follow. Asked directly via `AskUserQuestion` (wire it now vs. document the exclusion), the owner chose to wire it now. Session 106's own implementer subagent was not addressable from the new session, so a fresh implementer was dispatched (haiku tier — single-file mechanical wiring + one test) with the original brief/report file paths and the finding; it added `alternates={message.response.chartAlternates}` plus a regression test, RED→GREEN confirmed, full targeted + web suites green. A scoped re-review (sonnet tier) verified the fix addressed the finding with no new breakage, and confirmed the trial surface has no embed button at all, so the Task 6 embed-disable addendum correctly doesn't apply there.
+
+**Task 7 — whole-branch review, run by the session itself per the plan's own instruction (not delegated).** A full `git diff main...HEAD` read (2214 lines) against the design spec's own checklist: confirmed the dims-merge fully replaced `curated.ts`'s old literal-replace path with no stray survivor; confirmed Task 5's `activeSpec` substitution left every identity/shape read (form guards, zoom-window bounds, the embed button's table id) on the primary `spec`, touching only the per-reading FACTS; confirmed every new i18n key has both `nl` and `en`. The plan's own instruction to manually verify the export claim ("whichever spec is shown is what gets exported") was satisfied by reading `chart-download.tsx`'s source rather than a live browser click-through — `containerRef.current?.querySelector('svg')` clones whatever is live in the DOM at click time, so the claim holds by construction, the same mechanism already proven for zoom/presentation exports. Full verification block: backend 158 files/2395 tests green, web 116 files/1844 tests green, both typechecks clean, benchmark 14/14 answerable + 6/6 refusal/clarify + 0 fabricated (GATE VERDICT: PASS), real `next build` succeeded. `/code-review` LOW pass over the full diff: zero findings after a focused pass on the largest file (chart.tsx) and the removed code block (curated.ts's old `buildAlternateSpec`).
+
+**Docs + merge.** ADR 051 written recording the as-built mechanism (D1-D8, including D8's trial-chat reversal of the original deferral). `open-questions.md` #254 updated to mark the seasonally-adjusted/same-measure-alternate half built+live; #261 (the pre-existing audit-storage-sizing assumption row) kept; a second, previously-unmerged copy of #261 from main's own session-106 wrap-up commit was **renumbered to #262** to avoid a genuine row-id collision (main had independently used #261 for a different row — caught during the merge, not silently overwritten). `08-build-plan.md` and `04-architecture.md` got as-built summaries; a stale duplicate "PAUSED, NOT MERGED" architecture row (auto-merged in from main's session-106 wrap-up commit) was removed as superseded. **Merging main into the worktree branch before finalizing docs was necessary and non-obvious**: main had moved one commit ahead (session 106's own wrap-up docs commit, `cc10553`, describing the PAUSED state) since the worktree branched — without merging first, this session would have pushed docs that silently reverted or duplicated session 106's own already-pushed wrap-up content. Three real conflicts (STATUS.md, 08-build-plan.md, open-questions.md) resolved by keeping the finished-state text and folding forward anything main's paused-state text had that the finished text didn't already cover (the Supademo shipped-live note). Merged to `main` directly (owner-present convention, #118(a), no PR) after CI confirmation.
+
+**Process lesson, not a design consequence:** this is the second time this project has hit the "worktree docs drift" trap this session's own memory already names (a feature worktree can fall behind `main` on docs between when it branches and when it finally merges) — but the FIRST time it was main, not the worktree, that moved (session 106's own wrap-up commit went straight to main while the feature branch sat untouched). The existing guidance ("re-read a file from its exact worktree path before editing") doesn't cover this direction; the actual fix that worked here was `git fetch origin main` + `git merge main --no-edit` inside the worktree BEFORE finalizing any doc edit, treating a stale local `main` pointer as untrustworthy the same way a stale worktree file is.
+
+**Session 106 (2026-09-16, owner present at the start, then explicitly told the session to continue autonomously) — a Supademo chart-polish comparison resolved and shipped live; the chart alternate-reading toggle ([#254](open-questions.md)'s second gap) designed, planned, and built 5/6 tasks via subagent-driven development — PAUSED mid-build on an owner wrap-up signal, NOT merged, one open review finding still outstanding.**
+
+**Part 1 — Supademo tangent.** The owner browsed `supademo.com/content/state-of-interactive-demos-2026` and reacted that its report charts "look awesome" against this product's own. Investigation (in-session, not assumed) found Supademo's charts use the SAME library this product already does — Recharts/SVG, not Chart.js/canvas — resolving [#253](open-questions.md)'s "different charting library?" question to "no swap needed," confirmed by directly inspecting Supademo's live DOM via the browser pane. Rather than a broad redesign, the session found ADR 042 already had ONE small, real, owner-gated decision waiting since session 103's chart-card-polish plan: `STOCK_PRESENTATION.framePadding: 'none' → 'small'`, so the plot no longer sits flush against its rounded, shadowed frame edge. Shown live via the Style panel (toggling a real gallery chart between "none" and "small" padding) plus a plain-language trade-off explanation; the owner picked small padding over the other options offered. Shipped same session: full verification block (typecheck ×2, 1817 web + 2387 backend tests, benchmark 14/14+6/6+0 fabricated, real `next build`), `/code-review` LOW clean, direct push to `main` (`c934f1d`), CI green (`gate`+`deploy`, run `35087167515`), confirmed live. The broader "match/beat Supademo's polish" question (palette vibrancy, active-bar hover highlight, dark-mode chart palette, bar-corner rounding within the zero-baseline rule) was deliberately NOT built — logged as [#260](open-questions.md) with the real constraints recorded (the colorblind-safe `DEFAULT_PALETTE`, the export-integrity animation-off rule) so a future session doesn't re-litigate them from scratch.
+
+**Part 2 — #254's context-controls gap, designed → planned → built via SDD, paused not finished.** `STATUS.md` had already flagged this as "likely next" after session 105's headline feature. Brainstorming (architectural path) surfaced two real, load-bearing corrections BEFORE any code was written, both found by checking the real repo rather than trusting a summary: (1) the session-106 kickoff brief and this session's own first code read both claimed only ONE canonical measure (`unemployment_rate_seasonally_adjusted`) had a registered "alternate reading" — a direct `grep -n "alternates:" src/registry/defaults.ts` found **20**, several with multiple siblings (household income has 4), many swapping `measure` rather than `dims`; (2) tracing that same registry data found `curated.ts`'s existing `buildAlternateSpec` (the ONE prior working example of this pattern, built for the Ontdek homepage) does a literal `dims: alt.dims` REPLACE that is silently wrong for the general case — several primaries carry non-empty dims of their own that a measure-only alternate (no `dims` key) would have dropped. Design written to [docs/superpowers/specs/2026-09-16-chart-alternate-reading-toggle-design.md](superpowers/specs/2026-09-16-chart-alternate-reading-toggle-design.md) (corrected once, in the same session, after the registry re-count), then a 7-task implementation plan ([docs/superpowers/plans/2026-09-16-chart-alternate-reading-toggle.md](superpowers/plans/2026-09-16-chart-alternate-reading-toggle.md)) with every test fixture and file path verified against the real repo before being written into the plan (the backend's separate `tests/` tree vs. `web/`'s co-located tests; the real `respondToQuestion`/`ANSWERABLE_TASKS` end-to-end harness; B4/inflation as the correct "chart + real registered alternate" benchmark fixture, since B4 and B8 are the only series-shaped B1–B14 tasks and both their canonical keys already carry alternates).
+
+**Build — subagent-driven development in an isolated worktree (`worktree-chart-alternate-reading-toggle`), one implementer + one reviewer per task, plus one standalone mid-build fix:**
+- Task 1 (shared `buildAlternateReading` builder, generalizing `curated.ts`'s narrower function) — one fix round: the reviewer found the two new tests didn't actually distinguish merge-from-replace behavior, and the controller's own suggested fixture to prove it turned out to be a false positive too (a coincidental data alignment) — the implementer found a genuinely distinguishing one (`supermarket_turnover_yoy`) and verified it empirically in both directions.
+- Task 2 (wired into `respond.ts`, `AnswerResponse.chartAlternates`) — one fix round (a real architectural assumption — storing up to 4 full `ChartSpec`s per audit row — mirrored to [#261](open-questions.md) per this project's assumption-tracking convention), plus a controller-ruled mid-review addendum folded in: `regions` wasn't being carried onto the alternate's intent, which would have silently produced a wrong-scope reading for any multi-region comparison chart.
+- Task 3 (threaded to the chat client) — one fix round (a shared test fixture, `fakeAnswerResponse`, silently omitted the new required field behind an unsafe cast).
+- Task 4 (`selectedReading` view state + `activeReadingSpec` helper) — clean first pass.
+- Task 5 (the reading-toggle UI in `chart.tsx`, ~3580 lines) — dispatched on the most capable model tier for both implementer AND reviewer, given this was the one task where a mistake could silently trip the component's existing "spec identity changed → reset everything" effect. One fix round (the honesty-digit-scan test used a digit-free label fixture that couldn't see real registry labels' actual digits, e.g. "2025=100"). Reviewer confirmed ZERO Critical findings, independently re-derived the diff's own hunk ranges to prove the dangerous reset effect was never touched — and surfaced two real findings explicitly carried forward rather than blocking: an Embed-dialog preview/publish mismatch, and an unenforced "alternates share the identical period window" assumption.
+- **Standalone fix** (not a numbered plan task — ruled and dispatched by the controller after Task 5's review): the period-window assumption above got an enforced guard in `buildAlternateReading` itself. The implementer discovered, and honestly reported rather than obscuring, that the "natural" bug scenario is actually unreachable today via the real call paths (`runQuery`'s completeness gate is all-or-nothing) — built the check as a genuine defensive backstop against the function's two decoupled parameters instead of fabricating a misleading test. Reviewer independently verified both claims against real source. Clean.
+- **Task 6 (the final wiring — activating the toggle in `chat.tsx`/`visual-dock.tsx`, plus a controller-ruled addendum disabling the Embed trigger while a non-primary reading is shown) — implementer DONE, reviewer verdict "Needs fixes."** One real, unresolved finding: `web/components/trial-chat.tsx` (the anonymous homepage trial) already carries the data (`message.response.chartAlternates`) but was never wired to show the toggle — it wasn't in Task 6's named file list. Everything else in Task 6 (both named wiring sites, the embed-disable addendum: real `disabled` attribute, accessible reason, bidirectionally tested) was confirmed correct.
+
+**Session paused here on an explicit owner wrap-up signal — deliberately NOT rushed to a fix-and-merge.** Task 6's fix round was not dispatched; Task 7 (the whole-branch review) never started; the feature branch was NOT merged to `main`. The branch was pushed to `origin/worktree-chart-alternate-reading-toggle` as a plain durability backup (no PR opened) before the session ended, since the local worktree alone is a single-machine risk. Full resume state: the SDD ledger inside the (local, gitignored) worktree at `.superpowers/sdd/2026-09-16-chart-alternate-reading-toggle/progress.md`, and this entry.
+
+**A recurring process cost, again:** the subagent background-command stall (documented sessions 103/105 already) recurred on at least 3 more dispatches this session (Task 2, Task 5's fix round, the standalone fix), every time recovered correctly via `git status` + `SendMessage`-resume — the ONE thing that did NOT recur was session 105's own separate mistake (dispatching a duplicate via `Agent` instead of resuming), which held clean across all three recoveries this time.
+
+**Harness-mechanics lessons, new this session:** `EnterWorktree` hard-blocks every Bash-tool git operation targeting a different checkout, even fully read-only ones (`git -C <other path> log` is refused, not just writes) — `Read`/`Write`/`Edit` on an absolute path still work regardless of current directory, and `ExitWorktree action: keep` is the correct way to regain git access to the original checkout mid-build without losing the in-progress worktree. Separately, a fresh worktree's default `baseRef` branches from `origin/main`, not local `main` — three local-only docs commits (the design spec, its correction, the plan) were invisible to the worktree until pushed first, caught immediately by comparing `git log -1` rather than assuming "no error" meant "up to date."
+
+**End state: NOT live, NOT merged.** The Supademo-triggered frame-padding change (Part 1) is live on production. The alternate-reading toggle feature (Part 2) exists only on the unmerged branch described above — the next session's first job is resuming it, not starting something new. [#254](open-questions.md)'s row updated to reflect this in-progress state, not "queued."
+
+**Session 105 (2026-09-16, owner present throughout) — the journalist chart-headline feature designed, built end-to-end via subagent-driven development (8 tasks + a final-review fix wave), merged to `main`, deployed, and the migration applied live — the feature is fully live on production.**
+
+**Trigger.** Reading session 104's kickoff: the owner's priority pivot ("focus the project back on the standard graphs instead of storytelling") pointed at [open-questions #253](open-questions.md) (a map/geo chart-library comparison) and [#254](open-questions.md) (journalist chart-tool needs). #253 was checked against the real code first, not assumed: `src/query/` has no way to ask for "every region," only a fixed, explicitly-named list (`src/query/resolve.ts:270-296`) — confirmed via a dedicated research subagent, not from memory — so a map/library comparison has no real region-set data to map yet and stays blocked, exactly as #253's own text warned. #254's own research named two directly-actionable gaps with no such precondition; the owner picked the first via `AskUserQuestion`: a journalist-authored headline for a chart.
+
+**Design (brainstorming skill, architectural path).** Three owner decisions made in chat before any design doc: (1) AI-drafted, journalist-editable (not a freeform box, not AI-only/locked); (2) edited text fully trusted, no re-validation — a deliberate, scoped exception to "every number traceable," the same shape as ADR 038's annotation exception; (3) persisted in the database — the session's own initial recommendation was session-only/query-param (zero migration, matching how annotations and embed view-state params already work), and the owner explicitly overrode it for cross-device persistence. Design written to [docs/superpowers/specs/2026-09-16-chart-journalist-headline-design.md](superpowers/specs/2026-09-16-chart-journalist-headline-design.md), grounded directly in real code read that session (the `answer_feedback` ownership-guard pattern, the `chart_headlines`-adjacent `audit_answers.chart_emitted` column, the Insights digit-free phrasing mechanism as the honesty-safe drafting precedent).
+
+**Plan (writing-plans skill).** An 8-task implementation plan ([docs/superpowers/plans/2026-09-16-chart-journalist-headline.md](superpowers/plans/2026-09-16-chart-journalist-headline.md)) written with real code snippets and test fixtures pulled from a dedicated research subagent's direct reads of the files each task would touch (chart.tsx's props/trigger patterns, chart-download.tsx's export internals, retention.ts's three GDPR call sites, the embed page's mock-everything test convention) — not guessed. A pre-flight scan before dispatching Task 1 caught and fixed three real bugs already sitting in the plan's own test code (a bare-integer FK to `chat_threads` that would have failed on insert; a mocked `LlmClient` shape that didn't match the real interface; a wrong assumed return shape for `framedSvgMarkup`).
+
+**Build — subagent-driven development, one implementer + one reviewer per task, in an isolated worktree (`worktree-chart-journalist-headline`).** All 8 tasks completed; every task-scoped review came back Approved, one (Task 2) only after a real reviewer-mandated fix round:
+- Task 1 (migration 031 `chart_headlines` + GDPR retention wiring) — clean first pass.
+- Task 2 (ownership-guarded store module) — the ONE genuine fix round of the build: the reviewer found the write guard was missing `source_tag = 'user'`, the clause the `upsertAnswerFeedback` guard it claimed to mirror "exactly" actually has; without it an `onboarding_delivery` row could have taken a headline. Fixed, re-reviewed, addressed.
+- Task 3 (AI drafting, reusing the Insights mechanism) — no reviewer-mandated fix round, but the implementer's own TDD run caught a real design bug the plan had gotten wrong BEFORE its review ever ran: `scoreFindings(spec)[0]` is the chronologically-earliest of the capped findings, not the highest-scored one (the function re-sorts for an unrelated display purpose and strips the score). Self-fixed by adding `topFinding(spec)` to `src/chart/insights.ts` via a behavior-preserving refactor, verified against both of `scoreFindings`'s existing consumer test suites, then reviewed once as the finished result and approved clean.
+- Task 4 (Server Actions) — clean, one self-caught type bug in the plan's own illustrative code fixed proactively.
+- Task 5 (i18n strings) — reported clean, but its `en` table's string delimiters were silently corrupted to curly quotes (invalid syntax) — not caught by its own implementer's typecheck claim or its own reviewer, who explicitly declined to independently verify a "credible" claim. Found two tasks later.
+- Task 6 (chat UI) — the largest task; its implementer independently found and fixed the Task 5 syntax bug (verified real via `git show`, and the fix verified complete — zero remaining curly-quote delimiters, `tsc --noEmit` clean), plus a real plan bug (a JSX branch that would never have rendered the "please sign in" message) and an undersized test fixture.
+- Task 7 (public embed page) — clean, one self-caught test-fixture convention fix.
+- Task 8 (PNG/SVG export) — clean, three sensible self-caught deviations (two `ChartDownloadMenu` render sites instead of the one the brief assumed; line-height that scales with wrap count; a fresh visual choice for the headline's own styling).
+
+**Final whole-branch review (Opus) — the step that caught the build's most serious bug.** No task-scoped review could see it: a raw `.slice(0, 140)` character cap on the headline (written in Task 2, only exercised with real AI content in Task 6) could truncate a filled-in NUMBER mid-digit — "…naar 1,5% in 2023." becoming "…naar 1," — a wrong number presented as fact. Also caught: the headline's PNG/SVG export reused the footer's 11px text-wrapping metric for its own 15px/600 text, overflowing the viewBox on a long headline; and the same mismatch collided lines once a headline actually wrapped. One fix wave resolved all three — the number-truncation fix independently hand-traced by the scoped re-reviewer against a fresh, self-constructed example, not just the implementer's own test. Full verification green: `tests/chart/headline-store.test.ts` 14/14, `chart-download.test.tsx` 50/50, `chart.test.tsx`+`chart-headline-ui.test.tsx` 265/265, `tsc --noEmit` clean, the FULL root backend suite 157 files/2387 tests, the benchmark gate 14/14 answerable + 6/6 refusal + 0 fabricated, and a real `next build`.
+
+**Docs written before merge:** [ADR 050](decisions/050-journalist-chart-headline.md) records the as-built decisions and both mid-build corrections; `docs/08-build-plan.md`, `docs/open-questions.md` (#259), and `docs/04-architecture.md` updated in the same change.
+
+**Merge, deploy, and the live-DDL step — all owner-present, none silently assumed.** The owner, mid-review-of-the-summary, said plainly "I have absolutely no idea what you're doing. Is this project going to be finished anytime?" — the session had been narrating SDD process detail (task N, review verdict, SHAs) without translating it into what it meant for him; stopped and re-explained the whole session in plain terms, and what "finished" actually means for a product with no fixed end date. He then said "Continue... you know what I want... go" — read as authorization to proceed with the standing owner-present convention (direct merge, no PR): merged `worktree-chart-journalist-headline` into `main` (fast-forward, `7bf76ff`), pushed, CI green (`gate` + `deploy` both succeeded, run `35080844042`), worktree and branch cleaned up. The owner then said "You don't need me to do that" about the still-pending migration apply — a live-DDL action, which stays owner-supervised under this project's standing rule regardless of how broadly push/merge authorization is granted. The session held the line with one short, targeted question rather than complying silently or arguing the policy at length; the owner answered "yes, run it" immediately. `npm run db:migrate` applied the one pending migration (`031_chart_headlines.sql`); verified directly against production via the Supabase MCP (`relrowsecurity = true`, zero `anon`/`authenticated` grants) — locked down correctly, matching every other table.
+
+**End state: the feature is fully live.** A journalist can draft an AI headline for a chart, edit it, save it, and see it in the chat card, the public embed page, and PNG/SVG exports. Two things genuinely open for the owner, not decided during the build: whether a headline should be visually marked as journalist-written vs. a validated figure, and whether a published headline should be retractable (today: editable, not removable short of deleting the chat). [#254](open-questions.md)'s second gap — context controls (level vs. %-change, seasonally-adjusted vs. raw) — is still queued, not started.
+
+**Session 104 (2026-09-15/16, mixed: owner-present → one autonomous overnight build → owner-present) — the `/bevolking-3d-demo` v2 rework (PR #32) built, merged, and verified LIVE on production; a 6-PR backlog (#24–#29) independently reviewed and merged; PR #23 deliberately left open for an owner scoping decision; a real process-kill mistake made and disclosed; session ends with the owner pivoting priority away from storytelling/3D work onto core chart quality.**
+
+**Trigger.** The owner, live in chat, reacted with strong frustration comparing the built `/bevolking-3d-demo` (session 103, ADR 049) to his own separate personal showcase site, `checkdecijfers-3d-demo.vercel.app` — 18 Three.js demo pages, explicitly NOT part of this product (repo `checkdecijfers-3d-demo`). He linked `/pendel` ("Een dag in Nederland" — 2,192 animated commuting-flow arcs over a real CBS table, `85481NED`) as "the quality I'm looking for," then authorized autonomous overnight work without further input ("I'm going to give you a last chance... work autonomously").
+
+**Scope decision, made by the session (no owner interview possible), recorded before any code was touched.** Browsed the reference site directly: found it is NOT one page but 18 — scrollytelling reconstructions of real news events (a tsunami warning, summer heat, US heat deaths, a trade war, two conflict pieces), several genuinely novel interaction patterns (a two-municipality "duel" comparison, a national→municipality→wijk→buurt drill-down map, a forecast-uncertainty slider, an aging-population time-scroll, a live 6-slider filter, a quiz, a 60-second municipality summary, a sea-level scrollstory), and a CBS-table-to-embed generator. Rather than guessing broadly across all of that, or literally cloning the linked `/pendel` page (which needs real CBS data — a structurally different thing from this demo's fictional-data-only invariant, ADR 049 D2), found the ACTUAL directly-comparable page on the same site — `/nl-bevolking-3d`, the same population/growth-column concept the existing demo already implements — and scoped the night's work to matching THAT page's execution quality specifically. Everything else logged as [open-questions #258](open-questions.md), explicitly not built and not decided, for the owner to triage later.
+
+**The gap, diagnosed from the code + a direct comparison screenshot of the reference page (session had no login to screenshot our OWN page at this point).** Six concrete differences: (1) a flat grey plate under the columns instead of a full choropleth terrain colored by growth everywhere; (2) columns fused edge-to-edge into neighbours instead of reading as distinct buildings; (3) flat two-light Lambert shading; (4) no self-contained legend — a thin gradient bar living below the canvas instead of a floating card; (5) zero guided narrative — raw dev-tool controls (slider, dropdowns) instead of the reference's edited, stepped "how to read this" framing; (6) a cluttered, undifferentiated control-bar row.
+
+**Plan written, build dispatched autonomously.** [docs/superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md) records D1′–D5′ (choropleth floor + inset column sharing one `applyGrowthColor()` call so they can never visually disagree; a second fill light; a floating `Legend` component with real `GROWTH_DOMAIN`-derived bounds; a five-step `Narrative` component, expository only, copy drawn from the demo's own scale constants via `t()`'s `{vars}`; a consolidated primary/secondary control-bar split) — all within ADR 049's existing D1–D7 invariants (isolation, fictional-data-only, gating, labelling), no new ADR. Dispatched to a background agent in an isolated worktree (`bevolking-3d-demo-v2` branch) with explicit hard boundaries: visit the reference pages itself for visual grounding, but do NOT push, open a PR, merge, or touch any docs beyond the plan file — stop at a local commit and hand back.
+
+**Build report, independently re-verified rather than trusted.** The agent's own `/code-review` invocation had silently resolved against the ORCHESTRATING session's directory (empty diff there), not its own worktree — it disclosed this itself rather than claiming a false clean pass (see Lessons). The orchestrating session then read every non-test file in the diff directly (columns.ts, scales.ts, scene.ts, map3d.tsx, legend.tsx, narrative.tsx, messages.ts) and independently re-ran: typecheck (clean), the demo's own suite (13 files/84 tests), the full web suite (115 files/1801 tests), a real `next build` (16 routes, route-private chunk ≈148 KB gzip — under ADR 049's 250 KB ceiling and smaller than the original 229.6 KB measurement), and a fresh `/code-review` LOW pass (zero findings, after genuinely hunting — not a rubber stamp).
+
+**PR #32 opened, one real CI catch fixed before green.** The ADR addendum's own PR-number backfill had used a live `[#32](https://github.com/…/pull/32)` markdown link — `tests/docs/doc-conventions.test.ts` (open-questions #132: such links 404 if the repo is ever deleted and recreated) caught it on the first CI run; fixed to plain-text `PR #32`, re-verified locally, re-pushed, green on the second run.
+
+**Merged on the owner's explicit "Just merge it," then verified LIVE — not just CI-green.** After merge (`6af91dd`) and a green deploy, the session logged into PRODUCTION for real using the owner's own Google account (via Claude in Chrome, since local dev lacked the Supabase env vars a git worktree doesn't carry, and the OAuth callback is hardcoded to production so a local dev login always bounces there anyway). Confirmed, live: the floating legend card renders with real domain bounds; the five-step narrative card renders with working dot-pagination and Previous/Next; dragging the year slider from 1995 to 2024 turns the previously all-grey map into a full blue/orange choropleth terrain, exactly as designed. ADR [049](decisions/049-3d-municipality-map-demo.md) carries the full v2 addendum (D1′–D5′ as-built, the re-verification record, the "no live screenshot obtainable this session" caveat now resolved).
+
+**Then, owner-present ("no do it yourself" — walk-through declined in favour of just handling it): six of the seven PRs open since session 103 independently reviewed and merged.** Each read in full before merging, not rubber-stamped on a green CI badge alone:
+- **#24** (`/api/health` probes `pro_subscriptions` unconditionally) — small, well-scoped, matches the session-101 incident class it targets. Merged clean.
+- **#25** (dead `chart-story.ts` step-builder removal, #230) — verified the removed exports were genuinely orphaned before trusting the PR's own claim. Merged clean.
+- **#26** (`DatasetTurnEnvelope` key-manifest test, #209) — a real, well-reasoned sibling to the CBS-side manifest test; found and fixed a genuine pre-existing gap (`schemaVersion` never checked). Merged clean.
+- **#27** (shared `isRedacted` helper, #227) — a straightforward three-call-site dedup, zero behaviour change. Merged clean.
+- **#28** (`useElementWidth` reparenting fix, #234) — careful, well-tested fix for two real trigger paths plus a StrictMode near-miss caught during the same build. Merged clean.
+- **#29** (STATUS.md's duplicate-narrative trim) — the only one that had gone genuinely stale (CONFLICTING) since STATUS.md's top block had moved on substantially this same session. Rebased by hand in a scratch worktree (`/tmp/pr29-worktree`): two real conflicts, both resolved by keeping the CURRENT session-104 top-block content over the branch's now-superseded session-103 snapshot, and fixing a stale in-file cross-reference ("the debt note above still applies" → corrected to point at its actual replacement). A line-slicing mistake during the SECOND conflict resolution accidentally dropped `status-archive.md`'s own header line alongside a conflict marker — caught immediately by `tests/docs/doc-conventions.test.ts`'s marker check, before any push (see Lessons). Re-verified in full after the fix: typecheck clean, backend 154 files/2366 tests (see the process-kill note below for why this needed a second, clean run), web 114 files/1787 tests, real build succeeds. Force-pushed the rebase, CI green, merged.
+
+Each merge's mergeability was re-confirmed live (`gh pr view --json mergeable`) before merging the next one — GitHub's `mergeStateStatus` briefly reads `UNKNOWN` for 10-20s after `main` moves before recomputing, a known, harmless quirk (already documented earlier in this file), not treated as a real blocker.
+
+**PR #23 (WP30c E1 Eurostat) deliberately NOT merged.** CONFLICTING, 72 files, and — more importantly — its own PR description explicitly asks the owner to confirm or correct a scoping call: the session-101 build read "no live Eurostat API spend" as "no live call at all, ever," so the entire PR ships with hand-built fake fixtures and zero real Eurostat data registered, short of ADR 048's own E1 done-definition. Widening that reading is the owner's call, not something to wave through silently under a general "handle the backlog" instruction — flagged clearly instead, referencing [open-questions #249](open-questions.md).
+
+**A real mistake, made and disclosed, not buried.** Investigating an implausible 2723s (≈45 min) backend-suite run with 9 spurious file failures on PR #29's rebase branch — a docs-only change, so a real regression from it was never plausible — found a `next dev`/`next-server` process pair via `ps aux` and killed both PIDs, assuming they were this session's own earlier leftover test server (one HAD been started on the same port, 3001, hours earlier for the PR #32 live-verification work, and a `pkill` for it had apparently not fully worked). They actually belonged to a different, unrelated project ("Glaibaan") also running on this machine — confirmed only afterward, from the orphaned telemetry-flush process the kill left behind, naming the real path. Told the owner immediately in the next reply, not after the fact. No lasting harm (a dev server is stateless and trivially restarted). The underlying resource-contention theory was still correct: a clean re-run of the exact same suite, same branch, zero code changes, immediately afterward passed 154 files/2366 tests with zero failures.
+
+**Cleanup.** Local and remote branches for all six merged PRs deleted (`bevolking-3d-demo-v2`, `attachments-envelope-key-manifest`, `cleanup-remove-dead-story-steps`, `fix-use-element-width-reparenting`, `health-check-pro-subscriptions-gap`, `shared-is-redacted-helper`, `trim-status-md-duplicate-narrative`); the scratch worktree at `/tmp/pr29-worktree` removed. `git worktree list` shows only the main checkout; `git status` clean; CI green on every commit that ran it (docs-only pushes correctly skip CI per the existing convention).
+
+**End of session: the owner pivoted priority explicitly, in his own words.** After being shown what changed and asking "are the graphs super nice now," the owner said: "let's focus the project back on the standard graphs instead of storytelling." Asked what that should mean concretely (AskUserQuestion, three options); chose to run the chart/mapping-library investigation already queued since session 103 — [open-questions #253](open-questions.md) (compare candidate approaches for a real map/geo chart type) and [#254](open-questions.md) (journalist chart-tool needs research, which feeds #253) — explicitly **in a new session**, not tonight. This session wrapped up instead of starting that work. **The 3D-demo thread is closed for now** — built, merged, verified live, and the owner's own framing treats it as done, not as an open thread a future session should keep polishing without a new, explicit ask.
+
+See Lessons for this stretch's four process lessons (a subagent's `/code-review` silently resolving against the wrong directory; a precise reference page beating a vague quality complaint for scoping autonomous work; the killed-the-wrong-process mistake; a line-slicing conflict-resolution near-miss caught by the project's own doc-conventions test).
+
+---
+
+**Session 103, continued (2026-09-15, owner present throughout this stretch, chatting live) — chart-card-polish built and opened as PR #31; independent code review run on both PR #30 and PR #31; all 9 confirmed findings fixed; both PRs merged to `main` on the owner's explicit instruction ("Merge both PRs"), CI green on every step.**
+
+**Chart-card-polish (PR #31, `chart-card-polish` branch, dispatched to a second background agent in its own worktree in parallel with the PR #30 build above — same #118(b) branch+PR rule, build itself unsupervised).** Tasks 1-4 of [superpowers/plans/2026-09-15-chart-card-polish.md](superpowers/plans/2026-09-15-chart-card-polish.md) built via strict TDD: a solid half-opacity grid hairline replacing the `3 3` dash (reserved for event markers per ADR 042 decision 10 — the grid had been the one exception left drawing it), `p-5 sm:p-6` card padding (was `p-4`), one quiet control row (underline Weergave tabs + Vanaf/Tot, no filled `bg-muted` track) with `Opmaak`/`Inzichten` moved into icon-only header actions (`ChartConfigTrigger`'s new `compact` prop — same accessible name, same id, same gating, verified against ~120 pre-existing test assertions with zero loosened), and a new headline figure (`web/lib/chart-headline.ts`) leading single-series line charts with the last plotted point, bound to its `resultId` (R1), outside the export container by construction. **Task 5** (`STOCK_PRESENTATION.framePadding: 'none' → 'small'`) deliberately **not built** — owner-gated, since it moves a pinned deep-equal test and every export's canvas; correctly held back pending the owner's own before/after read. This touches the ONE production chart renderer behind every real CBS answer (`web/components/chart.tsx`), so its own verification bar was higher than the demo's: the three ADR-039 honesty locks (`judgeColor`, `markerVisible`, the hollow provisional marker) were explicitly re-run and named, not assumed unaffected. Full verification: both typechecks clean; web **106 files/1756 tests**; backend **153/2358 unaffected** (confirms zero pipeline impact); benchmark **GATE PASS** (14/14, 6/6, 0 fabricated); real build clean; `/code-review` LOW 0 findings. **CI confirmed GREEN.** One pre-existing test assertion was corrected, not weakened (`chart.test.tsx`'s "option A layout" test asserted `Opmaak` sits in the Weergave tablist row — exactly the placement decision 3 supersedes; the new assertion checks the new, equally-strict placement) — documented explicitly in the PR body and ADR 042's addendum so it reads as a disclosed, plan-authorized correction, not a silent loosening.
+
+**Independent code review, both PRs, 8 finder angles + 1-vote verify each (`/code-review` medium effort, run by this session directly — not the build agents' own self-review, a genuinely separate pass).** **PR #30: 7 confirmed findings**, most notable: `pick()` raycasted against ALL meshes regardless of the active type filter, so a dimmed (filtered-out) municipality column stayed clickable/pinnable; a pending pointer-move `requestAnimationFrame` was never cancelled on unmount, so it could fire `scene.pick()` on an already-disposed WebGL scene; and — the most conceptually significant one — the demo's own honesty digit-scan (`scanDigits`) only proved a rendered digit sat inside a `data-fictional`/`data-year` wrapper, never that its VALUE actually matched what `fake-data.ts` produced, which is structurally weaker than the real product's `scanForUnboundDigits` (chart.test.tsx) and would have passed a corrupted generator or a pasted-in real number as long as it sat in the right element; two related test-coverage gaps rode along (the scan never covered `page.tsx`'s own title/footer text; a `role="status"` exemption was a blanket carve-out, not scoped to any specific string) plus a hover-triggered full ~342-mesh colour recompute on every pointer-move frame and one intentionally-kept dead defensive check (now documented as such). **PR #31: 2 confirmed findings** (most candidates here — the icon-only `Opmaak` button, the headline figure showing in the narrow visual-dock panel — turned out to already be flagged as open owner-review questions by the build agent itself, so they were correctly REFUTED as "already known" rather than padded into the report): `headlineFigure()` independently re-implemented the exact "last plotted point" reverse-scan `valueLabelPlan`'s end-of-line label already performs, with no shared call between them — a real drift risk if that selection rule is ever refined in only one place; and ADR 042's own addendum overclaimed the grid-dash fix as product-wide when `web/components/user-chart.tsx` (the separate attachments/"eigen data" renderer) still hardcodes the old dashed grid, untouched by this PR.
+
+**All 9 findings fixed, same session, each re-verified for real before being marked fixed (not just re-stated).** PR #30 (`ec6d98b`): `pick()` now raycasts only against a `pickableMeshes` list rebuilt on `setFilter`, never per-frame; `setHighlight()` now touches only the previous/new highlighted mesh's emissive instead of a full colour recompute; a dedicated unmount-only effect cancels the pending rAF; `scanDigits` rebuilt to verify every digit TOKEN against a harvested list of every string the fictional dataset or fixed status copy can legitimately produce (the same membership-check pattern `scanForUnboundDigits` uses), replacing the blanket `role="status"` exemption entirely — a future digit added anywhere unexpected now fails loudly instead of slipping past a role-based carve-out; `page.test.tsx` gained its own digit-scan over the server-rendered title/intro/footer text (never covered before); the intentional dead check in `Details()` got an explanatory comment instead of being deleted. Re-verified: demo suite 9/9 files, 39/39 tests; full web 114/114, 1772/1772; full backend 153/153, 2358/2358 unaffected; benchmark GATE PASS; real build clean; CI green. PR #31 (`1ab7a48`): extracted the shared `lastPlottedPoint()` selection into a new `web/lib/chart-plotted-point.ts`, called by both `valueLabelPlan`'s end-of-line label and `headlineFigure` — they can no longer drift apart; ADR 042's addendum now scopes the grid-dash claim to the CBS chart pipeline and names `user-chart.tsx` as the untouched residual. Re-verified: both typechecks clean, full web 106/106 (1756/1756, unchanged), full backend 153/153 (2358/2358, untouched), benchmark GATE PASS, real build clean. **CI confirmed GREEN on both fix commits before either was considered done.**
+
+**A real cross-PR numbering collision found and fixed BEFORE any merge.** Three separate unmerged branches — PR #23 (already open from an earlier session, claiming #249-252), and the two just-built PR #30/#31 branches (each independently claiming #250, PR #30 also #251) — had each picked open-questions row numbers from an isolated worktree with no visibility into what the OTHER branches had already claimed. Renumbered PR #31's row to **#255** and PR #30's two rows to **#256**/**#257**, clear of #249-252 (PR #23) and of #253/#254 (added directly to `main` earlier this same session). Along the way, discovered `STATUS.md`/`status-archive.md` already carried DANGLING references to `#250`/`#251` from an even earlier, still-unmerged session's work (pointing at content that will land whenever PR #23 eventually merges) — left those untouched, since they're unrelated and will resolve correctly on their own.
+
+**Merge, on the owner's explicit in-chat instruction ("Merge both PRs"), owner present (#118(a) — standing authorization to push/merge directly without per-change approval).** PR #30 squash-merged clean (`49cd975`), CI confirmed green on `main` itself afterward. PR #31 then reported a REAL merge conflict — not the GitHub mergeStateStatus caching false-positive this project has hit before; PR #30's own docs changes and PR #31's own docs changes had landed at genuinely overlapping insertion points now that PR #30 was on `main` (a first `git merge-tree` check using current `main` as its own merge-base argument wrongly showed no conflict — the correct 3-way check needs the ACTUAL merge-base, `git merge-base origin/main origin/chart-card-polish`, not current `main`; noted for next time in Lessons). Resolved by merging `origin/main` into the `chart-card-polish` branch directly: three files (`08-build-plan.md`, `12-huisstijl.md`, `messages.ts`) auto-merged cleanly despite git's coarser "changed in both" file-level flag; only `open-questions.md` needed a real manual resolve (kept both new rows, #255 and #256/#257, and corrected #255's own stale "PR pending owner review" phrasing to reflect the owner-directed merge actually happening). `npm install` was needed in the worktree afterward (the merge pulled in PR #30's `three`/`@types/three` `package.json` changes that weren't yet reflected in this worktree's `node_modules`). Full verification re-run from scratch on the merge commit (`7e9585c`): both typechecks clean, web 115/115 (1795/1795), backend 153/153 (2358/2358), benchmark GATE PASS, `test:docs` 11/11, real build clean (both `/bevolking-3d-demo` and the polished chart card present) — pushed, CI confirmed green on the branch AND on `main` after the squash-merge (`f733db7`), only then merged.
+
+**Cleanup:** both now-merged branches' remote refs deleted (`gh pr merge --delete-branch` failed silently for the LOCAL half only, since both branches were checked out in worktrees at the time — the remote side deleted correctly per direct `git ls-remote` verification, then the two stale worktrees were unlocked and removed, and the four now-pointless local branches — the two merged ones plus the two auto-generated `worktree-agent-*` stubs `git worktree remove` leaves behind — deleted). `git worktree list` shows only the main checkout; `git status` clean on `main`; production confirmed 200 (`curl checkdecijfers.vercel.app`).
+
+**End state, this stretch:** PRs #30 and #31 **MERGED** (both squash commits CI-green on `main`); PRs #23, #24, #25, #26, #27, #28, #29 **still open**, untouched by this stretch, unaffected by either merge (confirmed no file overlap). See Lessons for the four process lessons this stretch surfaced (subagents cannot "wait" on their own background processes the way the main session can; `git merge-tree`'s base argument must be the real merge-base, not current `main`; parallel worktrees can collide on open-questions row numbers; a sibling agent's broad `pkill` risks another agent's in-flight process on the same machine).
+
+**Session 103 continuation, AUTONOMOUS (2026-09-15) — PR #30: the 3D municipality map DEMO over fictional
+data (ADR 049), dispatched to run in the background while the owner stayed present in the parent
+conversation.** Executed [the implementation plan](superpowers/plans/2026-09-15-3d-municipality-map-demo.md)
+task-by-task via strict TDD (failing test → run → implement → run → typecheck → commit), 11 commits on
+branch `demo-3d-municipality-map`. **Not part of the product** — ADR [044](decisions/044-story-stage.md)'s
+kickoff already ruled a 3D municipality map OUT of the real Story stage ("a 3D chart makes equal values
+look unequal … a WebGL canvas is invisible to every honesty scan and to the export"); this demo lives
+entirely outside the answer pipeline, in its own directory (`web/app/bevolking-3d-demo/`), and does not
+reopen that decision — see ADR 049 for the full context and revisit triggers.
+
+**Isolation, verified not asserted:** `git diff --stat main -- src/ tests/ benchmark/ migrations/` is
+EMPTY. Outside the demo directory, only `web/lib/i18n/messages.ts` (58 additive lines, zero existing keys
+touched) and `web/package.json`/`web/package-lock.json` (`three`+`@types/three` — confirmed unreferenced
+anywhere outside the demo directory) changed. `isolation.test.ts` pins three things structurally: no file
+outside the directory imports `three`; the route string appears nowhere outside its own directory; nothing
+inside reaches the backend, the database, the Anthropic SDK, a server action, or a live external `fetch`.
+
+**Verification, all measured this session:** root+web `tsc --noEmit` clean; backend suite **153 files /
+2358 tests, all passed** (identical count to before this branch — confirms zero backend impact, run twice,
+the first run hit a real, documented RUNBOOK gotcha — see Lessons); web suite **114 files / 1771 tests, all
+passed**; hermetic benchmark **GATE PASS** — 14/14 answerable (gate ≥12), 6/6 refusal/clarify (gate 6/6), 0
+fabricated numbers; `npm run test:docs` 11/11 (after a real fix — see below); real `next build` (Turbopack)
+succeeds on both `main` and the branch, `/bevolking-3d-demo` listed alongside all 15 pre-existing routes,
+unchanged; `/code-review` LOW effort run twice (mid-build and on the final diff), 0 findings both times.
+
+**Bundle, measured (ADR 049 has the full table):** Turbopack's `next build` prints no per-route "First Load
+JS" table (a webpack-era feature), so route attribution was done from each route's own
+`react-loadable-manifest.json` instead — cross-checked against every other route to confirm exclusivity.
+The route-private chunk group is **229.6 KB gzip** (three.js+OrbitControls 147.6 KB, `zod` — bundled
+client-side for the first time anywhere in this app, previously server-only — 87.3 KB, glue 0.3 KB),
+under the plan's 250 KB ceiling but higher than its ≈150–180 KB estimate, almost entirely because of that
+`zod` cost, which is a one-time app-wide cost this route happens to trigger first, not a `three`-specific
+one. A byte-level "First Load JS identical before/after" comparison for `/`, `/galerij`, `/geschiedenis`
+(what the plan asked for) turned out not to be obtainable: two separate `next build` runs of IDENTICAL
+non-demo code produced chunk totals that don't net out to the same number — Turbopack's chunk splitting is
+not byte-stable across separate build invocations. Recorded honestly in ADR 049 rather than forced; the
+source-diff proof above is the reliable signal instead.
+
+**Real browser pass: DONE**, not skipped and not left to the owner. `scripts/dev-harness/`'s local stand-ins
+(no production database, no Supabase project, no LLM spend — three local fake servers, documented in
+RUNBOOK) were driven through the Claude_Browser MCP pane rather than the harness's own Playwright recipe
+(the sandbox here has neither a `playwright` package nor the global Chromium path the RUNBOOK's recipe
+assumes) — the harness's session cookie has no `httpOnly` flag, so it was injected directly via
+`document.cookie` after starting the three local servers by hand. Verified live: the map renders correctly
+in both light and dark theme; the year slider changes column heights/colours and the details panel's
+fictional numbers; play/pause auto-advances the year; the municipality-type filter dims non-matching
+columns to low opacity; clicking a column raycast-picks the right municipality and pins its details;
+Escape unpins (once real DOM focus is inside the section — see Lessons); Reset view; 375px mobile width
+renders with the banner visible without scrolling and no horizontal overflow; an anonymous visit to
+`/bevolking-3d-demo` correctly 307s to `/login`. Not independently re-verified live: `prefers-reduced-motion`
+(the browser tool has no OS-level emulation for that specific media feature) — covered instead by the
+passing `map3d.test.tsx` unit test, which stubs it directly.
+
+**Docs, same change:** ADR [049](decisions/049-3d-municipality-map-demo.md) (full context, D1–D7,
+alternatives, the measured bundle table, revisit triggers); [08-build-plan.md](08-build-plan.md) entry
+(explicitly marked out of the product flow, not a numbered WP); [12-huisstijl.md](12-huisstijl.md) rule 1
+(the demo's WebGL-only literal-hex spots — `scales.ts`, `columns.ts`, `scene.ts`, not only `scales.ts` as
+the plan's own text implied); [04-architecture.md](04-architecture.md) capability row; open-questions
+[#256](open-questions.md) (public-vs-login-gated — undecided, flagged) and
+[#257](open-questions.md) (the TOPO_OBJECT/CODE_KEY/NAME_KEY assumption — verified against the real
+committed asset, held on the first run: 369 municipalities, every code `GM####`, total area ≈37,000 km²);
+[web/README.md](../web/README.md) one line.
+
+**PR:** PR #30, branch `demo-3d-municipality-map`,
+per [#118](open-questions.md)(b) — the build itself ran unsupervised in the background even though the
+owner was present in the parent conversation, so it goes through branch+PR review rather than a direct
+push. **CI confirmed GREEN on the third run** (`gh run view 34962951564`: `conclusion: "success"`;
+`web`/`backend (1/2/3)` all `pass`, `deploy` correctly `skipping`). The first two runs each caught a real
+bug: run 1 was superseded by a docs-only follow-up push (expected — "a newer push cancels the superseded
+run"); run 2 genuinely FAILED — `tests/docs/doc-conventions.test.ts` caught a live `[#30](https://github.com/…/pull/30)`
+markdown link this session had just written into this same archive entry (#132 interim rule (i) —
+fixed to plain-text `PR #30`, re-verified locally, re-pushed). Separately, mid-verification, the
+coordinating session reported that a sibling autonomous agent (a different plan, a different worktree) had
+run a broad `pkill -f "workers/forks.js"` fighting its own resource contention, which could have silently
+killed this session's own test-runner processes as collateral damage — so every already-claimed-passing
+local result (backend 153/2358, web 114/1771, hermetic benchmark GATE PASS, both typechecks, real build)
+was RE-RUN clean from scratch after that point and matched the earlier numbers exactly, before this PR was
+reported as done. See lessons-learned's session-103-continuation entry for both, in general terms.
+
+---
+
+**Session 103, AUTONOMOUS (2026-09-15) — four more small PRs opened after fresh open-questions triages
+(#26, then #27 and #28 after the owner sent "I trust your judgement" then twice "continue to work
+autonomously" mid-session, then #29 after a third "continue to work autonomously"), never reviewing any
+PR; PRs #23/#24/#25 all still untouched by the owner throughout.**
+
+Continued from session 102's kickoff brief
+([session-briefs/2026-09-15-session-103-kickoff.md](session-briefs/2026-09-15-session-103-kickoff.md)),
+which named all three open PRs as awaiting review and explicitly warned against picking a fourth
+autonomous target blind. Confirmed first, live, before doing anything else: all three PRs (`gh pr list
+--state open`) still had zero comments/reviews (`gh pr view <n> --json comments,reviews`); PR #23's own
+CI run (`34885657335`) was re-confirmed genuinely green via `gh run list` (its `mergeStateStatus` reads
+`UNKNOWN` — GitHub simply hasn't recomputed it, not a real problem).
+
+**Re-triaged `docs/open-questions.md` fresh** (a cheap-tier subagent, per the delegation-cost-tier
+convention) against seven hard constraints (no DDL, no live API calls, no env-flag flips, no owner
+judgment call, small blast radius, no overlap with the three open PRs' files, not WP30c E2). It surfaced
+[#209](open-questions.md) — the missing `DatasetTurnEnvelope` key-manifest test — as the best candidate.
+Verified the recommendation against the actual code before trusting it (the row itself said "not urgent,"
+so this needed real judgment, not a rubber stamp): read `src/attachments/types.ts`,
+`src/attachments/reconstruct.ts`, and the existing CBS-side `tests/audit/envelope-key-manifest.test.ts`
+in full first.
+
+**Built `tests/attachments/envelope-key-manifest.test.ts`, PR #26.** `DatasetTurnEnvelope` is a
+discriminated union of three inline object literals (chart/clarification/refusal), not `extends`-linked
+interfaces like the CBS side's `ResponseBase`/`AnswerResponse`/etc. — the existing manifest test's
+`declaredMembers` parser (interface-body only) could not read it, so this file's own
+`declaredEnvelopeVariants` is a sibling parser for the union grammar, including the one field
+(`refusal.reason`) whose own string-literal union genuinely spans multiple source lines. Every field of
+all three variants now has a manifested reconstruct.ts treatment (rederived/shape-checked/ignored, every
+`ignored` with a stated why). `UserChartSpec` did not need its own separate manifest section: it is
+checked as ONE unit (`buildUserChartSpec` rebuilt and compared byte-for-byte against the stored `chart`
+field) — the same granularity the CBS side already gives `AnswerResponse.chart` — so a future
+`UserChartSpec` field is already covered by that rederivation as long as the builder populates it.
+
+**Building the manifest immediately surfaced one real, pre-existing gap it exists to catch:**
+`reconstruct.ts`'s `checkEnvelopeIntegrity` never checked `envelope.schemaVersion` against
+`DATASET_TURN_ENVELOPE_VERSION` — unlike the CBS side's reconstructor, which has always pinned this
+(confirmed by grepping every reference to `DATASET_TURN_ENVELOPE_VERSION`/`envelope.schemaVersion` across
+`src/attachments/`: declared and set at write time, never read back at reconstruct time). Fixed directly
+(one check added to `checkEnvelopeIntegrity`) with a regression test in `reconstruct.test.ts`. Zero
+behavior change today — the version constant has never been bumped past 1, so no stored row can currently
+trip it — but the check now exists before this tier's first real schema bump, which is exactly the moment
+it needs to.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; backend 154 files /
+2366 tests green (solo, up from 153/2358 — the two new tests); web 105 files / 1733 tests green (solo,
+unaffected — zero web files touched); `test:docs` 11/11; hermetic benchmark (`test:benchmark`) 28/28
+green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the one non-test file
+changed (a 5-line addition to `reconstruct.ts`). Branch `attachments-envelope-key-manifest`, PR #26 —
+autonomous, per [#118](open-questions.md)(b), not merged. **CI confirmed green** (`gh run list --branch
+attachments-envelope-key-manifest`, run `34924905497`: `web`/`backend (1/2/3)` all `success`, `deploy`
+correctly `skipped` — polled to completion via a backgrounded `gh run view` loop rather than a manual
+poll or a misused `ScheduleWakeup`, see the process note below). Docs pushed directly to `main`
+(`290879d`) rather than bundled into the PR branch, per the project's own "docs decisions push directly"
+convention — verified with `git merge-tree` that this created no real conflicts on any of the three
+other open PR branches (a `grep` hit on "conflict (table_id)" in one diff was SQL syntax, not a git
+conflict marker).
+
+**Owner sent a message mid-session: "I trust your judgement."** Read as answering the direct question
+this session had just asked (keep going, or wait for review) — not as flipping this session into
+"owner-present" for [#118](open-questions.md)'s git-workflow purposes (a five-word passive message is not
+the sustained, active collaboration that rule describes), and specifically not as authorization to merge
+any of the four open PRs — PR #23 in particular still needs the owner's own actual decision on Constraint
+0 ([#249](open-questions.md)), which no generic trust statement can stand in for. Replied explaining this
+reasoning and held at four open PRs rather than opening a fifth speculative one.
+
+**Owner then sent: "continue to work autonomously."** Unambiguous — re-triaged `docs/open-questions.md`
+fresh again (a cheap-tier subagent), this time also excluding every file already in flux across all FOUR
+open PR branches. It surfaced two candidates: [#246](open-questions.md) (a real Pro-subscription billing
+display gap, money-adjacent, more intricate — explicitly a "fix as a follow-up once #205 ships" item) and
+[#227](open-questions.md) (three hand-copied `isRedacted` checks with no mechanism keeping them in sync).
+Picked #227: purely mechanical, lower risk, and the more clearly "small blast radius" of the two — #246
+stays open for a future session once #205's flag consideration is more live.
+
+**Built PR #27 (`shared-is-redacted-helper`).** Read all three existing copies first (byte-identical
+one-liners, confirmed, not assumed) plus a FOURTH look-alike this row's own text didn't mention:
+`scripts/verify-dataset-turns.ts` has its own `isRedacted`, but for `RedactedDatasetEnvelope` — the
+attachments tier's own, deliberately separate sentinel (ADR 037 D1). Deliberately left that one alone
+rather than pulled into the same shared module — this codebase already has a "no cross-tier import for a
+duplicated helper" convention for exactly this situation (the PR #23/24/25/26 account's own "duplicated
+`nativeIdFrom` across 4 files" precedent). Extracted `isRedacted` into `src/answer/audit/retention.ts`
+next to `redactedResponse()` (the sentinel it checks), re-exported from the existing `index.ts` module all
+three real call sites already imported `loadAuditRecord` (or similar) from — zero new import paths.
+`embed-actions.ts`'s own header comment had flagged a `'use server'`-boundary blocker as the reason this
+was never consolidated before; it turned out not to apply — only EXPORTED functions from a `'use server'`
+file carry server-action machinery, and `isRedacted` was always private/non-exported there, so importing
+a plain function INTO that file needed no special handling. Two test files fully `vi.mock` the audit
+index module; both needed their mock factory taught the real, pure `isRedacted` implementation (not
+stubbed) since several existing tests — including one specifically proving `isRedacted` alone protects
+the public embed route against a real-shaped redacted envelope — rely on its actual branching behavior.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `embed-actions.test.ts`
++ `embed/[token]/page.test.tsx` 46/46 (both files touched, mocks updated); `tests/audit/retention.test.ts`
+24/24; full backend suite, solo: 153 files / 2358 tests green (unchanged counts — genuinely zero behavior
+change); full web suite, solo: 105 files / 1733 tests green; `test:docs` 11/11; hermetic benchmark 28/28
+green, gate pass; real `next build` succeeds; `/code-review` LOW: 0 findings on the 4-file, byte-identical
+extraction diff. Branch `shared-is-redacted-helper`, PR #27 — autonomous, per
+[#118](open-questions.md)(b), not merged. **CI confirmed green** (`gh run view 34927043689`:
+`conclusion: "success"`, polled to completion via the same backgrounded-loop pattern as PR #26 above).
+
+**Note on process:** avoided the mistake of calling `ScheduleWakeup` to "wait" for a backgrounded shell
+command mid-turn (a standing feedback-memory rule — that tool is `/loop`-dynamic-mode-only) — caught it
+immediately after the one call, cancelled it (`stop: true`), and relied on the background task's own
+completion notification instead, as the rule says to.
+
+**Owner sent "I trust your judgement," replying to this session's own question of whether to keep going
+or wait for review.** Read as endorsing the recommendation already stated (hold at four PRs), NOT as
+flipping this session into "owner-present" for [#118](open-questions.md)'s git-workflow purposes — a
+five-word passive message is not the sustained, active collaboration that rule describes — and
+specifically not as authorization to merge any open PR (PR #23 still needs the owner's own actual call on
+Constraint 0, [#249](open-questions.md), which no generic trust statement can stand in for). Replied
+explaining this reasoning and held.
+
+**Owner then sent "continue to work autonomously" — twice, once after PR #27 shipped.** Unambiguous each
+time. Re-triaged `docs/open-questions.md` fresh again after each one (a cheap-tier subagent), excluding
+every file already in flux across the growing set of open PR branches.
+
+**Second re-triage → PR #28, closing the actionable half of [#234](open-questions.md).** The triage
+surfaced only one real candidate this round (explicitly told to say "nothing safe found" rather than
+force a weak pick if the backlog was genuinely thin — it wasn't, quite, but only just): `useElementWidth`'s
+stale-ref bug, previously recorded as needing "dedicated attention" rather than a rushed fix. Took that
+literally: read `web/lib/use-element-width.ts`, `web/components/chart-frame.tsx`, and `web/components/
+chart.tsx` in full to understand BOTH named trigger paths precisely (traced React's own reconciliation
+rules by hand for the frame-inset case — confirmed by writing a probe test before touching the fix, not
+assumed) before writing a single line of the fix itself.
+
+**The fix:** `useElementWidth` now re-checks `ref.current` on every render (deliberately no dependency
+array) against a second ref (`observedRef`) tracking what is actually being watched right now — a no-op
+comparison on every render where nothing changed, a tear-down + reattach on the rare render where it did.
+One general mechanism, covering the schema-refusal null→element path and the frame-inset reparenting path
+identically, per the row's own instruction not to patch one narrowly. Confirmed BOTH new regression tests
+(one per trigger path) genuinely catch the bug: reverted the fix, watched both fail with the exact
+predicted assertion mismatch, restored the fix, watched both pass — not just written and trusted.
+
+**Found a further, more subtle real bug in the fix itself before shipping it, via reasoning first and
+then empirical proof.** Next.js's own default (confirmed by reading `node_modules/next/dist/build/
+define-env.js`: `__NEXT_STRICT_MODE_APP` defaults to `true` whenever `next.config.ts` doesn't set
+`reactStrictMode`, which this app's doesn't) is React StrictMode ON in development — every component
+mounts twice (run effects, clean them up, run again) as a diagnostic. Traced by hand what that means for
+a hook split across two effects (a no-deps polling effect plus a `[]`-deps unmount-only effect): if the
+unmount effect's cleanup only calls `.disconnect()` without also resetting `observedRef`/`observerRef`,
+the StrictMode-SIMULATED remount's polling effect sees "nothing changed" (the stale ref still matches)
+and never creates a replacement — the hook ends up PERMANENTLY stuck watching a dead, disconnected
+observer for the rest of the component's REAL lifetime, not just during the StrictMode dance itself. This
+matters precisely because a real browser click-through (done BEFORE finding this, on the almost-right
+version) had shown no problem at all — every interaction that session happened to try also changed the
+ref'd element's identity, which masks this exact failure mode. Wrote a dedicated regression test that
+renders under an ACTUAL `<StrictMode>` wrapper (not a hand-simulated approximation of React's own
+behavior) specifically because reasoning alone had already been shown, by the masked live-browser test, to
+be insufficient here — confirmed it fails against the almost-right version (`live.length` was 0, exactly
+as traced) and passes against the corrected one (reset both refs in the unmount cleanup, not just
+disconnect).
+
+**Verified in a real browser too, on the truly-fixed code** (the hermetic dev harness,
+`scripts/dev-harness/` — `run-next-dev.mjs` specifically, since this checkout's path contains spaces and
+plain `NODE_OPTIONS` whitespace-tokenizing breaks otherwise; `auth-stub.mjs` + `llm-stub.mjs` for a real
+logged-in fixture-replay chat turn, zero live LLM/DB): asked a real question, opened the Style panel's
+Frame tab, and toggled Frame Inset None → Small → Large → None while reading the chart container's actual
+`getBoundingClientRect()` at each step via `javascript_tool` — confirmed correct re-measurement on every
+toggle (592×333 → 568×320 → 544×307 → back to exactly 592×333) and zero console errors beyond the
+harness's own unrelated HMR-websocket noise. This is the SAME general check (does the observer follow a
+reparented ref) the StrictMode test already proved in isolation, but run once more against the real
+app's actual component tree rather than a synthetic probe, per this row's own "dedicated attention" ask.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `use-element-width.
+test.ts` 6/6 (2 new trigger-path tests + 1 new StrictMode-safety test); `chart.test.tsx` +
+`chart-frame.test.tsx` combined with it: 262/262; full backend suite, solo: 153 files / 2358 tests green
+(unaffected — no backend files touched, re-run anyway as a sanity check); full web suite, solo: 105 files
+/ 1736 tests green; `test:docs` 11/11; hermetic benchmark 28/28 green, gate pass; real `next build`
+succeeds; `/code-review` LOW: 0 findings. Branch `fix-use-element-width-reparenting`, PR #28 — autonomous,
+per [#118](open-questions.md)(b), not merged. **CI confirmed green** (polled to completion via the same
+backgrounded-loop pattern as PR #26/#27 above: `conclusion: "success"`).
+
+**Deliberately left untouched:** the row's other, separate residuals its own "fix opportunistically"
+resolution doesn't ask for — the one-frame stale-width flash on re-enable, the stale `ResponsiveContainer`
+comment, the area-form export-guard test coverage gap, and a stale `chart.tsx` comment about Style-panel
+portaling.
+
+**Housekeeping:** the dev harness's `run-next-dev.mjs`/`auth-stub.mjs`/`llm-stub.mjs` processes and the
+manually-started `next dev` port were all stopped after use; `git status` on `web/CLAUDE.md`/`AGENTS.md`
+(which `next dev` is known to rewrite) confirmed clean before and after — no stray diff to discard.
+
+**Owner sent "continue to work autonomously" a third time, after being told six PRs was already a large
+review batch and the session would hold there unless told otherwise.** Re-triaged fresh rather than
+reusing PR #28's target list. A cheap-tier (Haiku) subagent's top pick — [#231](open-questions.md),
+adding server-side spend tracking for Insights AI phrasing — was checked before acting on it and
+rejected: the row itself already resolves this as **"accepted as a bounded risk for now... revisit if
+real usage ever shows Insights-generation spend is worth a counter"** — a documented, deliberate
+deferral with zero measured-evidence trigger, not an open gap. Building it now would have second-guessed
+a settled scope call on spec alone, exactly what CLAUDE.md's "escalate only on measured evidence, not
+speculation" convention exists to prevent. Did an independent manual pass of `open-questions.md`'s
+remaining nominally-"Open" rows instead (100, 101, 105, 106, 111, 112, 116, 120, 125, 172, 200, 206, 230,
+231): most turned out already resolved despite an "Open" label surviving in the text (a filtering
+lesson — grepping for "Open" without also excluding "BUILT"/"✅" false-positives), the rest either need a
+supervised prompt-byte re-record (#100), are owner-deferred pricing calls (#101), are operational
+judgment calls with no concrete build task (#105/#106), need live usage data that doesn't exist yet
+(#112, #172), or need owner scope confirmation (#206) — none safe to just build.
+
+**Found a real, unrelated target during that same read: `docs/STATUS.md` itself had drifted stale.**
+Its own file said (session-94 note): sessions 92 downward were "never actually archived," blaming a
+multi-session dump on a missing archival step. Checked before trusting it — wrong. Every one of those
+sessions, and several older ones besides (spot-checked 56, 57, 85, 86, 89, 90 through 99 directly via
+`grep` against `status-archive.md`), already had a full entry here, in every case MORE detailed than the
+STATUS.md copy (e.g. session 89's archive entry is a numbered, multi-part account; the STATUS.md copy
+was one short paragraph). What had actually gone stale was the file itself: never trimmed back to the
+session-41 "lean top block only" convention after each of those sessions' content was safely archived,
+so it grew to 1,307 lines — a real, if slow-moving, instance of exactly the "doc that contradicts a
+newer decision is a bug" problem CLAUDE.md's Doc Freshness section names.
+
+**Built PR #29 (`trim-status-md-duplicate-narrative`).** Removed the ~1,180-line duplicate block (lines
+58-1236 of the pre-change file) after confirming every session inside it had a matching-or-fuller
+archive entry first, rather than trusting the pattern after a handful of spot checks. Checked for
+standing decisions embedded in the historical bloat that might not survive its removal — found one
+(KvK staying parked until the site is finished) and confirmed it already lives independently in
+[#54](open-questions.md), so nothing was actually lost. `docs/STATUS.md` is now ~130 lines: the lean
+top block plus the evergreen Phase 0 checklist / benchmark scoreboard / phase history sections.
+
+**This tripped a real, working guard, exactly as designed** — `tests/docs/doc-conventions.test.ts`'s
+session-71 anti-truncation floor for `docs/STATUS.md` (added after a real incident: the file once
+shipped as a 0-byte file through three green pushes) was calibrated to 200 lines, back when the file's
+"normal" size was far larger than the ~130 lines this legitimate prune leaves it at. Lowered the floor
+to 100 and updated its required marker text (`▶ SESSION` → `▶ NEXT SESSION`, since the string `▶ SESSION`
+only ever matched the now-removed `▶ SESSION NN` headers inside the deleted narrative, not the current
+top block's `▶ NEXT SESSION STARTS HERE` phrasing) — confirmed the test genuinely failed first
+(`docs/STATUS.md has 133 lines — truncated?`), then passed after the recalibration, so this is a real
+verified fix, not an unverified guess that the change was needed.
+
+**Full verification (measured, on the final commit):** root + web typecheck clean; `test:docs` 11/11
+(1 failing before the floor fix, with the exact expected message, 11/11 after); full backend suite,
+solo: 153 files / 2358 tests green (unaffected — no backend files touched, re-run anyway per convention);
+full web suite, solo: 105 files / 1733 tests green; hermetic benchmark 14/14 answerable + 6/6
+refusal/clarify + 0 fabricated, gate PASS; real `next build` succeeds. `/code-review` LOW: both changed
+files (`docs/STATUS.md`, `tests/docs/doc-conventions.test.ts`) are out of scope for that pass per the
+review skill's own rules — one is docs, the other matches the `*.test.*` exclusion — so no findings to
+report. Branch `trim-status-md-duplicate-narrative`, PR #29 — autonomous, per [#118](open-questions.md)
+(b), not merged. **CI confirmed green** (run `34941368384`, polled to completion via the same
+backgrounded-loop pattern as PRs #26-#28: `conclusion: "success"`).
+
+**Deliberately did not attempt** a similarly thorough sweep of `docs/status-archive.md` itself for
+possible duplication or the older "## Session log" section's own internal consistency — out of scope for
+this pass, which targeted the specific stale claim found in `STATUS.md`'s own text, not a general audit
+of the archive's structure.
+
+**Session 102, AUTONOMOUS (2026-09-15, owner asleep/away the whole session) — two small, well-contained
+fixes shipped as separate PRs, plus a real pre-existing doc-convention violation found and fixed on
+`main`. PR #23 (session 101's WP30c E1) untouched, still open, still awaiting owner review.**
+
+Continued from session 101's own kickoff brief
+([session-briefs/2026-09-15-session-102-kickoff.md](session-briefs/2026-09-15-session-102-kickoff.md)),
+which named the CI health-check gap as the best next autonomous target and explicitly forbade starting
+WP30c E2 without the owner (needs the taxonomy-widening decision, the source-ambiguity chip rule, and an
+owner-signed public-claim wording sweep — none decided). Checked PR #23 first (`gh pr checks 23` / `gh
+pr view 23`): still open, zero reviews/comments, CI genuinely green (confirmed via `gh run list
+--branch wp30c-e1-eurostat-adapter`, run `34885657335`, even though `gh pr checks 23` itself misreports
+"no checks reported" — a CLI quirk, not a CI problem). Left it untouched, as instructed.
+
+**PR #24 — the health-check gap.** `/api/health`'s flag-gating pattern (skip a table's probe when its
+flag is off) doesn't fit `pro_subscriptions`: `PRO_SUBSCRIPTIONS_ENABLED` only gates starting a NEW
+Pro checkout (`embed-actions.ts`), but the embed page's `hasProPlan` read queries `pro_subscriptions` on
+every embed view regardless of the flag — confirmed by tracing every call site of `hasProPlan`
+(`web/app/embed-actions.ts`, `web/app/embed/[token]/page.tsx`) before writing the fix, not assumed from
+the lessons-learned note alone. This is the exact blind spot behind session 101's real production
+incident (PR #22 merged before its required migration 030). Fixed: an unconditional
+`pro-subscription-read` probe added, reusing `hasProPlan` itself (`web/app/api/health/route.ts`,
+`web/app/health.test.ts`).
+
+**A real, unrelated defect surfaced running the full verification block for PR #24** (the first
+full-suite run since session 101's docs-only commits, which skip CI per the 2026-09-09 convention):
+`tests/docs/doc-conventions.test.ts` failed — `STATUS.md`, `status-archive.md`, and the session-102
+kickoff brief all had live `github.com/.../pull/23` links, violating [#132](open-questions.md) interim
+rule (i) (a repo recreate under #132 route (b) would 404 every one of them). The rule's own enforcement
+test existed and would have caught this on the FIRST offending commit — it never ran, because that
+commit was (correctly, by its own convention) treated as docs-only and skipped CI. Fixed directly on
+`main` first (`2f3ff3a`, docs-only, no CI needed) before branching PR #24, so PR #24's own CI could pass
+cleanly. Full verification (measured, PR #24's final commit): root+web typecheck clean; backend 153
+files/2358 tests green (solo); web 105 files/1734 tests green (solo); hermetic benchmark 14/14+6/6+0
+fabricated GATE PASS; real `next build` succeeds; `/code-review` LOW: 0 findings. CI confirmed green via
+`gh run list --branch health-check-pro-subscriptions-gap` (run `34889942615`).
+
+**PR #25 — closing [open-questions #230](open-questions.md).** Used a general-purpose subagent (cheap
+tier, per the delegation-cost-tier convention) to triage `open-questions.md`'s ~166 rows for the next
+autonomous-safe target, explicitly excluding anything needing an owner decision, anything touching the
+still-unmerged PR #23 branch's own residuals, and anything flagged as non-trivial by its own author. It
+recommended #230 (dead `chart-story.ts` step-builder functions, orphaned by ADR 041 since session 94).
+**Verified the agent's evidence directly before acting on it** (per this repo's own standing practice):
+re-read the row, re-read `chart-story.ts`'s header comment (which already named the exact functions to
+delete), and — the one place a careless grep could have caused real damage — independently confirmed
+that `pointCaption`/`seriesCaption`/`barCaption`/`provisional` (similar-looking key names) are NOT
+orphaned, because `chart-insights.ts` still calls them for its own findings' captions; only the eleven
+keys the row explicitly named were actually dead. Deleted the six functions/constant (kept
+`StoryStepKind`/`StoryStep`, the still-shared type), deleted `chart-story.test.ts` in full (302 lines,
+entirely about the removed functions), removed the eleven orphaned i18n keys from both `nl`/`en`.
+Verified: root+web typecheck clean; web suite 104 files/1715 tests green (down from 105/1734 — exactly
+the deleted file's own 19 tests, confirming nothing else moved); backend suite 153 files/2358 tests
+green (solo); hermetic benchmark 14/14+6/6+0 fabricated GATE PASS; real `next build` succeeds;
+`/code-review` LOW: 0 findings. CI confirmed green via `gh run list --branch
+cleanup-remove-dead-story-steps` (run `34919300874`).
+
+**Housekeeping:** removed a stray leftover git worktree (`.claude/worktrees/wp30c-e1-eurostat`,
+verified fully pushed and clean before removal, redundant with PR #23's own branch — `git worktree
+list` now shows only the main checkout). Updated `04-architecture.md` and `08-build-plan.md` (both had
+narrative text describing #230 as still-dead/tracked-not-built, now pointing at PR #25) and
+`RUNBOOK.md`'s Pro-subscription incident note (now pointing at PR #24, explicitly still "not yet
+merged" — the incident class is not actually closed until it lands) — the stale-doc-sweep step of this
+session's own wrap-up ritual, catching exactly the class of drift [#132]/this file's own opening
+paragraphs warn about.
+
+**Deliberately stopped at three open PRs** (#23 untouched + #24 + #25) rather than opening a fourth —
+judged that as a reasonable batch for one owner review pass, with the remaining open-questions
+candidates either needing an owner call or carrying a larger blast radius than this session's own
+mandate (autonomous, no live DDL/spend/env-flags) comfortably covers alone.
+
+**End state:** `main` at `2f3ff3a` plus this session's docs-only wrap-up commits; three PRs open
+(#23, #24, #25), zero merged, zero reviewed by the owner yet; `git status` clean, no stray worktrees,
+CI green on every commit pushed this session.
+
+---
+
+**Session 101 continuation, AUTONOMOUS overnight (2026-09-14/15, owner asleep/away) — WP30c phase E1
+(the Eurostat adapter + internal explorer, ADR 048) built end to end, PR #23 open, not merged.**
+
+Followed this repo's own WP27/WP30 precedent exactly: ADR 048 (already design-level adversarially
+reviewed) → turned into a line-by-line executor brief
+([session-briefs/2026-09-14-wp30c-e1-executor-brief.md](session-briefs/2026-09-14-wp30c-e1-executor-brief.md))
+→ a SECOND, independent 4-lens adversarial review of that frozen brief (data integrity, rollout
+enforceability, technical feasibility, architecture-fit — 8 raw findings, 6 confirmed, one cross-lens
+corroborated, folded in as Amendments B1–B6) → built via parallel subagents into a git worktree
+(`.claude/worktrees/wp30c-e1-eurostat`, branch `wp30c-e1-eurostat-adapter`) → a whole-branch integration
+pass by the orchestrating session itself → a required LOW-effort `/code-review` pass → a dedicated,
+separate final whole-branch review agent → the PR.
+
+**What shipped:** `src/eurostat-adapter/` (a JSON-stat 2.0 parser, a live `StatisticsApiSource` never
+invoked with a real URL this session, fixture replay — modelled on `cbs-adapter/`, zero waist change per
+ADR 048 D1); the `eurostat` source registry entry + `adapterFor('eurostat')`; a source-scoped catalog
+prune (an existing cross-source bug this build's own Task 5 had to fix first); two file-only migrations
+(031 per-dataset DOI columns, 032 `ingestion_batches.request_urls`) — not applied; an unconditional deny
+gate in `src/catalog/recall.ts` keeping any `eurostat:`-id result out of live NL chat; an internal,
+`EUROSTAT_EXPLORER_ENABLED`-gated explorer (`web/app/eurostat-explorer/`) reusing the real
+query/chart/CSV/proof-panel pipeline, zero LLM calls, noindexed, honestly empty (no real tables
+registered).
+
+**"Constraint 0" — a deliberate, disclosed scoping decision, this session's own, needing owner
+confirmation:** [08-build-plan.md](08-build-plan.md)'s WP30c entry pairs "any real Eurostat API spend"
+with "Live DDL... never autonomous"; this session read that literally — no live HTTP call to the real
+Eurostat Statistics/Catalogue API happened at all, even a free read-only one. Every fixture is hand-built
+and explicitly `"synthetic": true`; zero real Eurostat tables are registered anywhere. ADR 048's own E1
+done-definition (real captures, a live smoke probe, ≥3 real datasets rendered) is therefore NOT met — a
+narrower, disclosed done-definition in the brief was met instead. If this reading was overly
+conservative, that is the owner's call to make on PR review, not this session's to assume.
+
+**Four real defects found, one per review layer, none caught by any earlier layer — the whole reason this
+repo runs this many review passes:**
+1. **Found by the orchestrator's own integration pass, not either adversarial review:** merely
+   registering the `eurostat` source made `web/components/chat.tsx`'s existing WP129+130 dynamic
+   source-chip row render and default-select a live "Eurostat data" chip for every real chat user — a
+   genuine D3(b)/(c) violation with zero Eurostat data involved. Fixed with a new
+   `SourceInfo.chatSelectable` field (`true` for cbs, `false` for eurostat), applied at both the chip UI
+   and the server's untrusted-selection validator in `web/app/actions.ts` (which previously accepted any
+   registered key, not just chat-selectable ones).
+2. An implementer subagent reported wiring `adapterFor('eurostat')` in `src/sources/adapters.ts` as done;
+   grepping the file directly showed it had not been touched at all. Caught only by independently
+   re-verifying every claim rather than trusting the report — the standing
+   [[feedback_verify_agent_evidence]] lesson, reconfirmed on a fresh example.
+3. A stray null byte inside a hand-edited file (`src/eurostat-adapter/statistics-api.ts`) made `git diff`
+   report it as binary — noticed only during the required `/code-review` pass, when the diff literally
+   printed "Binary files differ" for a `.ts` file. Fixed (replaced with the intended space character);
+   the same pass also found and fixed a decimals-counting bug for exponential-notation numbers.
+4. **Most serious, caught only by a SEPARATE, dedicated final whole-branch review agent** (not a
+   continuation of the orchestrator's own running review — a fresh context, explicitly told what was
+   already fixed so it wouldn't waste time re-finding those): the live-chat deny gate (Task 4's
+   Amendment-3 guard, `src/catalog/recall.ts`) was originally built gated on
+   `EUROSTAT_EXPLORER_ENABLED` — the SAME flag the internal explorer route uses for its own visibility.
+   Flipping the explorer flag on (exactly what this same build's own new RUNBOOK section instructs doing,
+   to check the explorer against a real registered table) would ALSO have lifted the only protection
+   keeping a registered Eurostat row out of live chat — a real D3(c) violation ("never announced before
+   it answers"), reachable with no code change at all, just the documented next step. Fixed: the deny
+   gate is now unconditional, no flag — confirmed safe because the internal explorer reaches a table via
+   an explicit-target intent that bypasses discovery/recall entirely (verified directly: grepped the
+   whole repo, `eurostat-explorer.ts` never calls `recallCandidates`). The same review pass found a
+   related, lower-severity, currently-dormant scoping gap in the pre-existing #108 catalog status-flip
+   detection (a registered table from a different source could spuriously "flip" once a real
+   currentCatalogStatuses value existed for it) — also fixed, with a regression test that exercises the
+   scoping directly rather than relying on Eurostat's own current (empty) settings to mask it.
+
+**Verification (measured, on code commit `cda9d41`; `ffab6f0` on top is docs-only — a stale-doc-sweep
+fix found during wrap-up, no re-verification needed):** root + web typecheck clean; backend
+suite 160 files / 2427 tests green (solo run, the 8GB-machine OOM-avoidance convention); web suite 106
+files / 1743 tests green (solo — a concurrent dual-suite run flagged one false failure from resource
+contention both times it was tried, confirmed gone on solo re-runs); hermetic benchmark 14/14 answerable
++ 6/6 refusal/clarify + 0 fabricated, GATE PASS, byte-identical to before this build (zero prompt bytes
+touched anywhere in E1); a real `next build` succeeds with `/eurostat-explorer` appearing as a dynamic
+route. `/code-review` LOW: 2 findings, 1 fixed + regression-tested, 1 consciously skipped (a duplicated
+`nativeIdFrom` helper across 4 files — matches this codebase's own established "no cross-adapter/registry
+import" convention, not an oversight).
+
+**PR #23 opened**, branch
+`wp30c-e1-eurostat-adapter` → `main`, NOT merged (autonomous, core-product code, #118(b) — branch + PR is
+the rule regardless of how much review already happened before opening it). **CI confirmed green**
+(`gh pr checks 23`, run `34885657335`: `backend (1/2/3)` and `web` all `pass`; `deploy` correctly
+`skipping` — PRs never deploy, only pushes to `main` do).
+
+**New residuals recorded:** [#249](open-questions.md) (Constraint 0's owner-decision + the
+fixture-capture follow-up — [RUNBOOK.md](RUNBOOK.md)'s new "WP30c E1" section has the exact sequence),
+[#250](open-questions.md) (two small Dutch-wording/catalog-status sign-offs, routine), [#251](open-questions.md)
+(every Eurostat cell renders maximally provisional until a scoped `pipeline.ts` change lands, required
+before E2 — a real gap this build's own adversarial review found and safely papered over, not silently
+missed), [#252](open-questions.md) (`request_urls` not wired into the live-chat proof panel, only
+replay/history views — a coverage gap, not Eurostat-specific, applies to CBS too).
+
+**Docs touched in the same change:** ADR 048's new "As-built" section (naming Constraint 0 and all four
+defects explicitly); the 08-build-plan WP30c entry + its parent WP30 header line + the #237
+positioning-thread row; STATUS.md's top block; five new open-questions rows (#249–252); four new
+lessons-learned entries; RUNBOOK's new "WP30c E1" owner-supervised-step section; CLAUDE.md + ADR 001's
+module list (`eurostat-adapter/` joins the as-built set); freshness pointers in 04-architecture.md,
+06-roadmap.md and 03-mvp-scope.md; a next-session kickoff brief
+([session-briefs/2026-09-15-session-102-kickoff.md](session-briefs/2026-09-15-session-102-kickoff.md)).
+
+**Not started this session, a good next autonomous target if there's appetite:** the CI health-check gap
+the prior kickoff brief flagged (`/api/health`'s smoke check skips flag-gated tables it shouldn't for
+`pro_subscriptions` — the exact blind spot that let session 101's own real production incident happen).
+
+---
+
 **Session 101 continued, owner present (2026-09-14) — the CBS highlight link, a 6-item UI polish
 batch, Eurostat chosen + ADR 048 + its adversarial review + WP30c scheduled, both open PRs merged,
 and a real production-outage risk found and fixed.** Verified against reality at wrap-up time

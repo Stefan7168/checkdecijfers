@@ -31,6 +31,14 @@ export interface DockVisual {
   /** The originating question (nearest preceding user turn), truncated. */
   question: string;
   chart: ChatMessage['chart'];
+  /** #254 Task 6: the dock renders `ChartView` directly (not a summary), so
+   * the reading toggle needs the same `chartAlternates` the in-flow chat
+   * bubble already gets — carried verbatim from the originating message,
+   * same null-safety posture as `chart`/`card`. `[]` for a `card` visual (no
+   * chart to switch readings on) and for every `userChart` visual
+   * (DatasetChatMessage carries no chartAlternates at all — a user-uploaded
+   * dataset chart has no CBS registry entry to look alternates up in). */
+  chartAlternates: ChatMessage['chartAlternates'];
   card: ChatMessage['card'];
   userChart: UserChartSpec | null;
   /** Task 4 (spec Part B1): the audit_answers row id ChartEmbedButton signs
@@ -91,6 +99,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         label: `Grafiek ${chartCount}`,
         question: truncate(lastQuestion),
         chart: message.chart,
+        chartAlternates: message.chartAlternates,
         card: null,
         userChart: null,
         auditId: message.auditId,
@@ -103,6 +112,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         label: `Kaart ${cardCount}`,
         question: truncate(lastQuestion),
         chart: null,
+        chartAlternates: [],
         card: message.card,
         userChart: null,
         auditId: message.auditId,
@@ -132,6 +142,7 @@ export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual
       label: `Your chart ${chartCount}`,
       question: truncate(lastQuestion),
       chart: null,
+      chartAlternates: [],
       card: null,
       userChart: message.chart,
       // DatasetChatMessage (backend/attachments/replay.ts) carries no

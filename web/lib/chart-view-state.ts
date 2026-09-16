@@ -30,6 +30,11 @@ export interface ChartViewState {
    * stale override can never apply to a newly-unsafe spec. Cleared by
    * `reset` — owner decision E (session 90): each chart starts fresh. */
   presentation: PresentationOverrides;
+  /** #254: index into the ChartView's `alternates` prop, or null for the
+   * primary reading. Deliberately NOT derived from the `spec` prop's
+   * identity — switching it must never trigger the spec-identity reset
+   * effect (chart.tsx ~line 1587), unlike a genuinely new chart. */
+  selectedReading: number | null;
 }
 
 export type ChartViewAction =
@@ -50,7 +55,8 @@ export type ChartViewAction =
      * distinct from `onReset` ("Standaard"), which always clears to `{}`
      * regardless of what the chart mounted with. Omitted (undefined) behaves
      * exactly as before this field existed. */
-  { type: 'reset'; initialForm: ChartForm; initialPresentation?: PresentationOverrides };
+  { type: 'reset'; initialForm: ChartForm; initialPresentation?: PresentationOverrides }
+  | { type: 'setReading'; index: number | null };
 
 export function initialViewState(
   initialForm: ChartForm,
@@ -69,6 +75,7 @@ export function initialViewState(
     highlightedKey: null,
     periodRange: null,
     presentation: { ...initialPresentation },
+    selectedReading: null,
   };
 }
 
@@ -105,6 +112,8 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
         highlightedKey: action.view.highlightedKey,
         periodRange: action.view.periodRange,
       };
+    case 'setReading':
+      return { ...state, selectedReading: action.index };
     case 'reset':
       return initialViewState(action.initialForm, action.initialPresentation);
     default:
@@ -186,4 +195,23 @@ export function windowSpec(spec: ChartSpec, range: [string, string] | null): Cha
       points: s.points.filter((p) => p.periodCode >= from && p.periodCode <= to),
     })),
   };
+}
+
+/** Pure: given the fetched primary spec, the alternates array and the
+ * current selectedReading, which ChartSpec should the chart actually
+ * RENDER data from. Out-of-range index (e.g. the alternates array shrank
+ * on a re-render) falls back to the primary — never throws, never shows a
+ * blank chart. */
+export function activeReadingSpec(
+  primary: ChartSpec,
+  alternates: { label: string; spec: ChartSpec }[],
+  selectedReading: number | null,
+): ChartSpec {
+  if (selectedReading === null) {
+    return primary;
+  }
+  if (selectedReading >= 0 && selectedReading < alternates.length) {
+    return alternates[selectedReading].spec;
+  }
+  return primary;
 }

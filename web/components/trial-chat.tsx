@@ -102,7 +102,7 @@ export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: numb
           <div key={i} className="max-w-xl rounded-lg border border-border bg-card px-4 py-3">
             <p className="whitespace-pre-wrap text-foreground">{message.text}</p>
             {message.response?.kind === 'answer' && message.response.chart !== null ? (
-              <ChartView spec={message.response.chart} />
+              <ChartView spec={message.response.chart} alternates={message.response.chartAlternates} />
             ) : null}
             {message.response?.kind === 'clarification' ? (
               // ADR 036 D5 (build revision 1): the trial has no reply round —

@@ -716,6 +716,12 @@ export interface ChartConfigTriggerProps {
   controlsId: string;
   triggerId: string;
   lang?: PanelLang;
+  /** Chart-card polish (2026-09-15): icon-only rendering for the card's
+   * header — the label moves into `aria-label` + `title` (same catalogue
+   * string, so the accessible name is unchanged) and the button takes the
+   * 44 px phone tap target (R9.1) via `max-sm:size-11`. Default false =
+   * the text button every existing harness/test renders, byte-identical. */
+  compact?: boolean;
 }
 
 export function ChartConfigTrigger({
@@ -724,19 +730,31 @@ export function ChartConfigTrigger({
   controlsId,
   triggerId,
   lang = 'nl',
+  compact = false,
 }: ChartConfigTriggerProps): ReactNode {
+  const label = t(lang, 'chart.panel.trigger');
+  if (compact) {
+    return (
+      <Button
+        id={triggerId}
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label={label}
+        title={label}
+        aria-expanded={open}
+        aria-controls={controlsId}
+        onClick={onToggle}
+        className="max-sm:size-11"
+      >
+        <SlidersHorizontal aria-hidden="true" />
+      </Button>
+    );
+  }
   return (
-    <Button
-      id={triggerId}
-      type="button"
-      variant="ghost"
-      size="sm"
-      aria-expanded={open}
-      aria-controls={controlsId}
-      onClick={onToggle}
-    >
+    <Button id={triggerId} type="button" variant="ghost" size="sm" aria-expanded={open} aria-controls={controlsId} onClick={onToggle}>
       <SlidersHorizontal aria-hidden="true" />
-      {t(lang, 'chart.panel.trigger')}
+      {label}
     </Button>
   );
 }

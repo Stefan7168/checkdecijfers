@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeReadingSpec,
   areaFormAllowed,
   chartViewReducer,
   fallbackForm,
@@ -63,6 +64,7 @@ describe('initialViewState', () => {
       highlightedKey: null,
       periodRange: null,
       presentation: {},
+      selectedReading: null,
     });
   });
 });
@@ -141,6 +143,7 @@ describe('chartViewReducer', () => {
       highlightedKey: null,
       periodRange: null,
       presentation: {},
+      selectedReading: null,
     });
   });
 });
@@ -400,5 +403,43 @@ describe('setView (story mode: restore the reader\'s own view in one action)', (
     const state = chartViewReducer(initialViewState('line'), { type: 'setView', view: { hiddenKeys: hidden, highlightedKey: null, periodRange: null } });
     hidden.add('s2');
     expect([...state.hiddenKeys]).toEqual(['s1']);
+  });
+});
+
+describe('selectedReading', () => {
+  it('initialViewState starts on the primary reading (null)', () => {
+    expect(initialViewState('line').selectedReading).toBeNull();
+  });
+
+  it('setReading updates only selectedReading, leaving form/zoom/presentation untouched', () => {
+    const before = { ...initialViewState('line'), form: 'bar' as const, periodRange: ['2025-01', '2025-06'] as [string, string] };
+    const after = chartViewReducer(before, { type: 'setReading', index: 0 });
+    expect(after.selectedReading).toBe(0);
+    expect(after.form).toBe('bar');
+    expect(after.periodRange).toEqual(['2025-01', '2025-06']);
+  });
+
+  it('reset clears selectedReading back to null, like every other per-chart-instance field', () => {
+    const withReading = chartViewReducer(initialViewState('line'), { type: 'setReading', index: 1 });
+    const after = chartViewReducer(withReading, { type: 'reset', initialForm: 'line' });
+    expect(after.selectedReading).toBeNull();
+  });
+});
+
+describe('activeReadingSpec', () => {
+  const primary = spec('line', [series('NL', [point('2020', 1)])]);
+  const altA = spec('line', [series('NL', [point('2020', 2)])]);
+
+  it('null selectedReading returns the primary', () => {
+    expect(activeReadingSpec(primary, [{ label: 'alt', spec: altA }], null)).toBe(primary);
+  });
+  it('a valid index returns that alternate\'s spec', () => {
+    expect(activeReadingSpec(primary, [{ label: 'alt', spec: altA }], 0)).toBe(altA);
+  });
+  it('an out-of-range index falls back to the primary, never throws', () => {
+    expect(activeReadingSpec(primary, [{ label: 'alt', spec: altA }], 5)).toBe(primary);
+  });
+  it('an empty alternates array with a non-null index falls back to the primary', () => {
+    expect(activeReadingSpec(primary, [], 0)).toBe(primary);
   });
 });

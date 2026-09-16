@@ -394,7 +394,14 @@ defaults the owner vetoes by exception; as-built record in [open-questions #197]
   As-built detail: ADR 029 (first as-built note) + ADR 024 (last addendum).
 - **Idea 4 (trend headline) BUILT** (sessions 80-81, 2026-09-05) — see [open-questions #197](open-questions.md)
   and [ADR 014](decisions/014-chart-spec-v1-and-renderer.md)'s as-built notes for the full record; PR #6 open,
-  not yet merged (autonomous session + core-product code, #118(b)). **Ideas 6 (series legend) + 8 (small
+  not yet merged (autonomous session + core-product code, #118(b)). **The number half of "Wat zie ik hier?" —
+  the sentence's own leading idea 4 always described a headline sentence PLUS a number-bearing takeaway, only
+  the sentence half shipped in sessions 80-81 — is now BUILT (session 103, 2026-09-15, chart-card polish,
+  Tasks 1-4 of [superpowers/plans/2026-09-15-chart-card-polish.md](superpowers/plans/2026-09-15-chart-card-polish.md),
+  built autonomous (#118(b)), independently code-reviewed (2 findings fixed), MERGED + LIVE (`f733db7`)
+  on the owner's explicit instruction, owner present):** `headlineFigure()`
+  (`web/lib/chart-headline.ts`) selects the last plotted point of a single time series and renders it large
+  above the chart, the trend sentence moved directly under it. **Ideas 6 (series legend) + 8 (small
   multiples) BUILT + MERGED + LIVE** (session 79, 2026-09-05). Idea 5 (revision history) still needs a migration
   (owner-supervised), unscheduled. Idea 7 unscheduled.
 
@@ -704,7 +711,8 @@ on branch `claude/checkdecijfers-embed-pr-review-acbrd5`, merged to `main`): `sr
 (deterministic outlier/jump ranking) + `src/chart/insights-phrase.ts` (AI phrasing via the digit-free
 slot-filling mechanism `answer/compose/slots.ts` proved) + `web/app/chart-insights-actions.ts` (the server
 action) + `chart.tsx` wiring (the existing `ChartStoryPanel` shell reused unchanged). Follow-ups tracked, not
-built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code; [#231](open-questions.md)
+built here: [#230](open-questions.md) delete `chart-story.ts`'s now-dead selection code (**✅ done, session 102,
+2026-09-15, PR #25 MERGED session 104, 2026-09-16, `9e00dd4`** — see open-questions.md); [#231](open-questions.md)
 no rate limit on Insights generation yet. Full verification block green (typecheck ×2, web 1304 tests,
 backend 2211 tests solo, benchmark 14/14+6/6+0 fabricated, real build, docs 11/11, code-review LOW 0
 findings) — see [STATUS.md](STATUS.md) for the exact numbers. **This push put PR #9 (embed-charts) into a
@@ -816,5 +824,38 @@ built, by rule). Phase 6 (re-measure) waits for real usage.
 **Session 101 continued (2026-09-13, owner present) — phase 2 / R3 BUILT on branch `journey-r3-fetch-confirm`, PR #21 open, CI green, NOT merged (branch + PR + owner review required for this one even though the owner is present in the session, per the rule below).** The confirm-first chip before the 100-credit on-demand fetch (#109's reversal, decisions 4-5 answered directly in chat — see [open-questions #109](open-questions.md)) and its full mechanism (a signed, stateless offer token, no database change) are recorded as-built in [ADR 026](decisions/026-on-demand-fetch-job-architecture.md)'s addendum. New required secret, not yet set anywhere as of PR open: `ONBOARDING_OFFER_SECRET` (RUNBOOK Secrets register) — until the owner sets it, the feature fails closed to an honest "not available right now" message, never a silent revert to the pre-#109 automatic-charge behavior; the owner confirmed in chat that it has since been set. Decision 5 (larger signup grant) was answered **no** — no config/schema change. Full verification green before the PR opened (typecheck ×2, backend 149 files/2273 tests, web 104 files/1693 tests, hermetic benchmark, real build, two LOW code-review passes) and again in CI (`gate` run `34745805896`, `mergeable_state: clean` at that check). **Same-day wrap-up addendum:** the session's own docs-only wrap-up commit to `main` (`ac08356`) touched several of the same doc sections and briefly flipped PR #21 to `mergeable_state: dirty`; fixed same session by merging `main` back into `journey-r3-fetch-confirm` (a merge commit, no rebase) and re-pushing. **Second addendum:** that same wrap-up also introduced six live `github.com/.../pull/21` links across docs/ (this paragraph included), which is exactly what CI's `test:docs` suite exists to catch (#132 interim rule (i) — a live PR link 404s once #132 route (b) recreates the repo); fixed and re-pushed (`4a9c8eb` on `main`, merged into this branch) — the feature code diff itself was untouched throughout. **✅ MERGED 2026-09-14 (`eb15838`), CI green, deployed, smoke check passed.**
 
 **Order / rule:** phase 0 → 1 → 2 → 3 → 4 → 5 → 6, the positioning items in parallel where they need no code. Owner present → direct push to `main` after the full verification block; autonomous → branch + PR ([#118](open-questions.md)(b)); **R3 always branch + PR + explicit owner go.** PR #9 (embed, `MERGEABLE`/`CLEAN` as of 2026-09-11 06:03 UTC) should merge before phase 3 so the "Publiceer" step has something real to point at.
+
+## 3D municipality map DEMO — NOT a work package, out of the product flow deliberately (session 103, 2026-09-15, [ADR 049](decisions/049-3d-municipality-map-demo.md))
+
+**Owner-approved after seeing a reference site he built himself; built autonomous (owner away), branch `demo-3d-municipality-map`, independently code-reviewed (7 findings fixed), MERGED + LIVE (`49cd975`) on the owner's explicit instruction.** Not numbered as a WP and not part of the phase checklist above on purpose — it is a standalone, login-gated, noindexed, unlinked demo page (`/bevolking-3d-demo`) over entirely FICTIONAL data (real CBS/PDOK municipality boundaries + names only), built as the owner-approved one-off exception to the zero-library rule (`three`+`@types/three`) that ADR [044](decisions/044-story-stage.md)'s kickoff had already ruled OUT of the real product ("a 3D chart makes equal values look unequal … a WebGL canvas is invisible to every honesty scan and to the export"). All 8 plan tasks built via strict TDD (failing test → run → implement → run → typecheck → commit, one commit per task): the fictional dataset generator (name-blind, deterministic, not tuned to any real place), a hand-rolled TopoJSON decoder + NL projection, the growth colour scale on the house palette, the boundary asset + dependency add, extruded column meshes, the WebGL scene (on-demand render loop, tween, orbit controls, raycast pick, dispose), the banner/component/digit-lock, and the noindexed login-gated page with bundle/product/discoverability isolation tests. `git diff --stat main -- src/ tests/ benchmark/ migrations/` is EMPTY — the real product, its tests, the benchmark and the invariant suite are byte-untouched. Full verification block and measured bundle numbers recorded in ADR 049 and the PR description. Never becomes a real feature without its own separate design round that re-answers the 3D-distortion and WebGL-invisible-to-honesty-scans objections — see ADR 049's revisit triggers.
+
+## Journalist chart headline — session 105 (2026-09-16), [ADR 050](decisions/050-journalist-chart-headline.md)
+
+**Owner priority pivot ("back to standard graphs instead of storytelling") → [#253](open-questions.md) checked and confirmed still blocked (no region-set query capability) → [#254](open-questions.md)'s headline gap picked instead, owner present.** Design approved in chat (spec:
+[superpowers/specs/2026-09-16-chart-journalist-headline-design.md](superpowers/specs/2026-09-16-chart-journalist-headline-design.md)), then built end-to-end via subagent-driven development in one session: migration 031 (`chart_headlines`, FILE-ONLY) + GDPR retention, an ownership-guarded store module, AI drafting that reuses the existing Insights digit-free mechanism (plus a real bug fix along the way — `src/chart/insights.ts` gained `topFinding()`, since `scoreFindings(spec)[0]` turned out to be chronologically-first, not highest-scored), three Server Actions, i18n strings, the chat UI (draft/edit/save/display — this task also caught and fixed an already-merged, build-breaking curly-quote syntax bug from the i18n task), the public embed page, and PNG/SVG export. Final whole-branch review found 3 real Important issues (an export-wrap overflow, a line-height collision, and — the most serious — a raw character-slice that could truncate a filled-in NUMBER mid-digit); one fix wave resolved all three, independently re-verified including a hand-traced example proving the number-truncation fix. Full verification block green: benchmark gate 14/14 + 6/6 + 0 fabricated, full backend + web suites, real `next build`. **✅ MERGED to `main` (`7bf76ff`, CI + deploy green) and migration 031 applied live with the owner's explicit go-ahead, verified against production (RLS on, zero `anon`/`authenticated` grants). The feature is fully live.** Two things still genuinely open for the owner, not decided during the build: whether a headline should be visually marked as journalist-written vs. a validated figure, and whether a published headline should be retractable (today: editable, not removable short of deleting the chat).
+
+## Chart alternate-reading toggle — sessions 106→107 (2026-09-16), [ADR 051](decisions/051-chart-alternate-reading-toggle.md)
+
+**[#254](open-questions.md)'s second genuine gap ("context controls: level vs. %-change,
+seasonally-adjusted vs. raw") picked as session 106's work, continuing autonomously in an
+owner-present chat.** Design corrected against the real registry before build (the original kickoff
+under-counted it by 20x — see the design spec) and built via subagent-driven development in an
+isolated worktree: a shared `buildAlternateReading` function (replacing `curated.ts`'s narrow
+inline version, now merging dims over the primary's own resolved coordinates instead of replacing
+them), `AnswerResponse.chartAlternates` threaded through the answer pipeline, the chat client, and
+`ChartViewState`'s reducer, a reading-toggle control on `ChartView` that swaps data without
+tripping the spec-identity reset, and an Embed-disable addendum for when a non-primary reading is
+shown. Session 106 built Tasks 1-5 plus a standalone period-code-match guard fix, all task-scoped
+reviews clean, then paused mid-Task-6 on an owner wrap-up signal. **Session 107 resumed from the
+SDD ledger**, finished Task 6 (the task reviewer's one finding — the anonymous trial chat
+(`trial-chat.tsx`) wasn't wired despite already carrying the data — was fixed on the owner's
+explicit choice, reversing the design doc's original deferral), then ran Task 7 (a full
+whole-branch diff read, the complete verification block, a LOW `/code-review` pass, and this doc
+update). **Full verification green: backend 158 files/2395 tests, web 116 files/1844 tests,
+benchmark gate 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks clean, `/code-review`
+LOW clean.** ~20 registered concepts (inflation, population, housing stock, GDP growth,
+bankruptcies, household income, imports/exports, retail turnover, house prices, unemployment, and
+others) now show a real toggle in chat, dock, and the trial. Level-vs-%-change stays open — it
+needs a new registered derivation and an ADR 011 revision, a separate future design task.
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

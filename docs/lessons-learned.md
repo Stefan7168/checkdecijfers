@@ -6,61 +6,197 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 101 continuation (2026-09-14/15, autonomous overnight) — WP30c E1 (Eurostat adapter), a second adversarial review round, and two real defects the review process itself did not catch
+## Session 107 (2026-09-16) — resumed + finished the chart alternate-reading toggle, merged to `main`
 
-- **A pre-build adversarial review of an executor brief is not the same as a whole-branch review of what
-  actually got built from it — both are needed, and they catch different things, and even a DEDICATED
-  final whole-branch review agent found something the orchestrator's own earlier integration pass missed.**
-  This session ran the brief's own required second review (4 lenses, 6 confirmed findings, all genuinely
-  real) BEFORE writing any code, built exactly to the amended brief, ran its own integration review (caught
-  the chip-leak and a stray null byte below), then dispatched a SEPARATE, dedicated final whole-branch
-  review agent as the brief's own required last step — which found a THIRD, more serious defect none of
-  the earlier passes had: the live-chat deny gate (Task 4's Amendment-3 guard) was built gated on the SAME
-  flag the internal explorer's own visibility uses, so enabling the explorer — the documented next step in
-  this very session's own RUNBOOK entry — would have silently re-opened the exact hole the guard existed to
-  close. Four review passes (2 design-level, 2 whole-branch) and it still took the LAST one to catch the
-  most severe issue. **Lesson: never skip the final whole-branch review as "redundant" after enough earlier
-  scrutiny — reserve it, run it as a genuinely separate pass (fresh context, not a continuation of the
-  orchestrator's own running review), and expect it to still find something new.**
-- **When a change adds a new key/entry to a shared registry/lookup table, explicitly grep for every
-  `Object.keys()`/`Object.values()` iteration over that registry across the whole codebase — not just the
-  files the brief's tasks name.** Merely adding a second `SourceInfo` registry entry made `chat.tsx`'s
-  existing WP129+130 source-chip UI render and default-select a brand-new "Eurostat data" chip for every
-  real chat user — a genuine violation of "never announced before it answers," with zero Eurostat data
-  involved. None of the review/implementer agents traced what an EXISTING, unrelated feature (#129's
-  dynamic chip row) would do once a second registry key existed; they checked the brief's own described
-  tasks against the ADR, not every OTHER consumer of the thing the brief's tasks touched.
-- **Two flags with overlapping-sounding names for two DIFFERENT concerns is a real hazard, not just a
-  naming nitpick — check whether a new flag-gated deny gate secretly reuses an existing flag meant for
-  something else.** `EUROSTAT_EXPLORER_ENABLED` was designed as a visibility flag for one internal admin
-  route; the deny-gate task (Task 4) reused it as the ALSO-only thing keeping Eurostat out of live chat,
-  because both "sound like" the right on/off switch for "is Eurostat allowed to do things yet." They
-  weren't the same switch. Any time a task description says "gated on the same flag as X" for a
-  DIFFERENT purpose than X's own, stop and ask whether flipping X for its own stated reason has a side
-  effect on the other thing nobody intended.
-- **Trust but verify a subagent's own "done" report, even a detailed and confident one — one agent in this
-  build reported wiring `adapterFor('eurostat')` as done; it hadn't touched the file at all.** Caught only
-  because the orchestrator re-grepped the actual file rather than accepting the report at face value (this
-  matches the standing [[feedback_verify_agent_evidence]] memory lesson, now reconfirmed on a fresh
-  example). Every subsequent agent dispatch in this build was told explicitly that its own claims would be
-  independently re-verified — worth stating that up front in the prompt, not just checking after the fact.
-- **`git diff` printing "Binary files ... differ" for a plain `.ts` file is a real signal, not a tooling
-  quirk to shrug off.** One implementer agent's file (`statistics-api.ts`) carried a single stray null
-  byte (`\x00`) in place of an ordinary space inside a template literal — likely an artifact of how the
-  agent's own edit tool wrote that one character. The file still compiled and its tests still passed (a
-  null byte is legal inside a JS string), so nothing in the verification block would have caught it; only
-  noticing the anomalous diff output during the code-review pass did. Worth a standing habit: if a diff on
-  a text file claims "binary," treat that as a bug report on the file, not a diff-tool limitation, before
-  reading past it.
-- **A hard "no live API calls this session" reading, taken from one build-plan sentence, is worth stating
-  as its own named, disclosed constraint rather than silently building a lesser thing.** This session read
-  "any real Eurostat API spend stays owner-supervised, never autonomous" literally — no live HTTP call to
-  the free, public, read-only Eurostat API happened at all, even for fixture capture. That single decision
-  reshaped the entire build's honest done-definition (synthetic fixtures, zero real registered tables, two
-  of ADR 048's own done-definition items left open). Naming it explicitly ("Constraint 0") in the brief,
-  the ADR's as-built note, STATUS, and the PR body — with an explicit invitation for the owner to say
-  "spend meant money, not any call" if this was overly conservative — kept the scope decision visible and
-  owner-reversible instead of quietly narrowing what "done" meant.
+**A feature worktree can fall behind `main` on docs in the OTHER direction too — `main` moving while the worktree branch sits untouched, not just the worktree falling behind a `main` that moves during a long build.** This project's own [feedback memory](../.claude — not committed, see the auto-memory system) already warns about worktree docs drift, but every prior instance was the worktree's OWN doc edits going stale relative to a `main` that moved during a long single-session build. This session hit a variant: session 106's wrap-up commit (`cc10553`, a docs-only push straight to `main`, correct per its own convention) landed on `main` describing the PAUSED state, while the feature branch — sitting in a worktree across the session boundary — never saw it. Session 107 started editing the SAME doc sections (STATUS.md's top block, `08-build-plan.md`, `open-questions.md`) from the worktree's stale pre-pause copies, and would have silently reverted or duplicated session 106's own already-pushed content had the merge not been done first. Caught only because `git worktree list` + `git log --oneline HEAD..main` was checked before finalizing docs, not after. **A genuine row-numbering collision surfaced by the same drift:** session 106's own wrap-up commit had independently used open-questions row `#261` for a different row than the one this branch's own Task 2 commit (`61df711`) had already claimed — main's row was pre-flagged with its own "needs renumbering" note, caught and resolved during the merge (renumbered to `#262`), not silently overwritten. **Lesson:** before finalizing ANY doc edit in a long-lived feature worktree, run `git fetch origin <default-branch>` + check `git log --oneline HEAD..main` for drift in EITHER direction, and merge `main` into the branch before editing shared doc sections — a stale local view of `main` is exactly as dangerous as a stale worktree file, just in the opposite direction, and the existing "re-read from the exact worktree path" guidance only covers one of the two.
+
+## Session 106 (2026-09-16) — the chart alternate-reading toggle, paused mid-build on an owner wrap-up signal
+
+**A design spec's own first-draft claim was off by an order of magnitude, caught only by grepping the real registry instead of trusting a kickoff brief's summary and a first pass of reading.** The initial design (before any code was written) assumed exactly one canonical measure (`unemployment_rate_seasonally_adjusted`) had a registered "alternate reading" — matching both the session-106 kickoff brief's claim and this session's own first read of `curated.ts`'s one hardcoded use case. A `grep -n "alternates:" src/registry/defaults.ts` before finalizing the spec found **20** entries, several with multiple siblings, many swapping `measure` rather than `dims`. Rewriting the spec at that point (not after implementation) avoided shipping a feature scoped for "1 chart lights up" when the real number was ~20, and avoided a UI built for "at most one alternate" when several concepts have up to 4. **Lesson:** for any design claim about "how many places X applies," grep the actual data before writing the spec section that depends on the count — a kickoff brief's summary and even a first careful code read can both undercount by 20x.
+
+**Tracing the SAME registry data one level deeper found a real correctness bug in the pattern the plan was about to copy verbatim.** `curated.ts`'s existing `buildAlternateSpec` replaces `dims` wholesale (`dims: alt.dims`) — safe for its one real use case (unemployment, a single-key same-key swap) but silently wrong for the general case: several registry entries have primaries with non-empty `dims` (e.g. a branch code) and alternates that swap only `measure`, carrying no `dims` key at all — a literal replace would have dropped the primary's own coordinate for every one of those. Caught during planning, before any implementer touched it, by reading several real registry entries side by side rather than generalizing from the one example already in the codebase. **Lesson:** "there's already a working example of this pattern in the codebase" is not the same as "the pattern generalizes correctly" — check it against the FULL range of real data the generalization will actually see, not just the one case that motivated the original narrow version.
+
+**Task reviewers caught real, non-cosmetic gaps in nearly every task this session, including in the controller's own suggested fix.** Task 1's reviewer found the two new tests didn't actually distinguish merge-from-replace behavior (both passed under either implementation) — and the controller's own suggested fixture to fix this (`retail_turnover_yoy`) turned out, on the implementer's own empirical check (sabotaging the code and re-running), to be a false positive too, due to a coincidental data alignment; the implementer found a genuinely distinguishing fixture instead. Task 5's reviewer found the honesty-digit-scan test used a digit-free label fixture that couldn't see the real failure mode (real registry labels do carry digits, e.g. "2025=100"). The standalone period-guard fix's reviewer independently re-derived, from source, that the "natural" bug scenario the fix was meant to catch is actually unreachable today via the real call paths — confirming the implementer's own honest disclosure of the same fact rather than either party glossing over it. **Lesson, reinforcing an existing one:** a reviewer that verifies claims against real data/source rather than accepting a plausible-sounding test or an "it's credible" read catches real bugs at a high rate in this kind of subtle, honesty-adjacent code — worth the dispatch cost every time, not just for the tasks that "feel" risky.
+
+**The single highest-risk task in the plan (touching a 3580-line file's existing view-state-reset effect) came back with zero Critical findings, dispatched on the most capable model tier available rather than the plan's own default "standard" tier.** Given the real risk (a mistake could silently wipe a reader's chart customizations on every reading toggle, or worse, mix data from two different readings), both the implementer and its reviewer were bumped to the top model tier for this one task specifically, deviating from the plan's own tier table. The reviewer's pass was unusually deep (independently re-derived the full list of which call sites should read primary-vs-alternate data, confirmed from the diff's own hunk *ranges* — not the report's claim — that the dangerous reset effect had zero touching hunks) and still found nothing Critical, only real-but-carry-forward Important findings (an embed preview/publish mismatch, an unenforced period-window invariant) that got folded into later dispatches rather than blocking. **Lesson:** for the one task in a plan explicitly flagged as the highest-risk judgment call, paying for the most capable tier on BOTH the implementer and its reviewer is worth it — a cheaper tier's plausible-but-wrong call here would have been the kind of bug that ships silently and shows a genuinely wrong number to a reader.
+
+**The Task/subagent background-command stall (documented in sessions 103 and 105 already) recurred again this session, on at least three separate dispatches, despite every dispatch prompt explicitly warning against it up front.** It happened on Task 2's implementer, Task 5's fix round, and the standalone period-guard fix's implementer — each ended a turn saying it was "waiting for a notification" about its own backgrounded test run. Every time, the fix was the same: check `git status` in the worktree to confirm nothing was lost, then `SendMessage`-resume (never a fresh `Agent` dispatch) with an explicit instruction to read the log file directly rather than wait. **This session did NOT repeat session 105's OWN separate mistake** (dispatching a duplicate via `Agent` instead of resuming) even once — the `SendMessage`-resume discipline held cleanly across all three recoveries. **Lesson, now stated a third time across three sessions:** treat this as a permanent, expected tax on any subagent dispatch that runs a slow test suite, not a bug that will eventually stop recurring — budget for it, and keep using the correct recovery mechanism (`SendMessage`, never `Agent`) every single time, since THAT part of the lesson has now visibly stuck.
+
+**A git-worktree session (via the harness's own `EnterWorktree` tool) hard-blocks every Bash-tool git operation that targets a different checkout, including fully read-only ones — but Read/Write/Edit on an absolute path to the other checkout work fine regardless of current directory.** Discovered while trying to run `git -C "<main checkout path>" log` from inside a worktree session to check main's state: refused outright, with an explicit message that a worktree-isolated session's git operations must target its own worktree, no exceptions for read-only commands. Docs-only edits to the main checkout's own files (STATUS.md, lessons-learned.md, etc.) using Read/Edit/Write tools on the main checkout's absolute path worked without issue while still "inside" the worktree session, but committing those edits required actually exiting the worktree (`ExitWorktree`, `action: "keep"` to preserve the in-progress branch) to regain git access to main. **Lesson:** when a session inside an `EnterWorktree` worktree needs to touch the ORIGINAL checkout's git history (not just its files) — to push accumulated local-only commits before branching, to check main's own log, or to wrap up a session with docs commits on main while an SDD feature branch stays unmerged — plan to `ExitWorktree` (`keep`) for that step; don't try to route around the restriction with `-C`/`--git-dir`, it's a hard block, not a convenience default.
+
+**Local commits made on `main` before creating a worktree are invisible to that worktree unless pushed first — `EnterWorktree`'s default `baseRef: fresh` branches from `origin/main`, not local `main`.** Three docs commits (the design spec, its correction, and the implementation plan) existed only on the local `main` branch when the worktree was created for this feature's SDD execution; the fresh worktree branched from the last-PUSHED commit and silently lacked all three. Caught immediately by checking `git log --oneline -1 main` from inside the worktree (worktrees share refs, so this comparison is cheap and reliable) against what was expected, then fixed by pushing local `main` to origin and `git reset --hard main` inside the worktree branch before any implementation work started — cheap because it was caught before any task was dispatched, not after. **Lesson:** immediately after creating a worktree for a feature, verify the worktree's own `git log -1` matches what you expect (not just "no error was thrown") — and as a standing practice, push local main before spinning up a worktree for a new feature, so this check never needs to fire in the first place.
+
+**A wrap-up signal arrived mid-SDD-run, with one task (of six) carrying an open, unresolved "Needs fixes" review verdict — the session paused there rather than either rushing to finish or merging unreviewed work.** Task 6's review found a real, if narrow, gap (one chat surface — the anonymous homepage trial — silently missing the toggle, since it wasn't in the task's named file list) that had not yet gone through a fix round when the wrap-up signal arrived. Rather than dispatching one more fix-and-re-review cycle under time pressure (risking a rushed, unverified "final" state) or merging the feature branch to `main` with a known-open finding, the session logged the exact pause point in the SDD ledger (which task, which finding, two concrete resolution options already named by the reviewer) and left the feature branch unmerged on its own worktree, resumable from that exact point. **Lesson:** "the owner wants to wrap up" is a reason to stop dispatching NEW work and document precisely where things stand, not a reason to force a task past an open review finding to reach a falsely-clean stopping point — an honestly-paused branch with a clear resume note costs the next session nothing; a rushed merge with a known gap costs real rework.
+
+## Session 105 (2026-09-16) — the journalist chart-headline feature, built via subagent-driven development end to end
+
+**The "subagent can't wait on its own background command" failure recurred TWICE more this session, despite an existing lessons-learned entry (session 103) already naming the exact fix.** Task 1's implementer, and later the final-review fix-wave implementer, each independently backgrounded a long test/build command (`npm test`, the full backend suite) and ended their turn expecting a notification that subagents structurally cannot receive — the controller had to notice, check the worktree's uncommitted state to confirm nothing was lost, and resume each one explicitly via `SendMessage`. This happened even though every dispatch prompt this session explicitly said "run commands in the foreground and wait for real output — do not background a test run expecting an automatic notification." **Lesson, sharper than session 103's version:** telling an agent not to background a command in the dispatch prompt is necessary but demonstrably not sufficient — the instinct to background a slow command is strong enough that it recurs even when explicitly warned against in the same message. Treat this as an expected failure mode to detect and recover from (check `ps aux` + `git status` in the worktree, resume via `SendMessage`, never re-dispatch via `Agent`), not a one-time fix that, once stated, stops happening.
+
+**Calling `Agent` again instead of `SendMessage` to resume a stuck subagent spawns a genuine duplicate that can race the original — caught once this session, before damage, exactly as the existing lessons entry warns.** While recovering from the background-wait stall above, the controller itself made this exact mistake once (dispatching a fresh "Resume Task 1 implementer" via `Agent`), then caught it via `ListAgents` showing the original as `completed` with no report filed, and `TaskStop`'d the duplicate before it could commit anything or collide with the real agent's own in-flight `npm test` run. No damage this time, but it is worth naming as a real, recurring failure mode under time pressure mid-recovery, not just a hypothetical.
+
+**A controller's own careful reading of existing source code missed a real behavioral gap that only surfaced once an implementer actually ran TDD against it.** The plan assumed `scoreFindings(spec)[0]` (an existing, well-tested function) returns the single most-notable finding on a chart. It doesn't — it returns the chronologically-earliest of the capped, score-ranked findings, because the function re-sorts its own output for an unrelated display purpose and strips the score before returning. This was missed during design (a careful read of the function's code, including its own doc comments) and only caught when Task 3's implementer wrote a concrete test and the expected value didn't match. **Lesson:** for a function whose ordering/selection behavior actually matters to a new caller, trust a real test run over a read of the code, even a careful one — sorting-then-re-sorting logic is exactly the kind of thing a human (or an LLM) skims past.
+
+**A reviewer explicitly declining to independently verify a cheap, fast claim ("credible given the correct structure") let a real, build-breaking bug through.** Task 5 (adding 8 translation-string pairs) had its `en` table's string delimiters silently corrupted to curly quotes — invalid syntax that would have broken `next build` and failed the whole `chart.test.tsx` suite at import time. The implementer's own report claimed a clean `tsc --noEmit`; the task reviewer read this as "credible" without running it, since the diff's *structure* looked right. A single `npx tsc --noEmit` (seconds, on a tiny diff) would have caught it immediately. It was found two tasks later, by accident, when an unrelated implementer's own test suite failed to even import the file. **Lesson:** "the report's claim is credible" is not the same as "I checked" — for any claim that costs under a minute to independently verify, verify it, even on a task that looks too small to have a real bug.
+
+**The final whole-branch review caught the single most serious bug in the entire build — one no task-scoped review could have seen, by design.** A raw `.slice(0, 140)` character cap on the headline text could truncate a filled-in NUMBER mid-digit (e.g. "1,5%" becoming "1,") — a wrong number presented as fact, the worst possible failure mode for a product whose entire premise is "every number traceable, never fabricated." No single task's own review caught it, because the cap was written in Task 2 (the store module) and only actually exercised with real AI-generated content in Task 6 (the UI) — the interaction between the two was only visible once the whole feature existed end to end. **Lesson, reinforcing why this step is mandatory, not a formality:** a feature can pass every task-scoped review individually and still ship a serious defect that only exists in the composition of tasks — budget for and actually run the final whole-branch pass, don't skip it because "every task already passed review."
+
+**A long stretch of dispatch-and-review narration, even when procedurally correct, left the (non-developer) product owner completely lost — a fresh instance of an old lesson, in a new shape.** After roughly an hour of "Task N dispatched," "review verdict: Approved," ledger updates, and SHA references, the owner said plainly: "I have absolutely no idea what you're doing. Is this project going to be finished anytime?" Nothing in that stretch was wrong or even off-convention for a subagent-driven-development execution — but it was never translated into what it actually meant for him, turn after turn. **Lesson:** the existing "plain English, no jargon" rule isn't just about decision-point summaries — it applies just as much to long autonomous-feeling execution stretches; periodically translate "here's what's actually happening and why" in plain terms even (especially) when the work itself is running smoothly, don't wait for the owner to have to ask.
+
+**The owner then pushed back on a repeatedly-reaffirmed standing rule (live DDL stays owner-supervised) — asking exactly one targeted confirming question, rather than complying silently or refusing at length, worked cleanly under real pressure.** Right after the jargon pushback, the owner said "You don't need me to do that" about running the database migration. The session held the line with one short, plain-English question (what this specific action is, why it's different from the code-merge he'd already blanket-approved, and a direct ask for yes/no) rather than either just running it or re-explaining the whole policy. He answered yes immediately, and the action proceeded. **Lesson, a confirmation not a correction:** the existing "ask before reversing standing rules" convention is worth keeping exactly as written — a single well-scoped question, even under visible frustration, resolves the tension in one exchange rather than escalating it.
+
+## Session 104 (2026-09-15/16) — reacting to a strong negative owner reaction, and a subagent's `/code-review` silently reviewing the wrong directory
+
+**A subagent invoking `/code-review` on itself can silently resolve against the ORCHESTRATING session's working copy, not its own worktree, and report "no diff" rather than erroring.** The build agent dispatched tonight (the `/bevolking-3d-demo` v2 rework) was told to run `/code-review` as a first pass on its own diff before reporting done. It did — and the skill resolved against `/Users/amity/Documents/Check de Cijfers` (the orchestrating session's own directory, not the agent's worktree at `.../checkdecijfers-worktrees/bevolking-3d-demo-v2`), found no diff there (correctly — nothing had changed in that directory), and the agent's own report flagged this honestly ("`/code-review` didn't actually run against my diff") rather than silently claiming a clean pass. **This worked out fine because the agent self-reported the gap AND the orchestrating session ran its own independent `/code-review` afterward anyway (already this project's standard verify-before-merge step)** — but if the agent had NOT flagged it, a "code-review passed" claim would have been meaningless. **Lesson:** when briefing a subagent to run `/code-review` (or any tool that resolves paths implicitly) from inside its own worktree, say explicitly which directory/target to pass so it doesn't silently default to the wrong one — don't assume cwd context carries over correctly into a skill invocation the way it does for plain shell commands.
+
+**A precise reference page beats a vague quality complaint, and grounding scope in it protects against blowing up the ask.** The owner's message was strong, general frustration ("the difference is so bad," "re-engineer this or something") plus one link to a specific page (`/pendel`, a commuting-flow demo on a *different* personal site with 18 pages total). Rather than either (a) guessing broadly and trying to rebuild several of those 18 pages overnight, or (b) literally cloning the linked `/pendel` page (which needed a real CBS table our fictional-data-only demo invariant never anticipated), the session found the ACTUAL directly-comparable page on that same site (`/nl-bevolking-3d` — same concept as our existing ADR 049 demo) and scoped the night's work to matching THAT page's polish specifically, logging everything else as an explicit, un-built, un-decided open-question row rather than either ignoring it or silently expanding scope to match it. **Lesson:** when an emotional, broad complaint arrives with one concrete example attached, spend a few minutes finding the *closest structurally-comparable* reference point before dispatching hours of autonomous work — it turns "make it better" into a bounded, verifiable target instead of an open-ended rebuild.
+
+**Killed the wrong process chasing a resource-contention theory — a real mistake, not a near-miss.** PR #29's rebase branch ran the full backend suite and took 2723s (≈45 min) with 9 spurious file failures, wildly outside this suite's normal range and implausible for a docs-only change. Correctly suspected resource contention on this 8GB machine and found a `next dev`/`next-server` process pair via `ps aux`, assumed it was this session's own earlier leftover test server (one had been started on the same port, 3001, hours before), and killed both PIDs without checking their actual working directory first. They belonged to a **different, unrelated project** ("Glaibaan") also running on the machine — confirmed only after the kill, from the orphaned telemetry-flush process it left behind naming the real path. Disclosed to the owner immediately. No lasting harm (a dev server is stateless, trivially restarted), and the underlying theory was still right — a clean re-run of the exact same suite immediately after passed 154/154 files, 2366/2366 tests, confirming a second project's process was the actual cause of the slowdown and the spurious failures, not a real regression. **Lesson:** on a machine that plausibly runs more than one project, `ps aux | grep` output is not enough to identify "my own" leftover process — check the actual command line's working directory / path before killing, every time, even when a theory about whose process it is feels obviously right and time pressure says just fix it.
+
+**A conflict-resolution script that slices a file by line index is exactly the kind of "obviously correct" code that silently drops one line too many.** Resolving a `git rebase` conflict in `docs/status-archive.md` by hand (Python, `lines[N:M]` slicing to cut a marker + one side of the conflict), the slice's start index was off by one relative to what was intended — it dropped not just the `<<<<<<< HEAD` marker line but the file's own `# STATUS archive` header line directly above it, since both were adjacent and the index arithmetic didn't separately account for them. Caught immediately, before any push, by `tests/docs/doc-conventions.test.ts`'s own marker-presence check — exactly the kind of guard that check exists for, working as designed on a same-session mistake rather than someone else's. **Lesson:** after any line-index-based conflict resolution (not just a manual `git add`-and-move-on), re-read the resolved file's own head/tail explicitly before trusting it, and — as happened here — let the project's existing doc-invariant tests be the actual backstop rather than eyeballing the diff as sufficient.
+
+**Reviewing a backlog for real (reading every diff, not rubber-stamping "CI is green") found zero real issues across six PRs spanning three different sessions.** Independently reviewing PRs #24–#29 before merging — each one read in full, not just trusted because an earlier autonomous session claimed a clean verification block — turned up no correctness bugs, no scope creep, no untested edge cases. This is itself a useful data point, not a non-event: it means the session-102/103 autonomous-build discipline (full verification block + `/code-review` LOW before opening each PR) is producing PRs that hold up under a genuinely independent second read, not just passing their own author's self-check.
+
+## Session 103, continued (2026-09-15) — dispatching two parallel background builds, reviewing both independently, and merging them: what actually went wrong
+
+**Subagents cannot "wait" on their own background process the way the main session can — this recurred TWICE more, on a SECOND agent, even after the first agent's own lessons entry below had already flagged it once.** Both the chart-card-polish build agent (dispatched in this same stretch) and, separately, the main session's own earlier reminder to it, hit the identical pattern: an agent starts a slow command in the background, ends its turn saying "I'll resume once the monitor notifies me" or "waiting for the backend suite to complete" — and then just sits there. The task-notification system reports the agent as `completed` with no live children, meaning nothing wakes it back up; it takes an explicit `SendMessage` from the orchestrating session to resume it, every time. This happened to the chart-card-polish agent twice in a row before the fix stuck. **What actually fixed it:** stop asking agents to "verify X" and trust them to figure out HOW; tell them explicitly, in the dispatch prompt itself, before they start any long-running step: "run every verification command as a normal BLOCKING call within a single tool use, even if it takes several minutes — do not background anything, do not call Monitor to wait, ending your turn to 'wait' is what's broken." Putting this in the ORIGINAL dispatch prompt (not just a correction after the fact) is the real fix — this session's second dispatch (the demo-map build) still needed one correction despite the first agent's own lessons entry existing, because that entry wasn't propagated INTO the next dispatch's own prompt.
+
+**`git merge-tree <base> <a> <b>` gives a misleading answer if `<base>` isn't the REAL merge-base.** Checking whether PR #31 would cleanly merge after PR #30 landed, the first attempt ran `git merge-tree origin/main origin/main origin/chart-card-polish` — passing current `main` as BOTH the base argument and one of the two branches. This produced zero conflict markers and looked completely clean. `gh pr view`'s own `mergeStateStatus` then flipped to genuinely `CONFLICTING` a few seconds later (not the stale-cache false-positive this project has hit before — a real conflict this time), and attempting the merge failed for real. The actual merge-base — `git merge-base origin/main origin/chart-card-polish` — was an OLDER commit than current `main`; re-running `git merge-tree` with the correct triple immediately showed the real "changed in both" files. **Lesson:** always compute the real merge-base explicitly before trusting a `git merge-tree` conflict check; passing "current main" as its own base is not a valid shortcut, it silently changes what the tool is even checking.
+
+**Two independent worktrees each claimed the same open-questions row numbers, with no way to see each other's reservations.** PR #30 and PR #31 were built in separate git worktrees, dispatched in parallel; each independently grepped `open-questions.md` for "the next free number" and both picked `#250` (PR #30 also claimed `#251`) — genuinely reasonable given what each could see from its own isolated checkout, but a real collision once both existed as open PRs. A THIRD branch (PR #23, from an earlier session, still open) had already claimed `#249`-`#252` for itself, invisible to either new worktree. Resolved by renumbering PR #31's row to `#255` and PR #30's two rows to `#256`/`#257`, clear of every other pending claim — but only found because this session went and checked, not because anything would have caught it automatically. **Lesson for next time:** when dispatching two-or-more parallel builds that will each touch `open-questions.md`, either pre-assign each build a specific number range in its own dispatch prompt, or treat "renumber before merging" as a standing expected step whenever more than one background build lands in the same session — don't assume isolated worktrees will naturally avoid collision.
+
+**A sibling agent's own resource-contention fix had real collateral-damage risk for this agent, on the same shared 8GB machine.** While the chart-card-polish agent was diagnosing severe load-average spikes (its own vitest workers plus the demo-build agent's, running concurrently in separate worktrees), it ran a broad `pkill -f "workers/forks.js"` to clear things out — a pattern-matched kill with no PID scoping, on a machine both agents' processes shared. It could just as easily have killed the OTHER agent's in-flight test run without either agent knowing. The demo-build agent was warned about this after the fact and re-ran its own verification from a clean process list rather than trust anything claimed-passing from before that point — the right response, but only possible because the orchestrating session happened to notice and flag it. **Lesson:** when two agents run heavy processes on the same machine, a broad `pkill` by pattern (rather than by owned PID) is a real cross-agent risk, not just a local cleanup step — worth naming explicitly in a dispatch prompt when running parallel builds, rather than discovering it mid-session.
+
+## Session 103 continuation (2026-09-15) — the 3D municipality map DEMO (PR #30, ADR 049): background-agent wait patterns, jsdom/Vite URL quirks, a Turbopack bundle-measurement gap, and a real-browser workaround
+
+- **A sibling agent's own crisis can silently corrupt THIS session's already-verified results, with no local
+  signal that it happened.** A different autonomous agent, building an unrelated plan in a separate
+  worktree on the same machine, ran a broad `pkill -f "workers/forks.js"` while fighting its own resource
+  contention — which could have killed this session's test-runner processes as collateral damage, mid-run,
+  without producing any error THIS session would necessarily notice (a killed worker can just look like a
+  slow/quiet run rather than an obvious crash). Only caught because the coordinating session relayed it
+  after the fact. The fix applied here: before trusting ANY already-reported "passed" result once such a
+  report arrives, re-run every affected command fresh from a clean process list and require the numbers to
+  match exactly (they did — 153/2358 backend, 114/1771 web, GATE PASS benchmark, both typechecks, the real
+  build — so nothing had actually been corrupted this time, but that had to be CONFIRMED, not assumed). On
+  a shared machine running multiple concurrent agents, "I already verified this" has a shelf life; a
+  same-machine process-management action by ANY agent is a reason to distrust it, not just your own.
+- **Writing ABOUT a live-PR-link-avoidance rule can violate the rule itself, and only CI catches it.** This
+  session's own status-archive.md entry, written to document the fix for the RUNBOOK's very own "avoid live
+  PR links" gotcha, itself contained a live `[#30](https://github.com/…/pull/30)` link — a session
+  documenting a convention is exactly as capable of breaking it as one doing anything else, and a `grep`
+  habit only catches what you remember to grep for. `tests/docs/doc-conventions.test.ts` caught it in CI
+  (not locally, since `npm test` doesn't run from a doc-only edit path the same way, and the session hadn't
+  re-run `test:docs` after that specific edit) — a reminder that `npm run test:docs` is cheap (under a
+  second) and worth running after ANY docs edit that mentions a PR number, not only after a code change.
+- **A subagent cannot rely on "I'll be notified automatically" to resume itself after ending a turn.**
+  Confirmed live during this build: a `run_in_background` bash task's completion notification only
+  actually reaches a session that keeps issuing tool calls in the SAME turn (the notification is delivered
+  as a system event injected between tool calls, not as something that wakes a stopped session back up).
+  Twice this session tried the pattern "end the turn, say I'll be notified" and stalled — a sibling agent
+  building a different plan in a separate worktree hit the identical stall independently. The fix, once a
+  coordinator flagged it: never background a verification command and stop; either let a normal blocking
+  Bash call run to its natural end (up to the tool's own timeout), or if it needs longer, chain another
+  blocking wait/poll call immediately in the SAME response — never end a response hoping to be resumed.
+- **Concurrent `vitest` runs across sibling worktrees on the same machine produce a MISLEADING failure that
+  reads exactly like a real regression** — this repo's own RUNBOOK already documents this
+  (`[vitest-pool-runner]: Timeout waiting for worker to respond` / `Failed to start forks worker`), and this
+  session hit it for real: a full backend-suite run failed with that exact signature while a sibling agent's
+  own `vitest run --maxWorkers=2` was active in a different worktree. Re-running the SAME suite alone, once
+  `pkill -f "<worktree-path>.*vitest"` cleared the stray processes, passed clean (153 files/2358 tests). A
+  test failure with this specific signature is a process-contention artifact, not a finding — check
+  `ps aux | grep vitest` for other worktrees before trusting it.
+- **`new URL(relative, import.meta.url)` breaks under this project's default jsdom vitest environment in a
+  way that is easy to mistake for a real bug**, and it is NOT a one-off — this session hit it twice
+  independently (once following the plan's own literal `asset.test.ts` code, once writing `isolation.test.ts`
+  from scratch) before recognizing the pattern. Vite's `vite:asset-import-meta-url` plugin rewrites that
+  exact syntax into an `http://localhost/@fs/...` URL under a "client"-consumer environment (jsdom is one),
+  so `fileURLToPath(...)` throws "The URL must be of scheme file" — already diagnosed once in this repo at
+  `next.config.test.ts:1-23` via a `// @vitest-environment node` override, but that fix doesn't compose with
+  a file that ALSO needs jsdom for its other tests. The general-purpose fix used here instead:
+  `dirname(fileURLToPath(import.meta.url))` + `path.join(...)` — the exact pattern already at
+  `chart.test.tsx:891` — sidesteps the special-cased syntax entirely and needs no environment override. Grep
+  for `new URL(.*import.meta.url)` before adding a NEW test file that resolves a path under the jsdom
+  environment; this will keep recurring otherwise.
+- **A test file's own source can accidentally match the very regex patterns it asserts against, making the
+  check self-defeating** — `isolation.test.ts` scanned every file in its own directory for strings like
+  `@anthropic-ai`, and (being IN that directory) matched its own literal regex source against itself. Fixed
+  by excluding `*.test.ts(x)` files from that one check (the invariant is about what SHIPS, not about a test
+  quoting the pattern it's checking for). Worth checking for in any new "grep every file in this directory
+  for a forbidden string" test — the test file itself is always one of the files being scanned.
+- **An HTML `<output>` element carries an IMPLICIT ARIA `role="status"`** — not obvious from the element
+  name, and it collided directly with a page's own `role="status"` loading/error paragraph, making
+  `getByRole('status')` ambiguous ("Found multiple elements with the role"). A plain `<span>` has no
+  implicit role; use one for a live-updating VALUE display that isn't itself meant to be an announcement.
+- **A `<label>` that WRAPS both a control and other visible text pulls ALL of that text into the control's
+  accessible name** — a `<label>Year<input/><span>1995</span></label>` pattern made the input's computed
+  accessible name "Year 1995" instead of "Year", breaking `getByLabelText('Year')`. Use `htmlFor`/`id`
+  instead of wrapping whenever a value display sits next to the label text, not only when styling demands
+  it — this bit even though the plan's own literal example code used the wrapping form.
+- **Turbopack's `next build` prints no per-route "First Load JS" table** (the webpack-era feature this
+  plan's own bundle-measurement instructions assumed exists) — route-level JS attribution has to come from
+  each route's own `.next/server/app/<route>/page/react-loadable-manifest.json` instead (list every chunk
+  file it references, then confirm no OTHER route's manifest references the same files). Useful precedent
+  for the next plan that wants to measure a Next 16/Turbopack route's bundle cost.
+- **Turbopack's chunk splitting is not byte-stable across separate `next build` invocations of IDENTICAL
+  code** — a fresh `main`-branch build and a fresh branch rebuild produced non-demo chunk totals that don't
+  net out to the same number, even though the only non-demo source diff was 58 additive doc-comment-style
+  i18n lines. A byte-level "First Load JS is identical before/after" claim (what this plan's own bundle
+  instructions asked for) is therefore not reliably obtainable by diffing two separate builds' chunk
+  directories — the source diff (`git diff --stat`) is the reliable signal for "did this touch that route,"
+  not a bundle-size diff. Recorded honestly in ADR 049 rather than forcing a misleading number.
+- **A real-browser pass is still possible in a sandbox with neither a `playwright` package nor a global
+  Chromium install**, even though this repo's own documented dev-harness recipe (`scripts/dev-harness/`)
+  assumes exactly those two things for its `shot.mjs`/`ask.mjs` helpers. Substitute: run the harness's three
+  local stand-in servers directly via plain `node` (not through `.claude/launch.json`/`preview_start`, which
+  reads from the MAIN checkout's launch.json, not a worktree's own — editing a worktree's copy has no
+  effect), then drive the already-running dev server through the Claude_Browser MCP pane via
+  `preview_start({ url })`. The harness's session cookie (`scripts/dev-harness/auth-stub.mjs`'s
+  `sb-localhost-auth-token`) has no `httpOnly` flag by design (it's meant for Playwright's `addCookies`,
+  which doesn't require page-JS access) — so `document.cookie = "..."` inside the browser pane sets it just
+  as well, and a normal `navigate()` to a login-gated route then authenticates correctly.
+- **Escape-to-unpin only fires once real DOM focus is inside the listening element's subtree** — clicking a
+  `<canvas>` (not itself a focusable element without `tabindex`) does NOT move document focus into its
+  parent `<section onKeyDown=...>`, so a global Escape keypress right after a canvas click does nothing;
+  focusing any actual focusable descendant first (the year slider, in this case) makes it fire correctly.
+  Not a bug in the shipped code — canvases are legitimately not focusable by default — but worth knowing
+  before assuming a keyboard-dismiss handler on a wrapping element "just works" after a canvas interaction.
+
+## Session 102 (2026-09-15, autonomous, owner away the whole session) — two small PRs, a docs-only-CI-skip blind spot found, a `gh pr checks` false negative
+
+- **The "docs-only pushes skip CI" convention (adopted 2026-09-09 to save Actions minutes) has a real
+  blind spot: it also skips the tests that check the DOCS THEMSELVES.** Session 101's own docs-only
+  commits added live `github.com/.../pull/23` links to `STATUS.md`/`status-archive.md`/a kickoff brief,
+  which `tests/docs/doc-conventions.test.ts` exists specifically to catch (#132's "no live PR links"
+  rule) — but because those commits touched only markdown, CI never ran, so the violation sat on `main`
+  undetected until this session's first CODE push finally ran the full suite. The convention still makes
+  sense (most docs-only changes have nothing a test could catch), but a session should not assume
+  "docs-only" means "risk-free" — a doc-conventions-style test is exactly the case where it isn't. No
+  fix proposed here (the convention itself is a deliberate cost trade-off, not a bug) — just a reason to
+  actually run `tests/docs` occasionally even on a docs-only-feeling change, especially after several
+  such commits have stacked up without a code push in between.
+- **`gh pr checks <n>` can report "no checks reported" for a PR whose CI genuinely ran and passed.**
+  Happened on PR #23 (session 101's own build): `gh pr checks 23` said nothing was reported, but
+  `gh run list --branch wp30c-e1-eurostat-adapter` showed a `completed`/`success` run for that exact PR.
+  Don't take a "no checks" result as "CI hasn't run" — cross-check with `gh run list --branch <branch>`
+  before concluding a PR is unverified.
+- **A delegated subagent's "confirmed X is orphaned" claim is worth re-verifying even when it looks
+  careful** (this repo's own standing practice, applied here without incident): the agent that found
+  [open-questions #230](open-questions.md) explicitly said it checked that `pointCaption`/
+  `seriesCaption`/`barCaption`/`provisional` were NOT orphaned before recommending the cleanup. Re-ran
+  the same grep independently before deleting anything anyway — it confirmed the agent was right, but
+  the check cost thirty seconds against the alternative of deleting four still-live i18n keys and
+  breaking `chart-insights.ts`'s AI-phrased captions in production. Cheap insurance, worth keeping as
+  a reflex even when there's no specific reason to distrust the source.
+- **Three unreviewed autonomous PRs is a reasonable place to stop and report, not a reason to keep
+  hunting for a fourth.** With PR #23 (session 101) already open and PR #24/#25 added this session, all
+  three untouched by the owner, judged that opening more work for one review pass would stack risk
+  (each additional PR is more for the owner to individually evaluate) without a correspondingly strong
+  reason — the remaining open-questions candidates surfaced by triage either needed an owner judgment
+  call or had a larger blast radius than a similarly-sized independent search agent's own report flagged
+  as comfortable for an unsupervised session. No hard rule proposed (this was a judgment call, made
+  explicit rather than justified after the fact) — just recording that "keep finding more autonomous
+  work" is not automatically the right call once a session has already produced a few PRs nobody has
+  looked at yet.
 
 ## Session 101 continued (2026-09-14, owner present) — Eurostat ADR 048 + its adversarial review, merging both open PRs, a real production incident found and fixed
 
@@ -143,6 +279,62 @@ on top.
   then `git branch -d` separately. A `git branch -d` warning about "merged to the remote branch but
   not yet merged to HEAD" after a squash merge is expected and harmless (squash merges never
   produce a fast-forward-identical local ancestor) — not a sign anything went wrong.
+
+## Session 101 continuation (2026-09-14/15, autonomous overnight) — WP30c E1 (Eurostat adapter), a second adversarial review round, and two real defects the review process itself did not catch
+
+- **A pre-build adversarial review of an executor brief is not the same as a whole-branch review of what
+  actually got built from it — both are needed, and they catch different things, and even a DEDICATED
+  final whole-branch review agent found something the orchestrator's own earlier integration pass missed.**
+  This session ran the brief's own required second review (4 lenses, 6 confirmed findings, all genuinely
+  real) BEFORE writing any code, built exactly to the amended brief, ran its own integration review (caught
+  the chip-leak and a stray null byte below), then dispatched a SEPARATE, dedicated final whole-branch
+  review agent as the brief's own required last step — which found a THIRD, more serious defect none of
+  the earlier passes had: the live-chat deny gate (Task 4's Amendment-3 guard) was built gated on the SAME
+  flag the internal explorer's own visibility uses, so enabling the explorer — the documented next step in
+  this very session's own RUNBOOK entry — would have silently re-opened the exact hole the guard existed to
+  close. Four review passes (2 design-level, 2 whole-branch) and it still took the LAST one to catch the
+  most severe issue. **Lesson: never skip the final whole-branch review as "redundant" after enough earlier
+  scrutiny — reserve it, run it as a genuinely separate pass (fresh context, not a continuation of the
+  orchestrator's own running review), and expect it to still find something new.**
+- **When a change adds a new key/entry to a shared registry/lookup table, explicitly grep for every
+  `Object.keys()`/`Object.values()` iteration over that registry across the whole codebase — not just the
+  files the brief's tasks name.** Merely adding a second `SourceInfo` registry entry made `chat.tsx`'s
+  existing WP129+130 source-chip UI render and default-select a brand-new "Eurostat data" chip for every
+  real chat user — a genuine violation of "never announced before it answers," with zero Eurostat data
+  involved. None of the review/implementer agents traced what an EXISTING, unrelated feature (#129's
+  dynamic chip row) would do once a second registry key existed; they checked the brief's own described
+  tasks against the ADR, not every OTHER consumer of the thing the brief's tasks touched.
+- **Two flags with overlapping-sounding names for two DIFFERENT concerns is a real hazard, not just a
+  naming nitpick — check whether a new flag-gated deny gate secretly reuses an existing flag meant for
+  something else.** `EUROSTAT_EXPLORER_ENABLED` was designed as a visibility flag for one internal admin
+  route; the deny-gate task (Task 4) reused it as the ALSO-only thing keeping Eurostat out of live chat,
+  because both "sound like" the right on/off switch for "is Eurostat allowed to do things yet." They
+  weren't the same switch. Any time a task description says "gated on the same flag as X" for a
+  DIFFERENT purpose than X's own, stop and ask whether flipping X for its own stated reason has a side
+  effect on the other thing nobody intended.
+- **Trust but verify a subagent's own "done" report, even a detailed and confident one — one agent in this
+  build reported wiring `adapterFor('eurostat')` as done; it hadn't touched the file at all.** Caught only
+  because the orchestrator re-grepped the actual file rather than accepting the report at face value (this
+  matches the standing [[feedback_verify_agent_evidence]] memory lesson, now reconfirmed on a fresh
+  example). Every subsequent agent dispatch in this build was told explicitly that its own claims would be
+  independently re-verified — worth stating that up front in the prompt, not just checking after the fact.
+- **`git diff` printing "Binary files ... differ" for a plain `.ts` file is a real signal, not a tooling
+  quirk to shrug off.** One implementer agent's file (`statistics-api.ts`) carried a single stray null
+  byte (`\x00`) in place of an ordinary space inside a template literal — likely an artifact of how the
+  agent's own edit tool wrote that one character. The file still compiled and its tests still passed (a
+  null byte is legal inside a JS string), so nothing in the verification block would have caught it; only
+  noticing the anomalous diff output during the code-review pass did. Worth a standing habit: if a diff on
+  a text file claims "binary," treat that as a bug report on the file, not a diff-tool limitation, before
+  reading past it.
+- **A hard "no live API calls this session" reading, taken from one build-plan sentence, is worth stating
+  as its own named, disclosed constraint rather than silently building a lesser thing.** This session read
+  "any real Eurostat API spend stays owner-supervised, never autonomous" literally — no live HTTP call to
+  the free, public, read-only Eurostat API happened at all, even for fixture capture. That single decision
+  reshaped the entire build's honest done-definition (synthetic fixtures, zero real registered tables, two
+  of ADR 048's own done-definition items left open). Naming it explicitly ("Constraint 0") in the brief,
+  the ADR's as-built note, STATUS, and the PR body — with an explicit invitation for the owner to say
+  "spend meant money, not any call" if this was overly conservative — kept the scope decision visible and
+  owner-reversible instead of quietly narrowing what "done" meant.
 
 ## Session 101 continued overnight (2026-09-13/14, autonomous, owner asleep) — chart visual/embed pass + the Pro subscription tier build to PR
 

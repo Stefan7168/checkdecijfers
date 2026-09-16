@@ -361,6 +361,11 @@ const nl = {
   'chart.formReason.hbarTimeSeries': 'Liggende staven passen alleen bij een vergelijking tussen regio’s.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
+  // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
+  // here — every option label is the registry's own alternate label string,
+  // rendered verbatim, never translated or invented by the UI.
+  'chart.reading.label': 'Lezing',
+  'chart.reading.primary': 'Standaard',
   'chart.graphPanelLabel': 'Grafiek',
   'chart.seriesGroupLabel': 'Reeksen',
   'chart.highlightButton': 'Markeer {label}',
@@ -374,6 +379,17 @@ const nl = {
   'chart.provisionalMarkerNote': '○ = voorlopig cijfer',
   'chart.markedInChart': 'Gemarkeerd in de grafiek: {label}',
   'chart.keyboardHint': 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.',
+  // Chart-card polish (2026-09-15): the screen-reader prefix for the large
+  // headline figure above the chart (the figure itself is a spec string).
+  'chart.headline.label': 'Laatste waarde in de grafiek',
+  'chart.headline.suggest': 'Kop voorstellen',
+  'chart.headline.edit': 'Kop bewerken',
+  'chart.headline.placeholder': 'Typ een kop…',
+  'chart.headline.save': 'Opslaan',
+  'chart.headline.cancel': 'Annuleren',
+  'chart.headline.drafting': 'Bezig met voorstellen…',
+  'chart.headline.unauthenticated': 'Log in om een kop toe te voegen.',
+  'chart.headline.error': 'Kon de kop niet opslaan.',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -424,15 +440,6 @@ const nl = {
   'chart.story.next': 'Volgende',
   'chart.story.close': 'Sluiten',
   'chart.story.stepsLabel': 'Stappen',
-  'chart.story.overviewTitle': 'Overzicht',
-  'chart.story.overviewCaption': 'Van {from} tot {to}',
-  'chart.story.overviewSeriesCaption': 'Meerdere reeksen; het verhaal loopt ze één voor één langs.',
-  'chart.story.moreSeries': 'Niet elke reeks krijgt een eigen stap.',
-  'chart.story.compareCaption': 'Eén staaf per regio; hierna de hoogste en de laagste.',
-  'chart.story.startTitle': 'Begin',
-  'chart.story.highTitle': 'Hoogste punt',
-  'chart.story.lowTitle': 'Laagste punt',
-  'chart.story.latestTitle': 'Meest recent',
   'chart.story.pointCaption': '{period}: {value} {unit}',
   'chart.story.seriesCaption': '{fromPeriod}: {fromValue} → {toPeriod}: {toValue} {unit}',
   'chart.story.barCaption': '{label}: {value} {unit}',
@@ -448,8 +455,6 @@ const nl = {
   // is about (chart.story.pointCaption/seriesCaption only ever name the
   // period) — this prefixes it. Single-series and bar findings never use it.
   'chart.insights.seriesLabelPrefix': '{series} — ',
-  'chart.story.exploreTitle': 'Verken zelf',
-  'chart.story.exploreCaption': 'Wissel van weergave met de tabs, kies een periode met Vanaf en Tot, of pas de opmaak aan.',
   'chart.story.controlsLocked': 'Sluit het verhaal om dit te wijzigen.',
   // ADR 044 (Task 4): the full-viewport Story stage — its own dialog chrome,
   // distinct from the compact panel's `chart.story.*` strings above (which
@@ -634,6 +639,12 @@ const nl = {
   'chart.embed.close': 'Sluiten',
   'chart.embed.unavailable': 'Insluiten is nu niet beschikbaar.',
   'chart.embed.loading': 'Code wordt gemaakt…',
+  // #254 Task 6 addendum: insluiten publiceert altijd de standaardlezing
+  // (de opgeslagen audit-rij kent geen lezingkeuze) — deze reden verschijnt
+  // zodra een andere lezing dan de standaard is gekozen, zodat een lezer
+  // nooit denkt dat de getoonde (afwijkende) lezing wordt gepubliceerd.
+  'chart.embed.readingDisabledReason':
+    'Insluiten publiceert altijd de standaardlezing van deze grafiek, niet de gekozen lezing. Kies eerst de standaardlezing om in te sluiten.',
 
   // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
   // links and the landing "Publiceer" step. Added as one block at the tail
@@ -791,6 +802,48 @@ const nl = {
   'gallery.story.consumptie-huishoudens.title': 'Hoeveel gaven huishoudens uit?',
   'gallery.story.werkloosheid-maandelijks.title': 'Hoe ontwikkelde de werkloosheid zich per maand?',
   'gallery.story.zonnestroom.title': 'Hoeveel stroom kwam er uit zonnepanelen?',
+
+  // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
+  'lab3d.pageTitle': 'Demo: 3D-gemeentekaart (fictieve data) — Check de Cijfers',
+  'lab3d.title': 'Nederland groeit, maar niet overal',
+  'lab3d.intro': 'Een demonstratie van een 3D-kaart: elke gemeente is een kolom, de hoogte staat voor het aantal inwoners en de kleur voor de groei sinds het startjaar. Alle cijfers zijn verzonnen; alleen de gemeentegrenzen en -namen zijn echt.',
+  'lab3d.badge': 'DEMO — FICTIEVE DATA',
+  'lab3d.badgeDetail': 'Elke waarde op deze pagina is verzonnen, alleen ter demonstratie. Dit is geen CBS-cijfer.',
+  'lab3d.watermark': 'FICTIEF',
+  'lab3d.footer': 'Cijfers: fictief, alleen ter demonstratie. Gemeentegrenzen: CBS/PDOK via cartomap.github.io, licentie CC BY 4.0.',
+  'lab3d.mapLabel': '3D-kaart van gemeenten (fictieve data)',
+  'lab3d.year': 'Jaar',
+  'lab3d.play': 'Afspelen',
+  'lab3d.pause': 'Pauzeren',
+  'lab3d.resetView': 'Herstel weergave',
+  'lab3d.typeLabel': 'Gemeentetype',
+  'lab3d.typeAll': 'Alle gemeenten',
+  'lab3d.typeCity': 'Stad',
+  'lab3d.typeMid': 'Middelgroot',
+  'lab3d.typeRural': 'Landelijk',
+  'lab3d.pickLabel': 'Gemeente',
+  'lab3d.pickNone': 'Kies een gemeente',
+  'lab3d.population': 'Inwoners (fictief)',
+  'lab3d.growth': 'Groei sinds startjaar (fictief)',
+  'lab3d.legendLow': 'krimp',
+  'lab3d.legendHigh': 'groei',
+  'lab3d.heightNote': 'Hoogte = inwoners (fictief) · kleur = groei (fictief)',
+  'lab3d.loading': 'Kaart laden…',
+  'lab3d.unavailable': 'Deze browser kan geen 3D tonen (WebGL ontbreekt).',
+  'lab3d.loadFailed': 'De gemeentegrenzen konden niet worden geladen.',
+  // v2 (D4′, session 104): the guided narrative card below the map — five
+  // static steps drawing on this demo's OWN scale/domain constants
+  // (GROWTH_DOMAIN, YEAR_START/YEAR_END), filled in via t()'s {vars} so the
+  // numbers can never drift from scales.ts/fake-data.ts.
+  'lab3d.narrativeTitle': 'Zo lees je deze kaart',
+  'lab3d.narrativePrev': 'Vorige',
+  'lab3d.narrativeNext': 'Volgende',
+  'lab3d.narrativeDotLabel': 'Ga naar stap {n} van {total}',
+  'lab3d.narrativeStep1': 'Elke gemeente is twee dingen tegelijk: een gekleurd vlak op de kaart én een kolom die erboven uitsteekt.',
+  'lab3d.narrativeStep2': 'De hoogte van de kolom staat voor het aantal inwoners — hoe hoger, hoe meer (fictieve) inwoners die gemeente heeft.',
+  'lab3d.narrativeStep3': 'De kleur van het vlak én de kolom staat voor groei sinds {start}: blauw is groei, rood-oranje is krimp, tot ongeveer ±{domain}%.',
+  'lab3d.narrativeStep4': 'Sleep de tijdbalk van {start} naar {end}, of klik op Afspelen om de groei jaar voor jaar te zien.',
+  'lab3d.narrativeStep5': 'Alle cijfers op deze kaart zijn verzonnen, uitsluitend om de techniek te laten zien — geen CBS-cijfer.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1077,6 +1130,8 @@ const en: Messages = {
   'chart.formReason.hbarTimeSeries': 'Horizontal bars only fit a comparison between regions.',
   'chart.from': 'From',
   'chart.to': 'To',
+  'chart.reading.label': 'Reading',
+  'chart.reading.primary': 'Default',
   'chart.graphPanelLabel': 'Chart',
   'chart.seriesGroupLabel': 'Series',
   'chart.highlightButton': 'Highlight {label}',
@@ -1090,6 +1145,15 @@ const en: Messages = {
   'chart.provisionalMarkerNote': '○ = provisional figure',
   'chart.markedInChart': 'Marked in the chart: {label}',
   'chart.keyboardHint': 'Use the arrow keys to move through the chart’s points.',
+  'chart.headline.label': 'Latest value on the chart',
+  'chart.headline.suggest': 'Suggest headline',
+  'chart.headline.edit': 'Edit headline',
+  'chart.headline.placeholder': 'Type a headline…',
+  'chart.headline.save': 'Save',
+  'chart.headline.cancel': 'Cancel',
+  'chart.headline.drafting': 'Drafting…',
+  'chart.headline.unauthenticated': 'Sign in to add a headline.',
+  'chart.headline.error': 'Could not save the headline.',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',
@@ -1123,15 +1187,6 @@ const en: Messages = {
   'chart.story.next': 'Next',
   'chart.story.close': 'Close',
   'chart.story.stepsLabel': 'Steps',
-  'chart.story.overviewTitle': 'Overview',
-  'chart.story.overviewCaption': 'From {from} to {to}',
-  'chart.story.overviewSeriesCaption': 'Several series; the story walks through them one by one.',
-  'chart.story.moreSeries': 'Not every series gets its own step.',
-  'chart.story.compareCaption': 'One bar per region; the highest and the lowest follow.',
-  'chart.story.startTitle': 'Start',
-  'chart.story.highTitle': 'Highest point',
-  'chart.story.lowTitle': 'Lowest point',
-  'chart.story.latestTitle': 'Latest',
   'chart.story.pointCaption': '{period}: {value} {unit}',
   'chart.story.seriesCaption': '{fromPeriod}: {fromValue} → {toPeriod}: {toValue} {unit}',
   'chart.story.barCaption': '{label}: {value} {unit}',
@@ -1141,8 +1196,6 @@ const en: Messages = {
   'chart.insights.jumpUpTitle': 'Sharp rise',
   'chart.insights.jumpDownTitle': 'Sharp drop',
   'chart.insights.seriesLabelPrefix': '{series} — ',
-  'chart.story.exploreTitle': 'Explore yourself',
-  'chart.story.exploreCaption': 'Switch the view with the tabs, pick a period with From and To, or change the style.',
   'chart.story.controlsLocked': 'Close the story to change this.',
   'chart.stage.present': 'Present',
   'chart.stage.label': 'Insights presentation',
@@ -1298,6 +1351,8 @@ const en: Messages = {
   'chart.embed.close': 'Close',
   'chart.embed.unavailable': 'Embedding is not available right now.',
   'chart.embed.loading': 'Generating code…',
+  'chart.embed.readingDisabledReason':
+    "Embedding always publishes this chart's default reading, not the one currently selected. Switch back to the default reading first to embed.",
 
   // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
   // links and the landing "Publish" step. Added as one block at the tail
@@ -1410,6 +1465,44 @@ const en: Messages = {
   'gallery.story.consumptie-huishoudens.title': 'How much did households spend?',
   'gallery.story.werkloosheid-maandelijks.title': 'How did unemployment move month by month?',
   'gallery.story.zonnestroom.title': 'How much power came from solar panels?',
+
+  // --- ADR 049: the 3D municipality DEMO (route kept out of this comment on purpose — isolation.test.ts pins that the string never appears outside its own directory). Every number on that page is fiction; these labels say so. ---
+  'lab3d.pageTitle': 'Demo: 3D municipality map (fictional data) — Check de Cijfers',
+  'lab3d.title': 'The Netherlands is growing, but not everywhere',
+  'lab3d.intro': 'A demonstration of a 3D map: every municipality is a column, height stands for population and colour for growth since the start year. Every figure is made up; only the municipal boundaries and names are real.',
+  'lab3d.badge': 'DEMO — FICTIONAL DATA',
+  'lab3d.badgeDetail': 'Every value on this page is made up, for demonstration only. This is not a CBS figure.',
+  'lab3d.watermark': 'FICTIONAL',
+  'lab3d.footer': 'Figures: fictional, for demonstration only. Municipal boundaries: CBS/PDOK via cartomap.github.io, licence CC BY 4.0.',
+  'lab3d.mapLabel': '3D map of municipalities (fictional data)',
+  'lab3d.year': 'Year',
+  'lab3d.play': 'Play',
+  'lab3d.pause': 'Pause',
+  'lab3d.resetView': 'Reset view',
+  'lab3d.typeLabel': 'Municipality type',
+  'lab3d.typeAll': 'All municipalities',
+  'lab3d.typeCity': 'City',
+  'lab3d.typeMid': 'Mid-sized',
+  'lab3d.typeRural': 'Rural',
+  'lab3d.pickLabel': 'Municipality',
+  'lab3d.pickNone': 'Choose a municipality',
+  'lab3d.population': 'Population (fictional)',
+  'lab3d.growth': 'Growth since start year (fictional)',
+  'lab3d.legendLow': 'shrinking',
+  'lab3d.legendHigh': 'growth',
+  'lab3d.heightNote': 'Height = population (fictional) · colour = growth (fictional)',
+  'lab3d.loading': 'Loading map…',
+  'lab3d.unavailable': 'This browser cannot show 3D (no WebGL).',
+  'lab3d.loadFailed': 'The municipal boundaries could not be loaded.',
+  'lab3d.narrativeTitle': 'How to read this map',
+  'lab3d.narrativePrev': 'Previous',
+  'lab3d.narrativeNext': 'Next',
+  'lab3d.narrativeDotLabel': 'Go to step {n} of {total}',
+  'lab3d.narrativeStep1': 'Every municipality is two things at once: a coloured area on the map, and a column rising above it.',
+  'lab3d.narrativeStep2': "The column's height stands for population — the taller it is, the more (fictional) residents that municipality has.",
+  'lab3d.narrativeStep3': 'The colour of both the area and the column stands for growth since {start}: blue is growth, red-orange is shrinkage, up to about ±{domain}%.',
+  'lab3d.narrativeStep4': 'Drag the time bar from {start} to {end}, or click Play to watch the growth year by year.',
+  'lab3d.narrativeStep5': 'Every figure on this map is made up, shown purely to demonstrate the technique — not a CBS figure.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;

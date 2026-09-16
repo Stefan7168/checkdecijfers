@@ -173,6 +173,28 @@ function redactedPendingClarification(): Record<string, unknown> {
   };
 }
 
+/** Does a stored `response` carry the `redactedResponse()` sentinel above?
+ * The shared home for a check that used to be hand-copied three times
+ * (open-questions #227): `web/app/embed-actions.ts`,
+ * `web/app/embed/[token]/page.tsx`, and `scripts/verify-audit-rows.ts` each
+ * independently defined this exact one-liner, correct individually but with
+ * nothing to keep them in sync if `redactedResponse()`'s shape ever changes.
+ * Placed next to `redactedResponse()` (the writer) rather than in
+ * `reconstruct.ts` (the reader) since this file is the one thing all three
+ * call sites already import from (`src/answer/audit/index.ts`).
+ *
+ * Deliberately NOT reused by `scripts/verify-dataset-turns.ts`'s own,
+ * structurally-identical-looking `isRedacted` — that one guards
+ * `RedactedDatasetEnvelope` (`src/attachments/types.ts`), a different trust
+ * tier's own sentinel (ADR 037 D1's deliberate separation from the CBS
+ * pipeline). Sharing this helper across tiers would be a coincidence-of-
+ * shape import, not a real one — the same "no cross-tier import for a
+ * duplicated helper" convention this codebase already applies elsewhere
+ * (e.g. `nativeIdFrom`, duplicated per-adapter on purpose). */
+export function isRedacted(response: unknown): boolean {
+  return typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true;
+}
+
 /** One row's before-state, returned so callers can log/count what was
  * touched without a second query. */
 export interface RedactedRow {
@@ -201,12 +223,24 @@ interface PendingRedaction {
   params: unknown[];
 }
 
+/** Session 105 (journalist chart-headline feature, migration 031): the paired
+ * chart_headlines hard-delete a caller runs in the SAME transaction as its
+ * redaction — same to_regclass existence guard as `feedbackDelete` (the
+ * table is FILE-ONLY until the owner-supervised apply, so a deploy window
+ * where audit_answers redaction must succeed while chart_headlines does not
+ * yet exist is expected, not an error). */
+interface HeadlineDelete {
+  sql: string;
+  params: unknown[];
+}
+
 async function redactMatchingRows(
   db: Db,
   whereClause: string,
   params: unknown[],
   feedbackDelete?: FeedbackDelete,
   pendingRedaction?: PendingRedaction,
+  headlineDelete?: HeadlineDelete,
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -222,6 +256,16 @@ async function redactMatchingRows(
       const { rows: reg } = await tx.query(`select to_regclass('public.answer_feedback') as t`);
       if (reg[0]?.t != null) {
         await tx.query(feedbackDelete.sql, feedbackDelete.params);
+      }
+    }
+    if (headlineDelete) {
+      // Same guard discipline as feedbackDelete above: migration 031 is
+      // FILE-ONLY at commit time, so the table may not exist yet in a given
+      // environment. The guard must be a check, not a catch — an error inside
+      // a transaction aborts the whole redaction.
+      const { rows: reg } = await tx.query(`select to_regclass('public.chart_headlines') as t`);
+      if (reg[0]?.t != null) {
+        await tx.query(headlineDelete.sql, headlineDelete.params);
       }
     }
     const { rows } = await tx.query(
@@ -315,6 +359,13 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
             where user_id = $1`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
+    {
+      // Session 105: this user's chart headlines (migration 031) hard-delete,
+      // same-parameter scoping as the redaction itself.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where user_id = $1)`,
+      params: [userId],
+    },
   );
 }
 
@@ -370,6 +421,12 @@ export async function deleteThreadQuestionHistory(
               )`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID, threadId, userId],
     },
+    {
+      // Session 105: this thread's chart headlines (migration 031) hard-delete.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where user_id = $1 and thread_id = $2)`,
+      params: [userId, threadId],
+    },
   );
 }
 
@@ -421,6 +478,13 @@ export async function purgeExpiredQuestionHistory(
       sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
             where ${PENDING_PURGE_WHERE}`,
       params: [cutoffIso, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
+    },
+    {
+      // Session 105: chart headlines (migration 031) attached to purged
+      // answers go with them — same window as the redaction itself.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
+      params: [cutoffIso, anonIso],
     },
   );
 }

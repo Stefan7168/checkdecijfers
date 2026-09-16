@@ -9,6 +9,7 @@ import { REDACTED_QUESTION_TEXT } from '../backend/answer/audit/retention.ts';
 import type { Db } from '../backend/db/types.ts';
 import type { ThreadRow } from '../backend/threads/index.ts';
 import { replayParts } from '../backend/threads/replay.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import { buildAnswerProof } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
@@ -136,6 +137,75 @@ describe('assembleMessages — ⟨A3⟩ meta refusal reclassifies to info', () =
     // The retry chip survives the full replay→assemble chain (regression: replay
     // dropped refusal suggestions, so a resumed thread lost the chip).
     expect(assistantMsg!.suggestions).toEqual(['Wat was inflatie in 2025?']);
+  });
+});
+
+// #254 (Task 3): AnswerResponse.chartAlternates (Task 2) must survive replay
+// onto the assembled ChatMessage the same way citation/card/csv already do —
+// read straight off the stored envelope (replay-assemble.ts's `answer`
+// narrowing), NOT one of Stage A's own lifted ReplayAssistantPart fields like
+// `chart` is (backend/threads/replay.ts never gained a chartAlternates field;
+// it doesn't need one since the raw envelope already carries it).
+describe('assembleMessages — #254 chartAlternates replay', () => {
+  const alternateSpec: ChartSpec = {
+    schemaVersion: 1,
+    kind: 'line',
+    title: 'Testreeks (alternatief)',
+    dims: { Kenmerk: '3000' },
+    dimLabels: { Kenmerk: 'Procentuele verandering' },
+    unit: '%',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: 'NL01',
+        points: [
+          {
+            resultId: 'r2',
+            periodCode: '2024JJ00',
+            periodLabel: '2024',
+            value: 3.3,
+            formattedValue: '3,3',
+            decimals: 1,
+            status: 'Definitief',
+            provisional: false,
+            valueAttribute: 'None',
+          },
+        ],
+      },
+    ],
+    provisionalNote: null,
+    nullNotes: [],
+    definitionLine: null,
+    attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+    attribution: {
+      tableId: '12345NED',
+      tableTitle: 'Test',
+      tableVersion: 1,
+      syncedAt: '2026-07-01',
+      coveredPeriods: { from: '2020', to: '2024' },
+      license: 'CC BY 4.0',
+    },
+  };
+
+  it('reconstructs a non-empty chartAlternates identical to the stored envelope', () => {
+    const chartAlternates = [{ label: 'Procentuele verandering', spec: alternateSpec }];
+    const response = {
+      ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }),
+      chartAlternates,
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = assembleMessages(replayParts([row({ response })]));
+    expect(assistantMsg!.chartAlternates).toEqual(chartAlternates);
+  });
+
+  it('defaults to [] on a non-answer response (e.g. a refusal)', () => {
+    const response = {
+      kind: 'refusal',
+      reason: 'meta',
+      text: 'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.',
+      webSection: null,
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = assembleMessages(replayParts([row({ kind: 'refusal', response })]));
+    expect(assistantMsg!.chartAlternates).toEqual([]);
   });
 });
 

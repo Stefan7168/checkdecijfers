@@ -18,7 +18,8 @@ import {
   type QueryOutcome,
   type ValidatedResult,
 } from '../../query/index.ts';
-import { buildChartSpec } from '../../chart/index.ts';
+import { buildAlternateReading, buildChartSpec } from '../../chart/index.ts';
+import type { ChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
 import { parseClarificationReply, type ClarifyReplyOptions } from '../intent/clarify.ts';
@@ -495,6 +496,19 @@ export async function respondToIntent(
     ...(options.slotPhrasing === true ? { slotPhrasing: true } : {}),
   } satisfies ComposeOptions);
   const chart = buildChartSpec(result);
+  // #254: every registered alternate of the answered measure, built
+  // independently and best-effort (never blocks the primary answer, and
+  // only attempted when there is a primary chart to offer alongside — a
+  // single-value/derived answer has no chart to toggle from). Capped at 4 —
+  // the highest count any registry entry carries today, a defensive bound
+  // rather than a real limit hit in practice.
+  const chartAlternates: { label: string; spec: ChartSpec }[] = [];
+  if (chart !== null) {
+    for (const alt of (result.attribution.alternates ?? []).slice(0, 4)) {
+      const outcome = await buildAlternateReading(db, result, parse.intent, alt);
+      if (outcome.ok) chartAlternates.push(outcome.result);
+    }
+  }
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
 
   // WP29 (#73, ADR 029): follow-up chips, servability-gated through the same
@@ -546,6 +560,7 @@ export async function respondToIntent(
     kind: 'answer',
     answer,
     chart,
+    chartAlternates,
     stalenessWarning: staleness.stale ? staleness.warning : null,
     parse,
     result,

@@ -119,7 +119,10 @@ export const CLASSIC_PRESENTATION: ChartPresentation = {
  * axis lines (a hairline baseline is drawn by chart.tsx whenever a grid
  * is shown), a gradient area fill. Deep-equal pinned by a test so the
  * decision cannot drift without an edit. Colour comes from DEFAULT_PALETTE
- * via `seriesColor` (an empty `seriesColors` map = the palette). */
+ * via `seriesColor` (an empty `seriesColors` map = the palette).
+ * 2026-09-16 (chart-card polish Task 5, owner-confirmed): small frame
+ * padding so the plot no longer sits flush against the rounded, shadowed
+ * frame edge b86556f introduced. */
 export const STOCK_PRESENTATION: ChartPresentation = {
   lineWidth: 'normal',
   markers: 'ends',
@@ -133,7 +136,7 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   fontFamily: null,
   language: null,
   frameBackground: 'none',
-  framePadding: 'none',
+  framePadding: 'small',
   frameCorners: 'rounded',
   frameShadow: 'soft',
   frameInset: 'none',

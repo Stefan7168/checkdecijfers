@@ -59,6 +59,7 @@ import { useElementWidth } from '../lib/use-element-width.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { trackChartStyleEvent } from '../lib/chart-usage-client.ts';
 import { templateById } from '../lib/chart-templates.ts';
+import { lastPlottedPoint } from '../lib/chart-plotted-point.ts';
 import {
   translateAttributionLine,
   translateMeasureTitle,
@@ -74,6 +75,16 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 // header for why (the usage-actions.ts precedent this mirrors).
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { generateInsights } from '../app/chart-insights-actions.ts';
+// Journalist chart-headline (session 105): own tiny-import-graph file,
+// mirroring chart-insights-actions.ts / chart-style-actions.ts above.
+import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../app/chart-headline-actions.ts';
+// Final-review fix (Finding 3, minor): import the shared cap + the
+// word-boundary-safe truncation from the store module rather than a
+// hardcoded `140` literal and a second, independently re-implemented
+// truncation — so the client-side optimistic update can never drift from
+// what normalizeHeadlineText would actually store server-side.
+import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
+import { Button } from './ui/button.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartEditModal } from './chart-edit-modal.tsx';
@@ -81,6 +92,7 @@ import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
+import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
 import { ChartStoryStage } from './chart-story-stage.tsx';
@@ -88,6 +100,7 @@ import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import {
+  activeReadingSpec,
   areaFormAllowed,
   chartViewReducer,
   fallbackForm,
@@ -165,6 +178,15 @@ export function seriesStyle(index: number): { color: string } {
 // ChartSmallMultiples.
 export const AXIS_COLOR = 'var(--muted-foreground)';
 export const GRID_COLOR = 'var(--border)';
+
+/** Chart-card polish (2026-09-15): the grid is a SOLID hairline at half
+ * opacity. The former `3 3` dash was byte-identical to the curated
+ * event-marker <ReferenceLine> dash below — ADR 042 decision 10 reserved
+ * the dashed vocabulary for event markers and the story ring, and the grid
+ * had been the one exception. One constant shared by every CartesianGrid
+ * (line, area, bar, hbar, ChartSmallMultiples) so the five sites cannot
+ * drift. `pres.grid` still decides WHICH lines exist (ADR 039/042). */
+export const GRID_LINE_PROPS = { stroke: GRID_COLOR, strokeOpacity: 0.5 } as const;
 
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
@@ -394,9 +416,11 @@ export function valueLabelPlan(spec: PlottableSpec): ValueLabelPlan {
   const axisTicks = lo.point.value === hi.point.value ? [tick(lo)] : [tick(lo), tick(hi)];
 
   const endLabels: PointLabel[] = spec.series.flatMap((series, i) => {
-    // Spec order is period-ascending (R6: the spec's order IS the render
-    // order), so the last plotted point is the last non-null one.
-    const last = [...series.points].reverse().find((p) => p.value !== null && p.formattedValue !== null);
+    // Code-review fix (2026-09-15): this selection now shares
+    // lastPlottedPoint with chart-headline.ts's headlineFigure, so the
+    // end-of-line label and the card's headline number can never disagree
+    // about which point is "current" — see chart-plotted-point.ts.
+    const last = lastPlottedPoint(series.points);
     if (!last) return [];
     return [
       {
@@ -1215,16 +1239,29 @@ export interface ChartStageMode {
 
 export function ChartView({
   spec,
+  alternates = [],
   frameless = false,
   embed,
   embedMode = false,
   embedFooter,
+  headlineText,
   initialFormOverride,
   stage,
   initialPresentation,
   initialPanel,
 }: {
   spec: ChartSpec;
+  /** #254: every registry-recorded ALTERNATE READING of the same answered
+   * measure, each already built server-side by the same deterministic
+   * pipeline as `spec` and over the PRIMARY's own resolved coordinates and
+   * the identical period window (src/chart/alternate-reading.ts). The
+   * reading control below switches which of these the chart draws its DATA
+   * from; `spec` itself — and therefore the spec-identity reset block above
+   * — is never touched by that switch, so a reading swap is a lightweight
+   * view tweak (like Lijn→Staaf), not a new chart. Defaulted to `[]`, so
+   * every call site that passes no alternates renders exactly as before
+   * this feature existed. */
+  alternates?: { label: string; spec: ChartSpec }[];
   /** Session 87 (purely presentational): drop the component's own card frame
    * when the mount point already IS a card (the visual dock) — a card inside a
    * card is the one thing the shadcn direction says not to do. Inline in the
@@ -1253,6 +1290,14 @@ export function ChartView({
    * every embed footer has byte-identical link markup. Ignored unless
    * embedMode is true. */
   embedFooter?: string;
+  /** Journalist chart-headline (Task 6): a server-resolved headline for the
+   * /embed/[token] public page (Task 7 resolves it once, server-side, and
+   * hands it in). `undefined` (the chat context — every other call site)
+   * means "not yet known": ChartView fetches it lazily itself via
+   * fetchChartHeadline, but only when `embed.auditId` is present (an
+   * unsaved/anonymous chart has nothing to fetch). `null` means "known and
+   * there isn't one yet" — distinct from "not yet known". */
+  headlineText?: string | null;
   /** Fix round (Task 5 review, Piece 3): a one-shot override for the
    * INITIAL form, set only by the /embed/[token] route (its own `?form=`,
    * already emitted by Task 4's embed dialog for "As shown" but never wired
@@ -1295,7 +1340,8 @@ export function ChartView({
   // has no use for. See `ChartStageMode` above for what stage mode is.
   const inStage = stage !== undefined;
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-4 text-card-foreground';
+  // Chart-card polish (2026-09-15): p-5 / sm:p-6 (was p-4) — the reference card the owner compared against breathes; the dock keeps its own p-4 (visual-dock.tsx), a narrow side panel.
+  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6';
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
@@ -1313,6 +1359,30 @@ export function ChartView({
     initialForm,
     (form: ChartForm) => initialViewState(form, initialPresentation),
   );
+  // #254: WHICH reading's data the chart draws — the primary `spec` prop, or
+  // one of `alternates`. Computed here, above every derivation that reads
+  // series/cell VALUES, so one substitution (`viewSpec` below, plus the
+  // handful of per-reading FACTS listed at their own call sites) covers the
+  // whole card.
+  //
+  // The single most important property of this line: `spec` itself is NOT
+  // reassigned and `specIdentity` (further down) keeps hashing the PROP.
+  // Routing a reading switch through the `spec` prop instead — e.g. a wrapper
+  // swapping which object it hands in — would trip that block's reset and
+  // wipe the reader's form, zoom, presentation, notes and open panels on
+  // every toggle. A reading switch is a view tweak of the same weight as
+  // Lijn→Staaf; only a genuinely DIFFERENT chart resets (and its `reset`
+  // action clears `selectedReading` back to the primary, which is correct:
+  // the new chart's alternates are a different set).
+  //
+  // Identity-shaped reads deliberately stay on `spec`: the form guards
+  // (canUseLine/canUseArea/canUseHbar/effectiveKind — the chart's TRUE
+  // shape), `allPeriodCodes`/`zoomAvailable`/the Vanaf-Tot options and the
+  // zoom disclosure's covered range (every alternate is built over the
+  // identical window, so switching reading must never change what periods
+  // are selectable), and the embed button's table id (an embed republishes
+  // the stored PRIMARY answer, which carries no reading selection).
+  const activeSpec = activeReadingSpec(spec, alternates, state.selectedReading);
   // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
   // once, on mount — never on a later spec swap (that's the `specIdentity`
   // block further down, and `reset` there deliberately preserves state.form
@@ -1348,6 +1418,35 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+
+  // Journalist chart-headline (Task 6): named `chartHeadline`, deliberately
+  // NOT `headline` — that identifier is already taken below by
+  // `headlineFigure`'s result (the big NUMBER a chart leads with, an
+  // unrelated feature). This is the sentence headline a reader can draft,
+  // edit and save.
+  const [chartHeadline, setChartHeadline] = useState<string | null>(headlineText ?? null);
+  const [headlineEditing, setHeadlineEditing] = useState(false);
+  const [headlineDraftText, setHeadlineDraftText] = useState('');
+  const [headlineBusy, setHeadlineBusy] = useState(false);
+  const [headlineError, setHeadlineError] = useState<string | null>(null);
+
+  // Lazy fetch-on-mount for the chat context only: the embed page already
+  // resolved `headlineText` server-side (undefined means "not yet known"
+  // here, never "known absent" — that's `null`), and there's nothing to
+  // fetch without a saved audit row to key off of.
+  useEffect(() => {
+    if (headlineText !== undefined) return;
+    if (embed?.auditId === undefined) return;
+    let cancelled = false;
+    void fetchChartHeadline(embed.auditId).then((result) => {
+      if (!cancelled && result.ok) setChartHeadline(result.headline);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted chart, keyed by auditId identity below
+  }, [embed?.auditId]);
+
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -1622,7 +1721,13 @@ export function ChartView({
   // spec (not the zoomed viewSpec) — a provisional point outside the
   // current zoom window still governs the honesty-locked defaults, the same
   // pattern spec.attribution uses elsewhere in this file.
-  const hasProvisional = spec.series.some((s) => s.points.some((p) => p.provisional));
+  // #254: the ACTIVE reading's own points — a reading whose cells are
+  // provisional must get the honesty-locked hollow-marker defaults even when
+  // the primary's are all final (and vice versa). `kind`/`seriesCount` below
+  // stay on `spec`: those are the chart's SHAPE, which every alternate
+  // shares by construction and which `activeForm`/`canUseLine` above already
+  // derive from the primary.
+  const hasProvisional = activeSpec.series.some((s) => s.points.some((p) => p.provisional));
   // WP218 phase 2 (owner C): the signed-in account's saved style is the
   // `base` every chart resolves ON TOP OF — `withAccountDefault` degrades
   // anything invalid/absent to the stock look, so a logged-out visitor
@@ -1702,9 +1807,12 @@ export function ChartView({
   // every finding's point exists on the chart the panel shows. This Hook
   // must run unconditionally on every render — ABOVE the schemaVersion guard
   // below, same reason as the font Effect and `chartLang` itself above it.
+  // #254: the ACTIVE reading — every Insights caption quotes plotted numbers,
+  // so findings built from the primary while an alternate is on screen would
+  // put digits on the card that no rendered cell backs (R1/R6).
   const findings = useMemo(
-    () => buildFindings(translateSpecForDisplay(spec, chartLang), chartLang),
-    [spec, chartLang],
+    () => buildFindings(translateSpecForDisplay(activeSpec, chartLang), chartLang),
+    [activeSpec, chartLang],
   );
   // The AI-phrased upgrade, keyed by finding id — null until openStory's
   // generateInsights call resolves (or is never attempted, or fails). Reset
@@ -1792,8 +1900,12 @@ export function ChartView({
   // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
   // the chart's identity, not its windowed content. Every DATA-derivation
   // call below (buildRows/annotationMarkers/valueLabelPlan/tableModel) reads
-  // `viewSpec`; every IDENTITY read (spec.kind, spec.attribution, spec.title,
-  // spec.unit) stays on the raw `spec`.
+  // `viewSpec`; every IDENTITY read (spec.kind, spec.title, spec.unit) stays
+  // on the raw `spec`. (#254 refines this: the window is now applied to
+  // `activeSpec`, and the per-reading FACTS — attribution, dimLabels,
+  // definitionLine, provisionalNote, nullNotes, trendHeadline — follow the
+  // active reading too, since they describe the cells actually plotted. What
+  // stays on the primary is listed at `activeSpec`'s own declaration above.)
   const allPeriodCodes = Array.from(
     new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
   ).sort((a, b) => a.localeCompare(b));
@@ -1810,7 +1922,14 @@ export function ChartView({
     ),
   );
   const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
-  const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
+  // #254: `allPeriodCodes`/`periodLabelByCode`/`zoomAvailable` above stay on
+  // the PRIMARY `spec` on purpose — every alternate reading is built over the
+  // identical period window, so what is SELECTABLE must not shift under the
+  // reader when they switch reading. What is PLOTTED does: the window is
+  // applied to `activeSpec`, and `displaySpec` below (hence buildRows,
+  // annotationMarkers, valueLabelPlan, tableModel, buildRegionRows, the
+  // headline figure, the end/axis labels and the accessible name) follows it.
+  const viewSpec = zoomAvailable ? windowSpec(activeSpec, state.periodRange) : activeSpec;
   // WP218 phase 4 (design §4): title/unit/series-labels(regions)/period-
   // labels translated ONCE here — every derivation below (buildRows,
   // annotationMarkers, valueLabelPlan, tableModel, the accessible name) reads
@@ -1822,8 +1941,11 @@ export function ChartView({
   // WP218 phase 4: the download menu receives this SAME displayed string
   // (never re-derived from spec.attributionLine independently), so the
   // exported PNG/SVG's baked-in attribution matches what the card shows.
+  // #254: the ACTIVE reading's own R4 sentence — it names the table, version
+  // and sync date the numbers on screen actually came from, which is a
+  // per-reading fact (an alternate can live in another table entirely).
   const displayAttributionLine =
-    chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
+    chartLang === 'en' ? translateAttributionLine(activeSpec.attributionLine) : activeSpec.attributionLine;
 
   // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
   // included) is computed above, ahead of the schemaVersion guard — see the
@@ -1831,7 +1953,11 @@ export function ChartView({
   // tooltip swatch and hatch pattern reads the SAME effective colour.
   const colorFor = (i: number) => seriesColor(pres, i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
-  const dimEntries = Object.entries(spec.dimLabels);
+  // #254: the ACTIVE reading's own pinned coordinates. This is the subtitle
+  // that NAMES the reading (e.g. "SeizoensCorrectie: Niet gecorrigeerd") —
+  // showing the primary's coordinates over an alternate's data would
+  // mislabel every plotted cell.
+  const dimEntries = Object.entries(activeSpec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
   // non-empty even after switching to Staaf — but the <ReferenceLine>
@@ -1842,6 +1968,13 @@ export function ChartView({
   // below, keeps the claim and the render in sync.
   const markers = annotationMarkers({ ...displaySpec, kind: effectiveKind }, rows);
   const plan = valueLabelPlan({ ...displaySpec, kind: effectiveKind });
+  // Chart-card polish (2026-09-15): the headline figure — the DISPLAYED
+  // spec's last plotted point (single time series only; see
+  // chart-headline.ts). Read from `displaySpec`, like the end label, so a
+  // Vanaf/Tot window leads with its own last point and an English chart
+  // shows the translated period/unit; the value/resultId fields are
+  // untouched by translation (translateSpecForDisplay).
+  const headline = headlineFigure(displaySpec);
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
@@ -2092,7 +2225,9 @@ export function ChartView({
       if (!signedIn) {
         setInsightsUnauthenticated(true);
       } else {
-        void generateInsights(spec).then((result) => {
+        // #254: the ACTIVE reading — `findings` (the ids this phrasing is
+        // keyed by, and the numbers it re-words) are built from it too.
+        void generateInsights(activeSpec).then((result) => {
           if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
           // R5.3: an anonymous visitor gets one honest line in the panel
           // instead of a silently-failed phrasing attempt — the
@@ -2164,6 +2299,60 @@ export function ChartView({
     setOpenPanel(openPanel === 'style' ? null : 'style');
   }
 
+  // Journalist chart-headline (Task 6): draft (AI, signed-in only) / edit
+  // (no AI call — reopens the existing saved text) / save / cancel. Mirrors
+  // the Insights `openStory` pattern above: an unauthenticated visitor gets
+  // an honest inline message, never a silently-failed server-action call.
+  function startHeadlineDraft(): void {
+    setHeadlineError(null);
+    if (chartHeadline !== null) {
+      setHeadlineDraftText(chartHeadline);
+      setHeadlineEditing(true);
+      return;
+    }
+    if (!signedIn) {
+      setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
+      return;
+    }
+    setHeadlineBusy(true);
+    // #254: the ACTIVE reading — a drafted headline describes the numbers
+    // the reader is looking at, not a reading they switched away from.
+    void draftChartHeadline(activeSpec).then((result) => {
+      setHeadlineBusy(false);
+      if (result.ok) {
+        setHeadlineDraftText(result.headline);
+        setHeadlineEditing(true);
+      } else if (result.reason === 'unauthenticated') {
+        setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
+      } else {
+        setHeadlineError(t(chartLang, 'chart.headline.error'));
+      }
+    });
+  }
+
+  function saveHeadlineDraft(): void {
+    if (embed?.auditId === undefined) return;
+    setHeadlineBusy(true);
+    void saveChartHeadline(embed.auditId, headlineDraftText).then((result) => {
+      setHeadlineBusy(false);
+      if (result.ok) {
+        // Finding 3 (minor): reuse normalizeHeadlineText's word-boundary-safe
+        // truncation instead of a raw `.slice()` re-implementation, so the
+        // optimistic client-side update can never drift from — or cut a
+        // number in half differently than — what the DB actually stored.
+        setChartHeadline(normalizeHeadlineText(headlineDraftText));
+        setHeadlineEditing(false);
+      } else {
+        setHeadlineError(t(chartLang, 'chart.headline.error'));
+      }
+    });
+  }
+
+  function cancelHeadlineDraft(): void {
+    setHeadlineEditing(false);
+    setHeadlineError(null);
+  }
+
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
@@ -2171,9 +2360,14 @@ export function ChartView({
   // the 44px minimum tap target. `min-h-11 sm:min-h-6` widens the tap target
   // only below the `sm` breakpoint, so the desktop (1280px) control stays
   // pixel-identical to before.
-  const segmentTab = (active: boolean): string =>
-    'min-h-11 sm:min-h-6 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ' +
-    (active ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground');
+  // Chart-card polish (2026-09-15): the Weergave tabs are quiet underline
+  // tabs (the dock's own house pattern, 12-huisstijl §Layout) — no filled
+  // track, no raised segment; the active tab is a 2 px underline in the
+  // foreground colour. R9.1 (#238): `min-h-11 sm:min-h-6` keeps the 44 px
+  // phone tap target, pinned by test.
+  const quietTab = (active: boolean): string =>
+    'min-h-11 sm:min-h-6 border-b-2 px-1.5 py-1 text-xs transition-colors disabled:cursor-not-allowed ' +
+    (active ? 'border-foreground font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground');
   const tabClass = (active: boolean): string =>
     'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
     (active
@@ -2316,8 +2510,7 @@ export function ChartView({
                 * labels below are ours. */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={GRID_COLOR}
+                  {...GRID_LINE_PROPS}
                   // Always true: this element only renders inside the
                   // `pres.grid !== 'none'` branch above, and GridMode has no
                   // vertical-only option — 'both'/'horizontal' both want it.
@@ -2432,7 +2625,7 @@ export function ChartView({
                 ))}
               </defs>
               {pres.grid !== 'none' ? (
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} horizontal vertical={pres.grid === 'both'} />
+                <CartesianGrid {...GRID_LINE_PROPS} horizontal vertical={pres.grid === 'both'} />
               ) : null}
               <XAxis
                 dataKey="periodLabel"
@@ -2534,7 +2727,7 @@ export function ChartView({
                 * literal); the category (region) axis's own gridlines are
                 * the extra ones, only in 'both' mode. */}
               {pres.grid !== 'none' ? (
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} vertical horizontal={pres.grid === 'both'} />
+                <CartesianGrid {...GRID_LINE_PROPS} vertical horizontal={pres.grid === 'both'} />
               ) : null}
               <XAxis
                 type="number"
@@ -2600,8 +2793,7 @@ export function ChartView({
                 * zeroBaseline). */}
               {pres.grid !== 'none' ? (
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={GRID_COLOR}
+                  {...GRID_LINE_PROPS}
                   // Always true: this element only renders inside the
                   // `pres.grid !== 'none'` branch above, and GridMode has no
                   // vertical-only option — 'both'/'horizontal' both want it.
@@ -2709,36 +2901,154 @@ export function ChartView({
 
   return (
     <div className={frameClass}>
-      <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
-        {displaySpec.title}
+      {/* Chart-card polish (2026-09-15): title + subtitle on the left, the
+        * card's two actions (Inzichten, Opmaak) top-right — the universal
+        * card-actions idiom. The heading's next sibling stays the subtitle
+        * (tests read the header by that relationship). Gating is byte-
+        * identical to the old control row: no actions in embed or stage
+        * mode; Opmaak never in Tabel form; Inzichten only when a story
+        * exists. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
+            {displaySpec.title}
+          </div>
+          {/* ADR 042: one muted subtitle line — the unit first, then the pinned
+            * dimensions — as separate spans (tests and the digit scan read them
+            * per text node). */}
+          <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            <span>{displaySpec.unit}</span>
+            {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
+          </div>
+        </div>
+        {!embedMode && !inStage && (storyAvailable || state.form !== 'table') ? (
+          <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
+            {/* Story mode (session 92): the colourful trigger is offered
+              * whenever there is a code-built story (storyAvailable,
+              * computed above next to styleControlsId). */}
+            {storyAvailable ? (
+              <ChartStoryTrigger
+                open={storyOpen}
+                onToggle={toggleStory}
+                controlsId={storyControlsId}
+                triggerId={storyTriggerId}
+                lang={chartLang}
+              />
+            ) : null}
+            {/* Review fix (chart-panel-layout, option A): table form gets NO
+              * frame and NO Style panel (as before the Frame-tab feature) — a
+              * framed table would need its own export path, so the trigger
+              * stays gated on `state.form !== 'table'` exactly like the
+              * ChartConfigPanel mount further down. */}
+            {state.form !== 'table' ? (
+              <ChartConfigTrigger
+                open={styleOpen}
+                onToggle={toggleStylePanel}
+                controlsId={styleControlsId}
+                triggerId={styleTriggerId}
+                lang={chartLang}
+                compact
+              />
+            ) : null}
+            {/* Journalist chart-headline (Task 6): chat context only (the
+              * embed page never shows edit UI, per the spec — Task 7's own
+              * static render is the read-only counterpart) and only when
+              * there's something to draft from (mirrors the Insights
+              * trigger's own storyAvailable-from-findings gate above). */}
+            {embed?.auditId !== undefined && findings.length > 0 ? (
+              <Button type="button" variant="ghost" size="sm" onClick={startHeadlineDraft} disabled={headlineBusy}>
+                {headlineBusy
+                  ? t(chartLang, 'chart.headline.drafting')
+                  : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-      {/* ADR 042: one muted subtitle line — the unit first, then the pinned
-        * dimensions — as separate spans (tests and the digit scan read them
-        * per text node). */}
-      <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-        <span>{displaySpec.unit}</span>
-        {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
-      </div>
-      {/* WP218 phase 1 (Task 7), updated by the option-A layout refactor: the
-        * Weergave tablist and the Opmaak trigger share one row — the trigger
-        * (`ChartConfigTrigger`, rendered directly here — see the review-fix
-        * comment on `styleOpen` above) is a plain row-mate of the tablist,
-        * not a child of it — the tablist's own `mt-3` moved up onto this
-        * wrapper so the row keeps its original top spacing regardless of
-        * whether the trigger is offered. */}
-      {/* Spec Part B3 + Task 3 (ADR 044): the ENTIRE Weergave tablist + Style/
-        * Story trigger row is a viewer-only control surface — an embed has
-        * no reader to flip between Lijn/Staaf/Tabel or open the Opmaak/
-        * Verhaal panels, and the full-viewport stage drives the chart purely
-        * from its own step index — so the whole row (not each control
-        * separately) is gated on both `!embedMode` and `!inStage`. */}
+      {/* Journalist chart-headline (Task 6): the sentence headline leads,
+        * the headlineFigure big-number block (below) follows. Named state
+        * `chartHeadline`/`headlineEditing` throughout — deliberately not
+        * `headline`, which is already the headlineFigure result just below. */}
+      {headlineEditing ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            type="text"
+            value={headlineDraftText}
+            onChange={(e) => setHeadlineDraftText(e.target.value.slice(0, CHART_HEADLINE_MAX_LENGTH))}
+            placeholder={t(chartLang, 'chart.headline.placeholder')}
+            maxLength={CHART_HEADLINE_MAX_LENGTH}
+            className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={saveHeadlineDraft} disabled={headlineBusy} className="text-xs font-medium text-foreground">
+              {t(chartLang, 'chart.headline.save')}
+            </button>
+            <button type="button" onClick={cancelHeadlineDraft} disabled={headlineBusy} className="text-xs text-muted-foreground">
+              {t(chartLang, 'chart.headline.cancel')}
+            </button>
+          </div>
+          {headlineError !== null ? <p className="text-xs text-destructive">{headlineError}</p> : null}
+        </div>
+      ) : chartHeadline !== null ? (
+        <p className="mt-3 text-base font-semibold leading-snug text-foreground" data-testid="chart-headline-text">
+          {chartHeadline}
+        </p>
+      ) : headlineError !== null ? (
+        // startHeadlineDraft's unauthenticated/error paths set headlineError
+        // WITHOUT entering edit mode (there's no draft to edit yet) — this
+        // branch is the only place that message is ever shown.
+        <p className="mt-3 text-xs text-destructive">{headlineError}</p>
+      ) : null}
+      {/* Chart-card polish (2026-09-15): the number leads, the chart is the
+        * evidence. Outside the export container (chartContainerRef) by
+        * construction — never in a PNG/SVG. Every token is a spec string
+        * already covered by the whole-card digit scan (formattedValue,
+        * unit, periodLabel); the value is bound to its cell via
+        * data-label-for (R1). Not in the table form (it shows everything),
+        * not in stage mode (ADR 044: the caption IS the sentence). */}
+      {headline !== null && !inStage && state.form !== 'table' ? (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-2" data-testid="headline-figure">
+          <span className="sr-only">{t(chartLang, 'chart.headline.label')}</span>
+          <span className="text-3xl font-semibold leading-none tracking-tight text-foreground tabular-nums" data-label-for={headline.resultId}>
+            {headline.value}
+            {headline.provisional ? '*' : ''}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {headline.unit} · {headline.periodLabel}
+          </span>
+        </p>
+      ) : null}
+      {/* #197 idea 4: the deterministic trend sentence, moved up under the
+        * figure (chart-card polish, 2026-09-15) — number in a sentence, the
+        * chart as evidence below. Gating unchanged: never in the stage
+        * (fix round 2, item 9 — the stage's caption is the sentence), never
+        * in the table, never under a zoom (it describes the full range). */}
+      {/* #254: the ACTIVE reading's own trend sentence — it describes the
+        * plotted line (and carries its own periods), so the primary's copy
+        * must never survive a switch to an alternate reading. */}
+      {!inStage && state.form !== 'table' && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
+        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
+          {activeSpec.attribution.trendHeadline}
+        </p>
+      ) : null}
+      {/* Chart-card polish (2026-09-15): ONE quiet control row above the
+        * plot — the Weergave tablist left, the Vanaf/Tot window right — in
+        * place of the former two rows (tablist + Opmaak + Inzichten, then
+        * Vanaf/Tot). Kept ABOVE the export container on purpose: DOM order
+        * is keyboard order, and every SeriesDot/SeriesBar is a tab stop
+        * (click-to-annotate), so a reader must reach the form switch before
+        * the chart's own points — moving the row under the plot would have
+        * cost a keyboard user one Tab per data point. Spec Part B3 + ADR
+        * 044: the whole row is a viewer-only control surface, gated on both
+        * `!embedMode` and `!inStage` exactly as before. */}
       {!embedMode && !inStage ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2" data-slot="chart-controls">
           <div
             role="tablist"
             aria-label={t(chartLang, 'chart.weergaveLabel')}
             onKeyDown={onFormTabKeyDown}
-            className="inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5"
+            className="flex flex-wrap items-center gap-1"
           >
             <button
               ref={lineTabRef}
@@ -2751,7 +3061,7 @@ export function ChartView({
               disabled={!canUseLine}
               title={canUseLine ? undefined : t(chartLang, 'chart.lineDisabledReason')}
               onClick={() => selectForm('line')}
-              className={segmentTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'line') + (canUseLine ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.tabLine')}
             </button>
@@ -2766,7 +3076,7 @@ export function ChartView({
               disabled={!canUseArea}
               title={canUseArea ? undefined : areaDisabledReason}
               onClick={() => selectForm('area')}
-              className={segmentTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'area') + (canUseArea ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.form.area')}
             </button>
@@ -2778,7 +3088,7 @@ export function ChartView({
               aria-controls={panelId}
               tabIndex={activeForm === 'bar' ? 0 : -1}
               onClick={() => selectForm('bar')}
-              className={segmentTab(activeForm === 'bar')}
+              className={quietTab(activeForm === 'bar')}
             >
               {t(chartLang, 'chart.tabBar')}
             </button>
@@ -2793,7 +3103,7 @@ export function ChartView({
               disabled={!canUseHbar}
               title={canUseHbar ? undefined : hbarDisabledReason}
               onClick={() => selectForm('hbar')}
-              className={segmentTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
+              className={quietTab(activeForm === 'hbar') + (canUseHbar ? '' : ' cursor-not-allowed opacity-40')}
             >
               {t(chartLang, 'chart.form.hbar')}
             </button>
@@ -2805,7 +3115,7 @@ export function ChartView({
               aria-controls={panelId}
               tabIndex={activeForm === 'table' ? 0 : -1}
               onClick={() => selectForm('table')}
-              className={segmentTab(activeForm === 'table')}
+              className={quietTab(activeForm === 'table')}
             >
               {t(chartLang, 'chart.tabTable')}
             </button>
@@ -2829,96 +3139,136 @@ export function ChartView({
               {hbarDisabledReason}
             </span>
           ) : null}
-          {/* Review fix (chart-panel-layout, option A): the "Opmaak" trigger
-            * renders directly here as a row-mate of the Weergave tablist — no
-            * portal, no placeholder node. Final-review fix: table form gets NO
-            * frame and NO Style panel (as before the Frame-tab feature) — a
-            * framed table would need its own export path, so the trigger stays
-            * gated on `state.form !== 'table'` exactly like the ChartConfigPanel
-            * mount further down. */}
-          {state.form !== 'table' ? (
-            <ChartConfigTrigger
-              open={styleOpen}
-              onToggle={toggleStylePanel}
-              controlsId={styleControlsId}
-              triggerId={styleTriggerId}
-              lang={chartLang}
-            />
+          {/* #254: the reading toggle — same quiet <select> pattern as the
+            * Vanaf/Tot pair right below it, and the same story lock (a story's
+            * steps are built from the ACTIVE reading's findings, so switching
+            * reading mid-story would change the captions under the reader).
+            * Its options are the registry's OWN label strings, verbatim —
+            * this component never invents copy describing a reading. The
+            * value lives in the reducer (`state.selectedReading`), NOT in the
+            * `spec` prop, which is what keeps a switch from tripping the
+            * spec-identity reset. Rendered only when the answer actually
+            * carried alternates; the whole row is already gated on
+            * `!embedMode && !inStage` above. */}
+          {alternates.length > 0 ? (
+            <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
+              <select
+                id={`${domId}-reading`}
+                aria-label={t(chartLang, 'chart.reading.label')}
+                value={state.selectedReading ?? 'primary'}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) =>
+                  dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
+                }
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
+                {/* Keyed by index on purpose: the index IS this list's
+                  * identity (it is what `selectedReading` stores and what
+                  * `activeReadingSpec` looks up), the array is never
+                  * reordered or filtered, and two registry alternates could
+                  * in principle carry the same label.
+                  *
+                  * These labels routinely CONTAIN DIGITS — the registry ships
+                  * 'CPI indexniveau (2025=100), geen mutatiepercentage',
+                  * 'stand per 31 december (Eindstand Voorraad)', '…(2021 =
+                  * 100)' — and that is deliberate and allowed. A registry
+                  * alternate label is curated config, hand-authored in
+                  * src/registry/defaults.ts and code-reviewed, never derived
+                  * from a CBS cell at runtime, and it NAMES a reading rather
+                  * than stating a measured quantity (an index BASE is a
+                  * definitional property of the measure, not a plotted
+                  * value). Same class as ChartAnnotation's curated event-marker
+                  * labels, whose own type comment (src/chart/types.ts) states
+                  * the policy: "METADATA … never a data VALUE (R1/R3's
+                  * numeric-token scanning never sees these)". chart.test.tsx's
+                  * #254 scan test pins the exemption as NARROW — the card
+                  * minus this one control must still scan clean with no
+                  * exemption at all, so a label's digits can never leak into
+                  * the chart, table, headline figure, axis or attribution. */}
+                {alternates.map((alt, i) => (
+                  <option key={i} value={i}>
+                    {alt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : null}
-          {/* Story mode (session 92): the colourful trigger sits in the same
-            * row as Opmaak — a code-built story is offered whenever there is
-            * one (storyAvailable, computed above next to styleControlsId). */}
-          {storyAvailable ? (
-            <ChartStoryTrigger
-              open={storyOpen}
-              onToggle={toggleStory}
-              controlsId={storyControlsId}
-              triggerId={storyTriggerId}
-              lang={chartLang}
-            />
+          {zoomAvailable ? (
+            /* #254: `ml-auto` moves to the reading block above when one is
+             * shown, so the right-hand group starts there and the two
+             * <select> groups sit next to each other instead of being pushed
+             * apart by two competing auto margins. With no alternates (every
+             * call site before this feature) the class list is unchanged. */
+            <div
+              className={
+                (alternates.length > 0 ? '' : 'ml-auto ') +
+                'flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground'
+              }
+            >
+              <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
+              <select
+                id={`${domId}-from`}
+                aria-label={t(chartLang, 'chart.from')}
+                value={state.periodRange?.[0] ?? allPeriodCodes[0]}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) => {
+                  const [from, clampedTo] = clampVanafChange(
+                    e.target.value,
+                    state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
+                  );
+                  dispatch({
+                    type: 'setPeriodRange',
+                    range:
+                      from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
+                        ? null
+                        : [from, clampedTo],
+                  });
+                }}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {allPeriodCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {periodLabelByCode.get(code)}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
+              <select
+                id={`${domId}-to`}
+                aria-label={t(chartLang, 'chart.to')}
+                value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) => {
+                  const [clampedFrom, to] = clampTotChange(
+                    state.periodRange?.[0] ?? allPeriodCodes[0],
+                    e.target.value,
+                  );
+                  dispatch({
+                    type: 'setPeriodRange',
+                    range:
+                      clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                        ? null
+                        : [clampedFrom, to],
+                  });
+                }}
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {allPeriodCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {periodLabelByCode.get(code)}
+                  </option>
+                ))}
+              </select>
+            </div>
           ) : null}
-        </div>
-      ) : null}
-      {zoomAvailable && !embedMode && !inStage ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
-          <select
-            id={`${domId}-from`}
-            aria-label={t(chartLang, 'chart.from')}
-            value={state.periodRange?.[0] ?? allPeriodCodes[0]}
-            disabled={storyOpen}
-            title={storyLockedTitle}
-            aria-describedby={storyOpen ? storyLockId : undefined}
-            onChange={(e) => {
-              const [from, clampedTo] = clampVanafChange(
-                e.target.value,
-                state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
-              );
-              dispatch({
-                type: 'setPeriodRange',
-                range:
-                  from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
-                    ? null
-                    : [from, clampedTo],
-              });
-            }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {allPeriodCodes.map((code) => (
-              <option key={code} value={code}>
-                {periodLabelByCode.get(code)}
-              </option>
-            ))}
-          </select>
-          <label htmlFor={`${domId}-to`}>{t(chartLang, 'chart.to')}</label>
-          <select
-            id={`${domId}-to`}
-            aria-label={t(chartLang, 'chart.to')}
-            value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
-            disabled={storyOpen}
-            title={storyLockedTitle}
-            aria-describedby={storyOpen ? storyLockId : undefined}
-            onChange={(e) => {
-              const [clampedFrom, to] = clampTotChange(
-                state.periodRange?.[0] ?? allPeriodCodes[0],
-                e.target.value,
-              );
-              dispatch({
-                type: 'setPeriodRange',
-                range:
-                  clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
-                    ? null
-                    : [clampedFrom, to],
-              });
-            }}
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {allPeriodCodes.map((code) => (
-              <option key={code} value={code}>
-                {periodLabelByCode.get(code)}
-              </option>
-            ))}
-          </select>
         </div>
       ) : null}
       {/* Task 3 (chart-visual-embed-pass): also suppressed while the Embed
@@ -2954,11 +3304,13 @@ export function ChartView({
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
         * next to the compact panel and NEVER inside chartContainerRef (like
         * the panel above, its own text must never enter an svg export).
-        * Never offered in stage mode itself: a stage never opens a stage. */}
+        * Never offered in stage mode itself: a stage never opens a stage.
+        * #254: its `spec` is the ACTIVE reading — `steps` are built from that
+        * reading's own findings, so the stage must plot what they describe. */}
       {storyAvailable && !inStage ? (
         <ChartStoryStage
           open={stageOpen}
-          spec={spec}
+          spec={activeSpec}
           steps={storySteps}
           index={storyIndex}
           onIndexChange={onStoryIndexChange}
@@ -3172,12 +3524,17 @@ export function ChartView({
             <ChartDownloadMenu
               containerRef={chartContainerRef}
               attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-              filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+              filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
               lang={chartLang}
               frame={pres}
               frameImage={frameImage}
+              headlineText={chartHeadline}
             />
             {embed ? (
+              /* #254: the PRIMARY's table id, deliberately — an embed
+               * republishes the stored audit row (the primary answer), which
+               * carries no reading selection, so labelling the published
+               * iframe with an alternate's table would misname it. */
               <ChartEmbedButton
                 auditId={embed.auditId}
                 tableId={spec.attribution.tableId}
@@ -3185,6 +3542,7 @@ export function ChartView({
                 currentForm={state.form}
                 open={embedOpen}
                 onOpenChange={setEmbedOpen}
+                disabled={state.selectedReading !== null}
                 chartSlot={
                   <>
                     {canvasNode}
@@ -3196,16 +3554,6 @@ export function ChartView({
           </div>
         ) : null}
         </ChartEditModal>
-      ) : null}
-      {/* Fix round 2 (item 9): no trend headline in the stage. The stage's own
-        * caption IS the sentence being presented; a second, differently
-        * phrased headline under the same chart competes with the step the
-        * reader is on (and on a phone it pushed the source line out of the
-        * pinned area entirely). */}
-      {!inStage && state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
-        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
-          {spec.attribution.trendHeadline}
-        </p>
       ) : null}
       {/* Task 3 (chart-visual-embed-pass): same no-double-mount reasoning as
         * canvasNode above — legendNode is also lifted into the Embed
@@ -3253,15 +3601,18 @@ export function ChartView({
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
-      {spec.provisionalNote ? (
+      {/* #254: provisionalNote/nullNotes/definitionLine below all describe the
+        * CELLS currently plotted (R11's "present iff" is per reading), so
+        * they follow `activeSpec`, never the primary's own copies. */}
+      {activeSpec.provisionalNote ? (
         <p className="mt-1 text-xs text-muted-foreground">{t(chartLang, 'chart.provisionalMarkerNote')}</p>
       ) : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
         * (R4); only presentation changes here. */}
-      {spec.provisionalNote ? <p className="mt-2 text-sm text-warning">{spec.provisionalNote}</p> : null}
-      {spec.nullNotes.map((note) => (
+      {activeSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{activeSpec.provisionalNote}</p> : null}
+      {activeSpec.nullNotes.map((note) => (
         <p key={note} className="text-sm text-warning">
           {note}
         </p>
@@ -3271,7 +3622,7 @@ export function ChartView({
         * dropped in stage mode. The caveats that carry data-quality meaning
         * (nullNotes, the provisional sentence and its marker key, the event
         * markers) and the attribution stay, in the stage as everywhere. */}
-      {!inStage && spec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{spec.definitionLine}</p> : null}
+      {!inStage && activeSpec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{activeSpec.definitionLine}</p> : null}
       {/* #170(4): curated event markers, always-visible text (never
         * hover-only — see the ReferenceLine comment above). Neutral tone
         * (text-muted-foreground), distinct from the #92 amber caveats above: this
@@ -3300,7 +3651,11 @@ export function ChartView({
         * identical badge for free. */}
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
         <p className="text-xs text-muted-foreground">{displayAttributionLine}</p>
-        <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+        {/* #254: the badge is `displayAttributionLine` made scannable, so it
+          * follows the SAME (active) reading — a badge pointing at the
+          * primary's table under an alternate's numbers would be a false
+          * source claim (R4). */}
+        <SourceBadge tableId={activeSpec.attribution.tableId} syncedAt={activeSpec.attribution.syncedAt} />
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME
           * displayAttributionLine string shown above (R4: one builder, one
@@ -3325,13 +3680,17 @@ export function ChartView({
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-            filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+            filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
             lang={chartLang}
             frame={pres}
             frameImage={frameImage}
+            headlineText={chartHeadline}
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+          /* #254: the PRIMARY's table id — same reasoning as the copy inside
+           * ChartEditModal above (an embed republishes the stored audit row,
+           * which carries no reading selection). */
           <ChartEmbedButton
             auditId={embed.auditId}
             tableId={spec.attribution.tableId}
@@ -3339,6 +3698,7 @@ export function ChartView({
             currentForm={state.form}
             open={embedOpen}
             onOpenChange={setEmbedOpen}
+            disabled={state.selectedReading !== null}
             chartSlot={
               <>
                 {canvasNode}

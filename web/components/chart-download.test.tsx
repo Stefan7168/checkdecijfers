@@ -677,3 +677,74 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     expect(framedHost.textContent).toBe(unframedHost.textContent);
   });
 });
+
+describe('headline in exports', () => {
+  it('draws the headline as a title line above the footer, growing totalHeight to make room', () => {
+    const withoutHeadline = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01');
+    const withHeadline = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, 'Werkloosheid stijgt scherp');
+    expect(withHeadline.markup).toContain('Werkloosheid stijgt scherp');
+    expect(withHeadline.markup).toContain('data-headline-line');
+    // The headline variant's total height must exceed the no-headline
+    // variant's — room was actually added, not just text overlaid on
+    // existing space. Both markups carry their outer <svg height="...">
+    // attribute; compare those rather than assuming a fixed pixel delta.
+    const heightOf = (markup: string): number => Number(markup.match(/^<svg[^>]*\sheight="(\d+(?:\.\d+)?)"/)![1]);
+    expect(heightOf(withHeadline.markup)).toBeGreaterThan(heightOf(withoutHeadline.markup));
+  });
+
+  it('omits the headline line entirely when headlineText is null/undefined', () => {
+    const markup = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, null).markup;
+    expect(markup).not.toContain('data-headline-line');
+  });
+
+  // Final-review fix (Findings 1+2): a long headline near the 140-char cap,
+  // drawn at 15px semibold, used to be wrapped using the footer's 6.5px-
+  // per-char estimate (tuned for 11px regular text) — too many characters
+  // per line for the real rendered size, so it would run past the SVG's
+  // right edge on export. And the wrapped lines' spacing used to reuse the
+  // footer's 14px line height, too tight for 15px semibold text once a
+  // headline actually wrapped to 2+ lines. This proves both are fixed: the
+  // near-cap headline actually wraps to multiple lines, and the exported
+  // SVG's height grows enough to fit them without overlap.
+  it('wraps a long (near-140-char) headline to 2+ lines and grows the SVG height enough to fit them without overlap', () => {
+    const longHeadline =
+      'Werkloosheid stijgt scherp naar recordhoogte in het tweede kwartaal van dit jaar volgens de nieuwste cijfers van het CBS vandaag gepubliceerd';
+    expect(longHeadline.length).toBeGreaterThan(120);
+    expect(longHeadline.length).toBeLessThanOrEqual(150);
+
+    const result = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, longHeadline);
+    const lineCount = (result.markup.match(/data-headline-line/g) ?? []).length;
+    expect(lineCount).toBeGreaterThanOrEqual(2);
+
+    // No word from the headline is lost or garbled by wrapping.
+    for (const word of longHeadline.split(' ')) {
+      expect(result.markup).toContain(word);
+    }
+
+    // Finding 1 directly: each wrapped headline line must respect the
+    // SCALED (15px-semibold-aware) character budget, not the footer's wider
+    // 11px-regular one. sampleSvg is 400 wide; available width for text is
+    // (400 - FOOTER_TEXT_MARGIN_X*2) = 376. The correct budget scales that
+    // by (11/15) before applying wrapAttributionText's 6.5px/char estimate —
+    // before this fix the unscaled budget (maxChars = floor(376/6.5) = 57)
+    // let lines run up to 56 characters, which at real 15px-semibold render
+    // width would overflow the SVG's right edge.
+    const correctMaxChars = Math.floor(((400 - 24) * (11 / 15)) / 6.5);
+    const host = document.createElement('div');
+    host.innerHTML = result.markup;
+    const lineTexts = Array.from(host.querySelectorAll('[data-headline-line]')).map((el) => el.textContent ?? '');
+    expect(lineTexts.length).toBe(lineCount);
+    for (const line of lineTexts) {
+      expect(line.length).toBeLessThanOrEqual(correctMaxChars);
+    }
+
+    // The headline reservation is HEADLINE_TOP_MARGIN (32) plus
+    // (lineCount - 1) * HEADLINE_LINE_HEIGHT (20) — enough room for every
+    // line without the next one overlapping it. sampleSvg is 400x200, +24
+    // one-line footer = 224 base height.
+    const HEADLINE_TOP_MARGIN = 32;
+    const HEADLINE_LINE_HEIGHT = 20;
+    const expectedMinHeight = 224 + HEADLINE_TOP_MARGIN + (lineCount - 1) * HEADLINE_LINE_HEIGHT;
+    expect(result.height).toBeGreaterThanOrEqual(expectedMinHeight);
+  });
+});

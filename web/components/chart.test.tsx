@@ -948,6 +948,52 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(panel().className).toContain('h-64');
     expect(panel().style.height).toBe('');
   });
+  it('chart-card polish (2026-09-15): the grid is a SOLID half-opacity hairline in the grid colour — no dash (the 3 3 dash belongs to event markers alone)', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const lines = [...container.querySelectorAll('.recharts-cartesian-grid-horizontal line')];
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line.getAttribute('stroke-dasharray')).toBeNull();
+      expect(line.getAttribute('stroke')).toBe('var(--border)');
+      expect(line.getAttribute('stroke-opacity')).toBe('0.5');
+    }
+    // The curated event marker keeps its dash — the two vocabularies stay distinct.
+    const annotated = render(<ChartView spec={spec({ annotations: [{ periodCode: '2024JJ00', label: 'Testgebeurtenis' }] })} />).container;
+    expect(annotated.querySelector('.recharts-reference-line line')?.getAttribute('stroke-dasharray')).toBe('3 3');
+  });
+  it('chart-card polish: the bar, horizontal-bar and small-multiples grids draw the same solid hairline', () => {
+    const cmp = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' })] },
+        { label: 'Rotterdam', regionCode: 'GM0599', points: [point({ resultId: 'r', periodCode: '2023JJ00', periodLabel: '2023', value: 2, formattedValue: '2,0' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={cmp} />);
+    const barLine = container.querySelector('.recharts-cartesian-grid-horizontal line')!;
+    expect(barLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(barLine.getAttribute('stroke-opacity')).toBe('0.5');
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const hbarLine = container.querySelector('.recharts-cartesian-grid-vertical line')!;
+    expect(hbarLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(hbarLine.getAttribute('stroke-opacity')).toBe('0.5');
+    cleanup();
+    const multi = render(<ChartView spec={twoSeriesSpec()} />).container;
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    const smallLine = multi.querySelector('.recharts-cartesian-grid-horizontal line')!;
+    expect(smallLine.getAttribute('stroke-dasharray')).toBeNull();
+    expect(smallLine.getAttribute('stroke-opacity')).toBe('0.5');
+  });
+  it('chart-card polish: the chat card frame pads p-5 / sm:p-6 (was p-4); frameless surfaces still get no frame at all', () => {
+    const framed = render(<ChartView spec={threePointSpec()} />).container.firstElementChild as HTMLElement;
+    expect(framed.className).toContain('p-5');
+    expect(framed.className).toContain('sm:p-6');
+    expect(framed.className).not.toMatch(/\bp-4\b/);
+    expect(framed.className).toContain('rounded-xl');
+    cleanup();
+    const frameless = render(<ChartView spec={threePointSpec()} frameless />).container.firstElementChild as HTMLElement;
+    expect(frameless.className).toBe('');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1577,6 +1623,151 @@ describe('ChartView form switch', () => {
     expect(
       container.querySelector('[data-role="axis-tick"], [data-role="end-label"]'),
     ).not.toBeNull();
+  });
+});
+
+describe('chart-card polish (2026-09-15) — a quiet control row and header actions', () => {
+  it('Opmaak is an icon-only header action (name kept), Inzichten sits beside it; neither is inside the Weergave row', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} />);
+    const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    const opmaak = screen.getByRole('button', { name: 'Opmaak' });
+    const inzichten = screen.getByRole('button', { name: 'Inzichten' });
+    expect(actions).toContainElement(opmaak);
+    expect(actions).toContainElement(inzichten);
+    expect(opmaak.textContent).toBe('');
+    expect(opmaak).toHaveAttribute('title', 'Opmaak');
+    expect(controls).not.toContainElement(opmaak);
+    expect(controls).not.toContainElement(inzichten);
+    expect(controls).toContainElement(screen.getByRole('tablist', { name: 'Weergave' }));
+    // The gradient ring around Inzichten (the product's one gradient) survives the move.
+    expect(container.querySelector('[data-story-trigger-ring]')).toContainElement(inzichten);
+  });
+  it('the Vanaf/Tot selects share the Weergave row — one control row above the plot, not two — and keep their labels', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    expect(controls).toContainElement(screen.getByLabelText('Vanaf'));
+    expect(controls).toContainElement(screen.getByLabelText('Tot'));
+    // DOM order = keyboard order: the control row precedes the chart panel, so a keyboard user reaches the tabs before the chart's own focusable points.
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(controls.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+  it('the form tabs are quiet underline tabs: no muted track, the active tab underlined, the R9.1 tap-target classes kept', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
+    expect(tablist.className).not.toContain('bg-muted');
+    const active = screen.getByRole('tab', { name: 'Lijn' });
+    expect(active).toHaveAttribute('aria-selected', 'true');
+    expect(active.className).toContain('border-foreground');
+    expect(active.className).not.toContain('shadow-sm');
+    const inactive = screen.getByRole('tab', { name: 'Staaf' });
+    expect(inactive.className).toContain('border-transparent');
+    expect(inactive.className).toContain('min-h-11');
+    expect(inactive.className).toContain('sm:min-h-6');
+  });
+  it('the header keeps its shape: the subtitle is still the heading\'s next sibling; the actions cluster is outside that column', () => {
+    const s = spec({ dimLabels: { Geslacht: 'Totaal' } });
+    const { container } = render(<ChartView spec={s} />);
+    const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
+    expect(heading.nextElementSibling?.textContent).toContain('Geslacht: Totaal');
+    expect(heading.parentElement).not.toContainElement(container.querySelector('[data-slot="chart-card-actions"]'));
+  });
+  it('Tabel form drops the Opmaak action (no Style panel in table form, as before) and keeps Inzichten off there too', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Inzichten' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+  });
+  it('embed mode and stage mode render neither the actions cluster nor the control row', () => {
+    const embed = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />).container;
+    expect(embed.querySelector('[data-slot="chart-card-actions"]')).toBeNull();
+    expect(embed.querySelector('[data-slot="chart-controls"]')).toBeNull();
+    cleanup();
+    const stage = render(<ChartView spec={threePointSpec()} stage={{ step: null, overrides: {} }} />).container;
+    expect(stage.querySelector('[data-slot="chart-card-actions"]')).toBeNull();
+    expect(stage.querySelector('[data-slot="chart-controls"]')).toBeNull();
+  });
+  it('the whole-card digit scan still passes with the new header and control row, in Dutch and in English', () => {
+    const s = fourYearLineSpec();
+    const nl = render(<ChartView spec={s} />).container;
+    scanForUnboundDigits(nl, harvestSpecStrings(s));
+    cleanup();
+    const en = render(<LangProvider lang="en"><ChartView spec={s} /></LangProvider>).container;
+    scanForUnboundDigits(en, harvestSpecStrings(s));
+  });
+});
+
+describe('chart-card polish (2026-09-15) — the headline figure', () => {
+  it('leads with the last plotted value of a single time series, bound to its resultId, unit and period beside it, above the control row', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    const bound = figure.querySelector('[data-label-for="nl-2021"]') as HTMLElement;
+    expect(bound.textContent).toBe('115');
+    expect(figure.textContent).toContain('%');
+    expect(figure.textContent).toContain('2021');
+    expect(figure.textContent).toContain('Laatste waarde in de grafiek');
+    const controls = container.querySelector('[data-slot="chart-controls"]') as HTMLElement;
+    expect(figure.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Outside the export container by construction (R6: never a new number in the file).
+    expect(container.querySelector('[role="tabpanel"]')).not.toContainElement(figure);
+  });
+  it('follows the Vanaf/Tot window: the window\'s own last point, labelled with its own period', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2020' } });
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    expect(figure.querySelector('[data-label-for="nl-2020"]')?.textContent).toBe('110');
+    expect(figure.querySelector('[data-label-for="nl-2021"]')).toBeNull();
+  });
+  it('a provisional latest value carries the * suffix, and a trailing null is skipped', () => {
+    const s = spec({
+      series: [{
+        label: 'Nederland', regionCode: null,
+        points: [
+          point({ resultId: 'a', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+          point({ resultId: 'b', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0', provisional: true, status: 'Voorlopig' }),
+          point({ resultId: 'c', periodCode: '2025JJ00', periodLabel: '2025', value: null, formattedValue: null, valueAttribute: 'Geheim' }),
+        ],
+      }],
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
+      nullNotes: ['2025: geheim.'],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('[data-testid="headline-figure"] [data-label-for="b"]')?.textContent).toBe('2,0*');
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+  it('no headline for a multi-series chart, a comparison, the Tabel form, or stage mode', () => {
+    expect(render(<ChartView spec={twoSeriesFourYearLineSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    expect(render(<ChartView spec={multiRegionBarSpec()} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+    cleanup();
+    expect(render(<ChartView spec={fourYearLineSpec()} stage={{ step: null, overrides: {} }} />).container.querySelector('[data-testid="headline-figure"]')).toBeNull();
+  });
+  it('the trend headline sentence sits directly under the figure (above the chart) and is still suppressed under a zoom', () => {
+    const { container } = render(<ChartView spec={trendHeadlineLineSpec()} />);
+    const figure = container.querySelector('[data-testid="headline-figure"]') as HTMLElement;
+    const sentence = screen.getByTestId('trend-headline');
+    expect(figure.nextElementSibling).toBe(sentence);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(sentence.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Vanaf'), { target: { value: '2019' } });
+    expect(screen.queryByTestId('trend-headline')).toBeNull();
+    expect(container.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
+  });
+  it('shows in embed mode (the honest card stands alone there) and the whole-card digit scan passes in both languages', () => {
+    const s = fourYearLineSpec();
+    const nl = render(<ChartView spec={s} embedMode embedFooter="x" />).container;
+    expect(nl.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
+    scanForUnboundDigits(nl, harvestSpecStrings(s));
+    cleanup();
+    const en = render(<LangProvider lang="en"><ChartView spec={s} /></LangProvider>).container;
+    expect(en.textContent).toContain('Latest value on the chart');
+    scanForUnboundDigits(en, harvestSpecStrings(s));
   });
 });
 
@@ -2334,21 +2525,28 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // change: the chart deliberately relocates into the dialog (verified by
   // reference identity below: the canvas tabpanel found after opening is a
   // DIFFERENT DOM node than the one found before — a real unmount/remount,
-  // not just a reposition). What's unchanged (option A) is the trigger's
-  // own dock position, proven exactly as before.
-  it('option A layout: the trigger stays in the Weergave tablist row in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
+  // not just a reposition).
+  //
+  // Chart-card polish (2026-09-15): the trigger's DOCK POSITION changed by
+  // explicit design — it is no longer a row-mate of the Weergave tablist
+  // ("option A"); it is a header action next to the title
+  // (`data-slot="chart-card-actions"`, see the new "quiet control row and
+  // header actions" describe above, which pins the new position and its
+  // exclusion from the tablist's own row). This one assertion is updated to
+  // match — not weakened, corrected to the plan's own stated new layout;
+  // everything below about the modal relocation is unaffected and unchanged.
+  it('the trigger stays in the card\'s header actions cluster in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const chartTabpanelBeforeOpen = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(chartTabpanelBeforeOpen).not.toBeNull();
 
-    // The trigger is a row-mate of the Weergave tablist (owner: option A —
-    // "the trigger stays in the tablist row") — proven via a shared
-    // ancestor that contains both, since the trigger is a row-mate of the
-    // tablist, not a DOM child of it. Unaffected by the modal conversion:
-    // only the PANEL's own content and the chart move, never the trigger.
+    // The trigger lives in the header's actions cluster (chart-card polish,
+    // 2026-09-15), not the Weergave tablist row. Unaffected by the modal
+    // conversion: only the PANEL's own content and the chart move, never
+    // the trigger.
     const trigger = screen.getByRole('button', { name: 'Opmaak' });
-    const tablist = screen.getByRole('tablist', { name: 'Weergave' });
-    expect((tablist.parentElement as HTMLElement).contains(trigger)).toBe(true);
+    const actions = container.querySelector('[data-slot="chart-card-actions"]') as HTMLElement;
+    expect(actions.contains(trigger)).toBe(true);
 
     fireEvent.click(trigger);
 
@@ -4671,5 +4869,288 @@ describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
     render(<ChartView spec={threePointSpec()} initialPanel="story" />);
     await screen.findByRole('link', { name: 'Log in voor AI-verwoorde inzichten.' });
     expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #254 Task 5 — the alternate-reading toggle on the chart card.
+//
+// The backend (Tasks 1/2) builds every registry-recorded alternate reading of
+// the answered measure over the PRIMARY's own resolved coordinates and the
+// IDENTICAL period window, and Task 3 threads them to the client as
+// `chartAlternates`. ChartView receives them as `alternates` and renders the
+// SELECTED reading's data — while the `spec` PROP itself never changes, so
+// the spec-identity reset effect (which wipes form/zoom/notes/panels for a
+// genuinely different chart) must NOT fire on a reading switch.
+// ---------------------------------------------------------------------------
+describe('ChartView — alternate reading toggle (#254)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  /** A second reading of the same measure: same series/regions and the same
+   * three period codes and labels as `threePointSpec()` (Task 1/2's own
+   * guarantee — an alternate is built over the identical window), differing
+   * only in the plotted values, their resultIds, and the coordinate labels
+   * that NAME the reading. Every string here is digit-free apart from the
+   * values themselves, so the whole-card digit scan below has an exact,
+   * unambiguous source set. */
+  function altReadingSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+    return spec({
+      dims: { SeizoensCorrectie: 'NG' },
+      dimLabels: { SeizoensCorrectie: 'Niet gecorrigeerd' },
+      definitionLine: 'Definitie: ongecorrigeerde reeks.',
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'alt-lo', periodCode: '2022JJ00', periodLabel: '2022', value: 8.5, formattedValue: '8,5' }),
+            point({ resultId: 'alt-mid', periodCode: '2023JJ00', periodLabel: '2023', value: 9, formattedValue: '9,0' }),
+            point({ resultId: 'alt-hi', periodCode: '2024JJ00', periodLabel: '2024', value: 9.75, formattedValue: '9,8' }),
+          ],
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  const readingControl = (): HTMLElement => screen.getByRole('combobox', { name: /lezing|reading/i });
+
+  /** A REAL alternate label, copied verbatim from the registry
+   * (src/registry/defaults.ts, the `cpi_yoy` entry) — digits and all. Task 5's
+   * first round used a digit-free placeholder ('Ongecorrigeerd'), which meant
+   * the whole-card digit scan below could not actually see whether a real
+   * label's own digits are handled: the registry ships several that carry them
+   * ('stand per 31 december (Eindstand Voorraad)', 'het indexNIVEAU (2021 =
+   * 100)', '85773NED'). Keep a digit-bearing label here — a placeholder
+   * without one silently removes this test's teeth. */
+  const REGISTRY_LABEL = 'CPI indexniveau (2025=100), geen mutatiepercentage';
+
+  /** Returns a detached copy of the rendered card with the reading control's
+   * own subtree (label + <select> + every <option>) removed, so the rest of
+   * the card can be digit-scanned with NO exemption at all. See the decision
+   * note on the scan test below for why that one subtree is the only place a
+   * curated string is allowed to put an untraced digit on screen. */
+  function cardWithoutReadingControl(container: HTMLElement): HTMLElement {
+    const clone = container.cloneNode(true) as HTMLElement;
+    const control = clone.querySelector('select[id$="-reading"]');
+    expect(control, 'the reading control must exist for this helper to be meaningful').not.toBeNull();
+    // `closest('div')` from the <select> is its immediate wrapper (the one
+    // holding the <label> and the <option>s) — never a larger ancestor.
+    control!.closest('div')!.remove();
+    // Guard against this helper quietly gutting the card and making the
+    // strict scan vacuous: the reading control is gone, but the ALTERNATE's
+    // own values, the Vanaf/Tot selects and the attribution are all still
+    // there to be scanned.
+    expect(clone.querySelector('select[id$="-reading"]')).toBeNull();
+    expect(clone.textContent).toContain('9,8');
+    expect(clone.querySelector('select[id$="-from"]')).not.toBeNull();
+    expect(clone.textContent).toContain('12345NED');
+    return clone;
+  }
+
+  it('shows no reading control when alternates is empty or omitted', () => {
+    const { unmount } = render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+    unmount();
+    render(<ChartView spec={threePointSpec()} alternates={[]} />);
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a reading control when alternates is non-empty, and switching it renders the alternate's own data", () => {
+    const alt = altReadingSpec();
+    render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
+
+    // Primary first: the headline figure is the primary's own last plotted
+    // point, bound to the primary's own cell.
+    const headline = (): HTMLElement => screen.getByTestId('headline-figure');
+    expect(headline().querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // The chart now leads with the ALTERNATE's last plotted point, bound to
+    // the ALTERNATE's own cell id — the primary's cell is gone from the card.
+    expect(headline().querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+    expect(headline().querySelector('[data-label-for="hi"]')).toBeNull();
+
+    // ...and so does the exact-values Tabel view, cell by cell.
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    const table = screen.getByRole('table');
+    expect(table.querySelector('[data-label-for="alt-lo"]')?.textContent).toBe('8,5');
+    expect(table.querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+    expect(table.querySelector('[data-label-for="lo"]')).toBeNull();
+
+    // Switching back returns to the primary's own cells.
+    fireEvent.change(readingControl(), { target: { value: 'primary' } });
+    expect(screen.getByRole('table').querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
+  });
+
+  it("the alternate reading brings its OWN coordinate labels, definition line and attribution — never the primary's", () => {
+    const alt = altReadingSpec({ attributionLine: 'Bron: CBS StatLine, tabel 99999NED.' });
+    const { container } = render(
+      <ChartView
+        spec={threePointSpec({ definitionLine: 'Definitie: gecorrigeerde reeks.' })}
+        alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+      />,
+    );
+    expect(container.textContent).toContain('Kenmerk: Alle kenmerken');
+    expect(container.textContent).toContain('Definitie: gecorrigeerde reeks.');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    expect(container.textContent).toContain('SeizoensCorrectie: Niet gecorrigeerd');
+    expect(container.textContent).not.toContain('Kenmerk: Alle kenmerken');
+    expect(container.textContent).toContain('Definitie: ongecorrigeerde reeks.');
+    expect(container.textContent).toContain('Bron: CBS StatLine, tabel 99999NED.');
+  });
+
+  it('switching reading does NOT reset the current form/zoom — the spec-identity effect must not fire', () => {
+    const alt = altReadingSpec();
+    render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2023JJ00' } });
+    expect(screen.getByRole('combobox', { name: 'Vanaf' })).toHaveValue('2023JJ00');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // The reset effect clears form AND periodRange; both survive here.
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('combobox', { name: 'Vanaf' })).toHaveValue('2023JJ00');
+    expect(screen.getByText(/Getoond: 2023–2024 van 2020–2024\./)).toBeInTheDocument();
+    // The reading itself stuck (it is the reducer's own state, not derived
+    // from the spec prop).
+    expect(readingControl()).toHaveValue('0');
+  });
+
+  it('a genuinely different spec DOES still reset the reading back to the primary (contrast: the identity effect works)', () => {
+    const alt = altReadingSpec();
+    const alternates = [{ label: 'Ongecorrigeerd', spec: alt }];
+    const { rerender } = render(<ChartView spec={threePointSpec()} alternates={alternates} />);
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+    expect(readingControl()).toHaveValue('0');
+
+    rerender(<ChartView spec={threePointSpec({ title: 'Andere reeks' })} alternates={alternates} />);
+    expect(readingControl()).toHaveValue('primary');
+  });
+
+  it("the reading control label uses the registry alternate's own label string, never invented copy", () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        alternates={[{ label: 'oorspronkelijke, ongecorrigeerde cijfers', spec: altReadingSpec() }]}
+      />,
+    );
+    expect(screen.getByText('oorspronkelijke, ongecorrigeerde cijfers')).toBeInTheDocument();
+  });
+
+  it('the alternate view passes the SAME whole-card digit-honesty scan the primary chart already does', () => {
+    const alt = altReadingSpec();
+    const { container } = render(
+      <ChartView spec={threePointSpec()} alternates={[{ label: REGISTRY_LABEL, spec: alt }]} />,
+    );
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // (1) The DATA surface — the whole card MINUS the reading control itself —
+    // is scanned with NO exemption whatsoever: with the ALTERNATE showing,
+    // every digit there must trace to the ALTERNATE's own spec strings, and
+    // the primary's values must be gone (R1/R6). This is the strict half, and
+    // it is what keeps the exemption in (2) narrow: a curated label's digits
+    // may never leak into the chart, the table, the headline figure, the axis
+    // or the attribution.
+    scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
+
+    // (2) The whole card, control included: the ONE extra source needed is the
+    // registry label itself, verbatim.
+    //
+    // DECISION (Task 5 review finding, #254) — a registry alternate label is
+    // CURATED CONFIG, not data, and is deliberately exempt from cell-level
+    // traceability. It is hand-authored in src/registry/defaults.ts, committed
+    // and code-reviewed, never derived from a CBS cell at runtime, and it NAMES
+    // a reading rather than stating a measured quantity: the digits in
+    // 'CPI indexniveau (2025=100)' are the index BASE — a definitional property
+    // of the measure — not a plotted value. This is the same class as
+    // ChartAnnotation's curated event-marker labels, whose own type comment
+    // (src/chart/types.ts) already states the policy explicitly: "METADATA
+    // about when something happened, never a data VALUE (R1/R3's numeric-token
+    // scanning never sees these)". Those labels likewise render straight onto
+    // the card (chart.markedInChart).
+    //
+    // The rejected alternative was requiring these labels to be digit-free so
+    // the scan could stay unexempted. That buys no honesty — the label still
+    // is not a claim about a plotted number — and costs real clarity: the
+    // clearest possible name for that reading IS "(2025=100)". Suppressing the
+    // base would make the toggle harder to read, not more honest.
+    scanForUnboundDigits(container, [...harvestSpecStrings(alt), REGISTRY_LABEL]);
+  });
+
+  // Task 6 addendum (a gap the Task 5 reviewer flagged): the Embed dialog's
+  // live preview shows whatever the card currently displays — once a reader
+  // can switch readings, that could be an alternate — but the PUBLISHED
+  // embed always republishes the PRIMARY (the stored audit row carries no
+  // reading selection; /embed/[token] has no chartAlternates concept at
+  // all). Disabling the trigger while a non-primary reading is selected is
+  // the fix; nested here (not a sibling top-level describe) specifically to
+  // reuse this block's own `altReadingSpec`/`readingControl` helpers.
+  describe('Embed disabled while an alternate reading is selected (#254 Task 6 addendum)', () => {
+    it('disables the Embed trigger once a non-primary reading is selected, with a reason reachable via aria-describedby', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      const trigger = screen.getByRole('button', { name: 'Insluiten' });
+      expect(trigger).not.toBeDisabled();
+
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+
+      expect(trigger).toBeDisabled();
+      const describedById = trigger.getAttribute('aria-describedby');
+      expect(describedById).toBeTruthy();
+      const reason = document.getElementById(describedById!);
+      expect(reason?.textContent).toMatch(/standaardlezing/);
+      expect(trigger).toHaveAttribute('title', expect.stringContaining('standaardlezing'));
+    });
+
+    it('re-enables the Embed trigger when switching back to the primary reading', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+      expect(screen.getByRole('button', { name: 'Insluiten' })).toBeDisabled();
+
+      fireEvent.change(readingControl(), { target: { value: 'primary' } });
+      expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
+    });
+
+    it('leaves the Embed trigger enabled when the answer carries no alternates at all (no reading control to switch)', () => {
+      render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+      expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
+    });
+
+    it('also disables the in-Style-modal Embed trigger while a non-primary reading is selected', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+      expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeDisabled();
+    });
   });
 });
