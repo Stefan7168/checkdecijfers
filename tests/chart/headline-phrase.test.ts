@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { ChartSpec } from '../../src/chart/types.ts';
-import { scoreFindings } from '../../src/chart/insights.ts';
+import { topFinding } from '../../src/chart/insights.ts';
 import { draftHeadline } from '../../src/chart/headline-phrase.ts';
 
 // Copied verbatim from tests/chart/insights-phrase.test.ts's own stubClient.
@@ -70,15 +70,15 @@ describe('draftHeadline', () => {
     expect(result).toEqual({ ok: false, reason: 'no_findings' });
   });
 
-  it("drafts a headline from the single top finding's AI phrase (fourPointSpec's first finding: recordLow in 2021)", async () => {
-    const top = scoreFindings(fourPointSpec())[0]!;
+  it("drafts a headline from the single top finding's AI phrase (fourPointSpec's highest-scored finding: jumpDown to 2023)", async () => {
+    const top = topFinding(fourPointSpec())!;
     const { client } = stubClient([
-      jsonInsights([{ id: top.id, text: `Daling naar {waarde-${top.id}} in {periode-${top.id}}.` }]),
+      jsonInsights([{ id: top.id, text: `Van {waarde-van-${top.id}} in {periode-van-${top.id}} naar {waarde-${top.id}} in {periode-${top.id}}.` }]),
     ]);
     const result = await draftHeadline(fourPointSpec(), { client });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.headline).toBe('Daling naar 2,0 % in 2021.');
+      expect(result.headline).toBe('Van 3,5 % in 2022 naar 1,5 % in 2023.');
     }
   });
 
