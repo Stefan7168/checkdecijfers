@@ -77,7 +77,7 @@ const areaCtx: PresentationContext = { kind: 'line', form: 'area', seriesCount: 
 const hbarCtx: PresentationContext = { kind: 'bar', form: 'hbar', seriesCount: 3, hasProvisional: false };
 
 describe('the designed default (ADR 042) and the classic session-87 look, both pinned', () => {
-  it('STOCK_PRESENTATION is the designed default: ends markers, horizontal grid, no axis lines, gradient area fill', () => {
+  it('STOCK_PRESENTATION is the designed default: ends markers, horizontal grid, no axis lines, gradient area fill, rounded soft-shadow frame with small padding', () => {
     expect(STOCK_PRESENTATION).toEqual({
       lineWidth: 'normal',
       markers: 'ends',
@@ -91,7 +91,7 @@ describe('the designed default (ADR 042) and the classic session-87 look, both p
       fontFamily: null,
       language: null,
       frameBackground: 'none',
-      framePadding: 'none',
+      framePadding: 'small',
       frameCorners: 'rounded',
       frameShadow: 'soft',
       frameInset: 'none',

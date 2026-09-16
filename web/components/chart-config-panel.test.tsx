@@ -1543,12 +1543,12 @@ describe('ChartConfigPanel — Frame tab', () => {
     const onFrameImage = vi.fn();
     // Since the chart-chrome default polish, `{}` overrides no longer land on
     // the bare/`isFramePristine` state — STOCK_PRESENTATION itself now
-    // resolves frameCorners/frameShadow to 'rounded'/'soft'. Force the frame
-    // back to the literal bare state explicitly, so this still tests "Kader
-    // wissen" being disabled when there is truly nothing left to clear.
+    // resolves frameCorners/frameShadow/framePadding to 'rounded'/'soft'/'small'.
+    // Force the frame back to the literal bare state explicitly, so this still
+    // tests "Kader wissen" being disabled when there is truly nothing left to clear.
     const { rerender } = render(
       <Harness
-        resolved={resolvePresentation(lineCtx, { frameCorners: 'square', frameShadow: 'none' })}
+        resolved={resolvePresentation(lineCtx, { frameCorners: 'square', frameShadow: 'none', framePadding: 'none' })}
         seriesMeta={colorMeta}
         onChange={onChange}
         onReset={vi.fn()}
