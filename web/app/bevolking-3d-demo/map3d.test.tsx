@@ -4,7 +4,7 @@ import { t } from '../../lib/i18n/messages.ts';
 import { DemoBanner } from './demo-banner.tsx';
 import { buildFakeDataset, growthSince, populationIn, YEAR_END, YEAR_START, type FakeDataset } from './fake-data.ts';
 import { Map3d, TOPOJSON_URL } from './map3d.tsx';
-import { formatGrowth, formatPopulation } from './scales.ts';
+import { formatGrowth, formatPopulation, GROWTH_DOMAIN } from './scales.ts';
 import { TWO_SQUARES_TOPOLOGY } from './test-fixture.ts';
 import { areaKm2, decodeMunicipalities } from './topojson.ts';
 
@@ -51,6 +51,11 @@ function harvestFictionalStrings(dataset: FakeDataset): string[] {
   for (const key of ['lab3d.loading', 'lab3d.unavailable', 'lab3d.loadFailed'] as const) {
     out.push(t('nl', key), t('en', key));
   }
+  // v2 (D3′): the floating Legend's domain labels — the real ±GROWTH_DOMAIN
+  // bounds from scales.ts, never hardcoded, so they must be harvested from
+  // the same formatGrowth() calls Legend itself renders.
+  out.push(formatGrowth(-GROWTH_DOMAIN, 'nl'), formatGrowth(-GROWTH_DOMAIN, 'en'));
+  out.push(formatGrowth(GROWTH_DOMAIN, 'nl'), formatGrowth(GROWTH_DOMAIN, 'en'));
   return out;
 }
 
@@ -114,6 +119,16 @@ describe('Map3d — labels, controls and the digit lock (ADR 049)', () => {
     expect(screen.getByRole('status').textContent).toBe(t('nl', 'lab3d.unavailable'));
     expect(container.textContent).toContain(t('nl', 'lab3d.heightNote'));
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(expect.arrayContaining(['Aa', 'Bee']));
+  });
+  it('the D3′ floating legend shows the real GROWTH_DOMAIN bounds, not hardcoded numbers', async () => {
+    const { container } = await renderLoaded();
+    const legend = container.querySelector('[data-legend="true"]');
+    expect(legend).not.toBeNull();
+    expect(legend?.textContent).toContain(formatGrowth(-GROWTH_DOMAIN, 'nl'));
+    expect(legend?.textContent).toContain(formatGrowth(GROWTH_DOMAIN, 'nl'));
+    expect(legend?.textContent).toContain(t('nl', 'lab3d.legendLow'));
+    expect(legend?.textContent).toContain(t('nl', 'lab3d.legendHigh'));
+    scanDigits(container, harvestFictionalStrings(fixtureDataset()));
   });
   it('choosing a municipality shows its (fictional) numbers, every one labelled; the digit scan passes', async () => {
     const { container } = await renderLoaded();

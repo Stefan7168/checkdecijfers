@@ -1,7 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../../lib/i18n/messages.ts';
 import { isPublicPath } from '../../proxy.ts';
+import { YEAR_END, YEAR_START } from './fake-data.ts';
+import { GROWTH_DOMAIN } from './scales.ts';
 
 const lang = vi.hoisted(() => ({ current: 'nl' as 'nl' | 'en' }));
 vi.mock('../../lib/i18n/server.ts', () => ({ getLang: async () => lang.current }));
@@ -46,7 +48,13 @@ describe('/bevolking-3d-demo page (ADR 049)', () => {
     for (const testLang of ['nl', 'en'] as const) {
       lang.current = testLang;
       const { container, unmount } = render(await Bevolking3dDemoPage());
-      const sourceStrings = ['lab3d.title', 'lab3d.intro', 'lab3d.badge', 'lab3d.badgeDetail', 'lab3d.footer'].map((key) => t(testLang, key as Parameters<typeof t>[1]));
+      // v2 (D4′): the Narrative card (rendered directly by the page, not
+      // inside the mocked-out Map3dLoader) draws real digits from
+      // GROWTH_DOMAIN/YEAR_START/YEAR_END via t()'s {vars} — its rendered
+      // strings must be harvested here the same way the fixed copy is.
+      const narrativeVars = { start: YEAR_START, end: YEAR_END, domain: Math.round(GROWTH_DOMAIN * 100) };
+      const keys = ['lab3d.title', 'lab3d.intro', 'lab3d.badge', 'lab3d.badgeDetail', 'lab3d.footer', 'lab3d.narrativeStep1', 'lab3d.narrativeStep2', 'lab3d.narrativeStep3', 'lab3d.narrativeStep4', 'lab3d.narrativeStep5'] as const;
+      const sourceStrings = keys.map((key) => t(testLang, key, narrativeVars));
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
       let seen = 0;
       for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
@@ -60,5 +68,24 @@ describe('/bevolking-3d-demo page (ADR 049)', () => {
       expect(seen).toBeGreaterThan(0); // both languages' intro/footer genuinely carry a digit (3D, CC BY 4.0) — a false pass on an empty scan is not acceptable here either
       unmount();
     }
+  });
+
+  it('renders the D4′ guided narrative card below the map, with real domain numbers, and Vorige/Volgende step through it', async () => {
+    const { container } = render(await Bevolking3dDemoPage());
+    const order = [...container.querySelectorAll('[data-testid="loader"], [aria-label="' + t('nl', 'lab3d.narrativeTitle') + '"]')];
+    expect(order[0]?.getAttribute('data-testid')).toBe('loader'); // narrative sits BELOW the map
+    expect(screen.getByText(t('nl', 'lab3d.narrativeStep1'))).toBeInTheDocument();
+    const next = screen.getByRole('button', { name: t('nl', 'lab3d.narrativeNext') });
+    const prev = screen.getByRole('button', { name: t('nl', 'lab3d.narrativePrev') });
+    expect(prev).toBeDisabled();
+    fireEvent.click(next);
+    expect(screen.getByText(t('nl', 'lab3d.narrativeStep2'))).toBeInTheDocument();
+    expect(prev).not.toBeDisabled();
+    const dots = screen.getAllByRole('tab');
+    expect(dots).toHaveLength(5);
+    fireEvent.click(dots[4]!);
+    const domain = Math.round(GROWTH_DOMAIN * 100);
+    expect(screen.getByText(t('nl', 'lab3d.narrativeStep5', { start: YEAR_START, end: YEAR_END, domain }))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('nl', 'lab3d.narrativeNext') })).toBeDisabled();
   });
 });

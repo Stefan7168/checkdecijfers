@@ -818,6 +818,19 @@ const nl = {
   'lab3d.loading': 'Kaart laden…',
   'lab3d.unavailable': 'Deze browser kan geen 3D tonen (WebGL ontbreekt).',
   'lab3d.loadFailed': 'De gemeentegrenzen konden niet worden geladen.',
+  // v2 (D4′, session 104): the guided narrative card below the map — five
+  // static steps drawing on this demo's OWN scale/domain constants
+  // (GROWTH_DOMAIN, YEAR_START/YEAR_END), filled in via t()'s {vars} so the
+  // numbers can never drift from scales.ts/fake-data.ts.
+  'lab3d.narrativeTitle': 'Zo lees je deze kaart',
+  'lab3d.narrativePrev': 'Vorige',
+  'lab3d.narrativeNext': 'Volgende',
+  'lab3d.narrativeDotLabel': 'Ga naar stap {n} van {total}',
+  'lab3d.narrativeStep1': 'Elke gemeente is twee dingen tegelijk: een gekleurd vlak op de kaart én een kolom die erboven uitsteekt.',
+  'lab3d.narrativeStep2': 'De hoogte van de kolom staat voor het aantal inwoners — hoe hoger, hoe meer (fictieve) inwoners die gemeente heeft.',
+  'lab3d.narrativeStep3': 'De kleur van het vlak én de kolom staat voor groei sinds {start}: blauw is groei, rood-oranje is krimp, tot ongeveer ±{domain}%.',
+  'lab3d.narrativeStep4': 'Sleep de tijdbalk van {start} naar {end}, of klik op Afspelen om de groei jaar voor jaar te zien.',
+  'lab3d.narrativeStep5': 'Alle cijfers op deze kaart zijn verzonnen, uitsluitend om de techniek te laten zien — geen CBS-cijfer.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1465,6 +1478,15 @@ const en: Messages = {
   'lab3d.loading': 'Loading map…',
   'lab3d.unavailable': 'This browser cannot show 3D (no WebGL).',
   'lab3d.loadFailed': 'The municipal boundaries could not be loaded.',
+  'lab3d.narrativeTitle': 'How to read this map',
+  'lab3d.narrativePrev': 'Previous',
+  'lab3d.narrativeNext': 'Next',
+  'lab3d.narrativeDotLabel': 'Go to step {n} of {total}',
+  'lab3d.narrativeStep1': 'Every municipality is two things at once: a coloured area on the map, and a column rising above it.',
+  'lab3d.narrativeStep2': "The column's height stands for population — the taller it is, the more (fictional) residents that municipality has.",
+  'lab3d.narrativeStep3': 'The colour of both the area and the column stands for growth since {start}: blue is growth, red-orange is shrinkage, up to about ±{domain}%.',
+  'lab3d.narrativeStep4': 'Drag the time bar from {start} to {end}, or click Play to watch the growth year by year.',
+  'lab3d.narrativeStep5': 'Every figure on this map is made up, shown purely to demonstrate the technique — not a CBS figure.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
