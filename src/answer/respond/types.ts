@@ -230,7 +230,10 @@ export interface AnswerResponse extends ResponseBase {
    * envelope-key-manifest's 'ignored' entry below. The registry's alternates
    * can change after a row is written; an older row simply offering a
    * different set later is an honest, unremarkable consequence, not a
-   * divergence worth pinning against a frozen stored value. */
+   * divergence worth pinning against a frozen stored value. Storing up to 4
+   * full ChartSpecs per row this way is a real, currently-unreviewed
+   * architectural assumption (low-risk today, at most 1 alternate per
+   * measure in the live registry) — see open-questions #261. */
   chartAlternates: { label: string; spec: ChartSpec }[];
   /** docs/05 staleness row, warn-and-serve branch: set when the table is past
    * its expected update cadence but the requested period is covered. Rendered
