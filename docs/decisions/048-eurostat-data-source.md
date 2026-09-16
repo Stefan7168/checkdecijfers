@@ -588,8 +588,43 @@ detection only catches same-PATH edits, never same-NUMBER-different-file additio
 `schema_migrations` primary key is what actually catches it, and only if the full suite runs post-merge before
 declaring victory.
 
-**Still open, unchanged by this addendum:** Amendment 7/D9's "≥3 real datasets rendered end-to-end through
-`/eurostat-explorer`" and the Amendment-12 live smoke probe both need a real registered table
-([#249](../open-questions.md)'s remaining step — owner-supervised, needs `npm run db:migrate` for migrations
-032/033 first); D6's `definitiveStatuses: []` correction and the [#251](../open-questions.md) `pipeline.ts`
-per-cell-status prerequisite are unaffected by anything in this addendum.
+## Second As-built addendum — migrations applied, a real table registered, a fourth real defect found (session 107, 2026-09-16/17, on the owner's explicit go-ahead)
+
+The owner directly instructed "apply migrations and register a real table," completing RUNBOOK "WP30c E1"'s
+remaining steps 4-5 (full account: RUNBOOK's own WP30c E1 section).
+
+**Migrations 032/033 applied to production** (`npm run db:migrate`) and verified directly against the live
+database (columns exist, correct types; no new security advisories).
+
+**A real table registered and synced: `eurostat:tipsbd30`, 532 real rows, 0 corrections** — via a one-off
+script calling `registerTables`/`syncTable` directly with `adapterFor('eurostat')`, since neither the
+`ingest` nor `catalog:refresh` CLI's own entry point was ever wired with a source-selection flag (both
+hardcode `CBS_SOURCE_KEY`); the underlying pipeline functions were always source-agnostic.
+
+**A fourth real defect found, this time in `registerTables` itself, not the adapter:** its `insert into
+cbs_tables` never wrote the `source` column at all, so every table ever registered — Eurostat included —
+silently landed tagged with the column's own default, `'cbs'`. Invisible until now because Eurostat was the
+first non-CBS source anything has ever actually registered; `ingestCatalog`'s own insert into `cbs_catalog`
+(the separate catalog-mirror table) already did this correctly, which is presumably why the gap in the
+table-registry insert was never caught by the WP30c/E1 brief's own review rounds — a different function,
+same table-adjacent concern, and the review checked the one that was already right. **Not a live-chat safety
+gap**: `src/catalog/recall.ts`'s deny gate derives the source from the table id's own string prefix
+(`sourceKeyForTableId`), by design never this column — its own comment states exactly why ("so this can
+never drift"), and that design choice is what kept this from ever being a real exposure. It WAS a real
+display bug: `web/lib/eurostat-explorer.ts`'s own `where source = $1` query could never have found this (or
+any future) Eurostat table. Fixed by deriving and writing `source` via the same `sourceKeyForTableId` the
+deny gate itself uses (commit `0a5c2c8`); two regression tests added (a bare-id CBS table still tags `cbs`,
+an `eurostat:`-prefixed table tags `eurostat`, neither defaulting silently); the one already-registered
+production row corrected directly via SQL, verified against the live database.
+
+**Still genuinely open:** `doi` was never populated for this table (stays `null`) — nothing in
+`registerTables` sources a DOI from anywhere, so ADR D7(a)'s "populated at catalog/registration time" was
+itself never implemented, a separate, not-yet-scoped gap from the column-tagging bug above. A full browser
+click-through of `/eurostat-explorer` was not done (would need either flipping the production
+`EUROSTAT_EXPLORER_ENABLED` flag, itself owner-supervised, or contending with another session's already-
+running local dev server) — the explorer's own backing SQL query, run directly against the live database,
+does now return this table, which is the load-bearing fact step 4 needed proven. Amendment 7/D9's "≥3 real
+datasets rendered end-to-end" and the Amendment-12 live smoke probe are now reachable (one real table is
+registered) but not yet exercised through the actual page. D6's `definitiveStatuses: []` correction and the
+[#251](../open-questions.md) `pipeline.ts` per-cell-status prerequisite are unaffected by anything in this
+addendum.

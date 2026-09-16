@@ -1064,14 +1064,14 @@ way. A true full rollback (hiding existing dataset threads too) would need gatin
 itself, not built and not needed for a same-day flag-flip revert. Migrations 026/027 are harmless
 to leave applied either way.
 
-## WP30c E1 (Eurostat adapter) — the one owner-supervised step (added 2026-09-14/15, session 101 continuation; steps 1-3 done session 107, 2026-09-16)
+## WP30c E1 (Eurostat adapter) — ✅ ALL 5 STEPS DONE (added 2026-09-14/15, session 101 continuation; steps 1-3 session 107 2026-09-16, steps 4-5 session 107 2026-09-16/17 on the owner's explicit go-ahead)
 
-E1 was built entirely autonomously on branch `wp30c-e1-eurostat-adapter` (PR #23), but one thing was
+E1 was built entirely autonomously on branch `wp30c-e1-eurostat-adapter` (PR #23, merged). One thing was
 deliberately NOT done autonomously at first: any live call to the real Eurostat API, even a free/read-only
 one ("Constraint 0") — see [open-questions #249](open-questions.md) and ADR
 [048](decisions/048-eurostat-data-source.md)'s "As-built addendum" for the full account.
 
-**✅ Steps 1-3 done, session 107 (2026-09-16):**
+**✅ Steps 1-3, session 107 (2026-09-16):**
 
 1. ✅ Constraint 0 confirmed by the owner directly in chat: "spend" meant money, not any live call.
 2. ✅ `npm run fixtures:capture:eurostat` run against the real API — found and fixed two real defects (the
@@ -1084,17 +1084,28 @@ one ("Constraint 0") — see [open-questions #249](open-questions.md) and ADR
    in-threshold codes (`tipsbd30`/`migr_asyapp1mp`, 515/525 cells) replaced them for the happy-path capture;
    the original three keep their hand-built specimens, still used by unrelated unit tests.
 
-**Steps 4-5 remain owner-supervised, not started:**
+**✅ Steps 4-5, session 107 (2026-09-16/17, on the owner's explicit "apply migrations and register a real
+table" go-ahead):**
 
-4. Register a real Eurostat table or two (through the normal `catalog:refresh`/ingestion CLIs, source-scoped
-   per session 101's Task 5 fix) and check `/eurostat-explorer` (behind `EUROSTAT_EXPLORER_ENABLED=1`, still
-   internal/noindexed) actually renders real data end to end — table, chart, CSV, proof panel. This is also
-   when ADR 048's Amendment-12 live smoke probe becomes checkable for real.
-5. Migrations 032 (DOI columns) and 033 (`request_urls`) are file-only, unapplied — apply them
-   (`npm run db:migrate`) whenever real Eurostat rows are expected to need them (step 4 needs them first);
-   harmless to apply early (additive, nullable, zero effect on existing CBS rows). Originally numbered
-   031/032; renumbered session 107 (2026-09-16) after a collision with an unrelated `031_chart_headlines.sql`
-   that landed on `main` while this branch sat unmerged — caught via a real test failure, not assumed.
+4. ✅ Migrations 032 (`cbs_tables`/`cbs_catalog` DOI columns) and 033 (`ingestion_batches.request_urls`)
+   applied to production (`npm run db:migrate`, root `.env`'s `DATABASE_URL`) and verified directly against
+   the live database (columns exist, correct nullable types; `get_advisors` showed no new security findings).
+5. ✅ One real Eurostat table registered and synced: `eurostat:tipsbd30` (Tier-1 capital ratio banking
+   sector), 532 real rows fetched and inserted, 0 corrections, via a one-off script calling the
+   source-agnostic `registerTables`/`syncTable` pipeline directly with `adapterFor('eurostat')` (the
+   `ingest`/`catalog:refresh` CLIs' own entry points are still hardcoded to CBS — they were never wired with
+   a source-selection flag; the underlying pipeline functions always were). **Found and fixed a real bug in
+   the process:** `registerTables`'s own `insert into cbs_tables` never wrote the `source` column at all,
+   so this table (and, latently, every table ever registered) landed tagged `source='cbs'` — invisible until
+   now because Eurostat is the FIRST non-CBS source anything has ever actually registered. Not a live-chat
+   safety gap (the deny gate in `src/catalog/recall.ts` derives source from the table id's own prefix, never
+   this column) but a real display bug — `web/lib/eurostat-explorer.ts`'s own `where source = $1` query
+   could never have found this table. Fixed in code (commit `0a5c2c8`, two regression tests added) and the
+   one already-registered production row corrected directly via SQL, both verified against the live
+   database. `/eurostat-explorer`'s own backing query, run directly against the live DB, now returns
+   `eurostat:tipsbd30` — a full browser click-through was not done this session (would have required either
+   flipping the production `EUROSTAT_EXPLORER_ENABLED` flag, which stays owner-supervised, or contending
+   with another already-running local dev server this session correctly declined to kill).
 
 **Nothing here is a public go-live** — `EUROSTAT_EXPLORER_ENABLED` stays unset in production regardless, and
 none of this makes Eurostat answerable from live chat (that's E2, its own future design round + an

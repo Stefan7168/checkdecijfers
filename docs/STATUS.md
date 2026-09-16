@@ -38,17 +38,30 @@ cross-branch migration-number collision (`031_source_doi.sql` vs. an unrelated
 `031_chart_headlines.sql`, renumbered to 032/033). **MERGED (`46527a8` + `1b23298`, run
 `35125746817`).** Full verification (covers both threads combined, run after the second merge):
 backend 165 files/2466 tests, web 117 files/1854 tests, benchmark 14/14 + 6/6 + 0 fabricated, real
-`next build`, both typechecks clean, `/code-review` LOW clean on each thread. **Still
-owner-supervised, not started: registering a real Eurostat table needs migrations 032/033 applied
-first** (`npm run db:migrate`) — RUNBOOK "WP30c E1" steps 4-5, [#249](open-questions.md) — that is
-the one concrete next step if Eurostat comes up again.
+`next build`, both typechecks clean, `/code-review` LOW clean on each thread.
+
+**Owner then explicitly asked to apply migrations and register a real table — RUNBOOK "WP30c E1"
+steps 4-5, now done.** Migrations 032/033 applied to production, verified live. `eurostat:tipsbd30`
+(Tier-1 capital ratio banking sector) registered and synced: 532 real rows, 0 corrections. **This
+surfaced a fifth real defect, in `registerTables` itself:** its own insert never wrote
+`cbs_tables.source`, so every table ever registered silently landed tagged `'cbs'` — invisible until
+the first non-CBS registration. Not a live-chat safety gap (the deny gate derives source from the
+table id's own prefix, never this column) but a real display bug (the explorer's own query couldn't
+find the table). Fixed + regression-tested (`0a5c2c8`, CI green, run `35132208250`); the one
+affected production row corrected directly, verified against the live DB. Full account: ADR 048's
+second As-built addendum. **Eurostat WP30c E1 is now fully through all 5 RUNBOOK steps** — still
+genuinely open: `doi` is never populated ([#264](open-questions.md), a separate gap), and a full
+`/eurostat-explorer` browser click-through wasn't done (needs the owner-supervised
+`EUROSTAT_EXPLORER_ENABLED` flip) — the explorer's own backing query, run directly against the live
+database, does confirm the table is findable.
 
 Session 106 also shipped, separately and already live before this: the Supademo chart-polish
 comparison's one pending decision (`framePadding: 'none' → 'small'`, owner-confirmed, `c934f1d`) —
 the broader "match Supademo's polish" question stays logged, not built ([#260](open-questions.md)).
 The 3D-demo thread stays closed — do not resume it without a new, explicit owner ask. Full account
-of sessions 106-107: [status-archive.md](status-archive.md). Session 108 kickoff:
-[session-briefs/2026-09-17-session-108-kickoff.md](session-briefs/2026-09-17-session-108-kickoff.md).
+of sessions 106-107: [status-archive.md](status-archive.md). Session 108 kickoff (written before the
+migration/registration work above — the "Eurostat next step" it names is now done, see this block
+instead): [session-briefs/2026-09-17-session-108-kickoff.md](session-briefs/2026-09-17-session-108-kickoff.md).
 
 ## Phase 0 checklist
 

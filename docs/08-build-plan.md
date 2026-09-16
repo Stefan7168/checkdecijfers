@@ -152,8 +152,18 @@ migration-number reference in the explorer's own empty-state copy — fixed same
 migration NUMBER collision found + fixed along the way** (`031_source_doi.sql` vs. an unrelated
 `031_chart_headlines.sql` that landed on `main` mid-session): renumbered to 032/033, see ADR 048's As-built
 addendum. **MERGED to `main` (`46527a8` + `1b23298`), CI green** (`gate` + `deploy`, run `35125746817`).
-**Still owner-supervised, not started:** registering a real table (needs migrations 032/033 applied first,
-`npm run db:migrate`) — RUNBOOK "WP30c E1" steps 4-5, [#249](open-questions.md).
+
+**✅ Steps 4-5 also done, same session, on the owner's explicit go-ahead ("apply migrations and register a
+real table"):** migrations 032/033 applied to production, verified live. `eurostat:tipsbd30` registered and
+synced — 532 real rows, 0 corrections. **A fifth real defect found in the process** (a fourth counting from
+the Constraint-0 work): `registerTables` never wrote `cbs_tables.source` at all — every table ever
+registered silently landed tagged `'cbs'`, invisible until the first non-CBS registration. Not a live-chat
+safety gap (the deny gate never reads this column); a real display bug (the explorer's own query couldn't
+find the table). Fixed + regression-tested (`0a5c2c8`), CI green (run `35132208250`); the one affected
+production row corrected directly. Full account: ADR 048's second As-built addendum,
+[#249](open-questions.md). **Still open:** `doi` was never populated (nothing sources it — [#264](open-questions.md), a separate gap); a full `/eurostat-explorer` browser click-through wasn't done (needs
+the owner-supervised `EUROSTAT_EXPLORER_ENABLED` flip) — the explorer's own backing query, run directly
+against the live DB, does confirm the table is now findable.
 
 The original entry below is kept as the design record; it no longer describes the current state.
 
