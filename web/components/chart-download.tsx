@@ -36,6 +36,25 @@ const FOOTER_FONT = 'system-ui, -apple-system, sans-serif';
 // the single-line FOOTER_HEIGHT above already covers one line's own height.
 const FOOTER_LINE_HEIGHT = 14;
 const FOOTER_TEXT_MARGIN_X = 12; // the footer text's x position AND its right-edge inset — one constant for both, so they can't drift apart
+// Final-review fix (Finding 2): the headline is drawn larger/heavier (15px
+// semibold) than the footer (11px regular) it was modeled on, so it needs
+// its own, taller line height — 14px of leading is too tight for 15px text
+// and adjacent wrapped lines would visually collide. Used for BOTH the
+// headline's height reservation and its per-line y offset; the footer's own
+// FOOTER_LINE_HEIGHT usage is completely unchanged.
+const HEADLINE_LINE_HEIGHT = 20;
+// Final-review fix (Finding 1): wrapAttributionText's AVG_CHAR_WIDTH (6.5) is
+// calibrated for the footer's 11px regular-weight text, not the headline's
+// 15px semibold — semibold-at-15px characters are roughly 8.5px wide on
+// average, so reusing the footer's per-character estimate lets too many
+// characters onto a line and the rendered text runs past the SVG's right
+// edge. Scaling the available width down by this ratio (footer font size /
+// headline font size) makes wrapAttributionText compute breaks as if it were
+// working with the headline's own, wider characters — without touching
+// wrapAttributionText itself or the footer's own call to it.
+const HEADLINE_FONT_SIZE = 15;
+const FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE = 11;
+const HEADLINE_WIDTH_SCALE = FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE / HEADLINE_FONT_SIZE;
 const PNG_SCALE = 2;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -240,16 +259,26 @@ function buildAttributedClone(
   const extraLines = Math.max(0, footerLines.length - 1);
 
   // Task 8: reserve room at the TOP for the headline, using the same
-  // wrapAttributionText/FOOTER_LINE_HEIGHT machinery the footer already
-  // uses below, rather than a second word-wrapping implementation.
+  // wrapAttributionText word-wrapping machinery the footer already uses
+  // below (rather than a second word-wrapping implementation) — but scaled
+  // to the headline's own, larger font size (Finding 1) and its own, taller
+  // line height (Finding 2 — HEADLINE_LINE_HEIGHT, not FOOTER_LINE_HEIGHT).
   // HEADLINE_TOP_MARGIN covers one line's own height plus breathing room;
   // each additional wrapped line grows the reservation exactly like the
   // footer's own `extraLines` does, so a long headline that wraps to two or
   // three lines still gets full room instead of overlapping the chart.
   const HEADLINE_TOP_MARGIN = 32;
-  const headlineLines = headlineText ? wrapAttributionText(headlineText, width - FOOTER_TEXT_MARGIN_X * 2) : [];
+  // Finding 1: the width budget is scaled down before it reaches
+  // wrapAttributionText, so the wrapper's fixed 6.5px-per-char estimate
+  // (tuned for the footer's smaller/lighter font) breaks lines as if it were
+  // measuring the headline's actual, wider 15px-semibold characters instead.
+  const headlineLines = headlineText
+    ? wrapAttributionText(headlineText, (width - FOOTER_TEXT_MARGIN_X * 2) * HEADLINE_WIDTH_SCALE)
+    : [];
   const headlineExtraLines = Math.max(0, headlineLines.length - 1);
-  const headlineHeight = headlineLines.length > 0 ? HEADLINE_TOP_MARGIN + headlineExtraLines * FOOTER_LINE_HEIGHT : 0;
+  // Finding 2: HEADLINE_LINE_HEIGHT, not FOOTER_LINE_HEIGHT — see that
+  // constant's own comment.
+  const headlineHeight = headlineLines.length > 0 ? HEADLINE_TOP_MARGIN + headlineExtraLines * HEADLINE_LINE_HEIGHT : 0;
 
   const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT + headlineHeight;
 
@@ -324,7 +353,7 @@ function buildAttributedClone(
   headlineLines.forEach((line, i) => {
     const text = document.createElementNS(SVG_NS, 'text');
     text.setAttribute('x', String(FOOTER_TEXT_MARGIN_X));
-    text.setAttribute('y', String(20 + i * FOOTER_LINE_HEIGHT));
+    text.setAttribute('y', String(20 + i * HEADLINE_LINE_HEIGHT));
     text.setAttribute('font-family', FOOTER_FONT);
     text.setAttribute('font-size', '15');
     text.setAttribute('font-weight', '600');

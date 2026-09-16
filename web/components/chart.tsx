@@ -78,6 +78,12 @@ import { generateInsights } from '../app/chart-insights-actions.ts';
 // Journalist chart-headline (session 105): own tiny-import-graph file,
 // mirroring chart-insights-actions.ts / chart-style-actions.ts above.
 import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../app/chart-headline-actions.ts';
+// Final-review fix (Finding 3, minor): import the shared cap + the
+// word-boundary-safe truncation from the store module rather than a
+// hardcoded `140` literal and a second, independently re-implemented
+// truncation — so the client-side optimistic update can never drift from
+// what normalizeHeadlineText would actually store server-side.
+import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
 import { Button } from './ui/button.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
@@ -2262,7 +2268,11 @@ export function ChartView({
     void saveChartHeadline(embed.auditId, headlineDraftText).then((result) => {
       setHeadlineBusy(false);
       if (result.ok) {
-        setChartHeadline(headlineDraftText.trim().slice(0, 140));
+        // Finding 3 (minor): reuse normalizeHeadlineText's word-boundary-safe
+        // truncation instead of a raw `.slice()` re-implementation, so the
+        // optimistic client-side update can never drift from — or cut a
+        // number in half differently than — what the DB actually stored.
+        setChartHeadline(normalizeHeadlineText(headlineDraftText));
         setHeadlineEditing(false);
       } else {
         setHeadlineError(t(chartLang, 'chart.headline.error'));
@@ -2896,9 +2906,9 @@ export function ChartView({
           <input
             type="text"
             value={headlineDraftText}
-            onChange={(e) => setHeadlineDraftText(e.target.value.slice(0, 140))}
+            onChange={(e) => setHeadlineDraftText(e.target.value.slice(0, CHART_HEADLINE_MAX_LENGTH))}
             placeholder={t(chartLang, 'chart.headline.placeholder')}
-            maxLength={140}
+            maxLength={CHART_HEADLINE_MAX_LENGTH}
             className="rounded-md border border-input bg-background px-2 py-1 text-sm"
             autoFocus
           />

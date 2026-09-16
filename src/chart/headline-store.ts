@@ -14,11 +14,24 @@ import type { Db } from '../db/types.ts';
 
 export const CHART_HEADLINE_MAX_LENGTH = 140;
 
+// Final-review fix (Finding 3): a raw `.slice(0, CHART_HEADLINE_MAX_LENGTH)`
+// can cut a token in half — including a NUMBER, e.g. "...naar 1,5% in 2023."
+// truncated to "...naar 1," would present a genuinely wrong number as fact,
+// on a product whose entire premise is that a wrong number is never shown
+// (principle (c), docs/05-data-rules.md). Truncates at the last whitespace
+// boundary at or before the cap instead, so a partial word/number is dropped
+// WHOLE rather than cut mid-token. Falls back to the hard cut only in the
+// pathological case where there is no reasonable word boundary near the cap
+// (a single "word" longer than the whole cap) — otherwise the result could
+// be empty or near-empty.
 export function normalizeHeadlineText(raw: string | null | undefined): string | null {
   if (typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (trimmed.length === 0) return null;
-  return trimmed.slice(0, CHART_HEADLINE_MAX_LENGTH);
+  if (trimmed.length <= CHART_HEADLINE_MAX_LENGTH) return trimmed;
+  const cut = trimmed.slice(0, CHART_HEADLINE_MAX_LENGTH);
+  const lastSpace = cut.lastIndexOf(' ');
+  return lastSpace > 0 ? cut.slice(0, lastSpace).trimEnd() : cut;
 }
 
 async function tableExists(db: Db): Promise<boolean> {

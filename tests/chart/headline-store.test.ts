@@ -38,7 +38,51 @@ describe('normalizeHeadlineText', () => {
     expect(normalizeHeadlineText(null)).toBeNull();
     expect(normalizeHeadlineText('   ')).toBeNull();
     expect(normalizeHeadlineText('  Werkloosheid daalt  ')).toBe('Werkloosheid daalt');
+  });
+
+  it('exact-length-under-cap text is returned unchanged (untouched by the truncation path)', () => {
+    const exact = 'x'.repeat(CHART_HEADLINE_MAX_LENGTH);
+    expect(normalizeHeadlineText(exact)).toBe(exact);
+    expect(normalizeHeadlineText(exact)).toHaveLength(CHART_HEADLINE_MAX_LENGTH);
+  });
+
+  it('pathological fallback: a single token with no whitespace boundary near the cap hard-cuts rather than returning empty', () => {
     expect(normalizeHeadlineText('x'.repeat(CHART_HEADLINE_MAX_LENGTH + 50))).toHaveLength(CHART_HEADLINE_MAX_LENGTH);
+  });
+
+  // Final-review fix (Finding 3): the whole point of this product is that a
+  // number shown to the reader is never wrong. A raw `.slice(0, 140)` can
+  // land in the MIDDLE of a number token, presenting a truncated (and
+  // therefore WRONG) figure as fact — e.g. "...naar 1,5%" cut to "...naar
+  // 1," reads as a real, different number, not as an obviously-cut string.
+  // Constructs a string where the naive hard cut at 140 lands mid-number:
+  // exactly 138 filler characters (well under the cap on their own) + one
+  // space + the 4-character token "1,5%" — so `raw.slice(0, 140)` would
+  // land 2 characters into "1,5%", producing "...1," (a different, wrong
+  // number). The word-boundary-aware version must instead drop "1,5%"
+  // WHOLE and return just the 138-char filler, trimmed.
+  it('never splits a token (a number, here) across the 140-char cap — drops the whole partial token instead', () => {
+    const filler = 'Werkloosheid stijgt scherp naar recordhoogte volgens de nieuwste CBS-cijfers over het afgelopen kwartaal in heel Nederland vandaag gepubliceerd'.slice(
+      0,
+      138,
+    );
+    expect(filler).toHaveLength(138);
+    const raw = `${filler} 1,5%`;
+    expect(raw.length).toBeGreaterThan(CHART_HEADLINE_MAX_LENGTH);
+
+    // Prove the naive hard-cut really would have cut the number in half —
+    // this is the bug this test exists to catch: "1,5%" (one and a half
+    // percent) becomes a bare, different, wrong number "1".
+    const naiveCut = raw.slice(0, CHART_HEADLINE_MAX_LENGTH);
+    expect(naiveCut).not.toContain('1,5%');
+    expect(naiveCut.endsWith(' 1')).toBe(true);
+
+    // The fix: the whole "1,5%" token is dropped, never split — the result
+    // is exactly the filler text, with the partial number gone entirely.
+    const result = normalizeHeadlineText(raw);
+    expect(result).toBe(filler);
+    expect(result).not.toContain('1,5%');
+    expect(result?.endsWith(' 1')).toBe(false);
   });
 });
 
