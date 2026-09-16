@@ -90,7 +90,7 @@ export default async function EurostatExplorerPage({
           No Eurostat tables are registered yet. E1 (this build phase) ships the adapter, the registry entry
           and this explorer, but registers zero real Eurostat tables — the adapter and its real API shapes
           are now verified (session 107's live fixture capture), but registering a real table needs
-          migrations 031/032 applied first (owner-supervised, RUNBOOK "WP30c E1" step 4). Once that's done,
+          migrations 032/033 applied first (owner-supervised, RUNBOOK "WP30c E1" step 4). Once that's done,
           registered tables will appear here.
         </p>
       ) : (
