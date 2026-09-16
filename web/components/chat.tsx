@@ -1282,6 +1282,7 @@ export function Chat({
             {!dockMode && message.chart ? (
               <ChartView
                 spec={message.chart}
+                alternates={message.chartAlternates}
                 embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
               />
             ) : null}

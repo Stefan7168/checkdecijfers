@@ -5085,4 +5085,72 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     // base would make the toggle harder to read, not more honest.
     scanForUnboundDigits(container, [...harvestSpecStrings(alt), REGISTRY_LABEL]);
   });
+
+  // Task 6 addendum (a gap the Task 5 reviewer flagged): the Embed dialog's
+  // live preview shows whatever the card currently displays — once a reader
+  // can switch readings, that could be an alternate — but the PUBLISHED
+  // embed always republishes the PRIMARY (the stored audit row carries no
+  // reading selection; /embed/[token] has no chartAlternates concept at
+  // all). Disabling the trigger while a non-primary reading is selected is
+  // the fix; nested here (not a sibling top-level describe) specifically to
+  // reuse this block's own `altReadingSpec`/`readingControl` helpers.
+  describe('Embed disabled while an alternate reading is selected (#254 Task 6 addendum)', () => {
+    it('disables the Embed trigger once a non-primary reading is selected, with a reason reachable via aria-describedby', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      const trigger = screen.getByRole('button', { name: 'Insluiten' });
+      expect(trigger).not.toBeDisabled();
+
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+
+      expect(trigger).toBeDisabled();
+      const describedById = trigger.getAttribute('aria-describedby');
+      expect(describedById).toBeTruthy();
+      const reason = document.getElementById(describedById!);
+      expect(reason?.textContent).toMatch(/standaardlezing/);
+      expect(trigger).toHaveAttribute('title', expect.stringContaining('standaardlezing'));
+    });
+
+    it('re-enables the Embed trigger when switching back to the primary reading', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+      expect(screen.getByRole('button', { name: 'Insluiten' })).toBeDisabled();
+
+      fireEvent.change(readingControl(), { target: { value: 'primary' } });
+      expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
+    });
+
+    it('leaves the Embed trigger enabled when the answer carries no alternates at all (no reading control to switch)', () => {
+      render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+      expect(screen.getByRole('button', { name: 'Insluiten' })).not.toBeDisabled();
+    });
+
+    it('also disables the in-Style-modal Embed trigger while a non-primary reading is selected', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+          embed={{ auditId: 1 }}
+        />,
+      );
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+      const styleDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+      expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeDisabled();
+    });
+  });
 });

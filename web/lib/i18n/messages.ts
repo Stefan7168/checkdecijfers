@@ -634,6 +634,12 @@ const nl = {
   'chart.embed.close': 'Sluiten',
   'chart.embed.unavailable': 'Insluiten is nu niet beschikbaar.',
   'chart.embed.loading': 'Code wordt gemaakt…',
+  // #254 Task 6 addendum: insluiten publiceert altijd de standaardlezing
+  // (de opgeslagen audit-rij kent geen lezingkeuze) — deze reden verschijnt
+  // zodra een andere lezing dan de standaard is gekozen, zodat een lezer
+  // nooit denkt dat de getoonde (afwijkende) lezing wordt gepubliceerd.
+  'chart.embed.readingDisabledReason':
+    'Insluiten publiceert altijd de standaardlezing van deze grafiek, niet de gekozen lezing. Kies eerst de standaardlezing om in te sluiten.',
 
   // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
   // links and the landing "Publiceer" step. Added as one block at the tail
@@ -1338,6 +1344,8 @@ const en: Messages = {
   'chart.embed.close': 'Close',
   'chart.embed.unavailable': 'Embedding is not available right now.',
   'chart.embed.loading': 'Generating code…',
+  'chart.embed.readingDisabledReason':
+    "Embedding always publishes this chart's default reading, not the one currently selected. Switch back to the default reading first to embed.",
 
   // WP-B (journey programme, phase 3/4 R5.1/R5.4/R6) — trust pages, footer
   // links and the landing "Publish" step. Added as one block at the tail

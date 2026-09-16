@@ -1227,6 +1227,26 @@ describe('Chat — chartAlternates threaded onto message state (#254)', () => {
     const assistant = lastMessages.find((m) => m.role === 'assistant');
     expect(assistant?.chartAlternates).toEqual([]);
   });
+
+  // Task 6: the UI landed (Task 5) and this task wires it up — chat.tsx's
+  // inline `<ChartView spec={message.chart} .../>` call now also passes
+  // `alternates={message.chartAlternates}`. Reusing the deriveVisuals spy
+  // above only proves the MESSAGE carries the field; this proves it actually
+  // REACHES ChartView, the same way chart.test.tsx's own Task 5 tests find
+  // the reading control (`getByRole('combobox', { name: /lezing|reading/i })`).
+  it("passes the message's chartAlternates through to ChartView as the alternates prop", async () => {
+    const chartAlternates = [{ label: 'Procentuele verandering', spec: CHART_SPEC }];
+    const response = {
+      ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }),
+      chart: CHART_SPEC,
+      chartAlternates,
+    } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 9, netCost: 20, response }));
+    render(<Chat />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
+  });
 });
 
 // Session 91 (owner-chosen "Option B — answer card"): an answer message now

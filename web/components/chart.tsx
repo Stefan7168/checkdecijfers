@@ -3542,6 +3542,7 @@ export function ChartView({
                 currentForm={state.form}
                 open={embedOpen}
                 onOpenChange={setEmbedOpen}
+                disabled={state.selectedReading !== null}
                 chartSlot={
                   <>
                     {canvasNode}
@@ -3697,6 +3698,7 @@ export function ChartView({
             currentForm={state.form}
             open={embedOpen}
             onOpenChange={setEmbedOpen}
+            disabled={state.selectedReading !== null}
             chartSlot={
               <>
                 {canvasNode}

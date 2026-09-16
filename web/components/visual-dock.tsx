@@ -103,6 +103,7 @@ export function VisualDock({
         ) : active.kind === 'chart' && active.chart !== null ? (
           <ChartView
             spec={active.chart}
+            alternates={active.chartAlternates}
             frameless
             embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
           />

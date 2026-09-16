@@ -62,6 +62,7 @@ describe('deriveDatasetVisuals', () => {
       label: 'Your chart 1',
       question: 'show revenue by year',
       chart: null,
+      chartAlternates: [],
       card: null,
       userChart: CHART_SPEC,
       // Task 4 (spec Part B1): DatasetChatMessage carries no auditId at all
