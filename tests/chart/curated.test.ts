@@ -148,15 +148,22 @@ describe('buildCuratedCharts (hermetic, fixture DB)', () => {
   });
 
   // #196 review round 2 (session 76): the assumption src/query/resolve.ts's
-  // explicit-target eviction-race branch relies on, made a real assertion —
-  // buildAlternateSpec (src/chart/curated.ts) is the only production caller
-  // of an `explicit` target, and it always targets the table a curated
-  // chart's own CANONICAL key already resolved to. If any curated table were
-  // ever NOT pinned, it would be eviction-eligible, and an explicit target
-  // over it could race an eviction the same way a canonical target does —
-  // which resolve.ts's explicit branch does not handle (it keeps
-  // `table_not_registered`, not the honest `table_evicted`). This asserts
-  // the registry-level fact that keeps that gap unreachable in production.
+  // explicit-target eviction-race branch relies on, made a real assertion.
+  // The `explicit` target is now constructed by the shared
+  // `buildAlternateReading` (src/chart/alternate-reading.ts) — as of the
+  // Task 1 refactor (chart alternate-reading toggle, #254) it superseded the
+  // old inline `buildAlternateSpec` this comment used to name, which no
+  // longer exists — called TODAY only from curated.ts's own pinned-table
+  // call site in `buildOne`, always targeting the table a curated chart's
+  // own CANONICAL key already resolved to. `buildAlternateReading`'s own
+  // header comment now documents the eviction-race invariant explicitly,
+  // including why it degrades safely for a future, non-pinned-table caller
+  // (Task 2, not yet built). If any curated table were ever NOT pinned, it
+  // would be eviction-eligible, and an explicit target over it could race an
+  // eviction the same way a canonical target does — which resolve.ts's
+  // explicit branch does not handle (it keeps `table_not_registered`, not
+  // the honest `table_evicted`). This asserts the registry-level fact that
+  // keeps that gap unreachable in production today.
   it('every curated chart resolves to a PINNED table — cbs_tables.pinned = true', async () => {
     const tableIds = [...new Set(Object.values(EXPECTED_TABLES))];
     expect(tableIds.length).toBeGreaterThan(0);

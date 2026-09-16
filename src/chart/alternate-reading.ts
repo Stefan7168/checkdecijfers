@@ -12,6 +12,34 @@
 // dims of their own (e.g. a branch code) that a bare `dims: alt.dims` would
 // silently drop, breaking the toggle for no honesty reason. Do not
 // "simplify" this back to a literal replace.
+//
+// Eviction-race safety invariant, carried forward from curated.ts's old
+// buildAlternateSpec comment (that function's only caller before this
+// refactor): this builds an `explicit` target (tableId + measure + dims),
+// and src/query/resolve.ts's explicit-target branch reports an eviction race
+// on the referenced table as the honest-but-misleading `table_not_registered`
+// refusal rather than the `table_evicted` a canonical target would get. That
+// gap is unreachable ONLY when the referenced table is PINNED (never
+// evictable, per migration 025_table_eviction_lifecycle.sql) — true for
+// every call from curated.ts (always a hand-curated seed table; pinned,
+// asserted by tests/chart/curated.test.ts), but NOT guaranteed for this
+// function's broader caller set. `buildAlternateReading` is called with
+// `primary.attribution.tableId` from whatever answered the PRIMARY query —
+// once a general caller (Task 2, the answer pipeline) passes it a primary
+// answer over an on-demand-onboarded (evictable, not pinned) table, that
+// eviction race becomes reachable here for the first time.
+//
+// This still degrades SAFELY today without any further work: an eviction
+// race on a non-pinned table produces `table_not_registered`, which is still
+// a typed refusal — `runQuery`'s `!altOutcome.ok` branch below turns ANY
+// refusal (this one included) into `{ ok: false }`, which every caller
+// (curated.ts today, the answer pipeline in Task 2) already treats as
+// "no toggle, primary chart unaffected" (principle c: refuse, never guess).
+// So a race here degrades to a missing alternate reading, never a wrong one.
+// If this function, or any future explicit-target caller, ever needs to
+// distinguish "genuinely refused" from "raced an eviction" (e.g. to retry),
+// resolve.ts's explicit-target branch needs revisiting first — see its own
+// comment there.
 import type { Db } from '../db/types.ts';
 import type { StructuredIntent, ValidatedResult } from '../query/index.ts';
 import { runQuery } from '../query/index.ts';
@@ -52,6 +80,14 @@ export async function buildAlternateReading(
       dims: { ...primaryCell.dims, ...(alt.dims ?? {}) },
     },
     period: primaryIntent.period,
+    // Inherited from the primary, never hardcoded to 'series': a hardcoded
+    // 'series' would refuse every alternate built over a comparison-shaped
+    // primary (bar chart, multiple regions at one period) once Task 2 wires
+    // this in generally — a comparison primary's own intent carries
+    // `derivation: 'none'`, and resolve.ts's arity check (src/query/
+    // resolve.ts) requires a multi-period selection (periodCodes.length >= 2)
+    // for `'series'`, which a single-period comparison intent never has. Do
+    // not "simplify" this back to a literal `'series'`.
     derivation: primaryIntent.derivation,
   };
 
