@@ -3170,7 +3170,25 @@ export function ChartView({
                   * identity (it is what `selectedReading` stores and what
                   * `activeReadingSpec` looks up), the array is never
                   * reordered or filtered, and two registry alternates could
-                  * in principle carry the same label. */}
+                  * in principle carry the same label.
+                  *
+                  * These labels routinely CONTAIN DIGITS — the registry ships
+                  * 'CPI indexniveau (2025=100), geen mutatiepercentage',
+                  * 'stand per 31 december (Eindstand Voorraad)', '…(2021 =
+                  * 100)' — and that is deliberate and allowed. A registry
+                  * alternate label is curated config, hand-authored in
+                  * src/registry/defaults.ts and code-reviewed, never derived
+                  * from a CBS cell at runtime, and it NAMES a reading rather
+                  * than stating a measured quantity (an index BASE is a
+                  * definitional property of the measure, not a plotted
+                  * value). Same class as ChartAnnotation's curated event-marker
+                  * labels, whose own type comment (src/chart/types.ts) states
+                  * the policy: "METADATA … never a data VALUE (R1/R3's
+                  * numeric-token scanning never sees these)". chart.test.tsx's
+                  * #254 scan test pins the exemption as NARROW — the card
+                  * minus this one control must still scan clean with no
+                  * exemption at all, so a label's digits can never leak into
+                  * the chart, table, headline figure, axis or attribution. */}
                 {alternates.map((alt, i) => (
                   <option key={i} value={i}>
                     {alt.label}

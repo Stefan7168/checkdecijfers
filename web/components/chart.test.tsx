@@ -4915,6 +4915,39 @@ describe('ChartView — alternate reading toggle (#254)', () => {
 
   const readingControl = (): HTMLElement => screen.getByRole('combobox', { name: /lezing|reading/i });
 
+  /** A REAL alternate label, copied verbatim from the registry
+   * (src/registry/defaults.ts, the `cpi_yoy` entry) — digits and all. Task 5's
+   * first round used a digit-free placeholder ('Ongecorrigeerd'), which meant
+   * the whole-card digit scan below could not actually see whether a real
+   * label's own digits are handled: the registry ships several that carry them
+   * ('stand per 31 december (Eindstand Voorraad)', 'het indexNIVEAU (2021 =
+   * 100)', '85773NED'). Keep a digit-bearing label here — a placeholder
+   * without one silently removes this test's teeth. */
+  const REGISTRY_LABEL = 'CPI indexniveau (2025=100), geen mutatiepercentage';
+
+  /** Returns a detached copy of the rendered card with the reading control's
+   * own subtree (label + <select> + every <option>) removed, so the rest of
+   * the card can be digit-scanned with NO exemption at all. See the decision
+   * note on the scan test below for why that one subtree is the only place a
+   * curated string is allowed to put an untraced digit on screen. */
+  function cardWithoutReadingControl(container: HTMLElement): HTMLElement {
+    const clone = container.cloneNode(true) as HTMLElement;
+    const control = clone.querySelector('select[id$="-reading"]');
+    expect(control, 'the reading control must exist for this helper to be meaningful').not.toBeNull();
+    // `closest('div')` from the <select> is its immediate wrapper (the one
+    // holding the <label> and the <option>s) — never a larger ancestor.
+    control!.closest('div')!.remove();
+    // Guard against this helper quietly gutting the card and making the
+    // strict scan vacuous: the reading control is gone, but the ALTERNATE's
+    // own values, the Vanaf/Tot selects and the attribution are all still
+    // there to be scanned.
+    expect(clone.querySelector('select[id$="-reading"]')).toBeNull();
+    expect(clone.textContent).toContain('9,8');
+    expect(clone.querySelector('select[id$="-from"]')).not.toBeNull();
+    expect(clone.textContent).toContain('12345NED');
+    return clone;
+  }
+
   it('shows no reading control when alternates is empty or omitted', () => {
     const { unmount } = render(<ChartView spec={threePointSpec()} />);
     expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
@@ -5014,13 +5047,42 @@ describe('ChartView — alternate reading toggle (#254)', () => {
   it('the alternate view passes the SAME whole-card digit-honesty scan the primary chart already does', () => {
     const alt = altReadingSpec();
     const { container } = render(
-      <ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
+      <ChartView spec={threePointSpec()} alternates={[{ label: REGISTRY_LABEL, spec: alt }]} />,
     );
     fireEvent.change(readingControl(), { target: { value: '0' } });
-    // R1/R6: with the ALTERNATE showing, every digit on the card must trace
-    // to the ALTERNATE's own strings — the primary's values must be gone.
-    scanForUnboundDigits(container, harvestSpecStrings(alt));
+
+    // (1) The DATA surface — the whole card MINUS the reading control itself —
+    // is scanned with NO exemption whatsoever: with the ALTERNATE showing,
+    // every digit there must trace to the ALTERNATE's own spec strings, and
+    // the primary's values must be gone (R1/R6). This is the strict half, and
+    // it is what keeps the exemption in (2) narrow: a curated label's digits
+    // may never leak into the chart, the table, the headline figure, the axis
+    // or the attribution.
+    scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
     fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
-    scanForUnboundDigits(container, harvestSpecStrings(alt));
+    scanForUnboundDigits(cardWithoutReadingControl(container), harvestSpecStrings(alt));
+
+    // (2) The whole card, control included: the ONE extra source needed is the
+    // registry label itself, verbatim.
+    //
+    // DECISION (Task 5 review finding, #254) — a registry alternate label is
+    // CURATED CONFIG, not data, and is deliberately exempt from cell-level
+    // traceability. It is hand-authored in src/registry/defaults.ts, committed
+    // and code-reviewed, never derived from a CBS cell at runtime, and it NAMES
+    // a reading rather than stating a measured quantity: the digits in
+    // 'CPI indexniveau (2025=100)' are the index BASE — a definitional property
+    // of the measure — not a plotted value. This is the same class as
+    // ChartAnnotation's curated event-marker labels, whose own type comment
+    // (src/chart/types.ts) already states the policy explicitly: "METADATA
+    // about when something happened, never a data VALUE (R1/R3's numeric-token
+    // scanning never sees these)". Those labels likewise render straight onto
+    // the card (chart.markedInChart).
+    //
+    // The rejected alternative was requiring these labels to be digit-free so
+    // the scan could stay unexempted. That buys no honesty — the label still
+    // is not a claim about a plotted number — and costs real clarity: the
+    // clearest possible name for that reading IS "(2025=100)". Suppressing the
+    // base would make the toggle harder to read, not more honest.
+    scanForUnboundDigits(container, [...harvestSpecStrings(alt), REGISTRY_LABEL]);
   });
 });
