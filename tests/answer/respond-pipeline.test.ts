@@ -30,7 +30,7 @@ import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import { freshestForCanonical, runQuery } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
-import { REFUSAL_TASK_QUESTIONS } from '../helpers/benchmark-intents.ts';
+import { ANSWERABLE_TASKS, REFUSAL_TASK_QUESTIONS } from '../helpers/benchmark-intents.ts';
 import { checkComposedAnswer, loadAnswerKey } from '../helpers/answer-expectations.ts';
 import { loadLabelledSet } from '../helpers/intent-expectations.ts';
 
@@ -279,6 +279,26 @@ describe('B15-B20 end-to-end (respondToQuestion, replayed fixtures)', () => {
       confidence: 0.91,
       candidateIds: ['82610NED', '70072NED', '37789ksz'],
     });
+  });
+});
+
+describe('chartAlternates (#254)', () => {
+  it('B4 (inflation, a real chart) returns its registered alternate, built and labelled', async () => {
+    const response = await respondToQuestion(db, ANSWERABLE_TASKS.B4!.question, respondOptions());
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    expect(response.chart).not.toBeNull();
+    expect(response.chartAlternates.length).toBeGreaterThan(0);
+    expect(response.chartAlternates[0]!.label).toBe('CPI indexniveau (2025=100), geen mutatiepercentage');
+    expect(response.chartAlternates[0]!.spec.attribution.tableId).toBe(response.chart?.attribution.tableId);
+  });
+
+  it('B11 (a single-value answer, no chart) returns an empty array, not undefined', async () => {
+    const response = await respondToQuestion(db, ANSWERABLE_TASKS.B11!.question, respondOptions());
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    expect(response.chart).toBeNull();
+    expect(response.chartAlternates).toEqual([]);
   });
 });
 

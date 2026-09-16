@@ -219,6 +219,19 @@ export interface AnswerResponse extends ResponseBase {
   /** WP8 chart spec when the result shape warrants one (series/comparison),
    * else null — policy lives in the chart module, not here. */
   chart: ChartSpec | null;
+  /** #254 alternate-reading toggle: every registered alternate of the
+   * answered measure, independently built through the same deterministic
+   * pipeline as `chart` (R6) — capped at 4. [] when the measure has no
+   * registered alternates, `chart` is null, or none could be built.
+   * Presentation sugar over already-attributed data (design doc §Audit/R8):
+   * it rides the audit envelope like every other field here (the row's
+   * `response` column stores it verbatim, same as `suggestions`/`pending`),
+   * but R8 reconstruction never re-derivation-checks it — see the
+   * envelope-key-manifest's 'ignored' entry below. The registry's alternates
+   * can change after a row is written; an older row simply offering a
+   * different set later is an honest, unremarkable consequence, not a
+   * divergence worth pinning against a frozen stored value. */
+  chartAlternates: { label: string; spec: ChartSpec }[];
   /** docs/05 staleness row, warn-and-serve branch: set when the table is past
    * its expected update cadence but the requested period is covered. Rendered
    * into `text`; structural so no rendering path can drop it. */

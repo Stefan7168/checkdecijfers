@@ -77,6 +77,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     kind: { category: 'shape-checked' },
     answer: { category: 'shape-checked' }, // a container: its own keys are manifested under ComposedAnswer
     chart: { category: 'rederived' }, // buildChartSpec over the stored result + schema re-validation
+    chartAlternates: {
+      category: 'ignored',
+      why: '#254: presentation sugar built independently, best-effort, alongside `chart`; the registry\'s alternates can change after a row is written, so nothing here has a frozen ground truth worth reconstructing against — same produce-time, non-reconstructed treatment as `suggestions`/`pending` (design doc §Audit/R8)',
+    },
     stalenessWarning: { category: 'shape-checked' }, // participates in the text re-assembly; its own wording is not re-derived
     parse: {
       category: 'ignored',
@@ -250,7 +254,7 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 8, // #197 step 3: + present-only `pending`
+      AnswerResponse: 9, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`
       ClarificationResponse: 6,
       RefusalResponse: 11,
       ComposedAnswer: 16,
