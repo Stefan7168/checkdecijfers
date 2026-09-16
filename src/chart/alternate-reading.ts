@@ -79,6 +79,14 @@ export async function buildAlternateReading(
       measure: alt.measure ?? primaryCell.measure,
       dims: { ...primaryCell.dims, ...(alt.dims ?? {}) },
     },
+    // #254 review finding (post-Task-1): must carry the PRIMARY's own
+    // regions onto the alternate. resolve.ts defaults an absent `regions` to
+    // `[]` (src/query/resolve.ts:270) — without this, a multi-region
+    // comparison primary (e.g. "compare Amsterdam and Rotterdam") would
+    // silently build its alternate over an unrelated, regionless national
+    // reading instead of the same region comparison. Same optional
+    // pass-through pattern as `period` above.
+    regions: primaryIntent.regions,
     period: primaryIntent.period,
     // Inherited from the primary, never hardcoded to 'series': a hardcoded
     // 'series' would refuse every alternate built over a comparison-shaped

@@ -109,6 +109,39 @@ describe('buildAlternateReading', () => {
     }
   });
 
+  it('carries the PRIMARY\'s own regions onto the alternate — a multi-region comparison stays the same comparison (#254 review finding)', async () => {
+    // population_on_1_january's real alternate (defaults.ts): { measure: 'M000365', label: '...' }.
+    // GM0363/GM0599 (Amsterdam, Rotterdam) are the same two region codes the B10 benchmark task
+    // already uses for this exact canonical key (tests/helpers/benchmark-intents.ts). Without
+    // `regions: primaryIntent.regions` on altIntent, resolve.ts defaults an absent `regions` to `[]`
+    // (src/query/resolve.ts:270) and this would silently resolve to an unrelated national reading
+    // instead of the same two-region comparison.
+    const primaryIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'population_on_1_january' },
+      regions: ['GM0363', 'GM0599'],
+      period: { kind: 'codes', codes: ['2024JJ00'] },
+      derivation: 'none',
+    };
+    const primaryOutcome = await runQuery(db, primaryIntent);
+    if (!primaryOutcome.ok) throw new Error(`fixture setup refused: ${primaryOutcome.refusal.kind}`);
+    const primary: ValidatedResult = primaryOutcome;
+
+    const outcome = await buildAlternateReading(db, primary, primaryIntent, {
+      measure: 'M000365',
+      label: 'Gemiddelde bevolking (jaargemiddelde, geen standcijfer)',
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      // A comparison shape (bar chart): one series per region, in the intent's
+      // own region order (build.ts groups cells "period ascending, then intent
+      // region order"; resolve.ts's `regionCodes = [...regions]` preserves it).
+      expect(outcome.result.spec.series).toHaveLength(2);
+      expect(outcome.result.spec.series.map((s) => s.regionCode)).toEqual(['GM0363', 'GM0599']);
+    }
+  });
+
   it('degrades to { ok: false } on a refusal, never throws, and names the refusal kind', async () => {
     const primaryIntent: StructuredIntent = {
       schemaVersion: 1,
