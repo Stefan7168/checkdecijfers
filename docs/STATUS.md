@@ -18,18 +18,32 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 105 — verify against `git log`/`gh pr list`
-before trusting this, since more may have landed after it was written).** **Session 105: the
-journalist chart-headline feature — [ADR 050](decisions/050-journalist-chart-headline.md), built via
-subagent-driven development (8 tasks + a final-review fix wave, all clean, two real bugs caught
-mid-build and fixed), merged to `main` (`7bf76ff`, CI green), deployed, and migration 031 applied
-live with the owner's separate explicit go-ahead — verified (RLS on, zero `anon`/`authenticated`
-grants). The feature is FULLY LIVE.** [#259](open-questions.md) has the full as-built record.
-[#254](open-questions.md)'s second gap (context controls: level vs. %-change, seasonally-adjusted
-vs. raw) is still queued, not started — likely next, but check this block hasn't been overtaken by
-a newer owner ask first. The 3D-demo thread stays closed — do not resume it without a new, explicit
-owner ask. Full account of session 105: [status-archive.md](status-archive.md). Session 106 kickoff:
-[session-briefs/2026-09-16-session-106-kickoff.md](session-briefs/2026-09-16-session-106-kickoff.md).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 106 — verify against `git log`/`gh pr list`
+before trusting this, since more may have landed after it was written).** **Session 106 is PAUSED
+MID-BUILD, not finished — resume it before starting anything new.** Two threads this session:
+(1) a Supademo chart-polish comparison resolved the one pending owner-gated decision from
+chart-card-polish Task 5 (`framePadding: 'none' → 'small'`) — shown live in the Style panel, owner
+picked it, shipped, CI green, **LIVE**; the broader "match Supademo's polish" question is logged,
+not built ([#260](open-questions.md)). (2) [#254](open-questions.md)'s second gap (context
+controls: raw vs. seasonally-adjusted / other registered alternate readings) was designed, planned,
+and built via subagent-driven development in an **isolated worktree, NOT merged to `main`**:
+`.claude/worktrees/chart-alternate-reading-toggle`, branch `worktree-chart-alternate-reading-toggle`
+(also pushed to `origin/worktree-chart-alternate-reading-toggle` as a durability backup — no PR
+opened, this is a plain branch backup, not a merge request) — 5 of 6 plan tasks + one standalone
+mid-build fix are complete and review-clean; **Task 6 (the final wiring — the one that actually
+activates the toggle) has ONE open review finding, not yet fixed**, and Task 7 (the whole-branch
+review) has not run. **Resume with `EnterWorktree` pointed at that existing local path if this
+machine still has it — do not create a fresh worktree if so, it already has 12 clean, reviewed
+commits. If the local worktree is gone (a machine/account switch), the branch itself survives on
+`origin/worktree-chart-alternate-reading-toggle` — check out fresh from there instead; only the
+local SDD ledger (a per-machine scratch file, not committed) would need to be reconstructed from
+this doc + [status-archive.md](status-archive.md)'s session-106 entry.**
+Full resume instructions: the SDD ledger at
+`.claude/worktrees/chart-alternate-reading-toggle/.superpowers/sdd/2026-09-16-chart-alternate-reading-toggle/progress.md`
+and [status-archive.md](status-archive.md)'s session-106 entry. Ready-to-paste kickoff:
+[session-briefs/2026-09-16-session-107-kickoff.md](session-briefs/2026-09-16-session-107-kickoff.md).
+The 3D-demo thread stays closed —
+do not resume it without a new, explicit owner ask.
 
 ## Phase 0 checklist
 
