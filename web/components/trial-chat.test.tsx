@@ -78,6 +78,62 @@ describe('TrialChat', () => {
     expect(await screen.findByText(/niet verbruikt/)).toBeInTheDocument();
     expect(screen.getByLabelText('Stel je gratis proefvraag')).toBeInTheDocument();
   });
+
+  it("passes the response's chartAlternates through to ChartView as the alternates prop", async () => {
+    const minimalChartSpec = {
+      schemaVersion: 1,
+      kind: 'line',
+      title: 'Testreeks',
+      dims: { Kenmerk: '000000' },
+      dimLabels: { Kenmerk: 'Alle kenmerken' },
+      unit: '%',
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            {
+              resultId: 'r1',
+              periodCode: '2024JJ00',
+              periodLabel: '2024',
+              value: 42,
+              formattedValue: '42,0',
+              decimals: 1,
+              status: 'Definitief',
+              provisional: false,
+              valueAttribute: 'None',
+            },
+          ],
+        },
+      ],
+      provisionalNote: null,
+      nullNotes: [],
+      definitionLine: null,
+      attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+      attribution: {
+        tableId: '12345NED',
+        tableTitle: 'Test',
+        tableVersion: 1,
+        syncedAt: '2026-07-01',
+        coveredPeriods: { from: '2020', to: '2024' },
+        license: 'CC BY 4.0',
+      },
+    };
+    askTrialQuestion.mockResolvedValue({
+      kind: 'ok',
+      response: {
+        kind: 'answer',
+        text: 'Hier is de grafiek.',
+        chart: minimalChartSpec,
+        chartAlternates: [{ label: 'Procentuele verandering', spec: minimalChartSpec }],
+      },
+      questionsLeft: 1,
+    });
+    render(<TrialChat initialQuestionsLeft={2} />);
+    await ask('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
+  });
 });
 
 // WP218 phase 4 (#219): proves the language switch reaches this surface.
