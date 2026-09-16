@@ -181,6 +181,18 @@ on `main` (`2f3ff3a`, docs-only) before branching PR #24. Verified: root+web typ
 (solo); hermetic benchmark 14/14+6/6+0 fabricated GATE PASS; real `next build` succeeds; `/code-review`
 LOW: 0 findings.
 
+**Session 102 (2026-09-15, autonomous, owner still away): two more small, well-contained fixes, each
+its own PR, per #118(b) — neither merged.** (a) PR #24: the health-check gap above is done
+(`/api/health` now probes `pro_subscriptions` unconditionally); a pre-existing, unrelated
+doc-convention violation (live PR links, #132) was found running the full suite and fixed directly on
+`main` first (docs-only, `2f3ff3a`). (b) PR #25: [open-questions #230](open-questions.md) (dead
+`chart-story.ts` step-builder functions, orphaned since ADR 041) is also done — verified
+`pointCaption`/`seriesCaption`/`barCaption`/`provisional` were NOT orphaned before removing anything,
+deleted the six actually-dead exports + their test file + eleven orphaned i18n keys. Both PRs: full
+verification block green (typecheck, suites, benchmark GATE PASS, real build, `/code-review` LOW 0
+findings) — see each PR's own description and the open-questions rows they close for the measured
+detail, not duplicated here.
+
 **▶ SUPERSEDED (written 2026-09-14 ~09:33 UTC, session 101 continued overnight, autonomous — owner
 asleep; superseded same day, see the "continued" block right below).** Both pieces of pre-approved
 overnight work are DONE. Chart visual/embed pass merged to `main` (`b86556f`..`841cb83`, 7
