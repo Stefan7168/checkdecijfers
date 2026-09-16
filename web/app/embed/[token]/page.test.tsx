@@ -47,6 +47,9 @@ vi.mock('../../../backend/billing/index.ts', () => ({ hasProPlan, lookupUserEmai
 const { rerunLive } = vi.hoisted(() => ({ rerunLive: vi.fn() }));
 vi.mock('../../../backend/chart/embed-live.ts', () => ({ rerunLive }));
 
+const { getChartHeadlinePublic } = vi.hoisted(() => ({ getChartHeadlinePublic: vi.fn(async () => null as string | null) }));
+vi.mock('../../../backend/chart/headline-store.ts', () => ({ getChartHeadlinePublic }));
+
 import EmbedPage, { metadata } from './page.tsx';
 
 // A full, valid ChartSpec — not the sparse shape a naive fixture would
@@ -571,5 +574,30 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     expect(rerunLive).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ userId: 'user-1' }), {
       lang: 'en',
     });
+  });
+});
+
+describe('/embed/[token] — journalist headline', () => {
+  afterEach(() => {
+    cleanup();
+    getChartHeadlinePublic.mockReset().mockResolvedValue(null);
+  });
+
+  it('renders the stored headline when one exists', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(1);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    getChartHeadlinePublic.mockResolvedValue('Werkloosheid stijgt scherp');
+    render(await EmbedPage({ params: params('tok'), searchParams: search() }));
+    expect(screen.getByText('Werkloosheid stijgt scherp')).toBeInTheDocument();
+  });
+
+  it('renders no headline text when none is stored', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(1);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    getChartHeadlinePublic.mockResolvedValue(null);
+    render(await EmbedPage({ params: params('tok'), searchParams: search() }));
+    expect(screen.queryByTestId('chart-headline-text')).not.toBeInTheDocument();
   });
 });

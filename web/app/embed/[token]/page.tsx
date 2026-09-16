@@ -52,6 +52,7 @@ import type { Metadata } from 'next';
 import { isRedacted, loadAuditRecord } from '../../../backend/answer/audit/index.ts';
 import { verifyEmbedToken } from '../../../backend/chart/embed-token.ts';
 import { rerunLive } from '../../../backend/chart/embed-live.ts';
+import { getChartHeadlinePublic } from '../../../backend/chart/headline-store.ts';
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
@@ -138,6 +139,8 @@ export default async function EmbedPage({
 
   const record = await loadAuditRecord(getDb(), auditId);
   if (record === null) notFound();
+
+  const headlineText = await getChartHeadlinePublic(getDb(), auditId);
 
   // ChartSpec (src/chart/types.ts) carries no language field of its own —
   // buildChartSpec (src/chart/build.ts) never takes a `lang`, and every
@@ -281,6 +284,7 @@ export default async function EmbedPage({
       embedMode
       embedFooter={finalFooter}
       initialFormOverride={formOverride}
+      headlineText={headlineText}
     />
   );
 
