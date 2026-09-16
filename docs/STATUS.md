@@ -18,23 +18,36 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 107 — verify against `git log`/`gh pr list`
-before trusting this, since more may have landed after it was written).** **Sessions 106→107: the
-chart alternate-reading toggle — [ADR 051](decisions/051-chart-alternate-reading-toggle.md), built
-via subagent-driven development (7 tasks incl. one standalone fix folded in mid-build, all
-task-scoped reviews clean), paused mid-Task-6 in session 106 on an owner wrap-up signal, resumed
-and finished in session 107 (one small fix round wiring the anonymous trial chat, then the
-whole-branch review). Full verification green: backend 158 files/2395 tests, web 116 files/1844
-tests, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks clean,
-`/code-review` LOW clean. **MERGED to `main` (`b31d84a`), CI green** (`gate` + `deploy` both
-succeeded, incl. the post-deploy smoke check, run `35115201383`). [#254](open-questions.md)'s second gap is now resolved for
-the seasonally-adjusted/same-measure-alternate half (~20 registered concepts); the level-vs-%-change
-half stays open, needs a new registered derivation + an ADR 011 revision — a separate future design
-task, not a quick follow-on. Session 106 also shipped, separately and already live before this:
-the Supademo chart-polish comparison's one pending decision (`framePadding: 'none' → 'small'`,
-owner-confirmed, `c934f1d`) — the broader "match Supademo's polish" question stays logged, not
-built ([#260](open-questions.md)). The 3D-demo thread stays closed — do not resume it without a
-new, explicit owner ask. Full account of sessions 106-107: [status-archive.md](status-archive.md).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 107 — spanned 2026-09-16 into 2026-09-17;
+verify against `git log`/`gh pr list` before trusting this, since more may have landed after it was
+written).** **Session 107 closed out TWO independent threads, both merged to `main`, CI green on
+both:**
+
+**(1) The chart alternate-reading toggle** — [ADR 051](decisions/051-chart-alternate-reading-toggle.md),
+resumed from session 106's pause (Task 6 finished: the anonymous trial chat wired in, owner's
+explicit choice), whole-branch review, **MERGED (`b31d84a`, run `35115201383`)**.
+[#254](open-questions.md)'s second gap is resolved for the seasonally-adjusted/same-measure-alternate
+half (~20 registered concepts); level-vs-%-change stays open, needs a new registered derivation +
+an ADR 011 revision.
+
+**(2) Eurostat WP30c E1's "Constraint 0"** — resolved directly by the owner in chat ("no real API
+spend" meant money, not any live call). The live fixture capture found + fixed two real API-shape
+defects (the Catalogue endpoint's real TSV shape; the Statistics API's real sparse `value` object
+shape — [ADR 048](decisions/048-eurostat-data-source.md)'s As-built addendum) and a genuine
+cross-branch migration-number collision (`031_source_doi.sql` vs. an unrelated
+`031_chart_headlines.sql`, renumbered to 032/033). **MERGED (`46527a8` + `1b23298`, run
+`35125746817`).** Full verification (covers both threads combined, run after the second merge):
+backend 165 files/2466 tests, web 117 files/1854 tests, benchmark 14/14 + 6/6 + 0 fabricated, real
+`next build`, both typechecks clean, `/code-review` LOW clean on each thread. **Still
+owner-supervised, not started: registering a real Eurostat table needs migrations 032/033 applied
+first** (`npm run db:migrate`) — RUNBOOK "WP30c E1" steps 4-5, [#249](open-questions.md) — that is
+the one concrete next step if Eurostat comes up again.
+
+Session 106 also shipped, separately and already live before this: the Supademo chart-polish
+comparison's one pending decision (`framePadding: 'none' → 'small'`, owner-confirmed, `c934f1d`) —
+the broader "match Supademo's polish" question stays logged, not built ([#260](open-questions.md)).
+The 3D-demo thread stays closed — do not resume it without a new, explicit owner ask. Full account
+of sessions 106-107: [status-archive.md](status-archive.md).
 
 ## Phase 0 checklist
 
