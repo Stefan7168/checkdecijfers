@@ -25,7 +25,15 @@ const { verifyEmbedToken } = vi.hoisted(() => ({ verifyEmbedToken: vi.fn() }));
 vi.mock('../../../backend/chart/embed-token.ts', () => ({ verifyEmbedToken }));
 
 const { loadAuditRecord } = vi.hoisted(() => ({ loadAuditRecord: vi.fn() }));
-vi.mock('../../../backend/answer/audit/index.ts', () => ({ loadAuditRecord }));
+// isRedacted is the real, pure implementation (open-questions #227) — it has
+// nothing to stub, and several tests below rely on its actual branching
+// behavior (including the REAL-shaped envelope with `chart` omitted, not
+// `null` — see that test's own comment for why isRedacted alone must catch it).
+vi.mock('../../../backend/answer/audit/index.ts', () => ({
+  loadAuditRecord,
+  isRedacted: (response: unknown) =>
+    typeof response === 'object' && response !== null && (response as { redacted?: unknown }).redacted === true,
+}));
 
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('../../../lib/db.ts', () => ({ getDb }));
