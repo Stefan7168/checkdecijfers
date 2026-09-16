@@ -80,7 +80,7 @@ No new dependency, no migration, no LLM call, no schema bump to `ChartSpec`.
 - Consumes: `runQuery`, `buildChartSpec` (already exported from `src/query/index.ts` /
   `src/chart/build.ts`, exactly as `curated.ts` already imports them).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Fixtures below are REAL, verified entries — `unemployment_rate_seasonally_adjusted`'s primary dims
 key is `SeizoenEnWerkdagcorrectie` (grain KW, quarterly — B5's own period code `2025KW04` proves
@@ -182,12 +182,12 @@ describe('buildAlternateReading', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run (repo root): `npx vitest run tests/chart/alternate-reading.test.ts`
 Expected: FAIL — `src/chart/alternate-reading.ts` does not exist yet.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```ts
 // src/chart/alternate-reading.ts
@@ -273,19 +273,19 @@ Keep every existing `curated.ts` export (`CuratedChartAlternateReading`, `Curate
 `CuratedChartDefinition`, `CuratedChart`, `buildCuratedCharts`, etc.) untouched — only the internal
 implementation of the one alternate-build call changes.
 
-- [ ] **Step 4: Run the new tests, then the existing curated + registry suites**
+- [x] **Step 4: Run the new tests, then the existing curated + registry suites**
 
 Run (repo root): `npx vitest run tests/chart/alternate-reading.test.ts tests/chart/curated.test.ts
 tests/registry/registry.test.ts`
 Expected: PASS, including every pre-existing `curated.test.ts` assertion about the `werkloosheid`
 chart's toggle — unchanged behavior, now routed through the shared function.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `npx tsc --noEmit` (repo root)
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/chart/alternate-reading.ts tests/chart/alternate-reading.test.ts src/chart/curated.ts
@@ -317,7 +317,7 @@ git commit -m "refactor(chart): generalize the alternate-reading builder (merge 
   every existing call site that constructs an `AnswerResponse` object literal must be updated to
   include it (TypeScript will point at every one via the Step-2 compile failure).
 
-- [ ] **Step 1: Add the field to the type, then run typecheck to find every call site that must set it**
+- [x] **Step 1: Add the field to the type, then run typecheck to find every call site that must set it**
 
 In `src/answer/respond/types.ts`, immediately after the `chart: ChartSpec | null;` field inside
 `AnswerResponse` (around line 221):
@@ -338,7 +338,7 @@ Expected: FAIL — every object literal that builds an `AnswerResponse` (in `res
 test fixture that constructs one directly rather than through `respond()`) is now missing the
 required field. List every reported file before continuing.
 
-- [ ] **Step 2: Write the failing behavioral tests**
+- [x] **Step 2: Write the failing behavioral tests**
 
 Add a new `describe` block to `tests/answer/respond-pipeline.test.ts`, in the same style its
 existing `describe('B15-B20 end-to-end ...')` block already uses (top-of-file `db` from this
@@ -382,12 +382,12 @@ describe('chartAlternates (#254)', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify the new tests fail**
+- [x] **Step 3: Run to verify the new tests fail**
 
 Run (repo root): `npx vitest run tests/answer/respond-pipeline.test.ts -t "chartAlternates"`
 Expected: FAIL — `chartAlternates` does not exist on the returned object yet.
 
-- [ ] **Step 4: Implement in `respond.ts`**
+- [x] **Step 4: Implement in `respond.ts`**
 
 Immediately after the existing `const chart = buildChartSpec(result);` line (found earlier in this
 session's research at `respond.ts` around line 496 — confirm the exact current line before editing):
@@ -421,18 +421,18 @@ Then add `chartAlternates,` to the `AnswerResponse` object literal `respond.ts` 
 staleness-refusal branch earlier in the file returns a `RefusalResponse`, not an `AnswerResponse`,
 so it does not need this field).
 
-- [ ] **Step 5: Run the tests, then typecheck**
+- [x] **Step 5: Run the tests, then typecheck**
 
 Run (repo root): `npx vitest run tests/answer/respond-pipeline.test.ts` then `npx tsc --noEmit`
 Expected: PASS, clean.
 
-- [ ] **Step 6: Run the FULL backend suite** (this touches a widely-shared type; confirm nothing
+- [x] **Step 6: Run the FULL backend suite** (this touches a widely-shared type; confirm nothing
   else broke)
 
 Run: `npm run test -- --run` (repo root)
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/answer/respond/types.ts src/answer/respond/respond.ts src/chart/index.ts tests/answer/respond-pipeline.test.ts
@@ -458,14 +458,14 @@ git commit -m "feat(answer): build every registered alternate reading alongside 
   ChartSpec }[]` alongside `chart`, available to `visual-dock.tsx` for free (it renders the same
   message object).
 
-- [ ] **Step 1: Find every place `AskOutcome`/the chat message type carries `chart` today**
+- [x] **Step 1: Find every place `AskOutcome`/the chat message type carries `chart` today**
 
 Run: `grep -n '\.chart\b\|chart:' web/app/actions.ts web/components/chat.tsx | grep -v chartAlternates`
 Read each hit before editing — this task's whole job is "wherever `chart` is threaded, thread
 `chartAlternates` the same way," and the exact type names (`AskOutcome`, whatever the per-message
 chat state interface is called) must come from the real file, not be guessed here.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 In whichever test file already has an assertion like `expect(result.chart).toEqual(...)` for a
 successful `askQuestion` call, add a sibling assertion:
@@ -478,26 +478,26 @@ using this file's own existing fixture/mock `AnswerResponse` — set that fixtur
 `chartAlternates` to a small non-empty array first so the assertion is meaningful, not
 vacuously `[] === []`.
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `cd web && npx vitest run <the test file>`
 Expected: FAIL — property does not exist / is undefined on the result.
 
-- [ ] **Step 4: Implement** — add `chartAlternates` to every type and object literal Step 1 found,
+- [x] **Step 4: Implement** — add `chartAlternates` to every type and object literal Step 1 found,
   by direct analogy with how `chart` is already threaded at each of those exact points. Do not
   invent new plumbing; mirror the existing `chart` field's path field-for-field.
 
-- [ ] **Step 5: Run the tests, then the whole web suite**
+- [x] **Step 5: Run the tests, then the whole web suite**
 
 Run: `cd web && npx vitest run <the test file>` then `cd web && npx vitest run --run`
 Expected: PASS.
 
-- [ ] **Step 6: Typecheck**
+- [x] **Step 6: Typecheck**
 
 Run: `cd web && npx tsc --noEmit`
 Expected: clean.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add web/app/actions.ts web/components/chat.tsx web/app/actions.test.ts web/components/chat.test.tsx
@@ -539,7 +539,7 @@ git commit -m "feat(chat): thread chartAlternates from the answer through to the
   ): ChartSpec;
   ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // additions to web/lib/chart-view-state.test.ts
@@ -586,12 +586,12 @@ describe('activeReadingSpec', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `cd web && npx vitest run lib/chart-view-state.test.ts`
 Expected: FAIL — `selectedReading`/`activeReadingSpec` do not exist yet.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `ChartViewState`, add `selectedReading: number | null;`. In `initialViewState`'s return object,
 add `selectedReading: null,`. In `chartViewReducer`'s switch, add:
@@ -608,12 +608,12 @@ hand rather than delegating to `initialViewState`). Add the new action variant t
 `ChartViewAction` union. Add `activeReadingSpec` as a plain exported function at the bottom of the
 file, by the union type given above — out-of-range or empty-array cases both return `primary`.
 
-- [ ] **Step 4: Run the tests, then typecheck**
+- [x] **Step 4: Run the tests, then typecheck**
 
 Run: `cd web && npx vitest run lib/chart-view-state.test.ts` then `cd web && npx tsc --noEmit`
 Expected: PASS, clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/lib/chart-view-state.ts web/lib/chart-view-state.test.ts
@@ -639,7 +639,7 @@ git commit -m "feat(chart): selectedReading view state + activeReadingSpec helpe
 (`~line 1587-1600`, quoted in this plan's Architecture section) before writing any code, so the
 distinction below is concrete, not guessed.**
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 // additions to web/components/chart.test.tsx — copy this file's own existing render-harness
@@ -705,12 +705,12 @@ it('the alternate view passes the SAME whole-card digit-honesty scan the primary
 });
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `cd web && npx vitest run components/chart.test.tsx -t "reading"`
 Expected: FAIL — no such prop/control exists yet.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 1. Add `alternates?: { label: string; spec: ChartSpec }[]` to `ChartView`'s props interface,
    defaulted to `[]` in the destructure (`alternates = []`).
@@ -770,14 +770,14 @@ Expected: FAIL — no such prop/control exists yet.
    fallback should be unreachable in practice; still required for type-safety, not dead code to
    delete).
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `cd web && npx vitest run components/chart.test.tsx`
 Expected: PASS — including every PRE-EXISTING assertion in this file (the honesty digit-scan tests
 in particular; if any fails, the `activeSpec` substitution touched a place it should not have —
 revert that one call site back to `spec` and re-check against Step 3's guidance).
 
-- [ ] **Step 5: Run the FULL web suite, then typecheck**
+- [x] **Step 5: Run the FULL web suite, then typecheck**
 
 Run: `cd web && npx vitest run --run` then `cd web && npx tsc --noEmit`
 Expected: PASS, clean. Pay special attention to `chart-config-panel.test.tsx`,
@@ -785,7 +785,7 @@ Expected: PASS, clean. Pay special attention to `chart-config-panel.test.tsx`,
 test — anything that imports `ChartView` and could be sensitive to a new optional prop with a
 default.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add web/components/chart.tsx web/lib/i18n/messages.ts web/components/chart.test.tsx
@@ -805,7 +805,7 @@ git commit -m "feat(chart): reading-toggle control, renders the selected alterna
   `chartAlternates` through from Task 3's message-state change and adjusts only if it does not)
 - Test: `web/components/chat.test.tsx`, `web/components/visual-dock.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // addition to chat.test.tsx
@@ -817,23 +817,23 @@ it('passes the message\'s chartAlternates through to ChartView as the alternates
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cd web && npx vitest run components/chat.test.tsx -t "chartAlternates"`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement** — find every `<ChartView spec={message.chart} .../>` (or equivalent)
+- [x] **Step 3: Implement** — find every `<ChartView spec={message.chart} .../>` (or equivalent)
   call in `chat.tsx` and add `alternates={message.chartAlternates}` (matching whatever field name
   Task 3 actually landed on the message-state type). Check `visual-dock.tsx`/`dock-visuals.ts` per
   the Files note above and thread it through there too if the dock renders `ChartView` directly.
 
-- [ ] **Step 4: Run the tests, full web suite, typecheck**
+- [x] **Step 4: Run the tests, full web suite, typecheck**
 
 Run: `cd web && npx vitest run components/chat.test.tsx components/visual-dock.test.tsx` then
 `cd web && npx vitest run --run` then `cd web && npx tsc --noEmit`
 Expected: PASS, clean.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web/components/chat.tsx web/components/visual-dock.tsx web/components/chat.test.tsx web/components/visual-dock.test.tsx
@@ -847,7 +847,7 @@ git commit -m "feat(chat): wire chartAlternates into ChartView on chat and dock"
 **Not a subagent-implementer task** — the main session does this itself, after Tasks 1-6 all show
 green individually.
 
-- [ ] **Step 1: Full diff read.** `git diff main...HEAD` (or the equivalent against whatever base
+- [x] **Step 1: Full diff read.** `git diff main...HEAD` (or the equivalent against whatever base
   this branch started from) — read every hunk, not just the summaries the per-task commits carried.
   Specifically re-check, against the design spec: the dims-merge in Task 1 is used everywhere (no
   stray literal-replace survived from curated.ts's old code); Task 5's `activeSpec` substitution
@@ -860,7 +860,7 @@ green individually.
   reading's own values (not the primary's) are what the file shows. If this claim turns out wrong,
   it is a real gap to fix here, not a footnote to defer.
 
-- [ ] **Step 2: Run the full verification block**
+- [x] **Step 2: Run the full verification block**
 
 ```bash
 cd web && npx tsc --noEmit && npx vitest run --run
@@ -872,10 +872,10 @@ cd web && npm run build
 Expected: typecheck ×2 clean; web + backend suites green; benchmark 14/14 + 6/6 + 0 fabricated;
 real production build succeeds.
 
-- [ ] **Step 3: `/code-review` at LOW effort** over the full diff — fix or consciously dispatch
+- [x] **Step 3: `/code-review` at LOW effort** over the full diff — fix or consciously dispatch
   every confirmed finding before proceeding (this project's standing pre-push rule).
 
-- [ ] **Step 4: Docs, same change** (CLAUDE.md definition of done):
+- [x] **Step 4: Docs, same change** (CLAUDE.md definition of done):
   - `docs/open-questions.md` — update #254's row: the "context controls" genuine gap is now
     ✅ BUILT + LIVE for the alternate-reading half (link this feature); the level-vs-%-change half
     stays open, unchanged.
@@ -890,6 +890,25 @@ real production build succeeds.
   - `docs/superpowers/plans/2026-09-16-chart-alternate-reading-toggle.md` (this file) — check off
     every remaining box, note any as-built deviation from what a task predicted.
 
-- [ ] **Step 5: Commit and push** — owner-present session, standing authorization (#118(a)): commit
+- [x] **Step 5: Commit and push** — owner-present session, standing authorization (#118(a)): commit
   the docs, then `git push origin main`. Confirm CI green (`gh run watch <run-id> --exit-status`)
   before declaring done.
+
+## As-built deviations (recorded at Task 7 close, session 107)
+
+- **Session split.** Tasks 1-5 plus a standalone period-code-match guard fix (ruled after Task 5's
+  review, not a numbered plan task) were built in session 106; the session paused mid-Task-6 on an
+  owner wrap-up signal. Session 107 resumed from the SDD ledger, finished Task 6, and ran Task 7.
+- **Task 6 grew a fix round beyond its own written scope.** The task reviewer flagged that
+  `web/components/trial-chat.tsx` (the anonymous homepage trial) already carried `chartAlternates`
+  on `message.response` but was never wired to show the toggle — not one of Task 6's own named
+  files (only `chat.tsx`/`visual-dock.tsx`), and the design doc's own Follow-up #4 had explicitly
+  deferred the trial surface. Asked directly, the owner chose to wire it now rather than record the
+  exclusion — see [ADR 051](../../decisions/051-chart-alternate-reading-toggle.md) D8. One small fix
+  round (a fresh implementer, since the original Task 6 implementer subagent was not addressable
+  from the new session) plus a scoped re-review, both clean.
+- **Step 1's manual export-claim verification was done by reading `chart-download.tsx`'s source**
+  (confirms `containerRef.current?.querySelector('svg')` clones whatever is live in the DOM at
+  click time) rather than a live dev-harness click-through — the mechanism is provably
+  reading-agnostic by construction (same code path already used for zoom/presentation exports), so
+  a live browser session would not have added information the code read didn't already establish.

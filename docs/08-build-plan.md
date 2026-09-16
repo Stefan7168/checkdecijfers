@@ -818,4 +818,28 @@ built, by rule). Phase 6 (re-measure) waits for real usage.
 **Owner priority pivot ("back to standard graphs instead of storytelling") → [#253](open-questions.md) checked and confirmed still blocked (no region-set query capability) → [#254](open-questions.md)'s headline gap picked instead, owner present.** Design approved in chat (spec:
 [superpowers/specs/2026-09-16-chart-journalist-headline-design.md](superpowers/specs/2026-09-16-chart-journalist-headline-design.md)), then built end-to-end via subagent-driven development in one session: migration 031 (`chart_headlines`, FILE-ONLY) + GDPR retention, an ownership-guarded store module, AI drafting that reuses the existing Insights digit-free mechanism (plus a real bug fix along the way — `src/chart/insights.ts` gained `topFinding()`, since `scoreFindings(spec)[0]` turned out to be chronologically-first, not highest-scored), three Server Actions, i18n strings, the chat UI (draft/edit/save/display — this task also caught and fixed an already-merged, build-breaking curly-quote syntax bug from the i18n task), the public embed page, and PNG/SVG export. Final whole-branch review found 3 real Important issues (an export-wrap overflow, a line-height collision, and — the most serious — a raw character-slice that could truncate a filled-in NUMBER mid-digit); one fix wave resolved all three, independently re-verified including a hand-traced example proving the number-truncation fix. Full verification block green: benchmark gate 14/14 + 6/6 + 0 fabricated, full backend + web suites, real `next build`. **✅ MERGED to `main` (`7bf76ff`, CI + deploy green) and migration 031 applied live with the owner's explicit go-ahead, verified against production (RLS on, zero `anon`/`authenticated` grants). The feature is fully live.** Two things still genuinely open for the owner, not decided during the build: whether a headline should be visually marked as journalist-written vs. a validated figure, and whether a published headline should be retractable (today: editable, not removable short of deleting the chat).
 
+## Chart alternate-reading toggle — sessions 106→107 (2026-09-16), [ADR 051](decisions/051-chart-alternate-reading-toggle.md)
+
+**[#254](open-questions.md)'s second genuine gap ("context controls: level vs. %-change,
+seasonally-adjusted vs. raw") picked as session 106's work, continuing autonomously in an
+owner-present chat.** Design corrected against the real registry before build (the original kickoff
+under-counted it by 20x — see the design spec) and built via subagent-driven development in an
+isolated worktree: a shared `buildAlternateReading` function (replacing `curated.ts`'s narrow
+inline version, now merging dims over the primary's own resolved coordinates instead of replacing
+them), `AnswerResponse.chartAlternates` threaded through the answer pipeline, the chat client, and
+`ChartViewState`'s reducer, a reading-toggle control on `ChartView` that swaps data without
+tripping the spec-identity reset, and an Embed-disable addendum for when a non-primary reading is
+shown. Session 106 built Tasks 1-5 plus a standalone period-code-match guard fix, all task-scoped
+reviews clean, then paused mid-Task-6 on an owner wrap-up signal. **Session 107 resumed from the
+SDD ledger**, finished Task 6 (the task reviewer's one finding — the anonymous trial chat
+(`trial-chat.tsx`) wasn't wired despite already carrying the data — was fixed on the owner's
+explicit choice, reversing the design doc's original deferral), then ran Task 7 (a full
+whole-branch diff read, the complete verification block, a LOW `/code-review` pass, and this doc
+update). **Full verification green: backend 158 files/2395 tests, web 116 files/1844 tests,
+benchmark gate 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks clean, `/code-review`
+LOW clean.** ~20 registered concepts (inflation, population, housing stock, GDP growth,
+bankruptcies, household income, imports/exports, retail turnover, house prices, unemployment, and
+others) now show a real toggle in chat, dock, and the trial. Level-vs-%-change stays open — it
+needs a new registered derivation and an ADR 011 revision, a separate future design task.
+
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

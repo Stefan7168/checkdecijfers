@@ -18,18 +18,20 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 105 — verify against `git log`/`gh pr list`
-before trusting this, since more may have landed after it was written).** **Session 105: the
-journalist chart-headline feature — [ADR 050](decisions/050-journalist-chart-headline.md), built via
-subagent-driven development (8 tasks + a final-review fix wave, all clean, two real bugs caught
-mid-build and fixed), merged to `main` (`7bf76ff`, CI green), deployed, and migration 031 applied
-live with the owner's separate explicit go-ahead — verified (RLS on, zero `anon`/`authenticated`
-grants). The feature is FULLY LIVE.** [#259](open-questions.md) has the full as-built record.
-[#254](open-questions.md)'s second gap (context controls: level vs. %-change, seasonally-adjusted
-vs. raw) is still queued, not started — likely next, but check this block hasn't been overtaken by
-a newer owner ask first. The 3D-demo thread stays closed — do not resume it without a new, explicit
-owner ask. Full account of session 105: [status-archive.md](status-archive.md). Session 106 kickoff:
-[session-briefs/2026-09-16-session-106-kickoff.md](session-briefs/2026-09-16-session-106-kickoff.md).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 107 — verify against `git log`/`gh pr list`
+before trusting this, since more may have landed after it was written).** **Sessions 106→107: the
+chart alternate-reading toggle — [ADR 051](decisions/051-chart-alternate-reading-toggle.md), built
+via subagent-driven development (7 tasks incl. one standalone fix folded in mid-build, all
+task-scoped reviews clean), paused mid-Task-6 in session 106 on an owner wrap-up signal, resumed
+and finished in session 107 (one small fix round wiring the anonymous trial chat, then the
+whole-branch review). Full verification green: backend 158 files/2395 tests, web 116 files/1844
+tests, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks clean,
+`/code-review` LOW clean. MERGED to `main` — check `git log -1 main` for the exact SHA, this line
+was written before the push landed.** [#254](open-questions.md)'s second gap is now resolved for
+the seasonally-adjusted/same-measure-alternate half (~20 registered concepts); the level-vs-%-change
+half stays open, needs a new registered derivation + an ADR 011 revision — a separate future design
+task, not a quick follow-on. The 3D-demo thread stays closed — do not resume it without a new,
+explicit owner ask. Full account of sessions 106-107: [status-archive.md](status-archive.md).
 
 ## Phase 0 checklist
 
