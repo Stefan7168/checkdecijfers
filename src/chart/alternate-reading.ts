@@ -103,6 +103,57 @@ export async function buildAlternateReading(
   if (!altOutcome.ok) {
     return { ok: false, reason: `alternate reading refused (${altOutcome.refusal.kind}): ${altOutcome.refusal.message}` };
   }
+
+  // #254 review finding (post-Task-5): the whole toggle feature assumes every
+  // alternate is built over the IDENTICAL period window as the primary — that
+  // assumption is what lets the UI safely keep the zoom-window bounds and the
+  // Vanaf/Tot period-select options derived from the PRIMARY spec even while
+  // an alternate reading is on screen, so the reader never sees the
+  // selectable date range shift under them when they switch reading. `period`
+  // is passed through unchanged onto altIntent above, but that only means
+  // both intents ASK for the same window — nothing before this point verifies
+  // the alternate's own RESOLVED cells actually landed on that same set of
+  // period codes. A registry alternate can swap `measure` entirely (not just
+  // `dims`), and a measure with a gappier published history on the same table
+  // could in principle resolve to a different set of periods than the primary
+  // even when both ask for the identical window. Today `runQuery`'s own
+  // completeness gate (src/query/run.ts: every requested period code or a
+  // full refusal, never a partial result) makes that unreachable via the
+  // ordinary "ask the same period, get a shorter alternate" path — a request
+  // spanning a genuine gap on the alternate measure (a real one exists: table
+  // 85429NED's M001608 YoY measure has NO rows at all for 2015/2021, unlike
+  // its sibling D001607 value measure) just refuses the whole alternate
+  // outright via the branch above, which every caller already treats as
+  // "no toggle, primary chart unaffected". This check exists as the enforced
+  // backstop for every OTHER way a mismatch could reach here — a future
+  // caller passing a `primaryIntent` that doesn't actually describe how
+  // `primary` was built, a future relaxation of runQuery's all-or-nothing
+  // completeness rule, or an on-demand-fetch race between the primary and
+  // alternate queries — so the "identical period window" assumption is an
+  // enforced invariant, not an unchecked hope. If it ever fires, the
+  // primary's own `attribution.coveredPeriods` (built from the PRIMARY query)
+  // would otherwise describe a range the alternate's own plotted data does
+  // not fully cover — an honesty-relevant mismatch (principle c: refuse
+  // rather than show something misleading), even though no single number
+  // would itself be wrong or fabricated. Comparing the SET, not the array:
+  // cell order is "period ascending, then intent region order" (run.ts), an
+  // ordering fact this check has no business depending on. Do not "simplify"
+  // this away — it is exactly this function's own documented philosophy ("a
+  // race here degrades to a missing alternate reading, never a wrong one")
+  // applied to the one failure mode nothing else here was checking.
+  const primaryPeriods = new Set(primary.cells.map((c) => c.periodCode));
+  const altPeriods = new Set(altOutcome.cells.map((c) => c.periodCode));
+  const periodsMatch = primaryPeriods.size === altPeriods.size && [...primaryPeriods].every((p) => altPeriods.has(p));
+  if (!periodsMatch) {
+    return {
+      ok: false,
+      reason:
+        `alternate reading resolved a different set of periods than the primary ` +
+        `(primary: ${[...primaryPeriods].sort().join(', ')}; alternate: ${[...altPeriods].sort().join(', ')}) — ` +
+        `refusing rather than risk a coverage claim the alternate's own data doesn't back`,
+    };
+  }
+
   try {
     const spec = buildChartSpec(altOutcome);
     if (spec === null) return { ok: false, reason: `alternate reading shape '${altOutcome.shape}' yields no chart` };

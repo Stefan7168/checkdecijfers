@@ -142,6 +142,79 @@ describe('buildAlternateReading', () => {
     }
   });
 
+  it('refuses when the alternate resolves a different set of periods than the primary (#254 post-Task-5 review finding)', async () => {
+    // The whole toggle feature assumes every alternate is built over the
+    // IDENTICAL period window as the primary (see this function's own new
+    // comment). Under the CURRENT architecture that window is structurally
+    // guaranteed by construction on the happy path: altIntent.period is
+    // `primaryIntent.period` verbatim (unchanged above), and runQuery's own
+    // completeness gate (src/query/run.ts) refuses the WHOLE query the moment
+    // any requested period is missing rather than ever serving a partial set
+    // — so "ask the same window, alternate measure has a real gap" cannot by
+    // itself produce an `altOutcome.ok === true` with a SHORTER period set
+    // than the primary (confirmed against a real gap: table 85429NED's
+    // M001608 YoY measure has NO rows at all for 2015/2021, unlike its
+    // sibling D001607 value measure — requesting a window spanning either
+    // year just refuses the alternate outright via the branch above this
+    // check, already exercised by the "degrades to refusal" test below).
+    //
+    // This test instead proves the GUARD ITSELF against a genuine mismatch,
+    // built entirely from two independently real, successful queries against
+    // the same real ingested cpi_yearly_inflation fixture (86141NED) — no
+    // fabricated ResultCell objects. `primary` is a real result for
+    // 2020-2022; `primaryIntent` here deliberately names a DIFFERENT real
+    // window (2016-2018) than the one that built `primary` — exactly the
+    // "a caller's primaryIntent doesn't describe how primary was built" class
+    // of mismatch the new comment names as one of the paths this guard backs
+    // up (the function's own two parameters, `primary` and `primaryIntent`,
+    // are never checked against each other anywhere else). Both windows are
+    // fully covered by both M000238 and M000215 (confirmed against the real
+    // fixture: 2010JJ00-2025JJ00 dense for every measure at Bestedingscategorieen
+    // T001112), so the alternate query itself succeeds — proving the refusal
+    // comes from THIS check, not from a downstream runQuery refusal.
+    const primaryIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'cpi_yearly_inflation' },
+      period: { kind: 'range', from: '2020JJ00', to: '2022JJ00' },
+      derivation: 'series',
+    };
+    const primaryOutcome = await runQuery(db, primaryIntent);
+    if (!primaryOutcome.ok) throw new Error(`fixture setup refused: ${primaryOutcome.refusal.kind}`);
+    const primary: ValidatedResult = primaryOutcome;
+    expect(primary.cells.map((c) => c.periodCode)).toEqual(['2020JJ00', '2021JJ00', '2022JJ00']);
+
+    const mismatchedIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'cpi_yearly_inflation' },
+      period: { kind: 'range', from: '2016JJ00', to: '2018JJ00' },
+      derivation: 'series',
+    };
+    // Sanity check: M000215 genuinely resolves this different, real window on
+    // its own — so the outcome below is provably the guard, not a refusal
+    // that would have happened anyway.
+    const sanityAltIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'explicit', tableId: primary.attribution.tableId, measure: 'M000215', dims: primary.cells[0]!.dims },
+      period: mismatchedIntent.period,
+      derivation: 'series',
+    };
+    const sanityOutcome = await runQuery(db, sanityAltIntent);
+    if (!sanityOutcome.ok) throw new Error(`sanity check refused: ${sanityOutcome.refusal.kind}`);
+    expect(sanityOutcome.cells.map((c) => c.periodCode)).toEqual(['2016JJ00', '2017JJ00', '2018JJ00']);
+
+    const outcome = await buildAlternateReading(db, primary, mismatchedIntent, {
+      measure: 'M000215',
+      label: 'CPI indexniveau (2025=100), geen mutatiepercentage',
+    });
+
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) {
+      expect(outcome.reason).toContain('different set of periods');
+      expect(outcome.reason).toContain('2020JJ00');
+      expect(outcome.reason).toContain('2016JJ00');
+    }
+  });
+
   it('degrades to { ok: false } on a refusal, never throws, and names the refusal kind', async () => {
     const primaryIntent: StructuredIntent = {
       schemaVersion: 1,
