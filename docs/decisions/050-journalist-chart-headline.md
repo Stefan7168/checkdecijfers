@@ -2,9 +2,10 @@
 
 **Status:** accepted, built end-to-end via subagent-driven development (session 105, 2026-09-16,
 branch `worktree-chart-journalist-headline`) — 8 tasks + a final-review fix wave, all task-scoped
-reviews and the whole-branch review clean. **Migration 031 is FILE-ONLY: not yet applied to any
-live database.** Not yet merged to `main` at ADR-write time; merge/deploy is an owner-supervised
-step per CLAUDE.md's git-workflow rule.
+reviews and the whole-branch review clean. **MERGED to `main` (`7bf76ff`) and deployed the same
+session, CI green (`gate` + `deploy` both succeeded).** Migration 031 was then applied live with
+the owner's explicit go-ahead and verified directly against production (RLS on, zero `anon`/
+`authenticated` grants). **The feature is fully live.**
 
 ## Context
 
@@ -141,8 +142,9 @@ exported image).
 - The feature is safe to deploy before the owner applies migration 031 (every path degrades
   gracefully), but deploying the CODE without the migration leaves a confusing half-working window:
   the trigger renders and the AI draft succeeds (and is billed) before the save fails with a
-  generic error. **Recorded owner-facing note (final review's own recommendation): apply migration
-  031 in the SAME deploy window as this code, or gate the trigger until it's applied.**
+  generic error. **As-built: the final review's recommendation was followed — migration 031 was
+  applied in the same session as the deploy, confirmed live (RLS on, zero `anon`/`authenticated`
+  grants) before this ADR was closed out, so that window never actually opened in production.**
 - `src/chart/insights.ts` now has two selection entry points (`scoreFindings` for the ≤5-finding
   panel, `topFinding` for the single-winner case) sharing one scoring/dedup core — a real, if small,
   widening of a previously single-purpose module's public surface. `topFinding` has no dedicated

@@ -450,6 +450,33 @@ code revert.
 "Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
 session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
+## Supervised live step — migration 031 chart_headlines (✅ RUN 2026-09-16, session 105, owner present — built + merged + deployed same session via subagent-driven development on branch `worktree-chart-journalist-headline`, ADR [050](decisions/050-journalist-chart-headline.md))
+
+The journalist chart-headline feature ([open-questions #259](open-questions.md)) was built, reviewed
+(8 task-scoped reviews + a final whole-branch review + a fix wave, all clean), merged directly to
+`main` (`7bf76ff`, owner-present push per [#118](open-questions.md)(a)) and deployed — CI's `gate`
+and `deploy` jobs both green (run `35080844042`). The owner then explicitly authorized the migration
+apply (a live-DDL step, asked for and confirmed separately from the code merge, per this project's
+standing "live DDL stays owner-supervised" rule — [#118](open-questions.md) revision, unchanged by
+any push-authorization revision).
+
+1. **`npm run db:migrate` from the repo root** — applied exactly one pending migration:
+   `031_chart_headlines.sql`. Additive only; zero changes to any existing table.
+2. **Verified directly against production:**
+   ```sql
+   select relrowsecurity as rls_enabled from pg_class where relname = 'chart_headlines';
+   select grantee, privilege_type from information_schema.role_table_grants
+    where table_name = 'chart_headlines' and grantee in ('anon','authenticated');
+   ```
+   Confirmed: `rls_enabled = true`; zero rows from the grants query. Locked down correctly, same
+   pattern as every other table (migration 003's `rls_auto_enable`).
+3. **Production responds** (`curl` on `https://checkdecijfers.vercel.app/` → `200`) after the deploy.
+
+**Rollback, if ever needed:** the table is additive and every reader/writer in
+`src/chart/headline-store.ts` degrades gracefully when it's absent (`to_regclass` check, never a
+throw) — dropping `chart_headlines` would simply make every chart's headline feature silently
+unavailable again, no other table or code path depends on it.
+
 ## Supervised live step — migration 024 error_log (✅ RUN 2026-09-02, session 69, owner present — applied with 022 in one `npm run db:migrate`, verified clean; built session 66, 2026-08-27, autonomous; merged into `main` session 67, 2026-08-28, PR #110)
 
 **⏳ TO RUN in the next owner-present window.** Migration `024_error_log.sql` (#65 / WP25: the durable,
