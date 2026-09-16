@@ -5,8 +5,8 @@
 // try/catch masking real errors) when the table doesn't exist yet, mirroring
 // src/chart/user-styles.ts's stated contract.
 //
-// The write's ownership + kind + chart-presence guard lives IN the SQL
-// itself (mirrors src/answer/audit/feedback.ts's upsertAnswerFeedback): a
+// The write's ownership + kind + chart + source guard lives IN the SQL
+// itself (mirrors src/answer/audit/feedback.ts's upsertAnswerFeedback exactly): a
 // row can only come into existence from a select over the caller's OWN,
 // USER-tagged, chart-bearing ANSWER row. Zero rows returned = the guard did
 // not match — reported as a soft `false`, never an error.
@@ -41,6 +41,7 @@ export async function upsertChartHeadline(db: Db, input: UpsertChartHeadlineInpu
       where a.id = $1
         and a.user_id = $3
         and a.kind = 'answer'
+        and a.source_tag = 'user'
         and a.chart_emitted
      on conflict (audit_answer_id) do update
        set headline = excluded.headline, updated_at = now()

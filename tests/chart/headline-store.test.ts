@@ -83,6 +83,18 @@ describe('upsertChartHeadline — the guarded write', () => {
     });
   });
 
+  it('source guard: onboarding_delivery rows never take a headline, even with valid user/kind/chart', async () => {
+    await withDb(async (db) => {
+      const onboarding = await insertAuditRow(db, {
+        userId: 'user-1',
+        kind: 'answer',
+        chartEmitted: true,
+        sourceTag: 'onboarding_delivery',
+      });
+      expect(await upsertChartHeadline(db, { auditAnswerId: onboarding, userId: 'user-1', headline: 'Nee' })).toBe(false);
+    });
+  });
+
   it('nonexistent audit id → soft false', async () => {
     await withDb(async (db) => {
       expect(await upsertChartHeadline(db, { auditAnswerId: 999999, userId: 'user-1', headline: 'Nee' })).toBe(false);
