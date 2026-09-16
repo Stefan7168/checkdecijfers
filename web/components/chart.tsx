@@ -100,6 +100,7 @@ import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import {
+  activeReadingSpec,
   areaFormAllowed,
   chartViewReducer,
   fallbackForm,
@@ -1238,6 +1239,7 @@ export interface ChartStageMode {
 
 export function ChartView({
   spec,
+  alternates = [],
   frameless = false,
   embed,
   embedMode = false,
@@ -1249,6 +1251,17 @@ export function ChartView({
   initialPanel,
 }: {
   spec: ChartSpec;
+  /** #254: every registry-recorded ALTERNATE READING of the same answered
+   * measure, each already built server-side by the same deterministic
+   * pipeline as `spec` and over the PRIMARY's own resolved coordinates and
+   * the identical period window (src/chart/alternate-reading.ts). The
+   * reading control below switches which of these the chart draws its DATA
+   * from; `spec` itself — and therefore the spec-identity reset block above
+   * — is never touched by that switch, so a reading swap is a lightweight
+   * view tweak (like Lijn→Staaf), not a new chart. Defaulted to `[]`, so
+   * every call site that passes no alternates renders exactly as before
+   * this feature existed. */
+  alternates?: { label: string; spec: ChartSpec }[];
   /** Session 87 (purely presentational): drop the component's own card frame
    * when the mount point already IS a card (the visual dock) — a card inside a
    * card is the one thing the shadcn direction says not to do. Inline in the
@@ -1346,6 +1359,30 @@ export function ChartView({
     initialForm,
     (form: ChartForm) => initialViewState(form, initialPresentation),
   );
+  // #254: WHICH reading's data the chart draws — the primary `spec` prop, or
+  // one of `alternates`. Computed here, above every derivation that reads
+  // series/cell VALUES, so one substitution (`viewSpec` below, plus the
+  // handful of per-reading FACTS listed at their own call sites) covers the
+  // whole card.
+  //
+  // The single most important property of this line: `spec` itself is NOT
+  // reassigned and `specIdentity` (further down) keeps hashing the PROP.
+  // Routing a reading switch through the `spec` prop instead — e.g. a wrapper
+  // swapping which object it hands in — would trip that block's reset and
+  // wipe the reader's form, zoom, presentation, notes and open panels on
+  // every toggle. A reading switch is a view tweak of the same weight as
+  // Lijn→Staaf; only a genuinely DIFFERENT chart resets (and its `reset`
+  // action clears `selectedReading` back to the primary, which is correct:
+  // the new chart's alternates are a different set).
+  //
+  // Identity-shaped reads deliberately stay on `spec`: the form guards
+  // (canUseLine/canUseArea/canUseHbar/effectiveKind — the chart's TRUE
+  // shape), `allPeriodCodes`/`zoomAvailable`/the Vanaf-Tot options and the
+  // zoom disclosure's covered range (every alternate is built over the
+  // identical window, so switching reading must never change what periods
+  // are selectable), and the embed button's table id (an embed republishes
+  // the stored PRIMARY answer, which carries no reading selection).
+  const activeSpec = activeReadingSpec(spec, alternates, state.selectedReading);
   // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
   // once, on mount — never on a later spec swap (that's the `specIdentity`
   // block further down, and `reset` there deliberately preserves state.form
@@ -1684,7 +1721,13 @@ export function ChartView({
   // spec (not the zoomed viewSpec) — a provisional point outside the
   // current zoom window still governs the honesty-locked defaults, the same
   // pattern spec.attribution uses elsewhere in this file.
-  const hasProvisional = spec.series.some((s) => s.points.some((p) => p.provisional));
+  // #254: the ACTIVE reading's own points — a reading whose cells are
+  // provisional must get the honesty-locked hollow-marker defaults even when
+  // the primary's are all final (and vice versa). `kind`/`seriesCount` below
+  // stay on `spec`: those are the chart's SHAPE, which every alternate
+  // shares by construction and which `activeForm`/`canUseLine` above already
+  // derive from the primary.
+  const hasProvisional = activeSpec.series.some((s) => s.points.some((p) => p.provisional));
   // WP218 phase 2 (owner C): the signed-in account's saved style is the
   // `base` every chart resolves ON TOP OF — `withAccountDefault` degrades
   // anything invalid/absent to the stock look, so a logged-out visitor
@@ -1764,9 +1807,12 @@ export function ChartView({
   // every finding's point exists on the chart the panel shows. This Hook
   // must run unconditionally on every render — ABOVE the schemaVersion guard
   // below, same reason as the font Effect and `chartLang` itself above it.
+  // #254: the ACTIVE reading — every Insights caption quotes plotted numbers,
+  // so findings built from the primary while an alternate is on screen would
+  // put digits on the card that no rendered cell backs (R1/R6).
   const findings = useMemo(
-    () => buildFindings(translateSpecForDisplay(spec, chartLang), chartLang),
-    [spec, chartLang],
+    () => buildFindings(translateSpecForDisplay(activeSpec, chartLang), chartLang),
+    [activeSpec, chartLang],
   );
   // The AI-phrased upgrade, keyed by finding id — null until openStory's
   // generateInsights call resolves (or is never attempted, or fails). Reset
@@ -1854,8 +1900,12 @@ export function ChartView({
   // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
   // the chart's identity, not its windowed content. Every DATA-derivation
   // call below (buildRows/annotationMarkers/valueLabelPlan/tableModel) reads
-  // `viewSpec`; every IDENTITY read (spec.kind, spec.attribution, spec.title,
-  // spec.unit) stays on the raw `spec`.
+  // `viewSpec`; every IDENTITY read (spec.kind, spec.title, spec.unit) stays
+  // on the raw `spec`. (#254 refines this: the window is now applied to
+  // `activeSpec`, and the per-reading FACTS — attribution, dimLabels,
+  // definitionLine, provisionalNote, nullNotes, trendHeadline — follow the
+  // active reading too, since they describe the cells actually plotted. What
+  // stays on the primary is listed at `activeSpec`'s own declaration above.)
   const allPeriodCodes = Array.from(
     new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
   ).sort((a, b) => a.localeCompare(b));
@@ -1872,7 +1922,14 @@ export function ChartView({
     ),
   );
   const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
-  const viewSpec = zoomAvailable ? windowSpec(spec, state.periodRange) : spec;
+  // #254: `allPeriodCodes`/`periodLabelByCode`/`zoomAvailable` above stay on
+  // the PRIMARY `spec` on purpose — every alternate reading is built over the
+  // identical period window, so what is SELECTABLE must not shift under the
+  // reader when they switch reading. What is PLOTTED does: the window is
+  // applied to `activeSpec`, and `displaySpec` below (hence buildRows,
+  // annotationMarkers, valueLabelPlan, tableModel, buildRegionRows, the
+  // headline figure, the end/axis labels and the accessible name) follows it.
+  const viewSpec = zoomAvailable ? windowSpec(activeSpec, state.periodRange) : activeSpec;
   // WP218 phase 4 (design §4): title/unit/series-labels(regions)/period-
   // labels translated ONCE here — every derivation below (buildRows,
   // annotationMarkers, valueLabelPlan, tableModel, the accessible name) reads
@@ -1884,8 +1941,11 @@ export function ChartView({
   // WP218 phase 4: the download menu receives this SAME displayed string
   // (never re-derived from spec.attributionLine independently), so the
   // exported PNG/SVG's baked-in attribution matches what the card shows.
+  // #254: the ACTIVE reading's own R4 sentence — it names the table, version
+  // and sync date the numbers on screen actually came from, which is a
+  // per-reading fact (an alternate can live in another table entirely).
   const displayAttributionLine =
-    chartLang === 'en' ? translateAttributionLine(spec.attributionLine) : spec.attributionLine;
+    chartLang === 'en' ? translateAttributionLine(activeSpec.attributionLine) : activeSpec.attributionLine;
 
   // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
   // included) is computed above, ahead of the schemaVersion guard — see the
@@ -1893,7 +1953,11 @@ export function ChartView({
   // tooltip swatch and hatch pattern reads the SAME effective colour.
   const colorFor = (i: number) => seriesColor(pres, i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
-  const dimEntries = Object.entries(spec.dimLabels);
+  // #254: the ACTIVE reading's own pinned coordinates. This is the subtitle
+  // that NAMES the reading (e.g. "SeizoensCorrectie: Niet gecorrigeerd") —
+  // showing the primary's coordinates over an alternate's data would
+  // mislabel every plotted cell.
+  const dimEntries = Object.entries(activeSpec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
   // non-empty even after switching to Staaf — but the <ReferenceLine>
@@ -2161,7 +2225,9 @@ export function ChartView({
       if (!signedIn) {
         setInsightsUnauthenticated(true);
       } else {
-        void generateInsights(spec).then((result) => {
+        // #254: the ACTIVE reading — `findings` (the ids this phrasing is
+        // keyed by, and the numbers it re-words) are built from it too.
+        void generateInsights(activeSpec).then((result) => {
           if (result.ok) setPhrasedCaptions(new Map(Object.entries(result.phrased)));
           // R5.3: an anonymous visitor gets one honest line in the panel
           // instead of a silently-failed phrasing attempt — the
@@ -2249,7 +2315,9 @@ export function ChartView({
       return;
     }
     setHeadlineBusy(true);
-    void draftChartHeadline(spec).then((result) => {
+    // #254: the ACTIVE reading — a drafted headline describes the numbers
+    // the reader is looking at, not a reading they switched away from.
+    void draftChartHeadline(activeSpec).then((result) => {
       setHeadlineBusy(false);
       if (result.ok) {
         setHeadlineDraftText(result.headline);
@@ -2956,9 +3024,12 @@ export function ChartView({
         * chart as evidence below. Gating unchanged: never in the stage
         * (fix round 2, item 9 — the stage's caption is the sentence), never
         * in the table, never under a zoom (it describes the full range). */}
-      {!inStage && state.form !== 'table' && !state.periodRange && spec.attribution.trendHeadline !== undefined ? (
+      {/* #254: the ACTIVE reading's own trend sentence — it describes the
+        * plotted line (and carries its own periods), so the primary's copy
+        * must never survive a switch to an alternate reading. */}
+      {!inStage && state.form !== 'table' && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
         <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
-          {spec.attribution.trendHeadline}
+          {activeSpec.attribution.trendHeadline}
         </p>
       ) : null}
       {/* Chart-card polish (2026-09-15): ONE quiet control row above the
@@ -3068,8 +3139,58 @@ export function ChartView({
               {hbarDisabledReason}
             </span>
           ) : null}
-          {zoomAvailable ? (
+          {/* #254: the reading toggle — same quiet <select> pattern as the
+            * Vanaf/Tot pair right below it, and the same story lock (a story's
+            * steps are built from the ACTIVE reading's findings, so switching
+            * reading mid-story would change the captions under the reader).
+            * Its options are the registry's OWN label strings, verbatim —
+            * this component never invents copy describing a reading. The
+            * value lives in the reducer (`state.selectedReading`), NOT in the
+            * `spec` prop, which is what keeps a switch from tripping the
+            * spec-identity reset. Rendered only when the answer actually
+            * carried alternates; the whole row is already gated on
+            * `!embedMode && !inStage` above. */}
+          {alternates.length > 0 ? (
             <div className="ml-auto flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
+              <select
+                id={`${domId}-reading`}
+                aria-label={t(chartLang, 'chart.reading.label')}
+                value={state.selectedReading ?? 'primary'}
+                disabled={storyOpen}
+                title={storyLockedTitle}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+                onChange={(e) =>
+                  dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
+                }
+                className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
+                {/* Keyed by index on purpose: the index IS this list's
+                  * identity (it is what `selectedReading` stores and what
+                  * `activeReadingSpec` looks up), the array is never
+                  * reordered or filtered, and two registry alternates could
+                  * in principle carry the same label. */}
+                {alternates.map((alt, i) => (
+                  <option key={i} value={i}>
+                    {alt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {zoomAvailable ? (
+            /* #254: `ml-auto` moves to the reading block above when one is
+             * shown, so the right-hand group starts there and the two
+             * <select> groups sit next to each other instead of being pushed
+             * apart by two competing auto margins. With no alternates (every
+             * call site before this feature) the class list is unchanged. */
+            <div
+              className={
+                (alternates.length > 0 ? '' : 'ml-auto ') +
+                'flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground'
+              }
+            >
               <label htmlFor={`${domId}-from`}>{t(chartLang, 'chart.from')}</label>
               <select
                 id={`${domId}-from`}
@@ -3165,11 +3286,13 @@ export function ChartView({
       {/* Task 5 (Story-stage plan): the full Story stage — a portal, mounted
         * next to the compact panel and NEVER inside chartContainerRef (like
         * the panel above, its own text must never enter an svg export).
-        * Never offered in stage mode itself: a stage never opens a stage. */}
+        * Never offered in stage mode itself: a stage never opens a stage.
+        * #254: its `spec` is the ACTIVE reading — `steps` are built from that
+        * reading's own findings, so the stage must plot what they describe. */}
       {storyAvailable && !inStage ? (
         <ChartStoryStage
           open={stageOpen}
-          spec={spec}
+          spec={activeSpec}
           steps={storySteps}
           index={storyIndex}
           onIndexChange={onStoryIndexChange}
@@ -3383,13 +3506,17 @@ export function ChartView({
             <ChartDownloadMenu
               containerRef={chartContainerRef}
               attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-              filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+              filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
               lang={chartLang}
               frame={pres}
               frameImage={frameImage}
               headlineText={chartHeadline}
             />
             {embed ? (
+              /* #254: the PRIMARY's table id, deliberately — an embed
+               * republishes the stored audit row (the primary answer), which
+               * carries no reading selection, so labelling the published
+               * iframe with an alternate's table would misname it. */
               <ChartEmbedButton
                 auditId={embed.auditId}
                 tableId={spec.attribution.tableId}
@@ -3455,15 +3582,18 @@ export function ChartView({
       {/* #197: the hollow marker needs a key a lay reader can decode without
         * reading the note first; rendered exactly when the spec says a
         * provisional point exists (R11's provisionalNote is present iff). */}
-      {spec.provisionalNote ? (
+      {/* #254: provisionalNote/nullNotes/definitionLine below all describe the
+        * CELLS currently plotted (R11's "present iff" is per reading), so
+        * they follow `activeSpec`, never the primary's own copies. */}
+      {activeSpec.provisionalNote ? (
         <p className="mt-1 text-xs text-muted-foreground">{t(chartLang, 'chart.provisionalMarkerNote')}</p>
       ) : null}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
         * (R4); only presentation changes here. */}
-      {spec.provisionalNote ? <p className="mt-2 text-sm text-warning">{spec.provisionalNote}</p> : null}
-      {spec.nullNotes.map((note) => (
+      {activeSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{activeSpec.provisionalNote}</p> : null}
+      {activeSpec.nullNotes.map((note) => (
         <p key={note} className="text-sm text-warning">
           {note}
         </p>
@@ -3473,7 +3603,7 @@ export function ChartView({
         * dropped in stage mode. The caveats that carry data-quality meaning
         * (nullNotes, the provisional sentence and its marker key, the event
         * markers) and the attribution stay, in the stage as everywhere. */}
-      {!inStage && spec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{spec.definitionLine}</p> : null}
+      {!inStage && activeSpec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{activeSpec.definitionLine}</p> : null}
       {/* #170(4): curated event markers, always-visible text (never
         * hover-only — see the ReferenceLine comment above). Neutral tone
         * (text-muted-foreground), distinct from the #92 amber caveats above: this
@@ -3502,7 +3632,11 @@ export function ChartView({
         * identical badge for free. */}
       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
         <p className="text-xs text-muted-foreground">{displayAttributionLine}</p>
-        <SourceBadge tableId={spec.attribution.tableId} syncedAt={spec.attribution.syncedAt} />
+        {/* #254: the badge is `displayAttributionLine` made scannable, so it
+          * follows the SAME (active) reading — a badge pointing at the
+          * primary's table under an alternate's numbers would be a false
+          * source claim (R4). */}
+        <SourceBadge tableId={activeSpec.attribution.tableId} syncedAt={activeSpec.attribution.syncedAt} />
         {/* #170(3): download-as-image, PNG or SVG, attribution baked into
           * the file itself — not just shown on this page — via the SAME
           * displayAttributionLine string shown above (R4: one builder, one
@@ -3527,7 +3661,7 @@ export function ChartView({
           <ChartDownloadMenu
             containerRef={chartContainerRef}
             attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-            filenameBase={`checkdecijfers-${spec.attribution.tableId}`}
+            filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
             lang={chartLang}
             frame={pres}
             frameImage={frameImage}
@@ -3535,6 +3669,9 @@ export function ChartView({
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+          /* #254: the PRIMARY's table id — same reasoning as the copy inside
+           * ChartEditModal above (an embed republishes the stored audit row,
+           * which carries no reading selection). */
           <ChartEmbedButton
             auditId={embed.auditId}
             tableId={spec.attribution.tableId}

@@ -4871,3 +4871,156 @@ describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
     expect(chartInsightsActions.generateInsights).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// #254 Task 5 — the alternate-reading toggle on the chart card.
+//
+// The backend (Tasks 1/2) builds every registry-recorded alternate reading of
+// the answered measure over the PRIMARY's own resolved coordinates and the
+// IDENTICAL period window, and Task 3 threads them to the client as
+// `chartAlternates`. ChartView receives them as `alternates` and renders the
+// SELECTED reading's data — while the `spec` PROP itself never changes, so
+// the spec-identity reset effect (which wipes form/zoom/notes/panels for a
+// genuinely different chart) must NOT fire on a reading switch.
+// ---------------------------------------------------------------------------
+describe('ChartView — alternate reading toggle (#254)', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  /** A second reading of the same measure: same series/regions and the same
+   * three period codes and labels as `threePointSpec()` (Task 1/2's own
+   * guarantee — an alternate is built over the identical window), differing
+   * only in the plotted values, their resultIds, and the coordinate labels
+   * that NAME the reading. Every string here is digit-free apart from the
+   * values themselves, so the whole-card digit scan below has an exact,
+   * unambiguous source set. */
+  function altReadingSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
+    return spec({
+      dims: { SeizoensCorrectie: 'NG' },
+      dimLabels: { SeizoensCorrectie: 'Niet gecorrigeerd' },
+      definitionLine: 'Definitie: ongecorrigeerde reeks.',
+      series: [
+        {
+          label: 'Nederland',
+          regionCode: 'NL01',
+          points: [
+            point({ resultId: 'alt-lo', periodCode: '2022JJ00', periodLabel: '2022', value: 8.5, formattedValue: '8,5' }),
+            point({ resultId: 'alt-mid', periodCode: '2023JJ00', periodLabel: '2023', value: 9, formattedValue: '9,0' }),
+            point({ resultId: 'alt-hi', periodCode: '2024JJ00', periodLabel: '2024', value: 9.75, formattedValue: '9,8' }),
+          ],
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  const readingControl = (): HTMLElement => screen.getByRole('combobox', { name: /lezing|reading/i });
+
+  it('shows no reading control when alternates is empty or omitted', () => {
+    const { unmount } = render(<ChartView spec={threePointSpec()} />);
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+    unmount();
+    render(<ChartView spec={threePointSpec()} alternates={[]} />);
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a reading control when alternates is non-empty, and switching it renders the alternate's own data", () => {
+    const alt = altReadingSpec();
+    render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
+
+    // Primary first: the headline figure is the primary's own last plotted
+    // point, bound to the primary's own cell.
+    const headline = (): HTMLElement => screen.getByTestId('headline-figure');
+    expect(headline().querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // The chart now leads with the ALTERNATE's last plotted point, bound to
+    // the ALTERNATE's own cell id — the primary's cell is gone from the card.
+    expect(headline().querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+    expect(headline().querySelector('[data-label-for="hi"]')).toBeNull();
+
+    // ...and so does the exact-values Tabel view, cell by cell.
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    const table = screen.getByRole('table');
+    expect(table.querySelector('[data-label-for="alt-lo"]')?.textContent).toBe('8,5');
+    expect(table.querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+    expect(table.querySelector('[data-label-for="lo"]')).toBeNull();
+
+    // Switching back returns to the primary's own cells.
+    fireEvent.change(readingControl(), { target: { value: 'primary' } });
+    expect(screen.getByRole('table').querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
+  });
+
+  it("the alternate reading brings its OWN coordinate labels, definition line and attribution — never the primary's", () => {
+    const alt = altReadingSpec({ attributionLine: 'Bron: CBS StatLine, tabel 99999NED.' });
+    const { container } = render(
+      <ChartView
+        spec={threePointSpec({ definitionLine: 'Definitie: gecorrigeerde reeks.' })}
+        alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+      />,
+    );
+    expect(container.textContent).toContain('Kenmerk: Alle kenmerken');
+    expect(container.textContent).toContain('Definitie: gecorrigeerde reeks.');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    expect(container.textContent).toContain('SeizoensCorrectie: Niet gecorrigeerd');
+    expect(container.textContent).not.toContain('Kenmerk: Alle kenmerken');
+    expect(container.textContent).toContain('Definitie: ongecorrigeerde reeks.');
+    expect(container.textContent).toContain('Bron: CBS StatLine, tabel 99999NED.');
+  });
+
+  it('switching reading does NOT reset the current form/zoom — the spec-identity effect must not fire', () => {
+    const alt = altReadingSpec();
+    render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2023JJ00' } });
+    expect(screen.getByRole('combobox', { name: 'Vanaf' })).toHaveValue('2023JJ00');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // The reset effect clears form AND periodRange; both survive here.
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('combobox', { name: 'Vanaf' })).toHaveValue('2023JJ00');
+    expect(screen.getByText(/Getoond: 2023–2024 van 2020–2024\./)).toBeInTheDocument();
+    // The reading itself stuck (it is the reducer's own state, not derived
+    // from the spec prop).
+    expect(readingControl()).toHaveValue('0');
+  });
+
+  it('a genuinely different spec DOES still reset the reading back to the primary (contrast: the identity effect works)', () => {
+    const alt = altReadingSpec();
+    const alternates = [{ label: 'Ongecorrigeerd', spec: alt }];
+    const { rerender } = render(<ChartView spec={threePointSpec()} alternates={alternates} />);
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+    expect(readingControl()).toHaveValue('0');
+
+    rerender(<ChartView spec={threePointSpec({ title: 'Andere reeks' })} alternates={alternates} />);
+    expect(readingControl()).toHaveValue('primary');
+  });
+
+  it("the reading control label uses the registry alternate's own label string, never invented copy", () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        alternates={[{ label: 'oorspronkelijke, ongecorrigeerde cijfers', spec: altReadingSpec() }]}
+      />,
+    );
+    expect(screen.getByText('oorspronkelijke, ongecorrigeerde cijfers')).toBeInTheDocument();
+  });
+
+  it('the alternate view passes the SAME whole-card digit-honesty scan the primary chart already does', () => {
+    const alt = altReadingSpec();
+    const { container } = render(
+      <ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
+    );
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+    // R1/R6: with the ALTERNATE showing, every digit on the card must trace
+    // to the ALTERNATE's own strings — the primary's values must be gone.
+    scanForUnboundDigits(container, harvestSpecStrings(alt));
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    scanForUnboundDigits(container, harvestSpecStrings(alt));
+  });
+});

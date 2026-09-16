@@ -356,6 +356,11 @@ const nl = {
   'chart.formReason.hbarTimeSeries': 'Liggende staven passen alleen bij een vergelijking tussen regio’s.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
+  // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
+  // here — every option label is the registry's own alternate label string,
+  // rendered verbatim, never translated or invented by the UI.
+  'chart.reading.label': 'Lezing',
+  'chart.reading.primary': 'Standaard',
   'chart.graphPanelLabel': 'Grafiek',
   'chart.seriesGroupLabel': 'Reeksen',
   'chart.highlightButton': 'Markeer {label}',
@@ -1112,6 +1117,8 @@ const en: Messages = {
   'chart.formReason.hbarTimeSeries': 'Horizontal bars only fit a comparison between regions.',
   'chart.from': 'From',
   'chart.to': 'To',
+  'chart.reading.label': 'Reading',
+  'chart.reading.primary': 'Default',
   'chart.graphPanelLabel': 'Chart',
   'chart.seriesGroupLabel': 'Series',
   'chart.highlightButton': 'Highlight {label}',
