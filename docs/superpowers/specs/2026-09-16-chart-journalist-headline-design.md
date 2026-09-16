@@ -76,16 +76,27 @@ select a.id, $2::text
  where a.id = $1
    and a.user_id = $3
    and a.kind = 'answer'
-   and a.response->'chart' is not null
+   and a.source_tag = 'user'
+   and a.chart_emitted
 on conflict (audit_answer_id) do update
   set headline = excluded.headline, updated_at = now()
 returning audit_answer_id
 ```
 
-A mismatch (someone else's row, a refusal/clarification, a chartless answer, a nonexistent id, or
-an anonymous row with `user_id is null`) returns zero rows → the function returns `false`, never
-throws — same soft-fail contract as feedback. This structurally means only an authenticated user
-editing their own chart can ever set a headline; anonymous/benchmark rows can't, by construction.
+**As-built correction (Task 2 review, session 105):** the implemented guard uses the promoted
+`chart_emitted` boolean column (migration 004) rather than reaching into the `response` envelope's
+jsonb — same effect, cheaper query, and consistent with how the rest of the codebase reads
+chart-presence. It also adds `a.source_tag = 'user'`, which this snippet originally omitted: without
+it, an `onboarding_delivery` row (a background-cron-generated chart, never thread-attached, but
+which CAN carry a real `user_id` + `kind = 'answer'` + `chart_emitted = true`) would have passed the
+guard even though it was never meant to be headline-able — the task reviewer caught this as a real
+gap against this section's own "mirrors `upsertAnswerFeedback` exactly" claim (that function's own
+guard already includes `source_tag = 'user'`), and it's fixed here and in the shipped code.
+
+A mismatch (someone else's row, a refusal/clarification, a chartless answer, a non-`user`-sourced
+row, a nonexistent id, or an anonymous row with `user_id is null`) returns zero rows → the function
+returns `false`, never throws — same soft-fail contract as feedback. This structurally means only an
+authenticated user editing their own, normally-chat-visible chart can ever set a headline.
 
 ### Drafting it — reuses the Insights AI-phrasing mechanism, not a new honesty design
 
