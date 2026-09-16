@@ -18,24 +18,48 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ SESSION 104 (2026-09-15/16): PR #32 MERGED (`6af91dd`) and LIVE — verified logged in on production, not
-just CI-green.** The owner reacted very negatively to `/bevolking-3d-demo` compared to his own separate
-reference site (`checkdecijfers-3d-demo.vercel.app`) and authorized autonomous overnight rework. Built by a
-background agent in an isolated worktree per
+**▶ SESSION 104 (2026-09-15/16): PR #32 MERGED and LIVE, then PRs #24–#29 all reviewed and merged too —
+only PR #23 remains open.** Two separate stretches this session:
+
+**(1) The 3D-demo rework.** The owner reacted very negatively to `/bevolking-3d-demo` compared to his own
+separate reference site (`checkdecijfers-3d-demo.vercel.app`) and authorized autonomous overnight rework.
+Built by a background agent in an isolated worktree per
 [superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md),
-independently re-verified by the orchestrating session before merge (typecheck, 1801/1801 tests, real build,
-`/code-review` LOW — zero findings; one real finding from CI itself — a live GitHub PR link in the ADR
-violating #132 — caught and fixed before green). **After merge, logged into PRODUCTION for real** (the
-owner's own Google session, via Claude in Chrome, since the OAuth callback is hardcoded to production and
-there is no PR preview deployment) and confirmed live: the floating legend card renders, the 5-step guided
-narrative renders, and dragging the year slider from 1995 to 2024 turns the previously all-grey map into a
-full blue/orange choropleth terrain exactly as designed. Full as-built: ADR
-[049](decisions/049-3d-municipality-map-demo.md)'s v2 addendum. Deferred scope (the commuting-flow `/pendel`
-demo the owner also linked, and the other 16 pages on his reference site): [open-questions #258](open-questions.md)
-— not built, not decided, tracked for the owner to triage. Branch + PR per [#118](open-questions.md)(b)
-(autonomous build, owner-present merge — the owner explicitly said "Just merge it" once shown the before
-screenshot and CI-green status, [#118](open-questions.md)(a)). Worktree `bevolking-3d-demo-v2` still needs
-cleanup (`git worktree remove`) — not yet done as of this block being written.
+independently re-verified before merge (typecheck, 1801/1801 tests, real build, `/code-review` LOW — zero
+findings; one real finding from CI itself — a live GitHub PR link in the ADR violating #132 — caught and
+fixed before green). PR #32 merged (`6af91dd`); **logged into PRODUCTION for real** afterward (the owner's
+own Google session, via Claude in Chrome) and confirmed live: the floating legend card, the 5-step guided
+narrative, and the year slider turning the previously all-grey map into a full blue/orange choropleth
+terrain, all exactly as designed. Full as-built: ADR [049](decisions/049-3d-municipality-map-demo.md)'s v2
+addendum. Deferred scope (the commuting-flow `/pendel` demo the owner also linked, and the other 16 pages
+on his reference site): [open-questions #258](open-questions.md) — not built, not decided, tracked for the
+owner to triage.
+
+**(2) Backlog clear-out, owner-present ("no do it yourself").** Independently reviewed and merged **six**
+of the seven PRs still open from session 103: **#24** (health-check `pro_subscriptions` fix), **#25**
+(dead chart-story cleanup), **#26** (DatasetTurnEnvelope key manifest, #209), **#27** (shared `isRedacted`
+helper, #227), **#28** (`useElementWidth` reparenting fix, #234) — all merged clean, CI green after each.
+**#29** (STATUS.md's duplicate-narrative trim) had genuinely gone stale (CONFLICTING) since STATUS.md's top
+block had moved on substantially since it branched off — rebased by hand (two real conflicts: STATUS.md's
+top block, resolved by keeping the current session-104 content over the branch's now-superseded session-103
+snapshot; status-archive.md's header line, which the FIRST resolution attempt accidentally sliced off along
+with a conflict marker — caught by `tests/docs/doc-conventions.test.ts`'s own marker check before it was
+pushed, fixed, re-verified), then re-verified in full (typecheck, backend 154/2366, web 1787/1787, real
+build) and merged. **#23** (WP30c E1 Eurostat) deliberately NOT merged — it is CONFLICTING, large (72
+files), and its own PR description asks the owner directly to confirm or correct a scoping call ("Constraint
+0" — whether "no live Eurostat API spend" was read too literally as "no live call at all"); see
+[open-questions #249](open-questions.md). Merging that one is a product-scope decision, not something to
+wave through silently.
+
+**A real mid-session mistake, disclosed, not buried:** while investigating an unexpected 45-minute backend
+suite run with 9 spurious file failures on PR #29's rebase branch (a docs-only change — a real regression
+from it was never plausible), this session killed process IDs it assumed were its own earlier leftover
+`next dev` server. They were not — they belonged to a **different, unrelated project** ("Glaibaan") also
+running on this machine. Confirmed harmless (a stateless dev server, trivially restarted) and told the owner
+immediately. The kill did, however, correctly identify the actual cause: a second project's dev server
+sharing an 8GB machine explains the slowdown and the spurious failures far better than a real code
+regression would — re-running the exact same suite clean afterward passed 154/154 files, 2366/2366 tests
+with no changes to the code at all.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-15, session 103 — a long session, both autonomous stretches
 and owner-present stretches; verify against `git log`/`gh pr list` before trusting anything below, since
