@@ -15,6 +15,7 @@ import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import type { ChatMessage } from '../lib/chat-message.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
+import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat } from './chat.tsx';
@@ -30,6 +31,23 @@ vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
   usePathname: () => '/chat',
 }));
+
+// #254 (Task 3): dock-visuals.ts's deriveVisuals is the one place chat.tsx
+// hands its FULL internal ChatMessage array to an outside function on every
+// render (`onVisualsChange?.(deriveVisuals(messages))`) — chartAlternates has
+// no rendered UI yet (deliberately out of this task's scope), so wrapping the
+// real implementation in a spy is how the "chartAlternates threaded onto
+// message state" test below observes the actual per-message state chat.tsx
+// built, without adding any new production plumbing. Behavior is byte-
+// identical for every other test (the real function still runs). NOTE: the
+// call site is `onVisualsChange?.(deriveVisuals(messages))` — optional
+// chaining short-circuits the WHOLE call including its arguments, so
+// deriveVisuals is only actually invoked when a real `onVisualsChange` prop
+// is passed; the tests below pass one for exactly that reason.
+vi.mock('../lib/dock-visuals.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/dock-visuals.ts')>();
+  return { ...actual, deriveVisuals: vi.fn(actual.deriveVisuals) };
+});
 
 // jsdom does not implement scrollIntoView (pre-existing chat.tsx effect,
 // unrelated to WP13) — stubbed here rather than in the shared setup file,
@@ -78,6 +96,7 @@ afterEach(() => {
   replyToClarification.mockReset();
   submitAnswerFeedback.mockReset();
   confirmOnboardingFetch.mockReset();
+  vi.mocked(deriveVisuals).mockClear();
 });
 
 /** Wraps a GatedResponse into the AskOutcome shape, with no context —
@@ -1162,6 +1181,54 @@ describe('Chat — Embed button wiring on the inline chart (Task 4)', () => {
   });
 });
 
+// #254 (Task 3): AnswerResponse.chartAlternates (Task 2) must survive the
+// live receive path onto the per-message ChatMessage state, by direct
+// analogy with how `chart` already does — chat.tsx's own object literal now
+// sets `chartAlternates: response.kind === 'answer' ? response.chartAlternates
+// : []` right beside `chart`. There is no rendered UI for it yet (a later
+// task's job), so this observes the actual message chat.tsx built via the one
+// place it hands its full internal messages array outward on every render —
+// deriveVisuals(messages), spied (not stubbed) at the top of this file.
+describe('Chat — chartAlternates threaded onto message state (#254)', () => {
+  it('carries the answer\'s chartAlternates onto the assistant ChatMessage, unchanged', async () => {
+    const chartAlternates = [{ label: 'Procentuele verandering', spec: CHART_SPEC }];
+    const response = {
+      ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }),
+      chart: CHART_SPEC,
+      chartAlternates,
+    } as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 9, netCost: 20, response }));
+    // A real onVisualsChange is required: the call site is
+    // `onVisualsChange?.(deriveVisuals(messages))` — optional chaining
+    // short-circuits deriveVisuals itself when no callback is passed.
+    render(<Chat onVisualsChange={() => {}} />);
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+
+    const calls = vi.mocked(deriveVisuals).mock.calls;
+    const lastMessages = calls[calls.length - 1]?.[0] ?? [];
+    const assistant = lastMessages.find((m) => m.role === 'assistant');
+    expect(assistant?.chartAlternates).toEqual(chartAlternates);
+  });
+
+  it('defaults chartAlternates to [] on a non-answer "ok" response (e.g. a refusal)', async () => {
+    const refusal = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+    } as unknown as ComposedResponse;
+    askQuestion.mockResolvedValue(outcome({ kind: 'ok', auditId: 3, netCost: 0, response: refusal }));
+    render(<Chat onVisualsChange={() => {}} />);
+    await submit('Hoe hoog wordt de inflatie volgend jaar?');
+    await screen.findByText('CBS publiceert gerealiseerde cijfers, geen voorspellingen.');
+
+    const calls = vi.mocked(deriveVisuals).mock.calls;
+    const lastMessages = calls[calls.length - 1]?.[0] ?? [];
+    const assistant = lastMessages.find((m) => m.role === 'assistant');
+    expect(assistant?.chartAlternates).toEqual([]);
+  });
+});
+
 // Session 91 (owner-chosen "Option B — answer card"): an answer message now
 // renders inside a shadcn Card, with a CardFooter carrying the source (left)
 // and the actions — feedback, proof, citation, CSV, cost — in that order
@@ -1268,6 +1335,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       kind: 'answer',
       text: 'Nederland telt 18.044.027 inwoners.',
       chart: null,
+      chartAlternates: [],
       cost: 20,
       citation: 'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED)',
       card: null,
@@ -2299,6 +2367,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
         kind: 'clarification',
         text: 'Welke regio?',
         chart: null,
+        chartAlternates: [],
         cost: 10,
         citation: null,
         card: null,

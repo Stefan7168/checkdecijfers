@@ -35,6 +35,9 @@ function redactedMessage(): ChatMessage {
     kind: null,
     text: 'Deze vraag is verwijderd.',
     chart: null,
+    // Not yet in the structural replay parts (see ChatMessage's own doc
+    // comment) — a redacted row has no envelope to derive one from anyway.
+    chartAlternates: [],
     cost: null,
     citation: null,
     card: null,
@@ -60,6 +63,7 @@ function userMessage(text: string): ChatMessage {
     kind: null,
     text,
     chart: null,
+    chartAlternates: [],
     cost: null,
     citation: null,
     card: null,
@@ -109,6 +113,12 @@ function assistantMessage(part: ReplayAssistantPart): ChatMessage {
     // R8: the exact stored text the user saw (Stage A pins finalText === stored).
     text: part.finalText,
     chart: part.chart,
+    // #254: unlike `chart`, Stage A never lifted this onto its own
+    // ReplayAssistantPart field — read it straight off the stored envelope,
+    // the SAME `answer` narrowing citation/card/csv already use two lines
+    // down (⟨A3⟩: the raw envelope IS the replay source of truth). [] on a
+    // non-answer, same as the live receive path.
+    chartAlternates: answer?.chartAlternates ?? [],
     cost: part.creditsCharged,
     // The SAME live-path builders over the SAME envelope (⟨A3⟩): identical
     // citation/card/csv reconstruction.

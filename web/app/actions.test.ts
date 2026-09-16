@@ -225,6 +225,29 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
     expect(gated.kind).toBe('ok');
     expect(billing.chargeAndRun).toHaveBeenCalledTimes(1);
   });
+
+  // #254 (Task 3): AnswerResponse.chartAlternates (Task 2) rides the audited
+  // envelope through chargeAndRun's own object spread (`{ kind: 'ok',
+  // ...audited, netCost }`, see driveGate above) exactly like every other
+  // AnswerResponse field — actions.ts needed NO code change for this to work,
+  // but nothing here previously pinned that the spread keeps a brand-new
+  // field alive. This regression-guards the AskOutcome boundary Task 3
+  // threads through to the chat client.
+  it('#254: carries AnswerResponse.chartAlternates through unchanged to the returned gated outcome', async () => {
+    const chartAlternates = [{ label: 'Procentuele verandering', spec: { schemaVersion: 1 } }];
+    const response = {
+      kind: 'answer',
+      question: 'q',
+      text: 'Het antwoord.',
+      answer: { body: 'Het antwoord.' },
+      chartAlternates,
+      webSection: null,
+    } as unknown as ComposedResponse;
+    driveGate(response, 1, 20);
+    const { gated } = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', RID);
+    expect(gated.kind).toBe('ok');
+    expect((gated as { response: ComposedResponse }).response).toMatchObject({ chartAlternates });
+  });
 });
 
 describe('askQuestion — selection validation (untrusted client payload)', () => {
