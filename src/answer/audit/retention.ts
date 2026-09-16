@@ -223,12 +223,24 @@ interface PendingRedaction {
   params: unknown[];
 }
 
+/** Session 105 (journalist chart-headline feature, migration 031): the paired
+ * chart_headlines hard-delete a caller runs in the SAME transaction as its
+ * redaction — same to_regclass existence guard as `feedbackDelete` (the
+ * table is FILE-ONLY until the owner-supervised apply, so a deploy window
+ * where audit_answers redaction must succeed while chart_headlines does not
+ * yet exist is expected, not an error). */
+interface HeadlineDelete {
+  sql: string;
+  params: unknown[];
+}
+
 async function redactMatchingRows(
   db: Db,
   whereClause: string,
   params: unknown[],
   feedbackDelete?: FeedbackDelete,
   pendingRedaction?: PendingRedaction,
+  headlineDelete?: HeadlineDelete,
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -244,6 +256,16 @@ async function redactMatchingRows(
       const { rows: reg } = await tx.query(`select to_regclass('public.answer_feedback') as t`);
       if (reg[0]?.t != null) {
         await tx.query(feedbackDelete.sql, feedbackDelete.params);
+      }
+    }
+    if (headlineDelete) {
+      // Same guard discipline as feedbackDelete above: migration 031 is
+      // FILE-ONLY at commit time, so the table may not exist yet in a given
+      // environment. The guard must be a check, not a catch — an error inside
+      // a transaction aborts the whole redaction.
+      const { rows: reg } = await tx.query(`select to_regclass('public.chart_headlines') as t`);
+      if (reg[0]?.t != null) {
+        await tx.query(headlineDelete.sql, headlineDelete.params);
       }
     }
     const { rows } = await tx.query(
@@ -337,6 +359,13 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
             where user_id = $1`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
+    {
+      // Session 105: this user's chart headlines (migration 031) hard-delete,
+      // same-parameter scoping as the redaction itself.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where user_id = $1)`,
+      params: [userId],
+    },
   );
 }
 
@@ -392,6 +421,12 @@ export async function deleteThreadQuestionHistory(
               )`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID, threadId, userId],
     },
+    {
+      // Session 105: this thread's chart headlines (migration 031) hard-delete.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where user_id = $1 and thread_id = $2)`,
+      params: [userId, threadId],
+    },
   );
 }
 
@@ -443,6 +478,13 @@ export async function purgeExpiredQuestionHistory(
       sql: `update pending_table_requests set ${PENDING_REDACTION_SET}
             where ${PENDING_PURGE_WHERE}`,
       params: [cutoffIso, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
+    },
+    {
+      // Session 105: chart headlines (migration 031) attached to purged
+      // answers go with them — same window as the redaction itself.
+      sql: `delete from chart_headlines where audit_answer_id in
+            (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
+      params: [cutoffIso, anonIso],
     },
   );
 }
