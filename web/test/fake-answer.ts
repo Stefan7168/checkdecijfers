@@ -7,6 +7,7 @@
 // fully-typed ResultCell and Attribution objects — the compiler, not the
 // cast, guarantees their shape.
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
 import type { Attribution, ResultCell } from '../backend/query/types.ts';
 
 export function fakeCell(overrides: Partial<ResultCell> = {}): ResultCell {
@@ -70,6 +71,10 @@ export function fakeAnswerResponse(opts: {
   attributionLine?: string;
   /** WP29 (#73): servability-gated follow-up chip texts the chat renders. */
   suggestions?: string[];
+  /** #254: every registered alternate reading of the answered measure
+   * (Task 2). Defaults to [] like `suggestions` above — callers that need a
+   * non-empty fixture pass it explicitly. */
+  chartAlternates?: { label: string; spec: ChartSpec }[];
 } = {}): AnswerResponse {
   const body = opts.body ?? 'Nederland telt 18.044.027 inwoners.';
   const attribution = fakeAttribution({
@@ -81,6 +86,7 @@ export function fakeAnswerResponse(opts: {
     kind: 'answer',
     text: opts.text ?? body,
     chart: null,
+    chartAlternates: opts.chartAlternates ?? [],
     stalenessWarning: opts.stalenessWarning ?? null,
     suggestions: opts.suggestions ?? [],
     answer: {
