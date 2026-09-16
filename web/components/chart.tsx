@@ -75,6 +75,10 @@ import { t, type Lang } from '../lib/i18n/messages.ts';
 // header for why (the usage-actions.ts precedent this mirrors).
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { generateInsights } from '../app/chart-insights-actions.ts';
+// Journalist chart-headline (session 105): own tiny-import-graph file,
+// mirroring chart-insights-actions.ts / chart-style-actions.ts above.
+import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../app/chart-headline-actions.ts';
+import { Button } from './ui/button.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
 import { ChartEditModal } from './chart-edit-modal.tsx';
@@ -1232,6 +1236,7 @@ export function ChartView({
   embed,
   embedMode = false,
   embedFooter,
+  headlineText,
   initialFormOverride,
   stage,
   initialPresentation,
@@ -1266,6 +1271,14 @@ export function ChartView({
    * every embed footer has byte-identical link markup. Ignored unless
    * embedMode is true. */
   embedFooter?: string;
+  /** Journalist chart-headline (Task 6): a server-resolved headline for the
+   * /embed/[token] public page (Task 7 resolves it once, server-side, and
+   * hands it in). `undefined` (the chat context — every other call site)
+   * means "not yet known": ChartView fetches it lazily itself via
+   * fetchChartHeadline, but only when `embed.auditId` is present (an
+   * unsaved/anonymous chart has nothing to fetch). `null` means "known and
+   * there isn't one yet" — distinct from "not yet known". */
+  headlineText?: string | null;
   /** Fix round (Task 5 review, Piece 3): a one-shot override for the
    * INITIAL form, set only by the /embed/[token] route (its own `?form=`,
    * already emitted by Task 4's embed dialog for "As shown" but never wired
@@ -1362,6 +1375,35 @@ export function ChartView({
   // clicks must not carry over another chart's notes).
   const [notes, setNotes] = useState<ChartNote[]>([]);
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
+
+  // Journalist chart-headline (Task 6): named `chartHeadline`, deliberately
+  // NOT `headline` — that identifier is already taken below by
+  // `headlineFigure`'s result (the big NUMBER a chart leads with, an
+  // unrelated feature). This is the sentence headline a reader can draft,
+  // edit and save.
+  const [chartHeadline, setChartHeadline] = useState<string | null>(headlineText ?? null);
+  const [headlineEditing, setHeadlineEditing] = useState(false);
+  const [headlineDraftText, setHeadlineDraftText] = useState('');
+  const [headlineBusy, setHeadlineBusy] = useState(false);
+  const [headlineError, setHeadlineError] = useState<string | null>(null);
+
+  // Lazy fetch-on-mount for the chat context only: the embed page already
+  // resolved `headlineText` server-side (undefined means "not yet known"
+  // here, never "known absent" — that's `null`), and there's nothing to
+  // fetch without a saved audit row to key off of.
+  useEffect(() => {
+    if (headlineText !== undefined) return;
+    if (embed?.auditId === undefined) return;
+    let cancelled = false;
+    void fetchChartHeadline(embed.auditId).then((result) => {
+      if (!cancelled && result.ok) setChartHeadline(result.headline);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted chart, keyed by auditId identity below
+  }, [embed?.auditId]);
+
   // Final review finding: a new note's id used to be
   // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
   // shrinks on delete — so two notes on the same point could end up with the
@@ -2185,6 +2227,54 @@ export function ChartView({
     setOpenPanel(openPanel === 'style' ? null : 'style');
   }
 
+  // Journalist chart-headline (Task 6): draft (AI, signed-in only) / edit
+  // (no AI call — reopens the existing saved text) / save / cancel. Mirrors
+  // the Insights `openStory` pattern above: an unauthenticated visitor gets
+  // an honest inline message, never a silently-failed server-action call.
+  function startHeadlineDraft(): void {
+    setHeadlineError(null);
+    if (chartHeadline !== null) {
+      setHeadlineDraftText(chartHeadline);
+      setHeadlineEditing(true);
+      return;
+    }
+    if (!signedIn) {
+      setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
+      return;
+    }
+    setHeadlineBusy(true);
+    void draftChartHeadline(spec).then((result) => {
+      setHeadlineBusy(false);
+      if (result.ok) {
+        setHeadlineDraftText(result.headline);
+        setHeadlineEditing(true);
+      } else if (result.reason === 'unauthenticated') {
+        setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
+      } else {
+        setHeadlineError(t(chartLang, 'chart.headline.error'));
+      }
+    });
+  }
+
+  function saveHeadlineDraft(): void {
+    if (embed?.auditId === undefined) return;
+    setHeadlineBusy(true);
+    void saveChartHeadline(embed.auditId, headlineDraftText).then((result) => {
+      setHeadlineBusy(false);
+      if (result.ok) {
+        setChartHeadline(headlineDraftText.trim().slice(0, 140));
+        setHeadlineEditing(false);
+      } else {
+        setHeadlineError(t(chartLang, 'chart.headline.error'));
+      }
+    });
+  }
+
+  function cancelHeadlineDraft(): void {
+    setHeadlineEditing(false);
+    setHeadlineError(null);
+  }
+
   // Session 87 (mockup Option B): the Grafiek/Tabel switch is a shadcn-style
   // segment (muted track, raised active segment); the small-multiples and
   // axis toggles are quiet pills.
@@ -2782,9 +2872,56 @@ export function ChartView({
                 compact
               />
             ) : null}
+            {/* Journalist chart-headline (Task 6): chat context only (the
+              * embed page never shows edit UI, per the spec — Task 7's own
+              * static render is the read-only counterpart) and only when
+              * there's something to draft from (mirrors the Insights
+              * trigger's own storyAvailable-from-findings gate above). */}
+            {embed?.auditId !== undefined && findings.length > 0 ? (
+              <Button type="button" variant="ghost" size="sm" onClick={startHeadlineDraft} disabled={headlineBusy}>
+                {headlineBusy
+                  ? t(chartLang, 'chart.headline.drafting')
+                  : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
+      {/* Journalist chart-headline (Task 6): the sentence headline leads,
+        * the headlineFigure big-number block (below) follows. Named state
+        * `chartHeadline`/`headlineEditing` throughout — deliberately not
+        * `headline`, which is already the headlineFigure result just below. */}
+      {headlineEditing ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <input
+            type="text"
+            value={headlineDraftText}
+            onChange={(e) => setHeadlineDraftText(e.target.value.slice(0, 140))}
+            placeholder={t(chartLang, 'chart.headline.placeholder')}
+            maxLength={140}
+            className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button type="button" onClick={saveHeadlineDraft} disabled={headlineBusy} className="text-xs font-medium text-foreground">
+              {t(chartLang, 'chart.headline.save')}
+            </button>
+            <button type="button" onClick={cancelHeadlineDraft} disabled={headlineBusy} className="text-xs text-muted-foreground">
+              {t(chartLang, 'chart.headline.cancel')}
+            </button>
+          </div>
+          {headlineError !== null ? <p className="text-xs text-destructive">{headlineError}</p> : null}
+        </div>
+      ) : chartHeadline !== null ? (
+        <p className="mt-3 text-base font-semibold leading-snug text-foreground" data-testid="chart-headline-text">
+          {chartHeadline}
+        </p>
+      ) : headlineError !== null ? (
+        // startHeadlineDraft's unauthenticated/error paths set headlineError
+        // WITHOUT entering edit mode (there's no draft to edit yet) — this
+        // branch is the only place that message is ever shown.
+        <p className="mt-3 text-xs text-destructive">{headlineError}</p>
+      ) : null}
       {/* Chart-card polish (2026-09-15): the number leads, the chart is the
         * evidence. Outside the export container (chartContainerRef) by
         * construction — never in a PNG/SVG. Every token is a spec string
