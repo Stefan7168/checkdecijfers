@@ -30,8 +30,11 @@ tests, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks 
 was written before the push landed.** [#254](open-questions.md)'s second gap is now resolved for
 the seasonally-adjusted/same-measure-alternate half (~20 registered concepts); the level-vs-%-change
 half stays open, needs a new registered derivation + an ADR 011 revision — a separate future design
-task, not a quick follow-on. The 3D-demo thread stays closed — do not resume it without a new,
-explicit owner ask. Full account of sessions 106-107: [status-archive.md](status-archive.md).
+task, not a quick follow-on. Session 106 also shipped, separately and already live before this:
+the Supademo chart-polish comparison's one pending decision (`framePadding: 'none' → 'small'`,
+owner-confirmed, `c934f1d`) — the broader "match Supademo's polish" question stays logged, not
+built ([#260](open-questions.md)). The 3D-demo thread stays closed — do not resume it without a
+new, explicit owner ask. Full account of sessions 106-107: [status-archive.md](status-archive.md).
 
 ## Phase 0 checklist
 
