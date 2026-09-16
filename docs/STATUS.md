@@ -18,18 +18,25 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 104 — verify against `git log`/`gh pr list`
-before trusting this, since more may have landed after it was written).** PR #32 (3D-demo v2 rework)
-merged and verified LIVE on production; six of seven backlog PRs (#24-#29) independently reviewed and
-merged; PR #23 (Eurostat) deliberately left open pending the owner's "Constraint 0" scoping answer
-([open-questions #249](open-questions.md)). **Owner priority pivot, his own words: "focus the project
-back on the standard graphs instead of storytelling."** Next session's actual mandate: the chart/
-mapping-library investigation queued since session 103 — [open-questions #253](open-questions.md)
-(candidate approaches for a real map/geo chart type on the PRODUCTION Recharts-based renderer, not the
-3D demo) and [#254](open-questions.md) (journalist chart-tool needs, feeds #253). The 3D-demo thread is
-closed for now — do not resume it without a new, explicit owner ask. Full account of this session:
-[status-archive.md](status-archive.md)'s session-104 entry. Kickoff prompt:
-[session-briefs/2026-09-16-session-104-kickoff.md](session-briefs/2026-09-16-session-104-kickoff.md).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-16, session 105 — verify against `git log`/`gh pr list`
+before trusting this, since more may have landed after it was written).** Session 104: PR #32 (3D-demo
+v2 rework) merged and verified LIVE; six of seven backlog PRs (#24-#29) merged; PR #23 (Eurostat) left
+open pending the owner's "Constraint 0" answer ([#249](open-questions.md)). Owner pivot, his own words:
+"focus the project back on the standard graphs instead of storytelling" — [#253](open-questions.md)
+(map/geo library comparison) checked against the real code this session and confirmed still blocked
+(no region-set query capability in `src/query/`); [#254](open-questions.md)'s headline gap picked
+instead. **Session 105 (this session): the journalist chart-headline feature built end-to-end via
+subagent-driven development — [ADR 050](decisions/050-journalist-chart-headline.md), 8 tasks + a
+final-review fix wave, all reviews clean, full verification green (benchmark 14/14+6/6+0 fabricated,
+real `next build`).** Branch `worktree-chart-journalist-headline`, **NOT yet merged to `main` or
+deployed** — the owner's next step is to review and merge it (or ask for changes), then apply migration
+031 (FILE-ONLY today) in the SAME deploy window as the code, per the final review's own recommendation
+(deploying the code without the migration lets the AI-draft trigger render and bill before save fails).
+[#259](open-questions.md) has the full as-built record; [#254](open-questions.md)'s second gap
+(context controls: level vs. %-change, seasonally-adjusted vs. raw) is still queued, not started.
+The 3D-demo thread stays closed — do not resume it without a new, explicit owner ask. Full account of
+session 104: [status-archive.md](status-archive.md). Session 105 kickoff:
+[session-briefs/2026-09-16-session-105-kickoff.md](session-briefs/2026-09-16-session-105-kickoff.md).
 
 ## Phase 0 checklist
 
