@@ -3377,6 +3377,7 @@ export function ChartView({
               lang={chartLang}
               frame={pres}
               frameImage={frameImage}
+              headlineText={chartHeadline}
             />
             {embed ? (
               <ChartEmbedButton
@@ -3520,6 +3521,7 @@ export function ChartView({
             lang={chartLang}
             frame={pres}
             frameImage={frameImage}
+            headlineText={chartHeadline}
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (

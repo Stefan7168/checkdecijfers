@@ -677,3 +677,23 @@ describe('attributedSvgMarkup — frame (Task 4, design §C3)', () => {
     expect(framedHost.textContent).toBe(unframedHost.textContent);
   });
 });
+
+describe('headline in exports', () => {
+  it('draws the headline as a title line above the footer, growing totalHeight to make room', () => {
+    const withoutHeadline = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01');
+    const withHeadline = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, 'Werkloosheid stijgt scherp');
+    expect(withHeadline.markup).toContain('Werkloosheid stijgt scherp');
+    expect(withHeadline.markup).toContain('data-headline-line');
+    // The headline variant's total height must exceed the no-headline
+    // variant's — room was actually added, not just text overlaid on
+    // existing space. Both markups carry their outer <svg height="...">
+    // attribute; compare those rather than assuming a fixed pixel delta.
+    const heightOf = (markup: string): number => Number(markup.match(/^<svg[^>]*\sheight="(\d+(?:\.\d+)?)"/)![1]);
+    expect(heightOf(withHeadline.markup)).toBeGreaterThan(heightOf(withoutHeadline.markup));
+  });
+
+  it('omits the headline line entirely when headlineText is null/undefined', () => {
+    const markup = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, null).markup;
+    expect(markup).not.toContain('data-headline-line');
+  });
+});
