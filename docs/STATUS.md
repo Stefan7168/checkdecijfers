@@ -26,8 +26,8 @@ task-scoped reviews clean), paused mid-Task-6 in session 106 on an owner wrap-up
 and finished in session 107 (one small fix round wiring the anonymous trial chat, then the
 whole-branch review). Full verification green: backend 158 files/2395 tests, web 116 files/1844
 tests, benchmark 14/14 + 6/6 + 0 fabricated, real `next build`, both typechecks clean,
-`/code-review` LOW clean. MERGED to `main` — check `git log -1 main` for the exact SHA, this line
-was written before the push landed.** [#254](open-questions.md)'s second gap is now resolved for
+`/code-review` LOW clean. **MERGED to `main` (`b31d84a`), CI green** (`gate` + `deploy` both
+succeeded, incl. the post-deploy smoke check, run `35115201383`). [#254](open-questions.md)'s second gap is now resolved for
 the seasonally-adjusted/same-measure-alternate half (~20 registered concepts); the level-vs-%-change
 half stays open, needs a new registered derivation + an ADR 011 revision — a separate future design
 task, not a quick follow-on. Session 106 also shipped, separately and already live before this:
