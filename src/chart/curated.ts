@@ -36,6 +36,7 @@ import type { Db } from '../db/types.ts';
 import { encodePeriodCode, parsePeriodCode, type ParsedPeriod } from '../ingestion/periods.ts';
 import type { PeriodGrain, StructuredIntent, ValidatedResult } from '../query/index.ts';
 import { freshestForCanonical, runQuery } from '../query/index.ts';
+import { buildAlternateReading } from './alternate-reading.ts';
 import { selectAnnotations } from './annotations.ts';
 import { buildChartSpec } from './build.ts';
 import type { ChartSpec } from './types.ts';
@@ -320,35 +321,11 @@ export function periodStepsBack(p: ParsedPeriod, steps: number): ParsedPeriod {
 // chart's resolved table carries `pinned = true`. If this function, or any
 // future explicit-target caller, ever comes to reference a non-pinned table,
 // resolve.ts's explicit-target branch needs revisiting first.
-async function buildAlternateSpec(
-  db: Db,
-  primary: ValidatedResult,
-  primaryIntent: StructuredIntent,
-  alt: CuratedChartAlternateReading,
-): Promise<{ spec: ChartSpec } | { reason: string }> {
-  const altIntent: StructuredIntent = {
-    schemaVersion: 1,
-    target: {
-      kind: 'explicit',
-      tableId: primary.attribution.tableId,
-      measure: primary.cells[0]!.measure,
-      dims: alt.dims,
-    },
-    period: primaryIntent.period,
-    derivation: 'series',
-  };
-  const altOutcome = await runQuery(db, altIntent);
-  if (!altOutcome.ok) {
-    return { reason: `alternate reading refused (${altOutcome.refusal.kind}): ${altOutcome.refusal.message}` };
-  }
-  try {
-    const spec = buildChartSpec(altOutcome);
-    if (spec === null) return { reason: `alternate reading shape '${altOutcome.shape}' yields no chart` };
-    return { spec };
-  } catch (err) {
-    return { reason: `alternate reading chart build failed: ${err instanceof Error ? err.message : String(err)}` };
-  }
-}
+//
+// The alternate reading is built via the shared buildAlternateReading (now
+// imported above) which merges the alternate's dims over the primary's own
+// resolved dims (not a bare replace) — preserved unchanged from the old
+// inline buildAlternateSpec, now shared for registry generality.
 
 interface BuildOneSuccess {
   slug: string;
@@ -425,8 +402,11 @@ async function buildOne(
   if (def.alternateReading === undefined) {
     return { slug, spec };
   }
-  const altResult = await buildAlternateSpec(db, outcome, intent, def.alternateReading);
-  if ('reason' in altResult) {
+  const altResult = await buildAlternateReading(db, outcome, intent, {
+    dims: def.alternateReading.dims,
+    label: def.alternateReading.label,
+  });
+  if (!altResult.ok) {
     return { slug, spec, toggleSkipReason: altResult.reason };
   }
   return {
@@ -434,8 +414,8 @@ async function buildOne(
     spec,
     toggle: {
       primaryLabel: def.primaryReadingLabel ?? spec.title,
-      alternateLabel: def.alternateReading.label,
-      alternateSpec: altResult.spec,
+      alternateLabel: altResult.result.label,
+      alternateSpec: altResult.result.spec,
     },
   };
 }
