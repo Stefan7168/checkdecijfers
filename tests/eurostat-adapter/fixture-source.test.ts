@@ -2,6 +2,14 @@
 // tree (tests/fixtures/eurostat/), the same specimens the conformance
 // harness replays. These tests give more granular, direct assertions than
 // the conformance harness's plain-language failure summaries.
+//
+// Session 107 (2026-09-16, Constraint 0 resolved): demo_pjan/namq_10_gdp/
+// nrg_bal_c stay the ORIGINAL hand-built ("synthetic": true) specimens —
+// their real cell counts (742,730/8,191,372/21,300,267, per a live catalog
+// capture) all exceed SYNC_CELL_THRESHOLD, too large to usefully commit as
+// synchronous-happy-path fixtures. tipsbd30/migr_asyapp1mp and the whole
+// catalog ARE real, captured specimens ("synthetic": false) — small,
+// in-threshold real datasets found via that same live capture.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -59,14 +67,20 @@ describe('EurostatFixtureSource — replays the committed synthetic fixtures thr
     expect(schema.measures.map((m) => m.code).sort()).toEqual(['nrg_bal_c|GWH', 'nrg_bal_c|KTOE']);
   });
 
-  it('fetchCatalog replays the synthetic Catalogue-API specimen', async () => {
+  it('fetchCatalog replays the REAL captured Catalogue-API table of contents (session 107)', async () => {
     const entries = await source.fetchCatalog();
-    expect(entries.map((e) => e.tableId).sort()).toEqual([
-      'eurostat:demo_pjan',
-      'eurostat:namq_10_gdp',
-      'eurostat:nrg_bal_c',
-    ]);
+    // The real catalog has 10,000+ entries — assert presence, not an exact
+    // full list (unlike the per-table tests above, which still replay
+    // small, exact, hand-built specimens).
+    const tableIds = new Set(entries.map((e) => e.tableId));
+    expect(tableIds.has('eurostat:demo_pjan')).toBe(true);
+    expect(tableIds.has('eurostat:tipsbd30')).toBe(true);
+    expect(tableIds.has('eurostat:migr_asyapp1mp')).toBe(true);
+    expect(entries.length).toBeGreaterThan(1000);
     expect(entries.every((e) => e.language === 'en')).toBe(true);
+    // No 'folder' rows leaked through — every entry is a real, independently
+    // queryable leaf node.
+    expect(entries.every((e) => e.datasetType === 'dataset' || e.datasetType === 'table')).toBe(true);
   });
 
   it('an unknown table id throws a descriptive error, not a silent empty result', async () => {

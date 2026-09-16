@@ -4,15 +4,15 @@
 // deliberately NOT implemented; a dataset over SYNC_CELL_THRESHOLD refuses
 // loudly via AsyncApiRequiredError instead of hanging or truncating).
 //
-// CONSTRAINT 0 (WP30c/E1 brief, this session): this class is written and
-// unit-tested but NEVER INVOKED WITH A REAL URL. Every test injects
-// `fetchFn` — a hand-built stub returning synthetic, clearly-labelled
-// JSON-stat 2.0 payloads — never a live network call. The URL shapes below
-// are consequently this session's best-effort, UNVERIFIED construction from
-// Eurostat's publicly documented API conventions, not measured wire facts
-// (contrast with src/cbs-adapter/odata-v4.ts's BASE, which IS measured).
-// The owner-run `npm run fixtures:capture:eurostat` follow-up is what
-// verifies or corrects them against the real API.
+// CONSTRAINT 0 (WP30c/E1 brief, session 101 continuation) resolved session
+// 107 (2026-09-16): the owner confirmed "no real Eurostat API spend" meant
+// money, not any live call — Eurostat's API is free/public/read-only. Every
+// unit test in this file still injects `fetchFn` (a stub, never a live
+// network call — that discipline doesn't change), but the URL shapes below
+// and both response shapes (jsonstat.ts's dataset AND catalog parsers) are
+// now VERIFIED against real captured responses (session 107), not guessed —
+// see tests/fixtures/eurostat/'s `"synthetic": false` fixtures and
+// ADR 048's As-built section.
 import type {
   CbsCatalogEntry,
   CbsCode,
@@ -23,12 +23,12 @@ import type {
 } from '../cbs-adapter/types.ts';
 import { parseJsonStatCatalog, parseJsonStatDataset, type ParsedEurostatDataset } from './jsonstat.ts';
 
-/** UNVERIFIED (Constraint 0) — Eurostat's documented Statistics API
- * dissemination endpoint convention. */
+/** VERIFIED live (session 107, 2026-09-16) — Eurostat's real Statistics API
+ * dissemination endpoint. */
 const STATISTICS_BASE = 'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data';
-/** UNVERIFIED (Constraint 0) — Eurostat's documented Catalogue API "table of
- * contents" endpoint convention; see parseJsonStatCatalog's own doc comment
- * in ./jsonstat.ts for the response shape this expects. */
+/** VERIFIED live (session 107, 2026-09-16) — Eurostat's real Catalogue API
+ * "table of contents" endpoint; see parseJsonStatCatalog's own doc comment
+ * in ./jsonstat.ts for the tab-separated TEXT (not JSON) shape this returns. */
 const CATALOGUE_URL = 'https://ec.europa.eu/eurostat/api/dissemination/catalogue/toc/txt?lang=EN';
 
 const FETCH_ATTEMPTS = 3;
@@ -56,12 +56,12 @@ export class StatisticsApiSource implements CbsSource {
     this.fetchFn = fetchFn;
   }
 
-  private async fetchJson(url: string): Promise<unknown> {
+  private async fetchWith<T>(url: string, headers: Record<string, string>, read: (res: Response) => Promise<T>): Promise<T> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
       try {
-        const res = await this.fetchFn(url, { headers: { Accept: 'application/json' } });
-        if (res.ok) return await res.json();
+        const res = await this.fetchFn(url, { headers });
+        if (res.ok) return await read(res);
         lastError = new Error(`Eurostat request failed: ${res.status} ${res.statusText} for ${url}`);
       } catch (err) {
         lastError = err;
@@ -75,6 +75,18 @@ export class StatisticsApiSource implements CbsSource {
         lastError instanceof Error ? lastError.message : String(lastError)
       }`,
     );
+  }
+
+  private fetchJson(url: string): Promise<unknown> {
+    return this.fetchWith(url, { Accept: 'application/json' }, (res) => res.json());
+  }
+
+  /** The Catalogue "table of contents" endpoint returns tab-separated TEXT,
+   * not JSON (verified live, session 107) — a JSON `Accept` header on this
+   * one endpoint gets a 406, not a JSON body. No `Accept` header at all,
+   * matching what a live capture confirmed the server accepts. */
+  private fetchText(url: string): Promise<string> {
+    return this.fetchWith(url, {}, (res) => res.text());
   }
 
   private loadDataset(tableId: string, slice?: CbsSlice): Promise<ParsedEurostatDataset> {
@@ -138,7 +150,7 @@ export class StatisticsApiSource implements CbsSource {
   }
 
   async fetchCatalog(): Promise<CbsCatalogEntry[]> {
-    const raw = await this.fetchJson(CATALOGUE_URL);
+    const raw = await this.fetchText(CATALOGUE_URL);
     return parseJsonStatCatalog(raw);
   }
 }

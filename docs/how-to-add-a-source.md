@@ -139,7 +139,7 @@ plain language — read them, fix the adapter or the declarations, never the har
 
 ## Known WP30c wiring points (verified landmines; #1 fixed by WP30c/E1, PR #23 — the rest are NOT yet wired)
 
-1. **✅ FIXED (WP30c/E1, PR [#23](https://github.com/Stefan7168/checkdecijfers/pull/23), session 101
+1. **✅ FIXED (WP30c/E1, PR #23, session 101
    continuation, 2026-09-14/15).** `ingestCatalog`'s prune is now source-scoped: it takes an explicit
    `sourceKey` parameter and prunes `where source = $1 and refreshed_at < $2` (the migration-016
    `source` column) — a second source's `catalog:refresh` can no longer delete another source's mirror

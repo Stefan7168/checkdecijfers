@@ -196,7 +196,7 @@ interface TableRow {
   periodSemantics: Record<string, string> | null;
   slice: CbsSlice | null;
   units: Record<string, { unit: string; decimals: number; title: string }>;
-  /** WP30c D7(a), migration 031: NULL for every CBS row (no such concept);
+  /** WP30c D7(a), migration 032: NULL for every CBS row (no such concept);
    * a Eurostat dataset's DOI once registered. */
   doi: string | null;
 }

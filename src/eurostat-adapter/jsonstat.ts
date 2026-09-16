@@ -127,10 +127,40 @@ function requireDataset(raw: unknown): JsonStatDataset {
   if (typeof ds.dimension !== 'object' || ds.dimension === null) {
     throw new Error("Eurostat JSON-stat response is missing 'dimension'");
   }
-  if (!Array.isArray(ds.value)) {
-    throw new Error("Eurostat JSON-stat response 'value' must be an array");
+  if (!Array.isArray(ds.value) && (typeof ds.value !== 'object' || ds.value === null)) {
+    throw new Error("Eurostat JSON-stat response 'value' must be an array (dense) or an object (sparse)");
   }
   return ds as unknown as JsonStatDataset;
+}
+
+/** Reads one cell — `value` is dense-array-or-sparse-object (see
+ * JsonStatDataset's own doc comment); a sparse object's missing key means
+ * null, exactly like a dense array's explicit `null` at that position. */
+function valueAt(value: JsonStatDataset['value'], offset: number): number | null {
+  const raw = Array.isArray(value) ? value[offset] : value[String(offset)];
+  return typeof raw === 'number' ? raw : null;
+}
+
+/** The array form must declare exactly `total` entries (dense, `null`
+ * explicit); the sparse object form only ever lists non-null cells, so its
+ * key COUNT is not comparable to `total` — instead every key must be a
+ * valid, in-range offset (mirrors normalizeStatus's own key validation). */
+function validateValueShape(value: JsonStatDataset['value'], total: number, tableId: string): void {
+  if (Array.isArray(value)) {
+    if (value.length !== total) {
+      throw new Error(
+        `Eurostat dataset '${tableId}' declares ${total} cells (product of 'size') but 'value' has ` +
+          `${value.length} entries.`,
+      );
+    }
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    const offset = Number(key);
+    if (!Number.isInteger(offset) || offset < 0 || offset >= total) {
+      throw new Error(`Eurostat dataset '${tableId}' has an out-of-range 'value' cell index '${key}' (total cells: ${total})`);
+    }
+  }
 }
 
 /** Normalizes a dimension's `category.index` (an object OR an array, both
@@ -367,12 +397,7 @@ export function parseJsonStatDataset(
 
   const total = ds.size.reduce((a, b) => a * b, 1);
   if (total > SYNC_CELL_THRESHOLD) throw new AsyncApiRequiredError(total, SYNC_CELL_THRESHOLD);
-  if (ds.value.length !== total) {
-    throw new Error(
-      `Eurostat dataset '${tableId}' declares ${total} cells (product of 'size') but 'value' has ` +
-        `${ds.value.length} entries.`,
-    );
-  }
+  validateValueShape(ds.value, total, tableId);
 
   if (!ds.id.includes('unit')) {
     throw new Error(`Eurostat dataset '${tableId}' has no 'unit' dimension — D6's per-unit measure synthesis needs one.`);
@@ -422,9 +447,19 @@ export function parseJsonStatDataset(
     if (geoCode !== undefined && !matchesGeoRestriction(geoCode)) continue;
     if (!matchesSlice(sliceCoordinates, slice)) continue;
 
-    const value = ds.value[offset] ?? null;
+    const value = valueAt(ds.value, offset);
     const flag = statusByOffset.get(offset) ?? null;
-    const valueAttribute = flag ?? 'None';
+    // A real live-data finding (session 107): Eurostat's sparse `value`
+    // representation routinely omits a cell from BOTH `value` and `status`
+    // (no observation reported at all for that coordinate combination — a
+    // normal, expected shape for real EU data, unlike CBS's dense grid).
+    // 'None' means "a real, present value with nothing special to flag"
+    // (see CbsObservationRow's own doc comment) — defaulting an ABSENT value
+    // to 'None' would claim the opposite of what happened. Eurostat's own
+    // ':' (not-available) flag, already registered in registry.ts's
+    // nullReasonLabels, is the honest default for a null cell with no
+    // explicit flag; 'None' stays the default only when a value IS present.
+    const valueAttribute = flag ?? (value === null ? ':' : 'None');
 
     if (value !== null) {
       const bucket = observedByUnit.get(unitCode) ?? [];
@@ -503,57 +538,76 @@ export function parseJsonStatDataset(
 }
 
 // ---------------------------------------------------------------------------
-// Catalogue API — PROVISIONAL shape (Constraint 0: genuinely unverified)
+// Catalogue API — the real "table of contents" TSV shape (Constraint 0
+// resolved, session 107, 2026-09-16, via a live capture)
 // ---------------------------------------------------------------------------
 
+/** dd.mm.yyyy (the real endpoint's own date format, e.g. "14.08.2026") — to
+ * ISO 'yyyy-mm-dd' so `modified` matches CBS's own ISO convention. */
+function parseEurostatTocDate(raw: string): string | null {
+  const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(raw.trim());
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+
+/** Splits ONE tab-separated, double-quoted line into its raw cell strings
+ * (quotes stripped, tabs are the only separator — no embedded-quote escaping
+ * in the real file, verified against a live capture). */
+function splitTocLine(line: string): string[] {
+  return line.split('\t').map((cell) => cell.replace(/^"|"$/g, ''));
+}
+
 /**
- * PROVISIONAL. Eurostat's real Catalogue API response shape is NOT verified
- * this session (Constraint 0, WP30c/E1 brief — see also the registry's own
- * `currentCatalogStatuses: []` TODO, which exists for the same reason).
- * Modelled on Eurostat's publicly documented "table of contents" navigation
- * shape (a `link.item[]` array of flat entries) as the single best-effort
- * guess buildable without a live call. Exercised only against the hand-built,
- * `synthetic: true` `tests/fixtures/eurostat/_catalog.json` specimen — MUST
- * be checked against a real captured response (the owner-run
- * `fixtures:capture:eurostat` follow-up) before this is trusted.
+ * Eurostat's REAL Catalogue "table of contents" endpoint
+ * (`.../catalogue/toc/txt?lang=EN`) is not JSON at all — it is a
+ * tab-separated, double-quoted TEXT file, one row per catalog node, verified
+ * against a live capture (session 107, 2026-09-16; the original
+ * `link.item[]` JSON shape this function used to expect was Constraint 0's
+ * own disclosed, UNVERIFIED best-effort guess and was wrong). Columns:
+ * `title \t code \t type \t last update of data \t last table structure
+ * change \t data start \t data end \t values`. `title`'s leading spaces
+ * encode the node's depth in the theme hierarchy (folders nest datasets/
+ * tables); trimmed away here since `CbsCatalogEntry` is a flat list, exactly
+ * like CBS's own catalog.
+ *
+ * Only `type === 'dataset' | 'table'` rows are real, independently queryable
+ * leaf nodes (both verified live against the Statistics API endpoint) —
+ * `'folder'` rows are pure navigation with no data behind them and are
+ * dropped. Eurostat's toc file carries no per-entry lifecycle/status field
+ * at all (unlike CBS's 'Regulier'/'Gediscontinueerd'/'Vervallen') — `status`
+ * stays `null` for every entry, not "unknown pending a capture" (that
+ * capture has now happened; the field genuinely does not exist here). See
+ * open-questions #250 for what this means for `currentCatalogStatuses`.
  */
-export function parseJsonStatCatalog(raw: unknown): CbsCatalogEntry[] {
-  if (typeof raw !== 'object' || raw === null) {
-    throw new Error('Eurostat catalogue response is not an object');
+export function parseJsonStatCatalog(raw: string): CbsCatalogEntry[] {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    throw new Error('Eurostat catalogue response is empty or not a string');
   }
-  const root = raw as Record<string, unknown>;
-  const link = root.link as Record<string, unknown> | undefined;
-  const items = link?.item;
-  if (!Array.isArray(items)) {
-    throw new Error("Eurostat catalogue response is missing 'link.item[]'");
+  const lines = raw.split('\n').filter((line) => line.trim().length > 0);
+  const [header, ...rows] = lines;
+  if (header === undefined || !header.includes('"code"')) {
+    throw new Error(`Eurostat catalogue response is missing the expected header row: ${JSON.stringify(header)}`);
   }
-  return items.map((entry) => {
-    const row = entry as Record<string, unknown>;
-    const code = row.code;
-    const title = row.title;
+  const entries: CbsCatalogEntry[] = [];
+  for (const line of rows) {
+    const cells = splitTocLine(line);
+    const [rawTitle, code, type, lastUpdate] = cells;
+    if (type !== 'dataset' && type !== 'table') continue;
     if (typeof code !== 'string' || code.length === 0) {
-      throw new Error(`Eurostat catalogue item is missing a string 'code': ${JSON.stringify(row)}`);
+      throw new Error(`Eurostat catalogue row is missing a code: ${JSON.stringify(line)}`);
     }
-    if (typeof title !== 'string' || title.length === 0) {
-      throw new Error(`Eurostat catalogue item '${code}' is missing a string 'title'`);
+    const title = (rawTitle ?? '').trim();
+    if (title.length === 0) {
+      throw new Error(`Eurostat catalogue item '${code}' is missing a title`);
     }
-    const datasetType = typeof row.type === 'string' ? row.type : null;
-    const modified =
-      typeof row.lastModified === 'string'
-        ? row.lastModified
-        : typeof row.lastUpdate === 'string'
-          ? row.lastUpdate
-          : null;
-    return {
+    entries.push({
       tableId: `eurostat:${code}`,
       title,
       summary: '',
-      // Genuinely unknown per the registry's own TODO (Constraint 0) — never
-      // guessed; a real lifecycle field surfaces once a live capture exists.
       status: null,
-      datasetType,
+      datasetType: type,
       language: 'en',
-      modified,
-    };
-  });
+      modified: typeof lastUpdate === 'string' ? parseEurostatTocDate(lastUpdate) : null,
+    });
+  }
+  return entries;
 }

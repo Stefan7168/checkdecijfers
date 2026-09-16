@@ -88,9 +88,10 @@ export default async function EurostatExplorerPage({
       {tables.length === 0 ? (
         <p data-testid="empty-state" style={{ marginTop: '1.5rem' }}>
           No Eurostat tables are registered yet. E1 (this build phase) ships the adapter, the registry entry
-          and this explorer, but registers zero real Eurostat tables (Constraint 0 — no live Eurostat API
-          calls this session). Once the owner runs the fixture-capture + onboarding follow-up, registered
-          tables will appear here.
+          and this explorer, but registers zero real Eurostat tables — the adapter and its real API shapes
+          are now verified (session 107's live fixture capture), but registering a real table needs
+          migrations 031/032 applied first (owner-supervised, RUNBOOK "WP30c E1" step 4). Once that's done,
+          registered tables will appear here.
         </p>
       ) : (
         <>

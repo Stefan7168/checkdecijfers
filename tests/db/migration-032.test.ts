@@ -1,8 +1,9 @@
-// Migration 032 (WP30c phase E1, ADR 048 D7(b)): the additive nullable
-// `request_urls text[]` column on ingestion_batches. Verifies the migration
-// is picked up by the scan, that a legacy-shaped batch insert (every batch
-// today) still defaults to NULL, and that a batch can carry the real request
-// URL(s) it fetched. Mirrors migration-016/030/031.test.ts's shape.
+// Migration 032 (WP30c phase E1, ADR 048 D7(a)): the additive nullable `doi`
+// column on cbs_tables/cbs_catalog. Verifies the migration is picked up by
+// the scan, that it is a true no-op for every existing (CBS-shaped) row —
+// NULL by default, no NOT NULL, no CHECK narrowing what a legacy insert can
+// do — and that a Eurostat-shaped row can carry a real DOI value. Mirrors
+// migration-016/030.test.ts's shape.
 import { describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { applyMigrations, MIGRATIONS_DIR } from '../../src/db/migrate.ts';
@@ -17,21 +18,13 @@ async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
   }
 }
 
-async function insertTable(db: Db, id: string): Promise<void> {
-  await db.query(
-    `insert into cbs_tables (id, title, platform, expected_dimensions)
-     values ($1, 'Testtabel', 'v4', '[]'::jsonb)`,
-    [id],
-  );
-}
-
 describe('migration 032 is picked up by the migration scan', () => {
-  it('applyMigrations records 032_ingestion_batch_request_urls.sql as applied', async () => {
+  it('applyMigrations records 032_source_doi.sql as applied', async () => {
     await withDb(async (db) => {
       const { rows } = await db.query(
         "select name from schema_migrations where name like '032_%' order by name",
       );
-      expect(rows.map((r) => r.name)).toEqual(['032_ingestion_batch_request_urls.sql']);
+      expect(rows.map((r) => r.name)).toEqual(['032_source_doi.sql']);
     });
   });
 
@@ -43,28 +36,54 @@ describe('migration 032 is picked up by the migration scan', () => {
   });
 });
 
-describe('ingestion_batches.request_urls — additive, nullable, byte-identical for a legacy-shaped insert', () => {
-  it('a legacy-shaped insert (no request_urls named) defaults to NULL', async () => {
+describe('cbs_tables.doi — additive, nullable, byte-identical for a legacy-shaped (CBS) insert', () => {
+  it('a legacy-shaped insert (no doi named) defaults to NULL', async () => {
     await withDb(async (db) => {
-      await insertTable(db, '99999TST');
-      const { rows } = await db.query(
-        `insert into ingestion_batches (table_id) values ('99999TST') returning request_urls`,
+      await db.query(
+        `insert into cbs_tables (id, title, platform, expected_dimensions)
+         values ('99999TST', 'Testtabel', 'v4', '[]'::jsonb)`,
       );
-      expect(rows[0]!.request_urls).toBeNull();
+      const { rows } = await db.query(`select doi from cbs_tables where id = '99999TST'`);
+      expect(rows[0]!.doi).toBeNull();
     });
   });
 
-  it('a batch can carry the real request URL(s) it fetched', async () => {
+  it('a Eurostat-shaped row can carry a real DOI value', async () => {
     await withDb(async (db) => {
-      await insertTable(db, '99999TST');
-      const urls = [
-        'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tps00001',
-      ];
-      const { rows } = await db.query(
-        `insert into ingestion_batches (table_id, request_urls) values ($1, $2) returning request_urls`,
-        ['99999TST', urls],
+      await db.query(
+        `insert into cbs_tables (id, title, platform, expected_dimensions, source, doi)
+         values ('eurostat:tps00001', 'Test EU tabel', 'eurostat-api', '[]'::jsonb, 'eurostat', '10.2908/TPS00001')`,
       );
-      expect(rows[0]!.request_urls).toEqual(urls);
+      const { rows } = await db.query(
+        `select doi from cbs_tables where id = 'eurostat:tps00001'`,
+      );
+      expect(rows[0]!.doi).toBe('10.2908/TPS00001');
+    });
+  });
+});
+
+describe('cbs_catalog.doi — additive, nullable, byte-identical for a legacy-shaped (CBS) insert', () => {
+  it('a legacy-shaped insert (no doi named) defaults to NULL', async () => {
+    await withDb(async (db) => {
+      await db.query(
+        `insert into cbs_catalog (table_id, title, status, dataset_type)
+         values ('99999TST', 'Testtabel', 'Regulier', 'Numeric')`,
+      );
+      const { rows } = await db.query(`select doi from cbs_catalog where table_id = '99999TST'`);
+      expect(rows[0]!.doi).toBeNull();
+    });
+  });
+
+  it('a Eurostat-shaped row can carry a real DOI value', async () => {
+    await withDb(async (db) => {
+      await db.query(
+        `insert into cbs_catalog (table_id, title, source, doi)
+         values ('eurostat:tps00001', 'Test EU tabel', 'eurostat', '10.2908/TPS00001')`,
+      );
+      const { rows } = await db.query(
+        `select doi from cbs_catalog where table_id = 'eurostat:tps00001'`,
+      );
+      expect(rows[0]!.doi).toBe('10.2908/TPS00001');
     });
   });
 });

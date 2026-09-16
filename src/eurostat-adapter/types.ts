@@ -25,14 +25,13 @@ export type {
 
 /**
  * Raw JSON-stat 2.0 "dataset" response shape (https://json-stat.org/format/),
- * restricted to the fields this adapter actually reads. Eurostat's real live
- * response is not verified against this session (Constraint 0, the WP30c/E1
- * brief) — this is the documented spec shape, exercised only against
- * hand-built synthetic fixtures (tests/fixtures/eurostat/), never a captured
- * real payload. `id`/`size` are parallel arrays (one entry per dimension, in
- * the SAME order); `value` is the flat cell array with the LAST dimension in
- * `id` varying fastest (the spec's own indexing rule) — jsonstat.ts's
- * `cellOffset` is the one place that arithmetic happens.
+ * restricted to the fields this adapter actually reads. Verified live
+ * (session 107, 2026-09-16, Constraint 0 resolved) against real Eurostat
+ * Statistics API responses — see tests/fixtures/eurostat/'s `"synthetic":
+ * false` specimens. `id`/`size` are parallel arrays (one entry per
+ * dimension, in the SAME order); `value` is the cell data with the LAST
+ * dimension in `id` varying fastest (the spec's own indexing rule) —
+ * jsonstat.ts's `cellOffset` is the one place that arithmetic happens.
  */
 export interface JsonStatCategory {
   /** Either an object mapping category code -> its position in `id`'s
@@ -60,9 +59,16 @@ export interface JsonStatDataset {
   /** Category counts, parallel to `id`. */
   size: number[];
   dimension: Record<string, JsonStatDimension>;
-  /** Flat, dense cell array (length = product(size)); a missing observation
-   * is `null` at its position, never a fabricated 0. */
-  value: Array<number | null>;
+  /** Per spec, either a flat DENSE array (length = product(size); a missing
+   * observation is `null` at its position) or a SPARSE object keyed by the
+   * cell's flat-index as a decimal string (only non-null cells appear — a
+   * key's absence means null, never a fabricated 0). Eurostat's real live API
+   * uses the sparse object form (verified session 107) — the original
+   * "always a dense array" assumption here was Constraint 0's own disclosed,
+   * unverified guess and was wrong; jsonstat.ts's `valueAt`/`valueEntryCount`
+   * are the two places that duality is handled, mirroring the same
+   * dense-or-sparse duality `status` below already handles correctly. */
+  value: Array<number | null> | Record<string, number>;
   /**
    * Per-cell flags (D6: `p e s f b c d u n z :`). Per spec this is either
    * absent (no flagged cells), a single string (uncommon — applies to every

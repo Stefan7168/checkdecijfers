@@ -15,6 +15,15 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
   } as unknown as Response;
 }
 
+function textResponse(body: string, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Error',
+    text: async () => body,
+  } as unknown as Response;
+}
+
 const SAMPLE_DATASET = {
   version: '2.0',
   class: 'dataset',
@@ -73,10 +82,12 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
     expect(fetchFn).toHaveBeenCalledTimes(3); // FETCH_ATTEMPTS
   }, 15_000);
 
-  it('fetchCatalog parses the (provisional, unverified) Catalogue API shape via the injected stub', async () => {
-    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) =>
-      jsonResponse({ link: { item: [{ code: 'demo_pjan', title: 'Population on 1 January', type: 'dataset' }] } }),
-    );
+  it('fetchCatalog parses the REAL, verified Catalogue "table of contents" TEXT shape via the injected stub', async () => {
+    const toc = [
+      '"title"\t"code"\t"type"\t"last update of data"\t"last table structure change"\t"data start"\t"data end"\t"values"',
+      '"    Population on 1 January"\t"demo_pjan"\t"dataset"\t"14.08.2026"\t"13.02.2026"\t"1960"\t"2025"\t742730',
+    ].join('\n');
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => textResponse(toc));
     const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
     const entries = await source.fetchCatalog();
     expect(entries).toEqual([
@@ -87,8 +98,11 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
         status: null,
         datasetType: 'dataset',
         language: 'en',
-        modified: null,
+        modified: '2026-08-14',
       },
     ]);
+    // No Accept:application/json header — the real endpoint 406s on that.
+    const [, init] = fetchFn.mock.calls[0]!;
+    expect((init?.headers as Record<string, string> | undefined)?.Accept).toBeUndefined();
   });
 });

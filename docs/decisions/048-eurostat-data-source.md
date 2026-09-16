@@ -473,7 +473,7 @@ up as settled. No change.
 
 **Built:** `src/eurostat-adapter/` (types, the JSON-stat 2.0 parser, the live `StatisticsApiSource`, the fixture
 replay), an `adapterFor('eurostat')` line, the eurostat `SourceInfo` registry entry, the source-scoped catalog
-prune (wiring point 1), the D7 migrations (031 DOI columns, 032 `request_urls` — file-only, unapplied), the
+prune (wiring point 1), the D7 migrations (032 DOI columns, 033 `request_urls` — file-only, unapplied), the
 D7(a)/(b) attribution and proof-panel code, the Amendment-3 deny gate in `src/catalog/recall.ts`, and the
 internal `EUROSTAT_EXPLORER_ENABLED`-gated explorer (`web/app/eurostat-explorer/`). Full detail, task by task:
 [session-briefs/2026-09-14-wp30c-e1-executor-brief.md](../session-briefs/2026-09-14-wp30c-e1-executor-brief.md)
@@ -530,3 +530,66 @@ dormancy, per Amendment B1, meant the bug couldn't be demonstrated with Eurostat
 D4 (id-prefix discipline), D5's zero-prompt-bytes claim (the benchmark ran byte-identical, 14/14+6/6+0
 fabricated, before and after this build), D8's ingestion posture, and every Alternative/Consequence not named
 above.
+
+## As-built addendum — Constraint 0 resolved, real captures + two real defects found (session 107, 2026-09-16)
+
+Session 107 resumed PR #23 (merge-conflict resolution against 53 commits of drift on `main`). Asked directly,
+the owner confirmed the Constraint 0 reading above was overly conservative: "no real Eurostat API spend" meant
+money, not any live call — Eurostat's API is free/public/read-only. This unblocked the RUNBOOK's owner-supervised
+step, run live this session (steps 1-3 of 5; steps 4-5 — registering a real table and applying migrations 032/033
+— stay owner-supervised, unstarted, since they need `npm run db:migrate`).
+
+**Two real API-shape defects found, exactly what Constraint 0's own disclosed uncertainty anticipated:**
+
+1. **The Catalogue "table of contents" endpoint returns tab-separated TEXT, not JSON.** The original
+   `parseJsonStatCatalog` assumed a `link.item[]` JSON shape (a best-effort guess from Eurostat's documented
+   conventions); the real endpoint 406s on an `Accept: application/json` header and returns a quoted,
+   tab-separated file (`title\tcode\ttype\t...`) instead. Rewritten to parse the real TSV — `type: 'dataset' |
+   'table'` rows are real, independently-queryable leaf nodes (both verified live against the Statistics API);
+   `'folder'` rows are pure navigation, dropped. `statistics-api.ts` gained a `fetchText` alongside `fetchJson`
+   (no `Accept` header on this one endpoint). The real toc file carries no per-entry lifecycle/status field at
+   all — `status` stays `null` for every entry, and this is now a CONFIRMED absence, not "unknown pending a
+   capture" ([#250](../open-questions.md) updated accordingly).
+2. **Eurostat's real Statistics API returns `value` as a sparse, offset-keyed OBJECT, not a dense array** —
+   e.g. `{"400": 7.7, "401": 9.3, ...}`, a spec-valid JSON-stat 2.0 alternative the original parser's
+   `requireDataset` hard-rejected. `JsonStatDataset.value`'s type widened to `Array<number | null> |
+   Record<string, number>`; `jsonstat.ts` gained `valueAt`/`validateValueShape` to handle both shapes (mirroring
+   `normalizeStatus`'s existing dense-or-sparse handling for `status`). A THIRD, related finding surfaced by the
+   conformance harness once real data flowed through: a cell absent from BOTH the sparse `value` map and the
+   sparse `status` map (a normal shape for real EU data — not every geo×time combination is reported, unlike
+   CBS's dense grid) was defaulting to `valueAttribute: 'None'`, which per `CbsObservationRow`'s own contract
+   means "a real, present value with nothing to flag" — dishonest for an absent cell. Fixed: `'None'` now only
+   applies when a value IS present; an absent value with no explicit flag defaults to Eurostat's own `':'`
+   (not-available) flag, already registered in `registry.ts`'s `nullReasonLabels`.
+
+**Real captures now committed** (`tests/fixtures/eurostat/`, `"synthetic": false`): the full real Catalogue TSV
+(10,331 entries, 2.1MB) and two small real datasets, `tipsbd30`/`migr_asyapp1mp` (515/525 cells each) — chosen
+fresh from the live catalog capture specifically because the original three demo codes
+(`demo_pjan`/`namq_10_gdp`/`nrg_bal_c`) turned out to have real cell counts of 742,730/8,191,372/21,300,267 —
+all three exceed `SYNC_CELL_THRESHOLD` (500,000), too large to usefully commit as synchronous-happy-path
+fixtures. Their original hand-built specimens stay in place, unchanged, still used by unrelated unit tests.
+
+**A third, unrelated real defect found while merging: a cross-branch migration NUMBER collision.**
+`031_source_doi.sql` (this branch, built 2026-09-14/15) and `031_chart_headlines.sql` (an unrelated feature
+that landed on `main` session 105, 2026-09-16, while this branch sat unmerged) both claimed migration number
+031. `src/db/migrate.ts` tracks applied migrations by filename in a `done` set but inserts by NUMERIC
+`version` into a `primary key` column — two different files with the same leading number pass the filename
+check independently, then collide on the second `insert`. Surfaced as a real, reproducible test failure
+(`duplicate key value violates unique constraint "schema_migrations_pkey"`) that made EVERY suite depending on
+`createIngestedDb()`/`applyMigrations` fail, not just Eurostat's own — caught by running the full backend
+suite after the merge rather than trusting the merge's own "no conflicts here" silence (two different
+filenames never conflict in git, so this collision was invisible to the merge itself). Fixed by renumbering
+this branch's two never-applied migrations: `031_source_doi.sql` → `032_source_doi.sql`,
+`032_ingestion_batch_request_urls.sql` → `033_ingestion_batch_request_urls.sql` (plus their paired test files
+and every code/doc cross-reference to the old numbers) — a pure rename, zero data or deployed-schema impact
+since neither had ever been applied. **Lesson for future sessions:** two independently-developed branches can
+each freely pick "the next number after what I see" and still collide once merged, since git's own conflict
+detection only catches same-PATH edits, never same-NUMBER-different-file additions — the backend suite's own
+`schema_migrations` primary key is what actually catches it, and only if the full suite runs post-merge before
+declaring victory.
+
+**Still open, unchanged by this addendum:** Amendment 7/D9's "≥3 real datasets rendered end-to-end through
+`/eurostat-explorer`" and the Amendment-12 live smoke probe both need a real registered table
+([#249](../open-questions.md)'s remaining step — owner-supervised, needs `npm run db:migrate` for migrations
+032/033 first); D6's `definitiveStatuses: []` correction and the [#251](../open-questions.md) `pipeline.ts`
+per-cell-status prerequisite are unaffected by anything in this addendum.

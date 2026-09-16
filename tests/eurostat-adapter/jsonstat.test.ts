@@ -334,15 +334,15 @@ describe('Amendment 7 — parseFactorUnit/baseLabel wrappers fail open AND log o
   });
 });
 
-describe('parseJsonStatCatalog — provisional Catalogue API shape', () => {
-  it('parses a link.item[] listing into prefixed CbsCatalogEntry rows', () => {
-    const raw = {
-      link: {
-        item: [
-          { code: 'demo_pjan', title: 'Population on 1 January', type: 'dataset', lastUpdate: '2026-01-15' },
-        ],
-      },
-    };
+describe('parseJsonStatCatalog — the real "table of contents" TSV shape (verified live, session 107)', () => {
+  const HEADER =
+    '"title"\t"code"\t"type"\t"last update of data"\t"last table structure change"\t"data start"\t"data end"\t"values"';
+
+  it('parses dataset/table rows into prefixed CbsCatalogEntry rows, trims hierarchy-indent spaces from the title, and converts the date', () => {
+    const raw = [
+      HEADER,
+      '"    Population on 1 January"\t"demo_pjan"\t"dataset"\t"14.08.2026"\t"13.02.2026"\t"1960"\t"2025"\t742730',
+    ].join('\n');
     const entries = parseJsonStatCatalog(raw);
     expect(entries).toEqual([
       {
@@ -352,12 +352,27 @@ describe('parseJsonStatCatalog — provisional Catalogue API shape', () => {
         status: null,
         datasetType: 'dataset',
         language: 'en',
-        modified: '2026-01-15',
+        modified: '2026-08-14',
       },
     ]);
   });
 
-  it('throws loudly on a response missing link.item[] (never silently returns an empty catalog)', () => {
-    expect(() => parseJsonStatCatalog({ nope: true })).toThrow();
+  it('drops folder rows (pure navigation, no data behind them)', () => {
+    const raw = [
+      HEADER,
+      '"General and regional statistics"\t"general"\t"folder"\t" "\t" "\t" "\t" "\t',
+      '"    Some table"\t"some_table"\t"table"\t"01.01.2026"\t"01.01.2026"\t"2020"\t"2025"\t100',
+    ].join('\n');
+    const entries = parseJsonStatCatalog(raw);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.tableId).toBe('eurostat:some_table');
+  });
+
+  it('throws loudly on an empty response (never silently returns an empty catalog)', () => {
+    expect(() => parseJsonStatCatalog('')).toThrow();
+  });
+
+  it('throws loudly on a response missing the expected header row', () => {
+    expect(() => parseJsonStatCatalog('not a catalog at all')).toThrow();
   });
 });

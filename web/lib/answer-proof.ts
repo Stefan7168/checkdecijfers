@@ -379,7 +379,7 @@ export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
 /** WP30c D7(b): request URL(s) per ingestion batch, keyed by
  * `ingestion_batches.id` — the SAME id every `ProofCell.batchId` already
  * carries. Present-only: a batch with no recorded urls (every batch ingested
- * before migration 032, or a batch row that no longer exists) is simply
+ * before migration 033, or a batch row that no longer exists) is simply
  * absent from the map, never a thrown error or a fabricated empty array. */
 export type RequestUrlsByBatch = Record<number, string[]>;
 

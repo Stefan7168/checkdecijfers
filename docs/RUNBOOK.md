@@ -1064,36 +1064,37 @@ way. A true full rollback (hiding existing dataset threads too) would need gatin
 itself, not built and not needed for a same-day flag-flip revert. Migrations 026/027 are harmless
 to leave applied either way.
 
-## WP30c E1 (Eurostat adapter) — the one owner-supervised step (added 2026-09-14/15, session 101 continuation)
+## WP30c E1 (Eurostat adapter) — the one owner-supervised step (added 2026-09-14/15, session 101 continuation; steps 1-3 done session 107, 2026-09-16)
 
-E1 was built entirely autonomously on branch `wp30c-e1-eurostat-adapter` (PR pending), but one thing was
-deliberately NOT done autonomously: any live call to the real Eurostat API, even a free/read-only one — see
-[open-questions #249](open-questions.md) and ADR [048](decisions/048-eurostat-data-source.md)'s "As-built"
-section for the full reasoning ("Constraint 0"). Everything built and tested this session used hand-built,
-`"synthetic": true` fixtures instead of real captured responses.
+E1 was built entirely autonomously on branch `wp30c-e1-eurostat-adapter` (PR #23), but one thing was
+deliberately NOT done autonomously at first: any live call to the real Eurostat API, even a free/read-only
+one ("Constraint 0") — see [open-questions #249](open-questions.md) and ADR
+[048](decisions/048-eurostat-data-source.md)'s "As-built addendum" for the full account.
 
-**The supervised step, once the PR is reviewed:**
+**✅ Steps 1-3 done, session 107 (2026-09-16):**
 
-1. Confirm (or correct) the Constraint 0 reading — if "any real Eurostat API spend" in
-   [08-build-plan.md](08-build-plan.md)'s WP30c entry meant money, not any live call, say so and this step's
-   scope narrows; otherwise proceed as below.
-2. Run `npm run fixtures:capture:eurostat` (written, never executed this session — modelled on
-   `scripts/capture-cbs-fixtures.ts`) against the real Eurostat Statistics + Catalogue APIs. This will very
-   likely need corrections to `src/eurostat-adapter/statistics-api.ts`'s URL shapes and
-   `jsonstat.ts`'s `parseJsonStatCatalog` — both are explicitly commented as UNVERIFIED, best-effort
-   constructions from Eurostat's public docs, not measured wire facts (contrast with CBS's own
-   `odata-v4.ts`, which IS measured).
-3. Re-run `npx vitest run tests/sources` with the real captured fixtures replacing the synthetic ones in
-   `tests/fixtures/eurostat/` — this is also when ADR 048's Amendment-12 live smoke probe (the 500k/5M/413
-   cell-count thresholds) and Amendment 7's "verified against real data" half both become checkable for
-   real, not just structurally exercised.
-4. Only once that's green: register a real Eurostat table or two (through the normal
-   `catalog:refresh`/ingestion CLIs, now source-scoped per this session's Task 5 fix) and check
-   `/eurostat-explorer` (behind `EUROSTAT_EXPLORER_ENABLED=1`, still internal/noindexed) actually renders
-   real data end to end — table, chart, CSV, proof panel.
-5. Migrations 031 (DOI columns) and 032 (`request_urls`) are file-only, unapplied — apply them
-   (`npm run db:migrate`) whenever real Eurostat rows are expected to need them; harmless to apply early
-   (additive, nullable, zero effect on existing CBS rows).
+1. ✅ Constraint 0 confirmed by the owner directly in chat: "spend" meant money, not any live call.
+2. ✅ `npm run fixtures:capture:eurostat` run against the real API — found and fixed two real defects (the
+   Catalogue endpoint's real TSV shape, not the guessed JSON one; the Statistics API's real sparse `value`
+   object shape, not always a dense array). Full account: ADR 048's As-built addendum.
+3. ✅ `npx vitest run tests/eurostat-adapter tests/sources` re-run with real captured fixtures
+   (`"synthetic": false`) — all green. The original three demo codes (`demo_pjan`/`namq_10_gdp`/`nrg_bal_c`)
+   turned out to have real cell counts of 742,730/8,191,372/21,300,267 — all over `SYNC_CELL_THRESHOLD`
+   (500,000), too large to usefully commit as synchronous-happy-path fixtures — so two small real
+   in-threshold codes (`tipsbd30`/`migr_asyapp1mp`, 515/525 cells) replaced them for the happy-path capture;
+   the original three keep their hand-built specimens, still used by unrelated unit tests.
+
+**Steps 4-5 remain owner-supervised, not started:**
+
+4. Register a real Eurostat table or two (through the normal `catalog:refresh`/ingestion CLIs, source-scoped
+   per session 101's Task 5 fix) and check `/eurostat-explorer` (behind `EUROSTAT_EXPLORER_ENABLED=1`, still
+   internal/noindexed) actually renders real data end to end — table, chart, CSV, proof panel. This is also
+   when ADR 048's Amendment-12 live smoke probe becomes checkable for real.
+5. Migrations 032 (DOI columns) and 033 (`request_urls`) are file-only, unapplied — apply them
+   (`npm run db:migrate`) whenever real Eurostat rows are expected to need them (step 4 needs them first);
+   harmless to apply early (additive, nullable, zero effect on existing CBS rows). Originally numbered
+   031/032; renumbered session 107 (2026-09-16) after a collision with an unrelated `031_chart_headlines.sql`
+   that landed on `main` while this branch sat unmerged — caught via a real test failure, not assumed.
 
 **Nothing here is a public go-live** — `EUROSTAT_EXPLORER_ENABLED` stays unset in production regardless, and
 none of this makes Eurostat answerable from live chat (that's E2, its own future design round + an

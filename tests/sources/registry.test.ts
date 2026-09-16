@@ -255,7 +255,7 @@ describe('WP30c/E1 Task 6 (ADR 048 D7(a)): buildAttributionLine for a eurostat-s
     });
     const result = makeResult({ shape: 'single', cells: [cell] });
     result.attribution.source = 'cbs';
-    // A doi should never exist on a real CBS row (migration 031: NULL for
+    // A doi should never exist on a real CBS row (migration 032: NULL for
     // every CBS row forever) — this proves the source check, not the doi
     // check, gates which sentence renders, in case a stray value ever got
     // written by mistake.

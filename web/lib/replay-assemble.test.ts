@@ -187,24 +187,24 @@ describe('assembleMessages — #254 chartAlternates replay', () => {
     },
   };
 
-  it('reconstructs a non-empty chartAlternates identical to the stored envelope', () => {
+  it('reconstructs a non-empty chartAlternates identical to the stored envelope', async () => {
     const chartAlternates = [{ label: 'Procentuele verandering', spec: alternateSpec }];
     const response = {
       ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }),
       chartAlternates,
     } as unknown as ComposedResponse;
-    const [, assistantMsg] = assembleMessages(replayParts([row({ response })]));
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb);
     expect(assistantMsg!.chartAlternates).toEqual(chartAlternates);
   });
 
-  it('defaults to [] on a non-answer response (e.g. a refusal)', () => {
+  it('defaults to [] on a non-answer response (e.g. a refusal)', async () => {
     const response = {
       kind: 'refusal',
       reason: 'meta',
       text: 'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine.',
       webSection: null,
     } as unknown as ComposedResponse;
-    const [, assistantMsg] = assembleMessages(replayParts([row({ kind: 'refusal', response })]));
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ kind: 'refusal', response })]), fakeDb);
     expect(assistantMsg!.chartAlternates).toEqual([]);
   });
 });

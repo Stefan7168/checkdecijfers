@@ -62,20 +62,32 @@ export function loadEurostatFixtureTree(dir: string): Record<string, unknown> {
   return result;
 }
 
+interface EurostatCatalogFixture {
+  synthetic: boolean;
+  /** The raw tab-separated Catalogue "table of contents" TEXT, verbatim —
+   * NOT JSON (session 107 correction: the real endpoint returns text, the
+   * original `link.item[]` JSON shape here was Constraint 0's own disclosed,
+   * unverified guess and was wrong). */
+  raw: string;
+}
+
 /** Global (non-per-table) catalog fixture, `_catalog.json` under `dir` —
  * mirrors cbs-adapter/fixture-source.ts's loadCatalogFixture. Returns null
  * when absent, so a source built without one simply has no catalog
  * (fetchCatalog then throws, matching the CBS-side contract). */
-export function loadEurostatCatalogFixture(dir: string): unknown | null {
+export function loadEurostatCatalogFixture(dir: string): EurostatCatalogFixture | null {
   const path = join(dir, '_catalog.json');
   if (!existsSync(path)) return null;
-  const doc = JSON.parse(readFileSync(path, 'utf8')) as { synthetic?: boolean };
+  const doc = JSON.parse(readFileSync(path, 'utf8')) as Partial<EurostatCatalogFixture>;
   if (typeof doc.synthetic !== 'boolean') {
     throw new Error(
       `Eurostat catalog fixture at '${path}' must declare a boolean 'synthetic' field (Task 3, WP30c/E1 brief).`,
     );
   }
-  return doc;
+  if (typeof doc.raw !== 'string' || doc.raw.length === 0) {
+    throw new Error(`Eurostat catalog fixture at '${path}' must declare a string 'raw' field (the TSV body).`);
+  }
+  return doc as EurostatCatalogFixture;
 }
 
 /** D4: strips the '<key>:' prefix internally — same local first-colon rule
@@ -96,15 +108,15 @@ function nativeIdFrom(tableId: string): string {
  */
 export class EurostatFixtureSource implements CbsSource {
   private readonly tables: Record<string, unknown>;
-  private readonly catalogRaw: unknown | null;
+  private readonly catalogFixture: EurostatCatalogFixture | null;
   /** Unsliced parse only — schema/codeLists never depend on a slice; a
    * sliced fetchObservations call re-parses with the slice applied rather
    * than filtering an already-cached row list a second time. */
   private readonly cache = new Map<string, ParsedEurostatDataset>();
 
-  constructor(tables: Record<string, unknown>, catalogRaw?: unknown) {
+  constructor(tables: Record<string, unknown>, catalogFixture?: EurostatCatalogFixture | null) {
     this.tables = tables;
-    this.catalogRaw = catalogRaw ?? null;
+    this.catalogFixture = catalogFixture ?? null;
   }
 
   private rawFor(tableId: string): unknown {
@@ -158,11 +170,11 @@ export class EurostatFixtureSource implements CbsSource {
   }
 
   async fetchCatalog(): Promise<CbsCatalogEntry[]> {
-    if (this.catalogRaw === null) {
+    if (this.catalogFixture === null) {
       throw new Error(
         'EurostatFixtureSource has no captured catalog fixture (pass loadEurostatCatalogFixture(dir) as the second constructor arg)',
       );
     }
-    return parseJsonStatCatalog(this.catalogRaw);
+    return parseJsonStatCatalog(this.catalogFixture.raw);
   }
 }

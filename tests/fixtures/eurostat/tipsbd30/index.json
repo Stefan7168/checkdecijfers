@@ -1,0 +1,6 @@
+{
+ "synthetic": false,
+ "dataset": "dataset.json",
+ "capturedAt": "2026-09-16T16:11:25.459Z",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tipsbd30?format=JSON&lang=EN"
+}

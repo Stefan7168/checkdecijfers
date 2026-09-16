@@ -1,0 +1,6 @@
+{
+ "synthetic": false,
+ "dataset": "dataset.json",
+ "capturedAt": "2026-09-16T16:11:26.131Z",
+ "source": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/migr_asyapp1mp?format=JSON&lang=EN"
+}
