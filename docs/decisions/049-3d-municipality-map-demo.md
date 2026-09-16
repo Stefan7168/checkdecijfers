@@ -19,10 +19,12 @@ as-built numbers this ADR is responsible for recording).
 separate personal showcase site (18 Three.js pages, NOT part of this product), specifically its `/nl-bevolking-3d`
 page (the direct equivalent of this demo). Full context: [open-questions #258](../open-questions.md).
 **Scope:** raising this demo's polish to that reference page — same concept, same D1–D7 invariants below, no new
-ADR. Built autonomously (branch `bevolking-3d-demo-v2`, PR #32) per
+ADR. Built autonomously (branch `bevolking-3d-demo-v2`) per
 [docs/superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md](../superpowers/plans/2026-09-16-bevolking-3d-demo-v2.md)
 (the plan's own D1′–D5′ is this addendum's rationale, restated here with as-built specifics), owner not present for
-the build — branch + PR per [#118](../open-questions.md)(b).
+the build — branch + PR per [#118](../open-questions.md)(b). **Status: PR #32 MERGED (`6af91dd`, 2026-09-16,
+squash) and verified LIVE on production** (logged in via the owner's own Google session, not just CI-green —
+see the verification paragraph below).
 
 - **D1′ — the flat grey `plate` is gone.** Every municipality now gets TWO paired meshes: a full-footprint FLOOR
   tile (fixed 0.15-unit depth, never tweened by the year slider — the always-visible choropleth terrain) and the
