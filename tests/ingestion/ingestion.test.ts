@@ -9,6 +9,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
+import {
+  EurostatFixtureSource,
+  loadEurostatFixtureTree,
+} from '../../src/eurostat-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
@@ -48,6 +52,7 @@ beforeEach(async () => {
 });
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
+const EUROSTAT_FIXTURES_DIR = fileURLToPath(new URL('../fixtures/eurostat', import.meta.url));
 
 function fixturePath(tableId: string): string {
   return `${FIXTURES_DIR}/${tableId}`;
@@ -1219,5 +1224,37 @@ describe('#34(b)+(c) — batched label writes and rebaseline concurrency guards 
       expect(Number(after.version)).toBe(versionBefore + 1);
       expect(after.status).toBe('active');
       expect(await dbLabelRows(db, '85224NED')).toEqual(labelsBefore);
+  });
+});
+
+// #WP30c (session 107): registerTables' own `insert into cbs_tables` never
+// wrote the migration-016 `source` column at all — every table, Eurostat
+// included, silently landed as the column's own default ('cbs'). Found live,
+// registering the first real Eurostat table: it registered and synced
+// successfully, but `cbs_tables.source` read 'cbs', so
+// `web/lib/eurostat-explorer.ts`'s own `where source = $1` query (and any
+// other source-column-scoped reader) could never find it. NOT a live-chat
+// safety gap — `src/catalog/recall.ts`'s deny gate derives the source from
+// the table id's OWN prefix (`sourceKeyForTableId`), never this column, by
+// design (see that file's own comment) — but a real display/discovery bug.
+describe('registerTables tags cbs_tables.source correctly (#WP30c source-column bug, session 107)', () => {
+  it('a bare-id CBS table registers with source = cbs', async () => {
+    const docs = await loadDocs('85224NED');
+    const source = new FixtureSource(docs);
+    await registerTables(db, source, [table('85224NED')]);
+    const row = (await db.query('select source from cbs_tables where id = $1', ['85224NED'])).rows[0]!;
+    expect(row.source).toBe('cbs');
+  });
+
+  it('an eurostat:-prefixed table registers with source = eurostat, never the column default', async () => {
+    const tables = loadEurostatFixtureTree(EUROSTAT_FIXTURES_DIR);
+    const source = new EurostatFixtureSource(tables);
+    await registerTables(db, source, [
+      { id: 'eurostat:tipsbd30', updateCadence: 'twice daily', servesTasks: [] },
+    ]);
+    const row = (
+      await db.query('select source from cbs_tables where id = $1', ['eurostat:tipsbd30'])
+    ).rows[0]!;
+    expect(row.source).toBe('eurostat');
   });
 });

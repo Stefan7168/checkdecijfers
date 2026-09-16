@@ -6,6 +6,7 @@ import type { Db } from '../db/types.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { parsePeriodCode } from './periods.ts';
 import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
+import { sourceKeyForTableId } from '../sources/registry.ts';
 import type { Correction, RegisterTablesFn, SyncOptions, SyncResult, SyncTableFn } from './types.ts';
 import {
   checkDimensionMapping,
@@ -93,8 +94,8 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
     await db.withTransaction(async (tx) => {
       await tx.query(
         `insert into cbs_tables
-           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned)
-         values ($1, $2, $3, $4, $5, $6, null, $7)`,
+           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned, source)
+         values ($1, $2, $3, $4, $5, $6, null, $7, $8)`,
         [
           table.id,
           schema.title,
@@ -103,6 +104,17 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
           JSON.stringify(units),
           table.updateCadence,
           pinned,
+          // WP30c fix (session 107, found registering the first real
+          // Eurostat table): this insert never wrote `source` at all,
+          // silently defaulting to the migration-016 column default ('cbs')
+          // for EVERY table, Eurostat included — a real bug, distinct from
+          // (and not caught by) `ingestCatalog`'s own already-correct
+          // source-scoped insert into `cbs_catalog`. Derived from the id's
+          // own prefix (D4), the SAME derivation `src/catalog/recall.ts`'s
+          // deny gate itself uses — so this write can never disagree with
+          // the one thing that actually matters for keeping Eurostat off
+          // live chat (that gate never reads this column, by design).
+          sourceKeyForTableId(table.id),
         ],
       );
 
