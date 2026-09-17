@@ -427,3 +427,54 @@ exact same 1,348,403-byte total, with the warning gone. `npm run typecheck` and
 warning fix — has no bytes attached; the byte-bearing lever needs the `chart.test.tsx` rewrite
 first). Commit: `perf(web): silence Turbopack workspace-root warning` (config-only, no code
 behaviour change) on branch `s110/perf2`. Not merged.
+
+**Lazy-load applied (session 110, second attempt).** Done properly this time, in a fresh
+worktree on branch `s110/perf3`, two commits: `test(chart): make interaction assertions
+async-safe (findBy/await) — no behaviour change` (`1ba09b6`), then `perf(web): lazy-load
+interaction-only chart UI (modal, style panel, story, notes)` (`08a4789`). `components/chart.tsx`
+now wraps five components in `next/dynamic({ ssr: false })`: `ChartEditModal` (the Style/Embed
+popup shell), `ChartConfigPanel` (~1900 lines, the Style tabs), `ChartStoryPanel` (the compact
+Insights panel), `ChartStoryStage` (the full-screen Present stage) and `ChartNotes` (the
+click-to-annotate editor). The download menu's PDF path was already dynamic and is untouched;
+`ChartView`'s own SVG (Recharts) stays a plain, statically-imported, server-rendered import — the
+gallery's first paint is unaffected.
+
+The first attempt's blocker — a static import of ANY binding from a module pulls the WHOLE module
+into the importer's chunk, so `ChartConfigTrigger`/`ChartStoryTrigger` sharing a file with their
+heavy panels silently defeated the split — was solved the same way that attempt had already found:
+both triggers moved into their own tiny files (`chart-config-trigger.tsx`, `chart-story-trigger.tsx`),
+re-exported unchanged from the original files for `chart-config-panel.test.tsx`/`chart-story.test.tsx`
+back-compat.
+
+The actual blocker last time — 56 of `chart.test.tsx`'s 281 assertions failing because a
+`fireEvent.click` on a trigger was followed by a synchronous `getByRole`/`getByText` against the
+panel that click opens, one microtask before the dynamic import resolves — was fixed by rewriting
+every such assertion to `await screen.findByRole(...)` (or `within(...).findByRole(...)`, or making
+the enclosing test/helper `async` where it wasn't already), landed as its own commit BEFORE the
+dynamic() conversion so it could be verified green against the still-fully-synchronous `chart.tsx`
+(confirmed by re-running the suite against a stash of the dynamic-conversion commit's files). No
+test was deleted or weakened. `next/dynamic` itself needed a global mock under jsdom
+(`web/test/mock-next-dynamic.ts`, wired into `vitest.setup.ts`) resolving through `React.lazy` +
+`Suspense` so the awaited gap is a real one; the same setup file also raised testing-library's
+default `findBy`/`waitFor` timeout from 1000ms to 5000ms, because the very first panel any test
+process opens pays a real, one-time module-transform-and-evaluate cost that measurably exceeded
+1000ms on this loaded machine (two of the file's ~284 tests — always the first to open the Style
+panel — timed out at 1000ms even though the fix itself was correct; every later test opening the
+same panel resolved instantly, module already cached).
+
+Loading-fallback choice: `ChartEditModal`, `ChartStoryPanel`, `ChartStoryStage` and `ChartNotes`
+use `loading: () => null` because chart.tsx mounts all four unconditionally (gated on things like
+`state.form !== 'table'` or `storyAvailable`, never on their own open/closed state) and each
+already renders `null` internally whenever closed — `null` exactly reproduces that default
+appearance instead of flashing new visible content on a chart nobody has interacted with.
+`ChartConfigPanel` is the one exception: it is only ever reached once its parent `ChartEditModal`
+is already open, so a small digit-free `Skeleton` there is a real improvement with no
+flash-when-closed risk.
+
+Verified: `npm run typecheck` clean on both commits; `vitest run components/chart.test.tsx`
+284/284 (both against the pre-dynamic and the post-dynamic `chart.tsx`); `vitest run
+components/chart-config-panel.test.tsx` 90/90; `vitest run components/chart-story.test.tsx`
+11/11. Bundle-size re-measurement (the same `client-reference-manifest.js` chunk-size method this
+section used for the 1,348,403-byte baseline) is left to whichever session runs the next real
+`next build` from the main checkout — this worktree only ran component tests, per its own
+process rules.

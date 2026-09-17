@@ -25,6 +25,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Area,
   AreaChart,
@@ -87,19 +88,18 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
 import { Button } from './ui/button.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
-import { ChartConfigPanel, ChartConfigTrigger } from './chart-config-panel.tsx';
-import { ChartEditModal } from './chart-edit-modal.tsx';
+import { ChartConfigTrigger } from './chart-config-trigger.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { APP_URL, ChartEmbedButton } from './chart-embed-dialog.tsx';
 import { buildFindings } from '../lib/chart-insights.ts';
 import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
-import { ChartStoryPanel, ChartStoryTrigger } from './chart-story.tsx';
-import { ChartStoryStage } from './chart-story-stage.tsx';
-import { ChartNotes, type ChartNote, type PendingPoint } from './chart-notes.tsx';
+import { ChartStoryTrigger } from './chart-story-trigger.tsx';
+import type { ChartNote, PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
+import { Skeleton } from './ui/skeleton.tsx';
 import {
   activeReadingSpec,
   areaFormAllowed,
@@ -123,6 +123,67 @@ import {
 } from '../lib/chart-view-state.ts';
 
 export { BAR_LABEL_MAX };
+
+// Lazy-load applied (session 110, second attempt — docs/session-briefs/
+// 2026-09-13-build-performance-diagnosis.md, "Landing bundle" section): the
+// five interaction-only pieces below (the Style modal + panel, the Insights
+// story panel + full-screen stage, and the click-to-annotate notes editor)
+// are never needed for a chart's first paint — every one of them is either
+// gated behind an explicit trigger click (Style, Insights/Present) or is
+// itself a no-op until the reader clicks a point (Notes) or opens Insights
+// (Story). `ssr: false` keeps them off the server-render path entirely (the
+// gallery's own chart SVG — Recharts, `ChartView`'s own JSX below — stays a
+// plain, statically-imported, server-rendered import; ONLY these five move).
+//
+// The trigger buttons themselves (ChartConfigTrigger, ChartStoryTrigger,
+// imported above) had to move into their OWN tiny files
+// (chart-config-trigger.tsx, chart-story-trigger.tsx) first: a static
+// import of ANY binding from a module pulls the whole module — trigger
+// button and 1900-line panel alike — into this file's chunk, which would
+// silently defeat the split below. With the triggers gone, chart.tsx now
+// holds zero static import edges into chart-config-panel.tsx,
+// chart-edit-modal.tsx, chart-story.tsx, chart-story-stage.tsx or
+// chart-notes.tsx — only the dynamic() calls below reference them, each
+// becoming its own on-demand chunk.
+//
+// Loading-fallback choice: all five of these are mounted UNCONDITIONALLY
+// wherever the JSX below places them (gated only on things like
+// `state.form !== 'table'` or `storyAvailable`, never on the open/closed
+// state itself) and each already returns `null` internally whenever its own
+// `open`/`pendingPoint` prop says there's nothing to show — that's how a
+// closed Style modal or an un-clicked Notes editor renders nothing today.
+// A dynamic() `loading` fallback is shown purely because the CHUNK hasn't
+// arrived yet, before that internal open-check ever runs — so for
+// ChartEditModal, ChartStoryPanel, ChartStoryStage and ChartNotes, `loading:
+// () => null` is not a placeholder cop-out, it is the ONLY choice that
+// exactly reproduces today's default (closed) appearance instead of
+// introducing a brand-new flash of visible content on charts nobody has
+// interacted with yet. ChartConfigPanel is the one exception: it is only
+// ever reached once its parent ChartEditModal has already loaded AND is
+// open (see the mount site further down), so a reader is already looking
+// at an open, empty-on-the-right modal at that point — a tiny, digit-free
+// Skeleton there is a real improvement over a blank pane, with no risk of
+// flashing on a chart the reader hasn't touched.
+const ChartEditModal = dynamic(() => import('./chart-edit-modal.tsx').then((m) => m.ChartEditModal), {
+  ssr: false,
+  loading: () => null,
+});
+const ChartConfigPanel = dynamic(() => import('./chart-config-panel.tsx').then((m) => m.ChartConfigPanel), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
+});
+const ChartStoryPanel = dynamic(() => import('./chart-story.tsx').then((m) => m.ChartStoryPanel), {
+  ssr: false,
+  loading: () => null,
+});
+const ChartStoryStage = dynamic(() => import('./chart-story-stage.tsx').then((m) => m.ChartStoryStage), {
+  ssr: false,
+  loading: () => null,
+});
+const ChartNotes = dynamic(() => import('./chart-notes.tsx').then((m) => m.ChartNotes), {
+  ssr: false,
+  loading: () => null,
+});
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`

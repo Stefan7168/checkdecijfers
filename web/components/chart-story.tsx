@@ -19,41 +19,12 @@ import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 
-export interface ChartStoryTriggerProps {
-  open: boolean;
-  onToggle(): void;
-  controlsId: string;
-  triggerId: string;
-  lang?: Lang;
-}
-
-/** The owner's ask: "a colourful border, with a magic wand … to show
- * something exciting will happen". The gradient lives on a 2 px wrapper;
- * the button itself paints the card colour so the ring reads as a border.
- * This is the one gradient in the product (12-huisstijl). */
-export function ChartStoryTrigger({ open, onToggle, controlsId, triggerId, lang = 'nl' }: ChartStoryTriggerProps): ReactNode {
-  return (
-    <span
-      className="inline-flex rounded-lg p-[2px]"
-      style={{ background: 'linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b)' }}
-      data-story-trigger-ring="true"
-    >
-      <Button
-        id={triggerId}
-        type="button"
-        variant="ghost"
-        size="sm"
-        aria-expanded={open}
-        aria-controls={controlsId}
-        onClick={onToggle}
-        className="rounded-[6px] bg-card text-foreground hover:bg-muted aria-expanded:bg-muted"
-      >
-        <WandSparkles aria-hidden="true" />
-        {t(lang, 'chart.story.trigger')}
-      </Button>
-    </span>
-  );
-}
+// Moved to chart-story-trigger.tsx (session 110 perf pass, second attempt)
+// so chart.tsx can statically import the trigger while lazy-loading
+// ChartStoryPanel/ChartStoryStage via next/dynamic — see that file's own
+// header for why. Re-exported here unchanged so the existing
+// chart-story.test.tsx import keeps resolving.
+export { ChartStoryTrigger, type ChartStoryTriggerProps } from './chart-story-trigger.tsx';
 
 export interface ChartStoryPanelProps {
   steps: StoryStep[];
