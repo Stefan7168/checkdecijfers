@@ -466,3 +466,19 @@ and, for a region with no row at some requested period:
 - `npm run typecheck` (root) → clean.
 - `npm run audit:verify` was NOT run (needs the live DB, out of scope for this
   hermetic worktree task) — Task 6's own done-definition names it.
+
+**⚠ A GAP THIS PLAN HAS NO TASK FOR — found in task 4, deliberately not fixed
+here.** `regionSetLine` has a whole surface beyond the composer, and the new
+sibling key is absent from every one of them, so **today the coverage sentence
+would be assembled and stored but never SHOWN**: `web/lib/chat-message.ts`
+(`AnswerView`), `web/components/chat.tsx` (`:903` maps it onto the view,
+`:1144` renders it), `web/lib/copy-answer.ts` (`:31`),
+`web/lib/replay-assemble.ts` (`:127`), `src/threads/replay.ts` (`:35`, `:97`)
+and `web/test/fake-answer.ts`. The rendered `answer.text` does contain the line
+(compose.ts assembles it), but the chat UI renders the PARTS, not `text` — so a
+partial/excluded region would be silently missing from the answer with no
+disclosure on screen, which is the one outcome the design's honesty rule exists
+to prevent. Task 4's brief scoped it to the backend answer layer and its
+`tests/answer` runs, and `web/` has its own co-located suites, so this is left
+for whoever owns the web slice (Task 3's file list is the nearest) — but it must
+not ship without it.
