@@ -18,6 +18,13 @@
 import { resolveSource, sourceKeyForTableId } from '../backend/sources/registry.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import { sourceLinkLabel, sourceTableUrl } from '../lib/statline.ts';
+// #252 fix (session 110 UX audit pass 3, row 2): the actual definition now
+// lives in the plain, directive-free web/lib/sync-date.ts so a server-only
+// module (answer-proof.ts) can use it without importing this 'use client'
+// component — re-exported here so this component's own JSX below and
+// source-badge.test.tsx's existing `import { syncDateLabel } from
+// './source-badge.tsx'` both keep working unchanged.
+import { syncDateLabel } from '../lib/sync-date.ts';
 
 export interface SourceBadgeProps {
   tableId: string;
@@ -30,13 +37,7 @@ export interface SourceBadgeProps {
   syncedAt?: string | null;
 }
 
-/** The measured date part of an ISO sync timestamp, or null when absent or
- * unparseable — never a guessed or reformatted date (principle c). */
-export function syncDateLabel(syncedAt: string | null | undefined): string | null {
-  if (!syncedAt) return null;
-  const match = /^\d{4}-\d{2}-\d{2}/.exec(syncedAt);
-  return match ? match[0] : null;
-}
+export { syncDateLabel };
 
 export function SourceBadge({ tableId, source, syncedAt }: SourceBadgeProps) {
   const t = useT();

@@ -53,8 +53,16 @@ import type { AttributionAlternate, DerivationRecord, ResultCell, ValidatedResul
 import type { Db } from '../backend/db/types.ts';
 // #170(1): the same measured-date formatter the source badge chip already
 // uses — reused here (not re-derived) so the panel's date can never drift
-// from the chip's.
-import { syncDateLabel } from '../components/source-badge.tsx';
+// from the chip's. #252 fix (session 110 UX audit pass 3, row 2): imported
+// from the plain web/lib/sync-date.ts, NOT from components/source-badge.tsx
+// (a 'use client' module) — this file runs from server-only call sites
+// (replay-assemble.ts, question-history.tsx, app/actions.ts), and importing
+// a client-directive module into a server path throws at runtime in Next's
+// RSC/server-action boundary. That throw was landing in the try/catch below
+// and being silently swallowed, which is how "Bewijs deze cijfers" could be
+// present on a live answer (chat.tsx's own client-side call, a valid
+// context for the old import) and missing from every stored one.
+import { syncDateLabel } from './sync-date.ts';
 import { cbsHighlightUrl } from './statline.ts';
 
 /** One `response.result.cells[i]`, carrying everything the "De gebruikte
@@ -371,7 +379,19 @@ export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
       nullNotice: buildNullNotice(result),
       marked,
     };
-  } catch {
+  } catch (error) {
+    // #252 fix (session 110 UX audit pass 3, row 2): a missing proof panel
+    // is the honest degradation this catch exists for (see the doc comment
+    // above), but a SILENT one is how the client-import bug shipped
+    // undetected — log so a recurrence is visible in the Vercel logs
+    // instead of just a missing button. Message only, never the raw error
+    // object: this runs over untrusted-shaped stored envelopes and the goal
+    // is a breadcrumb, not a stack-trace dump into logs a support flow may
+    // surface.
+    console.error(
+      'buildAnswerProof failed, proof panel omitted:',
+      error instanceof Error ? error.message : String(error),
+    );
     return null;
   }
 }
