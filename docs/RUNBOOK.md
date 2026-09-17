@@ -1992,7 +1992,7 @@ for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwrig
 
 ### CI e2e smoke — the harness as a gate (added session 110, 2026-09-17)
 
-The harness is no longer only a manual tool: **five Playwright tests run it on every CI push** (`web/e2e/`,
+The harness is no longer only a manual tool: **seven Playwright tests run it on every CI push** (`web/e2e/`,
 `web/playwright.config.ts`, inside the existing `web` job — no new job, the owner pays for these minutes). Still
 hermetic: no secrets, no network beyond npm + the browser download, no LLM spend.
 
@@ -2003,11 +2003,16 @@ modules as plain modules, so the boundary that actually breaks does not exist th
 have caught it**. Verified with teeth before shipping the tests: putting that exact import back makes the replay
 test fail while the live-answer test still passes.
 
-**What the five cover.** (a) the logged-out landing — headline + three real gallery charts (not the fail-safe
+**What the seven cover.** (a) the logged-out landing — headline + three real gallery charts (not the fail-safe
 placeholder); (b) the benchmark inflation question → answer, chart, proof panel with its five cells; (c) the SAME
 answer re-opened from the thread list on a fresh page load still offers a working proof panel (the P1 pin);
 (d) `!!regionset provincies` → the "Dekking:" coverage line + a 12-bar horizontal chart; (e) a prediction question
-→ the refusal card, 0 credits, and its retry chip. Every page also fails its test on any browser console error.
+→ the refusal card, 0 credits, and its retry chip; (f) ADR 055's multi-region series (`!!intent` for Amsterdam +
+Rotterdam, 2020-2024) → each region's own "(gestegen)" clause, a 2-line chart with both regions in the legend, and
+a region-named "Richting" step per region in the proof panel; (g) the ADR 055 `multi_region_multi_period` refusal
+over 7 named regions → the honest refusal text, 0 credits, no chart, and its offer chip (the first region, PV20)
+answers a real single-region series on click with zero LLM calls (`respond.ts` forces `templateOnly: true` on a
+taken click option). Every page also fails its test on any browser console error.
 
 **Running them yourself.**
 
@@ -2026,8 +2031,9 @@ hand, then run the tests against it.
 - The tests are **serial by design** (`workers: 1`): one harness user, one PGlite database, one thread list — test
   (c) deliberately re-opens the thread test (b) created, and every question spends from the same credit balance.
 - Only **benchmark questions** answer end to end (the LLM stub replays fixtures). A new test must use a question
-  from `benchmark/tasks.json` or a `!!regionset` injection — anything else 400s at the stub and looks like a
-  product failure.
+  from `benchmark/tasks.json`, a `!!regionset`/`!!intent` harness injection (`HARNESS_INTENT_INJECT=1`,
+  `src/answer/respond/harness-intent.ts`), or a click-option chip (forced `templateOnly: true`, no LLM call at
+  all) — anything else 400s at the stub and looks like a product failure.
 - `npx playwright install chromium` downloads a browser from `cdn.playwright.dev`. On a machine that cannot reach
   it, point `CHROMIUM_PATH` at a compatible Chromium already on disk (same convention as `ask.mjs`/`shot.mjs`):
   `CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-<build>/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" npx playwright test`.

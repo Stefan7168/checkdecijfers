@@ -1,4 +1,4 @@
-// End-to-end smoke test config (session 110). Five short Playwright tests that
+// End-to-end smoke test config (session 110). Seven short Playwright tests that
 // drive the REAL app in a REAL browser through the local dev harness
 // (scripts/dev-harness/) — zero secrets, zero LLM spend, no production database:
 // PGlite holds the hermetic CBS fixture snapshot, :9911 stands in for Supabase

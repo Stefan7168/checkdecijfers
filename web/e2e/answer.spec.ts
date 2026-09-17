@@ -11,6 +11,37 @@ import { expect, signInAsHarnessUser, test, type Page } from './harness.ts';
 const INFLATION_QUESTION = 'Hoe ontwikkelde de inflatie zich per jaar van 2020 t/m 2024?';
 const PREDICTION_QUESTION = 'Wat wordt de inflatie in 2027?';
 
+// ADR 055 (multi-region time series) — same `!!intent` harness injection as
+// `!!regionset` above, but a raw hand-authored intent: no named preset covers
+// this shape (docs/decisions/055-multi-region-series.md, scripts/dev-harness/
+// README.md). Amsterdam + Rotterdam over 2020-2024 is the EXACT case
+// tests/answer/region-series-answer.test.ts exercises against the same
+// hermetic CBS fixture snapshot this harness restores, so the resulting
+// numbers are known ahead of time (verified against
+// tests/fixtures/cbs/03759ned/observations-page-1.json): both cities'
+// population rose over the period, so both clauses read "gestegen".
+const REGION_SERIES_INTENT = JSON.stringify({
+  target: { kind: 'canonical', key: 'population_on_1_january' },
+  period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+  derivation: 'none',
+  regions: ['GM0363', 'GM0599'], // Amsterdam, Rotterdam
+});
+
+// Row 13's `multi_region_multi_period` refusal, but with 7 NAMED regions
+// (one over REGION_SERIES_MAX_REGIONS = 6) rather than a region CLASS — the
+// combination `tests/answer/query-refusal-chips.test.ts` ("carries exactly
+// one takeable chip") pins as the one that both refuses AND carries an offer
+// chip: the chip takes the FIRST region (PV20 = "Groningen (PV)") over the
+// same range, forced to `derivation: 'series'`. Taking a click-option chip
+// always composes `templateOnly: true` (src/answer/respond/respond.ts), so
+// this never risks an llm-stub MISS on a question the real parser never sees.
+const OVER_CAP_REGIONS_INTENT = JSON.stringify({
+  target: { kind: 'canonical', key: 'population_on_1_january' },
+  period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+  derivation: 'none',
+  regions: ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26'],
+});
+
 /** Type a question and send it. Deliberately does NOT wait for "an answer":
  * each test waits for ITS OWN expected outcome instead, so a test can never
  * pass on a generic "something appeared". */
@@ -111,5 +142,72 @@ test.describe.serial('the logged-in answer pipeline', () => {
 
     // And nothing that looks like an answer: a refusal has no chart.
     await expect(page.locator('.recharts-surface')).toHaveCount(0);
+  });
+
+  test('(f) a multi-region series states each region\'s own trend and charts one line per region', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+
+    // ADR 055 MS1: one clause per region, each bound to ITS OWN direction
+    // record — both region names and a real Dutch trend participle, never a
+    // cross-region claim. The exact figures are the fixture's own numbers.
+    await expect(page.getByText('Amsterdam ging van 872.757 in 2020 naar 931.298 in 2024 (gestegen)')).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(page.getByText('Rotterdam ging van 651.157 in 2020 naar 670.610 in 2024 (gestegen)')).toBeVisible();
+
+    // The chart: one line PER region (ADR 055 task 3), both in the legend.
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Amsterdam', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Rotterdam', exact: true })).toBeVisible();
+
+    // Proof panel: a region-named "Richting" step per region, not two
+    // identical unlabelled rows (the row-14 gap this ADR closed).
+    await page.getByRole('button', { name: 'Bewijs deze cijfers' }).first().click();
+    const proof = page.getByRole('region', { name: 'Onderbouwing van dit antwoord' });
+    await expect(proof.getByText('Richting van de reeks voor Amsterdam', { exact: false })).toBeVisible();
+    await expect(proof.getByText('Richting van de reeks voor Rotterdam', { exact: false })).toBeVisible();
+  });
+
+  test('(g) an over-cap multi-region refusal offers a chip that answers a single-region series on click', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${OVER_CAP_REGIONS_INTENT}`);
+
+    // Row 13's honest refusal — a whole GROUP of regions (or more than the
+    // cap), never the generic internal wording, and no digits (#37).
+    await expect(page.getByText('Dit kon ik niet beantwoorden')).toBeVisible({ timeout: 60_000 });
+    await expect(
+      page.getByText(
+        "maar deze vraag gaat over een hele groep regio's, of over meer regio's dan in één antwoord passen.",
+        { exact: false },
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('0 credits', { exact: true })).toBeVisible();
+    await expect(page.locator('.recharts-surface')).toHaveCount(0);
+
+    // The offer chip: the FIRST named region over the full range, as a trend.
+    const chipLabel = 'Hoe ontwikkelde bevolking op 1 januari in PV20 zich van 2020 tot en met 2024?';
+    await expect(page.getByText('Probeer in plaats daarvan:')).toBeVisible();
+    const chip = page.getByRole('button', { name: chipLabel });
+    await expect(chip).toBeVisible();
+
+    // Taking the chip fills the composer (refusal chips fill, they don't
+    // send) — Verstuur then takes the click-option rung (templateOnly,
+    // zero LLM calls) and answers a single-region series for Groningen.
+    await chip.click();
+    await expect(page.getByPlaceholder('Stel een vraag…')).toHaveValue(chipLabel);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+
+    // The template body strips the CBS "(PV)" suffix (baseRegionLabel) — a
+    // single line per requested period, naming the region it belongs to.
+    // (A single-series chart shows no legend at all — `seriesMeta.length > 1`
+    // in web/components/chart.tsx — so the region name only surfaces in the
+    // body text, not as a legend button like the two-region case above.)
+    await expect(page.getByText('in Groningen:', { exact: false }).first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
   });
 });
