@@ -10,13 +10,14 @@
 // genuinely triggers a partial refund at TODAY's prices, not just in a
 // simulated future-price scenario.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 
 function fakeAudited(kind: 'answer' | 'clarification' | 'refusal', auditId: number | null): AuditedResponse {
   return {
@@ -25,14 +26,24 @@ function fakeAudited(kind: 'answer' | 'clarification' | 'refusal', auditId: numb
   };
 }
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withPricedDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await applyPricingDefaults(db);
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await applyPricingDefaults(sharedDb);
+  await fn(sharedDb);
 }
 
 describe('chargeAndRun — insufficient balance', () => {
