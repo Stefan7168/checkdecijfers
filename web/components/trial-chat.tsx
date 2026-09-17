@@ -39,12 +39,23 @@ export function LoginNudge({ text }: { text: string }) {
   );
 }
 
-export function TrialChat({ initialQuestionsLeft }: { initialQuestionsLeft: number }) {
+export function TrialChat({
+  initialQuestionsLeft,
+  initialNotice = null,
+}: {
+  initialQuestionsLeft: number;
+  /** Row 1 (session 110 UX audit pass 2): lets the server gate (trial.tsx)
+   * hand this component an already-known notice (currently only 'used_up')
+   * instead of swapping TrialChat out for a bare LoginNudge on the post-action
+   * refresh — which used to unmount this component's `messages` state and
+   * discard the answer the visitor's last question just paid for. */
+  initialNotice?: Notice;
+}) {
   const [messages, setMessages] = useState<TrialMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [left, setLeft] = useState(initialQuestionsLeft);
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<Notice>(initialNotice);
   const t = useT();
   // From the SHARED catalogue (#184, now folded into messages.ts — WP218
   // phase 4 #219): the landing gate can discover pot_empty, used_up and

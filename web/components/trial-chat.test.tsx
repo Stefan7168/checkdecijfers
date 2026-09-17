@@ -50,6 +50,19 @@ describe('TrialChat', () => {
     expect(screen.queryByLabelText('Stel je gratis proefvraag')).toBeNull();
   });
 
+  // Row 1 (session 110 UX audit pass 2): the server gate (trial.tsx) hands
+  // this component the used_up notice directly on mount, instead of
+  // swapping TrialChat out for LoginNudge on the post-action refresh — which
+  // used to unmount this component and discard whatever was already in
+  // `messages`. A fresh mount with the notice pre-set must show the nudge
+  // immediately, without any submit.
+  it('shows the used_up nudge immediately when mounted with an initial notice (SSR resume)', () => {
+    render(<TrialChat initialQuestionsLeft={0} initialNotice="used_up" />);
+    expect(screen.getByText(/proefvragen gebruikt/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Stel je gratis proefvraag')).toBeNull();
+    expect(askTrialQuestion).not.toHaveBeenCalled();
+  });
+
   it('degrades to the pot-empty nudge on closed', async () => {
     askTrialQuestion.mockResolvedValue({ kind: 'closed', reason: 'pot_empty' });
     render(<TrialChat initialQuestionsLeft={2} />);

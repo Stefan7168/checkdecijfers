@@ -93,3 +93,48 @@ Two constraints this addendum kept, both zero-cost by construction (D3: every al
 **Verification (measured, this addendum only — the parent session runs full verification separately):** `cd web && npm run typecheck` clean. Targeted suites, each run solo with `--maxWorkers=1`: `components/chart.test.tsx` 275/275, `components/chart-embed-dialog.test.tsx` 21/21, `app/embed/[token]/page.test.tsx` 36/36, `lib/chart-view-state.test.ts` 58/58 — all green, no full-suite or `next build` run (out of this worktree brief's scope by design; the parent session's own verification block covers those).
 
 **Session 110 follow-up (branch `s110/rsform`) — the #229 predicate now also carves out `hbar`.** `defaultFormIsTable` (and the `initialForm` calc it backs) changed again the same session, this time for a DIFFERENT gap (open-questions, "many-region comparison default"): a 16-40 series comparison-shaped spec (one point per series — a region-set answer, not a time series) now defaults to `hbar`, not `table` — see [042](042-designed-default-chart.md)'s own new addendum for the full rule (`isComparisonShaped`, `COMPARISON_HBAR_MAX = 40`, `defaultFormFor`). `defaultFormIsTable` is now a thin wrapper (`defaultFormFor(spec) === 'table'`), so this ADR's #229 fix needed no code change at all — the Embed dialog's "Default" radio is correctly un-hidden for exactly this case too (a 16-40 series comparison switched to Lijn/Staaf and embedded with "Default" now lands on the same `hbar` the chat chart itself opens on, never the un-embeddable Tabel). Verified: `components/chart-embed-dialog.test.tsx` 22/22 still green, unchanged by this follow-up (its tests drive `defaultIsTable` as an explicit prop, not through a spec).
+
+## Session 110 as-built addendum — UX audit pass 2, rows 2, 5 and 10 (worktree `s110-ux-e`)
+
+Three more mechanical fixes on the embed surface, all from the same UX audit pass 2 as the addendum
+above, built in an independent worktree in parallel with it:
+
+- **Row 2 — the generated snippet's height did not fit the default embed's own content.** The
+  dialog's `buildEmbedCode` hardcoded `height="440"` while a default embedded chart (chart +
+  attribution/source/footer, no markers, no definitionLine) measured 604.5px on the audit's real
+  Playwright harness — leaving the CBS source line, the "Frozen on …" date and the
+  checkdecijfers.nl attribution below an inner scroller's fold, directly against this product's
+  public claim ("source and date shown"). `chart-embed-dialog.tsx` now exports
+  `EMBED_DEFAULT_HEIGHT_PX = 680` (604.5px measured + a ~75px margin for the attribution/footer
+  text wrapping to two lines on a host narrower than 600px), used in place of the literal. The
+  **other, larger half of this row — the page truly GROWING past any fixed height so a host's
+  auto-resize script could read it — needs an `isEmbedRoute`-conditional change to
+  `web/app/layout.tsx`'s shared `h-dvh` body + `flex-1 overflow-y-auto` app shell** (it wraps
+  every route's children, `/embed/[token]` included, and is what pins
+  `document.documentElement.scrollHeight` to the iframe's own height regardless of real content
+  height). That file was outside this worktree's assigned scope; `page.tsx` documents the gap
+  in place (its own comment above the final `return`) and its new test pins that `<main>` itself
+  introduces no ADDITIONAL fixed height/overflow of its own, so the residual is scoped to exactly
+  that one ancestor file, not rediscovered piecemeal later.
+- **Row 5 — the Embed dialog's own second "Close" button, the same shape as pass 1's row 6.**
+  `ChartEditModal`'s shell (`ui/dialog.tsx`'s `DialogContent`) already renders an accessibly-named
+  "Close" × by default; the dialog's own `chart.embed.close` button next to "Copy code" duplicated
+  it. Dropped (not relabelled), matching the row-6 precedent on the Style dialog.
+- **Row 10 — the embed chart's height did not adapt to a small frame.** At 320×240 (a common
+  sidebar embed unit), ADR 042's `CHART_MIN_HEIGHT_PX` floor (256px) is itself taller than the
+  frame, so the chart alone overflowed the iframe with no way to scroll it into view.
+  `chart.tsx` now exports `embedHeightValue(px)` — a CSS `min()` against `100dvh` (the same
+  ambient `h-dvh` app shell row 2 names above means `dvh` resolves to the iframe's own rendered
+  height here) minus a fixed reserve for the attribution block below the chart — applied to the
+  export container's height ONLY when `embedMode` is true, both once the width is measured and
+  before the first `ResizeObserver` callback fires. Every non-embed chart's height is
+  byte-identical to before this row (plain `autoHeightPx`/`CHART_MIN_HEIGHT_PX` numbers, exactly
+  as ADR 042 left them).
+
+Verification (measured, this addendum only): `cd web && npm run typecheck` clean. Targeted suites,
+each run solo with `--maxWorkers=1`: `components/chart.test.tsx` 283/283 (2 new),
+`components/chart-embed-dialog.test.tsx` 24/24 (2 new), `app/embed/[token]/page.test.tsx` 38/38
+(1 new) — all green; no full suite or `next build` run in this worktree by design (the parent
+session's own verification block covers those). Rows 1 and 3 (the trial-chat / trial-actions
+fixes from the same audit pass) are recorded in ADR 036's own session 110 addendum instead, since
+neither touches the embed surface this ADR covers.

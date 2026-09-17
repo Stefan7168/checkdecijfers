@@ -37,6 +37,7 @@ import {
   refundTrialQuestion,
   takeTrialQuestion,
   TRIAL_POT_LOW_WATER,
+  TRIAL_QUESTIONS_PER_VISITOR,
 } from '../backend/billing/index.ts';
 import { getDb } from '../lib/db.ts';
 import {
@@ -214,6 +215,33 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
       // core loop only (ADR 036 D5); every absent option keeps that path
       // byte-identical to the calibrated pipeline.
     });
+    // Row 3 (session 110 UX audit pass 2): the paid path refunds EVERY served
+    // refusal in full — "no value delivered" (src/billing/gate.ts). The trial
+    // deliberately does NOT mirror that in general (build revision 2 above):
+    // refunding an ordinary refusal would let a visitor burn the trial key for
+    // free by asking something deliberately unanswerable, uncounted, and the
+    // trial's "2 proefvragen" = 2 served responses rule (an ordinary refusal
+    // still counts) is unchanged by this. But an 'internal' refusal is not
+    // that — it is OUR pipeline failing after already catching the error and
+    // serving an honest refusal instead (principle (c)), the exact same class
+    // of failure the outer catch below already refunds when it escapes as an
+    // uncaught throw instead of reaching this point. A logged-in user is
+    // charged 0 credits for the identical refusal (gate.ts: "every refusal
+    // reason: no value delivered, full refund" only ever runs on the paid
+    // gate's own path, so this mirror was needed here specifically for
+    // 'internal'); the trial visitor should not lose one of their two
+    // questions to it either. Idempotent and DB-side (refundTrialQuestion),
+    // same as the throw-path refund.
+    let questionsLeft = take.questionsLeft;
+    if (audited.response.kind === 'refusal' && audited.response.reason === 'internal') {
+      await refundTrialQuestion(db, take.trialQuestionId);
+      // Mirror the refund into the value THIS response reports, so the
+      // visitor is not shown a false "1 of 2 left" until their next render
+      // re-reads the (by-then-refunded) budget from scratch. Clamped at the
+      // per-visitor cap for the same reason refundTrialQuestion clamps the
+      // pot at its cap: a refund can never inflate a budget past its ceiling.
+      questionsLeft = Math.min(TRIAL_QUESTIONS_PER_VISITOR, take.questionsLeft + 1);
+    }
     // Post-hoc link from the pot bookkeeping to the audit row — genuinely
     // fail-soft (adversarial-review finding, session 52: inside the outer
     // try, a throwing UPDATE would discard an already-served answer AND
@@ -250,13 +278,19 @@ export async function askTrialQuestion(question: string, requestId: string): Pro
     // 4,3,2,1,0 and never returns 5), which is exactly the pot size where a
     // warning shot matters most. The latch — not the equality — is what keeps
     // this to one mail per drain.
+    // Deliberately still keyed on take.potRemaining, not the post-refund pot:
+    // an internal refusal refunding the pot by 1 after this snapshot was read
+    // is the same class of staleness the comment above already accepts for
+    // refunds in general (near-dead code, #185) — a rare internal error
+    // announcing the pot as one question lower than it now actually is, never
+    // the other direction, so the safe-direction argument above still holds.
     if (take.potRemaining <= TRIAL_POT_LOW_WATER && !lowWaterAlerted) {
       lowWaterAlerted = await announcePot(take.potRemaining);
     }
     if (take.potRemaining === 0 && !emptyAlerted) {
       emptyAlerted = await announcePot(0);
     }
-    return { kind: 'ok', response: audited.response, questionsLeft: take.questionsLeft };
+    return { kind: 'ok', response: audited.response, questionsLeft };
   } catch (error) {
     // Nothing was shown: give the pot (and the visitor's budget) the
     // question back — the gate.ts compensation mirror, idempotent.

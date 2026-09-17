@@ -294,3 +294,34 @@ Three claims in this ADR need qualifying, and none of them is fixed by a code ch
 
 Also recorded: the revisit trigger above ("pot drains in hours") is currently **unobservable** — `ip_limit`,
 `pot_empty` and refunds are all silent, so the owner would find out at the next `trialpot:set`.
+
+## Session 110 as-built addendum — UX audit pass 2, rows 1 and 3
+
+Two real bugs, both mechanical, both in `web/app/trial-actions.ts` / `web/components/trial.tsx` /
+`web/components/trial-chat.tsx`, found by the session-110 UX audit's hermetic harness pass (no LLM spend,
+no code changed by the audit itself — fixed in a follow-up implementation pass, worktree `s110-ux-e`):
+
+- **Row 1 — the last free answer used to vanish.** A Server Action call from a Client Component
+  implicitly refreshes the calling route's Server Components; `trial.tsx`'s `TrialGate` re-read the gate
+  state on that refresh and, at `questionsLeft === 0`, swapped `<TrialChat>` out for a bare `<LoginNudge>`
+  — unmounting `TrialChat`'s own `messages` state and discarding the answer the visitor's second question
+  had just paid for. Fixed by having the gate render `<TrialChat initialQuestionsLeft={0}
+  initialNotice="used_up">` instead of swapping components — `TrialChat` already renders this exact nudge
+  itself once its own client-side `notice` state reaches `used_up`, so the new `initialNotice` prop just
+  lets the SSR gate hand it that state directly rather than remounting a different component over it. The
+  other non-open gate states (`closed`/`unavailable`/`ip_limit`) were left rendering the bare nudge — none
+  of them can be reached mid-session after a transcript already exists, so there was nothing to lose there.
+- **Row 3 — an internal refusal still cost a trial question.** Build revision 2 above (every served
+  response, refusal included, consumes the trial question; refund only on a throw) is unchanged for
+  ordinary refusals — that decision holds. But an `'internal'` refusal (`src/answer/respond/types.ts`) is
+  our own pipeline error, caught and served as an honest refusal (principle (c)) rather than escaping as an
+  uncaught throw — the same class of failure the existing throw-path refund already compensates, and the
+  same case the paid gate (`src/billing/gate.ts`) refunds in full ("every refusal reason: no value
+  delivered"). `askTrialQuestion` now calls `refundTrialQuestion` and reports the visitor's budget as
+  un-spent when `audited.response.kind === 'refusal' && audited.response.reason === 'internal'`, clamped
+  at `TRIAL_QUESTIONS_PER_VISITOR` like every other refund. Every other served kind (answer, clarification,
+  a non-internal refusal) is byte-identical to before.
+
+Verification (measured, this addendum only): `cd web && npx vitest run components/trial.test.tsx
+components/trial-chat.test.tsx app/trial-actions.test.ts --maxWorkers=1` — 20 + 27 = 47 tests, all green
+(4 new for row 1, 5 new for row 3); `npm run typecheck` clean.

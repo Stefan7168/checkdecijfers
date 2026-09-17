@@ -58,6 +58,24 @@ import { Button } from './ui/button.tsx';
 // generates and the backlink `href` chart.tsx renders can never disagree.
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://checkdecijfers.nl';
 
+// Row 2 (session 110 UX audit pass 2): the generated snippet used to hardcode
+// height="440" while a DEFAULT embedded chart (single series, no markers, no
+// definitionLine, the standard attribution + "Frozen on …" footer) renders
+// noticeably taller — measured by that audit's hermetic-harness pass (real
+// Playwright layout, zero LLM spend; docs/session-briefs/
+// 2026-09-17-session-110-ux-audit-pass2.md, row 2) at a last-element bottom
+// of 604.5px inside a 600px-wide iframe. At 440 the CBS source line, the
+// "Frozen on …" date and the checkdecijfers.nl attribution — the exact things
+// the product's public claim promises are shown — sat below an inner
+// scroller's fold. Derivation: 604.5px measured content, rounded up to 680px
+// to leave ~75px of margin for the attribution/footer line wrapping to two
+// lines on a host page narrower than 600px (a journalist's sidebar column is
+// the common case this margin is for). Not a substitute for the page itself
+// growing with its content (a taller FIXED number still clips an unusually
+// tall chart — e.g. one with markers or a long definitionLine) — see the
+// embed page's own layout comment for that residual.
+export const EMBED_DEFAULT_HEIGHT_PX = 680;
+
 type ColourOption = 'light' | 'dark' | 'auto';
 type ChartTypeOption = 'as-shown' | 'default';
 
@@ -104,7 +122,7 @@ function buildEmbedCode(
   const effectiveChartType: ChartTypeOption = opts.chartType === 'default' && opts.defaultIsTable ? 'as-shown' : opts.chartType;
   if (effectiveChartType === 'as-shown' && opts.currentForm) params.set('form', opts.currentForm);
   if (opts.live) params.set('live', '1');
-  return `<iframe src="${APP_URL}/embed/${token}?${params.toString()}" width="100%" height="440" title="${title}" loading="lazy" style="border:0"></iframe>`;
+  return `<iframe src="${APP_URL}/embed/${token}?${params.toString()}" width="100%" height="${EMBED_DEFAULT_HEIGHT_PX}" title="${title}" loading="lazy" style="border:0"></iframe>`;
 }
 
 export function ChartEmbedButton({
@@ -400,6 +418,13 @@ function ChartEmbedDialog({
           ) : null}
 
           <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{code}</pre>
+          {/* Row 5 (session 110 UX audit pass 2): this row used to end with a
+            * SECOND "Close" button, alongside ChartEditModal's own built-in ×
+            * (ui/dialog.tsx's DialogContent, `showCloseButton` default true —
+            * also accessibly named "Close") — two identically-named close
+            * controls in one dialog, the same shape pass 1's row 6 fixed on
+            * the Style dialog. Dropped rather than relabelled, matching that
+            * fix: the shell's own × is the only close control a reader needs. */}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -424,9 +449,6 @@ function ChartEmbedDialog({
               }}
             >
               {copied ? t(lang, 'chart.embed.copyCodeCopied') : t(lang, 'chart.embed.copyCode')}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              {t(lang, 'chart.embed.close')}
             </Button>
           </div>
         </>

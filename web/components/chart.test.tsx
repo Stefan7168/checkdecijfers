@@ -1050,6 +1050,39 @@ describe('ADR 042 — height follows width once measured', () => {
     fireResize(panel);
     expect(panel.style.height).toBe('256px');
   });
+  // Row 10 (session 110 UX audit pass 2): at a small embed frame (320×240,
+  // a common sidebar unit) the plain 256px CHART_MIN_HEIGHT_PX floor is
+  // TALLER than the frame itself, so the chart alone overflowed the iframe
+  // with no way to scroll it into view. embedMode makes the height
+  // frame-relative via CSS `min()` against `100dvh` instead of a bare px
+  // number — never applied outside embedMode (the test above pins that the
+  // ordinary, non-embed case still gets a plain '360px'/'256px').
+  it('embedMode makes the measured height frame-relative (CSS min() against 100dvh), never a bare px floor', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    // A narrow embed frame (320px wide, e.g. a sidebar unit): chartHeightForWidth
+    // clamps to the 256px floor exactly like the non-embed case above, but this
+    // time it must be wrapped in a frame-relative min(), not a bare px value.
+    panel.getBoundingClientRect = () => ({ width: 320 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).not.toBe('256px');
+    expect(panel.style.height).toContain('min(');
+    expect(panel.style.height).toContain('256px');
+    expect(panel.style.height).toContain('dvh');
+  });
+
+  // The same relaxation must hold BEFORE the first measurement lands too
+  // (autoHeightPx still null, autoHeight true) — otherwise a small embed
+  // frame flashes the un-relaxed 256px floor for one paint before
+  // ResizeObserver's first callback fires.
+  it('embedMode is already frame-relative before the first measurement (autoHeightPx still null)', () => {
+    const { container } = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toContain('min(');
+    expect(panel.style.height).toContain('256px');
+    expect(panel.style.height).toContain('dvh');
+  });
+
   it('a frame aspect ratio switches the measured height off — the frame sizes the box and the container goes h-full with no inline height', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;

@@ -23,7 +23,7 @@ vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode, startProSubscriptio
 const { trackChartStyleEvent } = vi.hoisted(() => ({ trackChartStyleEvent: vi.fn() }));
 vi.mock('../lib/chart-usage-client.ts', () => ({ trackChartStyleEvent }));
 
-import { ChartEmbedButton } from './chart-embed-dialog.tsx';
+import { ChartEmbedButton, EMBED_DEFAULT_HEIGHT_PX } from './chart-embed-dialog.tsx';
 
 beforeEach(() => {
   // Task 11 (#205): the real-world default everywhere except a session that
@@ -249,6 +249,21 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.getByText(/theme=dark/)).toBeInTheDocument();
   });
 
+  // Row 2 (session 110 UX audit pass 2): the generated snippet used to
+  // hardcode height="440" while a default embedded chart's content (the
+  // chart + attribution/source/footer block) measured 604.5px on the real
+  // audit harness — the CBS source line, "Frozen on" date and attribution
+  // sat below an inner scroller's fold at that height. The snippet now
+  // carries the measured, documented constant instead of a bare literal.
+  it('generates the snippet with the measured EMBED_DEFAULT_HEIGHT_PX, not the old 440', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    expect(EMBED_DEFAULT_HEIGHT_PX).toBeGreaterThan(604.5);
+    await screen.findByText(new RegExp(`height="${EMBED_DEFAULT_HEIGHT_PX}"`));
+    expect(screen.queryByText(/height="440"/)).toBeNull();
+  });
+
   it('changing the chart-type option to "As shown" adds a form= query param from currentForm', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" currentForm="bar" />);
@@ -285,6 +300,20 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /embed/i }));
     await screen.findByText(/form=line/);
     expect(screen.getByRole('radio', { name: /^default$/i })).toBeInTheDocument();
+  });
+
+  // Row 5 (session 110 UX audit pass 2): the dialog used to add its OWN
+  // "Close" button alongside ChartEditModal's built-in × (which also carries
+  // the accessible name "Close", per ui/dialog.tsx's DialogContent default),
+  // giving the dialog two identically-named close controls — the same shape
+  // as pass 1's row 6 on the Style dialog. Fixed by dropping the dialog's own
+  // button; the shell's × is the only close control left.
+  it('has exactly one control named "Close" (no duplicate close button)', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByText(/copy code/i);
+    expect(screen.getAllByRole('button', { name: /^close$/i })).toHaveLength(1);
   });
 
   it('Escape closes the dialog and refocuses the trigger', async () => {

@@ -41,6 +41,7 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  CHART_MIN_HEIGHT_PX,
   chartHeightForWidth,
   DEFAULT_PALETTE,
   dotGeometry,
@@ -198,6 +199,25 @@ export const GRID_COLOR = 'var(--border)';
  * (line, area, bar, hbar, ChartSmallMultiples) so the five sites cannot
  * drift. `pres.grid` still decides WHICH lines exist (ADR 039/042). */
 export const GRID_LINE_PROPS = { stroke: GRID_COLOR, strokeOpacity: 0.5 } as const;
+
+/** Row 10 (session 110 UX audit pass 2): CHART_MIN_HEIGHT_PX (256, ADR 042)
+ * is a floor for the height-follows-width auto-height rule below — right
+ * for an ordinary card, but at a small embed frame (320×240, a common
+ * sidebar unit) that floor is TALLER than the frame itself, so the chart
+ * alone overflowed a 240px iframe with no way to scroll it into view.
+ * `embedHeightValue` makes the height frame-relative for embedMode ONLY —
+ * CSS `min()` against `100dvh` (the embed page's ambient `h-dvh` app shell
+ * means `dvh` here resolves to the embed IFRAME's own rendered height, so
+ * this is genuinely frame-relative, not a second hardcoded floor) minus a
+ * fixed reserve for the attribution block that always sits below the chart
+ * in embedMode (definitionLine / the attribution+SourceBadge row / the
+ * "Frozen on …" footer — all text-xs). Applied ONLY when embedMode is true
+ * (see the containerStyle call sites below); every non-embed chart's height
+ * stays exactly the plain px number it always was. */
+export const EMBED_ATTRIBUTION_RESERVE_PX = 72;
+export function embedHeightValue(idealPx: number): string {
+  return `min(${idealPx}px, 100dvh - ${EMBED_ATTRIBUTION_RESERVE_PX}px)`;
+}
 
 // Y-axis honesty policy (open-questions #48, resolved 2026-07-04): a bar
 // encodes LENGTH, so a non-zero baseline visually lies about ratios — bars
@@ -2416,9 +2436,24 @@ export function ChartView({
   // ADR 042: the export container's font override and auto height merged
   // into one style object — `undefined` (not `{}`) when neither applies, so
   // the stock DOM stays attribute-identical to before this task.
+  //
+  // Row 10 (session 110 UX audit pass 2): in embedMode, both branches below
+  // route through `embedHeightValue` instead of the plain px number —
+  // whether the width has already been measured (`autoHeightPx`) or not yet
+  // (still on the `CHART_MIN_HEIGHT_PX` floor `autoHeight` implies before
+  // the first ResizeObserver callback fires) — so there is no flash of an
+  // unrelaxed 256px height in a small embed frame before measurement
+  // settles. Non-embed behaviour is byte-identical to before this row: the
+  // `autoHeightPx !== null` branch still sets the plain number, and the
+  // unmeasured/non-auto case still sets no height at all (the `h-64`
+  // className floor stands, exactly as ADR 042 left it).
   const containerStyle: CSSProperties = {
     ...(fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : {}),
-    ...(autoHeightPx !== null ? { height: autoHeightPx } : {}),
+    ...(autoHeightPx !== null
+      ? { height: embedMode ? embedHeightValue(autoHeightPx) : autoHeightPx }
+      : embedMode && autoHeight
+        ? { height: embedHeightValue(CHART_MIN_HEIGHT_PX) }
+        : {}),
   };
 
 
