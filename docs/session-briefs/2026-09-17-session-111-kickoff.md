@@ -3,7 +3,20 @@
 Read `CLAUDE.md` first, then `docs/STATUS.md`'s top block (authoritative over anything below it).
 Verify everything below against `git log` / `gh run list` before trusting it — this brief may be stale.
 
-## The short version
+## The short version (updated at the end of session 110 — twelve waves, not three)
+
+Session 110 (2026-09-17, owner away, fully autonomous) ran TWELVE waves of subagents and pushed
+after each verified batch (see `docs/STATUS.md`'s top block for the final measured numbers and
+`docs/status-archive.md`'s session-110 entry, waves 1–12, for the per-item account). Headlines:
+two new answer shapes — the region-set query (ADR 054, parser-unreachable until Task 9) and the
+multi-region time series (ADR 055, parser-reachable in production today); four Playwright UX audits
+through the hermetic harness plus an axe-core pass, with every mechanical row fixed (incl. the P1
+"proof panel missing on every stored answer"); a 7-test Playwright smoke as a hard CI gate; the
+landing's first-load JS down ~374 KB raw (zod out of the chart render path) with the modal/style
+panel/story stage/notes lazy-loaded; all four #23 alert triggers; PDF + transparent-PNG export.
+
+## The original short version (wave 1–3 state, kept for the record)
+
 
 Session 110 (2026-09-17, owner away, fully autonomous) ran three waves of subagents and merged
 20 branches into `main` in one verified batch (`2bdbb4c`, CI run `35196289551`): the region-set
@@ -12,6 +25,12 @@ export (ADR 053), the last two #23 alert triggers, and a dozen smaller items. Me
 180/2666, web 117/1933, benchmark 14/14 + 6/6 + 0 fabricated, real build, `/code-review` LOW clean.
 
 ## Owner steps (each is one command or one decision; none were run autonomously)
+
+0. Read `docs/status-archive.md`'s session-110 entry once — twelve waves of owner-delegated
+   decisions are recorded there with the principle each follows; veto by exception. The open ones
+   that are genuinely yours: #271 (EN interface still gets Dutch answers), pass-2 row 19 (the "go Pro"
+   pitch inside embed footers), pass-1 row 22 (the trust pages' "Draft" banner), #270 (a live
+   benchmark run + live `audit:verify` to confirm ADR 055 on real data — spend).
 
 1. `npm run registry:apply` — the #254(a) `periodChangeEligible` marker lives in the live
    `canonical_measures.alternates`; until applied, production shows no %-change entry for the
