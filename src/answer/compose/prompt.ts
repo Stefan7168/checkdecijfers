@@ -110,8 +110,15 @@ export function buildPhrasingPayload(result: ValidatedResult): PhrasingPayload {
     // (double-render risk, and rule 3 forbids it converting units), and the
     // filter keeps every payload byte-identical to the pre-#125a form — so
     // every recorded LLM fixture keeps its request hash and replays.
+    // period_change records (ADR 052) are excluded the same way: they never
+    // actually appear on a PRIMARY result's derivations today (they only
+    // ever ride the synthetic, chart-only ValidatedResult
+    // src/chart/period-change.ts builds for the alternate-reading dropdown,
+    // which composeAnswer never sees) — filtered here defensively so R2's
+    // whitelist stays correct even if that ever changed, rather than relying
+    // on "never happens in practice."
     derivations: result.derivations
-      .filter((d): d is Exclude<typeof d, { kind: 'unit_expansion' }> => d.kind !== 'unit_expansion')
+      .filter((d): d is Exclude<typeof d, { kind: 'unit_expansion' | 'period_change' }> => d.kind !== 'unit_expansion' && d.kind !== 'period_change')
       .map((d) => {
       switch (d.kind) {
         case 'difference':

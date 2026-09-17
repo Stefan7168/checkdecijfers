@@ -13,12 +13,17 @@
 //   ranking / comparison sentences have a registered derivation to bind to
 //   (R9) — added automatically by run.ts, never on demand by the LLM.
 import { DERIVED_DATA_MARKING, type DerivationRecord, type ResultCell } from './types.ts';
+import { contiguousPeriodCodes } from './resolve.ts';
 
 export type DerivationResult =
   | { ok: true; record: DerivationRecord }
   | { ok: false; reason: string };
 
-function refuse(reason: string): DerivationResult {
+// Narrowly typed to the shared failure shape (not the full DerivationResult
+// union) so it is reusable as-is by derivePeriodChangeSeries's own
+// differently-shaped PeriodChangeSeriesResult below, rather than needing a
+// second one-line "refuse" helper that would do exactly the same thing.
+function refuse(reason: string): { ok: false; reason: string } {
   return { ok: false, reason };
 }
 
@@ -244,4 +249,83 @@ export function deriveFirstLast(cells: ResultCell[]): DerivationResult {
       lastResultId: last.resultId,
     },
   };
+}
+
+type PeriodChangeRecord = Extract<DerivationRecord, { kind: 'period_change' }>;
+
+export type PeriodChangeSeriesResult =
+  | { ok: true; records: PeriodChangeRecord[] }
+  | { ok: false; reason: string };
+
+/** ADR 052 (#254's level-vs-%-change gap): one `period_change` record per
+ * ADJACENT pair in a period-ordered, single-region series — cells[1] vs
+ * cells[0], cells[2] vs cells[1], and so on ("adjacent" is grain-relative:
+ * this never skips ahead to "same period last year" the way CBS's own
+ * "jaarmutatie" measures do; where CBS publishes that as a real measure, the
+ * ADR 051 alternate-reading toggle already serves it — this function exists
+ * for the measures that have no such CBS-published sibling at all).
+ *
+ * Refuses the WHOLE series (principle c: no partial/fabricated result) when:
+ *  - fewer than 2 cells, more than one region, or any cell has no value
+ *    (checkComputable/checkSingleRegion — the same guards every other
+ *    derivation in this file uses);
+ *  - the periods are not a gap-free, single-grain, ascending sequence
+ *    (contiguousPeriodCodes — reused from resolve.ts, not reimplemented);
+ *  - ANY step's previous-period value is zero (division by zero) or
+ *    negative (a percentage from a negative base can flip sign in a way
+ *    that reads as nonsense — e.g. −5 to +5 is arithmetically "+200%").
+ * Checked as one pre-scan pass over every step before any record is built,
+ * so a bad step anywhere in the series refuses the entire reading rather
+ * than silently dropping just that one point (the same "a chart may not
+ * imply a continuity the data doesn't have" discipline chart/build.ts and
+ * buildAlternateReading's own period-match guard already apply). */
+export function derivePeriodChangeSeries(cells: ResultCell[]): PeriodChangeSeriesResult {
+  // `refuse`'s `{ ok: false, reason }` shape is identical to this function's
+  // own failure branch — reused directly (code-review finding) rather than
+  // adding a second one-line "refuse" helper that does the same thing.
+  if (cells.length < 2) {
+    return refuse(`period-over-period change needs at least 2 source cells, got ${cells.length}`);
+  }
+  const regionProblem = checkSingleRegion(cells);
+  if (regionProblem) return refuse(regionProblem);
+  const computableProblem = checkComputable(cells);
+  if (computableProblem) return refuse(computableProblem);
+  const periods = cells.map((c) => c.periodCode);
+  if (!contiguousPeriodCodes(periods)) {
+    return refuse(
+      `cells are not a regular, gap-free, single-grain period-over-period sequence (${periods.join(', ')}) — refusing rather than compare non-adjacent periods`,
+    );
+  }
+  for (let i = 1; i < cells.length; i++) {
+    const previous = cells[i - 1] as ResultCell;
+    const previousValue = previous.value as number;
+    if (previousValue === 0) {
+      return refuse(`period ${previous.periodCode} has value 0 — a percentage change from zero is undefined`);
+    }
+    if (previousValue < 0) {
+      return refuse(
+        `period ${previous.periodCode} has a negative value (${previousValue}) — a percentage change from a negative base can be misleading, refusing rather than show it`,
+      );
+    }
+  }
+  const records: PeriodChangeRecord[] = [];
+  for (let i = 1; i < cells.length; i++) {
+    const previous = cells[i - 1] as ResultCell;
+    const current = cells[i] as ResultCell;
+    const previousValue = previous.value as number;
+    const currentValue = current.value as number;
+    const raw = ((currentValue - previousValue) / previousValue) * 100;
+    const rounded = Math.round(raw * 10) / 10 + 0; // + 0 collapses a -0 to 0
+    records.push({
+      kind: 'period_change',
+      explicit: false,
+      sourceResultIds: [previous.resultId, current.resultId],
+      unit: '%',
+      marking: DERIVED_DATA_MARKING,
+      value: rounded,
+      previousResultId: previous.resultId,
+      currentResultId: current.resultId,
+    });
+  }
+  return { ok: true, records };
 }

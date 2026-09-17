@@ -98,6 +98,14 @@ function derivationNumbers(d: DerivationRecord): number[] {
       // The exact expanded figure ("= 390.200") — backed so the display
       // splice's token classifies as derivation, never unbacked (ADR 031 D5).
       return [d.value];
+    case 'period_change':
+      // ADR 052: never appears in an answer BODY today (period_change
+      // records only ever ride the synthetic, chart-only ValidatedResult
+      // src/chart/period-change.ts builds, which composeAnswer never sees) —
+      // handled here defensively, the same way every other derivation kind
+      // is, so this switch stays exhaustive and a future prose caller isn't
+      // silently unbacked.
+      return [d.value];
   }
 }
 
@@ -800,7 +808,9 @@ function derivationSourceCells(d: DerivationRecord, cellsById: Map<string, Resul
         ? [d.firstResultId, d.lastResultId]
         : d.kind === 'unit_expansion'
           ? d.sourceResultIds
-          : [d.winnerResultId];
+          : d.kind === 'period_change'
+            ? [d.previousResultId, d.currentResultId]
+            : [d.winnerResultId];
   return ids.map((id) => cellsById.get(id)).filter((c): c is ResultCell => c !== undefined);
 }
 

@@ -169,6 +169,28 @@ export type DerivationRecord =
       /** source cell value × factor, exact (integer-scaled, never float
        * multiplication) and integer-valued by construction (ADR 031 D1). */
       value: number;
+    })
+  | (DerivationBase & {
+      /** ADR 052 (#254's level-vs-%-change gap): period-over-period percent
+       * change — (current − previous) / previous × 100, rounded to 1
+       * decimal — between two ADJACENT cells in a period-ordered,
+       * single-region, single-grain, gap-free series (never a skipped-ahead
+       * comparison; "adjacent" is grain-relative: month-over-month for
+       * monthly data, year-over-year for yearly). Computed only by
+       * `derivePeriodChangeSeries` (src/query/derivations.ts), which refuses
+       * the WHOLE series rather than emit one record on a null source cell,
+       * an irregular/mixed-grain gap, or a zero/negative previous-period
+       * base (principle c — a percentage from a non-positive base can be
+       * misleading, not just occasionally wrong). Never explicit: nothing in
+       * today's intent vocabulary asks for this directly (ADR 052
+       * Alternatives) — it exists only as a chart alternate-reading built by
+       * src/chart/period-change.ts over an already-answered primary series,
+       * the same "toggle an already-delivered reading" shape ADR 051 uses,
+       * never a second query. */
+      kind: 'period_change';
+      value: number;
+      previousResultId: string;
+      currentResultId: string;
     });
 
 /** #39: one non-chosen alternate reading of a canonical measure — the

@@ -1,0 +1,288 @@
+# ADR 052 — Period-over-period percent-change alternate reading
+
+**Status: DRAFT — built end to end in an isolated worktree (branch
+`period-over-period-percent-change`), NOT merged, NOT owner-approved.** This
+is a real design decision the product owner (Stefan) has not yet reviewed —
+see the "Open questions for the owner" section at the end. Do not treat
+anything here as settled until that review happens.
+
+## Context
+
+[Open-questions #254](../open-questions.md) named two genuine gaps in "what
+journalists want from a chart tool": (1) same-measure alternate readings
+(seasonally-adjusted vs. raw, index level vs. year-mutation) and (2)
+level-vs-%-change. Gap (1) shipped as the chart alternate-reading toggle
+([ADR 051](051-chart-alternate-reading-toggle.md), session 106→107, merged).
+Gap (2) was explicitly left open there: *"needs a new registered
+series-wide derivation and an ADR 011 revision, not an extension of the
+toggle mechanism."* This ADR is that follow-up.
+
+**This is a genuinely different mechanism from ADR 051, not a variant of
+it — worth stating precisely, because on first glance it looks like the same
+feature.** ADR 051's `buildAlternateReading` swaps `measure`/`dims` and
+**re-queries** the database for a *different CBS-published cell* — the
+alternate value is itself a real, independently-stored CBS observation
+(a companion seasonally-adjusted series, a companion index-level measure).
+Checked against the real registry (`src/registry/defaults.ts`), several
+canonical measures already have exactly this kind of alternate wired up —
+including some that read as "level vs. %-change" at a glance, e.g.
+`goods_imports_value` ↔ its alternate `M001608` ("de jaarmutatie in %"), or
+`house_price_index_regional` ↔ its alternate `M005355` ("de jaarmutatie van
+de index in %"). **Those are already served by ADR 051 today, at zero
+marginal cost, because CBS itself publishes the mutation as a separate
+measure column.** They are explicitly NOT part of this ADR's scope — no new
+code is needed for them, and duplicating a CBS-published mutation with our
+own arithmetic would risk a second, independently-rounded number disagreeing
+with CBS's own (a new honesty risk, not a feature).
+
+The actual gap is: **canonical measures whose primary reading is a level and
+which have NO CBS-published companion mutation measure at all** — population,
+housing stock, average home price, bankruptcies, solar production, household
+income. For those, the only way to offer a %-change reading is to **compute
+it ourselves**, from the already-validated level cells, through a genuinely
+new registered derivation. That computation is real arithmetic our own code
+performs on stored CBS values — exactly the class of thing [ADR
+011](011-query-contract.md) and R5 govern, hence the ADR 011 revision.
+
+## Decision
+
+**D1 — A new registered derivation kind, `period_change`, added to
+`DerivationRecord` (`src/query/types.ts`) and computed by a new pure function
+`derivePeriodChangeSeries` (`src/query/derivations.ts`) — the same file and
+the same discipline as `deriveDifference`/`deriveMax`/`deriveDirection` (R5:
+"derivations exist only as registered functions in the query module").**
+Precise definition: for a period-ordered, single-region series of cells at
+one grain, `period_change` is computed pairwise — period *N*'s value against
+period *N−1*, i.e. the *immediately preceding entry in that same series*.
+This is deliberately grain-agnostic in its definition (month-over-month for
+monthly data, quarter-over-quarter for quarterly, year-over-year for yearly)
+rather than a fixed calendar window, because the underlying series is already
+validated as a gap-free, single-grain sequence (`contiguousPeriodCodes`,
+existing helper) — "the previous period" always means the previous *stored*
+period, never a skipped-ahead comparison. This is a different, narrower
+concept than CBS's own "jaarmutatie" (always a same-period-last-year
+comparison, regardless of the series' own grain) — where CBS publishes that
+as a real measure, ADR 051 already serves it; this derivation fills the gap
+where CBS does not.
+
+**D2 — Refuse the WHOLE reading, never a partial one, on any of these
+(principle c):**
+- Fewer than 2 source cells, more than one region, or a null-valued cell
+  anywhere in the series (a CBS null-with-reason cell — reused
+  `checkComputable`/`checkSingleRegion` guards, unchanged from the existing
+  derivations).
+- The periods are not a gap-free, single-grain, ascending sequence
+  (`contiguousPeriodCodes` — reused, not reimplemented; this is exactly the
+  "irregular period spacing" refusal the brief asked for).
+- **Any step's previous-period value is zero or negative.** Division by zero
+  is refused outright (undefined); a negative base is refused because a
+  percentage computed from a negative base is not a stable, honestly
+  interpretable number (a move from −5 to +5 is arithmetically "+200%" but
+  reads as nonsense) — principle (c) says refuse rather than show something
+  that could mislead. Every measure this ADR marks eligible (D3) is normally
+  a strictly-positive level (a count, a price, an amount, a production
+  total), so this guard is a genuine backstop for real anomalies, not the
+  common case — but it is enforced code, not an assumption about the data.
+
+All-or-nothing matches every other refusal path in this codebase
+(`runQuery`'s completeness gate, `buildAlternateReading`'s period-match
+guard): a chart with silently-dropped points would imply a continuity the
+data doesn't have.
+
+**D3 — Eligibility is a hand-curated allowlist, `PERIOD_CHANGE_ELIGIBLE_KEYS`
+in `src/registry/defaults.ts`, keyed by canonical measure key — not a runtime
+heuristic ("does this measure's history happen to stay positive?").** New
+canonical measures are ineligible by default until a person reviews and adds
+them, same discipline as the registry's own `alternates` arrays. No database
+column, no migration: this is a code-level policy constant (like the R7
+safelist in ADR 024 — "the safelist is code, never configuration"), read
+directly by the answer pipeline, matching the "cheapest mechanism first"
+default (a hardcoded, reviewed list beats inferring eligibility from live
+data or adding schema).
+
+**Measures marked eligible** (7): `population_on_1_january`,
+`housing_stock_start_of_year`, `average_existing_home_sale_price`,
+`bankruptcies_businesses`, `solar_electricity_production`,
+`average_disposable_household_income`, `average_home_sale_price_by_gemeente`
+— all strictly-positive levels (counts, prices, amounts) with no CBS-published
+companion mutation measure.
+
+**Measures deliberately excluded, with reasons:**
+- Already a %-change/mutation reading as the PRIMARY (a %-change of a
+  %-change is a different, out-of-scope statistic; some already have a level
+  reachable via the ADR 051 toggle, from which this same gap would reopen —
+  logged as a follow-up, not built here): `cpi_yearly_inflation`,
+  `gdp_growth_yoy_volume`, `gdp_growth_qoq_volume`, `producer_prices_yoy`,
+  `import_prices_yoy`, `retail_turnover_yoy`, `supermarket_turnover_yoy`,
+  `goods_imports_yoy`, `goods_exports_yoy`, `household_consumption_growth`.
+- Already served by a CBS-published companion mutation measure via ADR 051
+  (adding our own computed version would be a second, possibly-disagreeing
+  number for the same fact — a new honesty risk, not a gap):
+  `goods_imports_value`, `goods_exports_value`, `house_price_index_regional`,
+  `producer_price_index_level` (this last one has no *registered* ADR 051
+  alternate yet even though CBS publishes one on the same table — a cheap,
+  independent registry-only follow-up, **not done in this change** to keep
+  this diff to the one new mechanism it was scoped for; flagged in
+  open-questions).
+- Already a rate/percentage, not a level (a %-change of a percentage risks
+  exactly the procentpunt-vs-percentage confusion R10 exists to guard
+  against): `unemployment_rate_seasonally_adjusted`,
+  `monthly_unemployment_seasonally_adjusted`.
+- Sentiment/balance indices that legitimately cross zero (consumentenvertrouwen
+  and its sub-indicators routinely sit near or below zero in real CBS data —
+  D2's positive-base guard would refuse most real questions, and even where it
+  wouldn't, a %-change of a balance-of-opinion index is not a meaningful
+  statistic): `consumer_confidence_seasonally_adjusted`,
+  `economic_climate_seasonally_adjusted`, `willingness_to_buy_seasonally_adjusted`.
+
+**D4 — A new module, `src/chart/period-change.ts`, exports
+`buildPeriodChangeReading(primary: ValidatedResult)` — a PURE, synchronous
+function, deliberately NOT a parallel to `buildAlternateReading`'s
+re-query shape.** It takes the already-fetched, already-validated primary
+result and transforms its own cells; it makes no database call and
+constructs no new `StructuredIntent`. This is a real, structural
+simplification over ADR 051's mechanism: there is no second `runQuery`, so
+none of `buildAlternateReading`'s documented eviction-race caveat applies
+here at all (that caveat exists specifically because `buildAlternateReading`
+builds a fresh `explicit` target against `resolve.ts`; this function never
+does). The function:
+1. Refuses unless `primary.shape === 'series'`.
+2. Calls `derivePeriodChangeSeries(primary.cells)` (D1/D2).
+3. Projects each derivation record into a synthetic `ResultCell` (value = the
+   computed percentage, unit `'%'`, decimals 1, `resultId` minted as
+   `${currentCell.resultId}#period_change` — clearly derived, never
+   colliding with a real coordinate id) and wraps them in a synthetic
+   `ValidatedResult` (`shape: 'series'`, `attribution` copied from the
+   primary with `alternates` dropped and `definitionLabel` extended to state
+   "procentuele verandering t.o.v. vorige periode").
+4. Feeds that synthetic result through the **existing, unmodified**
+   `buildChartSpec` — reusing R6 wholesale rather than re-implementing chart
+   assembly. This is the same reuse-over-reinvention approach ADR 051 itself
+   used for `runQuery`, applied one level down.
+
+**D5 — The reading rides the SAME `chartAlternates` sibling array ADR 051
+built (`AnswerResponse.chartAlternates: { label; spec }[]`), not a separate UI
+surface.** Concretely, `src/answer/respond/respond.ts` gains one extra
+line after the existing registry-alternates loop: when the primary intent's
+target is `canonical` and its key is in `PERIOD_CHANGE_ELIGIBLE_KEYS`, call
+`buildPeriodChangeReading(result)` and push its `{label, spec}` onto the same
+array the registry alternates already populate. **Chosen over a separate
+toggle/UI component because `chartAlternates` is already a generic,
+source-agnostic list** — `chart-view-state.ts`'s `activeReadingSpec` and
+every consumer (chat, the visual dock, the anonymous trial, the digit-honesty
+scan, the Embed-disable-on-non-primary-reading rule) already treat it as "any
+complete alternate `ChartSpec` with a label," never assuming *how* an entry
+was built. Zero UI code changes: chat, dock and the trial get the new reading
+for free, the Embed button already disables itself for ANY non-primary
+selection (ADR 051 D7), and the existing period-match philosophy naturally
+holds trivially (nothing here re-queries, so there is nothing to mismatch).
+The one new line is a genuinely tiny, low-risk touch to the answer pipeline;
+a bespoke second dropdown/toggle would have meant threading new state through
+`chart-view-state.ts`, `chat.tsx`, `visual-dock.tsx`, and `trial-chat.tsx`
+for no product benefit — "toggle between readings of the same chart" is
+exactly what the existing control already means to a reader.
+
+**D6 — The new derivation's cap is a flat +1 on top of the existing "first 4
+registry alternates," not folded into that same cap.** A canonical key can
+carry up to 4 registry alternates (household income does) AND, independently,
+one period-change reading if eligible — worst case 5 entries in
+`chartAlternates`, still small. Kept separate because the two lists come from
+structurally different places (registry data vs. a hardcoded eligibility set)
+and conflating them would make the registry's own 4-alternate comment
+("the highest count any registry entry carries today") describe a number
+that no longer matches what it counts.
+
+**D7 — No trend headline on the period-change chart.** `buildChartSpec` only
+emits `attribution.trendHeadline` when the result carries a `direction`
+derivation; the synthetic result here carries only `period_change` records.
+Computing `direction`/`first_last` over the %-change series itself (the
+"is the growth rate itself accelerating" question) is a real, separate
+question this ADR deliberately does not answer — silence here is the honest
+default (principle c: no invented headline) rather than a decision to
+suppress something computed.
+
+## Alternatives considered
+
+- **Add the missing measures' %-change as literal ADR 051 registry
+  `alternates` entries**, computing nothing new. Rejected as the general
+  solution: it only works where CBS *already publishes* the mutation as its
+  own measure on the same table (true for a handful of already-excluded keys
+  above, added to open-questions as a cheap follow-up) — it is structurally
+  impossible for population, housing stock, bankruptcies, home prices,
+  disposable income, and solar production, none of which have any such
+  CBS-published sibling measure to point an alternate at.
+- **A new `IntentDerivation` value** (extending the 4-value enum in ADR 011)
+  so the LLM could ask for a period-change series directly. Rejected for this
+  slice: nothing in today's product asks a user-facing question that needs
+  this as an intent-selectable derivation (it is a *reading* of an existing
+  series, exactly like ADR 051's toggle, not a new kind of question) — adding
+  it to the LLM-facing vocabulary would be schema surface with no current
+  consumer. `DerivationRecord` (the OUTPUT vocabulary) gains the new kind;
+  `IntentDerivation` (the INPUT vocabulary) is untouched. If a future
+  benchmark task ever asks "what was the percentage change last year" as a
+  literal intent, that is the trigger to revisit (see below).
+- **Re-deriving via a second `runQuery` against an `explicit` target**,
+  mirroring `buildAlternateReading`'s shape exactly. Rejected: there is no
+  second CBS cell to query for these measures — the transform operates on
+  the primary's own already-fetched cells, so a re-query would be pure
+  overhead (and would reintroduce the eviction-race class of caveat
+  `buildAlternateReading` has to carry, for no benefit).
+- **Auto-detect eligibility from the data** (e.g. "offer the toggle whenever
+  every historical value happens to be positive"). Rejected: silently
+  data-dependent behavior (a measure's toggle could appear or disappear
+  across syncs) is exactly the kind of implicit, unreviewed guess principle
+  (c) and the registry's own curation discipline exist to prevent. A human
+  reviews and opts a measure in, once, in code.
+
+## Consequences
+
+- 7 canonical measures gain a genuinely new, computed alternate reading in
+  chat, the visual dock, and the anonymous trial, at zero extra query cost
+  (no second `runQuery`) and zero extra LLM cost (same as every other
+  reading toggle).
+- A 2-cell primary series (the minimum for `shape: 'series'`) yields a
+  period-change chart with exactly one plotted point — technically honest,
+  visually thin. Not fixed here; a candidate UX nicety for later (e.g. only
+  offering the toggle once ≥3 raw points exist), logged as an open question
+  below rather than decided unilaterally.
+- `producer_price_index_level`'s existing gap (no ADR 051 alternate for its
+  own CBS-published mutation measure) stays open — a cheap, unrelated,
+  registry-only follow-up, logged in open-questions rather than folded into
+  this diff.
+- The new `period_change` `DerivationRecord` kind is additive to a
+  discriminated union with no exhaustive switch anywhere in the codebase over
+  `DerivationRecord['kind']` (checked: every existing consumer is a `.find`/
+  equality check, not a switch) — this change cannot break an existing
+  compile-time exhaustiveness check because none exists.
+
+## Revisit triggers
+
+- A future benchmark task or user-facing feature needs the LLM to *ask* for a
+  period-change series (not just toggle an already-delivered one) — that is
+  the trigger to extend `IntentDerivation` itself, not this ADR's mechanism.
+- `producer_price_index_level` (or any other level-with-an-unregistered-CBS-
+  mutation measure) gets its own ADR 051 alternate — shrinks this ADR's
+  eligible set's justification by exactly that one entry, not a contradiction.
+- The 2-cell/1-point chart edge case (Consequences above) turns out to matter
+  in practice — add a minimum-points gate, a owner-confirmable UX choice.
+
+## Open questions for the owner (none of this is decided without your say)
+
+1. **Does the 7-measure eligible list match your judgment of "correctly and
+   safely computable"?** In particular: do you want household income's
+   *alternate* income concepts (primair/bruto/gestandaardiseerd — reachable
+   today only via the ADR 051 dropdown) to also get this toggle, or is the
+   default (besteedbaar inkomen only) the right scope for v1?
+2. **Is reusing the exact same reading dropdown (D5) the right UX**, or would
+   you rather this be a visually distinct control (e.g. a separate "toon als
+   %" switch next to the existing reading dropdown) so a reader can tell "a
+   different definition of the same thing" (ADR 051) apart from "the same
+   thing, shown as a rate of change" (this ADR)? Both are literally toggling
+   the same underlying chart-spec-swap mechanism; the difference is purely
+   how it reads to a journalist.
+3. **The Dutch label wording** — "Procentuele verandering t.o.v. vorige
+   periode" was chosen to match the registry's existing alternate-label
+   style; happy to change it.
+4. **Should `producer_price_index_level` get its missing ADR 051 alternate
+   as a quick, separate follow-up** (registry-only, no new code), closing
+   that one residual gap noted above?

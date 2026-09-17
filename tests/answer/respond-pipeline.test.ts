@@ -302,6 +302,58 @@ describe('chartAlternates (#254)', () => {
   });
 });
 
+describe('period-over-period percent-change alternate reading (ADR 052, DRAFT — not owner-approved)', () => {
+  it('B8 (average_existing_home_sale_price, a period-change-eligible series) gets an EXTRA entry alongside its registry alternate', async () => {
+    const response = await respondToQuestion(db, ANSWERABLE_TASKS.B8!.question, respondOptions());
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    expect(response.chart).not.toBeNull();
+    // The registry alternate (prijsindex) PLUS the new period-change reading
+    // — proving the two mechanisms compose (ADR 052 D6: a flat +1, not
+    // folded into the registry-alternates cap).
+    expect(response.chartAlternates.length).toBe(2);
+    const pctChange = response.chartAlternates.find((a) => a.label === 'Procentuele verandering t.o.v. vorige periode');
+    expect(pctChange).toBeDefined();
+    if (!pctChange) throw new Error('unreachable');
+    expect(pctChange.spec.unit).toBe('%');
+    // One point per adjacent PAIR of primary points — one fewer than the
+    // primary series (2019..2024 = 6 points -> 5 pairwise changes).
+    expect(pctChange.spec.series[0]!.points.length).toBe(response.chart!.series[0]!.points.length - 1);
+    // Every plotted value is a real, finite computed percentage — never a
+    // fabricated or missing number for a series this benchmark task proves
+    // is fully dense (no null cells).
+    for (const point of pctChange.spec.series[0]!.points) {
+      expect(point.value).not.toBeNull();
+      expect(Number.isFinite(point.value)).toBe(true);
+    }
+  });
+
+  it('B4 (cpi_yearly_inflation, already a %-change measure — deliberately NOT on the eligibility list) gets no extra entry', async () => {
+    const response = await respondToQuestion(db, ANSWERABLE_TASKS.B4!.question, respondOptions());
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    // Exactly the one registry alternate (the CPI index level) pinned by the
+    // '#254' describe block above — no period-change entry alongside it.
+    expect(response.chartAlternates.length).toBe(1);
+    expect(response.chartAlternates.some((a) => a.label === 'Procentuele verandering t.o.v. vorige periode')).toBe(false);
+  });
+
+  it('B7 (average_existing_home_sale_price, but a SINGLE period — no chart at all) gets no extra entry', async () => {
+    // Same key as B8 above, but this question asks for one year only:
+    // shape 'single' builds no chart (pre-existing respond.ts gate, same one
+    // B11's test above pins), so the whole chartAlternates block — registry
+    // alternates AND the new period-change check — never runs. The PRIMARY's
+    // own shape guard inside buildPeriodChangeReading itself (a 'comparison'
+    // or 'derived' shape reaching the function some other way) is unit-tested
+    // directly in tests/chart/period-change.test.ts.
+    const response = await respondToQuestion(db, ANSWERABLE_TASKS.B7!.question, respondOptions());
+    expect(response.kind).toBe('answer');
+    if (response.kind !== 'answer') throw new Error('unreachable');
+    expect(response.chart).toBeNull();
+    expect(response.chartAlternates).toEqual([]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // The clarification round (benchmark/clarification-cases.json)
 // ---------------------------------------------------------------------------

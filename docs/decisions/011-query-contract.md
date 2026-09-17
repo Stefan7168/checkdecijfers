@@ -65,6 +65,24 @@ traceability (R1), and the refusal taxonomy (principle c). All live in
   (CBS wire metadata carries stray double/trailing spaces); codes stay
   verbatim.
 
+## Addendum (DRAFT, 2026-09-17 — not owner-approved, see ADR 052)
+
+[ADR 052](052-period-over-period-percent-change.md) adds a new
+`DerivationRecord` kind, `period_change` (period-over-period percent change,
+computed by a new registered function `derivePeriodChangeSeries`), to the
+registered-derivation vocabulary this ADR's decision #4 describes. This is
+narrower than it may sound: it extends the OUTPUT vocabulary
+(`DerivationRecord`, the "what a registered function may compute" list) —
+`IntentDerivation` (the four-value INPUT vocabulary a `StructuredIntent` may
+select, decision #1 above) is untouched, because nothing today asks the LLM
+to select a period-change series directly; it exists only as a chart
+alternate-reading built over an already-answered primary series, the same
+"toggle an already-delivered reading" shape [ADR 051](051-chart-alternate-reading-toggle.md)
+uses. See ADR 052 for the full design and its own explicit Alternatives entry
+on why `IntentDerivation` itself was left alone. **This addendum, and ADR
+052, are both DRAFT — built in an isolated worktree, not yet reviewed by the
+product owner or merged.**
+
 ## Revisit triggers
 
 - A benchmark-shaped question needs several regions *and* several periods

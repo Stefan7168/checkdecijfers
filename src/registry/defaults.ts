@@ -569,3 +569,42 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
       'Jaarcijfers 1995-2025, alle Definitief; opgeheven gemeenten houden lege cellen met reden "Impossible" na hun opheffing (R11). De kale term "huizenprijs" blijft bij average_existing_home_sale_price (85773NED) — deze key is de per-gemeente/regionale lezing (#160(b)).',
   },
 ];
+
+/** #254 (ADR 052, DRAFT — not yet owner-approved): canonical measures
+ * eligible for the PERIOD-OVER-PERIOD PERCENT-CHANGE alternate reading — a
+ * NEW, code-computed derivation (src/chart/period-change.ts,
+ * derivePeriodChangeSeries), distinct from this file's `alternates` arrays
+ * above (which point at a DIFFERENT, CBS-published measure/dims coordinate;
+ * this list instead marks a measure safe for OUR OWN arithmetic over its own
+ * already-answered series). Hand-curated, like `alternates`: a measure
+ * qualifies only when (a) its primary reading is a LEVEL, not already a
+ * %-change/mutation measure itself (a %-change of a %-change is a different,
+ * out-of-scope statistic — cpi_yearly_inflation, the gdp_growth_* keys,
+ * producer_prices_yoy, import_prices_yoy, retail/supermarket_turnover_yoy,
+ * goods_imports_yoy/goods_exports_yoy and household_consumption_growth are
+ * all already %-change readings), (b) it has no CBS-published companion
+ * mutation measure already reachable via this file's own `alternates`
+ * (goods_imports_value/goods_exports_value/house_price_index_regional
+ * already have one — computing our own would risk a second, independently-
+ * rounded number disagreeing with CBS's own), (c) it is not itself already a
+ * rate/percentage (unemployment_rate_seasonally_adjusted and
+ * monthly_unemployment_seasonally_adjusted stay out — a %-change of a
+ * PERCENTAGE risks exactly the procentpunt-vs-percentage confusion R10
+ * guards against), and (d) the underlying magnitude is a level that is
+ * normally strictly positive (consumer_confidence_seasonally_adjusted and
+ * its two sub-indicators stay out: a sentiment/balance index that routinely
+ * sits near or crosses zero would refuse under derivePeriodChangeSeries'
+ * own zero/negative-base guard most of the time, and even where it wouldn't,
+ * a %-change of a balance-of-opinion index is not a meaningful statistic).
+ * Never auto-derived from live data — a new canonical measure is ineligible
+ * by default until a person reviews and adds its key here. Full reasoning:
+ * docs/decisions/052-period-over-period-percent-change.md. */
+export const PERIOD_CHANGE_ELIGIBLE_KEYS: ReadonlySet<string> = new Set([
+  'population_on_1_january',
+  'housing_stock_start_of_year',
+  'average_existing_home_sale_price',
+  'bankruptcies_businesses',
+  'solar_electricity_production',
+  'average_disposable_household_income',
+  'average_home_sale_price_by_gemeente',
+]);

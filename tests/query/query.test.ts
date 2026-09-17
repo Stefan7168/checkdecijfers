@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { enumeratePeriods, runQuery, contiguousPeriodCodes } from '../../src/query/index.ts';
 import type { QueryRefusal, ResultCell, StructuredIntent } from '../../src/query/index.ts';
-import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax } from '../../src/query/derivations.ts';
+import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, derivePeriodChangeSeries } from '../../src/query/derivations.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -168,6 +168,99 @@ describe('derivation semantics (pure — the independent oracle for what these w
     if (!firstLast.ok || firstLast.record.kind !== 'first_last') throw new Error('expected first_last');
     expect(firstLast.record.firstResultId).toBe(oneRegion[0]!.resultId);
     expect(firstLast.record.lastResultId).toBe(oneRegion[oneRegion.length - 1]!.resultId);
+  });
+});
+
+describe('derivePeriodChangeSeries (ADR 052, DRAFT — not owner-approved; pure — the independent oracle)', () => {
+  function cellAt(periodCode: string, region: string, value: number | null): ResultCell {
+    return {
+      resultId: `t:m:${region || '-'}:${periodCode}:-`,
+      tableId: 't', measure: 'm', measureTitle: 'm', regionCode: region || null,
+      regionLabel: region || null, periodCode, periodLabel: periodCode, grain: 'JJ',
+      dims: {}, dimLabels: {}, value, unit: 'aantal', decimals: 0,
+      status: 'Definitief', provisional: false, valueAttribute: value === null ? 'Impossible' : 'None',
+      batchId: 1,
+    };
+  }
+  const series = (...values: (number | null)[]) => values.map((v, i) => cellAt(`${2019 + i}JJ00`, '', v));
+
+  it('computes (current - previous) / previous * 100, rounded to 1 decimal, one record per adjacent pair', () => {
+    const result = derivePeriodChangeSeries(series(100, 110, 99));
+    if (!result.ok) throw new Error(`expected ok, got refusal: ${result.reason}`);
+    expect(result.records).toHaveLength(2);
+    expect(result.records[0]!.kind).toBe('period_change');
+    expect(result.records[0]!.value).toBe(10); // (110-100)/100*100
+    expect(result.records[1]!.value).toBeCloseTo(-10, 1); // (99-110)/110*100 = -10.0
+    expect(result.records[0]!.unit).toBe('%');
+    expect(result.records[0]!.explicit).toBe(false);
+  });
+
+  it('sourceResultIds / previousResultId / currentResultId name the exact two adjacent source cells', () => {
+    const cells = series(100, 110);
+    const result = derivePeriodChangeSeries(cells);
+    if (!result.ok) throw new Error(`expected ok, got refusal: ${result.reason}`);
+    expect(result.records[0]!.previousResultId).toBe(cells[0]!.resultId);
+    expect(result.records[0]!.currentResultId).toBe(cells[1]!.resultId);
+    expect(result.records[0]!.sourceResultIds).toEqual([cells[0]!.resultId, cells[1]!.resultId]);
+  });
+
+  it('REFUSES rather than fabricate a percentage when a step\'s base value is zero (division by zero)', () => {
+    const result = derivePeriodChangeSeries(series(0, 5));
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toContain('value 0');
+  });
+
+  it('REFUSES rather than fabricate a misleading percentage when a step\'s base value is negative', () => {
+    const result = derivePeriodChangeSeries(series(-5, 5));
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toContain('negative');
+  });
+
+  it('refuses the WHOLE series, not just the bad step, when only ONE step has a non-positive base', () => {
+    // Two genuinely computable steps (100->110, 99->105) sandwich one zero
+    // base (110->0->99) — the all-or-nothing rule means the two good steps
+    // must not be served either (principle c: a chart with a silent gap in
+    // the middle would still imply a continuity the data doesn't have).
+    const result = derivePeriodChangeSeries(series(100, 110, 0, 99, 105));
+    expect(result.ok).toBe(false);
+  });
+
+  it('refuses a null-valued source cell — never skips it', () => {
+    expect(derivePeriodChangeSeries(series(100, null, 120)).ok).toBe(false);
+  });
+
+  it('refuses more than one region — a first-vs-last-style trend needs one place over time', () => {
+    const crossRegion = [cellAt('2019JJ00', 'GM0363', 10), cellAt('2020JJ00', 'GM0599', 15)];
+    expect(derivePeriodChangeSeries(crossRegion).ok).toBe(false);
+  });
+
+  it('refuses fewer than 2 cells', () => {
+    expect(derivePeriodChangeSeries(series(100)).ok).toBe(false);
+    expect(derivePeriodChangeSeries([]).ok).toBe(false);
+  });
+
+  it('refuses an irregular/gappy period sequence rather than compare non-adjacent periods', () => {
+    // 2019, 2020, then a jump to 2023 — contiguousPeriodCodes' own gate.
+    const gappy = [cellAt('2019JJ00', '', 100), cellAt('2020JJ00', '', 110), cellAt('2023JJ00', '', 130)];
+    const result = derivePeriodChangeSeries(gappy);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toContain('gap-free');
+  });
+
+  it('refuses mixed-grain cells (contiguousPeriodCodes\' own single-grain rule)', () => {
+    const mixedGrain = [cellAt('2019JJ00', '', 100), { ...cellAt('2019KW04', '', 110) }];
+    expect(derivePeriodChangeSeries(mixedGrain).ok).toBe(false);
+  });
+
+  it('a rise from a small positive base is a real, large, honestly-computed percentage — not a refusal', () => {
+    // Guards against over-broadly treating "small previous value" as unsafe:
+    // only zero/negative bases refuse, never merely a SMALL positive one.
+    const result = derivePeriodChangeSeries(series(1, 5));
+    if (!result.ok) throw new Error(`expected ok, got refusal: ${result.reason}`);
+    expect(result.records[0]!.value).toBe(400);
   });
 });
 

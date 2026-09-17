@@ -18,7 +18,7 @@ import {
   type QueryOutcome,
   type ValidatedResult,
 } from '../../query/index.ts';
-import { buildAlternateReading, buildChartSpec } from '../../chart/index.ts';
+import { buildAlternateReading, buildChartSpec, buildPeriodChangeReading, isPeriodChangeEligible } from '../../chart/index.ts';
 import type { ChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
@@ -507,6 +507,20 @@ export async function respondToIntent(
     for (const alt of (result.attribution.alternates ?? []).slice(0, 4)) {
       const outcome = await buildAlternateReading(db, result, parse.intent, alt);
       if (outcome.ok) chartAlternates.push(outcome.result);
+    }
+    // ADR 052 (#254's level-vs-%-change gap): a DIFFERENT mechanism from the
+    // registry-alternates loop above — no re-query, a pure transform of
+    // `result`'s own cells (src/chart/period-change.ts) — offered as one
+    // EXTRA entry on the same dropdown, deliberately not folded into the
+    // 4-alternate cap above (ADR 052 D6: the two lists come from
+    // structurally different places). Gated on the intent's own canonical
+    // key, not on `result.attribution.alternates` (a measure can be
+    // period-change-eligible with zero registry alternates of its own, e.g.
+    // solar_electricity_production). Best-effort, same degrade-on-refusal
+    // contract as the loop above.
+    if (parse.intent.target.kind === 'canonical' && isPeriodChangeEligible(parse.intent.target.key)) {
+      const pctOutcome = buildPeriodChangeReading(result);
+      if (pctOutcome.ok) chartAlternates.push(pctOutcome.result);
     }
   }
   const text = staleness.stale ? `${answer.text}\n\n${staleness.warning}` : answer.text;
