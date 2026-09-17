@@ -82,7 +82,9 @@ describe('CreditsPage — en', () => {
   it('renders the English balance line and heading', async () => {
     getLang.mockResolvedValue('en');
     render(await CreditsPage({ searchParams: emptySearch }));
-    expect(screen.getByText('Credits — Check de Cijfers')).toBeInTheDocument();
+    // Row 14 (session 110 UX audit): the h1 is just "Credits", not "Credits
+    // — Check de Cijfers" (the site name isn't repeated in the heading).
+    expect(screen.getByRole('heading', { level: 1, name: 'Credits' })).toBeInTheDocument();
     expect(screen.getByText(/Your current balance:/)).toHaveTextContent('Your current balance: 80 credits.');
   });
 

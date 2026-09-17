@@ -225,7 +225,7 @@ const nl = {
   // login/login-form.tsx, login/page.tsx, login/actions.ts. googleFailed is
   // shared between the server action's own return value and the client's
   // (near-unreachable) post-unstable_rethrow fallback — one sentence, one key.
-  'login.pageHeading': 'Inloggen — Check de Cijfers',
+  'login.pageHeading': 'Inloggen',
   'login.pageBody': 'Vul je e-mailadres in; je krijgt een inloglink toegestuurd. Geen wachtwoord nodig.',
   'login.sentMessage': 'Check je e-mail voor de inloglink.',
   'login.emailPlaceholder': 'jij@voorbeeld.nl',
@@ -237,7 +237,7 @@ const nl = {
   'login.googleFailed': 'Inloggen met Google is niet gelukt. Probeer het opnieuw of gebruik de inloglink.',
 
   // app/credits/*.
-  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.pageHeading': 'Credits',
   'credits.balancePrefix': 'Je huidige saldo:',
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
@@ -263,7 +263,7 @@ const nl = {
   'history.older': 'Ouder',
 
   // app/geschiedenis/page.tsx.
-  'history.pageHeading': 'Geschiedenis — Check de Cijfers',
+  'history.pageHeading': 'Geschiedenis',
 
   // question-history.tsx (Server Component; onboarding.failureSummary itself
   // is backend text and is never translated — only the fixed template words
@@ -1041,7 +1041,7 @@ const en: Messages = {
     'You pay per question with credits — no subscription. Creating an account is free and takes seconds: enter your email, click the login link, start asking.',
   'common.createFreeAccount': 'Create a free account',
 
-  'login.pageHeading': 'Log in — Check de Cijfers',
+  'login.pageHeading': 'Log in',
   'login.pageBody': 'Enter your email address; you will get a login link. No password needed.',
   'login.sentMessage': 'Check your email for the login link.',
   'login.emailPlaceholder': 'you@example.com',
@@ -1052,7 +1052,7 @@ const en: Messages = {
   'login.magicLinkFailed': 'Something went wrong sending the login link. Please try again.',
   'login.googleFailed': 'Signing in with Google did not work. Please try again or use the login link.',
 
-  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.pageHeading': 'Credits',
   'credits.balancePrefix': 'Your current balance:',
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
@@ -1072,7 +1072,7 @@ const en: Messages = {
   'history.last7': 'Last 7 days',
   'history.older': 'Older',
 
-  'history.pageHeading': 'History — Check de Cijfers',
+  'history.pageHeading': 'History',
 
   'history.empty': 'No previous questions yet.',
   'history.heading': 'Previous questions',

@@ -33,7 +33,9 @@ describe('/login stripped header (#135 residual)', () => {
     process.env.WORKSPACE_ENABLED = '1';
     render(await LoginPage());
     expect(screen.getByRole('link', { name: 'Check de Cijfers' })).toBeInTheDocument();
-    expect(screen.getByText('Inloggen — Check de Cijfers')).toBeInTheDocument();
+    // Row 14 (session 110 UX audit): the h1 is just "Inloggen" — the site
+    // name already appears once, in the header link asserted above.
+    expect(screen.getByRole('heading', { level: 1, name: 'Inloggen' })).toBeInTheDocument();
   });
 
   it('stays header-less with the flag off (ADR 033 ⟨A5⟩: byte-identical)', async () => {
@@ -41,7 +43,7 @@ describe('/login stripped header (#135 residual)', () => {
     delete process.env.WORKSPACE_ENABLED;
     render(await LoginPage());
     expect(screen.queryByRole('link', { name: 'Check de Cijfers' })).toBeNull();
-    expect(screen.getByText('Inloggen — Check de Cijfers')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Inloggen' })).toBeInTheDocument();
   });
 });
 
@@ -50,7 +52,7 @@ describe('/login — en', () => {
   it('renders the English heading and body under getLang() -> "en"', async () => {
     getLang.mockResolvedValue('en');
     render(await LoginPage());
-    expect(screen.getByText('Log in — Check de Cijfers')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Log in' })).toBeInTheDocument();
     expect(
       screen.getByText('Enter your email address; you will get a login link. No password needed.'),
     ).toBeInTheDocument();
