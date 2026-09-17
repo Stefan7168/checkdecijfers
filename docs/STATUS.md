@@ -39,6 +39,10 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   pass-2 rows 18/19 (source-aware footer on Eurostat pages; the "go Pro" pitch in embed footers).
 - **Chart export** — PDF (vector) + "PNG, chart only (transparent)" ([ADR 053](decisions/053-chart-export-formats.md)); defaults byte-identical.
 - **[#23](open-questions.md) alerts COMPLETE** — missed-sync (cadence from `period_semantics`) + health-probe, both on the daily cron.
+- **Wave 9:** pass-3 design rows built (hbar extreme labels, one colour per comparison, "Hoogste/
+  Laagste" insight titles, an honest multi-region × multi-period refusal + offer chips) and a
+  **Playwright e2e smoke in CI** through the hermetic harness (`continue-on-error` until first green —
+  flip it in `.github/workflows/ci.yml` once run green).
 - **Waves 7–8:** a third UX audit (via the harness's intent injector) + an axe-core audit, all
   mechanical rows FIXED — **P1** the proof panel was missing on every STORED answer (a `'use client'`
   import in a server path, throw swallowed); comparison charts open on horizontal bars at every
@@ -54,7 +58,7 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   [#134](open-questions.md)(c) refusal offer chip; 16–40-series comparisons open on hbar;
   [#245](open-questions.md) Action 3 test-DB reset helper (795 s → 200 s over 40 files).
 
-**Measured (final tree, after wave 8):** backend 182 files / 2681 tests, web 120 / 2041, benchmark
+**Measured (final tree, after wave 9):** backend 183 files / 2698 tests, web 120 / 2051 (+ 5 Playwright e2e), benchmark
 14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings (both batches), root + web
 typecheck clean. First batch (`2bdbb4c`, run `35196289551`): backend 180/2666, web 117/1933.
 
