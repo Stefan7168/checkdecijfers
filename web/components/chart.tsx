@@ -3529,6 +3529,7 @@ export function ChartView({
               frame={pres}
               frameImage={frameImage}
               headlineText={chartHeadline}
+              syncedAt={activeSpec.attribution.syncedAt}
             />
             {embed ? (
               /* #254: the PRIMARY's table id, deliberately — an embed
@@ -3685,6 +3686,7 @@ export function ChartView({
             frame={pres}
             frameImage={frameImage}
             headlineText={chartHeadline}
+            syncedAt={activeSpec.attribution.syncedAt}
           />
         ) : null}
         {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (

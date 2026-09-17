@@ -409,6 +409,11 @@ const nl = {
   'chart.download.menuLabel': 'Downloadformaat',
   'chart.download.png': 'Download als PNG',
   'chart.download.svg': 'Download als SVG',
+  // #215 (ADR 053): vector export as PDF, and a chart-only PNG for external
+  // layout work — label says plainly what it leaves out, since the file
+  // itself carries no source line to say so.
+  'chart.download.pdf': 'Download als PDF',
+  'chart.download.pngTransparent': 'PNG, alleen grafiek (transparant, zonder bronregel)',
   'chart.download.failed': 'Downloaden lukte niet in deze browser.',
 
   // chart-small-multiples.tsx.
@@ -1171,6 +1176,8 @@ const en: Messages = {
   'chart.download.menuLabel': 'Download format',
   'chart.download.png': 'Download as PNG',
   'chart.download.svg': 'Download as SVG',
+  'chart.download.pdf': 'Download as PDF',
+  'chart.download.pngTransparent': 'PNG, chart only (transparent, no source line)',
   'chart.download.failed': 'Download did not work in this browser.',
 
   'chart.smallMultiplesGroupLabel': 'Small multiples per series',
