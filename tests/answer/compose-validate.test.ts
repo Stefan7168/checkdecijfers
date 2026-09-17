@@ -143,6 +143,28 @@ describe('R9: semantic binding', () => {
     const report = validateAnswerBody('De bevolking op 1 januari in Nederland was in 2024 18.044.027 inwoners.', populationSingle);
     expect(report.ok).toBe(false);
   });
+
+  it('ADR 055 pass-4 row 12 (2026-09-17): a CBS-qualified region label still binds via the base-label substring check', () => {
+    // sentenceMentionsCellRegion matches on baseRegionLabel(cell.regionLabel)
+    // as a case-insensitive SUBSTRING — so a body that keeps the qualifier
+    // ("Utrecht (gemeente)", the exact colliding-name case renderRegionSeries
+    // now writes verbatim) still binds without any change to that function.
+    const utrecht = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          measureTitle: 'Bevolking op 1 januari',
+          region: { code: 'GM0344', label: 'Utrecht (gemeente)' },
+          periodCode: '2024JJ00', periodLabel: '2024', value: 374238, unit: 'aantal',
+        }),
+      ],
+    });
+    const ok = validateAnswerBody('Utrecht (gemeente) telde in 2024 374.238 inwoners.', utrecht);
+    expect(ok.problems).toEqual([]);
+    // The base form alone also still binds (unaffected, regression check).
+    const alsoOk = validateAnswerBody('Utrecht telde in 2024 374.238 inwoners.', utrecht);
+    expect(alsoOk.problems).toEqual([]);
+  });
 });
 
 describe('R9: direction, superlative and comparison words', () => {
@@ -322,6 +344,34 @@ describe('#264 (task 5): region-aware trend backing for multi-`direction` result
     const body = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen); Rotterdam daalde de afgelopen jaren.';
     const report = validateAnswerBody(body, twoRegionResult);
     expect(report.problems).toEqual([]);
+  });
+
+  it('ADR 055 pass-4 row 13 (2026-09-17): a NEWLINE binds a two-region trend answer exactly like a period/semicolon does', () => {
+    // splitSentences now treats '\n' as a sentence boundary too, which is
+    // what lets renderRegionSeries emit one "– region" LINE per region
+    // instead of one semicolon-joined sentence. Same two claims as the test
+    // above, joined by '\n' with no semicolon at all — must accept exactly
+    // as readily.
+    const body = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen)\nRotterdam daalde de afgelopen jaren.';
+    const report = validateAnswerBody(body, twoRegionResult);
+    expect(report.problems).toEqual([]);
+  });
+
+  it('ADR 055 pass-4 row 13: a region name swapped between two newline-joined lines is rejected — the per-line scope is real, not cosmetic', () => {
+    // Both lines' NUMBERS stay exactly where they are (R1 is still happy —
+    // every value is a genuine cell of this result); only the LEADING region
+    // name on each line is swapped with the other's. If '\n' were not a
+    // sentence boundary, both region names would sit in one giant "sentence"
+    // and checkBinding's "is this cell's region mentioned ANYWHERE in scope"
+    // would pass by accident, since both names still occur somewhere in that
+    // one blob. With '\n' as a real boundary, each line is scoped to itself,
+    // so the swap must fail.
+    const correct = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen)\nRotterdam ging van 651.446 in 2020 naar 630.000 in 2022 (gedaald).';
+    expect(validateAnswerBody(correct, twoRegionResult).problems).toEqual([]);
+    const swapped = 'Rotterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen)\nAmsterdam ging van 651.446 in 2020 naar 630.000 in 2022 (gedaald).';
+    const report = validateAnswerBody(swapped, twoRegionResult);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => /R9:.*regio waar hij bij hoort/.test(p))).toBe(true);
   });
 });
 

@@ -128,46 +128,39 @@ const TREND_PARTICIPLE_BY_DIRECTION: Record<'up' | 'down' | 'flat', string> = {
   flat: 'gelijk gebleven',
 };
 
-/** ADR 055 — one measure, 2..REGION_SERIES_MAX_REGIONS EXPLICITLY NAMED
- * regions, over a period range: one clause per region.
- *
- * **MS1 is implemented here exactly the way RS1 is implemented in
- * renderRegionSet: by keying on the existence of a DERIVATION RECORD, never
- * by filtering words out of prose.** run.ts produces a `direction` (and a
- * `first_last`) record per region that has a value at EVERY requested period,
- * computed by the registered functions over that region's own cells alone
- * (deriveDirection's checkSingleRegion is what makes a per-region slice the
- * only legal input). A region with any gap simply has no record, so this
- * renderer has nothing to phrase a direction from and writes no clause for
- * it at all — and R9 then fails any trend word about that region closed from
- * the other side. Its cells still DRAW (chart gaps + nullNotes, R11) and its
- * coverage is disclosed by the structural line buildRegionSeriesLine builds.
- *
- * **No cross-region claim of any kind is made or supported**: no registered
- * derivation ranks change across regions (deriveMax refuses a multi-period
- * cells array, and run.ts additionally gates it off this shape), so there is
- * no `max` record here and a superlative would fail R9 closed.
- *
- * Clause boundaries are ';'/':'/', ' (validate.ts splitClauses), so each
- * region's direction word sits in a clause carrying that region's OWN two
- * endpoint values and its own name — which is exactly what
- * resolveTrendBacking needs to bind the word to that region's record and
- * nothing else (MS1, the validator half, task 5).
- *
- * With NO region carrying a record the body falls back to renderSeries' own
- * claim-free per-cell listing — the fail-closed floor of the R3 ladder, each
- * line naming its region, period and value, no trend word anywhere. */
-function renderRegionSeries(result: ValidatedResult): string {
+/** One region's phraseable clause data: the two endpoint cells and the
+ * direction record's own word, in BOTH label forms — `fullLabel` (verbatim
+ * CBS label, e.g. "Utrecht (gemeente)") for the live renderer since ADR 055
+ * pass-4 row 12, and `baseLabel` (qualifier stripped) kept only for
+ * `renderRegionSeriesLegacyPreLineFormat` below, which reconstruct.ts uses
+ * for rows stored before that change. Shared by both renderers so the DATA
+ * (which regions get a clause, and from which cells) can never drift between
+ * them — only the wording differs. */
+interface RegionSeriesClause {
+  fullLabel: string;
+  baseLabel: string;
+  first: ResultCell;
+  last: ResultCell;
+  direction: 'up' | 'down' | 'flat';
+}
+
+/** ADR 055 MS1, mechanised: one entry per region that has its OWN `direction`
+ * record (computed over that region's cells alone — deriveDirection's
+ * checkSingleRegion is what makes a per-region slice the only legal input).
+ * A region with any gap at any requested period simply has no record here,
+ * so neither renderer below has anything to phrase a direction from for it —
+ * and R9 fails any trend word about that region closed from the other side.
+ * The intent's own region order is used (`result.regionSeries?.requested`,
+ * which is also the chart's series order, R6), with a fallback that keeps
+ * this total for a hand-built result rather than throwing inside the
+ * fail-closed floor of the R3 ladder — the same defensive posture
+ * renderRegionSet takes with `scope`. */
+function regionSeriesClauses(result: ValidatedResult): RegionSeriesClause[] {
   const byId = new Map(result.cells.map((c) => [c.resultId, c]));
-  // The intent's own region order — which is also the chart's series order
-  // (R6: the chart is a verbatim projection, spec order is render order). The
-  // fallback keeps this renderer total for a hand-built result rather than
-  // throwing inside the fail-closed floor of the R3 ladder, the same
-  // defensive posture renderRegionSet takes with `scope`.
   const requested =
     result.regionSeries?.requested ??
     [...new Set(result.cells.map((c) => c.regionCode).filter((code): code is string => code !== null))];
-  const clauses: string[] = [];
+  const clauses: RegionSeriesClause[] = [];
   for (const regionCode of requested) {
     const direction = result.derivations.find(
       (d): d is Extract<DerivationRecord, { kind: 'direction' }> =>
@@ -180,15 +173,86 @@ function renderRegionSeries(result: ValidatedResult): string {
     // always cells of the same result, and a record only exists for a region
     // whose every cell carries a value) — fail closed rather than throw.
     if (first?.value == null || last?.value == null) continue;
-    const name = first.regionLabel === null ? regionCode : baseRegionLabel(first.regionLabel);
-    clauses.push(
-      `${name} ging van ${displayValueUnit(first.value, first.decimals, first.unit)}${provisionalSuffix(first)} ` +
-        `in ${first.periodLabel} naar ${displayValueUnit(last.value, last.decimals, last.unit)}${provisionalSuffix(last)} ` +
-        `in ${last.periodLabel} (${TREND_PARTICIPLE_BY_DIRECTION[direction.direction]})`,
-    );
+    const fullLabel = first.regionLabel === null ? regionCode : first.regionLabel;
+    const baseLabel = first.regionLabel === null ? regionCode : baseRegionLabel(first.regionLabel);
+    clauses.push({ fullLabel, baseLabel, first, last, direction: direction.direction });
   }
+  return clauses;
+}
+
+/** The clause's own prose, given which label form to open it with — the only
+ * thing that differs between the live renderer and the legacy one below. */
+function regionSeriesClauseText(name: string, c: RegionSeriesClause): string {
+  return (
+    `${name} ging van ${displayValueUnit(c.first.value!, c.first.decimals, c.first.unit)}${provisionalSuffix(c.first)} ` +
+    `in ${c.first.periodLabel} naar ${displayValueUnit(c.last.value!, c.last.decimals, c.last.unit)}${provisionalSuffix(c.last)} ` +
+    `in ${c.last.periodLabel} (${TREND_PARTICIPLE_BY_DIRECTION[c.direction]})`
+  );
+}
+
+/** ADR 055 — one measure, 2..REGION_SERIES_MAX_REGIONS EXPLICITLY NAMED
+ * regions, over a period range: one line per region.
+ *
+ * **MS1 is implemented here exactly the way RS1 is implemented in
+ * renderRegionSet: by keying on the existence of a DERIVATION RECORD, never
+ * by filtering words out of prose** — see `regionSeriesClauses` above. Its
+ * cells still DRAW (chart gaps + nullNotes, R11) and its coverage is
+ * disclosed by the structural line buildRegionSeriesLine builds.
+ *
+ * **No cross-region claim of any kind is made or supported**: no registered
+ * derivation ranks change across regions (deriveMax refuses a multi-period
+ * cells array, and run.ts additionally gates it off this shape), so there is
+ * no `max` record here and a superlative would fail R9 closed.
+ *
+ * **ADR 055 pass-4 rows 12+13 (2026-09-17), superseding this renderer's
+ * original shape (shipped commit f923f31, same day):**
+ *  - **Row 12 — the verbatim CBS-qualified label, not `baseRegionLabel`.**
+ *    Six named regions in one sentence made a bare "Utrecht" genuinely
+ *    ambiguous with the provincie of the same name; the legend, proof table
+ *    and CSV already show the qualifier ("Utrecht (gemeente)"), so the body
+ *    now matches them. `sentenceMentionsCellRegion` (validate.ts) needed no
+ *    change: it is a case-insensitive SUBSTRING check against the BASE
+ *    label, which still matches inside the qualified form.
+ *  - **Row 13 — one line per region, not one semicolon-joined sentence.** A
+ *    375px 6-region body used to be a 15-line run-on paragraph. Each line
+ *    now starts with "– " (en dash) and the lines are joined by '\n', with
+ *    the header ending in ':' on its own line and only the FINAL line ending
+ *    in '.'. `splitSentences` (validate.ts) now treats '\n' as a sentence
+ *    boundary too, which is what keeps each line's binding independent
+ *    (MS1) — see that function's own comment.
+ *
+ * These two rows changed `body`'s BYTES for this shape, which is
+ * `renderTemplateBody`'s R8 byte-identical re-derivation target
+ * (reconstruct.ts) — `renderRegionSeriesLegacyPreLineFormat` below exists
+ * SOLELY so a row stored before this change still reconstructs.
+ *
+ * With NO region carrying a record the body falls back to renderSeries' own
+ * claim-free per-cell listing — the fail-closed floor of the R3 ladder, each
+ * line naming its region, period and value, no trend word anywhere. */
+function renderRegionSeries(result: ValidatedResult): string {
+  const clauses = regionSeriesClauses(result);
   if (clauses.length === 0) return renderSeries(result);
-  return `${subjectSentenceStart(result)} per regio: ${clauses.join('; ')}.`;
+  const lines = clauses.map((c) => `– ${regionSeriesClauseText(c.fullLabel, c)}`);
+  return `${subjectSentenceStart(result)} per regio:\n${lines.join('\n')}.`;
+}
+
+/** The PRE-pass-4 shape of `renderRegionSeries`, byte-identical to how it
+ * shipped at commit f923f31 (2026-09-17, ~13:50 UTC — the shape's own
+ * go-live): base (unqualified) region labels, one sentence, clauses
+ * separated by '; '. Never called from the live compose path — its only
+ * caller is `checkAnswerReconstruction` (reconstruct.ts), for a
+ * `region_series` row whose `createdAt` predates
+ * `REGION_SERIES_LINE_FORMAT_CUTOFF` (that file's own comment explains why
+ * this is a date-scoped tolerance rather than a known-divergences.ts
+ * per-row-id entry). Kept here, next to the live renderer, rather than in
+ * reconstruct.ts, so the two can never accidentally diverge on the shared
+ * `regionSeriesClauses`/`regionSeriesClauseText` data path — only the label
+ * form and the joiner differ. */
+export function renderRegionSeriesLegacyPreLineFormat(result: ValidatedResult): string {
+  const clauses = regionSeriesClauses(result);
+  if (clauses.length === 0) return renderSeries(result);
+  const text = clauses.map((c) => regionSeriesClauseText(c.baseLabel, c)).join('; ');
+  return `${subjectSentenceStart(result)} per regio: ${text}.`;
 }
 
 function renderComparison(result: ValidatedResult): string {

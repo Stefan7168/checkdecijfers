@@ -120,7 +120,11 @@ describe('region_series — a COMPLETE series: one clause per region, each bound
     for (const record of directions) {
       const first = byId.get(record.firstResultId)!;
       const last = byId.get(record.lastResultId)!;
-      const name = baseRegionLabel(first.regionLabel!);
+      // ADR 055 pass-4 row 12 (2026-09-17): the FULL, verbatim CBS-qualified
+      // label ("Amsterdam (gemeente)"), not baseRegionLabel — matching the
+      // legend, proof table and CSV, since a bare name is genuinely
+      // ambiguous once several regions share one sentence.
+      const name = first.regionLabel!;
       const word = { up: 'gestegen', down: 'gedaald', flat: 'gelijk gebleven' }[record.direction];
       // The clause: this region's name, its own two endpoint values with
       // their own period labels, and the direction word its OWN record backs.
@@ -129,10 +133,44 @@ describe('region_series — a COMPLETE series: one clause per region, each bound
           `naar ${formatValueNl(last.value!, last.decimals)} in ${last.periodLabel} (${word})`,
       );
     }
-    // One sentence, two clauses — the clause boundary is what lets the
-    // validator bind each direction word to one region alone.
-    expect(body.split(';')).toHaveLength(2);
+    // ADR 055 pass-4 row 13: a header line, then one "– region" line PER
+    // clause, newline-joined — the line boundary (not ';') is what lets the
+    // validator bind each direction word to one region alone (splitSentences
+    // now treats '\n' as a sentence boundary too).
+    const lines = body.split('\n');
+    expect(lines).toHaveLength(directions.length + 1);
+    expect(lines[0]!.endsWith(' per regio:')).toBe(true);
+    for (const line of lines.slice(1)) {
+      expect(line.startsWith('– ')).toBe(true);
+    }
     expect(validateAnswerBody(body, result).problems).toEqual([]);
+  });
+
+  it('rejects a body whose two per-region lines had their region names swapped — proves the newline IS a binding boundary (ADR 055 pass-4 row 13)', async () => {
+    // Real cell VALUES stay exactly where the template put them (R1 is still
+    // happy — every number is verbatim); only the LEADING region name on
+    // each line is swapped with the other line's. If '\n' were not a
+    // sentence boundary, both region names would sit in one giant "sentence"
+    // and checkBinding's "is this cell's region mentioned ANYWHERE in scope"
+    // would pass by accident. With '\n' as a boundary, each line is scoped
+    // to itself, so the swap must fail — this is what makes row 13's format
+    // change safe rather than a silent R9 regression.
+    const result = await answer(population({ regions: [AMSTERDAM, ROTTERDAM] }));
+    const body = renderTemplateBody(result);
+    const lines = body.split('\n');
+    expect(lines).toHaveLength(3);
+    const amsterdamLabel = cellsOf(result, AMSTERDAM)[0]!.regionLabel!;
+    const rotterdamLabel = cellsOf(result, ROTTERDAM)[0]!.regionLabel!;
+    expect(lines[1]).toContain(amsterdamLabel);
+    expect(lines[2]).toContain(rotterdamLabel);
+    const swapped = [
+      lines[0],
+      lines[1]!.replace(amsterdamLabel, rotterdamLabel),
+      lines[2]!.replace(rotterdamLabel, amsterdamLabel),
+    ].join('\n');
+    const report = validateAnswerBody(swapped, result);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => /R9:.*regio waar hij bij hoort/.test(p))).toBe(true);
   });
 
   it('makes NO cross-region claim of any kind — there is no ranking record to bind one to', async () => {
@@ -185,8 +223,9 @@ describe('region_series — a PARTIAL region gets no clause, no trend word, and 
     expect(directionsOf(result)).toHaveLength(1);
 
     const body = renderTemplateBody(result);
-    // The complete region is phrased in full...
-    expect(body).toContain(baseRegionLabel(cellsOf(result, AMSTERDAM)[0]!.regionLabel!));
+    // The complete region is phrased in full, by its FULL CBS-qualified label
+    // (ADR 055 pass-4 row 12) — not merely a substring of it.
+    expect(body).toContain(cellsOf(result, AMSTERDAM)[0]!.regionLabel!);
     // ...the partial one is named nowhere, and NONE of its values appear —
     // not even the endpoints it does have. No clause means no trend word can
     // be attached to it by accident.

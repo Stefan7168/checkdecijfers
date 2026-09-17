@@ -31,7 +31,7 @@ import {
   buildRegionSeriesLine,
   buildRegionSetLine,
 } from '../compose/format.ts';
-import { renderTemplateBody } from '../compose/template.ts';
+import { renderTemplateBody, renderRegionSeriesLegacyPreLineFormat } from '../compose/template.ts';
 import { applyUnitExpansions } from '../compose/expand.ts';
 import { findSuspectTokens } from '../compose/semantic-check.ts';
 import { buildSlotContext, fillSlots, validateSlotBody } from '../compose/slots.ts';
@@ -247,6 +247,50 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   }
 }
 
+// ADR 055 pass-4 rows 12+13 (2026-09-17): `renderRegionSeries` (template.ts)
+// changed `region_series` bodies' BYTES — full CBS-qualified labels, one "– "
+// line per region — hours after the shape itself first shipped (commit
+// f923f31, ~13:50 UTC same day, ADR 055's own go-live). A row stored in that
+// narrow live window has a stored `body`/`final_text` in the OLD shape,
+// exactly what the user actually saw (R8's own promise), while
+// `renderTemplateBody` today produces the NEW shape — the ordinary
+// "row stored under an older, less-safe/less-readable rule" scenario
+// known-divergences.ts's module header already documents for two OTHER
+// rows (id 76, id 227).
+//
+// This is deliberately NOT a third entry in that file's `KNOWN_DIVERGENCES`
+// array: that register is per-ROW-ID by its own stated discipline ("one
+// entry per row, never a range or a pattern"), and no real audit_answers id
+// can be named from this hermetic worktree — there is no database
+// connection here (same unresolved gap ADR 055's own "Verified" section
+// already flags: `npm run audit:verify` against the live DB was not run in
+// any hermetic worktree task for this ADR). Inventing a placeholder id would
+// violate that register's own anti-pattern rule and silently swallow a real,
+// different problem on whatever row happens to get that id later.
+//
+// Instead this is the file's OTHER documented mechanism: a small, NAMED,
+// narrowly-scoped tolerance living directly in the reconstruction check
+// itself (known-divergences.ts's header names two examples — the
+// `attribution.source` A1 fallback and the `trendHeadline` optional-v1-field
+// exception) — except keyed on `createdAt` rather than on one field's
+// presence, because what changed here is an entire rendering FORMAT for one
+// shape, not one optional field. A row's body is judged against
+// `renderRegionSeriesLegacyPreLineFormat` (byte-identical to how
+// `renderRegionSeries` shipped at f923f31) when `createdAt` predates this
+// cutoff, and against TODAY's `renderTemplateBody` otherwise — so a
+// genuinely pre-change row reconstructs TRUE, not merely "known-divergent".
+//
+// The cutoff is this change's own authoring timestamp (verified against
+// `date -u`, not recalled) — a deliberately conservative bound, since no
+// commit can be deployed before it is made. The tiny window between this
+// commit and its actual deploy could in principle hold one more
+// old-format row; open-questions tracks a follow-up for a session with live
+// DB access to run `npm run audit:verify` across the f923f31→deploy window
+// once and confirm, or register a specific known-divergences.ts id entry
+// (following its own id-76/id-227 examples) for any row this tolerance does
+// not cover.
+const REGION_SERIES_LINE_FORMAT_CUTOFF = Date.parse('2026-09-17T15:30:00.000Z');
+
 function checkAnswerReconstruction(record: AuditRecord, problems: string[]): void {
   const response = record.response as AnswerResponse;
   const result = response.result as ValidatedResult;
@@ -365,8 +409,17 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
       problems.push(`a ${result.shape} answer must be template-composed, stored source is '${answer.source}'`);
     }
     // The SPLICED body is what compose stores (assemble → applyUnitExpansions),
-    // so the re-derivation applies the same splice.
-    const rederivedBody = applyUnitExpansions(renderTemplateBody(result), result);
+    // so the re-derivation applies the same splice. ADR 055 pass-4 rows
+    // 12+13: a `region_series` row stored before this change's cutoff
+    // re-derives against the LEGACY renderer instead (see
+    // REGION_SERIES_LINE_FORMAT_CUTOFF's own comment above) — every other
+    // case (region_set, or a region_series row from today's format onward)
+    // re-derives through today's renderTemplateBody exactly as before.
+    const templateBody =
+      result.shape === 'region_series' && Date.parse(record.createdAt) < REGION_SERIES_LINE_FORMAT_CUTOFF
+        ? renderRegionSeriesLegacyPreLineFormat(result)
+        : renderTemplateBody(result);
+    const rederivedBody = applyUnitExpansions(templateBody, result);
     if (answer.body !== rederivedBody) {
       const label = result.shape === 'region_set' ? 'region-set' : 'region-series';
       problems.push(`${label} body does not re-derive from the stored result`);
