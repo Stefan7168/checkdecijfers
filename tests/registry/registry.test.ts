@@ -3,7 +3,7 @@
 // needed) then applies src/registry/defaults.ts and checks the result.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
@@ -11,15 +11,36 @@ import { applyRegistryDefaults } from '../../src/registry/apply.ts';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from '../../src/registry/defaults.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../fixtures/cbs', import.meta.url));
 
-async function registeredDb(): Promise<{ db: Db; close(): Promise<void> }> {
-  const { db, close } = await createTestDb();
+// Perf (#245 Action 3, session 110): boots ONE PGlite instance for the whole
+// file (beforeAll/afterAll) instead of once per test (registeredDb() used to
+// call createTestDb() itself, 3 boots, plus a 4th bare boot below), and
+// TRUNCATE-resets it before every test instead. registerFixtures() re-runs
+// registerTables() against the shared, freshly-reset db for the tests that
+// need a populated registry; the "empty cbs_tables" test simply doesn't call
+// it, exactly as it didn't call registeredDb() before.
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
+async function registerFixtures(db: Db): Promise<void> {
   const docsTree = loadFixtureDocsTree(FIXTURES_DIR);
   const source = new FixtureSource(docsTree);
   await registerTables(db, source, SEED_TABLES);
-  return { db, close };
 }
 
 async function cbsTable(db: Db, id: string) {
@@ -32,71 +53,58 @@ async function cbsTable(db: Db, id: string) {
 
 describe('registry defaults (ADR 010)', () => {
   it('refuses to apply anything when a referenced table is not yet registered (all-or-nothing)', async () => {
-    const { db, close } = await createTestDb(); // no registerTables call — empty cbs_tables
-    try {
-      const result = await applyRegistryDefaults(db);
-      expect(result.tablesMissing.length).toBe(SEED_TABLES.length);
-      expect(result.tablesUpdated).toEqual([]);
-      expect(result.canonicalMeasuresUpserted).toEqual([]);
-      const cm = await db.query('select count(*) c from canonical_measures');
-      expect(Number(cm.rows[0]!.c)).toBe(0);
-    } finally {
-      await close();
-    }
+    const db = sharedDb; // no registerFixtures() call — empty cbs_tables
+    const result = await applyRegistryDefaults(db);
+    expect(result.tablesMissing.length).toBe(SEED_TABLES.length);
+    expect(result.tablesUpdated).toEqual([]);
+    expect(result.canonicalMeasuresUpserted).toEqual([]);
+    const cm = await db.query('select count(*) c from canonical_measures');
+    expect(Number(cm.rows[0]!.c)).toBe(0);
   });
 
   it('applies default_coordinates + period_semantics for every registered Phase 0 table', async () => {
-    const { db, close } = await registeredDb();
-    try {
-      const result = await applyRegistryDefaults(db);
-      expect(result.tablesMissing).toEqual([]);
-      expect(result.tablesUpdated.sort()).toEqual(SEED_TABLES.map((t) => t.id).sort());
+    const db = sharedDb;
+    await registerFixtures(db);
+    const result = await applyRegistryDefaults(db);
+    expect(result.tablesMissing).toEqual([]);
+    expect(result.tablesUpdated.sort()).toEqual(SEED_TABLES.map((t) => t.id).sort());
 
-      for (const entry of TABLE_REGISTRY_DEFAULTS) {
-        const row = await cbsTable(db, entry.tableId);
-        expect(row, entry.tableId).toBeTruthy();
-        expect(row!.default_coordinates, entry.tableId).toEqual(entry.defaultCoordinates);
-        expect(row!.period_semantics, entry.tableId).toEqual(entry.periodSemantics);
-      }
-    } finally {
-      await close();
+    for (const entry of TABLE_REGISTRY_DEFAULTS) {
+      const row = await cbsTable(db, entry.tableId);
+      expect(row, entry.tableId).toBeTruthy();
+      expect(row!.default_coordinates, entry.tableId).toEqual(entry.defaultCoordinates);
+      expect(row!.period_semantics, entry.tableId).toEqual(entry.periodSemantics);
     }
   });
 
   it('upserts every canonical measure, each referencing a real registered table', async () => {
-    const { db, close } = await registeredDb();
-    try {
-      const result = await applyRegistryDefaults(db);
-      expect(result.canonicalMeasuresUpserted.sort()).toEqual(CANONICAL_MEASURES.map((c) => c.key).sort());
+    const db = sharedDb;
+    await registerFixtures(db);
+    const result = await applyRegistryDefaults(db);
+    expect(result.canonicalMeasuresUpserted.sort()).toEqual(CANONICAL_MEASURES.map((c) => c.key).sort());
 
-      const rows = await db.query('select key, table_id, measure, dims, definition_label, everyday_terms from canonical_measures order by key');
-      expect(rows.rows).toHaveLength(CANONICAL_MEASURES.length);
-      const registeredIds = new Set(SEED_TABLES.map((t) => t.id));
-      for (const row of rows.rows) {
-        expect(registeredIds.has(row.table_id as string), `${row.key} -> ${row.table_id}`).toBe(true);
-        expect((row.everyday_terms as string[]).length, `${row.key} everydayTerms`).toBeGreaterThan(0);
-        expect((row.definition_label as string).length, `${row.key} definitionLabel`).toBeGreaterThan(0);
-      }
-    } finally {
-      await close();
+    const rows = await db.query('select key, table_id, measure, dims, definition_label, everyday_terms from canonical_measures order by key');
+    expect(rows.rows).toHaveLength(CANONICAL_MEASURES.length);
+    const registeredIds = new Set(SEED_TABLES.map((t) => t.id));
+    for (const row of rows.rows) {
+      expect(registeredIds.has(row.table_id as string), `${row.key} -> ${row.table_id}`).toBe(true);
+      expect((row.everyday_terms as string[]).length, `${row.key} everydayTerms`).toBeGreaterThan(0);
+      expect((row.definition_label as string).length, `${row.key} definitionLabel`).toBeGreaterThan(0);
     }
   });
 
   it('is idempotent: applying twice yields the same row counts and values, no duplicates', async () => {
-    const { db, close } = await registeredDb();
-    try {
-      await applyRegistryDefaults(db);
-      const first = await db.query('select key, table_id, measure, dims from canonical_measures order by key');
+    const db = sharedDb;
+    await registerFixtures(db);
+    await applyRegistryDefaults(db);
+    const first = await db.query('select key, table_id, measure, dims from canonical_measures order by key');
 
-      const second = await applyRegistryDefaults(db);
-      expect(second.tablesMissing).toEqual([]);
-      const after = await db.query('select key, table_id, measure, dims from canonical_measures order by key');
+    const second = await applyRegistryDefaults(db);
+    expect(second.tablesMissing).toEqual([]);
+    const after = await db.query('select key, table_id, measure, dims from canonical_measures order by key');
 
-      expect(after.rows).toHaveLength(first.rows.length);
-      expect(after.rows).toEqual(first.rows);
-    } finally {
-      await close();
-    }
+    expect(after.rows).toHaveLength(first.rows.length);
+    expect(after.rows).toEqual(first.rows);
   });
 
   it('every canonical measure flagged as an owner-revisable **Assumption** carries visible alternates (transparency, R7)', () => {
