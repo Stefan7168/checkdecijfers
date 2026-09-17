@@ -5789,3 +5789,158 @@ describe('ChartView — #253/row 11 single palette colour for a comparison-shape
     expect(bars[2]?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 4, rows 1 and 3: value labels used to be drawn
+// inline inside each series' own shape/dot render, so a LATER series could
+// paint its own `<rect>`/`<circle>` over an EARLIER series' `<text>` label
+// (row 1: a bar label truncated on screen even though its DOM text was the
+// complete formattedValue), and two end-of-line labels close together had
+// no collision handling at all (row 3). Row 1's fix: every SeriesBar label
+// is wrapped in Recharts' own `<ZIndexLayer zIndex={DefaultZIndexes.label}>`
+// (chart.tsx), the SAME zIndex bucket Recharts uses for its own
+// LabelList/Label, which sits above the `bar`/`line` graphical-item
+// buckets regardless of JSX order — a plain custom `<g>` rendered "last in
+// JSX" was tried first and measured NOT sufficient (Recharts 3.x paints
+// known graphical items through their own zIndex buckets, not JSX order).
+// Row 3's fix: `EndLabelsOverlay` (chart.tsx) computes every end-of-line
+// label's real pixel position from Recharts' own settled
+// `useXAxisScale`/`useYAxisScale`, runs the collision pass, and paints the
+// result in that same `label` zIndex layer. This block rides the same
+// unstubbed-ResizeObserver convention as "ChartView — #197 step 1, rendered
+// against the real svg" above (jsdom keeps Recharts' initialDimension
+// fallback, so real SVG geometry — real cx/cy, real bar x/y/width/height —
+// comes out of a plain render() with no FakeResizeObserver needed).
+// ---------------------------------------------------------------------------
+
+describe('Session 110 UX audit pass 4 — rows 1 and 3: label paint order and collision', () => {
+  beforeEach(() => vi.unstubAllGlobals());
+
+  it('row 1: every bar rect precedes every bar label text in DOM order, and every label is the complete formattedValue string', () => {
+    const { container } = render(<ChartView spec={threeRegionSeriesLineSpec()} initialFormOverride="bar" />);
+    const svg = container.querySelector('svg.recharts-surface')!;
+    const nodes = [...svg.querySelectorAll('rect[data-point="value"], text[data-role="bar-label"]')];
+    const rectCount = nodes.filter((n) => n.tagName === 'rect').length;
+    const labelCount = nodes.filter((n) => n.tagName === 'text').length;
+    expect(rectCount).toBe(9); // 3 series x 3 periods
+    expect(labelCount).toBe(9);
+    // DOM order: once the first label appears, every remaining node is a
+    // label too — no rect can paint after (and therefore over) any label.
+    const firstLabelIndex = nodes.findIndex((n) => n.tagName === 'text');
+    expect(nodes.slice(firstLabelIndex).every((n) => n.tagName === 'text')).toBe(true);
+
+    // Every label is the point's own complete formattedValue, never a
+    // truncated fragment (R1/R6: a verbatim projection of the cell).
+    const expected = new Set(['872.757', '882.633', '903.991', '651.446', '655.468', '662.356', '548.320', '552.995', '560.498']);
+    for (const label of svg.querySelectorAll('text[data-role="bar-label"]')) {
+      expect(expected.has(label.textContent ?? '')).toBe(true);
+    }
+  });
+
+  it('row 3: two end-of-line labels whose values sit pixel-adjacent are stacked apart, never left overlapping, and neither is truncated', () => {
+    const s = spec({
+      kind: 'line',
+      series: [
+        {
+          label: 'Eindhoven',
+          regionCode: 'GM0772',
+          points: [
+            point({ resultId: 'eh-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }),
+            point({ resultId: 'eh-2024', periodCode: '2024', periodLabel: '2024', value: 246417, formattedValue: '246.417' }),
+          ],
+        },
+        {
+          // One unit away from Eindhoven's end value on a 0-246417 domain —
+          // guarantees a real, unavoidable pixel collision regardless of
+          // measured chart height, the same class of bug the audit's own
+          // 4px-apart repro hit on the flagship 6-region chart.
+          label: 'Tilburg',
+          regionCode: 'GM0855',
+          points: [
+            point({ resultId: 'ti-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }),
+            point({ resultId: 'ti-2024', periodCode: '2024', periodLabel: '2024', value: 246416, formattedValue: '246.416' }),
+          ],
+        },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    const ends = [...container.querySelectorAll('[data-role="end-label"]')];
+    expect(ends.length).toBeGreaterThan(0);
+    if (ends.length === 2) {
+      const y0 = Number(ends[0].getAttribute('y'));
+      const y1 = Number(ends[1].getAttribute('y'));
+      expect(Math.abs(y0 - y1)).toBeGreaterThanOrEqual(13);
+    }
+    // Text stays fully intact either way — never truncated (R1/R6).
+    for (const end of ends) {
+      expect(['2024: 246.417', '2024: 246.416']).toContain(end.textContent);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 4, row 2: yAxisWidth/rightMargin used to cap at
+// absolute pixel ceilings regardless of the chart's own measured width, so
+// a narrow card lost almost its entire plot area to them — measured at
+// 211px container width, a 6-region line chart's plot area was 20px wide
+// and no x-axis tick had room to render at all. Own describe block, its own
+// FakeResizeObserver (mirrors "ADR 042 — height follows width once
+// measured" above) — a plain unstubbed render never measures a width, so
+// this row's fix (which only ever engages once `measuredWidth > 0`) needs
+// the same harness that block already built.
+// ---------------------------------------------------------------------------
+
+describe('Session 110 UX audit pass 4 — row 2: margins scale with measured width, not an absolute px ceiling', () => {
+  type ResizeCallback = (entries: unknown[]) => void;
+  let resizeObservers: Array<{ cb: ResizeCallback; target: Element | null }> = [];
+  class FakeResizeObserver {
+    private readonly entry: { cb: ResizeCallback; target: Element | null };
+    constructor(cb: ResizeCallback) {
+      this.entry = { cb, target: null };
+      resizeObservers.push(this.entry);
+    }
+    observe(target: Element): void {
+      this.entry.target = target;
+    }
+    disconnect(): void {
+      resizeObservers = resizeObservers.filter((e) => e !== this.entry);
+    }
+  }
+  // Recharts' own ResponsiveContainer ALSO builds a ResizeObserver, on its
+  // own inner wrapper div (a descendant of the tabpanel) — its effect
+  // commits before ChartView's own useElementWidth effect (React fires
+  // child effects before parent effects), so it registers FIRST. Unlike the
+  // ADR-042 height tests above (which only ever assert our OWN inline CSS
+  // height and so only ever fire OUR OWN observer), this row's pin needs
+  // Recharts' REAL internal layout at a specific width, so every registered
+  // observer is fired here — each with both a `getBoundingClientRect`
+  // override (what our own `useElementWidth` reads) and a `contentRect`
+  // (what ResponsiveContainer's own callback reads, per its source).
+  function fireAllResizes(width: number, height = 256): void {
+    for (const entry of resizeObservers) {
+      const target = entry.target;
+      if (!target) continue;
+      (target as HTMLElement).getBoundingClientRect = () => ({ width, height }) as DOMRect;
+      act(() => entry.cb([{ target, contentRect: { width, height } }]));
+    }
+  }
+  beforeEach(() => {
+    resizeObservers = [];
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('at a 211px container width, a 6-region line chart keeps at least 45% of the container as real plot area and renders real x-axis ticks', () => {
+    const { container } = render(<ChartView spec={sixRegionSeriesLineSpec()} />);
+    fireAllResizes(211);
+    // The horizontal grid line spans exactly the real plot area Recharts
+    // computed (x1 to x2) — the stock presentation draws it (ADR 042), and
+    // it needs no re-derivation of Recharts' own internal margin math.
+    const gridLine = container.querySelector('.recharts-cartesian-grid-horizontal line');
+    expect(gridLine).not.toBeNull();
+    const plotWidth = Number(gridLine!.getAttribute('x2')) - Number(gridLine!.getAttribute('x1'));
+    expect(plotWidth).toBeGreaterThanOrEqual(211 * 0.45);
+    const xTicks = container.querySelectorAll('.recharts-xAxis .recharts-cartesian-axis-tick');
+    expect(xTicks.length).toBeGreaterThan(0);
+  });
+});
