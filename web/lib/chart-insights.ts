@@ -117,7 +117,16 @@ export function buildFindings(spec: ChartSpec, lang: Lang): Finding[] {
  * `point.periodLabel` satisfies it, `StoryStep` included.
  *
  * A step with no point (`overview`/`explore` — never duplicated by kind)
- * falls back to the title alone; nothing to disambiguate. */
-export function stepAccessibleName(step: { title: string; point: { periodLabel?: string } | null }): string {
+ * falls back to the title alone; nothing to disambiguate.
+ *
+ * The parameter's `point` type deliberately includes `periodCode` (not just
+ * the optional `periodLabel` this function actually reads): a type with
+ * ONLY optional properties is a TS "weak type", and `StoryStep`'s point
+ * (`{ seriesKey, periodCode }`, no `periodLabel`) would then be rejected
+ * outright for sharing no REQUIRED property with the parameter type, even
+ * though it is otherwise perfectly compatible. `periodCode` is real on
+ * every point and gives the two types a property in common, sidestepping
+ * that check without importing `StoryStep` itself. */
+export function stepAccessibleName(step: { title: string; point: { periodCode: string; periodLabel?: string } | null }): string {
   return step.point?.periodLabel ? `${step.title} — ${step.point.periodLabel}` : step.title;
 }

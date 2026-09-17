@@ -236,12 +236,12 @@ describe('buildFindings — no series at all', () => {
 // carousel and the Story stage both use to name their "position" dots.
 describe('stepAccessibleName', () => {
   it('appends the finding\'s own period to a kind-only title', () => {
-    expect(stepAccessibleName({ title: 'Below average', point: { periodLabel: '2021' } })).toBe('Below average — 2021');
+    expect(stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } })).toBe('Below average — 2021');
   });
 
   it('disambiguates two same-kind findings by their different periods', () => {
-    const a = stepAccessibleName({ title: 'Below average', point: { periodLabel: '2021' } });
-    const b = stepAccessibleName({ title: 'Below average', point: { periodLabel: '2024' } });
+    const a = stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } });
+    const b = stepAccessibleName({ title: 'Below average', point: { periodCode: '2024JJ00', periodLabel: '2024' } });
     expect(a).not.toBe(b);
     expect(a).toBe('Below average — 2021');
     expect(b).toBe('Below average — 2024');

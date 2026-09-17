@@ -297,7 +297,7 @@ describe('ChartStoryStage', () => {
     const stepsWithPeriod = [
       { id: 'below-s0-2021JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2021: 1,3 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2021JJ00', periodLabel: '2021' } },
       { id: 'below-s0-2024JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2024: 1,4 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024' } },
-    ] as StoryStep[];
+    ] as unknown as StoryStep[];
     render(<ChartStoryStage {...baseProps({ steps: stepsWithPeriod })} />);
     const list = screen.getByRole('list', { name: 'Positie in het verhaal' });
     const dots = Array.from(list.querySelectorAll('button'));
