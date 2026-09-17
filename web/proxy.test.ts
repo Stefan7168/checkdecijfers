@@ -7,8 +7,20 @@
 // (web/lib/onboarding-kick.ts) were redirected and the job would never run,
 // while the route-handler + job tests all stayed green. isPublicPath is the
 // pure decision the proxy makes; pinning it here fails that regression loudly.
-import { describe, expect, it } from 'vitest';
-import { applyEmbedRequestHeaders, embedRequestHeaders, isPublicPath } from './proxy.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { applyEmbedRequestHeaders, embedRequestHeaders, isPublicPath, proxy } from './proxy.ts';
+
+// Row 2 (session 110 UX audit, #P1): a malformed/truncated sb-*-auth-token
+// cookie makes the real supabase-js `getClaims()` THROW (e.g. it JSON.parses
+// the cookie value) rather than resolve to "no session". Stubbed at the
+// `@supabase/ssr` module seam — proxy() is the one function in this file
+// that needs a real NextRequest + Supabase client, so it can't be unit-tested
+// as a pure function the way isPublicPath/embedRequestHeaders are.
+const { getClaims } = vi.hoisted(() => ({ getClaims: vi.fn() }));
+vi.mock('@supabase/ssr', () => ({
+  createServerClient: () => ({ auth: { getClaims } }),
+}));
 
 describe('proxy isPublicPath allowlist', () => {
   it('allows the self-authenticating API routes (Bearer / signature, no session cookie)', () => {
@@ -237,5 +249,56 @@ describe('applyEmbedRequestHeaders (Bundle A, final review)', () => {
     applyEmbedRequestHeaders(headers, '/credits', new URLSearchParams());
     expect(headers.get('cookie')).toBe('session=abc');
     expect(headers.get('accept')).toBe('text/html');
+  });
+});
+
+describe('proxy() — a malformed auth cookie must not 500 the whole app (row 2, #P1)', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('on a public path, treats the throw as signed-out and clears the offending cookie instead of surfacing a 500', async () => {
+    getClaims.mockRejectedValue(new SyntaxError('Unexpected token in JSON'));
+    const request = new NextRequest('https://example.com/', {
+      headers: { cookie: 'sb-abcproj-auth-token=not-valid-json' },
+    });
+
+    const response = await proxy(request);
+
+    // No throw escaped proxy() to become an unhandled 500.
+    expect(response.status).toBeLessThan(500);
+    // '/' is public — no redirect to /login.
+    expect(response.headers.get('location')).toBeNull();
+    // The bad cookie is cleared on the response (empty value + immediate expiry).
+    const cleared = response.cookies.get('sb-abcproj-auth-token');
+    expect(cleared?.value).toBe('');
+  });
+
+  it('on a private path, redirects to /login (same as an ordinary signed-out visit) rather than throwing', async () => {
+    getClaims.mockRejectedValue(new SyntaxError('Unexpected token in JSON'));
+    const request = new NextRequest('https://example.com/credits', {
+      headers: { cookie: 'sb-abcproj-auth-token=not-valid-json' },
+    });
+
+    const response = await proxy(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toContain('/login');
+  });
+
+  it('never logs the cookie value on the throw path', async () => {
+    getClaims.mockRejectedValue(new SyntaxError('Unexpected token in JSON at position 0'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const request = new NextRequest('https://example.com/', {
+      headers: { cookie: 'sb-abcproj-auth-token=super-secret-token-value' },
+    });
+
+    await proxy(request);
+
+    const logged = [...errorSpy.mock.calls, ...warnSpy.mock.calls].flat().join(' ');
+    expect(logged).not.toContain('super-secret-token-value');
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 });

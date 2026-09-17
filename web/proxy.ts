@@ -214,7 +214,26 @@ export async function proxy(request: NextRequest) {
 
   // getClaims() validates the JWT (locally via WebCrypto, or against the
   // Auth server) rather than trusting an unverified session cookie.
-  const { data } = await supabase.auth.getClaims();
+  //
+  // Row 2 (session 110 UX audit, #P1): a malformed/truncated sb-*-auth-token
+  // cookie makes getClaims() THROW (it parses the cookie value) rather than
+  // resolve to "no session" — before this fix that turned into an uncaught
+  // 500 on EVERY route, public ones included, with no in-app way out short
+  // of the visitor manually clearing cookies. Treat a throw exactly like "no
+  // claims" and clear the offending cookie(s) on the response so the browser
+  // stops re-sending the same bad value forever. Never log the caught error
+  // or the cookie value — the error message can echo the malformed payload.
+  let data: Awaited<ReturnType<typeof supabase.auth.getClaims>>['data'];
+  try {
+    ({ data } = await supabase.auth.getClaims());
+  } catch {
+    data = null;
+    for (const cookie of request.cookies.getAll()) {
+      if (/^sb-.*-auth-token/.test(cookie.name)) {
+        response.cookies.delete(cookie.name);
+      }
+    }
+  }
   const isPublic = isPublicPath(request.nextUrl.pathname);
 
   if (!data?.claims && !isPublic) {
