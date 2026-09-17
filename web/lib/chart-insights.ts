@@ -19,7 +19,10 @@ export interface Finding extends ScoredFinding {
   title: string;
   /** The deterministic template caption — see module doc's "R3 FLOOR". */
   caption: string;
-  point: { seriesKey: string; periodCode: string };
+  // `periodLabel` added here (audit pass 2, row 14, 2026-09-17) alongside
+  // the pre-existing seriesKey/periodCode — see `stepAccessibleName` below
+  // for why and how the consuming components read it.
+  point: { seriesKey: string; periodCode: string; periodLabel: string };
 }
 
 const TITLE_KEY: Record<
@@ -90,6 +93,31 @@ export function buildFindings(spec: ChartSpec, lang: Lang): Finding[] {
     ...finding,
     title: t(lang, TITLE_KEY[finding.kind], finding.multiSeries ? { series: finding.seriesLabel } : {}),
     caption: buildCaption(finding, lang, spec.kind),
-    point: { seriesKey: finding.seriesKey, periodCode: finding.periodCode },
+    point: { seriesKey: finding.seriesKey, periodCode: finding.periodCode, periodLabel: finding.periodLabel },
   }));
+}
+
+/** Audit pass 2, row 14 (2026-09-17): the Insights carousel's and the Story
+ * stage's "position" dots name every step by KIND alone — two "Below
+ * average" findings on the same chart read as identical buttons to a
+ * screen-reader user, with no way to tell which jumps to which period. The
+ * VISIBLE label stays kind-only (title, unchanged, still what a sighted
+ * reader sees under the caption); this only appends the finding's own
+ * period to the ACCESSIBLE name, e.g. "Below average — 2021".
+ *
+ * `StoryStep.point` is declared in web/lib/chart-story.ts (out of this
+ * fix's file scope) as `{ seriesKey, periodCode }` — no `periodLabel`.
+ * `Finding.point` above now attaches `periodLabel` on that same shape, and
+ * chart.tsx's `storySteps` mapping (also out of scope, unedited) forwards
+ * `point: f.point` by reference, so the extra field survives into every
+ * `StoryStep` at runtime even though the shared type never declares it.
+ * The parameter type here is intentionally its own minimal shape (not an
+ * import of `StoryStep`, which would need a type-only import back from
+ * chart-story.ts) — any object with a `title` and an optional
+ * `point.periodLabel` satisfies it, `StoryStep` included.
+ *
+ * A step with no point (`overview`/`explore` — never duplicated by kind)
+ * falls back to the title alone; nothing to disambiguate. */
+export function stepAccessibleName(step: { title: string; point: { periodLabel?: string } | null }): string {
+  return step.point?.periodLabel ? `${step.title} — ${step.point.periodLabel}` : step.title;
 }

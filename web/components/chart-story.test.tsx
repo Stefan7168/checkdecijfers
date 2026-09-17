@@ -92,6 +92,30 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     expect(document.activeElement).toBe(trigger);
   });
 
+  // Audit pass 2, row 14 (2026-09-17): two same-kind findings ("Below
+  // average" twice) used to produce two dots with the IDENTICAL accessible
+  // name — a screen-reader user could not tell which jumps to which
+  // period. `point.periodLabel` (attached by chart-insights.ts's
+  // buildFindings, forwarded unchanged by chart.tsx) is now appended to
+  // the accessible name only; the visible dot itself carries no text
+  // either way, so this is purely an aria-label change.
+  it('two same-kind findings get distinct accessible names via their own period, without changing what a sighted reader sees', () => {
+    const stepsWithPeriod = [
+      { id: 'below-s0-2021JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2021: 1,3 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2021JJ00', periodLabel: '2021' } },
+      { id: 'below-s0-2024JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2024: 1,4 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024' } },
+    ] as StoryStep[];
+    render(<Harness steps={stepsWithPeriod} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const dots = within(within(region).getByRole('list', { name: 'Stappen' })).getAllByRole('button');
+    expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual(['Onder het gemiddelde — 2021', 'Onder het gemiddelde — 2024']);
+    // The visible card text is untouched — no " — 2021" leaks into it.
+    expect(within(region).getAllByRole('article').map((a) => a.textContent)).toEqual([
+      'Onder het gemiddelde2021: 1,3 %',
+      'Onder het gemiddelde2024: 1,4 %',
+    ]);
+  });
+
   it('speaks English when asked', () => {
     render(<Harness lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: 'Insights' }));

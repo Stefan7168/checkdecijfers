@@ -287,6 +287,23 @@ describe('ChartStoryStage', () => {
     expect(onIndexChange).toHaveBeenCalledWith(2);
   });
 
+  // Audit pass 2, row 14 (2026-09-17): same fix as the Insights carousel's
+  // dots (chart-story.test.tsx) — the Story stage's own "position" dots
+  // used the same kind-only `aria-label`. `point.periodLabel` is attached
+  // by chart-insights.ts's buildFindings and forwarded unchanged through
+  // chart.tsx's storySteps mapping, so it is present on a real StoryStep at
+  // runtime despite not being part of the type's own declared shape.
+  it('two same-kind findings get distinct position-dot accessible names via their own period (#14)', () => {
+    const stepsWithPeriod = [
+      { id: 'below-s0-2021JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2021: 1,3 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2021JJ00', periodLabel: '2021' } },
+      { id: 'below-s0-2024JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2024: 1,4 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024' } },
+    ] as StoryStep[];
+    render(<ChartStoryStage {...baseProps({ steps: stepsWithPeriod })} />);
+    const list = screen.getByRole('list', { name: 'Positie in het verhaal' });
+    const dots = Array.from(list.querySelectorAll('button'));
+    expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual(['Onder het gemiddelde — 2021', 'Onder het gemiddelde — 2024']);
+  });
+
   it('auto-play: off by default; toggling calls onAutoplay once, advances on a timer, and stops at the last step', () => {
     vi.useFakeTimers();
     const onAutoplay = vi.fn();
