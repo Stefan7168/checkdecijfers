@@ -28,6 +28,7 @@ import {
   buildAssumptionLine,
   buildAttributionLine,
   buildDefinitionLine,
+  buildRegionSeriesLine,
   buildRegionSetLine,
 } from '../compose/format.ts';
 import { renderTemplateBody } from '../compose/template.ts';
@@ -321,6 +322,26 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
     problems.push('region-set coverage line does not re-derive from the stored result');
   }
 
+  // ADR 055 / MS1: the multi-region-series coverage disclosure re-derives from
+  // the stored per-region COVERAGE RECORD (`result.regionSeries`) through the
+  // SAME builder compose.ts used — the sibling of the region-set check above,
+  // and the same argument: the coverage record has no independent ground truth
+  // at audit time, but the sentence the user actually read is a pure function
+  // of it. It is where a tampered coverage record fails: `complete` decides
+  // whether there is a disclosure at all, the partial/excluded partition
+  // decides which sentence names a region and whether it is named by its
+  // verbatim CBS label or its bare code, and the digits ("N van de M gevraagde
+  // jaren") come from the SERVED CELLS — so a roster edited after the fact
+  // disagrees loudly with the cells stored beside it. It is also the ledger of
+  // MS1: a region in either bucket has no derivation record, hence no clause in
+  // the body. `?? null` (A1): every answer that is not a multi-region series,
+  // every COMPLETE one (nothing to disclose), and every row stored before ADR
+  // 055 serializes no key at all.
+  const regionSeriesLine = buildRegionSeriesLine(result);
+  if ((answer.regionSeriesLine ?? null) !== regionSeriesLine) {
+    problems.push('region-series coverage line does not re-derive from the stored result');
+  }
+
   // #253: unlike every other answer body, a region-class body has a
   // DETERMINISTIC ground truth — composeAnswer is template-only BY SHAPE for
   // `region_set` (never an LLM call, so never LLM prose), and
@@ -332,15 +353,23 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   // `region_set` on purpose — for an LLM-written body there is nothing to
   // re-derive against, which is why `body` stays `revalidated` everywhere
   // else (see tests/audit/envelope-key-manifest.test.ts).
-  if (result.shape === 'region_set') {
+  //
+  // ADR 055 adds the SECOND such shape, on the same two grounds: a
+  // `region_series` answer is template-only by shape too (compose.ts and
+  // respond.ts both, Task 4), and MS1 makes its claim-SET the honesty question
+  // exactly as RS1 does for the region class — which regions the body spoke
+  // about, and with which direction word, must be a function of the stored
+  // per-region derivations, not of what the validator happens to tolerate.
+  if (result.shape === 'region_set' || result.shape === 'region_series') {
     if (answer.source !== 'template') {
-      problems.push(`a region_set answer must be template-composed, stored source is '${answer.source}'`);
+      problems.push(`a ${result.shape} answer must be template-composed, stored source is '${answer.source}'`);
     }
     // The SPLICED body is what compose stores (assemble → applyUnitExpansions),
     // so the re-derivation applies the same splice.
     const rederivedBody = applyUnitExpansions(renderTemplateBody(result), result);
     if (answer.body !== rederivedBody) {
-      problems.push('region-set body does not re-derive from the stored result');
+      const label = result.shape === 'region_set' ? 'region-set' : 'region-series';
+      problems.push(`${label} body does not re-derive from the stored result`);
     }
   }
   const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
@@ -350,12 +379,16 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
 
   // The rendered text re-assembles byte-identically from its stored parts —
   // in the SAME order compose.ts assembles them (assumption → region-set
-  // coverage → definition → alternates → marking → attribution).
+  // coverage → region-series coverage → definition → alternates → marking →
+  // attribution). The two coverage lines can never co-occur in practice (a
+  // region CLASS over several periods is still refused), but the order is
+  // fixed here and in compose.ts either way.
   const text = [
     answer.body,
     '',
     ...(assumptionLine ? [assumptionLine] : []),
     ...(regionSetLine ? [regionSetLine] : []),
+    ...(regionSeriesLine ? [regionSeriesLine] : []),
     ...(definitionLine ? [definitionLine] : []),
     ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),

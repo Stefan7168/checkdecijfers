@@ -596,3 +596,111 @@ to prevent. Task 4's brief scoped it to the backend answer layer and its
 `tests/answer` runs, and `web/` has its own co-located suites, so this is left
 for whoever owns the web slice (Task 3's file list is the nearest) — but it must
 not ship without it.
+
+## As-built notes (task 6)
+
+Built session 110 in worktree `s110-mrs6` (branch `s110/mrs6`), on top of the
+merged tasks 1–2, 5, 3 and 4. No deviation from the plan's file list; one
+addition to it (`tests/audit/region-set-r8.test.ts`, whose `reassemble()`
+helper task 4's notes already flagged as needing the new slot).
+
+**`src/answer/audit/reconstruct.ts` — three edits, all inside the answer
+branch:**
+
+1. **The coverage line re-derives.** `buildRegionSeriesLine(result)` is re-run
+   over the stored result and compared to `answer.regionSeriesLine ?? null`,
+   immediately after the identical `regionSetLine` check — same builder, same
+   present-only discipline, new problem string *"region-series coverage line
+   does not re-derive from the stored result"*. This is the whole tamper
+   surface for `ValidatedResult.regionSeries`: the record is checked THROUGH
+   the sentence it determines, because the coverage itself has no independent
+   ground truth at audit time (re-resolving it would ask today's database about
+   a row written months ago).
+2. **The body re-derives byte-identically.** The shape gate that used to read
+   `result.shape === 'region_set'` now reads `region_set || region_series`.
+   Both messages inside it are built from the shape so the region-set strings
+   stay **byte-identical**: the template-source problem interpolates
+   `${result.shape}` (which renders `a region_set answer must be
+   template-composed …` exactly as before), and the body problem picks its
+   label from a ternary (`region-set` / `region-series`). That matters beyond
+   tidiness — `src/answer/audit/known-divergences.ts` pins problems by
+   substring, so a reworded region-set message would silently unpin a
+   registered historical divergence. (Checked: that register mentions neither
+   string today, but the discipline is the point.)
+3. **The text re-assembly gained the slot** — `regionSeriesLine` immediately
+   after `regionSetLine`, matching `compose.ts` exactly.
+
+**Manifest rows (`tests/audit/envelope-key-manifest.test.ts`), the categories
+chosen and why:**
+
+- `ComposedAnswer.regionSeriesLine` → **`rederived`**, the same category as
+  every other structural line. Its note records the one way it differs from its
+  region-set sibling: the key is absent on rows *of its own shape* too, because
+  a COMPLETE series has nothing to disclose — so `?? null` carries three
+  meanings at once (pre-feature row / other shape / nothing was missing) and a
+  reader must treat them identically.
+- `ValidatedResult.regionSeries` → **`shape-checked`**, read through the line,
+  verbatim the argument the `regionSet` entry makes, plus one the region-set
+  record cannot make: the line's digits (*"N van de M gevraagde jaren"*) are
+  counted from the SERVED CELLS, so a tampered roster disagrees with the cells
+  stored beside it as well as with the stored sentence.
+- The two declared-member counts were bumped (`ComposedAnswer` 17 → 18,
+  `ValidatedResult` 11 → 12). The manifest suite was genuinely RED on both new
+  keys before this task (measured: 3 failed / 7 passed) — made green by
+  manifesting them, never by an `ignored` entry.
+- The suite's "a manifest entry that claims a check nobody wrote" cross-check
+  passes because `reconstruct.ts` names `result.regionSeries` in the new
+  comment block — the same way the `regionSet` entry satisfies it. (Note the
+  regex is `\bregionSeries\b`, which does NOT match inside `regionSeriesLine`;
+  the identifier has to appear on its own.)
+
+**New test file `tests/audit/region-series-r8.test.ts`** (10 tests, all against
+the real hermetic ingest through `respondToIntent` with a client that throws if
+the LLM is ever reached — the same construction the region-set R8 suite uses,
+and itself a second proof that this shape is template-only by shape). Covers:
+
+- a COMPLETE 2-region row reconstructs — `shape`, `complete`, `source ===
+  'template'`, **no `regionSeriesLine` key at all**, a non-null 2-series `line`
+  chart, zero problems;
+- an invented `excluded` entry on that complete row fails loudly (the builder
+  produces a sentence where the row has none);
+- a tampered **per-region direction record** (`up` → `down`) fails loudly on
+  the BODY re-derivation — the pin the plan asks for, and the one that proves
+  the body is re-derived rather than only re-validated on the derivation side;
+- a dropped region clause (every remaining digit still cell-backed, so the
+  numeric validator is happy) fails ONLY on the body re-derivation — asserted
+  both ways, `fails re-validation` must NOT appear;
+- a pre-feature row (an ordinary single-region `series`) carries neither key on
+  the SERIALIZED row and still reconstructs;
+- a partial+excluded row reconstructs with its line, and then four tamper pins:
+  `complete` flipped, a region moved `partial` → `excluded`, a rewritten line,
+  and a STRIPPED line (`?? null` is not an escape hatch).
+
+**`npm run audit:verify` against the live DB is expected to pass UNCHANGED**,
+reasoned from the code rather than run (it needs live credentials, out of scope
+for a hermetic worktree task): `region_series` is forward-only — no stored row
+carries the shape or the `regionSeries` key — so on every historical row
+`buildRegionSeriesLine` returns `null` at its first line (`result.regionSeries
+?? null`), the stored `regionSeriesLine` is likewise absent (`?? null`), the
+new equality holds trivially, the text re-assembly omits the slot exactly as
+before, and the widened body gate is never entered. The only strings a live row
+could match are byte-identical to today's. A later session with DB access
+should still run it once before the whole plan is called done, as tasks 3, 4
+and 5 each noted.
+
+**Verification run (this task only):**
+- `npx vitest run tests/audit/region-series-r8.test.ts --maxWorkers=1` → 10
+  passed, 0 failed (new file; 8 of the 10 were RED before the reconstruct.ts
+  edits — tests first, measured).
+- `npx vitest run tests/audit/envelope-key-manifest.test.ts
+  tests/audit/region-set-r8.test.ts --maxWorkers=1` → 28 passed, 0 failed (the
+  manifest was 3 failed / 7 passed before this task).
+- `npx vitest run tests/audit --maxWorkers=1` → **202 passed, 0 failed** (25
+  files) — the whole audit tree, including every other reconstruction suite
+  that shares the edited file.
+- `npm run typecheck` (root) → clean, no errors.
+
+**Still open after this task:** the web-render gap task 4 flagged
+(`regionSeriesLine` is stored and audited, but the chat UI renders the answer
+PARTS and does not yet map this one) is untouched here — it is not an R8
+concern, and this task's brief scoped it out. It must not ship without a fix.

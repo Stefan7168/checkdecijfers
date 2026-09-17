@@ -66,8 +66,16 @@ label is a complete question, so thread resume may replay it as a plain fill-the
 `PendingClarification.conversationContext` (nullable),
 `ComposedAnswer.regionSetLine` (nullable, #253 — the region-class coverage disclosure; absent on every
 answer that is not a region-class answer and on every row stored before #253),
+`ComposedAnswer.regionSeriesLine` (nullable, ADR 055 — the multi-region-series coverage disclosure;
+absent on every answer that is not a multi-region series, on every **COMPLETE** multi-region series
+(there is nothing to disclose), and on every row stored before ADR 055 — so on this key the `?? null`
+read is load-bearing twice over: absence means "pre-feature *or* wrong shape *or* nothing was missing",
+and a reader must treat all three the same),
 and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted`,
 `ValidatedResult.regionSet` (#253 — the coverage record; present ONLY on a `region_set` result),
+`ValidatedResult.regionSeries` (ADR 055 — the per-region coverage record; present ONLY on a
+`region_series` result, and checked at audit time THROUGH the disclosure line it determines, exactly
+like `regionSet`),
 `ValidatedResult.registry` (#196 — the staleness inputs; absent on synthetic results),
 `QueryRefusal.refusal.subReason` (#253 — see below) and
 `Attribution.alternates` (#39 — absent on explicit targets, on canonical measures without
