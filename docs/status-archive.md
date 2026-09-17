@@ -18,7 +18,7 @@
 
 **(6) Research (docs-only): [#253](open-questions.md)** — region-set query capability verified still absent (no wildcard region selection anywhere upstream of `run.ts`'s existing `region_code = any(...)`); the row now carries a 5-point minimal build scope. **[#254](open-questions.md)(a)** — all three household-income alternates verified eligible for `period_change` from the committed 83932NED fixtures; `PERIOD_CHANGE_ELIGIBLE_KEYS` is primary-key-only so extension needs a per-alternate marker; no LLM-fixture invalidation.
 
-**Verification (parent, serial, after all merges):** root + web typecheck clean; migrations check OK (33 files); backend 168 files / 2543 tests; hermetic benchmark 14/14 answerable, 6/6 refusal, 0 fabricated, GATE PASS; web 117 files / 1859 tests; real `next build` OK; `/code-review` LOW over `e776763..HEAD`: 0 findings. Pushed as one batch (docs commit on top) — CI run recorded in STATUS's top block.
+**Verification (parent, serial, after all merges):** root + web typecheck clean; migrations check OK (33 files); backend 168 files / 2543 tests; hermetic benchmark 14/14 answerable, 6/6 refusal, 0 fabricated, GATE PASS; web 117 files / 1859 tests; real `next build` OK; `/code-review` LOW over `e776763..HEAD`: 0 findings. Pushed as one batch, docs commit `719220d` on top — CI run `35187124626` green (web, backend 1/2/3, deploy).
 
 **Not done, deliberately:** `tipsbd30` DOI backfill (owner); #254(b) PPI fixture re-record (real spend); #245 Action 3 (owner sub-questions); #250(a) Dutch wording.
 

@@ -23,7 +23,7 @@ list` before trusting this, since more may have landed after it was written).** 
 owner-queued priority; the owner's one instruction was "spawn a bunch of sub-agents … do not ask me
 questions".** Six independent [open-questions.md](open-questions.md) rows were dispatched to six PARALLEL
 subagents (own worktrees; cheap tier for mechanical work, a higher tier for the one shared live-path
-file), then merged by the parent, verified ONCE serially, and pushed as one batch — CI green:
+file), then merged by the parent, verified ONCE serially, and pushed as one batch — CI green incl. deploy (`719220d`, run `35187124626`):
 
 - **[#264](open-questions.md) Eurostat DOI — BUILT** (`src/eurostat-adapter/doi.ts`; construct
   `10.2908/<CODE>`, write only on a DataCite `findable` check; CBS never touched). **Owner step pending:**
