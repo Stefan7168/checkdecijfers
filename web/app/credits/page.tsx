@@ -23,6 +23,15 @@ const EUR_FORMATS = {
   en: new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR' }),
 } as const;
 
+// Row 7 (session 110 UX audit): plain integer counts (a pack's own credits,
+// the "≈N questions" line) get the same per-language grouping as the euro
+// amounts above — nl-NL's "25.000" vs. en-GB's "25,000" — instead of one
+// long unseparated digit run.
+const COUNT_FORMATS = {
+  nl: new Intl.NumberFormat('nl-NL'),
+  en: new Intl.NumberFormat('en-GB'),
+} as const;
+
 export default async function CreditsPage({
   searchParams,
 }: {
@@ -43,6 +52,7 @@ export default async function CreditsPage({
   const { purchase, pro } = await searchParams;
   const lang = await getLang();
   const eurFormat = EUR_FORMATS[lang];
+  const countFormat = COUNT_FORMATS[lang];
 
   // WP135 (ADR 033 ⟨A5⟩): the shell rides the SAME WORKSPACE_ENABLED flag as the
   // workspace. Flag off ⇒ NO header, byte-identical to today; flag on ⇒ the
@@ -90,23 +100,31 @@ export default async function CreditsPage({
           // both lines rather than dividing by zero or showing a lie.
           const packQuestions = simplePrice > 0 ? Math.floor(pack.credits / simplePrice) : null;
           const pricePerQuestion = packQuestions !== null && packQuestions > 0 ? pack.priceCents / 100 / packQuestions : null;
+          // Row 7: the pack's own price/credits line and (row 13) the Buy
+          // button's accessible name are both built from the SAME two
+          // pre-formatted values — never the DB-stored `label` (a fixed
+          // Dutch string) and never a bare, unformatted number.
+          const priceFormatted = eurFormat.format(pack.priceCents / 100);
+          const creditsFormatted = countFormat.format(pack.credits);
+          const packLabel = t(lang, 'credits.packLabel', { price: priceFormatted, credits: creditsFormatted });
+          const buyAriaLabel = t(lang, 'credits.buyAriaLabel', { price: priceFormatted, credits: creditsFormatted });
           return (
             <div
               key={pack.id}
               className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
             >
               <div className="flex flex-col">
-                <span className="text-sm text-foreground tnum">{pack.label}</span>
+                <span className="text-sm text-foreground tnum">{packLabel}</span>
                 {packQuestions !== null ? (
                   <span className="text-xs text-muted-foreground tnum">
-                    {t(lang, 'credits.packQuestions', { n: packQuestions })}
+                    {t(lang, 'credits.packQuestions', { n: countFormat.format(packQuestions) })}
                     {pricePerQuestion !== null
                       ? ` · ${t(lang, 'credits.packPricePerQuestion', { price: eurFormat.format(pricePerQuestion) })}`
                       : ''}
                   </span>
                 ) : null}
               </div>
-              <BuyButton packId={pack.id} />
+              <BuyButton packId={pack.id} packDescription={buyAriaLabel} />
             </div>
           );
         })}

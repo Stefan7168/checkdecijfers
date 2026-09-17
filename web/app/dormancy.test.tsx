@@ -75,13 +75,16 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
   it('/credits renders NO site header', async () => {
     render(await CreditsPage({ searchParams: emptySearch }));
     expect(screen.queryByTestId('site-header')).toBeNull();
-    expect(screen.getByText(/Credits — Check de Cijfers/)).toBeInTheDocument();
+    // Row 14 (session 110 UX audit): the h1 is just "Credits" — the site
+    // name is not repeated in it (the real <title> is set once, site-wide,
+    // by app/layout.tsx's generateMetadata, not by this heading).
+    expect(screen.getByRole('heading', { level: 1, name: 'Credits' })).toBeInTheDocument();
   });
 
   it('/login renders NO site header', async () => {
     render(await LoginPage());
     expect(screen.queryByTestId('site-header')).toBeNull();
-    expect(screen.getByText(/Inloggen — Check de Cijfers/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Inloggen' })).toBeInTheDocument();
   });
 
   it('/geschiedenis redirects to /', async () => {
@@ -94,7 +97,7 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
     const { getLang } = await import('../lib/i18n/server.ts');
     vi.mocked(getLang).mockResolvedValueOnce('en');
     render(await GeschiedenisPage());
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('History — Check de Cijfers');
+    expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
   });
 
   it('/geschiedenis opts out of static prerendering (#135 residual, same bug as /login)', () => {

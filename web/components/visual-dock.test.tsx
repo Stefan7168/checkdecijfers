@@ -194,7 +194,10 @@ describe('VisualDock — busy skeleton (chat interaction polish, session 88)', (
 });
 
 // WP218 phase 4 (#219): proves the language switch reaches the dock's own
-// chrome (the tab labels/questions are DockVisual data, out of scope here).
+// chrome. Session 110 UX audit row 5 closed the "tab labels are out of scope"
+// gap this comment used to record: a `chart`/`card` visual's count-based tab
+// label (`dock.chartTab`/`dock.cardTab`) now goes through the catalogue too —
+// the question text alongside it stays whatever language the user typed in.
 describe('VisualDock — en', () => {
   it('renders the English header + tablist label under LangProvider lang="en"', () => {
     render(
@@ -204,6 +207,43 @@ describe('VisualDock — en', () => {
     );
     expect(screen.getByText('Charts')).toBeInTheDocument();
     expect(screen.getByRole('tablist', { name: 'Visualizations' })).toBeInTheDocument();
+  });
+
+  it('renders "Chart 1" / "Card 1" tab labels, not "Grafiek 1" / "Kaart 1" (row 5)', () => {
+    render(
+      <LangProvider lang="en">
+        <VisualDock
+          visuals={[chartVisual({ id: 'visual-0', count: 1 })]}
+          activeVisualId="visual-0"
+          onSelect={vi.fn()}
+          busy={false}
+        />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: /Chart 1/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Grafiek/)).not.toBeInTheDocument();
+  });
+
+  it('renders "Card 1" for a card visual in English', () => {
+    const cardVisual: DockVisual = {
+      id: 'visual-1',
+      kind: 'card',
+      label: 'Kaart 1',
+      count: 1,
+      question: '',
+      chart: null,
+      chartAlternates: [],
+      userChart: null,
+      card: { value: '42,0', unitSuffix: '%', measureTitle: 'Test', context: 'Nederland', provisional: false, tableId: '12345NED', sourceLabel: 'CBS StatLine', syncedDate: '2026-07-01' },
+      auditId: null,
+    };
+    render(
+      <LangProvider lang="en">
+        <VisualDock visuals={[cardVisual]} activeVisualId="visual-1" onSelect={vi.fn()} busy={false} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: /Card 1/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Kaart/)).not.toBeInTheDocument();
   });
 });
 

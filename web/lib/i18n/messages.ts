@@ -134,6 +134,11 @@ const nl = {
   // visual-dock.tsx.
   'dock.header': 'Grafieken',
   'dock.tablistLabel': 'Visualisaties',
+  // Session 110 UX audit row 5: the per-visual tab label (dock-visuals.ts's
+  // `count` field) — kept byte-identical to the old hardcoded template
+  // literals (`Grafiek ${n}` / `Kaart ${n}`) in Dutch.
+  'dock.chartTab': 'Grafiek {n}',
+  'dock.cardTab': 'Kaart {n}',
 
   // dataset-chat.tsx.
   'datasetChat.needsDecisionFallback': 'Niets meer te beslissen.',
@@ -220,7 +225,7 @@ const nl = {
   // login/login-form.tsx, login/page.tsx, login/actions.ts. googleFailed is
   // shared between the server action's own return value and the client's
   // (near-unreachable) post-unstable_rethrow fallback — one sentence, one key.
-  'login.pageHeading': 'Inloggen — Check de Cijfers',
+  'login.pageHeading': 'Inloggen',
   'login.pageBody': 'Vul je e-mailadres in; je krijgt een inloglink toegestuurd. Geen wachtwoord nodig.',
   'login.sentMessage': 'Check je e-mail voor de inloglink.',
   'login.emailPlaceholder': 'jij@voorbeeld.nl',
@@ -232,7 +237,7 @@ const nl = {
   'login.googleFailed': 'Inloggen met Google is niet gelukt. Probeer het opnieuw of gebruik de inloglink.',
 
   // app/credits/*.
-  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.pageHeading': 'Credits',
   'credits.balancePrefix': 'Je huidige saldo:',
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Bedankt! Je saldo verschijnt hier zodra Stripe de betaling bevestigt.',
@@ -247,8 +252,18 @@ const nl = {
   'credits.startFailed': 'Er ging iets mis bij het starten van de betaling.',
   'credits.noCheckoutUrl': 'Stripe gaf geen checkout-URL terug.',
 
+  // thread-sidebar.tsx group headings (session 110 UX audit row 4) — the
+  // bucket KEYS in web/lib/thread-groups.ts (ThreadGroupLabel) stay Dutch
+  // literals used only as internal identifiers; these are the rendered
+  // labels shown above each day-bucket of threads in the CHAT SIDEBAR (not
+  // the /geschiedenis page below, despite the shared "history." prefix).
+  'history.today': 'Vandaag',
+  'history.yesterday': 'Gisteren',
+  'history.last7': 'Afgelopen 7 dagen',
+  'history.older': 'Ouder',
+
   // app/geschiedenis/page.tsx.
-  'history.pageHeading': 'Geschiedenis — Check de Cijfers',
+  'history.pageHeading': 'Geschiedenis',
 
   // question-history.tsx (Server Component; onboarding.failureSummary itself
   // is backend text and is never translated — only the fixed template words
@@ -737,6 +752,14 @@ const nl = {
   // and packPricePerQuestion strings carry the ONLY digits (via {n}/{price},
   // computed server-side from the pack's own priceCents/credits, never
   // hardcoded), and neither can appear inside a chart card.
+  // Row 7 (session 110 UX audit): the pack's own price/credits line, built
+  // from its priceCents/credits rather than the DB-stored `label` (which was
+  // a fixed Dutch string, e.g. "€30 — 2.000 credits", shown even in English)
+  // — both {price} and {credits} are pre-formatted via Intl.NumberFormat for
+  // the page's own language before being substituted in.
+  'credits.packLabel': '{price} — {credits} credits',
+  // Row 13: the Buy button's accessible name, same pre-formatted vars.
+  'credits.buyAriaLabel': 'Koop {price} — {credits} credits',
   'credits.packQuestions': '≈ {n} gewone vragen',
   'credits.packPricePerQuestion': '{price} per vraag',
   'credits.neverExpires': 'Credits verlopen nooit. Geen abonnement.',
@@ -962,6 +985,8 @@ const en: Messages = {
 
   'dock.header': 'Charts',
   'dock.tablistLabel': 'Visualizations',
+  'dock.chartTab': 'Chart {n}',
+  'dock.cardTab': 'Card {n}',
 
   'datasetChat.needsDecisionFallback': 'Nothing left to decide.',
   'datasetChat.noLongerNeedsDecision': 'This file no longer needs a decision — it may have been deleted.',
@@ -1035,7 +1060,7 @@ const en: Messages = {
     'You pay per question with credits — no subscription. Creating an account is free and takes seconds: enter your email, click the login link, start asking.',
   'common.createFreeAccount': 'Create a free account',
 
-  'login.pageHeading': 'Log in — Check de Cijfers',
+  'login.pageHeading': 'Log in',
   'login.pageBody': 'Enter your email address; you will get a login link. No password needed.',
   'login.sentMessage': 'Check your email for the login link.',
   'login.emailPlaceholder': 'you@example.com',
@@ -1046,7 +1071,7 @@ const en: Messages = {
   'login.magicLinkFailed': 'Something went wrong sending the login link. Please try again.',
   'login.googleFailed': 'Signing in with Google did not work. Please try again or use the login link.',
 
-  'credits.pageHeading': 'Credits — Check de Cijfers',
+  'credits.pageHeading': 'Credits',
   'credits.balancePrefix': 'Your current balance:',
   'credits.creditsWord': 'credits.',
   'credits.purchaseSuccess': 'Thanks! Your balance will appear here once Stripe confirms the payment.',
@@ -1061,7 +1086,12 @@ const en: Messages = {
   'credits.startFailed': 'Something went wrong starting the payment.',
   'credits.noCheckoutUrl': 'Stripe did not return a checkout URL.',
 
-  'history.pageHeading': 'History — Check de Cijfers',
+  'history.today': 'Today',
+  'history.yesterday': 'Yesterday',
+  'history.last7': 'Last 7 days',
+  'history.older': 'Older',
+
+  'history.pageHeading': 'History',
 
   'history.empty': 'No previous questions yet.',
   'history.heading': 'Previous questions',
@@ -1437,6 +1467,8 @@ const en: Messages = {
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
   // WP-C (journey programme, session 96): mirrors the Dutch block above —
   // R10 credits-page pack copy, R5.3 the anonymous-Insights login line.
+  'credits.packLabel': '{price} — {credits} credits',
+  'credits.buyAriaLabel': 'Buy {price} — {credits} credits',
   'credits.packQuestions': '≈ {n} simple questions',
   'credits.packPricePerQuestion': '{price} per question',
   'credits.neverExpires': 'Credits never expire. No subscription.',

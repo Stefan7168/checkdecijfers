@@ -151,6 +151,21 @@ describe('QuestionHistory', () => {
     expect(screen.getAllByText('Amsterdam telt 931.298 inwoners.').length).toBeGreaterThanOrEqual(1);
   });
 
+  // Row 17 (session 110 UX audit): the summary's accessible name is the
+  // concatenation of ALL its text nodes -- the question span and the
+  // credits/date span sit side by side with no text between them (only a
+  // CSS margin, which contributes nothing to the accessible name), so a
+  // question ending in "?" ran straight into "0 credits" as "?0 credits".
+  it('puts a real space between the question and the credits/date, not just a CSS margin', async () => {
+    const { container } = render(
+      (await QuestionHistory({ items: [entry({ question: 'Wat wordt de inflatie in 2027?', creditsCharged: 0 })] })),
+    );
+    const summary = container.querySelector('summary');
+    expect(summary).not.toBeNull();
+    expect(summary!.textContent).not.toMatch(/\?0 credits/);
+    expect(summary!.textContent).toMatch(/\?\s+0 credits/);
+  });
+
   it('renders no exchange block and no "totaal" label when clarification is null', async () => {
     render((await QuestionHistory({ items:[entry()] })));
     expect(screen.queryByText('Verduidelijkingsvraag')).toBeNull();

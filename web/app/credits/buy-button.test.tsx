@@ -33,3 +33,20 @@ describe('BuyButton — en', () => {
     expect(screen.getByRole('button', { name: 'Buy' })).toBeInTheDocument();
   });
 });
+
+// Row 13 (session 110 UX audit): four packs' Buy buttons all shared the
+// SAME accessible name ("Buy" / "Kopen"), unusable by a screen-reader user.
+describe('BuyButton — packDescription (row 13)', () => {
+  it('uses packDescription as the accessible name when given', () => {
+    render(<BuyButton packId="pack-1" packDescription="Koop €5,00 — 100 credits" />);
+    expect(screen.getByRole('button', { name: 'Koop €5,00 — 100 credits' })).toBeInTheDocument();
+    // Still renders the plain visible "Kopen" text — only the accessible
+    // name changes, not what's on screen.
+    expect(screen.getByText('Kopen')).toBeInTheDocument();
+  });
+
+  it('falls back to the plain "Kopen" accessible name when packDescription is absent', () => {
+    render(<BuyButton packId="pack-1" />);
+    expect(screen.getByRole('button', { name: 'Kopen' })).toBeInTheDocument();
+  });
+});
