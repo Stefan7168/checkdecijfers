@@ -82,6 +82,10 @@ most natural lay question the product can't chart today, but large (region-set i
 bulk-ingested year-versioned geometry, server-built class breaks). Re-raise if real
 region-set demand shows up.
 
+**Update (session 110, 2026-09-17):** the region-set-intents half of that prerequisite is now
+built — see [ADR 054](../decisions/054-region-set-query.md) and [#253](../open-questions.md). The
+map itself (year-versioned geometry, server-built class breaks) is still not built.
+
 **Deliberately not proposed:** pie charts, dual y-axes, LLM-chosen chart types, curve
 smoothing/interpolation, client-side moving averages/trend lines, client-side merging of
 two answers, client-side date slicing — each is an R1/R5/R6 violation by construction or

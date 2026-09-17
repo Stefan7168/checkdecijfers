@@ -13,6 +13,10 @@ Session 105's mandate (owner, in-chat): "focus the project back on the standard 
 storytelling." [Open-questions #253](../open-questions.md) (a map/geo chart library comparison) was
 checked against the real code and confirmed still blocked — `src/query/` has no way to ask for
 "every region," only a fixed, explicitly-named list, so there is no real region-set data to map yet.
+(**Update, session 110, 2026-09-17:** this changed — see ADR [054](054-region-set-query.md) and
+[#253](../open-questions.md); the query/chart/answer layers now support region-class queries, though
+the map itself and the parser exposure needed to reach it in chat remain future work. Accurate as of
+session 105, when this ADR was written.)
 [#254](../open-questions.md)'s own research named two directly-actionable "standard graphs" gaps
 with no such precondition; the owner picked the first: **a journalist-authored headline for a
 chart** — today the chart title is always the CBS table's own name, never editable prose the reader

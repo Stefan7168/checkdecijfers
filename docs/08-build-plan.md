@@ -853,7 +853,7 @@ built, by rule). Phase 6 (re-measure) waits for real usage.
 
 ## Journalist chart headline — session 105 (2026-09-16), [ADR 050](decisions/050-journalist-chart-headline.md)
 
-**Owner priority pivot ("back to standard graphs instead of storytelling") → [#253](open-questions.md) checked and confirmed still blocked (no region-set query capability) → [#254](open-questions.md)'s headline gap picked instead, owner present.** Design approved in chat (spec:
+**Owner priority pivot ("back to standard graphs instead of storytelling") → [#253](open-questions.md) checked and confirmed still blocked (no region-set query capability) → [#254](open-questions.md)'s headline gap picked instead, owner present.** (Accurate as of session 105; the region-set query capability was later built — see the WP253 entry near the end of this file and ADR [054](decisions/054-region-set-query.md).) Design approved in chat (spec:
 [superpowers/specs/2026-09-16-chart-journalist-headline-design.md](superpowers/specs/2026-09-16-chart-journalist-headline-design.md)), then built end-to-end via subagent-driven development in one session: migration 031 (`chart_headlines`, FILE-ONLY) + GDPR retention, an ownership-guarded store module, AI drafting that reuses the existing Insights digit-free mechanism (plus a real bug fix along the way — `src/chart/insights.ts` gained `topFinding()`, since `scoreFindings(spec)[0]` turned out to be chronologically-first, not highest-scored), three Server Actions, i18n strings, the chat UI (draft/edit/save/display — this task also caught and fixed an already-merged, build-breaking curly-quote syntax bug from the i18n task), the public embed page, and PNG/SVG export. Final whole-branch review found 3 real Important issues (an export-wrap overflow, a line-height collision, and — the most serious — a raw character-slice that could truncate a filled-in NUMBER mid-digit); one fix wave resolved all three, independently re-verified including a hand-traced example proving the number-truncation fix. Full verification block green: benchmark gate 14/14 + 6/6 + 0 fabricated, full backend + web suites, real `next build`. **✅ MERGED to `main` (`7bf76ff`, CI + deploy green) and migration 031 applied live with the owner's explicit go-ahead, verified against production (RLS on, zero `anon`/`authenticated` grants). The feature is fully live.** Two things still genuinely open for the owner, not decided during the build: whether a headline should be visually marked as journalist-written vs. a validated figure, and whether a published headline should be retractable (today: editable, not removable short of deleting the chat).
 
 ## Chart alternate-reading toggle — sessions 106→107 (2026-09-16), [ADR 051](decisions/051-chart-alternate-reading-toggle.md)
@@ -950,3 +950,78 @@ rows and ADRs named here; the measured numbers are in [STATUS.md](STATUS.md)/[st
 
 **Not done, deliberately:** the `tipsbd30` DOI backfill (live DB write → owner); #254(b) PPI fixture re-record
 (real spend → owner); #245 Action 3 (waits on the owner's three sub-questions); #250(a) Dutch wording sign-off.
+
+## WP253 — region-set query (session 110, 2026-09-17)
+
+**Scope:** answer "one measure, one period, a SET of regions" — a set given as a region CLASS (all
+provincies, all gemeenten, the gemeenten of one provincie), not just an explicit list of named
+regions — the capability [#253](open-questions.md) names as the precondition for any map/geo chart.
+Design: [docs/superpowers/specs/2026-09-17-region-set-query-design.md](superpowers/specs/2026-09-17-region-set-query-design.md).
+Plan + full per-task as-built notes: [docs/superpowers/plans/2026-09-17-region-set-query.md](superpowers/plans/2026-09-17-region-set-query.md).
+As-built decision record: ADR [054](decisions/054-region-set-query.md).
+
+**Built (Tasks 1–8, all hermetic, no real LLM spend):**
+- **Task 1** (`s110/253-region-set-query`) — `resolveRegionSet` (`src/query/region-set.ts`): reads
+  the roster of a region CLASS from `dimension_labels.dimension_group`, never a hardcoded list,
+  never guessed (an empty/unverifiable `GM<pv>` group refuses rather than falling back to a
+  code-prefix scan). Deviation: "alle gemeenten" on `03759ned` measured at **834** codes, not the
+  design's estimated 835 (`GM0997` correctly excluded).
+- **Task 2** — `StructuredIntent.regionSet` (additive, `INTENT_SCHEMA_VERSION` stays `1`) + the
+  resolver branch in `resolve.ts`. The one-varying-axis rule is **not relaxed**.
+- **Task 3** — the `region_set` fetch branch + coverage record (`ValidatedResult.regionSet`) in
+  `run.ts`: applicable/withheld cells are served; not-applicable (CBS `Impossible`) and missing
+  members are disclosed, never silently dropped. Deviation: `REGION_SET_MAX_MEMBERS` (500) caps
+  SERVED cells, not roster size (the design's wording was ambiguous; the as-built code resolved it
+  explicitly, since a roster-size cap would have wrongly refused "alle gemeenten" outright).
+- **Task 4** — `deriveRegionRanking` (RS1): a ranking derivation exists only when the served set is
+  complete; an incomplete set produces no derivation at all, so R9 refuses any ranking claim by
+  construction. Reuses `deriveMax`, no new `DerivationRecord` kind.
+- **Task 5** (`s110/rs5`) — `region_set` charts as `kind: 'bar'` (no new chart kind); series order
+  follows the ranking derivation's own order, or the query layer's own cell order with no ranking
+  record — never a builder-invented sort.
+- **Task 6** (`s110/rs6`) — the deterministic (zero-LLM) answer body (`renderRegionSet`, a summary
+  when complete, the full per-member list when incomplete), the structural coverage-disclosure line
+  (`regionSetLine`, outside the R1-scanned body), and a new refusal, `region_scope_on_national_measure`,
+  for a class ask on a measure CBS only publishes nationally. Deviation from the design: this landed
+  as an answer-layer `RefusalReason` + a new `QueryRefusal.refusal.subReason`, not an intent-layer
+  `ResolutionFailure.reason` — the intent layer never sees this case. **Real bug fix along the way:**
+  before this, the case would have served as the generic `internal` refusal, which pages the owner
+  on every occurrence.
+- **Task 7** (`s110/rs7`) — R8 reconstruction: `regionSetLine` re-derives byte-identically (a real,
+  previously-latent bug — `reconstruct.ts` had no entry for it at all before this task), the coverage
+  record is checked through the line it determines (never re-resolved against today's data), region-set
+  BODIES are `rederived` (not merely `revalidated`, a deliberate strengthening — this is the one shape
+  with a fully deterministic ground truth), `subReason`↔`reason` pairing is checked both directions, and
+  a new ingestion conformance test (`tests/ingestion/region-set-groups.test.ts`) guards the `GM<pv>`
+  group-naming assumption per registered geo table.
+- **Task 8** (this entry + ADR 054 + the doc updates it lists) — docs.
+
+**Not built — Task 9, owner-supervised, real LLM spend, deliberately deferred:** exposing
+`regionScope` through the intent parser (`rawCandidateSchema` + its duplicate in
+`rawParseSchemaWith`, `PROMPT_VERSION` 6→7 with a narrowly-scoped Regions rule, `RAW_PARSE_VERSION`
+3→4) and re-recording 103 fixtures (`intent`, `followup`, `clarify`, `onboarding-delivery`) plus 5
+new labelled benchmark cases. **Until Task 9 runs, this capability is unreachable by any real user
+question** — everything above is hermetically built and tested against hand-authored intents only.
+Procedure (verbatim from the plan): code + labelled cases → `intent:record` → `clarify:record` /
+`followup:record` / `onboarding-delivery:record` → `intent:eval --repeat=3` checked against ADR 012's
+0.9/0.35 thresholds → the full verification block (typechecks, all suites, benchmark 14/14 + 6/6 +
+0 fabricated, real build) → `/code-review` LOW → push.
+
+**Invariants:** R1/R5/R9 (RS1's ranking-honesty mechanism), R6 (verbatim chart projection, no
+builder-invented sort), R8 (full reconstruction incl. the new refusal pairing), R11 (withheld cells
+keep their CBS reason), principle (a) (the LLM never enumerates region codes — Task 9 will teach it
+to classify a CLASS, never emit a list), principle (c) (never guess a roster; an incomplete class
+answers honestly, never with a suppressed gap).
+
+**Owner-delegated decisions (2026-09-17), full reasoning in ADR 054:** (1) an incomplete region class
+answers without ranking words, never refuses outright; (2) "alle landsdelen" stays an honest
+`outside_loaded_slice` refusal, no ingest-slice widening now; (3) two regional canonical measures are
+enough to ship; (4) a fully deterministic (zero-phrasing-model) answer is accepted for this shape;
+(5) the bar chart ships first, the map stays a separate, later decision.
+
+**Done-definition:** MET for Tasks 1–8 (every task's own hermetic test suite green, `npm run
+typecheck` clean at every step — see the plan's per-task "Measured at the end of task N" notes for
+exact counts; the full backend/web suites and a live benchmark run were not re-run as one combined
+pass in this docs-only task). **NOT MET** for the WP's own end-to-end goal ("a journalist can ask
+this in chat") until Task 9 ships — tracked as its own, explicitly owner-gated step, not a residual
+bug.

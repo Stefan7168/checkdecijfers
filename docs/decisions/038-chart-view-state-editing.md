@@ -134,3 +134,8 @@ digits, not because notes are exempt.*
 - A map view (decision H) stays gated behind the architecture panel's stated prerequisite: a
   "region-set" query capability the product does not have today (a CBS result only ever contains
   the regions one question named, so a map of them would visually claim "no data" everywhere else).
+  **Update (session 110, 2026-09-17):** the region-set query capability itself is now built (ADR
+  [054](054-region-set-query.md), [#253](../open-questions.md)) — the query, chart and answer layers
+  can answer over a region CLASS. Decision H's gate is narrower than it was, not lifted: the
+  capability is not yet reachable through the intent parser (Task 9, owner-supervised), and the map
+  view itself (year-versioned geometry, server-built class breaks) is separately unbuilt.
