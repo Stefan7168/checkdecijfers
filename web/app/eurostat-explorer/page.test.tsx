@@ -20,6 +20,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('../../lib/db.ts', () => ({ getDb: vi.fn(() => ({})) }));
 
+// Session 110 UX audit pass 3, row 9: page.tsx now calls the real
+// getLang() (next/headers under the hood — no request context in jsdom,
+// same reason question-history.test.tsx already mocks this module).
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
+vi.mock('../../lib/i18n/server.ts', () => ({ getLang }));
+
 const { listRegisteredEurostatTables, listMeasuresForTable, runExplorerQuery, geoDimensionForTable } = vi.hoisted(
   () => ({
     listRegisteredEurostatTables: vi.fn(),
@@ -40,8 +46,9 @@ vi.mock('../../lib/eurostat-explorer.ts', () => ({
 }));
 // Set once at module load (not only in afterEach) so the FIRST test in the
 // file — which runs before any afterEach fires — also gets the "no geo
-// dimension" default rather than an unmocked `undefined`.
+// dimension"/"nl" defaults rather than an unmocked `undefined`.
 geoDimensionForTable.mockResolvedValue(null);
+getLang.mockResolvedValue('nl');
 
 import { redirect } from 'next/navigation';
 import EurostatExplorerPage, { dynamic, runtime } from './page.tsx';
@@ -57,6 +64,8 @@ afterEach(() => {
   runExplorerQuery.mockReset();
   geoDimensionForTable.mockReset();
   geoDimensionForTable.mockResolvedValue(null);
+  getLang.mockReset();
+  getLang.mockResolvedValue('nl');
 });
 
 describe('EurostatExplorerPage — flag mechanism (Amendment B3)', () => {
@@ -89,6 +98,34 @@ describe('EurostatExplorerPage — noindex (D3(a))', () => {
   it('sets noindex metadata regardless of flag state', async () => {
     const { metadata } = await import('./page.tsx');
     expect(metadata).toMatchObject({ robots: { index: false, follow: false } });
+  });
+});
+
+// Session 110 UX audit pass 3, row 9: the page's own chrome stays English
+// (an internal tool), but app/layout.tsx renders the SHARED site footer in
+// the reader's own `lang` cookie language underneath it — one page, two
+// languages. Pins the one-sentence notice that now names the mismatch up
+// front, in the reader's own language.
+describe('EurostatExplorerPage — English-only notice (session 110 UX audit pass 3, row 9)', () => {
+  beforeEach(() => {
+    process.env.EUROSTAT_EXPLORER_ENABLED = '1';
+    listRegisteredEurostatTables.mockResolvedValue([]);
+  });
+
+  it('shows the notice in Dutch when the reader\'s lang is nl (the default)', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await EurostatExplorerPage({ searchParams: emptySearch }));
+    expect(screen.getByTestId('english-only-notice')).toHaveTextContent(
+      'Deze interne tool is alleen in het Engels beschikbaar; de voettekst hieronder blijft in jouw eigen taal.',
+    );
+  });
+
+  it('shows the notice in English when the reader\'s lang is en', async () => {
+    getLang.mockResolvedValue('en');
+    render(await EurostatExplorerPage({ searchParams: emptySearch }));
+    expect(screen.getByTestId('english-only-notice')).toHaveTextContent(
+      'This internal tool is English-only; the footer below stays in your own language.',
+    );
   });
 });
 

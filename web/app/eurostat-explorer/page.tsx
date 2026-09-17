@@ -42,6 +42,14 @@ import { buildAnswerProof, batchIdsForProof, fetchRequestUrlsByBatch } from '../
 import { AnswerProof } from '../../components/answer-proof.tsx';
 import { ChartView } from '../../components/chart.tsx';
 import { displayValueUnit, provisionalSuffix } from '../../backend/answer/compose/template.ts';
+// Session 110 UX audit pass 3, row 9: this page's own chrome stays English
+// (an internal, never-publicly-linked tool — see the module header), but
+// app/layout.tsx renders the SHARED site footer under every non-embed page
+// in the reader's own `lang` cookie language, which produced a one-page-
+// two-languages mismatch for an nl-cookie reader. `getLang`/`t` are the
+// same server-side language resolution site-footer.tsx itself uses.
+import { getLang } from '../../lib/i18n/server.ts';
+import { t } from '../../lib/i18n/messages.ts';
 
 export const metadata: Metadata = {
   title: 'Eurostat explorer (internal)',
@@ -79,6 +87,7 @@ export default async function EurostatExplorerPage({
 
   const db = getDb();
   const { tableId, measure, from, to, region } = await searchParams;
+  const lang = await getLang();
 
   const tables = await listRegisteredEurostatTables(db);
   // Session 110 UX audit pass 3, row 5: read ONCE here (not re-read inside
@@ -96,6 +105,12 @@ export default async function EurostatExplorerPage({
         Internal, flag-gated tool (EUROSTAT_EXPLORER_ENABLED) — not part of the public product. Picks a
         REGISTERED Eurostat table and runs it through the real answer pipeline (runQuery → composeAnswer →
         buildChartSpec), zero LLM calls.
+      </p>
+      {/* Session 110 UX audit pass 3, row 9: one sentence, in the reader's
+          OWN language, naming the language mismatch up front — see the
+          import comment above and the key's own comment in messages.ts. */}
+      <p data-testid="english-only-notice" style={{ color: '#666', fontStyle: 'italic' }}>
+        {t(lang, 'eurostatExplorer.englishOnlyNotice')}
       </p>
 
       {tables.length === 0 ? (

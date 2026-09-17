@@ -925,6 +925,19 @@ const nl = {
   'lab3d.narrativeStep3': 'De kleur van het vlak én de kolom staat voor groei sinds {start}: blauw is groei, rood-oranje is krimp, tot ongeveer ±{domain}%.',
   'lab3d.narrativeStep4': 'Sleep de tijdbalk van {start} naar {end}, of klik op Afspelen om de groei jaar voor jaar te zien.',
   'lab3d.narrativeStep5': 'Alle cijfers op deze kaart zijn verzonnen, uitsluitend om de techniek te laten zien — geen CBS-cijfer.',
+
+  // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
+  // (labels, buttons, the empty-state paragraph) is internal-tool English
+  // by design (D3(a) in the page itself), but the SHARED site footer below
+  // it renders in whatever language the reader's `lang` cookie says — so an
+  // nl-cookie reader saw an English page with a Dutch footer, one language
+  // per page violated. Cheapest honest fix (≤15 new keys would still leave
+  // long, code/dynamic-value-bearing strings like the empty-state paragraph
+  // untranslated and inconsistent) is a single intro sentence, in the
+  // reader's OWN language, saying so up front — not a full translation of
+  // an internal, never-publicly-linked tool.
+  'eurostatExplorer.englishOnlyNotice':
+    'Deze interne tool is alleen in het Engels beschikbaar; de voettekst hieronder blijft in jouw eigen taal.',
 };
 
 // `Messages` is derived from the (widened, non-`const`) Dutch object above,
@@ -1609,6 +1622,14 @@ const en: Messages = {
   'lab3d.narrativeStep3': 'The colour of both the area and the column stands for growth since {start}: blue is growth, red-orange is shrinkage, up to about ±{domain}%.',
   'lab3d.narrativeStep4': 'Drag the time bar from {start} to {end}, or click Play to watch the growth year by year.',
   'lab3d.narrativeStep5': 'Every figure on this map is made up, shown purely to demonstrate the technique — not a CBS figure.',
+
+  // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
+  // reader this row actually reports on is the nl-cookie one; this English
+  // entry only exists because `Messages` (below) requires the same key set
+  // in both languages — trivially true for an English reader, but never
+  // skipped, so a future language switch never silently loses this key.
+  'eurostatExplorer.englishOnlyNotice':
+    'This internal tool is English-only; the footer below stays in your own language.',
 };
 
 export const MESSAGES = { nl, en } as const satisfies Record<Lang, Messages>;
