@@ -35,10 +35,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useT } from '../lib/i18n/lang-provider.tsx';
+import { MESSAGES } from '../lib/i18n/messages.ts';
 
-/** The attribution sentence without the trailing separator. */
-export const FOOTER_ATTRIBUTION =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel';
+/** The Dutch attribution sentence without the trailing separator — kept as a
+ * plain export (many other test files build an expected default-language
+ * footer string from it) and sourced from the catalogue's `nl` entry so
+ * there is exactly one place this copy lives. Session 110 UX audit row 21:
+ * the RENDERED sentence now goes through `t('footer.attribution')` and
+ * translates under EN (it used to stay byte-pinned Dutch in both
+ * languages) — this constant is the nl value that decision translates FROM. */
+export const FOOTER_ATTRIBUTION = MESSAGES.nl['footer.attribution'];
 /** The exact footer prefix on the home page (ADR 033 D6, byte-pinned in the
  * tests; owner gave the final look at PR review). */
 export const FOOTER_PREFIX = FOOTER_ATTRIBUTION + ' · ';
@@ -64,14 +70,39 @@ function useAboutTargetPresent(pathname: string | null): boolean {
   return present;
 }
 
+// Row 11 (session 110 UX audit, #P2): at 375px the attribution sentence
+// alone wrapped to two lines on every screen, and the footer had no
+// background colour, so page content abutting the scroller's bottom edge
+// sat right up against the footer text. Splitting off the trailing clause
+// ("Elk getal herleidbaar…") and collapsing it below `sm` gets the sentence
+// down to one line on a phone while keeping the CBS/CC BY part — the
+// legally load-bearing half (R4 attribution) — visible at every width.
+const FOOTER_ATTRIBUTION_SEPARATOR = ' · ';
+
+function splitAttribution(attribution: string): { main: string; clause: string } {
+  const separatorIndex = attribution.indexOf(FOOTER_ATTRIBUTION_SEPARATOR);
+  if (separatorIndex === -1) return { main: attribution, clause: '' };
+  return {
+    main: attribution.slice(0, separatorIndex),
+    clause: attribution.slice(separatorIndex + FOOTER_ATTRIBUTION_SEPARATOR.length),
+  };
+}
+
 export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
   const t = useT();
+  const { main: attributionMain, clause: attributionClause } = splitAttribution(t('footer.attribution'));
   return (
-    <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+    <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-background px-4 py-2.5 text-xs text-muted-foreground">
       <span>
-        {FOOTER_ATTRIBUTION}
+        {attributionMain}
+        {attributionClause ? (
+          <span className="hidden sm:inline">
+            {FOOTER_ATTRIBUTION_SEPARATOR}
+            {attributionClause}
+          </span>
+        ) : null}
         {showAbout ? (
           <span className="hidden sm:inline">
             {' · '}

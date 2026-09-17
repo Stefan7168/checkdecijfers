@@ -167,3 +167,19 @@ describe('SiteHeader — link to /about in the account menu (owner punch-list it
     expect(aboutLinks.some((link) => link.getAttribute('href') === '/about')).toBe(true);
   });
 });
+
+// Row 8 (session 110 UX audit, #P2): at 375px the Account button's right
+// edge measured 4px past the viewport edge (right: 379 on a 375-wide
+// screen) — the header's own px-3 right padding plus the gap before the
+// button left no room. jsdom has no layout engine, so this pins the
+// CSS-contract fix the same way the wordmark/logout tap-target tests above
+// do: a narrower right-side gutter below `sm`.
+describe('SiteHeader — phone right-edge gutter (row 8)', () => {
+  it('uses a narrower horizontal padding below sm than at sm and up', () => {
+    render(<SiteHeader balance={10} />);
+    const header = document.querySelector('header')!;
+    expect(header.className).toMatch(/\bpx-2\b/);
+    expect(header.className).toMatch(/\bsm:px-4\b/);
+    expect(header.className).not.toMatch(/\bpx-3\b/);
+  });
+});

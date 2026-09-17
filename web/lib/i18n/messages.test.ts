@@ -60,4 +60,13 @@ describe('MESSAGES — catalogue-wide invariants', () => {
       }
     }
   });
+
+  // Session 110 UX audit row 21: the footer attribution now translates (it
+  // used to be a single byte-pinned Dutch string in both languages), but
+  // "CBS StatLine (CC BY 4.0)" is the R4 attribution requirement and must
+  // stay verbatim in both — a translation pass must never paraphrase it.
+  it('keeps "CBS StatLine (CC BY 4.0)" verbatim in both languages (R4 attribution)', () => {
+    expect(MESSAGES.nl['footer.attribution']).toContain('CBS StatLine (CC BY 4.0)');
+    expect(MESSAGES.en['footer.attribution']).toContain('CBS StatLine (CC BY 4.0)');
+  });
 });

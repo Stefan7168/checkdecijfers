@@ -484,14 +484,44 @@ export function Workspace({
           </div>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 gap-2 p-2 pl-0">
-          <div className={sidebarCollapsed ? 'w-12 shrink-0' : 'w-64 shrink-0'}>
+        <div className="relative flex min-h-0 flex-1 gap-2 p-2 pl-0">
+          {/* Row 1 (session 110 UX audit, #P1): below md, the expanded
+              sidebar used to render as a 264px flex sibling, squeezing the
+              chat pane to ~111px (composer clipped, "Send" off-screen), and
+              selecting a thread never re-collapsed it. Below md it now
+              renders as an overlay/drawer over the chat pane instead — the
+              backdrop closes it on tap, and selecting a thread closes it
+              too (below). The >= md flex-sibling layout is untouched: both
+              branches render only when `isNarrow && !sidebarCollapsed`,
+              which is never true at >= md. */}
+          {isNarrow && !sidebarCollapsed ? (
+            <div
+              data-testid="sidebar-backdrop"
+              aria-hidden="true"
+              className="fixed inset-0 z-10 bg-black/40"
+              onClick={() => setSidebarCollapsed(true)}
+            />
+          ) : null}
+          <div
+            className={
+              isNarrow && !sidebarCollapsed
+                ? 'absolute inset-y-0 left-0 z-20 w-64 bg-sidebar'
+                : sidebarCollapsed
+                  ? 'w-12 shrink-0'
+                  : 'w-64 shrink-0'
+            }
+          >
             <ThreadSidebar
               threads={threads}
               activeThreadId={activeThreadId}
               collapsed={sidebarCollapsed}
               busy={chatBusy}
-              onSelect={(id) => void selectThread(id)}
+              onSelect={(id) => {
+                void selectThread(id);
+                // Row 1: closing the drawer on select is mobile-only — the
+                // >= md sidebar stays open exactly as before.
+                if (isNarrow) setSidebarCollapsed(true);
+              }}
               onNewChat={startNewChat}
               onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)}
               onDelete={deleteThread}
