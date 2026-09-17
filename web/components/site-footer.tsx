@@ -64,14 +64,39 @@ function useAboutTargetPresent(pathname: string | null): boolean {
   return present;
 }
 
+// Row 11 (session 110 UX audit, #P2): at 375px the attribution sentence
+// alone wrapped to two lines on every screen, and the footer had no
+// background colour, so page content abutting the scroller's bottom edge
+// sat right up against the footer text. Splitting off the trailing clause
+// ("Elk getal herleidbaar…") and collapsing it below `sm` gets the sentence
+// down to one line on a phone while keeping the CBS/CC BY part — the
+// legally load-bearing half (R4 attribution) — visible at every width.
+const FOOTER_ATTRIBUTION_SEPARATOR = ' · ';
+
+function splitAttribution(attribution: string): { main: string; clause: string } {
+  const separatorIndex = attribution.indexOf(FOOTER_ATTRIBUTION_SEPARATOR);
+  if (separatorIndex === -1) return { main: attribution, clause: '' };
+  return {
+    main: attribution.slice(0, separatorIndex),
+    clause: attribution.slice(separatorIndex + FOOTER_ATTRIBUTION_SEPARATOR.length),
+  };
+}
+
 export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
   const t = useT();
+  const { main: attributionMain, clause: attributionClause } = splitAttribution(FOOTER_ATTRIBUTION);
   return (
-    <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-2.5 text-xs text-muted-foreground">
+    <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-background px-4 py-2.5 text-xs text-muted-foreground">
       <span>
-        {FOOTER_ATTRIBUTION}
+        {attributionMain}
+        {attributionClause ? (
+          <span className="hidden sm:inline">
+            {FOOTER_ATTRIBUTION_SEPARATOR}
+            {attributionClause}
+          </span>
+        ) : null}
         {showAbout ? (
           <span className="hidden sm:inline">
             {' · '}

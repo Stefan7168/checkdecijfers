@@ -38,3 +38,31 @@ describe('SiteFooter — en', () => {
     expect(screen.getByRole('link', { name: 'How we work' })).toHaveAttribute('href', '/werkwijze');
   });
 });
+
+// Row 11 (session 110 UX audit, #P2): at 375px the footer wrapped to two
+// lines on every screen and had no background colour at all
+// (`rgba(0,0,0,0)`), so content at the scroller's bottom edge abutted the
+// footer text with only a hairline between them.
+describe('SiteFooter — phone layout (row 11)', () => {
+  it('has an opaque background', () => {
+    render(<SiteFooter />);
+    const footer = document.querySelector('footer')!;
+    expect(footer.className).toMatch(/\bbg-background\b/);
+  });
+
+  it('hides the second attribution clause below sm so the sentence fits one line, while keeping the CBS/CC BY part always visible', () => {
+    render(<SiteFooter />);
+    const footer = document.querySelector('footer')!;
+    // jsdom ignores the CSS `hidden` utility (no layout engine), so the full
+    // sentence is still present in textContent — this pins the CSS contract
+    // (the wrapping span's classes), not visibility itself.
+    expect(footer.textContent).toContain(FOOTER_ATTRIBUTION);
+    const hiddenSpans = Array.from(footer.querySelectorAll('span.hidden'));
+    const clauseSpan = hiddenSpans.find((el) => el.textContent?.includes('Elk getal herleidbaar'));
+    expect(clauseSpan).toBeTruthy();
+    expect(clauseSpan!.className).toMatch(/\bsm:inline\b/);
+    // The "CBS StatLine (CC BY 4.0)" segment must NOT be inside that hidden
+    // wrapper — only the trailing clause collapses below sm.
+    expect(clauseSpan!.textContent).not.toContain('CBS StatLine');
+  });
+});
