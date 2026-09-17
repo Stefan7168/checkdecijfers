@@ -21,6 +21,13 @@ afterEach(() => {
 });
 
 describe('WerkwijzePage — nl (default)', () => {
+  // Session 110 a11y audit (#Fix-now 2): axe-core flagged landmark-one-main +
+  // region on this page — the content wrapper was a plain <div>.
+  it('wraps the page content in a <main> landmark', async () => {
+    render(await WerkwijzePage());
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
   it('renders the heading, the public-claim sentence and the draft note', async () => {
     render(await WerkwijzePage());
     expect(screen.getByRole('heading', { name: 'Hoe we werken', level: 1 })).toBeInTheDocument();

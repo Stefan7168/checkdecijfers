@@ -28,6 +28,14 @@ describe('/login stripped header (#135 residual)', () => {
     expect(dynamic).toBe('force-dynamic');
   });
 
+  // Session 110 a11y audit (#Fix-now 2): axe-core flagged landmark-one-main +
+  // region on this page — the content wrapper was a plain <div>.
+  it('wraps the page content in a <main> landmark', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await LoginPage());
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
   it('renders the stripped header when the workspace flag is on', async () => {
     getLang.mockResolvedValue('nl');
     process.env.WORKSPACE_ENABLED = '1';

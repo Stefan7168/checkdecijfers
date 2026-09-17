@@ -29,7 +29,7 @@ export default async function WerkwijzePage() {
   return (
     <>
       {showShell ? <SiteHeader /> : null}
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4">
+      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4">
         <p className="rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
           {t(lang, 'trust.draftNote')}
         </p>
@@ -65,7 +65,7 @@ export default async function WerkwijzePage() {
           <h2 className="text-lg text-foreground">{t(lang, 'werkwijze.notCoveredHeading')}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t(lang, 'werkwijze.notCoveredBody')}</p>
         </section>
-      </div>
+      </main>
     </>
   );
 }

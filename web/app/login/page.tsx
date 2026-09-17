@@ -20,7 +20,7 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       {showShell ? <SiteHeader stripped /> : null}
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 p-4">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 p-4">
         <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-6">
           <div className="flex flex-col gap-1">
             <h1 className="text-lg font-semibold">{t(lang, 'login.pageHeading')}</h1>
@@ -28,7 +28,7 @@ export default async function LoginPage() {
           </div>
           <LoginForm />
         </div>
-      </div>
+      </main>
     </div>
   );
 }
