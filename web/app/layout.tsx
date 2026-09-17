@@ -101,6 +101,13 @@ export default async function RootLayout({
   const isEmbedRoute = headerList.get("x-embed-route") === "1";
   const embedLang = headerList.get("x-embed-lang");
   const forcedTheme = resolveEmbedForcedTheme(headerList.get("x-embed-theme"));
+  // Session 110 UX audit row 18 (ADR 048 addendum): web/proxy.ts sets
+  // x-source-route: eurostat ONLY for the exact /eurostat-explorer path (and
+  // strips a client-supplied value on every other path — see proxy.ts's
+  // applySourceRouteHeader). Re-validated here to exactly "eurostat" rather
+  // than trusted raw, the same defense-in-depth discipline
+  // resolveEmbedForcedTheme/isLang get for their own headers just above.
+  const sourceRoute = headerList.get("x-source-route") === "eurostat" ? "eurostat" : undefined;
 
   // WP218 phase 4 (#219): cookie -> Accept-Language -> 'nl'
   // (docs/superpowers/specs/2026-09-09-language-switch-design.md §2.4). The
@@ -153,7 +160,7 @@ export default async function RootLayout({
                   meant to be a clean, chart-only surface (spec Part B3) — the
                   site-wide footer has no business appearing inside a
                   third-party page's embedded chart. */}
-              {!isEmbedRoute ? <SiteFooter /> : null}
+              {!isEmbedRoute ? <SiteFooter sourceRoute={sourceRoute} /> : null}
             </StylePanelOwnerProvider>
           </ThemeProvider>
         </LangProvider>

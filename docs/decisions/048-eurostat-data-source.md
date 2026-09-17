@@ -774,3 +774,27 @@ undeclared status is exactly how a typo'd flag could slip outside both `definiti
 (Eurostat is still not selectable in live chat) and `currentCatalogStatuses: []` (confirmed permanent for that
 endpoint, [#250](../open-questions.md)) — and the open owner sign-off on the Dutch suffix / null-reason
 wording (Amendment 11, [#250](../open-questions.md)(a)).
+
+## Fifth As-built addendum — footer trust line made source-aware for the Eurostat explorer only (session 110 UX audit pass 2, row 18, 2026-09-17)
+
+**What was wrong.** The session-110 UX audit (pass 2, row 18) found the ONE internal page that is entirely
+Eurostat data — `web/app/eurostat-explorer/page.tsx` — rendered the single global footer's CBS-only trust line
+("Figures: CBS StatLine (CC BY 4.0) · Every number traceable to an official CBS table"), which is simply wrong
+on a page with no CBS data on it at all. Harmless while the page is internal/flag-gated, but the parent session
+judged that on this one internal route, correctness of attribution outweighs the "footer stays byte-identical
+everywhere" posture D3 otherwise holds until Eurostat itself goes public.
+
+**Decision.** Made the footer source-aware for exactly this one route, reusing the existing
+`x-embed-route`-style proxy-header pattern rather than inventing a new mechanism: `web/proxy.ts` now exports
+`sourceRouteHeaders`/`applySourceRouteHeader`, which set `x-source-route: eurostat` for the exact
+`/eurostat-explorer` path only and strip any client-supplied value on every other path (same strip-then-set
+discipline `applyEmbedRequestHeaders` already uses). `web/app/layout.tsx` reads that header, re-validates it to
+exactly `"eurostat"`, and passes it to a new `SiteFooter({ sourceRoute })` prop, which selects the new
+`footer.attributionEurostat` message key (added to both `nl`/`en` in `web/lib/i18n/messages.ts`, wording taken
+from `src/sources/registry.ts`'s Eurostat entry: `attributionLabel: 'Eurostat'`, `license: 'CC BY 4.0'`) instead
+of `footer.attribution`. Every other route keeps rendering the plain CBS line byte-for-byte — pinned in
+`site-footer.test.tsx`, `layout.test.ts`, and `proxy.test.ts`.
+
+**Not touched:** D3's public-facing posture itself (Eurostat is still `chatSelectable: false` and invisible to
+real chat users); this only fixes copy on an internal, flag-gated, noindexed page. `chatSelectable`/
+`currentCatalogStatuses` and Amendment 11's open owner sign-off are unaffected.

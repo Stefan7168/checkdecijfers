@@ -311,6 +311,16 @@ const nl = {
   // languages must keep "CBS StatLine (CC BY 4.0)" verbatim (R4 attribution;
   // asserted in messages.test.ts).
   'footer.attribution': 'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel',
+  // Session 110 UX audit row 18 (ADR 048 addendum): the ONE internal page
+  // that is entirely Eurostat data (web/app/eurostat-explorer/page.tsx) gets
+  // its own source-correct footer line instead of the CBS one above — see
+  // site-footer.tsx's `sourceRoute` prop. Wording mirrors 'footer.attribution'
+  // exactly, swapping CBS StatLine/CBS-tabel for the registry's own Eurostat
+  // attributionLabel/license (src/sources/registry.ts EUROSTAT_SOURCE_KEY
+  // entry: attributionLabel 'Eurostat', license 'CC BY 4.0'). "Eurostat (CC
+  // BY 4.0)" must stay verbatim in both languages (messages.test.ts).
+  'footer.attributionEurostat':
+    'Cijfers: Eurostat (CC BY 4.0) · Elk getal herleidbaar tot een officiële Eurostat-dataset',
   'footer.aboutLabel': 'Over dit project',
   'footer.systemMapLabel': 'Systeemoverzicht',
 
@@ -1149,6 +1159,8 @@ const en: Messages = {
   'account.explainerNoQuestions': 'Signing up gets you {grant} credits once. An ordinary question costs {price} credits.',
 
   'footer.attribution': 'Figures: CBS StatLine (CC BY 4.0) · Every number traceable to an official CBS table',
+  'footer.attributionEurostat':
+    'Figures: Eurostat (CC BY 4.0) · Every number traceable to an official Eurostat dataset',
   'footer.aboutLabel': 'About this project',
   'footer.systemMapLabel': 'System map',
 
