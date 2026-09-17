@@ -622,6 +622,17 @@ export type BrandLookupOutcome =
 
 export interface ChartConfigPanelBrand {
   lookup: (website?: string) => Promise<BrandLookupOutcome>;
+  /** Row 11 (session 110 UX audit pass 5, still-broken recheck): whether
+   * THIS DEPLOYMENT has Brandfetch configured at all
+   * (`useChartStyle().brandLookupAvailable`, ultimately `process.env.
+   * BRANDFETCH_API_KEY` read once server-side, app/page.tsx) — a fixed,
+   * account-independent fact, not the per-lookup `BrandLookupOutcome`
+   * below. `chart.tsx` always passes this field whenever it passes `brand`
+   * at all (signed-in), so the panel never has to guess a default for it.
+   * `false` disables "Pas merkkleuren toe" from the FIRST render, before
+   * any click — closing the gap the button's own post-click `brandUnavailable`
+   * latch (below) only closed after one guaranteed failed round trip. */
+  available: boolean;
 }
 
 type BrandFailureReason = Extract<BrandLookupOutcome, { ok: false }>['reason'];
@@ -821,19 +832,28 @@ export function ChartConfigPanel({
   // when the deployment has no Brandfetch key configured at all — a FIXED
   // condition for this deployment (checked in chart-style-actions.ts
   // BEFORE any per-user work), not a transient failure like a rate limit.
-  // Gating the button on that condition AT RENDER would need a new prop
-  // from chart.tsx (which decides whether `brand` is offered at all) or a
-  // change to the action itself — both out of this fix's file scope — so
-  // this cannot be known before the first click. Once the first click DOES
-  // learn it, though, there is no reason to keep re-offering the same
-  // doomed action: this latches the button into a disabled-hint state
-  // (`aria-disabled`, not a removed control — same convention chat.tsx
-  // uses for its "coming soon" chips) instead of leaving it clickable
-  // forever next to a failure line that reads like a one-off error.
+  // This latches the button into a disabled-hint state (`aria-disabled`,
+  // not a removed control — same convention chat.tsx uses for its "coming
+  // soon" chips) instead of leaving it clickable forever next to a failure
+  // line that reads like a one-off error.
+  //
+  // Pass 5 recheck (still broken): the above was only ever a POST-CLICK
+  // latch — the button was still offered enabled on every FIRST render,
+  // guaranteeing one failed round trip per session before it disabled
+  // itself. `brand.available` (ChartConfigPanelBrand, above) is now the
+  // same fixed fact known BEFORE any click — chart.tsx always supplies it
+  // whenever it supplies `brand` at all — so `brandGateUnavailable` below
+  // disables the button from the very first render. `brandUnavailable`
+  // (this state) survives as the belt: a defensive fallback for the
+  // theoretical case `brand.available` was true at render but the action
+  // itself still answers `unavailable` (a mid-session env change, or a
+  // caller that doesn't thread the new prop).
   const [brandUnavailable, setBrandUnavailable] = useState(false);
+  const brandGateUnavailable = brand !== undefined && !brand.available;
+  const brandDisabled = brandGateUnavailable || brandUnavailable;
 
   async function handleApplyBrand(): Promise<void> {
-    if (!brand || brandUnavailable) return;
+    if (!brand || brandDisabled) return;
     setBrandBusy(true);
     try {
       const result = await brand.lookup(brandNeedsWebsite ? brandWebsite : undefined);
@@ -1521,8 +1541,8 @@ export function ChartConfigPanel({
                     variant="outline"
                     size="xs"
                     disabled={brandBusy}
-                    aria-disabled={brandUnavailable ? true : undefined}
-                    aria-describedby={brandUnavailable ? brandUnavailableHintId : undefined}
+                    aria-disabled={brandDisabled ? true : undefined}
+                    aria-describedby={brandDisabled ? brandUnavailableHintId : undefined}
                     onClick={() => void handleApplyBrand()}
                   >
                     {copy.brandApply}
@@ -1545,10 +1565,19 @@ export function ChartConfigPanel({
                       // on the click that discovered it and as the
                       // standing reason a screen-reader user hears for the
                       // now aria-disabled button.
-                      <p role="status" id={brandUnavailable ? brandUnavailableHintId : undefined} className="w-full text-muted-foreground">
+                      <p role="status" id={brandDisabled ? brandUnavailableHintId : undefined} className="w-full text-muted-foreground">
                         {brandFailureText(brandOutcome.reason)}
                       </p>
                     )
+                  ) : brandGateUnavailable ? (
+                    // Pass 5 recheck: known unavailable BEFORE any click —
+                    // same digit-free copy as the post-click failure line
+                    // (`copy.brandUnavailable`, chart.panel.brandUnavailable),
+                    // shown from the first render instead of only after a
+                    // guaranteed-doomed round trip.
+                    <p id={brandUnavailableHintId} className="w-full text-muted-foreground">
+                      {copy.brandUnavailable}
+                    </p>
                   ) : null}
                 </div>
               ) : null}

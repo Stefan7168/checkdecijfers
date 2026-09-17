@@ -3415,6 +3415,26 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
   });
 
+  // Row 11 recheck (session 110 UX audit pass 5): ChartView threads
+  // `useChartStyle().brandLookupAvailable` straight into the panel's
+  // `brand.available` — signed in, but the DEPLOYMENT has no Brandfetch key
+  // (the provider's own default when `brandLookupAvailable` isn't passed),
+  // the button must be offered but aria-disabled from the first render, and
+  // a click must never call `lookupBrand` at all.
+  it('signed in but brandLookupAvailable is false (the provider default): the button is offered but aria-disabled, and a click never calls lookupBrand', async () => {
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesLineSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(button);
+    expect(chartStyleActions.lookupBrand).not.toHaveBeenCalled();
+  });
+
   it('applying a brand recolours the first series and the usage sink receives brand_applied', async () => {
     chartStyleActions.lookupBrand.mockResolvedValue({
       ok: true,
@@ -3431,7 +3451,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     setChartUsageSink(sink);
     try {
       render(
-        <ChartStyleProvider initial={{}}>
+        <ChartStyleProvider initial={{}} brandLookupAvailable>
           <ChartView spec={twoSeriesLineSpec()} />
         </ChartStyleProvider>,
       );
@@ -3465,7 +3485,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     });
     chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
     render(
-      <ChartStyleProvider initial={{}}>
+      <ChartStyleProvider initial={{}} brandLookupAvailable>
         <ChartView spec={twoSeriesLineSpec()} />
       </ChartStyleProvider>,
     );
@@ -4920,6 +4940,90 @@ describe('embed mode (spec Part B3)', () => {
     // embedMode, not just the <p> (a plain getByText would throw here on
     // "multiple elements", which is itself the reason this uses getAllByText).
     expect(screen.getAllByText(new RegExp(s.attribution.tableId)).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// Regression 1 (session 110 UX audit pass 5): the embed reading <select>
+// (#262c) had no width cap, so a long registry alternate label forced it to
+// its intrinsic content width (341px in a 320px frame), causing horizontal
+// page scroll on the public embed. Fixed by capping the select's width to
+// its flex container instead of its content.
+describe('ChartView — embed reading select never forces a width past its container (regression 1, pass 5)', () => {
+  it('caps the select at the container width instead of its content width', () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        embedMode
+        embedFooter="x"
+        alternates={[{ label: 'Ongecorrigeerd', spec: threePointSpec() }]}
+      />,
+    );
+    const select = screen.getByRole('combobox', { name: /lezing|reading/i });
+    expect(select.className).toMatch(/\bw-full\b/);
+    expect(select.className).toMatch(/\bmax-w-full\b/);
+    expect(select.className).toMatch(/\bmin-w-0\b/);
+    const wrapper = select.closest('[data-slot="chart-controls-embed"]') as HTMLElement;
+    expect(wrapper.className).toMatch(/\bmin-w-0\b/);
+  });
+});
+
+// Row 10/#p2-10 recheck (session 110 UX audit pass 5, PARTIAL): at 320x240
+// the embed chart's TOP still sat below the fold (y 216 of 240) even after
+// embedHeightValue made the chart's own height frame-relative — the title/
+// headline/reading-select chrome above it still ate most of the frame.
+// jsdom has no layout engine, so these pin the CSS-contract fix: below a
+// `max-height: 300px` frame, embedMode (a) turns this wrapper into a flex
+// column so `order-*` can apply, (b) hides the decorative headline-figure
+// and trend-headline paragraphs (pure restatements of what the chart
+// already shows), and (c) pushes the alternate-reading select (added by
+// #262(c)) to the end of that flex column — after the chart — instead of
+// sitting above it. None of this applies outside embedMode.
+describe('ChartView — embed chart chrome collapses on a short frame (row 10 recheck, pass 5)', () => {
+  it('only embedMode turns the card wrapper into a flex column keyed to a short frame', () => {
+    const s = threePointSpec();
+    const { container: embedContainer } = render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const embedWrapper = embedContainer.firstElementChild as HTMLElement;
+    expect(embedWrapper.className).toMatch(/\[@media\(max-height:300px\)\]:flex\b/);
+    expect(embedWrapper.className).toMatch(/\[@media\(max-height:300px\)\]:flex-col\b/);
+
+    cleanup();
+    const { container: cardContainer } = render(<ChartView spec={s} />);
+    const cardWrapper = cardContainer.firstElementChild as HTMLElement;
+    expect(cardWrapper.className).not.toMatch(/max-height:300px/);
+  });
+
+  it('hides the decorative headline-figure and trend-headline paragraphs on a short embed frame', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const figure = screen.getByTestId('headline-figure');
+    expect(figure.className).toMatch(/\[@media\(max-height:300px\)\]:hidden\b/);
+    const trend = screen.queryByTestId('trend-headline');
+    if (trend) expect(trend.className).toMatch(/\[@media\(max-height:300px\)\]:hidden\b/);
+    // Still present in the DOM (a real reader on an ordinary-height frame
+    // must still see them) -- only display is conditioned on the media query.
+    expect(figure).toBeInTheDocument();
+  });
+
+  it('pushes the alternate-reading select to the end of the flex column on a short embed frame', () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        embedMode
+        embedFooter="x"
+        alternates={[{ label: 'Ongecorrigeerd', spec: threePointSpec() }]}
+      />,
+    );
+    const controlsRow = document.querySelector('[data-slot="chart-controls-embed"]') as HTMLElement;
+    expect(controlsRow).toBeInTheDocument();
+    expect(controlsRow.className).toMatch(/\[@media\(max-height:300px\)\]:order-last\b/);
+  });
+
+  it('compacts the title to a smaller size on a short embed frame, without removing it', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const heading = screen.getByRole('heading', { level: 3 });
+    expect(heading.className).toMatch(/\[@media\(max-height:300px\)\]:text-xs\b/);
+    expect(heading).toHaveTextContent(s.title);
   });
 });
 

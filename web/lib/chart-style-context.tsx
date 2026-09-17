@@ -22,6 +22,24 @@ export interface ChartStyleContextValue {
   setAccountStyle: (next: PresentationOverrides | null) => void;
   /** True only inside a mounted ChartStyleProvider — see the module header. */
   signedIn: boolean;
+  /** Row 11 (session 110 UX audit pass 5, still-broken recheck): whether
+   * this DEPLOYMENT has `BRANDFETCH_API_KEY` configured at all — a fixed,
+   * server-known fact for the whole running app, never a per-user or
+   * per-chart condition. `lookupBrand` (app/chart-style-actions.ts) already
+   * checks this env var before any per-user work and returns `reason:
+   * 'unavailable'` when it's missing; this field lets a render KNOW that
+   * same fact up front, before the reader ever clicks "Pas merkkleuren toe"
+   * and gets a failure. Threaded from the one server component that reads
+   * `process.env.BRANDFETCH_API_KEY` (app/page.tsx, mirroring how
+   * `websearchEnabled`/`attachmentsEnabled` reach Workspace there) through
+   * `ChartStyleProvider`'s own prop below — never re-read client-side
+   * (the client has no access to server env vars anyway). Defaults to
+   * `false` both with no provider (a logged-out surface, where the brand
+   * button is never offered regardless — chart.tsx only passes `brand` when
+   * `signedIn`) and for any existing `<ChartStyleProvider>` call site that
+   * doesn't pass it (test harnesses, mainly) — `false` is the SAFE default:
+   * it hides/disables the button rather than risk offering a doomed one. */
+  brandLookupAvailable: boolean;
 }
 
 const ChartStyleContext = createContext<ChartStyleContextValue | null>(null);
@@ -30,6 +48,7 @@ const NO_PROVIDER_DEFAULT: ChartStyleContextValue = {
   accountStyle: null,
   setAccountStyle: () => {},
   signedIn: false,
+  brandLookupAvailable: false,
 };
 
 /** Sanitised once, at the initial render (a lazy useState initializer runs
@@ -44,10 +63,21 @@ function sanitizeInitial(initial: unknown): PresentationOverrides | null {
   return Object.keys(clean).length === 0 ? null : clean;
 }
 
-export function ChartStyleProvider({ initial, children }: { initial: unknown; children: ReactNode }) {
+export function ChartStyleProvider({
+  initial,
+  brandLookupAvailable = false,
+  children,
+}: {
+  initial: unknown;
+  /** See `ChartStyleContextValue.brandLookupAvailable` above. Optional so
+   * every existing call site (tests, mainly) that doesn't pass it keeps
+   * working — defaulting to `false`, the safe/hidden state. */
+  brandLookupAvailable?: boolean;
+  children: ReactNode;
+}) {
   const [accountStyle, setAccountStyle] = useState<PresentationOverrides | null>(() => sanitizeInitial(initial));
   return (
-    <ChartStyleContext.Provider value={{ accountStyle, setAccountStyle, signedIn: true }}>
+    <ChartStyleContext.Provider value={{ accountStyle, setAccountStyle, signedIn: true, brandLookupAvailable }}>
       {children}
     </ChartStyleContext.Provider>
   );

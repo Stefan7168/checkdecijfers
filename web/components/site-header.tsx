@@ -87,9 +87,24 @@ export function SiteHeader({
       </Link>
       <div className="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
         {/* ADR 006: the balance is read live and passed in — never a hardcoded
-          * number. .tnum so digits align (the #91 FT/NRC convention). */}
+          * number. .tnum so digits align (the #91 FT/NRC convention).
+          * Row 8 recheck (session 110 pass 5): the pass-1 padding fix
+          * (px-3→px-2) alone did not hold — the Account button still fell
+          * 8px past the 375px edge, because EVERY item in this cluster
+          * (this badge, the language switch, the Account button — which
+          * inherits `shrink-0` from the shared Button component's own base
+          * variant class, ui/button.tsx, app-wide) refused to give up any
+          * width, so the cluster's min-content size exceeded the viewport
+          * regardless of padding. Rather than touch the shared Button
+          * primitive (which every button in the app relies on staying a
+          * fixed size), let the least important item — this balance
+          * badge — shrink and truncate first. The shared Badge component
+          * (ui/badge.tsx) bakes `shrink-0` into its own base variant class,
+          * so merely omitting it here changes nothing — `shrink` has to be
+          * passed explicitly so the shared `cn()` helper's tailwind-merge
+          * behaviour overrides the base class with this instance's. */}
         {balance !== undefined ? (
-          <Badge variant="secondary" className="tnum shrink-0 whitespace-nowrap font-normal text-muted-foreground">
+          <Badge variant="secondary" className="tnum min-w-0 shrink truncate font-normal text-muted-foreground">
             {t('header.balance', { n: balance })}
           </Badge>
         ) : null}
