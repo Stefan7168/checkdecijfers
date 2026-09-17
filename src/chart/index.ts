@@ -3,6 +3,8 @@
 export { buildChartSpec, PROVISIONAL_NOTE } from './build.ts';
 export { buildAlternateReading } from './alternate-reading.ts';
 export type { AlternateReadingCoordinate, AlternateReadingOutcome, AlternateReadingResult } from './alternate-reading.ts';
+export { buildChartAlternates } from './chart-alternates.ts';
+export type { BuildChartAlternatesOptions, ChartAlternateEntry } from './chart-alternates.ts';
 export {
   buildPeriodChangeReading,
   composeAlternatePeriodChangeLabel,

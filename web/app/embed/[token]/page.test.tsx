@@ -498,11 +498,41 @@ describe('/embed/[token] — chartAlternates reading toggle (#262(c))', () => {
     scanForUnboundDigits(container, [...harvestSpecStrings(alt), footer, label]);
   });
 
-  it('suppresses the reading control on a successful Live re-run (stored alternates would pair stale data with a fresh primary)', async () => {
+  it('shows the reading control with the FRESH live alternates on a successful Live re-run, not the stale stored ones (Session 110 follow-up)', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     hasProPlan.mockReturnValue(true);
-    rerunLive.mockResolvedValue(chartSpec());
+    const staleAlt = altSpec(); // the stored, frozen-row alternate — must never render
+    const liveAlt = altSpec({
+      series: [{ label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'live-alt-r1', value: 77, formattedValue: '77,0' })] }],
+    });
+    rerunLive.mockResolvedValue({ spec: chartSpec(), alternates: [{ label: 'Live reading', spec: liveAlt }] });
+    loadAuditRecord.mockResolvedValue(
+      answerRecord({
+        userId: 'user-1',
+        response: {
+          kind: 'answer',
+          chart: chartSpec(),
+          chartAlternates: [{ label: 'Ongecorrigeerd', spec: staleAlt }],
+        },
+      }),
+    );
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByText(/live · gegevens van/i)).toBeInTheDocument();
+    const control = screen.getByRole('combobox', { name: /lezing|reading/i });
+    expect(control).toBeInTheDocument();
+    expect(screen.getByText('Live reading')).toBeInTheDocument();
+    expect(screen.queryByText('Ongecorrigeerd')).not.toBeInTheDocument();
+
+    fireEvent.change(control, { target: { value: '0' } });
+    expect(screen.getByTestId('headline-figure').querySelector('[data-label-for="live-alt-r1"]')?.textContent).toBe('77,0');
+  });
+
+  it('shows no reading control on a successful Live re-run whose rebuilt alternates array is empty', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue({ spec: chartSpec(), alternates: [] });
     const alt = altSpec();
     loadAuditRecord.mockResolvedValue(
       answerRecord({
@@ -606,7 +636,7 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     hasProPlan.mockReturnValue(true);
     const liveSpec = chartSpec();
     liveSpec.attribution.syncedAt = '2026-09-09'; // deliberately different from record.createdAt (2026-09-10)
-    rerunLive.mockResolvedValue(liveSpec);
+    rerunLive.mockResolvedValue({ spec: liveSpec, alternates: [] });
     // The frozen chart rendered here is answerRecord()'s default chartSpec(),
     // whose own attribution.syncedAt is '2026-08-26' — the fix-round
     // assertion below leans on that literal.
@@ -647,7 +677,7 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     hasProPlan.mockReturnValue(true);
-    rerunLive.mockResolvedValue(chartSpec());
+    rerunLive.mockResolvedValue({ spec: chartSpec(), alternates: [] });
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
     expect(screen.getByText(/live · gegevens van/i)).toBeInTheDocument();
@@ -685,7 +715,7 @@ describe('/embed/[token] — ?live=1 (Task 6)', () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     hasProPlan.mockReturnValue(true);
-    rerunLive.mockResolvedValue(chartSpec());
+    rerunLive.mockResolvedValue({ spec: chartSpec(), alternates: [] });
     loadAuditRecord.mockResolvedValue(answerRecord({ userId: 'user-1' }));
     await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', lang: 'en' }) });
     expect(rerunLive).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ userId: 'user-1' }), {
