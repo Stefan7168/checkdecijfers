@@ -31,6 +31,13 @@ export interface AnswerView {
    * text order). Null when the answer is not a region-class answer, and on
    * every answer stored before #253 (A1: the key is simply absent). */
   regionSetLine: string | null;
+  /** ADR 055 / MS1: the multi-region-series coverage disclosure ("Dekking: …
+   * de reeks is niet compleet voor …") — deterministic code's own sentence,
+   * shown in the SAME slot as the region-set line it sits beside (compose.ts's
+   * text order; the two can never co-occur). Null when the series is
+   * complete, and on every answer stored before MS1 (A1: the key is simply
+   * absent). */
+  regionSeriesLine: string | null;
   stalenessWarning: string | null;
   definitionLine: string | null;
   /** #39: the alternate-reading disclosure ("Er is ook een andere lezing

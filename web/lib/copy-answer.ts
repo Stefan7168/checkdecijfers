@@ -29,6 +29,7 @@ function structuralLines(view: AnswerView): string[] {
     view.body,
     view.assumptionLine,
     view.regionSetLine,
+    view.regionSeriesLine,
     view.stalenessWarning,
     view.definitionLine,
     view.alternatesLine,

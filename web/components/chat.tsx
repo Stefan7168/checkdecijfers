@@ -901,6 +901,10 @@ export function Chat({
                   // answer that is not a region-class answer (the key is
                   // simply absent — A1).
                   regionSetLine: response.answer.regionSetLine ?? null,
+                  // ADR 055 / MS1: `?? null` guards the deploy-window skew AND
+                  // every answer whose series is complete (the key is simply
+                  // absent — A1), same discipline as regionSetLine above.
+                  regionSeriesLine: response.answer.regionSeriesLine ?? null,
                   stalenessWarning: response.stalenessWarning,
                   definitionLine: response.answer.definitionLine,
                   // #39: `?? null` guards the deploy-window skew AND every
@@ -1143,6 +1147,13 @@ export function Chat({
                     * order. */}
                   {message.answerView.regionSetLine ? (
                     <p className="text-sm text-muted-foreground">{message.answerView.regionSetLine}</p>
+                  ) : null}
+                  {/* ADR 055 / MS1: the multi-region-series coverage
+                    * disclosure — same slot and weight as the region-set
+                    * line it sits beside (the two can never co-occur),
+                    * matching compose.ts's text order. */}
+                  {message.answerView.regionSeriesLine ? (
+                    <p className="text-sm text-muted-foreground">{message.answerView.regionSeriesLine}</p>
                   ) : null}
                   {message.answerView.stalenessWarning ? (
                     <p className="text-sm text-warning">{message.answerView.stalenessWarning}</p>

@@ -629,6 +629,39 @@ describe('Chat — WP23 display smalls', () => {
     expect(screen.queryByText(/^Dekking:/)).not.toBeInTheDocument();
   });
 
+  it('renders the ADR 055 / MS1 region-series coverage disclosure, muted like regionSetLine, right after it', async () => {
+    const body = 'De bevolking van Amsterdam, Rotterdam en Utrecht groeide van 2020 tot en met 2022.';
+    const regionSeriesLine = 'Dekking: Amsterdam ontbreekt in 2021 en 2022.';
+    const response = fakeAnswerResponse({
+      body,
+      text: [body, '', regionSeriesLine].join('\n'),
+      regionSeriesLine,
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoe groeide de bevolking van Amsterdam, Rotterdam en Utrecht van 2020 tot en met 2022?');
+    expect(await screen.findByText(body)).toBeInTheDocument();
+    const line = screen.getByText(regionSeriesLine);
+    expect(line).toBeInTheDocument();
+    // Same muted style as regionSetLine, per the ADR 055 / MS1 discipline.
+    expect(line).toHaveClass('text-sm', 'text-muted-foreground');
+  });
+
+  it('omits the region-series coverage element when regionSeriesLine is null', async () => {
+    const body = 'Nederland telde 17.900.000 inwoners.';
+    const response = fakeAnswerResponse({ body, text: body, cells: [fakeCell()] });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(await screen.findByText(body)).toBeInTheDocument();
+    expect(screen.queryByText(/^Dekking:/)).not.toBeInTheDocument();
+  });
+
   it('a rescue chip takes the reply path, but any OTHER text takes the question path (WP26c)', async () => {
     // Review finding (session 56): replyToClarification deliberately wires no
     // table finder, so routing a fresh question through it would silently drop
