@@ -122,7 +122,10 @@ describe('buildFindings — a single time series', () => {
     const findings = buildFindings(fourPointSpec(), 'nl');
     const jump2023 = findings.find((f) => f.periodCode === '2023JJ00')!;
     expect(jump2023.resultId).toBe('c');
-    expect(jump2023.point).toEqual({ seriesKey: 's0', periodCode: '2023JJ00', periodLabel: '2023' });
+    // `seriesLabel` joined `periodLabel` on the point in audit pass 3 (row
+    // 8) — both are verbatim spec strings, both only ever read by
+    // `stepAccessibleName`; the ringed CELL is still seriesKey + periodCode.
+    expect(jump2023.point).toEqual({ seriesKey: 's0', periodCode: '2023JJ00', periodLabel: '2023', seriesLabel: 'Nederland' });
   });
 
   it('marks a provisional point\'s caption, verbatim to the story convention', () => {
@@ -234,17 +237,44 @@ describe('buildFindings — no series at all', () => {
 
 // Audit pass 2, row 14 (2026-09-17): the shared helper the Insights
 // carousel and the Story stage both use to name their "position" dots.
+// Audit pass 3, row 8 (same day): the disambiguator is now whichever field
+// actually VARIES across the chart's own steps — pass 2 always appended the
+// period, which on a region comparison is identical for every finding.
 describe('stepAccessibleName', () => {
-  it('appends the finding\'s own period to a kind-only title', () => {
-    expect(stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } })).toBe('Below average — 2021');
+  function step(title: string, periodLabel?: string, seriesLabel?: string) {
+    return { title, point: { periodCode: `${periodLabel ?? '2024'}JJ00`, periodLabel, seriesLabel } };
+  }
+
+  it('periods vary, one series (a trend line): appends the period', () => {
+    const steps = [step('Onder het gemiddelde', '2021', 'Nederland'), step('Onder het gemiddelde', '2024', 'Nederland')];
+    expect(steps.map((s) => stepAccessibleName(s, steps))).toEqual([
+      'Onder het gemiddelde — 2021',
+      'Onder het gemiddelde — 2024',
+    ]);
   });
 
-  it('disambiguates two same-kind findings by their different periods', () => {
-    const a = stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } });
-    const b = stepAccessibleName({ title: 'Below average', point: { periodCode: '2024JJ00', periodLabel: '2024' } });
-    expect(a).not.toBe(b);
-    expect(a).toBe('Below average — 2021');
-    expect(b).toBe('Below average — 2024');
+  it('one period, series vary (a region set): appends the SERIES, never the shared period (#8)', () => {
+    const steps = [step('Onder het gemiddelde', '2024', 'Nieuwegein'), step('Onder het gemiddelde', '2024', 'Vijfheerenlanden')];
+    const names = steps.map((s) => stepAccessibleName(s, steps));
+    expect(names).toEqual(['Onder het gemiddelde — Nieuwegein', 'Onder het gemiddelde — Vijfheerenlanden']);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('both vary (a multi-series line chart): appends period · series', () => {
+    const steps = [step('Hoogste punt', '2021', 'Zeeland'), step('Hoogste punt', '2024', 'Utrecht')];
+    expect(steps.map((s) => stepAccessibleName(s, steps))).toEqual([
+      'Hoogste punt — 2021 · Zeeland',
+      'Hoogste punt — 2024 · Utrecht',
+    ]);
+  });
+
+  it('neither varies (nothing to tell apart): falls back to the period, as pass 2 did', () => {
+    const steps = [step('Onder het gemiddelde', '2024', 'Nederland')];
+    expect(stepAccessibleName(steps[0]!, steps)).toBe('Onder het gemiddelde — 2024');
+  });
+
+  it('a step named against itself (no sibling list) still gets its own period', () => {
+    expect(stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } })).toBe('Below average — 2021');
   });
 
   it('falls back to the title alone for a step with no point (overview/explore)', () => {
@@ -254,6 +284,23 @@ describe('stepAccessibleName', () => {
   it('a real buildFindings point carries a periodLabel that resolves through unchanged', () => {
     const findings = buildFindings(fourPointSpec(), 'nl');
     const jump2023 = findings.find((f) => f.periodCode === '2023JJ00')!;
-    expect(stepAccessibleName(jump2023)).toBe(`${jump2023.title} — 2023`);
+    expect(stepAccessibleName(jump2023, findings)).toBe(`${jump2023.title} — 2023`);
+  });
+
+  it('a real region-set (bar) chart: every step name is unique, and names the region rather than the shared period (#8)', () => {
+    const regionSet = spec({
+      kind: 'bar',
+      series: [10, 90, 50, 55, 52, 48].map((value, i) => ({
+        label: `Gemeente ${i}`,
+        regionCode: `GM000${i}`,
+        points: [point({ resultId: `b${i}`, periodCode: '2024JJ00', periodLabel: '2024', value, formattedValue: String(value) })],
+      })),
+    });
+    const findings = buildFindings(regionSet, 'nl');
+    expect(findings.length).toBeGreaterThan(1);
+    const names = findings.map((f) => stepAccessibleName(f, findings));
+    expect(new Set(names).size).toBe(names.length);
+    for (const [i, name] of names.entries()) expect(name).toBe(`${findings[i]!.title} — ${findings[i]!.seriesLabel}`);
+    expect(names.some((n) => n.includes('2024'))).toBe(false);
   });
 });
