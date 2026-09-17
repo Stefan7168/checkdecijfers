@@ -668,3 +668,149 @@ the anonymous request's OWN module graph never references the client component a
 script/preload tags), zod fully out of `chart.tsx`'s import graph, no behaviour change (54/54 +
 37/37 unit tests, 284/284 `chart.test.tsx`). Target B: proven, not just suspected, to be a dead
 end for this route's current shape — reverted clean.
+
+## Logged-in workspace bundle (session 110)
+
+**Task:** the three passes above only ever measured `/` as an anonymous visitor. The signed-in
+workspace (`Dashboard`/`Workspace` via `app/page.tsx`, `components/workspace.tsx`, `chat.tsx`,
+`thread-sidebar.tsx`, `visual-dock.tsx`) had never been measured with a real request. Use pass 3's
+own honest method — `next start`, curl the served HTML, sum on-disk sizes of every
+`<script src>`/preload-as-script tag — for both an anonymous and a signed-in request, then look
+for a ≥40 KB, measured, safe win.
+
+**Setup, same trap as passes 1-3.** This worktree's `node_modules`/`web/node_modules` were plain
+symlinks into the main checkout; fixed the same way (`rm` both, real `npm ci` at the repo root and
+inside `web/`, a few minutes each). The dev-harness's auth-stub (`:9911`) and llm-stub (`:9912`)
+were already running (another agent's harness), so they were reused as documented in
+`scripts/dev-harness/README.md` rather than started again; its `session-cookie.json` supplied the
+signed-in `curl -b` cookie. `next start` ran on port 3131 (3102/9911/9912 belong to that other
+harness and were never touched).
+
+**A new build-time gotcha, distinct from passes 1-3's Turbopack-across-symlinks trap: `NODE_OPTIONS`
+breaks `next build`'s own TypeScript step.** `scripts/dev-harness/env.sh` sets
+`NODE_OPTIONS="--import <preload>"` so the PGlite fixture db is available to every Node process the
+harness starts — that is correct for `next dev`/`next start` (long-lived server processes), but
+`next build` also spawns a short-lived `tsc` subprocess for its own type-checking step, and
+`NODE_OPTIONS` is inherited by every child process, not just the main one. With it set, `next build`
+compiled successfully but then failed at "Running TypeScript..." with "Could not parse output from
+TypeScript's `--showConfig`" and never finished (no `BUILD_ID` written) — the preload script's own
+imports/side effects, run again inside the `tsc` subprocess's context, corrupt the JSON `tsc
+--showConfig` output Next.js's build step parses. **Fix: build WITHOUT `NODE_OPTIONS`** (the route
+itself is server-rendered on demand, not statically generated, so nothing at build time actually
+needs the harness db) **and only set `NODE_OPTIONS` when running `next start`** (the DB is a
+request-time, not build-time, dependency). `run-next-dev.mjs`'s `pathToFileURL(...)` percent-encoding
+trick is also required for `NODE_OPTIONS` itself when constructed by hand — a raw path with the
+checkout's spaces (`Check de Cijfers`) throws `ERR_MODULE_NOT_FOUND` on the first space-delimited
+fragment.
+
+**A second, more consequential gotcha: `web/lib/db.ts`'s harness seam never fires under `next
+start`.** The seam (`if (process.env.NODE_ENV !== 'production') { use global.__checkdecijfersDb }`)
+exists precisely so the harness's PGlite preload can feed the app a db — and it works under `next
+dev` (`NODE_ENV=development`). But `next start` always serves a `next build` output, and Turbopack's
+production build inlines `process.env.NODE_ENV` to the literal string `'production'` wherever it's
+referenced in application code — confirmed empirically: setting `NODE_ENV=development` in the shell
+that runs `next start` (without rebuilding) made no difference at all, because the `!== 'production'`
+check had already been dead-code-eliminated at build time, when `next build` itself ran with the
+implicit default `NODE_ENV=production`. The anonymous branch (`Landing`) degrades gracefully when
+`getDb()` then throws `DATABASE_URL is not set` (`coverage-disclosure.ts` and `galerij`'s curated
+charts both catch and log, serving a stale/empty version) — but `app/page.tsx`'s signed-in branches
+call `getBalance`/`listThreads`/etc. through an un-caught `Promise.all`, so the whole request 500'd.
+
+**Fix applied and kept: an explicit harness escape hatch, additive to the existing seam.**
+`web/lib/db.ts`'s condition became `if (process.env.NODE_ENV !== 'production' ||
+process.env.CDC_PGLITE_HARNESS === '1')` — `CDC_PGLITE_HARNESS` is an ordinary runtime env var (never
+subject to the `NODE_ENV`-style build-time inlining Next.js/Turbopack special-cases), set only by
+`scripts/dev-harness/env.sh`/`run-next-dev.mjs`, and never set in any real deploy — so production
+behaviour (the `cached` branch, a real `connectFromEnv()` pool) is bit-for-bit unchanged; the change
+only ever takes effect when this exact harness's own flag is on. This is the only source change this
+pass makes; it is harness-enablement, not a bundle-size fix, and is necessary infrastructure for
+*any* future session that wants to measure the logged-in workspace with a real request rather than
+guessing from source. Verified: `npm run typecheck` clean; `getDb` is mocked (`vi.mock('../lib/db.ts',
+() => ({ getDb }))`) in every test file that touches it (`actions.test.ts` and 12 others), so no
+existing test exercises this branch directly — ran `npx vitest run app/actions.test.ts --maxWorkers=1`
+(36/36 passed) as a representative check that nothing else broke.
+
+**Build-budget accounting (the brief caps `next build` at 3 real runs this pass):** (1) the
+`NODE_OPTIONS`-broken build above (no `BUILD_ID` written — a genuinely failed attempt, still counted
+against the cap per the brief's own wording); (2) a clean build without `NODE_OPTIONS`, confirming
+the build-time cause of (1), taken *before* the `db.ts` fix — this build could serve the anonymous
+landing but not the signed-in workspace; (3) the final rebuild, with the `db.ts` fix in place and
+`NODE_OPTIONS` still unset at build time. All 3 are spent; no further rebuild was attempted this
+pass (see "Net result" below for what that forecloses).
+
+**Measurement, both requests against build 3, `next start -p 3131` with build 3 above plus
+`NODE_OPTIONS` (the preload) restored for the running server only:**
+
+- Anonymous (`curl http://localhost:3131/`): HTTP 200, **15 script/preload tags, 1,502,217 bytes**
+  — matches pass 3's Target-A-only baseline (1,496,638 bytes / 15 tags) to within normal
+  install-to-install hash noise (passes 1-3 already documented this noise band).
+- Signed-in (`curl -b <session-cookie.json's sb-localhost-auth-token> http://localhost:3131/`):
+  confirmed rendering `Workspace` (not `Landing`, not `__next_error__`) via `grep -o
+  "Workspace\|Dashboard\|Landing\|__next_error__"` on the response body. HTTP 200, **15
+  script/preload tags, 1,502,217 bytes** — byte-for-byte, tag-for-tag **identical** to the
+  anonymous response (`diff` of the two sorted `src="..."` lists is empty).
+
+**Finding: there is no separate "logged-in bundle" today — the anonymous visitor already pays for
+all of it.** This confirms and sharpens pass 3's own Target-B conclusion (dynamic()-wrapping
+`Dashboard`/`Workspace` in `app/page.tsx` didn't reduce anonymous bytes because Next emits
+`<script>` tags for the whole statically-imported module graph of a route "regardless of which
+runtime branch actually renders them"): the *converse* is equally true from the signed-in side —
+every chunk the workspace needs was ALREADY being shipped to anonymous visitors before this pass
+even started, because `Landing`, `Dashboard` and `Workspace` are three static imports inside the
+same `app/page.tsx` Server Component. There is no request-shape-based split at all between "what an
+anonymous visitor's browser fetches" and "what a signed-in visitor's browser fetches" for `/` as
+currently structured — the earlier "logged-in workspace bundle" framing this brief opened with is,
+measured, not a distinct thing to diet separately; it is the same 1,502,217 bytes already accounted
+for (and left alone, per this brief's own scope) by passes 1-3.
+
+**Per-chunk module identification** (same method as pass 2 — grep each chunk's minified text for
+package/identifier markers, `strings` for any embedded source paths, and distinctive UI string
+literals pulled from the actual source files as fingerprints; every marker below was cross-checked
+for false positives — see the `zod`/`zodra` note):
+
+| Chunk (bytes) | Contents (evidence) | Notes |
+|---|---|---|
+| 480,448 | `recharts-` (83 hits, matches pass 2/3's chart chunk exactly), a `svg2pdf` hit that is only the destructuring site of an already-separate dynamic-chunk call (pass 1's finding, unchanged); `ChartEditModal`/`ChartConfigPanel`/`ChartStoryPanel`/`ChartStoryStage`/`ChartNotes` identifiers present as the `dynamic(() => import(...))` call sites pass 1 introduced, not their bodies (those are separate, on-demand chunks). Zero `ZodError` hits — Target A's fix confirmed still holding; the one raw `zod` substring match in a *different* chunk (3trj6b9cc2g1f.js, below) is a false positive: it's inside the Dutch word "zodra" ("as soon as"), verified by printing 30 characters of context around every hit. | `components/chart.tsx` (`ChartView`), same as passes 1-3. Landing-required, out of this pass's scope by the brief's own rule. |
+| 229,290 | `react-dom` (1), `Fiber` (29), `Suspense` (5), `startTransition` (3), `hydrateRoot` (2), `webpack`/`turbopack` (1 each) | React + React-DOM + the Next.js client hydration runtime. Framework, unavoidable. |
+| 203,596 | `Workspace` (1, exact string match) and `DeleteHistory` (1) as identifiers; `"chat-composer"`, `"chat-panel"`, `"dock-panel"` (1 each) as literal CSS/test-id-style strings pulled straight from `components/workspace.tsx`/`chat.tsx`; a `ResponsiveContainer`/`ChartView` reference (the inline chart preview inside a chat answer) | This is the Workspace/Chat/ThreadSidebar/VisualDock module graph — almost exactly pass 2's 203,156-byte "chat/dashboard" chunk (99.98% match; the ~400-byte drift is ordinary hash noise). **This is the one real candidate for a next pass's lazy-load** (see "What this pass recommends, unverified" below). |
+| 144,443 | `x-deployment-id`, `x-action-revalidated`, `middleware`, `forbidden`, `digest`, `unauthorized` string literals; `startTransition` (5) | Next.js's app-router client runtime (Server Actions fetch/revalidation handling). Framework, unavoidable. |
+| 112,594 | Served with the `noModule` attribute in the HTML (`<script src="/_next/static/chunks/0cz1d0mv5g_q7.js" noModule="">`); contents are `Reflect`/`Symbol`/`WeakMap`/`species`/`iterator`-heavy — a core-js-style ES2015+ polyfill bundle | Next.js's automatic **legacy-browser fallback bundle**. `nomodule` scripts are never fetched or executed by any browser that understands `type="module"` (every browser this product targets) — this pass's byte-sum method counts it because it's a real `<script>` tag in the HTML, but it is not part of any modern visitor's real first-load cost. Worth noting as a measurement-method caveat for future passes, not a code change. |
+| 71,439 | Zero `ZodError` hits (the one `zod` substring is the "zodra" false positive above); referenced from the RSC payload as the vendor half of nearly every client-component reference alongside `2o70teaie9lwz.js` (`I[...,["/_next/static/chunks/3trj6b9cc2g1f.js","/_next/static/chunks/2o70teaie9lwz.js"],"LangProvider"]`, and again for `ThemeProvider`, `StylePanelOwnerProvider`, `ChartUsageTracker`, `SiteFooter`) | The shared site-chrome/providers vendor chunk (`theme-provider.tsx`, `lang-provider.tsx`, `style-panel-owner.tsx`, `chart-usage-tracker.tsx`, `site-footer.tsx`) — global on every route, not workspace-specific. |
+| 62,906 / 40,841 / 35,492 / 30,758 / 28,473 / 27,546 / 22,582 / 10,947 / 862 | 35,492-byte chunk: 1 `lucide` hit (icon glyph data). The rest: no marker from the full sweep (`react-resizable-panels`, `PanelGroup`, `PanelResizeHandle`, `papaparse`, `date-fns`, `@base-ui`, `AttachmentsPanel`, `DatasetChat`, `AccountPanel`, `user-chart-styles`, `ThreadSidebar`, `VisualDock` — all zero hits across all 15 chunks, re-confirmed this pass) | Same as pass 2's own honest admission for its unattributed tail: likely first-party providers/small Next runtime pieces, individually too small to justify further digging inside this pass's budget. **Notably absent, confirmed again:** no `react-resizable-panels`, `@base-ui`, `papaparse`/csv, or `date-fns` string anywhere in any of the 15 chunks — either these libraries aren't reachable from `/` at all today, or their identifiers are fully mangled by Turbopack's minifier (unlike `Workspace`/`DeleteHistory`, which happened to survive as literal strings). Flagged rather than guessed, per this brief's own norm. |
+
+**What this pass recommends, unverified (no build budget left to prove it this pass).** The
+203,596-byte Workspace/Chat/dock chunk is the one candidate that fits this brief's own criteria
+(interaction-only pieces that ship but aren't needed before an interaction) — but the RIGHT
+mechanism matters, and this pass's own measurement just re-proved which one doesn't work: pass 3's
+Target B already showed that wrapping `Dashboard`/`Workspace` themselves in `next/dynamic()` **at
+the `app/page.tsx` Server Component boundary** (necessarily `ssr: true`, since they ARE the
+first-paint content) does not shrink the real script-tag byte count, because Next still emits an
+unconditional `<script src>` for every chunk reachable from the route's import graph regardless of
+which branch executes. The precedent that DID work is pass 1's: wrapping genuinely interaction-only
+CHILDREN **inside an already-`'use client'` component** (`chart.tsx`'s `ChartEditModal`/
+`ChartConfigPanel`/`ChartStoryPanel`(partially)/`ChartStoryStage`/`ChartNotes`) with
+`dynamic(() => import(...), { ssr: false })` — `ssr: false` chunks are fetched via a runtime
+`import()` call embedded in the parent's own chunk, not as a top-level `<script>` tag, so they
+never appear in this pass's byte sum at all until actually opened. The same pattern likely applies
+inside `workspace.tsx`/`chat.tsx`/`thread-sidebar.tsx` themselves (both are already `'use client'`)
+for pieces gated behind their own open/closed state — the delete-history confirmation dialog
+(`DeleteHistory`, confirmed present in this chunk) is the clearest candidate by name alone, and the
+brief's own suggested list (account panel, dataset/attachments chat if dormant, chart dock's heavy
+children beyond `ChartView`) should be checked the same way `chart.tsx`'s children were: read each
+candidate's actual mount condition first (only ever reached from a click vs. unconditionally
+mounted with internal open/closed state), matching `chart.test.tsx`'s async-safe rewrite pattern
+(`web/test/mock-next-dynamic.ts`) if any assertion needs it. **Not attempted this pass** — the
+3-build budget was spent establishing the measurement method itself and fixing the harness gap that
+blocked it; applying and then verifying a dynamic() split needs at least one more full
+build-and-measure cycle, which is exactly the next pass's job.
+
+**Net result: no bundle-size change this pass (0 bytes, by design — no code diet was attempted
+without the build budget to verify it).** One real, kept fix: `web/lib/db.ts`'s `CDC_PGLITE_HARNESS`
+escape hatch, harness-only, enabling every future session to measure the logged-in workspace with a
+real signed-in request instead of reading source and guessing. One real, sharpened finding: the
+"logged-in workspace bundle" and the "anonymous landing bundle" are, today, the exact same
+1,502,217 bytes — there is no separate logged-in cost to diet independently until `Dashboard`/
+`Workspace`'s own interaction-only children are split the way `chart.tsx`'s already were. Commit:
+`fix(harness): let CDC_PGLITE_HARNESS reach next start's production db seam` — `npm run typecheck`
+clean, `app/actions.test.ts` 36/36 passed as a representative check of every `getDb`-mocking test
+file's continued behaviour.
