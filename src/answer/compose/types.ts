@@ -158,6 +158,22 @@ export interface ComposedAnswer {
    * and every row stored before #253, carries no key at all — readers MUST use
    * `?? null`. */
   regionSetLine?: string | null;
+  /** ADR 055 / **MS1**: the multi-region-series coverage disclosure ("Voor
+   * Den Haag ontbreekt een cijfer in 2 van de 6 gevraagde jaren; …") —
+   * assembled by deterministic code (buildRegionSeriesLine) from the validated
+   * per-region coverage record, outside the LLM-scanned body, and re-derived
+   * byte-identically at audit time (R8) by the same builder.
+   *
+   * Same structural reason as regionSetLine above, one bucket further: its
+   * digits count REQUESTED PERIODS and MISSING CELLS, not CBS cell values, so
+   * R1 — whose exemptions are structural, never pattern-based — would
+   * (correctly) reject them inside the scanned body.
+   *
+   * OPTIONAL and present-only: every answer that is not a multi-region series,
+   * every COMPLETE multi-region series (there is nothing to disclose), and
+   * every row stored before ADR 055 carries no key at all — readers MUST use
+   * `?? null`. */
+  regionSeriesLine?: string | null;
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;

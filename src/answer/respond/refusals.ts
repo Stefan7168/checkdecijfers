@@ -535,18 +535,33 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
 }
 
 /** Row 13 (session 110, ADR 054 addendum): "several regions AND several
- * periods in one question" (ADR 011's one-varying-axis rule) — e.g. "Hoe
- * ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot
- * 2024?". Distinguished from the generic `invalid_intent` wording (which
- * would page the owner, src/answer/audit/alerts.ts) exactly like D6's
+ * periods in one question" (ADR 011's one-varying-axis rule). Distinguished
+ * from the generic `invalid_intent` wording (which would page the owner,
+ * src/answer/audit/alerts.ts) exactly like D6's
  * region_scope_on_national_measure — routed by the query refusal's
- * structural `subReason`, never by matching its English message. The offer
- * is the natural fallback: one region over the whole period, or several
- * regions at one period — never both. */
+ * structural `subReason`, never by matching its English message.
+ *
+ * **Re-worded by ADR 055 (task 4), because the old wording became FALSE.**
+ * It said "Ik kan meerdere regio's over meerdere periodes nog niet in één
+ * antwoord combineren" — and a handful of NAMED regions over a range is
+ * exactly what the `region_series` shape now answers. What is still refused
+ * is everything OUTSIDE that shape, and the wording now says which: a whole
+ * GROUP of regions (a region class — ADR 054's axis, a different chart), or
+ * more named regions / more cells than one answer may carry
+ * (REGION_SERIES_MAX_REGIONS, REGION_SERIES_MAX_CELLS). The disjunction is
+ * honest for every case that reaches here: exactly one of the two holds, and
+ * this template layer cannot tell which without the resolver's own detail
+ * (which stays internal — a refusal carries no digits, #37).
+ *
+ * The offer is unchanged in kind: name a few regions over the period, or ask
+ * the whole group for one period — and the chip below still takes the first
+ * named region over the full range. */
 function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal {
   const body =
-    "Ik kan meerdere regio's over meerdere periodes nog niet in één antwoord combineren.";
-  const offer = 'Vraag één regio over die periode, of meerdere regio\'s voor één periode.';
+    "Een ontwikkeling over meerdere periodes kan ik voor een paar met name genoemde regio's samen laten zien, " +
+    "maar deze vraag gaat over een hele groep regio's, of over meer regio's dan in één antwoord passen.";
+  const offer =
+    "Vraag een paar regio's met naam over die periode, of de hele groep voor één periode.";
   return {
     reason: 'multi_region_multi_period',
     text: assertNotAQuestion(joinParts([body, offer])),
