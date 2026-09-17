@@ -212,6 +212,68 @@ describe('askTrialQuestion', () => {
     expect(refundTrialQuestion).toHaveBeenCalledWith(expect.anything(), 7);
   });
 
+  // Row 3 (session 110 UX audit pass 2): an 'internal' refusal is OUR
+  // pipeline's own error, caught and served as an honest refusal rather than
+  // escaping as a throw — the paid path refunds every served refusal in full
+  // (src/billing/gate.ts), and the trial should not charge a visitor's question
+  // for our bug either, even though the trial otherwise deliberately does NOT
+  // refund ordinary refusals (build revision 2, ADR 036).
+  describe('internal refusal refund (#row3)', () => {
+    const INTERNAL_REFUSAL = {
+      kind: 'refusal',
+      reason: 'internal',
+      text: 'Er ging iets mis.',
+      chart: null,
+    };
+
+    it('refunds the trial question and reports the budget as un-spent', async () => {
+      answerQuestionAudited.mockResolvedValue({ response: INTERNAL_REFUSAL, auditId: 42 });
+      const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
+      expect(refundTrialQuestion).toHaveBeenCalledWith(expect.anything(), 7);
+      // take.questionsLeft was 1 (primed in beforeEach); the refund gives the
+      // question back, so the visitor sees 2 again, not 1.
+      expect(outcome).toEqual({ kind: 'ok', response: INTERNAL_REFUSAL, questionsLeft: 2 });
+    });
+
+    it('clamps the reported budget at the per-visitor cap (never above 2)', async () => {
+      takeTrialQuestion.mockResolvedValue({
+        kind: 'taken', trialQuestionId: 7, questionsLeft: 2, potRemaining: 20,
+      });
+      answerQuestionAudited.mockResolvedValue({ response: INTERNAL_REFUSAL, auditId: 42 });
+      const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
+      expect(outcome).toEqual({ kind: 'ok', response: INTERNAL_REFUSAL, questionsLeft: 2 });
+    });
+
+    it('still links the R8 audit row for a refunded internal refusal', async () => {
+      answerQuestionAudited.mockResolvedValue({ response: INTERNAL_REFUSAL, auditId: 42 });
+      await askTrialQuestion('Wat is de inflatie?', R1);
+      expect(attachTrialAudit).toHaveBeenCalledWith(expect.anything(), 7, 42);
+    });
+
+    // Pin: an ORDINARY (non-internal) refusal must keep today's behaviour —
+    // it still consumes the trial question, exactly like a served answer or
+    // clarification. Only 'internal' is special-cased.
+    it('does NOT refund an ordinary data-gap refusal', async () => {
+      const ORDINARY_REFUSAL = {
+        kind: 'refusal',
+        reason: 'not_published',
+        text: 'Dat cijfer is nog niet gepubliceerd.',
+        chart: null,
+      };
+      answerQuestionAudited.mockResolvedValue({ response: ORDINARY_REFUSAL, auditId: 42 });
+      const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
+      expect(refundTrialQuestion).not.toHaveBeenCalled();
+      expect(outcome).toEqual({ kind: 'ok', response: ORDINARY_REFUSAL, questionsLeft: 1 });
+    });
+
+    // Pin: a served ANSWER never refunds either — only 'refusal' + 'internal'.
+    it('does NOT refund a normal answer', async () => {
+      const outcome = await askTrialQuestion('Wat is de inflatie?', R1);
+      expect(refundTrialQuestion).not.toHaveBeenCalled();
+      expect(outcome).toEqual({ kind: 'ok', response: RESPONSE, questionsLeft: 1 });
+    });
+  });
+
   it('mints and sets the visitor cookie on first use only', async () => {
     readTrialVisitorId.mockResolvedValue(null);
     await askTrialQuestion('v', R1);
