@@ -38,7 +38,7 @@ import { validateAnswerBody } from '../compose/validate.ts';
 import { stableStringify } from '../llm/client.ts';
 import { ANSWER_SCHEMA_VERSION, SEMANTIC_CHECK_SCHEMA_VERSION, SLOT_PHRASING_SCHEMA_VERSION } from '../compose/types.ts';
 import { RESPONSE_SCHEMA_VERSION } from '../respond/types.ts';
-import type { AnswerResponse } from '../respond/types.ts';
+import type { AnswerResponse, RefusalReason } from '../respond/types.ts';
 import type { AuditRecord } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
@@ -132,14 +132,19 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
       );
     }
   }
-  // #253: `QueryRefusal.refusal.subReason` — the one machine-readable marker
-  // that turns an `invalid_intent` (an internal fault by default, which PAGES
-  // THE OWNER through src/answer/audit/alerts.ts) into the honest scope-limit
-  // refusal "this measure is published nationally only". The served
-  // `reason` is a pure function of it (refusals.ts buildQueryRefusal), so the
-  // two must agree on a stored row in BOTH directions: a row carrying the
-  // sub-reason with any other reason, or that reason without the sub-reason,
-  // records a refusal its own inputs cannot produce.
+  // #253 / row 13 (session 110, ADR 054 addendum): `QueryRefusal.refusal.
+  // subReason` is the one machine-readable marker that turns an
+  // `invalid_intent` (an internal fault by default, which PAGES THE OWNER
+  // through src/answer/audit/alerts.ts) into one of two honest scope-limit
+  // refusals: "this measure is published nationally only"
+  // (region_scope_on_national_measure) and "several regions AND several
+  // periods in one question" (multi_region_multi_period, row 13). Each
+  // served `reason` is a pure function of its own sub-reason value
+  // (refusals.ts buildQueryRefusal), so every pair must agree on a stored row
+  // in BOTH directions: a row carrying a sub-reason with any other reason
+  // (including the OTHER sub-reasoned one — the sibling case), or one of
+  // these two reasons without its own sub-reason, records a refusal its own
+  // inputs cannot produce.
   //
   // Same shape check (not a numeric one) and the same `?? null` discipline as
   // the onboarding pairing above: every refusal stored before #253 — and every
@@ -147,8 +152,18 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   // `undefined !== null` would flag all of them.
   if (response.kind === 'refusal') {
     const subReason = response.queryRefusal?.refusal.subReason ?? null;
-    const isScopeLimit = response.reason === 'region_scope_on_national_measure';
-    if (isScopeLimit !== (subReason === 'region_scope_on_national_measure')) {
+    // Every subReason value maps to EXACTLY the RefusalReason it must be
+    // paired with — additive: a future third sub-reason only needs an entry
+    // here, never a rewrite of the check itself.
+    const subReasonToReason: Record<string, RefusalReason> = {
+      region_scope_on_national_measure: 'region_scope_on_national_measure',
+      multi_region_multi_period: 'multi_region_multi_period',
+    };
+    const pairedReasons = new Set(Object.values(subReasonToReason));
+    const mismatch = pairedReasons.has(response.reason)
+      ? subReasonToReason[subReason ?? ''] !== response.reason
+      : subReason !== null;
+    if (mismatch) {
       problems.push(
         `queryRefusal subReason ${subReason === null ? 'absent' : `'${subReason}'`} does not match reason '${response.reason}'`,
       );

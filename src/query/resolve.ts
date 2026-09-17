@@ -311,7 +311,17 @@ export async function resolveIntent(
   // same side of this rule — this feature does NOT relax ADR 011's
   // one-varying-axis contract.
   if (periodCodes.length > 1 && (regions.length > 1 || regionSet !== undefined)) {
-    return refuse(intent, 'invalid_intent', 'several regions AND several periods in one question is not supported (one varying axis per question)');
+    // Row 13 (session 110, ADR 054 addendum): this is an honest, ordinary
+    // scope limit (ADR 011's one-varying-axis rule), not an internal fault —
+    // mark it exactly like D6's region_scope_on_national_measure so the
+    // answer layer can word it honestly instead of the generic `internal`
+    // wording, which pages the owner (alertInternalRefusal).
+    return refuse(
+      intent,
+      'invalid_intent',
+      'several regions AND several periods in one question is not supported (one varying axis per question)',
+      { subReason: 'multi_region_multi_period' },
+    );
   }
   switch (intent.derivation) {
     case 'difference':

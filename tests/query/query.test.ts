@@ -560,10 +560,15 @@ describe('typed refusals: intent validity', () => {
   });
 
   it('several regions AND several periods at once is out of contract', async () => {
-    await expectRefusal(
+    const refusal = await expectRefusal(
       population({ regions: ['GM0363', 'GM0599'], period: { kind: 'codes', codes: ['2023JJ00', '2024JJ00'] } }),
       'invalid_intent',
     );
+    // Row 13 (session 110, ADR 054 addendum): this is an honest, structural
+    // scope limit, not an internal fault — marked exactly like D6's
+    // region_scope_on_national_measure so the answer layer can word it
+    // honestly instead of paging the owner (alertInternalRefusal).
+    expect(refusal.subReason).toBe('multi_region_multi_period');
   });
 });
 

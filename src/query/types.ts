@@ -449,8 +449,18 @@ export interface QueryRefusal {
      *
      * Present-only (docs/13): absent on every other refusal and on every row
      * stored before #253, so readers use `?? null` and a plain equality test —
-     * never a bare truthiness read. */
-    subReason?: 'region_scope_on_national_measure';
+     * never a bare truthiness read.
+     *
+     * Session 110 (docs/session-briefs/2026-09-17-session-110-ux-audit-pass3.md
+     * row 13, ADR 054 addendum) adds a second value, `multi_region_multi_period`,
+     * for the SAME reason this field exists at all: "several regions AND
+     * several periods in one question" is a structural refusal (ADR 011's
+     * one-varying-axis rule), not a data fault, but it was served with the
+     * generic `internal` wording and paged the owner. Both values are
+     * mutually exclusive on one refusal (a row carries at most one) and each
+     * is checked in both directions against its own `RefusalReason`
+     * (src/answer/audit/reconstruct.ts). */
+    subReason?: 'region_scope_on_national_measure' | 'multi_region_multi_period';
     /** For freshness refusals: what we can serve instead. */
     freshness?: FreshnessInfo;
     /** For scope refusals: the nearest answerable alternative, as a CBS code

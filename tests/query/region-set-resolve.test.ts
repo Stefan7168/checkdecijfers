@@ -71,6 +71,11 @@ describe('resolveIntent — regionSet (the region-class axis)', () => {
     if (outcome.ok) throw new Error('unreachable');
     expect(outcome.refusal.kind).toBe('invalid_intent');
     expect(outcome.refusal.message).toContain('one varying axis per question');
+    // Row 13 (session 110, ADR 054 addendum): a region CLASS counts as
+    // "several regions" for this rule too, so it gets the same honest
+    // sub-reason as an explicit multi-region ask — not the generic internal
+    // wording that pages the owner.
+    expect(outcome.refusal.subReason).toBe('multi_region_multi_period');
   });
 
   it('"alle landsdelen" refuses as outside the loaded slice — not as "CBS does not publish it"', async () => {

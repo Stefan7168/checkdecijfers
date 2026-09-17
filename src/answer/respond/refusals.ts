@@ -484,6 +484,29 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
   };
 }
 
+/** Row 13 (session 110, ADR 054 addendum): "several regions AND several
+ * periods in one question" (ADR 011's one-varying-axis rule) — e.g. "Hoe
+ * ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot
+ * 2024?". Distinguished from the generic `invalid_intent` wording (which
+ * would page the owner, src/answer/audit/alerts.ts) exactly like D6's
+ * region_scope_on_national_measure — routed by the query refusal's
+ * structural `subReason`, never by matching its English message. The offer
+ * is the natural fallback: one region over the whole period, or several
+ * regions at one period — never both. */
+function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal {
+  const body =
+    "Ik kan meerdere regio's over meerdere periodes nog niet in één antwoord combineren.";
+  const offer = 'Vraag één regio over die periode, of meerdere regio\'s voor één periode.';
+  return {
+    reason: 'multi_region_multi_period',
+    text: assertNotAQuestion(joinParts([body, offer])),
+    offer,
+    guidance: null,
+    freshness: null,
+    internalNote: null,
+  };
+}
+
 function buildQuarantinedRefusal(): BuiltRefusal {
   const body =
     'Deze tabel is tijdelijk niet beschikbaar omdat we de gegevens opnieuw aan het controleren zijn (kwaliteitscheck na een mogelijke wijziging bij CBS).';
@@ -611,6 +634,12 @@ export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
       // cap, both axes given, a malformed period) keeps the generic wording.
       if (refusal.refusal.subReason === 'region_scope_on_national_measure') {
         return { kind: 'refusal', refusal: buildRegionScopeOnNationalMeasureRefusal(refusal) };
+      }
+      // Row 13 (session 110): the second honest sub-reason, same treatment —
+      // several regions AND several periods is a structural scope limit, not
+      // an internal fault.
+      if (refusal.refusal.subReason === 'multi_region_multi_period') {
+        return { kind: 'refusal', refusal: buildMultiRegionMultiPeriodRefusal(refusal) };
       }
       return { kind: 'refusal', refusal: buildInternalRefusal(refusal) };
     case 'table_not_registered':
