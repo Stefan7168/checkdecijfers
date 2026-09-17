@@ -512,11 +512,17 @@ describe('defaultFormFor / defaultFormIsTable', () => {
     );
   }
 
-  it('at or below BAR_LABEL_MAX series: the spec\'s own kind, never Tabel', () => {
-    expect(defaultFormFor(comparisonSpec(BAR_LABEL_MAX))).toBe('bar');
+  it('a single-series spec (not comparison-shaped) at or below BAR_LABEL_MAX: the spec\'s own kind, never Tabel', () => {
     expect(defaultFormFor(comparisonSpec(1))).toBe('bar');
-    expect(defaultFormIsTable(comparisonSpec(BAR_LABEL_MAX))).toBe(false);
     expect(defaultFormIsTable(comparisonSpec(1))).toBe(false);
+  });
+
+  it('a comparison-shaped spec opens on hbar at EVERY series count up to COMPARISON_HBAR_MAX, not only above BAR_LABEL_MAX — pass 3 row 1: a vertical bar names no region and its labels collide well below 15 series', () => {
+    expect(defaultFormFor(comparisonSpec(2))).toBe('hbar');
+    expect(defaultFormFor(comparisonSpec(12))).toBe('hbar');
+    expect(defaultFormFor(comparisonSpec(BAR_LABEL_MAX))).toBe('hbar');
+    expect(defaultFormIsTable(comparisonSpec(2))).toBe(false);
+    expect(defaultFormIsTable(comparisonSpec(BAR_LABEL_MAX))).toBe(false);
   });
 
   it('16 (BAR_LABEL_MAX + 1) comparison-shaped series: hbar, not Tabel — the session 110 fix', () => {

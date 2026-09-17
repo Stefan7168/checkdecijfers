@@ -939,6 +939,10 @@ describe('ADR 042 — the designed default renders its literals', () => {
       ],
     });
     const { container } = render(<ChartView spec={cmp} />);
+    // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
+    // on Liggend by default — select Staaf explicitly to exercise its own
+    // baseline before switching to Liggend.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
@@ -982,6 +986,10 @@ describe('ADR 042 — the designed default renders its literals', () => {
       ],
     });
     const { container } = render(<ChartView spec={cmp} />);
+    // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
+    // on Liggend by default — select Staaf explicitly to check its own
+    // grid before switching to Liggend.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     const barLine = container.querySelector('.recharts-cartesian-grid-horizontal line')!;
     expect(barLine.getAttribute('stroke-dasharray')).toBeNull();
     expect(barLine.getAttribute('stroke-opacity')).toBe('0.5');
@@ -3499,6 +3507,11 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
 
   it('S3: arrow-key order skips the disabled Lijn/Vlak tabs entirely (Staaf -> Liggend -> Tabel -> Staaf)', () => {
     render(<ChartView spec={multiRegionBarSpec()} />);
+    // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
+    // it now OPENS on Liggend by default (not Staaf) — select Staaf first
+    // to make it the active form, then drive the same arrow-key traversal
+    // this test always intended.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     const barTab = screen.getByRole('tab', { name: 'Staaf' });
     barTab.focus();
     fireEvent.keyDown(barTab, { key: 'ArrowRight' });
@@ -3879,6 +3892,15 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('a comparison story highlights the highest bar', () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
+    // it now opens on Liggend by default. The Liggend (hbar) form draws all
+    // regions through one shared <Bar dataKey="value"> (RegionBar), which
+    // does not wire per-series highlight/dim the way the vertical Staaf
+    // form's per-series <Bar> elements do — out of scope for this fix
+    // (row 1 is the default-form rule only). Select Staaf explicitly so
+    // this story-highlighting test keeps exercising the form it always
+    // meant to.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
