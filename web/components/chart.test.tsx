@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
-import { COMPARISON_HBAR_MAX } from '../lib/chart-view-state.ts';
+import { COMPARISON_HBAR_MAX, HBAR_MAX_HEIGHT_PX, HBAR_ROW_PX } from '../lib/chart-view-state.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
@@ -1120,6 +1120,56 @@ describe('ADR 042 — height follows width once measured', () => {
     expect(after.style.height).toBe('');
     expect(after.className).toContain('h-full');
   });
+
+  // Session 110 pass 3 row 3: an hbar chart draws one category (region) row
+  // per series at a roughly fixed pitch (26 bars collided their labels at
+  // the plain 256px floor in the audit repro) — its height now grows with
+  // the series count, on top of whatever the width-based rule already gave
+  // it, capped at HBAR_MAX_HEIGHT_PX. Every other form is untouched (the
+  // 700→360/400→256 test above already pins that for a non-hbar spec).
+  it('an hbar chart grows past the width-based height once its own series count needs more row space', () => {
+    const s = regionSetBarSpec(26); // comparison-shaped -> defaults to hbar; 26 * HBAR_ROW_PX = 520
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect; // chartHeightForWidth(700) = 360, smaller than 520
+    fireResize(panel);
+    expect(panel.style.height).toBe(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.className).not.toContain('h-64');
+  });
+
+  it('an hbar chart with few regions keeps the plain width-based height — the row floor never SHRINKS it', () => {
+    const s = multiRegionBarSpec(); // 3 series, defaults to hbar; 3 * HBAR_ROW_PX = 60, well under 360
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+  });
+
+  it('an hbar chart already carries its row-based height BEFORE the first measurement — never flashes the plain 256px floor', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toBe(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.className).not.toContain('h-64');
+  });
+
+  it('an hbar chart height is capped at HBAR_MAX_HEIGHT_PX however many series it is handed (via an explicit override, past COMPARISON_HBAR_MAX)', () => {
+    const s = regionSetBarSpec(COMPARISON_HBAR_MAX + 50);
+    const { container } = render(<ChartView spec={s} initialFormOverride="hbar" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toBe(`${HBAR_MAX_HEIGHT_PX}px`);
+  });
+
+  it('embedMode wraps the hbar row-based height in the same frame-relative min(), never a bare px floor', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toContain('min(');
+    expect(panel.style.height).toContain(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.style.height).toContain('dvh');
+  });
+
   it('the export container carries the entrance utilities, with the reduced-motion opt-out', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
