@@ -683,6 +683,12 @@ const nl = {
   'chart.embed.trigger': 'Insluiten',
   'chart.embed.dialogTitle': 'Grafiek insluiten',
   'chart.embed.dialogExplain': 'Plak deze code in een artikel om deze grafiek te tonen, met bronvermelding.',
+  // Session 110 (embed auto-resize, ADR 041 addendum): one sentence
+  // explaining the new mechanism — the generated snippet's own inline
+  // <script> resizes the iframe to fit; the height attribute on the
+  // <iframe> itself is only the fallback for a host that blocks scripts.
+  'chart.embed.autoResizeExplain':
+    'De grafiek past zichzelf aan op de inhoud; de hoogte in de code is de terugvaloptie als scripts geblokkeerd zijn.',
   'chart.embed.languageLabel': 'Taal',
   'chart.embed.colourLabel': 'Kleuren',
   'chart.embed.colourLight': 'Licht',
@@ -1427,6 +1433,8 @@ const en: Messages = {
   'chart.embed.trigger': 'Embed',
   'chart.embed.dialogTitle': 'Embed this chart',
   'chart.embed.dialogExplain': 'Paste this code into an article to show this chart, with attribution.',
+  'chart.embed.autoResizeExplain':
+    'The chart resizes itself to its content; the height attribute is the fallback when scripts are blocked.',
   'chart.embed.languageLabel': 'Language',
   'chart.embed.colourLabel': 'Colours',
   'chart.embed.colourLight': 'Light',
