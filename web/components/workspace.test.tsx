@@ -523,3 +523,77 @@ describe('Workspace — session 90: deleting a chat from the sidebar', () => {
     expect(actions.listMyThreads).not.toHaveBeenCalled();
   });
 });
+
+// Row 1 (session 110 UX audit, #P1): below md, expanding the sidebar used to
+// squeeze the chat pane to ~111px as a 264px flex sibling (composer clipped,
+// "Send" off-screen), and it never re-collapsed on thread select. It must
+// now render as an overlay/drawer over the chat pane on a phone, with a
+// backdrop that closes it on tap, while the >=md flex-sibling layout stays
+// byte-identical.
+describe('Workspace — mobile sidebar overlay (row 1, #P1)', () => {
+  // Same window.matchMedia stub shape as the top-level beforeEach, but lets a
+  // test choose which query reports narrow (max-width: 767px, #213) so it can
+  // exercise BOTH the >=md and <md behaviour of the same sidebar.
+  function mockNarrow(narrow: boolean) {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: narrow && query === '(max-width: 767px)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  }
+
+  const ONE_THREAD: ThreadSummary[] = [
+    { id: 1, title: 'Inflatie 2024', lastActivityAt: new Date().toISOString(), kind: 'cbs' },
+  ];
+
+  it('at >= md, the expanded sidebar stays a plain flex sibling (byte-identical desktop behaviour)', () => {
+    mockNarrow(false);
+    renderWorkspace(ONE_THREAD);
+    const nav = screen.getByRole('navigation', { name: 'Gesprekken' });
+    expect(nav.parentElement!.className).toBe('w-64 shrink-0');
+    expect(document.querySelector('[data-testid="sidebar-backdrop"]')).toBeNull();
+  });
+
+  it('below md, expanding the sidebar renders an overlay drawer (not a flex sibling) with a backdrop', () => {
+    mockNarrow(true);
+    renderWorkspace(ONE_THREAD);
+    // #213: auto-collapses on mount below md — open it via the rail toggle.
+    fireEvent.click(screen.getByRole('button', { name: 'Toon gesprekken' }));
+    const nav = screen.getByRole('navigation', { name: 'Gesprekken' });
+    const wrapperClass = nav.parentElement!.className;
+    expect(wrapperClass).toContain('absolute');
+    expect(wrapperClass).toContain('inset-y-0');
+    expect(wrapperClass).toContain('left-0');
+    expect(wrapperClass).toContain('z-20');
+    expect(wrapperClass).not.toBe('w-64 shrink-0');
+    expect(document.querySelector('[data-testid="sidebar-backdrop"]')).toBeTruthy();
+  });
+
+  it('tapping the backdrop closes the drawer (collapses back to the rail)', () => {
+    mockNarrow(true);
+    renderWorkspace(ONE_THREAD);
+    fireEvent.click(screen.getByRole('button', { name: 'Toon gesprekken' }));
+    fireEvent.click(screen.getByTestId('sidebar-backdrop'));
+    expect(screen.getByRole('button', { name: 'Toon gesprekken' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Gesprekken' })).not.toBeInTheDocument();
+  });
+
+  it('selecting a thread while the mobile drawer is open closes it', async () => {
+    actions.loadMyThread.mockResolvedValue({ kind: 'cbs', threadId: 1, messages: [], context: null });
+    mockNarrow(true);
+    renderWorkspace(ONE_THREAD);
+    fireEvent.click(screen.getByRole('button', { name: 'Toon gesprekken' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Inflatie 2024' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Toon gesprekken' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('navigation', { name: 'Gesprekken' })).not.toBeInTheDocument();
+    // The thread still actually loads — closing the drawer is additive, not a bypass.
+    expect(await screen.findByPlaceholderText('Stel een vraag…')).toBeInTheDocument();
+  });
+});
