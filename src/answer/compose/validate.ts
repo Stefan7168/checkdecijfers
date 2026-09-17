@@ -902,17 +902,59 @@ const COMPARATIVE = /\b(meer|hoger|groter|minder|lager|kleiner)\b[^.!?]{0,60}?\b
 
 type Trend = 'up' | 'down' | 'flat';
 
-function trendBacking(result: ValidatedResult): { kind: 'direction' | 'difference'; net: Trend; monotonic: boolean } | null {
-  const direction = result.derivations.find((d) => d.kind === 'direction');
-  if (direction && direction.kind === 'direction') {
-    return { kind: 'direction', net: direction.direction, monotonic: direction.monotonic };
+/** One trend-backing candidate: a `direction` or `difference` derivation,
+ * plus the region its OWN source cells belong to (never "the first record" —
+ * multi-region series design, MS1). `checkSingleRegion` (derivations.ts)
+ * guarantees every `direction` record's source cells share one region, so
+ * `sourceCells[0]`'s coordinate IS the record's region. */
+interface TrendCandidate {
+  kind: 'direction' | 'difference';
+  net: Trend;
+  monotonic: boolean;
+  sourceCells: ResultCell[];
+  regionCode: string | null;
+}
+
+function trendCandidates(result: ValidatedResult, cellsById: Map<string, ResultCell>): TrendCandidate[] {
+  const candidates: TrendCandidate[] = [];
+  for (const d of result.derivations) {
+    if (d.kind === 'direction') {
+      const sourceCells = derivationSourceCells(d, cellsById);
+      candidates.push({ kind: 'direction', net: d.direction, monotonic: d.monotonic, sourceCells, regionCode: sourceCells[0]?.regionCode ?? null });
+    } else if (d.kind === 'difference') {
+      const sourceCells = derivationSourceCells(d, cellsById);
+      const net: Trend = d.value > EPSILON ? 'up' : d.value < -EPSILON ? 'down' : 'flat';
+      candidates.push({ kind: 'difference', net, monotonic: true, sourceCells, regionCode: sourceCells[0]?.regionCode ?? null });
+    }
   }
-  const difference = result.derivations.find((d) => d.kind === 'difference');
-  if (difference && difference.kind === 'difference') {
-    const net: Trend = difference.value > EPSILON ? 'up' : difference.value < -EPSILON ? 'down' : 'flat';
-    return { kind: 'difference', net, monotonic: true };
+  return candidates;
+}
+
+/** Which candidate backs a trend claim in this piece of text (a clause, or a
+ * sentence for the comparative fallback below). With exactly one candidate
+ * (every ordinary single-region `series`/`difference` result, unchanged
+ * behaviour), that candidate always backs it — region mentions are never
+ * consulted, so this stays byte-identical to the pre-#264 single-`direction`
+ * behaviour. With MORE than one candidate (a multi-region result), a claim
+ * is backed only when the text names EXACTLY one candidate's region — naming
+ * none or naming several is fail-closed (MS1: no ambiguous or borrowed
+ * backing, ever). */
+function resolveTrendBacking(scopeText: string, candidates: TrendCandidate[]): TrendCandidate | null {
+  if (candidates.length === 0) return null;
+  // A single-region result can still carry TWO candidates (an explicit
+  // `difference` alongside the pre-registered `direction`, e.g. B13) — that
+  // is not the multi-region ambiguity MS1 targets, so it keeps the OLD
+  // priority (direction over difference) unconditionally, with no region
+  // mention required. Only genuinely distinct regions across candidates
+  // trigger the "name exactly one" rule below.
+  const distinctRegionsOverall = new Set(candidates.map((c) => c.regionCode));
+  if (distinctRegionsOverall.size <= 1) {
+    return candidates.find((c) => c.kind === 'direction') ?? candidates[0]!;
   }
-  return null;
+  const matching = candidates.filter((c) => c.sourceCells.some((cell) => sentenceMentionsCellRegion(scopeText, cell)));
+  const distinctMatchingRegions = new Set(matching.map((c) => c.regionCode));
+  if (distinctMatchingRegions.size !== 1) return null;
+  return matching.find((c) => c.kind === 'direction') ?? matching[0]!;
 }
 
 function sign(delta: number): Trend {
@@ -935,8 +977,9 @@ function expectedTrendForClause(
   clause: Sentence,
   tokens: ClassifiedToken[],
   result: ValidatedResult,
-  net: Trend,
+  backing: TrendCandidate,
 ): Trend {
+  const net = backing.net;
   const cellTokensInClause = tokens
     .filter((t) => t.kind === 'cell' && t.index >= clause.start && t.index < clause.end)
     .sort((a, b) => a.index - b.index);
@@ -944,7 +987,11 @@ function expectedTrendForClause(
     return sign(cellTokensInClause[cellTokensInClause.length - 1]!.value - cellTokensInClause[0]!.value);
   }
 
-  const orderedCells = [...result.cells].filter((c) => c.value !== null);
+  // Scoped to the BACKING candidate's own region (a no-op in the ordinary
+  // single-region case, where every cell already shares that region) — a
+  // multi-`direction` result must never let a later region's cell silently
+  // overwrite an earlier one's for the SAME year in this lookup (MS1).
+  const orderedCells = [...result.cells].filter((c) => c.value !== null && c.regionCode === backing.regionCode);
   const cellsByYear = new Map(orderedCells.map((c) => [yearOf(c), c]));
   const value = (year: number) => cellsByYear.get(year)!.value!;
   const yearsInClause = [...new Set(
@@ -984,9 +1031,9 @@ function checkDirectionWords(
   result: ValidatedResult,
 ): string[] {
   const problems: string[] = [];
-  const backing = trendBacking(result);
   const maxDerivation = result.derivations.find((d) => d.kind === 'max');
   const cellsById = new Map(result.cells.map((c) => [c.resultId, c]));
+  const candidates = trendCandidates(result, cellsById);
 
   for (const sentence of sentences) {
     const saysSuperlative = SUPERLATIVE_WORDS.test(sentence.text);
@@ -997,8 +1044,12 @@ function checkDirectionWords(
       const saysDown = DOWN_WORDS.test(clause.text) && !negatedMatch(clause.text, DOWN_WORDS);
       const saysFlat = FLAT_WORDS.test(clause.text) && !negatedMatch(clause.text, FLAT_WORDS);
       if (!saysUp && !saysDown && !saysFlat) continue;
+      const backing = resolveTrendBacking(clause.text, candidates);
       if (!backing) {
-        problems.push(`R9: trendwoord in "${clause.text.trim()}" zonder direction/difference-derivatie om aan te binden`);
+        const reason = candidates.length === 0
+          ? 'zonder direction/difference-derivatie om aan te binden'
+          : "kan niet aan precies één regio's direction-derivatie worden gebonden (meerdere regio's in dit resultaat)";
+        problems.push(`R9: trendwoord in "${clause.text.trim()}" ${reason}`);
         continue;
       }
       // Both families in one clause of a non-monotonic series ("na de
@@ -1006,7 +1057,7 @@ function checkDirectionWords(
       // occurred; temporal attribution is beyond deterministic reach, and
       // the numbers themselves stay verbatim-checked either way.
       if (saysUp && saysDown && !backing.monotonic) continue;
-      const expected = expectedTrendForClause(clause, tokens, result, backing.net);
+      const expected = expectedTrendForClause(clause, tokens, result, backing);
       if (saysUp && expected !== 'up') problems.push(`R9: zinsdeel claimt stijging maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
       if (saysDown && expected !== 'down') problems.push(`R9: zinsdeel claimt daling maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
       if (saysFlat && expected !== 'flat') problems.push(`R9: zinsdeel claimt 'gelijk gebleven' maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
@@ -1063,8 +1114,9 @@ function checkDirectionWords(
       } else if (UP_WORDS.test(sentence.text) || DOWN_WORDS.test(sentence.text)) {
         // 'steeg … hoger dan vorig jaar' — the clause-level trend branch
         // above already judged this sentence's direction claims.
-      } else if (/\b(hoger|lager|meer|minder|groter|kleiner)\b/i.test(comparative[0]) && backing) {
-        const expected = expectedTrendForClause(sentence, tokens, result, backing.net);
+      } else if (/\b(hoger|lager|meer|minder|groter|kleiner)\b/i.test(comparative[0]) && resolveTrendBacking(sentence.text, candidates)) {
+        const backing = resolveTrendBacking(sentence.text, candidates)!;
+        const expected = expectedTrendForClause(sentence, tokens, result, backing);
         const claimsUp = /\b(meer|hoger|groter)\b/i.test(comparative[0]);
         if (claimsUp && expected !== 'up') problems.push(`R9: vergelijkend 'meer/hoger dan' strookt niet met richting '${expected}': "${sentence.text.trim()}"`);
         if (!claimsUp && expected !== 'down') problems.push(`R9: vergelijkend 'minder/lager dan' strookt niet met richting '${expected}': "${sentence.text.trim()}"`);

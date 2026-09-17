@@ -215,3 +215,62 @@ Unlike ADR 054's region-set shape, this capability is **reachable by a real user
 it merges** — the parser already emits the intent (spec §"The intent side"). That makes Task 7's
 benchmark run the real go/no-go: the first live confirmation that the parser does in practice what
 its own prompt rules require.
+
+## As-built notes (task 5)
+
+Built in worktree `s110-mrs5` (branch `s110/mrs5`), independent of Tasks 1–2 as planned — no
+`region_series` shape exists yet, and none was added here. The hand-built test result uses
+`shape: 'series'` with two `direction` derivations (one per region, each produced by the real
+`deriveDirection` over that region's own cells) since `validate.ts` never reads `result.shape` at
+all — the fix is shape-agnostic by construction, so it needs nothing from Tasks 1–2 to be correct
+for `region_series` once that shape lands.
+
+**Deviation from the plan's file list:** the plan names `tests/answer/validate.test.ts`; the actual
+suite for this module is `tests/answer/compose-validate.test.ts` (there is no `validate.test.ts` in
+the repo). Tests were added there, in a new `describe('#264 (task 5): region-aware trend backing for
+multi-\`direction\` results')` block.
+
+**Mechanism, as built:**
+- `trendBacking()` (took the first `direction`, else first `difference`, record) is replaced by
+  `trendCandidates(result, cellsById)`, which collects EVERY `direction`/`difference` derivation as a
+  `TrendCandidate` carrying its own `sourceCells` and the `regionCode` those cells share
+  (`checkSingleRegion` in `derivations.ts` already guarantees a `direction` record's sources are
+  single-region, so `sourceCells[0].regionCode` is that record's region unambiguously).
+- `resolveTrendBacking(scopeText, candidates)` picks which candidate backs a claim in one clause (or
+  sentence, for the comparative fallback). **Important refinement made mid-build, not in the
+  original spec text:** the multi-candidate branch is gated on the candidates spanning **more than
+  one DISTINCT region**, not merely "more than one candidate" — an ordinary single-region B13-style
+  result carries TWO candidates (an explicit `difference` alongside the pre-registered `direction`)
+  and must keep the OLD unconditional "prefer `direction`" priority with no region mention required.
+  Gating on candidate *count* instead of distinct-region *count* was tried first and broke the real
+  B13 fixture in `compose-pipeline.test.ts` (a real single-region result, "Dat is een toename." named
+  no region and was wrongly rejected as ambiguous) — caught by running `tests/answer` in full before
+  committing, exactly the check the plan's Task 5 scope asks for. Only when candidates truly span
+  ≥2 regions does the "the clause names EXACTLY one candidate's region" rule apply; naming zero or
+  two-plus is fail-closed (MS1).
+- `expectedTrendForClause` now takes the resolved `TrendCandidate` (not a bare `Trend`) and scopes its
+  `cellsByYear` lookup to cells whose `regionCode` matches the backing's own region — a no-op for
+  single-region results (all cells already share that region) and the fix for the "a later region
+  silently overwrites an earlier one" bug the spec names.
+
+**Tests (`tests/answer/compose-validate.test.ts`, describe block `#264 (task 5)`):** a hand-built
+two-region result (Amsterdam rising, Rotterdam genuinely falling, one `direction` record per region
+via real `deriveDirection` calls) proves, before the fix, all of: (1) a clause claiming a rise for
+Rotterdam was wrongly ACCEPTED (borrowed Amsterdam's backing — the first-record bug); (2) a clause
+naming no region was wrongly ACCEPTED; (3) a clause naming two regions was wrongly ACCEPTED, and
+separately, that (4) a correctly-attributed two-region answer ("Amsterdam steeg ...; Rotterdam
+daalde ...") was wrongly REJECTED (the single global `net` judged both clauses). After the fix, (1)–(3)
+are rejected and (4) is accepted with zero problems — all four pins are in the committed test file.
+Every pre-existing validator expectation in the file (85 tests) is unchanged and still passes.
+
+**Verification run (final, this task only):**
+- `npx vitest run tests/answer/compose-validate.test.ts --maxWorkers=1` → 89 passed (85 pre-existing
+  + 4 new), 0 failed.
+- `npx vitest run tests/answer --maxWorkers=1` → 828 passed, 0 failed (confirms the B13
+  single-region-two-candidate regression found and fixed mid-build stays fixed, and nothing else in
+  the answer pipeline moved).
+- `npm run typecheck` (root) → clean, no errors.
+- `npm run audit:verify` was NOT run (needs the live DB, out of scope for this hermetic worktree task
+  per the dispatch brief) — the plan's own "Done when" for Task 5 names it, so a later session with
+  DB access should run it once before treating the whole multi-region-series plan as done; this
+  task's own hermetic proof is the two vitest runs above.
