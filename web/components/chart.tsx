@@ -2362,7 +2362,10 @@ export function ChartView({
       } else if (result.reason === 'unauthenticated') {
         setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
       } else {
-        setHeadlineError(t(chartLang, 'chart.headline.error'));
+        // #6 (session 110 UX audit pass 2): this is the DRAFT failure path
+        // — nothing has been saved yet, so it must not use the save-error
+        // string (chart.headline.error, used by saveHeadlineDraft below).
+        setHeadlineError(t(chartLang, 'chart.headline.draftError'));
       }
     });
   }
@@ -3035,7 +3038,14 @@ export function ChartView({
               {t(chartLang, 'chart.headline.cancel')}
             </button>
           </div>
-          {headlineError !== null ? <p className="text-xs text-destructive">{headlineError}</p> : null}
+          {/* #15 (session 110 UX audit pass 2): role="alert" so a screen
+            * reader announces the failure — the paragraph used to render
+            * silently. */}
+          {headlineError !== null ? (
+            <p role="alert" className="text-xs text-destructive">
+              {headlineError}
+            </p>
+          ) : null}
         </div>
       ) : chartHeadline !== null ? (
         <p className="mt-3 text-base font-semibold leading-snug text-foreground" data-testid="chart-headline-text">
@@ -3045,7 +3055,11 @@ export function ChartView({
         // startHeadlineDraft's unauthenticated/error paths set headlineError
         // WITHOUT entering edit mode (there's no draft to edit yet) — this
         // branch is the only place that message is ever shown.
-        <p className="mt-3 text-xs text-destructive">{headlineError}</p>
+        // #15 (session 110 UX audit pass 2): role="alert" — see the other
+        // headlineError paragraph above for the same fix.
+        <p role="alert" className="mt-3 text-xs text-destructive">
+          {headlineError}
+        </p>
       ) : null}
       {/* Chart-card polish (2026-09-15): the number leads, the chart is the
         * evidence. Outside the export container (chartContainerRef) by

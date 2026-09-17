@@ -148,4 +148,49 @@ describe('chart headline — draft, edit, save', () => {
     expect(screen.getByText('Log in om een kop toe te voegen.')).toBeInTheDocument();
     expect(chartHeadlineActions.draftChartHeadline).not.toHaveBeenCalled();
   });
+
+  // #6 (session 110 UX audit pass 2): a failed DRAFT used to show "Kon de
+  // kop niet opslaan" (the SAVE error) — nothing was being saved yet. The
+  // draft path must use its own string.
+  it('shows a draft-specific error when the AI draft call fails, not the save-error message', async () => {
+    chartHeadlineActions.draftChartHeadline.mockResolvedValue({ ok: false, reason: 'error' });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByText('Kop voorstellen'));
+    expect(await screen.findByText('Kon de kop niet voorstellen.')).toBeInTheDocument();
+    expect(screen.queryByText('Kon de kop niet opslaan.')).not.toBeInTheDocument();
+  });
+
+  // #15 (session 110 UX audit pass 2): the headline error paragraph had no
+  // role="alert" — a screen-reader user who triggered a failure heard
+  // nothing.
+  it('announces a draft failure to assistive tech via role="alert"', async () => {
+    chartHeadlineActions.draftChartHeadline.mockResolvedValue({ ok: false, reason: 'error' });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByText('Kop voorstellen'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kon de kop niet voorstellen.');
+  });
+
+  // #15 also covers the SAVE-error paragraph (the second `headlineError`
+  // render branch, shown while still in edit mode) — same requirement.
+  it('announces a save failure to assistive tech via role="alert"', async () => {
+    chartHeadlineActions.draftChartHeadline.mockResolvedValue({ ok: true, headline: 'Werkloosheid stijgt scherp' });
+    chartHeadlineActions.saveChartHeadline.mockResolvedValue({ ok: false });
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesFindingsSpec()} embed={{ auditId: 1 }} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByText('Kop voorstellen'));
+    await screen.findByDisplayValue('Werkloosheid stijgt scherp');
+    fireEvent.click(screen.getByText('Opslaan'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Kon de kop niet opslaan.');
+  });
 });

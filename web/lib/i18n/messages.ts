@@ -415,6 +415,11 @@ const nl = {
   'chart.headline.drafting': 'Bezig met voorstellen…',
   'chart.headline.unauthenticated': 'Log in om een kop toe te voegen.',
   'chart.headline.error': 'Kon de kop niet opslaan.',
+  // #6 (session 110 UX audit pass 2): the draft (Kop voorstellen) and the
+  // save (Opslaan) path used to share `chart.headline.error` — a failed
+  // AI draft showed "Kon de kop niet opslaan", which is false: nothing was
+  // being saved yet. Own string for the draft failure.
+  'chart.headline.draftError': 'Kon de kop niet voorstellen.',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1212,6 +1217,7 @@ const en: Messages = {
   'chart.headline.drafting': 'Drafting…',
   'chart.headline.unauthenticated': 'Sign in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
+  'chart.headline.draftError': 'Could not suggest a headline.',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',
