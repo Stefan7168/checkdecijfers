@@ -30,17 +30,62 @@ export function isChartForm(x: unknown): x is ChartForm {
  * (chart.test.tsx) keeps working unchanged. */
 export const BAR_LABEL_MAX = 15;
 
-/** #229 (ADR 041 addendum, session 110): true exactly when `spec`'s OWN
- * default form is Tabel, independent of whatever form a viewer currently has
- * selected — the same test chart.tsx's `initialForm` calc
- * (`spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind`) applies for a
- * spec's INITIAL render. Extracted so the Embed dialog can ask this same
- * question about the publisher's spec without mounting a ChartView, and so
- * there is exactly one place this threshold is compared against — never a
- * second, independently-typed copy that could silently drift from the real
- * rule. */
-export function defaultFormIsTable(spec: Pick<ChartSpec, 'series'>): boolean {
-  return spec.series.length > BAR_LABEL_MAX;
+/** Session 110 (many-region comparison default, open-questions): a
+ * structural test on `spec` itself — never a new field, ChartSpec carries no
+ * "shape" concept — true exactly when every series has exactly one point
+ * (no time axis; the spec is a single-moment comparison across regions/
+ * categories) and there are at least two series (a single series has
+ * nothing to compare). A region-set answer (all provincies, all gemeenten
+ * in a provincie, …) is the canonical example; a multi-point time series
+ * (even a `kind: 'bar'` one) is never comparison-shaped. */
+export function isComparisonShaped(spec: Pick<ChartSpec, 'series'>): boolean {
+  return spec.series.length >= 2 && spec.series.every((s) => s.points.length === 1);
+}
+
+/** Session 110: a comparison-shaped chart of up to this many regions is
+ * still perfectly readable as a horizontal bar chart — every label sits on
+ * the category axis, so nothing is lost the way it would be crammed onto a
+ * vertical bar's x-axis. Above this (e.g. a "alle gemeenten" ~342-member
+ * class) even a horizontal bar stops being a usable chart and the table
+ * remains the honest view. Deliberately independent of BAR_LABEL_MAX (which
+ * only gates whether VALUE labels are drawn on top of the bars, left
+ * untouched by this change) — a 16-40 row hbar chart still suppresses its
+ * value labels exactly as before, it is just offered as a chart at all. */
+export const COMPARISON_HBAR_MAX = 40;
+
+/** #229 (ADR 041 addendum, session 110) + the session 110 many-region-
+ * comparison fix: which form `spec` opens on by default, independent of
+ * whatever form a viewer currently has selected — the same calc chart.tsx's
+ * own `initialForm` uses for a spec's INITIAL render. Above BAR_LABEL_MAX
+ * series, a comparison-shaped spec (isComparisonShaped) that is still
+ * within COMPARISON_HBAR_MAX regions and allowed to render as a horizontal
+ * bar (hbarFormAllowed) opens on 'hbar' — every label is readable on the
+ * category axis, so "no chart at all" (the old blanket fall-back to Tabel)
+ * was needlessly pessimistic for e.g. a provincie's ~26 gemeenten. Every
+ * other case is exactly the pre-session-110 rule: Tabel above
+ * BAR_LABEL_MAX, else the spec's own `kind`. Single source of truth — the
+ * Embed dialog (chart-embed-dialog.tsx) asks the same question about the
+ * publisher's spec without mounting a ChartView, and there is exactly one
+ * place this threshold is compared against, never a second, independently-
+ * typed copy that could silently drift from the real rule. */
+export function defaultFormFor(spec: Pick<ChartSpec, 'kind' | 'series'>): ChartForm {
+  if (spec.series.length > BAR_LABEL_MAX) {
+    if (isComparisonShaped(spec) && spec.series.length <= COMPARISON_HBAR_MAX && hbarFormAllowed(spec)) {
+      return 'hbar';
+    }
+    return 'table';
+  }
+  return spec.kind;
+}
+
+/** True exactly when `spec`'s OWN default form (`defaultFormFor`) is Tabel.
+ * Kept as a thin wrapper — rather than re-implementing the threshold — so
+ * every existing caller (the Embed dialog's #229 gate) automatically tracks
+ * whatever `defaultFormFor` decides, including the session 110 hbar
+ * carve-out: a 16-40 series comparison is no longer table-by-default, so
+ * its Embed "Default" option is correctly allowed again. */
+export function defaultFormIsTable(spec: Pick<ChartSpec, 'kind' | 'series'>): boolean {
+  return defaultFormFor(spec) === 'table';
 }
 
 export interface ChartViewState {

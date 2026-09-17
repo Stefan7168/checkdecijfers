@@ -4,11 +4,14 @@ import {
   areaFormAllowed,
   BAR_LABEL_MAX,
   chartViewReducer,
+  COMPARISON_HBAR_MAX,
+  defaultFormFor,
   defaultFormIsTable,
   fallbackForm,
   hbarFormAllowed,
   initialViewState,
   isChartForm,
+  isComparisonShaped,
   lineFormAllowed,
   windowSpec,
   type ChartViewState,
@@ -446,26 +449,104 @@ describe('activeReadingSpec', () => {
   });
 });
 
-// #229 (ADR 041 addendum, session 110): the canonical home for the
-// >BAR_LABEL_MAX-series default-form-is-Tabel rule, extracted here (out of
-// chart.tsx) so the Embed dialog (chart-embed-dialog.tsx) can ask the exact
-// same question about a spec without importing the whole chart component —
-// see this file's own BAR_LABEL_MAX/defaultFormIsTable comments for why a
-// direct chart.tsx import from there would be circular.
-describe('defaultFormIsTable', () => {
-  function manySeriesSpec(count: number): ChartSpec {
+// Session 110: a comparison-shaped spec (isComparisonShaped) — one point per
+// series, ≥2 series — is the structural shape a region-set answer (all
+// provincies, all gemeenten in a provincie, …) always has. A time series
+// (even multi-series bar-kind) never qualifies: it has more than one point
+// per series.
+describe('isComparisonShaped', () => {
+  function comparisonSpec(count: number): ChartSpec {
     return spec(
       'bar',
       Array.from({ length: count }, (_, i) => series(`S${i}`, [point('2020', i)])),
     );
   }
 
-  it('is false at or below BAR_LABEL_MAX series', () => {
-    expect(defaultFormIsTable(manySeriesSpec(BAR_LABEL_MAX))).toBe(false);
-    expect(defaultFormIsTable(manySeriesSpec(1))).toBe(false);
+  function timeSeriesSpec(seriesCount: number, pointsPerSeries: number): ChartSpec {
+    return spec(
+      'bar',
+      Array.from({ length: seriesCount }, (_, i) =>
+        series(
+          `S${i}`,
+          Array.from({ length: pointsPerSeries }, (_, p) => point(`202${p}`, i + p)),
+        ),
+      ),
+    );
+  }
+
+  it('true for ≥2 series with exactly one point each', () => {
+    expect(isComparisonShaped(comparisonSpec(2))).toBe(true);
+    expect(isComparisonShaped(comparisonSpec(26))).toBe(true);
   });
 
-  it('is true strictly above BAR_LABEL_MAX series — the exact predicate chart.tsx\'s own initialForm calc uses', () => {
-    expect(defaultFormIsTable(manySeriesSpec(BAR_LABEL_MAX + 1))).toBe(true);
+  it('false for a single series, however many points', () => {
+    expect(isComparisonShaped(comparisonSpec(1))).toBe(false);
+    expect(isComparisonShaped(timeSeriesSpec(1, 10))).toBe(false);
+  });
+
+  it('false the moment any series carries more than one point — a time series, not a comparison', () => {
+    expect(isComparisonShaped(timeSeriesSpec(26, 2))).toBe(false);
+  });
+});
+
+// #229 (ADR 041 addendum, session 110) + the session 110 many-region-
+// comparison fix: the canonical home for the default-form rule, extracted
+// out of chart.tsx so the Embed dialog (chart-embed-dialog.tsx) can ask the
+// exact same question about a spec without importing the whole chart
+// component — see this file's own BAR_LABEL_MAX/defaultFormFor comments for
+// why a direct chart.tsx import from there would be circular.
+describe('defaultFormFor / defaultFormIsTable', () => {
+  function comparisonSpec(count: number): ChartSpec {
+    return spec(
+      'bar',
+      Array.from({ length: count }, (_, i) => series(`S${i}`, [point('2020', i)])),
+    );
+  }
+
+  function timeSeriesSpec(seriesCount: number): ChartSpec {
+    return spec(
+      'bar',
+      Array.from({ length: seriesCount }, (_, i) =>
+        series(`S${i}`, [point('2020', i), point('2021', i + 1)]),
+      ),
+    );
+  }
+
+  it('at or below BAR_LABEL_MAX series: the spec\'s own kind, never Tabel', () => {
+    expect(defaultFormFor(comparisonSpec(BAR_LABEL_MAX))).toBe('bar');
+    expect(defaultFormFor(comparisonSpec(1))).toBe('bar');
+    expect(defaultFormIsTable(comparisonSpec(BAR_LABEL_MAX))).toBe(false);
+    expect(defaultFormIsTable(comparisonSpec(1))).toBe(false);
+  });
+
+  it('16 (BAR_LABEL_MAX + 1) comparison-shaped series: hbar, not Tabel — the session 110 fix', () => {
+    expect(defaultFormFor(comparisonSpec(BAR_LABEL_MAX + 1))).toBe('hbar');
+    expect(defaultFormIsTable(comparisonSpec(BAR_LABEL_MAX + 1))).toBe(false);
+  });
+
+  it(`${COMPARISON_HBAR_MAX} (COMPARISON_HBAR_MAX) comparison-shaped series: still hbar`, () => {
+    expect(defaultFormFor(comparisonSpec(COMPARISON_HBAR_MAX))).toBe('hbar');
+  });
+
+  it(`${COMPARISON_HBAR_MAX + 1} (COMPARISON_HBAR_MAX + 1) comparison-shaped series: back to Tabel — even a horizontal bar stops being readable`, () => {
+    expect(defaultFormFor(comparisonSpec(COMPARISON_HBAR_MAX + 1))).toBe('table');
+    expect(defaultFormIsTable(comparisonSpec(COMPARISON_HBAR_MAX + 1))).toBe(true);
+  });
+
+  it('a 342-series comparison (the "alle gemeenten" class) stays Tabel — far above COMPARISON_HBAR_MAX', () => {
+    expect(defaultFormFor(comparisonSpec(342))).toBe('table');
+  });
+
+  it('a 26-series TIME SERIES (multi-point, not comparison-shaped) still defaults to Tabel above BAR_LABEL_MAX — the hbar carve-out never applies to a time series', () => {
+    const s = timeSeriesSpec(26);
+    expect(isComparisonShaped(s)).toBe(false);
+    expect(defaultFormFor(s)).toBe('table');
+    expect(defaultFormIsTable(s)).toBe(true);
+  });
+
+  it('a comparison-shaped spec whose kind is not bar (never actually produced today, but hbarFormAllowed still gates it) falls back to Tabel, not hbar', () => {
+    const s = comparisonSpec(BAR_LABEL_MAX + 1);
+    const lineKindComparison: ChartSpec = { ...s, kind: 'line' };
+    expect(defaultFormFor(lineKindComparison)).toBe('table');
   });
 });

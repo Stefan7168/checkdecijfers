@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
+import { COMPARISON_HBAR_MAX } from '../lib/chart-view-state.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
@@ -1225,8 +1226,20 @@ describe('ChartView — #197 step 2, the Tabel view', () => {
     expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
   });
 
-  it('opens on the table when a comparison has more series than a chart can label (the idea-bank >15 rule)', () => {
+  it('opens on the horizontal bar when a many-region comparison has more series than a vertical chart can label, but still fits COMPARISON_HBAR_MAX (session 110 many-region comparison fix, was: the idea-bank >15 rule opened this on the table)', () => {
     const series = Array.from({ length: 16 }, (_, i) => ({
+      label: `Gemeente ${i}`,
+      regionCode: `GM${i}`,
+      points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
+    }));
+    const { container } = render(<ChartView spec={spec({ kind: 'bar', series })} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('table')).toBeNull();
+    expect(container.querySelector('svg.recharts-surface')).not.toBeNull();
+  });
+
+  it('opens on the table when a many-region comparison exceeds even COMPARISON_HBAR_MAX (the idea-bank >15 rule, unreachable via hbar past this point)', () => {
+    const series = Array.from({ length: COMPARISON_HBAR_MAX + 1 }, (_, i) => ({
       label: `Gemeente ${i}`,
       regionCode: `GM${i}`,
       points: [point({ resultId: `r${i}`, value: i, formattedValue: `${i},0` })],
@@ -5329,7 +5342,29 @@ describe('ChartView — #253 region_set bar chart (Task 5)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('a 342-series region-set spec opens on the table form by default — the existing BAR_LABEL_MAX rule, not re-implemented', () => {
+  // Session 110 (many-region comparison default, open-questions): a 26-series
+  // region-set spec is comparison-shaped (one point per series) and within
+  // COMPARISON_HBAR_MAX (40, chart-view-state.ts) — it now opens on Liggend
+  // BY DEFAULT, no initialFormOverride needed, instead of the old blanket
+  // Tabel fall-back above BAR_LABEL_MAX. The 26 gemeenten of a provincie are
+  // exactly the case this fixes: "no chart at all" for a perfectly readable
+  // horizontal bar.
+  it('a 26-series region-set spec opens on the horizontal-bar form BY DEFAULT — the session 110 many-region comparison fix', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('table')).toBeNull();
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(26);
+    for (const series of s.series) {
+      expect(container.textContent).toContain(series.label);
+    }
+    // Every visible digit is still bound to a spec string (R1/R6) — the new
+    // default form is a VIEW change only, never a new data path.
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('a 342-series region-set spec opens on the table form by default — the existing BAR_LABEL_MAX rule, not re-implemented (342 is far above COMPARISON_HBAR_MAX too)', () => {
     const s = regionSetBarSpec(342);
     expect(s.series.length).toBeGreaterThan(BAR_LABEL_MAX);
     const { container } = render(<ChartView spec={s} />);
