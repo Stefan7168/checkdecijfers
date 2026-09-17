@@ -858,15 +858,14 @@ describe('ChartStoryStage', () => {
     expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
   });
 
-  // NEW regression test (scrollbar-drag auto-play fix): a scrollbar-thumb
-  // drag fires only a `scroll` DOM event — no wheel/touch/pointerdown — and
-  // (unlike go()'s own advance below) is never preceded by the hook's
-  // beginProgrammatic(). ADR 044's as-built section recorded this as an
-  // "accepted gap" (auto-play kept running through a scrollbar drag);
-  // useStageScroll now exposes isProgrammatic() so onAnyScroll can tell the
-  // two kinds of `scroll` event apart, and a non-programmatic one must stop
-  // auto-play like any other reader gesture.
-  it('a scrollbar-driven scroll (no beginProgrammatic) stops auto-play when it is on', () => {
+  // Regression test (ADR 044 motion addendum — the scrollbar-drag case):
+  // a scrollbar-thumb drag is the one reader gesture that raises no
+  // `wheel` and no `touch*`. It DOES raise `pointerdown` on the scroller
+  // (a press anywhere in an element's own scrollbar gutter targets that
+  // element), which is how the pass-3 input-based rule still catches it —
+  // the `scroll` event it also raises no longer stops anything, because
+  // the stage's own smooth scrolls raise that too (row 6).
+  it('a scrollbar-thumb drag (pointerdown on the scroller, then scroll) stops auto-play when it is on', () => {
     useStageScrollTimers();
     try {
       const onAdvance = vi.fn();
@@ -875,10 +874,8 @@ describe('ChartStoryStage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
       expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
 
-      // The same scrollStage() helper the "reader scrolls via scrollbar"
-      // test above uses: a bare `scroll` event, scrollTop set directly —
-      // exactly what a scrollbar-thumb drag raises, and never routed through
-      // beginProgrammatic() the way go()'s own scrollIntoView advance is.
+      // The press on the thumb, then the drag's own scroll.
+      fireEvent.pointerDown(scroller);
       scrollStage(scroller, 1600);
 
       expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
@@ -975,6 +972,128 @@ describe('ChartStoryStage', () => {
       expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  // Row 6, audit pass 3 (2026-09-17): pass 2's `armProgrammaticLatch` did
+  // NOT hold — traced again in a real browser, auto-play still advanced
+  // exactly one step (scrollTop 0 → 779 → 804) and switched itself off
+  // half a second later, with no movement for the next six steps. The
+  // defect was never the latch's DURATION (1000 ms was plenty) but its
+  // CLEARING CONDITION: it releases the instant the target position is
+  // reached — or `scrollend` fires — and a smooth scroll's own tail keeps
+  // raising `scroll` events after that moment, by which time the hook's
+  // 150 ms window has lapsed too. Both guards then read "reader", and the
+  // animation cancelled the auto-play that started it.
+  //
+  // This pins the reproduction and the fix: a reader gesture is decided by
+  // INPUT (wheel / touch / pointerdown / keys), never by `scroll` events,
+  // which the stage itself causes and cannot reliably attribute.
+  it('auto-play survives the trailing `scroll` events its own smooth scroll raises AFTER reaching the target (#6)', () => {
+    useStageScrollTimers();
+    try {
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const scroller = layoutStage();
+      // A faithful smooth advance: `scrollIntoView` lands the scroller on
+      // the panel's centred offset — the exact position pass 2's latch
+      // polled for — and raises the `scroll` event a browser raises with it.
+      Element.prototype.scrollIntoView = vi.fn(function (this: HTMLElement) {
+        scroller.scrollTop = Math.max(0, this.offsetTop - (scroller.clientHeight - this.offsetHeight) / 2);
+        scroller.dispatchEvent(new Event('scroll'));
+      });
+      const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      // The target is reached, so every position/time-based guard releases
+      // (pass 2's rAF poll on the next frame; the hook's own window 150 ms
+      // after that last event) …
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      // … and only THEN does the animation's tail raise one more `scroll`.
+      // No wheel, no touch, no pointerdown: nobody touched anything.
+      act(() => {
+        scroller.dispatchEvent(new Event('scroll'));
+      });
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      // And it really does carry on to the last step (`last` = 2).
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Row 6 (2026-09-17), the input side of the same rule: the three input
+  // events the stage listens for each stop auto-play on their own. `wheel`
+  // has its own test above; `touchstart` is new in pass 3 (a touch flick
+  // used to have to reach `touchmove` first), and `pointerdown` is what
+  // keeps the scrollbar-thumb case working.
+  it.each([
+    ['touchstart', (el: HTMLElement) => fireEvent.touchStart(el)],
+    ['touchmove', (el: HTMLElement) => fireEvent.touchMove(el)],
+    ['pointerdown', (el: HTMLElement) => fireEvent.pointerDown(el)],
+  ])('a %s on the stage stops auto-play (#6: input, not `scroll`, decides)', (_name, fire) => {
+    vi.useFakeTimers();
+    const onAdvance = vi.fn();
+    render(<Harness onAdvance={onAdvance} />);
+    const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    fire(document.querySelector('[data-stage-scroller]') as HTMLElement);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    act(() => {
+      vi.advanceTimersByTime(STAGE_AUTOPLAY_MS * 3);
+    });
+    expect(onAdvance).not.toHaveBeenCalled();
+  });
+
+  // Row 6 (2026-09-17): the reduced-motion / touch / small-screen path is
+  // unchanged by the input-based rule. `go()` still jumps instantly there
+  // ('auto', never 'smooth'), and auto-play still runs the story out —
+  // pass 2's latch deliberately skipped that path, so this pins that
+  // removing the latch did not take the instant path down with it.
+  it('reduced motion: advances instantly (behavior "auto") and still reaches the last step (#6)', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    try {
+      const behaviors: (ScrollBehavior | undefined)[] = [];
+      Element.prototype.scrollIntoView = vi.fn((options?: boolean | ScrollIntoViewOptions) => {
+        behaviors.push(typeof options === 'object' ? options.behavior : undefined);
+      });
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+      fireEvent.click(toggle);
+
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+      expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
+      expect(behaviors).toEqual(['auto', 'auto']);
+      expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 

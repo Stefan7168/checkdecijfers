@@ -47,7 +47,7 @@ Built through Subagent-Driven Development (five tasks, a reviewer per task, a fa
 - **Motion, as built.** The entry tilt is 8° with a lifting shadow; it settles FLAT over `entryProgress` = how far the reader has scrolled toward the FIRST caption's centre, so the plane is flat before the first finding is read (the review found that the original "settle over the first step's progress" left the first caption — a number — on a tilted plane; `stageProgress`'s nearest-centre progress also caps at ~0.5 and popped at each boundary). Captions reveal continuously (`2·progress` / `1 − 2·progress`); programmatic jumps ease (`transform` in the transition). The whole motion set is OFF (flat plane, no vignette, instant switches) below `lg` (1024 px), on `(hover: none)` and under `prefers-reduced-motion` — a lazy-initialised `useStageMotion()`. **There is no parallax in v1** — the plan's three layers were not built.
 - **Spotlight, as built.** Read once per step change AND on a ResizeObserver tick of the chart box (Recharts has not measured at the moment the stage opens), confined to the plot box (`[data-slot="chart-frame"]`) so the title and the R4 attribution are never washed. No pan, no zoom.
 - **Opening at the current step.** Opening from step N scrolls panel N into view; the hook→index sync applies only after a real reader gesture (wheel/touch/pointer/scroll/key), so a mount-time index-0 report never resets the reader's step.
-- **Auto-play** stops on any reader gesture (wheel, touch, pointer-down, an unhandled key) and on close; `stage_autoplay` is counted outside the state updater (Strict Mode safe). The scroller's own `scroll` event only arms the reader-scroll guard — it never stops auto-play, because auto-play's own advance (`go()` → `scrollIntoView`) fires `scroll` on that same element; the post-loop fix that bound `scroll` to the shared gesture handler made auto-play switch itself off after its first advance in a real browser (jsdom stubs `scrollIntoView`, so the suite stayed green). Found by the mandatory `/code-review` LOW pass after three review seats had passed it; fixed with a pinned test that dispatches a bare `scroll` between two timer advances. **Mostly fixed 2026-09-11 (session 96, see the addendum below):** `useStageScroll` now exposes `isProgrammatic()`, and the scroll listener stops auto-play on any scroll that isn't the stage's own — closing the scrollbar-drag case for the common, isolated case. Residual, narrower gap, accepted: `isProgrammatic()` is a time-window read, not a per-event cause read, so a drag that overlaps an in-flight programmatic scroll (auto-play's own `scrollIntoView`, a dot/key jump still easing) keeps the same settle window open and is not distinguished from that programmatic scroll until it pauses.
+- **Auto-play** stops on any reader gesture (wheel, touch, pointer-down, an unhandled key) and on close; `stage_autoplay` is counted outside the state updater (Strict Mode safe). The scroller's own `scroll` event only arms the reader-scroll guard — it never stops auto-play, because auto-play's own advance (`go()` → `scrollIntoView`) fires `scroll` on that same element; the post-loop fix that bound `scroll` to the shared gesture handler made auto-play switch itself off after its first advance in a real browser (jsdom stubs `scrollIntoView`, so the suite stayed green). Found by the mandatory `/code-review` LOW pass after three review seats had passed it; fixed with a pinned test that dispatches a bare `scroll` between two timer advances. **Superseded 2026-09-17 (session 110, UX audit pass 3 row 6 — see the last addendum):** the session-96 `isProgrammatic()` route and session 110 pass 2's latch are both gone. A `scroll` event is never used to decide whether the reader took over; only INPUT (wheel/touch/pointerdown, plus the dialog's keys) stops auto-play, and the scrollbar drag is caught by `pointerdown` on the scroller. The time-window residual recorded here disappeared with the mechanism.
 - **The compact panel's IntersectionObserver is a no-op while the stage is open** (a classic-scrollbar reflow could otherwise overwrite the shared step). Parked: the reverse reflow on CLOSE can still make the compact observer snap the step (pre-existing behaviour of the compact panel).
 - **Stage-mode chart:** the spec's own form (line / bar), never the table, even for a > 15-series spec; hides the definition line and the trend headline (explanatory prose without numbers — the phone layout needed the room); keeps the null-cell notes (R11), the provisional sentence + marker key, the event-marker notes (#170(4)), the attribution + source badge (R4); the export container drops its `tabpanel` role (no tablist in the stage).
 - **Phone layout:** the pinned area is `max-h-[50vh] overflow-y-auto` with `items-start` and the card `my-auto`, so a card taller than half the viewport scrolls inside its area and its top stays reachable (the fix wave's first attempt used `items-center`, which clips the top of a scroll container — caught in re-review).
@@ -70,4 +70,48 @@ The owner's explicit ask, after an initial too-small first attempt: make the sta
 
 ## Addendum — 2026-09-17, session 110 (UX audit pass 2, row 4): auto-play surviving its own sparse smooth-scroll events
 
+> **Superseded the same day by pass 3, row 6 — see the next addendum.** The latch described here did not
+> hold; it is removed. Kept for the record of what was tried and why it failed.
+
 The audit found auto-play advancing exactly one step and switching itself off — a real browser's `scrollIntoView({behavior:'smooth'})` keeps firing `scroll` events for as long as the animation runs, and a gap between two of THOSE OWN events can exceed `useStageScroll`'s fixed 150ms settle window (re-armed only by each event it sees, per the "Mostly fixed" note above); once a gap lapsed, the next of the animation's own events read as a reader gesture and cancelled auto-play. `use-stage-scroll.ts` was out of the fixing task's file scope, so the fix is a second, independent latch local to `chart-story-stage.tsx`: `go()` arms it once per smooth advance (not re-armed per event), and it clears on whichever comes first — the container's own `scrollend` event, the scroll position reaching the target panel, or a 1000ms bounded timeout. `onAnyScroll` ORs it with the hook's own `isProgrammatic()`. Pinned with a fake-timer test dispatching `scroll` events 300ms apart (wider than the old window); confirmed it fails without the fix. The hook's own time-window residual (documented above) is unchanged — this addendum only closes the specific gap the audit found (auto-play's own advance), narrower in scope than a `use-stage-scroll.ts` rewrite would be.
+
+## Addendum — 2026-09-17, session 110 (UX audit pass 3, row 6): a reader gesture is decided by INPUT, never by `scroll`
+
+Pass 2's latch (the addendum directly above) **did not hold** — pass 3 traced the same defect in a real
+browser: `aria-pressed` true at 0 s, `scrollTop` 0 → 779 → 804 by 4.5 s, `aria-pressed` **false** at 5 s, then
+no movement at all for the next 12 s (six steps). The latch's *duration* was never the problem (1000 ms was
+ample); its **clearing condition** was. It releases the moment the target position is reached — or `scrollend`
+fires — and a smooth `scrollIntoView` keeps raising `scroll` events after that moment, by which time the
+hook's own 150 ms window has lapsed too. Both guards then read "reader", and auto-play's own animation
+cancelled the auto-play that started it.
+
+Reproduced first, at the cause: a fake-timer test whose `scrollIntoView` lands the scroller exactly on the
+panel's centred offset (the position the latch polled for), waits 200 ms so every position- and time-based
+guard releases, and only then raises one more `scroll` — no wheel, no touch, no pointer. It failed on the
+pass-2 code at precisely the predicted assertion.
+
+**The rule now:** a reader gesture is decided by **input**, never by `scroll`. A `scroll` event does not carry
+its own cause, and no window-tuning can give it one — two rounds of trying is enough evidence. Only
+`wheel`, `touchstart`, `touchmove` and `pointerdown` on the scroller stop auto-play, plus the dialog's
+existing `onKeyDown` (which already stops it for every key it does not itself consume — Arrow\*, PageUp/Down,
+Space, Home/End). Every real way a reader can move this column raises one of those first; the stage's own
+`scrollIntoView` raises none of them. **The scrollbar-thumb drag** (ADR 044's motion-addendum case, the one
+gesture with no wheel and no touch) keeps working through `pointerdown`: a press anywhere in an element's own
+scrollbar gutter targets that element. `scroll` is still listened for, but only to set `readerScrolled` —
+that flag wants "the column has actually moved", which is what a `scroll` event genuinely means regardless of
+who caused it.
+
+**Removed as dead code:** the pass-2 latch (`armProgrammaticLatch`, `programmaticSettleRef`,
+`settleCleanupRef`) in full, and `useStageScroll`'s public `isProgrammatic()` accessor with its Probe wiring
+and test — `onAnyScroll` was their only caller. The hook's internal `programmatic` ref stays: it is the
+hook's own measurement suppression (don't re-measure mid-animation), which is all a time window was ever
+reliable for. `beginProgrammatic()` is unchanged and still called by `go()` and the open-at-step jump.
+
+**Pinned:** auto-play reaches the last step under trailing `scroll` events; each of `touchstart`/`touchmove`/
+`pointerdown` stops it on its own; `wheel` and a native-scroll key still stop it (pre-existing tests); the
+scrollbar-drag test now presses before it scrolls; and the reduced-motion path is unchanged — `go()` still
+jumps with `behavior: 'auto'` there and auto-play still runs the story out (newly pinned, since pass 2's
+latch deliberately skipped that path). Supersedes the "Mostly fixed 2026-09-11 (session 96)" note and its
+"time-window residual" in the as-built list above: that residual is gone with the mechanism it belonged to.
+**Not re-checked in a real browser by this task** — jsdom cannot run a smooth scroll; a human should confirm
+auto-play now runs all the way through on desktop, and that a scrollbar drag still stops it.

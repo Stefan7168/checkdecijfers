@@ -169,71 +169,8 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   // step N — so an unguarded "the hook says 0, the prop says 2" sync would
   // drag the shared index straight back to the first finding on every open.
   const readerScrolled = useRef(false);
-  // Row 4 fix (audit pass 2): a SECOND, independent programmatic latch,
-  // alongside `useStageScroll`'s own `isProgrammatic()`. That hook's window
-  // is a fixed ~150ms that gets RE-ARMED by every `scroll` event it sees —
-  // fine while the browser fires those events close together, but a real
-  // `scrollIntoView({behavior:'smooth'})` can leave gaps wider than 150ms
-  // between frames (the animation is still running; it just didn't paint a
-  // new scroll position in time), and once the window lapses `onAnyScroll`
-  // below reads the NEXT of the animation's own events as a reader gesture
-  // and cancels auto-play after exactly one step — reproduced in the
-  // pinned test below. `use-stage-scroll.ts` is out of scope for this fix
-  // (not a file this task may touch), so this latch is local to the stage
-  // and does not depend on scroll-event cadence at all: `go()` arms it
-  // once per smooth advance, via `armProgrammaticLatch`, and it is cleared
-  // by whichever comes first — the container's own `scrollend` event where
-  // supported, the scroll position actually reaching the target panel, or
-  // a bounded timeout (so a browser that never fires `scrollend` and a
-  // target that is never exactly reached cannot latch forever). `onAnyScroll`
-  // ORs this with the hook's own `isProgrammatic()`, so nothing about the
-  // hook's existing (correct) behaviour for non-smooth jumps changes.
-  const programmaticSettleRef = useRef(false);
-  const settleCleanupRef = useRef<(() => void) | null>(null);
   const last = steps.length - 1;
   const step = steps[index] ?? null;
-
-  // See `programmaticSettleRef` above. `panel` is the step panel `go()` is
-  // scrolling to; the target scroll offset mirrors `scrollIntoView({block:
-  // 'center'})`'s own math so the "position reached" fallback means what it
-  // says. Any latch already in flight (a rapid second advance before the
-  // first settled) is cancelled first, never left dangling.
-  const armProgrammaticLatch = useCallback((panel: HTMLElement): void => {
-    settleCleanupRef.current?.();
-    settleCleanupRef.current = null;
-    const el = scrollRef.current;
-    if (!el) return;
-    programmaticSettleRef.current = true;
-    const targetTop = Math.max(0, panel.offsetTop - (el.clientHeight - panel.offsetHeight) / 2);
-    const MAX_SETTLE_MS = 1000;
-    const start = Date.now();
-    let done = false;
-    let raf: ReturnType<typeof requestAnimationFrame> | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const finish = (): void => {
-      if (done) return;
-      done = true;
-      programmaticSettleRef.current = false;
-      if (raf !== null) cancelAnimationFrame(raf);
-      if (timer !== null) clearTimeout(timer);
-      el.removeEventListener('scrollend', finish);
-      settleCleanupRef.current = null;
-    };
-    if ('onscrollend' in el) {
-      el.addEventListener('scrollend', finish, { once: true });
-    }
-    const poll = (): void => {
-      if (done) return;
-      if (Math.abs(el.scrollTop - targetTop) < 2 || Date.now() - start > MAX_SETTLE_MS) {
-        finish();
-        return;
-      }
-      raf = requestAnimationFrame(poll);
-    };
-    raf = requestAnimationFrame(poll);
-    timer = setTimeout(finish, MAX_SETTLE_MS);
-    settleCleanupRef.current = finish;
-  }, []);
 
   // Scroll position → step index (the hook only reports; the owner of the
   // index is ChartView). Only honoured once the reader has scrolled — see
@@ -262,10 +199,6 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     }
     return () => {
       document.body.style.overflow = previous;
-      // Row 4 fix: a close mid-smooth-scroll must not leave the latch
-      // armed into the next open (auto-play is already forced off on close
-      // by a separate effect below; this just avoids a dangling rAF/timer).
-      settleCleanupRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on open only; `index` is read as the step to open AT
   }, [open]);
@@ -321,71 +254,66 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     return () => observer.disconnect();
   }, [open, readSpot]);
 
-  // Fix round 2 (item 6): auto-play stops the moment the reader takes over —
-  // ADR 044 decision 7 promises "stopping at the last or on any user
-  // scroll/key", and only the key half existed. The same gesture also marks
-  // the hook's index reports as reader-driven (item 1). Registered whenever
+  // Auto-play stops the moment the reader takes over — ADR 044 decision 7
+  // promises "stopping at the last or on any user scroll/key".
+  //
+  // Audit pass 3, row 6 (2026-09-17) — THE RULE: a reader gesture is
+  // decided by INPUT, never by `scroll` events. Two earlier rounds tried to
+  // tell the reader's `scroll` events apart from the stage's own (a
+  // 150 ms settle window in `useStageScroll`, then a per-advance
+  // position/`scrollend`/timeout latch here) and both leaked: a smooth
+  // `scrollIntoView` keeps raising `scroll` AFTER it has reached its target
+  // and after `scrollend` — at which point every position- and time-based
+  // guard has already released — so auto-play cancelled itself after
+  // exactly one step, twice traced in a real browser. A `scroll` event
+  // simply does not carry its own cause, and no amount of window-tuning
+  // gives it one.
+  //
+  // So `scroll` no longer stops anything. Every real way a reader can move
+  // this column produces an INPUT event first, and each of those is
+  // unambiguous:
+  //   • wheel / trackpad          → `wheel`
+  //   • touch drag / flick        → `touchstart` (+ `touchmove`)
+  //   • scrollbar-thumb drag      → `pointerdown` on the scroller (a click
+  //     anywhere in the element's own scrollbar gutter targets the element
+  //     itself) — this is what keeps ADR 044's motion-addendum scrollbar
+  //     case working now that its `scroll` route is gone
+  //   • keyboard (Arrow*, PageUp/Down, Space, Home/End) → the dialog's own
+  //     `onKeyDown` below, which already stops auto-play for every key it
+  //     does not itself consume
+  // The stage's own `scrollIntoView` produces none of them.
+  //
+  // `scroll` is still listened for, but ONLY to mark the hook's index
+  // reports as authoritative (`readerScrolled`, fix round 2 item 1): that
+  // flag wants "the column has actually moved", which is exactly what a
+  // `scroll` event means regardless of who caused it. Registered whenever
   // the stage is open rather than only while auto-play is on: one listener
   // set serves both jobs, and the updater is a no-op while auto-play is off.
-  // Fix 3: a scrollbar-thumb drag fires only the `scroll` event, not
-  // wheel/touch/pointer, so it was not guarded. The passive scroll listener
-  // catches it too (the hook's mount-time measure is a direct call, not a
-  // scroll event, so mount-time index-0 suppression stays intact).
   useEffect(() => {
     if (!open) return undefined;
     const el = scrollRef.current;
     if (!el) return undefined;
-    // Shared by both listeners below so a later change to how auto-play is
-    // stopped only has to be made once.
-    const stopAutoplay = (): void => {
+    // The reader's hands: stop auto-play and hand the index over to the hook.
+    const onReaderGesture = (): void => {
       readerScrolled.current = true;
       setAutoplay((on) => (on ? false : on));
     };
-    const onReaderGesture = (): void => {
-      stopAutoplay();
-    };
-    // `scroll` fires for the stage's OWN moves too — `go()` → `scrollIntoView`
-    // (auto-play, dots, arrow keys) and the open-at-step scroll — so binding
-    // it straight to the gesture handler switched auto-play off after its own
-    // first advance (jsdom stubs `scrollIntoView`, which is why no test
-    // caught it). Fix (this task): `useStageScroll` now exposes
-    // `isProgrammatic()`, a live read of the same ref `beginProgrammatic()`
-    // sets — true only while a scroll the STAGE itself caused has not yet
-    // settled. A `scroll` event that is NOT programmatic — a scrollbar-thumb
-    // drag included, which fires only this event and none of
-    // wheel/touch/pointerdown — is the reader taking over, so it now also
-    // stops auto-play (pinned by the two regression tests below). This
-    // closes the common case of the scrollbar-drag gap ADR 044's as-built
-    // section recorded as "accepted" — an ISOLATED drag, not overlapping an
-    // in-flight programmatic scroll, now stops auto-play like any other
-    // gesture. Residual (code-review finding, not fixed here — the ref this
-    // reads has no way to attribute a `scroll` event to a CAUSE, only to a
-    // time window): a drag that starts while a stage-caused scroll is still
-    // settling — e.g. the reader grabs the thumb during auto-play's own
-    // ~150ms+ settle window right after `go()` — keeps `isProgrammatic()`
-    // true throughout (the drag's own events re-arm the same settle timer
-    // the animation's tail was already re-arming, indistinguishably), so
-    // auto-play is not stopped until the reader's drag pauses for 150ms.
-    // Narrower than the original bug (which affected every scrollbar drag,
-    // any time), not eliminated by it.
+    // The column moved — by anyone. Never stops auto-play; see above.
     const onAnyScroll = (): void => {
       readerScrolled.current = true;
-      // Row 4 fix: OR the hook's own (time-window) read with this stage's
-      // own latch (see `programmaticSettleRef` above) — either one being
-      // armed means the scroll is the stage's own, not the reader's.
-      if (!scroll.isProgrammatic() && !programmaticSettleRef.current) stopAutoplay();
     };
     el.addEventListener('wheel', onReaderGesture, { passive: true });
+    el.addEventListener('touchstart', onReaderGesture, { passive: true });
     el.addEventListener('touchmove', onReaderGesture, { passive: true });
     el.addEventListener('pointerdown', onReaderGesture, { passive: true });
     el.addEventListener('scroll', onAnyScroll, { passive: true });
     return () => {
       el.removeEventListener('wheel', onReaderGesture);
+      el.removeEventListener('touchstart', onReaderGesture);
       el.removeEventListener('touchmove', onReaderGesture);
       el.removeEventListener('pointerdown', onReaderGesture);
       el.removeEventListener('scroll', onAnyScroll);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `scroll.isProgrammatic` is stable across renders (it closes over a ref, not state); re-running this effect on every scroll-driven re-render would repeatedly detach/reattach the listeners.
   }, [open]);
 
   // Auto-play: advance every STAGE_AUTOPLAY_MS, stop at the end.
@@ -406,14 +334,12 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     onIndexChange(clamped);
     const panel = panelRefs.current[clamped];
     if (panel && typeof panel.scrollIntoView === 'function') {
+      // `beginProgrammatic()` is the HOOK's own suppression (it must not
+      // re-measure while the stage is moving the column itself). It has
+      // nothing to do with auto-play any more — see the reader-gesture
+      // effect above: auto-play is stopped by INPUT, never by a `scroll`.
       scroll.beginProgrammatic();
-      const behavior = staticMotion ? 'auto' : 'smooth';
-      // Row 4 fix: only a smooth scroll can run long enough, with wide
-      // enough gaps between its own `scroll` events, to outlast the hook's
-      // 150ms window — an instant ('auto') jump stays covered by that
-      // window alone, as before.
-      if (behavior === 'smooth') armProgrammaticLatch(panel);
-      panel.scrollIntoView({ block: 'center', behavior });
+      panel.scrollIntoView({ block: 'center', behavior: staticMotion ? 'auto' : 'smooth' });
     }
   }
 
