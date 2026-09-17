@@ -1221,6 +1221,19 @@ function RegionBar(
           strokeOpacity={value_provisional ? (dimmed ? 0.25 : 1) : undefined}
           strokeWidth={value_provisional ? 1 : undefined}
           data-point="value"
+          // Session 110 pass 3 row 1's own follow-up note (ADR 042): this
+          // was the one remaining spot with the SAME gap SeriesBar's doc
+          // comment above already named and fixed — `fillOpacity` was
+          // forwarded onto the drawn `<rect>` (a custom `shape` fully
+          // replaces Recharts' own rendering, so nothing forwards a prop
+          // unless done explicitly here), but the `data-series-dimmed`
+          // marker itself was not, so a test asserting on the marker (rather
+          // than `fill-opacity` directly, as the pre-existing "Liggend"
+          // tests did) saw no dimmed rows in hbar form even though the
+          // highlight was already visually correct. `dimmed` is exactly the
+          // caller's own boolean (payload.dimmed, set from
+          // state.highlightedKey in ChartView) — not a guess.
+          data-series-dimmed={dimmed ? 'true' : undefined}
           data-result-id={value_resultId ?? undefined}
           role={onPointClick ? 'button' : undefined}
           tabIndex={onPointClick ? 0 : undefined}

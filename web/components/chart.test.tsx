@@ -3741,15 +3741,38 @@ describe('ChartView — horizontal bar form (WP218 phase 5)', () => {
     expect([...bars].map((b) => b.getAttribute('data-result-id'))).toEqual(['gr-2021', 'dr-2021']);
   });
 
-  it('highlighting one region dims the fill-opacity of the others', () => {
+  it('highlighting one region dims the fill-opacity of the others, marks them data-series-dimmed, and clearing restores all', () => {
+    // Session 110 pass 3 row 1's follow-up (ADR 042): RegionBar's fillOpacity
+    // was always correctly wired to payload.dimmed, but the data-series-dimmed
+    // marker itself — the same marker SeriesBar's rect forwards for the
+    // vertical Staaf form, since a custom `shape` replaces Recharts' own
+    // rendering and forwards nothing unless done explicitly — was missing on
+    // the hbar rect, so a marker-based assertion (rather than fill-opacity
+    // directly) would have wrongly concluded hbar had no dim behaviour at
+    // all. Both are pinned here.
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const byResultId = (id: string) =>
+      [...container.querySelectorAll('rect[data-point="value"]')].find((b) => b.getAttribute('data-result-id') === id)!;
+    // Before any highlight: every row full opacity, none marked dimmed.
+    expect(byResultId('gr-2021').getAttribute('fill-opacity')).toBe('1');
+    expect(byResultId('fr-2021').getAttribute('fill-opacity')).toBe('1');
+    expect(container.querySelectorAll('rect[data-point="value"][data-series-dimmed="true"]')).toHaveLength(0);
+
     fireEvent.click(screen.getByRole('button', { name: 'Markeer Groningen' }));
-    const bars = [...container.querySelectorAll('rect[data-point="value"]')];
-    const groningen = bars.find((b) => b.getAttribute('data-result-id') === 'gr-2021')!;
-    const friesland = bars.find((b) => b.getAttribute('data-result-id') === 'fr-2021')!;
+    const groningen = byResultId('gr-2021');
+    const friesland = byResultId('fr-2021');
     expect(groningen.getAttribute('fill-opacity')).toBe('1');
+    expect(groningen.hasAttribute('data-series-dimmed')).toBe(false);
     expect(friesland.getAttribute('fill-opacity')).toBe('0.25');
+    expect(friesland.getAttribute('data-series-dimmed')).toBe('true');
+    expect(container.querySelectorAll('rect[data-point="value"][data-series-dimmed="true"]')).toHaveLength(2);
+
+    // Clearing the highlight (same button, toggled off) restores every row.
+    fireEvent.click(screen.getByRole('button', { name: 'Markeer Groningen' }));
+    expect(byResultId('gr-2021').getAttribute('fill-opacity')).toBe('1');
+    expect(byResultId('fr-2021').getAttribute('fill-opacity')).toBe('1');
+    expect(container.querySelectorAll('rect[data-point="value"][data-series-dimmed="true"]')).toHaveLength(0);
   });
 
   it('a provisional region is hatched, not just noted in prose', () => {
@@ -3940,16 +3963,29 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     expect(container.querySelectorAll('.recharts-line')).toHaveLength(1);
   });
 
-  it('a comparison story highlights the highest bar', () => {
+  it('a comparison story highlights the highest bar in hbar form (its own default, ADR 042 hbar highlight parity)', () => {
+    // multiRegionBarSpec is comparison-shaped, so it opens on Liggend (hbar)
+    // by default (row 1). This exercises the SAME story-driven highlight
+    // path as the Staaf-form test below, on the form a comparison actually
+    // opens on: the RegionBar shape now forwards data-series-dimmed exactly
+    // as SeriesBar's rect already does, so the story's "highest bar" step
+    // has the same visible + DOM effect here as it does on Staaf.
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
-    // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
-    // it now opens on Liggend by default. The Liggend (hbar) form draws all
-    // regions through one shared <Bar dataKey="value"> (RegionBar), which
-    // does not wire per-series highlight/dim the way the vertical Staaf
-    // form's per-series <Bar> elements do — out of scope for this fix
-    // (row 1 is the default-form rule only). Select Staaf explicitly so
-    // this story-highlighting test keeps exercising the form it always
-    // meant to.
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveTextContent('Friesland: 20 %');
+    const bars = [...container.querySelectorAll('rect[data-point="value"]')];
+    const friesland = bars.find((b) => b.getAttribute('data-result-id') === 'fr-2021')!;
+    const groningen = bars.find((b) => b.getAttribute('data-result-id') === 'gr-2021')!;
+    expect(friesland.getAttribute('fill-opacity')).toBe('1');
+    expect(friesland.hasAttribute('data-series-dimmed')).toBe(false);
+    expect(groningen.getAttribute('fill-opacity')).toBe('0.25');
+    expect(groningen.getAttribute('data-series-dimmed')).toBe('true');
+    expect(container.querySelectorAll('[data-series-dimmed="true"]').length).toBeGreaterThan(0);
+  });
+
+  it('a comparison story highlights the highest bar on Staaf too (explicit non-default form)', () => {
+    const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
