@@ -19,11 +19,12 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 import { AnthropicLlmClient } from '../../../backend/answer/llm/client.ts';
-import { maybeAlertIngestionRunProblems } from '../../../backend/answer/audit/alerts.ts';
+import { maybeAlertIngestionRunProblems, maybeAlertMissedSyncs } from '../../../backend/answer/audit/alerts.ts';
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
 import { runOnboardingJob } from '../../../backend/ingestion/onboarding.ts';
 import { productionNotifier } from '../../../backend/ingestion/onboarding-notify.ts';
 import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.ts';
+import { findStaleSyncs, loadStaleSyncCandidateRows } from '../../../backend/ingestion/stale-sync.ts';
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
 
@@ -116,6 +117,22 @@ export async function GET(request: Request): Promise<Response> {
       } catch (alertError) {
         console.warn('onboarding-cron: owner alert failed (job result unaffected):', alertError);
       }
+    }
+
+    // #23 residual (missed-sync trigger, session 110): this route is the
+    // cheapest existing scheduler (Vercel Cron, DAILY at 06:00, web/vercel.json)
+    // — no new cron route, no new schema. Guarded exactly like the block
+    // above: a failure here must never turn today's real onboarding-job
+    // result into an error response. The cadence rule and the daily-alert-
+    // fatigue dedupe both live in src/ingestion/stale-sync.ts and
+    // maybeAlertMissedSyncs (src/answer/audit/alerts.ts) respectively — this
+    // route only supplies "now" and the DB.
+    try {
+      const candidates = await loadStaleSyncCandidateRows(db);
+      const overdue = findStaleSyncs(candidates, new Date());
+      await maybeAlertMissedSyncs({ overdue });
+    } catch (missedSyncError) {
+      console.warn('onboarding-cron: missed-sync check failed (job result unaffected):', missedSyncError);
     }
 
     return Response.json(summary, { status: 200 });

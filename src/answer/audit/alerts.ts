@@ -12,6 +12,7 @@
 // → the console.error line is the floor (visible in Vercel logs); an email
 // failure is logged and can never affect the served response.
 import type { AuditedResponse } from './respond-audited.ts';
+import { shouldAlertToday } from '../../ingestion/stale-sync.ts';
 
 /** Same verified sender the onboarding notifier uses (onboarding-notify.ts). */
 const FROM_ADDRESS = 'noreply@mail.checkdecijfers.nl';
@@ -520,5 +521,86 @@ export async function maybeAlertIngestionRunProblems(
     await alertIngestionRunProblems(alert, fetchImpl);
   } catch (err) {
     console.error('[ingestion-run] alert e-mail failed:', err);
+  }
+}
+
+// #23 residual (2026-09-17, session 110): the MISSED-SYNC alert — the row's
+// other still-open trigger ("a table that should have refreshed by now but
+// silently didn't"). Same mechanism, same fail-soft posture as every alert
+// above. The cadence baseline (which grain → how many days is "too long") and
+// the dedupe (shouldAlertToday) both live in src/ingestion/stale-sync.ts as
+// pure, DB-free functions — this module only knows how to phrase and send
+// the e-mail. Wired from the daily onboarding-cron route (see
+// docs/RUNBOOK.md "Missed-sync alert"), guarded so a failure here can never
+// fail that cron's actual job.
+export interface MissedSyncEntry {
+  tableId: string;
+  /** ISO timestamp of the table's last successful sync (never null — see
+   * findStaleSyncs, which excludes tables that have never synced at all). */
+  lastSuccessfulSyncAt: string;
+  thresholdDays: number;
+  /** Whole days past the threshold, as of the check that produced this list. */
+  overdueDays: number;
+}
+
+export interface MissedSyncAlert {
+  overdue: MissedSyncEntry[];
+}
+
+export async function alertMissedSyncs(
+  alert: MissedSyncAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.overdue.length === 1
+      ? `checkdecijfers: tabel ${alert.overdue[0]!.tableId} heeft geen verversing binnen de verwachte termijn`
+      : `checkdecijfers: ${alert.overdue.length} tabellen hebben geen verversing binnen de verwachte termijn`;
+  const lines = alert.overdue.map(
+    (e) =>
+      `- ${e.tableId}: laatst succesvol gesynchroniseerd op ${e.lastSuccessfulSyncAt} ` +
+      `(drempel ${e.thresholdDays} dagen, nu ${e.overdueDays} dag(en) daaroverheen)`,
+  );
+  const body = [
+    'Een of meer geregistreerde, actieve tabellen zijn langer geleden voor het laatst succesvol ' +
+      'gesynchroniseerd dan hun eigen publicatieritme redelijkerwijs toestaat (#23, het "gemiste ' +
+      'sync"-restpunt).',
+    '',
+    'Wat dit betekent: eerder al gevalideerde cijfers blijven gewoon bruikbaar — dit is geen ' +
+      'kwaliteitsprobleem met bestaande data, maar een signaal dat de reguliere verversing voor ' +
+      'deze tabel(len) is opgehouden (bijv. de bron heeft de tabel-id gewijzigd, of een geplande ' +
+      'sync draait niet meer). De drempels zijn bewust ruim gekozen (60/130/420 dagen voor maand-/' +
+      'kwartaal-/jaarcijfers) om normale CBS-publicatievertraging nooit als vals alarm te melden.',
+    '',
+    'Actie: controleer of deze tabel bij de bron nog bestaat/hetzelfde publiceert, en draai zo nodig ' +
+      'een handmatige sync (npm run ingest sync <tabel-id>).',
+    '',
+    ...lines,
+    '',
+    `Tijd: ${new Date().toISOString()}`,
+  ].join('\n');
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws — the daily cron this is
+ * wired into must never fail or block on this. Applies the daily-alert-
+ * fatigue dedupe (shouldAlertToday) itself, so callers can pass the RAW
+ * findStaleSyncs() output on every run without re-deriving the dedupe logic;
+ * a fully clean run, or a run where every overdue table is mid-cooldown,
+ * sends nothing. */
+export async function maybeAlertMissedSyncs(
+  alert: MissedSyncAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const due = alert.overdue.filter((e) => shouldAlertToday(e.overdueDays));
+  if (due.length === 0) return;
+  for (const e of due) {
+    console.error(
+      `[missed-sync] ${e.tableId}: last synced ${e.lastSuccessfulSyncAt}, ${e.overdueDays} day(s) past its ${e.thresholdDays}-day threshold`,
+    );
+  }
+  try {
+    await alertMissedSyncs({ overdue: due }, fetchImpl);
+  } catch (err) {
+    console.error('[missed-sync] alert e-mail failed:', err);
   }
 }

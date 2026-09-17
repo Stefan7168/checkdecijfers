@@ -140,6 +140,30 @@ describe('onboarding-cron wiring (source pins)', () => {
     expect(ownCatch).toBeGreaterThan(alertBlockStart);
     expect(responseJson).toBeGreaterThan(ownCatch);
   });
+
+  // #23 residual (missed-sync trigger, session 110): reuses this SAME daily
+  // cron (no new route, no new schema — CLAUDE.md "cheapest mechanism
+  // first") to check every registered table's last successful sync against
+  // its own derived cadence. Behavioral coverage of the cadence rule and the
+  // alert mechanism themselves lives in tests/ingestion/stale-sync.test.ts
+  // and tests/audit/missed-sync-alert.test.ts (both hermetic, no DB/network);
+  // this pins the WIRING presence, same style as the block above.
+  it('#23 residual: runs the missed-sync check after the onboarding job, via the shared stale-sync helpers', () => {
+    expect(source).toContain('loadStaleSyncCandidateRows(db)');
+    expect(source).toContain('findStaleSyncs(candidates, new Date())');
+    expect(source).toContain('maybeAlertMissedSyncs({ overdue })');
+  });
+
+  it('#23 residual: the missed-sync check is fail-open and runs AFTER the onboarding job, BEFORE the 200 response', () => {
+    const jobCallEnd = source.indexOf('});', source.indexOf('await runOnboardingJob({'));
+    const missedSyncBlockStart = source.indexOf('await loadStaleSyncCandidateRows(db)');
+    const ownCatch = source.indexOf('missed-sync check failed', missedSyncBlockStart);
+    const responseJson = source.indexOf('Response.json(summary');
+    expect(jobCallEnd).toBeGreaterThan(-1);
+    expect(missedSyncBlockStart).toBeGreaterThan(jobCallEnd);
+    expect(ownCatch).toBeGreaterThan(missedSyncBlockStart);
+    expect(responseJson).toBeGreaterThan(ownCatch);
+  });
 });
 
 describe('onboarding-cron vercel config', () => {
