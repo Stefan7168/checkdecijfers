@@ -264,8 +264,12 @@ async function adjacentPeriod(ctx: SuggestionContext): Promise<ChipCandidate | n
 async function trend(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.label === null) return null;
   if (ctx.result.shape === 'series' || ctx.intent.derivation === 'series') return null;
-  // A multi-region series is a shape the query layer refuses (several regions
-  // AND several periods) — don't burn dry-runs on it.
+  // Since ADR 055 (session 110) up to 6 NAMED regions over a period range IS
+  // answerable (shape 'region_series'), so this skip is no longer "the query
+  // layer refuses it" — it is a deliberate chip-scope choice: the trend chip
+  // stays a single-region offer (one dry-run, one clear reading). A
+  // "trend per region" chip on a comparison answer is a separate, unbuilt
+  // idea (docs/open-questions.md #270's neighbourhood), not this generator's.
   if (ctx.candidateRegions.length > 1) return null;
   for (const span of [5, 3]) {
     const from = stepPeriodCode(ctx.lastPeriod, -(span - 1));
