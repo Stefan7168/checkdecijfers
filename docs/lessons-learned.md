@@ -6,7 +6,7 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 107, continued once more (2026-09-16/17) — registering the first real Eurostat table found a fifth real bug, in code nobody had touched this session
+## Session 107, continued once more (2026-09-16/17) — registering the first real Eurostat table found a fourth real bug, in code nobody had touched this session
 
 **Checking the actual result — not the success message — caught a bug that would otherwise have shipped invisibly.** `registerTables`/`syncTable` reported clean success ("Registered: eurostat:tipsbd30" / "Sync outcome: succeeded" / "532 rows inserted") for a real, correctly-fetched, correctly-parsed table. A lazier verification would have stopped there. A direct SQL query against the result (`select source from cbs_tables where id = ...`) showed `'cbs'` — wrong. **Lesson, worth restating even though it's not new:** "the tool reported success" and "the data is actually correct" are different claims, and the gap between them is exactly where bugs that never got exercised before hide. This is the second time this session a genuine bug was found only because the immediate output of a successful-looking operation was independently checked against the database rather than trusted (the first was the migration-number collision, caught by running the FULL suite rather than trusting one green file).
 

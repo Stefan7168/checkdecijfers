@@ -43,7 +43,7 @@ backend 165 files/2466 tests, web 117 files/1854 tests, benchmark 14/14 + 6/6 + 
 **Owner then explicitly asked to apply migrations and register a real table — RUNBOOK "WP30c E1"
 steps 4-5, now done.** Migrations 032/033 applied to production, verified live. `eurostat:tipsbd30`
 (Tier-1 capital ratio banking sector) registered and synced: 532 real rows, 0 corrections. **This
-surfaced a fifth real defect, in `registerTables` itself:** its own insert never wrote
+surfaced a fourth real defect, in `registerTables` itself:** its own insert never wrote
 `cbs_tables.source`, so every table ever registered silently landed tagged `'cbs'` — invisible until
 the first non-CBS registration. Not a live-chat safety gap (the deny gate derives source from the
 table id's own prefix, never this column) but a real display bug (the explorer's own query couldn't

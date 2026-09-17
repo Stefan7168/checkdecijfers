@@ -155,7 +155,7 @@ addendum. **MERGED to `main` (`46527a8` + `1b23298`), CI green** (`gate` + `depl
 
 **✅ Steps 4-5 also done, same session, on the owner's explicit go-ahead ("apply migrations and register a
 real table"):** migrations 032/033 applied to production, verified live. `eurostat:tipsbd30` registered and
-synced — 532 real rows, 0 corrections. **A fifth real defect found in the process** (a fourth counting from
+synced — 532 real rows, 0 corrections. **A fourth real defect found in the process** (a genuine bug, distinct from
 the Constraint-0 work): `registerTables` never wrote `cbs_tables.source` at all — every table ever
 registered silently landed tagged `'cbs'`, invisible until the first non-CBS registration. Not a live-chat
 safety gap (the deny gate never reads this column); a real display bug (the explorer's own query couldn't
