@@ -41,6 +41,18 @@ export type IntentPeriod =
  * derivations.ts — there is no free-form computation. */
 export type IntentDerivation = 'none' | 'difference' | 'max' | 'series';
 
+/** #253: a region CLASS, as opposed to an explicit list of region codes. The
+ * class is a NAME here, never a list — the roster it stands for is read from
+ * CBS's own dimension groups per table at resolve time
+ * (src/query/region-set.ts), so no layer above the database ever enumerates
+ * region codes (principle (a), ADR 012 decision 1). `parent` is a CBS province
+ * code (e.g. 'PV26'). */
+export type RegionScope =
+  | { kind: 'all_provincies' }
+  | { kind: 'all_landsdelen' }
+  | { kind: 'all_gemeenten' }
+  | { kind: 'gemeenten_in_provincie'; parent: string };
+
 export interface StructuredIntent {
   schemaVersion: typeof INTENT_SCHEMA_VERSION;
   target: IntentTarget;
