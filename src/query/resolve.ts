@@ -16,9 +16,11 @@ import type {
   IntentDerivation,
   PeriodGrain,
   QueryRefusal,
+  RegionScope,
   StructuredIntent,
 } from './types.ts';
 import { INTENT_SCHEMA_VERSION } from './types.ts';
+import { resolveRegionSet } from './region-set.ts';
 
 /** WP26 mechanism B (ADR 024, safelist entry 1): the CBS code for the national
  * total. Not a heuristic pick among places — a specific, existing row, which is
@@ -66,6 +68,13 @@ export interface ResolvedQuery {
    * dimension (matching observations.region_code's '' convention). */
   regionCodes: string[];
   regionLabels: Record<string, string>;
+  /** #253: null unless the intent asked for a region CLASS. `scope` is the
+   * class itself (what the audit record re-derives the roster from);
+   * `excludedBySlice` names roster members this table publishes but we never
+   * ingested — a coverage gap run.ts folds into the result's coverage record,
+   * never a silent drop (a ranking over a silently-shortened class would be a
+   * claim the data cannot support). */
+  regionSet: { scope: RegionScope; excludedBySlice: string[] } | null;
   geoDimension: string | null;
   timeDimension: string;
   /** Fully enumerated period codes, ascending. */
@@ -281,12 +290,27 @@ export async function resolveIntent(
     return refuse(intent, 'invalid_intent', 'regions contains duplicates', { axis: 'region' });
   }
 
+  // #253: the region CLASS axis. Present-only (docs/13) — an intent from
+  // before this feature carries no key, so `?? undefined` is the whole read.
+  const regionSet = intent.regionSet ?? undefined;
+  if (regionSet !== undefined && regions.length > 0) {
+    return refuse(
+      intent,
+      'invalid_intent',
+      `the intent names both explicit region(s) (${regions.join(', ')}) and the region class "${regionSet.kind}" — these are mutually exclusive`,
+      { axis: 'region' },
+    );
+  }
+
   // --- Derivation arity (structural: can never be satisfied) ---------------
   // Phase 0 supports one varying axis per question: several periods at one
   // place, or several regions at one period — never both (**Assumption**,
   // mirrored in docs/open-questions.md; revisit with WP6 if a benchmark-shaped
   // question needs it).
-  if (periodCodes.length > 1 && regions.length > 1) {
+  // #253: a region CLASS *is* "several regions", so it lands on exactly the
+  // same side of this rule — this feature does NOT relax ADR 011's
+  // one-varying-axis contract.
+  if (periodCodes.length > 1 && (regions.length > 1 || regionSet !== undefined)) {
     return refuse(intent, 'invalid_intent', 'several regions AND several periods in one question is not supported (one varying axis per question)');
   }
   switch (intent.derivation) {
@@ -299,6 +323,17 @@ export async function resolveIntent(
       }
       break;
     case 'max':
+      // #253: with a region CLASS the "at least 2 regions" half is a DATA
+      // question, not a structural one — how many members the class has (and
+      // how many of them CBS actually publishes at this period) is only known
+      // after the fetch, where run.ts refuses `no_data` below two applicable
+      // members. The one-period half still holds structurally.
+      if (regionSet !== undefined) {
+        if (periodCodes.length !== 1) {
+          return refuse(intent, 'invalid_intent', `derivation "max" needs exactly 1 period, got ${periodCodes.length}`, { axis: 'derivation' });
+        }
+        break;
+      }
       if (periodCodes.length !== 1 || regions.length < 2) {
         return refuse(intent, 'invalid_intent', `derivation "max" needs exactly 1 period and at least 2 regions, got ${periodCodes.length} period(s) and ${regions.length} region(s)`, { axis: 'derivation' });
       }
@@ -537,9 +572,42 @@ export async function resolveIntent(
     let regionLabels: Record<string, string> = {};
     let regionMissing = false;
     let regionDefaulted = false;
+    let resolvedRegionSet: ResolvedQuery['regionSet'] = null;
     let effectiveIntent = intent;
     if (geoDimension) {
-      if (regions.length === 0) {
+      if (regionSet !== undefined) {
+        // #253: the roster is CBS's own answer, read per table under the SAME
+        // transaction (and the same #196 advisory lock) as every other read in
+        // this function — so an eviction landing mid-flight cannot hand back a
+        // half-resolved class.
+        const roster = await resolveRegionSet(
+          tx,
+          tableId,
+          geoDimension,
+          regionSet,
+          table.slice?.dimensionPrefixes?.[geoDimension],
+        );
+        if (!roster.ok) {
+          // docs/05: "outside the loaded slice" and "no roster at all" are
+          // different facts and must stay different refusals — the first says
+          // CBS publishes it and we did not ingest it, the second says we
+          // cannot establish the class from CBS's own metadata.
+          return roster.reason === 'outside_slice'
+            ? refuse(intent, 'outside_loaded_slice', roster.detail, { axis: 'region' })
+            : refuse(intent, 'no_data', roster.detail, { axis: 'region' });
+        }
+        const labels = await fetchLabels(tx, tableId, geoDimension, roster.codes);
+        const unlabelled = roster.codes.filter((c) => !labels.has(c));
+        if (unlabelled.length > 0) {
+          // Structurally unreachable (the roster came OUT of dimension_labels),
+          // so reaching it means the two reads disagree — refuse loudly rather
+          // than serve a cell with no region label to bind it to (R9).
+          return refuse(intent, 'internal_inconsistency', `region code(s) ${unlabelled.join(', ')} are in the "${regionSet.kind}" roster of table "${tableId}" but carry no label`, { axis: 'region' });
+        }
+        regionCodes = roster.codes;
+        regionLabels = Object.fromEntries(roster.codes.map((c) => [c, labels.get(c)!]));
+        resolvedRegionSet = { scope: regionSet, excludedBySlice: roster.excludedBySlice };
+      } else if (regions.length === 0) {
         // WP26 mechanism B-region (ADR 024, safelist entry 1, owner-approved
         // session 23 + re-read session 56): a question that names no place, on a
         // measure that HAS a national figure, gets the national figure — with the
@@ -595,6 +663,12 @@ export async function resolveIntent(
       }
     } else if (regions.length > 0) {
       return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent names region(s) ${regions.join(', ')}`, { axis: 'region' });
+    } else if (regionSet !== undefined) {
+      // #253 question 3: a class ask on a national-only measure. The answer
+      // layer turns this into its own refusal wording
+      // (region_scope_on_national_measure) — it must never be served as a
+      // national figure relabelled "per provincie".
+      return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent asks for the region class "${regionSet.kind}"`, { axis: 'region' });
     }
 
     // --- Clarification: ALL unresolved user-facing axes in ONE refusal ----------
@@ -655,6 +729,7 @@ export async function resolveIntent(
         dimLabels,
         regionCodes,
         regionLabels,
+        regionSet: resolvedRegionSet,
         geoDimension,
         timeDimension,
         periodCodes,

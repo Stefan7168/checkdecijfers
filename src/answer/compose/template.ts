@@ -214,5 +214,16 @@ export function renderTemplateBody(result: ValidatedResult): string {
       // derived shape with a non-explicit or missing derivation record —
       // fall back to the safest general rendering.
       return result.cells.length === 1 ? renderSingle(result) : renderSeries(result);
+    case 'region_set':
+      // #253 INTERIM (Task 3 landed the shape; Task 6 replaces this with a
+      // dedicated renderRegionSet + the coverage disclosure line). Routed to
+      // renderComparison because that renderer is already RS1-safe by
+      // construction: its superlative sentence exists only when a `max`
+      // derivation record does, and a region set only gets one when its
+      // coverage is complete (src/query/derivations.ts deriveRegionRanking).
+      // So an incomplete set renders values with no ranking claim, which is
+      // exactly the honesty rule — it is the phrasing, not the safety, that
+      // Task 6 still owes.
+      return renderComparison(result);
   }
 }

@@ -61,6 +61,18 @@ export interface StructuredIntent {
    * user-facing ambiguity and refuses to clarification, never defaults.
    * Must be omitted/empty for tables without one. */
   regions?: string[];
+  /** #253: a region CLASS instead of an explicit list — "alle provincies",
+   * "de gemeenten in Utrecht". Mutually exclusive with `regions`; the roster
+   * it stands for is read from the table's own CBS dimension groups at
+   * resolve time (src/query/region-set.ts), never enumerated by a caller.
+   *
+   * ADDITIVE and PRESENT-ONLY (docs/13-envelope-presence-grammar.md): every
+   * intent stored before #253 carries no key at all, which is exactly why
+   * INTENT_SCHEMA_VERSION is NOT bumped — a bump would invalidate every live
+   * embed token (src/chart/embed-live.ts) and every in-flight pending
+   * clarification (src/answer/respond/validate-pending.ts). Readers use
+   * `?? undefined`, never a bare truthiness assumption about its presence. */
+  regionSet?: RegionScope;
   period: IntentPeriod;
   derivation: IntentDerivation;
 }
@@ -263,7 +275,12 @@ export interface Attribution {
   alternates?: AttributionAlternate[];
 }
 
-export type ResultShape = 'single' | 'series' | 'comparison' | 'derived';
+/** #253: `'region_set'` is one measure at one period across a whole region
+ * CLASS. It is its own shape rather than a 'comparison' because it carries a
+ * coverage record (ValidatedResult.regionSet) and because 'derived' — what an
+ * explicit `max` produces — charts as null (src/chart/build.ts), while a
+ * ranked region set must chart. Forward-only: no stored row carries it. */
+export type ResultShape = 'single' | 'series' | 'comparison' | 'derived' | 'region_set';
 
 export interface ValidatedResult {
   ok: true;
