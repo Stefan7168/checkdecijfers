@@ -9,7 +9,40 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
-import { AXIS_COLOR, AxisTick, baselineAxisLine, buildRows, GRID_LINE_PROPS, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import {
+  AXIS_COLOR,
+  AxisTick,
+  type AxisTickLabel,
+  baselineAxisLine,
+  buildRows,
+  GRID_LINE_PROPS,
+  labelWidthPx,
+  type Row,
+  valueLabelPlan,
+  yAxisDomain,
+} from './chart.tsx';
+
+/** Session 110 UX audit pass 4, row 4: the same cap chart.tsx's combined-
+ * chart `yAxisWidth` uses (`Math.min(80, …)`) — reused, not reinvented. A
+ * mini panel has no spare width to clamp INTO the way the combined chart
+ * does, so `smallMultiplesAxisWidth` below treats this as a hard ceiling:
+ * fit the full label under it, or draw none at all. */
+const SMALL_MULTIPLES_AXIS_CAP_PX = 80;
+
+/** Sizes the "eigen assen" y-axis from the ACTUAL longest tick label
+ * (`labelWidthPx`, chart.tsx's own estimate — never a second measurement),
+ * not a fixed constant. The fixed 28px this replaced clipped `651.157` down
+ * to `1.157` on screen: a wrong number, not a wrong 28px (R1/R6). Unlike the
+ * combined chart, a mini panel cannot clamp down and stay honest — if even
+ * the sane cap can't fit the full label, this returns 0 so the YAxis draws
+ * NO tick at all, rather than a width that would still clip it. */
+export function smallMultiplesAxisWidth(ticks: AxisTickLabel[]): number {
+  if (ticks.length === 0) return 0;
+  const longest = ticks.reduce((w, t) => (t.display.length > w.length ? t.display : w), '');
+  const needed = labelWidthPx(longest);
+  if (needed > SMALL_MULTIPLES_AXIS_CAP_PX) return 0;
+  return Math.max(24, needed);
+}
 
 /** R11 (WP218 gap fix): the hollow provisional marker, same convention as
  * chart.tsx's SeriesDot — but ONLY for a provisional point; a final point
@@ -101,6 +134,7 @@ export function ChartSmallMultiples({
         // DIFFERENT series' data here would itself be dishonest.
         const ownTicks = axisMode === 'own' ? valueLabelPlan({ ...spec, series: [spec.series[i]] }).axisTicks : [];
         const tickByValue = new Map(ownTicks.map((t) => [t.value, t]));
+        const ownAxisWidth = smallMultiplesAxisWidth(ownTicks);
         return (
           <div key={s.key} className="rounded-lg border border-border p-1.5">
             <div className="truncate text-xs text-muted-foreground" title={s.label}>
@@ -132,8 +166,8 @@ export function ChartSmallMultiples({
                   <YAxis
                     ticks={ownTicks.map((t) => t.value)}
                     interval={0}
-                    tick={ownTicks.length > 0 ? AxisTick(tickByValue) : false}
-                    width={ownTicks.length > 0 ? 28 : 0}
+                    tick={ownAxisWidth > 0 ? AxisTick(tickByValue) : false}
+                    width={ownAxisWidth}
                     domain={domain ?? yAxisDomain(spec.kind)}
                     stroke={AXIS_COLOR}
                   />
