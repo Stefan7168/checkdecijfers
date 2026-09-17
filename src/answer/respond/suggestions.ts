@@ -151,7 +151,7 @@ interface SuggestionContext {
 /** Which generator produced a chip: the ClickOption id prefix (readable in
  * the audit row's take note), and the one property that follows from it —
  * whether the label is a question the ordinary parse handles on its own. */
-type GeneratorKind = 'adjacent' | 'trend' | 'region' | 'topic' | 'compareRegion' | 'comparePeriod';
+type GeneratorKind = 'adjacent' | 'trend' | 'regionTrend' | 'region' | 'topic' | 'compareRegion' | 'comparePeriod';
 
 /** A chip candidate — the shape EVERY generator returns since #73 v2: the
  * label, the fully resolved intent the dry-run just proved (the intent a
@@ -167,6 +167,7 @@ interface ChipCandidate {
 const ID_PREFIX: Record<GeneratorKind, string> = {
   adjacent: 'adjacent',
   trend: 'trend',
+  regionTrend: 'regionTrend',
   region: 'region',
   topic: 'topic',
   compareRegion: 'cmp',
@@ -267,9 +268,11 @@ async function trend(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   // Since ADR 055 (session 110) up to 6 NAMED regions over a period range IS
   // answerable (shape 'region_series'), so this skip is no longer "the query
   // layer refuses it" — it is a deliberate chip-scope choice: the trend chip
-  // stays a single-region offer (one dry-run, one clear reading). A
-  // "trend per region" chip on a comparison answer is a separate, unbuilt
-  // idea (docs/open-questions.md #270's neighbourhood), not this generator's.
+  // stays a single-region offer (one dry-run, one clear reading). The
+  // multi-region case is `regionTrend()` below, ADR 029's follow-up
+  // (docs/open-questions.md #270's neighbourhood) — the two are mutually
+  // exclusive by construction (this guard vs. that generator's own ≥2 gate),
+  // so exactly one of them can ever produce a chip for a given answer.
   if (ctx.candidateRegions.length > 1) return null;
   for (const span of [5, 3]) {
     const from = stepPeriodCode(ctx.lastPeriod, -(span - 1));
@@ -278,6 +281,53 @@ async function trend(ctx: SuggestionContext): Promise<ChipCandidate | null> {
     if (await servable(ctx, candidate)) {
       return {
         kind: 'trend',
+        label:
+          `Hoe ontwikkelde ${ctx.label}${ctx.regionPhrase} zich van ` +
+          `${periodCodeToNl(from)} tot en met ${periodCodeToNl(ctx.lastPeriod)}?`,
+        intent: candidate,
+        axis: 'period',
+      };
+    }
+  }
+  return null;
+}
+
+/** Generator 2b (ADR 029 follow-up over ADR 055, session 110) — trend per
+ * region: `trend()`'s multi-region sibling. Fills the exact "widen the
+ * period" slot `trend()` leaves empty on a COMPARISON answer (2..6 named
+ * regions, one period): the SAME regions, in the answered order, over a
+ * period range ending at the answered period — the new `region_series` shape
+ * (ADR 055), one line per region, no cross-region claim (MS1).
+ *
+ * Uses `ctx.candidateRegions`/`ctx.regionPhrase` — the exact pair `trend()`
+ * uses — rather than the RESOLVED `answeredRegions()` the comparison
+ * generators read: this chip's label NAMES the regions, so it needs the same
+ * drop-never-guess safety trend()'s label has (an honest cell-label count
+ * match), not merely a servable candidate. Two cases this naturally reduces
+ * to zero regions, hence no chip, with no special-casing: a region CLASS
+ * answer (ADR 054's `regionSet`) has an empty parsed `intent.regions` by
+ * construction (`regions`/`regionSet` are mutually exclusive on
+ * StructuredIntent) — matching ADR 055 D3's own refusal of a class over a
+ * range; and a national-only single-region answer, which is `trend()`'s case,
+ * not this one.
+ *
+ * Gated by `servableAndTakeable`, not the plain `servable` the question-
+ * shaped generators use: a real-LLM parse of this exact shape (2+ named
+ * regions AND a period range in one question) is UNCONFIRMED
+ * (docs/open-questions.md #270), so — like the two comparison generators —
+ * an untakeable candidate is not offered as a plain fill-the-input label
+ * either; it is a takeable click chip or nothing. */
+async function regionTrend(ctx: SuggestionContext): Promise<ChipCandidate | null> {
+  if (ctx.label === null) return null;
+  if (ctx.firstPeriod !== ctx.lastPeriod) return null;
+  if (ctx.candidateRegions.length < 2) return null;
+  for (const span of [5, 3]) {
+    const from = stepPeriodCode(ctx.lastPeriod, -(span - 1));
+    if (from === null) continue;
+    const candidate = variant(ctx, { kind: 'range', from, to: ctx.lastPeriod }, 'series');
+    if (await servableAndTakeable(ctx, candidate)) {
+      return {
+        kind: 'regionTrend',
         label:
           `Hoe ontwikkelde ${ctx.label}${ctx.regionPhrase} zich van ` +
           `${periodCodeToNl(from)} tot en met ${periodCodeToNl(ctx.lastPeriod)}?`,
@@ -465,16 +515,22 @@ export interface AnswerChips {
 type Generator = (ctx: SuggestionContext) => Promise<ChipCandidate | null>;
 
 /** Builds the servability-gated chips for an answered question (ADR 029):
- * candidates in fixed priority — adjacent period → trend → [#197: region
- * comparison → period comparison →] region variant → same topic — each
- * dry-run through `check`, first MAX_SUGGESTIONS survivors kept. The two
- * comparison generators run ONLY with `opts.clickOptions` (the
+ * candidates in fixed priority — adjacent period → trend → [ADR 055 follow-up:
+ * trend per region →] [#197: region comparison → period comparison →] region
+ * variant → same topic — each dry-run through `check`, first MAX_SUGGESTIONS
+ * survivors kept. `regionTrend` sits directly after `trend` (its multi-region
+ * sibling occupies the exact "widen the period" slot `trend` leaves empty on
+ * a comparison answer; the two never both produce a chip for one answer) and
+ * ahead of the comparison generators for the same reason those sit ahead of
+ * the region variant: with the cap at 3, a later slot could never surface on
+ * a multi-region answer once earlier ones are taken. The comparison
+ * generators AND `regionTrend` run ONLY with `opts.clickOptions` (the
  * CLARIFY_CLICK_ENABLED wire): their chips need the deterministic take-path,
  * so without it they are not generated at all and the output is the pre-#197
- * list, byte for byte. They sit ahead of the region variant because a
- * side-by-side comparison subsumes the lone national figure; with the cap at 3
- * that is also the only position where they can surface at all on a regional
- * answer.
+ * list, byte for byte. The two ORIGINAL comparison generators sit ahead of
+ * the region variant because a side-by-side comparison subsumes the lone
+ * national figure; with the cap at 3 that is also the only position where
+ * they can surface at all on a regional answer.
  *
  * #73 v2: with `opts.clickOptions` on, EVERY survivor whose intent passes the
  * click-time schema (`isClickTakeableIntent`) gets a ClickOption — the four
@@ -551,7 +607,7 @@ export async function buildAnswerChips(
     };
 
     const generators: Generator[] = opts.clickOptions
-      ? [adjacentPeriod, trend, compareRegion, comparePeriod, regionVariant, sameTopic]
+      ? [adjacentPeriod, trend, regionTrend, compareRegion, comparePeriod, regionVariant, sameTopic]
       : [adjacentPeriod, trend, regionVariant, sameTopic];
     const suggestions: string[] = [];
     const clickOptions: ClickOption[] = [];

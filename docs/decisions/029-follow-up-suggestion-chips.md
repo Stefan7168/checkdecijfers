@@ -19,7 +19,10 @@ session 75, owner-approved in chat, squash `527ef2e`**) — the dry-run primitiv
 longer bumps `last_queried_at`; see the second as-built note below. EXTENDED with the
 [#134](../open-questions.md)(c) forecast/causal offer chip (session 110, 2026-09-17, branch `s110/refchip`) —
 the forecast/causal refusal's own honest offer is now one takeable chip on the same carrier; see the as-built
-note above the WP29 original note below.**
+note above the WP29 original note below. EXTENDED AGAIN over ADR [055](055-multi-region-series.md) (session 110,
+2026-09-17, branch `s110/chip`, NOT yet merged) with `regionTrend()`, a "trend per region" chip on a
+multi-region COMPARISON answer offering the same named regions as a `region_series` follow-up — see the
+as-built note at the end of the file.**
 
 ## As-built note (#73 v2 — every chip takeable, session 72, 2026-09-03, autonomous; MERGED + LIVE 2026-09-03 as PR #122, session 75)
 
@@ -615,3 +618,63 @@ needed the same treatment from day one.
   byte-identical text/reason/offer). `tests/answer/refusal-offer-chip.test.ts` (the forecast/causal
   chips) and `tests/answer/rescue-chip.test.ts` unaffected — the narrow candidate shape and its call
   site are untouched. Root `npm run typecheck` clean; zero prompt/fixture bytes changed.
+
+## As-built note (`regionTrend()` — trend per region on a comparison answer, ADR 055 follow-up, session 110, 2026-09-17, branch `s110/chip`, NOT yet merged)
+
+`trend()`'s own header (before this change) named the gap explicitly: since ADR
+[055](055-multi-region-series.md) up to 6 NAMED regions over a period range is answerable (the
+`region_series` shape), the single-region `trend()` skip for `candidateRegions.length > 1` was no
+longer "the query layer refuses it" but a deliberate chip-scope choice, with "a trend-per-region chip
+on a comparison answer" left as a separate, unbuilt idea next to
+[open-questions #270](../open-questions.md). This note builds that idea, as `regionTrend()` in
+`src/answer/respond/suggestions.ts`.
+
+- **What it offers.** On a `comparison`-shape answer (2..6 explicitly NAMED regions, one period),
+  ONE chip: the same measure, the SAME regions in the answered order, a period range ending at the
+  answered period (5 periods, falling back to 3 — the exact span loop `trend()` already uses), as a
+  `region_series` intent (`derivation: 'series'`). Label: "Hoe ontwikkelde `<subject>` in Amsterdam en
+  Rotterdam zich van 2020 tot en met 2024?" — built from the SAME `ctx.label`/`ctx.regionPhrase`
+  helpers `trend()` uses (`regionPhrase` already joins region display names with ", " and " en" via
+  the module's existing `joinNl`), so no new label-building code exists.
+- **Placement: the exact "widen the period" slot `trend()` leaves empty for a multi-region answer.**
+  `regionTrend()` requires `ctx.candidateRegions.length >= 2` where `trend()` requires `<= 1` — the two
+  are mutually exclusive by construction, so at most one of them ever produces a chip for a given
+  answer. It sits directly after `trend` in the `opts.clickOptions` generator list (`adjacentPeriod →
+  trend → regionTrend → compareRegion → comparePeriod → regionVariant → sameTopic`), ahead of the two
+  #197 comparison generators for the same cap-3 reason those sit ahead of the region variant: with the
+  cap at 3, a later slot could never surface on a multi-region answer once earlier ones are taken.
+  Measured on the fixture (a 2-region Amsterdam+Rotterdam comparison): adjacent period + regionTrend +
+  "Vergelijk met Nederland" fill the cap; `comparePeriod` (single-region only) and `regionVariant`
+  (subsumed once a region comparison surfaces) never reach a slot.
+- **Not question-shaped — a takeable click chip or nothing**, like the two #197 comparison generators,
+  not like `trend()`'s own plain-label fallback: gated through `servableAndTakeable` (dry-run PLUS the
+  click-time schema, `isClickTakeableIntent`) rather than the bare `servable` the four original WP29
+  generators use. The real-LLM parse behaviour of this exact shape (2+ named regions AND a period range
+  in one Dutch question) is UNCONFIRMED — the same open item ADR 055 itself records
+  ([#270](../open-questions.md)) — so an untakeable candidate (an on-demand-onboarded `onboarded:…`
+  key, for instance) is not offered as a plain fill-the-input label either.
+- **A region-SET answer (ADR [054](054-region-set-query.md)'s `regionSet`) needs no special-casing.**
+  `regions` and `regionSet` are mutually exclusive fields on `StructuredIntent`; a region-class answer
+  therefore always has an EMPTY parsed `intent.regions`, so `ctx.candidateRegions` is `[]` and the
+  `< 2` guard returns `null` before any dry-run — matching ADR 055 D3's own refusal of a region class
+  over a range (`regionSeriesEligible` requires `regionSet === undefined`), with zero duplicated logic.
+- **Uses `ctx.candidateRegions`/`ctx.regionPhrase` (the `trend()` pair), not the RESOLVED
+  `answeredRegions()` the two comparison generators read.** This chip's label NAMES the regions, so it
+  needs the same drop-never-guess safety `trend()`'s label already has (an honest cell-label count
+  match) — using the resolved regions instead could mint a candidate naming 2+ regions behind a label
+  that failed to word them, the exact mismatch the module's wording rule exists to prevent.
+- **Verified** against the real fixture DB (`tests/answer/comparison-chips.test.ts`, new describe block
+  "buildAnswerChips — regionTrend"): a 2-region comparison (Amsterdam + Rotterdam, 2024) gets exactly
+  one `regionTrend-…` click option carrying `{ regions: ['GM0363','GM0599'], period: { kind: 'range',
+  from: '2020JJ00', to: '2024JJ00' }, derivation: 'series' }`; a single-region answer is unchanged
+  (`trend()`'s own chip, no `regionTrend` option); a `regionSet: { kind: 'all_provincies' }` answer
+  gets none (and no MULTI-region `series` candidate is ever dry-run, though `trend()`'s own regionless
+  series candidates still are — untouched, unrelated); flag off produces no `regionTrend` chip (the
+  pre-#197 generator list is untouched); when the `series`-derivation candidate is refused the envelope
+  degrades to exactly `[adjacent period, "Vergelijk met Nederland"]`, measured against the real
+  fixture; and clicking the chip answers as a NEW `region_series` result (10 cells, period-major, both
+  regions, `regionSeries.complete === true`) through the zero-LLM `templateOnly` rung with a line chart
+  of 2 series — no client-side merge of two answers (R6). Root `npm run typecheck` clean;
+  `tests/answer` 847/847. **Not yet run: the CI gate on this branch, and the two owner-supervised
+  real-spend steps ADR 055 itself already tracks ([#270](../open-questions.md)) — this follow-up adds
+  no new one of its own, since it reuses `region_series` exactly as ADR 055 built it.**
