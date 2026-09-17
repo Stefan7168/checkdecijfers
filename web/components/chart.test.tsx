@@ -5574,3 +5574,107 @@ describe('ChartView — #253 region_set bar chart (Task 5)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 3, row 10 (decided by the parent session): "no
+// invented ticks" (chart.tsx's hbar XAxis draws tick={false} by design) plus
+// the pre-existing >BAR_LABEL_MAX value-label thinning rule together left a
+// 16-40-bar hbar chart with ZERO numbers anywhere on it. Both rules stay;
+// the fix always labels the EXTREMES — the first and last PLOTTED row, in
+// the spec's own order (R6: never re-sorted here) — everything else stays
+// unlabelled. `regionSetBarSpec`'s own values (`count - i`, descending)
+// double as a stand-in ranking, so "first/last row" and "ranking top/
+// bottom" coincide here exactly as ADR 054's `deriveRegionRanking` would
+// produce for a real ranked class.
+// ---------------------------------------------------------------------------
+describe('ChartView — #253/row 10 hbar extreme-only value labels above BAR_LABEL_MAX', () => {
+  it('a 26-row hbar renders exactly two value labels, on the first and last row, both real spec strings', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(26);
+    const labels = container.querySelectorAll('[data-role="bar-label"]');
+    expect(labels).toHaveLength(2);
+    const first = s.series[0]!.points[0]!;
+    const last = s.series[s.series.length - 1]!.points[0]!;
+    expect(container.querySelector(`[data-role="bar-label"][data-label-for="${first.resultId}"]`)?.textContent).toBe(
+      first.formattedValue,
+    );
+    expect(container.querySelector(`[data-role="bar-label"][data-label-for="${last.resultId}"]`)?.textContent).toBe(
+      last.formattedValue,
+    );
+    // Every digit on screen (the two labels, plus the y-axis region names)
+    // still traces to a real spec string — the honesty contract is
+    // unaffected by which rows the thinning rule chose to label.
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('a 12-row hbar (at or below BAR_LABEL_MAX) still labels every row — the pre-existing rule, unchanged', () => {
+    const s = regionSetBarSpec(12);
+    const { container } = render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(12);
+    const labels = container.querySelectorAll('[data-role="bar-label"]');
+    expect(labels).toHaveLength(12);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 3, row 11 (decided by the parent session): the
+// 8-colour DEFAULT_PALETTE cycled on a comparison-shaped chart (every
+// series one point, >= 2 series — isComparisonShaped, chart-view-state.ts),
+// so a 12-province chart repeated colours after the 8th region even though
+// colour was never carrying information there (the region is the axis, the
+// measure is the same). Fix: a comparison-shaped chart's un-overridden
+// series all resolve to the palette's FIRST colour (seriesColor's new
+// `paletteIndex` parameter, chart-presentation.ts); a genuine time series
+// (any multi-point series) is unaffected and keeps the cycling palette; an
+// explicit per-series `seriesColors` override still wins.
+// ---------------------------------------------------------------------------
+describe('ChartView — #253/row 11 single palette colour for a comparison-shaped chart', () => {
+  it('a 12-series region comparison renders every bar with the same fill (the palette\'s first colour)', () => {
+    const s = regionSetBarSpec(12);
+    const { container } = render(<ChartView spec={s} />);
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(12);
+    const fills = Array.from(bars).map((b) => b.getAttribute('fill'));
+    expect(fills.every((f) => f === DEFAULT_PALETTE[0])).toBe(true);
+  });
+
+  it('a 3-series time series keeps 3 distinct palette colours (never comparison-shaped)', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Nederland', regionCode: null, points: [point({ resultId: 'a1', periodCode: '2020', periodLabel: '2020', value: 1, formattedValue: '1' }), point({ resultId: 'a2', periodCode: '2021', periodLabel: '2021', value: 2, formattedValue: '2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'b1', periodCode: '2020', periodLabel: '2020', value: 3, formattedValue: '3' }), point({ resultId: 'b2', periodCode: '2021', periodLabel: '2021', value: 4, formattedValue: '4' })] },
+        { label: 'Groningen', regionCode: 'GM0014', points: [point({ resultId: 'c1', periodCode: '2020', periodLabel: '2020', value: 5, formattedValue: '5' }), point({ resultId: 'c2', periodCode: '2021', periodLabel: '2021', value: 6, formattedValue: '6' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    // Multi-point series: not comparison-shaped, stays on the vertical Staaf
+    // form (spec.kind), never Liggend.
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('.recharts-bar-rectangle rect, rect[data-point="value"]');
+    const fills = new Set(Array.from(bars).map((b) => b.getAttribute('fill')).filter((f): f is string => f != null && f.startsWith('#')));
+    expect(fills).toEqual(new Set(DEFAULT_PALETTE.slice(0, 3)));
+  });
+
+  it('an explicit seriesColors override on a comparison-shaped chart still wins per series', () => {
+    const s = regionSetBarSpec(3);
+    const { container } = render(
+      <ChartStyleProvider initial={{ seriesColors: { 1: '#123456' } }}>
+        <ChartView spec={s} />
+      </ChartStyleProvider>,
+    );
+    const bars = Array.from(container.querySelectorAll('rect[data-point="value"]'));
+    expect(bars).toHaveLength(3);
+    // Series 0 and 2 fall back to the shared comparison colour; series 1's
+    // explicit override wins regardless.
+    expect(bars[0]?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
+    expect(bars[1]?.getAttribute('fill')).toBe('#123456');
+    expect(bars[2]?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
+  });
+});

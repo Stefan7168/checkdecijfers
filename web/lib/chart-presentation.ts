@@ -442,8 +442,27 @@ export function xAxisHeight(mode: XLabelMode, longestLabel: string): number | un
   return Math.min(96, Math.ceil(longestLabel.length * 6.5 * 0.71) + 20);
 }
 
-export function seriesColor(values: Pick<ChartPresentation, 'seriesColors'>, index: number): string {
-  return values.seriesColors[index] ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!;
+/** `index` is the SERIES's own index — an explicit `seriesColors` override
+ * (the Style panel, keyed by series index) always wins per series and is
+ * looked up on `index`, never on `paletteIndex`. `paletteIndex` (defaults to
+ * `index`, so every pre-existing call site is unaffected) is a SEPARATE
+ * knob for which palette slot an un-overridden series falls back to.
+ * Session 110 UX audit pass 3, row 11: a comparison-shaped chart (every
+ * series one point, >= 2 series — `isComparisonShaped`, chart-view-state.ts)
+ * passes `paletteIndex: 0` for every series from its caller in chart.tsx, so
+ * every un-overridden bar/row shares the palette's first colour instead of
+ * cycling through all 8 and repeating after the 8th region — the region is
+ * the axis and the measure is the same, so colour was never carrying
+ * information there, only running out of distinct values to show. A
+ * genuine time series (line/area, and any multi-point `kind: 'bar'`) is
+ * never comparison-shaped and keeps passing `paletteIndex === index`, i.e.
+ * the unchanged cycling palette. */
+export function seriesColor(
+  values: Pick<ChartPresentation, 'seriesColors'>,
+  index: number,
+  paletteIndex: number = index,
+): string {
+  return values.seriesColors[index] ?? DEFAULT_PALETTE[paletteIndex % DEFAULT_PALETTE.length]!;
 }
 
 // --- colours -----------------------------------------------------------------
