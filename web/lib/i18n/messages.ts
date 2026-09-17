@@ -401,7 +401,6 @@ const nl = {
   'chart.axisGroupLabel': 'Gelijke assen of eigen assen',
   'chart.sharedAxes': 'Gelijke assen',
   'chart.ownAxes': 'Eigen assen',
-  'chart.provisionalMarkerNote': '○ = voorlopig cijfer',
   'chart.markedInChart': 'Gemarkeerd in de grafiek: {label}',
   'chart.keyboardHint': 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.',
   // Chart-card polish (2026-09-15): the screen-reader prefix for the large
@@ -534,7 +533,11 @@ const nl = {
   'chart.panel.zeroBaseline': 'Y-as vanaf nul',
   'chart.panel.areaFill': 'Verloop in het vlak',
   'chart.panel.showGroup': 'Tonen',
-  'chart.panel.reset': 'Standaard',
+  // Audit pass 2, row 12 (2026-09-17): the whole accessible name of this
+  // control used to be just "Standaard" — sitting directly above "Bewaar
+  // als mijn standaard" it read as a state label, not the reset action it
+  // actually is.
+  'chart.panel.reset': 'Terug naar standaard',
   'chart.panel.lineWidthOption.thin': 'Dun',
   'chart.panel.lineWidthOption.normal': 'Normaal',
   'chart.panel.lineWidthOption.thick': 'Dik',
@@ -1214,7 +1217,6 @@ const en: Messages = {
   'chart.axisGroupLabel': 'Shared axes or own axes',
   'chart.sharedAxes': 'Shared axes',
   'chart.ownAxes': 'Own axes',
-  'chart.provisionalMarkerNote': '○ = provisional figure',
   'chart.markedInChart': 'Marked in the chart: {label}',
   'chart.keyboardHint': 'Use the arrow keys to move through the chart’s points.',
   'chart.headline.label': 'Latest value on the chart',
@@ -1296,7 +1298,8 @@ const en: Messages = {
   'chart.panel.zeroBaseline': 'Y-axis from zero',
   'chart.panel.areaFill': 'Gradient fill',
   'chart.panel.showGroup': 'Show',
-  'chart.panel.reset': 'Default',
+  // Audit pass 2, row 12 (2026-09-17): see the `nl` entry above.
+  'chart.panel.reset': 'Reset to default',
   'chart.panel.lineWidthOption.thin': 'Thin',
   'chart.panel.lineWidthOption.normal': 'Normal',
   'chart.panel.lineWidthOption.thick': 'Thick',

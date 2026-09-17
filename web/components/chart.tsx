@@ -3742,15 +3742,23 @@ export function ChartView({
           ) : null}
         </div>
       ) : null}
-      {/* #197: the hollow marker needs a key a lay reader can decode without
-        * reading the note first; rendered exactly when the spec says a
-        * provisional point exists (R11's provisionalNote is present iff). */}
-      {/* #254: provisionalNote/nullNotes/definitionLine below all describe the
-        * CELLS currently plotted (R11's "present iff" is per reading), so
-        * they follow `activeSpec`, never the primary's own copies. */}
-      {activeSpec.provisionalNote ? (
-        <p className="mt-1 text-xs text-muted-foreground">{t(chartLang, 'chart.provisionalMarkerNote')}</p>
-      ) : null}
+      {/* Audit pass 2, row 7 (2026-09-17): #197 used to render a SECOND,
+        * UI-only legend line here ("○ = voorlopig cijfer") — gated on the
+        * exact same condition as the backend `provisionalNote` prose right
+        * below, so the two always appeared together, stating the same
+        * provisional flag with two different symbols (a hollow ring vs. the
+        * '*' the value itself already carries). `provisionalNote` is the
+        * R8-reconstructed, DB-stored string (never edited on the UI side —
+        * see `PROVISIONAL_NOTE` in src/chart/build.ts) and already tells
+        * the reader the convention they see on the value; this line added a
+        * second symbol to reconcile, not new information, so it is dropped
+        * rather than kept in sync with a marker mode that, per
+        * `markerVisible` in chart-presentation.ts, draws the hollow ring
+        * for every provisional point regardless of mode anyway (there is no
+        * "what the reader sees" that varies by mode to describe here).
+        * #254: provisionalNote/nullNotes/definitionLine below all describe
+        * the CELLS currently plotted (R11's "present iff" is per reading),
+        * so they follow `activeSpec`, never the primary's own copies. */}
       {/* WP23 (#92): caveats read like caveats — warn and a step larger than
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder

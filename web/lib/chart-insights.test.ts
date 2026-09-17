@@ -6,7 +6,7 @@
 // trigger) — mirrors buildStorySteps' own honesty contract.
 import { describe, expect, it } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
-import { buildFindings, INSIGHTS_MAX_FINDINGS } from './chart-insights.ts';
+import { buildFindings, INSIGHTS_MAX_FINDINGS, stepAccessibleName } from './chart-insights.ts';
 
 function point(overrides: Partial<ChartSpec['series'][0]['points'][0]> = {}) {
   return {
@@ -122,7 +122,7 @@ describe('buildFindings — a single time series', () => {
     const findings = buildFindings(fourPointSpec(), 'nl');
     const jump2023 = findings.find((f) => f.periodCode === '2023JJ00')!;
     expect(jump2023.resultId).toBe('c');
-    expect(jump2023.point).toEqual({ seriesKey: 's0', periodCode: '2023JJ00' });
+    expect(jump2023.point).toEqual({ seriesKey: 's0', periodCode: '2023JJ00', periodLabel: '2023' });
   });
 
   it('marks a provisional point\'s caption, verbatim to the story convention', () => {
@@ -229,5 +229,31 @@ describe('buildFindings — comparison (bar)', () => {
 describe('buildFindings — no series at all', () => {
   it('returns []', () => {
     expect(buildFindings(spec({ series: [] }), 'nl')).toEqual([]);
+  });
+});
+
+// Audit pass 2, row 14 (2026-09-17): the shared helper the Insights
+// carousel and the Story stage both use to name their "position" dots.
+describe('stepAccessibleName', () => {
+  it('appends the finding\'s own period to a kind-only title', () => {
+    expect(stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } })).toBe('Below average — 2021');
+  });
+
+  it('disambiguates two same-kind findings by their different periods', () => {
+    const a = stepAccessibleName({ title: 'Below average', point: { periodCode: '2021JJ00', periodLabel: '2021' } });
+    const b = stepAccessibleName({ title: 'Below average', point: { periodCode: '2024JJ00', periodLabel: '2024' } });
+    expect(a).not.toBe(b);
+    expect(a).toBe('Below average — 2021');
+    expect(b).toBe('Below average — 2024');
+  });
+
+  it('falls back to the title alone for a step with no point (overview/explore)', () => {
+    expect(stepAccessibleName({ title: 'Overzicht', point: null })).toBe('Overzicht');
+  });
+
+  it('a real buildFindings point carries a periodLabel that resolves through unchanged', () => {
+    const findings = buildFindings(fourPointSpec(), 'nl');
+    const jump2023 = findings.find((f) => f.periodCode === '2023JJ00')!;
+    expect(stepAccessibleName(jump2023)).toBe(`${jump2023.title} — 2023`);
   });
 });

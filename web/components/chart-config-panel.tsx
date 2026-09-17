@@ -858,9 +858,24 @@ export function ChartConfigPanel({
   const [brandOutcome, setBrandOutcome] = useState<
     { kind: 'applied'; name: string; fontSkipped: boolean } | { kind: 'failure'; reason: BrandFailureReason } | null
   >(null);
+  // Audit pass 2, row 11 (2026-09-17): "Apply brand colours" used to stay
+  // offered forever and fail after every single click with "unavailable"
+  // when the deployment has no Brandfetch key configured at all — a FIXED
+  // condition for this deployment (checked in chart-style-actions.ts
+  // BEFORE any per-user work), not a transient failure like a rate limit.
+  // Gating the button on that condition AT RENDER would need a new prop
+  // from chart.tsx (which decides whether `brand` is offered at all) or a
+  // change to the action itself — both out of this fix's file scope — so
+  // this cannot be known before the first click. Once the first click DOES
+  // learn it, though, there is no reason to keep re-offering the same
+  // doomed action: this latches the button into a disabled-hint state
+  // (`aria-disabled`, not a removed control — same convention chat.tsx
+  // uses for its "coming soon" chips) instead of leaving it clickable
+  // forever next to a failure line that reads like a one-off error.
+  const [brandUnavailable, setBrandUnavailable] = useState(false);
 
   async function handleApplyBrand(): Promise<void> {
-    if (!brand) return;
+    if (!brand || brandUnavailable) return;
     setBrandBusy(true);
     try {
       const result = await brand.lookup(brandNeedsWebsite ? brandWebsite : undefined);
@@ -872,6 +887,10 @@ export function ChartConfigPanel({
           setBrandOutcome(null);
           return;
         }
+        // 'unavailable' is the deployment-wide, permanent case described
+        // above — every OTHER reason (rate/daily/monthly cap, not_found,
+        // invalid_domain, error) stays retryable exactly as before.
+        if (result.reason === 'unavailable') setBrandUnavailable(true);
         setBrandOutcome({ kind: 'failure', reason: result.reason });
         return;
       }
@@ -1122,6 +1141,9 @@ export function ChartConfigPanel({
   const regionId = `${idPrefix}-style`;
   const tabId = (key: TabKey) => `${idPrefix}-style-tab-${key}`;
   const panelId = (key: TabKey) => `${idPrefix}-style-panel-${key}`;
+  // Row 11 (audit pass 2): the id the disabled "Apply brand colours"
+  // button's `aria-describedby` points at once it is known unavailable.
+  const brandUnavailableHintId = `${idPrefix}-style-brand-unavailable`;
 
   // ChartEditModal (the real Dialog this panel now renders inside) already
   // owns focus-trap/focus-on-open and Escape-to-close natively — this used
@@ -1541,6 +1563,8 @@ export function ChartConfigPanel({
                     variant="outline"
                     size="xs"
                     disabled={brandBusy}
+                    aria-disabled={brandUnavailable ? true : undefined}
+                    aria-describedby={brandUnavailable ? brandUnavailableHintId : undefined}
                     onClick={() => void handleApplyBrand()}
                   >
                     {copy.brandApply}
@@ -1556,7 +1580,14 @@ export function ChartConfigPanel({
                         ) : null}
                       </>
                     ) : (
-                      <p role="status" className="w-full text-muted-foreground">
+                      // Row 11: once the reason is 'unavailable', this same
+                      // line also serves as the disabled button's
+                      // `aria-describedby` target (`brandUnavailableHintId`
+                      // below) — one string, read both as the status update
+                      // on the click that discovered it and as the
+                      // standing reason a screen-reader user hears for the
+                      // now aria-disabled button.
+                      <p role="status" id={brandUnavailable ? brandUnavailableHintId : undefined} className="w-full text-muted-foreground">
                         {brandFailureText(brandOutcome.reason)}
                       </p>
                     )

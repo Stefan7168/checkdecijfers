@@ -287,6 +287,23 @@ describe('ChartStoryStage', () => {
     expect(onIndexChange).toHaveBeenCalledWith(2);
   });
 
+  // Audit pass 2, row 14 (2026-09-17): same fix as the Insights carousel's
+  // dots (chart-story.test.tsx) — the Story stage's own "position" dots
+  // used the same kind-only `aria-label`. `point.periodLabel` is attached
+  // by chart-insights.ts's buildFindings and forwarded unchanged through
+  // chart.tsx's storySteps mapping, so it is present on a real StoryStep at
+  // runtime despite not being part of the type's own declared shape.
+  it('two same-kind findings get distinct position-dot accessible names via their own period (#14)', () => {
+    const stepsWithPeriod = [
+      { id: 'below-s0-2021JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2021: 1,3 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2021JJ00', periodLabel: '2021' } },
+      { id: 'below-s0-2024JJ00', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: '2024: 1,4 %', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024' } },
+    ] as unknown as StoryStep[];
+    render(<ChartStoryStage {...baseProps({ steps: stepsWithPeriod })} />);
+    const list = screen.getByRole('list', { name: 'Positie in het verhaal' });
+    const dots = Array.from(list.querySelectorAll('button'));
+    expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual(['Onder het gemiddelde — 2021', 'Onder het gemiddelde — 2024']);
+  });
+
   it('auto-play: off by default; toggling calls onAutoplay once, advances on a timer, and stops at the last step', () => {
     vi.useFakeTimers();
     const onAutoplay = vi.fn();
@@ -905,6 +922,60 @@ describe('ChartStoryStage', () => {
 
     expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
     expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  // Row 4, audit pass 2 (2026-09-17): a real `scrollIntoView({behavior:
+  // 'smooth'})` keeps firing `scroll` events for as long as the animation
+  // runs, and those events can be MORE than the hook's 150ms settle window
+  // apart (the animation is still going; it just hasn't painted a new
+  // position within that window). The old fix only re-armed that window on
+  // every event, so once a gap exceeded it, the very next of the
+  // animation's OWN events read as a reader gesture and cancelled auto-play
+  // after exactly one step. This pins the reproduction from the audit
+  // (`aria-pressed` true → one advance → false, with no further movement)
+  // and the fix: auto-play must survive scroll events spaced well past
+  // 150ms apart, and keep advancing all the way to the last step.
+  it('auto-play survives its own smooth-scroll `scroll` events spaced more than 150ms apart, and reaches the last step (#4)', () => {
+    useStageScrollTimers();
+    try {
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const scroller = layoutStage();
+      const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      // Three of the smooth animation's own `scroll` events, 300ms apart —
+      // each gap wider than the old 150ms settle window, and well short of
+      // this fix's own 1000ms bounded fallback.
+      act(() => {
+        scroller.dispatchEvent(new Event('scroll'));
+        vi.advanceTimersByTime(300);
+        scroller.dispatchEvent(new Event('scroll'));
+        vi.advanceTimersByTime(300);
+        scroller.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+      expect(onAdvance).toHaveBeenCalledTimes(1);
+
+      // The remainder of the second step's STAGE_AUTOPLAY_MS window (the
+      // 600ms above already elapsed toward it) — steps has 3 entries
+      // (`last` = index 2), so this second advance reaches the last step
+      // and auto-play switches itself off THERE, not one step early.
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS - 600);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // Item 8: the vignette used to cover the whole card — the title, the

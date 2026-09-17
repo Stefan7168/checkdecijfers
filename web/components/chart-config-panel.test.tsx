@@ -242,7 +242,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeDisabled();
     unmount();
 
     const onReset = vi.fn();
@@ -256,7 +256,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const reset = screen.getByRole('button', { name: 'Standaard' });
+    const reset = screen.getByRole('button', { name: 'Terug naar standaard' });
     expect(reset).not.toBeDisabled();
     fireEvent.click(reset);
     expect(onReset).toHaveBeenCalledTimes(1);
@@ -395,25 +395,25 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
     expect(screen.getByText('Waarom geen taart- of gestapelde grafiek?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
     // Kleuren keeps its own, separate reset, ALONGSIDE the whole-panel one.
     expect(screen.getByRole('button', { name: 'Standaardkleuren' })).toBeInTheDocument();
-    const resetOnKleuren = screen.getByRole('button', { name: 'Standaard' });
+    const resetOnKleuren = screen.getByRole('button', { name: 'Terug naar standaard' });
     expect(resetOnKleuren).toBeInTheDocument();
     expect(resetOnKleuren).not.toBeDisabled();
     fireEvent.click(resetOnKleuren);
     expect(onReset).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
   });
 });
 
@@ -992,6 +992,63 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
       expect(onChange).not.toHaveBeenCalled();
       unmount();
     }
+  });
+
+  // Audit pass 2, row 11 (2026-09-17): "unavailable" means the deployment
+  // has no Brandfetch key at all (a FIXED condition, checked before any
+  // per-user work in chart-style-actions.ts) — not a transient failure a
+  // reader should be invited to retry. The button cannot be gated on this
+  // at render (that needs a prop from chart.tsx, out of this fix's
+  // scope), so the first click still has to try and report why; this pins
+  // that a SECOND click is refused (no second `lookup` call) and the
+  // button carries `aria-disabled` + an `aria-describedby` pointing at the
+  // reason, once that first click has learned it — never for a reason
+  // that stays retryable (`not_found` here, unaffected).
+  it('unavailable: a repeat click never re-runs the lookup, and the button is aria-disabled with the reason attached; a retryable reason is unaffected (#11)', async () => {
+    const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'unavailable' });
+    const { unmount } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-unavail"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    fireEvent.click(button);
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Merkkleuren ophalen is op dit moment niet mogelijk.');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAttribute('aria-describedby', status.id);
+    expect(status.id).toBeTruthy();
+
+    fireEvent.click(button);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    unmount();
+
+    // A retryable reason (not_found) never latches: no aria-disabled, and
+    // a second click DOES re-run the lookup.
+    const retryLookup = vi.fn().mockResolvedValue({ ok: false, reason: 'not_found' });
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-retry"
+        brand={{ lookup: retryLookup }}
+      />,
+    );
+    openTab('Kleuren');
+    const retryButton = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    fireEvent.click(retryButton);
+    await screen.findByRole('status');
+    expect(retryButton).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(retryButton);
+    expect(retryLookup).toHaveBeenCalledTimes(2);
   });
 
   it('busy-disables the apply button while a lookup is pending, re-enables once it settles', async () => {

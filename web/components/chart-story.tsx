@@ -14,6 +14,7 @@
 // Escape closes and refocuses the trigger.
 import { useEffect, useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { WandSparkles } from 'lucide-react';
+import { stepAccessibleName } from '../lib/chart-insights.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
@@ -304,9 +305,13 @@ export function ChartStoryPanel({
                 * below the ~24px minimum touch/click target — the button
                 * itself now reserves a size-6 (24px) hit area, with the
                 * small coloured dot as an inner, non-interactive span. */}
+              {/* Audit pass 2, row 14 (2026-09-17): the VISIBLE dot carries
+                * no text either way — only the accessible name changes,
+                * from the kind alone to kind + period, so two same-kind
+                * findings ("Below average" twice) are told apart. */}
               <button
                 type="button"
-                aria-label={step.title}
+                aria-label={stepAccessibleName(step)}
                 aria-current={i === index ? 'step' : undefined}
                 onClick={() => go(i)}
                 className="flex size-6 items-center justify-center"

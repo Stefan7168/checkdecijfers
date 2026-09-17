@@ -767,10 +767,21 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
     expect(screen.getByRole('heading', { name: 'Testreeks' })).toBeInTheDocument();
   });
 
-  it('renders a legend key for the hollow provisional marker exactly when the spec carries a provisional note', () => {
+  // Audit pass 2, row 7 (2026-09-17): the card used to ALSO render a
+  // separate UI-only legend line ("○ = voorlopig cijfer") right above the
+  // backend's own `provisionalNote` prose ("Voorlopige cijfers zijn
+  // gemarkeerd met *.") — gated on the exact same condition, so the two
+  // always appeared together, describing the SAME provisional flag with
+  // two different symbols (a hollow ring vs. an asterisk) in the same
+  // card. The backend string is R8-reconstructed/stored and describes the
+  // convention actually visible on the value ("1,4*"); the UI legend added
+  // nothing the reader couldn't already read there, only a second symbol
+  // to reconcile. Dropped, never the backend string (out of scope: R8).
+  it('never renders a separate hollow-marker legend — the backend provisionalNote already states the * convention the reader sees on the value (audit pass 2, row 7)', () => {
     const withNote = threePointSpec({ provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.' });
     const { unmount } = render(<ChartView spec={withNote} />);
-    expect(screen.getByText('○ = voorlopig cijfer')).toBeInTheDocument();
+    expect(screen.queryByText('○ = voorlopig cijfer')).toBeNull();
+    expect(screen.getByText('Voorlopige cijfers zijn gemarkeerd met *.')).toBeInTheDocument();
     unmount();
     render(<ChartView spec={threePointSpec()} />);
     expect(screen.queryByText('○ = voorlopig cijfer')).toBeNull();
@@ -2464,7 +2475,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
   });
 
-  it('Standaard restores the byte-identical stock svg', () => {
+  it('Terug naar standaard restores the byte-identical stock svg', () => {
     render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1 (session 101): opening Style now genuinely REMOUNTS the
     // chart into the portaled dialog (a fresh mount, per the "option A
@@ -2482,7 +2493,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
     expect(document.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
-    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terug naar standaard' }));
     expect(document.querySelector('svg.recharts-surface')!.outerHTML).toBe(stock);
   });
 
@@ -2713,7 +2724,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     }
   });
 
-  it('a template replaces earlier tweaks (reset first); Standaard afterwards returns to the default', () => {
+  it("a template replaces earlier tweaks (reset first); Terug naar standaard afterwards returns to the default", () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
@@ -2726,7 +2737,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
     expect(document.querySelector('.recharts-cartesian-grid-horizontal')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terug naar standaard' }));
     expect(document.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
   });
 
@@ -2845,7 +2856,7 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
     // like "Standaardkleuren" (a partial reset via onChange) already was —
     // before the fix, a full reset fired nothing, so the counter
     // systematically under-counted resets.
-    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terug naar standaard' }));
     expect(sink).toHaveBeenCalledTimes(3);
     expect(sink).toHaveBeenNthCalledWith(3, 'option_changed');
   });
@@ -2874,7 +2885,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeDisabled();
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
   });
 
@@ -2905,7 +2916,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('clicking Dun then Standaard returns to 3 px — the account default, not stock', () => {
+  it("clicking Dun then Terug naar standaard returns to 3 px — the account default, not stock", () => {
     render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
@@ -2919,7 +2930,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('1');
     expect(screen.queryByText('Mijn standaard is actief.')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terug naar standaard' }));
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
   });
 
@@ -4317,7 +4328,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     expect(saved).toHaveProperty('frameBackground', { kind: 'solid', hex: '#ffffff' });
   });
 
-  it('clicking Standaard resets and also clears the uploaded frame image', async () => {
+  it('clicking Terug naar standaard resets and also clears the uploaded frame image', async () => {
     render(
       <ChartStyleProvider initial={{}}>
         <ChartView spec={threePointSpec()} />
@@ -4354,7 +4365,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
 
     // Click Standaard to reset everything
-    fireEvent.click(screen.getByRole('button', { name: 'Standaard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terug naar standaard' }));
 
     // Verify the frame no longer has a background-image after the reset
     const frameAfterReset = document.querySelector('[data-slot="chart-frame"]') as HTMLElement;
@@ -4968,7 +4979,7 @@ describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
     // "Standaard" is disabled only on a pristine (no-override) panel — an
     // initialPresentation is itself an override, so it must render enabled
     // from the first open, without the reader having touched anything.
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeEnabled();
   });
 
   it('initialPanel="story" opens Insights at step 0 on mount, without a click', () => {

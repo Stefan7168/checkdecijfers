@@ -24,6 +24,7 @@ import {
   STAGE_SPOTLIGHT_TRANSITION_EASING,
   STAGE_SPOTLIGHT_TRANSITION_MS,
 } from '../lib/chart-stage.ts';
+import { stepAccessibleName } from '../lib/chart-insights.ts';
 import type { PresentationOverrides } from '../lib/chart-presentation.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
@@ -168,8 +169,71 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
   // step N — so an unguarded "the hook says 0, the prop says 2" sync would
   // drag the shared index straight back to the first finding on every open.
   const readerScrolled = useRef(false);
+  // Row 4 fix (audit pass 2): a SECOND, independent programmatic latch,
+  // alongside `useStageScroll`'s own `isProgrammatic()`. That hook's window
+  // is a fixed ~150ms that gets RE-ARMED by every `scroll` event it sees —
+  // fine while the browser fires those events close together, but a real
+  // `scrollIntoView({behavior:'smooth'})` can leave gaps wider than 150ms
+  // between frames (the animation is still running; it just didn't paint a
+  // new scroll position in time), and once the window lapses `onAnyScroll`
+  // below reads the NEXT of the animation's own events as a reader gesture
+  // and cancels auto-play after exactly one step — reproduced in the
+  // pinned test below. `use-stage-scroll.ts` is out of scope for this fix
+  // (not a file this task may touch), so this latch is local to the stage
+  // and does not depend on scroll-event cadence at all: `go()` arms it
+  // once per smooth advance, via `armProgrammaticLatch`, and it is cleared
+  // by whichever comes first — the container's own `scrollend` event where
+  // supported, the scroll position actually reaching the target panel, or
+  // a bounded timeout (so a browser that never fires `scrollend` and a
+  // target that is never exactly reached cannot latch forever). `onAnyScroll`
+  // ORs this with the hook's own `isProgrammatic()`, so nothing about the
+  // hook's existing (correct) behaviour for non-smooth jumps changes.
+  const programmaticSettleRef = useRef(false);
+  const settleCleanupRef = useRef<(() => void) | null>(null);
   const last = steps.length - 1;
   const step = steps[index] ?? null;
+
+  // See `programmaticSettleRef` above. `panel` is the step panel `go()` is
+  // scrolling to; the target scroll offset mirrors `scrollIntoView({block:
+  // 'center'})`'s own math so the "position reached" fallback means what it
+  // says. Any latch already in flight (a rapid second advance before the
+  // first settled) is cancelled first, never left dangling.
+  const armProgrammaticLatch = useCallback((panel: HTMLElement): void => {
+    settleCleanupRef.current?.();
+    settleCleanupRef.current = null;
+    const el = scrollRef.current;
+    if (!el) return;
+    programmaticSettleRef.current = true;
+    const targetTop = Math.max(0, panel.offsetTop - (el.clientHeight - panel.offsetHeight) / 2);
+    const MAX_SETTLE_MS = 1000;
+    const start = Date.now();
+    let done = false;
+    let raf: ReturnType<typeof requestAnimationFrame> | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
+      programmaticSettleRef.current = false;
+      if (raf !== null) cancelAnimationFrame(raf);
+      if (timer !== null) clearTimeout(timer);
+      el.removeEventListener('scrollend', finish);
+      settleCleanupRef.current = null;
+    };
+    if ('onscrollend' in el) {
+      el.addEventListener('scrollend', finish, { once: true });
+    }
+    const poll = (): void => {
+      if (done) return;
+      if (Math.abs(el.scrollTop - targetTop) < 2 || Date.now() - start > MAX_SETTLE_MS) {
+        finish();
+        return;
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    raf = requestAnimationFrame(poll);
+    timer = setTimeout(finish, MAX_SETTLE_MS);
+    settleCleanupRef.current = finish;
+  }, []);
 
   // Scroll position → step index (the hook only reports; the owner of the
   // index is ChartView). Only honoured once the reader has scrolled — see
@@ -198,6 +262,10 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     }
     return () => {
       document.body.style.overflow = previous;
+      // Row 4 fix: a close mid-smooth-scroll must not leave the latch
+      // armed into the next open (auto-play is already forced off on close
+      // by a separate effect below; this just avoids a dangling rAF/timer).
+      settleCleanupRef.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on open only; `index` is read as the step to open AT
   }, [open]);
@@ -302,7 +370,10 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     // any time), not eliminated by it.
     const onAnyScroll = (): void => {
       readerScrolled.current = true;
-      if (!scroll.isProgrammatic()) stopAutoplay();
+      // Row 4 fix: OR the hook's own (time-window) read with this stage's
+      // own latch (see `programmaticSettleRef` above) — either one being
+      // armed means the scroll is the stage's own, not the reader's.
+      if (!scroll.isProgrammatic() && !programmaticSettleRef.current) stopAutoplay();
     };
     el.addEventListener('wheel', onReaderGesture, { passive: true });
     el.addEventListener('touchmove', onReaderGesture, { passive: true });
@@ -336,7 +407,13 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
     const panel = panelRefs.current[clamped];
     if (panel && typeof panel.scrollIntoView === 'function') {
       scroll.beginProgrammatic();
-      panel.scrollIntoView({ block: 'center', behavior: staticMotion ? 'auto' : 'smooth' });
+      const behavior = staticMotion ? 'auto' : 'smooth';
+      // Row 4 fix: only a smooth scroll can run long enough, with wide
+      // enough gaps between its own `scroll` events, to outlast the hook's
+      // 150ms window — an instant ('auto') jump stays covered by that
+      // window alone, as before.
+      if (behavior === 'smooth') armProgrammaticLatch(panel);
+      panel.scrollIntoView({ block: 'center', behavior });
     }
   }
 
@@ -716,7 +793,10 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
           <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
             {steps.map((s, i) => (
               <li key={s.id}>
-                <button type="button" aria-label={s.title} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
+                {/* Audit pass 2, row 14 (2026-09-17): kind + period in the
+                  * accessible name only — the visible dot stays a plain
+                  * coloured circle, no text either way. */}
+                <button type="button" aria-label={stepAccessibleName(s)} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
                   <span
                     className={
                       'block size-2.5 rounded-full transition-[transform,background-color,box-shadow] duration-300 ' +
