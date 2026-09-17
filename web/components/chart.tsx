@@ -32,13 +32,18 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  DefaultZIndexes,
   Line,
   LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
+  useXAxisScale,
+  useYAxisScale,
   XAxis,
   YAxis,
+  ZIndexLayer,
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
@@ -911,6 +916,105 @@ function StageLegend({ seriesMeta, lang }: { seriesMeta: SeriesMeta[]; lang: Lan
 // drift apart between them.
 const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: 'var(--card)', strokeWidth: 3, strokeLinejoin: 'round' } as const;
 
+// Session 110 UX audit pass 4, rows 1 and 3: value labels used to be drawn
+// INSIDE each series' own shape/dot render (one `<g>` per series, per bar —
+// SeriesBar; a `<text>` sibling of each end point's `<circle>` — SeriesDot).
+// Recharts paints series in the order their `<Bar>`/`<Line>` JSX appears, so
+// a LATER series' `<rect>`s (row 1) painted OVER an EARLIER series' label —
+// screen showed `45.58` for a cell whose real formattedValue is `45.587`,
+// an R1/R6 violation (a truncated verbatim projection). Two adjacent
+// end-of-line labels (row 3) had no collision pass at all and could smear
+// into each other by a few px, same root cause: nothing decided paint order
+// or spacing ACROSS series.
+//
+// First attempt, rejected: draw every label in ONE plain `<g>` mounted as
+// the LAST child of the `<BarChart>`/`<LineChart>`, on the assumption that
+// Recharts 3.x paints arbitrary children in JSX order. Measured false: this
+// version DOES render its own known graphical items (Bar, Line, Area, …)
+// through an internal Z-INDEX system (`DefaultZIndexes` — grid -100, bar
+// 300, line 400, axis 500, label 2000, …), with each one portaled into a
+// dedicated z-order bucket regardless of JSX position; a plain custom `<g>`
+// with no zIndex lands in the unlabelled default bucket, which sits BELOW
+// `bar`'s — so the "last JSX child" assumption held for nothing rendered
+// through a `<Bar>`/`<Line>`, and the labels stayed hidden under them.
+//
+// Actual fix: `ZIndexLayer` (Recharts 3.4+, exported alongside
+// `DefaultZIndexes`) is the documented, supported way to place arbitrary
+// content in a specific z-order bucket — it portals its children into the
+// chart's own zIndex-2000 "label" layer (the SAME bucket Recharts' own
+// `LabelList`/`Label` use), which sits above every graphical item bucket.
+// Every SeriesBar wraps its OWN label in `<ZIndexLayer zIndex={
+// DefaultZIndexes.label}>` at the point it already knows its real, current
+// x/y/width/height (no ref, no portal target of our own, no cross-render
+// timing to reason about — this is a plain, ordinary child of that one
+// Shape render). Row 3's `EndLabelsOverlay` (below) draws every chart's end
+// labels together (it needs to, for the collision pass) and wraps its
+// WHOLE returned group the same way.
+interface EndLabelSpec {
+  resultId: string;
+  periodLabel: string;
+  value: number;
+  text: string;
+}
+
+/** Row 3: the line height a value label needs to stay legible (12px font +
+ * the halo, ADR 042's VALUE_LABEL_PROPS). Two end-of-line labels closer than
+ * this on the y axis read as smeared digits. */
+const END_LABEL_LINE_HEIGHT_PX = 13;
+
+/** Row 3: computes every end-of-line label's real pixel position from
+ * Recharts' own settled scales — `useXAxisScale`/`useYAxisScale` (Recharts
+ * 3.x's documented way for an arbitrary descendant to read the chart's
+ * finalized layout) applied to each label's own already-plotted VALUE and
+ * period, never a re-derivation or a guess — resolves collisions (sort by
+ * the resulting `cy`, stack labels closer than a line height apart, drop
+ * one only if it would spill past `usePlotArea`'s real measured bottom
+ * rather than truncate it or let it overflow into the x-axis: the value
+ * stays fully readable in the tooltip, legend and Tabel view, per
+ * principle (c) — never a half-shown number), and paints the result inside
+ * the shared `label` zIndex layer (see the block comment above). */
+function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  const plotArea = usePlotArea();
+  if (!xScale || !yScale || specs.length === 0) return null;
+  const bottom = plotArea ? plotArea.y + plotArea.height : Number.POSITIVE_INFINITY;
+  const positioned = specs
+    .map((s) => ({ ...s, cx: Number(xScale(s.periodLabel)), cy: Number(yScale(s.value)) }))
+    .filter((s) => Number.isFinite(s.cx) && Number.isFinite(s.cy))
+    .sort((a, b) => a.cy - b.cy);
+  const placed: Array<EndLabelSpec & { cx: number; y: number }> = [];
+  for (const draw of positioned) {
+    let y = draw.cy;
+    const prev = placed[placed.length - 1];
+    if (prev && y - prev.y < END_LABEL_LINE_HEIGHT_PX) {
+      y = prev.y + END_LABEL_LINE_HEIGHT_PX;
+    }
+    if (y + 4 > bottom) continue;
+    placed.push({ ...draw, y });
+  }
+  return (
+    <ZIndexLayer zIndex={DefaultZIndexes.label}>
+      <g>
+        {placed.map((l) => (
+          <text
+            key={l.resultId}
+            x={l.cx + 8}
+            y={l.y + 4}
+            {...VALUE_LABEL_PROPS}
+            fill="var(--foreground)"
+            textAnchor="start"
+            data-role="end-label"
+            data-label-for={l.resultId}
+          >
+            {l.text}
+          </text>
+        ))}
+      </g>
+    </ZIndexLayer>
+  );
+}
+
 /** Line-chart point marker: filled in the series colour, hollow when
  * provisional (R11, same convention as render.ts), plus the #197 end-of-line
  * label on the series' last plotted point. Recharts passes the Line's own
@@ -931,7 +1035,6 @@ const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: 'var(--c
  * Task 5's `opacity` param, not in place of it. */
 function SeriesDot(
   seriesKey: string,
-  endLabel: PointLabel | undefined,
   opacity = 1,
   seriesLabel?: string,
   onPointClick?: (point: PendingPoint) => void,
@@ -963,7 +1066,6 @@ function SeriesDot(
     const provisional = payload[`${seriesKey}_provisional`];
     const resultId = payload[`${seriesKey}_resultId`];
     const color = props.stroke ?? 'currentColor';
-    const isEnd = endLabel !== undefined && payload.periodCode === endLabel.periodCode;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
     // ADR 042: which markers are drawn follows the resolved marker mode
     // (all / ends / provisionalOnly) via the pure `markerVisible`; the point
@@ -1040,19 +1142,6 @@ function SeriesDot(
               : undefined
           }
         />
-        {isEnd ? (
-          <text
-            x={cx + 8}
-            y={cy + 4}
-            {...VALUE_LABEL_PROPS}
-            fill="var(--foreground)"
-            textAnchor="start"
-            data-role="end-label"
-            data-label-for={endLabel.resultId}
-          >
-            {endLabel.text}
-          </text>
-        ) : null}
       </g>
     );
   };
@@ -1101,6 +1190,26 @@ function SeriesBar(
     const label = labelByPeriod.get(String(payload.periodCode));
     const negative = typeof value === 'number' && value < 0;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
+    // Row 1 (session 110 UX audit pass 4): wrapped in the shared `label`
+    // zIndex layer (see the block comment above SeriesDot) so a LATER
+    // series' bar `<rect>` — Recharts draws every `<Bar>` through its own
+    // `bar` zIndex bucket, JSX order notwithstanding — can never again
+    // paint over an EARLIER series' label.
+    const labelNode = label ? (
+      <ZIndexLayer zIndex={DefaultZIndexes.label}>
+        <text
+          x={x + width / 2}
+          y={negative ? y + height + 12 : y - 4}
+          {...VALUE_LABEL_PROPS}
+          fill="var(--foreground)"
+          textAnchor="middle"
+          data-role="bar-label"
+          data-label-for={label.resultId}
+        >
+          {label.text}
+        </text>
+      </ZIndexLayer>
+    ) : null;
     // Task 6 keyboard-operability fix (#212 follow-up): same rationale as
     // SeriesDot's `activate` above — a synthetic role="button" on an SVG
     // element gets no native Enter/Space activation, so onKeyDown has to
@@ -1161,19 +1270,6 @@ function SeriesBar(
               : undefined
           }
         />
-        {label ? (
-          <text
-            x={x + width / 2}
-            y={negative ? y + height + 12 : y - 4}
-            {...VALUE_LABEL_PROPS}
-            fill="var(--foreground)"
-            textAnchor="middle"
-            data-role="bar-label"
-            data-label-for={label.resultId}
-          >
-            {label.text}
-          </text>
-        ) : null}
         {isStory ? (
           <rect
             x={x - 3}
@@ -1188,6 +1284,7 @@ function SeriesBar(
             data-story-marker={resultId == null ? 'true' : String(resultId)}
           />
         ) : null}
+        {labelNode}
       </g>
     );
   };
@@ -2210,7 +2307,6 @@ export function ChartView({
   // untouched by translation (translateSpecForDisplay).
   const headline = headlineFigure(displaySpec);
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
-  const endLabelByKey = new Map(plan.endLabels.map((l) => [l.seriesKey, l]));
   // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
   // from the DISPLAYED spec (a zoomed window's own ends get the markers).
   const endpointsByKey = new Map<string, SeriesEndpoints>();
@@ -2224,17 +2320,36 @@ export function ChartView({
     byPeriod.set(label.periodCode, label);
     barLabelsByKey.set(label.seriesKey, byPeriod);
   }
+  // Session 110 UX audit pass 4, row 2: both margins used to cap at
+  // absolute pixel ceilings (80px / 140px) regardless of the chart's own
+  // measured width, so a narrow card (375px viewport, a sidebar, an embed)
+  // could lose almost its entire plot area to them — measured at 211px
+  // container width, a 6-region line chart's plot area was 20px wide and
+  // no x-axis tick had room to render at all. Both caps now scale with the
+  // MEASURED container width (`measuredWidth`, 0 until the first
+  // ResizeObserver callback lands — see useElementWidth — in which case the
+  // old absolute ceilings are kept as the best available fallback, exactly
+  // what SSR/jsdom's unmeasured first paint already rendered before this
+  // fix). When even the fraction-capped margins would leave less than
+  // END_LABEL_MIN_PLOT_FRACTION of the container for the plot itself, the
+  // end-of-line labels are the part that gives way — never the plot, never
+  // the axis: `pres.valueLabels === 'shown'` below already gates them
+  // behind a presentation choice, so dropping them here for width is the
+  // same kind of "optional over essential" call, just width-driven.
+  const Y_AXIS_WIDTH_MAX_FRACTION = 0.25;
+  const RIGHT_MARGIN_MAX_FRACTION = 0.35;
+  const END_LABEL_MIN_PLOT_FRACTION = 0.45;
+  const yAxisWidthCap = measuredWidth > 0 ? Math.round(measuredWidth * Y_AXIS_WIDTH_MAX_FRACTION) : 80;
   const yAxisWidth =
     plan.axisTicks.length > 0
-      ? Math.min(80, Math.max(24, labelWidthPx(plan.axisTicks.reduce((w, t) => (t.display.length > w.length ? t.display : w), ''))))
+      ? Math.min(yAxisWidthCap, Math.max(24, labelWidthPx(plan.axisTicks.reduce((w, t) => (t.display.length > w.length ? t.display : w), ''))))
       : 16;
-  const rightMargin =
-    plan.endLabels.length > 0
-      ? Math.min(140, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
-      : 8;
   // WP218: reserved x-axis height for tilted labels (xAxisHeight) needs the
   // longest label actually plotted — `rows`, never a re-derivation, so a
-  // zoomed viewSpec's shorter label set reserves less height too.
+  // zoomed viewSpec's shorter label set reserves less height too. Moved
+  // above the margin-fraction block (row 2) so `leftMargin` — the OTHER
+  // horizontal reservation a real render makes, on top of `yAxisWidth` — is
+  // known before deciding whether the end labels still fit.
   const longestPeriodLabel = rows.reduce(
     (longest, row) => (String(row.periodLabel).length > longest.length ? String(row.periodLabel) : longest),
     '',
@@ -2246,6 +2361,39 @@ export function ChartView({
   // Tilted labels overhang the first tick to the left; reserve what the y-axis
   // width does not already cover (see xLabelOverhang).
   const leftMargin = 8 + Math.max(0, xLabelOverhang(pres.xLabels, longestPeriodLabel) - yAxisWidth);
+  const rightMarginCap = measuredWidth > 0 ? Math.round(measuredWidth * RIGHT_MARGIN_MAX_FRACTION) : 140;
+  const rightMarginForEndLabels =
+    plan.endLabels.length > 0
+      ? Math.min(rightMarginCap, plan.endLabels.reduce((w, l) => Math.max(w, labelWidthPx(l.text)), 0))
+      : 8;
+  // The real reservation a render makes on each side: `leftMargin` (outer
+  // margin) plus `yAxisWidth` on the left, `rightMarginForEndLabels` (outer
+  // margin) on the right — never approximated, so this decision matches
+  // what actually gets drawn.
+  const suppressEndLabels =
+    measuredWidth > 0 &&
+    plan.endLabels.length > 0 &&
+    measuredWidth - leftMargin - yAxisWidth - rightMarginForEndLabels < measuredWidth * END_LABEL_MIN_PLOT_FRACTION;
+  const rightMargin = suppressEndLabels ? 8 : rightMarginForEndLabels;
+  // Session 110 UX audit pass 4 row 3: `EndLabelsOverlay` computes its own
+  // pixel positions from Recharts' settled scales (see its doc comment
+  // above), so it only needs each label's own VALUE and period LABEL
+  // (looked up here from `rows`, the same period x series model the chart
+  // itself renders from) plus the text/resultId `valueLabelPlan` already
+  // built. Hidden series (no Line/Area rendered for them at all) and the
+  // width-driven suppression above both drop out here, never inside the
+  // overlay, so the overlay itself stays a pure "place what it's given"
+  // renderer.
+  const endLabelSpecs: EndLabelSpec[] =
+    pres.valueLabels === 'shown' && !suppressEndLabels
+      ? plan.endLabels.flatMap((l) => {
+          if (state.hiddenKeys.has(l.seriesKey)) return [];
+          const row = rows.find((r) => r.periodCode === l.periodCode);
+          const value = row?.[l.seriesKey];
+          if (row == null || typeof value !== 'number') return [];
+          return [{ resultId: l.resultId, periodLabel: String(row.periodLabel), value, text: l.text }];
+        })
+      : [];
   const accessibleName = `${t(chartLang, 'chart.graphPanelLabel')}: ${displaySpec.title} (${displaySpec.unit})`;
   // Final review finding (owner-directed follow-up): small multiples always
   // drew line panels regardless of the form switch, so choosing Staaf while
@@ -2854,7 +3002,6 @@ export function ChartView({
                       connectNulls={false}
                       dot={SeriesDot(
                         s.key,
-                        pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
                         onPointClick,
@@ -2867,6 +3014,10 @@ export function ChartView({
                     />
                   );
                 })}
+              {/* Row 3 (session 110 UX audit pass 4): the LAST child, so it
+                * paints after every Line above — see EndLabelsOverlay's own
+                * doc comment. */}
+              <EndLabelsOverlay specs={endLabelSpecs} />
             </LineChart>
           ) : activeForm === 'area' ? (
             // WP218 phase 5 (Global Constraints): area is offered only for a
@@ -2947,7 +3098,6 @@ export function ChartView({
                       connectNulls={false}
                       dot={SeriesDot(
                         s.key,
-                        pres.valueLabels === 'shown' ? endLabelByKey.get(s.key) : undefined,
                         dimmed ? 0.25 : 1,
                         s.label,
                         onPointClick,
@@ -2960,6 +3110,9 @@ export function ChartView({
                     />
                   );
                 })}
+              {/* Row 3 (session 110 UX audit pass 4): see the LineChart
+                * branch above — same overlay, same reasoning. */}
+              <EndLabelsOverlay specs={endLabelSpecs} />
             </AreaChart>
           ) : activeForm === 'hbar' ? (
             // WP218 phase 5 (Global Constraints): hbar is offered only for a

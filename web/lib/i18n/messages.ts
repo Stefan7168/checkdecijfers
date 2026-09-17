@@ -401,7 +401,13 @@ const nl = {
   'chart.formReason.areaMultiSeries':
     'Een gevuld vlak per reeks zou de reeksen over elkaar leggen en gaten verbergen.',
   'chart.formReason.areaComparison': 'Een vlak past alleen bij een reeks in de tijd.',
-  'chart.formReason.hbarTimeSeries': 'Liggende staven passen alleen bij een vergelijking tussen regio’s.',
+  // Session 110 UX audit pass 4, row 7: this used to say "only fits a
+  // comparison between regions" — false on a real multi-region time series
+  // (a `region_series` answer IS a comparison between regions), where the
+  // real reason Liggend is disallowed is the time axis, not the region
+  // count (see the `hbarDisabledReason` comment in chart.tsx: it fires for
+  // any line-kind spec, regardless of series count).
+  'chart.formReason.hbarTimeSeries': 'Liggende staven tonen één periode; deze grafiek loopt over meerdere periodes.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -1258,7 +1264,9 @@ const en: Messages = {
   'chart.formReason.areaMultiSeries':
     'A filled area per series would stack the series on top of each other and hide gaps.',
   'chart.formReason.areaComparison': 'An area chart only fits a single series over time.',
-  'chart.formReason.hbarTimeSeries': 'Horizontal bars only fit a comparison between regions.',
+  // Session 110 UX audit pass 4, row 7: see the nl entry's comment — the
+  // real reason is the time axis, not the region count.
+  'chart.formReason.hbarTimeSeries': 'Horizontal bars show one period; this chart spans several.',
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',
