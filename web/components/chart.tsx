@@ -1685,7 +1685,18 @@ export function ChartView({
   const inStage = stage !== undefined;
   const chartContainerRef = useRef<HTMLDivElement>(null);
   // Chart-card polish (2026-09-15): p-5 / sm:p-6 (was p-4) — the reference card the owner compared against breathes; the dock keeps its own p-4 (visual-dock.tsx), a narrow side panel.
-  const frameClass = frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6';
+  // Row 10/#p2-10 recheck (session 110 UX audit pass 5, PARTIAL): making
+  // the chart's own height frame-relative (embedHeightValue above) was not
+  // enough at 320x240 — the title/headline/reading-select chrome ABOVE the
+  // chart still pushed its top past the fold. Below a `max-height: 300px`
+  // frame (a small embed sidebar unit, never triggered by an ordinary
+  // in-app card), embedMode switches this wrapper to a flex column so the
+  // `order-*` utilities below can push the reading select (chart-controls-
+  // embed) to the end — after the chart — while everything else keeps its
+  // default order. Never applied outside embedMode; a non-embed card is
+  // never flex here regardless of viewport height.
+  const embedCompactClass = embedMode ? '[@media(max-height:300px)]:flex [@media(max-height:300px)]:flex-col' : '';
+  const frameClass = `${frameless || inStage ? '' : 'mt-3 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6'} ${embedCompactClass}`.trim();
   const rawId = useId();
   const domId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
   const coarsePointer = useCoarsePointer();
@@ -3397,7 +3408,18 @@ export function ChartView({
         * exists. */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div role="heading" aria-level={3} className="text-base font-semibold leading-snug text-foreground">
+          {/* Row 10/#p2-10 recheck (pass 5): title compacts to text-xs below
+            * a 300px-tall embed frame — the chart itself is the point of a
+            * tiny sidebar embed, not a full title. */}
+          <div
+            role="heading"
+            aria-level={3}
+            className={
+              embedMode
+                ? 'text-base font-semibold leading-snug text-foreground [@media(max-height:300px)]:text-xs [@media(max-height:300px)]:leading-tight'
+                : 'text-base font-semibold leading-snug text-foreground'
+            }
+          >
             {displaySpec.title}
           </div>
           {/* ADR 042: one muted subtitle line — the unit first, then the pinned
@@ -3516,7 +3538,14 @@ export function ChartView({
         * data-label-for (R1). Not in the table form (it shows everything),
         * not in stage mode (ADR 044: the caption IS the sentence). */}
       {headline !== null && !inStage && state.form !== 'table' ? (
-        <p className="mt-3 flex flex-wrap items-baseline gap-x-2" data-testid="headline-figure">
+        <p
+          className={
+            embedMode
+              ? 'mt-3 flex flex-wrap items-baseline gap-x-2 [@media(max-height:300px)]:hidden'
+              : 'mt-3 flex flex-wrap items-baseline gap-x-2'
+          }
+          data-testid="headline-figure"
+        >
           <span className="sr-only">{t(chartLang, 'chart.headline.label')}</span>
           <span className="text-3xl font-semibold leading-none tracking-tight text-foreground tabular-nums" data-label-for={headline.resultId}>
             {headline.value}
@@ -3536,7 +3565,14 @@ export function ChartView({
         * plotted line (and carries its own periods), so the primary's copy
         * must never survive a switch to an alternate reading. */}
       {!inStage && state.form !== 'table' && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
-        <p data-testid="trend-headline" className="mt-1 text-sm text-foreground">
+        <p
+          data-testid="trend-headline"
+          className={
+            embedMode
+              ? 'mt-1 text-sm text-foreground [@media(max-height:300px)]:hidden'
+              : 'mt-1 text-sm text-foreground'
+          }
+        >
           {activeSpec.attribution.trendHeadline}
         </p>
       ) : null}
@@ -3797,7 +3833,10 @@ export function ChartView({
         * this route: there is no Embed button here (a page already reached
         * via a signed embed token never re-offers its own embed dialog). */}
       {embedMode && !inStage && alternates.length > 0 ? (
-        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground" data-slot="chart-controls-embed">
+        <div
+          className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground [@media(max-height:300px)]:order-last"
+          data-slot="chart-controls-embed"
+        >
           <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
           <select
             id={`${domId}-reading`}

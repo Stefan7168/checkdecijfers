@@ -4947,6 +4947,66 @@ describe('ChartView — embed reading select never forces a width past its conta
   });
 });
 
+// Row 10/#p2-10 recheck (session 110 UX audit pass 5, PARTIAL): at 320x240
+// the embed chart's TOP still sat below the fold (y 216 of 240) even after
+// embedHeightValue made the chart's own height frame-relative — the title/
+// headline/reading-select chrome above it still ate most of the frame.
+// jsdom has no layout engine, so these pin the CSS-contract fix: below a
+// `max-height: 300px` frame, embedMode (a) turns this wrapper into a flex
+// column so `order-*` can apply, (b) hides the decorative headline-figure
+// and trend-headline paragraphs (pure restatements of what the chart
+// already shows), and (c) pushes the alternate-reading select (added by
+// #262(c)) to the end of that flex column — after the chart — instead of
+// sitting above it. None of this applies outside embedMode.
+describe('ChartView — embed chart chrome collapses on a short frame (row 10 recheck, pass 5)', () => {
+  it('only embedMode turns the card wrapper into a flex column keyed to a short frame', () => {
+    const s = threePointSpec();
+    const { container: embedContainer } = render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const embedWrapper = embedContainer.firstElementChild as HTMLElement;
+    expect(embedWrapper.className).toMatch(/\[@media\(max-height:300px\)\]:flex\b/);
+    expect(embedWrapper.className).toMatch(/\[@media\(max-height:300px\)\]:flex-col\b/);
+
+    cleanup();
+    const { container: cardContainer } = render(<ChartView spec={s} />);
+    const cardWrapper = cardContainer.firstElementChild as HTMLElement;
+    expect(cardWrapper.className).not.toMatch(/max-height:300px/);
+  });
+
+  it('hides the decorative headline-figure and trend-headline paragraphs on a short embed frame', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const figure = screen.getByTestId('headline-figure');
+    expect(figure.className).toMatch(/\[@media\(max-height:300px\)\]:hidden\b/);
+    const trend = screen.queryByTestId('trend-headline');
+    if (trend) expect(trend.className).toMatch(/\[@media\(max-height:300px\)\]:hidden\b/);
+    // Still present in the DOM (a real reader on an ordinary-height frame
+    // must still see them) -- only display is conditioned on the media query.
+    expect(figure).toBeInTheDocument();
+  });
+
+  it('pushes the alternate-reading select to the end of the flex column on a short embed frame', () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        embedMode
+        embedFooter="x"
+        alternates={[{ label: 'Ongecorrigeerd', spec: threePointSpec() }]}
+      />,
+    );
+    const controlsRow = document.querySelector('[data-slot="chart-controls-embed"]') as HTMLElement;
+    expect(controlsRow).toBeInTheDocument();
+    expect(controlsRow.className).toMatch(/\[@media\(max-height:300px\)\]:order-last\b/);
+  });
+
+  it('compacts the title to a smaller size on a short embed frame, without removing it', () => {
+    const s = threePointSpec();
+    render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const heading = screen.getByRole('heading', { level: 3 });
+    expect(heading.className).toMatch(/\[@media\(max-height:300px\)\]:text-xs\b/);
+    expect(heading).toHaveTextContent(s.title);
+  });
+});
+
 // Task 4 (spec Part B1): the real ChartEmbedButton now mounts at the footer
 // marker Task 3 left — chart-embed-dialog.test.tsx covers the button/dialog
 // in isolation; these cover its WIRING into ChartView itself: the `embed`
