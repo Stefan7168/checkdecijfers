@@ -1083,7 +1083,10 @@ describe('ADR 042 — height follows width once measured', () => {
     const subtitle = heading.nextElementSibling as HTMLElement;
     expect(subtitle.className).toContain('text-muted-foreground');
     expect(subtitle.textContent).toContain(s.unit);
-    expect(subtitle.textContent).toContain('Geslacht: Totaal');
+    // #18 (session 110 UX audit): the human label only, never the raw
+    // dimension key ("Geslacht:") prefixed onto it.
+    expect(subtitle.textContent).toContain('Totaal');
+    expect(subtitle.textContent).not.toContain('Geslacht:');
   });
   it('legend entries are chips (rounded-full, bordered) and keep their toggle semantics', () => {
     const { container } = render(<ChartView spec={twoSeriesSpec()} />);
@@ -1669,7 +1672,8 @@ describe('chart-card polish (2026-09-15) — a quiet control row and header acti
     const s = spec({ dimLabels: { Geslacht: 'Totaal' } });
     const { container } = render(<ChartView spec={s} />);
     const heading = container.querySelector('[role="heading"][aria-level="3"]') as HTMLElement;
-    expect(heading.nextElementSibling?.textContent).toContain('Geslacht: Totaal');
+    // #18 (session 110 UX audit): human label only, no "Geslacht:" prefix.
+    expect(heading.nextElementSibling?.textContent).toContain('Totaal');
     expect(heading.parentElement).not.toContainElement(container.querySelector('[data-slot="chart-card-actions"]'));
   });
   it('Tabel form drops the Opmaak action (no Style panel in table form, as before) and keeps Inzichten off there too', () => {
@@ -3326,6 +3330,26 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
     expect(hbarTab).toBeDisabled();
     expect(hbarTab).toHaveAttribute('title', expect.stringContaining('regio'));
+  });
+
+  // #16 (session 110 UX audit): the disabled tab's reason must be reachable
+  // via aria-describedby (a plain `title` tooltip alone is invisible to a
+  // screen reader) WITHOUT also being permanent, always-visible copy under
+  // the tablist of every chart — the audit found it rendered as static text
+  // under every chart's form tabs, landing-page cards included.
+  it('#16: the Liggend disabled reason is reachable via aria-describedby, and is never ALSO rendered as permanent visible copy', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
+    const describedById = hbarTab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const hint = document.getElementById(describedById!);
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveClass('sr-only');
+    const reasonText = 'Liggende staven passen alleen bij een vergelijking tussen regio’s.';
+    expect(hint?.textContent).toBe(reasonText);
+    // Exactly ONE copy of the reason in the whole card — the sr-only span,
+    // never a second, permanently-visible paragraph alongside it.
+    expect(screen.getAllByText(reasonText)).toHaveLength(1);
   });
 
   it('S2 (multi-series time series): Vlak and Liggend are both disabled, each with its own reason', () => {
@@ -5017,13 +5041,14 @@ describe('ChartView — alternate reading toggle (#254)', () => {
         alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
       />,
     );
-    expect(container.textContent).toContain('Kenmerk: Alle kenmerken');
+    // #18 (session 110 UX audit): human labels only, no dimension-key prefix.
+    expect(container.textContent).toContain('Alle kenmerken');
     expect(container.textContent).toContain('Definitie: gecorrigeerde reeks.');
 
     fireEvent.change(readingControl(), { target: { value: '0' } });
 
-    expect(container.textContent).toContain('SeizoensCorrectie: Niet gecorrigeerd');
-    expect(container.textContent).not.toContain('Kenmerk: Alle kenmerken');
+    expect(container.textContent).toContain('Niet gecorrigeerd');
+    expect(container.textContent).not.toContain('Alle kenmerken');
     expect(container.textContent).toContain('Definitie: ongecorrigeerde reeks.');
     expect(container.textContent).toContain('Bron: CBS StatLine, tabel 99999NED.');
   });

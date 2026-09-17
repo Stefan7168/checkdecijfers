@@ -2924,7 +2924,17 @@ export function ChartView({
             * per text node). */}
           <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
             <span>{displaySpec.unit}</span>
-            {dimEntries.length > 0 ? <span>{dimEntries.map(([k, v]) => `${k}: ${v}`).join(' · ')}</span> : null}
+            {/* #18 (session 110 UX audit): human labels only — the raw CBS
+              * dimension KEY (e.g. "Bestedingscategorieen") used to prefix
+              * every value here (`${k}: ${v}`), putting a camelCase machine
+              * identifier in the reader's face on every chart card,
+              * homepage included. The key is still available where a reader
+              * actually needs it: the proof panel's cell table shows it as
+              * its own column header (answer-proof.tsx's CellTable). Every
+              * value here is still a spec string (dimLabels), so R6/#254's
+              * digit-scan exemption is unaffected — only the machine-key
+              * prefix is dropped, never the label itself. */}
+            {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => v).join(' · ')}</span> : null}
           </div>
         </div>
         {!embedMode && !inStage && (storyAvailable || state.form !== 'table') ? (
