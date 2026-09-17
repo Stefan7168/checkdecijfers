@@ -127,6 +127,18 @@ function renderComparison(result: ValidatedResult): string {
   return `${subjectSentenceStart(result)}: ${lines}.${winnerSentence}`;
 }
 
+/** #253 INTERIM (Task 3/4 landed the shape and its ranking record; Task 6 owns
+ * the finished phrasing plus the structural coverage line). Delegates to
+ * renderComparison, which is already RS1-safe by construction: its superlative
+ * sentence exists only when a `max` derivation record does, and a region set
+ * only ever gets one when its coverage is complete
+ * (src/query/derivations.ts deriveRegionRanking). So an incomplete set renders
+ * its values with no ranking claim — the honesty rule holds today; it is the
+ * wording and the disclosure sentence that are still owed. */
+function renderRegionSet(result: ValidatedResult): string {
+  return renderComparison(result);
+}
+
 function renderDifference(result: ValidatedResult, derivation: Extract<DerivationRecord, { kind: 'difference' }>): string {
   const byId = new Map(result.cells.map((c) => [c.resultId, c]));
   const later = byId.get(derivation.minuendResultId)!;
@@ -200,6 +212,12 @@ export function renderTrendHeadline(
 
 /** Deterministic Dutch answer body for any ValidatedResult. */
 export function renderTemplateBody(result: ValidatedResult): string {
+  // #253: the region-class shape is decided FIRST, ahead of the explicit-max
+  // branch. renderMax spells out every runner-up, which is right for a
+  // four-city comparison and unreadable for a 342-gemeente class — and the
+  // class has its own ranking record (deriveRegionRanking) that renderComparison
+  // already honours only when coverage made one exist.
+  if (result.shape === 'region_set') return renderRegionSet(result);
   const explicit = result.derivations.find((d) => d.explicit);
   if (explicit?.kind === 'difference') return renderDifference(result, explicit);
   if (explicit?.kind === 'max') return renderMax(result, explicit);
@@ -214,5 +232,7 @@ export function renderTemplateBody(result: ValidatedResult): string {
       // derived shape with a non-explicit or missing derivation record —
       // fall back to the safest general rendering.
       return result.cells.length === 1 ? renderSingle(result) : renderSeries(result);
+    // 'region_set' has already returned above — TypeScript narrows it out of
+    // this switch, so adding a case here is a compile error, not an omission.
   }
 }

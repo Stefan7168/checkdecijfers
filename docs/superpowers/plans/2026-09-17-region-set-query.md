@@ -240,3 +240,59 @@ needs 3+4. Task 7 needs 6. Task 8 can be written any time after 6. Task 9 last, 
 After Tasks 1–8 the capability is fully built and test-proven but reachable only through a
 hand-authored intent — which is also the safe shipping point if the owner wants to defer the
 fixture spend.
+
+---
+
+## As-built notes (tasks 1–4)
+
+Built on branch `s110/253-region-set-query` (session 110). **Tasks 1, 2, 3 and 4 are DONE**;
+tasks 5–9 are untouched. Deviations from the plan as written, and why:
+
+1. **`RegionScope` landed in Task 1, not Task 2.** Task 1's `resolveRegionSet` takes a
+   `RegionScope`, so the type had to exist before Task 2. It is declared in `src/query/types.ts`
+   (the query-contract file, where the plan always meant it to live); Task 2 then added only the
+   `StructuredIntent.regionSet` field and the `'region_set'` member of `ResultShape`.
+
+2. **"Alle gemeenten" on `03759ned` is 834 codes, not 835.** Measured from the committed fixture:
+   the twelve `GMPV<nn>` groups sum to 834. The 835th `GM`-prefixed code is `GM0997` ("Centraal
+   persoonsregister", group `OVERIG`), which the group-based roster correctly excludes — the plan's
+   835 counted it. The test asserts 834.
+
+3. **`resolveRegionSet` returns `excludedBySlice` alongside `codes`.** The plan's interface covered
+   only "empty roster" and "entirely outside the slice". A roster only PARTLY inside the slice (no
+   such case exists in today's fixtures, but nothing prevents one) would otherwise have been
+   silently shortened — and a ranking over a silently shortened class is exactly the claim RS1
+   forbids. Those members are carried into the coverage record's `missing` bucket, so they break
+   `complete` and suppress the ranking like any other unknown member.
+
+4. **`derivation: 'max'` is accepted alongside a `regionSet`**, with only the "exactly 1 period"
+   half of the arity rule checked structurally — the member count is a data question `run.ts`
+   answers after the fetch (`no_data` below two members with a value). The explicit `max` never
+   reaches `deriveMax`: `run.ts` routes the whole shape through `deriveRegionRanking`, so an
+   explicit "welke … de hoogste" over an incomplete set answers the set and simply carries no
+   ranking record (the owner's decision 1 — answer without ranking words, never refuse outright).
+
+5. **`deriveRegionRanking` takes an optional third argument, `explicit`** (default `false`) — a
+   superset of the plan's two-argument signature. Without it a region set could never mark the
+   ranking as the intent-requested computation, which is the flag the visible derived-data marking
+   keys on.
+
+6. **`REGION_SET_MAX_MEMBERS` caps SERVED CELLS (applicable + withheld), per spec §6 — not roster
+   size.** The plan's Task 3 wording ("a roster over …") reads as roster size, which would refuse
+   "alle gemeenten" (834 members) outright even though its ~342 applicable cells sit well under the
+   cap the spec measured for exactly that case. The constant lives in `src/query/region-set.ts`
+   beside `NOT_APPLICABLE_ATTRIBUTE`.
+
+7. **Interim `renderRegionSet` in `src/answer/compose/template.ts`** (Task 6's file). Adding the
+   `'region_set'` shape made `renderTemplateBody`'s switch non-exhaustive — a compile error — so the
+   shape needed *some* renderer now. It delegates to `renderComparison`, which is already RS1-safe
+   by construction (its superlative sentence exists only when a `max` record does), and the shape is
+   checked BEFORE the explicit-max branch so a 342-member class never reaches `renderMax`'s
+   spell-out-every-runner-up rendering. **Task 6 still owns the real renderer, the coverage
+   disclosure line (`regionSetLine`) and the `templateOnly` wiring.**
+
+8. **The one-varying-axis rule was NOT relaxed** (pinned by test), and `INTENT_SCHEMA_VERSION` is
+   still `1`. Nothing under `src/answer/intent/` or `tests/fixtures/llm/` was touched.
+
+Measured at the end of task 4: `tests/query` 183 passed (13 files), `tests/invariants` 26 passed,
+`tests/answer/compose-template.test.ts` 42 passed, root `npm run typecheck` clean.

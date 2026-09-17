@@ -4,8 +4,8 @@
 // (ADR 009). The benchmark scoring itself lives in benchmark-intents.test.ts.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { enumeratePeriods, runQuery, contiguousPeriodCodes } from '../../src/query/index.ts';
-import type { QueryRefusal, ResultCell, StructuredIntent } from '../../src/query/index.ts';
-import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, derivePeriodChangeSeries } from '../../src/query/derivations.ts';
+import type { QueryRefusal, RegionSetCoverage, ResultCell, StructuredIntent } from '../../src/query/index.ts';
+import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, derivePeriodChangeSeries, deriveRegionRanking } from '../../src/query/derivations.ts';
 import { parsePeriodCode } from '../../src/ingestion/periods.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -168,6 +168,82 @@ describe('derivation semantics (pure — the independent oracle for what these w
     if (!firstLast.ok || firstLast.record.kind !== 'first_last') throw new Error('expected first_last');
     expect(firstLast.record.firstResultId).toBe(oneRegion[0]!.resultId);
     expect(firstLast.record.lastResultId).toBe(oneRegion[oneRegion.length - 1]!.resultId);
+  });
+});
+
+describe('deriveRegionRanking (#253 / RS1 — pure: the ranking is GATED on coverage, not on wording)', () => {
+  function cellAt(region: string, value: number | null, valueAttribute?: string): ResultCell {
+    return {
+      resultId: `t:m:${region}:2025JJ00:-`,
+      tableId: 't', measure: 'm', measureTitle: 'm', regionCode: region,
+      regionLabel: region, periodCode: '2025JJ00', periodLabel: '2025', grain: 'JJ',
+      dims: {}, dimLabels: {}, value, unit: 'aantal', decimals: 0,
+      status: 'Definitief', provisional: false,
+      valueAttribute: valueAttribute ?? (value === null ? 'Impossible' : 'None'),
+      batchId: 1,
+    };
+  }
+  function coverage(overrides: Partial<RegionSetCoverage> = {}): RegionSetCoverage {
+    const base: RegionSetCoverage = {
+      scope: { kind: 'all_provincies' },
+      rosterSize: 3,
+      notApplicable: [],
+      withheld: [],
+      missing: [],
+      complete: true,
+    };
+    const merged = { ...base, ...overrides };
+    return { ...merged, complete: merged.withheld.length === 0 && merged.missing.length === 0 };
+  }
+  const trio = [cellAt('PV20', 10), cellAt('PV21', 30), cellAt('PV22', 20)];
+
+  it('a COMPLETE set produces a max record ranking every cell, highest first', () => {
+    const result = deriveRegionRanking(trio, coverage());
+    if (!result.ok || result.record.kind !== 'max') throw new Error('expected a max record');
+    expect(result.record.value).toBe(30);
+    expect(result.record.winnerResultId).toBe(trio[1]!.resultId);
+    expect(result.record.rankingResultIds).toEqual([
+      trio[1]!.resultId, trio[2]!.resultId, trio[0]!.resultId,
+    ]);
+    expect(result.record.sourceResultIds).toHaveLength(3);
+    expect(result.record.explicit).toBe(false);
+  });
+
+  it('members CBS marks Impossible do NOT break completeness — they are not members at that coordinate', () => {
+    const result = deriveRegionRanking(trio, coverage({ notApplicable: ['PV23', 'PV24'], rosterSize: 5 }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('ONE withheld member produces NO record at all — a hidden value could be the maximum', () => {
+    const withCell = [...trio, cellAt('PV23', null, 'Confidential')];
+    const result = deriveRegionRanking(withCell, coverage({ withheld: ['PV23'], rosterSize: 4 }));
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.reason).toContain('PV23');
+  });
+
+  it('ONE missing member produces NO record either', () => {
+    const result = deriveRegionRanking(trio, coverage({ missing: ['PV23'], rosterSize: 4 }));
+    expect(result.ok).toBe(false);
+  });
+
+  it('a tie at the top still refuses — deriveMax\'s own rule, not re-implemented', () => {
+    const tied = [cellAt('PV20', 30), cellAt('PV21', 30), cellAt('PV22', 10)];
+    expect(deriveRegionRanking(tied, coverage()).ok).toBe(false);
+  });
+
+  it('checkComputable is NOT bypassed: a null-valued source cell refuses even when coverage claims complete', () => {
+    // A coverage record that says "complete" while a cell carries no value is
+    // self-contradictory — the derivation must still refuse rather than trust
+    // the record blindly.
+    const lying = [...trio, cellAt('PV23', null, 'Confidential')];
+    expect(deriveRegionRanking(lying, coverage({ rosterSize: 4 })).ok).toBe(false);
+  });
+
+  it('explicit=true marks it as the intent-requested computation, same flag renderMax keys on', () => {
+    const result = deriveRegionRanking(trio, coverage(), true);
+    if (!result.ok) throw new Error('expected a record');
+    expect(result.record.explicit).toBe(true);
   });
 });
 

@@ -187,6 +187,116 @@ describe('anti-hallucination invariants — query-layer halves, real since WP5 (
   });
 });
 
+describe('RS1 (#253) — a region-set answer may claim a ranking ONLY when the class is complete', () => {
+  // The rule is enforced by the ABSENCE of a derivation record, never by
+  // filtering superlatives out of prose — so what this block proves is that a
+  // partial set carries ZERO ranking-capable derivations. R9's post-generation
+  // check then fails a superlative closed, mechanically, with nothing to bind
+  // to. (Members CBS itself marks `Impossible` do not break completeness: CBS
+  // is stating they are not members at that coordinate.)
+  let rs1Db: Db;
+  let closeRs1: () => Promise<void>;
+  const POPULATION_MEASURE = 'M000352';
+
+  const provincies = (): import('../../src/query/index.ts').StructuredIntent => ({
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'population_on_1_january' },
+    period: { kind: 'codes', codes: ['2025JJ00'] },
+    derivation: 'none',
+    regionSet: { kind: 'all_provincies' },
+  });
+
+  async function served(): Promise<ValidatedResult> {
+    const outcome = await runQuery(rs1Db, provincies());
+    if (!outcome.ok) throw new Error(`region-set probe refused: ${outcome.refusal.message}`);
+    return outcome;
+  }
+
+  /** Every derivation a ranking/superlative sentence could bind to. */
+  function rankingRecords(result: ValidatedResult) {
+    return result.derivations.filter((d) => d.kind === 'max');
+  }
+
+  beforeAll(async () => {
+    ({ db: rs1Db, close: closeRs1 } = await createIngestedDb());
+  }, 300_000);
+
+  afterAll(async () => {
+    await closeRs1();
+  });
+
+  it('a COMPLETE class registers a ranking covering every served cell, highest first (R5: registered, marked, sources listed)', async () => {
+    const result = await served();
+    expect(result.shape).toBe('region_set');
+    expect(result.regionSet!.complete).toBe(true);
+    const ranking = rankingRecords(result);
+    expect(ranking).toHaveLength(1);
+    const record = ranking[0]!;
+    if (record.kind !== 'max') throw new Error('unreachable');
+    expect(record.marking).toBe(DERIVED_DATA_MARKING);
+    expect(new Set(record.rankingResultIds)).toEqual(new Set(result.cells.map((c) => c.resultId)));
+    const valueById = new Map(result.cells.map((c) => [c.resultId, c.value as number]));
+    const ranked = record.rankingResultIds.map((id) => valueById.get(id)!);
+    expect([...ranked].sort((a, b) => b - a)).toEqual(ranked);
+    expect(record.value).toBe(valueById.get(record.winnerResultId));
+  });
+
+  it('ONE WITHHELD member removes the ranking entirely — the answer still serves, the claim does not', async () => {
+    await rs1Db.query(
+      `update observations set value = null, value_attribute = 'Confidential'
+        where table_id = '03759ned' and measure = $1 and region_code = 'PV22' and period_code = '2025JJ00'`,
+      [POPULATION_MEASURE],
+    );
+    const result = await served();
+    expect(result.regionSet!.withheld).toEqual(['PV22']);
+    expect(result.regionSet!.complete).toBe(false);
+    expect(rankingRecords(result)).toEqual([]);
+    // R11: the withheld cell is still served, with its CBS reason.
+    const pv22 = result.cells.find((c) => c.regionCode === 'PV22')!;
+    expect(pv22.value).toBeNull();
+    expect(pv22.valueAttribute).toBe('Confidential');
+  });
+
+  it('ONE MISSING member removes the ranking too — including when the intent explicitly asked for the maximum', async () => {
+    // Restore the withheld cell first, so this case isolates "missing".
+    await rs1Db.query(
+      `update observations set value = 600000, value_attribute = 'None'
+        where table_id = '03759ned' and measure = $1 and region_code = 'PV22' and period_code = '2025JJ00'`,
+      [POPULATION_MEASURE],
+    );
+    await rs1Db.query(
+      `delete from observations
+        where table_id = '03759ned' and measure = $1 and region_code = 'PV23' and period_code = '2025JJ00'`,
+      [POPULATION_MEASURE],
+    );
+
+    const implicit = await served();
+    expect(implicit.regionSet!.missing).toEqual(['PV23']);
+    expect(implicit.regionSet!.complete).toBe(false);
+    expect(rankingRecords(implicit)).toEqual([]);
+
+    // An explicit "welke had de hoogste" must not buy a ranking the coverage
+    // cannot support: it answers the set, without the claim.
+    const outcome = await runQuery(rs1Db, { ...provincies(), derivation: 'max' });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) throw new Error('unreachable');
+    expect(rankingRecords(outcome)).toEqual([]);
+    expect(outcome.derivations.every((d) => d.kind !== 'max')).toBe(true);
+  });
+
+  it('an all-Impossible class refuses outright rather than ranking one survivor', async () => {
+    await rs1Db.query(
+      `update observations set value = null, value_attribute = 'Impossible'
+        where table_id = '03759ned' and measure = $1 and period_code = '2025JJ00' and region_code like 'PV%'`,
+      [POPULATION_MEASURE],
+    );
+    const outcome = await runQuery(rs1Db, provincies());
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.kind).toBe('no_data');
+  });
+});
+
 describe('anti-hallucination invariants — answer-side halves, real since WP7 (audit-record linkage lands with WP10)', () => {
   // A client that always fabricates — drives composeAnswer down the full
   // fail-closed ladder. It fakes OUR failure path, not model behavior
