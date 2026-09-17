@@ -454,6 +454,12 @@ const nl = {
   // on a single-series chart (buildComparePrompt's own title-only usage).
   'chart.insights.recordHighTitle': 'Uitschieter naar boven',
   'chart.insights.recordLowTitle': 'Uitschieter naar beneden',
+  // Session 110 addendum (ADR 041): a point that is above/below the
+  // series' own mean but is NOT the actual highest/lowest point — kept
+  // distinct from the "Uitschieter" titles above so a mid-series point is
+  // never mislabelled as the record it isn't.
+  'chart.insights.aboveAverageTitle': 'Boven het gemiddelde',
+  'chart.insights.belowAverageTitle': 'Onder het gemiddelde',
   'chart.insights.jumpUpTitle': 'Sterke stijging',
   'chart.insights.jumpDownTitle': 'Sterke daling',
   // A multi-series finding's caption has no other way to say WHICH series it
@@ -1200,6 +1206,8 @@ const en: Messages = {
   'chart.story.provisional': ' (provisional figure)',
   'chart.insights.recordHighTitle': 'Notable high',
   'chart.insights.recordLowTitle': 'Notable low',
+  'chart.insights.aboveAverageTitle': 'Above average',
+  'chart.insights.belowAverageTitle': 'Below average',
   'chart.insights.jumpUpTitle': 'Sharp rise',
   'chart.insights.jumpDownTitle': 'Sharp drop',
   'chart.insights.seriesLabelPrefix': '{series} — ',

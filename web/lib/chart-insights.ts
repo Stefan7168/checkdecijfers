@@ -22,9 +22,21 @@ export interface Finding extends ScoredFinding {
   point: { seriesKey: string; periodCode: string };
 }
 
-const TITLE_KEY: Record<FindingKind, 'chart.insights.recordHighTitle' | 'chart.insights.recordLowTitle' | 'chart.insights.jumpUpTitle' | 'chart.insights.jumpDownTitle'> = {
+const TITLE_KEY: Record<
+  FindingKind,
+  | 'chart.insights.recordHighTitle'
+  | 'chart.insights.recordLowTitle'
+  | 'chart.insights.aboveAverageTitle'
+  | 'chart.insights.belowAverageTitle'
+  | 'chart.insights.jumpUpTitle'
+  | 'chart.insights.jumpDownTitle'
+> = {
   recordHigh: 'chart.insights.recordHighTitle',
   recordLow: 'chart.insights.recordLowTitle',
+  // Session 110 addendum (ADR 041): a non-extreme above/below-mean point —
+  // never labelled as a record/outlier, see insights.ts's kind assignment.
+  aboveAverage: 'chart.insights.aboveAverageTitle',
+  belowAverage: 'chart.insights.belowAverageTitle',
   jumpUp: 'chart.insights.jumpUpTitle',
   jumpDown: 'chart.insights.jumpDownTitle',
 };

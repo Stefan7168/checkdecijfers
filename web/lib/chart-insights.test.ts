@@ -54,6 +54,10 @@ function spec(overrides: Partial<ChartSpec> = {}): ChartSpec {
 // candidate: 2021 stays its (only) record candidate; 2022/2023/2024 all lose
 // to their own incoming jump. Ranked desc: 2023, 2022, 2024, 2021 — all 4
 // clear the cap, then re-sorted chronologically for the final order.
+// 2021's level candidate is below the series mean (2.375) but 2021 is NOT
+// the series' actual minimum (2023, value 1.5, is) — session 110 addendum
+// (ADR 041): only the actual min/max may be recordLow/recordHigh, so 2021's
+// surviving candidate is 'belowAverage', not 'recordLow'.
 function fourPointSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   return spec({
     series: [
@@ -92,10 +96,26 @@ function expectDigitsBound(s: ChartSpec, lang: 'nl' | 'en'): void {
 }
 
 describe('buildFindings — a single time series', () => {
-  it('selects real movers (jumps + the one non-jump record), not chronological start/latest', () => {
+  it('selects real movers (jumps + the one non-jump below-average point), not chronological start/latest', () => {
     const findings = buildFindings(fourPointSpec(), 'nl');
     expect(findings.map((f) => f.periodCode)).toEqual(['2021JJ00', '2022JJ00', '2023JJ00', '2024JJ00']);
-    expect(findings.map((f) => f.kind)).toEqual(['recordLow', 'jumpUp', 'jumpDown', 'jumpUp']);
+    expect(findings.map((f) => f.kind)).toEqual(['belowAverage', 'jumpUp', 'jumpDown', 'jumpUp']);
+  });
+
+  // Session 110 addendum (ADR 041): a below-mean point that is not the
+  // series' actual minimum must never be titled/captioned as a record.
+  it('titles a non-extreme below-average point as "Onder het gemiddelde", never "Uitschieter naar beneden"', () => {
+    const findings = buildFindings(fourPointSpec(), 'nl');
+    const belowAvg = findings.find((f) => f.periodCode === '2021JJ00')!;
+    expect(belowAvg.kind).toBe('belowAverage');
+    expect(belowAvg.title).toBe('Onder het gemiddelde');
+    expect(belowAvg.title).not.toContain('Uitschieter');
+  });
+
+  it('same finding is titled "Below average" in English', () => {
+    const findings = buildFindings(fourPointSpec(), 'en');
+    const belowAvg = findings.find((f) => f.periodCode === '2021JJ00')!;
+    expect(belowAvg.title).toBe('Below average');
   });
 
   it('carries R1 traceability (resultId) and the point to ring, matching the spec cell', () => {

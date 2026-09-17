@@ -41,3 +41,41 @@ Two invariants constrain the design: principle (a) — the LLM never computes or
 - ~~The `chart-story.ts` cleanup follow-up actually getting picked up~~ — **done, session 102 (2026-09-15), PR #25** (see the Consequences section above for what was actually deleted).
 - A request to phrase Insights in the chart's own display language rather than always Dutch — would need a second (English) system prompt in `insights-phrase.ts`, mirrored word-form/validation rules, and its own fixture/eval coverage.
 - The big "Story stage" (3D/scroll full-screen presentation, [session-briefs/2026-09-10-visual-next-level-plan.md](../session-briefs/2026-09-10-visual-next-level-plan.md) §3) reusing `buildStorySteps`/`storySteps`/`storyIndex` unchanged, per that plan's own text — it should reuse `chart-insights.ts`'s findings instead once built, the same swap this ADR made.
+
+## Session 110 addendum — extreme labels only on the actual extreme
+
+**Context (2026-09-17, session 110 UX audit, row #19).** The audit found the Insights carousel labelling
+two consecutive cards "Notable low" on the same chart: `2020: 1,3 %` and `2021: 2,7 %` — the second was a
+*rise* over the first, not a low. The root cause, as originally built: `candidatesForSeries`'
+(`src/chart/insights.ts`) and `comparisonCandidates`' kind assignment used `p.value >= mean ? 'recordHigh'
+: 'recordLow'` — i.e. ANY point above/below the series' (or, for a bar chart, the cross-series) own mean
+was labelled a "record", not only the point that actually IS the series' minimum/maximum. For a
+fact-checking product, an outlier label on a non-outlier is a credibility risk (this is exactly the
+"needs a design decision" framing row #19 used, not a mechanical bug — R9 requires a ranking/extremity
+claim to match the data).
+
+**Decision.** `recordHigh`/`recordLow` are now reserved for the series' (or cross-series, for a bar
+chart) actual maximum/minimum point only — the same `high`/`low` values `candidatesForSeries`/
+`comparisonCandidates` already computed for scoring purposes (`isRecord = p === high || p === low`) are
+now also used to decide the KIND, not just the score floor. A tie resolves to the earliest occurrence,
+matching the pre-existing `>`/`<` reduce that picked `high`/`low` in the first place — no new tie-break
+logic was introduced. Two new `FindingKind` values, `aboveAverage`/`belowAverage`, cover every other
+point that still ranks (a real z-score against the mean) but is not the actual extreme — titled "Above
+average"/"Below average" (EN) and "Boven het gemiddelde"/"Onder het gemiddelde" (NL) in
+`web/lib/i18n/messages.ts`, wired through `web/lib/chart-insights.ts`'s `TITLE_KEY` map exactly like the
+existing four kinds. No new number is computed or displayed: a `belowAverage`/`aboveAverage` finding
+still only shows the point's own already-formatted value (R1/R3 unchanged by construction), and the
+series/cross-series mean itself is still never displayed (it wasn't before this change either — checked,
+`chart-insights.ts`'s caption builders never render `mean`). The AI-phrasing system prompt
+(`src/chart/insights-phrase.ts`, rule 7) was updated to tell the model `aboveAverage`/`belowAverage` may
+not be phrased as a record/outlier/extreme, mirroring the same distinction.
+
+**As-built.** `src/chart/insights.ts` (kind assignment in both `candidatesForSeries` and
+`comparisonCandidates`), `src/chart/insights-phrase.ts` (system prompt rule 7),
+`web/lib/chart-insights.ts` (`TITLE_KEY`), `web/lib/i18n/messages.ts` (4 new keys, nl+en). Test coverage:
+new `tests/chart/insights.test.ts` pins "at most one `recordHigh`/one `recordLow` per series" and that a
+below-mean non-minimum point is `belowAverage` (plus a case showing this invariant holds even when a
+competing jump — a pre-existing, unrelated dynamic — outscores the level record at the same point);
+`web/lib/chart-insights.test.ts`'s existing `fourPointSpec` case updated (its 2021 point, below the
+series mean but not the series minimum, now asserts `belowAverage` instead of the previous, overclaiming
+`recordLow`) plus new title-text assertions in both languages.
