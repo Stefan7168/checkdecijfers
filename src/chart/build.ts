@@ -5,6 +5,12 @@
 //   result shape 'series'      → line chart (B4, B8)
 //   result shape 'comparison'  → bar chart  (docs/03: "chart when
 //                                 trend/comparison")
+//   result shape 'region_set'  → bar chart, sorted by the region-ranking
+//                                 derivation when one exists (#253 Task 5;
+//                                 no ChartSpec.kind value for "horizontal" —
+//                                 the web layer's 'hbar' FORM is a view of a
+//                                 'bar'-kind spec, chart-view-state.ts's
+//                                 hbarFormAllowed)
 //   'single' / 'derived'       → no chart (null) — a lone number or an
 //                                 explicit derivation headline is prose, not
 //                                 a chart, in Phase 0
@@ -53,7 +59,9 @@ function nullNote(cell: ResultCell, multiRegion: boolean, sourceName: string): s
 }
 
 export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
-  if (result.shape !== 'series' && result.shape !== 'comparison') return null;
+  if (result.shape !== 'series' && result.shape !== 'comparison' && result.shape !== 'region_set') {
+    return null;
+  }
   // #64 (session 22, review fix): a non-contiguous explicit enumeration
   // draws NO chart — a connected line across skipped periods would imply a
   // continuity nobody sampled (the R6 renderer draws exactly what the spec
@@ -89,6 +97,28 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
     series.points.push(toPoint(cell));
   }
   const series = [...seriesByRegion.values()];
+
+  // #253 Task 5 (R6 — the renderer draws the spec's own order, it never
+  // invents one): a region_set's bars are sorted by its ranking derivation
+  // when RS1 produced one (a complete set — src/query/derivations.ts
+  // deriveRegionRanking). Each region_set series carries exactly one point
+  // (checked below), so its resultId stands for the whole series. With no
+  // ranking record (an incomplete set — RS1 refused it) the sort is skipped
+  // entirely and the series stay in the result's own cell order — never a
+  // builder-invented fallback ordering.
+  if (result.shape === 'region_set') {
+    const ranking = result.derivations.find(
+      (d): d is Extract<DerivationRecord, { kind: 'max' }> => d.kind === 'max',
+    );
+    if (ranking) {
+      const rankIndex = new Map(ranking.rankingResultIds.map((id, i) => [id, i]));
+      series.sort((a, b) => {
+        const aRank = rankIndex.get(a.points[0]!.resultId) ?? Number.MAX_SAFE_INTEGER;
+        const bRank = rankIndex.get(b.points[0]!.resultId) ?? Number.MAX_SAFE_INTEGER;
+        return aRank - bRank;
+      });
+    }
+  }
 
   // Shape guarantee from the query layer: a comparison is one period across
   // regions. A multi-point series here is a contract break — fail loudly.
