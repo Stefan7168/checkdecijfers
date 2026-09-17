@@ -52,7 +52,10 @@ export function fakeAttribution(overrides: Partial<Attribution> = {}): Attributi
 export function fakeAnswerResponse(opts: {
   body?: string;
   text?: string;
-  shape?: 'single' | 'series' | 'comparison' | 'derived';
+  /** ADR 055: 'region_series' added (task 3's proof-panel region-naming
+   * pin) — 'region_set' stays out until a caller needs it, per the
+   * minimal-widening discipline this fixture already follows. */
+  shape?: 'single' | 'series' | 'comparison' | 'derived' | 'region_series';
   cells?: ResultCell[];
   /** Loosely typed on purpose: consumers that only count derivations may
    * pass stubs; CSV tests pass full DerivationRecord objects. */

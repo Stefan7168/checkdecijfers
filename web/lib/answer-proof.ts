@@ -244,8 +244,19 @@ const UNKNOWN_STEP: AnswerProofStep = {
 /** One "Stap voor stap" entry for a registered derivation. Every numeric
  * value printed here is the derivation's OWN stored field (`.value`,
  * `.netChange`, `.factor`) run through the shared formatter — never
- * recomputed from the cells (R1: "no arithmetic in this module"). */
-function derivationStep(derivation: ShownDerivation, cellsById: Map<string, ResultCell>): AnswerProofStep {
+ * recomputed from the cells (R1: "no arithmetic in this module").
+ *
+ * `multiRegion` (ADR 055 Task 3): true when the result's cells span more
+ * than one region — the only shape that can produce it today is
+ * `region_series`, which registers one `direction`/`first_last` PER region
+ * (src/query/run.ts, MS1). Without it, N regions rendered N textually
+ * identical "Richting van de reeks: …" rows naming no region at all (the
+ * #253/#264 UX-audit pass-3 row 14 gap this task closes) — the fix names the
+ * region straight from the derivation's own bound cells, never a second
+ * lookup into `result.regionSeries`, so a stored row from before that field
+ * existed still reconstructs correctly. A single-region result (ordinary
+ * `series`) is byte-identical to before this change. */
+function derivationStep(derivation: ShownDerivation, cellsById: Map<string, ResultCell>, multiRegion: boolean): AnswerProofStep {
   switch (derivation.kind) {
     case 'difference': {
       const later = cellsById.get(derivation.minuendResultId)!;
@@ -280,9 +291,15 @@ function derivationStep(derivation: ShownDerivation, cellsById: Map<string, Resu
       // 'constructor' resolves through the prototype chain to a function.
       const word: unknown = DIRECTION_WORD_NL[derivation.direction];
       if (typeof word !== 'string') return UNKNOWN_STEP;
+      // ADR 055 Task 3: on a multi-region result, name the region this
+      // record's own cells belong to (checkSingleRegion in derivations.ts
+      // guarantees `first`/`last` share one region), so N regions no longer
+      // render N identical rows. Single-region results are unaffected —
+      // `multiRegion` is false, so `regionPart` is always ''.
+      const regionPart = multiRegion && first.regionLabel !== null ? ` voor ${first.regionLabel}` : '';
       return {
         text:
-          `Richting van de reeks: ${word} van ${first.periodLabel} ` +
+          `Richting van de reeks${regionPart}: ${word} van ${first.periodLabel} ` +
           `tot en met ${last.periodLabel}; netto ${displayDifferenceUnit(derivation.netChange, last.decimals, derivation.unit)}.` +
           monotonicNote,
         technical: ` [cel-id ${derivation.sourceResultIds.join(', ')}]`,
@@ -303,7 +320,16 @@ function derivationStep(derivation: ShownDerivation, cellsById: Map<string, Resu
 }
 
 function buildSteps(result: ValidatedResult, cellsById: Map<string, ResultCell>): { steps: AnswerProofStep[]; marked: boolean } {
-  const derivationSteps = result.derivations.filter(isShownDerivation).map((derivation) => derivationStep(derivation, cellsById));
+  // ADR 055 Task 3: computed from the cells themselves (never from
+  // `result.shape` or `result.regionSeries`, both absent on older stored
+  // rows), so a pre-feature row with, say, a hand-seeded multi-region
+  // 'series' cells array degrades the same honest way. Only the 'direction'
+  // branch above reads this — every other derivation kind is single-cell or
+  // already names its own cells' labels.
+  const multiRegion = new Set(result.cells.map((c) => c.regionCode)).size > 1;
+  const derivationSteps = result.derivations
+    .filter(isShownDerivation)
+    .map((derivation) => derivationStep(derivation, cellsById, multiRegion));
   // Review round 2 (session 74): the "no computation" sentence must agree with
   // the read step above it AND with the answer's own marking line. Every
   // answer without a SHOWN derivation lands here: a single cell; a multi-cell

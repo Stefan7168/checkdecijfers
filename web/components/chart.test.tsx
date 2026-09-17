@@ -1551,6 +1551,117 @@ describe('ChartView — small multiples toggle (idea 8)', () => {
   });
 });
 
+// ADR 055 Task 3 (#253/#264 UX-audit pass-3 row 14): a `region_series`
+// result's ChartSpec is kind: 'line' with MANY points per series (a genuine
+// multi-year time series per region) — never comparison-shaped
+// (isComparisonShaped requires every series to have exactly one point,
+// chart-view-state.ts). Before this task the query/chart layer could never
+// produce such a spec (src/chart/build.ts returned null for the shape), so
+// this multi-point/multi-region combination — as opposed to the
+// one-point-per-series specs `twoSeriesSpec`/`multiRegionBarSpec` above
+// already exercise — had no real chart-layer producer and no pinned test.
+// The rendering machinery itself (legend, small multiples, palette) is
+// entirely generic over `spec.series` and needed NO change; these tests pin
+// that it genuinely reaches a spec shaped like a real region_series answer.
+function threeRegionSeriesLineSpec(): ChartSpec {
+  return spec({
+    kind: 'line',
+    series: [
+      {
+        label: 'Amsterdam',
+        regionCode: 'GM0363',
+        points: [
+          point({ resultId: 'ams-2020', periodCode: '2020', periodLabel: '2020', value: 872757, formattedValue: '872.757' }),
+          point({ resultId: 'ams-2021', periodCode: '2021', periodLabel: '2021', value: 882633, formattedValue: '882.633' }),
+          point({ resultId: 'ams-2022', periodCode: '2022', periodLabel: '2022', value: 903991, formattedValue: '903.991' }),
+        ],
+      },
+      {
+        label: 'Rotterdam',
+        regionCode: 'GM0599',
+        points: [
+          point({ resultId: 'rtd-2020', periodCode: '2020', periodLabel: '2020', value: 651446, formattedValue: '651.446' }),
+          point({ resultId: 'rtd-2021', periodCode: '2021', periodLabel: '2021', value: 655468, formattedValue: '655.468' }),
+          point({ resultId: 'rtd-2022', periodCode: '2022', periodLabel: '2022', value: 662356, formattedValue: '662.356' }),
+        ],
+      },
+      {
+        label: 'Den Haag',
+        regionCode: 'GM0518',
+        points: [
+          point({ resultId: 'dh-2020', periodCode: '2020', periodLabel: '2020', value: 548320, formattedValue: '548.320' }),
+          point({ resultId: 'dh-2021', periodCode: '2021', periodLabel: '2021', value: 552995, formattedValue: '552.995' }),
+          point({ resultId: 'dh-2022', periodCode: '2022', periodLabel: '2022', value: 560498, formattedValue: '560.498' }),
+        ],
+      },
+    ],
+  });
+}
+
+// REGION_SERIES_MAX_REGIONS (src/query/types.ts) is 6 — the largest count the
+// query layer ever hands the chart builder for this shape. Two points each
+// is enough: this test is about colour assignment, not the honesty rules
+// multi-point charts already prove above.
+function sixRegionSeriesLineSpec(): ChartSpec {
+  const labels = ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Groningen'];
+  return spec({
+    kind: 'line',
+    series: labels.map((label, i) => ({
+      label,
+      regionCode: `GM0${100 + i}`,
+      points: [
+        point({ resultId: `${label}-2020`, periodCode: '2020', periodLabel: '2020', value: 100 + i, formattedValue: String(100 + i) }),
+        point({ resultId: `${label}-2021`, periodCode: '2021', periodLabel: '2021', value: 110 + i, formattedValue: String(110 + i) }),
+      ],
+    })),
+  });
+}
+
+describe('ChartView — region_series (ADR 055 task 3): multi-point, multi-region line', () => {
+  it('renders three lines (one per region), the legend lists all three shown, and hide/highlight both work', () => {
+    const { container } = render(<ChartView spec={threeRegionSeriesLineSpec()} />);
+    expect(container.querySelectorAll('.recharts-line-curve').length).toBe(3);
+    for (const name of ['Amsterdam', 'Rotterdam', 'Den Haag']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+    }
+    // Hide (idea 6): hiding Rotterdam drops only ITS points, not the others'.
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(container.querySelector('svg [data-point="value"][data-result-id="rtd-2020"]')).toBeNull();
+    expect(container.querySelector('svg [data-point="value"][data-result-id="ams-2020"]')).not.toBeNull();
+    expect(screen.getByText('1 van 3 reeksen verborgen')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(screen.getByRole('button', { name: 'Rotterdam' })).toHaveAttribute('aria-pressed', 'true');
+
+    // Highlight (#212 series highlight): dims every OTHER series' line,
+    // leaving exactly one (the highlighted one) undimmed.
+    fireEvent.click(screen.getByRole('button', { name: /Markeer Den Haag/ }));
+    expect(container.querySelectorAll('[data-series-dimmed="true"]')).toHaveLength(2);
+  });
+
+  it('offers small multiples — the row-14 bug this task fixes: a region_series answer used to build a spec small multiples could never reach', () => {
+    const { container } = render(<ChartView spec={threeRegionSeriesLineSpec()} />);
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('group', { name: 'Kleine grafieken per reeks' })).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-panel-for]')).toHaveLength(3);
+  });
+
+  it('the whole-card digit scan is clean: every rendered digit traces to a spec string', () => {
+    const s = threeRegionSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('at 6 series (REGION_SERIES_MAX_REGIONS), every line keeps its own distinct palette colour — the comparison-shaped single-colour rule does not apply because each series has more than one point', () => {
+    const s = sixRegionSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const strokes = [...container.querySelectorAll('.recharts-line-curve')].map((el) => el.getAttribute('stroke'));
+    expect(strokes).toHaveLength(6);
+    expect(new Set(strokes).size).toBe(6);
+    expect(strokes).toEqual(DEFAULT_PALETTE.slice(0, 6));
+  });
+});
+
 // Task 3 (line/bar/table form switch) fixtures — self-contained per-spec
 // factories built on the file's own point()/spec() helpers rather than
 // duplicating them, per the plan's "reuse the existing declaration" note.

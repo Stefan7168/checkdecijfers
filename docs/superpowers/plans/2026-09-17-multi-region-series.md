@@ -335,3 +335,117 @@ deviations below are the ones a later task owner needs to know about.
    Each needs re-pointing at a still-refused case (over the cap, or a region
    class), the same edit `tests/query/query.test.ts` took in note 1. Tasks 4 and
    6 own them; nothing in `src/` is wrong.
+
+## As-built notes (task 3)
+
+Built in worktree `s110-mrs3` (branch `s110/mrs3`), on top of Tasks 1–2
+(`s110/mrs12`, merged into this worktree's base). No deviation from the
+plan's file list or done-definition; every test the plan's Task 3 section
+names is in the committed suite.
+
+**Chart builder (`src/chart/build.ts`):** three edits, all in `buildChartSpec`.
+1. The shape gate (`:62` in the plan's line numbers) now admits
+   `'region_series'` alongside the existing three shapes.
+2. The `#64` contiguity gate — previously `result.shape === 'series'` only —
+   now also runs for `'region_series'`. Its cells are period-major/
+   region-minor (N regions × M periods), so the naive `cells.map(c =>
+   c.periodCode)` list repeats each code N times; `contiguousPeriodCodes`
+   (`src/query/resolve.ts`) already de-duplicates before checking, so no
+   region-aware rewrite was needed — the existing function was already the
+   right shape for this call.
+3. `kind` is `'line'` for `'series'` OR `'region_series'`, `'bar'` otherwise.
+
+Nothing else in the file changed: the group-by-region loop
+(`seriesByRegion`), the `region_set`-only ranking sort (explicitly gated on
+`result.shape === 'region_set'`, so it never runs here), the `multiRegion =
+series.length > 1` flag that already drives both `nullNote`'s region-naming
+and the `trendHeadline` suppression, and the bar-arity/duplicate-period/
+dims-fingerprint guards were all already generic enough to cover this shape
+correctly — confirmed by test, not by inspection alone (see
+`tests/chart/region-series.test.ts`).
+
+**New test file `tests/chart/region-series.test.ts`** (6 tests, hand-built
+`ValidatedResult`s via `tests/chart/helpers.ts`'s `makeCell`/`makeResult` —
+no hermetic DB needed, since `buildChartSpec` reads only `cells`/`shape`/
+`derivations`; Task 2's own `tests/query/region-series-run.test.ts` already
+proves the DB-backed wiring that produces a *real* `region_series` result).
+Covers: kind/series-per-region/order (the row-14 bug, proven by asserting a
+non-null spec where today's code returns `null`); every point's `resultId`
+traceable to its cell; a non-contiguous explicit period enumeration across
+two regions still charts as `null`; a partial region's null cell keeps its
+`nullNotes` line naming region + period + verbatim reason; `trendHeadline`
+absent on a multi-region chart even with a single-region `direction` record
+present; three regions charting three ordered, unsorted series.
+
+**Proof panel (`web/lib/answer-proof.ts`):** the one gap the spec named.
+`derivationStep`'s `direction` case took no region-aware information, so N
+regions produced N textually identical "Richting van de reeks: …" rows.
+Fixed by:
+- A new `multiRegion` boolean, computed once in `buildSteps` from
+  `result.cells` (`new Set(result.cells.map(c => c.regionCode)).size > 1`) —
+  deliberately NOT read from `result.shape` or `result.regionSeries` (both
+  absent on rows stored before this feature and on any hand-built result),
+  so the region-naming degrades the same honest way for every input shape,
+  including a plain `series` result that happens to carry cells from more
+  than one region (structurally shouldn't happen, but the function stays
+  correct either way — belt, not a new assumption).
+- `derivationStep` takes `multiRegion` as a third parameter, used only in the
+  `'direction'` case: `` ` voor ${first.regionLabel}` `` is appended to the
+  Dutch sentence when `multiRegion` is true and the record's own bound cell
+  carries a non-null `regionLabel` (`checkSingleRegion` in
+  `src/query/derivations.ts` already guarantees a `direction` record's
+  source cells share one region, so `first.regionLabel` unambiguously names
+  the whole record). Every other derivation kind (`difference`, `max`,
+  `unit_expansion`) is unaffected — none of them can occur on a
+  `region_series` result today (see the spec's honesty-rule section: no
+  cross-region derivation is ever registered), and their own text already
+  names cells directly.
+- `web/test/fake-answer.ts`'s `fakeAnswerResponse` `shape` union gained
+  `'region_series'` (minimal widening — `'region_set'` was left out, unused
+  by this task).
+
+**Pinned in `web/lib/answer-proof.test.ts`** (new test `(4b)`, 21/21 passing
+in the file): a hand-built two-region `region_series` result (Amsterdam and
+Rotterdam, one real-shaped `direction` derivation each) renders two DISTINCT
+"Richting van de reeks voor \<region\>: …" steps; a regression assertion in
+the same test proves an ordinary single-region `series` result's step text
+is BYTE-IDENTICAL to before this change (no `" voor …"` segment ever
+appears when only one region is present) — the existing test `(4)` above it
+already pins the exact same single-region sentence and was left untouched.
+
+**Pinned in `web/components/chart.test.tsx`** (new describe block "ChartView
+— region_series (ADR 055 task 3)", 4 tests, appended just before the
+existing "Task 3 (line/bar/table form switch) fixtures" comment so as not to
+disturb line-number-sensitive neighbors): a 3-region, 3-year line spec
+renders three `.recharts-line-curve` paths, all three legend toggle buttons
+start shown, hiding one drops only its own points (`data-result-id`) and
+shows the "1 van 3 reeksen verborgen" disclosure, and the highlight control
+(`Markeer <region>`) dims exactly the other two; the small-multiples toggle
+is offered and switches to 3 panels (`[data-panel-for]`) — the row-14 bug,
+proven positively rather than just asserted absent; the whole-card digit
+scan (`scanForUnboundDigits`/`harvestSpecStrings`, both pre-existing local
+helpers in the file) is clean; a 6-series spec (`REGION_SERIES_MAX_REGIONS`)
+keeps 6 distinct `DEFAULT_PALETTE` colours in order — confirming
+`isComparisonShaped` (which requires every series to have exactly one
+point) correctly returns `false` for a genuine multi-point-per-series
+region_series spec, so the comparison-shaped single-palette-colour rule
+(session 110 UX-audit row 11) never fires here. No change was needed in
+`web/components/chart.tsx`, `chart-view-state.ts` or `chart-presentation.ts`
+to make any of this true — verified by test, matching the spec's own claim
+that "web changes actually needed: exactly one, and it is not the chart."
+
+**Verification run (this task only):**
+- `npx vitest run tests/chart/region-series.test.ts --maxWorkers=1` → 6
+  passed, 0 failed.
+- `npx vitest run tests/chart --maxWorkers=1` → 270 passed, 0 failed (17
+  files) — confirms nothing else under `src/chart/` moved.
+- `cd web && npx vitest run lib/answer-proof.test.ts --maxWorkers=1` → 21
+  passed, 0 failed.
+- `cd web && npx vitest run components/chart.test.tsx --maxWorkers=1` → 299
+  passed, 0 failed.
+- `npm run typecheck` (root) → clean, no errors.
+- `cd web && npm run typecheck` → clean, no errors.
+- `npm run audit:verify` was NOT run — this task never touches
+  `src/answer/audit/` (Task 6 owns that), and the dispatch brief scoped this
+  worktree to the targeted commands above; a later session should still run
+  it once before treating the whole plan as done, per Task 5's own note.
