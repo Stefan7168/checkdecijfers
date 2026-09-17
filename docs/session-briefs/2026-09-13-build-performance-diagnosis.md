@@ -563,3 +563,108 @@ brief is scoped never to touch; the 203,156-byte chat/dashboard chunk is a real
 architectural leak (ships to every visitor) but this measurement method can't confirm a real-world
 byte reduction for the one fix tried, and a browser-trace-based follow-up is a separate, explicitly
 scoped task (own build + browser-tool budget), not a "cheap" extension of this pass.
+
+## Landing bundle pass 3 (session 110)
+
+**Task:** two concrete follow-ups from pass 2, each with a named target — Target A (drop the
+381,692-byte zod chunk out of `chart.tsx`'s render path) and Target B (prove, with a real browser
+network trace rather than the manifest-chunk sum, whether `next/dynamic()`-wrapping
+`Dashboard`/`Workspace` in `app/page.tsx` actually reduces anonymous visitors' first load).
+
+**Setup, same as passes 1-2.** Fresh worktree, no `node_modules` at all this time (not even a
+symlink) — a plain `npm ci` at the repo root and inside `web/` (a few minutes each) was all that
+was needed; no Turbopack-across-symlink trap to work around.
+
+**Target A — zod out of the render path.** Read `lib/chart-presentation.ts`'s `overridesSchema`
+(a zod schema built at module load) and every caller of `sanitizeOverrides`: `chart.tsx`
+(`withAccountDefault`/`resolvePresentation`, called unconditionally on every render, including the
+landing's SSR'd gallery chart), `lib/chart-style-context.tsx` (`ChartStyleProvider`'s one-time
+`sanitizeInitial`, signed-in tree only) and `app/chart-style-actions.ts`'s `saveMyChartStyle` (the
+actual write path — untrusted raw browser JSON destined for `user_chart_styles`). Traced every
+input the RENDER-path call sites actually receive: `chart.tsx`'s `state.presentation` (built by
+its own reducer from panel actions, never raw JSON), `accountStyle` from `useChartStyle()` (already
+sanitized once at `ChartStyleProvider` mount), and `gallery.tsx`'s `initialPresentation`
+(`templateById(...).overrides`, a compile-time-typed curated template) — none of them is untrusted
+input by the time it reaches `sanitizeOverrides` on the render path; the write path is the one
+real security boundary.
+
+Applied the brief's option 2: replaced `sanitizeOverrides` in `lib/chart-presentation.ts` with a
+hand-written, zod-free validator with IDENTICAL semantics to the old schema (same 17 keys, same
+enum lists, same "lowercase-then-regex" 6-digit hex rule, same `.strict()` exact-key-set rule per
+`frameBackground` variant — `solid`/`gradient`/`image` each reject any extra or missing key, not
+just a wrong type) — pinned byte-for-byte by the existing `lib/chart-presentation.test.ts` suite,
+which needed ZERO changes and passed 54/54 unchanged. The zod-backed strict version (renamed
+`sanitizeOverridesStrict`, along with its own private copies of `hexSchema`/`frameBackgroundSchema`/
+`overridesSchema`) moved into `app/chart-style-actions.ts` itself — already a `'use server'` Server
+Action module Next.js compiles into a server-only bundle and never ships to the client — so it
+keeps zod as the real allow-list for the one path that actually receives untrusted input. Added a
+new parity test to `app/actions-chart-style.test.ts` (`'the strict write-path sanitiser and the
+render-path sanitiser agree on every fixture'`) that runs 20 fixtures — including every zod-schema
+edge case from the pinned test suite — through both `saveMyChartStyle` (exercising
+`sanitizeOverridesStrict`) and `sanitizeOverrides`, asserting identical results, so the two
+validators can never silently diverge in a future edit. `zod` is no longer imported anywhere in
+`lib/chart-presentation.ts`.
+
+Verified two ways: (1) `.next/server/app/page_client-reference-manifest.js`'s chunk-sum method
+(the one passes 1-2 used) went from the pass-2 baseline's 10 chunks / 1,317,815 bytes to **9
+chunks / 943,345 bytes (-374,470 bytes, -28.4%)** — the missing 381,692-byte zod chunk, confirmed
+by `grep -c ZodError` returning **zero hits across all 9 chunks** (the chart chunk itself still has
+83 `recharts-` hits, confirming the chart SVG path is untouched). (2) The REAL anonymous first-load
+method this pass introduces for Target B (below) was also run against Target-A-only: `next start`
+on port 3123, `curl http://localhost:3123/` as an anonymous visitor, every `<script src="/_next/...">`
+and `<link rel="preload" as="script">` extracted from the served HTML and summed from
+`.next/static/...` on disk — **15 real script/preload tags, 1,496,638 bytes total, zero `ZodError`
+matches across all 15** (this real-network number is higher than the manifest-sum number because
+the manifest-chunk method, as pass 2 itself noted, doesn't capture every chunk the browser actually
+requests — e.g. framework/runtime chunks referenced by the root layout rather than the page's own
+RSC client-reference-manifest; it is still the right relative comparison, and Target A's win shows
+up identically in both methods). `npm run typecheck` clean. Commit:
+`perf(web): drop zod from chart.tsx's render-path import graph (Target A)` (`ed236cb`).
+**Kept.**
+
+**Target B — proving (not guessing) whether `next/dynamic()` on `Dashboard`/`Workspace` helps.**
+Pass 2 tried wrapping both in `next/dynamic()` (no `ssr: false` — they ARE the first-paint content
+for a signed-in visitor) in `app/page.tsx`, saw the crude manifest-sum total barely move, and
+correctly flagged that its own measurement method "cannot detect the real, per-visitor savings a
+route-level `next/dynamic()` split produces" — a browser-trace-based follow-up was left as this
+pass's job. Re-applied the exact same change (`const Dashboard = dynamic(() =>
+import('../components/dashboard.tsx').then((m) => m.Dashboard))`, same for `Workspace`;
+`npm run typecheck` clean) and this time measured with the REAL anonymous-request method above
+instead of the manifest sum: `next start` on port 3123, a fresh anonymous `curl` of `/`, every
+`<script src>`/preload-as-script tag extracted and summed from disk.
+
+**Result: no reduction — confirms pass 2's suspicion, now with hard evidence.** 16 real
+script/preload tags, **1,496,752 bytes total** — 114 bytes MORE than the Target-A-only baseline
+(1,496,638 bytes, 15 tags), not less. Inspecting the actual HTML explains why: Next.js's
+`next/dynamic()` machinery still emits ordinary, unconditional `<script src="..." async>` tags for
+every chunk reachable from the route's dynamic-import graph — e.g. `<script
+src="/_next/static/chunks/0ca1y52n9gfmu.js" async>` was present in the anonymous visitor's own
+served HTML, one of four new chunks (154,138 + 41,617 + 23,878 + 20,941 bytes, replacing the old
+203,156-byte single chunk pass 2 already saw split apart) that the old 203,156-byte
+`Dashboard`/`Workspace`/chat chunk got split into. `next/dynamic()` (at least at `ssr: true`,
+inside a Server Component route, on Next 16.3.4/Turbopack) preloads the chunks it wraps for EVERY
+request to the route regardless of which runtime branch actually renders them — it cannot tell,
+at build time, that the anonymous branch (`userId === null`, returning `<Landing>`) never reaches
+`<Dashboard>`/`<Workspace>` at all. Splitting the code doesn't stop it from being fetched.
+
+Per this task's own instruction — keep only a measured reduction, otherwise revert — reverted with
+`git checkout -- web/app/page.tsx`. Rebuilt (build 3 of the pass's 3-build budget) to confirm a
+clean revert: manifest-chunk sum came back to 9 chunks / 943,342 bytes (3-byte hash noise off the
+943,345 Target-A-only number, the same install-to-install noise passes 1-2 already documented) —
+bit-for-bit equivalent. **Reverted — measurement only, no commit for Target B.**
+
+**Read as a finding:** the real anonymous first-load method this pass built (curl the built app,
+parse the served HTML's own `<script>`/preload tags, sum on-disk sizes) is now the trustworthy
+before/after tool the last two passes' methodology note asked for. It confirms Target A's win in
+both methods and definitively closes pass 2's open question on `next/dynamic()`-wrapping the
+dashboard/workspace branch: it is not a viable lever for `app/page.tsx` as currently structured
+(a single route serving three mutually-exclusive branches from one Server Component) — the
+203,156-byte (now ~240,574-byte, split) chunk is a real architectural leak to anonymous visitors,
+but fixing it needs a structural change (e.g. a genuinely separate route/layout per branch, so
+the anonymous request's OWN module graph never references the client component at all), not a
+`next/dynamic()` wrapper — a separate, larger piece of work, not a "cheap" follow-up.
+
+**Net result: one real keeper.** Target A alone: real anonymous first load 1,496,638 bytes (15
+script/preload tags), zod fully out of `chart.tsx`'s import graph, no behaviour change (54/54 +
+37/37 unit tests, 284/284 `chart.test.tsx`). Target B: proven, not just suspected, to be a dead
+end for this route's current shape — reverted clean.

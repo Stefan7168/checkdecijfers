@@ -8,7 +8,6 @@
 // panel explains. Nothing here ever enters a ChartSpec, buildChartSpec or an
 // audit record — it projects an unchanged server-built spec for display,
 // exactly like windowSpec in chart-view-state.ts.
-import { z } from 'zod';
 import type { ChartForm } from './chart-view-state.ts';
 import type { Lang } from './i18n/messages.ts';
 
@@ -148,32 +147,130 @@ export const HEX_COLOR = /^#[0-9a-f]{6}$/;
 // leak into a CSS string or a Google Fonts URL as syntax.
 export const FONT_FAMILY_NAME = /^[A-Za-z0-9 ]{1,40}$/;
 
-const hexSchema = z.string().transform((s) => s.toLowerCase()).pipe(z.string().regex(HEX_COLOR));
-const frameBackgroundSchema = z.union([
-  z.literal('none'),
-  z.object({ kind: z.literal('solid'), hex: hexSchema }).strict(),
-  z.object({ kind: z.literal('gradient'), from: hexSchema, to: hexSchema }).strict(),
-  z.object({ kind: z.literal('image') }).strict(),
-]);
-const overridesSchema = z.object({
-  lineWidth: z.enum(['thin', 'normal', 'thick', 'extraThick']).optional(),
-  markers: z.enum(['all', 'ends', 'provisionalOnly']).optional(),
-  grid: z.enum(['both', 'horizontal', 'none']).optional(),
-  xLabels: z.enum(['flat', 'tilted']).optional(),
-  axisLines: z.enum(['shown', 'hidden']).optional(),
-  valueLabels: z.enum(['shown', 'hidden']).optional(),
-  zeroBaseline: z.enum(['auto', 'zero']).optional(),
-  areaFill: z.enum(['gradient', 'flat']).optional(),
-  seriesColors: z.record(z.string(), z.unknown()).optional(),
-  fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
-  language: z.enum(['nl', 'en']).nullable().optional(),
-  frameBackground: frameBackgroundSchema.optional(),
-  framePadding: z.enum(['none', 'small', 'medium', 'large']).optional(),
-  frameCorners: z.enum(['square', 'rounded', 'veryRounded']).optional(),
-  frameShadow: z.enum(['none', 'soft', 'strong']).optional(),
-  frameInset: z.enum(['none', 'small', 'large']).optional(),
-  frameAspect: z.enum(['auto', '16:9', '4:5', '1:1', '1.91:1']).optional(),
-});
+// Landing-bundle pass 3 (session 110, docs/session-briefs/2026-09-13-build-
+// performance-diagnosis.md "Target A"): this used to be a zod schema
+// (`overridesSchema`/`frameBackgroundSchema`/`hexSchema`), but `chart.tsx`
+// calls `sanitizeOverrides` (via `withAccountDefault`/`resolvePresentation`)
+// on EVERY chart render, including the anonymous landing's own SSR'd
+// gallery chart — so `zod` (a ~382 KB chunk) shipped to every first-time
+// visitor for a check that, on the render path, only ever re-validates
+// already-well-typed `PresentationOverrides` (panel state, a curated
+// template's `overrides`, or the once-sanitized account-style context
+// value — see chart-style-context.tsx). The untrusted-input case — a raw
+// jsonb blob straight off `user_chart_styles`, or a browser-submitted patch
+// — is the WRITE path (`app/chart-style-actions.ts`'s `saveMyChartStyle`,
+// a `'use server'` action Next.js never bundles into the client), which
+// keeps its own private, zod-backed strict validator
+// (`sanitizeOverridesStrict` in that file) as the actual security boundary.
+// This hand-written validator mirrors that zod schema's exact semantics
+// (same enums, same 6-digit-hex-after-lowercasing rule, same `.strict()`
+// exact-key-set rule per frameBackground variant) — pinned byte-for-byte by
+// the existing `sanitizeOverrides` tests below, which the write path's
+// strict validator is ALSO tested against (chart-style-actions.test.ts) so
+// the two can never quietly diverge. `zod` is no longer imported by this
+// module, so it drops out of `chart.tsx`'s import graph entirely.
+const ENUM_OPTIONS: Partial<Record<PresentationKey, readonly string[]>> = {
+  lineWidth: ['thin', 'normal', 'thick', 'extraThick'],
+  markers: ['all', 'ends', 'provisionalOnly'],
+  grid: ['both', 'horizontal', 'none'],
+  xLabels: ['flat', 'tilted'],
+  axisLines: ['shown', 'hidden'],
+  valueLabels: ['shown', 'hidden'],
+  zeroBaseline: ['auto', 'zero'],
+  areaFill: ['gradient', 'flat'],
+  framePadding: ['none', 'small', 'medium', 'large'],
+  frameCorners: ['square', 'rounded', 'veryRounded'],
+  frameShadow: ['none', 'soft', 'strong'],
+  frameInset: ['none', 'small', 'large'],
+  frameAspect: ['auto', '16:9', '4:5', '1:1', '1.91:1'],
+};
+
+// The full override key set, exactly the keys `ChartPresentation` declares
+// (and the zod schema's old `.shape` keys) — sanitizeOverrides only ever
+// looks at keys named here, so an unknown/extra key on `raw` is ignored the
+// same way an unrecognised zod-schema key would be.
+const OVERRIDE_KEYS: readonly PresentationKey[] = [
+  'lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels',
+  'zeroBaseline', 'areaFill', 'seriesColors', 'fontFamily', 'language',
+  'frameBackground', 'framePadding', 'frameCorners', 'frameShadow',
+  'frameInset', 'frameAspect',
+];
+
+/** A string, lowercased, matching `HEX_COLOR` (6 hex digits after '#') —
+ * the same "transform-then-regex" order the old zod `hexSchema` used, so
+ * '#ABCDEF' passes (lowercases first) but '#abc' (3-digit shorthand) still
+ * fails. null on anything else. */
+function parseHexColor(v: unknown): string | null {
+  if (typeof v !== 'string') return null;
+  const lower = v.toLowerCase();
+  return HEX_COLOR.test(lower) ? lower : null;
+}
+
+/** Mirrors the old `frameBackgroundSchema` union, including each object
+ * variant's `.strict()` — an object with the right `kind` but ANY extra or
+ * missing key is rejected outright, not partially accepted. */
+function parseFrameBackground(v: unknown): FrameBackground | undefined {
+  if (v === 'none') return 'none';
+  if (typeof v !== 'object' || v === null) return undefined;
+  const obj = v as Record<string, unknown>;
+  const keys = Object.keys(obj);
+  if (obj.kind === 'solid' && keys.length === 2 && keys.includes('hex')) {
+    const hex = parseHexColor(obj.hex);
+    return hex !== null ? { kind: 'solid', hex } : undefined;
+  }
+  if (obj.kind === 'gradient' && keys.length === 3 && keys.includes('from') && keys.includes('to')) {
+    const from = parseHexColor(obj.from);
+    const to = parseHexColor(obj.to);
+    return from !== null && to !== null ? { kind: 'gradient', from, to } : undefined;
+  }
+  if (obj.kind === 'image' && keys.length === 1) {
+    return { kind: 'image' };
+  }
+  return undefined;
+}
+
+/** Mirrors the old `z.record(z.string(), z.unknown())` + manual per-index
+ * loop: any plain object passes the outer shape check, then only integer-
+ * string keys with a valid hex value survive into the result. */
+function parseSeriesColors(v: unknown): Record<number, string> | undefined {
+  if (typeof v !== 'object' || v === null) return undefined;
+  const colors: Record<number, string> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (!/^\d+$/.test(k)) continue;
+    const index = Number(k);
+    const hex = parseHexColor(val);
+    if (Number.isInteger(index) && hex !== null) colors[index] = hex;
+  }
+  return colors;
+}
+
+function parseOverrideValue(key: PresentationKey, value: unknown): { ok: true; value: unknown } | { ok: false } {
+  const options = ENUM_OPTIONS[key];
+  if (options) {
+    return typeof value === 'string' && options.includes(value) ? { ok: true, value } : { ok: false };
+  }
+  switch (key) {
+    case 'seriesColors': {
+      const colors = parseSeriesColors(value);
+      return colors !== undefined ? { ok: true, value: colors } : { ok: false };
+    }
+    case 'fontFamily': {
+      if (value === null) return { ok: true, value: null };
+      if (typeof value === 'string' && FONT_FAMILY_NAME.test(value)) return { ok: true, value };
+      return { ok: false };
+    }
+    case 'language': {
+      if (value === null || value === 'nl' || value === 'en') return { ok: true, value };
+      return { ok: false };
+    }
+    case 'frameBackground': {
+      const bg = parseFrameBackground(value);
+      return bg !== undefined ? { ok: true, value: bg } : { ok: false };
+    }
+    default:
+      return { ok: false };
+  }
+}
 
 /** Allow-list parse of anything claiming to be overrides (a reducer patch, a
  * stored row, a URL someday). Unknown keys, wrong enum values, malformed
@@ -182,23 +279,11 @@ export function sanitizeOverrides(raw: unknown): PresentationOverrides {
   if (raw === null || typeof raw !== 'object') return {};
   const out: PresentationOverrides = {};
   // Per-key parse so one bad key doesn't discard its siblings.
-  for (const key of Object.keys(overridesSchema.shape) as PresentationKey[]) {
+  for (const key of OVERRIDE_KEYS) {
     if (!(key in raw)) continue;
-    const parsed = overridesSchema.pick({ [key]: true } as never).safeParse({ [key]: (raw as Record<string, unknown>)[key] });
-    if (!parsed.success) continue;
-    const value = (parsed.data as Record<string, unknown>)[key];
-    if (value === undefined) continue;
-    if (key === 'seriesColors') {
-      const colors: Record<number, string> = {};
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        const index = /^\d+$/.test(k) ? Number(k) : NaN;
-        const hex = hexSchema.safeParse(v);
-        if (Number.isInteger(index) && hex.success) colors[index] = hex.data;
-      }
-      out.seriesColors = colors;
-    } else {
-      (out as Record<string, unknown>)[key] = value;
-    }
+    const parsed = parseOverrideValue(key, (raw as Record<string, unknown>)[key]);
+    if (!parsed.ok) continue;
+    (out as Record<string, unknown>)[key] = parsed.value;
   }
   return out;
 }

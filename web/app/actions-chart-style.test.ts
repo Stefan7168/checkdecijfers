@@ -9,10 +9,11 @@
 // actions-threads.test.ts's convention — but brandfetch.ts's PURE domain
 // rules (normalizeDomain, isFreeMailDomain, pickBrandColours, pickBrandFont)
 // are left real via importOriginal (the trial-actions.test.ts precedent),
-// the same way this file already leaves chart-presentation.ts's
-// sanitizeOverrides real rather than mocking a pure function. chart.tsx
-// (never actions.ts) is the only real consumer, mocked separately in
-// chart.test.tsx.
+// the same way this file already leaves chart-style-actions.ts's own
+// private `sanitizeOverridesStrict` (moved in-file, session 110 landing-
+// bundle pass 3 — see that file's header comment) real rather than mocking
+// a pure function. chart.tsx (never actions.ts) is the only real consumer,
+// mocked separately in chart.test.tsx.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../backend/db/types.ts';
 import type { BrandInfo } from '../backend/chart/brandfetch.ts';
@@ -55,6 +56,7 @@ const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
 
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from './chart-style-actions.ts';
+import { sanitizeOverrides } from '../lib/chart-presentation.ts';
 
 const fakeDb = {} as Db;
 
@@ -85,6 +87,47 @@ describe('saveMyChartStyle', () => {
     await saveMyChartStyle({ lineWidth: 'thick', notARealField: 'x', markers: 'bogus' });
 
     expect(store.saveUserChartStyle).toHaveBeenCalledWith(fakeDb, 'user-1', { lineWidth: 'thick' });
+  });
+
+  // Session 110 landing-bundle pass 3: the write path's private,
+  // zod-backed `sanitizeOverridesStrict` (chart-style-actions.ts) and the
+  // render path's hand-written, zod-free `sanitizeOverrides`
+  // (chart-presentation.ts) MUST agree on every input — they are two
+  // implementations of the same allow-list, split only so `zod` doesn't
+  // reach chart.tsx's client bundle. Run the same fixtures (including the
+  // trickiest zod-schema edge cases: frame-background `.strict()` extra
+  // keys, hex-casing, non-numeric seriesColors keys, nullable
+  // fontFamily/language) through both and require byte-identical results.
+  it('the strict write-path sanitiser and the render-path sanitiser agree on every fixture', async () => {
+    store.saveUserChartStyle.mockResolvedValue({ ok: true });
+    const fixtures: unknown[] = [
+      null,
+      'x',
+      {},
+      { lineWidth: 'huge', grid: 'none', bogus: 1 },
+      { seriesColors: { 0: '#ABCDEF', 1: 'red', x: '#000000' } },
+      { fontFamily: 'Roboto' },
+      { fontFamily: '<script>' },
+      { fontFamily: null },
+      { language: 'en' },
+      { language: 'fr' },
+      { language: 1 },
+      { frameBackground: 'none' },
+      { frameBackground: { kind: 'solid', hex: '#ABCDEF' } },
+      { frameBackground: { kind: 'solid', hex: '#abc' } },
+      { frameBackground: { kind: 'gradient', from: '#fde68a', to: '#f472b6' } },
+      { frameBackground: { kind: 'gradient', from: '#fde68a' } },
+      { frameBackground: { kind: 'image' } },
+      { frameBackground: { kind: 'image', extra: 'nope' } },
+      { framePadding: 'huge' },
+      { frameAspect: '4:5' },
+    ];
+    for (const raw of fixtures) {
+      store.saveUserChartStyle.mockClear();
+      await saveMyChartStyle(raw);
+      const [, , strictResult] = store.saveUserChartStyle.mock.calls[0] ?? [undefined, undefined, undefined];
+      expect(strictResult).toEqual(sanitizeOverrides(raw));
+    }
   });
 
   it('ok: passes the store result straight through, and never touches setAppliedBrand without a brandApplied argument', async () => {
