@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
-import { COMPARISON_HBAR_MAX } from '../lib/chart-view-state.ts';
+import { COMPARISON_HBAR_MAX, HBAR_MAX_HEIGHT_PX, HBAR_ROW_PX } from '../lib/chart-view-state.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { StylePanelOwnerProvider } from '../lib/style-panel-owner.tsx';
@@ -939,6 +939,10 @@ describe('ADR 042 — the designed default renders its literals', () => {
       ],
     });
     const { container } = render(<ChartView spec={cmp} />);
+    // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
+    // on Liggend by default — select Staaf explicitly to exercise its own
+    // baseline before switching to Liggend.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     expect(container.querySelector('.recharts-xAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
     expect(container.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')?.getAttribute('stroke')).toBe('var(--border)');
@@ -982,6 +986,10 @@ describe('ADR 042 — the designed default renders its literals', () => {
       ],
     });
     const { container } = render(<ChartView spec={cmp} />);
+    // Session 110 pass 3 row 1: a 2-series comparison-shaped spec now opens
+    // on Liggend by default — select Staaf explicitly to check its own
+    // grid before switching to Liggend.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     const barLine = container.querySelector('.recharts-cartesian-grid-horizontal line')!;
     expect(barLine.getAttribute('stroke-dasharray')).toBeNull();
     expect(barLine.getAttribute('stroke-opacity')).toBe('0.5');
@@ -1112,6 +1120,56 @@ describe('ADR 042 — height follows width once measured', () => {
     expect(after.style.height).toBe('');
     expect(after.className).toContain('h-full');
   });
+
+  // Session 110 pass 3 row 3: an hbar chart draws one category (region) row
+  // per series at a roughly fixed pitch (26 bars collided their labels at
+  // the plain 256px floor in the audit repro) — its height now grows with
+  // the series count, on top of whatever the width-based rule already gave
+  // it, capped at HBAR_MAX_HEIGHT_PX. Every other form is untouched (the
+  // 700→360/400→256 test above already pins that for a non-hbar spec).
+  it('an hbar chart grows past the width-based height once its own series count needs more row space', () => {
+    const s = regionSetBarSpec(26); // comparison-shaped -> defaults to hbar; 26 * HBAR_ROW_PX = 520
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect; // chartHeightForWidth(700) = 360, smaller than 520
+    fireResize(panel);
+    expect(panel.style.height).toBe(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.className).not.toContain('h-64');
+  });
+
+  it('an hbar chart with few regions keeps the plain width-based height — the row floor never SHRINKS it', () => {
+    const s = multiRegionBarSpec(); // 3 series, defaults to hbar; 3 * HBAR_ROW_PX = 60, well under 360
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
+    fireResize(panel);
+    expect(panel.style.height).toBe('360px');
+  });
+
+  it('an hbar chart already carries its row-based height BEFORE the first measurement — never flashes the plain 256px floor', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toBe(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.className).not.toContain('h-64');
+  });
+
+  it('an hbar chart height is capped at HBAR_MAX_HEIGHT_PX however many series it is handed (via an explicit override, past COMPARISON_HBAR_MAX)', () => {
+    const s = regionSetBarSpec(COMPARISON_HBAR_MAX + 50);
+    const { container } = render(<ChartView spec={s} initialFormOverride="hbar" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toBe(`${HBAR_MAX_HEIGHT_PX}px`);
+  });
+
+  it('embedMode wraps the hbar row-based height in the same frame-relative min(), never a bare px floor', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} embedMode embedFooter="x" />);
+    const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
+    expect(panel.style.height).toContain('min(');
+    expect(panel.style.height).toContain(`${26 * HBAR_ROW_PX}px`);
+    expect(panel.style.height).toContain('dvh');
+  });
+
   it('the export container carries the entrance utilities, with the reduced-motion opt-out', () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
@@ -3499,6 +3557,11 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
 
   it('S3: arrow-key order skips the disabled Lijn/Vlak tabs entirely (Staaf -> Liggend -> Tabel -> Staaf)', () => {
     render(<ChartView spec={multiRegionBarSpec()} />);
+    // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
+    // it now OPENS on Liggend by default (not Staaf) — select Staaf first
+    // to make it the active form, then drive the same arrow-key traversal
+    // this test always intended.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     const barTab = screen.getByRole('tab', { name: 'Staaf' });
     barTab.focus();
     fireEvent.keyDown(barTab, { key: 'ArrowRight' });
@@ -3879,6 +3942,15 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
 
   it('a comparison story highlights the highest bar', () => {
     const { container } = render(<ChartView spec={multiRegionBarSpec()} />);
+    // Session 110 pass 3 row 1: multiRegionBarSpec is comparison-shaped, so
+    // it now opens on Liggend by default. The Liggend (hbar) form draws all
+    // regions through one shared <Bar dataKey="value"> (RegionBar), which
+    // does not wire per-series highlight/dim the way the vertical Staaf
+    // form's per-series <Bar> elements do — out of scope for this fix
+    // (row 1 is the default-form rule only). Select Staaf explicitly so
+    // this story-highlighting test keeps exercising the form it always
+    // meant to.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
     fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
     expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toHaveTextContent('Friesland: 20 %');

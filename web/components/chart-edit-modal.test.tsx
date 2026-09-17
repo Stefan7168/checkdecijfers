@@ -89,4 +89,36 @@ describe('ChartEditModal', () => {
     );
     expect(screen.getByRole('dialog').className).toMatch(/\bp-6\b/);
   });
+
+  // Session 110 UX audit pass 3, row 7: the shell's own × used to be a
+  // hardcoded English "Close" regardless of language — every Dutch-UI modal
+  // (this shell's own Style/Embed content included) announced "Close" as
+  // its last accessible name. With no `closeLabel` given and no
+  // LangProvider above it (this file's own convention, like every other
+  // test here), DialogContent's ambient useT() falls back to its context
+  // default ('nl', lang-provider.tsx) — proving the fix actually localizes
+  // it, not just that it still reads "Close" by coincidence.
+  it('the × close control reads the localized common.close label by default (no LangProvider: falls back to the nl context default)', () => {
+    render(
+      <ChartEditModal open onClose={() => {}} title="Chart style" chartSlot={<p>chart</p>}>
+        <p>controls</p>
+      </ChartEditModal>,
+    );
+    expect(screen.getByRole('button', { name: 'Sluiten' })).toBeInTheDocument();
+  });
+
+  // chart.tsx and chart-embed-dialog.tsx both resolve `title` via their own
+  // explicit `t(lang, …)` call (no ambient LangProvider dependency, by
+  // design — see chart-embed-dialog.tsx's header comment) and must be able
+  // to do the exact same thing for the × — this is the plumbing that lets
+  // them.
+  it('an explicit closeLabel overrides the ambient default, matching how those callers already resolve `title`', () => {
+    render(
+      <ChartEditModal open onClose={() => {}} title="Chart style" closeLabel="Close" chartSlot={<p>chart</p>}>
+        <p>controls</p>
+      </ChartEditModal>,
+    );
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sluiten' })).toBeNull();
+  });
 });

@@ -40,6 +40,7 @@ export function ChartEditModal({
   open,
   onClose,
   title,
+  closeLabel,
   chartSlot,
   children,
 }: {
@@ -55,6 +56,18 @@ export function ChartEditModal({
    * so a visible title reads as one header over the whole popup, not
    * squeezed into the chart column alone. */
   title: ReactNode;
+  /** Session 110 UX audit pass 3, row 7: forwarded verbatim to
+   * DialogContent's own `closeLabel` — optional, so a caller with no
+   * language of its own to thread (there is none today) can still omit it
+   * and fall back to DialogContent's ambient-context default. Both of this
+   * shell's real callers (chart.tsx, chart-embed-dialog.tsx) already resolve
+   * `title` via their own explicit `t(lang, …)` call above; passing the same
+   * resolved `t(lang, 'common.close')` here keeps the × in the SAME
+   * language as everything else those callers render, exactly like `title`
+   * already does, rather than relying on an ambient LangProvider those
+   * callers deliberately don't depend on (see chart-embed-dialog.tsx's own
+   * header comment on that convention). */
+  closeLabel?: string;
   /** Left pane (top on phone): the live chart (+ legend) — chart.tsx's own
    * lifted canvas/legend/notes, the exact same rendered output shown in
    * the dock, relocated here rather than duplicated (see the file header). */
@@ -73,6 +86,7 @@ export function ChartEditModal({
     >
       <DialogContent
         aria-modal="true"
+        closeLabel={closeLabel}
         className="grid max-h-[calc(100vh-2rem)] w-full max-w-[calc(100%-2rem)] grid-cols-1 gap-4 overflow-y-auto p-6 sm:max-w-2xl sm:p-8 lg:max-h-[85vh] lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-visible"
       >
         <DialogTitle className="lg:col-span-2">{title}</DialogTitle>

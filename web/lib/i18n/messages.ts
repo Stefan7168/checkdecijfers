@@ -33,6 +33,14 @@ const nl = {
   // Shared across surfaces (dataset-chat.tsx, workspace.tsx) — same literal
   // string, same meaning, so ONE key rather than three near-duplicates.
   'common.sessionExpired': 'Je sessie is verlopen. Vernieuw de pagina.',
+  // Session 110 UX audit pass 3, row 7: components/ui/dialog.tsx's generic
+  // × close control (shared by every modal that doesn't set its own
+  // showCloseButton copy) hardcoded the English word "Close" regardless of
+  // language — so in the Dutch UI every modal's last accessible name
+  // announced "Close". One shared key (not a chart.*-scoped one like
+  // chart.panel.close/chart.embed.close above) because dialog.tsx is the
+  // generic shadcn primitive, used by dialogs outside the chart surfaces too.
+  'common.close': 'Sluiten',
 
   // chat.tsx (the CBS chat loop). Task 2 (WP218 phase 4, #219).
   'chat.placeholder': 'Stel een vraag…',
@@ -950,6 +958,7 @@ const en: Messages = {
   'header.balance': '{n} credits',
 
   'common.sessionExpired': 'Your session has expired. Please refresh the page.',
+  'common.close': 'Close',
 
   'chat.placeholder': 'Ask a question…',
   'chat.send': 'Send',

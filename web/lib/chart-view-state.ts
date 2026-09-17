@@ -53,26 +53,62 @@ export function isComparisonShaped(spec: Pick<ChartSpec, 'series'>): boolean {
  * value labels exactly as before, it is just offered as a chart at all. */
 export const COMPARISON_HBAR_MAX = 40;
 
+/** Session 110 pass 3 row 3: a horizontal bar chart draws one category
+ * (region) row per series on its own y-axis, at a roughly fixed row pitch —
+ * a chart height that only follows the CARD'S WIDTH (chart-presentation.ts's
+ * `chartHeightForWidth`) leaves that pitch shrinking as more regions are
+ * added, which is exactly why the 26-gemeente chart's row pitch (8.1 px)
+ * collided with its own 13 px label text (session 110 UX audit pass 3, row
+ * 3 repro). ~20 px per row is comfortably taller than a 13 px label. */
+export const HBAR_ROW_PX = 20;
+
+/** The tallest an hbar chart is ever allowed to grow to, however many
+ * series it is actually handed — `COMPARISON_HBAR_MAX` rows at
+ * `HBAR_ROW_PX` each (800px). `defaultFormFor` never OFFERS hbar above
+ * `COMPARISON_HBAR_MAX` series, but an explicit `initialFormOverride` (the
+ * embed route's own escape hatch) can still hand hbar a spec with more —
+ * this cap is enforced here independently rather than assumed from that
+ * gate. */
+export const HBAR_MAX_HEIGHT_PX = HBAR_ROW_PX * COMPARISON_HBAR_MAX;
+
+/** Session 110 pass 3 row 3: the hbar form's own height floor, applied ON
+ * TOP OF whatever height the width-based rule already produced
+ * (`baseHeightPx` — chart.tsx's own `chartHeightForWidth` result, or its
+ * unmeasured 256px floor) — never below it, since a comparison with few
+ * regions is already well served by the width-based height alone. This
+ * function only ever GROWS `baseHeightPx`, capped at `HBAR_MAX_HEIGHT_PX`;
+ * it has no effect on any other form (chart.tsx calls it only when the
+ * currently active form is 'hbar'), so bar/line/area heights are completely
+ * untouched by its existence. */
+export function hbarChartHeight(seriesCount: number, baseHeightPx: number): number {
+  return Math.max(baseHeightPx, Math.min(seriesCount * HBAR_ROW_PX, HBAR_MAX_HEIGHT_PX));
+}
+
 /** #229 (ADR 041 addendum, session 110) + the session 110 many-region-
- * comparison fix: which form `spec` opens on by default, independent of
- * whatever form a viewer currently has selected — the same calc chart.tsx's
- * own `initialForm` uses for a spec's INITIAL render. Above BAR_LABEL_MAX
- * series, a comparison-shaped spec (isComparisonShaped) that is still
- * within COMPARISON_HBAR_MAX regions and allowed to render as a horizontal
- * bar (hbarFormAllowed) opens on 'hbar' — every label is readable on the
- * category axis, so "no chart at all" (the old blanket fall-back to Tabel)
- * was needlessly pessimistic for e.g. a provincie's ~26 gemeenten. Every
- * other case is exactly the pre-session-110 rule: Tabel above
- * BAR_LABEL_MAX, else the spec's own `kind`. Single source of truth — the
- * Embed dialog (chart-embed-dialog.tsx) asks the same question about the
- * publisher's spec without mounting a ChartView, and there is exactly one
- * place this threshold is compared against, never a second, independently-
- * typed copy that could silently drift from the real rule. */
+ * comparison fix, REVISED session 110 pass 3 row 1: which form `spec` opens
+ * on by default, independent of whatever form a viewer currently has
+ * selected — the same calc chart.tsx's own `initialForm` uses for a spec's
+ * INITIAL render. A comparison-shaped spec (isComparisonShaped — every
+ * series exactly one point, ≥2 series) that is allowed to render as a
+ * horizontal bar (hbarFormAllowed) now opens on 'hbar' AT EVERY SERIES
+ * COUNT, not only above BAR_LABEL_MAX: a vertical bar names no region on
+ * its axis and its value labels start overlapping well below 15 series
+ * (pass 3's own 12-province repro), while a horizontal bar puts every
+ * region on the category axis regardless of count. Above COMPARISON_HBAR_MAX
+ * regions even a horizontal bar stops being a usable chart, so it falls
+ * back to Tabel there. A spec that is NOT comparison-shaped (a genuine time
+ * series, however many series or points) is completely untouched by this
+ * branch and keeps the pre-existing rule: Tabel above BAR_LABEL_MAX, else
+ * the spec's own `kind`. Single source of truth — the Embed dialog
+ * (chart-embed-dialog.tsx) asks the same question about the publisher's
+ * spec without mounting a ChartView, and there is exactly one place this
+ * threshold is compared against, never a second, independently-typed copy
+ * that could silently drift from the real rule. */
 export function defaultFormFor(spec: Pick<ChartSpec, 'kind' | 'series'>): ChartForm {
+  if (isComparisonShaped(spec) && hbarFormAllowed(spec)) {
+    return spec.series.length <= COMPARISON_HBAR_MAX ? 'hbar' : 'table';
+  }
   if (spec.series.length > BAR_LABEL_MAX) {
-    if (isComparisonShaped(spec) && spec.series.length <= COMPARISON_HBAR_MAX && hbarFormAllowed(spec)) {
-      return 'hbar';
-    }
     return 'table';
   }
   return spec.kind;

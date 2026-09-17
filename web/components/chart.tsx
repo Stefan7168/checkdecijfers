@@ -115,6 +115,9 @@ import {
   defaultFormFor,
   defaultFormIsTable,
   fallbackForm,
+  // Session 110 pass 3 row 3: the hbar row-height floor — see its own
+  // comment in chart-view-state.ts.
+  hbarChartHeight,
   hbarFormAllowed,
   initialViewState,
   lineFormAllowed,
@@ -1874,7 +1877,24 @@ export function ChartView({
   // the h-64 floor, so SSR/jsdom render exactly as before.
   const autoHeight = pres.frameAspect === 'auto' && !(smallMultiples && smallMultiplesAvailable) && state.form !== 'table';
   const measuredWidth = useElementWidth(chartContainerRef, autoHeight);
-  const autoHeightPx = autoHeight && measuredWidth > 0 ? chartHeightForWidth(measuredWidth) : null;
+  const widthHeightPx = autoHeight && measuredWidth > 0 ? chartHeightForWidth(measuredWidth) : null;
+  // Session 110 pass 3 row 3: the hbar form draws one category (region) row
+  // per series at a roughly fixed pitch, so a chart height that only
+  // follows the card's WIDTH leaves that pitch shrinking as more regions
+  // are added — the exact collision the session-110 UX audit found at 26
+  // gemeenten (row 3). `hbarChartHeight` only ever GROWS whatever the
+  // width-based rule already produced (or its unmeasured 256px floor), so a
+  // comparison with few regions is unaffected; every other form (bar, line,
+  // area) passes straight through as `widthHeightPx`, completely unchanged.
+  // Deliberately keyed on the unmeasured 256px floor too (not only once
+  // `widthHeightPx` is non-null) so a many-region hbar chart never flashes
+  // a cramped default height for one paint before the first
+  // ResizeObserver callback lands.
+  const autoHeightPx = !autoHeight
+    ? null
+    : activeForm === 'hbar'
+      ? hbarChartHeight(spec.series.length, widthHeightPx ?? CHART_MIN_HEIGHT_PX)
+      : widthHeightPx;
   // This is the one Hook `pres` feeds, so it must run unconditionally on
   // every render — ABOVE the schemaVersion guard below, which a live spec
   // swap on this same mounted instance (see the specIdentity block above)
@@ -3559,6 +3579,11 @@ export function ChartView({
             document.getElementById(styleTriggerId)?.focus();
           }}
           title={t(chartLang, 'chart.panel.regionLabel')}
+          // Session 110 UX audit pass 3, row 7: resolved via chartLang,
+          // matching `title` right above it — never the ambient
+          // LangProvider this file's own `t(chartLang, …)` convention
+          // deliberately doesn't depend on.
+          closeLabel={t(chartLang, 'common.close')}
           chartSlot={
             <>
               {canvasNode}
