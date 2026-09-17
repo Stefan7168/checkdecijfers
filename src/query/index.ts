@@ -7,6 +7,6 @@ export type { EchoAvailability, EchoServability } from './dry-run.ts';
 export { resolveIntent, enumeratePeriods, periodKey, contiguousPeriodCodes } from './resolve.ts';
 export type { ResolvedQuery, ResolveOutcome, QueryOptions } from './resolve.ts';
 export { NATIONAL_REGION_CODE } from './resolve.ts';
-export { resolveRegionSet } from './region-set.ts';
+export { resolveRegionSet, REGION_SET_MAX_MEMBERS, NOT_APPLICABLE_ATTRIBUTE } from './region-set.ts';
 export type { RegionSetOutcome } from './region-set.ts';
 export * from './types.ts';

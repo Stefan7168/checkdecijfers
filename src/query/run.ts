@@ -7,7 +7,14 @@
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
 import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
-import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
+import {
+  deriveDifference,
+  deriveDirection,
+  deriveFirstLast,
+  deriveMax,
+  deriveRegionRanking,
+  deriveUnitExpansion,
+} from './derivations.ts';
 import { NOT_APPLICABLE_ATTRIBUTE, REGION_SET_MAX_MEMBERS } from './region-set.ts';
 import {
   NATIONAL_REGION_CODE,
@@ -459,6 +466,7 @@ export async function runQuery(
   const missing: string[] = [];
   let servedRegionCodes = q.regionCodes;
   let applicableCount = q.regionCodes.length;
+  let coverage: RegionSetCoverage | null = null;
   if (regionSetScope !== null) {
     const periodCode = q.periodCodes[0]!;
     const served: string[] = [];
@@ -502,6 +510,17 @@ export async function runQuery(
       );
     }
     servedRegionCodes = served;
+    coverage = {
+      scope: regionSetScope.scope,
+      rosterSize: q.regionCodes.length + regionSetScope.excludedBySlice.length,
+      notApplicable,
+      withheld,
+      missing,
+      // RS1, mechanised: `Impossible` members do NOT break completeness (CBS
+      // states they are not members at this coordinate); a withheld or unknown
+      // member does, because either could have been the maximum.
+      complete: withheld.length === 0 && missing.length === 0,
+    };
   }
 
   // --- Build ordered, labeled cells ------------------------------------------
@@ -553,10 +572,14 @@ export async function runQuery(
   if (regionSetScope !== null) {
     // #253 / RS1: a region set NEVER routes through deriveMax — that function
     // knows nothing about coverage and would happily rank a set with withheld
-    // or missing members. The ranking for this shape comes from
-    // deriveRegionRanking, which refuses unless coverage is complete (added in
-    // the next task); until then a region set carries no ranking derivation at
-    // all, which is the fail-closed direction.
+    // or missing members. deriveRegionRanking is the coverage-aware gate, and
+    // it REFUSES on an incomplete set. A refusal here is deliberately NOT a
+    // query refusal (the owner's decision: answer the set, drop the ranking
+    // claim): the record is simply absent, so a superlative has nothing to
+    // bind to and R9 fails it closed. This is why the whole rule needs no
+    // string filtering anywhere.
+    const ranking = deriveRegionRanking(cells, coverage!, q.derivation === 'max');
+    if (ranking.ok) derivations.push(ranking.record);
   } else if (q.derivation === 'difference') {
     const derived = deriveDifference(cells);
     if (!derived.ok) return refuse(intent, 'derivation_failed', derived.reason, { axis: 'derivation' });
@@ -664,21 +687,6 @@ export async function runQuery(
             ? 'comparison'
             : 'single';
 
-  const coverage: RegionSetCoverage | null =
-    regionSetScope === null
-      ? null
-      : {
-          scope: regionSetScope.scope,
-          rosterSize: q.regionCodes.length + regionSetScope.excludedBySlice.length,
-          notApplicable,
-          withheld,
-          missing,
-          // RS1, mechanised: `Impossible` members do NOT break completeness
-          // (CBS states they are not members at this coordinate); a withheld
-          // or unknown member does, because either could have been the
-          // maximum.
-          complete: withheld.length === 0 && missing.length === 0,
-        };
 
   return {
     ok: true,

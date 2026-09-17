@@ -12,7 +12,7 @@
 //   every multi-region comparison gets a non-explicit `max`, so honest trend /
 //   ranking / comparison sentences have a registered derivation to bind to
 //   (R9) — added automatically by run.ts, never on demand by the LLM.
-import { DERIVED_DATA_MARKING, type DerivationRecord, type ResultCell } from './types.ts';
+import { DERIVED_DATA_MARKING, type DerivationRecord, type RegionSetCoverage, type ResultCell } from './types.ts';
 import { contiguousPeriodCodes } from './resolve.ts';
 
 export type DerivationResult =
@@ -120,6 +120,46 @@ export function deriveMax(cells: ResultCell[], explicit: boolean): DerivationRes
       rankingResultIds: ranked.map((c) => c.resultId),
     },
   };
+}
+
+/** #253 / **RS1** — the ranking over a region CLASS ("welke gemeente had de
+ * hoogste …"), and the mechanism that makes the honesty rule enforceable
+ * rather than editorial.
+ *
+ * RS1: a region-set answer may use ranking or superlative language only when
+ * the set is COMPLETE for the class — zero withheld members, zero missing
+ * ones. Members CBS itself marks `Impossible` do not break completeness: CBS
+ * is stating they are not members at that coordinate, not hiding a number.
+ *
+ * The rule is enforced by the ABSENCE of a derivation record, never by
+ * filtering superlatives out of prose: with an incomplete set this function
+ * returns `{ ok: false }`, so no `max`-family DerivationRecord exists, and
+ * R9's post-generation check already fails closed on a ranking word with no
+ * registered derivation behind it. That is strictly stronger than a caveat
+ * sentence — a withheld value could BE the maximum, so "de hoogste" would be a
+ * claim the data cannot support (principle (c)).
+ *
+ * Reuses deriveMax's existing `max` record (no new DerivationRecord kind, no
+ * IntentDerivation change — ADR 052's reasoning, applied again), including its
+ * refusal on a tie and its null-source guard. */
+export function deriveRegionRanking(
+  cells: ResultCell[],
+  coverage: RegionSetCoverage,
+  /** True only when the intent literally asked for the ranking ("welke … de
+   * hoogste"); false for the automatic pre-registration that exists so honest
+   * ranking prose has something to bind to, exactly like the comparison max. */
+  explicit = false,
+): DerivationResult {
+  if (!coverage.complete) {
+    const gaps = [
+      coverage.withheld.length > 0 ? `${coverage.withheld.length} withheld (${coverage.withheld.join(', ')})` : null,
+      coverage.missing.length > 0 ? `${coverage.missing.length} missing (${coverage.missing.join(', ')})` : null,
+    ].filter((part): part is string => part !== null);
+    return refuse(
+      `the region class "${coverage.scope.kind}" is not complete — ${gaps.join(' and ')} of ${coverage.rosterSize} member(s); a ranking over an incomplete set would be a claim the data cannot support`,
+    );
+  }
+  return deriveMax(cells, explicit);
 }
 
 /** Pre-registered on every series (R9): net direction over the period-ordered
