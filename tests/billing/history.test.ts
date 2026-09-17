@@ -18,8 +18,16 @@ import { describe, expect, it } from 'vitest';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { getQuestionHistory } from '../../src/billing/history.ts';
-import { compensate, debitWebSearch, getActionClassPrice, reserveOnboardingDebit } from '../../src/billing/ledger.ts';
+import {
+  compensate,
+  debitWebSearch,
+  deriveAddonRequestId,
+  getActionClassPrice,
+  reserveOnboardingDebit,
+  reserveWebSearchDebit,
+} from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
+import { debitBucket, grantBucket } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createPendingRequest, finalizeDelivered, finalizeFailed } from '../../src/ingestion/onboarding-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -84,6 +92,23 @@ async function insertAuditRow(
     ],
   );
   return Number(rows[0]!.id);
+}
+
+/** #246: an active Pro subscription row, exactly as tests/billing/ledger-split.test.ts
+ * seeds one (that file's own doc comment: "as the customer.subscription.*
+ * webhook handlers will write it" -- inserted directly here so this file
+ * stays independent of the Stripe plumbing). Once this row exists,
+ * chargeAndRun's own reserveDebit call (src/billing/gate.ts) picks up
+ * `grantId` via getCurrentGrantId and spends the bucket FIRST through
+ * splitDebit -- no separate wiring needed in these tests, exercising the
+ * exact production path #246 is about. */
+async function seedSubscription(db: Db, userId: string, grantId: string): Promise<void> {
+  await db.query(
+    `insert into pro_subscriptions
+       (user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end, current_period_grant_id)
+     values ($1, $2, $3, 'active', now() + interval '20 days', $4)`,
+    [userId, `cus_${randomUUID()}`, `sub_${randomUUID()}`, grantId],
+  );
 }
 
 describe('getQuestionHistory — reconstruction matches what the gate actually charged', () => {
@@ -996,6 +1021,292 @@ describe('getQuestionHistory — web-search add-on (WP129+130, migration 018)', 
       // debit is attributed to the reply turn's request_id alone, so it is
       // never double-counted across the pair.
       expect(entry!.creditsCharged).toBe(clarifyGated.netCost + replyGated.netCost + webPrice);
+    });
+  });
+});
+
+// #246 (open-questions #246, session 109): getQuestionHistory's creditsCharged
+// used to read ONLY credit_transactions. A fully Pro-bucket-funded turn's
+// ONLY trace is a pro_bucket_ledger row (splitDebit, src/billing/ledger.ts,
+// never writes credit_transactions when the whole charge came from the
+// bucket), so that turn showed creditsCharged: null on the dashboard; a SPLIT
+// debit (part bucket, part ledger) under-reported (only the ledger portion
+// summed). These tests drive the REAL chargeAndRun/reserveWebSearchDebit/
+// splitDebit primitives against a seeded Pro subscription + bucket grant —
+// the same "consistency, not arithmetic" posture the rest of this file uses.
+describe('getQuestionHistory — Pro bucket cost display (#246 fix, session 109)', () => {
+  it('FULLY bucket-funded turn: creditsCharged is the real netCost, not null (the #246 bug)', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      // A generous bucket grant and ZERO permanent signup credits: the whole
+      // question debit is forced through the bucket (fromLedger === 0), so
+      // credit_transactions gets NO row for this request_id at all -- the
+      // exact shape that produced a null caption before this fix.
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+
+      // Confirm the premise: no credit_transactions row exists for this debit.
+      const { rows: ledgerRows } = await db.query(
+        `select count(*)::int as n from credit_transactions where user_id = $1 and request_id = $2`,
+        [userId, requestId],
+      );
+      expect(Number(ledgerRows[0]!.n)).toBe(0);
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      expect(entry!.creditsCharged).not.toBeNull();
+      expect(entry!.creditsCharged).toBe(gated.netCost);
+    });
+  });
+
+  it('SPLIT debit (bucket covers PART, ledger the rest): creditsCharged sums both legs', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const questionPrice = await getActionClassPrice(db, 'simple');
+      const bucketShare = Math.min(5, questionPrice - 1); // strictly partial
+      await grantBucket(db, userId, grantId, bucketShare, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+
+      const { rows: ledgerRows } = await db.query(
+        `select count(*)::int as n from credit_transactions where user_id = $1 and request_id = $2 and reason = 'question_cost'`,
+        [userId, requestId],
+      );
+      const { rows: bucketRows } = await db.query(
+        `select count(*)::int as n from pro_bucket_ledger where user_id = $1 and request_id = $2 and reason = 'debit'`,
+        [userId, requestId],
+      );
+      // Confirm the premise: BOTH tables actually carry a leg of this debit.
+      expect(Number(ledgerRows[0]!.n)).toBe(1);
+      expect(Number(bucketRows[0]!.n)).toBe(1);
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      // Pre-#246 this would have shown only the ledger leg (questionPrice -
+      // bucketShare); the fix must report the FULL netCost, both legs summed.
+      expect(entry!.creditsCharged).toBe(gated.netCost);
+    });
+  });
+
+  it('bucket-funded REFUSAL: the compensation nets the bucket debit back to 0', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'refusal',
+        question: 'Wat is de kleur van de lucht op Mars?',
+        finalText: 'Dat kan ik niet beantwoorden.',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'refusal', reason: 'out_of_scope', question: 'x', text: 'x' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      expect(gated.netCost).toBe(0);
+
+      const { rows: compRows } = await db.query(
+        `select count(*)::int as n from pro_bucket_ledger where user_id = $1 and reason = 'compensation'`,
+        [userId],
+      );
+      expect(Number(compRows[0]!.n)).toBe(1); // confirm the premise: a bucket refund really happened
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      expect(entry!.creditsCharged).toBe(0);
+    });
+  });
+
+  it('KEPT websearch add-on funded from the bucket: creditsCharged sums the base + the add-on\'s bucket leg', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland? (met internet)',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      // reserveWebSearchDebit is the REAL production entry point (ADR 032 +
+      // Task 6, #205) -- it derives its own bucket-side id internally via
+      // deriveAddonRequestId(requestId, 'websearch') and spends the bucket
+      // first, exactly like the base question debit above.
+      const reservation = await reserveWebSearchDebit(db, userId, requestId, webPrice);
+      if (reservation.kind !== 'debited') throw new Error(`expected debited, got ${reservation.kind}`);
+
+      // Confirm the premise: the add-on's bucket leg landed under the
+      // DERIVED id, not the plain request_id (which the base debit already
+      // owns) -- the exact wrinkle open-questions #246 calls out.
+      const addonBucketId = deriveAddonRequestId(requestId, 'websearch');
+      const { rows: addonBucketRows } = await db.query(
+        `select count(*)::int as n from pro_bucket_ledger where user_id = $1 and request_id = $2 and reason = 'debit'`,
+        [userId, addonBucketId],
+      );
+      expect(Number(addonBucketRows[0]!.n)).toBe(1);
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      expect(entry!.creditsCharged).toBe(gated.netCost + webPrice);
+    });
+  });
+
+  it('a dataset add-on\'s bucket leg (derived id) is matched too, exercising the general mechanism', async () => {
+    // **Assumption** (mirrored in docs/open-questions.md #246): in TODAY's
+    // production flow a dataset-chat turn (askDataset) never shares a
+    // request_id with a CBS audit_answers row -- dataset turns live entirely
+    // in dataset_turns (src/billing/dataset-gate.ts), never audit_answers,
+    // so getQuestionHistory never actually encounters a 'dataset_cost' debit
+    // in practice today. This test exercises the QUERY MECHANISM directly
+    // (seeding a pro_bucket_ledger 'debit' row under
+    // deriveAddonRequestId(requestId, 'dataset') via the same debitBucket
+    // primitive splitDebit itself calls, bypassing the higher-level
+    // dataset-chat flow), proving getQuestionHistory's matching is generic
+    // across BOTH add-on kinds -- exactly as ledger.ts's deriveAddonRequestId
+    // doc comment and open-questions #246 describe it (kind being
+    // 'websearch' OR 'dataset') -- and future-proofing the read path if a
+    // dataset add-on ever does ride alongside a CBS question turn.
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+
+      const datasetAddonPrice = 10;
+      const datasetBucketId = deriveAddonRequestId(requestId, 'dataset');
+      const bucketDebit = await debitBucket(db, userId, grantId, datasetBucketId, datasetAddonPrice, 'test dataset add-on');
+      expect(bucketDebit).not.toBeNull();
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      expect(entry!.creditsCharged).toBe(gated.netCost + datasetAddonPrice);
+    });
+  });
+
+  it('non-Pro user: an all-ledger debit is BYTE-IDENTICAL to before the #246 fix (regression pin)', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      // Deliberately NO pro_subscriptions row and NO grantBucket call: this
+      // user can never have a pro_bucket_ledger row at all, so the bucket
+      // side is always an empty map for them and resolveCreditsCharged's
+      // bucket branch is always a no-op -- the exact byte-identity #246's
+      // fix must preserve.
+      await db.query('update signup_grant_config set credits = 100');
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+      const webPrice = await getActionClassPrice(db, 'web_addon');
+      const webDebit = await debitWebSearch(db, userId, requestId, webPrice);
+      expect(webDebit).not.toBeNull();
+
+      const history = await getQuestionHistory(db, userId);
+      const entry = history.find((h) => h.id === auditId);
+      expect(entry).toBeDefined();
+      expect(entry!.creditsCharged).toBe(gated.netCost + webPrice);
+    });
+  });
+
+  it('READ-ONLY: getQuestionHistory never writes to credit_transactions or pro_bucket_ledger', async () => {
+    await withDb(async (db) => {
+      await applyPricingDefaults(db);
+      const userId = randomUUID();
+      const grantId = randomUUID();
+      await seedSubscription(db, userId, grantId);
+      await grantBucket(db, userId, grantId, 1000, `in_${randomUUID()}`);
+      const requestId = randomUUID();
+      const auditId = await insertAuditRow(db, userId, {
+        kind: 'answer',
+        question: 'Hoeveel inwoners heeft Nederland?',
+        finalText: 'testantwoord',
+        requestId,
+      });
+      const gated = await chargeAndRun(db, userId, requestId, async (): Promise<AuditedResponse> => ({
+        response: { kind: 'answer', question: 'x', text: 'testantwoord' } as unknown as AuditedResponse['response'],
+        auditId,
+      }));
+      if (gated.kind !== 'ok') throw new Error(`expected ok, got ${gated.kind}`);
+
+      const countRows = async (table: 'credit_transactions' | 'pro_bucket_ledger'): Promise<number> => {
+        const { rows } = await db.query(`select count(*)::int as n from ${table}`);
+        return Number(rows[0]!.n);
+      };
+      const before = { ledger: await countRows('credit_transactions'), bucket: await countRows('pro_bucket_ledger') };
+      // Call it twice -- the read path itself must never grow either table.
+      await getQuestionHistory(db, userId);
+      await getQuestionHistory(db, userId);
+      const after = { ledger: await countRows('credit_transactions'), bucket: await countRows('pro_bucket_ledger') };
+      expect(after).toEqual(before);
     });
   });
 });

@@ -23,7 +23,8 @@
 // audit_answers.user_id is `text`. The queries below scope chat_threads by
 // `user_id = $n::uuid` (index-friendly; the session id is always a real uuid)
 // and audit_answers by the plain text `user_id = $n` — never mixing the two.
-import type { Db } from '../db/types.ts';
+import { createHash } from 'node:crypto';
+import type { Db, QueryResultRow } from '../db/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import type { ComposedResponse } from '../answer/respond/types.ts';
 
@@ -79,6 +80,34 @@ function toIso(value: unknown): string {
  * context/build.ts expected_dimensions precedent). */
 function decodeResponse(raw: unknown): ComposedResponse {
   return (typeof raw === 'string' ? (JSON.parse(raw) as ComposedResponse) : (raw as ComposedResponse));
+}
+
+/** #246 fix (session 109): a byte-for-byte DUPLICATE of
+ * src/billing/ledger.ts's (unexported) deriveAddonRequestId — deliberately
+ * NOT imported. This module's own doc comment on attachOrCreateThread states
+ * a load-bearing invariant, "this module NEVER touches src/billing/**",
+ * which importing from ledger.ts would break; this file already duplicates
+ * SQL (the credit_transactions netting formula in getThreadRows below is its
+ * own independent copy of history.ts's, not a shared function) and a small
+ * helper (decodeResponse above, vs. history.ts's own copy) for the same
+ * boundary reason, so this follows the same precedent rather than carving
+ * out a one-off exception.
+ *
+ * The drift risk a plain duplicate would normally carry — this MUST derive
+ * the exact same id ledger.ts's splitDebit wrote a pro_bucket_ledger row
+ * under, or a websearch/dataset add-on's bucket debit silently stops
+ * matching here again (the original #246 bug) — is closed by
+ * tests/threads/threads.test.ts's "deriveAddonRequestId parity" pin, which
+ * imports BOTH this copy (exported for exactly that test, no other
+ * production caller uses the export) and ledger.ts's real
+ * deriveAddonRequestId and asserts they agree across a range of inputs; that
+ * test fails loudly the moment the two drift, rather than the mismatch
+ * silently reappearing as a display bug. See ledger.ts's own doc comment on
+ * deriveAddonRequestId for the full algorithm rationale (why a hash instead
+ * of a colon-joined string, etc.) — that reasoning is not repeated here. */
+export function deriveAddonRequestId(requestId: string, suffix: string): string {
+  const hex = createHash('sha256').update(`${requestId}:${suffix}`).digest('hex').slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 /** ⟨A1⟩ READ-ONLY ownership check — NEVER an INSERT. Returns the validated
@@ -370,46 +399,75 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
        -- in-thread carrier of that request_id's onboarding_cost. Aggregated as
        -- correlated subqueries, NOT extra LEFT JOINs: several debits plus their
        -- compensations would multiply the row (cartesian product) under a join.
-       -- Null ONLY when the turn has no attributable debit at all (a
-       -- pre-migration-010 row, or a benchmark/validation turn). NB history.ts's
-       -- dashboard shows onboarding on the DELIVERY row + excludes the ack row
-       -- (the opposite surface), so the two files handle onboarding by design
-       -- differently — a separate, reviewed change; do not read across.
-       case
-         when not exists (
-           select 1
-           from credit_transactions d
-           where d.user_id::text = a.user_id
-             and d.request_id = a.request_id
-             and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
-         ) then null
-         else
-           coalesce((
-             select -sum(d.delta)
+       -- NB history.ts's dashboard shows onboarding on the DELIVERY row +
+       -- excludes the ack row (the opposite surface), so the two files
+       -- handle onboarding by design differently — a separate, reviewed
+       -- change; do not read across.
+       --
+       -- #246 fix (session 109, open-questions #246): this used to collapse
+       -- straight to null via a single CASE when nothing matched here — but
+       -- "nothing in credit_transactions" no longer means "nothing was
+       -- charged": a fully Pro-bucket-funded turn's ONLY trace is a
+       -- pro_bucket_ledger row (splitDebit, src/billing/ledger.ts, never
+       -- writes a credit_transactions row when the whole charge came from
+       -- the bucket). onboarding_cost itself is deliberately EXCLUDED from
+       -- the bucket mechanic (reserveOnboardingDebit's doc comment) and
+       -- always lands here, unaffected — only the base question_cost debit
+       -- and the websearch_cost add-on can ever be bucket-funded. So this
+       -- query now reports the LEDGER side's own number (always numeric, 0
+       -- when this turn has no ledger debit) plus a separate
+       -- ledger_has_debit flag; queryBucketNetCosts (computed just below, in
+       -- JS, batched over the whole thread) supplies the bucket side
+       -- afterwards. The null-or-number decision moves to
+       -- resolveThreadRowCreditsCharged, which also computes the
+       -- websearch/dataset add-on's derived bucket id via this file's own
+       -- local deriveAddonRequestId (a deliberate duplicate of
+       -- src/billing/ledger.ts's — see that function's doc comment above for
+       -- why) — pro_bucket_ledger has no reason column to filter by, only a
+       -- request_id an add-on debit derives specially, so a plain request_id
+       -- match alone would silently miss it (exactly the wrinkle
+       -- open-questions #246 flags).
+       coalesce((
+         select -sum(d.delta)
+         from credit_transactions d
+         where d.user_id::text = a.user_id
+           and d.request_id = a.request_id
+           and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
+       ), 0)
+       - coalesce((
+         select sum(c.delta)
+         from credit_transactions c
+         where c.reason = 'compensation'
+           and c.related_transaction_id in (
+             select d.id
              from credit_transactions d
              where d.user_id::text = a.user_id
                and d.request_id = a.request_id
                and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
-           ), 0)
-           - coalesce((
-             select sum(c.delta)
-             from credit_transactions c
-             where c.reason = 'compensation'
-               and c.related_transaction_id in (
-                 select d.id
-                 from credit_transactions d
-                 where d.user_id::text = a.user_id
-                   and d.request_id = a.request_id
-                   and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
-               )
-           ), 0)
-       end as credits_charged
+           )
+       ), 0) as ledger_net,
+       exists (
+         select 1
+         from credit_transactions d
+         where d.user_id::text = a.user_id
+           and d.request_id = a.request_id
+           and d.reason in ('question_cost', 'websearch_cost', 'onboarding_cost')
+       ) as ledger_has_debit,
+       a.request_id as request_id
      from audit_answers a
      where a.thread_id = $1
        and a.user_id = $2
      order by a.created_at asc, a.id asc`,
     [threadId, userId],
   );
+  // #246 fix (session 109): one batched round trip against pro_bucket_ledger
+  // for every row's candidate bucket ids, mirroring src/billing/history.ts's
+  // own getBucketNetCosts call -- duplicated here (a local, DB-touching
+  // query), never imported, per this file's "NEVER touches src/billing/**"
+  // invariant (attachOrCreateThread's doc comment above) and its usual
+  // threads/billing module-boundary convention (see decodeResponse's own
+  // duplicate, and this file's local deriveAddonRequestId duplicate).
+  const bucketNetCosts = await queryBucketNetCosts(db, userId, collectBucketCandidateIds(rows));
   return rows.map((row) => ({
     id: Number(row.id),
     kind: row.kind as ThreadRow['kind'],
@@ -418,6 +476,90 @@ export async function getThreadRows(db: Db, userId: string, threadId: number): P
     replyText: row.reply_text === null ? null : String(row.reply_text),
     createdAt: toIso(row.created_at),
     response: decodeResponse(row.response),
-    creditsCharged: row.credits_charged === null ? null : Number(row.credits_charged),
+    creditsCharged: resolveThreadRowCreditsCharged(row, bucketNetCosts),
   }));
+}
+
+/** #246 fix (session 109): every candidate pro_bucket_ledger request_id this
+ * thread's rows could possibly have a bucket debit under -- the base
+ * request_id (a question/onboarding-ack debit's own bucketRequestId
+ * default) plus the two derived add-on ids (splitDebit's disambiguation for
+ * reserveWebSearchDebit/reserveDatasetDebit — see deriveAddonRequestId's doc
+ * comment in src/billing/ledger.ts). onboarding_cost debits are always
+ * ledger-only (never bucket-eligible, reserveOnboardingDebit's doc comment)
+ * so no separate exclusion is needed the way history.ts needs one for its
+ * onboarding DELIVERY rows — this file's thread scan never sees a delivery
+ * row at all (see the SQL's own comment above). Deduplicated (a Set) since
+ * the two derived ids are each 32 bytes of SHA-256 — no reason to ask
+ * Postgres to match the same uuid twice. */
+function collectBucketCandidateIds(rows: readonly QueryResultRow[]): string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (row.request_id === null || row.request_id === undefined) continue;
+    const requestId = String(row.request_id);
+    ids.add(requestId);
+    ids.add(deriveAddonRequestId(requestId, 'websearch'));
+    ids.add(deriveAddonRequestId(requestId, 'dataset'));
+  }
+  return [...ids];
+}
+
+/** #246 fix (session 109): the local, threads-module copy of
+ * src/billing/pro-bucket.ts's getBucketNetCosts — same query, same
+ * semantics (a Map from request_id to net credits charged, present only for
+ * an id with a committed 'debit' row), duplicated per this file's usual
+ * threads/billing SQL-independence convention (see e.g. this function's own
+ * sibling, the credit_transactions correlated subquery above, which
+ * independently re-derives history.ts's netting formula rather than
+ * importing it). Scoped to `userId`, mirroring every other cross-ledger read
+ * in this file. */
+async function queryBucketNetCosts(db: Db, userId: string, requestIds: readonly string[]): Promise<Map<string, number>> {
+  if (requestIds.length === 0) return new Map();
+  const { rows } = await db.query(
+    `select
+       d.request_id as request_id,
+       (-d.delta) - coalesce(
+         (select sum(c.delta) from pro_bucket_ledger c where c.related_entry_id = d.id and c.reason = 'compensation'),
+         0
+       ) as net
+     from pro_bucket_ledger d
+     where d.user_id = $1
+       and d.reason = 'debit'
+       and d.request_id = any($2::uuid[])`,
+    [userId, requestIds],
+  );
+  const result = new Map<string, number>();
+  for (const row of rows) {
+    result.set(String(row.request_id), Number(row.net));
+  }
+  return result;
+}
+
+/** #246 fix (session 109): the null-or-number decision the SQL used to make
+ * alone now also needs the bucket side — see the SQL's own comment above for
+ * the full reasoning. The null guard fires only when NEITHER table has a
+ * matching debit; non-Pro byte-identity holds because a non-Pro user never
+ * has a pro_bucket_ledger row at all, so `bucketNetCosts` is always empty
+ * for them and this collapses to exactly the pre-#246 ledger-only value. */
+function resolveThreadRowCreditsCharged(row: QueryResultRow, bucketNetCosts: Map<string, number>): number | null {
+  const ledgerNet = Number(row.ledger_net);
+  const ledgerHasDebit = Boolean(row.ledger_has_debit);
+  let bucketNet = 0;
+  let bucketHasDebit = false;
+  if (row.request_id !== null && row.request_id !== undefined) {
+    const requestId = String(row.request_id);
+    for (const candidate of [
+      requestId,
+      deriveAddonRequestId(requestId, 'websearch'),
+      deriveAddonRequestId(requestId, 'dataset'),
+    ]) {
+      const net = bucketNetCosts.get(candidate);
+      if (net !== undefined) {
+        bucketHasDebit = true;
+        bucketNet += net;
+      }
+    }
+  }
+  if (!ledgerHasDebit && !bucketHasDebit) return null;
+  return ledgerNet + bucketNet;
 }
