@@ -30,9 +30,13 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   → one cell per region, ranking claimed ONLY over a complete set (RS1), sorted bars, template-only
   answer, R8 reconstruction. **Reachable only via a hand-authored intent until Task 9** (parser
   exposure = owner-supervised 103-fixture re-record, [#267](open-questions.md)).
-- **UX audit + fixes** — [session-briefs/2026-09-17-session-110-ux-audit.md](session-briefs/2026-09-17-session-110-ux-audit.md):
-  25 findings; 17 mechanical + 4 design-decided rows FIXED (P1: phone sidebar overlay; a malformed
-  auth cookie no longer 500s every route). Left for the owner: row 22 (trust pages' "Draft" banner).
+- **UX audit + fixes, two passes** — [pass 1](session-briefs/2026-09-17-session-110-ux-audit.md) (25 findings;
+  17 mechanical + 4 design-decided rows FIXED: phone sidebar overlay; a malformed auth cookie no longer
+  500s every route; …) and [pass 2](session-briefs/2026-09-17-session-110-ux-audit-pass2.md) over the
+  surfaces pass 1 could not reach (17 findings, ALL 17 mechanical rows FIXED: the trial keeps its last
+  answer on screen; embed snippet height + the embed document grows with content; story Auto-play runs
+  to the end; Enter activates annotation points; …). Left for the owner: pass-1 row 22 ("Draft" banner),
+  pass-2 rows 18/19 (source-aware footer on Eurostat pages; the "go Pro" pitch in embed footers).
 - **Chart export** — PDF (vector) + "PNG, chart only (transparent)" ([ADR 053](decisions/053-chart-export-formats.md)); defaults byte-identical.
 - **[#23](open-questions.md) alerts COMPLETE** — missed-sync (cadence from `period_semantics`) + health-probe, both on the daily cron.
 - **Smaller:** [#254](open-questions.md)(a) %-change on income alternates; [#262](open-questions.md)(c)/[#229](open-questions.md)
@@ -40,15 +44,17 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   [#134](open-questions.md)(c) refusal offer chip; 16–40-series comparisons open on hbar;
   [#245](open-questions.md) Action 3 test-DB reset helper (795 s → 200 s over 40 files).
 
-**Measured:** backend 180 files / 2666 tests, web 117 / 1933, benchmark 14/14 + 6/6 + 0 fabricated,
-real `next build`, `/code-review` LOW 0 findings, root + web typecheck clean.
+**Measured (final tree, after waves 4–5):** backend 180 files / 2666 tests, web 117 / 1966, benchmark
+14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings (both batches), root + web
+typecheck clean. First batch (`2bdbb4c`, run `35196289551`): backend 180/2666, web 117/1933.
 
 **Owner steps pending (in order):** `npm run registry:apply` (#254(a) marker lives in the live
 `canonical_measures.alternates`); `npm run backfill:eurostat-doi -- --apply` (#264, session 109);
 `npm run benchmark:run:live` (confirms #216, real spend); region-set Task 9 (#267, real spend); audit
-row 22 sign-off. **Standing candidates:** a second UX-audit pass over the surfaces the first could not
-reach (chart notes, headline, story stage, small multiples, trial answering, embed page, Eurostat
-explorer); landing bundle (169 KB chunk) lazy-load; WP30c E2 (#250(a) wording sign-off first);
+row 22 sign-off. **Standing candidates:** a third UX pass on what pass 2 still could not reach (small multiples,
+region-set rendering, the Eurostat explorer past its empty state, headline/insights happy paths —
+needs an intent-injection hook in the harness); the landing lazy-load split (measured, reverted — needs
+`chart.test.tsx`'s synchronous assertions made async first, see the build-performance brief); WP30c E2 (#250(a) wording sign-off first);
 [#260](open-questions.md) Supademo polish (needs brainstorming). Session 111 kickoff:
 [session-briefs/2026-09-17-session-111-kickoff.md](session-briefs/2026-09-17-session-111-kickoff.md).
 

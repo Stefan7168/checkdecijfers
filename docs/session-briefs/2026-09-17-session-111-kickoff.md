@@ -21,16 +21,20 @@ export (ADR 053), the last two #23 alert triggers, and a dozen smaller items. Me
    (real LLM spend).
 4. Region-set Task 9 — expose the capability through the parser (#267): re-records 103 LLM
    fixtures, procedure in `docs/superpowers/plans/2026-09-17-region-set-query.md` Task 9.
-5. UX-audit row 22 — the trust pages (`/werkwijze`, `/privacy`) still show "Draft — under review";
-   sign off or hide pre-launch.
+5. UX-audit pass-1 row 22 — the trust pages (`/werkwijze`, `/privacy`) still show "Draft — under review";
+   sign off or hide pre-launch. Pass-2 rows 18/19 (source-aware footer on Eurostat pages; the
+   "Never go stale — go Pro" pitch inside embed footers) are product-voice calls too.
 
 ## What's next (no owner-queued priority)
 
-- A second UX-audit pass over what the first could not reach: chart notes/annotations, the
-  journalist headline, the story stage, small multiples, trial answering, `/embed/[token]`,
-  `/eurostat-explorer` (flag on in the harness). Use `scripts/dev-harness/` (RUNBOOK § "Local
-  real-browser harness") — zero LLM spend. Then a fix wave by file ownership, as in session 110.
-- Landing bundle: the 169 KB chunk is the lazy-load candidate (measure with a real `next build`).
+- A THIRD UX pass on what pass 2 still could not reach: small multiples, region-set rendering,
+  `/eurostat-explorer` past its empty state, the headline/insights happy paths — the harness needs an
+  intent-injection hook first (see pass 2's "Could not reach"). Use `scripts/dev-harness/` (RUNBOOK
+  § "Local real-browser harness") — zero LLM spend. Then a fix wave by file ownership.
+- Landing lazy-load: measured and reverted in session 110 (it broke 56 synchronous `chart.test.tsx`
+  assertions) — first make those assertions async, then re-apply; numbers + the module list are in
+  `docs/session-briefs/2026-09-13-build-performance-diagnosis.md` "Landing bundle (session 110)".
+  A worktree needs a REAL `npm ci` (not the symlinks) for Turbopack to build.
 - WP30c E2 (Eurostat beyond the explorer) — #250(a) Dutch wording sign-off is the owner's first.
 - #260 Supademo polish (brainstorming first), #212 tier-3 "edit feel" (design round).
 - Stripe live-mode / KvK — never raise as a next step (#54).
