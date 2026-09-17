@@ -719,10 +719,13 @@ export function ChartStoryStage({ open, spec, steps, index, onIndexChange, onClo
           <ol role="list" aria-label={t(lang, 'chart.stage.positionLabel')} className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1">
             {steps.map((s, i) => (
               <li key={s.id}>
-                {/* Audit pass 2, row 14 (2026-09-17): kind + period in the
-                  * accessible name only — the visible dot stays a plain
-                  * coloured circle, no text either way. */}
-                <button type="button" aria-label={stepAccessibleName(s)} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
+                {/* Audit pass 2, row 14 (2026-09-17): kind + a disambiguator
+                  * in the accessible name only — the visible dot stays a
+                  * plain coloured circle, no text either way. Pass 3, row 8:
+                  * the whole step list is passed so the disambiguator is the
+                  * field that actually varies here (period, series, or
+                  * both) — on a region set every finding shares the period. */}
+                <button type="button" aria-label={stepAccessibleName(s, steps)} aria-current={i === index ? 'step' : undefined} onClick={() => { setAutoplay(false); go(i); }} className="flex size-6 items-center justify-center">
                   <span
                     className={
                       'block size-2.5 rounded-full transition-[transform,background-color,box-shadow] duration-300 ' +

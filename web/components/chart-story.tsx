@@ -278,11 +278,15 @@ export function ChartStoryPanel({
                 * small coloured dot as an inner, non-interactive span. */}
               {/* Audit pass 2, row 14 (2026-09-17): the VISIBLE dot carries
                 * no text either way — only the accessible name changes,
-                * from the kind alone to kind + period, so two same-kind
-                * findings ("Below average" twice) are told apart. */}
+                * from the kind alone to kind + a disambiguator, so two
+                * same-kind findings ("Below average" twice) are told apart.
+                * Pass 3, row 8: the whole step list goes with it, so the
+                * disambiguator is whichever field actually varies on THIS
+                * chart — on a region comparison the period is shared by
+                * every finding and only the region tells them apart. */}
               <button
                 type="button"
-                aria-label={stepAccessibleName(step)}
+                aria-label={stepAccessibleName(step, steps)}
                 aria-current={i === index ? 'step' : undefined}
                 onClick={() => go(i)}
                 className="flex size-6 items-center justify-center"

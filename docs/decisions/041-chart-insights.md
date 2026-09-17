@@ -82,6 +82,9 @@ series mean but not the series minimum, now asserts `belowAverage` instead of th
 
 ## Session 110 addendum (audit pass 2, row 14) — disambiguating same-kind step names by period
 
+> **Refined the same day by pass 3, row 8 — see the next addendum.** Appending the period alone is not
+> enough on a region comparison, where every finding shares it.
+
 **Context (2026-09-17).** The addendum above fixed WHICH kind a finding gets; a second-pass audit found
 that the Insights carousel's and the Story stage's "position" dots still name every step by kind alone
 (`aria-label` = `step.title`) — two `belowAverage` findings on one chart (e.g. 2021 and 2024) produce two
@@ -105,3 +108,40 @@ reference unchanged, so it reaches every real `StoryStep` at runtime despite the
 tests plus the updated `buildFindings` point-shape assertion in `chart-insights.test.ts`; a dedicated
 two-same-kind-findings test in both `chart-story.test.tsx` and `chart-story-stage.test.tsx` asserting
 distinct `aria-label`s and an unchanged visible card/caption.
+
+## Session 110 addendum (audit pass 3, row 8) — the disambiguator is whichever field VARIES
+
+**Context (2026-09-17).** Pass 2's fix above always appends the finding's PERIOD. On a region-set or
+comparison chart there is only one period — every bar is the same snapshot, the region is the axis — so the
+audit found the stage's step list reading `Uitschieter naar boven — 2024`, `Uitschieter naar beneden — 2024`,
+`Onder het gemiddelde — 2024`, `Boven het gemiddelde — 2024`, `Onder het gemiddelde — 2024`: two identical
+names again, exactly the defect pass 2 set out to remove. Appending the period unconditionally solved the
+trend-line case and left the region case untouched.
+
+**Decision.** Name a step by the field that actually varies across the steps of THIS chart, computed from
+the sibling list the caller is already rendering:
+
+| what varies across the chart's steps | appended | typical chart |
+|---|---|---|
+| periods, one series | the period — `"Onder het gemiddelde — 2021"` | a trend line |
+| one period, series vary | the series — `"Onder het gemiddelde — Nieuwegein"` | a region set / comparison |
+| both | `"Hoogste punt — 2021 · Zeeland"` | a multi-series line chart |
+| neither | the period (pass 2's behaviour; nothing tells them apart anyway) | a single-finding chart |
+
+Still an ACCESSIBLE-name change only: the visible dot stays a plain coloured circle and the caption cards are
+untouched, so nothing a sighted reader sees moves. `stepAccessibleName(step, steps?)` gained the sibling list
+as an optional second parameter — omitting it names the step against itself, which is the "neither varies"
+row, so every existing single-argument call keeps its old result. Rejected: *always* appending both period
+and series (noisy on the common trend-line chart, where the series never changes and the period is the whole
+point), and switching on the chart's `kind` (`bar` → series, `line` → period — cheaper to read but wrong for
+a multi-series line chart, and it would couple the name to the chart FORM the reader can change rather than
+to the findings themselves).
+
+**As-built.** `web/lib/chart-insights.ts`: `Finding.point` now also carries `seriesLabel` (a verbatim spec
+string, same forwarding trick as `periodLabel` — chart.tsx's `point: f.point` passes it by reference into
+every `StoryStep` at runtime, and the shared type still declares neither); `stepAccessibleName` takes the
+optional sibling list. Both dot lists (`chart-story.tsx`, `chart-story-stage.tsx`) pass their own `steps`.
+Test coverage: all four variation cases as unit tests in `chart-insights.test.ts`, plus a real `buildFindings`
+region-set (bar) chart asserting every name is unique, names the region, and contains no period at all; a
+region-comparison dot test in both `chart-story.test.tsx` and `chart-story-stage.test.tsx`; the pass-2
+period tests kept unchanged (their two steps share a series, so they still get the period).

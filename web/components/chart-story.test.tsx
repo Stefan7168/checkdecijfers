@@ -116,6 +116,25 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     ]);
   });
 
+  // Audit pass 3, row 8 (2026-09-17): pass 2's fix collapses again on a
+  // region comparison — every finding shares the chart's single period, so
+  // appending it produced two identical names once more. The disambiguator
+  // is now whichever field actually varies; here that is the region.
+  it('a region comparison names the dots by REGION, not by the period every finding shares (#8)', () => {
+    const regionSteps = [
+      { id: 'below-s0', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: 'Nieuwegein: 456.395 euro', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024', seriesLabel: 'Nieuwegein' } },
+      { id: 'below-s1', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: 'Vijfheerenlanden: 506.529 euro', highlight: 's1', point: { seriesKey: 's1', periodCode: '2024JJ00', periodLabel: '2024', seriesLabel: 'Vijfheerenlanden' } },
+    ] as unknown as StoryStep[];
+    render(<Harness steps={regionSteps} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const dots = within(within(region).getByRole('list', { name: 'Stappen' })).getAllByRole('button');
+    expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual([
+      'Onder het gemiddelde — Nieuwegein',
+      'Onder het gemiddelde — Vijfheerenlanden',
+    ]);
+  });
+
   it('speaks English when asked', () => {
     render(<Harness lang="en" />);
     fireEvent.click(screen.getByRole('button', { name: 'Insights' }));

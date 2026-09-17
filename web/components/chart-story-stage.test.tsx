@@ -304,6 +304,23 @@ describe('ChartStoryStage', () => {
     expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual(['Onder het gemiddelde — 2021', 'Onder het gemiddelde — 2024']);
   });
 
+  // Audit pass 3, row 8 (2026-09-17): the same collapse on the stage's own
+  // dots — `!!regionset gemeenten-utrecht` gave "Onder het gemiddelde —
+  // 2024" twice, because a region set has one period for every finding.
+  it('a region comparison names the position dots by REGION, not by the shared period (#8)', () => {
+    const regionSteps = [
+      { id: 'below-s0', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: 'Nieuwegein: 456.395 euro', highlight: 's0', point: { seriesKey: 's0', periodCode: '2024JJ00', periodLabel: '2024', seriesLabel: 'Nieuwegein' } },
+      { id: 'below-s1', kind: 'belowAverage', title: 'Onder het gemiddelde', caption: 'Vijfheerenlanden: 506.529 euro', highlight: 's1', point: { seriesKey: 's1', periodCode: '2024JJ00', periodLabel: '2024', seriesLabel: 'Vijfheerenlanden' } },
+    ] as unknown as StoryStep[];
+    render(<ChartStoryStage {...baseProps({ steps: regionSteps })} />);
+    const list = screen.getByRole('list', { name: 'Positie in het verhaal' });
+    const dots = Array.from(list.querySelectorAll('button'));
+    expect(dots.map((d) => d.getAttribute('aria-label'))).toEqual([
+      'Onder het gemiddelde — Nieuwegein',
+      'Onder het gemiddelde — Vijfheerenlanden',
+    ]);
+  });
+
   it('auto-play: off by default; toggling calls onAutoplay once, advances on a timer, and stops at the last step', () => {
     vi.useFakeTimers();
     const onAutoplay = vi.fn();
