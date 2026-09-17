@@ -45,6 +45,7 @@ import {
 import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
+import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
 import { checkStaleness } from './staleness.ts';
 import { buildAnswerChips, buildRefusalSuggestions } from './suggestions.ts';
 import type {
@@ -731,6 +732,17 @@ export async function respondToQuestion(
       clickOptionsEnabled: options.clickOptionsEnabled,
       answerFirstEnabled: options.answerFirstEnabled,
     };
+    // Harness-only bypass (dev-harness Task 1, gated on HARNESS_INTENT_INJECT):
+    // a `!!regionset <name>` / `!!intent {json}` question skips the parser
+    // entirely and hands respondToParseOutcome a hand-authored intent — the
+    // one way today to exercise the region_set shape (ADR 054), whose
+    // LLM-facing vocabulary (Task 9) is not built. Returns null (falls
+    // through to the ordinary parse below) whenever the flag is unset, which
+    // is every production request and every non-harness test/runner.
+    const injected = tryHarnessInjectedIntent(question);
+    if (injected !== null) {
+      return await respondToParseOutcome(db, question, harnessParseOutcome(question, injected), options);
+    }
     // WP15 (ADR 021): with a validated context, the parse runs in follow-up
     // mode — same downstream machinery, same thresholds, same one round of
     // clarification per question (finalRound stays a reply-turn concept).
