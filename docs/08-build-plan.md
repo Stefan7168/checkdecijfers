@@ -1049,3 +1049,76 @@ exact counts; the full backend/web suites and a live benchmark run were not re-r
 pass in this docs-only task). **NOT MET** for the WP's own end-to-end goal ("a journalist can ask
 this in chat") until Task 9 ships — tracked as its own, explicitly owner-gated step, not a residual
 bug.
+
+## WP-MRS — multi-region time series (session 110, 2026-09-17)
+
+**Scope:** answer "one measure, 2–6 EXPLICITLY NAMED regions, a period range" — one line per region,
+each region's own first/last/direction, no cross-region claim — the relaxation UX-audit pass-3 rows
+[13 and 14](session-briefs/2026-09-17-session-110-ux-audit-pass3.md) named, and make small multiples
+reachable from a real CBS answer for the first time.
+Design: [docs/superpowers/specs/2026-09-17-multi-region-series-design.md](superpowers/specs/2026-09-17-multi-region-series-design.md).
+Plan + full per-task as-built notes: [docs/superpowers/plans/2026-09-17-multi-region-series.md](superpowers/plans/2026-09-17-multi-region-series.md).
+As-built decision record: ADR [055](decisions/055-multi-region-series.md).
+
+**Built (Tasks 1–7, all hermetic, no real LLM spend):**
+- **Task 1** (`s110/mrs12`) — the new `ResultShape` member `'region_series'`, `RegionSeriesCoverage`,
+  the caps (`REGION_SERIES_MAX_REGIONS = 6`, `REGION_SERIES_MAX_CELLS = 500`), and the conditional
+  resolver gate in `resolve.ts`. Deviation: an existing `tests/query/query.test.ts` pin that used
+  exactly the newly-accepted case was re-pointed at the still-refused over-the-cap case; the
+  one-varying-axis check moved to AFTER the derivation-arity switch, so `difference`/`max` over
+  several regions now reads as a derivation-arity refusal rather than the generic scope limit.
+- **Task 2** (`s110/mrs12`) — `run.ts`: the partition into `requested`/`partial`/`excluded`, per-region
+  `deriveDirection`/`deriveFirstLast` slices (never the whole cell array — `checkSingleRegion` is what
+  makes a slice the only legal input), `deriveMax` explicitly excluded from this shape, and the
+  all-or-nothing floor (`diagnoseMissing`) below 2 surviving regions. Deviation: three existing answer
+  suites that built a 2-named-region-over-a-range intent and asserted REFUSAL turned red the moment
+  this shape started answering it (measured, not a bug in `src/`) — re-pointed in Tasks 4 and 6.
+- **Task 3** (`s110/mrs3`) — `buildChartSpec` emits `kind: 'line'` (not `null`) for this shape, one
+  series per region in intent order; the one real web-side gap, `web/lib/answer-proof.ts`'s
+  `derivationStep`, now names each region in its own direction row instead of producing N identical
+  rows.
+- **Task 4** (`s110/mrs4`) — `renderRegionSeries` (deterministic, zero-LLM body), `buildRegionSeriesLine`
+  (the structural coverage-disclosure line, outside the R1-scanned body), and the re-worded
+  `multi_region_multi_period` refusal (the old wording had become false for named regions). Found and
+  fixed a real MS1 hole here, not only in Task 5: a `region_series` with only ONE complete region
+  carried only one trend candidate, so a hand-written clause about the OTHER (partial) region could
+  silently borrow the complete region's backing — closed by gating on the result's own distinct
+  region count, not the candidate list's.
+- **Task 5** (`s110/mrs5`, built independently, merged first) — the validator fix:
+  `trendBacking` (took the first `direction` record unconditionally) replaced by
+  `trendCandidates`/`resolveTrendBacking`, so a multi-region result's trend clause must name exactly
+  one region and bind to that region's own candidate. An ordinary single-region result (including a
+  B13-style two-candidate case) is byte-identical to before — a real regression caught and fixed
+  mid-build, not merely anticipated.
+- **`s110/mrsline`** (between Tasks 4 and 6) — closed a real gap Task 4 flagged: `regionSeriesLine`
+  (like ADR 054's `regionSetLine` before it) was assembled into `answer.text` but not read by the
+  field-by-field answer views (`web/lib/chat-message.ts`, `web/components/chat.tsx`,
+  `web/lib/copy-answer.ts`, `web/lib/replay-assemble.ts`, `src/threads/replay.ts`) — fixed in the same
+  pass as the sibling `regionSetLine` fix.
+- **Task 6** (`s110/mrs6`) — R8 reconstruction: the coverage line re-derives (checked THROUGH the
+  sentence, never re-resolved against today's data), the body re-derives byte-identically (the shape
+  gate widened from `region_set` alone to `region_set || region_series`, keeping the `region_set`
+  problem strings byte-identical for the audit divergence register), manifest rows for both new keys
+  (measured RED — 3 failed/7 passed — before this task, green after).
+- **Task 7** (this entry + ADR 055 + the doc updates it lists) — docs.
+
+**Invariants:** R1 (structural exemption only), R3, R5, R6 (verbatim chart projection, spec order is
+render order), R8 (full reconstruction), R9, R10, R11 (withheld cells keep their CBS reason), **MS1**
+(no trend claim without a same-region derivation record, no cross-region claim of any kind),
+principle (a) (the LLM never enumerates region codes — none of this touches the intent contract),
+principle (c) (a named region is never silently dropped to fit a cap; a gap is disclosed, not
+guessed).
+
+**Owner-delegated decisions (2026-09-17), full reasoning in ADR 055:** (1) the region cap is 6, not
+the more conservative 4; (2) a named region with a gap answers the others and discloses the gap,
+rather than refusing the whole ask; (3) a fully deterministic (zero-phrasing-model) answer is accepted
+for this shape too, as ADR 054 already established for `region_set`.
+
+**Done-definition:** MET for Tasks 1–7 (every task's own hermetic test suite green, `npm run
+typecheck` clean at every step — see the plan's per-task "As-built notes" for exact counts; `npm run
+audit:verify` against the live DB was not run in any hermetic worktree task, reasoned correct from the
+code since the shape is forward-only). **NOT MET** for the live-LLM confirmation: no recorded fixture
+of the 72 `intent`/23 `followup`/7 `clarify` fixtures scanned carries ≥2 regions and a range period,
+so a `npm run benchmark:run:live` pass against this shape is the real go/no-go and has not yet been
+run — owner-supervised spend, tracked as its own step, not a residual bug. Unlike WP253/ADR 054, this
+capability needs **no** further parser work to become reachable — it already is.
