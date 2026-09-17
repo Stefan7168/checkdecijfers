@@ -508,7 +508,12 @@ core-product code, never auto-merged (#118(b)).
 - **`request_urls` (D7(b)) is wired at two of `buildAnswerProof`'s three call sites, not all three** — the
   live chat proof panel (`chat.tsx`, `'use client'`, no server context) doesn't show it; replay and question
   history do ([#252](../open-questions.md)). Applies to CBS proof panels too, so it is a coverage gap, not an
-  Eurostat-specific one.
+  Eurostat-specific one. **As-built (session 109, 2026-09-17): closed.** `web/app/actions.ts`'s
+  `askQuestion`/`replyToClarification` now run the same `fetchRequestUrlsByBatch` lookup AFTER the answer is
+  settled (fail-open, never inside the charged section) and thread it onto a new `AskOutcome.proofRequestUrls`
+  field; `chat.tsx` reads it for the live turn exactly as `replay-assemble.ts`/`question-history.tsx` already
+  did for a resumed one. All three call sites are wired; see [#252](../open-questions.md) for the measured
+  test counts.
 
 **A third real defect, found by the required final whole-branch review (after all tasks were built, before
 the PR) — the most serious of the three:** Task 4's live-chat deny gate (`src/catalog/recall.ts`) was

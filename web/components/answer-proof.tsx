@@ -32,9 +32,10 @@ function distinctBatchIds(proof: AnswerProofData): number[] {
  * line per batch this proof's cells reference that has a captured
  * request_urls entry. Renders nothing (not even the heading) when the map is
  * absent, empty, or has no entry for any of this proof's batches — the exact
- * degradation the byte-parity requirement asks for: a replay with no lookup
- * wired (chat.tsx live chat, Amendment B5; a deleted batch row; a batch
- * ingested before migration 032) must leave the rest of the panel unchanged,
+ * degradation the byte-parity requirement asks for: a lookup miss (a
+ * deleted batch row; a batch ingested before migration 032; a DB hiccup —
+ * #252, session 109, closed the one CASE that used to degrade this way on
+ * purpose, chat.tsx live chat) must leave the rest of the panel unchanged,
  * never throw. */
 function RequestUrlsSection({
   proof,
@@ -157,9 +158,11 @@ export const AnswerProof = memo(function AnswerProof({
   /** WP30c D7(b) (ADR 048, Amendment 6): a live side-lookup, fetched
    * ALONGSIDE `proof` by the caller — never a field ON `proof` itself, since
    * `ingestion_batches.request_urls` lives outside the R8-reconstructed
-   * envelope. Optional/nullable: absent on the live chat.tsx call site
-   * (Amendment B5, a named residual) and on any replay where the lookup
-   * found nothing — the panel below renders identically either way. */
+   * envelope. Optional/nullable: `null`/`undefined` on any turn (live or
+   * replayed) where the lookup found nothing — since #252 (session 109)
+   * that is a lookup MISS, not a missing wiring, on every call site
+   * including chat.tsx's own live turn — the panel below renders
+   * identically either way. */
   requestUrlsByBatch?: RequestUrlsByBatch | null;
 }) {
   const [open, setOpen] = useState(false);

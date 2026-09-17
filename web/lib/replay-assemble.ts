@@ -18,11 +18,12 @@
 // synchronous `buildAnswerProof` call. The result is a fresh side-lookup,
 // kept OUTSIDE the R8-reconstructed envelope and threaded onto the message
 // as its own `proofRequestUrls` field — never merged into `proof` itself,
-// and never something replayed from stored JSON. This IS one of the two
-// genuinely server-side `buildAnswerProof` call sites the brief names (the
-// other is question-history.tsx); `chat.tsx`'s live-chat call site is
-// `'use client'` and stays without this lookup (Amendment B5, a named
-// residual, not an oversight).
+// and never something replayed from stored JSON. This IS one of the three
+// `buildAnswerProof` call sites the brief names (the others are
+// question-history.tsx and, since #252 (session 109), chat.tsx's live turn —
+// that one is `'use client'` so it cannot run this lookup itself, but now
+// gets the SAME result server-side via AskOutcome.proofRequestUrls, computed
+// inside askQuestion/replyToClarification, web/app/actions.ts).
 import type {
   ReplayAssistantPart,
   ReplayPart,

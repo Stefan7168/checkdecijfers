@@ -19,6 +19,15 @@ import {
   upsertAnswerFeedback,
 } from '../backend/answer/audit/index.ts';
 import { buildConversationContext, validateConversationContext } from '../backend/answer/context/index.ts';
+// #252: the SAME live `ingestion_batches.request_urls` side-lookup
+// replay-assemble.ts and question-history.tsx already wire in — this Server
+// Action is the third and last `buildAnswerProof` call site (ADR 048
+// Amendment 6, D7(b)), and it is genuinely server-side (unlike chat.tsx's
+// own client-side buildAnswerProof call two lines away in the render), so it
+// can run the lookup too. Never duplicated SQL: fetchRequestUrlsByBatch is
+// the one function that touches `ingestion_batches`.
+import { batchIdsForProof, buildAnswerProof, fetchRequestUrlsByBatch } from '../lib/answer-proof.ts';
+import type { RequestUrlsByBatch } from '../lib/answer-proof.ts';
 // WP218 phase 2: the account-level chart-style wipe, called from
 // deleteMyQuestionHistory below. Imported directly from the module, not
 // through backend/chart/index.ts's barrel — that store is file-only
@@ -409,6 +418,20 @@ export interface AskOutcome {
    * to confirm) and a resumed/replayed thread (never reconstructed on
    * replay, same posture as `carrier` — ADR 033 ⟨A6⟩). */
   onboardingOffer: { token: string; priceCredits: number } | null;
+  /** #252: the live `ingestion_batches.request_urls` lookup for this turn's
+   * own proof (present only on a gated-ok 'answer' response — every other
+   * kind, including a refusal/clarification/non-'ok' gate, has no proof to
+   * look up against and stays `null`, same as `proof` itself on the client
+   * message). Computed AFTER the answer/debit is already settled below
+   * (outcomeProofRequestUrls), never inside chargeAndRun's charged section —
+   * a lookup hiccup must cost this turn's URL badges, never its answer or
+   * its charge. Threading this through AskOutcome is what lets chat.tsx set
+   * `message.proofRequestUrls` for a LIVE turn exactly as
+   * replay-assemble.ts / question-history.tsx already do for a resumed one
+   * (previously `null` there always — the last of the three
+   * `buildAnswerProof` call sites ADR 048 Amendment 6 named, see
+   * open-questions #252). */
+  proofRequestUrls: RequestUrlsByBatch | null;
 }
 
 // WP135 ⟨A1⟩: the ONLY thread write from the request path — a post-hoc UPDATE
@@ -451,6 +474,32 @@ async function outcomeContext(gated: GatedResponse): Promise<ConversationContext
   }
 }
 
+/** #252: this turn's own `ingestion_batches.request_urls`, fetched
+ * ALONGSIDE (never inside) the already-settled gated response — the same
+ * outcomeContext posture above, applied to the proof panel's URL badges
+ * instead of the next turn's referent. `null` on every non-'ok' gate, every
+ * non-'answer' response kind (a refusal/clarification carries no validated
+ * cells to look batch ids up from — buildAnswerProof would return null for
+ * it anyway, same belt question-history.tsx already relies on), and on a
+ * `buildAnswerProof` miss (a redacted/malformed envelope, R8's own
+ * degradation). Never throws: `fetchRequestUrlsByBatch` already degrades to
+ * `{}` on any DB error or absent batch row, and the try/catch here is
+ * defense-in-depth around `buildAnswerProof`/`batchIdsForProof` themselves —
+ * by the time this runs the answer is already produced, audited AND
+ * debited, so a hiccup here must cost only this turn's URL badges, never the
+ * answer or the charge the user already paid for. */
+async function outcomeProofRequestUrls(gated: GatedResponse): Promise<RequestUrlsByBatch | null> {
+  if (gated.kind !== 'ok' || gated.response.kind !== 'answer') return null;
+  try {
+    const proof = buildAnswerProof(gated.response);
+    if (proof === null) return null;
+    return await fetchRequestUrlsByBatch(getDb(), batchIdsForProof(proof));
+  } catch (error) {
+    console.error('proof request-urls lookup failed (answer still returned):', error);
+    return null;
+  }
+}
+
 // requestId: a client-generated UUID (crypto.randomUUID(), one per submit —
 // chat.tsx) threaded all the way into the billing gate's idempotency key
 // (credit_transactions_one_debit_per_request). Without it, a Server Action
@@ -476,7 +525,7 @@ export async function askQuestion(
   guardRequestId(requestId);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
   }
   // ⟨A1⟩ READ-ONLY ownership check (never an INSERT); a forged/foreign id
   // coerces to null → a fresh thread, never a cross-attach, never a leak.
@@ -504,7 +553,7 @@ export async function askQuestion(
     if (balance < required) {
       // ⟨W4⟩/⟨A1⟩ early return: no gate, no audit id ⇒ no thread (lazy by
       // construction — an empty thread is never created here).
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
     }
   }
   // #112: loaded BEFORE the billing gate — the load is read-only and must
@@ -611,7 +660,7 @@ export async function askQuestion(
     // WP135 ⟨A1⟩: attach the audited answer to its thread (created lazily if
     // this is a fresh chat). Only runs on a gated-ok outcome with an audit id.
     const threadId = threadAware ? await attachThread(settled, userId, validatedThreadId) : null;
-    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: offer };
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: offer, proofRequestUrls: await outcomeProofRequestUrls(settled) };
   } catch (error) {
     // WP129+130 (ADR 032): a web debit taken before the pipeline threw is
     // compensated here (the base question debit is already compensated inside
@@ -769,7 +818,7 @@ export async function replyToClarification(
   guardPending(pending);
   const userId = await currentUserId();
   if (userId === null) {
-    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null };
+    return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
   }
   const threadAware = rawThreadId !== undefined;
   const validatedThreadId = threadAware
@@ -802,7 +851,7 @@ export async function replyToClarification(
     const required = simplePrice + webAddonPrice;
     const balance = await getBalance(getDb(), userId);
     if (balance < required) {
-      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null };
+      return { gated: { kind: 'insufficient_credits', balance, required }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
     }
   }
   // #112: same pre-gate load as askQuestion (read-only, fail-soft).
@@ -863,7 +912,7 @@ export async function replyToClarification(
     // The reply path never injects a finder (see the comment above this
     // function's pipeline call), so no turn here can ever be an onboarding
     // offer — always null, never computed.
-    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: null };
+    return { gated: settled, context: await outcomeContext(settled), threadId, onboardingOffer: null, proofRequestUrls: await outcomeProofRequestUrls(settled) };
   } catch (error) {
     // WP129+130 (ADR 032): compensate a taken web debit before rethrowing (the
     // base debit is already compensated inside chargeAndRun — ADR 020).

@@ -862,12 +862,18 @@ export function Chat({
           card: response.kind === 'answer' ? statCardData(response) : null,
           csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
           proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
-          // Amendment B5 (WP30c/E1 brief): this component is 'use client'
-          // with no server execution context — the live request_urls
-          // lookup is wired only at the two server-side call sites
-          // (replay-assemble.ts, question-history.tsx). Always null here,
-          // by design, not an oversight.
-          proofRequestUrls: null,
+          // #252 (was Amendment B5's named residual): this component is
+          // 'use client' with no server execution context, so the request_urls
+          // lookup itself cannot run here — it now runs SERVER-SIDE inside
+          // askQuestion/replyToClarification (web/app/actions.ts,
+          // outcomeProofRequestUrls) instead, threaded onto AskOutcome and
+          // read off `outcome` here, the same way `context`/`threadId`/
+          // `onboardingOffer` already are. Byte-identical map to what
+          // replay-assemble.ts / question-history.tsx already do for a
+          // resumed turn.
+          // `?? null` guards the same deploy-window skew as onboardingOffer
+          // below (a brand-new AskOutcome field an old server bundle omits).
+          proofRequestUrls: outcome.proofRequestUrls ?? null,
           answerView:
             response.kind === 'answer'
               ? {
