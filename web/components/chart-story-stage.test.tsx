@@ -907,6 +907,60 @@ describe('ChartStoryStage', () => {
     expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  // Row 4, audit pass 2 (2026-09-17): a real `scrollIntoView({behavior:
+  // 'smooth'})` keeps firing `scroll` events for as long as the animation
+  // runs, and those events can be MORE than the hook's 150ms settle window
+  // apart (the animation is still going; it just hasn't painted a new
+  // position within that window). The old fix only re-armed that window on
+  // every event, so once a gap exceeded it, the very next of the
+  // animation's OWN events read as a reader gesture and cancelled auto-play
+  // after exactly one step. This pins the reproduction from the audit
+  // (`aria-pressed` true → one advance → false, with no further movement)
+  // and the fix: auto-play must survive scroll events spaced well past
+  // 150ms apart, and keep advancing all the way to the last step.
+  it('auto-play survives its own smooth-scroll `scroll` events spaced more than 150ms apart, and reaches the last step (#4)', () => {
+    useStageScrollTimers();
+    try {
+      const onAdvance = vi.fn();
+      render(<Harness onAdvance={onAdvance} />);
+      const scroller = layoutStage();
+      const toggle = screen.getByRole('button', { name: 'Automatisch afspelen' });
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(1, 1);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+      // Three of the smooth animation's own `scroll` events, 300ms apart —
+      // each gap wider than the old 150ms settle window, and well short of
+      // this fix's own 1000ms bounded fallback.
+      act(() => {
+        scroller.dispatchEvent(new Event('scroll'));
+        vi.advanceTimersByTime(300);
+        scroller.dispatchEvent(new Event('scroll'));
+        vi.advanceTimersByTime(300);
+        scroller.dispatchEvent(new Event('scroll'));
+      });
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'true');
+      expect(onAdvance).toHaveBeenCalledTimes(1);
+
+      // The remainder of the second step's STAGE_AUTOPLAY_MS window (the
+      // 600ms above already elapsed toward it) — steps has 3 entries
+      // (`last` = index 2), so this second advance reaches the last step
+      // and auto-play switches itself off THERE, not one step early.
+      act(() => {
+        vi.advanceTimersByTime(STAGE_AUTOPLAY_MS - 600);
+      });
+      expect(onAdvance).toHaveBeenNthCalledWith(2, 2);
+      expect(screen.getByRole('button', { name: 'Automatisch afspelen' })).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // Item 8: the vignette used to cover the whole card — the title, the
   // legend and the source line dimmed along with the chart. It is now
   // positioned over the plot box alone.
