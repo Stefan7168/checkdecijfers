@@ -93,8 +93,14 @@ addendum above did not bump it: the field is additive-optional (every intent sto
 before this feature carries no key, `?? undefined` reads), so a bump would needlessly
 break every live embed token (`src/chart/embed-live.ts`) and in-flight pending
 clarification (`src/answer/respond/validate-pending.ts`). Decision #1's one-varying-axis
-rule is **not relaxed** — a region CLASS is still one axis (region) at one period; "several
-regions and several periods" (this ADR's own Revisit trigger below) remains refused.
+rule is **not relaxed for a region CLASS** — a region CLASS is still one axis (region) at
+one period; a region CLASS crossed with several periods stays refused. **This "several
+regions and several periods" framing is now qualified, not superseded: it stayed true only
+for a region CLASS or an over-cap/derivation-incompatible named-region ask. A HANDFUL OF
+EXPLICITLY NAMED regions crossed with a period range is answered as of ADR
+[055](055-multi-region-series.md) (session 110, 2026-09-17) — see that ADR's own addendum
+below, which is the one to read for the current, narrower scope of what "remains refused"
+actually means today.**
 
 This is a **scoped deviation from Alternatives #3 above** ("serving partial series...
 Rejected... all-or-nothing"): for the new `'region_set'` shape only, a missing or withheld
@@ -109,12 +115,52 @@ and why `Impossible`-null members do not count as a gap. **Tasks 1–7 of ADR 05
 and merged (session 110, 2026-09-17); Task 9 (parser exposure) is not built — see ADR 054's
 own status line.**
 
+## Addendum (2026-09-17, see ADR 055)
+
+[ADR 055](055-multi-region-series.md) adds a THIRD new result shape,
+`'region_series'`, for exactly ONE relaxation of decision #1's one-varying-axis rule: a
+handful of **explicitly named** regions (2 to `REGION_SERIES_MAX_REGIONS` = 6) crossed with
+a period range, up to `REGION_SERIES_MAX_CELLS` (500) cells — one line per region, each
+region's own `direction`/`first_last`, no cross-region claim (MS1). **This is the very
+cross-product shape this ADR's own Revisit trigger below anticipated, and
+`INTENT_SCHEMA_VERSION` is deliberately NOT bumped anyway** — the trigger's premise (that
+such a shape would need a new field and its own derivations) turned out not to hold: the
+shape is *derived* from `regions.length > 1 && periodCodes.length > 1` on fields the
+contract already has, no `StructuredIntent` field is added, and the pre-registered
+derivations (`direction`/`first_last`) are the SAME registered functions decision #4
+describes, called per-region-slice rather than over the whole cell array. A bump would have
+broken every live embed token (`src/chart/embed-live.ts`) and in-flight pending
+clarification (`src/answer/respond/validate-pending.ts`) for a shape change that touches no
+byte of the stored contract.
+
+The one-varying-axis rule is **not relaxed in general** — only for this one, narrow,
+named-regions-times-range case. Everything else it always refused stays refused, unchanged:
+a region CLASS (ADR 054's `regionSet`) crossed with a range remains `invalid_intent` with
+`subReason: 'multi_region_multi_period'`; more than 6 named regions, or a cross-product over
+500 cells, refuses the same way rather than silently dropping a named region; a
+`difference`/`max` derivation over several regions keeps its own, more specific arity
+refusal (decision #1, unchanged).
+
+This is also a scoped deviation from Alternatives #3 above, on the same axis ADR 054's own
+addendum already deviated: for `'region_series'` only, a named region missing a whole row at
+any requested period is **excluded from the answer entirely** rather than refusing the whole
+query — disclosed structurally (`ValidatedResult.regionSeries`, a `regionSeriesLine`) and
+never silently served or silently shortened. A region present at every period but with a
+null-with-reason cell somewhere in the window is **partial**: its cells still draw (R11), but
+it gets no trend claim (MS1). See ADR 055 for the full coverage-record mechanism, the
+validator fix it required (`trendBacking` → `trendCandidates`/`resolveTrendBacking`, so a
+later region's cells can no longer silently borrow an earlier region's derivation backing),
+and why — unlike `region_set` — this capability is reachable by a real user question the
+moment it merges, with no parser change needed at all. **Tasks 1–6 of ADR 055 are built and
+merged (session 110, 2026-09-17); the first real-LLM confirmation (a live benchmark run) is
+owner-supervised spend, not yet performed — see ADR 055's own status line.**
+
 ## Revisit triggers
 
-- A benchmark-shaped question needs several regions *and* several periods
-  (e.g. "compare the G4's growth 2019-2024") → extend the contract with an
-  explicit cross-product shape and its own derivations, bump
-  `INTENT_SCHEMA_VERSION`.
+- A benchmark-shaped question needs a region CLASS (not explicitly named regions — see the
+  ADR 055 addendum above for the named-regions case, already built) *and* several periods
+  (e.g. "compare all provincies' growth 2019-2024") → extend the contract with an explicit
+  cross-product shape and its own derivations, bump `INTENT_SCHEMA_VERSION`.
 - WP6 calibration shows the parser needs richer period expressions
   ("meest recente") → add a typed relative-period form; never free text.
 - A second table with a non-`Perioden` time dimension or multiple geo

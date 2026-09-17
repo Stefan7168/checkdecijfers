@@ -418,3 +418,14 @@ onto an unrelated refusal. Pinned in `tests/audit/region-set-r8.test.ts`.
 both refusals' wording, both offer chips, both no-chip cases, both flag-off byte-identical envelopes),
 `tests/audit/region-set-r8.test.ts` (18, was 10). Root `npm run typecheck` clean. Zero
 prompt/fixture bytes changed.
+
+**Superseded for named regions (session 110, 2026-09-17, see ADR [055](055-multi-region-series.md)).**
+The row-13 example question above — "Hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van
+2020 tot 2024?" — is **no longer refused**. ADR 055 relaxes the one-varying-axis rule for exactly this
+case (2 to 6 explicitly named regions crossed with a period range) and answers it as a new
+`'region_series'` result shape. The `multi_region_multi_period` sub-reason, its refusal builder and its
+row-13/row-15 offer chip described above are **still live and still used**, but now only for what ADR
+055 does NOT relax: a region CLASS (`regionSet`) crossed with a range, more than 6 named regions, or a
+cross-product over 500 cells. The refusal's wording was updated accordingly (ADR 055's own doc); this
+ADR's text above is left as the historical record of the bug this addendum fixed, not a current
+description of what refuses today.
