@@ -11,9 +11,13 @@ vi.mock('../lib/trial.ts', async (importOriginal) => ({
   getTrialGateState,
 }));
 vi.mock('./trial-chat.tsx', () => ({
-  TrialChat: ({ initialQuestionsLeft }: { initialQuestionsLeft: number }) => (
-    <div data-testid="trial-chat" data-left={initialQuestionsLeft} />
-  ),
+  TrialChat: ({
+    initialQuestionsLeft,
+    initialNotice,
+  }: {
+    initialQuestionsLeft: number;
+    initialNotice?: string | null;
+  }) => <div data-testid="trial-chat" data-left={initialQuestionsLeft} data-notice={initialNotice ?? ''} />,
   LoginNudge: ({ text }: { text: string }) => <div data-testid="login-nudge">{text}</div>,
 }));
 
@@ -81,10 +85,17 @@ describe('TrialGate', () => {
     expect(screen.queryByTestId('trial-chat')).toBeNull();
   });
 
-  it('tells an exhausted visitor their own budget is spent', async () => {
+  // Row 1 (session 110 UX audit pass 2): a bare LoginNudge here used to
+  // unmount TrialChat's `messages` state on the post-action refresh,
+  // discarding the answer the visitor's last question just paid for. TrialChat
+  // now stays mounted and renders this notice itself.
+  it('tells an exhausted visitor their own budget is spent — WITHOUT unmounting the trial chat', async () => {
     getTrialGateState.mockResolvedValue({ kind: 'used_up' });
     render(await TrialGate());
-    expect(screen.getByTestId('login-nudge')).toHaveTextContent('proefvragen gebruikt');
+    const chat = screen.getByTestId('trial-chat');
+    expect(chat.dataset.left).toBe('0');
+    expect(chat.dataset.notice).toBe('used_up');
+    expect(screen.queryByTestId('login-nudge')).toBeNull();
   });
 
   // #184: the visitor behind an exhausted NAT usually asked nothing themselves,
@@ -123,13 +134,25 @@ describe('TrialGate', () => {
 // WP218 phase 4 (#219): proves the language switch reaches this Server
 // Component.
 describe('TrialGate — en', () => {
-  it('renders the English heading, subheading and degrade copy', async () => {
+  it('renders the English heading and degrade copy for a closed pot', async () => {
+    getLang.mockResolvedValue('en');
+    getTrialGateState.mockResolvedValue({ kind: 'closed' });
+    render(await TrialGate());
+    expect(screen.getByText('Try it now')).toBeInTheDocument();
+    expect(screen.getByTestId('login-nudge')).toHaveTextContent(
+      MESSAGES.en['trial.potEmpty'],
+    );
+  });
+
+  // The used_up notice text itself is TrialChat's own responsibility (see
+  // trial-chat.test.tsx); here only the language switch reaching this
+  // Server Component, and the chat staying mounted, are in scope.
+  it('keeps the trial chat mounted (never login-nudge) for used_up, in English too', async () => {
     getLang.mockResolvedValue('en');
     getTrialGateState.mockResolvedValue({ kind: 'used_up' });
     render(await TrialGate());
     expect(screen.getByText('Try it now')).toBeInTheDocument();
-    expect(
-      screen.getByTestId('login-nudge'),
-    ).toHaveTextContent('You have used your free trial questions. Create a free account to continue.');
+    expect(screen.getByTestId('trial-chat').dataset.notice).toBe('used_up');
+    expect(screen.queryByTestId('login-nudge')).toBeNull();
   });
 });

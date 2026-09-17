@@ -26,7 +26,6 @@ export async function TrialGate() {
   // pot-is-empty sentence, which during a #173 pooler exhaustion told every
   // visitor something untrue).
   const NUDGE_TEXT = {
-    used_up: t(lang, 'trial.usedUp'),
     closed: t(lang, 'trial.potEmpty'),
     unavailable: t(lang, 'trial.unavailable'),
     ip_limit: t(lang, 'trial.ipLimit'),
@@ -38,6 +37,19 @@ export async function TrialGate() {
       <div className="mt-6">
         {state.kind === 'open' ? (
           <TrialChat initialQuestionsLeft={state.questionsLeft} />
+        ) : state.kind === 'used_up' ? (
+          // Row 1 (session 110 UX audit pass 2): a Server Action call from
+          // TrialChat implicitly refreshes this Server Component, and it used
+          // to swap TrialChat out for a bare LoginNudge the instant
+          // questionsLeft hit 0 — unmounting the client message list and
+          // discarding the very answer the visitor's last question paid for.
+          // TrialChat already renders this exact nudge itself (see its own
+          // `used_up` notice); handing it the notice as an initial prop, INSTEAD
+          // of swapping components, keeps the transcript mounted across the
+          // refresh. The other non-open states never had a transcript to lose
+          // (the visitor is capped before ever chatting), so only this one
+          // branch needed to change.
+          <TrialChat initialQuestionsLeft={0} initialNotice="used_up" />
         ) : (
           <LoginNudge text={NUDGE_TEXT[state.kind]} />
         )}
