@@ -164,6 +164,32 @@ describe('onboarding-cron wiring (source pins)', () => {
     expect(ownCatch).toBeGreaterThan(missedSyncBlockStart);
     expect(responseJson).toBeGreaterThan(ownCatch);
   });
+
+  // #23 (health-probe alert, session 110): re-runs /api/health's own checks
+  // (#114) after the main job and alerts once on a failure. Behavioral
+  // coverage of the alert pair itself lives in
+  // tests/audit/health-probe-alert.test.ts (hermetic, stubbed fetch); this
+  // pins the WIRING presence, same reasoning as the #23 ingestion-alert pin
+  // above.
+  it('#23: re-runs the health-probe checks after the main job and alerts on a failure', () => {
+    expect(source).toContain('runHealthChecks(');
+    expect(source).toContain('maybeAlertHealthProbeFailure(');
+  });
+
+  it('#23: the health-probe alert is fail-open — a throw there must never fail the cron response', () => {
+    // Its own try/catch sits BETWEEN the main job's summary and the
+    // terminally-failed-row alert block, so a runHealthChecks/alert failure
+    // can only ever reach this route's own console.warn, never the
+    // catch(error) 500 path below.
+    const jobDone = source.indexOf('await runOnboardingJob(');
+    const healthBlockStart = source.indexOf('runHealthChecks(', jobDone);
+    const ownCatch = source.indexOf('health-probe alert failed', healthBlockStart);
+    const failedRowBlockStart = source.indexOf("outcome === 'failed'", healthBlockStart);
+    expect(jobDone).toBeGreaterThan(-1);
+    expect(healthBlockStart).toBeGreaterThan(jobDone);
+    expect(ownCatch).toBeGreaterThan(healthBlockStart);
+    expect(failedRowBlockStart).toBeGreaterThan(ownCatch);
+  });
 });
 
 describe('onboarding-cron vercel config', () => {
