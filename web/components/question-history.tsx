@@ -258,6 +258,14 @@ export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[]
               <span className={item.isDeleted ? 'italic text-muted-foreground' : 'font-medium'}>
                 {item.isDeleted ? t(lang, 'history.deletedQuestionLabel') : item.question}
               </span>
+              {/* Row 17 (session 110 UX audit): the `ml-2` on the span below
+                * is a CSS margin -- it separates these two spans VISUALLY but
+                * contributes no character to the accessible name, so a
+                * question ending in "?" ran straight into "0 credits" as
+                * "?0 credits". This literal space (before the same visual
+                * gap the margin already gives) fixes the accessible name
+                * without changing how the row looks. */}
+              {' '}
               <span className="ml-2 text-xs text-muted-foreground">
                 {/* A collapsed round's number is the SUM of two turns -- say so
                   * (adversarial-review finding: unlabeled, it reads as one
@@ -269,7 +277,9 @@ export async function QuestionHistory({ items }: { items: QuestionHistoryEntry[]
                 {formatDate(lang, item.createdAt)}
               </span>
               {item.isDeleted ? null : (
-                <div className="mt-0.5 truncate text-xs text-muted-foreground">{snippet(item.finalText)}</div>
+                // Same fix: a leading space so this block's text doesn't run
+                // straight into the date/credits span above it either.
+                <div className="mt-0.5 truncate text-xs text-muted-foreground">{' ' + snippet(item.finalText)}</div>
               )}
             </summary>
             {item.isDeleted ? (
