@@ -4923,6 +4923,30 @@ describe('embed mode (spec Part B3)', () => {
   });
 });
 
+// Regression 1 (session 110 UX audit pass 5): the embed reading <select>
+// (#262c) had no width cap, so a long registry alternate label forced it to
+// its intrinsic content width (341px in a 320px frame), causing horizontal
+// page scroll on the public embed. Fixed by capping the select's width to
+// its flex container instead of its content.
+describe('ChartView — embed reading select never forces a width past its container (regression 1, pass 5)', () => {
+  it('caps the select at the container width instead of its content width', () => {
+    render(
+      <ChartView
+        spec={threePointSpec()}
+        embedMode
+        embedFooter="x"
+        alternates={[{ label: 'Ongecorrigeerd', spec: threePointSpec() }]}
+      />,
+    );
+    const select = screen.getByRole('combobox', { name: /lezing|reading/i });
+    expect(select.className).toMatch(/\bw-full\b/);
+    expect(select.className).toMatch(/\bmax-w-full\b/);
+    expect(select.className).toMatch(/\bmin-w-0\b/);
+    const wrapper = select.closest('[data-slot="chart-controls-embed"]') as HTMLElement;
+    expect(wrapper.className).toMatch(/\bmin-w-0\b/);
+  });
+});
+
 // Task 4 (spec Part B1): the real ChartEmbedButton now mounts at the footer
 // marker Task 3 left — chart-embed-dialog.test.tsx covers the button/dialog
 // in isolation; these cover its WIRING into ChartView itself: the `embed`
