@@ -39,7 +39,7 @@ import {
   withValidatedClickOptions,
 } from '../../src/answer/respond/index.ts';
 import type { PendingClarification } from '../../src/answer/respond/index.ts';
-import { isRescuePending } from '../../src/answer/respond/respond.ts';
+import { CHIP_CARRIER_QUESTION_NL, isRescuePending } from '../../src/answer/respond/respond.ts';
 import type { ServabilityCheck } from '../../src/answer/intent/policy.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
@@ -597,5 +597,152 @@ describe('the take: a clicked comparison is a NEW validated result, without any 
     expect(record.answerSource).toBe('template');
     expect(record.resultIds).toHaveLength(2);
     expect(reconstructionReport(record).problems).toEqual([]);
+  });
+});
+
+// ADR 055 follow-up (session 110) — `regionTrend()`, the multi-region sibling
+// of the WP29 `trend()` generator: on a comparison answer (2..6 named
+// regions, one period) it offers ONE chip re-asking the same regions over a
+// period range as the new `region_series` shape. Gated by
+// `servableAndTakeable`, the same take-path the two comparison generators
+// above use, and it occupies the exact slot `trend()` leaves empty for a
+// multi-region answer — the two are mutually exclusive by construction.
+const REGION_TREND_LABEL =
+  'Hoe ontwikkelde bevolking op 1 januari in Amsterdam en Rotterdam zich van 2020 tot en met 2024?';
+
+describe('buildAnswerChips — regionTrend (ADR 055 follow-up, session 110)', () => {
+  it('a 2-region comparison answer (Amsterdam + Rotterdam, 2024) offers ONE region-trend chip: same regions, a 5-period range, `series` derivation', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'GM0599']);
+    const chips = await buildAnswerChips(intent, await answered(intent), realCheck, ON);
+    expect(chips.suggestions).toContain(REGION_TREND_LABEL);
+    const option = chips.clickOptions.find((o) => o.id.startsWith('regionTrend'));
+    expect(option).toBeDefined();
+    expect(option!.label).toBe(REGION_TREND_LABEL);
+    expect(option!.intent).toEqual(
+      intentOf(
+        'population_on_1_january',
+        { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+        ['GM0363', 'GM0599'],
+        'series',
+      ),
+    );
+    expect(option!.impliedRecency).toBe(false);
+    // Not question-shaped: like the comparison generators, a click-take or
+    // nothing — never a plain fill-the-input fallback for this new shape.
+    expect(option!.questionShaped).toBeUndefined();
+    expectNoValueDigits([REGION_TREND_LABEL]);
+    expect(validateClickOptions(chips.clickOptions)).toEqual(chips.clickOptions);
+  });
+
+  it('a single-region answer is untouched: trend() still offers its own single-region chip, and no region-trend chip appears', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363']);
+    const chips = await buildAnswerChips(intent, await answered(intent), realCheck, ON);
+    expect(chips.clickOptions.some((o) => o.id.startsWith('regionTrend'))).toBe(false);
+    expect(chips.suggestions).toContain(
+      'Hoe ontwikkelde bevolking op 1 januari in Amsterdam zich van 2020 tot en met 2024?',
+    );
+  });
+
+  it('a region-SET answer (ADR 054 regionSet, "all provinces") gets no region-trend chip: `regions`/`regionSet` are mutually exclusive, so candidateRegions is empty and the generator never dry-runs a MULTI-region class × range candidate', async () => {
+    const intent: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: { kind: 'canonical', key: 'population_on_1_january' },
+      regionSet: { kind: 'all_provincies' },
+      period: { kind: 'codes', codes: ['2025JJ00'] },
+      derivation: 'none',
+    };
+    const seriesCandidates: StructuredIntent[] = [];
+    const check: ServabilityCheck = async (i) => {
+      if (i.derivation === 'series') seriesCandidates.push(i);
+      return realCheck(i);
+    };
+    const result = await answered(intent);
+    const chips = await buildAnswerChips(intent, result, check, ON);
+    expect(chips.clickOptions.some((o) => o.id.startsWith('regionTrend'))).toBe(false);
+    expect(chips.suggestions.join(' ')).not.toContain('Hoe ontwikkelde');
+    // trend() itself still dry-runs its own (regionless) series candidates —
+    // that generator is untouched by this change. The claim this pins is
+    // narrower and precise: regionTrend contributes NONE of them, because
+    // ADR 055 D3 already refuses a region class over a range and this
+    // generator's own wording-safety gate (candidateRegions empty for a
+    // regionSet answer) never lets it try — no candidate here carries more
+    // than one region.
+    expect(seriesCandidates.every((c) => (c.regions ?? []).length <= 1)).toBe(true);
+  });
+
+  it('flag off: no region-trend chip either — the pre-#197 generator list is untouched', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'GM0599']);
+    const result = await answered(intent);
+    const suggestions = await buildSuggestions(intent, result, realCheck);
+    expect(suggestions.join(' ')).not.toContain('Hoe ontwikkelde');
+  });
+
+  it('the envelope is byte-identical to the pre-regionTrend chip set when the region-trend candidate is not servable (both the 5- and 3-period window refused)', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'GM0599']);
+    const result = await answered(intent);
+    // Only the `series` derivation (regionTrend's own candidate shape) is
+    // refused; everything else runs the real dry-run — so this isolates
+    // exactly the "not servable" case the generator itself must degrade
+    // gracefully from. Measured against the real fixture (adjacent period →
+    // regionTrend refused/skipped → compareRegion; comparePeriod/
+    // regionVariant/sameTopic yield nothing for this table either way).
+    const seriesRefused: ServabilityCheck = async (i) => (i.derivation === 'series' ? NOT_SERVABLE : realCheck(i));
+    const chips = await buildAnswerChips(intent, result, seriesRefused, ON);
+    expect(chips.suggestions).toEqual([
+      'Wat was bevolking op 1 januari in Amsterdam en Rotterdam in 2025?',
+      'Vergelijk met Nederland',
+    ]);
+    expect(chips.clickOptions.map((o) => o.id)).toEqual(['adjacent-1', 'cmp-1']);
+    expect(chips.clickOptions.map((o) => o.label)).toEqual(chips.suggestions);
+    expect(chips.axes).toEqual(['period', 'region']);
+  });
+
+  it('the take: clicking the region-trend chip yields a NEW `region_series` result — zero LLM calls, one line per region', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363', 'GM0599']);
+    const chips = await buildAnswerChips(intent, await answered(intent), realCheck, ON);
+    const pending: PendingClarification = {
+      version: 1,
+      question: 'Hoeveel inwoners hadden Amsterdam en Rotterdam in 2024?',
+      referenceDate: REFERENCE_DATE,
+      axes: chips.axes,
+      questionNl: CHIP_CARRIER_QUESTION_NL,
+      options: chips.clickOptions.map((o) => o.label),
+      clickOptions: chips.clickOptions,
+      rescueOnly: true,
+    };
+    const taken = await respondToClarificationReply(db, pending, REGION_TREND_LABEL, {
+      intentClient: new ThrowingClient(),
+      answerClient: new ThrowingClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    expect(taken.kind).toBe('answer');
+    if (taken.kind !== 'answer') throw new Error('unreachable');
+    expect(taken.result.shape).toBe('region_series');
+    expect(taken.result.intent.regions).toEqual(['GM0363', 'GM0599']);
+    expect(taken.result.cells.map((c) => c.periodCode)).toEqual([
+      '2020JJ00',
+      '2020JJ00',
+      '2021JJ00',
+      '2021JJ00',
+      '2022JJ00',
+      '2022JJ00',
+      '2023JJ00',
+      '2023JJ00',
+      '2024JJ00',
+      '2024JJ00',
+    ]);
+    expect(new Set(taken.result.cells.map((c) => c.regionCode))).toEqual(new Set(['GM0363', 'GM0599']));
+    expect(taken.result.regionSeries?.complete).toBe(true);
+    // ADR 024: template rung, click model, zero tokens.
+    expect(taken.answer.source).toBe('template');
+    expect(taken.answer.model).toBeNull();
+    expect(taken.answer.validation.ok).toBe(true);
+    expect(taken.parse.model).toBe(CLICK_TAKE_MODEL);
+    expect(taken.parse.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
+    expect(taken.result.cells.every((c) => c.resultId.length > 0)).toBe(true);
+    expect(taken.question).toBe('Hoeveel inwoners hadden Amsterdam en Rotterdam in 2024?');
+    expect(taken.chart?.kind).toBe('line');
+    expect(taken.chart?.series).toHaveLength(2);
   });
 });
