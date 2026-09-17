@@ -8,18 +8,29 @@
 // mirroring migration-018.test.ts's shape for a brand-new table pair rather
 // than a widening.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { applyMigrations, MIGRATIONS_DIR } from '../../src/db/migrate.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const MINIMAL_PROFILE = JSON.stringify({ columns: [], rowCount: 0 });

@@ -3,20 +3,31 @@
 // assumption anymore) plus the cross-user isolation the code-review pass
 // added (get/delete now take userId, scoped identically to put).
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PostgresFileStore } from '../../src/attachments/file-store.ts';
 import { insertDataset } from '../../src/attachments/store.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const MINIMAL_PROFILE: DatasetProfile = { columns: [], rowCount: 0 };

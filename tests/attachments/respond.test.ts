@@ -2,22 +2,33 @@
 // with a fake LlmClient (no live LLM). Every outcome must write exactly one
 // turn and return a matching AuditedDatasetTurn.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MIN_INSTRUCTION_CONFIDENCE, respondToDatasetQuestion } from '../../src/attachments/respond.ts';
 import { insertDataset } from '../../src/attachments/store.ts';
 import { toClientInstruction, type ChartInstruction, type UserDataset } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import { buildDatasetProfile } from '../../src/attachments/ingest/profile.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const CELLS = [

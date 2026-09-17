@@ -1,18 +1,29 @@
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { getBalance, QUESTION_DEBIT, reserveDebit, WEBSEARCH_DEBIT } from '../../src/billing/ledger.ts';
 import { splitDebit, compensateSplit, getCurrentGrantId, getSpendableBalance } from '../../src/billing/ledger.ts';
 import { grantBucket, getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 async function seedSignup(db: Db, userId: string, credits: number): Promise<void> {

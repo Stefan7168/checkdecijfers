@@ -3,12 +3,13 @@
 // Stripe's own `generateTestHeaderString` test helper against a hand-authored
 // `checkout.session.completed` fixture. No network, no live Stripe account.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { handleStripeEvent } from '../../src/billing/stripe-webhook.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
 import { getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 // WEBHOOK_SECRET/sign and the two Stripe-shape-sensitive fixture builders
 // (subscriptionEventPayload, invoicePaidPayload) live in a shared, non-test
 // helper module — not defined locally and exported from here — so that
@@ -93,13 +94,23 @@ function checkoutCompletedPayload(
   return checkoutEventPayload('checkout.session.completed', sessionId, userId, packId, credits, paymentStatus);
 }
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 describe('handleStripeEvent — valid signature', () => {

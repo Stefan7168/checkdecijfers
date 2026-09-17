@@ -14,7 +14,7 @@
 // earlier version hardcoded the refund amounts and would have missed exactly
 // that drift).
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 import { chargeAndRun } from '../../src/billing/gate.ts';
 import { getQuestionHistory } from '../../src/billing/history.ts';
@@ -31,14 +31,25 @@ import { debitBucket, grantBucket } from '../../src/billing/pro-bucket.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createPendingRequest, finalizeDelivered, finalizeFailed } from '../../src/ingestion/onboarding-store.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 /** Minimal audit_answers row -- a real ComposedResponse envelope has many

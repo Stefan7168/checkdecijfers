@@ -1,20 +1,31 @@
 // getDatasetTurnById (read.ts) — the AuditRecord-analog reader for
 // dataset_turns, used by reconstruct.ts and scripts/verify-dataset-turns.ts.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { getDatasetTurnById } from '../../src/attachments/read.ts';
 import { insertDataset, insertDatasetTurn } from '../../src/attachments/store.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const MINIMAL_PROFILE: DatasetProfile = { columns: [], rowCount: 0 };
