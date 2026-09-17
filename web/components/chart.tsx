@@ -916,6 +916,20 @@ function SeriesDot(
               ? (event: KeyboardEvent<SVGCircleElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): Recharts' own
+                  // `.recharts-wrapper` ancestor has its own onKeyDown
+                  // (RechartsWrapper.js) that feeds its built-in tooltip
+                  // keyboard-navigation feature, and that feature treats
+                  // 'Enter' specially (one of exactly three keys its
+                  // listener middleware acts on) while leaving ' ' alone —
+                  // which is exactly why Enter silently did nothing here
+                  // while Space worked: this activation was competing with
+                  // Recharts' own Enter handling for the same keystroke. A
+                  // point that already activated on this key owns the
+                  // gesture completely, the same way a real <button> would
+                  // never hand the keypress that activated it to an
+                  // ancestor's unrelated keyboard handling.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
@@ -1030,6 +1044,13 @@ function SeriesBar(
               ? (event: KeyboardEvent<SVGRectElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): see SeriesDot's
+                  // identical stopPropagation above — Recharts' own
+                  // `.recharts-wrapper` ancestor onKeyDown treats 'Enter'
+                  // specially for its built-in tooltip keyboard navigation
+                  // (not ' '), which is why only Enter silently did nothing
+                  // here.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
@@ -1124,6 +1145,13 @@ function RegionBar(
               ? (event: KeyboardEvent<SVGRectElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): see SeriesDot's
+                  // identical stopPropagation above — Recharts' own
+                  // `.recharts-wrapper` ancestor onKeyDown treats 'Enter'
+                  // specially for its built-in tooltip keyboard navigation
+                  // (not ' '), which is why only Enter silently did nothing
+                  // here.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
@@ -2334,7 +2362,10 @@ export function ChartView({
       } else if (result.reason === 'unauthenticated') {
         setHeadlineError(t(chartLang, 'chart.headline.unauthenticated'));
       } else {
-        setHeadlineError(t(chartLang, 'chart.headline.error'));
+        // #6 (session 110 UX audit pass 2): this is the DRAFT failure path
+        // — nothing has been saved yet, so it must not use the save-error
+        // string (chart.headline.error, used by saveHeadlineDraft below).
+        setHeadlineError(t(chartLang, 'chart.headline.draftError'));
       }
     });
   }
@@ -3007,7 +3038,14 @@ export function ChartView({
               {t(chartLang, 'chart.headline.cancel')}
             </button>
           </div>
-          {headlineError !== null ? <p className="text-xs text-destructive">{headlineError}</p> : null}
+          {/* #15 (session 110 UX audit pass 2): role="alert" so a screen
+            * reader announces the failure — the paragraph used to render
+            * silently. */}
+          {headlineError !== null ? (
+            <p role="alert" className="text-xs text-destructive">
+              {headlineError}
+            </p>
+          ) : null}
         </div>
       ) : chartHeadline !== null ? (
         <p className="mt-3 text-base font-semibold leading-snug text-foreground" data-testid="chart-headline-text">
@@ -3017,7 +3055,11 @@ export function ChartView({
         // startHeadlineDraft's unauthenticated/error paths set headlineError
         // WITHOUT entering edit mode (there's no draft to edit yet) — this
         // branch is the only place that message is ever shown.
-        <p className="mt-3 text-xs text-destructive">{headlineError}</p>
+        // #15 (session 110 UX audit pass 2): role="alert" — see the other
+        // headlineError paragraph above for the same fix.
+        <p role="alert" className="mt-3 text-xs text-destructive">
+          {headlineError}
+        </p>
       ) : null}
       {/* Chart-card polish (2026-09-15): the number leads, the chart is the
         * evidence. Outside the export container (chartContainerRef) by

@@ -415,6 +415,11 @@ const nl = {
   'chart.headline.drafting': 'Bezig met voorstellen…',
   'chart.headline.unauthenticated': 'Log in om een kop toe te voegen.',
   'chart.headline.error': 'Kon de kop niet opslaan.',
+  // #6 (session 110 UX audit pass 2): the draft (Kop voorstellen) and the
+  // save (Opslaan) path used to share `chart.headline.error` — a failed
+  // AI draft showed "Kon de kop niet opslaan", which is false: nothing was
+  // being saved yet. Own string for the draft failure.
+  'chart.headline.draftError': 'Kon de kop niet voorstellen.',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -425,9 +430,18 @@ const nl = {
   // chart-notes.tsx.
   'chart.notes.heading': 'Uw aantekeningen (geen CBS-data)',
   'chart.notes.delete': 'Verwijder',
+  // #13 (session 110 UX audit pass 2): plain "Verwijder" on every note's
+  // delete button reads as "Verwijder, Verwijder, Verwijder" with several
+  // notes. Own accessible-name key carrying the note's own point context —
+  // the visible button label stays the short `chart.notes.delete` text.
+  'chart.notes.deleteAriaLabel': 'Verwijder de notitie bij {series} · {period}',
   'chart.notes.draftLabel': 'Notitie bij {series} · {period}',
   'chart.notes.save': 'Opslaan',
   'chart.notes.cancel': 'Annuleren',
+  // #17 (session 110 UX audit pass 2): notes are session-only and excluded
+  // from every download/embed by construction (ADR 038) — nothing on
+  // screen said so before this line.
+  'chart.notes.sessionOnly': 'Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.',
 
   // chart-download.tsx.
   'chart.download.trigger': 'Download',
@@ -1212,6 +1226,7 @@ const en: Messages = {
   'chart.headline.drafting': 'Drafting…',
   'chart.headline.unauthenticated': 'Sign in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
+  'chart.headline.draftError': 'Could not suggest a headline.',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',
@@ -1221,9 +1236,11 @@ const en: Messages = {
 
   'chart.notes.heading': 'Your notes (not CBS data)',
   'chart.notes.delete': 'Delete',
+  'chart.notes.deleteAriaLabel': 'Delete the note at {series} · {period}',
   'chart.notes.draftLabel': 'Note at {series} · {period}',
   'chart.notes.save': 'Save',
   'chart.notes.cancel': 'Cancel',
+  'chart.notes.sessionOnly': 'Notes stay in this session and are not included in downloads or embeds.',
 
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Download format',

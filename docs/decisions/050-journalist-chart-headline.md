@@ -167,6 +167,14 @@ exported image).
   during Task 6, independently re-verified by Task 6's reviewer and again by the final whole-branch
   review. Process lesson, not a design consequence of this ADR — recorded in
   [lessons-learned.md](../lessons-learned.md).
+- **Addendum (session 110, 2026-09-17, UX audit pass 2 rows #6/#15):** the draft (Kop voorstellen)
+  and save (Opslaan) failure paths shared one `chart.headline.error` string, so a failed DRAFT
+  showed "Could not save the headline" — nothing had been saved yet. Fixed with a dedicated
+  `chart.headline.draftError` key (`web/lib/i18n/messages.ts`), used only by `startHeadlineDraft`'s
+  generic-failure branch in `web/components/chart.tsx`. The same session also added `role="alert"`
+  to both `headlineError` `<p>` elements (edit-mode save-failure and no-draft-yet failure), which
+  previously rendered silently for screen-reader users. No schema/mechanism change; mechanical
+  fixes only.
 
 ## Revisit triggers
 

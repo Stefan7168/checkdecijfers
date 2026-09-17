@@ -9,7 +9,7 @@
 // excluded from the PNG/SVG export (which only ever reads the live <svg>
 // inside chartContainerRef). Session-only by owner decision (F): no
 // persistence, nothing here survives a reload.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 
 export interface ChartNote {
@@ -51,6 +51,17 @@ export function ChartNotes({
   onDelete: (id: string) => void;
 }) {
   const [draft, setDraft] = useState('');
+  // #8 (session 110 UX audit pass 2): opening the editor never moved focus
+  // into it, so a keyboard user who activated an "Add a note at …" point
+  // was dropped wherever focus already was (usually the top of the
+  // document — the editor mounts far below the chart). `triggerElRef`
+  // captures whatever was focused (the point itself, for both a real click
+  // — which focuses a tabIndex=0 SVG element — and a keyboard activation,
+  // which REQUIRES the point to already have focus) so Save/Cancel/Escape
+  // can put focus back where it started, matching how a native dialog
+  // returns focus to its own opener.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const triggerElRef = useRef<HTMLElement | SVGElement | null>(null);
 
   // A click on a DIFFERENT chart point swaps `pendingPoint` (chart.tsx calls
   // setPendingPoint(p) unconditionally on every point click) while this
@@ -61,17 +72,27 @@ export function ChartNotes({
   // (and needlessly reset the same in-progress draft) on unrelated re-renders.
   useEffect(() => {
     setDraft('');
+    if (pendingPoint) {
+      const active = document.activeElement;
+      triggerElRef.current = active instanceof HTMLElement || active instanceof SVGElement ? active : null;
+      textareaRef.current?.focus();
+    }
   }, [pendingPoint?.resultId]);
 
   const noteDraftId = `${idPrefix}-note-draft`;
 
   if (notes.length === 0 && !pendingPoint) return null;
 
+  function returnFocusToTrigger(): void {
+    triggerElRef.current?.focus();
+  }
+
   function save(): void {
     const trimmed = draft.trim();
     if (trimmed.length === 0) return;
     onSave(trimmed);
     setDraft('');
+    returnFocusToTrigger();
   }
 
   return (
@@ -79,6 +100,10 @@ export function ChartNotes({
       <div role="heading" aria-level={4} className="text-xs font-semibold text-muted-foreground">
         {t(lang, 'chart.notes.heading')}
       </div>
+      {/* #17 (session 110 UX audit pass 2): notes are session-only and
+        * excluded from every download/embed by construction (ADR 038) —
+        * this is the disclosure that says so. */}
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{t(lang, 'chart.notes.sessionOnly')}</p>
       {notes.length > 0 ? (
         <ul className="mt-2 flex flex-col gap-1.5">
           {notes.map((note) => (
@@ -92,6 +117,7 @@ export function ChartNotes({
               <button
                 type="button"
                 onClick={() => onDelete(note.id)}
+                aria-label={t(lang, 'chart.notes.deleteAriaLabel', { series: note.seriesLabel, period: note.periodLabel })}
                 className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
                 {t(lang, 'chart.notes.delete')}
@@ -106,6 +132,7 @@ export function ChartNotes({
             {t(lang, 'chart.notes.draftLabel', { series: pendingPoint.seriesLabel, period: pendingPoint.periodLabel })}
           </label>
           <textarea
+            ref={textareaRef}
             id={noteDraftId}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -113,6 +140,7 @@ export function ChartNotes({
               if (e.key === 'Escape') {
                 setDraft('');
                 onCancelPending();
+                returnFocusToTrigger();
               }
             }}
             rows={2}
@@ -131,6 +159,7 @@ export function ChartNotes({
               onClick={() => {
                 setDraft('');
                 onCancelPending();
+                returnFocusToTrigger();
               }}
               className="min-h-6 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
             >
