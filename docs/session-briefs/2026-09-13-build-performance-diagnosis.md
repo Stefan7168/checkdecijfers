@@ -880,3 +880,127 @@ failed — `answer.spec.ts` "(g) an over-cap multi-region refusal…" expects a 
 whole change, moved the new route folder aside and re-ran that spec on the baseline — identical
 failure, same locator. Not this pass's to fix (it is a test-expectation/label-resolution mismatch);
 worth its own row.
+
+## Workspace chunk split (session 110)
+
+**Task:** the "Logged-in workspace bundle" pass above named the 203,596-byte Workspace/Chat/
+ThreadSidebar/dock chunk as "the one real candidate for a next pass's lazy-load" and named the
+mechanism that already works elsewhere in this codebase: `next/dynamic({ ssr: false })` on
+interaction-only CHILDREN inside an already-`'use client'` component (`chart.tsx`'s own precedent,
+pass 1 of the landing-bundle work above) — never on the Server Component branch itself (proven not
+to work, twice, by pass 3 Target B and the logged-in pass). This pass applied that mechanism inside
+`workspace.tsx`/`chat.tsx`/`visual-dock.tsx`/`site-header.tsx` and measured with the real
+anonymous/signed-in curl method the logged-in pass built (`next start`, sum every
+`<script src>`/preload-as-script tag from the served HTML, on-disk sizes).
+
+**What was converted, all to `dynamic(() => import(...).then((m) => m.X), { ssr: false })`:**
+
+- `DatasetChat` (`components/dataset-chat.tsx`, 305 lines) — wrapped in `workspace.tsx`. Only ever
+  mounted for a dataset-kind `Handoff` (an existing dataset thread clicked, or a completed upload);
+  never at first paint, and (`ATTACHMENTS_ENABLED` still off) unreachable in production today.
+  `loading: () => <AnswerSkeleton />`, matching the section's own existing `threadLoading` skeleton.
+- `UserChartView` (`components/user-chart.tsx`, 162 lines) — wrapped in `visual-dock.tsx`. Only
+  reached once an active dock tab is a `userChart` visual. `loading: () => <ChartSkeleton />`,
+  reusing the file's own busy-state fallback.
+- `DeleteHistoryButton` (`components/delete-history-button.tsx`, 82 lines) — wrapped in
+  `site-header.tsx`. Already sat inside the account menu's own `menuOpen`-gated block — the whole
+  GDPR delete-history flow (its own `useState` machine) never needed to be in the chunk every
+  workspace visitor already pays for just to sit unrendered until a click. `loading: () => null`.
+- `AnswerProof` (`components/answer-proof.tsx`) and the thread-sidebar's rename/delete `DropdownMenu`
+  were considered and NOT converted — see "Not attempted" below.
+
+**Test changes, both async-safe rewrites of a synchronous assertion into `await screen.findBy...`
+(the same class pass 1 of the landing-bundle work hit and fixed, at much smaller scale here):**
+`visual-dock.test.tsx`'s two `userChart`-branch tests (the component is rendered with the prop
+already set, not reached via a click, so its own text needed the `await`), and one assertion inside
+`workspace.test.tsx`'s "the account menu holds Log uit … and the delete-history control" test (only
+`DeleteHistoryButton`'s own line — "Log uit" is a plain static link/button, unaffected). Every other
+test in both files, and every test in `dataset-chat.test.tsx`, `site-header.test.tsx` and
+`user-chart.test.tsx` (all of which exercise the wrapped components directly, not through the
+wrapper), needed no change. `npm run typecheck` clean throughout.
+
+**Measured, same method as the logged-in pass** (`next build` without `NODE_OPTIONS`, sourcing
+`scripts/dev-harness/env.sh` first; `next start` with `NODE_OPTIONS` + `CDC_PGLITE_HARNESS=1`; curl
+the served HTML as an anonymous visitor and as a signed-in visitor via the auth-stub's session
+cookie; sum every `<script src>`/preload-as-script tag from `.next/static` on disk). Three real
+`next build` runs spent this pass, all budgeted: (1) a build with all four conversions applied,
+measured first; (2) `git stash` of the four changed files, a clean baseline rebuild, measured
+second; (3) `git stash pop` to restore the conversions, a final rebuild to leave the worktree in a
+buildable state for the revert decision below — independently re-measured and found byte-for-byte
+identical to build (1)'s numbers, confirming the result is reproducible, not a one-off artifact of a
+single build.
+
+| Request | Baseline (build 2, no conversions) | With conversions (builds 1 & 3, identical) | Δ |
+|---|---|---|---|
+| Anonymous `/` | 13 tags, **1,280,984 bytes** | 13 tags, **1,325,769 bytes** | **+44,785 (+3.5%)** |
+| Signed-in `/` | 15 tags, **1,498,886 bytes** | 15 tags, **1,536,485 bytes** | **+37,599 (+2.5%)** |
+
+The baseline's own two numbers (1,280,984 / 1,498,886) match the "Route split" section's own
+measured baseline exactly, confirming this pass's harness setup and method are consistent with that
+prior one.
+
+**Both went UP, not down — the opposite of the intended effect, and it fails this task's own keep
+criteria on both counts (anonymous "must not grow"; signed-in "keep only if it drops ≥ 40 KB").**
+Diagnosed rather than left unexplained: comparing the two builds' chunk-by-chunk breakdowns (same
+tag count, 13 and 15, in both), the framework/runtime/vendor-provider chunks are byte-identical
+(229,290 / 144,443 / 112,594 / 71,439 / 62,906 / 40,841 / 30,758 / 10,947 all match exactly on both
+sides) — the difference concentrates entirely in the chart/recharts chunk and two smaller
+first-party chunks: the chart chunk grew from 481,578 to 527,844 bytes (+46,266), a landing-only
+chunk that was 17,587 bytes at baseline shrank to 964 bytes (−16,623), and one other first-party
+chunk grew from 22,582 to 37,724 bytes (+15,142) — net **+44,785**, matching the anonymous total
+exactly. `grep`-confirmed the grown chart chunk still contains zero `toPlottableSpec`/
+`USER_DATA_BADGE`/`askDataset` markers (i.e. no dataset-chat/user-chart CODE actually leaked into
+it) — this is not a code-reuse bug, an accidental static import, or content genuinely duplicated
+into the wrong place. It reads as Turbopack's own automatic chunk-splitting choosing DIFFERENT
+physical chunk boundaries for the SAME functional code once `user-chart.tsx`'s synchronous reference
+count dropped (having become a `dynamic({ ssr: false })` target instead of a plain static import) —
+the shared/vendor grouping heuristic that used to split some of the chart/recharts-adjacent code into
+its own smaller, better-deduplicated chunks apparently merges more of it into the main chart chunk
+once fewer synchronous call sites reference it, and that regrouping costs slightly more raw bytes
+overall than it saves, on an anonymous route (`/`) that never even imports `workspace.tsx`,
+`site-header.tsx` or `visual-dock.tsx` — proof the effect is a build-wide bundler side effect of the
+conversion, not a per-route content change.
+
+**Reverted — no code kept.** `git checkout -- web/components/site-header.tsx
+web/components/visual-dock.test.tsx web/components/visual-dock.tsx web/components/workspace.test.tsx
+web/components/workspace.tsx`; `git status` clean afterward. No fourth `next build` was spent to
+re-confirm the revert's bundle size — the revert is a plain `git checkout` back to the exact
+committed state this pass started from (verified by an empty `git diff`), and this pass's own build
+(1)/(3) reproducibility check already showed the measurement method itself is stable run-to-run, so
+a fourth build would only reconfirm what the checkout already guarantees. This pass's own three
+builds are fully spent; no further conversion or measurement was attempted.
+
+**Read as a finding for the next attempt, not a dead end.** The `next/dynamic({ ssr: false })`
+mechanism itself is sound (chart.tsx's own five-component precedent, pass 1 of the landing-bundle
+work, DID net a real, measured, kept reduction) — but it is not automatically a win merely because a
+component is interaction-only and mounts late: whether it helps or hurts depends on how Turbopack's
+automatic chunk-splitting regroups the REST of the app's shared code once that component's reference
+count changes, which this pass's grep-the-chunk method can diagnose after the fact but not predict
+before building. Two things worth trying differently next time, neither attempted here (budget
+spent): (1) convert ONE component at a time (not four together) and rebuild between each, so a
+regression traces to a single cause instead of a combined diff — this pass's four-at-once approach
+means it cannot say which ONE of `DatasetChat`/`UserChartView`/`DeleteHistoryButton` (or their
+combination) triggered the regrouping, only that the combination did; (2) `DeleteHistoryButton` in
+particular (82 lines, already inside a closed-by-default menu) is the weakest candidate by size and
+was the newest, least-precedented mount point of the four (chart.tsx's five conversions were all
+siblings inside ONE already-`'use client'` file with a single shared chunk-boundary decision;
+this pass's four conversions spanned four separate files) — isolating it first would cheaply test
+whether the smallest, least-justified conversion is also the one causing the regrouping.
+
+**Not attempted, with reasons.** `AnswerProof` (`components/answer-proof.tsx`) was read and
+considered but not converted: it mounts unconditionally on every answer message (not behind a
+click-to-mount gate the way `DatasetChat`/`UserChartView` are — only its internal `open` state is
+click-gated), and `chat.test.tsx` (2,791 lines) has many messages asserting its trigger button
+synchronously right after render — converting it would need the same scale of `findBy`/`waitFor`
+rewrite pass 1 did for `chart.test.tsx` (56 failures fixed there), which is its own properly-scoped
+piece of work, not a small addition to this one, and `chat.test.tsx` is capped at two runs per this
+task's own budget. The thread-sidebar's rename/delete `DropdownMenu` was considered and not
+attempted: it is inline JSX inside `thread-sidebar.tsx` (itself part of the first-paint sidebar, not
+a separate importable module), so splitting it would first need the same "pull the trigger into its
+own tiny file" surgery pass 1's own header comment describes for `chart-config-trigger.tsx`/
+`chart-story-trigger.tsx` — real, but out of this pass's remaining budget once the regression above
+needed diagnosing.
+
+**Net result: 0 bytes kept, no commit changes code.** This doc append is the only artifact of this
+pass. `git status` clean; both harness servers (auth-stub on :9911, `next start` on scratch ports
+3151/3152/3153) were stopped, PIDs confirmed dead.
