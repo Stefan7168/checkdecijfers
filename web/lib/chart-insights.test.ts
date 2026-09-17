@@ -118,6 +118,24 @@ describe('buildFindings — a single time series', () => {
     expect(belowAvg.title).toBe('Below average');
   });
 
+  // Session 110 addendum (audit pass 3, row 16): the comparison-specific
+  // "Hoogste"/"Laagste" titles must NOT leak onto a time series — a true
+  // peak/trough there still reads "Uitschieter naar boven/beneden".
+  it('a time-series record keeps the "Uitschieter" title, unaffected by the comparison-specific titles', () => {
+    // Same fixture as tests/chart/insights.test.ts's "flat series with a
+    // two-step ramp into its peak": the true max (index 5, value 50) wins
+    // its point on the LEVEL candidate (its incoming jump is tiny next to
+    // its own z-score), so it survives as recordHigh rather than jumpUp.
+    const values = [10, 10, 10, 10, 48, 50, 10, 10, 10, 10];
+    const points = values.map((value, i) =>
+      point({ resultId: `p${i}`, periodCode: `202${i}JJ00`, periodLabel: `202${i}`, value, formattedValue: String(value) }),
+    );
+    const findings = buildFindings(spec({ series: [{ label: 'Nederland', regionCode: 'NL01', points }] }), 'nl');
+    const recordHigh = findings.find((f) => f.kind === 'recordHigh');
+    expect(recordHigh).toBeDefined();
+    expect(recordHigh!.title).toBe('Uitschieter naar boven');
+  });
+
   it('carries R1 traceability (resultId) and the point to ring, matching the spec cell', () => {
     const findings = buildFindings(fourPointSpec(), 'nl');
     const jump2023 = findings.find((f) => f.periodCode === '2023JJ00')!;
@@ -218,6 +236,36 @@ describe('buildFindings — comparison (bar)', () => {
     const findings = buildFindings(barSpec([10, 90, 50, 55, 52]), 'nl');
     expect(findings.some((f) => f.kind === 'recordHigh' && f.caption.startsWith('Regio 1:'))).toBe(true);
     expect(findings.some((f) => f.kind === 'recordLow' && f.caption.startsWith('Regio 0:'))).toBe(true);
+  });
+
+  // Session 110 addendum (audit pass 3, row 16): a comparison chart's
+  // extremes are the highest/lowest MEMBER of a ranking, not a time-series
+  // "uitschieter" (outlier/jump implies a departure from a trend a snapshot
+  // ranking doesn't have) — so recordHigh/recordLow get their own titles
+  // here, distinct from the time-series ones, while aboveAverage/
+  // belowAverage (never an extreme claim to begin with) are unaffected.
+  it('titles the highest/lowest bar "Hoogste"/"Laagste", never "Uitschieter…" (NL)', () => {
+    const findings = buildFindings(barSpec([10, 90, 50, 55, 52]), 'nl');
+    const highest = findings.find((f) => f.kind === 'recordHigh')!;
+    const lowest = findings.find((f) => f.kind === 'recordLow')!;
+    expect(highest.title).toBe('Hoogste');
+    expect(lowest.title).toBe('Laagste');
+    expect(highest.title).not.toContain('Uitschieter');
+    expect(lowest.title).not.toContain('Uitschieter');
+  });
+
+  it('titles the highest/lowest bar "Highest"/"Lowest" in English', () => {
+    const findings = buildFindings(barSpec([10, 90, 50, 55, 52]), 'en');
+    expect(findings.find((f) => f.kind === 'recordHigh')!.title).toBe('Highest');
+    expect(findings.find((f) => f.kind === 'recordLow')!.title).toBe('Lowest');
+  });
+
+  it('a mid-pack above/below-mean bar keeps the shared aboveAverage/belowAverage title, unaffected by the comparison-specific record titles', () => {
+    const findings = buildFindings(barSpec([10, 90, 50, 55, 52]), 'nl');
+    const midPack = findings.find((f) => f.kind === 'aboveAverage' || f.kind === 'belowAverage');
+    if (midPack !== undefined) {
+      expect(['Boven het gemiddelde', 'Onder het gemiddelde']).toContain(midPack.title);
+    }
   });
 
   it('returns [] when every bar is equal — no story rather than the same bar told twice', () => {

@@ -26,15 +26,17 @@ export interface Finding extends ScoredFinding {
   point: { seriesKey: string; periodCode: string; periodLabel: string; seriesLabel: string };
 }
 
-const TITLE_KEY: Record<
-  FindingKind,
+type TitleKey =
   | 'chart.insights.recordHighTitle'
   | 'chart.insights.recordLowTitle'
+  | 'chart.insights.highestMemberTitle'
+  | 'chart.insights.lowestMemberTitle'
   | 'chart.insights.aboveAverageTitle'
   | 'chart.insights.belowAverageTitle'
   | 'chart.insights.jumpUpTitle'
-  | 'chart.insights.jumpDownTitle'
-> = {
+  | 'chart.insights.jumpDownTitle';
+
+const TITLE_KEY: Record<FindingKind, TitleKey> = {
   recordHigh: 'chart.insights.recordHighTitle',
   recordLow: 'chart.insights.recordLowTitle',
   // Session 110 addendum (ADR 041): a non-extreme above/below-mean point —
@@ -44,6 +46,24 @@ const TITLE_KEY: Record<
   jumpUp: 'chart.insights.jumpUpTitle',
   jumpDown: 'chart.insights.jumpDownTitle',
 };
+
+/** Session 110 addendum (audit pass 3, row 16): on a COMPARISON chart (bar —
+ * every series exactly one point, a ranking with no time axis, per
+ * types.ts's own ChartSeries doc comment) a recordHigh/recordLow finding is
+ * the highest/lowest-ranked MEMBER, not a time-series "uitschieter"
+ * (outlier/jump vocabulary implies a departure from a trend, which a
+ * snapshot ranking has none of — row #16). `spec.kind === 'bar'` is the
+ * same proxy buildCaption already uses to tell a comparison chart from a
+ * time series, so no new field on Finding/ChartSpec is needed: the title
+ * resolver already has the spec in hand. aboveAverage/belowAverage and every
+ * time-series kind are unaffected. */
+function titleKeyFor(kind: FindingKind, specKind: ChartSpec['kind']): TitleKey {
+  if (specKind === 'bar') {
+    if (kind === 'recordHigh') return 'chart.insights.highestMemberTitle';
+    if (kind === 'recordLow') return 'chart.insights.lowestMemberTitle';
+  }
+  return TITLE_KEY[kind];
+}
 
 function provisionalSuffix(finding: ScoredFinding, lang: Lang): string {
   return finding.provisional ? t(lang, 'chart.story.provisional') : '';
@@ -92,7 +112,7 @@ function buildCaption(finding: ScoredFinding, lang: Lang, specKind: ChartSpec['k
 export function buildFindings(spec: ChartSpec, lang: Lang): Finding[] {
   return scoreFindings(spec).map((finding) => ({
     ...finding,
-    title: t(lang, TITLE_KEY[finding.kind], finding.multiSeries ? { series: finding.seriesLabel } : {}),
+    title: t(lang, titleKeyFor(finding.kind, spec.kind), finding.multiSeries ? { series: finding.seriesLabel } : {}),
     caption: buildCaption(finding, lang, spec.kind),
     point: {
       seriesKey: finding.seriesKey,

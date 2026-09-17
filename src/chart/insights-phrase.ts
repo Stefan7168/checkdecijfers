@@ -105,7 +105,17 @@ function buildSystemPrompt(): string {
     "4. Als 'seriesLabel' niet null is, noem die naam ergens in de zin, exact zoals gegeven.",
     "5. Schrijf hoeveelheden nooit in woorden — geen telwoorden ('twee', 'tien'), geen schaalwoorden ('duizend', 'miljoen', 'miljard'), geen breuken of veelvouden.",
     "6. De eenheid wordt automatisch bij elk ingevuld getal geplaatst; schrijf zelf geen eenheid of procent-teken.",
-    "7. Kind 'jumpUp'/'recordHigh' is een stijging/hoog punt, 'jumpDown'/'recordLow' een daling/laag punt. Kind 'aboveAverage'/'belowAverage' ligt alleen boven/onder het gemiddelde van de reeks — NIET het hoogste/laagste punt — dus beweer bij die kind nooit dat het om een record, uitschieter, hoogste- of laagste punt gaat. Laat het onderscheid in de toon van de zin doorklinken zonder een richting te beweren die niet uit 'kind' volgt.",
+    // Session 110 addendum (audit pass 3, row 16): recordHigh/recordLow used
+    // to be grouped with jumpUp/jumpDown under movement language ("een
+    // stijging") — wrong on a comparison chart (a ranking of members, no
+    // time axis, so a "record" there is the highest/lowest MEMBER, not a
+    // point that rose or fell). recordHigh/recordLow now get neutral
+    // value/position language of their own, never a movement or outlier
+    // word — correct whether the finding came from a time series or a
+    // comparison, without the payload needing to say which. Movement words
+    // ("stijging"/"daling"/"sprong"/"uitschieter") stay reserved for
+    // jumpUp/jumpDown, identifiable by their fromValueSlot/fromPeriodSlot.
+    "7. Kind 'recordHigh' is het hoogste punt of de hoogst scorende positie, 'recordLow' het laagste — beschrijf dit als een waarde of positie ('het hoogste'/'het laagste'), NOOIT als een stijging, daling, sprong of uitschieter (die bewegingswoorden horen uitsluitend bij 'jumpUp'/'jumpDown', te herkennen aan hun 'fromValueSlot'/'fromPeriodSlot'). Kind 'jumpUp' is een stijging, 'jumpDown' een daling, gemeten ten opzichte van de vorige periode. Kind 'aboveAverage'/'belowAverage' ligt alleen boven/onder het gemiddelde van de reeks — NIET het hoogste/laagste punt — dus beweer bij die kind nooit dat het om een record, uitschieter, hoogste- of laagste punt gaat. Laat het onderscheid in de toon van de zin doorklinken zonder een richting te beweren die niet uit 'kind' volgt.",
     '8. Puur de constatering — geen inleiding, geen mening, geen bronvermelding. Eén zin, aantrekkelijk voor een nieuwsbericht.',
     "9. Antwoord met EXACT één entry per finding-id uit het blok GEGEVENS — geen ontbrekende, geen verzonnen ids.",
   ].join('\n');

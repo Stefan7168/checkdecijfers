@@ -161,4 +161,28 @@ describe('scoreFindings — recordHigh/recordLow reserved for the actual extreme
     const kinds = ['recordHigh', 'recordLow', 'aboveAverage', 'belowAverage', 'jumpUp', 'jumpDown'];
     for (const k of kinds) expect(/\d/.test(k)).toBe(false);
   });
+
+  // Session 110 addendum (audit pass 3, row 16): a comparison (bar) chart is
+  // a snapshot ranking, not a time series — it has no period-over-period
+  // step to have "jumped" from, so 'jumpUp'/'jumpDown' must never appear;
+  // its extremes are the highest/lowest MEMBER, i.e. still recordHigh/
+  // recordLow (chart-insights.ts titles these "Hoogste"/"Laagste" instead of
+  // "Uitschieter…" — see that module's titleKeyFor).
+  it('a comparison chart never emits jumpUp/jumpDown — only record/average kinds', () => {
+    const bars = [10, 90, 50, 55, 52, 48, 60];
+    const findings = scoreFindings(
+      spec({
+        kind: 'bar',
+        series: bars.map((value, i) => ({
+          label: `Regio ${i}`,
+          regionCode: `GM000${i}`,
+          points: [point({ resultId: `b${i}`, periodCode: '2024JJ00', periodLabel: '2024', value, formattedValue: String(value) })],
+        })),
+      }),
+    );
+    expect(findings.length).toBeGreaterThan(1);
+    for (const f of findings) expect(['recordHigh', 'recordLow', 'aboveAverage', 'belowAverage']).toContain(f.kind);
+    expect(findings.some((f) => f.kind === 'recordHigh')).toBe(true);
+    expect(findings.some((f) => f.kind === 'recordLow')).toBe(true);
+  });
 });

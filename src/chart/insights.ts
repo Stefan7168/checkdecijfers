@@ -200,7 +200,20 @@ function multiSeriesCandidates(spec: ChartSpec): Scored[] {
 /** Comparison (bar): one point per series — ranked by deviation from the
  * cross-series mean, the direct bar-chart analog of the level z-score above.
  * `multiSeries` here means "name the region" (barCaption always does, via
- * its own {label}), which is every bar chart with >1 bar by construction. */
+ * its own {label}), which is every bar chart with >1 bar by construction.
+ *
+ * Session 110 addendum (audit pass 3, row 16): a comparison chart is a
+ * single snapshot per series (exactly one point each — ChartSeries' own doc
+ * comment), so there is no period-over-period step to score here at all —
+ * unlike candidatesForSeries above, this function has no jump loop and
+ * structurally CANNOT emit 'jumpUp'/'jumpDown' ("Uitschieter naar boven/
+ * beneden" is time-series vocabulary for a departure from a trend; a
+ * ranking has no trend to depart from). Every bar is either the actual
+ * highest/lowest ('recordHigh'/'recordLow', ties resolved to the earliest
+ * occurrence like candidatesForSeries) or 'aboveAverage'/'belowAverage'
+ * relative to the cross-series mean — see chart-insights.ts's
+ * `titleKeyFor` for the comparison-specific "Hoogste"/"Laagste" titles this
+ * produces instead of the time-series "Uitschieter" wording. */
 function comparisonCandidates(spec: ChartSpec): Scored[] {
   const bars = spec.series
     .map((series, index) => ({ series, index, point: plotted(series.points)[0] }))
