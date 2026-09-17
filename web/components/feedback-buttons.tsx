@@ -54,11 +54,16 @@ export function FeedbackButtons({
 
   return (
     <div className="flex flex-wrap items-center gap-2 has-[[data-slot=feedback-panel]]:basis-full">
+      {/* Audit pass 2, row 16 (2026-09-17): these measured 32×24px at
+        * 375px — under the 44px phone tap target R9.1 enforces elsewhere
+        * (chart-config-panel.tsx's ChartConfigTrigger, same `max-sm:size-11`
+        * class) for the same reason: `size="xs"` is right above `sm`, but
+        * a thumb needs 44px regardless of the desktop-density choice. */}
       <Button
         type="button"
         variant={chosen === 'up' ? 'secondary' : 'outline'}
         size="xs"
-        className={chosen === 'up' ? undefined : 'bg-background shadow-sm'}
+        className={'max-sm:size-11' + (chosen === 'up' ? '' : ' bg-background shadow-sm')}
         aria-label={t('feedback.helpful')}
         aria-pressed={chosen === 'up'}
         disabled={busy}
@@ -70,7 +75,7 @@ export function FeedbackButtons({
         type="button"
         variant={chosen === 'down' ? 'secondary' : 'outline'}
         size="xs"
-        className={chosen === 'down' ? undefined : 'bg-background shadow-sm'}
+        className={'max-sm:size-11' + (chosen === 'down' ? '' : ' bg-background shadow-sm')}
         aria-label={t('feedback.notHelpful')}
         aria-pressed={chosen === 'down'}
         disabled={busy}

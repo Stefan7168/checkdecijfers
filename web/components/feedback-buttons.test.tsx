@@ -111,6 +111,18 @@ describe('FeedbackButtons — en', () => {
   });
 });
 
+// Audit pass 2, row 16 (2026-09-17): at 375px these measured 32×24px —
+// well under the 44px phone tap target R9.1 enforces elsewhere (the Style
+// and Show-chats triggers on the same screen are both exactly 44×44 via
+// the same `max-sm:size-11` class).
+describe('FeedbackButtons — phone tap target (audit pass 2, row 16)', () => {
+  it('both buttons carry max-sm:size-11, the same 44px-below-sm treatment as the Style/Show-chats triggers', () => {
+    render(<FeedbackButtons auditId={1} />);
+    expect(screen.getByRole('button', { name: 'Nuttig antwoord' }).className).toContain('max-sm:size-11');
+    expect(screen.getByRole('button', { name: 'Niet nuttig' }).className).toContain('max-sm:size-11');
+  });
+});
+
 describe('FeedbackButtons — inside the answer-card footer (session 91 review)', () => {
   it('marks its 👎 panel so the flex parents can grow to full width, and its root grows with it', () => {
     render(<FeedbackButtons auditId={1} />);
