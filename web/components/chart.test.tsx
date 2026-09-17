@@ -338,6 +338,46 @@ describe('ChartView — footer arrangement (#92)', () => {
   });
 });
 
+// Session 110 UX audit pass 4, row 6: build.ts's nullNote prints the raw CBS
+// ValueAttribute verbatim inside Dutch prose ("... : Impossible (CBS)."). R8
+// forbids reworking that string in build.ts (reconstruct.ts byte-compares
+// the re-derived spec against every stored row), so the fix is render-time
+// only, in ChartView's own nullNotes rendering. These pins use the REAL
+// shape `nullNote` (src/chart/build.ts) actually emits, which none of the
+// fixtures above happen to — those pre-date this row and are pinned to stay
+// untouched by the same fix, checked in the third case below.
+describe('ChartView — nullNotes humanize the raw CBS attribute (session 110 UX audit pass 4, row 6)', () => {
+  it('renders the real backend "Impossible" shape as the registry-approved plain-Dutch reason, never the bare English token', () => {
+    const s = spec({ nullNotes: ['Geen waarde voor 2022: Impossible (CBS).'] });
+    render(<ChartView spec={s} />);
+    expect(
+      screen.getByText('Geen waarde voor 2022: deze waarde kan volgens CBS niet voorkomen.'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Impossible/)).toBeNull();
+  });
+
+  it('keeps the region/period prefix untouched while re-wording a multi-region note ("Confidential")', () => {
+    const s = spec({ nullNotes: ['Geen waarde voor 2021 (Eemsdelta): Confidential (CBS).'] });
+    render(<ChartView spec={s} />);
+    expect(
+      screen.getByText('Geen waarde voor 2021 (Eemsdelta): door CBS niet gepubliceerd (vertrouwelijk).'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Confidential/)).toBeNull();
+  });
+
+  it('falls back to the same registry-worded "marked as" phrase the answer body already uses for an attribute outside the map, never the bare code alone', () => {
+    const s = spec({ nullNotes: ['Geen waarde voor 2020: Foo (CBS).'] });
+    render(<ChartView spec={s} />);
+    expect(screen.getByText("Geen waarde voor 2020: door CBS gemarkeerd als 'Foo'.")).toBeTruthy();
+  });
+
+  it('leaves a note that does not match the real backend shape untouched (safe fallback, e.g. every pre-row-6 fixture above)', () => {
+    const s = spec({ nullNotes: ['2022: geen gegevens beschikbaar (geheim).'] });
+    render(<ChartView spec={s} />);
+    expect(screen.getByText('2022: geen gegevens beschikbaar (geheim).')).toBeTruthy();
+  });
+});
+
 // #170(4): curated event markers, resolved to the exact periodLabel Recharts
 // matches its categorical x-axis on — never reformatted, only looked up.
 describe('annotationMarkers', () => {

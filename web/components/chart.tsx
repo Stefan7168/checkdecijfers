@@ -101,6 +101,14 @@ import type { ChartNote, PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { Skeleton } from './ui/skeleton.tsx';
+// Session 110 UX audit pass 4, row 6: `resolveSourceForTable`'s
+// `nullReasonLabels` is the ALREADY owner-approved CBS/Eurostat-attribute →
+// Dutch map (src/sources/registry.ts, also driving the answer body's
+// `nullReasonText`, src/answer/compose/template.ts) — reused here rather
+// than inventing a second, competing translation, and safe to import into
+// this client bundle because sources/registry.ts is documented there as a
+// pure leaf with no adapter-graph pull. See `humanizeNullNote` below.
+import { resolveSourceForTable } from '../backend/sources/registry.ts';
 import {
   activeReadingSpec,
   areaFormAllowed,
@@ -1376,6 +1384,43 @@ function useCoarsePointer(): boolean {
  * this only reserves margin, it never affects what's actually drawn. */
 function labelWidthPx(text: string): number {
   return Math.ceil(text.length * 7.5) + 16;
+}
+
+/** Session 110 UX audit pass 4, row 6: `src/chart/build.ts`'s `nullNote`
+ * prints the raw CBS `ValueAttribute` verbatim inside otherwise-Dutch prose
+ * ("Geen waarde voor 2020 (Eemsdelta): Impossible (CBS)."). R8 blast-radius
+ * check (reconstruct.ts:507-509, `buildChartSpec`'s own `nullNote` comment
+ * "this stored, R8-re-derived string"): `reconstruct.ts` re-derives the
+ * chart spec from the stored result via `buildChartSpec` and compares it
+ * BYTE-IDENTICALLY to the stored spec. `nullNotes` is part of `ChartSpec`
+ * (build.ts:192-194), so changing `nullNote`'s wording in build.ts would
+ * make every ALREADY-STORED row carrying this attribute fail that
+ * comparison the next time it is re-verified — a backend wording change
+ * cannot be made here. This function instead re-words the note at RENDER
+ * TIME only: the stored/re-derived spec (and every stored audit row) is
+ * untouched, so R8 keeps holding for old and new rows alike.
+ *
+ * Only the exact shape `nullNote` actually emits is touched — anything else
+ * (every existing chart.test.tsx fixture note, which predates the real
+ * production shape) passes through unchanged, same fail-closed discipline
+ * as cbs-words.ts's converters. The digits (the period) are never touched —
+ * they come back out of the ORIGINAL note string, still a spec string. */
+function humanizeNullNote(note: string, tableId: string): string {
+  const source = resolveSourceForTable(tableId);
+  const suffix = ` (${source.displayName}).`;
+  if (!note.endsWith(suffix)) return note;
+  const withoutSuffix = note.slice(0, -suffix.length);
+  const sepIndex = withoutSuffix.lastIndexOf(': ');
+  if (sepIndex === -1) return note;
+  const where = withoutSuffix.slice(0, sepIndex);
+  const attribute = withoutSuffix.slice(sepIndex + 2);
+  if (attribute === 'None' || attribute === '') return note;
+  // Same registry-approved fallback the answer body already uses
+  // (nullReasonText, src/answer/compose/template.ts) for an attribute
+  // outside the map: naming the marker in a full Dutch sentence rather than
+  // printing it bare.
+  const reason = source.nullReasonLabels[attribute] ?? `door ${source.displayName} gemarkeerd als '${attribute}'`;
+  return `${where}: ${reason}.`;
 }
 
 /** Task 3 (Story-stage plan, ADR 044): drives a second, chrome-less
@@ -3920,7 +3965,7 @@ export function ChartView({
       {activeSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{activeSpec.provisionalNote}</p> : null}
       {activeSpec.nullNotes.map((note) => (
         <p key={note} className="text-sm text-warning">
-          {note}
+          {humanizeNullNote(note, activeSpec.attribution.tableId)}
         </p>
       ))}
       {/* Fix round 2 (item 9): the definition line is reference prose for a
