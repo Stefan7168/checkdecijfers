@@ -32,7 +32,16 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Session 110 a11y audit (#Fix-now 1): darkened from oklch(0.556 0 0),
+   * which measured 4.34:1 on --muted (axe-core color-contrast, serious) —
+   * below the WCAG AA 4.5:1 threshold for normal text. oklch(0.53 0 0)
+   * measures ~4.84:1 on --muted and ~5.28:1 on --background/--card (both
+   * pinned in web/test/contrast.test.ts, converter in web/test/contrast.ts),
+   * a deliberate margin above the ~0.547 boundary rather than the tightest
+   * passing value, so browser oklch rounding can't tip it back under 4.5.
+   * Dark theme's pairing (already >= 4.5:1) is untouched — ADR 042 colour
+   * tokens are deliberate; only the token this audit named moved. */
+  --muted-foreground: oklch(0.53 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
