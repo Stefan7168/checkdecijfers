@@ -8,7 +8,7 @@
 // `cbs_tables` (the registered set) while keeping seed auto-registration and
 // the explicit-id path exactly as before.
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
@@ -179,6 +179,96 @@ describe('#110a — sync --all targets the registered set (cbs_tables), not the 
       // this test's claim.
       void exitCode;
     } finally {
+      await close();
+    }
+  });
+});
+
+// #23 (2026-09-17, session 109): `ingest sync` fires AT MOST ONE owner-alert
+// email per run when any target table failed/threw — never one per table.
+// Hermetic on the alert side: fetch is stubbed exactly like every sibling
+// alert test (tests/audit/*-alert.test.ts); the DB is the real pglite
+// fixture harness this file already uses everywhere else.
+function envPatch(values: Record<string, string | undefined>): () => void {
+  const saved = new Map(Object.keys(values).map((k) => [k, process.env[k]]));
+  for (const [k, v] of Object.entries(values)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
+  return () => {
+    for (const [k, v] of saved) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  };
+}
+
+describe('#23 — ingest sync owner-alert wiring', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('two unregistered target tables (both throw) produce exactly ONE alert email listing both', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    const restore = envPatch({ RESEND_API_KEY: 'key-x', ADMIN_ALERT_EMAIL: 'owner@example.com' });
+    const fetchStub = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK' }));
+    try {
+      // Neither id is a seed nor pre-registered: syncTable's own "not
+      // registered" guard throws for each — a cheap, fixture-free way to
+      // exercise the run's "sync threw" alert trigger twice in one run.
+      const { result: exitCode } = await withSpies(() =>
+        runCli(['sync', 'no-such-table-a', 'no-such-table-b'], {
+          db,
+          source: buildTwoTableSource(),
+          fetchImpl: fetchStub as unknown as typeof fetch,
+        }),
+      );
+      expect(exitCode).toBe(1);
+      expect(fetchStub).toHaveBeenCalledOnce();
+      const [, init] = fetchStub.mock.calls[0]! as unknown as [string, RequestInit];
+      const body = JSON.parse(String(init.body));
+      expect(body.subject).toContain('2 ingestieproblemen');
+      expect(body.text).toContain('no-such-table-a');
+      expect(body.text).toContain('no-such-table-b');
+      expect(body.text).toContain('threw');
+    } finally {
+      restore();
+      await close();
+    }
+  });
+
+  it('a fully clean run sends no alert email', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    const restore = envPatch({ RESEND_API_KEY: 'key-x', ADMIN_ALERT_EMAIL: 'owner@example.com' });
+    const fetchStub = vi.fn();
+    try {
+      const docsB = loadDocs('82242NED');
+      const sourceB = new FixtureSource(docsB);
+      const { result: exitCode } = await withSpies(() =>
+        runCli(['sync', '82242NED'], { db, source: sourceB, fetchImpl: fetchStub as unknown as typeof fetch }),
+      );
+      expect(exitCode).toBe(0);
+      expect(fetchStub).not.toHaveBeenCalled();
+    } finally {
+      restore();
+      await close();
+    }
+  });
+
+  it('unset RESEND_API_KEY/ADMIN_ALERT_EMAIL: a failing run still exits 1 but never calls fetch', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    const restore = envPatch({ RESEND_API_KEY: undefined, ADMIN_ALERT_EMAIL: undefined });
+    const fetchStub = vi.fn();
+    try {
+      const { result: exitCode } = await withSpies(() =>
+        runCli(['sync', 'no-such-table-a'], {
+          db,
+          source: buildTwoTableSource(),
+          fetchImpl: fetchStub as unknown as typeof fetch,
+        }),
+      );
+      expect(exitCode).toBe(1);
+      expect(fetchStub).not.toHaveBeenCalled();
+    } finally {
+      restore();
       await close();
     }
   });

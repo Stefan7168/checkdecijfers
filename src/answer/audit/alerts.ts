@@ -435,3 +435,90 @@ export async function maybeAlertTableStatusFlip(
     console.error('[catalog-status-flip] alert e-mail failed:', err);
   }
 }
+
+// #23 (2026-09-17, session 109): the INGESTION-RUN alert — the broader owner-
+// alerting row. A batch failure, a validation quarantine (needs_review), or a
+// sync throwing were loud only to whoever happened to be watching that run's
+// own console/logs — nothing told the owner PROACTIVELY. Reuses the exact
+// mechanism every alert above does (Resend via sendAdminAlertEmail, same
+// fail-soft posture) — no new module, no new provider (CLAUDE.md "cheapest
+// mechanism first"). Batched exactly like #108's TableStatusFlip: AT MOST ONE
+// email per run, never one per table.
+//
+// Wired from two call sites: the ingestion CLI's `sync`/`sync --all` (which
+// always has a real ingestion_batches row per table, so `batchId` is set),
+// and the on-demand onboarding-cron route (one table per invocation; that
+// path's failure detail comes back as a pending_table_requests.failure_summary
+// string rather than a fresh SyncResult, so `batchId` is null there — a
+// documented residual, not a bug: see docs/open-questions.md #23).
+//
+// Deliberately NOT covering "missed syncs" or `/api/health` failures (the
+// row's other two original triggers): both need a scheduler/expectation
+// baseline this mechanism doesn't have (what "missed" even means requires
+// knowing the expected cadence per table) — out of scope here, tracked as the
+// #23 residual rather than guessed at.
+export interface IngestionRunProblem {
+  tableId: string;
+  /** The table's source key ('cbs', 'eurostat', ...) — sources/registry.ts's
+   * own derivation (sourceKeyForTableId), never guessed here. */
+  source: string;
+  /** The failed validation check's stage name (e.g. 'row_plausibility'), or
+   * 'threw' when the sync itself raised (an infrastructure error, not one of
+   * the five ordered checks). */
+  check: string;
+  message: string;
+  /** The ingestion_batches row id, when this run recorded one. Null when the
+   * call site has no SyncResult to read one from (see the onboarding-cron
+   * residual above). */
+  batchId: number | null;
+}
+
+export interface IngestionRunAlert {
+  problems: IngestionRunProblem[];
+}
+
+export async function alertIngestionRunProblems(
+  alert: IngestionRunAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.problems.length === 1
+      ? `checkdecijfers: ingestieprobleem bij tabel ${alert.problems[0]!.tableId}`
+      : `checkdecijfers: ${alert.problems.length} ingestieproblemen in deze run`;
+  const lines = alert.problems.map(
+    (p) =>
+      `- ${p.tableId} (bron: ${p.source}), check: ${p.check}, batch: ${p.batchId ?? '(geen batch-id)'} — ${p.message}`,
+  );
+  const body = [
+    'Een of meer tabellen in deze ingestie-run hebben een mislukte batch, zijn ' +
+      'gequarantaind (needs_review) door een validatiecheck, of de sync gooide een ' +
+      'onverwachte fout (#23).',
+    '',
+    'Wat dit betekent: eerder al gevalideerde cijfers blijven gewoon bruikbaar — deze ' +
+      'tabellen kregen alleen GEEN nieuwe, gevalideerde ververing deze run. Een ' +
+      "tabel met status needs_review wordt uitgesloten van beantwoording tot iemand 'm herbeoordeelt.",
+    '',
+    ...lines,
+    '',
+    `Tijd: ${new Date().toISOString()}`,
+  ].join('\n');
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws — an ingestion run (CLI or
+ * cron) must never fail or block on this. No-op on an empty problem list: the
+ * AT-MOST-ONE-email contract means a fully clean run sends nothing. */
+export async function maybeAlertIngestionRunProblems(
+  alert: IngestionRunAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (alert.problems.length === 0) return;
+  for (const p of alert.problems) {
+    console.error(`[ingestion-run] ${p.tableId} (${p.source}) ${p.check}: ${p.message}`);
+  }
+  try {
+    await alertIngestionRunProblems(alert, fetchImpl);
+  } catch (err) {
+    console.error('[ingestion-run] alert e-mail failed:', err);
+  }
+}

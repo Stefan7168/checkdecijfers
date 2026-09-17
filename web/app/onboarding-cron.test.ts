@@ -115,6 +115,31 @@ describe('onboarding-cron wiring (source pins)', () => {
   it('WP27 stage C: wires the measure-fit client into the job (the gate would otherwise end every chained row all-errored)', () => {
     expect(source).toContain('fitClient: new AnthropicLlmClient()');
   });
+
+  // #23 (2026-09-17, session 109): the proactive owner alert on a terminally-
+  // failed onboarding row. Behavioral coverage of the alert mechanism itself
+  // lives in tests/audit/ingestion-run-alert.test.ts (hermetic, stubbed
+  // fetch); a real end-to-end failed-row run needs a live DB + CBS + LLM in a
+  // server context, same reasoning as the success-path comment above — so
+  // this pins the WIRING presence, exactly like the rest of this describe
+  // block.
+  it("#23: alerts the owner on a terminally-failed onboarding row, gated on 'failed' only (not 'unanswerable')", () => {
+    expect(source).toContain('maybeAlertIngestionRunProblems');
+    expect(source).toContain("summary.processed?.outcome === 'failed'");
+    expect(source).not.toContain("summary.processed?.outcome === 'unanswerable'");
+  });
+
+  it('#23: the owner-alert lookup is fail-open — a throw there must never fail the cron response', () => {
+    // The alert block sits INSIDE the outer try that returns 200, wrapped in
+    // its own try/catch — so a getPendingRequest/alert failure can only ever
+    // reach this route's own console.warn, never its catch(error) 500 path.
+    const alertBlockStart = source.indexOf("outcome === 'failed'");
+    const ownCatch = source.indexOf('owner alert failed', alertBlockStart);
+    const responseJson = source.indexOf('Response.json(summary', alertBlockStart);
+    expect(alertBlockStart).toBeGreaterThan(-1);
+    expect(ownCatch).toBeGreaterThan(alertBlockStart);
+    expect(responseJson).toBeGreaterThan(ownCatch);
+  });
 });
 
 describe('onboarding-cron vercel config', () => {

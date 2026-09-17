@@ -3,6 +3,8 @@
 // the owner can read). Commands: register, sync.
 import type { CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
+import { maybeAlertIngestionRunProblems, type IngestionRunProblem } from '../answer/audit/alerts.ts';
+import { sourceKeyForTableId } from '../sources/registry.ts';
 import { SEED_TABLES } from './registry-seed.ts';
 import { registerTables, syncTable } from './pipeline.ts';
 import type { Correction, SyncResult } from './types.ts';
@@ -10,6 +12,9 @@ import type { Correction, SyncResult } from './types.ts';
 interface Deps {
   db: Db;
   source: CbsSource;
+  /** Injected for tests (hermetic Resend stubbing, same pattern every sibling
+   * admin alert test uses). Defaults to the real fetch in production. */
+  fetchImpl?: typeof fetch;
 }
 
 interface ParsedArgs {
@@ -122,6 +127,11 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
   // so a brand-new database still bootstraps from nothing.
   const targetIds = args.all ? (await db.query('select id from cbs_tables')).rows.map((r) => String(r.id)) : args.tableIds;
 
+  // #23: at most one owner-alert email for this whole run, listing every
+  // affected table — never one email per table (see alerts.ts's
+  // maybeAlertIngestionRunProblems for the batching contract).
+  const problems: IngestionRunProblem[] = [];
+
   let allSucceeded = true;
   for (const tableId of targetIds) {
     const start = Date.now();
@@ -131,11 +141,36 @@ export async function runCli(argv: string[], deps: Deps): Promise<number> {
         rebaseline: args.rebaseline,
       });
       printResult('Synced', tableId, result, Date.now() - start);
-      if (result.outcome === 'failed') allSucceeded = false;
+      if (result.outcome === 'failed') {
+        allSucceeded = false;
+        problems.push({
+          tableId,
+          source: sourceKeyForTableId(tableId),
+          check: result.failureStage ?? 'unknown',
+          message: result.failureSummary ?? '(no summary recorded)',
+          batchId: result.batchId,
+        });
+      }
     } catch (err) {
       allSucceeded = false;
       console.error(`\n[${tableId}] FAILED: ${err instanceof Error ? err.message : String(err)}`);
+      problems.push({
+        tableId,
+        source: sourceKeyForTableId(tableId),
+        check: 'threw',
+        message: err instanceof Error ? err.message : String(err),
+        batchId: null,
+      });
     }
+  }
+
+  // Fail-open by contract (maybeAlertIngestionRunProblems never throws); the
+  // extra try/catch is defense-in-depth only — an alerting bug must never
+  // flip this CLI's own exit code.
+  try {
+    await maybeAlertIngestionRunProblems({ problems }, deps.fetchImpl ?? fetch);
+  } catch (err) {
+    console.warn('ingestion run: owner alert failed (sync result unaffected):', err);
   }
 
   return allSucceeded ? 0 : 1;
