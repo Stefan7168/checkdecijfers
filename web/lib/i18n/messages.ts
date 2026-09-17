@@ -474,6 +474,10 @@ const nl = {
 
   // chart-small-multiples.tsx.
   'chart.smallMultiplesGroupLabel': 'Kleine grafieken per reeks',
+  // Row 11 (session 110 UX audit pass 4): the grid never stated its period
+  // span. {from}/{to} are the spec's own period labels (R6 — no invented
+  // number), so this template carries no digit itself.
+  'chart.smallMultiplesPeriodSpan': 'Periode {from} – {to}',
 
   // chart-toggle.tsx.
   'chart.toggle.definitionGroupLabel': 'Definitie wisselen',
@@ -1305,6 +1309,7 @@ const en: Messages = {
   'chart.download.failed': 'Download did not work in this browser.',
 
   'chart.smallMultiplesGroupLabel': 'Small multiples per series',
+  'chart.smallMultiplesPeriodSpan': 'Period {from} – {to}',
 
   'chart.toggle.definitionGroupLabel': 'Switch definition',
 

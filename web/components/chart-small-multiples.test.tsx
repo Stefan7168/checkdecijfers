@@ -207,6 +207,46 @@ describe('ChartSmallMultiples', () => {
     expect(panel.querySelector('[data-role="axis-tick"]')).toBeNull();
   });
 
+  // Row 11 (session 110 UX audit pass 4): the grid never stated which years
+  // it covers -- neither axis is labelled with a period in either mode.
+  function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): void {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const tokens: string[] = [];
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+    }
+    for (const tok of tokens) {
+      expect(
+        specStrings.some((str) => str.includes(tok)),
+        `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+      ).toBe(true);
+    }
+  }
+
+  it('row 11: states the grid\'s period span in one shared caption above the grid', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
+    );
+    const caption = container.querySelector('[data-role="small-multiples-period-span"]');
+    expect(caption?.textContent).toBe('Periode 2023 – 2024');
+    // Every digit in the caption traces to the spec's own period labels (R6).
+    scanForUnboundDigits(container.querySelector('[data-role="small-multiples-period-span"]')!, ['2023', '2024']);
+  });
+
+  it('row 11: the period-span caption localizes to English (WP218 phase 4)', () => {
+    const { container } = render(
+      <ChartSmallMultiples
+        spec={twoPointSeriesSpec()}
+        hiddenKeys={new Set()}
+        axisMode="shared"
+        presentation={STOCK_PRESENTATION}
+        lang="en"
+      />,
+    );
+    const caption = container.querySelector('[data-role="small-multiples-period-span"]');
+    expect(caption?.textContent).toBe('Period 2023 – 2024');
+  });
+
   it('"gelijke assen" shows no per-panel tick labels (a shared endpoint may belong to a different series\' data, which would be dishonest to label here)', () => {
     const { container } = render(
       <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
