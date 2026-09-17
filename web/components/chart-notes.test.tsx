@@ -26,6 +26,25 @@ describe('ChartNotes', () => {
     expect(onDelete).toHaveBeenCalledWith('n1');
   });
 
+  // #13 (session 110 UX audit pass 2): every delete button's accessible
+  // name used to be the plain visible label "Verwijder" — a screen-reader
+  // user with several notes heard "Verwijder, Verwijder, Verwijder" with no
+  // way to tell them apart.
+  it("names each note's delete button with its own series and period, so several notes are distinguishable", () => {
+    const noteB: ChartNote = { id: 'n2', resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Utrecht', text: 'Andere piek' };
+    render(<ChartNotes notes={[NOTE, noteB]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Verwijder de notitie bij Nederland · 2020' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Verwijder de notitie bij Utrecht · 2021' })).toBeInTheDocument();
+  });
+
+  // #17 (session 110 UX audit pass 2): nothing on screen said notes are
+  // session-only and excluded from downloads/embeds (both deliberate, ADR
+  // 038) — the affordance read like a normal, persisted annotation feature.
+  it('discloses that notes are session-only and excluded from downloads/embeds', () => {
+    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.')).toBeInTheDocument();
+  });
+
   it('shows an entry form when a point is pending, labelled with the clicked point context', () => {
     render(
       <ChartNotes

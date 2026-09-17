@@ -118,6 +118,13 @@ digits, not because notes are exempt.*
     moot for this build.
 - **Decisions G (transparent PNG export) and H (map view) are untouched — fully out of scope for
   this build.** Nothing in this change reads or writes either.
+- **Addendum (session 110, 2026-09-17, UX audit pass 2 row #17):** decision F (session-only notes,
+  excluded from every download/embed) was correct but undisclosed — the affordance read like a
+  normal, persisted annotation feature, so someone could annotate a chart, download it, and be
+  surprised the note is gone. `ChartNotes` (`web/components/chart-notes.tsx`) now renders one muted
+  line under its heading ("Notes stay in this session and are not included in downloads or
+  embeds." / nl equivalent, `chart.notes.sessionOnly` in `web/lib/i18n/messages.ts`) stating both
+  facts. No mechanism change — F itself is unchanged, only now disclosed.
 
 ## Revisit triggers
 

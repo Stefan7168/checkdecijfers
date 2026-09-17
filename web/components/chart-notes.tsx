@@ -100,6 +100,10 @@ export function ChartNotes({
       <div role="heading" aria-level={4} className="text-xs font-semibold text-muted-foreground">
         {t(lang, 'chart.notes.heading')}
       </div>
+      {/* #17 (session 110 UX audit pass 2): notes are session-only and
+        * excluded from every download/embed by construction (ADR 038) —
+        * this is the disclosure that says so. */}
+      <p className="mt-0.5 text-[11px] text-muted-foreground">{t(lang, 'chart.notes.sessionOnly')}</p>
       {notes.length > 0 ? (
         <ul className="mt-2 flex flex-col gap-1.5">
           {notes.map((note) => (
@@ -113,6 +117,7 @@ export function ChartNotes({
               <button
                 type="button"
                 onClick={() => onDelete(note.id)}
+                aria-label={t(lang, 'chart.notes.deleteAriaLabel', { series: note.seriesLabel, period: note.periodLabel })}
                 className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
                 {t(lang, 'chart.notes.delete')}

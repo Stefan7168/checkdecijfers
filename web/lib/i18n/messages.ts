@@ -430,9 +430,18 @@ const nl = {
   // chart-notes.tsx.
   'chart.notes.heading': 'Uw aantekeningen (geen CBS-data)',
   'chart.notes.delete': 'Verwijder',
+  // #13 (session 110 UX audit pass 2): plain "Verwijder" on every note's
+  // delete button reads as "Verwijder, Verwijder, Verwijder" with several
+  // notes. Own accessible-name key carrying the note's own point context —
+  // the visible button label stays the short `chart.notes.delete` text.
+  'chart.notes.deleteAriaLabel': 'Verwijder de notitie bij {series} · {period}',
   'chart.notes.draftLabel': 'Notitie bij {series} · {period}',
   'chart.notes.save': 'Opslaan',
   'chart.notes.cancel': 'Annuleren',
+  // #17 (session 110 UX audit pass 2): notes are session-only and excluded
+  // from every download/embed by construction (ADR 038) — nothing on
+  // screen said so before this line.
+  'chart.notes.sessionOnly': 'Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.',
 
   // chart-download.tsx.
   'chart.download.trigger': 'Download',
@@ -1227,9 +1236,11 @@ const en: Messages = {
 
   'chart.notes.heading': 'Your notes (not CBS data)',
   'chart.notes.delete': 'Delete',
+  'chart.notes.deleteAriaLabel': 'Delete the note at {series} · {period}',
   'chart.notes.draftLabel': 'Note at {series} · {period}',
   'chart.notes.save': 'Save',
   'chart.notes.cancel': 'Cancel',
+  'chart.notes.sessionOnly': 'Notes stay in this session and are not included in downloads or embeds.',
 
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Download format',
