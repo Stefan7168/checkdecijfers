@@ -190,7 +190,10 @@ test.describe.serial('the logged-in answer pipeline', () => {
     await expect(page.locator('.recharts-surface')).toHaveCount(0);
 
     // The offer chip: the FIRST named region over the full range, as a trend.
-    const chipLabel = 'Hoe ontwikkelde bevolking op 1 januari in PV20 zich van 2020 tot en met 2024?';
+    // Since pass-4 row 5 (session 110) the chip names the region by its loaded
+    // label ("Groningen"), falling back to the CBS code only when no label is
+    // loaded — accept both so the pin is about the chip, not the label source.
+    const chipLabel = /^Hoe ontwikkelde bevolking op 1 januari in (Groningen|PV20) zich van 2020 tot en met 2024\?$/;
     await expect(page.getByText('Probeer in plaats daarvan:')).toBeVisible();
     const chip = page.getByRole('button', { name: chipLabel });
     await expect(chip).toBeVisible();
@@ -199,7 +202,7 @@ test.describe.serial('the logged-in answer pipeline', () => {
     // send) — Verstuur then takes the click-option rung (templateOnly,
     // zero LLM calls) and answers a single-region series for Groningen.
     await chip.click();
-    await expect(page.getByPlaceholder('Stel een vraag…')).toHaveValue(chipLabel);
+    await expect(page.getByPlaceholder('Stel een vraag…')).toHaveValue(chipLabel); // toHaveValue accepts a RegExp
     await page.getByRole('button', { name: 'Verstuur' }).click();
 
     // The template body strips the CBS "(PV)" suffix (baseRegionLabel) — a

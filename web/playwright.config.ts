@@ -32,7 +32,12 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   // A retry re-runs only a FAILED test, so the happy path costs nothing extra.
-  retries: process.env.CI ? 1 : 0,
+  // No retries, even in CI (session 110): the suite shares ONE harness user
+  // whose signup credit grant is finite, so a retry pass re-spends credits and
+  // makes a later, unrelated test fail for "no credits" — a retry here hides
+  // flakes AND manufactures new failures. The suite is hermetic; a red run is
+  // a real signal.
+  retries: 0,
   // Generous, not slow: the steady-state tests finish in a few seconds each,
   // but `next dev` compiles routes and server actions ON DEMAND, so whichever
   // test asks the first question pays Turbopack's one-off compile.
