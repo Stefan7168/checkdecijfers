@@ -1977,7 +1977,10 @@ for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwrig
 - **Turbopack refuses a symlinked `node_modules`** ("Symlink [project]/web/node_modules is invalid, it points out of the
   filesystem root"). The session-97 worktree recipe (symlink `node_modules`) is fine for vitest/tsc but NOT for
   `next dev`/`next build` in a worktree — use a hard-linked copy instead: `cp -al <main>/web/node_modules <worktree>/web/node_modules`
-  (seconds, ~no disk).
+  (seconds, ~no disk). **Session 111 addendum:** a fresh worktree symlinks BOTH `node_modules` (repo root) and
+  `web/node_modules` — Turbopack refuses each independently, so `next dev` fails on the root one FIRST (fixing only
+  `web/node_modules` still crashes), then again on `web/node_modules` once the root one is fixed. Remove the symlink
+  and hard-link-copy both: `rm node_modules && cp -al <main>/node_modules node_modules`, then the `web/` one above.
 - **`next dev` and `next build` REWRITE `web/CLAUDE.md`** (Next 16 "agent rules" block; `AGENTS.md` is a symlink to it,
   so the block lands in the committed file). `git checkout -- web/CLAUDE.md` before every commit; a future session may
   set `agentRules: false` in `next.config.ts` to stop it at the source.

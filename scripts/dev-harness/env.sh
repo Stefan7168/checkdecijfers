@@ -13,5 +13,11 @@ export WORKSPACE_ENABLED=1
 export CLARIFY_CLICK_ENABLED=1
 export ANSWER_FIRST_ENABLED=1
 export SEMANTIC_CHECK_ENABLED=1
+export EUROSTAT_EXPLORER_ENABLED=1                                # dev-harness Task 2: /eurostat-explorer now has a registered table to show
+# dev-harness Task 1: HARNESS_INTENT_INJECT=1 makes a "!!regionset <name>" /
+# "!!intent {json}" question skip the parser (src/answer/respond/harness-intent.ts)
+# — unset/anything else in production, and the pipeline treats the text as an
+# ordinary (unmatched) question.
+export HARNESS_INTENT_INJECT=1
 export NO_PROXY=localhost,127.0.0.1
 export no_proxy=localhost,127.0.0.1
