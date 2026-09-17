@@ -801,12 +801,73 @@ To see a REAL e-mail land (owner-supervised only, costs one Resend send): with `
 — the "not registered" throw is a free, side-effect-free way to trigger the `(c)` path and confirm
 delivery end-to-end.
 
-**Explicitly NOT built (#23's other two original triggers, still open):** alerting for a *missed*
-sync (a table that should have refreshed by now but silently didn't) or for `/api/health` check
-failures. Both need a scheduler/expected-cadence baseline this mechanism doesn't have — what
-"missed" even means requires knowing each table's expected refresh cadence, which isn't tracked
-anywhere today. Deliberately out of scope here rather than guessed at; tracked as the #23 residual
-in [open-questions.md](open-questions.md).
+**Explicitly NOT built (#23's other original trigger, still open):** alerting on `/api/health`
+check failures. The *missed-sync* trigger below is now built (session 110); `/api/health` alerting
+is the sole remaining #23 residual, tracked in [open-questions.md](open-questions.md).
+
+### Missed-sync alert (#23 residual, built session 110, 2026-09-17)
+
+**What it is.** The row's other original trigger: a *registered, actively-served* table
+(`cbs_tables.status = 'active'`) that has gone longer without a successful sync than its own data
+allows for — as opposed to the alerts above, which all fire on something that happened DURING a
+run. This one fires when nothing has happened for too long. Same mechanism and posture as every
+alert in this section: `sendAdminAlertEmail`, fail-soft, at most one e-mail per check.
+
+**No new schema, no new provider (CLAUDE.md "cheapest mechanism first").** The cadence baseline is
+derived entirely from columns the registry already has:
+- `cbs_tables.last_sync_at` — the pipeline's own commit timestamp, set only on a *successful* sync
+  (never on a failed/quarantined one).
+- `cbs_tables.period_semantics` — keyed by the same grain markers the whole codebase already uses
+  (`JJ` yearly, `KW` quarterly, `MM` monthly; `src/registry/defaults.ts`, `src/ingestion/periods.ts`).
+  The table's FINEST grain sets its expected refresh rhythm.
+
+The thresholds (`SYNC_CADENCE_THRESHOLD_DAYS`, `src/ingestion/stale-sync.ts`) are deliberately
+generous — roughly double the longest real CBS publication lag we've measured (docs/07's ~22-days-
+after-month-end for the fastest series) — so ordinary publication jitter never fires a false alarm:
+
+| Finest grain the table carries | Threshold (days) |
+| --- | --- |
+| Monthly (`MM`) | 60 |
+| Quarterly (`KW`) | 130 |
+| Yearly-only (`JJ`) | 420 |
+| Unknown (no `period_semantics`, or an unrecognized grain) | 420 |
+
+A `needs_review` (quarantined) table is excluded — the existing quarantine/catalog-status-flip
+alerts already cover it, and re-alerting on it here would be noise. A table that has NEVER
+synced at all (`last_sync_at` is `null`) is also excluded: that is a registration/onboarding gap,
+not a "missed" *recurring* sync, and this mechanism deliberately does not guess at it.
+
+**The pure logic, unit-tested without a DB** (`src/ingestion/stale-sync.ts`,
+`tests/ingestion/stale-sync.test.ts`):
+- `findStaleSyncs(rows, now)` — given each active table's last sync + period semantics, returns
+  every table more than its threshold days overdue, with `tableId`, `lastSuccessfulSyncAt`,
+  `thresholdDays`, `overdueDays`.
+- `shouldAlertToday(overdueDays)` — the daily-alert-fatigue dedupe, so the SAME overdue table
+  doesn't re-alert every single day it stays overdue. Without adding a "last alerted at" column,
+  it recomputes fresh each run from `overdueDays` alone: fires on day 1 (the day a table first
+  crosses its threshold), then again every 7th day after (day 8, 15, 22, ...), silent on every day
+  in between. `maybeAlertMissedSyncs` (`src/answer/audit/alerts.ts`) applies this filter itself, so
+  a caller can pass the raw `findStaleSyncs` output on every run.
+
+**Where it's wired:** the SAME daily cron this section already documents above —
+`/api/onboarding-cron` (`web/app/api/onboarding-cron/route.ts`, Vercel Cron `0 6 * * *`,
+`web/vercel.json`) — no new cron route. After the onboarding job's own work finishes, the route
+loads every table's candidate row (`loadStaleSyncCandidateRows`), runs `findStaleSyncs`, and calls
+`maybeAlertMissedSyncs`, all inside its own try/catch so a failure here can never turn a real
+onboarding-job result into a 500 (mirrors the existing `#23` ingestion-run-problem block in the
+same route exactly).
+
+**What the owner does on receipt:** the e-mail names each overdue table, its last successful sync
+date, its threshold, and how many days past that threshold it is. Check whether the source (CBS or
+Eurostat) still publishes that table under the same id — a source-side id change or a stopped feed
+is the most likely cause — and run a manual sync (`npm run ingest sync <tabel-id>`) once resolved.
+
+**How to test it without spending anything:** hermetically covered by
+`tests/ingestion/stale-sync.test.ts` (the cadence rule and dedupe, pure, no DB) and
+`tests/audit/missed-sync-alert.test.ts` (the e-mail mechanism, stubbed `fetch`). The cron route's
+wiring is pinned by three source-scan tests in `web/app/onboarding-cron.test.ts` (added session
+110) — a real end-to-end run needs a live DB with a genuinely overdue table, which is the same
+"needs a server context" limit every other wiring pin in this file already documents.
 
 ## ⚠ Supabase free tier: 15 SESSION-MODE connections — deploy bursts exhaust it (measured 2026-07-25)
 
