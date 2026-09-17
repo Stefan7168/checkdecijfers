@@ -3415,6 +3415,26 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
   });
 
+  // Row 11 recheck (session 110 UX audit pass 5): ChartView threads
+  // `useChartStyle().brandLookupAvailable` straight into the panel's
+  // `brand.available` — signed in, but the DEPLOYMENT has no Brandfetch key
+  // (the provider's own default when `brandLookupAvailable` isn't passed),
+  // the button must be offered but aria-disabled from the first render, and
+  // a click must never call `lookupBrand` at all.
+  it('signed in but brandLookupAvailable is false (the provider default): the button is offered but aria-disabled, and a click never calls lookupBrand', async () => {
+    render(
+      <ChartStyleProvider initial={{}}>
+        <ChartView spec={twoSeriesLineSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(button);
+    expect(chartStyleActions.lookupBrand).not.toHaveBeenCalled();
+  });
+
   it('applying a brand recolours the first series and the usage sink receives brand_applied', async () => {
     chartStyleActions.lookupBrand.mockResolvedValue({
       ok: true,
@@ -3431,7 +3451,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     setChartUsageSink(sink);
     try {
       render(
-        <ChartStyleProvider initial={{}}>
+        <ChartStyleProvider initial={{}} brandLookupAvailable>
           <ChartView spec={twoSeriesLineSpec()} />
         </ChartStyleProvider>,
       );
@@ -3465,7 +3485,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     });
     chartStyleActions.saveMyChartStyle.mockResolvedValue({ ok: true });
     render(
-      <ChartStyleProvider initial={{}}>
+      <ChartStyleProvider initial={{}} brandLookupAvailable>
         <ChartView spec={twoSeriesLineSpec()} />
       </ChartStyleProvider>,
     );

@@ -104,6 +104,7 @@ export function Workspace({
   websearch,
   attachments,
   chartStyle,
+  brandLookupAvailable = false,
   packs,
   coverage,
 }: {
@@ -134,6 +135,15 @@ export function Workspace({
    * itself, so an account with no saved style yet still gets offered the
    * "Bewaar als mijn standaard" row. */
   chartStyle?: unknown;
+  /** Row 11 (session 110 UX audit pass 5, still-broken recheck): whether
+   * this deployment has `BRANDFETCH_API_KEY` configured — read server-side
+   * (page.tsx) exactly like `websearch`/`attachments` above, and threaded
+   * straight into `ChartStyleProvider` below so every ChartView's
+   * `useChartStyle()` can gate the "Pas merkkleuren toe" button at render,
+   * instead of only learning it from the first click's own failure.
+   * Defaults to `false` (hidden/disabled) for any caller that hasn't been
+   * updated. */
+  brandLookupAvailable?: boolean;
   /** R2.2 (WP-D, #69/#75/#211): the active credit packs, read server-side
    * (page.tsx, `getActivePacks`) and passed through unchanged — threaded
    * into Chat's own `packs` prop for the insufficient-credits message's
@@ -463,7 +473,7 @@ export function Workspace({
     // presence is what "signed in" means to useChartStyle() (see the
     // `chartStyle` prop doc above), not the value it was mounted with, so
     // this stays unconditional even when `chartStyle` is null/undefined.
-    <ChartStyleProvider initial={chartStyle ?? null}>
+    <ChartStyleProvider initial={chartStyle ?? null} brandLookupAvailable={brandLookupAvailable}>
       {/* Session 87 visual redesign (mockup Option B, "Inset Cards"): the whole
           screen sits on the grey sidebar ground; the sidebar is borderless on it,
           and the chat column + the visual dock are two separate white cards, each

@@ -2095,7 +2095,7 @@ export function ChartView({
   // `initialPresentation` when the chart was given one, #237/ADR 046 — never
   // to `accountStyle`, so "Standaard" and a fresh chart both fall back to
   // THIS base, not stock).
-  const { accountStyle, signedIn, setAccountStyle } = useChartStyle();
+  const { accountStyle, signedIn, setAccountStyle, brandLookupAvailable } = useChartStyle();
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
     { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
@@ -4094,7 +4094,7 @@ export function ChartView({
           }
           // WP218 phase 3 (owner B): same signedIn gate as `account` —
           // Ontdek/trial gets no Merkkleuren block at all.
-          brand={signedIn ? { lookup: (website) => lookupBrand(website) } : undefined}
+          brand={signedIn ? { lookup: (website) => lookupBrand(website), available: brandLookupAvailable } : undefined}
           onBrandApplied={(applied) => {
             setLastAppliedBrand(applied);
             trackChartStyleEvent('brand_applied');

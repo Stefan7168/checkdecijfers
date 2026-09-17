@@ -79,6 +79,13 @@ export default async function Home({
   // matters inside the WORKSPACE_ENABLED branch below.
   const attachmentsEnabled = process.env.ATTACHMENTS_ENABLED === '1';
 
+  // Row 11 (session 110 UX audit pass 5, still-broken recheck): a plain env
+  // presence check, no dormancy flag involved (Brandfetch itself has been
+  // live since WP218 phase 3) — this is the SAME fact chart-style-actions.ts's
+  // `lookupBrand` checks before any per-user work, read here once so it can
+  // reach the render instead of only surfacing after a failed click.
+  const brandLookupAvailable = Boolean(process.env.BRANDFETCH_API_KEY);
+
   // WP135 (ADR 033 D7): dormant behind WORKSPACE_ENABLED (the WP129 pattern).
   // Flag ON → the chat workspace + site shell. Flag OFF → today's <Dashboard>,
   // rendered byte-identically below (no new props, no thread reads). The
@@ -116,6 +123,7 @@ export default async function Home({
         initialThreads={wsThreads}
         purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
         chartStyle={wsChartStyle?.style ?? null}
+        brandLookupAvailable={brandLookupAvailable}
         packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
         coverage={coverage}
         {...(websearchEnabled && wsWebAddonPrice !== null

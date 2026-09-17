@@ -276,7 +276,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
           // scan too — a `brand` prop with an unused stub is enough to render
           // the heading/intro/button text (the need_website input only
           // appears after a real lookup, tested separately below).
-          brand={{ lookup: vi.fn() }}
+          brand={{ lookup: vi.fn(), available: true }}
         />,
       );
       fireEvent.click(screen.getByRole('button', { name: lang === 'nl' ? 'Opmaak' : 'Style' }));
@@ -829,7 +829,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={onChange}
         onReset={vi.fn()}
         idPrefix="br1"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
         onBrandApplied={onBrandApplied}
       />,
     );
@@ -870,7 +870,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={onChange}
         onReset={vi.fn()}
         idPrefix="br2"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -892,7 +892,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="brnw"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -914,7 +914,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={onChange}
         onReset={vi.fn()}
         idPrefix="br3c"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -946,7 +946,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="br3"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -983,7 +983,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
           onChange={onChange}
           onReset={vi.fn()}
           idPrefix={`brf-${reason}`}
-          brand={{ lookup }}
+          brand={{ lookup, available: true }}
         />,
       );
       openTab('Kleuren');
@@ -997,13 +997,16 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
   // Audit pass 2, row 11 (2026-09-17): "unavailable" means the deployment
   // has no Brandfetch key at all (a FIXED condition, checked before any
   // per-user work in chart-style-actions.ts) — not a transient failure a
-  // reader should be invited to retry. The button cannot be gated on this
-  // at render (that needs a prop from chart.tsx, out of this fix's
-  // scope), so the first click still has to try and report why; this pins
-  // that a SECOND click is refused (no second `lookup` call) and the
-  // button carries `aria-disabled` + an `aria-describedby` pointing at the
-  // reason, once that first click has learned it — never for a reason
-  // that stays retryable (`not_found` here, unaffected).
+  // reader should be invited to retry.
+  //
+  // Pass 5 recheck (still broken -> fixed): this test passes `available:
+  // true` on purpose — it exercises the BELT (the post-click latch, for
+  // the case the action itself still answers `unavailable` despite the
+  // render-time gate saying yes) — a repeat click is refused and the
+  // button carries `aria-disabled` once that first click has learned it,
+  // never for a reason that stays retryable (`not_found`, unaffected).
+  // The MAIN fix — `brand.available: false` disabling the button from the
+  // very first render, no click needed — is pinned by the two tests below.
   it('unavailable: a repeat click never re-runs the lookup, and the button is aria-disabled with the reason attached; a retryable reason is unaffected (#11)', async () => {
     const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'unavailable' });
     const { unmount } = render(
@@ -1013,7 +1016,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="br-unavail"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -1039,7 +1042,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="br-retry"
-        brand={{ lookup: retryLookup }}
+        brand={{ lookup: retryLookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -1049,6 +1052,54 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
     expect(retryButton).not.toHaveAttribute('aria-disabled');
     fireEvent.click(retryButton);
     expect(retryLookup).toHaveBeenCalledTimes(2);
+  });
+
+  // Row 11 recheck (session 110 UX audit pass 5, STILL BROKEN -> fixed):
+  // `brand.available: false` (chart.tsx's `useChartStyle().brandLookupAvailable`,
+  // ultimately BRANDFETCH_API_KEY read once server-side, app/page.tsx) must
+  // disable the button and show the reason from the FIRST render — never
+  // needing a doomed click to learn it, closing the gap the post-click
+  // latch above only closed after guaranteeing one failure per session.
+  it('available=false: the button is aria-disabled with the reason attached from the very first render, and a click never runs the lookup (#11 pass 5)', () => {
+    const lookup = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-gate"
+        brand={{ lookup, available: false }}
+      />,
+    );
+    openTab('Kleuren');
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    // No click has happened yet -- the hint is already there.
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    const describedBy = button.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)).toHaveTextContent('Merkkleuren ophalen is op dit moment niet mogelijk.');
+    fireEvent.click(button);
+    expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it('available=true (the normal case): no aria-disabled and no hint before the first click', () => {
+    const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'not_found' });
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-gate-ok"
+        brand={{ lookup, available: true }}
+      />,
+    );
+    openTab('Kleuren');
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    expect(button).not.toHaveAttribute('aria-disabled');
+    expect(button).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText('Merkkleuren ophalen is op dit moment niet mogelijk.')).not.toBeInTheDocument();
   });
 
   it('busy-disables the apply button while a lookup is pending, re-enables once it settles', async () => {
@@ -1066,7 +1117,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="br4"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     openTab('Kleuren');
@@ -1098,7 +1149,7 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
         onChange={vi.fn()}
         onReset={vi.fn()}
         idPrefix="br5"
-        brand={{ lookup }}
+        brand={{ lookup, available: true }}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
@@ -2083,14 +2134,14 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     openTab('Sjablonen');
     expect(screen.queryByText('Merk')).toBeNull();
     unmount();
-    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never, available: true }} />);
     openTab('Sjablonen');
     expect(screen.getByText('Merk')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Naar Kleuren' }));
     expect(screen.getByRole('tab', { name: 'Kleuren' })).toHaveAttribute('aria-selected', 'true');
   });
   it('English: Templates / Standard … Minimal / Current / Go to Colours', () => {
-    render(<Harness lang="en" resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    render(<Harness lang="en" resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never, available: true }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
     expect(screen.getByRole('radio', { name: 'Standard' })).toHaveAttribute('aria-checked', 'true');
@@ -2098,7 +2149,7 @@ describe('ChartConfigPanel — Sjablonen (templates) tab (ADR 043)', () => {
     expect(screen.getByRole('button', { name: 'Go to Colours' })).toBeTruthy();
   });
   it('the whole tab is digit-free (no ratio numbers leak into text)', () => {
-    const { container } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never }} />);
+    const { container } = render(<Harness resolved={resolvePresentation(lineCtx, {})} seriesMeta={meta} onChange={vi.fn()} onReset={vi.fn()} idPrefix="t" onApplyTemplate={vi.fn()} brand={{ lookup: vi.fn() as never, available: true }} />);
     openTab('Sjablonen');
     expect(container.textContent ?? '').not.toMatch(/\d/);
   });
