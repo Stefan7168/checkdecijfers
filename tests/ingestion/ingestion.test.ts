@@ -1258,3 +1258,105 @@ describe('registerTables tags cbs_tables.source correctly (#WP30c source-column 
     expect(row.source).toBe('eurostat');
   });
 });
+
+// #264 (ADR 048 D7(a)): registerTables never sourced a DOI at all — the
+// column (migration 032) simply stayed NULL for every table, Eurostat
+// included. Session 108 verified the DOI source live (Eurostat mints one per
+// dataset, `10.2908/<CODE>`, confirmed against the public DataCite REST API);
+// this fix constructs it deterministically then verifies it out-of-band
+// before ever storing it (principle c: never guess), scoped to
+// `source = 'eurostat'` rows only — CBS has no DOI concept. Every fetchImpl
+// here is a hermetic stub; these tests never touch the real network.
+describe('registerTables populates cbs_tables.doi for Eurostat rows (#264, ADR 048 D7(a))', () => {
+  const EUROSTAT_TABLE = { id: 'eurostat:tipsbd30', updateCadence: 'twice daily', servesTasks: [] };
+
+  function dataciteFetch(status: number, body: unknown) {
+    return vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
+  }
+
+  function eurostatSource(): EurostatFixtureSource {
+    return new EurostatFixtureSource(loadEurostatFixtureTree(EUROSTAT_FIXTURES_DIR));
+  }
+
+  it('200 + state:"findable" → doi = 10.2908/<CODE uppercased>', async () => {
+    const fetchImpl = dataciteFetch(200, { data: { attributes: { state: 'findable' } } });
+
+    await registerTables(db, eurostatSource(), [EUROSTAT_TABLE], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    const row = (
+      await db.query('select doi from cbs_tables where id = $1', ['eurostat:tipsbd30'])
+    ).rows[0]!;
+    expect(row.doi).toBe('10.2908/TIPSBD30');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [url] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe('https://api.datacite.org/dois/10.2908/TIPSBD30');
+  });
+
+  it('404 from DataCite → doi stays null, registration still succeeds', async () => {
+    const fetchImpl = dataciteFetch(404, {});
+
+    const registered = await registerTables(db, eurostatSource(), [EUROSTAT_TABLE], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(registered).toEqual(['eurostat:tipsbd30']);
+    const row = (
+      await db.query('select doi from cbs_tables where id = $1', ['eurostat:tipsbd30'])
+    ).rows[0]!;
+    expect(row.doi).toBeNull();
+  });
+
+  it('a throwing fetchImpl → doi stays null, registration still succeeds (never blocks ingestion)', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new Error('network down');
+    });
+
+    const registered = await registerTables(db, eurostatSource(), [EUROSTAT_TABLE], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(registered).toEqual(['eurostat:tipsbd30']);
+    const row = (
+      await db.query('select doi from cbs_tables where id = $1', ['eurostat:tipsbd30'])
+    ).rows[0]!;
+    expect(row.doi).toBeNull();
+  });
+
+  it('a CBS table never gets a doi and never triggers a DataCite fetch (CBS has no DOI concept)', async () => {
+    const docs = await loadDocs('85224NED');
+    const source = new FixtureSource(docs);
+    const fetchImpl = vi.fn();
+
+    await registerTables(db, source, [table('85224NED')], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    const row = (await db.query('select doi from cbs_tables where id = $1', ['85224NED'])).rows[0]!;
+    expect(row.doi).toBeNull();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('re-registration is idempotent: an already-registered table is skipped, no second DataCite call', async () => {
+    const fetchImpl = dataciteFetch(200, { data: { attributes: { state: 'findable' } } });
+    const source = eurostatSource();
+
+    const firstRun = await registerTables(db, source, [EUROSTAT_TABLE], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(firstRun).toEqual(['eurostat:tipsbd30']);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+    const secondRun = await registerTables(db, source, [EUROSTAT_TABLE], {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    expect(secondRun).toEqual([]); // already registered — skipped entirely
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // no re-fetch on the skip
+
+    const row = (
+      await db.query('select doi from cbs_tables where id = $1', ['eurostat:tipsbd30'])
+    ).rows[0]!;
+    expect(row.doi).toBe('10.2908/TIPSBD30');
+  });
+});

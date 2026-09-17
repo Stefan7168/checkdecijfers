@@ -1125,6 +1125,34 @@ table" go-ahead):**
 none of this makes Eurostat answerable from live chat (that's E2, its own future design round + an
 owner-signed public-claim wording sweep, ADR 048 D3(d)).
 
+### DOI backfill for the already-registered `eurostat:tipsbd30` row (#264, ADR 048 D7(a), added session 109, 2026-09-17)
+
+`registerTables` (`src/ingestion/pipeline.ts`) now constructs + verifies a DOI for every NEWLY registered
+Eurostat table at registration time (`10.2908/<CODE>`, verified out-of-band against the public DataCite REST
+API before ever being written — never a guess, per principle c). That fix does not reach `eurostat:tipsbd30`,
+which was registered in step 5 above BEFORE this fix existed — its `doi` column is still `null` in production
+and needs a one-off backfill.
+
+- **Owner step, not run by the session that built it** (this repo's own rule: no live DB writes from a
+  dispatched/autonomous session). Run:
+  ```
+  npm run backfill:eurostat-doi
+  ```
+  This is a **dry run** — it reports what it WOULD write (the constructed DOI + whether DataCite confirms it
+  `findable`) without touching the database. Once the report looks right:
+  ```
+  npm run backfill:eurostat-doi -- --apply
+  ```
+- **Idempotent**: it only ever touches `cbs_tables` rows with `source = 'eurostat' and doi is null`, so
+  re-running it after a successful `--apply` finds nothing left to do. Safe to run again if unsure whether it
+  already ran.
+- **Never guesses**: any row DataCite doesn't confirm `findable` (a 404, a network hiccup, a timeout) is
+  reported and left `null` — the script never writes an unverified DOI. Uses the root `.env`'s `DATABASE_URL`
+  (`--env-file=.env`, same as `db:migrate`/`gdpr:purge`).
+- Script: `scripts/backfill-eurostat-doi.ts`. Test coverage (hermetic, no real network) lives in
+  `tests/ingestion/ingestion.test.ts`'s "`registerTables` populates `cbs_tables.doi`" describe block, which
+  exercises the same `src/eurostat-adapter/doi.ts` functions the backfill script calls.
+
 ## Running the web app locally WITH the real database (added 2026-09-09, session 90)
 
 `npm run web:dev` (or the `web` entry in `.claude/launch.json`) starts `next dev` with only

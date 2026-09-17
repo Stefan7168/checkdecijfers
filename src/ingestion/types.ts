@@ -81,7 +81,14 @@ export type RegisterTablesFn = (
    * curated seed set (`ingest register`, the fixture harness). On-demand
    * onboarding registers with the default (false): those rows are the TTL
    * cache the eviction GC (src/ingestion/eviction.ts) may remove. */
-  options?: { pinned?: boolean },
+  options?: {
+    pinned?: boolean;
+    /** #264 (ADR 048 D7(a)): injectable `fetch` for the out-of-band DataCite
+     * DOI-verification call registerTables makes for `source = 'eurostat'`
+     * rows only — never the real network in tests. Defaults to the global
+     * `fetch`, matching src/chart/brandfetch.ts's `fetchBrand` shape. */
+    fetchImpl?: typeof fetch;
+  },
 ) => Promise<string[]>;
 
 /**

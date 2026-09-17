@@ -3,10 +3,11 @@
 // slices and catalog quirks).
 import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow, CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
+import { eurostatDoiFor, verifyEurostatDoi } from '../eurostat-adapter/doi.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { parsePeriodCode } from './periods.ts';
 import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
-import { sourceKeyForTableId } from '../sources/registry.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 import type { Correction, RegisterTablesFn, SyncOptions, SyncResult, SyncTableFn } from './types.ts';
 import {
   checkDimensionMapping,
@@ -72,6 +73,7 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
   // takes the default false — matching the column default, so the on-demand
   // path needed no change when the option landed.
   const pinned = options.pinned ?? false;
+  const fetchImpl = options.fetchImpl;
   const existingRows = await db.query('select id from cbs_tables');
   const existingIds = new Set(existingRows.rows.map((r) => r.id as string));
 
@@ -91,11 +93,46 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
     const excluded = new Set(table.excludeMeasures ?? []);
     const units = unitsFromMeasures(schema.measures.filter((m) => !excluded.has(m.code)));
 
+    const sourceKey = sourceKeyForTableId(table.id);
+
+    // #264 (ADR 048 D7(a)): the DOI shown on the "Bewijs dit cijfer" proof
+    // panel, scoped to Eurostat rows only — CBS has no DOI concept, so
+    // migration 032's `doi` column stays NULL for every CBS row forever
+    // (cheapest-mechanism-first: zero API calls for the source that has no
+    // DOI at all). For Eurostat, construct the DOI deterministically
+    // (`10.2908/<CODE>`, session 108 research) then verify it out-of-band —
+    // never the request path — against the public DataCite API before ever
+    // storing it as fact (principle c: never guess). `verifyEurostatDoi`
+    // itself never throws (see that module); the try/catch below is an
+    // extra belt so a genuinely unexpected failure here can NEVER fail or
+    // block registration — DOI is presentation-only support, not a
+    // validation-pipeline check.
+    let doi: string | null = null;
+    if (sourceKey === EUROSTAT_SOURCE_KEY) {
+      try {
+        const candidate = eurostatDoiFor(table.id);
+        const findable = await verifyEurostatDoi(candidate, { fetchImpl });
+        if (findable) {
+          doi = candidate;
+        } else {
+          console.warn(
+            `DOI candidate ${candidate} for ${table.id} was not confirmed findable by DataCite — ` +
+              'left null (registration and the proof panel are unaffected).',
+          );
+        }
+      } catch (error) {
+        console.warn(
+          `DOI verification errored for ${table.id} (registration unaffected):`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+    }
+
     await db.withTransaction(async (tx) => {
       await tx.query(
         `insert into cbs_tables
-           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned, source)
-         values ($1, $2, $3, $4, $5, $6, null, $7, $8)`,
+           (id, title, expected_dimensions, slice, units, update_cadence, schema_fingerprint, pinned, source, doi)
+         values ($1, $2, $3, $4, $5, $6, null, $7, $8, $9)`,
         [
           table.id,
           schema.title,
@@ -114,7 +151,8 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
           // deny gate itself uses — so this write can never disagree with
           // the one thing that actually matters for keeping Eurostat off
           // live chat (that gate never reads this column, by design).
-          sourceKeyForTableId(table.id),
+          sourceKey,
+          doi,
         ],
       );
 
