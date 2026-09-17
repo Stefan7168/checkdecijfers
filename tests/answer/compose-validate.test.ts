@@ -9,6 +9,8 @@ import {
   scanBody,
   validateAnswerBody,
 } from '../../src/answer/compose/index.ts';
+import { deriveDirection } from '../../src/query/derivations.ts';
+import type { DerivationRecord } from '../../src/query/index.ts';
 import {
   cpiSeries,
   makeCell,
@@ -240,6 +242,86 @@ describe('R9: direction, superlative and comparison words', () => {
     const niet =
       'De bevolking op 1 januari in Nederland groeide in 2024 met 101.085 inwoners, niet gedaald: van 17.942.942 in 2024 naar 18.044.027 in 2025.';
     expect(validateAnswerBody(niet, populationDifference()).problems).toEqual([]);
+  });
+});
+
+// Multi-region-series task 5 (docs/superpowers/specs/2026-09-17-multi-region-
+// series-design.md, MS1): today's `trendBacking` takes the FIRST `direction`
+// record in `result.derivations`, and `expectedTrendForClause`'s `cellsByYear`
+// map is keyed by year across ALL cells, so a later region silently overwrites
+// an earlier one. Neither bug needs the (not-yet-added) `region_series` shape
+// to exist — a hand-built result with two `direction` records, one per
+// region, already reproduces both: the validator must judge each trend clause
+// against ONLY the direction record for the region that clause names, and
+// fail closed when a clause names zero or more than one region.
+describe('#264 (task 5): region-aware trend backing for multi-`direction` results', () => {
+  const amsterdam = { code: 'GM0363', label: 'Amsterdam' };
+  const rotterdam = { code: 'GM0599', label: 'Rotterdam' };
+
+  const amsterdamCells = [
+    ['2020JJ00', '2020', 872757],
+    ['2021JJ00', '2021', 900000],
+    ['2022JJ00', '2022', 933680],
+  ].map(([code, label, value]) =>
+    makeCell({ measureTitle: 'Bevolking op 1 januari', region: amsterdam, periodCode: code as string, periodLabel: label as string, value: value as number, unit: 'aantal' }),
+  );
+  // A genuine DECLINE — the region this suite deliberately claims a rise
+  // for, to prove the claim gets rejected rather than borrowed backing.
+  const rotterdamCells = [
+    ['2020JJ00', '2020', 651446],
+    ['2021JJ00', '2021', 640000],
+    ['2022JJ00', '2022', 630000],
+  ].map(([code, label, value]) =>
+    makeCell({ measureTitle: 'Bevolking op 1 januari', region: rotterdam, periodCode: code as string, periodLabel: label as string, value: value as number, unit: 'aantal' }),
+  );
+
+  // Hand-built exactly the way run.ts's per-region slicing (spec's "the
+  // honesty rule, as a testable invariant") produces them: the registered
+  // deriveDirection function, called once per region's own cells.
+  const amsterdamDirection = deriveDirection(amsterdamCells);
+  const rotterdamDirection = deriveDirection(rotterdamCells);
+  if (!amsterdamDirection.ok || !rotterdamDirection.ok) {
+    throw new Error('fixture setup: deriveDirection must succeed over a clean 3-point single-region series');
+  }
+  const derivations: DerivationRecord[] = [amsterdamDirection.record, rotterdamDirection.record];
+
+  const twoRegionResult = makeResult({
+    shape: 'series',
+    cells: [...amsterdamCells, ...rotterdamCells],
+    derivations,
+  });
+
+  it('rejects a trend claim about the wrong region (today the FIRST direction record silently backs it)', () => {
+    // No numeric tokens at all in the Rotterdam clause, so validate.ts's
+    // rule-1 shortcut ("≥2 bound cell tokens in the clause decide by their
+    // textual order") cannot rescue this by accident — the claim can only be
+    // judged by which direction record backs it. Amsterdam genuinely rose;
+    // Rotterdam genuinely fell. Claiming a rise for Rotterdam must fail.
+    const body = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen). Rotterdam steeg de afgelopen jaren.';
+    const report = validateAnswerBody(body, twoRegionResult);
+    expect(report.ok).toBe(false);
+  });
+
+  it('fails closed when a trend clause on a multi-`direction` result names no region', () => {
+    const body = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen). Al met al steeg het dit jaar.';
+    const report = validateAnswerBody(body, twoRegionResult);
+    expect(report.ok).toBe(false);
+  });
+
+  it('fails closed when a trend clause on a multi-`direction` result names two regions', () => {
+    const body = 'Amsterdam en Rotterdam stegen dit jaar.';
+    const report = validateAnswerBody(body, twoRegionResult);
+    expect(report.ok).toBe(false);
+  });
+
+  it('accepts a correctly attributed two-region trend answer (each clause bound to its own region\'s record)', () => {
+    // Under today's bug this is REJECTED, not accepted: the single global
+    // `net` (Amsterdam's 'up') is checked against BOTH clauses, so the
+    // honest 'Rotterdam daalde' clause reads as a false claim. Region-aware
+    // backing must accept this — an honest answer is not itself a bug.
+    const body = 'Amsterdam ging van 872.757 in 2020 naar 933.680 in 2022 (gestegen); Rotterdam daalde de afgelopen jaren.';
+    const report = validateAnswerBody(body, twoRegionResult);
+    expect(report.problems).toEqual([]);
   });
 });
 
