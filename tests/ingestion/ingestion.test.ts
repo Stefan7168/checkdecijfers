@@ -13,9 +13,12 @@ import {
   EurostatFixtureSource,
   loadEurostatFixtureTree,
 } from '../../src/eurostat-adapter/fixture-source.ts';
+import { EUROSTAT_DEFINITIVE_STATUS } from '../../src/eurostat-adapter/jsonstat.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { isProvisionalStatus, SOURCES } from '../../src/sources/registry.ts';
+import type { CbsObservationRow, CbsSlice, CbsSource } from '../../src/cbs-adapter/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -1358,5 +1361,187 @@ describe('registerTables populates cbs_tables.doi for Eurostat rows (#264, ADR 0
       await db.query('select doi from cbs_tables where id = $1', ['eurostat:tipsbd30'])
     ).rows[0]!;
     expect(row.doi).toBe('10.2908/TIPSBD30');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #251 (session 109): the OPTIONAL per-CELL status override in the narrow
+// waist (CbsObservationRow.status).
+//
+// Before this change, observations.status — the ONE column R11's
+// isProvisionalStatus ever reads — was derived EXCLUSIVELY from
+// periodStatusByCode, a per-PERIOD-code lookup. That is the true CBS shape
+// (every cell in a CBS period shares one CBS status), but it left a source
+// with real per-CELL flags (Eurostat's JSON-stat `p e s f b c d u n z :`)
+// with no path into the column at all, which is why the Eurostat registry
+// entry had to declare `definitiveStatuses: []` ("everything provisional,
+// unconditionally") as the safe fail-direction.
+//
+// pipeline.ts is a shared, live-money-path file: every CBS answer's
+// provisional marking flows through the same function. The first two tests
+// below are the CBS regression pins — the adapter never sets the new field,
+// so the new branch is never taken for a CBS row and the written statuses are
+// still exactly the per-period ones.
+// ---------------------------------------------------------------------------
+
+/** Every observation row a source yields for a table, flattened. */
+async function allRows(source: CbsSource, tableId: string, slice?: CbsSlice): Promise<CbsObservationRow[]> {
+  const out: CbsObservationRow[] = [];
+  for await (const page of source.fetchObservations(tableId, slice)) out.push(...page);
+  return out;
+}
+
+/** period_code -> status, exactly as the pipeline's own periodStatusByCode
+ * builds it: from the time dimension's published code list. */
+async function periodStatuses(source: CbsSource, tableId: string, dimension: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const code of await source.fetchCodeList(tableId, dimension)) {
+    if (code.status != null) map.set(code.code, code.status);
+  }
+  return map;
+}
+
+async function writtenStatuses(db: Db, tableId: string): Promise<{ period_code: string; status: string }[]> {
+  const result = await db.query(
+    'select period_code, status from observations where table_id = $1 order by period_code, measure',
+    [tableId],
+  );
+  return result.rows.map((r) => ({ period_code: r.period_code as string, status: r.status as string }));
+}
+
+/** A CbsSource that delegates everything to `inner` and only rewrites the
+ * per-cell `status` of the observation rows it yields — the narrow-waist
+ * seam an adapter with real per-cell statuses uses. */
+class PerCellStatusSource implements CbsSource {
+  private readonly inner: CbsSource;
+  private readonly decorate: (row: CbsObservationRow) => string | undefined;
+
+  constructor(inner: CbsSource, decorate: (row: CbsObservationRow) => string | undefined) {
+    this.inner = inner;
+    this.decorate = decorate;
+  }
+
+  fetchTableSchema(tableId: string) {
+    return this.inner.fetchTableSchema(tableId);
+  }
+  fetchCodeList(tableId: string, dimension: string) {
+    return this.inner.fetchCodeList(tableId, dimension);
+  }
+  fetchObservationCount(tableId: string) {
+    return this.inner.fetchObservationCount(tableId);
+  }
+  fetchCatalog() {
+    return this.inner.fetchCatalog();
+  }
+  async *fetchObservations(tableId: string, slice?: CbsSlice, dimensionNames?: string[]) {
+    for await (const page of this.inner.fetchObservations(tableId, slice, dimensionNames)) {
+      yield page.map((row) => {
+        const status = this.decorate(row);
+        return status === undefined ? row : { ...row, status };
+      });
+    }
+  }
+}
+
+describe('#251 per-cell status override (narrow waist, session 109)', () => {
+  // 82242NED is the one Phase-0 fixture whose observations span all THREE CBS
+  // publication statuses (Definitief / Voorlopig / NaderVoorlopig), so this
+  // exercises the whole per-period vocabulary in a single sync.
+  const CBS_TABLE = '82242NED';
+
+  it('CBS is unchanged: the adapter sets no per-cell status at all, so the new branch is never taken', async () => {
+    const source = new FixtureSource(await loadDocs(CBS_TABLE));
+    const rows = await allRows(source, CBS_TABLE);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.status === undefined)).toBe(true);
+    // Not merely "undefined": the key is absent from the parsed object, so no
+    // spread/serialization of a CBS row can ever materialize a blank one.
+    expect(rows.every((r) => !('status' in r))).toBe(true);
+  });
+
+  it('CBS is byte-identical: every written status is still exactly the PERIOD code list status', async () => {
+    const source = new FixtureSource(await loadDocs(CBS_TABLE));
+    await registerTables(db, source, [table(CBS_TABLE)]);
+    const result = await syncTable(db, source, CBS_TABLE);
+    expect(result.outcome).toBe('succeeded');
+
+    const expected = await periodStatuses(source, CBS_TABLE, 'Perioden');
+    const written = await writtenStatuses(db, CBS_TABLE);
+    expect(written.length).toBeGreaterThan(0);
+    for (const row of written) {
+      expect(row.status, row.period_code).toBe(expected.get(row.period_code));
+    }
+    // All three CBS statuses really are in play here — this is not a
+    // vacuous "everything is Definitief" pass.
+    expect(new Set(written.map((r) => r.status))).toEqual(
+      new Set(['Definitief', 'Voorlopig', 'NaderVoorlopig']),
+    );
+  });
+
+  it('an adapter-supplied per-cell status WINS, and rows without one still fall back to the period ' +
+    'status — both paths in the SAME sync', async () => {
+    const plain = new FixtureSource(await loadDocs(CBS_TABLE));
+    const periodByCode = await periodStatuses(plain, CBS_TABLE, 'Perioden');
+    // Stamp exactly one period's cells; leave every other row's field absent.
+    const stamped = [...periodByCode.keys()].sort()[0]!;
+    const source = new PerCellStatusSource(plain, (row) =>
+      row.coordinates['Perioden'] === stamped ? 'PerCellOverride' : undefined,
+    );
+
+    await registerTables(db, source, [table(CBS_TABLE)]);
+    const result = await syncTable(db, source, CBS_TABLE);
+    expect(result.outcome).toBe('succeeded');
+
+    const written = await writtenStatuses(db, CBS_TABLE);
+    const overridden = written.filter((r) => r.period_code === stamped);
+    expect(overridden.length).toBeGreaterThan(0);
+    expect(overridden.every((r) => r.status === 'PerCellOverride')).toBe(true);
+    for (const row of written.filter((r) => r.period_code !== stamped)) {
+      expect(row.status, row.period_code).toBe(periodByCode.get(row.period_code));
+    }
+  });
+
+  it('a BLANK per-cell status fails loudly — never silently treated as definitive (principle c)', async () => {
+    const plain = new FixtureSource(await loadDocs(CBS_TABLE));
+    const source = new PerCellStatusSource(plain, () => '   ');
+    await registerTables(db, source, [table(CBS_TABLE)]);
+    await expect(syncTable(db, source, CBS_TABLE)).rejects.toThrow(/EMPTY per-cell status/);
+    // Nothing was written: the staging loop throws before the write transaction.
+    const written = await writtenStatuses(db, CBS_TABLE);
+    expect(written).toHaveLength(0);
+  });
+});
+
+describe('#251 Eurostat per-cell statuses reach observations.status end-to-end', () => {
+  const EUROSTAT_SOURCE = SOURCES.eurostat!;
+
+  async function syncEurostat(tableId: string) {
+    const source = new EurostatFixtureSource(loadEurostatFixtureTree(EUROSTAT_FIXTURES_DIR));
+    await registerTables(db, source, [{ id: tableId, updateCadence: 'unknown', servesTasks: [] }]);
+    const result = await syncTable(db, source, tableId);
+    expect(result.failureSummary ?? '').toBe('');
+    expect(result.outcome).toBe('succeeded');
+    return source;
+  }
+
+  it('the REAL captured tipsbd30 table writes its e/p flags verbatim — every cell provisional', async () => {
+    await syncEurostat('eurostat:tipsbd30');
+    const written = await writtenStatuses(db, 'eurostat:tipsbd30');
+    expect(written.length).toBeGreaterThan(0);
+    expect(new Set(written.map((r) => r.status))).toEqual(new Set([':', 'e', 'p']));
+    for (const row of written) {
+      expect(isProvisionalStatus(EUROSTAT_SOURCE, row.status), row.status).toBe(true);
+    }
+  });
+
+  it('an UNFLAGGED Eurostat table (demo_pjan) no longer renders "always provisional" — the #251 ' +
+    'behaviour change the registry entry\'s definitiveStatuses: [] used to force', async () => {
+    await syncEurostat('eurostat:demo_pjan');
+    const written = await writtenStatuses(db, 'eurostat:demo_pjan');
+    expect(written.length).toBeGreaterThan(0);
+    expect(new Set(written.map((r) => r.status))).toEqual(new Set([EUROSTAT_DEFINITIVE_STATUS]));
+    for (const row of written) {
+      expect(isProvisionalStatus(EUROSTAT_SOURCE, row.status)).toBe(false);
+    }
   });
 });

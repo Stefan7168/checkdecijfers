@@ -11,6 +11,7 @@ import {
   SOURCES,
   sourceKeyForTableId,
 } from '../../src/sources/registry.ts';
+import { EUROSTAT_DEFINITIVE_STATUS } from '../../src/eurostat-adapter/jsonstat.ts';
 import { fakeSourceInfo } from '../helpers/fake-source-info.ts';
 import { nullReasonText, renderTemplateBody } from '../../src/answer/compose/index.ts';
 import { buildAttributionLine } from '../../src/answer/compose/format.ts';
@@ -155,7 +156,7 @@ describe('display builders are byte-identical for cbs vs absent source (A1)', ()
   });
 });
 
-describe('WP30c/E1 (ADR 048 D6/D7, Amendment B1): the eurostat registry entry', () => {
+describe('WP30c/E1 (ADR 048 D6/D7; Amendment B1 superseded by #251): the eurostat registry entry', () => {
   it('resolveSource returns the registered eurostat entry, not the cbs fallback', () => {
     const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
     expect(eurostat).toBe(SOURCES[EUROSTAT_SOURCE_KEY]);
@@ -184,15 +185,33 @@ describe('WP30c/E1 (ADR 048 D6/D7, Amendment B1): the eurostat registry entry', 
     );
   });
 
-  it('Amendment B1: empty definitiveStatuses makes isProvisionalStatus return true unconditionally', () => {
+  // #251 (session 109) — SUPERSEDES Amendment B1's `definitiveStatuses: []`.
+  // pipeline.ts now carries a per-CELL status through the narrow waist, so
+  // exactly ONE Eurostat status may be declared definitive: the unflagged
+  // 'Published' the adapter emits. Everything else stays provisional.
+  it('#251: definitiveStatuses is exactly the adapter\'s own EUROSTAT_DEFINITIVE_STATUS', () => {
     const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
-    expect(eurostat.definitiveStatuses).toEqual([]);
-    // Every status string — flagged, unflagged, empty, or unrecognized —
-    // must come back provisional. This is the safe-direction behavior the
-    // empty list exists to guarantee, since pipeline.ts has no per-cell
-    // status path for Eurostat's per-cell flags (only a per-period one).
-    for (const status of ['', 'p', 'e', 's', 'f', 'b', 'c', 'd', 'u', 'n', 'anything-unrecognized']) {
-      expect(isProvisionalStatus(eurostat, status)).toBe(true);
+    expect(eurostat.definitiveStatuses).toEqual([EUROSTAT_DEFINITIVE_STATUS]);
+    // The registry is a PURE LEAF and cannot import the adapter, so it spells
+    // the value as a literal. This is the pin that keeps the two in step.
+    expect(eurostat.definitiveStatuses).toEqual(['Published']);
+    expect(isProvisionalStatus(eurostat, EUROSTAT_DEFINITIVE_STATUS)).toBe(false);
+  });
+
+  it('#251: every observation flag stays provisional — confidential and not-available included', () => {
+    const eurostat = resolveSource(EUROSTAT_SOURCE_KEY);
+    // 'c' (confidential) and the not-available family (':', 'n', 'z') must
+    // NEVER read as definitive (principle c); '' is rejected upstream by
+    // pipeline.ts but must be provisional here too if it ever arrived.
+    for (const status of ['', 'p', 'e', 's', 'f', 'b', 'c', 'd', 'u', 'n', 'z', ':', 'anything-unrecognized']) {
+      expect(isProvisionalStatus(eurostat, status), status).toBe(true);
+    }
+    // No provisional-display flag may collide with the definitive value.
+    for (const flag of Object.keys(eurostat.provisionalDisplay)) {
+      expect(eurostat.definitiveStatuses).not.toContain(flag);
+    }
+    for (const flag of Object.keys(eurostat.nullReasonLabels)) {
+      expect(eurostat.definitiveStatuses).not.toContain(flag);
     }
   });
 
