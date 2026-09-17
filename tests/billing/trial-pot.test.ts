@@ -1,7 +1,7 @@
 // The #53 trial pot's deterministic core (ADR 036): check-BEFORE-serve,
 // idempotent takes, both abuse limits, refund compensation and the dormant
 // default — all hermetic on PGlite with migration 020 applied (ADR 009).
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import {
   attachTrialAudit,
@@ -16,21 +16,30 @@ import {
   trialRetentionCutoff,
 } from '../../src/billing/index.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 
 const V1 = '11111111-1111-4111-8111-111111111111';
 const V2 = '22222222-2222-4222-8222-222222222222';
 const V3 = '33333333-3333-4333-8333-333333333333';
 const IP_A = 'hash-a';
 
+// Perf (#245 Action 3, session 110): boots ONE PGlite instance for the whole
+// file (beforeAll/afterAll) instead of one per test, and TRUNCATE-resets it
+// (incl. re-seeding the migration-020 trial_pot_config singleton) before
+// every test instead.
 let db: Db;
 let close: () => Promise<void>;
 
-beforeEach(async () => {
+beforeAll(async () => {
   ({ db, close } = await createTestDb());
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await close();
+});
+
+beforeEach(async () => {
+  await resetTestDb(db);
 });
 
 async function remaining(): Promise<number> {
