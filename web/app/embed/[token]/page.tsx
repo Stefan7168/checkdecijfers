@@ -332,5 +332,24 @@ export default async function EmbedPage({
   // web/proxy.ts + web/app/layout.tsx for where that responsibility now
   // lives (the `x-embed-theme` request header -> `<ThemeProvider
   // forcedTheme={...}>`, applied at the root, not per-route here).
+  //
+  // Row 2 (session 110 UX audit pass 2) — recorded, not fixed here: this
+  // `<main>` deliberately carries no fixed height or overflow of its own
+  // (see this file's own test, "wraps the chart in a plain <main>..."), but
+  // the page still cannot GROW past the iframe's declared height, because
+  // web/app/layout.tsx wraps every route's children (this page included) in
+  // `<body className="flex h-dvh flex-col">` and a
+  // `flex-1 overflow-y-auto` div — a fixed-height ancestor this route did
+  // not opt out of. That ancestor is what makes `document.documentElement.
+  // scrollHeight` stay pinned to the iframe's own height regardless of how
+  // tall this page's content actually is, which is what stops a host page's
+  // auto-resize script from ever reading the true content height. Closing
+  // that fully needs an `isEmbedRoute`-conditional branch in layout.tsx
+  // (already reads `x-embed-route` for the SiteFooter toggle — the same
+  // condition would apply here) — outside this change's file scope; raising
+  // chart-embed-dialog.tsx's EMBED_DEFAULT_HEIGHT_PX to the real measured
+  // default content height (this row's other half) is what actually fixes
+  // the reported repro without it, for the common case of a chart whose
+  // content fits under that constant.
   return <main className="p-2">{chartView}</main>;
 }

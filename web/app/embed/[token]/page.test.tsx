@@ -240,6 +240,28 @@ describe('/embed/[token] — frozen render', () => {
     expect(notFound).not.toHaveBeenCalled();
   });
 
+  // Row 2 (session 110 UX audit pass 2): the CBS source line, "Frozen on"
+  // date and attribution sat below an inner scroller's fold because the
+  // page's content was taller than the DEFAULT generated iframe height
+  // (chart-embed-dialog.test.tsx's own row-2 test pins that constant). This
+  // page's OWN wrapper must add no fixed-height/hidden-overflow of its own —
+  // the true "grows past a fixed height" residual is the shared app shell's
+  // (web/app/layout.tsx's isEmbedRoute-conditional `h-dvh` body +
+  // `overflow-y-auto` wrapper around every route's children, out of this
+  // change's file scope), and this pin keeps that the ONLY place it can come
+  // from: `<main>` here must never independently re-introduce it.
+  it('wraps the chart in a plain <main> with no fixed height or its own overflow clipping', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord());
+    const { container } = render(
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }),
+    );
+    const main = container.querySelector('main');
+    expect(main).not.toBeNull();
+    expect(main!.className).not.toMatch(/\boverflow-|\bh-\[|\bh-dvh\b|\bh-screen\b|\bh-full\b/);
+  });
+
   it('defaults the frozen footer to Dutch ("Bevroren op") when ?lang is absent', async () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
