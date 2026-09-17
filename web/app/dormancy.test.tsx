@@ -97,7 +97,7 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
     const { getLang } = await import('../lib/i18n/server.ts');
     vi.mocked(getLang).mockResolvedValueOnce('en');
     render(await GeschiedenisPage());
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('History', { exact: true });
+    expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument();
   });
 
   it('/geschiedenis opts out of static prerendering (#135 residual, same bug as /login)', () => {
