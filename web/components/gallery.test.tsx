@@ -101,6 +101,27 @@ describe('GalleryGrid', () => {
     expect(screen.getByText('Andere reeks')).toBeInTheDocument();
   });
 
+  // Session 110 a11y audit (#Fix-now 4): a story card's own default heading
+  // level is <h3> — right when nested under the landing teaser's <h2>, wrong
+  // on /galerij (standalone under an <h1>, skipping <h2> — axe's heading-order,
+  // moderate). Default here stays <h3> so GalleryTeaser's callers are
+  // byte-identical to before this fix.
+  it('renders each card title as <h3> by default', async () => {
+    render(await GalleryGrid());
+    expect(screen.getByRole('heading', { level: 3, name: 'Hoe optimistisch zijn Nederlanders?' })).toBeInTheDocument();
+  });
+
+  // Scoped to the card's own title element (`article > h2`/`h3`), not every
+  // "heading" role in the DOM — ChartView's own chart-title element is a
+  // separate, unrelated `role="heading" aria-level="3"` div (its internal
+  // header, out of this fix's scope) that legitimately stays put either way.
+  it('renders each card title as <h2> when headingLevel={2} is passed (the /galerij page)', async () => {
+    const { container } = render(await GalleryGrid({ headingLevel: 2 }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Hoe optimistisch zijn Nederlanders?' })).toBeInTheDocument();
+    expect(container.querySelectorAll('article > h2')).toHaveLength(FOUR_CHARTS.length);
+    expect(container.querySelectorAll('article > h3')).toHaveLength(0);
+  });
+
   // Fix-wave finding 5: twelve (here, four) open Insights panels at once
   // made the real page unreadable — only the FIRST card pre-opens as the
   // worked example.
@@ -163,6 +184,18 @@ describe('GalleryGrid', () => {
 });
 
 describe('GalleryTeaser', () => {
+  // Session 110 a11y audit (#Fix-now 4): the teaser nests under the landing
+  // page's own <h2>Stories from the gallery</h2>, so its cards must stay
+  // <h3> — GalleryTeaser never passes headingLevel through. The card's own
+  // title (the QUESTION text) is asserted, not ChartView's separate internal
+  // chart-title element (which shows the spec's own title, "Testreeks").
+  it('renders each card title as <h3> — nested under the landing page\'s own <h2>', async () => {
+    render(await GalleryTeaser());
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Hoe optimistisch zijn Nederlanders?' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows only the first three stories, compact (no Insights pre-opened), plus a link to the full gallery', async () => {
     render(await GalleryTeaser());
     expect(screen.getByText('Testreeks')).toBeInTheDocument();

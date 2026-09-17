@@ -37,6 +37,7 @@ function GalleryCard({
   lang,
   openByDefault,
   compact,
+  headingLevel = 3,
 }: {
   chart: CuratedChart;
   lang: Lang;
@@ -50,11 +51,18 @@ function GalleryCard({
    * only — no Insights pre-opened — so three cards read as a short teaser,
    * not three more full-height panels stacked under the hero. */
   compact: boolean;
+  /** Session 110 a11y audit (#Fix-now 4): the card title's heading level.
+   * Defaults to 3 (the landing teaser nests it under the landing page's own
+   * <h2>Stories from the gallery</h2>); the standalone /galerij page passes
+   * 2, since there the card sits directly under the page's own <h1> with no
+   * <h2> in between (axe-core heading-order, moderate). */
+  headingLevel?: 2 | 3;
 }) {
   const titleKey = `gallery.story.${chart.slug}.title` as MessageKey;
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <article className="rounded-xl border border-border bg-card p-5 sm:p-6">
-      <h3 className="text-lg text-foreground">{t(lang, titleKey)}</h3>
+      <Heading className="text-lg text-foreground">{t(lang, titleKey)}</Heading>
       <div className="mt-3">
         <ChartView
           spec={chart.spec}
@@ -97,15 +105,24 @@ function CardGrid({
   charts,
   lang,
   compact = false,
+  headingLevel,
 }: {
   charts: CuratedChart[];
   lang: Lang;
   compact?: boolean;
+  headingLevel?: 2 | 3;
 }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {charts.map((chart, i) => (
-        <GalleryCard key={chart.slug} chart={chart} lang={lang} openByDefault={i === 0} compact={compact} />
+        <GalleryCard
+          key={chart.slug}
+          chart={chart}
+          lang={lang}
+          openByDefault={i === 0}
+          compact={compact}
+          headingLevel={headingLevel}
+        />
       ))}
     </div>
   );
@@ -116,10 +133,10 @@ function CardGrid({
  * built (e.g. a cold DB, or a build still in flight — #190) never renders a
  * broken empty grid — it renders GalleryLoadingRow's honest placeholder
  * instead of the old silent `null`. */
-export async function GalleryGrid() {
+export async function GalleryGrid({ headingLevel }: { headingLevel?: 2 | 3 } = {}) {
   const [charts, lang] = await Promise.all([getGalleryStories(), getLang()]);
   if (charts.length === 0) return <GalleryLoadingRow lang={lang} count={2} />;
-  return <CardGrid charts={charts} lang={lang} />;
+  return <CardGrid charts={charts} lang={lang} headingLevel={headingLevel} />;
 }
 
 /** The landing's gallery teaser (WP-E): the first three stories, compact

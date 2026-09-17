@@ -39,7 +39,12 @@ export default async function GaleryPage() {
         <p className="mt-2 text-sm text-muted-foreground">{t(lang, 'gallery.embedComingSoon')}</p>
 
         <div className="mt-8">
-          <GalleryGrid />
+          {/* Session 110 a11y audit (#Fix-now 4): this page's own <h1>De
+              galerij</h1> has no <h2> before the cards, so each card's title
+              renders as <h2> here (axe-core heading-order, moderate) —
+              GalleryTeaser (landing's teaser, under its own <h2>) keeps the
+              default <h3>. */}
+          <GalleryGrid headingLevel={2} />
         </div>
 
         <div className="mt-12 border-t border-border pt-8 text-center">
