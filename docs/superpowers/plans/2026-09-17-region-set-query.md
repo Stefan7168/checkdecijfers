@@ -296,3 +296,70 @@ tasks 5–9 are untouched. Deviations from the plan as written, and why:
 
 Measured at the end of task 4: `tests/query` 183 passed (13 files), `tests/invariants` 26 passed,
 `tests/answer/compose-template.test.ts` 42 passed, root `npm run typecheck` clean.
+
+## As-built notes (task 5)
+
+Built on branch `s110/rs5` (session 110, worktree). Task 5 is DONE; tasks 6-9 are untouched.
+
+1. **Chart kind is `'bar'`, not a new "horizontal" kind — as the plan anticipated but left open.**
+   `src/chart/types.ts`'s `ChartSpec.kind` is `'line' | 'bar'`; there is no `hbar` value at that
+   layer, and none was added (widening a stored, versioned envelope's kind enum for one shape would
+   be exactly the kind of change ADR 007/014 reserve for a schema bump). The web layer already
+   treats `kind: 'bar'` as the horizontal-bar-eligible shape (`hbarFormAllowed(spec) = spec.kind ===
+   'bar'`, `web/lib/chart-view-state.ts`) — a region_set spec is therefore ALREADY offered the
+   Liggend (hbar) view with zero web-side changes; Task 5 only had to make `buildChartSpec` stop
+   returning `null` for the shape and hand back a `'bar'`-kind spec shaped exactly like any other
+   comparison (one series per region, one point each).
+
+2. **`src/chart/build.ts` changes: the shape gate (now admits `'region_set'` alongside `'series'`/
+   `'comparison'`) and a new sort step, inserted right after the per-region `series` map is
+   flattened.** The sort applies ONLY when `result.shape === 'region_set'`: it looks for a `kind:
+   'max'` `DerivationRecord` in `result.derivations` (the one `deriveRegionRanking` produces —
+   Task 4) and, when one exists, reorders `series` to match its `rankingResultIds` array (each
+   region_set series carries exactly one point, so that point's `resultId` stands for the whole
+   series). With NO ranking record — RS1 refused it because the set was incomplete — the sort is
+   skipped entirely and `series` stays in the Map's insertion order, which is the result's own cell
+   order (`servedRegionCodes` order from `run.ts`). This is the literal "never a builder-invented
+   sort" requirement: the ONLY two orders this code can ever produce are "the ranking derivation's
+   order" or "the query layer's own order" — there is no third, ad-hoc fallback (e.g. alphabetical
+   or re-sorted-by-value-here) anywhere in the new code.
+
+3. **Everything else Task 5 asked for came for free from existing, unmodified code**, which is why
+   the diff is small: `nullNotes` (withheld member + reason), `resultId` on every point, the
+   mixed-unit/duplicate-period/dims-fingerprint guards, and the `kind === 'bar'` "exactly one point
+   per series" contract check all already ran over whatever shape reached them — region_set only
+   needed to stop being rejected at the shape gate to inherit all of it correctly. No change to
+   `nullNote`, `toPoint`, or any of the four throw-loudly guards.
+
+4. **Tests use the real hermetic path, not hand-built cells** (`tests/chart/region-set.test.ts`,
+   mirroring `tests/query/region-set-run.test.ts`'s own DB and mutation technique): `runQuery`
+   against `createIngestedDb()` for a real `population_on_1_january` × `all_provincies` result (12
+   members, complete, real ranking) and a real `average_home_sale_price_by_gemeente` × PV26
+   `gemeenten_in_provincie` result (26 served cells, 16 `Impossible` excluded, still complete) —
+   proving the chart never re-includes an `Impossible` member as a bar. Two further cases mutate the
+   same private PGlite instance (PV20 → `Confidential`, PV21 deleted, non-overlapping provinces,
+   same test-order discipline as region-set-run.test.ts) to exercise the no-ranking path and the
+   `nullNotes` line for a withheld member.
+
+5. **The web pin (`web/components/chart.test.tsx`) tests the two existing, un-re-implemented rules a
+   region-set answer actually collides with, rather than the plan's literal "26 renders with labels
+   by default" framing** — measured against the current code, `BAR_LABEL_MAX` (15, unchanged) gates
+   BOTH the default chat form (`defaultFormIsTable`, `series.length > 15`) and the per-bar value-
+   label count identically, so a 26-series spec (`> 15`) already opens on the table by DEFAULT too,
+   same as 342 — there is no series count between 16 and `REGION_SET_MAX_MEMBERS` (500) for which
+   the plan's literal "26 renders bars, 342 opens on table" contrast is true under the current
+   constant. The two pinned tests instead assert what IS true and load-bearing today: (a) a
+   26-series region-set spec renders correctly as bars, one label per region, when the viewer
+   explicitly selects the bar/hbar form (`initialFormOverride="hbar"`, the same seam
+   `initialFormOverride` tests elsewhere in the file already use) — form availability is never
+   gated by series count, only the DEFAULT starting form is; (b) a 342-series spec opens on the
+   table by default with no override, the same `BAR_LABEL_MAX` rule applying at a size no one
+   disputes. Both assert `scanForUnboundDigits` finds no unbound digit. Neither test changes
+   `BAR_LABEL_MAX` or re-implements its threshold. **Flagged in open-questions as a plan/constant
+   mismatch worth a one-line fix next time the plan is touched — not acted on further here per the
+   dispatch brief's hard limit against changing `BAR_LABEL_MAX` or re-implementing the existing bar
+   rules.**
+
+Measured at the end of task 5: `tests/chart` 254 passed (15 files) including the new
+`region-set.test.ts` (6 tests); `web/components/chart.test.tsx` 277 passed (was 275, +2 new);
+root `npm run typecheck` clean; `web`'s `npm run typecheck` clean.

@@ -5230,3 +5230,61 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// #253 Task 5 pin: a region_set ValidatedResult builds a `kind: 'bar'`
+// ChartSpec (src/chart/build.ts) — there is no "horizontal" ChartSpec.kind
+// value, so a region set is offered as the horizontal-bar VIEW of a
+// bar-kind spec, exactly like any other multi-region comparison
+// (hbarFormAllowed, chart-view-state.ts). These two tests pin the two
+// existing, un-re-implemented rules a real region-set answer collides
+// with: BAR_LABEL_MAX gates the DEFAULT chat form at >15 series (a 342-
+// member "alle gemeenten" class opens on the table), while explicitly
+// selecting a bar/hbar form is never gated by series count (a 26-member
+// class — e.g. PV26's gemeenten, tests/query/region-set-run.test.ts's own
+// real fixture count — renders as bars with a label per region either way).
+// ---------------------------------------------------------------------------
+function regionSetBarSpec(count: number): ChartSpec {
+  return spec({
+    kind: 'bar',
+    series: Array.from({ length: count }, (_, i) => {
+      const n = i + 1;
+      const value = count - i; // distinct, so nothing here relies on a sort.
+      return {
+        label: `Gemeente ${n}`,
+        regionCode: `GM${String(n).padStart(4, '0')}`,
+        points: [point({ resultId: `rs-${n}`, periodCode: '2025', periodLabel: '2025', value, formattedValue: String(value) })],
+      };
+    }),
+  });
+}
+
+describe('ChartView — #253 region_set bar chart (Task 5)', () => {
+  it('a 26-series region-set spec renders as bars, one label per region, when the bar/hbar form is used', () => {
+    const s = regionSetBarSpec(26);
+    expect(s.series.length).toBe(26);
+    const { container } = render(<ChartView spec={s} initialFormOverride="hbar" />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(26);
+    // Every region's own label is on screen (the y-axis category ticks) —
+    // never dropped just because the set is over BAR_LABEL_MAX.
+    for (const series of s.series) {
+      expect(container.textContent).toContain(series.label);
+    }
+    // BAR_LABEL_MAX (15) is NOT re-implemented here — whatever the existing
+    // value-label rule already does for 26 series is left alone; this scan
+    // only proves every digit actually rendered has a real source in the
+    // spec, however many value labels that rule chose to show.
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('a 342-series region-set spec opens on the table form by default — the existing BAR_LABEL_MAX rule, not re-implemented', () => {
+    const s = regionSetBarSpec(342);
+    expect(s.series.length).toBeGreaterThan(BAR_LABEL_MAX);
+    const { container } = render(<ChartView spec={s} />);
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelector('svg.recharts-surface, .recharts-responsive-container')).toBeNull();
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+});
