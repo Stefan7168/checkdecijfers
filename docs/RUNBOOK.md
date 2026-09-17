@@ -311,6 +311,20 @@ FIRST** (`npm run db:migrate`, owner-present window; the running old code ignore
 still serves, **then** push the code. Plus the standard per-migration check when a migration adds a TABLE
 (grants/RLS, migration-011 queries); a column on an existing RLS-locked table inherits its table's posture.
 
+## Migration numbering — cross-branch collision check (added 2026-09-17, #263)
+
+Migration files are numbered sequentially (`migrations/NNN_description.sql`) with no built-in
+cross-branch coordination — a real collision happened session 107 (two branches both minted
+`031_*.sql` under different filenames; git's merge never flags that, since different filenames
+never conflict, and it surfaced only when the merged backend suite hit Postgres's
+`duplicate key value violates unique constraint "schema_migrations_pkey"`). CI now catches this
+on every push/PR **before** that: `npm run migrations:check-numbers`
+(`scripts/check-migration-numbers.ts`, pinned by `tests/db/migration-numbers.test.ts`) lists
+`migrations/`, extracts each file's leading number, and fails loudly if two files share one — no
+DB, no network. It is also safe and useful to run locally on a long-unmerged branch before
+opening/updating a PR, to catch a number `main` has claimed in the meantime. This does not
+replace judgment: renumber the side that has NOT shipped to `main` yet, to the next free number.
+
 ## Real-browser check of chart features without spend (added 2026-09-10, session 92)
 
 The Browser pane never hydrates the chart subtree while hidden, and the owner's Chrome only has charts in

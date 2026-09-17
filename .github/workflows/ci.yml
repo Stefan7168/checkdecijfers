@@ -29,6 +29,10 @@
 #       Stage-1 FTS recall + alias hints, the rerank hard-allowlist validator,
 #       findTable routing, and the end-to-end replay test — the rerank's LLM
 #       call replays from committed fixtures, still no API key, no network.
+#   12. migration number collision check (open-questions #263): fails the push
+#       if two files in migrations/ share a leading number — the cheap,
+#       deterministic net for the cross-branch collision session 107 hit
+#       post-merge (scripts/check-migration-numbers.ts).
 # State per work package: the ingestion suite has real teeth since WP2 (wire-level
 # corruption fixtures against an embedded Postgres, ADR 009); the registry suite
 # (WP4) checks default_coordinates/period_semantics/canonical_measures apply
@@ -135,6 +139,17 @@ jobs:
       - name: Typecheck
         if: matrix.shard == 1
         run: npm run typecheck
+      # Cross-branch migration-number collision guard (#263): two branches
+      # once each minted migrations/031_*.sql under different filenames — git
+      # never flags that (different filenames never conflict) — and the
+      # clash surfaced only post-merge, as a Postgres
+      # schema_migrations_pkey duplicate-key failure across every
+      # applyMigrations-dependent suite. This is the cheap, deterministic
+      # check that would have caught it on THIS push, before the full suite
+      # runs. No DB, no network — filesystem + string parsing only.
+      - name: Migration number collision check
+        if: matrix.shard == 1
+        run: npm run migrations:check-numbers
       # Covers every file under tests/ (ingestion, invariants, benchmark
       # structure, registry, query, answer, chart, audit, billing, catalog,
       # db, sources, websearch, threads, docs, attachments, usage — see the
