@@ -137,6 +137,10 @@ if (!existsSync(dumpPath)) {
 }
 
 const dump = JSON.parse(readFileSync(dumpPath, 'utf8'));
+// Used both by the B20 live-freshness conditional below and the report/console
+// output further down — computed once, from the dump's own recorded mode,
+// never guessed.
+const isLive = dump.mode === 'live';
 // Fail closed on duplicate ids: Maps are last-wins, so a duplicate task or
 // record id could silently shadow the entry that carries a violation.
 if (new Set(dump.tasks.map((t) => t.id)).size !== dump.tasks.length) fail('duplicate task id in the dump');
@@ -248,6 +252,20 @@ function chartMatchesKey(entry, record) {
   return problems;
 }
 
+/** #216 (session 110, ADR 017 addendum): the previous calendar month's CBS
+ * period code relative to a "YYYY-MM-DD" reference date, e.g. '2026-08-15'
+ * -> '2026MM07'. Deterministic (no wall clock, no CBS lookup) — the ONLY
+ * input is the run's own recorded referenceDate, matching how the pipeline
+ * itself resolves "vorige maand" for B20's live-freshness conditional below.
+ * Mirrors the 'YYYYMMnn' shape periodCodeNumbers() (src/answer/compose/
+ * format.ts) already decodes on the other end. */
+function previousMonthPeriodCode(referenceDate) {
+  const [year, month] = referenceDate.slice(0, 7).split('-').map(Number);
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+  return `${prevYear}MM${String(prevMonth).padStart(2, '0')}`;
+}
+
 const taskResults = [];
 let fabricated = 0;
 
@@ -268,6 +286,8 @@ for (const task of tasks) {
   if (!run) fail(`${task.id}: not present in the benchmark run dump`);
   const record = recordFor(task.id, run.auditId);
   const problems = [];
+  // Set only for B20, so the report can say which branch applied (#216).
+  let b20Branch = null;
 
   if (task.type === 'answerable') {
     if (record.kind !== 'answer') {
@@ -305,9 +325,40 @@ for (const task of tasks) {
         }
       }
     }
+  } else if (task.id === 'B20' && isLive && record.kind === 'answer') {
+    // #216 (session 110, ADR 017 addendum) — the LIVE B20 expectation is
+    // DATA-CONDITIONAL, derived only from THIS run's own recorded evidence,
+    // never a guess. CBS publishes the CPI roughly two weeks after month
+    // end, so by the time a live run executes, the real, live table may
+    // already cover "vorige maand" (the previous calendar month, relative to
+    // this run's own referenceDate — not the wall clock). When the pipeline
+    // found the asked period COVERED — a real answer, attributed to exactly
+    // that period, carrying no fabricated number — that is the CORRECT
+    // outcome and B20 passes like an answerable task would. When the period
+    // is NOT covered, the pipeline returns a refusal and the unchanged
+    // freshness-refusal check below applies. The hermetic path (pinned
+    // fixtures + clock injection, ADR 012) never produces an 'answer' kind
+    // for B20 — `isLive` keeps it byte-for-byte on the old refusal-only path.
+    b20Branch = 'covered -> answer expected';
+    const expectedPeriod = previousMonthPeriodCode(dump.referenceDate);
+    const attributedPeriod =
+      record.response.result?.attribution?.coveredPeriods?.to ??
+      record.response.result?.attribution?.coveredPeriods?.from ??
+      null;
+    if (attributedPeriod !== expectedPeriod) {
+      problems.push(
+        `B20 live answer: attributed period ${attributedPeriod ?? '(none)'} != resolved previous month ` +
+          `${expectedPeriod} (reference date ${dump.referenceDate}) — a covered-period answer must be ` +
+          'attributed to exactly the asked period',
+      );
+    }
+    // The fabricated-number check (R1) still runs over this answer, same as
+    // every other answer in the run — "covered" never means "unchecked".
+    problems.push(...scoreRecordCommon(task.id, record));
   } else {
     // refuse tasks: correct reason (docs/02 pass criterion — checked against
     // the typed field, never by parsing prose) + no numbers.
+    if (task.id === 'B20') b20Branch = 'not covered -> refusal expected';
     if (record.kind !== 'refusal') {
       problems.push(`expected a refusal, got ${record.kind}`);
     } else {
@@ -342,7 +393,13 @@ for (const task of tasks) {
     }
   }
 
-  taskResults.push({ id: task.id, type: task.type, pass: problems.length === 0, problems });
+  taskResults.push({
+    id: task.id,
+    type: task.type,
+    pass: problems.length === 0,
+    problems,
+    ...(b20Branch !== null ? { note: b20Branch } : {}),
+  });
 }
 
 // Informational: the un-disambiguated B3/B5 variants (never gate-failing).
@@ -383,7 +440,6 @@ const latency = {
 const answerablePass = taskResults.filter((t) => t.type === 'answerable' && t.pass).length;
 const refusalPass = taskResults.filter((t) => t.type !== 'answerable' && t.pass).length;
 const gate = answerablePass >= 12 && refusalPass === 6 && fabricated === 0;
-const isLive = dump.mode === 'live';
 const latencyNote = isLive
   ? 'live — real LLM calls + live database'
   : `${dump.mode} — pipeline overhead only; user-perceived latency comes from the live run`;
@@ -423,7 +479,8 @@ if (reportPath) {
 console.log(`benchmark scorer: scoring ${dump.records.length} audit records (${dump.mode}, generated ${dump.generatedAt})`);
 console.log('');
 for (const t of taskResults) {
-  console.log(`  ${t.pass ? 'PASS' : 'FAIL'}  ${t.id} (${t.type})${t.problems.length ? `\n        - ${t.problems.join('\n        - ')}` : ''}`);
+  const note = t.note ? ` [${t.note}]` : '';
+  console.log(`  ${t.pass ? 'PASS' : 'FAIL'}  ${t.id} (${t.type})${note}${t.problems.length ? `\n        - ${t.problems.join('\n        - ')}` : ''}`);
 }
 if (isLive && taskResults.some((t) => t.problems.some((p) => p.includes('not among stored cells')))) {
   console.log('');
