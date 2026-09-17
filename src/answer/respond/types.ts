@@ -73,6 +73,16 @@ export type RefusalReason =
   /** Table quarantined pending review — treated as out of scope, never
    * served; wording is honest about the temporary hold (docs/05). */
   | 'quarantined'
+  /** #253: the question asked for a whole region CLASS ("per provincie",
+   * "welke gemeente") on a measure CBS publishes only nationally. Its own
+   * reason because neither neighbour's wording is honest here: 'internal'
+   * would page the owner (src/answer/audit/alerts.ts) for what is an ordinary
+   * scope limit, and the intent layer's max_needs_regions template asks the
+   * user to NAME some regions — precisely what a class ask avoids, and
+   * impossible on a table with no regional dimension at all. The wording says
+   * the measure is published nationally only and offers that national figure;
+   * it never relabels a national number "per provincie". */
+  | 'region_scope_on_national_measure'
   /** Still ambiguous after the one clarification round: refusal-with-guidance,
    * never a second question (docs/05 failure table). */
   | 'still_ambiguous'

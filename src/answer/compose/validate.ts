@@ -11,6 +11,7 @@
 // exemption) and never pass through the LLM, so they are not scanned.
 import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/index.ts';
 import {
+  baseRegionLabel,
   findNumericTokens,
   maskPhrases,
   type MetadataNumberAnchor,
@@ -23,15 +24,16 @@ import {
 } from './format.ts';
 import type { AnswerValidationReport } from './types.ts';
 
+/** Re-exported from format.ts, where it now lives beside the other builders
+ * that need it (#253's buildRegionSetLine names excluded class members the
+ * same way prose does). Kept exported HERE too: it is part of this module's
+ * published surface and several callers import it from the validator. */
+export { baseRegionLabel };
+
 const EPSILON = 1e-9;
 
 function eq(a: number, b: number): boolean {
   return Math.abs(a - b) < EPSILON;
-}
-
-/** Region label as prose uses it: "Utrecht (gemeente)" → "Utrecht". */
-export function baseRegionLabel(label: string): string {
-  return label.replace(/\s*\(.*\)\s*$/, '').trim();
 }
 
 /** Typographic apostrophes must not defeat region matching ('s-Gravenhage). */

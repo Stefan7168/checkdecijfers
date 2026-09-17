@@ -667,8 +667,10 @@ export async function resolveIntent(
       // #253 question 3: a class ask on a national-only measure. The answer
       // layer turns this into its own refusal wording
       // (region_scope_on_national_measure) — it must never be served as a
-      // national figure relabelled "per provincie".
-      return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent asks for the region class "${regionSet.kind}"`, { axis: 'region' });
+      // national figure relabelled "per provincie". The sub-reason is what
+      // carries that decision structurally, so the answer layer never has to
+      // match on this English message.
+      return refuse(intent, 'invalid_intent', `table "${tableId}" has no regional dimension, but the intent asks for the region class "${regionSet.kind}"`, { axis: 'region', subReason: 'region_scope_on_national_measure' });
     }
 
     // --- Clarification: ALL unresolved user-facing axes in ONE refusal ----------
