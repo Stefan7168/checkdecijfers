@@ -59,9 +59,8 @@ Session 106 also shipped, separately and already live before this: the Supademo 
 comparison's one pending decision (`framePadding: 'none' → 'small'`, owner-confirmed, `c934f1d`) —
 the broader "match Supademo's polish" question stays logged, not built ([#260](open-questions.md)).
 The 3D-demo thread stays closed — do not resume it without a new, explicit owner ask. Full account
-of sessions 106-107: [status-archive.md](status-archive.md). Session 108 kickoff (written before the
-migration/registration work above — the "Eurostat next step" it names is now done, see this block
-instead): [session-briefs/2026-09-17-session-108-kickoff.md](session-briefs/2026-09-17-session-108-kickoff.md).
+of sessions 106-107: [status-archive.md](status-archive.md). Session 108 kickoff:
+[session-briefs/2026-09-17-session-108-kickoff.md](session-briefs/2026-09-17-session-108-kickoff.md).
 
 ## Phase 0 checklist
 

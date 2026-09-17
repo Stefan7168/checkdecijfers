@@ -87,11 +87,10 @@ export default async function EurostatExplorerPage({
 
       {tables.length === 0 ? (
         <p data-testid="empty-state" style={{ marginTop: '1.5rem' }}>
-          No Eurostat tables are registered yet. E1 (this build phase) ships the adapter, the registry entry
-          and this explorer, but registers zero real Eurostat tables — the adapter and its real API shapes
-          are now verified (session 107's live fixture capture), but registering a real table needs
-          migrations 032/033 applied first (owner-supervised, RUNBOOK "WP30c E1" step 4). Once that's done,
-          registered tables will appear here.
+          No Eurostat tables are registered yet. The adapter, its real API shapes, and the required
+          migrations are all verified and applied (RUNBOOK "WP30c E1") — this is a genuinely empty state, not
+          a missing prerequisite. Register one via `registerTables`/`syncTable` with `adapterFor('eurostat')`
+          (see RUNBOOK "WP30c E1" step 4) to see it appear here.
         </p>
       ) : (
         <>
