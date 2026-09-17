@@ -514,6 +514,14 @@ const nl = {
   // on a single-series chart (buildComparePrompt's own title-only usage).
   'chart.insights.recordHighTitle': 'Uitschieter naar boven',
   'chart.insights.recordLowTitle': 'Uitschieter naar beneden',
+  // Session 110 addendum (audit pass 3, row 16): a comparison chart (bar —
+  // every series exactly one point, a ranking, no time axis) has no "jump"
+  // to have leapt from — its extremes are the highest/lowest MEMBER, not an
+  // "uitschieter" (a time-series-shaped word implying a departure from a
+  // trend). chart-insights.ts's TITLE_KEY picks these two instead of
+  // recordHigh/recordLowTitle whenever the spec is bar-shaped.
+  'chart.insights.highestMemberTitle': 'Hoogste',
+  'chart.insights.lowestMemberTitle': 'Laagste',
   // Session 110 addendum (ADR 041): a point that is above/below the
   // series' own mean but is NOT the actual highest/lowest point — kept
   // distinct from the "Uitschieter" titles above so a mid-series point is
@@ -1317,6 +1325,8 @@ const en: Messages = {
   'chart.story.provisional': ' (provisional figure)',
   'chart.insights.recordHighTitle': 'Notable high',
   'chart.insights.recordLowTitle': 'Notable low',
+  'chart.insights.highestMemberTitle': 'Highest',
+  'chart.insights.lowestMemberTitle': 'Lowest',
   'chart.insights.aboveAverageTitle': 'Above average',
   'chart.insights.belowAverageTitle': 'Below average',
   'chart.insights.jumpUpTitle': 'Sharp rise',
