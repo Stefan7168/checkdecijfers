@@ -741,6 +741,14 @@ const nl = {
   // and packPricePerQuestion strings carry the ONLY digits (via {n}/{price},
   // computed server-side from the pack's own priceCents/credits, never
   // hardcoded), and neither can appear inside a chart card.
+  // Row 7 (session 110 UX audit): the pack's own price/credits line, built
+  // from its priceCents/credits rather than the DB-stored `label` (which was
+  // a fixed Dutch string, e.g. "€30 — 2.000 credits", shown even in English)
+  // — both {price} and {credits} are pre-formatted via Intl.NumberFormat for
+  // the page's own language before being substituted in.
+  'credits.packLabel': '{price} — {credits} credits',
+  // Row 13: the Buy button's accessible name, same pre-formatted vars.
+  'credits.buyAriaLabel': 'Koop {price} — {credits} credits',
   'credits.packQuestions': '≈ {n} gewone vragen',
   'credits.packPricePerQuestion': '{price} per vraag',
   'credits.neverExpires': 'Credits verlopen nooit. Geen abonnement.',
@@ -1445,6 +1453,8 @@ const en: Messages = {
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
   // WP-C (journey programme, session 96): mirrors the Dutch block above —
   // R10 credits-page pack copy, R5.3 the anonymous-Insights login line.
+  'credits.packLabel': '{price} — {credits} credits',
+  'credits.buyAriaLabel': 'Buy {price} — {credits} credits',
   'credits.packQuestions': '≈ {n} simple questions',
   'credits.packPricePerQuestion': '{price} per question',
   'credits.neverExpires': 'Credits never expire. No subscription.',
