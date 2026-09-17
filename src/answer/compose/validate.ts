@@ -743,11 +743,23 @@ export interface Sentence {
 }
 
 /** Sentence boundaries: terminal punctuation followed by whitespace/end —
- * dots inside '18.044.027' never split (no whitespace follows them). */
+ * dots inside '18.044.027' never split (no whitespace follows them). A bare
+ * newline is ALSO a boundary (ADR 055 pass-4 row 13, 2026-09-17):
+ * `renderRegionSeries` emits one "– region …" line per region, joined by
+ * `\n` with no terminal punctuation of its own (only the body's very last
+ * line ends in '.'). Without this, every line would fall inside ONE giant
+ * multi-region "sentence", and `checkBinding`/`checkDirectionWords` scope
+ * their region binding to the enclosing SENTENCE — so a trend word on line 2
+ * could silently "see" line 1's region name and pass a binding check it
+ * should fail (MS1, docs/05 R9). Splitting on '\n' is what makes each line
+ * its own sentence again, exactly like the semicolon-joined single-sentence
+ * form did before (pinned: tests/answer/compose-validate.test.ts "a newline
+ * is a sentence boundary too"). No renderer before this one ever put '\n'
+ * inside `body`, so this is additive for every other shape. */
 export function splitSentences(text: string): Sentence[] {
   const sentences: Sentence[] = [];
   let start = 0;
-  const re = /[.!?](?=\s|$)/g;
+  const re = /[.!?](?=\s|$)|\n/g;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
     const end = match.index + 1;

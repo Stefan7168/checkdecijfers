@@ -12,7 +12,7 @@ export {
 } from './prompt.ts';
 export type { PhrasingPayload, PhrasingRequestOptions } from './prompt.ts';
 export { applyUnitExpansions } from './expand.ts';
-export { renderTemplateBody, displayValueUnit, nullReasonText } from './template.ts';
+export { renderTemplateBody, renderRegionSeriesLegacyPreLineFormat, displayValueUnit, nullReasonText } from './template.ts';
 export { validateAnswerBody, scanBody, splitSentences, baseRegionLabel } from './validate.ts';
 export type { ClassifiedToken, TokenKind } from './validate.ts';
 export { formatValueNl, parseNlNumber, findNumericTokens, maskPhrases, unitMaskPhrases } from './format.ts';

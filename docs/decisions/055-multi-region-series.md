@@ -2,7 +2,11 @@
 
 **Status:** Tasks 1–6 built + merged session 110 (2026-09-17), on top of `main`, each on its own
 worktree branch (`s110/mrs12`, `s110/mrs3`, `s110/mrs4`, `s110/mrs5`, `s110/mrsline`, `s110/mrs6`).
-Task 7 (this doc + the other docs it lists) is this change. **Parser exposure is NOT needed** —
+Task 7 (this doc + the other docs it lists) followed the same day. **Same-day UX audit pass 4 (rows
+12+13, worktree `s110-ux-r`) then changed the answer body's own shape** — full CBS-qualified region
+labels and one "– " line per region instead of a semicolon-joined sentence of base labels — see the
+"Pass-4 addendum" section below for the change, the `splitSentences` mechanism it needed, and how R8
+was kept green for rows stored before it. **Parser exposure is NOT needed** —
 unlike ADR [054](054-region-set-query.md)'s `region_set` shape, this capability is reachable by a
 real user question the moment it merged: the intent parser already emits 2+ named regions and a
 period range as ordinary, independent fields (see D1 below). **The first real-LLM confirmation is a
@@ -285,6 +289,76 @@ line, and a stripped line (`?? null` is not an escape hatch) — each fails loud
 **Billing: unchanged `simple`, 20 credits.** Every pipeline answer is `simple` and no classifier
 exists; this shape makes one intent call and zero phrasing calls, same as `region_set`.
 
+## Pass-4 addendum (session 110, 2026-09-17): rows 12+13 — the qualified label and the per-line body
+
+A same-day UX audit pass ([docs/session-briefs/2026-09-17-session-110-ux-audit-pass4.md](../session-briefs/2026-09-17-session-110-ux-audit-pass4.md), rows 12 and 13) drove five real `region_series`
+turns through the chat UI and found the shape's own launch body (above) had two real readability/
+honesty problems once it carried its full 2–6-region range rather than the two-region examples this
+ADR was written against:
+
+- **Row 12 — a bare region name is ambiguous once several regions share one sentence.** The body used
+  `baseRegionLabel` (qualifier stripped) while the legend, proof table and CSV all kept the verbatim
+  CBS label; in a 6-region answer, "Utrecht" is genuinely ambiguous between the gemeente (~374k) and
+  the provincie (~1.4M) it collides with. **Decided: `renderRegionSeries` now names each region with
+  the FULL verbatim CBS label** (e.g. "Utrecht (gemeente)"), matching every other surface. Checked, not
+  changed: `sentenceMentionsCellRegion` (validate.ts) already matches on `baseRegionLabel` as a
+  case-insensitive SUBSTRING, so it still finds a region's base name inside its qualified form with no
+  code change — pinned in `tests/answer/compose-validate.test.ts`. `renderRegionSet` and
+  `renderComparison` are UNCHANGED (still `baseRegionLabel`) — this decision is scoped to the one
+  renderer row 12 named.
+- **Row 13 — a 6-region body was a 15-line run-on paragraph at phone width.** All clauses sat in one
+  semicolon-joined sentence. **Decided: one line per region**, each starting with "– " (en dash,
+  space), joined by `\n`, with the header ending in ':' on its own line and only the body's FINAL line
+  ending in '.'. This is the first `body` in the whole answer pipeline to contain a literal newline —
+  `web/components/chat.tsx`'s `whitespace-pre-wrap` body div and `web/lib/copy-answer.ts`'s verbatim
+  copy both already handle it with no change needed.
+  **The mechanism this forced:** `validate.ts`'s `splitSentences` treats bare `\n` as a sentence
+  boundary now, alongside `[.!?](?=\s|$)`. Without this, every region's line would sit inside ONE
+  giant multi-region "sentence" for `checkBinding`/`checkDirectionWords` purposes — and since row 13
+  also dropped the `';'` separators the OLD single-sentence form relied on, a trend word on line 2
+  could "see" line 1's region name (mentioned anywhere in the shared scope) and pass a binding check it
+  should fail. This is not hypothetical: pinned by a swapped-region-label regression in both
+  `tests/answer/compose-validate.test.ts` (generic, hand-built two-region result) and
+  `tests/answer/region-series-answer.test.ts` (a real query result) — each line's leading region name
+  swapped with the other's, values left untouched, and the validator correctly rejects it because each
+  line is now its own binding scope. No renderer before this one ever put `\n` inside `body`, so the
+  change is additive for every other shape.
+
+**R8 blast radius, and how it was closed without a database.** Both rows changed `region_series`
+bodies' BYTES, which is `renderTemplateBody`'s R8 byte-identical re-derivation target
+(`src/answer/audit/reconstruct.ts`, "Audit / R8" above) — a row stored between this shape's own
+go-live (commit `f923f31`, 2026-09-17, ~13:50 UTC) and this change would fail fresh re-derivation
+under today's renderer. The ordinary fix, a `known-divergences.ts` per-row-id entry (the `id: 76`/
+`id: 227` pattern that file already carries), was not available: no real `audit_answers` id from that
+window can be named from this hermetic worktree (no live database connection — the same gap
+[open-questions #270](../open-questions.md) already tracked for this whole ADR), and that register's
+own stated discipline is "one entry per row, never a range or a pattern" — a placeholder id would
+violate it and could silently swallow an unrelated future problem on whatever row eventually gets that
+id.
+
+Instead, `reconstruct.ts` was given the file's OTHER documented mechanism: a small, NAMED,
+narrowly-scoped tolerance living directly in the reconstruction check (that module's own header names
+two precedents — the `attribution.source` A1 fallback and the `trendHeadline` optional-v1-field
+exception) — except keyed on `createdAt` rather than on one field's presence, because what changed is
+an entire rendering FORMAT for one shape, not one optional field. `template.ts` keeps a
+`renderRegionSeriesLegacyPreLineFormat` export, byte-identical to how `renderRegionSeries` shipped at
+`f923f31` (base labels, `'; '`-joined, one sentence — sharing its region/derivation data path with the
+live renderer via `regionSeriesClauses`/`regionSeriesClauseText` so the two can never drift on WHICH
+regions get a clause, only on wording). `reconstruct.ts`'s `REGION_SERIES_LINE_FORMAT_CUTOFF`
+(`Date.parse('2026-09-17T15:30:00.000Z')`, this change's own authoring timestamp, verified against
+`date -u`) picks which renderer a `region_series` row is checked against by its `createdAt` — a
+genuinely pre-change row now reconstructs TRUE, not merely "known-divergent". Pinned in
+`tests/audit/region-series-r8.test.ts` ("R8: pre-cutoff region_series rows…"): a pre-cutoff row with
+the old-shape body reconstructs clean; the SAME old-shape body timestamped after the cutoff still
+fails (proving the tolerance is date-scoped, not a blanket pass); a post-cutoff row with today's shape
+is unaffected.
+
+**Left open, tracked in [open-questions #271](../open-questions.md):** whether any REAL row actually
+falls in the `f923f31`→this-change window is unconfirmed (no DB access here) — a session with live
+access should run `npm run audit:verify` across that id range once, folded into #270's own pending
+verification step, and register a `known-divergences.ts` id entry for any row the date tolerance does
+not cover (e.g. one written in the short gap between this commit and its actual deploy).
+
 ## The five questions from the design, as built
 
 | # | Question | As built |
@@ -376,3 +450,14 @@ audit:verify` against the live DB was **not run** in any hermetic worktree task 
 say so) — reasoned correct from the code (this shape is forward-only, so every historical row's
 `regionSeries ?? null` read is unaffected), but a session with DB access should run it once before
 treating the whole plan as done.
+
+**Pass-4 addendum (rows 12+13) verified:** `tests/answer/region-series-answer.test.ts` (16, 3 new —
+qualified-label body content, per-line format, and a swapped-region-label rejection),
+`tests/answer/compose-validate.test.ts` (92, 3 new — a `\n`-joined two-region body binds like a
+semicolon-joined one; a swapped-region-label control fails; a CBS-qualified region label still binds),
+`tests/audit/region-series-r8.test.ts` (13, 3 new — a pre-cutoff row with the old-shape body
+reconstructs, the same body timestamped post-cutoff fails, a post-cutoff row with today's shape is
+unaffected), `tests/audit/region-set-r8.test.ts` + `tests/audit/envelope-key-manifest.test.ts`
+(28 total, unaffected, re-run clean). Root `npm run typecheck` clean. `npm run audit:verify`
+against the live DB still **not run** (no DB access in this worktree either) — see
+[open-questions #271](../open-questions.md) for the specific follow-up this addendum needs.
