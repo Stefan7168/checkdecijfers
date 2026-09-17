@@ -2,39 +2,53 @@ One route is intentionally public with no session: `/embed/[token]` serves a sha
 
 `/bevolking-3d-demo` is a standalone, login-gated, noindexed, unlinked DEMO over entirely fictional data — a 3D municipality map, not part of the product (ADR [049](../docs/decisions/049-3d-municipality-map-demo.md)); `three`/`@types/three` is the one owner-approved library exception, reachable only through that route's own dynamic import.
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+`/eurostat-explorer` is another internal, flag-gated tool (`EUROSTAT_EXPLORER_ENABLED`, ADR [048](../docs/decisions/048-eurostat-data-source.md)) for browsing the Eurostat adapter's own tables — not part of the public product either, and off by default.
 
-## Getting Started
+This is a [Next.js](https://nextjs.org) (App Router) project, originally bootstrapped with `create-next-app`. It is a fully independent npm project — its own `package-lock.json`, not an npm workspace member (ADR [018](../docs/decisions/018-chat-ui-and-deploy.md)) — and reaches the backend source with zero duplication via `web/backend`, a committed symlink to `../src`.
 
-First, run the development server:
+## Getting started
+
+From `web/`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # next dev, http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Or from the repo root, without `cd`-ing into `web/`: `npm run web:dev` (also `web:build`,
+`web:test`, `web:typecheck`, `web:ci` — see root `package.json`). `.claude/launch.json` also
+defines `web` (dev server, port 3000) and `web-prod` (`next start` over a real build, port 3001) as
+named configurations for Claude Code's own browser-preview tooling.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The web app needs a real Supabase project + Postgres database and `ANTHROPIC_API_KEY` to run
+end-to-end (see `docs/RUNBOOK.md` for the secrets list) — there is no seeded local database by
+default.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Running it with no database and no LLM spend
 
-## Learn More
+For UI work or a real-browser audit pass, [scripts/dev-harness/](../scripts/dev-harness/README.md)
+runs the entire logged-in product — questions included — against a hermetic CBS fixture snapshot in
+PGlite, with stand-ins for Supabase Auth and the Anthropic API. No production database, no Supabase
+project, no LLM spend, no secrets. Full recipe and gotchas: `docs/RUNBOOK.md` § "Local real-browser
+harness".
 
-To learn more about Next.js, take a look at the following resources:
+## Testing and typechecking
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+From `web/` (or via the root `web:test`/`web:typecheck` aliases from the repo root):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm test          # vitest run
+npm run typecheck # tsc --noEmit
+npm run lint       # eslint
+npm run build      # next build (also what CI runs before deploy)
+```
 
-## Deploy on Vercel
+CI (`.github/workflows/ci.yml`) runs this app's own typecheck + test suite in its own `web` job,
+alongside a `backend` job for the rest of the repo; a separate `deploy` job (`needs: [backend,
+web]`) is the only thing that ever deploys — Vercel's git integration is deliberately NOT connected
+(ADR 018), so pushing to `main` alone does not trigger a Vercel deploy.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Learn more about Next.js
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Learn Next.js](https://nextjs.org/learn)
