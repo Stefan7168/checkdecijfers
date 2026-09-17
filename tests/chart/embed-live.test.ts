@@ -256,11 +256,11 @@ describe('rerunLive', () => {
   it('returns a fresh ChartSpec when the stored intent still resolves cleanly', async () => {
     const { db, close } = await createIngestedDb();
     try {
-      const spec = await rerunLive(db, record(SERIES_INTENT), { lang: 'nl' });
-      expect(spec).not.toBeNull();
-      expect(spec!.schemaVersion).toBe(CHART_SPEC_VERSION);
-      expect(spec!.kind).toBe('line');
-      expect(spec!.series.length).toBeGreaterThan(0);
+      const result = await rerunLive(db, record(SERIES_INTENT), { lang: 'nl' });
+      expect(result).not.toBeNull();
+      expect(result!.spec.schemaVersion).toBe(CHART_SPEC_VERSION);
+      expect(result!.spec.kind).toBe('line');
+      expect(result!.spec.series.length).toBeGreaterThan(0);
     } finally {
       await close();
     }
@@ -269,8 +269,8 @@ describe('rerunLive', () => {
   it('passes { probe: true } to runQuery — a live embed re-render is not a billed/served turn', async () => {
     const { db, close } = await createIngestedDb();
     try {
-      const spec = await rerunLive(db, record(SERIES_INTENT), { lang: 'nl' });
-      expect(spec).not.toBeNull(); // sanity: the call actually succeeded
+      const result = await rerunLive(db, record(SERIES_INTENT), { lang: 'nl' });
+      expect(result).not.toBeNull(); // sanity: the call actually succeeded
 
       // #195 discipline (src/query/run.ts): only a DELIVERABLE read counts as
       // demand for the eviction GC. Proven the same way
@@ -281,6 +281,68 @@ describe('rerunLive', () => {
       const tableId = await tableIdForCanonicalKey(db, 'cpi_yearly_inflation');
       const { rows } = await db.query('select last_queried_at from cbs_tables where id = $1', [tableId]);
       expect(rows[0]!.last_queried_at).toBeNull();
+    } finally {
+      await close();
+    }
+  }, 300_000);
+
+  // Session 110 continuation (#262(c) follow-up, ADR 041 as-built addendum):
+  // rerunLive now also rebuilds `chartAlternates` from the SAME live query
+  // result, through the exact shared function (buildChartAlternates,
+  // src/chart/chart-alternates.ts) respond.ts calls for a freshly-answered
+  // chat turn. `cpi_yearly_inflation` is the same canonical key
+  // tests/answer/respond-pipeline.test.ts's own "chartAlternates (#254)"
+  // suite already proves gets exactly one registered alternate ('CPI
+  // indexniveau (2025=100), geen mutatiepercentage', measure M000215,
+  // src/registry/defaults.ts) — reusing that same real, already-ingested
+  // coordinate here (rather than inventing a new fixture) is the whole
+  // point: it proves this file's `rerunLive` and respond.ts's own pipeline
+  // produce the SAME alternate for the SAME canonical key, via the SAME
+  // shared assembly function.
+  it('rebuilds the registered alternate reading(s) from the live query result, not from any stored copy', async () => {
+    const { db, close } = await createIngestedDb();
+    try {
+      const result = await rerunLive(db, record(SERIES_INTENT), { lang: 'nl' });
+      expect(result).not.toBeNull();
+      expect(result!.alternates.length).toBeGreaterThan(0);
+      expect(result!.alternates[0]!.label).toBe('CPI indexniveau (2025=100), geen mutatiepercentage');
+      // R1: every digit in the alternate spec must trace back to a validated
+      // cell from the SAME live query as the primary — proven the same way
+      // the primary spec itself is trusted (a real ChartSpec, same schema
+      // version, same table, real series data), not a stubbed/duplicated
+      // copy of the primary.
+      expect(result!.alternates[0]!.spec.schemaVersion).toBe(CHART_SPEC_VERSION);
+      expect(result!.alternates[0]!.spec.attribution.tableId).toBe(result!.spec.attribution.tableId);
+      expect(result!.alternates[0]!.spec.series.length).toBeGreaterThan(0);
+      expect(result!.alternates[0]!.spec.series[0]!.points.length).toBeGreaterThan(0);
+      // The alternate is a genuinely different reading (a different CBS
+      // measure, M000215's own index-level series) from the primary
+      // (cpi_yearly_inflation's own YoY-percentage series) — not the primary
+      // spec accidentally duplicated under a different label.
+      expect(result!.alternates[0]!.spec.unit).not.toBe(result!.spec.unit);
+    } finally {
+      await close();
+    }
+  }, 300_000);
+
+  it('returns an empty alternates array (never undefined, never a throw) for an explicit-target intent, which the registry never attaches alternates to', async () => {
+    const { db, close } = await createIngestedDb();
+    try {
+      // src/query/resolve.ts: an explicit target always resolves with
+      // `alternates: []` (only a canonical target's registry row can carry
+      // alternates at all) — the same real table/measure as SERIES_INTENT
+      // above, addressed explicitly instead of by canonical key, so this
+      // proves the "no alternates to offer" degrade path on a genuinely
+      // successful re-run, not a refusal.
+      const explicitIntent: StructuredIntent = {
+        schemaVersion: INTENT_SCHEMA_VERSION,
+        target: { kind: 'explicit', tableId: '86141NED', measure: 'M000238' },
+        period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+        derivation: 'series',
+      };
+      const result = await rerunLive(db, record(explicitIntent), { lang: 'nl' });
+      expect(result).not.toBeNull();
+      expect(result!.alternates).toEqual([]);
     } finally {
       await close();
     }

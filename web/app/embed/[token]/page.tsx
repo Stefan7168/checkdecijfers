@@ -15,6 +15,12 @@
 // live re-run fall back to the frozen render — silently for a non-Pro owner
 // (spec: "a copied 'live' code stops being live when Pro lapses"), with a
 // distinguishing footer message when a Pro owner's live re-run itself fails.
+// Session 110 continuation (closing the ADR 041 as-built addendum's own
+// recorded gap): `rerunLive` now also rebuilds `chartAlternates` from the
+// SAME live query result (via the shared `buildChartAlternates`,
+// src/chart/chart-alternates.ts), so a successful Live re-run renders the
+// ADR 051 reading toggle with fresh, live-consistent alternate data instead
+// of suppressing it.
 //
 // The row's owner is resolved to an email via `lookupUserEmail`
 // (src/billing/creator-email.ts, added 2026-09-12 — ADR 041 revisit trigger,
@@ -191,6 +197,14 @@ export default async function EmbedPage({
   // or blank page.
   let finalSpec = spec;
   let finalFooter = footerText;
+  // #262(c) (session 110, ADR 041 addendum) follow-up: on a successful Live
+  // re-run this is overwritten with the FRESH alternates `rerunLive` itself
+  // rebuilds (src/chart/embed-live.ts, via the shared buildChartAlternates)
+  // — never the stale, frozen-row alternates, which would pair a fresh
+  // primary with days-old alternate data. Left as the stored, frozen-row
+  // alternates whenever Live doesn't apply/activate/succeed (see the
+  // `alternates` const below for the exact reasoning of each branch).
+  let finalAlternates = response.chartAlternates ?? [];
 
   if (query.live === '1') {
     // The Pro gate checks the audit row's OWNER (`record.userId`), never the
@@ -238,12 +252,13 @@ export default async function EmbedPage({
     // gets above, extended to this check too.
     const pro = record.userId === null ? false : await hasProPlan(getDb(), { id: record.userId, email });
     if (pro) {
-      const liveSpec = await rerunLive(getDb(), record, { lang });
-      if (liveSpec !== null) {
-        finalSpec = liveSpec;
+      const live = await rerunLive(getDb(), record, { lang });
+      if (live !== null) {
+        finalSpec = live.spec;
+        finalAlternates = live.alternates;
         finalFooter =
           (lang === 'en' ? 'Live · data as of ' : 'Live · gegevens van ') +
-          formatEmbedDate(liveSpec.attribution.syncedAt, lang) +
+          formatEmbedDate(live.spec.attribution.syncedAt, lang) +
           ' ·';
       } else {
         finalFooter =
@@ -277,28 +292,29 @@ export default async function EmbedPage({
   const formOverride: ChartForm | undefined =
     isChartForm(query.form) && query.form !== 'table' ? query.form : undefined;
 
-  // #262(c) (session 110, ADR 041 as-built addendum): the FROZEN embed gets
-  // ADR 051's reading toggle for free — `response.chartAlternates` is
-  // whatever the answer pipeline stored on this audit row at answer time
-  // (D3: built once, server-side, capped at 4), never re-queried here, so
-  // showing it costs nothing new and adds no query string (chart.tsx's own
-  // `state.selectedReading` is local component state, same as chat/dock).
-  // A pre-ADR-051 row simply has no `chartAlternates` key at all — ChartView
-  // already defaults an absent/undefined `alternates` prop to `[]`, so the
-  // dropdown silently doesn't render rather than throwing (same "absent
-  // means not built for this row" reading the rest of the envelope uses).
+  // #262(c) (session 110, ADR 041 as-built addendum) — and its own follow-up,
+  // session 110 continuation: the FROZEN embed gets ADR 051's reading toggle
+  // for free — `response.chartAlternates` is whatever the answer pipeline
+  // stored on this audit row at answer time (D3: built once, server-side,
+  // capped at 4), never re-queried here, so showing it on the frozen render
+  // costs nothing new and adds no query string (chart.tsx's own
+  // `state.selectedReading` is local component state, same as chat/dock). A
+  // pre-ADR-051 row simply has no `chartAlternates` key at all —
+  // `finalAlternates`'s own `?? []` default (above) covers that the same way
+  // ChartView's own absent/undefined `alternates` prop default used to.
   //
-  // Deliberately SUPPRESSED on a successful Live re-run (`finalSpec !==
-  // spec`): the stored alternates were built from the SAME query as the
-  // frozen `spec`, days or weeks ago — pairing a fresh live primary with
-  // stale alternates would let a reader pick a reading that silently reverts
-  // the chart to old data with no distinguishing footer message, exactly the
-  // kind of quiet misrepresentation R11/D3 exist to prevent. `rerunLive`
-  // itself only ever rebuilds one spec (src/chart/embed-live.ts has no
-  // alternates mechanism), so there is nothing honest to offer here until a
-  // future slice teaches Live to re-run every alternate too.
-  const alternates = finalSpec === spec ? response.chartAlternates : [];
-
+  // A successful Live re-run no longer suppresses the toggle (the ADR 041
+  // as-built addendum's own recorded gap): `finalAlternates` was already
+  // overwritten above with the FRESH alternates `rerunLive` itself rebuilt
+  // from the live query result (src/chart/embed-live.ts, via the same
+  // `buildChartAlternates` respond.ts calls for a freshly-answered chat
+  // turn) — so a reader toggling a reading on a live embed sees alternate
+  // data from the SAME live query as the primary, never a stale pairing.
+  // Only when Live doesn't apply (no `?live=1`, non-Pro owner) or its
+  // re-run itself failed does `finalAlternates` stay at its initial,
+  // stored-row value, which is exactly the frozen render's own alternates —
+  // correct in both of those cases since the chart being shown IS the
+  // frozen one either way.
   const chartView = (
     <ChartView
       spec={finalSpec}
@@ -307,7 +323,7 @@ export default async function EmbedPage({
       embedFooter={finalFooter}
       initialFormOverride={formOverride}
       headlineText={headlineText}
-      alternates={alternates}
+      alternates={finalAlternates}
     />
   );
 

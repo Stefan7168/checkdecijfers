@@ -75,11 +75,23 @@ export interface AlternateReadingCoordinate {
   label: string;
 }
 
+/** `options.probe` (Session 110, ADR 041's #195 discipline): defaults to
+ * `false` (the original, pre-existing behavior every chat/dock/curated
+ * caller still gets — an alternate built for an actually-served answer is a
+ * real, deliverable read and legitimately bumps `cbs_tables.last_queried_at`
+ * like any other). `src/chart/embed-live.ts`'s `rerunLive` is the one
+ * caller that passes `true`: a live embed re-render is never a
+ * billed/served turn (the same discipline already applied to the PRIMARY
+ * query there), so an alternate rebuilt alongside it must not bump the
+ * eviction anchor either — an anonymous visitor merely loading (or
+ * refreshing) a live embed must never be able to keep an otherwise-unused
+ * table alive by that fact alone. */
 export async function buildAlternateReading(
   db: Db,
   primary: ValidatedResult,
   primaryIntent: StructuredIntent,
   alt: AlternateReadingCoordinate,
+  options: { probe?: boolean } = {},
 ): Promise<AlternateReadingOutcome> {
   const primaryCell = primary.cells[0];
   if (!primaryCell) return { ok: false, reason: 'primary result has no cells to derive a coordinate from' };
@@ -112,7 +124,7 @@ export async function buildAlternateReading(
     derivation: primaryIntent.derivation,
   };
 
-  const altOutcome = await runQuery(db, altIntent);
+  const altOutcome = await runQuery(db, altIntent, { probe: options.probe === true });
   if (!altOutcome.ok) {
     return { ok: false, reason: `alternate reading refused (${altOutcome.refusal.kind}): ${altOutcome.refusal.message}` };
   }

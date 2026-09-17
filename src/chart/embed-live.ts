@@ -20,8 +20,9 @@
 //
 // rerunLive turns EVERY failure mode — a malformed/absent stored intent, a
 // thrown error, a refusal outcome — into the same `null` signal, so the
-// embed route's fallback-to-frozen logic is a single `if (spec === null)`
+// embed route's fallback-to-frozen logic is a single `if (result !== null)`
 // check, never a try/catch the route itself has to reason about.
+import { buildChartAlternates, type ChartAlternateEntry } from './chart-alternates.ts';
 import { buildChartSpec } from './build.ts';
 import type { ChartSpec } from './types.ts';
 import { INTENT_SCHEMA_VERSION, runQuery } from '../query/index.ts';
@@ -112,23 +113,56 @@ export function parseStoredIntent(raw: unknown): StructuredIntent | null {
   };
 }
 
+/** `rerunLive`'s success shape — the fresh primary spec plus its own freshly
+ * rebuilt `chartAlternates` (Session 110, #262(c) follow-up: ADR 041's
+ * as-built addendum recorded a live re-run as NOT rebuilding alternates,
+ * forcing the embed route to suppress the reading toggle whenever Live
+ * actually activated; this closes that gap). `alternates` is built through
+ * the SAME `buildChartAlternates` (src/chart/chart-alternates.ts) respond.ts
+ * calls for a freshly-answered chat turn — same order, same 4-cap, same
+ * per-alternate %-change entries, same best-effort/degrade-on-refusal
+ * contract — so a live embed's dropdown is never a second, drifting
+ * implementation of that assembly. */
+export interface LiveRerunResult {
+  spec: ChartSpec;
+  alternates: ChartAlternateEntry[];
+}
+
 /**
  * Re-runs a stored audit row's intent through the LIVE query pipeline and
- * rebuilds its chart spec — the "Live" branch of the public embed route
- * (spec Part B3). Returns `null` on ANY failure: a malformed/absent stored
- * intent, a thrown error from runQuery (e.g. the database is unreachable), or
- * a refusal outcome (the table was evicted, the period is no longer
- * servable, an unknown canonical key, etc.) — the caller's fallback-to-frozen
- * logic never needs to distinguish these; a stale-but-honest frozen chart is
- * always the safe default over a broken or blank live one. Also returns
- * `null` when runQuery succeeds but the result shape carries no chart
- * (buildChartSpec's own 'single'/'derived' → null rule, ADR 014) — the exact
- * same case a freshly-produced answer already handles.
+ * rebuilds its chart spec, plus every alternate reading of that same fresh
+ * result — the "Live" branch of the public embed route (spec Part B3).
+ * Returns `null` on ANY failure: a malformed/absent stored intent, a thrown
+ * error from runQuery (e.g. the database is unreachable), or a refusal
+ * outcome (the table was evicted, the period is no longer servable, an
+ * unknown canonical key, etc.) — the caller's fallback-to-frozen logic never
+ * needs to distinguish these; a stale-but-honest frozen chart is always the
+ * safe default over a broken or blank live one. Also returns `null` when
+ * runQuery succeeds but the result shape carries no chart (buildChartSpec's
+ * own 'single'/'derived' → null rule, ADR 014) — the exact same case a
+ * freshly-produced answer already handles. `alternates` itself is always
+ * best-effort: a failed/refused alternate (or period-change reading) is
+ * simply omitted from the array, never a reason to fail the whole re-run —
+ * the same degrade-on-refusal contract `buildChartAlternates` already
+ * documents.
  *
  * `{ probe: true }` (src/query/run.ts's #195 discipline): a live embed
  * re-render is never a billed/served turn, so it must not bump the table's
  * `last_queried_at` eviction anchor — the same "only a DELIVERABLE read
- * counts as demand" rule dry-run.ts's echoServability already follows.
+ * counts as demand" rule dry-run.ts's echoServability already follows. This
+ * applies to the primary query AND to every alternate `buildChartAlternates`
+ * rebuilds alongside it: this call passes `probe: true` through to it
+ * (`BuildChartAlternatesOptions.probe`, src/chart/chart-alternates.ts),
+ * which forwards it to every `buildAlternateReading` call in turn — an
+ * anonymous visitor merely loading (or refreshing) a live embed must never
+ * be able to keep an otherwise-unused table alive by that fact alone, and
+ * that holds for the alternate's own table exactly as much as the primary's
+ * (today always the same table, since every registered alternate replaces
+ * only measure/dims on the primary's own tableId). respond.ts's own call
+ * for a freshly-answered chat turn passes no `probe` option at all
+ * (defaulting to `false`) — an alternate built there IS a real, deliverable
+ * read of an actually-served answer, and legitimately counts as demand like
+ * any other.
  *
  * `options.lang` mirrors the route's own resolved language
  * (web/lib/i18n/messages.ts's `Lang`, reproduced here as a bare 'nl' | 'en'
@@ -144,14 +178,20 @@ export async function rerunLive(
   db: Db,
   record: AuditRecord,
   options: { lang: 'nl' | 'en' },
-): Promise<ChartSpec | null> {
+): Promise<LiveRerunResult | null> {
   const intent = parseStoredIntent(record.intent);
   if (intent === null) return null;
 
   try {
     const outcome = await runQuery(db, intent, { probe: true });
     if (!outcome.ok) return null;
-    return buildChartSpec(outcome);
+    const spec = buildChartSpec(outcome);
+    if (spec === null) return null;
+    const alternates = await buildChartAlternates(db, outcome, intent, outcome.attribution.alternates ?? [], {
+      periodChangeEligibleKey: intent.target.kind === 'canonical' ? intent.target.key : null,
+      probe: true,
+    });
+    return { spec, alternates };
   } catch {
     return null;
   }
