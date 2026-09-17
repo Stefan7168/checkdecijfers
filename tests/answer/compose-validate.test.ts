@@ -143,6 +143,28 @@ describe('R9: semantic binding', () => {
     const report = validateAnswerBody('De bevolking op 1 januari in Nederland was in 2024 18.044.027 inwoners.', populationSingle);
     expect(report.ok).toBe(false);
   });
+
+  it('ADR 055 pass-4 row 12 (2026-09-17): a CBS-qualified region label still binds via the base-label substring check', () => {
+    // sentenceMentionsCellRegion matches on baseRegionLabel(cell.regionLabel)
+    // as a case-insensitive SUBSTRING — so a body that keeps the qualifier
+    // ("Utrecht (gemeente)", the exact colliding-name case renderRegionSeries
+    // now writes verbatim) still binds without any change to that function.
+    const utrecht = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          measureTitle: 'Bevolking op 1 januari',
+          region: { code: 'GM0344', label: 'Utrecht (gemeente)' },
+          periodCode: '2024JJ00', periodLabel: '2024', value: 374238, unit: 'aantal',
+        }),
+      ],
+    });
+    const ok = validateAnswerBody('Utrecht (gemeente) telde in 2024 374.238 inwoners.', utrecht);
+    expect(ok.problems).toEqual([]);
+    // The base form alone also still binds (unaffected, regression check).
+    const alsoOk = validateAnswerBody('Utrecht telde in 2024 374.238 inwoners.', utrecht);
+    expect(alsoOk.problems).toEqual([]);
+  });
 });
 
 describe('R9: direction, superlative and comparison words', () => {

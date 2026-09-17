@@ -796,6 +796,17 @@ function sentenceMentionsCellPeriod(sentence: string, cell: ResultCell): boolean
   return year.test(sentence) || sentence.includes(cell.periodLabel);
 }
 
+/** ADR 055 pass-4 row 12 (2026-09-17): checked, not changed. `mentions` is a
+ * case-insensitive SUBSTRING check, so matching on the BASE label still
+ * finds it inside a body that keeps the full CBS-qualified label
+ * ("Utrecht (gemeente)".includes("utrecht") is true) — `renderRegionSeries`
+ * switching from `baseRegionLabel` to the verbatim `regionLabel` needed no
+ * change here. Pinned: tests/answer/compose-validate.test.ts "a
+ * CBS-qualified region label still binds via the base-label substring
+ * check". (A genuine ambiguity this does NOT solve: two named regions that
+ * share a base name but differ only in qualifier, e.g. "Utrecht (gemeente)"
+ * vs. "Utrecht (provincie)", would both match here — pre-existing, not
+ * introduced by this change, out of scope.) */
 function sentenceMentionsCellRegion(sentence: string, cell: ResultCell): boolean {
   if (cell.regionLabel === null) return true;
   return mentions(sentence, baseRegionLabel(cell.regionLabel));

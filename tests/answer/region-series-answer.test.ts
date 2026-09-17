@@ -120,7 +120,11 @@ describe('region_series — a COMPLETE series: one clause per region, each bound
     for (const record of directions) {
       const first = byId.get(record.firstResultId)!;
       const last = byId.get(record.lastResultId)!;
-      const name = baseRegionLabel(first.regionLabel!);
+      // ADR 055 pass-4 row 12 (2026-09-17): the FULL, verbatim CBS-qualified
+      // label ("Amsterdam (gemeente)"), not baseRegionLabel — matching the
+      // legend, proof table and CSV, since a bare name is genuinely
+      // ambiguous once several regions share one sentence.
+      const name = first.regionLabel!;
       const word = { up: 'gestegen', down: 'gedaald', flat: 'gelijk gebleven' }[record.direction];
       // The clause: this region's name, its own two endpoint values with
       // their own period labels, and the direction word its OWN record backs.
@@ -185,8 +189,9 @@ describe('region_series — a PARTIAL region gets no clause, no trend word, and 
     expect(directionsOf(result)).toHaveLength(1);
 
     const body = renderTemplateBody(result);
-    // The complete region is phrased in full...
-    expect(body).toContain(baseRegionLabel(cellsOf(result, AMSTERDAM)[0]!.regionLabel!));
+    // The complete region is phrased in full, by its FULL CBS-qualified label
+    // (ADR 055 pass-4 row 12) — not merely a substring of it.
+    expect(body).toContain(cellsOf(result, AMSTERDAM)[0]!.regionLabel!);
     // ...the partial one is named nowhere, and NONE of its values appear —
     // not even the endpoints it does have. No clause means no trend word can
     // be attached to it by accident.

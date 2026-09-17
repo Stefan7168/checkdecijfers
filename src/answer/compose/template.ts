@@ -156,7 +156,19 @@ const TREND_PARTICIPLE_BY_DIRECTION: Record<'up' | 'down' | 'flat', string> = {
  *
  * With NO region carrying a record the body falls back to renderSeries' own
  * claim-free per-cell listing — the fail-closed floor of the R3 ladder, each
- * line naming its region, period and value, no trend word anywhere. */
+ * line naming its region, period and value, no trend word anywhere.
+ *
+ * **ADR 055 pass-4 row 12 (2026-09-17):** the region name is the FULL,
+ * verbatim CBS label (e.g. "Utrecht (gemeente)"), not `baseRegionLabel`. Six
+ * named regions in one sentence made a bare "Utrecht" genuinely ambiguous
+ * with the provincie of the same name; the legend, proof table and CSV
+ * already show the qualifier, so the body now matches them.
+ * `sentenceMentionsCellRegion` (validate.ts) needed no change: it is a
+ * case-insensitive SUBSTRING check against the BASE label, which still
+ * matches inside the qualified form — pinned in
+ * tests/answer/compose-validate.test.ts. `renderRegionSet` and
+ * `renderComparison` are UNCHANGED (still `baseRegionLabel`); this decision
+ * is scoped to this one renderer. */
 function renderRegionSeries(result: ValidatedResult): string {
   const byId = new Map(result.cells.map((c) => [c.resultId, c]));
   // The intent's own region order — which is also the chart's series order
@@ -180,7 +192,7 @@ function renderRegionSeries(result: ValidatedResult): string {
     // always cells of the same result, and a record only exists for a region
     // whose every cell carries a value) — fail closed rather than throw.
     if (first?.value == null || last?.value == null) continue;
-    const name = first.regionLabel === null ? regionCode : baseRegionLabel(first.regionLabel);
+    const name = first.regionLabel === null ? regionCode : first.regionLabel;
     clauses.push(
       `${name} ging van ${displayValueUnit(first.value, first.decimals, first.unit)}${provisionalSuffix(first)} ` +
         `in ${first.periodLabel} naar ${displayValueUnit(last.value, last.decimals, last.unit)}${provisionalSuffix(last)} ` +
