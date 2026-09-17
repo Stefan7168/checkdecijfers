@@ -28,6 +28,11 @@ export interface ReplayAnswerView {
    * thread must state the same assumption the answer originally carried. Null
    * on every pre-WP26 row and every non-defaulted answer. */
   assumptionLine: string | null;
+  /** #253: the region-class coverage disclosure the user was shown. Replayed
+   * from the STORED envelope, never re-decided. Null on every pre-#253 row
+   * and every answer that is not a region-class answer. Same present-only
+   * discipline as assumptionLine above. */
+  regionSetLine: string | null;
   definitionLine: string | null;
   /** #39: the alternate-reading disclosure the user was shown. Replayed from
    * the STORED envelope, never re-decided. Null on every pre-#39 row and every
@@ -89,6 +94,7 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
   return {
     body,
     assumptionLine: answer?.assumptionLine ?? null,
+    regionSetLine: answer?.regionSetLine ?? null,
     definitionLine: answer?.definitionLine ?? null,
     alternatesLine: answer?.alternatesLine ?? null,
     markingLine: answer?.markingLine ?? null,

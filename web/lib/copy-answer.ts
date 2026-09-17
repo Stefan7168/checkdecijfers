@@ -28,6 +28,7 @@ function structuralLines(view: AnswerView): string[] {
   return [
     view.body,
     view.assumptionLine,
+    view.regionSetLine,
     view.stalenessWarning,
     view.definitionLine,
     view.alternatesLine,
