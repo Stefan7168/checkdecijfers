@@ -748,7 +748,7 @@ key is present, flag state irrelevant).
 two). `/api/health` (#114) was only ever checked by the CI post-deploy smoke, so between deploys
 nobody watched it. The daily onboarding cron (`web/app/api/onboarding-cron/route.ts`, `0 6 * * *`)
 now re-runs the exact same dashboard-read probes AFTER its own job, via a new exported
-`runHealthChecks(db, flags)` in `web/app/api/health/route.ts` (the route's own `GET` was refactored
+`runHealthChecks(db, flags)` in `web/app/api/health/checks.ts` (split out of `route.ts` on 2026-09-17 — a `route.ts` may only export handlers under Next 16 route types) (the route's own `GET` was refactored
 to call it too — same checks, same stop-at-first-failure order, same response bytes; pinned by the
 existing `web/app/health.test.ts`). When any check fails, ONE e-mail goes out via a new
 `alertHealthProbeFailure` / `maybeAlertHealthProbeFailure` pair in `src/answer/audit/alerts.ts` —

@@ -31,7 +31,7 @@ import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.t
 import { findStaleSyncs, loadStaleSyncCandidateRows } from '../../../backend/ingestion/stale-sync.ts';
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
-import { runHealthChecks } from '../health/route.ts';
+import { runHealthChecks } from '../health/checks.ts';
 
 /** 'today' in the product's own timezone — same computation as the chat
  * action's referenceDate(), so the delivery re-run resolves relative periods
