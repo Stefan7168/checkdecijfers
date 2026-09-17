@@ -488,3 +488,78 @@ text from the server HTML and added a layout shift — the one place a first pai
 final largest chunk 472,477 bytes (−21% raw on the critical chunk), `chart.test.tsx` 284/284,
 `gallery.test.tsx` green. The modal, the 1,900-line style panel, the story stage and the notes editor
 stay `dynamic({ ssr: false })`.
+
+## Landing bundle pass 2 (session 110)
+
+**Task:** with the pass-1 lazy-load already merged (largest chunk 472,477 bytes, above), look for
+a second, independent, ≥40 KB win in the landing's remaining first-load chunks — module-by-module
+this time, not just re-checking the chart path.
+
+**Setup, same trap as pass 1.** This worktree's `node_modules`/`web/node_modules` were again plain
+symlinks into the main checkout (Turbopack refuses to build across them); fixed the same way
+(`rm` both, real `npm ci` at the repo root and inside `web/`).
+
+**Baseline (build 1 of 3), same manifest-chunk method as pass 1** — reading
+`.next/server/app/page_client-reference-manifest.js`'s `clientModules` for `/`, deduping every
+chunk file referenced by ANY of them (not just every other array entry — see the correction note
+below), and summing on-disk sizes: **10 chunks, 1,317,815 bytes total**, matching the parent's
+post-merge number almost exactly (the parent measured 1,311,908 on a slightly different `npm ci`
+run — both are the same build, small hash-driven byte noise between installs). Per-chunk
+breakdown, identified by grepping each chunk's minified text for package/identifier markers, then
+cross-checking against `git grep` for which source files use those imports:
+
+| Chunk (bytes) | Contents (evidence) | Landing-required? |
+|---|---|---|
+| 472,477 | `recharts` (88 hits: `ResponsiveContainer`, `LineChart`, `AreaChart`, `recharts-*` classNames), `motion` (4), `clsx` (28); `svg2pdf`/`stripe` matches are just the destructuring site of an already-separate dynamic-chunk call, not inlined code | Yes — `components/chart.tsx` (`ChartView`), the gallery's own SSR'd chart SVG. Excluded from this pass by the brief's own rule ("never touch the chart SVG path"). |
+| 381,692 | `zod` (581 hits) — traced via `grep -rl "from 'zod'"` to exactly one landing-reachable source file, `web/lib/chart-presentation.ts` (`overridesSchema`, `frameBackgroundSchema`, used by the exported `sanitizeOverrides()`). Read the call graph: `sanitizeOverrides` is called from `resolvePresentation()` and `withAccountDefault()` — both called **unconditionally** by `chart.tsx` on every render (`withAccountDefault(accountStyle)` at `chart.tsx:1863`), not only from the interactive `ChartConfigPanel`. Zod here validates a chart's presentation overrides on the plain read/render path, not just the editor — it is baked into the chart SVG path the brief says not to touch, so untouchable within this pass's own scope without a real "hand-roll the validation" refactor (a separate, larger task). | Yes, for the same reason as the row above. |
+| 203,156 | First-party app code confirmed by `strings`-dumping the chunk: `deriveDatasetVisuals`/`messageHasVisual`/`datasetMessageHasVisual` (the chat message→visual-card derivation logic), a `submitAnswerFeedback` server reference, and inlined lucide `thumbs-up`/`thumbs-down` icon path data — i.e. `components/dashboard.tsx`, `components/workspace.tsx`, `components/trial-chat.tsx` and their chat/feedback subtree, per the RSC client-module list for `/` (`grep`-extracted from the manifest: `dashboard.tsx`, `workspace.tsx`, `trial-chat.tsx`, `answer-proof.tsx`, `onboarding-live-status.tsx`, `source-badge.tsx`, `coverage-disclosure.tsx` all appear as client modules for this route). | **No for `dashboard.tsx`/`workspace.tsx`** — see "what was tried" below. `trial-chat.tsx` (the anonymous trial chat) IS needed: `components/trial.tsx`'s `TrialSectie` renders `<TrialChat>` unconditionally and visibly whenever the trial gate is `'open'` (the default state for an anonymous visitor) — it's the landing's own composer, visible at first paint, not gated behind a click, so the brief's "keep anything visible at first paint SSR" rule rules out `ssr:false` for it. |
+| 70,716 | Next.js framework internals: `layout-router.js`, `render-from-template-context.js`, `client-page.js`, `client-segment.js`, `error-boundary.js`, `boundary-components.js`, `icon-mark.js` (all `[project]/web/node_modules/next/dist/esm/...`, confirmed from the manifest's own `clientModules` keys, which still carry source paths for `node_modules/next` even though the app's own source paths are stripped in the minified chunk text) | Yes — React/Next runtime, unavoidable. |
+| 62,815 / 40,841 / 36,442 / 30,758 / 18,056 / 862 | No package marker hit (grepped for `recharts`, `d3-`, `motion`/`framer`, `@base-ui`, `radix`, `lucide`, `react-resizable-panels`, `next-themes`, `three`, `topojson`, `jspdf`, `svg2pdf`, `date-fns`, `zod`, `@supabase`, `stripe`, plus a second pass for `react-day-picker`, `cmdk`, `sonner`, `embla`, `AnimatePresence`, `ResizablePanel`, `Toaster`, `class-variance-authority`, `@floating-ui`, `tailwind-merge`, `swr`, `@tanstack`, `react-hook-form`, `dayjs`, `posthog`, `@vercel/analytics`, `supabase-js`, `createClient`, `GoTrueClient`, `@sentry`) — likely the remaining first-party providers (`theme-provider.tsx`, `lang-provider.tsx`, `style-panel-owner.tsx`, `site-header.tsx`, `chart-usage-tracker.tsx`, `site-footer.tsx`) plus Next's own small shared runtime pieces, none individually large enough or clearly a third-party-library win to justify further digging inside this pass's 3-build budget. No Supabase browser client, no `react-resizable-panels`, no `next-themes` string matched anywhere in the 10 chunks — those named-in-the-brief candidates simply aren't present on the landing's client side. | Assumed yes (framework/providers needed globally); not fully individually attributed — flagged rather than guessed. |
+
+**What was tried: `next/dynamic()` on `Dashboard`/`Workspace` in `app/page.tsx`.** `app/page.tsx`
+(a Server Component) statically imported `Dashboard`, `Workspace` and `QuestionHistory` at module
+top level, but renders at most one of `Dashboard`/`Workspace` — and only inside the
+`userId !== null` branches; an anonymous visitor's request returns `<Landing>` several lines
+earlier and never references either. (`QuestionHistory` turned out to already be a plain
+`async function` **Server Component** with no `'use client'` — it needs no treatment; it was never
+in the client manifest at all.) This is the textbook "unauthenticated homepage ships the
+authenticated dashboard's JS" Next.js gotcha: because the manifest is built from the route's
+static import graph, not its runtime branches, both client components' whole module graph (chat,
+feedback, thread sidebar) was in `/`'s client-reference-manifest regardless of which branch a
+given request takes. Fix applied: wrap both in `dynamic(() => import(...).then((m) => m.X))` with
+**no `ssr: false`** (Dashboard/Workspace ARE the first-paint content for logged-in visitors, so
+per the brief's own rule they must stay server-rendered for that audience — only the anonymous
+branch benefits, and it already never reaches them).
+
+`npm run typecheck` was clean (build 2 of 3, full rebuild). But the same manifest-chunk
+measurement showed **no reduction**: 11 chunks / 1,317,926 bytes (+111 bytes, largest chunk still
+472,474 — noise-level identical). The 203,156-byte chunk did disappear as a single unit, replaced
+by four smaller chunks (154,138 + 41,617 + 23,878 + 20,941 ≈ 240,574) — real code-splitting
+happened — but the manifest still lists every chunk reachable from the route's compiled module
+graph whether it is loaded eagerly or only on the branch that actually renders `<Dashboard>`/
+`<Workspace>`, so this crude sum (the same method the parent's own pass-1 measurement used) cannot
+see the difference between "shipped to every visitor" and "shipped only when this branch
+executes." **Per this task's own instruction — keep only a ≥40 KB measured reduction, otherwise
+revert — the change was reverted with `git checkout -- web/app/page.tsx`** (build 3 of 3
+reproduced the exact pre-change baseline: 10 chunks, 1,317,815 bytes, largest 472,477 — bit-for-bit
+match on the total, confirming the revert is clean). `components/chart.test.tsx` re-run
+post-revert: 284/284 passed.
+
+**Read as a finding, not a dead end:** the measurement method this brief has used since pass 1
+(sum every chunk the manifest lists for the route) cannot detect the real, per-visitor savings a
+route-level `next/dynamic()` split produces, because it doesn't distinguish "this route's request
+CAN reach this chunk on some branch" from "this specific request's RSC payload actually references
+it." A true before/after for this class of fix needs a real browser network trace on the built app
+(`next start` + an anonymous request, checking which chunk files the browser actually fetches) —
+outside this pass's grep-and-build-count budget. Recorded here rather than left silent, per
+open-questions #245's own norm of writing down a negative result with its reason, not just a
+positive one.
+
+**Net result: no keeper this pass.** No code changed relative to the pass-1 merge
+(`git status` clean); this is a **measurement-only** pass — no commit beyond this doc append. The
+472,477-byte chart chunk and 381,692-byte zod-in-the-render-path chunk together account for
+~65% of the landing's first load and are both legitimately required by the chart SVG path this
+brief is scoped never to touch; the 203,156-byte chat/dashboard chunk is a real
+architectural leak (ships to every visitor) but this measurement method can't confirm a real-world
+byte reduction for the one fix tried, and a browser-trace-based follow-up is a separate, explicitly
+scoped task (own build + browser-tool budget), not a "cheap" extension of this pass.
