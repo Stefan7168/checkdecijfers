@@ -218,6 +218,49 @@ describe('buildFindings — multi-series', () => {
   it('returns [] with fewer than 2 series contributing (nothing to compare)', () => {
     expect(buildFindings(spec(), 'nl')).toEqual([]);
   });
+
+  // Row 8 (session 110 UX audit pass 4): the region order used to flip
+  // between finding groups on a real 2-region series ("… · Amsterdam, …
+  // · Rotterdam" then "… · Rotterdam, … · Amsterdam") because the final
+  // chronological sort's ONLY tie-break for a shared period was JS sort
+  // stability over the SCORE-ranked order -- whichever region's finding
+  // happened to score higher for that period landed first, not the
+  // region named first in the question. Amsterdam (series 0) has a modest,
+  // even rise; Rotterdam (series 1) has a big spike at the SAME 2021JJ00
+  // period that outscores Amsterdam's 2021 finding -- reproducing exactly
+  // the score-order-wins-the-tie bug this row fixes.
+  function twoRegionFlipSpec(): ChartSpec {
+    return spec({
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [
+            point({ resultId: 'a-2020', periodCode: '2020JJ00', periodLabel: '2020', value: 100, formattedValue: '100' }),
+            point({ resultId: 'a-2021', periodCode: '2021JJ00', periodLabel: '2021', value: 105, formattedValue: '105' }),
+            point({ resultId: 'a-2022', periodCode: '2022JJ00', periodLabel: '2022', value: 110, formattedValue: '110' }),
+          ],
+        },
+        {
+          label: 'Rotterdam',
+          regionCode: 'GM0599',
+          points: [
+            point({ resultId: 'r-2020', periodCode: '2020JJ00', periodLabel: '2020', value: 10, formattedValue: '10' }),
+            point({ resultId: 'r-2021', periodCode: '2021JJ00', periodLabel: '2021', value: 100, formattedValue: '100' }),
+            point({ resultId: 'r-2022', periodCode: '2022JJ00', periodLabel: '2022', value: 15, formattedValue: '15' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  it('row 8: keeps the intent\'s region order (Amsterdam before Rotterdam) whenever two findings share a period, regardless of which one scored higher', () => {
+    const findings = buildFindings(twoRegionFlipSpec(), 'nl');
+    const sharedPeriod = findings.filter((f) => f.point.periodCode === '2021JJ00');
+    expect(sharedPeriod.length).toBe(2); // both regions DO have a finding at 2021 -- otherwise this fixture proves nothing
+    expect(sharedPeriod[0]!.point.seriesLabel).toBe('Amsterdam');
+    expect(sharedPeriod[1]!.point.seriesLabel).toBe('Rotterdam');
+  });
 });
 
 describe('buildFindings — comparison (bar)', () => {

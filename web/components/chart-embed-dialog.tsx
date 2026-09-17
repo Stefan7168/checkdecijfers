@@ -361,8 +361,18 @@ function ChartEmbedDialog({
       closeLabel={t(lang, 'common.close')}
       chartSlot={chartSlot}
     >
-      <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
-      <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.autoResizeExplain')}</p>
+      {/* Row 10 (session 110 UX audit pass 4): these two instruction
+        * paragraphs describe a code block that only exists once `result`
+        * resolves to a real token -- shown unconditionally, they used to sit
+        * above "Insluiten is nu niet beschikbaar." with no code anywhere,
+        * instructions for something that does not exist. Gated the same way
+        * the code block below already is (`result !== 'unavailable'`). */}
+      {result !== 'unavailable' ? (
+        <>
+          <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
+          <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.autoResizeExplain')}</p>
+        </>
+      ) : null}
 
       {result === 'loading' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.loading')}</p> : null}
       {/* #12 (session 110 UX audit): availability is only known AFTER this

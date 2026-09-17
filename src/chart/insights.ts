@@ -164,13 +164,31 @@ function rankByScore(candidates: Scored[]): Scored[] {
   return dedupeByPoint(candidates).sort((a, b) => b.score - a.score);
 }
 
+/** `seriesKeyOf` above always writes `s${index}` — the numeric suffix IS the
+ * series' position in the spec (the intent's own region/measure order). */
+function seriesIndexOf(seriesKey: string): number {
+  return Number(seriesKey.slice(1));
+}
+
 function rankAndCap(candidates: Scored[]): ScoredFinding[] {
   const capped = rankByScore(candidates).slice(0, INSIGHTS_MAX_FINDINGS);
   // Chronological order reads more naturally than score order once selected
   // (the score only decided WHICH points made the cut, not the telling
   // order) — mirrors the spec's own period-ascending order (R6).
+  //
+  // Row 8 (session 110 UX audit pass 4): two findings that share a period
+  // (a multi-region series) used to keep whatever order the SCORE sort left
+  // them in — Array#sort is stable, so a tie on periodCode fell through to
+  // "whichever region's finding happened to score higher", which flips
+  // unpredictably from one period to the next. Series index (the intent's
+  // own region order) is now the explicit secondary key, so the region
+  // order is stable across every step regardless of which one scored
+  // higher for that particular period.
   return capped
-    .sort((a, b) => (a.periodCode < b.periodCode ? -1 : a.periodCode > b.periodCode ? 1 : 0))
+    .sort((a, b) => {
+      if (a.periodCode !== b.periodCode) return a.periodCode < b.periodCode ? -1 : 1;
+      return seriesIndexOf(a.seriesKey) - seriesIndexOf(b.seriesKey);
+    })
     .map(({ score: _score, ...finding }) => finding);
 }
 

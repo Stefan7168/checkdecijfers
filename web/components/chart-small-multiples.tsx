@@ -9,7 +9,40 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } fro
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
-import { AXIS_COLOR, AxisTick, baselineAxisLine, buildRows, GRID_LINE_PROPS, type Row, valueLabelPlan, yAxisDomain } from './chart.tsx';
+import {
+  AXIS_COLOR,
+  AxisTick,
+  type AxisTickLabel,
+  baselineAxisLine,
+  buildRows,
+  GRID_LINE_PROPS,
+  labelWidthPx,
+  type Row,
+  valueLabelPlan,
+  yAxisDomain,
+} from './chart.tsx';
+
+/** Session 110 UX audit pass 4, row 4: the same cap chart.tsx's combined-
+ * chart `yAxisWidth` uses (`Math.min(80, …)`) — reused, not reinvented. A
+ * mini panel has no spare width to clamp INTO the way the combined chart
+ * does, so `smallMultiplesAxisWidth` below treats this as a hard ceiling:
+ * fit the full label under it, or draw none at all. */
+const SMALL_MULTIPLES_AXIS_CAP_PX = 80;
+
+/** Sizes the "eigen assen" y-axis from the ACTUAL longest tick label
+ * (`labelWidthPx`, chart.tsx's own estimate — never a second measurement),
+ * not a fixed constant. The fixed 28px this replaced clipped `651.157` down
+ * to `1.157` on screen: a wrong number, not a wrong 28px (R1/R6). Unlike the
+ * combined chart, a mini panel cannot clamp down and stay honest — if even
+ * the sane cap can't fit the full label, this returns 0 so the YAxis draws
+ * NO tick at all, rather than a width that would still clip it. */
+export function smallMultiplesAxisWidth(ticks: AxisTickLabel[]): number {
+  if (ticks.length === 0) return 0;
+  const longest = ticks.reduce((w, t) => (t.display.length > w.length ? t.display : w), '');
+  const needed = labelWidthPx(longest);
+  if (needed > SMALL_MULTIPLES_AXIS_CAP_PX) return 0;
+  return Math.max(24, needed);
+}
 
 /** R11 (WP218 gap fix): the hollow provisional marker, same convention as
  * chart.tsx's SeriesDot — but ONLY for a provisional point; a final point
@@ -86,72 +119,88 @@ export function ChartSmallMultiples({
   const visible = seriesMeta.map((s, i) => ({ s, i })).filter(({ s }) => !hiddenKeys.has(s.key));
   const domain = axisMode === 'shared' ? sharedLineDomain(spec, visible.map(({ i }) => i)) : undefined;
   const geometry = dotGeometry(presentation.lineWidth);
+  // Row 11 (session 110 UX audit pass 4): neither axis states a period --
+  // "Gelijke assen" hides the x-axis by design, and "Eigen assen" only ever
+  // labels VALUES (R6's honesty rule above). `rows` is already sorted by
+  // period (buildRows above) and holds every spec period exactly once, so
+  // its first/last `periodLabel` ARE spec strings (R6) -- never a
+  // re-derived date.
+  const periodSpan =
+    rows.length > 0 ? { from: String(rows[0]!.periodLabel), to: String(rows[rows.length - 1]!.periodLabel) } : null;
 
   return (
-    <div role="group" aria-label={t(lang, 'chart.smallMultiplesGroupLabel')} className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {visible.map(({ s, i }) => {
-        // "Eigen assen": each panel auto-scales to only its own data, so a
-        // shape alone can't be honestly compared across panels -- label it
-        // with its OWN min/max, computed the same way the combined chart
-        // does (valueLabelPlan, so it's still only ever a point's own
-        // formattedValue, never a re-derived number). "Gelijke assen" needs
-        // no such label: every panel shares the identical domain by
-        // construction, so their shapes ARE directly, honestly comparable
-        // without it -- and labelling a shared endpoint that belongs to a
-        // DIFFERENT series' data here would itself be dishonest.
-        const ownTicks = axisMode === 'own' ? valueLabelPlan({ ...spec, series: [spec.series[i]] }).axisTicks : [];
-        const tickByValue = new Map(ownTicks.map((t) => [t.value, t]));
-        return (
-          <div key={s.key} className="rounded-lg border border-border p-1.5">
-            <div className="truncate text-xs text-muted-foreground" title={s.label}>
-              {s.label}
-            </div>
-            <div className="h-24 w-full" data-panel-for={s.key}>
-              <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 200, height: 96 }}>
-                <LineChart data={rows} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
-                  {/* ADR 042 designed default (2026-09-11): the grid honours
-                    * `presentation.grid` and the category axis line follows
-                    * `baselineAxisLine` — hidden by default with a hairline
-                    * baseline in its place — same as the combined chart, all
-                    * in theme colours (AXIS_COLOR/GRID_COLOR, chart.tsx — the
-                    * literal #666/#ccc Recharts defaults are illegible in
-                    * dark mode). The session-87 "basic Recharts look"
-                    * survives only as the Classic look; only the
-                    * honesty-bound tick mechanism is custom. */}
-                  {presentation.grid !== 'none' ? (
-                    <CartesianGrid
-                      {...GRID_LINE_PROPS}
-                      // Always true: this element only renders inside the
-                      // `presentation.grid !== 'none'` branch above, and
-                      // GridMode has no vertical-only option.
-                      horizontal
-                      vertical={presentation.grid === 'both'}
+    <div>
+      {periodSpan ? (
+        <p className="text-xs text-muted-foreground" data-role="small-multiples-period-span">
+          {t(lang, 'chart.smallMultiplesPeriodSpan', periodSpan)}
+        </p>
+      ) : null}
+      <div role="group" aria-label={t(lang, 'chart.smallMultiplesGroupLabel')} className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {visible.map(({ s, i }) => {
+          // "Eigen assen": each panel auto-scales to only its own data, so a
+          // shape alone can't be honestly compared across panels -- label it
+          // with its OWN min/max, computed the same way the combined chart
+          // does (valueLabelPlan, so it's still only ever a point's own
+          // formattedValue, never a re-derived number). "Gelijke assen" needs
+          // no such label: every panel shares the identical domain by
+          // construction, so their shapes ARE directly, honestly comparable
+          // without it -- and labelling a shared endpoint that belongs to a
+          // DIFFERENT series' data here would itself be dishonest.
+          const ownTicks = axisMode === 'own' ? valueLabelPlan({ ...spec, series: [spec.series[i]] }).axisTicks : [];
+          const tickByValue = new Map(ownTicks.map((t) => [t.value, t]));
+          const ownAxisWidth = smallMultiplesAxisWidth(ownTicks);
+          return (
+            <div key={s.key} className="rounded-lg border border-border p-1.5">
+              <div className="truncate text-xs text-muted-foreground" title={s.label}>
+                {s.label}
+              </div>
+              <div className="h-24 w-full" data-panel-for={s.key}>
+                <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 200, height: 96 }}>
+                  <LineChart data={rows} margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
+                    {/* ADR 042 designed default (2026-09-11): the grid honours
+                      * `presentation.grid` and the category axis line follows
+                      * `baselineAxisLine` — hidden by default with a hairline
+                      * baseline in its place — same as the combined chart, all
+                      * in theme colours (AXIS_COLOR/GRID_COLOR, chart.tsx — the
+                      * literal #666/#ccc Recharts defaults are illegible in
+                      * dark mode). The session-87 "basic Recharts look"
+                      * survives only as the Classic look; only the
+                      * honesty-bound tick mechanism is custom. */}
+                    {presentation.grid !== 'none' ? (
+                      <CartesianGrid
+                        {...GRID_LINE_PROPS}
+                        // Always true: this element only renders inside the
+                        // `presentation.grid !== 'none'` branch above, and
+                        // GridMode has no vertical-only option.
+                        horizontal
+                        vertical={presentation.grid === 'both'}
+                      />
+                    ) : null}
+                    <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} axisLine={baselineAxisLine(presentation)} />
+                    <YAxis
+                      ticks={ownTicks.map((t) => t.value)}
+                      interval={0}
+                      tick={ownAxisWidth > 0 ? AxisTick(tickByValue) : false}
+                      width={ownAxisWidth}
+                      domain={domain ?? yAxisDomain(spec.kind)}
+                      stroke={AXIS_COLOR}
                     />
-                  ) : null}
-                  <XAxis dataKey="periodLabel" tick={false} stroke={AXIS_COLOR} axisLine={baselineAxisLine(presentation)} />
-                  <YAxis
-                    ticks={ownTicks.map((t) => t.value)}
-                    interval={0}
-                    tick={ownTicks.length > 0 ? AxisTick(tickByValue) : false}
-                    width={ownTicks.length > 0 ? 28 : 0}
-                    domain={domain ?? yAxisDomain(spec.kind)}
-                    stroke={AXIS_COLOR}
-                  />
-                  <Line
-                    type="linear"
-                    dataKey={s.key}
-                    stroke={s.color}
-                    strokeWidth={LINE_WIDTH_PX[presentation.lineWidth]}
-                    connectNulls={false}
-                    dot={ProvisionalDot(s.key, s.color, geometry)}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+                    <Line
+                      type="linear"
+                      dataKey={s.key}
+                      stroke={s.color}
+                      strokeWidth={LINE_WIDTH_PX[presentation.lineWidth]}
+                      connectNulls={false}
+                      dot={ProvisionalDot(s.key, s.color, geometry)}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

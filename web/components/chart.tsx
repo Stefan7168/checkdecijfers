@@ -1373,8 +1373,12 @@ function useCoarsePointer(): boolean {
 /** Approximate text width at the 12px value-label font plus its halo stroke
  * (ADR 042, VALUE_LABEL_PROPS below) — layout only, so the plot leaves room
  * for the end-of-line label instead of clipping it. Deliberately generous:
- * this only reserves margin, it never affects what's actually drawn. */
-function labelWidthPx(text: string): number {
+ * this only reserves margin, it never affects what's actually drawn.
+ * Exported (session 110 UX audit pass 4, row 4) so ChartSmallMultiples sizes
+ * its own-axis tick labels from the SAME estimate instead of a second,
+ * invented constant — the fixed 28px it used before clipped `651.157` down
+ * to `1.157` on screen (R1/R6: a clipped digit is a wrong number). */
+export function labelWidthPx(text: string): number {
   return Math.ceil(text.length * 7.5) + 16;
 }
 

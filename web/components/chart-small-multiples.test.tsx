@@ -2,7 +2,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import { STOCK_PRESENTATION } from '../lib/chart-presentation.ts';
-import { ChartSmallMultiples, sharedLineDomain } from './chart-small-multiples.tsx';
+import { ChartSmallMultiples, sharedLineDomain, smallMultiplesAxisWidth } from './chart-small-multiples.tsx';
 
 function twoPointSeriesSpec(overrides: Partial<ChartSpec> = {}): ChartSpec {
   return {
@@ -155,6 +155,98 @@ describe('ChartSmallMultiples', () => {
     expect(hi?.textContent).toBe('2,0');
   });
 
+  // Row 4 (session 110 UX audit pass 4): the fixed 28px axis used to clip
+  // "651.157" down to "1.157" on screen -- a wrong number, not a wrong
+  // width (R1/R6). The axis must now size itself from the real label.
+  function realWorldValueSpec(): ChartSpec {
+    return spec({
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [
+            point({ resultId: 'ams-lo', periodCode: '2020JJ00', periodLabel: '2020', value: 651157, formattedValue: '651.157' }),
+            point({ resultId: 'ams-hi', periodCode: '2024JJ00', periodLabel: '2024', value: 670610, formattedValue: '670.610' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  it('row 4: "eigen assen" renders a real-world value label COMPLETE, never clipped (651.157 / 670.610)', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={realWorldValueSpec()} hiddenKeys={new Set()} axisMode="own" presentation={STOCK_PRESENTATION} />,
+    );
+    const panel = container.querySelector('[data-panel-for="s0"]')!;
+    const lo = panel.querySelector('[data-role="axis-tick"][data-label-for="ams-lo"]');
+    const hi = panel.querySelector('[data-role="axis-tick"][data-label-for="ams-hi"]');
+    expect(lo?.textContent).toBe('651.157');
+    expect(hi?.textContent).toBe('670.610');
+  });
+
+  function tooLongValueSpec(): ChartSpec {
+    return spec({
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [
+            point({ resultId: 'long-lo', periodCode: '2020JJ00', periodLabel: '2020', value: 1, formattedValue: '1.234.567,89' }),
+            point({ resultId: 'long-hi', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '9.876.543,21' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  it('row 4: "eigen assen" draws NO tick label when even the sane cap cannot fit it, rather than a clipped one', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={tooLongValueSpec()} hiddenKeys={new Set()} axisMode="own" presentation={STOCK_PRESENTATION} />,
+    );
+    const panel = container.querySelector('[data-panel-for="s0"]')!;
+    expect(panel.querySelector('[data-role="axis-tick"]')).toBeNull();
+  });
+
+  // Row 11 (session 110 UX audit pass 4): the grid never stated which years
+  // it covers -- neither axis is labelled with a period in either mode.
+  function scanForUnboundDigits(container: HTMLElement, specStrings: string[]): void {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const tokens: string[] = [];
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+    }
+    for (const tok of tokens) {
+      expect(
+        specStrings.some((str) => str.includes(tok)),
+        `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+      ).toBe(true);
+    }
+  }
+
+  it('row 11: states the grid\'s period span in one shared caption above the grid', () => {
+    const { container } = render(
+      <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
+    );
+    const caption = container.querySelector('[data-role="small-multiples-period-span"]');
+    expect(caption?.textContent).toBe('Periode 2023 – 2024');
+    // Every digit in the caption traces to the spec's own period labels (R6).
+    scanForUnboundDigits(container.querySelector('[data-role="small-multiples-period-span"]')!, ['2023', '2024']);
+  });
+
+  it('row 11: the period-span caption localizes to English (WP218 phase 4)', () => {
+    const { container } = render(
+      <ChartSmallMultiples
+        spec={twoPointSeriesSpec()}
+        hiddenKeys={new Set()}
+        axisMode="shared"
+        presentation={STOCK_PRESENTATION}
+        lang="en"
+      />,
+    );
+    const caption = container.querySelector('[data-role="small-multiples-period-span"]');
+    expect(caption?.textContent).toBe('Period 2023 – 2024');
+  });
+
   it('"gelijke assen" shows no per-panel tick labels (a shared endpoint may belong to a different series\' data, which would be dishonest to label here)', () => {
     const { container } = render(
       <ChartSmallMultiples spec={twoPointSeriesSpec()} hiddenKeys={new Set()} axisMode="shared" presentation={STOCK_PRESENTATION} />,
@@ -243,5 +335,31 @@ describe('sharedLineDomain ("gelijke assen": the shared y-domain across all visi
       series: [{ label: 'Leeg', regionCode: null, points: [point({ value: null, formattedValue: null })] }],
     });
     expect(sharedLineDomain(s, [0])).toBeUndefined();
+  });
+});
+
+describe('smallMultiplesAxisWidth (row 4, session 110 UX audit pass 4)', () => {
+  it('returns 0 (no axis, no tick) when there are no ticks to show', () => {
+    expect(smallMultiplesAxisWidth([])).toBe(0);
+  });
+
+  it('sizes to fit a short label, floored at 24px', () => {
+    const width = smallMultiplesAxisWidth([{ value: 1, display: '1,0', resultId: 'a' }]);
+    expect(width).toBeGreaterThanOrEqual(24);
+    expect(width).toBeLessThanOrEqual(80);
+  });
+
+  it('fits a real-world 7-digit value under the cap, never clipping it', () => {
+    const width = smallMultiplesAxisWidth([
+      { value: 651157, display: '651.157', resultId: 'a' },
+      { value: 670610, display: '670.610', resultId: 'b' },
+    ]);
+    expect(width).toBeGreaterThanOrEqual(69); // labelWidthPx('651.157') = ceil(7*7.5)+16 = 69
+    expect(width).toBeLessThanOrEqual(80);
+  });
+
+  it('returns 0 (draw nothing) rather than a width that would still clip an over-cap label', () => {
+    const width = smallMultiplesAxisWidth([{ value: 1, display: '1.234.567,89', resultId: 'a' }]);
+    expect(width).toBe(0);
   });
 });
