@@ -41,7 +41,7 @@ describe('buildPeriodChangeReading', () => {
   beforeAll(async () => ({ db, close } = await createIngestedDb()));
   afterAll(async () => close());
 
-  it('builds a real, complete chart spec over a genuine multi-year home-price series', async () => {
+  it('builds a real, complete chart spec over a genuine multi-year (JJ grain) home-price series', async () => {
     const intent: StructuredIntent = {
       schemaVersion: 1,
       target: { kind: 'canonical', key: 'average_existing_home_sale_price' },
@@ -56,7 +56,9 @@ describe('buildPeriodChangeReading', () => {
     const result = buildPeriodChangeReading(primary);
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
-    expect(result.result.label).toBe('Procentuele verandering t.o.v. vorige periode');
+    // Owner-delegated decision (ADR 052 revision): the label/definition name
+    // the grain-specific previous period, not a generic "vorige periode".
+    expect(result.result.label).toBe('Procentuele verandering t.o.v. vorig jaar');
     const spec = result.result.spec;
     expect(spec.unit).toBe('%');
     expect(spec.series).toHaveLength(1);
@@ -69,9 +71,47 @@ describe('buildPeriodChangeReading', () => {
     }
     // Attribution carries the same source table, extended definition label.
     expect(spec.attribution.tableId).toBe(primary.attribution.tableId);
-    expect(spec.definitionLine).toContain('procentuele verandering t.o.v. vorige periode');
+    expect(spec.definitionLine).toContain('procentuele verandering t.o.v. vorig jaar');
     // The synthetic cells never leak a real CBS measure code as their own.
     expect(spec.series[0]!.points[0]!.resultId).toContain('#period_change');
+  });
+
+  it('labels a QUARTERLY (KW grain) series "t.o.v. vorig kwartaal"', async () => {
+    const intent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'average_existing_home_sale_price' },
+      period: { kind: 'range', from: '2023KW01', to: '2024KW04' },
+      derivation: 'series',
+    };
+    const outcome = await runQuery(db, intent);
+    if (!outcome.ok) throw new Error(`fixture setup refused: ${outcome.refusal.kind}`);
+    expect(outcome.cells[0]!.grain).toBe('KW');
+
+    const result = buildPeriodChangeReading(outcome);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.result.label).toBe('Procentuele verandering t.o.v. vorig kwartaal');
+    expect(result.result.spec.definitionLine).toContain('procentuele verandering t.o.v. vorig kwartaal');
+    expect(result.result.spec.series[0]!.points).toHaveLength(outcome.cells.length - 1);
+  });
+
+  it('labels a MONTHLY (MM grain) series "t.o.v. vorige maand"', async () => {
+    const intent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'bankruptcies_businesses' },
+      period: { kind: 'range', from: '2024MM01', to: '2024MM06' },
+      derivation: 'series',
+    };
+    const outcome = await runQuery(db, intent);
+    if (!outcome.ok) throw new Error(`fixture setup refused: ${outcome.refusal.kind}`);
+    expect(outcome.cells[0]!.grain).toBe('MM');
+
+    const result = buildPeriodChangeReading(outcome);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.result.label).toBe('Procentuele verandering t.o.v. vorige maand');
+    expect(result.result.spec.definitionLine).toContain('procentuele verandering t.o.v. vorige maand');
+    expect(result.result.spec.series[0]!.points).toHaveLength(outcome.cells.length - 1);
   });
 
   it('refuses a "single" shape (one period, no series to compute a trend over)', async () => {

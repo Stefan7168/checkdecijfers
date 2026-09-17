@@ -1,10 +1,77 @@
 # ADR 052 — Period-over-period percent-change alternate reading
 
-**Status: DRAFT — built end to end in an isolated worktree (branch
-`period-over-period-percent-change`), NOT merged, NOT owner-approved.** This
-is a real design decision the product owner (Stefan) has not yet reviewed —
-see the "Open questions for the owner" section at the end. Do not treat
-anything here as settled until that review happens.
+**Status: ACCEPTED (2026-09-17).** Built end to end in an isolated worktree
+(branch `period-over-period-percent-change`), then reviewed via the four
+open questions below. **The product owner (Stefan) reviewed those four
+questions and explicitly delegated the decision on all of them to the
+parent session, rather than answering each himself** — the decisions below
+are the parent session's judgment calls, made with his authorization, not
+his own direct answers. Merged to `main` the same day.
+
+## Owner-delegated decisions (2026-09-17)
+
+1. **Eligible-measure list (D3 below): ship the 7 measures exactly as
+   scoped and verified — do not add household income's alternate income
+   concepts now.** Reasoning: doing so without independently checking those
+   three alternate coordinates' own data (period regularity, always-positive
+   history) against the real registry would be exactly the kind of guess
+   this project's "never guess" rule exists to prevent. Logged as a
+   `**Future scope**` note under D3 instead of decided here.
+2. **Dropdown reuse (D5 below): keep it as built — reuse the existing
+   `chartAlternates` mechanism, no new UI control.** This is already the
+   cheapest viable mechanism (CLAUDE.md's standing rule), and the design's
+   own Alternatives section already gave the reasoning; no code change was
+   needed, only this confirmation.
+3. **Label wording: made cadence-specific instead of generic.** The reading
+   now states which previous period it compares against — "t.o.v. vorig
+   jaar" / "t.o.v. vorig kwartaal" / "t.o.v. vorige maand" — derived from the
+   series' own `PeriodGrain` (`src/query/types.ts`, the same field every
+   `ResultCell` already carries; no new grain vocabulary invented). Applied
+   consistently to the reading's dropdown label, its synthetic measure
+   title, and its definition line (`src/chart/period-change.ts`,
+   `periodChangeReadingLabel`/`periodChangePhraseLower`) — the three shared
+   one phrase-builder so they cannot drift apart. Tested for all three
+   cadences (`tests/chart/period-change.test.ts`).
+4. **The producer-price-index (`producer_price_index_level`) alternate:
+   investigated, a real companion measure code was found, but NOT wired —
+   see "PPI alternate: investigated and consciously NOT added" below.**
+
+## PPI alternate: investigated and consciously NOT added
+
+A real, already-proven companion mutation measure DOES exist:
+`producer_price_index_level`'s own coordinate (`M003367`, dims
+`{ Afzetgebieden: 'A044074', AlleProdComCoderingen: 'A052584' }`, table
+`85770NED`) sits on the exact same table and exact same dims as the
+already-registered `producer_prices_yoy` canonical measure's own primary
+(`M003288`, same dims) — not a guess, a coordinate this project's own
+registry already uses and tests elsewhere. Wiring it as
+`producer_price_index_level`'s ADR 051 alternate would have been a one-line,
+otherwise-safe registry addition.
+
+**It was not added, because doing so has a real, empirically-confirmed
+side effect this session cannot safely take:** `src/answer/intent/prompt.ts`
+renders EVERY canonical measure's `alternates` array into the LLM intent
+parser's system prompt (the "NIET te verwarren met" line,
+`renderVocabularyEntry`), and that whole vocabulary block is part of the
+SHA-256-hashed request every recorded intent fixture is keyed on (ADR 012:
+*"any registry change loudly invalidates the recorded fixtures"*). This was
+verified empirically, not just read from the doc comment: adding the
+alternate and running `tests/answer/respond-pipeline.test.ts` immediately
+broke 17 of its 27 tests (fixture-hash misses degrading to `internal`
+refusals) — confirming the change would invalidate intent-parsing fixtures
+project-wide, not just for PPI questions. Fixing that requires
+`npm run intent:record` against the real Anthropic API — **real API spend,
+owner-supervised only** (CLAUDE.md; docs/08-build-plan.md guardrail 4), which
+this session is not authorized to do autonomously. The change was reverted
+immediately after the confirming test run; no registry file changed as a
+result of this investigation.
+
+**Follow-up, logged in [open-questions #254](../open-questions.md):** add
+`{ measure: 'M003288', label: '...' }` to `producer_price_index_level`'s
+`alternates` in `src/registry/defaults.ts`, in an owner-supervised session
+that budgets for `npm run intent:record`'s fixture re-record (a few cents of
+real API spend, per ADR 012's own cost note) — a small, mechanical follow-up,
+not a design question.
 
 ## Context
 
@@ -105,7 +172,17 @@ data or adding schema).
 `bankruptcies_businesses`, `solar_electricity_production`,
 `average_disposable_household_income`, `average_home_sale_price_by_gemeente`
 — all strictly-positive levels (counts, prices, amounts) with no CBS-published
-companion mutation measure.
+companion mutation measure. **Owner-delegated decision (2026-09-17): ship
+exactly these 7, unchanged** — see "Owner-delegated decisions" above.
+
+**Future scope, deliberately not decided here:** `average_disposable_household_income`'s
+own three registered ADR 051 alternates (primair inkomen, bruto inkomen,
+gestandaardiseerd inkomen — reachable today only via the reading dropdown's
+income-concept entries, not this feature) are NOT marked period-change-eligible
+in this change. Adding them would need the same real-data check this ADR's
+other 7 entries each got (period regularity, no zero/negative history) —
+not assumed from the primary concept's own eligibility. A future session
+should check each of the three explicitly before adding any of them here.
 
 **Measures deliberately excluded, with reasons:**
 - Already a %-change/mutation reading as the PRIMARY (a %-change of a
@@ -154,7 +231,8 @@ does). The function:
    colliding with a real coordinate id) and wraps them in a synthetic
    `ValidatedResult` (`shape: 'series'`, `attribution` copied from the
    primary with `alternates` dropped and `definitionLabel` extended to state
-   "procentuele verandering t.o.v. vorige periode").
+   the grain-specific phrase, e.g. "procentuele verandering t.o.v. vorig
+   jaar" — see "Owner-delegated decisions" #3 above).
 4. Feeds that synthetic result through the **existing, unmodified**
    `buildChartSpec` — reusing R6 wholesale rather than re-implementing chart
    assembly. This is the same reuse-over-reinvention approach ADR 051 itself
@@ -172,7 +250,8 @@ source-agnostic list** — `chart-view-state.ts`'s `activeReadingSpec` and
 every consumer (chat, the visual dock, the anonymous trial, the digit-honesty
 scan, the Embed-disable-on-non-primary-reading rule) already treat it as "any
 complete alternate `ChartSpec` with a label," never assuming *how* an entry
-was built. Zero UI code changes: chat, dock and the trial get the new reading
+was built. **Owner-delegated decision (2026-09-17): keep it exactly this way
+— no separate control.** Zero UI code changes: chat, dock and the trial get the new reading
 for free, the Embed button already disables itself for ANY non-primary
 selection (ADR 051 D7), and the existing period-match philosophy naturally
 holds trivially (nothing here re-queries, so there is nothing to mismatch).
@@ -266,23 +345,22 @@ suppress something computed.
 - The 2-cell/1-point chart edge case (Consequences above) turns out to matter
   in practice — add a minimum-points gate, a owner-confirmable UX choice.
 
-## Open questions for the owner (none of this is decided without your say)
+## Open questions — RESOLVED (2026-09-17, owner-delegated)
 
-1. **Does the 7-measure eligible list match your judgment of "correctly and
-   safely computable"?** In particular: do you want household income's
-   *alternate* income concepts (primair/bruto/gestandaardiseerd — reachable
-   today only via the ADR 051 dropdown) to also get this toggle, or is the
-   default (besteedbaar inkomen only) the right scope for v1?
-2. **Is reusing the exact same reading dropdown (D5) the right UX**, or would
-   you rather this be a visually distinct control (e.g. a separate "toon als
-   %" switch next to the existing reading dropdown) so a reader can tell "a
-   different definition of the same thing" (ADR 051) apart from "the same
-   thing, shown as a rate of change" (this ADR)? Both are literally toggling
-   the same underlying chart-spec-swap mechanism; the difference is purely
-   how it reads to a journalist.
-3. **The Dutch label wording** — "Procentuele verandering t.o.v. vorige
-   periode" was chosen to match the registry's existing alternate-label
-   style; happy to change it.
-4. **Should `producer_price_index_level` get its missing ADR 051 alternate
-   as a quick, separate follow-up** (registry-only, no new code), closing
-   that one residual gap noted above?
+The four questions this ADR originally asked, and how each was resolved (see
+"Owner-delegated decisions" at the top for the full reasoning):
+
+1. **Eligible-measure list** — ship the 7 as scoped; household income's
+   alternate income concepts are explicitly future scope (D3's note above),
+   not decided now.
+2. **Dropdown reuse vs. a separate control** — keep the dropdown reuse (D5);
+   no code change, no separate control.
+3. **Label wording** — made cadence-specific ("t.o.v. vorig jaar" / "vorig
+   kwartaal" / "vorige maand") instead of the generic "vorige periode" this
+   ADR originally shipped with (Owner-delegated decision #3).
+4. **`producer_price_index_level`'s missing ADR 051 alternate** — investigated
+   for real, a genuine companion measure code was found, but consciously NOT
+   wired in this change because doing so provably invalidates the intent
+   parser's recorded LLM fixtures project-wide (see "PPI alternate:
+   investigated and consciously NOT added" above) — logged as an
+   owner-supervised follow-up in open-questions #254 instead.

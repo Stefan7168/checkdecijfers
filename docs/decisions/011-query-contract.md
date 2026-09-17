@@ -65,7 +65,7 @@ traceability (R1), and the refusal taxonomy (principle c). All live in
   (CBS wire metadata carries stray double/trailing spaces); codes stay
   verbatim.
 
-## Addendum (DRAFT, 2026-09-17 — not owner-approved, see ADR 052)
+## Addendum (2026-09-17, see ADR 052)
 
 [ADR 052](052-period-over-period-percent-change.md) adds a new
 `DerivationRecord` kind, `period_change` (period-over-period percent change,
@@ -79,9 +79,8 @@ to select a period-change series directly; it exists only as a chart
 alternate-reading built over an already-answered primary series, the same
 "toggle an already-delivered reading" shape [ADR 051](051-chart-alternate-reading-toggle.md)
 uses. See ADR 052 for the full design and its own explicit Alternatives entry
-on why `IntentDerivation` itself was left alone. **This addendum, and ADR
-052, are both DRAFT — built in an isolated worktree, not yet reviewed by the
-product owner or merged.**
+on why `IntentDerivation` itself was left alone. **ADR 052 is ACCEPTED
+(2026-09-17, owner-delegated) and merged.**
 
 ## Revisit triggers
 

@@ -312,7 +312,9 @@ describe('period-over-period percent-change alternate reading (ADR 052, DRAFT �
     // — proving the two mechanisms compose (ADR 052 D6: a flat +1, not
     // folded into the registry-alternates cap).
     expect(response.chartAlternates.length).toBe(2);
-    const pctChange = response.chartAlternates.find((a) => a.label === 'Procentuele verandering t.o.v. vorige periode');
+    // B8 asks a yearly (JJ grain) range — the grain-specific label (ADR 052
+    // revision, owner-delegated decision 3).
+    const pctChange = response.chartAlternates.find((a) => a.label === 'Procentuele verandering t.o.v. vorig jaar');
     expect(pctChange).toBeDefined();
     if (!pctChange) throw new Error('unreachable');
     expect(pctChange.spec.unit).toBe('%');
@@ -335,7 +337,7 @@ describe('period-over-period percent-change alternate reading (ADR 052, DRAFT �
     // Exactly the one registry alternate (the CPI index level) pinned by the
     // '#254' describe block above — no period-change entry alongside it.
     expect(response.chartAlternates.length).toBe(1);
-    expect(response.chartAlternates.some((a) => a.label === 'Procentuele verandering t.o.v. vorige periode')).toBe(false);
+    expect(response.chartAlternates.some((a) => a.label.startsWith('Procentuele verandering t.o.v.'))).toBe(false);
   });
 
   it('B7 (average_existing_home_sale_price, but a SINGLE period — no chart at all) gets no extra entry', async () => {

@@ -880,31 +880,36 @@ bankruptcies, household income, imports/exports, retail turnover, house prices, 
 others) now show a real toggle in chat, dock, and the trial. Level-vs-%-change stays open — it
 needs a new registered derivation and an ADR 011 revision, a separate future design task.
 
-## Period-over-period percent-change alternate reading — DRAFT, NOT merged, [ADR 052](decisions/052-period-over-period-percent-change.md)
+## Period-over-period percent-change alternate reading — ACCEPTED + MERGED (2026-09-17), [ADR 052](decisions/052-period-over-period-percent-change.md)
 
 **The level-vs-%-change half of [#254](open-questions.md) named above, built end to end (design +
-implementation + tests + full verification block) in an isolated worktree (branch
-`period-over-period-percent-change`), STOPPED SHORT of merging per the brief that spawned it — this
-is a real design decision the product owner has not yet reviewed.** A new registered
-`period_change` `DerivationRecord` kind (src/query/types.ts) + its computing function
-`derivePeriodChangeSeries` (src/query/derivations.ts, ADR 011 addendum) compute period-over-period
-percent change over an already-answered, single-region LEVEL series — refusing the whole series on
-a null cell, an irregular/gappy/mixed-grain period sequence, or a zero/negative previous-period
-base (never a fabricated or misleading percentage). A new pure module, `src/chart/period-change.ts`
+implementation + tests + full verification block) in an isolated worktree, then reviewed via ADR
+052's four open questions — the owner delegated the decision on all four to the parent session
+rather than answering each himself.** A new registered `period_change` `DerivationRecord` kind
+(src/query/types.ts) + its computing function `derivePeriodChangeSeries`
+(src/query/derivations.ts, ADR 011 addendum) compute period-over-period percent change over an
+already-answered, single-region LEVEL series — refusing the whole series on a null cell, an
+irregular/gappy/mixed-grain period sequence, or a zero/negative previous-period base (never a
+fabricated or misleading percentage). A new pure module, `src/chart/period-change.ts`
 (`buildPeriodChangeReading` + `isPeriodChangeEligible`), is a DIFFERENT mechanism from ADR 051's
 `buildAlternateReading` — no re-query, a transform of the primary's own already-fetched cells — and
 is wired into the SAME `chartAlternates` dropdown ADR 051 built, as one extra entry, for 7
 hand-curated canonical measures (`PERIOD_CHANGE_ELIGIBLE_KEYS`, src/registry/defaults.ts) with no
 CBS-published mutation sibling: population, housing stock, average home price (national and
-per-gemeente), bankruptcies, solar production, disposable household income. Full reasoning for the
-eligible/excluded split is in ADR 052. No migration, no schema change, no live DDL — the
-eligibility list is a plain code constant. **Full verification green in the worktree: both
-typechecks clean, the full backend suite, the full web suite, `benchmark:run` + `benchmark:score`
-= 14/14 + 6/6 + 0 fabricated, a real `next build`, and a LOW `/code-review` pass with its findings
-fixed** (exact counts and the review's findings are in the branch's own commit history and the
-session report, not restated here to avoid a number drifting stale in this doc). **Do not merge
-without the owner reading ADR 052's "Open questions for the owner" section first** — the eligible-
-measure list, the reading-dropdown-reuse UX choice, and the exact Dutch label wording are all real,
-unconfirmed judgment calls.
+per-gemeente), bankruptcies, solar production, disposable household income. The reading's label
+states which previous period it compares against ("t.o.v. vorig jaar"/"vorig kwartaal"/"vorige
+maand", derived from the series' own `PeriodGrain`) — an owner-delegated refinement over the
+original generic "vorige periode" wording. No migration, no schema change, no live DDL — the
+eligibility list is a plain code constant. A separate, related follow-up
+(`producer_price_index_level`'s own missing ADR 051 alternate) was investigated and consciously
+NOT built in this change: a real companion measure code exists, but wiring it would invalidate the
+intent parser's recorded LLM fixtures project-wide (confirmed empirically, not just read from a doc
+comment — see ADR 052's "PPI alternate" section) — that needs its own owner-supervised session
+budgeting for a real fixture re-record, logged in [#254](open-questions.md). Full reasoning for the
+eligible/excluded split, and the full record of the owner-delegated decisions, is in ADR 052.
+**Full verification green (measured 2026-09-17, after the owner-delegated label refinement and
+rebase onto `main`'s migration-collision-check work, `eeae1b2`): both typechecks clean, backend 167
+files / 2500 tests, web 117 files / 1854 tests, `benchmark:run` + `benchmark:score` = 14/14 + 6/6 +
+0 fabricated, real `next build` green, `/code-review` LOW clean.**
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*

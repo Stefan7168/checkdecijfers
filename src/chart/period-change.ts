@@ -13,13 +13,38 @@
 // synthetic ValidatedResult and handing it to the EXISTING, unmodified
 // buildChartSpec (reuse over reinvention, the same approach ADR 051 itself
 // took for runQuery, applied one level down).
-import type { Attribution, ResultCell, ValidatedResult } from '../query/index.ts';
+import type { Attribution, PeriodGrain, ResultCell, ValidatedResult } from '../query/index.ts';
 import { derivePeriodChangeSeries } from '../query/derivations.ts';
 import { PERIOD_CHANGE_ELIGIBLE_KEYS } from '../registry/defaults.ts';
 import { buildChartSpec } from './build.ts';
 import type { ChartSpec } from './types.ts';
 
-export const PERIOD_CHANGE_READING_LABEL = 'Procentuele verandering t.o.v. vorige periode' as const;
+/** Owner-delegated decision (ADR 052 revision, 2026-09-17): the reading's
+ * label/title/definition state WHICH previous period the percentage is
+ * against, using the series' own already-typed `PeriodGrain` (never a new
+ * grain vocabulary — reused verbatim from src/query/types.ts, the same field
+ * every `ResultCell` already carries) rather than a generic "vorige
+ * periode". Dutch grammar: "vorig jaar"/"vorig kwartaal" (het-woorden) vs.
+ * "vorige maand" (de-woord). */
+const PREVIOUS_PERIOD_PHRASE: Record<PeriodGrain, string> = {
+  JJ: 'vorig jaar',
+  KW: 'vorig kwartaal',
+  MM: 'vorige maand',
+};
+
+/** Lowercase form — "procentuele verandering t.o.v. vorig jaar" — used
+ * mid-sentence (the synthetic measure title, the definition line). */
+function periodChangePhraseLower(grain: PeriodGrain): string {
+  return `procentuele verandering t.o.v. ${PREVIOUS_PERIOD_PHRASE[grain]}`;
+}
+
+/** Capitalized form — "Procentuele verandering t.o.v. vorig jaar" — used
+ * standalone (the reading dropdown's own label). Both forms share the exact
+ * same phrase so they can never drift apart. Exported for tests. */
+export function periodChangeReadingLabel(grain: PeriodGrain): string {
+  const phrase = periodChangePhraseLower(grain);
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+}
 
 export interface PeriodChangeReadingResult {
   label: string;
@@ -58,6 +83,12 @@ export function buildPeriodChangeReading(primary: ValidatedResult): PeriodChange
     return { ok: false, reason: `period-over-period change refused (${derived.reason})` };
   }
 
+  // Guaranteed non-empty and single-grain: shape === 'series' means at least
+  // 2 cells (run.ts), and derivePeriodChangeSeries's own contiguousPeriodCodes
+  // guard (just passed, since `derived.ok`) refuses a mixed-grain series
+  // before this point is ever reached.
+  const grain = primary.cells[0]!.grain;
+
   const cellById = new Map(primary.cells.map((c) => [c.resultId, c] as const));
   const changeCells: ResultCell[] = derived.records.map((record) => {
     const previous = cellById.get(record.previousResultId);
@@ -77,7 +108,7 @@ export function buildPeriodChangeReading(primary: ValidatedResult): PeriodChange
       // field's internal structure, but a synthetic value should never read
       // as though it were CBS's own measure.
       measure: `${current.measure}#period_change`,
-      measureTitle: `${current.measureTitle} — procentuele verandering t.o.v. vorige periode`,
+      measureTitle: `${current.measureTitle} — ${periodChangePhraseLower(grain)}`,
       regionCode: current.regionCode,
       regionLabel: current.regionLabel,
       periodCode: current.periodCode,
@@ -107,8 +138,8 @@ export function buildPeriodChangeReading(primary: ValidatedResult): PeriodChange
     ...attributionRest,
     definitionLabel:
       primary.attribution.definitionLabel === null
-        ? 'procentuele verandering t.o.v. vorige periode'
-        : `${primary.attribution.definitionLabel}, procentuele verandering t.o.v. vorige periode`,
+        ? periodChangePhraseLower(grain)
+        : `${primary.attribution.definitionLabel}, ${periodChangePhraseLower(grain)}`,
   };
 
   const synthetic: ValidatedResult = {
@@ -126,7 +157,7 @@ export function buildPeriodChangeReading(primary: ValidatedResult): PeriodChange
     if (spec === null) {
       return { ok: false, reason: 'period-change reading shape yields no chart' };
     }
-    return { ok: true, result: { label: PERIOD_CHANGE_READING_LABEL, spec } };
+    return { ok: true, result: { label: periodChangeReadingLabel(grain), spec } };
   } catch (err) {
     return { ok: false, reason: `period-change chart build failed: ${err instanceof Error ? err.message : String(err)}` };
   }

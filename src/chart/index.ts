@@ -3,7 +3,7 @@
 export { buildChartSpec, PROVISIONAL_NOTE } from './build.ts';
 export { buildAlternateReading } from './alternate-reading.ts';
 export type { AlternateReadingCoordinate, AlternateReadingOutcome, AlternateReadingResult } from './alternate-reading.ts';
-export { buildPeriodChangeReading, isPeriodChangeEligible, PERIOD_CHANGE_READING_LABEL } from './period-change.ts';
+export { buildPeriodChangeReading, isPeriodChangeEligible, periodChangeReadingLabel } from './period-change.ts';
 export type { PeriodChangeReadingOutcome, PeriodChangeReadingResult } from './period-change.ts';
 export { CHART_ANNOTATIONS, selectAnnotations } from './annotations.ts';
 export type { ChartAnnotationDefinition } from './annotations.ts';
