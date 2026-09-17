@@ -1990,6 +1990,55 @@ for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwrig
   and the fixture ingest runs fine against it (`src/db/migrate.ts` + `FixtureSource` + `syncTable`, ~30 s) — useful
   for CLI scripts, useless for the web app because of the pinned-CA point above.
 
+### CI e2e smoke — the harness as a gate (added session 110, 2026-09-17)
+
+The harness is no longer only a manual tool: **five Playwright tests run it on every CI push** (`web/e2e/`,
+`web/playwright.config.ts`, inside the existing `web` job — no new job, the owner pays for these minutes). Still
+hermetic: no secrets, no network beyond npm + the browser download, no LLM spend.
+
+**Why.** Session 110's third UX audit found "Bewijs deze cijfers" — the product's namesake action — present on a
+LIVE answer and missing from every STORED one: `buildAnswerProof` imported `syncDateLabel` from a `'use client'`
+module, which throws when a Server Action calls it, and the throw was swallowed by a catch. vitest loads both
+modules as plain modules, so the boundary that actually breaks does not exist there — **no unit test could ever
+have caught it**. Verified with teeth before shipping the tests: putting that exact import back makes the replay
+test fail while the live-answer test still passes.
+
+**What the five cover.** (a) the logged-out landing — headline + three real gallery charts (not the fail-safe
+placeholder); (b) the benchmark inflation question → answer, chart, proof panel with its five cells; (c) the SAME
+answer re-opened from the thread list on a fresh page load still offers a working proof panel (the P1 pin);
+(d) `!!regionset provincies` → the "Dekking:" coverage line + a 12-bar horizontal chart; (e) a prediction question
+→ the refusal card, 0 credits, and its retry chip. Every page also fails its test on any browser console error.
+
+**Running them yourself.**
+
+```bash
+cd web && npx playwright test          # starts the whole harness itself, then tears it down
+cd web && npx playwright test --ui     # the same, with Playwright's inspector
+```
+
+Playwright owns the harness lifecycle through its `webServer` block, which runs the new
+`scripts/dev-harness/start-all.mjs` (auth-stub + llm-stub + `next dev` in one command; exits non-zero if any of
+the three dies, so a half-started harness fails loudly instead of looking like a product bug). Locally it REUSES a
+harness you already have running (`reuseExistingServer`), so the three-shell recipe above still works — start it by
+hand, then run the tests against it.
+
+**Gotchas.**
+- The tests are **serial by design** (`workers: 1`): one harness user, one PGlite database, one thread list — test
+  (c) deliberately re-opens the thread test (b) created, and every question spends from the same credit balance.
+- Only **benchmark questions** answer end to end (the LLM stub replays fixtures). A new test must use a question
+  from `benchmark/tasks.json` or a `!!regionset` injection — anything else 400s at the stub and looks like a
+  product failure.
+- `npx playwright install chromium` downloads a browser from `cdn.playwright.dev`. On a machine that cannot reach
+  it, point `CHROMIUM_PATH` at a compatible Chromium already on disk (same convention as `ask.mjs`/`shot.mjs`):
+  `CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-<build>/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" npx playwright test`.
+- After ANY harness run (these tests or the manual recipe), `npm run typecheck` in `web/` reports errors inside
+  `.next/dev/types/validator.ts` — a file `next dev` generates and `tsconfig.json` includes. Pre-existing, not
+  caused by the tests, and invisible to CI (which typechecks before anything starts a dev server); `rm -rf
+  web/.next` clears it locally.
+- **The CI step is `continue-on-error: true` until its first green run** — the tests are verified against the real
+  harness on a developer machine, but the browser install and a Linux harness start have never been exercised. Flip
+  it to a hard gate once one CI run is green; that is the whole point of adding it.
+
 ## The designed default chart look (ADR 042) — what changes on merge (written 2026-09-11, session 95, autonomous)
 
 Nothing to apply: no migration, no secret, no flag. On merge + deploy every chart on every surface (chat,

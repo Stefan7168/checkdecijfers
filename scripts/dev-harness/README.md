@@ -12,6 +12,7 @@ the gotchas: [docs/RUNBOOK.md](../../docs/RUNBOOK.md) § "Local real-browser har
 | `llm-stub.mjs` | An Anthropic-API stand-in on :9912 that replays `tests/fixtures/llm/**` — the benchmark questions answer end to end, nothing else does. |
 | `env.sh` | The env the dev server needs (`source` it, then `npx next dev -p 3102` from `web/`). |
 | `run-next-dev.mjs` | Node-based equivalent of `env.sh` + `next dev`, for driving the harness from `.claude/launch.json`'s `preview_start` (session-101 addition — a `runtimeExecutable: "sh"` entry running `env.sh` hit a sandboxed-shell `getcwd: Operation not permitted`, and `NODE_OPTIONS`'s whitespace-tokenizing broke on a checkout path containing spaces; this sets the same env vars in-process via `node`, matching `scripts/dev-web.mjs`'s known-working pattern). Not needed for the manual recipe below — that still works as documented. |
+| `start-all.mjs` | ONE command for all three (auth-stub + llm-stub + `run-next-dev.mjs`), exiting non-zero if any of them dies. Added session 110 so Playwright's `webServer` block can own the harness lifecycle for the CI end-to-end smoke (`web/e2e/`, `web/playwright.config.ts` — run it with `cd web && npx playwright test`; see [docs/RUNBOOK.md](../../docs/RUNBOOK.md) § "CI e2e smoke"). The manual three-shell recipe below is unchanged. |
 | `shot.mjs` / `ask.mjs` | Playwright helpers: a screenshot of any page (grows the viewport to the app's inner scroll container; prints `scrollWidth` + console errors) and "ask one question, screenshot the answer". |
 
 ```bash

@@ -37,13 +37,20 @@ harness".
 From `web/` (or via the root `web:test`/`web:typecheck` aliases from the repo root):
 
 ```bash
-npm test          # vitest run
-npm run typecheck # tsc --noEmit
-npm run lint       # eslint
-npm run build      # next build (also what CI runs before deploy)
+npm test             # vitest run (jsdom component tests, no network)
+npx playwright test  # end-to-end smoke in a real browser (starts the dev harness itself)
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint
+npm run build        # next build (also what CI runs before deploy)
 ```
 
-CI (`.github/workflows/ci.yml`) runs this app's own typecheck + test suite in its own `web` job,
+`npx playwright test` runs `e2e/` — five short tests that drive the real app in a real browser
+through the dev harness above (landing, an answered benchmark question with its chart and proof
+panel, the same answer re-opened from storage, a region-set answer, a refusal). It brings the whole
+harness up and down itself, so there is nothing to start first; if a harness is already running it
+reuses it. Details and gotchas: `docs/RUNBOOK.md` § "CI e2e smoke".
+
+CI (`.github/workflows/ci.yml`) runs this app's own typecheck + test suite + that e2e smoke in its own `web` job,
 alongside a `backend` job for the rest of the repo; a separate `deploy` job (`needs: [backend,
 web]`) is the only thing that ever deploys — Vercel's git integration is deliberately NOT connected
 (ADR 018), so pushing to `main` alone does not trigger a Vercel deploy.

@@ -40,3 +40,9 @@ benchmark/validation-run.json
 .playwright-mcp/
 scripts/dev-harness/session-cookie.json
 .worktrees/
+
+# Playwright e2e output (web/playwright.config.ts, session 110): traces,
+# failure screenshots and the HTML report are per-run artifacts — CI uploads
+# the report as a build artifact on failure, nothing here belongs in git.
+web/test-results/
+web/playwright-report/

@@ -49,7 +49,13 @@
 # invariants are tested.
 # WP12 (ADR 018): the chat UI (`web/`) adds two hermetic steps to the `web`
 # job below — its own typecheck and its own component test suite (jsdom, no
-# network) — plus a third job, `deploy`, gated on `[backend, web]` via
+# network) — plus, since session 110, a third: a five-test Playwright smoke
+# that drives the real app in a real browser through the local dev harness
+# (still hermetic — PGlite, an auth stand-in and an LLM fixture replay, no
+# secrets, no spend). It exists for the failure class jsdom cannot see at all:
+# a server/client module-boundary break that only happens in a running Next
+# server — see the step's own comment.
+# WP12 also adds a third JOB, `deploy`, gated on `[backend, web]` via
 # `needs:` so a red run on either structurally blocks the deploy. `deploy`
 # runs only on a direct push to main (this repo has
 # no PRs/branch protection — CLAUDE.md, deliberate — so a `needs:` dependency
@@ -193,6 +199,57 @@ jobs:
         run: npm run web:typecheck
       - name: Web app tests (chart wrapper, jsdom, no network)
         run: npm run web:test
+      # End-to-end smoke (session 110, web/playwright.config.ts): five short
+      # Playwright tests that drive the REAL app in a REAL browser through the
+      # local dev harness (scripts/dev-harness/start-all.mjs) — the hermetic CBS
+      # fixture snapshot in PGlite, an auth stand-in on :9911 and an LLM
+      # stand-in on :9912 replaying tests/fixtures/llm/**. No secrets, no
+      # network beyond npm + the browser download, no LLM spend: this job stays
+      # hermetic. It lives INSIDE the existing `web` job on purpose — a new job
+      # would pay a second checkout + two `npm ci` installs for five tests, and
+      # the owner is paying for these minutes.
+      #
+      # Why a browser at all, with >1000 hermetic tests already on this gate:
+      # session 110's third UX audit found "Bewijs deze cijfers" — the
+      # product's namesake action — present on a live answer and MISSING from
+      # every stored one, because a server-side import of a 'use client' module
+      # threw and was swallowed. vitest loads both modules as plain modules, so
+      # the RSC/server-action boundary that actually breaks does not exist
+      # there; no unit test could have seen it. Measured, not assumed: putting
+      # that exact import back makes e2e/answer.spec.ts's replay test fail
+      # while its live-answer test still passes.
+      - name: Resolve the Playwright version (browser cache key)
+        id: playwright
+        run: echo "version=$(node -p "require('./web/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+      # continue-on-error until the FIRST green CI run: the tests themselves are
+      # verified (5/5 passing against the real harness on a developer machine,
+      # session 110), but two halves of THIS step could not be exercised there —
+      # `playwright install` could not reach its download CDN from that machine
+      # (a local network restriction; the run used an already-cached Chromium),
+      # and the harness has never started on a Linux runner. A first run that
+      # fails for an environment reason must not block the deploy of code that
+      # passed every other gate. Flip this to a hard gate as soon as one run is
+      # green — that is the whole point of adding it.
+      - name: Web app end-to-end smoke (dev harness, real browser)
+        id: e2e
+        continue-on-error: true
+        run: npx playwright test
+        working-directory: web
+      - name: Playwright report (failures only)
+        if: steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 7
 
   deploy:
     needs: [backend, web]
