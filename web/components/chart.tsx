@@ -3730,38 +3730,48 @@ export function ChartView({
           * still true, so the old `!smallMultiples` guard hid Download on
           * an ordinary bar/area chart with no way back except returning to
           * Lijn and toggling small multiples off. */}
+        {/* #10 (session 110 UX audit): Download and Embed used to be
+          * independent flex-wrap items in this row (alongside the
+          * attribution text and SourceBadge above) — under the dock's
+          * narrower width Embed could wrap onto its own line, left-aligned,
+          * while Download stayed inline with the source link, reading as
+          * two unrelated controls. Grouped into ONE flex group that wraps as
+          * a unit; `shrink-0` keeps the pair from being squeezed before the
+          * attribution text wraps instead. */}
         {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          <ChartDownloadMenu
-            containerRef={chartContainerRef}
-            attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
-            filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
-            lang={chartLang}
-            frame={pres}
-            frameImage={frameImage}
-            headlineText={chartHeadline}
-            syncedAt={activeSpec.attribution.syncedAt}
-          />
-        ) : null}
-        {embed && state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
-          /* #254: the PRIMARY's table id — same reasoning as the copy inside
-           * ChartEditModal above (an embed republishes the stored audit row,
-           * which carries no reading selection). */
-          <ChartEmbedButton
-            auditId={embed.auditId}
-            tableId={spec.attribution.tableId}
-            lang={chartLang}
-            currentForm={state.form}
-            defaultIsTable={defaultFormIsTable(spec)}
-            open={embedOpen}
-            onOpenChange={setEmbedOpen}
-            disabled={state.selectedReading !== null}
-            chartSlot={
-              <>
-                {canvasNode}
-                {legendNode}
-              </>
-            }
-          />
+          <div className="flex shrink-0 items-center gap-2" data-slot="chart-footer-actions">
+            <ChartDownloadMenu
+              containerRef={chartContainerRef}
+              attributionText={`${displayAttributionLine} checkdecijfers.nl${viewDisclosure}`}
+              filenameBase={`checkdecijfers-${activeSpec.attribution.tableId}`}
+              lang={chartLang}
+              frame={pres}
+              frameImage={frameImage}
+              headlineText={chartHeadline}
+              syncedAt={activeSpec.attribution.syncedAt}
+            />
+            {embed ? (
+              /* #254: the PRIMARY's table id — same reasoning as the copy
+               * inside ChartEditModal above (an embed republishes the
+               * stored audit row, which carries no reading selection). */
+              <ChartEmbedButton
+                auditId={embed.auditId}
+                tableId={spec.attribution.tableId}
+                lang={chartLang}
+                currentForm={state.form}
+                defaultIsTable={defaultFormIsTable(spec)}
+                open={embedOpen}
+                onOpenChange={setEmbedOpen}
+                disabled={state.selectedReading !== null}
+                chartSlot={
+                  <>
+                    {canvasNode}
+                    {legendNode}
+                  </>
+                }
+              />
+            ) : null}
+          </div>
         ) : null}
       </div>
       {embedMode && embedFooter ? (

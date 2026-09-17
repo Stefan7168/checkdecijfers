@@ -4511,6 +4511,31 @@ describe('Embed button wiring (spec Part B1, Task 4)', () => {
     expect(screen.queryByRole('button', { name: 'Insluiten' })).toBeNull();
   });
 
+  // #10 (session 110 UX audit): Download and Embed used to be independent
+  // flex-wrap items in the footer's own row (alongside the attribution text
+  // and SourceBadge) — under the dock's narrower width Embed wrapped onto
+  // its own row, left-aligned, while Download stayed inline with the source
+  // link, so the two actions read as unrelated. They now share one flex
+  // group (`flex items-center gap-2 shrink-0`) that wraps as a UNIT.
+  it('Download and Embed share one flex group that wraps as a unit, not two independently-wrapping footer items', () => {
+    render(<ChartView spec={threePointSpec()} embed={{ auditId: 1 }} />);
+    const download = screen.getByRole('button', { name: 'Download' });
+    const insluiten = screen.getByRole('button', { name: 'Insluiten' });
+    // ChartDownloadMenu/ChartEmbedButton each own their own internal wrapper
+    // (a relative-positioned div, a Fragment) — `closest` finds the SHARED
+    // group ancestor this fix adds, regardless of either component's own
+    // internal DOM shape.
+    const downloadGroup = download.closest('[data-slot="chart-footer-actions"]');
+    const embedGroup = insluiten.closest('[data-slot="chart-footer-actions"]');
+    expect(downloadGroup).not.toBeNull();
+    expect(downloadGroup).toBe(embedGroup);
+    const group = downloadGroup as HTMLElement;
+    expect(group.className).toContain('flex');
+    expect(group.className).toContain('items-center');
+    expect(group.className).toContain('gap-2');
+    expect(group.className).toContain('shrink-0');
+  });
+
   // Reviewer regression finding (Task 3 follow-up): `setEmbedOpen` used to
   // switch `openPanel` straight to 'embed' with no guard for
   // `openPanel === 'story'` — unlike `toggleStylePanel` and `selectForm`,
