@@ -191,6 +191,51 @@ describe('buildAnswerProof', () => {
     );
   });
 
+  it('(4b) ADR 055 task 3: a two-region region_series result renders two DISTINCT direction steps, each naming its own region', () => {
+    const amsFirst = fakeCell({ resultId: 'ams-F', regionCode: 'GM0363', regionLabel: 'Amsterdam', periodCode: '2020JJ00', periodLabel: '2020', value: 872757, decimals: 0, unit: 'aantal' });
+    const amsLast = fakeCell({ resultId: 'ams-L', regionCode: 'GM0363', regionLabel: 'Amsterdam', periodCode: '2024JJ00', periodLabel: '2024', value: 933680, decimals: 0, unit: 'aantal' });
+    const rtdFirst = fakeCell({ resultId: 'rtd-F', regionCode: 'GM0599', regionLabel: 'Rotterdam', periodCode: '2020JJ00', periodLabel: '2020', value: 651446, decimals: 0, unit: 'aantal' });
+    const rtdLast = fakeCell({ resultId: 'rtd-L', regionCode: 'GM0599', regionLabel: 'Rotterdam', periodCode: '2024JJ00', periodLabel: '2024', value: 670610, decimals: 0, unit: 'aantal' });
+    const amsDirection: DerivationRecord = {
+      kind: 'direction', explicit: false, sourceResultIds: ['ams-F', 'ams-L'], unit: 'aantal',
+      marking: DERIVED_DATA_MARKING, direction: 'up', monotonic: true, netChange: 60923,
+      firstResultId: 'ams-F', lastResultId: 'ams-L',
+    };
+    const rtdDirection: DerivationRecord = {
+      kind: 'direction', explicit: false, sourceResultIds: ['rtd-F', 'rtd-L'], unit: 'aantal',
+      marking: DERIVED_DATA_MARKING, direction: 'up', monotonic: true, netChange: 19164,
+      firstResultId: 'rtd-F', lastResultId: 'rtd-L',
+    };
+    const proof = buildAnswerProof(
+      fakeAnswerResponse({
+        shape: 'region_series',
+        cells: [amsFirst, rtdFirst, amsLast, rtdLast],
+        derivations: [amsDirection, rtdDirection],
+      }),
+    )!;
+
+    // Read step + two direction steps — first_last (none registered here)
+    // stays skipped exactly as in the single-region case.
+    expect(proof.steps).toHaveLength(3);
+    expect(proof.steps[1]!.text).toBe('Richting van de reeks voor Amsterdam: gestegen van 2020 tot en met 2024; netto 60.923.');
+    expect(proof.steps[2]!.text).toBe('Richting van de reeks voor Rotterdam: gestegen van 2020 tot en met 2024; netto 19.164.');
+    expect(proof.steps[1]!.text).not.toBe(proof.steps[2]!.text);
+
+    // Regression pin: an ordinary single-region result's step text is
+    // BYTE-IDENTICAL to before this task — no region name is ever added
+    // when the result carries only one region (test (4) above pins the
+    // exact same sentence shape with no ' voor <region>' segment).
+    const { first, last } = seriesEndpoints();
+    const singleRegion = buildAnswerProof(
+      fakeAnswerResponse({
+        shape: 'series',
+        cells: [first, last],
+        derivations: [{ ...amsDirection, sourceResultIds: ['F', 'La'], firstResultId: 'F', lastResultId: 'La', netChange: 1.2, unit: '%' } satisfies DerivationRecord],
+      }),
+    )!;
+    expect(singleRegion.steps[1]!.text).toBe('Richting van de reeks: gestegen van 2020 tot en met 2024; netto 1,2 procentpunt.');
+  });
+
   it('(5) unit_expansion: the expanded figure is the STORED derivation value, never a live multiplication', () => {
     const cell = fakeCell({ resultId: 'B', value: 8204, decimals: 0, unit: 'x 1 000', periodLabel: '2024' });
     const expansion: DerivationRecord = {

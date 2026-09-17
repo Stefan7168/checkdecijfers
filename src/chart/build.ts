@@ -2,18 +2,25 @@
 // producer of chart data in the pipeline (R6; ADR 007: the LLM never produces
 // chart data). Policy (recorded in ADR 014):
 //
-//   result shape 'series'      → line chart (B4, B8)
-//   result shape 'comparison'  → bar chart  (docs/03: "chart when
-//                                 trend/comparison")
-//   result shape 'region_set'  → bar chart, sorted by the region-ranking
-//                                 derivation when one exists (#253 Task 5;
-//                                 no ChartSpec.kind value for "horizontal" —
-//                                 the web layer's 'hbar' FORM is a view of a
-//                                 'bar'-kind spec, chart-view-state.ts's
-//                                 hbarFormAllowed)
-//   'single' / 'derived'       → no chart (null) — a lone number or an
-//                                 explicit derivation headline is prose, not
-//                                 a chart, in Phase 0
+//   result shape 'series'         → line chart (B4, B8)
+//   result shape 'comparison'     → bar chart  (docs/03: "chart when
+//                                    trend/comparison")
+//   result shape 'region_set'     → bar chart, sorted by the region-ranking
+//                                    derivation when one exists (#253 Task 5;
+//                                    no ChartSpec.kind value for "horizontal" —
+//                                    the web layer's 'hbar' FORM is a view of a
+//                                    'bar'-kind spec, chart-view-state.ts's
+//                                    hbarFormAllowed)
+//   result shape 'region_series'  → line chart, one series per region in
+//                                    intent order (ADR 055 Task 3; #253/#264
+//                                    UX-audit pass-3 row 14) — the same
+//                                    group-by-region below already produces
+//                                    one ChartSeries per regionCode, so this
+//                                    shape needed no new grouping, only the
+//                                    kind + contiguity-gate extension
+//   'single' / 'derived'          → no chart (null) — a lone number or an
+//                                    explicit derivation headline is prose,
+//                                    not a chart, in Phase 0
 //
 // Everything plotted is a verbatim projection of the result's cells: same
 // values, same order (period ascending, then intent region order), null
@@ -59,7 +66,12 @@ function nullNote(cell: ResultCell, multiRegion: boolean, sourceName: string): s
 }
 
 export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
-  if (result.shape !== 'series' && result.shape !== 'comparison' && result.shape !== 'region_set') {
+  if (
+    result.shape !== 'series' &&
+    result.shape !== 'comparison' &&
+    result.shape !== 'region_set' &&
+    result.shape !== 'region_series'
+  ) {
     return null;
   }
   // #64 (session 22, review fix): a non-contiguous explicit enumeration
@@ -68,10 +80,19 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
   // says, so the spec must never say it). Genuine ranges are gap-free by
   // the WP14 completeness discipline and chart as always. A per-period BAR
   // presentation for enumerations is a possible follow-up, not v1.
-  if (result.shape === 'series' && !contiguousPeriodCodes(result.cells.map((c) => c.periodCode))) {
+  //
+  // ADR 055 Task 3: `region_series` gets the SAME gate. Its cells are
+  // period-major/region-minor (N regions x M periods), so the naive period
+  // list carries each code N times — contiguousPeriodCodes de-dupes
+  // internally (src/query/resolve.ts), so this checks the shared period
+  // axis exactly once, regardless of region count.
+  if (
+    (result.shape === 'series' || result.shape === 'region_series') &&
+    !contiguousPeriodCodes(result.cells.map((c) => c.periodCode))
+  ) {
     return null;
   }
-  const kind = result.shape === 'series' ? 'line' : 'bar';
+  const kind = result.shape === 'series' || result.shape === 'region_series' ? 'line' : 'bar';
 
   // One unit per chart (R10). The query layer already refuses mixed units
   // (internal_inconsistency), so this firing means upstream corruption —
