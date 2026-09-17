@@ -112,6 +112,18 @@ export async function buildAlternateReading(
     // reading instead of the same region comparison. Same optional
     // pass-through pattern as `period` above.
     regions: primaryIntent.regions,
+    // Session 110 UX audit pass 3, row 4: the same gap as the comment
+    // directly above, one field over. `regionSet` (#253's region CLASS —
+    // "alle provincies", "de gemeenten in Utrecht") is mutually exclusive
+    // with `regions` at resolve time (src/query/resolve.ts:296-301) and was
+    // simply missing here, so a region-set primary's alternate silently ran
+    // regionless on the geo table and best-effort-dropped: the answer body
+    // promised "Er is ook een andere lezing beschikbaar…" with no working
+    // control behind it. PRESENT-ONLY (docs/13-envelope-presence-grammar.md)
+    // — only set when the primary actually carries one, so a `regions`-shaped
+    // primary's altIntent still has no `regionSet` key at all (the
+    // mutual-exclusivity check above would refuse if both were present).
+    ...(primaryIntent.regionSet !== undefined ? { regionSet: primaryIntent.regionSet } : {}),
     period: primaryIntent.period,
     // Inherited from the primary, never hardcoded to 'series': a hardcoded
     // 'series' would refuse every alternate built over a comparison-shaped
