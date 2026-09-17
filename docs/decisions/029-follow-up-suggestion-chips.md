@@ -249,7 +249,7 @@ CI run 33699880673 gate + deploy green).
   through a parse it was never written for, so they are not offered at all.
 - **Principle (c) is the same dry-run gate:** a table with no national row offers no national comparison —
   pinned with a stub check that refuses `NL01`. Structural skips before any dry-run: explicit targets (the
-  trust boundary refuses them), multi-period answers (one varying axis per question), an answer that already
+  trust boundary refuses them), multi-period answers (the one-varying-axis rule of that time — since ADR 055, session 110, up to six NAMED regions over a range is answerable; the chip logic here predates it), an answer that already
   contains the national row, a region set beyond the validator's bound of 8 (an option the validator would drop
   at click time would silently downgrade the click to the LLM merge — so it is never offered).
 - **`isRescuePending` widened** from "exactly one chip on one `measure` axis" to "1..MAX_CLICK_OPTIONS chips,

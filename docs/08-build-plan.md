@@ -935,8 +935,21 @@ alternates, #216, #134(c), the 16–40-series hbar default, and #245 Action 3 (t
 touch; "no backgrounding" stated up front; agents report what they saw and did not do — each such note became
 a follow-up agent and several found real bugs. Lessons: [lessons-learned.md](lessons-learned.md) session 110.
 
-**Next:** owner steps (registry:apply, DOI backfill, live benchmark, Task 9, audit row 22); a second UX-audit
-pass over unreached surfaces; landing bundle lazy-load; WP30c E2 after #250(a).
+**Waves 4–14, same session (the entry above describes waves 1–3; the full per-wave account is the
+session-110 entry in [status-archive.md](status-archive.md)):** four more Playwright UX audits through
+the hermetic harness (which gained an intent injector and a Eurostat fixture table so it could reach
+region-set, multi-region and explorer surfaces), an axe-core pass and a verification-only pass — every
+mechanical row fixed, incl. two P1s (the proof panel missing on every STORED answer; the default
+region-set chart naming no region); a 7-test Playwright smoke as a hard CI gate; a SECOND core shape,
+the multi-region time series (**WP-MRS / [ADR 055](decisions/055-multi-region-series.md)**, parser-
+reachable in production with zero fixture changes) plus its "trend per region" chip; zod out of the
+chart render path and a route split (anonymous first-load JS −374 KB then −222 KB raw); a security read;
+README/RUNBOOK refresh; the fifth open-questions triage. Final measured: backend 188/2769, web
+121/2108 (+7 e2e), benchmark 14/14 + 6/6 + 0 fabricated, real build, review clean each push.
+
+**Next:** owner steps (registry:apply, DOI backfill, live benchmark + live `audit:verify` for ADR 055
+(#270), Task 9 (#267), audit rows: pass-1 22, pass-2 19, #271); WP30c E2 after #250(a); the
+203 KB workspace chunk's own interaction-only split (client-side, per the diagnosis brief).
 
 ## Session 109 (2026-09-17) — six parallel subagents on standing open-questions items, ALL MERGED to `main` in one verified batch
 

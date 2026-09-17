@@ -2054,9 +2054,11 @@ hand, then run the tests against it.
   `.next/dev/types/validator.ts` — a file `next dev` generates and `tsconfig.json` includes. Pre-existing, not
   caused by the tests, and invisible to CI (which typechecks before anything starts a dev server); `rm -rf
   web/.next` clears it locally.
-- **The CI step is `continue-on-error: true` until its first green run** — the tests are verified against the real
-  harness on a developer machine, but the browser install and a Linux harness start have never been exercised. Flip
-  it to a hard gate once one CI run is green; that is the whole point of adding it.
+- **The CI step is a HARD gate since its first green run** (run `35223290808`, 2026-09-17): it shipped with
+  `continue-on-error: true` for exactly one run — the browser install and a Linux harness start had never been
+  exercised — and was flipped the same hour. **Retries are OFF in CI on purpose:** the suite shares one harness user
+  with a finite signup credit grant, so a retry pass re-spends credits and makes a later, unrelated test fail for
+  "no credits" (that is exactly what turned two runs red on 2026-09-17); a hermetic suite's red run is a real signal.
 
 ## The designed default chart look (ADR 042) — what changes on merge (written 2026-09-11, session 95, autonomous)
 
