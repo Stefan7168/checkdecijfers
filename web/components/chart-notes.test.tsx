@@ -108,4 +108,99 @@ describe('ChartNotes', () => {
     );
     expect(screen.getByRole('textbox')).toHaveAttribute('id', 'chart-abc123-note-draft');
   });
+
+  // #8 (session 110 UX audit pass 2): opening the note editor never moved
+  // focus into it — a keyboard user who activated an "Add a note at …"
+  // point was dropped at the top of the document. The trigger (the point
+  // the parent's own onPointClick handler leaves focused, exactly what
+  // chart.tsx's SVG points do) is stood in for here by a plain <button>,
+  // since ChartNotes itself never renders the trigger.
+  describe('focus management (#8)', () => {
+    function Wrapper({
+      pending,
+      onSave,
+      onCancelPending,
+    }: {
+      pending: PendingPoint | null;
+      onSave: (text: string) => void;
+      onCancelPending: () => void;
+    }) {
+      return (
+        <div>
+          <button type="button">Add a note at Nederland, 2020</button>
+          <ChartNotes notes={[]} pendingPoint={pending} idPrefix="test" onSave={onSave} onCancelPending={onCancelPending} onDelete={vi.fn()} />
+        </div>
+      );
+    }
+
+    it('moves focus into the note textarea once the editor mounts', () => {
+      const { rerender } = render(<Wrapper pending={null} onSave={vi.fn()} onCancelPending={vi.fn()} />);
+      const trigger = screen.getByRole('button', { name: /Add a note/ });
+      trigger.focus();
+      expect(document.activeElement).toBe(trigger);
+
+      rerender(
+        <Wrapper
+          pending={{ resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland' }}
+          onSave={vi.fn()}
+          onCancelPending={vi.fn()}
+        />,
+      );
+      expect(document.activeElement).toBe(screen.getByRole('textbox'));
+    });
+
+    it('restores focus to the originating trigger on Save', () => {
+      const onSave = vi.fn();
+      const { rerender } = render(<Wrapper pending={null} onSave={onSave} onCancelPending={vi.fn()} />);
+      const trigger = screen.getByRole('button', { name: /Add a note/ });
+      trigger.focus();
+
+      rerender(
+        <Wrapper pending={{ resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland' }} onSave={onSave} onCancelPending={vi.fn()} />,
+      );
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Coronapiek' } });
+      fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+      expect(onSave).toHaveBeenCalledWith('Coronapiek');
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('restores focus to the originating trigger on Cancel', () => {
+      const onCancelPending = vi.fn();
+      const { rerender } = render(<Wrapper pending={null} onSave={vi.fn()} onCancelPending={onCancelPending} />);
+      const trigger = screen.getByRole('button', { name: /Add a note/ });
+      trigger.focus();
+
+      rerender(
+        <Wrapper
+          pending={{ resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland' }}
+          onSave={vi.fn()}
+          onCancelPending={onCancelPending}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /annuleren/i }));
+
+      expect(onCancelPending).toHaveBeenCalled();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('restores focus to the originating trigger on Escape', () => {
+      const onCancelPending = vi.fn();
+      const { rerender } = render(<Wrapper pending={null} onSave={vi.fn()} onCancelPending={onCancelPending} />);
+      const trigger = screen.getByRole('button', { name: /Add a note/ });
+      trigger.focus();
+
+      rerender(
+        <Wrapper
+          pending={{ resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland' }}
+          onSave={vi.fn()}
+          onCancelPending={onCancelPending}
+        />,
+      );
+      fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+
+      expect(onCancelPending).toHaveBeenCalled();
+      expect(document.activeElement).toBe(trigger);
+    });
+  });
 });
