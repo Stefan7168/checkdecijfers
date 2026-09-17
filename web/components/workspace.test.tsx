@@ -427,7 +427,10 @@ describe('Workspace — mixed CBS + dataset thread list (ADR 037 D10 invariant)'
 describe('Workspace — handleUploadFile (ADR 037 D10/D14, attachments prop)', () => {
   it('without the attachments prop, the upload chip is disabled and ingestFile is never wired', () => {
     renderWorkspace();
-    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toBeDisabled();
+    // Session 110 (UX audit row 15): the "coming soon" chips stay keyboard-
+    // focusable and announce their state via aria-disabled instead of the
+    // `disabled` attribute — so the pin is on aria-disabled, not toBeDisabled().
+    expect(screen.getByRole('button', { name: 'Bestand uploaden' })).toHaveAttribute('aria-disabled', 'true');
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
