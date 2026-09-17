@@ -751,6 +751,64 @@ describe('valueLabelPlan (#197: the numbers a lay reader asked for — still onl
     }));
     expect(valueLabelPlan(spec({ kind: 'bar', series })).barLabels).toEqual([]);
   });
+
+  // Session-110 pass-4 row 14: repeated period prefixes on a comparison
+  // chart's end-of-line labels are pure clutter when every series ends on
+  // the same period — the period only needs stating once.
+  it('row 14: drops the "period: " prefix from every end label when all three series end on the SAME period', () => {
+    const s = spec({
+      kind: 'line',
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [point({ resultId: 'ams-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 1, formattedValue: '1,0' })],
+        },
+        {
+          label: 'Rotterdam',
+          regionCode: 'GM0599',
+          points: [point({ resultId: 'rot-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0' })],
+        },
+        {
+          label: 'Utrecht',
+          regionCode: 'GM0344',
+          points: [point({ resultId: 'utr-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0' })],
+        },
+      ],
+    });
+    const plan = valueLabelPlan(s);
+    expect(plan.endLabels.map((l) => l.text)).toEqual(['1,0', '2,0', '3,0']);
+    // Every digit is still bound to its own resultId (R1) — only the wording
+    // of the label changed, never which value is shown or for which cell.
+    expect(plan.endLabels.map((l) => l.resultId)).toEqual(['ams-2024', 'rot-2024', 'utr-2024']);
+  });
+
+  it('row 14: keeps every "period: " prefix when one series (a partial region, ADR 055) ends on a DIFFERENT period', () => {
+    const s = spec({
+      kind: 'line',
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [point({ resultId: 'ams-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 1, formattedValue: '1,0' })],
+        },
+        {
+          label: 'Rotterdam',
+          regionCode: 'GM0599',
+          points: [point({ resultId: 'rot-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0' })],
+        },
+        {
+          // Eemsdelta-style partial region: its last plotted point is 2023,
+          // not 2024 — every label must stay self-describing (R6).
+          label: 'Eemsdelta',
+          regionCode: 'GM1979',
+          points: [point({ resultId: 'eem-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 3, formattedValue: '3,0' })],
+        },
+      ],
+    });
+    const plan = valueLabelPlan(s);
+    expect(plan.endLabels.map((l) => l.text)).toEqual(['2024: 1,0', '2024: 2,0', '2023: 3,0']);
+  });
 });
 
 describe('ChartView — #197 step 1, rendered against the real svg', () => {
@@ -5915,10 +5973,13 @@ describe('Session 110 UX audit pass 4 — rows 1 and 3: label paint order and co
       const y1 = Number(ends[1].getAttribute('y'));
       expect(Math.abs(y0 - y1)).toBeGreaterThanOrEqual(13);
     }
-    // Text stays fully intact either way — never truncated (R1/R6).
-    for (const end of ends) {
-      expect(['2024: 246.417', '2024: 246.416']).toContain(end.textContent);
-    }
+    // Text stays fully intact either way — never truncated (R1/R6), and
+    // session-110 pass-4 row 14: both series end on the SAME period (2024),
+    // so `valueLabelPlan` drops the repeated "2024: " prefix from both (the
+    // x-axis renders its own ticks here, so `EndLabelsOverlay`'s tick-less
+    // fallback — see the row 14 tickless test below — does not fire).
+    const texts = new Set(ends.map((end) => end.textContent));
+    expect(texts).toEqual(new Set(['246.417', '246.416']));
   });
 });
 

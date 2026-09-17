@@ -40,6 +40,7 @@ import {
   Tooltip,
   usePlotArea,
   useXAxisScale,
+  useXAxisTicks,
   useYAxisScale,
   XAxis,
   YAxis,
@@ -479,7 +480,13 @@ export interface PointLabel {
 export interface ValueLabelPlan {
   /** Line charts: the plotted min and max (one entry when they coincide). */
   axisTicks: AxisTickLabel[];
-  /** Line charts: "periodLabel: value" at each series' last plotted point. */
+  /** Line charts: "periodLabel: value" at each series' last plotted point —
+   * or, per session-110 pass-4 row 14, just "value" when EVERY series' last
+   * plotted point falls on the SAME period (the period is then only stated
+   * once, by the x-axis/legend, instead of once per series). A series that
+   * ends on a different period (a partial region, ADR 055) always keeps its
+   * own prefix, because then the label is the only thing on screen that says
+   * which period IT covers. */
   endLabels: PointLabel[];
   /** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars. */
   barLabels: PointLabel[];
@@ -525,6 +532,24 @@ export function valueLabelPlan(spec: PlottableSpec): ValueLabelPlan {
   });
   const axisTicks = lo.point.value === hi.point.value ? [tick(lo)] : [tick(lo), tick(hi)];
 
+  // Session-110 pass-4 row 14: when every plotted series' last point falls on
+  // the same period, repeating that period on every end-of-line label is
+  // pure clutter (the flagship case is a 6-region comparison: six identical
+  // "2024: " prefixes eating most of the right margin, see row 2's own
+  // measurement). Two or more last points, all equal, is required —
+  // single-series charts keep the prefix unchanged (their one end label is
+  // still the clearest on-chart statement of "as of which period", same as
+  // before this row), and a lone differing series (a partial region, ADR
+  // 055) keeps EVERY label prefixed, because then the prefix is the only
+  // thing on screen naming which period that specific series' number is for
+  // — self-describing per R6's own framing above.
+  const lastPointsBySeries = spec.series.map((series) => lastPlottedPoint(series.points));
+  const validLastPoints = lastPointsBySeries.filter((p): p is NonNullable<typeof p> => p !== undefined);
+  const sharedEndPeriodCode =
+    validLastPoints.length >= 2 && validLastPoints.every((p) => p.periodCode === validLastPoints[0]!.periodCode)
+      ? validLastPoints[0]!.periodCode
+      : null;
+
   const endLabels: PointLabel[] = spec.series.flatMap((series, i) => {
     // Code-review fix (2026-09-15): this selection now shares
     // lastPlottedPoint with chart-headline.ts's headlineFigure, so the
@@ -537,7 +562,7 @@ export function valueLabelPlan(spec: PlottableSpec): ValueLabelPlan {
         seriesKey: `s${i}`,
         periodCode: last.periodCode,
         resultId: last.resultId,
-        text: `${last.periodLabel}: ${pointLabelText(last)}`,
+        text: last.periodCode === sharedEndPeriodCode ? pointLabelText(last) : `${last.periodLabel}: ${pointLabelText(last)}`,
       },
     ];
   });
@@ -955,6 +980,12 @@ interface EndLabelSpec {
   periodLabel: string;
   value: number;
   text: string;
+  /** Row 14: true when `text` had its period prefix dropped because every
+   * plotted series shares this same end period (see `valueLabelPlan`). Lets
+   * `EndLabelsOverlay` reinstate the period on the one label that stays
+   * on-screen when the x-axis itself renders no ticks at this width — never
+   * used to decide whether to draw the label at all, only how to word it. */
+  periodOmitted: boolean;
 }
 
 /** Row 3: the line height a value label needs to stay legible (12px font +
@@ -972,11 +1003,23 @@ const END_LABEL_LINE_HEIGHT_PX = 13;
  * rather than truncate it or let it overflow into the x-axis: the value
  * stays fully readable in the tooltip, legend and Tabel view, per
  * principle (c) — never a half-shown number), and paints the result inside
- * the shared `label` zIndex layer (see the block comment above). */
+ * the shared `label` zIndex layer (see the block comment above).
+ *
+ * Row 14: when `valueLabelPlan` dropped the shared period prefix (every
+ * series ends on the same period), that period must still appear on screen
+ * SOMEWHERE — normally the x-axis's own last tick already shows it. But at a
+ * narrow width the x-axis can render NO ticks at all (session-110 pass-4 row
+ * 2's own 375px/6-region measurement: `xTicks: []`), which would leave the
+ * period stated nowhere. `useXAxisTicks()` reads Recharts' own settled,
+ * POST-collision tick list (the same one the XAxis element actually draws,
+ * not a width estimate of our own), so when it comes back empty the topmost
+ * label after THIS component's own collision pass (`placed[0]` — sorted by
+ * `cy` above) gets its period prefix put back, exactly once. */
 function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
   const xScale = useXAxisScale();
   const yScale = useYAxisScale();
   const plotArea = usePlotArea();
+  const xAxisTicks = useXAxisTicks();
   if (!xScale || !yScale || specs.length === 0) return null;
   const bottom = plotArea ? plotArea.y + plotArea.height : Number.POSITIVE_INFINITY;
   const positioned = specs
@@ -993,10 +1036,11 @@ function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
     if (y + 4 > bottom) continue;
     placed.push({ ...draw, y });
   }
+  const xAxisIsTickless = (xAxisTicks?.length ?? 0) === 0;
   return (
     <ZIndexLayer zIndex={DefaultZIndexes.label}>
       <g>
-        {placed.map((l) => (
+        {placed.map((l, i) => (
           <text
             key={l.resultId}
             x={l.cx + 8}
@@ -1007,7 +1051,7 @@ function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
             data-role="end-label"
             data-label-for={l.resultId}
           >
-            {l.text}
+            {i === 0 && l.periodOmitted && xAxisIsTickless ? `${l.periodLabel}: ${l.text}` : l.text}
           </text>
         ))}
       </g>
@@ -2384,6 +2428,15 @@ export function ChartView({
   // width-driven suppression above both drop out here, never inside the
   // overlay, so the overlay itself stays a pure "place what it's given"
   // renderer.
+  // Row 14: mirrors valueLabelPlan's own "every last point shares one
+  // period" check (≥2 endLabels, same periodCode) so EndLabelsOverlay knows
+  // WHICH labels had their prefix dropped for that reason — never a
+  // re-derivation of the VALUE, just of which of the plan's own labels
+  // qualified, from the plan's own periodCode field.
+  const sharedEndPeriodCode =
+    plan.endLabels.length >= 2 && plan.endLabels.every((l) => l.periodCode === plan.endLabels[0]!.periodCode)
+      ? plan.endLabels[0]!.periodCode
+      : null;
   const endLabelSpecs: EndLabelSpec[] =
     pres.valueLabels === 'shown' && !suppressEndLabels
       ? plan.endLabels.flatMap((l) => {
@@ -2391,7 +2444,15 @@ export function ChartView({
           const row = rows.find((r) => r.periodCode === l.periodCode);
           const value = row?.[l.seriesKey];
           if (row == null || typeof value !== 'number') return [];
-          return [{ resultId: l.resultId, periodLabel: String(row.periodLabel), value, text: l.text }];
+          return [
+            {
+              resultId: l.resultId,
+              periodLabel: String(row.periodLabel),
+              value,
+              text: l.text,
+              periodOmitted: l.periodCode === sharedEndPeriodCode,
+            },
+          ];
         })
       : [];
   const accessibleName = `${t(chartLang, 'chart.graphPanelLabel')}: ${displaySpec.title} (${displaySpec.unit})`;
