@@ -767,10 +767,21 @@ describe('ChartView — #197 step 1, rendered against the real svg', () => {
     expect(screen.getByRole('heading', { name: 'Testreeks' })).toBeInTheDocument();
   });
 
-  it('renders a legend key for the hollow provisional marker exactly when the spec carries a provisional note', () => {
+  // Audit pass 2, row 7 (2026-09-17): the card used to ALSO render a
+  // separate UI-only legend line ("○ = voorlopig cijfer") right above the
+  // backend's own `provisionalNote` prose ("Voorlopige cijfers zijn
+  // gemarkeerd met *.") — gated on the exact same condition, so the two
+  // always appeared together, describing the SAME provisional flag with
+  // two different symbols (a hollow ring vs. an asterisk) in the same
+  // card. The backend string is R8-reconstructed/stored and describes the
+  // convention actually visible on the value ("1,4*"); the UI legend added
+  // nothing the reader couldn't already read there, only a second symbol
+  // to reconcile. Dropped, never the backend string (out of scope: R8).
+  it('never renders a separate hollow-marker legend — the backend provisionalNote already states the * convention the reader sees on the value (audit pass 2, row 7)', () => {
     const withNote = threePointSpec({ provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.' });
     const { unmount } = render(<ChartView spec={withNote} />);
-    expect(screen.getByText('○ = voorlopig cijfer')).toBeInTheDocument();
+    expect(screen.queryByText('○ = voorlopig cijfer')).toBeNull();
+    expect(screen.getByText('Voorlopige cijfers zijn gemarkeerd met *.')).toBeInTheDocument();
     unmount();
     render(<ChartView spec={threePointSpec()} />);
     expect(screen.queryByText('○ = voorlopig cijfer')).toBeNull();

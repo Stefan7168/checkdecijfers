@@ -401,7 +401,6 @@ const nl = {
   'chart.axisGroupLabel': 'Gelijke assen of eigen assen',
   'chart.sharedAxes': 'Gelijke assen',
   'chart.ownAxes': 'Eigen assen',
-  'chart.provisionalMarkerNote': '○ = voorlopig cijfer',
   'chart.markedInChart': 'Gemarkeerd in de grafiek: {label}',
   'chart.keyboardHint': 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.',
   // Chart-card polish (2026-09-15): the screen-reader prefix for the large
@@ -1200,7 +1199,6 @@ const en: Messages = {
   'chart.axisGroupLabel': 'Shared axes or own axes',
   'chart.sharedAxes': 'Shared axes',
   'chart.ownAxes': 'Own axes',
-  'chart.provisionalMarkerNote': '○ = provisional figure',
   'chart.markedInChart': 'Marked in the chart: {label}',
   'chart.keyboardHint': 'Use the arrow keys to move through the chart’s points.',
   'chart.headline.label': 'Latest value on the chart',
