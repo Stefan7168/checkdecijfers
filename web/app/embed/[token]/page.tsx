@@ -277,6 +277,28 @@ export default async function EmbedPage({
   const formOverride: ChartForm | undefined =
     isChartForm(query.form) && query.form !== 'table' ? query.form : undefined;
 
+  // #262(c) (session 110, ADR 041 as-built addendum): the FROZEN embed gets
+  // ADR 051's reading toggle for free — `response.chartAlternates` is
+  // whatever the answer pipeline stored on this audit row at answer time
+  // (D3: built once, server-side, capped at 4), never re-queried here, so
+  // showing it costs nothing new and adds no query string (chart.tsx's own
+  // `state.selectedReading` is local component state, same as chat/dock).
+  // A pre-ADR-051 row simply has no `chartAlternates` key at all — ChartView
+  // already defaults an absent/undefined `alternates` prop to `[]`, so the
+  // dropdown silently doesn't render rather than throwing (same "absent
+  // means not built for this row" reading the rest of the envelope uses).
+  //
+  // Deliberately SUPPRESSED on a successful Live re-run (`finalSpec !==
+  // spec`): the stored alternates were built from the SAME query as the
+  // frozen `spec`, days or weeks ago — pairing a fresh live primary with
+  // stale alternates would let a reader pick a reading that silently reverts
+  // the chart to old data with no distinguishing footer message, exactly the
+  // kind of quiet misrepresentation R11/D3 exist to prevent. `rerunLive`
+  // itself only ever rebuilds one spec (src/chart/embed-live.ts has no
+  // alternates mechanism), so there is nothing honest to offer here until a
+  // future slice teaches Live to re-run every alternate too.
+  const alternates = finalSpec === spec ? response.chartAlternates : [];
+
   const chartView = (
     <ChartView
       spec={finalSpec}
@@ -285,6 +307,7 @@ export default async function EmbedPage({
       embedFooter={finalFooter}
       initialFormOverride={formOverride}
       headlineText={headlineText}
+      alternates={alternates}
     />
   );
 

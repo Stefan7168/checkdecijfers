@@ -102,7 +102,15 @@ import { SourceBadge } from './source-badge.tsx';
 import {
   activeReadingSpec,
   areaFormAllowed,
+  // #229 (ADR 041 addendum): the >15-series default-form constant/predicate
+  // now live canonically in chart-view-state.ts (not here) — see that
+  // file's own comment for why (chart-embed-dialog.tsx needs the same
+  // predicate and would otherwise create an import cycle). Re-exported below
+  // so every existing `import { BAR_LABEL_MAX } from './chart.tsx'` call
+  // site (chart.test.tsx) keeps working unchanged.
+  BAR_LABEL_MAX,
   chartViewReducer,
+  defaultFormIsTable,
   fallbackForm,
   hbarFormAllowed,
   initialViewState,
@@ -111,6 +119,8 @@ import {
   type ChartForm,
   type ChartViewState,
 } from '../lib/chart-view-state.ts';
+
+export { BAR_LABEL_MAX };
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -370,10 +380,6 @@ export interface ValueLabelPlan {
   /** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars. */
   barLabels: PointLabel[];
 }
-
-/** Above this many bars the labels would smear into each other; the idea
- * bank's >15-categories rule says a table is the honest view there. */
-export const BAR_LABEL_MAX = 15;
 
 function pointLabelText(point: PlottablePoint): string {
   return `${point.formattedValue ?? ''}${point.provisional ? '*' : ''}`;
@@ -1353,7 +1359,7 @@ export function ChartView({
   // table showed a presentation with no chart in it at all — no highlight,
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
-  const initialForm = inStage ? spec.kind : spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind;
+  const initialForm = inStage ? spec.kind : defaultFormIsTable(spec) ? 'table' : spec.kind;
   const [state, dispatch] = useReducer(
     chartViewReducer,
     initialForm,
@@ -3271,6 +3277,47 @@ export function ChartView({
           ) : null}
         </div>
       ) : null}
+      {/* #262(c) (session 110): the public embed route (embedMode=true) hides
+        * the WHOLE control row above (form tabs, Vanaf/Tot) by design — a
+        * frozen embed never lets a reader change form or window — but ADR
+        * 051's reading toggle is a narrower, additive case: every alternate
+        * is already a complete, independently-built ChartSpec baked into the
+        * audit row at answer time (D3), so switching reading here is exactly
+        * as safe as it is in chat/dock — no re-query, no new query string
+        * (the choice lives in local component state, `state.selectedReading`,
+        * same as everywhere else), and every visible fact still flows through
+        * `activeSpec` (D5) so R1/R6/R11 cover it the same way. Rendered ONLY
+        * when the stored response actually carried alternates (embed pages
+        * built before ADR 051, or answers whose measure has none, render
+        * nothing here — same "absent means not built for this row" reading
+        * as the rest of the envelope, docs/13-envelope-presence-grammar.md).
+        * D7's Embed-button-disable-while-non-primary rule does not apply on
+        * this route: there is no Embed button here (a page already reached
+        * via a signed embed token never re-offers its own embed dialog). */}
+      {embedMode && !inStage && alternates.length > 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground" data-slot="chart-controls-embed">
+          <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
+          <select
+            id={`${domId}-reading`}
+            aria-label={t(chartLang, 'chart.reading.label')}
+            value={state.selectedReading ?? 'primary'}
+            onChange={(e) =>
+              dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
+            }
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+          >
+            <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
+            {/* Same curated-label digit exemption as the non-embed dropdown
+              * above (D6) — these strings are hand-authored registry config,
+              * never a CBS cell read at runtime. */}
+            {alternates.map((alt, i) => (
+              <option key={i} value={i}>
+                {alt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       {/* Task 3 (chart-visual-embed-pass): also suppressed while the Embed
         * dialog is open — the same canvasNode element is now ALSO passed
         * into ChartEmbedButton's chartSlot below, and the no-double-mount
@@ -3540,6 +3587,7 @@ export function ChartView({
                 tableId={spec.attribution.tableId}
                 lang={chartLang}
                 currentForm={state.form}
+                defaultIsTable={defaultFormIsTable(spec)}
                 open={embedOpen}
                 onOpenChange={setEmbedOpen}
                 disabled={state.selectedReading !== null}
@@ -3696,6 +3744,7 @@ export function ChartView({
             tableId={spec.attribution.tableId}
             lang={chartLang}
             currentForm={state.form}
+            defaultIsTable={defaultFormIsTable(spec)}
             open={embedOpen}
             onOpenChange={setEmbedOpen}
             disabled={state.selectedReading !== null}

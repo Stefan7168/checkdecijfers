@@ -19,6 +19,30 @@ export function isChartForm(x: unknown): x is ChartForm {
   return x === 'line' || x === 'area' || x === 'bar' || x === 'hbar' || x === 'table';
 }
 
+/** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars
+ * (chart.tsx's valueLabelPlan/hbarLabelsShown). Canonical home for this
+ * constant is HERE, not chart.tsx (#229, ADR 041 addendum, session 110):
+ * chart-embed-dialog.tsx needs the exact same >15-series default-form rule
+ * chart.tsx's own `initialForm` calc uses, and chart.tsx already imports
+ * chart-embed-dialog.tsx (for ChartEmbedButton) — a dialog-side import back
+ * from chart.tsx would be circular. chart.tsx re-exports this constant so
+ * every existing `import { BAR_LABEL_MAX } from './chart.tsx'` call site
+ * (chart.test.tsx) keeps working unchanged. */
+export const BAR_LABEL_MAX = 15;
+
+/** #229 (ADR 041 addendum, session 110): true exactly when `spec`'s OWN
+ * default form is Tabel, independent of whatever form a viewer currently has
+ * selected — the same test chart.tsx's `initialForm` calc
+ * (`spec.series.length > BAR_LABEL_MAX ? 'table' : spec.kind`) applies for a
+ * spec's INITIAL render. Extracted so the Embed dialog can ask this same
+ * question about the publisher's spec without mounting a ChartView, and so
+ * there is exactly one place this threshold is compared against — never a
+ * second, independently-typed copy that could silently drift from the real
+ * rule. */
+export function defaultFormIsTable(spec: Pick<ChartSpec, 'series'>): boolean {
+  return spec.series.length > BAR_LABEL_MAX;
+}
+
 export interface ChartViewState {
   form: ChartForm;
   hiddenKeys: Set<string>;

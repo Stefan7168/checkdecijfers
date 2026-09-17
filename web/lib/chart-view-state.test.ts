@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   activeReadingSpec,
   areaFormAllowed,
+  BAR_LABEL_MAX,
   chartViewReducer,
+  defaultFormIsTable,
   fallbackForm,
   hbarFormAllowed,
   initialViewState,
@@ -441,5 +443,29 @@ describe('activeReadingSpec', () => {
   });
   it('an empty alternates array with a non-null index falls back to the primary', () => {
     expect(activeReadingSpec(primary, [], 0)).toBe(primary);
+  });
+});
+
+// #229 (ADR 041 addendum, session 110): the canonical home for the
+// >BAR_LABEL_MAX-series default-form-is-Tabel rule, extracted here (out of
+// chart.tsx) so the Embed dialog (chart-embed-dialog.tsx) can ask the exact
+// same question about a spec without importing the whole chart component —
+// see this file's own BAR_LABEL_MAX/defaultFormIsTable comments for why a
+// direct chart.tsx import from there would be circular.
+describe('defaultFormIsTable', () => {
+  function manySeriesSpec(count: number): ChartSpec {
+    return spec(
+      'bar',
+      Array.from({ length: count }, (_, i) => series(`S${i}`, [point('2020', i)])),
+    );
+  }
+
+  it('is false at or below BAR_LABEL_MAX series', () => {
+    expect(defaultFormIsTable(manySeriesSpec(BAR_LABEL_MAX))).toBe(false);
+    expect(defaultFormIsTable(manySeriesSpec(1))).toBe(false);
+  });
+
+  it('is true strictly above BAR_LABEL_MAX series — the exact predicate chart.tsx\'s own initialForm calc uses', () => {
+    expect(defaultFormIsTable(manySeriesSpec(BAR_LABEL_MAX + 1))).toBe(true);
   });
 });
