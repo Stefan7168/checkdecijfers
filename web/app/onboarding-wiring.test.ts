@@ -53,7 +53,9 @@ describe('WP16 sub-part 2 onboarding-finder wiring (source pins)', () => {
     // The ungated merge 500'd the production dashboard while migration 012
     // was (correctly) not yet applied — the read path must ride the same
     // ONBOARDING_ENABLED switch as the finder injection.
-    const page = read('page.tsx');
+    // Session 110 route split (ADR 033 D8): the signed-in dashboard branch
+    // moved to the app/workspace segment proxy.ts rewrites `/` to.
+    const page = read('workspace/page.tsx');
     expect(page).toContain(
       "getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' })",
     );

@@ -23,8 +23,13 @@ describe('#95 purchase-redirect wiring (source pins)', () => {
   });
 
   it('the main page threads the success flag into the Dashboard', () => {
-    const source = read('page.tsx');
+    // Session 110 route split (ADR 033 D8): the signed-in page moved to its
+    // own route segment, which proxy.ts rewrites `/` to — the redirect target
+    // (`/?purchase=success`) and this wiring are unchanged, only the file.
+    const source = read('workspace/page.tsx');
     expect(source).toContain('purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}');
-    expect(source).toContain("from '../lib/purchase.ts'");
+    // One directory deeper since the split (app/workspace/page.tsx), same
+    // shared builder.
+    expect(source).toContain("from '../../lib/purchase.ts'");
   });
 });

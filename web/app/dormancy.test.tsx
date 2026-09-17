@@ -45,6 +45,13 @@ vi.mock('../lib/i18n/server.ts', () => ({ getLang: vi.fn().mockResolvedValue('nl
 
 import { redirect } from 'next/navigation';
 import Home from './page.tsx';
+// Session 110 route split (ADR 033 D8): the signed-in surfaces `/` used to
+// render moved to their own route segment (web/app/workspace/page.tsx), which
+// web/proxy.ts rewrites `/` to for a session — the URL is unchanged, so every
+// "flag OFF → Dashboard / flag ON → Workspace" pin below is still a pin about
+// what a signed-in visitor of `/` sees; it just renders from the other file
+// now. `Home` keeps the logged-out half and is asserted on separately.
+import WorkspaceRoute from './workspace/page.tsx';
 import CreditsPage from './credits/page.tsx';
 import LoginPage from './login/page.tsx';
 import GeschiedenisPage, { dynamic as geschiedenisDynamic } from './geschiedenis/page.tsx';
@@ -67,7 +74,7 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
   beforeEach(() => vi.stubEnv('WORKSPACE_ENABLED', '0'));
 
   it('/ renders the Dashboard, never the Workspace', async () => {
-    render(await Home({ searchParams: emptySearch }));
+    render(await WorkspaceRoute({ searchParams: emptySearch }));
     expect(screen.getByTestId('dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('workspace')).toBeNull();
   });
@@ -106,16 +113,32 @@ describe('WP135 dormancy — flag OFF renders today, byte-identical (⟨A5⟩)',
 });
 
 describe('public landing (session 51/52 — #98 resolved + ADR 035)', () => {
-  it('/ renders the Landing for a logged-out visitor, flag-independent, no dashboard reads', async () => {
-    currentUserId.mockResolvedValue(null);
+  it('/ renders the Landing, flag-independent, no dashboard reads', async () => {
+    // Session 110 route split: `/` no longer branches on the session at all —
+    // it IS the landing, and the signed-in tree is a different route segment
+    // the proxy rewrites to. Both the logged-out and the (impossible, since
+    // the proxy rewrites it away) signed-in shape are asserted here, so this
+    // stays the pin that `/` can never serve a chargeable surface.
     for (const flag of ['0', '1']) {
-      vi.stubEnv('WORKSPACE_ENABLED', flag);
-      render(await Home({ searchParams: emptySearch }));
-      expect(screen.getByTestId('landing')).toBeInTheDocument();
-      expect(screen.queryByTestId('dashboard')).toBeNull();
-      expect(screen.queryByTestId('workspace')).toBeNull();
-      cleanup();
+      for (const user of [null, 'user-1']) {
+        currentUserId.mockResolvedValue(user);
+        vi.stubEnv('WORKSPACE_ENABLED', flag);
+        render(await Home());
+        expect(screen.getByTestId('landing')).toBeInTheDocument();
+        expect(screen.queryByTestId('dashboard')).toBeNull();
+        expect(screen.queryByTestId('workspace')).toBeNull();
+        cleanup();
+      }
     }
+  });
+
+  it('the signed-in route sends a visitor with no session back to / (belt-and-suspenders)', async () => {
+    // proxy.ts only rewrites `/` here for a JWT-validated session, but a proxy
+    // matcher is an optimistic check, never the authorization boundary — the
+    // page re-verifies and bounces rather than reading a balance for nobody.
+    currentUserId.mockResolvedValue(null);
+    await expect(WorkspaceRoute({ searchParams: emptySearch })).rejects.toThrow('REDIRECT:/');
+    expect(redirect).toHaveBeenCalledWith('/');
   });
 });
 
@@ -123,7 +146,7 @@ describe('WP135 dormancy — flag ON renders the workspace + shell', () => {
   beforeEach(() => vi.stubEnv('WORKSPACE_ENABLED', '1'));
 
   it('/ renders the Workspace, never the Dashboard', async () => {
-    render(await Home({ searchParams: emptySearch }));
+    render(await WorkspaceRoute({ searchParams: emptySearch }));
     expect(screen.getByTestId('workspace')).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard')).toBeNull();
   });

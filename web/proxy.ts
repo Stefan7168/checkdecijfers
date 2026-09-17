@@ -191,7 +191,52 @@ export function applySourceRouteHeader(headers: Headers, pathname: string): void
   }
 }
 
+/** Session 110 route split (ADR 033 D8): the route segment the SIGNED-IN
+ * product (`web/app/workspace/page.tsx` — Dashboard/Workspace) actually lives
+ * on. `/` keeps serving the public landing for everyone; a request to `/` that
+ * carries a valid session is REWRITTEN here by `proxy()` below, so the address
+ * bar, bookmarks, the header's home link, the Stripe purchase redirect
+ * (`/?purchase=success`) and the e2e tests all still say `/`. The split exists
+ * because Next builds a route's client bundle from its static import graph,
+ * not from which runtime branch renders: while one `/` page imported Landing,
+ * Dashboard AND Workspace, every anonymous visitor downloaded the whole chat
+ * workspace (measured — see docs/session-briefs/2026-09-13-build-performance-
+ * diagnosis.md). */
+export const INTERNAL_APP_PATH = '/workspace';
+
+/** True for the internal rewrite target above (and anything nested under it).
+ * This path is NOT a URL a browser may ask for: `proxy()` redirects any direct
+ * request for it back to `/`, which then serves either the landing (no
+ * session) or — via the rewrite — the same workspace the visitor was aiming
+ * for. That redirect is this route's equivalent of
+ * `applyEmbedRequestHeaders`'s strip-then-set discipline: rather than trusting
+ * that nothing outside this file can reach the segment, the one entry point is
+ * closed unconditionally, for signed-in and anonymous requests alike, so the
+ * segment can only ever be entered through the rewrite below. Exact match plus
+ * a slash-delimited prefix, the same discipline `PUBLIC_EXACT_PATHS` uses: a
+ * future sibling route named `/workspace-debug` must not be swallowed by this
+ * rule by accident. Exported and unit-tested directly, same reason
+ * `isPublicPath`/`embedRequestHeaders` are. */
+export function isInternalAppPath(pathname: string): boolean {
+  return pathname === INTERNAL_APP_PATH || pathname.startsWith(`${INTERNAL_APP_PATH}/`);
+}
+
 export async function proxy(request: NextRequest) {
+  // Route split (ADR 033 D8), FIRST — before any session work, because the
+  // answer does not depend on one: the internal segment is unreachable from
+  // the outside for everybody. A signed-in visitor who types `/workspace`
+  // lands on `/` and is rewritten straight back into the workspace (so this
+  // costs them nothing); an anonymous one lands on `/` and gets the landing,
+  // exactly as if they had typed `/` in the first place. Deliberately a
+  // REDIRECT, not a rewrite-to-`/`: it canonicalises the address bar on the
+  // one URL the product owns, and it cannot loop (the target `/` is never
+  // itself an internal path).
+  if (isInternalAppPath(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
+    return NextResponse.redirect(url);
+  }
+
   // Computed once, right here, and applied by MUTATING the one shared
   // `request.headers` Headers instance — not by cloning it into a second
   // object reused at both `NextResponse.next({ request })` call sites below.
@@ -270,6 +315,41 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
+  }
+
+  // Route split (ADR 033 D8): a VALIDATED session on the exact `/` path is
+  // served the signed-in route segment, without changing the URL. Placed after
+  // the session check on purpose — `data.claims` here is the same
+  // JWT-validated claims set the redirect above trusts, so an anonymous or a
+  // malformed-cookie request (which lands on `data = null`) always falls
+  // through to the landing. Exact match only, the same discipline
+  // `isPublicPath` uses for `/`. `request.nextUrl.clone()` keeps the query
+  // string, so `/?purchase=success` (the Stripe return, ADR 006) still reaches
+  // the page's `searchParams`. `{ request }` passes the SAME mutated request
+  // headers the `NextResponse.next({ request })` calls above rely on — the
+  // spoof-stripping `applyEmbedRequestHeaders`/`applySourceRouteHeader` did at
+  // the top of this function must survive the rewrite, or a forged
+  // `x-embed-route`/`x-source-route` would reach layout.tsx on this one path.
+  if (data?.claims && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = INTERNAL_APP_PATH;
+    const rewritten = NextResponse.rewrite(url, { request });
+    // Carry over whatever Supabase's `setAll` put on `response`: a rewrite
+    // builds a FRESH response object, so a just-refreshed session cookie set
+    // during `getClaims()` would otherwise be dropped on exactly the requests
+    // where it matters most (the visitor would keep re-refreshing until the
+    // old token finally expired). Cookies go through the cookies API;
+    // `set-cookie` is therefore skipped in the header copy below to avoid
+    // writing the same cookie twice, and `x-middleware-*` is skipped because
+    // those are Next's own internal control headers for the response object
+    // they were created on — copying `x-middleware-next` onto a rewrite would
+    // hand Next two contradictory instructions for one request.
+    for (const cookie of response.cookies.getAll()) rewritten.cookies.set(cookie);
+    for (const [key, value] of response.headers) {
+      if (key === 'set-cookie' || key.startsWith('x-middleware')) continue;
+      rewritten.headers.set(key, value);
+    }
+    return rewritten;
   }
 
   return response;
