@@ -2060,7 +2060,13 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
 });
 
 describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
-  it('renders upload/data-source buttons as disabled, explanatory placeholders; "Add link" is clickable', () => {
+  // #15 (session 110 UX audit): these three chips used to use the native
+  // `disabled` attribute, which drops a control from the Tab order — their
+  // "coming soon" explanation lived ONLY in a `title` tooltip, unreachable
+  // without a mouse. aria-disabled keeps them focusable; the same text is
+  // now also reachable via aria-describedby, for keyboard/screen-reader
+  // users alike.
+  it('renders upload/data-source buttons as aria-disabled (still focusable), with an explanatory title AND a matching sr-only hint; "Add link" is clickable', () => {
     render(<Chat />);
     for (const [name, hint] of [
       ['Bestand uploaden', 'upload een bestand'],
@@ -2068,12 +2074,20 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
       ['Data koppelen', 'verbind een databron'],
     ] as const) {
       const button = screen.getByRole('button', { name });
-      expect(button).toBeDisabled();
+      expect(button).not.toBeDisabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
       expect(button).toHaveAttribute('title', expect.stringContaining(hint));
+      const describedById = button.getAttribute('aria-describedby');
+      expect(describedById).toBeTruthy();
+      const description = document.getElementById(describedById!);
+      expect(description).not.toBeNull();
+      expect(description).toHaveClass('sr-only');
+      expect(description?.textContent).toBe(button.getAttribute('title'));
     }
     const linkButton = screen.getByRole('button', { name: 'Link toevoegen' });
     expect(linkButton).not.toBeDisabled();
     expect(linkButton).not.toHaveAttribute('title');
+    expect(linkButton).not.toHaveAttribute('aria-disabled');
   });
 
   it('"Link sheet" sits directly before "Connect data" in the chip row (owner request, session 90)', () => {
@@ -2095,16 +2109,20 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
   // weaker assertion while breaking real byte-identity. Pinned against the
   // literal strings so any future edit to this markup is a deliberate,
   // reviewed diff to this test, not a silent drift.
-  it('the "Upload file" button is byte-identical to before D10 when attachments is absent', () => {
+  it('the "Upload file" button keeps its D10 markup (plus #15\'s aria-disabled/aria-describedby) when attachments is absent', () => {
     render(<Chat />);
     const button = screen.getByRole('button', { name: 'Bestand uploaden' });
     // Session 87 restyle: the "soon" chip (dashed outline, dimmed) — still one
     // literal string, so any future markup edit is a deliberate diff here.
+    // #15: `disabled:cursor-not-allowed` -> a static `cursor-not-allowed` —
+    // this chip is never natively `disabled` any more, so the pseudo-class
+    // variant would no longer apply.
     expect(button.className).toBe(
-      'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed',
+      'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium border-dashed border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed',
     );
     expect(button.getAttribute('title')).toBe('Binnenkort beschikbaar: upload een bestand (bijv. PDF)');
-    expect(button).toBeDisabled();
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
     // No attachment-related DOM node exists AT ALL — not merely hidden.
     expect(document.querySelector('input[type="file"]')).toBeNull();
     expect(screen.queryByText('Bestand wordt gelezen…')).not.toBeInTheDocument();
@@ -2146,11 +2164,23 @@ describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 0
     expect(await screen.findByText('This file is too large.')).toBeInTheDocument();
   });
 
-  it('"Connect data" stays disabled even when attachments is present; "Add link" stays clickable', () => {
+  it('"Connect data" stays aria-disabled even when attachments is present; "Add link" stays clickable', () => {
     const onUploadFile = vi.fn();
     render(<Chat attachments={{ enabled: true, onUploadFile }} />);
-    expect(screen.getByRole('button', { name: 'Data koppelen' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Data koppelen' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Link toevoegen' })).not.toBeDisabled();
+  });
+
+  // #15 (session 110 UX audit): clicking (or activating via keyboard) one of
+  // these chips must be a real no-op — no onClick handler exists on any of
+  // them, so removing the native `disabled` attribute must not newly wire
+  // one up.
+  it('clicking an aria-disabled coming-soon chip does nothing (no onUploadFile call, no crash)', () => {
+    const onUploadFile = vi.fn();
+    render(<Chat attachments={{ enabled: true, onUploadFile }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sheet koppelen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Data koppelen' }));
+    expect(onUploadFile).not.toHaveBeenCalled();
   });
 });
 
