@@ -29,11 +29,22 @@ import { Ellipsis, PanelLeftClose, PanelLeftOpen, Plus, Search } from 'lucide-re
 import { useId, useState } from 'react';
 import type { ThreadSummary } from '../backend/threads/index.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
-import { groupThreads } from '../lib/thread-groups.ts';
+import type { MessageKey } from '../lib/i18n/messages.ts';
+import { groupThreads, type ThreadGroupLabel } from '../lib/thread-groups.ts';
 import { cn } from '../lib/utils.ts';
 import { Button } from './ui/button.tsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu.tsx';
 import { Input } from './ui/input.tsx';
+
+// Session 110 UX audit row 4: the bucket labels from thread-groups.ts stay
+// Dutch literals (they're internal identifiers, not UI text) — this maps
+// each one to its catalogue key for rendering.
+const GROUP_LABEL_KEY: Record<ThreadGroupLabel, MessageKey> = {
+  Vandaag: 'history.today',
+  Gisteren: 'history.yesterday',
+  'Afgelopen 7 dagen': 'history.last7',
+  Ouder: 'history.older',
+};
 
 export function ThreadSidebar({
   threads,
@@ -153,7 +164,7 @@ export function ThreadSidebar({
           groups.map((group) => (
             <div key={group.label} className="flex flex-col gap-0.5">
               <p className="px-2.5 pt-3 pb-1 text-[10.5px] font-medium tracking-[0.06em] text-muted-foreground uppercase">
-                {group.label}
+                {t(GROUP_LABEL_KEY[group.label])}
               </p>
               {group.threads.map((thread) => {
                 const titleId = `${idPrefix}-t${thread.id}`;

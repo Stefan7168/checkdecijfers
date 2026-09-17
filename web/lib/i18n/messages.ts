@@ -247,6 +247,16 @@ const nl = {
   'credits.startFailed': 'Er ging iets mis bij het starten van de betaling.',
   'credits.noCheckoutUrl': 'Stripe gaf geen checkout-URL terug.',
 
+  // thread-sidebar.tsx group headings (session 110 UX audit row 4) — the
+  // bucket KEYS in web/lib/thread-groups.ts (ThreadGroupLabel) stay Dutch
+  // literals used only as internal identifiers; these are the rendered
+  // labels shown above each day-bucket of threads in the CHAT SIDEBAR (not
+  // the /geschiedenis page below, despite the shared "history." prefix).
+  'history.today': 'Vandaag',
+  'history.yesterday': 'Gisteren',
+  'history.last7': 'Afgelopen 7 dagen',
+  'history.older': 'Ouder',
+
   // app/geschiedenis/page.tsx.
   'history.pageHeading': 'Geschiedenis — Check de Cijfers',
 
@@ -1049,6 +1059,11 @@ const en: Messages = {
   'credits.unavailable': 'Payments are not available right now.',
   'credits.startFailed': 'Something went wrong starting the payment.',
   'credits.noCheckoutUrl': 'Stripe did not return a checkout URL.',
+
+  'history.today': 'Today',
+  'history.yesterday': 'Yesterday',
+  'history.last7': 'Last 7 days',
+  'history.older': 'Older',
 
   'history.pageHeading': 'History — Check de Cijfers',
 

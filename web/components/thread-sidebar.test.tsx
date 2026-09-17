@@ -248,4 +248,23 @@ describe('ThreadSidebar — en', () => {
     expect(screen.getByRole('button', { name: 'New chat' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
   });
+
+  // Row 4 (session 110 UX audit): the day-bucket group heading above a
+  // thread's row must go through the catalogue, not stay hardcoded Dutch.
+  it('renders the "Today" group heading, not "Vandaag"', () => {
+    render(
+      <LangProvider lang="en">
+        <ThreadSidebar
+          threads={[cbsThread()]}
+          activeThreadId={null}
+          collapsed={false}
+          onSelect={vi.fn()}
+          onNewChat={vi.fn()}
+          onToggleCollapse={vi.fn()}
+        />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.queryByText('Vandaag')).not.toBeInTheDocument();
+  });
 });
