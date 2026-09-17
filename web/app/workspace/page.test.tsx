@@ -11,7 +11,7 @@
 //     and the signed-in response shipped the exact same 15 script tags /
 //     1,503,395 bytes — docs/session-briefs/2026-09-13-build-performance-
 //     diagnosis.md). A source-text pin is the honest cheap layer here, the same
-//     judgment app/bevolking-3d-demo/isolation.test.ts already made for the
+//     judgment the 3D-demo route's own isolation test already made for the
 //     three.js route: vitest loads both files as plain modules, so the bundling
 //     boundary that actually breaks does not exist in jsdom at all.
 //  2. That the move was faithful: the props this route hands Workspace/Dashboard

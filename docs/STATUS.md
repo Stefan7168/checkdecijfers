@@ -39,6 +39,8 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   pass-2 rows 18/19 (source-aware footer on Eurostat pages; the "go Pro" pitch in embed footers).
 - **Chart export** — PDF (vector) + "PNG, chart only (transparent)" ([ADR 053](decisions/053-chart-export-formats.md)); defaults byte-identical.
 - **[#23](open-questions.md) alerts COMPLETE** — missed-sync (cadence from `period_semantics`) + health-probe, both on the daily cron.
+- **Wave 14:** the route split — anonymous visitors no longer download the workspace (−222 KB raw
+  first-load JS, ADR 033 D8); two red CI runs from a stale e2e pin fixed the same hour.
 - **Wave 13:** pass-4 design rows built (qualified region labels, one region per line, shared
   period prefix dropped), a verification-only browser pass (36 of 40 fixes VERIFIED; the 4
   residuals fixed the same hour), the logged-in bundle measured (identical to anonymous — route
@@ -71,7 +73,7 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
   [#134](open-questions.md)(c) refusal offer chip; 16–40-series comparisons open on hbar;
   [#245](open-questions.md) Action 3 test-DB reset helper (795 s → 200 s over 40 files).
 
-**Measured (final tree, after wave 13):** backend 188 files / 2769 tests, web 120 / 2089 (+ 7 Playwright e2e), benchmark
+**Measured (final tree, after wave 14):** backend 188 files / 2769 tests, web 121 / 2108 (+ 7 Playwright e2e), benchmark
 14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings (both batches), root + web
 typecheck clean. First batch (`2bdbb4c`, run `35196289551`): backend 180/2666, web 117/1933.
 
