@@ -142,6 +142,47 @@ describe('buildAlternateReading', () => {
     }
   });
 
+  it('carries the PRIMARY\'s own regionSet onto the alternate — a region-set answer keeps its alternate reading (session 110 UX audit pass 3, row 4)', async () => {
+    // Same gap as the test above, one field over: `regionSet` (#253's region
+    // CLASS, e.g. "alle provincies") was not copied onto altIntent, so a
+    // region-set primary's alternate ran regionless on the geo table and was
+    // dropped best-effort — the answer body's "Er is ook een andere lezing
+    // beschikbaar…" promise had no working control behind it. Same
+    // population_on_1_january / M000365 canonical alternate the multi-region
+    // test above uses, this time over the full 12-provincie roster
+    // (tests/query/region-set-run.test.ts's own "all 12 provincies" fixture).
+    const primaryIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'population_on_1_january' },
+      regionSet: { kind: 'all_provincies' },
+      period: { kind: 'codes', codes: ['2025JJ00'] },
+      derivation: 'none',
+    };
+    const primaryOutcome = await runQuery(db, primaryIntent);
+    if (!primaryOutcome.ok) throw new Error(`fixture setup refused: ${primaryOutcome.refusal.kind}`);
+    const primary: ValidatedResult = primaryOutcome;
+    expect(primary.shape).toBe('region_set');
+
+    const outcome = await buildAlternateReading(db, primary, primaryIntent, {
+      measure: 'M000365',
+      label: 'Gemiddelde bevolking (jaargemiddelde, geen standcijfer)',
+    });
+
+    expect(outcome.ok).toBe(true);
+    if (outcome.ok) {
+      // The alternate's own resolved ValidatedResult must be the SAME
+      // region_set shape with the SAME roster — not silently dropped to a
+      // regionless national reading, and not a different, mismatched roster.
+      expect(outcome.result.validated.shape).toBe('region_set');
+      expect(outcome.result.validated.regionSet?.rosterSize).toBe(12);
+      expect(outcome.result.validated.regionSet?.complete).toBe(true);
+      expect(outcome.result.spec.series).toHaveLength(12);
+      expect(new Set(outcome.result.spec.series.map((s) => s.regionCode))).toEqual(
+        new Set(primary.cells.map((c) => c.regionCode)),
+      );
+    }
+  });
+
   it('refuses when the alternate resolves a different set of periods than the primary (#254 post-Task-5 review finding)', async () => {
     // The whole toggle feature assumes every alternate is built over the
     // IDENTICAL period window as the primary (see this function's own new

@@ -6,7 +6,10 @@
 // (a cell's own `value`, a derivation's own `value`/`netChange`/`factor`) or
 // a verbatim metadata field, never a value this module computed itself
 // (R1/R3, docs/05-data-rules.md).
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   findNumericTokens,
   maskPhrases,
@@ -499,5 +502,115 @@ describe('buildAnswerProof', () => {
   it('never throws on a maximally empty-but-array-shaped result', () => {
     const response = fakeAnswerResponse({ shape: 'single', cells: [] });
     expect(() => buildAnswerProof(response)).not.toThrow();
+  });
+});
+
+// #252 (session 110 UX audit pass 3, row 2): "Bewijs deze cijfers" was
+// present on a live answer and missing from every stored one. Root cause:
+// this file used to import `syncDateLabel` from
+// components/source-badge.tsx, a `'use client'` module — this file itself
+// runs from THREE server-only call sites (replay-assemble.ts,
+// question-history.tsx, app/actions.ts), and importing a client-directive
+// module into a server path throws at runtime in Next's RSC/server-action
+// boundary. jsdom (this whole workspace's test environment) draws no such
+// distinction — every existing test above passed both before and after the
+// fix, which is exactly how the bug shipped unnoticed. A test that reproduces
+// the RSC throw itself is therefore not possible here; this instead pins the
+// STATIC fact the throw depended on — that answer-proof.ts's whole import
+// graph is directive-free — so the same class of regression (any future
+// import of a 'use client' leaf into this server-only module) fails a test
+// instead of only failing silently in production.
+describe('answer-proof.ts server-import graph (#252)', () => {
+  function stripComments(source: string): string {
+    return source
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map((line) => line.replace(/\/\/.*$/, ''))
+      .join('\n');
+  }
+
+  function hasUseClientDirective(source: string): boolean {
+    const stripped = stripComments(source).trimStart();
+    return stripped.startsWith("'use client'") || stripped.startsWith('"use client"');
+  }
+
+  function relativeImportSpecifiers(source: string): string[] {
+    // Matches both `import ... from '...'` and `export ... from '...'`
+    // (re-exports create the same dependency edge), across multi-line
+    // import statements — non-greedy up to the first `from '...'`.
+    const re = /(?:import|export)\b[\s\S]*?from\s+['"](\.[^'"]+)['"]/g;
+    const specifiers: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(stripComments(source))) !== null) {
+      specifiers.push(match[1]);
+    }
+    return specifiers;
+  }
+
+  /** Walks the REAL transitive import graph on disk (relative imports
+   * only — a bare/package specifier can never be one of this repo's own
+   * 'use client' leaves) and returns every file carrying the directive. */
+  function findUseClientImports(entryFile: string): string[] {
+    const visited = new Set<string>();
+    const offenders: string[] = [];
+    function walk(file: string) {
+      if (visited.has(file)) return;
+      visited.add(file);
+      let source: string;
+      try {
+        source = readFileSync(file, 'utf8');
+      } catch {
+        return; // unresolvable (shouldn't happen for a relative specifier)
+      }
+      if (hasUseClientDirective(source)) {
+        offenders.push(file);
+        return;
+      }
+      for (const specifier of relativeImportSpecifiers(source)) {
+        walk(resolve(dirname(file), specifier));
+      }
+    }
+    walk(entryFile);
+    return offenders;
+  }
+
+  it('imports no `\'use client\'` module, directly or transitively', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const offenders = findUseClientImports(resolve(here, 'answer-proof.ts'));
+    expect(offenders).toEqual([]);
+  });
+
+  it('the guard itself can detect the exact regression this bug was: importing source-badge.tsx directly', () => {
+    // Belt for the test above: prove the walker actually flags a 'use
+    // client' file, so an empty `offenders` array above means "graph is
+    // clean", not "the checker is a no-op".
+    const here = dirname(fileURLToPath(import.meta.url));
+    const offenders = findUseClientImports(resolve(here, '../components/source-badge.tsx'));
+    expect(offenders).toEqual([resolve(here, '../components/source-badge.tsx')]);
+  });
+});
+
+describe('buildAnswerProof — a thrown error is logged, never silently swallowed (#252)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('logs the error message via console.error and still returns null (the honest degradation)', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // `attribution` is required by buildAnswerProof's own read of
+    // `result.attribution.tableId` — an envelope shaped to have `cells` as
+    // an array (passing the `Array.isArray` belt) but no `attribution`
+    // forces the exact "throws deep inside the try" shape the silent catch
+    // used to hide, without needing a real client/server boundary.
+    const response = {
+      result: { cells: [fakeCell()] },
+    } as unknown as AnswerResponse;
+
+    const proof = buildAnswerProof(response);
+
+    expect(proof).toBeNull();
+    expect(spy).toHaveBeenCalledTimes(1);
+    const [message, detail] = spy.mock.calls[0]!;
+    expect(message).toBe('buildAnswerProof failed, proof panel omitted:');
+    expect(typeof detail).toBe('string');
+    expect(detail.length).toBeGreaterThan(0);
   });
 });
