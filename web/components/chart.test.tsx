@@ -3600,7 +3600,9 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).not.toBeDisabled();
     const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
     expect(hbarTab).toBeDisabled();
-    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('regio'));
+    // Session 110 UX audit pass 4, row 7: reworded to name the real reason
+    // (the time axis), not the region count — was 'regio'.
+    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('periode'));
   });
 
   // #16 (session 110 UX audit): the disabled tab's reason must be reachable
@@ -3616,7 +3618,8 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     const hint = document.getElementById(describedById!);
     expect(hint).not.toBeNull();
     expect(hint).toHaveClass('sr-only');
-    const reasonText = 'Liggende staven passen alleen bij een vergelijking tussen regio’s.';
+    // Session 110 UX audit pass 4, row 7: reworded to name the time axis.
+    const reasonText = 'Liggende staven tonen één periode; deze grafiek loopt over meerdere periodes.';
     expect(hint?.textContent).toBe(reasonText);
     // Exactly ONE copy of the reason in the whole card — the sr-only span,
     // never a second, permanently-visible paragraph alongside it.
@@ -3631,7 +3634,8 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(areaTab).toHaveAttribute('title', expect.stringContaining('reeksen'));
     const hbarTab = screen.getByRole('tab', { name: 'Liggend' });
     expect(hbarTab).toBeDisabled();
-    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('regio'));
+    // Session 110 UX audit pass 4, row 7: was 'regio'.
+    expect(hbarTab).toHaveAttribute('title', expect.stringContaining('periode'));
   });
 
   it('S3 (multi-region comparison): Lijn and Vlak are both disabled, each with its own reason; Liggend is allowed', () => {
