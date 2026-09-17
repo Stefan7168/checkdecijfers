@@ -104,6 +104,27 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(message.className).toContain('text-muted-foreground');
   });
 
+  // Row 10 (session 110 UX audit pass 4): the two instruction paragraphs
+  // ("Paste this code into an article…", auto-resize note) used to render
+  // unconditionally, above "…is not available", describing a code block
+  // that does not exist in the unavailable state.
+  it('hides the instruction paragraphs once embedding is unavailable (nothing left to explain)', async () => {
+    createEmbedCode.mockResolvedValue({ ok: false, reason: 'unavailable' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await waitFor(() => expect(screen.getByText(/not available/i)).toBeInTheDocument());
+    expect(screen.queryByText(/paste this code/i)).toBeNull();
+    expect(screen.queryByText(/auto/i)).toBeNull();
+  });
+
+  it('still shows the instruction paragraphs once a real code is ready', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await waitFor(() => expect(screen.getByText(/<iframe/)).toBeInTheDocument());
+    expect(screen.getByText(/paste this code/i)).toBeInTheDocument();
+  });
+
   // Minor #3 (opus review): a rejected Server Action promise must not leave
   // the dialog stuck on "loading" forever with an unhandled rejection — it
   // should collapse to the same terminal 'unavailable' state as { ok: false }.
