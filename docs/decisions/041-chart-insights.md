@@ -145,3 +145,60 @@ Test coverage: all four variation cases as unit tests in `chart-insights.test.ts
 region-set (bar) chart asserting every name is unique, names the region, and contains no period at all; a
 region-comparison dot test in both `chart-story.test.tsx` and `chart-story-stage.test.tsx`; the pass-2
 period tests kept unchanged (their two steps share a series, so they still get the period).
+
+## Session 110 addendum (audit pass 3, row 16) — a comparison chart's extremes are ranked members, not outliers
+
+**Context (2026-09-17).** The audit found a region ranking's Insights cards titled `Uitschieter naar boven`
+/ `Uitschieter naar beneden` ("Outlier upward/downward") for its highest and lowest bar — the same example
+chart the row-8 addendum above already quotes. `recordHigh`/`recordLow` are TIME-SERIES vocabulary: a "jump"
+or "outlier" implies a departure from a trend along a time axis. A comparison (bar) chart has no time axis —
+it is one snapshot per region (`ChartSeries`' own doc comment: "Bar charts: one series per region, exactly
+one point each") — so its highest/lowest bar is simply the highest/lowest-RANKED member, and calling it an
+"outlier" overclaims a trend that was never plotted (R9: a ranking/extremity claim must match what the chart
+actually shows).
+
+**Investigation.** `comparisonCandidates` (`src/chart/insights.ts`) turned out to already satisfy half of
+this by construction, as a side effect of the row-19 addendum earlier this session: it has no period-over-
+period loop at all (a comparison chart has only one point per series to score, nothing to diff against a
+"previous" period), so it structurally cannot emit `jumpUp`/`jumpDown` — confirmed by reading the function
+and pinned by a new test (`tests/chart/insights.test.ts`) rather than assumed. What was still wrong was the
+DISPLAY layer: `web/lib/chart-insights.ts`'s `TITLE_KEY` mapped every `recordHigh`/`recordLow` finding to the
+same "Uitschieter…" title regardless of chart shape, because a comparison chart's real extreme still carries
+the `recordHigh`/`recordLow` KIND (correctly — it IS the actual max/min, same as a time-series peak/trough;
+only the WORDING needs to differ by chart shape, not the underlying selection).
+
+**Decision.** No new `FindingKind` and no new field on `Finding`/`ChartSpec`: `buildFindings(spec, lang)`
+already has the spec in hand, and `spec.kind === 'bar'` is the exact, already-used proxy for "comparison-
+shaped" (`buildCaption` relies on the same check for the caption template). A new `titleKeyFor(kind,
+specKind)` resolves `recordHigh`/`recordLow` to two new keys — `chart.insights.highestMemberTitle` ("Hoogste"
+/ "Highest") and `chart.insights.lowestMemberTitle` ("Laagste" / "Lowest") — only when `specKind === 'bar'`;
+every other kind, and every kind on a non-bar chart, resolves exactly as before (`recordHigh`/`recordLow`
+still read "Uitschieter naar boven/beneden" on a time series; `aboveAverage`/`belowAverage` are unaffected on
+either shape, since they never claimed to be an extreme in the first place). The AI-phrasing prompt
+(`src/chart/insights-phrase.ts`, rule 7) was reworded so `recordHigh`/`recordLow` get neutral value/position
+language ("het hoogste"/"het laagste") of their own, correct on either chart shape, rather than being grouped
+with `jumpUp`/`jumpDown` under movement words ("een stijging") that only a genuine jump has earned — the
+payload does not need a chart-shape field for this, since the wording no longer depends on shape at all, only
+on whether the finding carries `fromValueSlot`/`fromPeriodSlot` (jump kinds only).
+
+The brief's optional third part — skipping/merging the cards when the answer body already states the top and
+bottom of a complete ranking — was **not built**: `ChartSpec` carries no flag for "this is a complete ranking
+with a stated top/bottom in the answer body" (checked: no such field exists on `ChartSpec` or
+`ChartAttribution`), so per the brief's own fallback instruction this part is skipped rather than guessed at.
+Marked as an assumption/open item below rather than silently dropped.
+
+**As-built.** `src/chart/insights.ts` (doc comment on `comparisonCandidates` confirming it structurally
+cannot emit jump kinds — no functional change, the kind-assignment logic was already correct as of the row-19
+addendum). `web/lib/chart-insights.ts` (`titleKeyFor`, replacing the flat `TITLE_KEY` lookup at the call
+site). `web/lib/i18n/messages.ts` (`chart.insights.highestMemberTitle`/`lowestMemberTitle`, nl+en).
+`src/chart/insights-phrase.ts` (rule 7 reworded). Test coverage: a new root test pinning that a comparison
+spec's findings are only ever `recordHigh`/`recordLow`/`aboveAverage`/`belowAverage`, never a jump kind
+(`tests/chart/insights.test.ts`); new web tests pinning `"Hoogste"`/`"Highest"` and `"Laagste"`/`"Lowest"` on
+a bar spec's extremes, that a mid-pack `aboveAverage`/`belowAverage` bar keeps its existing shared title, and
+that a genuine time-series record still reads `"Uitschieter naar boven"` — confirming the comparison-specific
+titles do not leak onto the shape they were not built for (`web/lib/chart-insights.test.ts`).
+
+**Open item (mirrored in [open-questions.md](../open-questions.md)):** whether/how to detect "the answer body
+already states this ranking's top and bottom" so the Insights cards can adapt their framing (not necessarily
+by hiding them — the brief was explicit that dropping cards is the wrong fix for a restatement concern) needs
+a `ChartSpec`-level signal that does not exist today; deferred, not decided against.
