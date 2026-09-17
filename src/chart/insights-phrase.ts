@@ -105,7 +105,7 @@ function buildSystemPrompt(): string {
     "4. Als 'seriesLabel' niet null is, noem die naam ergens in de zin, exact zoals gegeven.",
     "5. Schrijf hoeveelheden nooit in woorden — geen telwoorden ('twee', 'tien'), geen schaalwoorden ('duizend', 'miljoen', 'miljard'), geen breuken of veelvouden.",
     "6. De eenheid wordt automatisch bij elk ingevuld getal geplaatst; schrijf zelf geen eenheid of procent-teken.",
-    "7. Kind 'jumpUp'/'recordHigh' is een stijging/hoog punt, 'jumpDown'/'recordLow' een daling/laag punt — laat dat in de toon van de zin doorklinken zonder een richting te beweren die niet uit 'kind' volgt.",
+    "7. Kind 'jumpUp'/'recordHigh' is een stijging/hoog punt, 'jumpDown'/'recordLow' een daling/laag punt. Kind 'aboveAverage'/'belowAverage' ligt alleen boven/onder het gemiddelde van de reeks — NIET het hoogste/laagste punt — dus beweer bij die kind nooit dat het om een record, uitschieter, hoogste- of laagste punt gaat. Laat het onderscheid in de toon van de zin doorklinken zonder een richting te beweren die niet uit 'kind' volgt.",
     '8. Puur de constatering — geen inleiding, geen mening, geen bronvermelding. Eén zin, aantrekkelijk voor een nieuwsbericht.',
     "9. Antwoord met EXACT één entry per finding-id uit het blok GEGEVENS — geen ontbrekende, geen verzonnen ids.",
   ].join('\n');

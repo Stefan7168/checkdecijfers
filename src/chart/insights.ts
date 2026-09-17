@@ -14,7 +14,15 @@
 // discipline, "keep user-typed text out of the phrasing prompt").
 import type { ChartPoint, ChartSpec } from './types.ts';
 
-export type FindingKind = 'recordHigh' | 'recordLow' | 'jumpUp' | 'jumpDown';
+// Session 110 addendum (ADR 041 — see the doc's "Session 110 addendum"
+// section): recordHigh/recordLow are reserved for the series' (or, for a
+// bar chart, the cross-series) ACTUAL extreme point — never any other
+// below-/above-mean point. aboveAverage/belowAverage cover every other
+// point that still ranks (a real z-score against the series' own mean) but
+// is not itself the min/max — labelling a mid-series point "Notable low"
+// when a later point is lower still is a false claim, even though no
+// number changes (R9: direction/ranking words must match the data).
+export type FindingKind = 'recordHigh' | 'recordLow' | 'aboveAverage' | 'belowAverage' | 'jumpUp' | 'jumpDown';
 
 export interface ScoredFinding {
   /** Stable per chart: `${kind}-${seriesKey}-${periodCode}`. */
@@ -84,12 +92,16 @@ function candidatesForSeries(seriesLabel: string, index: number, points: Plotted
     // in a low-variance series where its raw z-score would stay tiny.
     const isRecord = p === high || p === low;
     const score = isRecord ? Math.max(z, 1) : z;
-    // Above/below the series' OWN mean, not "is this literally the record"
-    // — a non-extreme point that still ranks (a real but non-record
-    // z-score) needs a kind too, and "high"/"low" framing is honest for
-    // either: it reads as "the record" only when it IS one (isRecord/score
-    // already guarantee a record always outranks a merely-elevated point).
-    const kind: FindingKind = p.value >= mean ? 'recordHigh' : 'recordLow';
+    // recordHigh/recordLow ONLY for the point that IS the series' actual
+    // max/min (`high`/`low` above already resolve a tie to the earliest
+    // occurrence, via the `>`/`<` reduce — the codebase's existing
+    // tie-break convention, reused here rather than reinvented). Every
+    // other point above/below the series' own mean is aboveAverage/
+    // belowAverage instead (session 110 addendum, ADR 041) — isRecord/score
+    // still guarantee a real record always outranks a merely-elevated
+    // point, but the KIND must not overclaim what a non-record point is.
+    const kind: FindingKind =
+      p === high ? 'recordHigh' : p === low ? 'recordLow' : p.value >= mean ? 'aboveAverage' : 'belowAverage';
     out.push({
       id: `${kind}-${key}-${p.periodCode}`,
       kind,
@@ -208,8 +220,12 @@ function comparisonCandidates(spec: ChartSpec): Scored[] {
     const z = sd > 0 ? Math.abs(bar.point.value - mean) / sd : 0;
     const isRecord = bar === high || bar === low;
     const score = isRecord ? Math.max(z, 1) : z;
-    // Above/below the cross-series mean — see the identical reasoning above.
-    const kind: FindingKind = bar.point.value >= mean ? 'recordHigh' : 'recordLow';
+    // recordHigh/recordLow ONLY for the actual highest/lowest bar — see the
+    // identical reasoning in candidatesForSeries above (session 110
+    // addendum, ADR 041). Every other bar is aboveAverage/belowAverage
+    // relative to the cross-series mean.
+    const kind: FindingKind =
+      bar === high ? 'recordHigh' : bar === low ? 'recordLow' : bar.point.value >= mean ? 'aboveAverage' : 'belowAverage';
     return {
       id: `${kind}-${key}`,
       kind,
