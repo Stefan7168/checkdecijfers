@@ -22,25 +22,36 @@
 // calls as a side effect, which would silently double-run that file's whole
 // suite inside this one — see stripe-fixtures.ts's header.)
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { handleStripeEvent } from '../../src/billing/stripe-webhook.ts';
 import { getBalance, reserveDebit } from '../../src/billing/ledger.ts';
 import { getBucketBalance } from '../../src/billing/pro-bucket.ts';
 import { hasProPlan } from '../../src/billing/pro.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import { WEBHOOK_SECRET, invoicePaidPayload, sign, subscriptionEventPayload } from '../helpers/stripe-fixtures.ts';
 
 // Per this codebase's own convention (every tests/billing/*.test.ts file
 // defines its own local withDb rather than sharing one) — see
 // tests/billing/stripe-webhook.test.ts, ledger.test.ts, pro.test.ts, etc.
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 describe('Pro subscription — full lifecycle', () => {

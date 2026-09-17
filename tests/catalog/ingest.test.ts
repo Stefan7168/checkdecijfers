@@ -1,11 +1,12 @@
 // Catalog-mirror ingest: hermetic (PGlite), against the real catalog fixture.
 // Proves idempotency and the timestamp-based prune of delisted tables.
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
 import type { CbsCatalogEntry, CbsSource } from '../../src/cbs-adapter/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { Db } from '../../src/db/types.ts';
 import { CBS_SOURCE_KEY } from '../../src/sources/registry.ts';
 
@@ -34,11 +35,14 @@ describe('ingestCatalog', () => {
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
   });
 
   it('ingests the real catalog fixture and is idempotent (re-run upserts, prunes nothing)', async () => {

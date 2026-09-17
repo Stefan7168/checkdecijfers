@@ -10,7 +10,7 @@
 //      to fail the insert or store unbounded blobs.
 //   4. Retention (90 days): count and purge share one WHERE (⟨F2⟩ — preview
 //      and apply can never disagree), purge DELETES and is idempotent.
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   countPurgeableErrorLog,
   ERROR_LOG_RETENTION_DAYS,
@@ -20,14 +20,25 @@ import {
 } from '../../src/db/error-log.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const REQ = '00000000-0000-4000-8000-000000000001';

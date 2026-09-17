@@ -5,7 +5,7 @@
 // respondToDatasetQuestion + getDatasetTurnsByThread round trip for the
 // integration tests, mirroring reconstruct.test.ts's own convention.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { lastChartState, replayDatasetTurns } from '../../src/attachments/replay.ts';
 import { getDatasetTurnsByThread } from '../../src/attachments/read.ts';
 import { deleteOneDataset } from '../../src/attachments/retention.ts';
@@ -15,15 +15,26 @@ import { insertDataset } from '../../src/attachments/store.ts';
 import type { ChartInstruction, DatasetTurnRecord, UserDataset } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { LlmClient, LlmRequest, LlmResponse } from '../../src/answer/llm/client.ts';
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 function baseRecord(overrides: Partial<DatasetTurnRecord> = {}): DatasetTurnRecord {

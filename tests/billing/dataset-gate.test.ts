@@ -10,13 +10,14 @@
 // skipping the reserve call entirely for that source kind (a `> 0` CHECK
 // constraint means "free" can never be a 0-credit row).
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chargeAndRunDataset } from '../../src/billing/dataset-gate.ts';
 import { getBalance } from '../../src/billing/ledger.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { AuditedDatasetTurn } from '../../src/billing/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 
 const DATASET_TURN_PRICE = 20; // docs/09-pricing.md reference value, matches pricing-defaults.ts
 
@@ -32,14 +33,24 @@ function fakeTurn(
   };
 }
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withPricedDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await applyPricingDefaults(db);
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await applyPricingDefaults(sharedDb);
+  await fn(sharedDb);
 }
 
 describe('chargeAndRunDataset — insufficient balance', () => {

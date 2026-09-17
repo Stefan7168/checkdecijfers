@@ -200,3 +200,148 @@ beforeEach(() => db.query('truncate credit_transactions, trial_questions restart
 3. **Build the shared reset helper and sweep every remaining call site by its hook**, generalizing action
    1 — this is the piece that needs the owner's answers to the three questions above before it's worth
    scheduling as real work, since it's 1–3 days rather than a few hours.
+
+## Action 3 as-built (session 110, branch `s110/tinfra`)
+
+Built as a scoped, parallel subagent task (`docs/open-questions.md` #245), independently of the owner's
+3 sub-questions above (which still only gate the CI-sharding tier). Everything below is measured, not
+projected — every number traces to an individual `npx vitest run <file> --maxWorkers=1` run, one before
+the conversion and one after, on the same 8GB machine with other agents running in parallel.
+
+**The helper.** `tests/helpers/reset-db.ts` exports one function:
+
+```ts
+resetTestDb(db: Db, opts?: { tables?: string[] }): Promise<void>
+```
+
+It reads `pg_tables` for the `public` schema (excluding `schema_migrations`) once per db instance
+(cached in a `WeakMap<Db, string[]>`), `TRUNCATE`s all of them with `RESTART IDENTITY CASCADE`, then
+re-inserts the two rows a migration itself seeds at table-creation time (not test fixtures) so a reset
+reproduces "freshly migrated," not merely "empty": `signup_grant_config` (migration 005, `credits=100`)
+and `trial_pot_config` (migration 020, `remaining_questions=0, cap=0`). No `createIngestedDb()`-based
+file in the allowed directories needed the ingested-db variant the brief sketched (Action 3 step 1's
+"boot+ingest once, restore only mutable tables") — the two in-scope users of `createIngestedDb()`
+(`tests/registry/coverage.test.ts`, `tests/catalog/current-status.test.ts`) already booted once per file
+via `beforeAll` with no per-test reset at all, and stayed untouched.
+
+**The sweep.** 40 files converted, spanning `tests/attachments/` (8), `tests/billing/` (11),
+`tests/catalog/` (4), `tests/db/` (13), `tests/registry/` (1), `tests/threads/` (3). Two source shapes
+existed, both converted the same way (boot in `beforeAll`, `resetTestDb()` in `beforeEach`, no per-test
+`createTestDb()`/`close()` left):
+  - A literal `beforeEach(() => createTestDb())` / `afterEach(() => close())` pair (the shape Action 1
+    fixed in `ledger.test.ts`/`ingestion.test.ts`).
+  - A per-test `withDb`/`withPricedDb`-style helper function that every `it()` calls, which boots and
+    closes internally — grep-invisible as a "per-test boot" the way a literal `beforeEach` is, exactly
+    the trap Action 2-A's own note warned about ("a call sitting inside `beforeEach` looks identical to
+    one inside `beforeAll` by a plain grep"). 30 of the 40 files shared a byte-identical `withDb` body
+    (verified by hashing each), converted mechanically with a one-off script; the rest (two
+    `withPricedDb` files, `pricing.test.ts`'s 7 inline per-`it()` boots, `registry.test.ts`'s
+    `registeredDb()` helper, four `tests/catalog/` files with describe-scoped setup, `trial-pot.test.ts`'s
+    file-level hooks) were hand-converted.
+  - Two describes turned out to be read-only against `findTable()` (no `db.query` writes at all):
+    `tests/catalog/find-replay.test.ts`'s whole file, and the first describe (`'findTable routing'`) in
+    `tests/catalog/find.test.ts`. Both boot+ingest ONCE per describe (`beforeAll`) with **no** per-test
+    reset at all, since nothing mutates state. Every other converted describe (including `find.test.ts`'s
+    second, DDL-adjacent describe and all three in `recall.test.ts`) still resets per test, since their
+    tests insert/delete rows.
+
+**Measured, summed across the 40 files: 795.7s → 200.3s, a 4.0x aggregate speedup.** Individual files
+ranged from 18x (`tests/attachments/retention.test.ts`, 56.0s → 3.1s) down to a single file that got
+marginally *slower* (`tests/billing/pro-subscription-e2e.test.ts`, 3.6s → 6.1s, one test only — boot
+cost dominates either way for a one-test file, and the "after" run likely hit more contention from the
+other parallel sessions this ran alongside; not a regression worth chasing). Full per-file numbers, one
+row per converted file (before/after wall-clock from an individual `vitest run <file> --maxWorkers=1`
+run, and the resulting speedup):
+
+| File | Before | After | Speedup |
+|---|---|---|---|
+| `tests/attachments/audit.test.ts` | 12.17s | 5.16s | 2.4x |
+| `tests/attachments/file-store.test.ts` | 6.35s | 4.09s | 1.6x |
+| `tests/attachments/read.test.ts` | 3.35s | 3.42s | 1.0x |
+| `tests/attachments/reconstruct.test.ts` | 11.98s | 3.23s | 3.7x |
+| `tests/attachments/replay.test.ts` | 4.53s | 3.06s | 1.5x |
+| `tests/attachments/respond.test.ts` | 13.15s | 2.86s | 4.6x |
+| `tests/attachments/retention.test.ts` | 55.99s | 3.08s | 18.2x |
+| `tests/attachments/store.test.ts` | 28.43s | 3.25s | 8.7x |
+| `tests/db/error-log.test.ts` | 12.38s | 2.97s | 4.2x |
+| `tests/db/migration-012.test.ts` | 41.23s | 3.58s | 11.5x |
+| `tests/db/migration-013.test.ts` | 6.65s | 2.63s | 2.5x |
+| `tests/db/migration-015.test.ts` | 8.56s | 4.65s | 1.8x |
+| `tests/db/migration-016.test.ts` | 6.38s | 2.67s | 2.4x |
+| `tests/db/migration-017.test.ts` | 5.91s | 2.65s | 2.2x |
+| `tests/db/migration-018.test.ts` | 21.34s | 3.22s | 6.6x |
+| `tests/db/migration-024.test.ts` | 7.52s | 4.35s | 1.7x |
+| `tests/db/migration-026.test.ts` | 22.86s | 5.73s | 4.0x |
+| `tests/db/migration-027.test.ts` | 32.62s | 5.47s | 6.0x |
+| `tests/db/migration-030.test.ts` | 67.52s | 8.12s | 8.3x |
+| `tests/db/migration-032.test.ts` | 10.22s | 6.42s | 1.6x |
+| `tests/db/migration-033.test.ts` | 7.68s | 5.13s | 1.5x |
+| `tests/threads/dataset-threads.test.ts` | 15.40s | 12.75s | 1.2x |
+| `tests/threads/replay.test.ts` | 14.11s | 3.87s | 3.7x |
+| `tests/threads/threads.test.ts` | 76.67s | 6.90s | 11.1x |
+| `tests/billing/creator-email.test.ts` | 10.89s | 4.31s | 2.5x |
+| `tests/billing/history.test.ts` | 74.78s | 6.30s | 11.9x |
+| `tests/billing/ledger-split.test.ts` | 14.21s | 7.78s | 1.8x |
+| `tests/billing/pro-bucket.test.ts` | 9.82s | 6.99s | 1.4x |
+| `tests/billing/pro-subscription-e2e.test.ts` | 3.59s | 6.05s | 0.6x |
+| `tests/billing/stripe-webhook.test.ts` | 45.81s | 4.31s | 10.6x |
+| `tests/billing/pro.test.ts` | 8.60s | 3.80s | 2.3x |
+| `tests/billing/dataset-gate.test.ts` | 10.51s | 3.15s | 3.3x |
+| `tests/billing/gate.test.ts` | 10.50s | 3.24s | 3.2x |
+| `tests/billing/pricing.test.ts` | 8.43s | 3.12s | 2.7x |
+| `tests/billing/trial-pot.test.ts` | 13.95s | 5.02s | 2.8x |
+| `tests/registry/registry.test.ts` | 6.70s | 6.12s | 1.1x |
+| `tests/catalog/ingest.test.ts` | 12.80s | 10.22s | 1.3x |
+| `tests/catalog/find-replay.test.ts` | 16.67s | 5.21s | 3.2x |
+| `tests/catalog/find.test.ts` | 22.23s | 7.22s | 3.1x |
+| `tests/catalog/recall.test.ts` | 33.25s | 8.20s | 4.1x |
+| **TOTAL (40 files)** | **795.7s** | **200.3s** | **4.0x** |
+
+`dataset-threads.test.ts`'s modest 1.2x and `registry.test.ts`'s 1.1x reflect the two hazard fixes above
+(a private per-test boot re-added for the DDL test) and the `registeredDb()`-style helper's own
+re-registration cost (cheap relative to a PGlite boot, but not free) respectively — both still net wins,
+just smaller than the pure-`TRUNCATE` cases.
+
+**Two real correctness bugs found and fixed while sweeping, not just perf regressions:**
+
+1. **`tests/threads/threads.test.ts` and `tests/threads/dataset-threads.test.ts`** each have one test
+   that runs schema DDL (`alter table chat_threads drop column dataset_id`; `drop table if exists
+   user_datasets cascade`) to reproduce the real pre-migration-026 production shape (the #154-class bug
+   from session 86). `resetTestDb()` only `TRUNCATE`s — it cannot undo a dropped column or table — so on
+   a shared instance that DDL would permanently break every test that runs after it in the same file.
+   `dataset-threads.test.ts`'s version happened to be the LAST test in the file (masking the bug — it
+   passed by ordering accident), but `threads.test.ts`'s version was NOT last and failed 16 of 33 tests
+   the moment the conversion ran, with a "relation user_datasets does not exist" error surfacing several
+   tests later. Fix: both tests now keep their own private, freshly-migrated `createTestDb()` instead of
+   the file's shared one — exactly what every test in these files did before this conversion — with a
+   comment explaining why.
+2. **`tests/billing/creator-email.test.ts`** has two different tests that each `create schema auth;
+   create table auth.users (...)` from scratch (the file's whole premise is "no auth schema by default").
+   `resetTestDb()` only touches the `public` schema, so on a shared instance the second such test would
+   throw "already exists". Fix: this file's own `beforeEach` runs `drop schema if exists auth cascade`
+   after the shared reset, restoring "no auth schema at all" before every test.
+
+Both are the exact class of hazard Action 2-A's write-up anticipated ("watch for a file whose tests
+share state deliberately") — neither was a case of deliberately shared state, but of a per-test
+mutation the generic `TRUNCATE`-only reset structurally cannot reverse (DDL, or a schema outside
+`public`). Any FUTURE file added to the shared-db pattern should be checked for the same two hazards:
+does any test run DDL (`drop`/`alter`/`create table`), and does any test touch a schema other than
+`public`.
+
+**Deliberately left on the old per-test-boot path, with reasons:**
+  - `tests/db/fixture-snapshot.test.ts` — this file's entire purpose is proving `createIngestedDb()`
+    hands out ISOLATED databases per call; converting it to a shared instance would falsify the very
+    property it tests.
+  - `tests/registry/coverage.test.ts`, `tests/catalog/current-status.test.ts` — already boot once per
+    file via `beforeAll` with no per-test reset (read-only against the ingested fixture); no conversion
+    needed.
+  - `tests/sources/`, `tests/websearch/`, `tests/docs/` — no `createTestDb()`/`createIngestedDb()` call
+    sites at all; nothing to convert.
+  - Out of scope for this task (other agents' concurrent work): `tests/answer/`, `tests/audit/`,
+    `tests/ingestion/`, `tests/query/`, `tests/chart/`, `tests/invariants/`, `tests/benchmark/` — a
+    follow-up sweep should cover these the same way.
+
+**Not done:** the branch (`s110/tinfra`) has not been merged to `main`; `npm run typecheck` is clean and
+all 40 converted files pass individually, but the full backend suite / CI has not been run against this
+branch. The owner's 3 sub-questions from Action 2 are unaffected by this action and remain open for the
+CI-sharding tier specifically.

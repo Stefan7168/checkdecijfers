@@ -4,7 +4,7 @@
 // "Fixed in review" redaction completeness (question/final_text, not just
 // the envelope sentinel), and the two-cutoff purge never double-counting.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   countPurgeableDatasets,
   deleteOneDataset,
@@ -19,15 +19,26 @@ import { getDataset, insertDataset, insertDatasetTurn } from '../../src/attachme
 import { REDACTED_DATASET_TEXT } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const MINIMAL_PROFILE: DatasetProfile = { columns: [], rowCount: 0 };
