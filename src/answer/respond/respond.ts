@@ -18,7 +18,13 @@ import {
   type QueryOutcome,
   type ValidatedResult,
 } from '../../query/index.ts';
-import { buildAlternateReading, buildChartSpec, buildPeriodChangeReading, isPeriodChangeEligible } from '../../chart/index.ts';
+import {
+  buildAlternateReading,
+  buildChartSpec,
+  buildPeriodChangeReading,
+  composeAlternatePeriodChangeLabel,
+  isPeriodChangeEligible,
+} from '../../chart/index.ts';
 import type { ChartSpec } from '../../chart/index.ts';
 import { composeAnswer, type ComposeOptions } from '../compose/index.ts';
 import { parseQuestion, type ParseQuestionOptions } from '../intent/parse.ts';
@@ -506,7 +512,31 @@ export async function respondToIntent(
   if (chart !== null) {
     for (const alt of (result.attribution.alternates ?? []).slice(0, 4)) {
       const outcome = await buildAlternateReading(db, result, parse.intent, alt);
-      if (outcome.ok) chartAlternates.push(outcome.result);
+      if (!outcome.ok) continue;
+      // Explicit pick, never a spread: outcome.result also carries
+      // `validated` (#254(a) below) — the stored envelope must stay
+      // byte-identical to before this addendum for every alternate that
+      // doesn't carry the marker, so only the two original keys ever reach
+      // chartAlternates.
+      chartAlternates.push({ label: outcome.result.label, spec: outcome.result.spec });
+      // #254(a), ADR 052 session 110 addendum: a registry alternate can
+      // itself be marked periodChangeEligible (today: the three household-
+      // income concepts) on the SAME grounds ADR 052 D3 checked for the
+      // primary — a person reviewed that alternate's own data, not an
+      // inference from the primary's eligibility. When it is, offer ONE
+      // extra dropdown entry: the period-change reading of THIS alternate's
+      // own already-built result (never a third query — buildPeriodChangeReading
+      // is a pure transform of `outcome.result.validated`'s own cells).
+      // Best-effort, same degrade-on-refusal contract as everywhere else.
+      if (alt.periodChangeEligible === true) {
+        const altPctOutcome = buildPeriodChangeReading(outcome.result.validated);
+        if (altPctOutcome.ok) {
+          chartAlternates.push({
+            label: composeAlternatePeriodChangeLabel(alt.label, altPctOutcome.result.label),
+            spec: altPctOutcome.result.spec,
+          });
+        }
+      }
     }
     // ADR 052 (#254's level-vs-%-change gap): a DIFFERENT mechanism from the
     // registry-alternates loop above — no re-query, a pure transform of

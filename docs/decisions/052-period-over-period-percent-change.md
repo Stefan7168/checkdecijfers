@@ -364,3 +364,98 @@ The four questions this ADR originally asked, and how each was resolved (see
    parser's recorded LLM fixtures project-wide (see "PPI alternate:
    investigated and consciously NOT added" above) — logged as an
    owner-supervised follow-up in open-questions #254 instead.
+
+## Session 110 as-built addendum — #254(a) alternates eligibility
+
+**Built:** the three `average_disposable_household_income` registry
+alternates (primair/bruto/gestandaardiseerd inkomen, dims
+`{Inkomensbegrippen: 'A043964'/'A043965'/'A043967'}`,
+`src/registry/defaults.ts` ~lines 316-333) marked
+`periodChangeEligible: true` — the "Future scope" item D3 above deliberately
+left open, now resolved on the real-data check session 109 already ran and
+recorded in [open-questions #254](../open-questions.md) (verified against
+the committed `83932NED` fixture: same measure/unit as the primary, no
+CBS-published mutation sibling, 14 non-null strictly-positive yearly values
+per concept, 2011JJ00-2024JJ00). This session added no new data
+verification — it implemented the mechanism the D3 note said was still
+missing.
+
+**Mechanism — an optional per-alternate marker, not a parallel eligibility
+set.** `CanonicalMeasureAlternate` (`src/registry/types.ts`) and its runtime
+mirror `AttributionAlternate` (`src/query/types.ts`) both gained an optional
+`periodChangeEligible?: true` field, round-tripped unchanged through
+`canonical_measures.alternates` (registry/apply.ts's existing
+`JSON.stringify`/`resolve.ts`'s existing `parseJsonb` — no migration, no new
+column: the JSONB shape already carries whatever keys the registry writes).
+This was chosen over option (b) from the open-questions note (a parallel
+`(key, dims)`-keyed set) because it keeps the eligibility fact on the same
+object the label/dims already live on — one lookup, not two structures that
+could drift out of sync — and it is the "cheapest mechanism first" choice:
+zero new lookup machinery, reusing the exact discipline
+`PERIOD_CHANGE_ELIGIBLE_KEYS` already established (a human-reviewed marker,
+never inferred from the primary's own eligibility or from live data).
+
+**Wiring — `src/answer/respond/respond.ts`'s existing registry-alternates
+loop gained one more step, not a parallel loop.** For each alternate that
+`buildAlternateReading` already resolves successfully, if that alternate's
+own registry entry carries the marker, its own already-built `ValidatedResult`
+(not the primary's) is fed through the SAME `buildPeriodChangeReading` the
+primary's own period-change entry uses — no third query, matching D4's
+"pure transform of already-fetched cells" design. This required extending
+`AlternateReadingResult` (`src/chart/alternate-reading.ts`) with one
+additive field, `validated: ValidatedResult` (the `altOutcome` the function
+already had in scope), so a caller can reach the alternate's own cells
+without a second `runQuery`. **Byte-identical envelope, verified, not just
+argued:** respond.ts explicitly picks `{label, spec}` out of
+`buildAlternateReading`'s result rather than pushing it wholesale — the new
+`validated` field never reaches `AnswerResponse.chartAlternates`, confirmed
+by a new assertion in `tests/answer/respond-pipeline.test.ts` (B4's entry's
+own keys are exactly `['label', 'spec']`).
+
+**Label composition — reuses, never re-derives, the phrase-builder.** A new
+`composeAlternatePeriodChangeLabel(altLabel, standaloneLabel)`
+(`src/chart/period-change.ts`) takes the alternate's own registry label
+("primair inkomen") and the exact standalone label
+`buildPeriodChangeReading` already returned for that same call
+("Procentuele verandering t.o.v. vorig jaar"), decapitalizing the latter to
+read as a suffix: "primair inkomen — procentuele verandering t.o.v. vorig
+jaar". It does not re-derive the grain phrase itself (no new import of the
+internal `PREVIOUS_PERIOD_PHRASE` table) — the one phrase-builder the ADR's
+owner-delegated decision #3 established stays the single source, so the
+alternate's wording can never drift from the primary's.
+
+**D6's cap is unchanged and now compounds as designed.** Household income
+can now surface up to 8 `chartAlternates` entries for one answer: the
+primary chart is separate; up to 4 registry alternates (it has exactly 3);
+the primary's own period-change entry (already eligible via
+`PERIOD_CHANGE_ELIGIBLE_KEYS`); and up to 3 more period-change entries, one
+per eligible alternate. This was a known consequence of D6's own "flat +1,
+not folded into the cap" framing applied per-alternate rather than only to
+the primary — no new cap was added, since nothing in the brief or D6 called
+for one and the dropdown UI (unchanged, ADR 051 D5) already lists an
+arbitrary number of entries.
+
+**Not done, and why:** no live-database registry sync was run from this
+session (a git worktree with no database access) — the marker exists in
+`src/registry/defaults.ts` and will reach the live `canonical_measures`
+table the next time the ordinary registry-apply mechanism runs (the same
+path every other registry edit already takes; not a new deploy step this
+change invented). No new LLM intent fixture was recorded — the hermetic
+proof (`tests/chart/period-change.test.ts`) queries `average_disposable_
+household_income` directly via `runQuery`/`buildAlternateReading` rather
+than through `respondToQuestion`'s LLM-fixture-replay layer, since no
+committed benchmark task asks a multi-period household-income question
+(session 109's own #254 note already flagged the fixture-invalidation risk
+of any registry vocabulary change — this change adds no new key, measure,
+dims, or label text, only a boolean flag never read by the intent-parser
+prompt builder, so no fixture was at risk and none was touched).
+
+**Tests added:** `tests/registry/registry.test.ts` (marker pinned to
+exactly the 3 income alternates, nothing else); `tests/chart/period-change.
+test.ts` (a new describe block proving each of the 3 alternates yields a
+real, non-null %-change reading of its OWN data, and that a control measure
+whose alternate lacks the marker — `bankruptcies_businesses` — never carries
+it); `tests/answer/respond-pipeline.test.ts` (the byte-identical-envelope
+regression guard above). `tests/audit/envelope-key-manifest.test.ts`
+re-run clean (unaffected — it manifests top-level `AnswerResponse`/
+`ComposedAnswer` keys, not nested `Attribution.alternates` fields).

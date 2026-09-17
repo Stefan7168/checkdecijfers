@@ -320,10 +320,17 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     dims: { Inkomensbegrippen: 'A043966' },
     definitionLabel: 'gemiddeld besteedbaar inkomen van huishoudens',
     everydayTerms: ['besteedbaar inkomen', 'huishoudinkomen'],
+    // #254(a), ADR 052 session 110 addendum: session 109 (docs/open-
+    // questions.md #254) already verified all three alternates against the
+    // committed fixture (83932NED, measure M003239, 2011-2024JJ00) — same
+    // measure/unit as the primary, no CBS-published mutation sibling, every
+    // yearly value non-null and strictly positive for all three concepts —
+    // the same bar ADR 052 D3's 7 primary-measure entries were held to. So
+    // all three are marked periodChangeEligible here.
     alternates: [
-      { dims: { Inkomensbegrippen: 'A043964' }, label: 'primair inkomen' },
-      { dims: { Inkomensbegrippen: 'A043965' }, label: 'bruto inkomen' },
-      { dims: { Inkomensbegrippen: 'A043967' }, label: 'gestandaardiseerd inkomen' },
+      { dims: { Inkomensbegrippen: 'A043964' }, label: 'primair inkomen', periodChangeEligible: true },
+      { dims: { Inkomensbegrippen: 'A043965' }, label: 'bruto inkomen', periodChangeEligible: true },
+      { dims: { Inkomensbegrippen: 'A043967' }, label: 'gestandaardiseerd inkomen', periodChangeEligible: true },
     ],
     notes: 'Not a canonical-default choice: "besteedbaar inkomen" names the Inkomensbegrip directly, no ambiguity to resolve.',
   },

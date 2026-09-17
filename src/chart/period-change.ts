@@ -46,6 +46,22 @@ export function periodChangeReadingLabel(grain: PeriodGrain): string {
   return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
+/** #254(a), ADR 052 session 110 addendum: composes the dropdown label for a
+ * period-change reading of a registry ALTERNATE (not the primary) — the
+ * alternate's own registry label ("primair inkomen") followed by the SAME
+ * standalone phrase `periodChangeReadingLabel` already produced for the
+ * primary's own period-change entry, decapitalized to read naturally as a
+ * suffix after an em dash ("primair inkomen — procentuele verandering
+ * t.o.v. vorig jaar"). Takes the standalone label a real
+ * `buildPeriodChangeReading` call already returned (never re-derives the
+ * grain phrase itself) so the phrase can never drift from the one the
+ * primary's own reading uses — the same single-phrase-builder discipline the
+ * ADR's owner-delegated decision #3 established. */
+export function composeAlternatePeriodChangeLabel(alternateLabel: string, standaloneLabel: string): string {
+  const suffix = standaloneLabel.charAt(0).toLowerCase() + standaloneLabel.slice(1);
+  return `${alternateLabel} — ${suffix}`;
+}
+
 export interface PeriodChangeReadingResult {
   label: string;
   spec: ChartSpec;

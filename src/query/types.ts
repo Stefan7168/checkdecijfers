@@ -205,6 +205,13 @@ export interface AttributionAlternate {
   /** Present when the alternate differs by dimension coordinate(s). */
   dims?: Record<string, string>;
   label: string;
+  /** #254(a), ADR 052 session 110 addendum: mirrors registry/types.ts's
+   * CanonicalMeasureAlternate.periodChangeEligible — carried through
+   * unchanged from canonical_measures.alternates (resolve.ts reads the JSONB
+   * column as-is, no reconstruction). When true, src/answer/respond/
+   * respond.ts also offers a period-over-period %-change reading of THIS
+   * alternate's own built result, alongside its plain toggle entry. */
+  periodChangeEligible?: true;
 }
 
 /** R4: what every answer must display, carried in the result so no rendering
