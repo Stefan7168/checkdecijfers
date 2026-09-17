@@ -17,6 +17,7 @@ import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import { CHART_TEMPLATES, templateById, type ChartTemplateId } from '../lib/chart-templates.ts';
 import { GALLERY_STORIES } from '../backend/chart/index.ts';
 import { ChartView } from './chart.tsx';
+import { Skeleton } from './ui/skeleton.tsx';
 
 /** Every gallery slug's chosen "look" (src/chart/curated.ts's `look` field,
  * kept as a bare string there per the src/-never-imports-web/lib module
@@ -66,6 +67,32 @@ function GalleryCard({
   );
 }
 
+/** #3 (session 110 UX audit): the honest "still loading" state for a cold
+ * read (web/lib/deadline.ts's ANONYMOUS_READ_DEADLINE_MS degrade, #190) —
+ * replaces the old silent `return null`, which on a slow serverless cold
+ * start rendered the /galerij heading/intro/CTA with zero cards (and made
+ * the landing's teaser vanish outright) with no skeleton and no message, so
+ * the page read as broken rather than loading. The placeholder cards are
+ * aria-hidden (loading-skeletons.tsx's own convention: nothing new for a
+ * screen reader to announce until real content lands); the note itself is
+ * a normal, announced paragraph so a reader who reloads knows why.
+ * `count` mirrors the caller's own card count (full grid vs. teaser). */
+function GalleryLoadingRow({ lang, count }: { lang: Lang; count: number }) {
+  return (
+    <div>
+      <div className={`grid gap-6 ${count > 1 ? 'lg:grid-cols-2' : ''}`} aria-hidden="true">
+        {Array.from({ length: count }, (_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5 sm:p-6">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-4 h-48 w-full" />
+          </div>
+        ))}
+      </div>
+      <p className="mt-4 text-sm text-muted-foreground">{t(lang, 'gallery.loadingNote')}</p>
+    </div>
+  );
+}
+
 function CardGrid({
   charts,
   lang,
@@ -86,24 +113,32 @@ function CardGrid({
 
 /** The full gallery grid — every built story, the first pre-opened as the
  * worked example. Fail-safe like the Ontdek section (ADR 035): no stories
- * built (e.g. a cold DB) renders as nothing, never a broken empty grid. */
+ * built (e.g. a cold DB, or a build still in flight — #190) never renders a
+ * broken empty grid — it renders GalleryLoadingRow's honest placeholder
+ * instead of the old silent `null`. */
 export async function GalleryGrid() {
   const [charts, lang] = await Promise.all([getGalleryStories(), getLang()]);
-  if (charts.length === 0) return null;
+  if (charts.length === 0) return <GalleryLoadingRow lang={lang} count={2} />;
   return <CardGrid charts={charts} lang={lang} />;
 }
 
 /** The landing's gallery teaser (WP-E): the first three stories, compact
  * (question + chart, no Insights pre-opened), plus a link to the full
- * gallery. */
+ * gallery. #3 (session 110 UX audit): the section itself (heading + link)
+ * always renders now — only the card area degrades to GalleryLoadingRow —
+ * so a cold read no longer makes the whole teaser vanish from the landing
+ * page. */
 export async function GalleryTeaser() {
   const [charts, lang] = await Promise.all([getGalleryStories(), getLang()]);
-  if (charts.length === 0) return null;
   return (
     <section className="border-b border-border py-12">
       <h2 className="text-2xl text-foreground">{t(lang, 'gallery.teaserHeading')}</h2>
       <div className="mt-6">
-        <CardGrid charts={charts.slice(0, 3)} lang={lang} compact />
+        {charts.length === 0 ? (
+          <GalleryLoadingRow lang={lang} count={3} />
+        ) : (
+          <CardGrid charts={charts.slice(0, 3)} lang={lang} compact />
+        )}
       </div>
       <Link href="/galerij" className="mt-6 inline-block font-medium text-primary hover:underline">
         {t(lang, 'gallery.teaserAllLink')}

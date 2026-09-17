@@ -14,7 +14,7 @@
 // exists in the DOM once open). Closed by default (D1: inline disclosure,
 // not a side panel).
 import { ShieldCheck } from 'lucide-react';
-import { memo, useId, useState } from 'react';
+import { memo, useEffect, useId, useRef, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
 import type { AnswerProof as AnswerProofData, RequestUrlsByBatch } from '../lib/answer-proof.ts';
@@ -170,6 +170,19 @@ export const AnswerProof = memo(function AnswerProof({
   const panelId = useId();
   const t = useT();
   const triggerLabel = proof.cells.length === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
+  // #9 (session 110 UX audit): "Prove these numbers" — the product's own
+  // namesake trust action — used to open this panel below the fold with no
+  // scroll, leaving only a grey strip visible behind the composer. Guarded
+  // for jsdom (no scrollIntoView there without a test's own stub, and no
+  // guarantee a future host environment has it either).
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (panel && typeof panel.scrollIntoView === 'function') {
+      panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [open]);
 
   return (
     <>
@@ -186,6 +199,7 @@ export const AnswerProof = memo(function AnswerProof({
       </Button>
       {open ? (
         <div
+          ref={panelRef}
           id={panelId}
           role="region"
           aria-label={t('answerProof.regionLabel')}

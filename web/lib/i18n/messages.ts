@@ -37,6 +37,11 @@ const nl = {
   // chat.tsx (the CBS chat loop). Task 2 (WP218 phase 4, #219).
   'chat.placeholder': 'Stel een vraag…',
   'chat.send': 'Verstuur',
+  // #20 (session 110 UX audit): the composer's near-the-cap character
+  // counter (e.g. "412/500") — language-neutral punctuation, kept as its
+  // own key (rather than hardcoded in chat.tsx) per this catalogue's own
+  // convention that every interface string lives here.
+  'chat.composerCounter': '{current}/{max}',
   'chat.copyCitation': 'Kopieer',
   'chat.copyCitationCopied': 'Gekopieerd!',
   'chat.downloadCsv': 'CSV',
@@ -825,6 +830,10 @@ const nl = {
   'gallery.intro':
     'Elke kaart hieronder is gebouwd uit officiële CBS-cijfers, met bron en datum erbij — door dezelfde deterministische motor die ook antwoorden geeft in de chat. Klik op Inzichten om te zien wat erin opvalt.',
   'gallery.embedComingSoon': 'Zelf inline insluiten komt binnenkort.',
+  // #3 (session 110 UX audit): shown instead of a silent empty grid while
+  // getGalleryStories() is still building its cache (a cold read, #190) —
+  // see gallery.tsx's GalleryLoadingRow.
+  'gallery.loadingNote': 'Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.',
   // Fix-wave finding 4: every title is now the QUESTION a reader would have
   // typed in chat — it demonstrates the positioning sentence directly and
   // never repeats the chart's own on-screen title one line below. The
@@ -907,6 +916,8 @@ const en: Messages = {
 
   'chat.placeholder': 'Ask a question…',
   'chat.send': 'Send',
+  // #20 (session 110 UX audit): see the nl entry's comment.
+  'chat.composerCounter': '{current}/{max}',
   'chat.copyCitation': 'Copy',
   'chat.copyCitationCopied': 'Copied!',
   'chat.downloadCsv': 'CSV',
@@ -1504,6 +1515,8 @@ const en: Messages = {
   'gallery.intro':
     'Every card below is built from official CBS figures, with source and date shown — by the same deterministic engine that answers questions in chat. Click Insights to see what stands out.',
   'gallery.embedComingSoon': 'Inline embedding of your own is coming soon.',
+  // #3 (session 110 UX audit): see the nl entry's comment.
+  'gallery.loadingNote': 'Loading the gallery — reload in a moment if it stays empty.',
   // Fix-wave finding 4: every title is the QUESTION a reader would have
   // typed — the separate "lead" line was dropped, the question says it.
   'gallery.story.consumentenvertrouwen.title': 'How optimistic are the Dutch?',

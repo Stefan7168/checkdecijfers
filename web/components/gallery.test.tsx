@@ -144,10 +144,14 @@ describe('GalleryGrid', () => {
     scanForUnboundDigits(container, strings);
   });
 
-  it('renders nothing when no stories built (fail-safe, ADR 035 posture)', async () => {
+  // #3 (session 110 UX audit): a cold read used to render `null` here — the
+  // gallery heading/intro/CTA showed with zero cards and no explanation, so
+  // the page read as broken. Now it renders an honest loading placeholder
+  // instead (still fail-safe: never a broken empty grid, ADR 035 posture).
+  it('renders a loading placeholder (never a broken empty grid) when no stories are built yet', async () => {
     getGalleryStories.mockResolvedValue([]);
-    const result = await GalleryGrid();
-    expect(result).toBeNull();
+    render(await GalleryGrid());
+    expect(screen.getByText('Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.')).toBeInTheDocument();
   });
 
   it('renders in English too', async () => {
@@ -183,9 +187,14 @@ describe('GalleryTeaser', () => {
     }
   });
 
-  it('renders nothing when no stories built', async () => {
+  // #3 (session 110 UX audit): the whole teaser section (heading + link)
+  // used to disappear along with the cards on a cold read — now only the
+  // card area degrades, to the same loading placeholder GalleryGrid uses.
+  it('keeps the heading and link, and shows a loading placeholder instead of cards, when no stories are built yet', async () => {
     getGalleryStories.mockResolvedValue([]);
-    const result = await GalleryTeaser();
-    expect(result).toBeNull();
+    render(await GalleryTeaser());
+    expect(screen.getByText('Verhalen uit de galerij')).toBeInTheDocument();
+    expect(screen.getByText('Bezig met laden — vernieuw de pagina zo dadelijk als dit leeg blijft.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Alle verhalen' })).toHaveAttribute('href', '/galerij');
   });
 });

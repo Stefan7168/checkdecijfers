@@ -89,6 +89,21 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.queryByText(/<iframe/)).toBeNull();
   });
 
+  // #12 (session 110 UX audit): whether embedding is available is only known
+  // AFTER this server round trip (EMBED_TOKEN_SECRET is a server-only env
+  // check inside createEmbedCode) — there is no earlier render-time signal
+  // the BUTTON itself could gate on. The dialog stays the honest fallback,
+  // but the message reads as a disabled-state hint (muted), never as a red
+  // destructive error — the reader did nothing wrong.
+  it('styles the unavailable message as a neutral hint, not a red error', async () => {
+    createEmbedCode.mockResolvedValue({ ok: false, reason: 'unavailable' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    const message = await screen.findByText(/not available/i);
+    expect(message.className).not.toContain('text-destructive');
+    expect(message.className).toContain('text-muted-foreground');
+  });
+
   // Minor #3 (opus review): a rejected Server Action promise must not leave
   // the dialog stuck on "loading" forever with an unhandled rejection — it
   // should collapse to the same terminal 'unavailable' state as { ok: false }.

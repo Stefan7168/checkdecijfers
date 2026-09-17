@@ -7,10 +7,14 @@
 // for keyboard reachability) and that the toggle actually gates the
 // technical columns/suffixes.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AnswerProof as AnswerProofData, ProofCell } from '../lib/answer-proof.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { AnswerProof } from './answer-proof.tsx';
+
+// #9 (session 110 UX audit): jsdom does not implement scrollIntoView — same
+// stub chat.test.tsx/answer-proof-replay.test.tsx already use.
+Element.prototype.scrollIntoView = vi.fn();
 
 afterEach(cleanup);
 
@@ -124,6 +128,33 @@ describe('AnswerProof — open/close', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
     const region = screen.getByRole('region', { name: 'Onderbouwing van dit antwoord' });
     expect(region).toHaveClass('order-last', 'basis-full');
+  });
+
+  // #9 (session 110 UX audit): clicking "Prove these numbers" used to open
+  // the panel below the fold with no scroll — only a grey strip stayed
+  // visible behind the composer, for the product's own namesake trust
+  // action. Guarded for jsdom (no scrollIntoView in a real browser without
+  // the stub above either — chart-story-stage.tsx/visual-dock.tsx's own
+  // convention).
+  it('scrolls the opened panel into view', () => {
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    render(<AnswerProof proof={fakeProof()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    const region = screen.getByRole('region', { name: 'Onderbouwing van dit antwoord' });
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.instances[0]).toBe(region);
+    expect(spy).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' });
+  });
+
+  it('does not scroll again on a re-render while already open', () => {
+    const spy = vi.fn();
+    Element.prototype.scrollIntoView = spy;
+    const { rerender } = render(<AnswerProof proof={fakeProof()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    expect(spy).toHaveBeenCalledTimes(1);
+    rerender(<AnswerProof proof={fakeProof()} />);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('a second click closes the region again', () => {

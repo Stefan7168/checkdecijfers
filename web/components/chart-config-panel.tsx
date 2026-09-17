@@ -686,6 +686,15 @@ export interface ChartConfigPanelProps {
    * panel only reports the pick, it never resolves or applies anything
    * itself. Optional so every existing render call keeps compiling. */
   onApplyTemplate?: (id: ChartTemplateId) => void;
+  /** #6 (session 110 UX audit): true when the caller already renders its own
+   * Close control around this panel — chart.tsx's ChartEditModal wraps it in
+   * a real Dialog whose own X (ui/dialog.tsx's showCloseButton default) made
+   * this panel's own "Sluiten"/"Close" button a second, redundant close
+   * control in the same popup. Defaults to false so every other render call
+   * (this file's own test harness, with no surrounding Dialog) keeps its one
+   * and only Close button exactly as before. `closeAndRefocus` (Escape,
+   * keyboard) is unaffected either way — only the visible button is hidden. */
+  hideCloseButton?: boolean;
   /** R5.2 (journey WP-C, ADR 043 decision 6 revisit): when true AND
    * `resolved.pristine` (the per-chart override object is empty — no
    * template applied, no hand tweak yet) AND the templates tabpanel is
@@ -776,6 +785,7 @@ export function ChartConfigPanel({
   onFrameImage = () => {},
   onApplyTemplate,
   openTemplatesWhenPristine = false,
+  hideCloseButton = false,
 }: ChartConfigPanelProps): ReactNode {
   const copy = buildPanelCopy(lang);
   // ADR 043: which of the six named looks (if any) the resolved values
@@ -1255,9 +1265,11 @@ export function ChartConfigPanel({
             <option value="nl">{copy.languageNl}</option>
             <option value="en">{copy.languageEn}</option>
           </select>
-          <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
-            <X aria-hidden="true" />
-          </Button>
+          {!hideCloseButton ? (
+            <Button type="button" variant="ghost" size="sm" aria-label={copy.close} onClick={closeAndRefocus}>
+              <X aria-hidden="true" />
+            </Button>
+          ) : null}
         </div>
       </div>
 

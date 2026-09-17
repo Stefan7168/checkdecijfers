@@ -15,7 +15,7 @@
 import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
 import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { askQuestion, confirmOnboardingFetch, replyToClarification } from '../app/actions.ts';
 import type { AskOutcome } from '../app/actions.ts';
 import type { ConversationContext } from '../backend/answer/context/index.ts';
@@ -59,6 +59,7 @@ import { StatCard } from './stat-card.tsx';
 import { Button } from './ui/button.tsx';
 import { Card, CardContent, CardFooter } from './ui/card.tsx';
 import { Input } from './ui/input.tsx';
+import { Textarea } from './ui/textarea.tsx';
 
 // Session 87 visual redesign (owner decision, docs/superpowers/specs/
 // 2026-09-07-chat-chart-visual-redesign-design.md): the #75 example-question
@@ -73,7 +74,11 @@ const CHIP_BASE = 'inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5
 const CHIP_ON = `${CHIP_BASE} border-transparent bg-secondary text-foreground`;
 const CHIP_OFF = `${CHIP_BASE} border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground`;
 const CHIP_ACTION = `${CHIP_BASE} border-border bg-background text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60`;
-const CHIP_SOON = `${CHIP_BASE} border-dashed border-border bg-background text-muted-foreground opacity-60 disabled:cursor-not-allowed`;
+// #15 (session 110 UX audit): a static `cursor-not-allowed`, not the
+// `disabled:` pseudo-class variant — every CHIP_SOON button is aria-disabled
+// now (still focusable), never natively `disabled`, so the pseudo-class
+// would never apply.
+const CHIP_SOON = `${CHIP_BASE} border-dashed border-border bg-background text-muted-foreground opacity-60 cursor-not-allowed`;
 /** Follow-up chips (#73) and the docked-visual reference chip: pills under a message. */
 const PILL = 'rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground';
 
@@ -595,7 +600,7 @@ export function Chat({
   // #75 fill-don't-send convention, like every other example/follow-up
   // chip) and moves focus there so the click reads as "now edit or send",
   // not a silent no-op.
-  const composerInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
 
   // WP202b preview (owner request, session 86): "Link toevoegen" opens the
   // inline URL row the original design sketched (D10), so the intended flow
@@ -609,6 +614,17 @@ export function Chat({
   const [linkRowOpen, setLinkRowOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkComingSoon, setLinkComingSoon] = useState(false);
+
+  // #15 (session 110 UX audit): the "coming soon" chips below (Upload file
+  // when attachments is absent, Link sheet, Connect data) used to be native
+  // `disabled` buttons — dropped from the Tab order entirely, with their
+  // only explanation in a `title` tooltip a keyboard/screen-reader user can
+  // never reach. Each now stays focusable (aria-disabled, not disabled) and
+  // points via aria-describedby at one of these sr-only hint spans, which
+  // carries the SAME text as the button's own `title`.
+  const uploadFileHintId = useId();
+  const linkWithSheetHintId = useId();
+  const connectDatabaseHintId = useId();
 
   function handleLinkSubmit(e: React.FormEvent): void {
     e.preventDefault();
@@ -1564,27 +1580,43 @@ export function Chat({
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            disabled
-            title={t('chat.uploadFileComingSoonTitle')}
-            className={CHIP_SOON}
-          >
-            <Paperclip aria-hidden="true" className="size-3.5" />
-            {t('chat.uploadFile')}
-          </button>
+          <>
+            {/* #15: aria-disabled (not disabled) keeps this focusable; the
+              * click stays a no-op purely because no onClick is wired up. */}
+            <button
+              type="button"
+              aria-disabled="true"
+              aria-describedby={uploadFileHintId}
+              title={t('chat.uploadFileComingSoonTitle')}
+              className={CHIP_SOON}
+            >
+              <Paperclip aria-hidden="true" className="size-3.5" />
+              {t('chat.uploadFile')}
+            </button>
+            <span id={uploadFileHintId} className="sr-only">
+              {t('chat.uploadFileComingSoonTitle')}
+            </span>
+          </>
         )}
         {/* Session 90 (owner request, in chat): a "Link with sheet" entry
           * point BEFORE "Connect database" — a spreadsheet link (Google
           * Sheets and the like) is a different, lighter ask than a database
           * connection, so it gets its own chip. Same honest "coming soon"
-          * treatment as its neighbour: disabled with an explanatory title,
-          * no backend yet (WP202b territory). "Connect database"'s example
-          * moved from Google Sheets to a real database now that sheets have
-          * their own chip. */}
+          * treatment as its neighbour: aria-disabled with an explanatory
+          * title, no backend yet (WP202b territory). "Connect database"'s
+          * example moved from Google Sheets to a real database now that
+          * sheets have their own chip.
+          * #15's sr-only hint span sits BEFORE this button (not between it
+          * and "Connect database") so the "sits directly before" adjacency
+          * test below stays true — aria-describedby doesn't care about DOM
+          * order, only that the id resolves somewhere. */}
+        <span id={linkWithSheetHintId} className="sr-only">
+          {t('chat.linkWithSheetComingSoonTitle')}
+        </span>
         <button
           type="button"
-          disabled
+          aria-disabled="true"
+          aria-describedby={linkWithSheetHintId}
           title={t('chat.linkWithSheetComingSoonTitle')}
           className={CHIP_SOON}
         >
@@ -1593,13 +1625,17 @@ export function Chat({
         </button>
         <button
           type="button"
-          disabled
+          aria-disabled="true"
+          aria-describedby={connectDatabaseHintId}
           title={t('chat.connectDatabaseComingSoonTitle')}
           className={CHIP_SOON}
         >
           <Plug aria-hidden="true" className="size-3.5" />
           {t('chat.connectDatabase')}
         </button>
+        <span id={connectDatabaseHintId} className="sr-only">
+          {t('chat.connectDatabaseComingSoonTitle')}
+        </span>
       </div>
       {nothingSelected ? (
         <p className="text-xs text-destructive">{t('chat.nothingSelectedHint')}</p>
@@ -1636,21 +1672,48 @@ export function Chat({
         <p className="text-xs text-destructive">{uploadError}</p>
       ) : null}
       <form onSubmit={handleSubmit} className="flex gap-2">
-        <Input
-          ref={composerInputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder={
-            // WP26c: a RESCUE pending must not make the box look like it is
-            // waiting for an answer — nothing was asked. Only a real
-            // clarification round echoes its question here.
-            pending && pending.rescueOnly !== true ? pending.questionNl : t('chat.placeholder')
-          }
-          className="h-10 flex-1 bg-background px-3.5"
-        />
+        {/* #20 (session 110 UX audit): the composer used to be a single-line
+          * `<input maxlength=500>` — a realistic 291-character question
+          * showed only ~60 characters at a time (never wrapped) and the cap
+          * cut input silently, with no counter. An auto-growing textarea
+          * (min 1 row, capped around ~6 rows, then its own scrollbar) keeps
+          * the 500-char maxLength but makes a long question readable while
+          * typing it; Enter still sends (matching the old input's behavior),
+          * Shift+Enter inserts a newline instead. */}
+        <div className="relative flex-1">
+          <Textarea
+            ref={composerInputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // sendText already guards on busy/empty/nothingSelected —
+                // same no-op-when-not-ready behavior the Send button's own
+                // `disabled` gate gives it.
+                void sendText(input.trim());
+              }
+            }}
+            disabled={busy}
+            maxLength={500}
+            rows={1}
+            placeholder={
+              // WP26c: a RESCUE pending must not make the box look like it is
+              // waiting for an answer — nothing was asked. Only a real
+              // clarification round echoes its question here.
+              pending && pending.rescueOnly !== true ? pending.questionNl : t('chat.placeholder')
+            }
+            className="max-h-40 min-h-10 w-full resize-none overflow-y-auto bg-background px-3.5 py-2"
+          />
+          {/* Counter appears once the question is getting close to the cap
+            * — not on every keystroke from character 1, which would just be
+            * noise. */}
+          {input.length >= 400 ? (
+            <span className="pointer-events-none absolute bottom-1.5 right-2.5 text-xs text-muted-foreground tnum">
+              {t('chat.composerCounter', { current: input.length, max: 500 })}
+            </span>
+          ) : null}
+        </div>
         <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
           {t('chat.send')}
         </Button>
