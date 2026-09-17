@@ -154,6 +154,7 @@ export function UserChartView({ spec }: { spec: UserChartSpec }) {
           containerRef={containerRef}
           attributionText={`${spec.disclaimerLine} · checkdecijfers.nl`}
           filenameBase={`checkdecijfers-your-data-${spec.provenance.datasetId}`}
+          syncedAt={spec.provenance.capturedAt}
         />
       </div>
     </div>

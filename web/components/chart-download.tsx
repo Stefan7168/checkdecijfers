@@ -56,6 +56,10 @@ const HEADLINE_FONT_SIZE = 15;
 const FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE = 11;
 const HEADLINE_WIDTH_SCALE = FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE / HEADLINE_FONT_SIZE;
 const PNG_SCALE = 2;
+// #215: the "PNG, chart only (transparent)" export is explicitly asked to be
+// smaller than the default — scale 1 rather than PNG_SCALE's 2 — since it
+// carries no attribution to justify the extra resolution for. See ADR 053.
+const TRANSPARENT_PNG_SCALE = 1;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** What's needed to bake the on-screen frame into an export: the resolved
@@ -364,6 +368,46 @@ function buildAttributedClone(
   });
 
   return { clone, width, totalHeight };
+}
+
+/** #215: builds the "chart only" clone for the "PNG, chart only
+ * (transparent)" export — paint inlined and hover artifacts stripped exactly
+ * like buildAttributedClone, but WITHOUT the white background rect and
+ * WITHOUT any footer/headline text baked in — "just the chart itself", the
+ * owner's own words (open-questions #215). Deliberately ignores `frame` and
+ * `headlineText`: this option's whole point is an unstyled, transparent
+ * asset for pasting into other layouts, and baking a frame background or a
+ * caption into it would reintroduce exactly the styling choice it exists to
+ * opt out of (see ADR 053 for the reasoning and its trade-offs). Width/
+ * height stay the chart's own — no growth for a footer or headline that is
+ * never drawn here, unlike buildAttributedClone. */
+function buildBareClone(svg: SVGSVGElement, resolvePaint: PaintResolver): { clone: SVGSVGElement; width: number; height: number } {
+  const width = svg.clientWidth || Number(svg.getAttribute('width')) || 600;
+  const height = svg.clientHeight || Number(svg.getAttribute('height')) || 300;
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  // #222: resolved against the light theme, same as the attributed clone —
+  // see withLightThemeResolution's own doc comment.
+  withLightThemeResolution(() => inlineComputedPaint(svg, clone, resolvePaint));
+  // ADR 042: never bake a hover/tap cursor or active-dot artifact into a
+  // downloaded file — same reasoning as buildAttributedClone.
+  for (const cursor of clone.querySelectorAll('.recharts-tooltip-cursor, .recharts-active-dot')) cursor.remove();
+  clone.setAttribute('xmlns', SVG_NS);
+  clone.setAttribute('width', String(width));
+  clone.setAttribute('height', String(height));
+  clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  return { clone, width, height };
+}
+
+/** #215: the bare (unattributed) markup the "PNG, chart only (transparent)"
+ * export rasterizes from. Exported for direct testing, mirroring
+ * attributedSvgMarkup's own reason for being exported: constructing a plain
+ * SVG element needs no Recharts/ResizeObserver setup at all. */
+export function bareChartMarkup(
+  svg: SVGSVGElement,
+  resolvePaint: PaintResolver = defaultResolvePaint,
+): { markup: string; width: number; height: number } {
+  const { clone, width, height } = buildBareClone(svg, resolvePaint);
+  return { markup: new XMLSerializer().serializeToString(clone), width, height };
 }
 
 function svgEl(tag: string): Element {
@@ -752,6 +796,108 @@ function downloadPng(
   image.src = svgUrl;
 }
 
+// #215: the "PNG, chart only (transparent)" export — same SVG -> Image ->
+// canvas rasterization as downloadPng, but from the BARE (unattributed)
+// markup, at TRANSPARENT_PNG_SCALE (1, not PNG_SCALE's 2 — the owner asked
+// for a file roughly half the size), and with no canvas fill at all, so the
+// PNG's background stays transparent rather than the white ground downloadPng
+// always paints behind an unframed export.
+function downloadTransparentPng(svg: SVGSVGElement, filenameBase: string, onFailure: () => void): void {
+  const { markup, width, height } = bareChartMarkup(svg);
+  const svgUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+  const image = new Image();
+  image.onerror = () => {
+    URL.revokeObjectURL(svgUrl);
+    onFailure();
+  };
+  image.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width * TRANSPARENT_PNG_SCALE;
+    canvas.height = height * TRANSPARENT_PNG_SCALE;
+    const ctx = canvas.getContext('2d');
+    if (ctx === null) {
+      URL.revokeObjectURL(svgUrl);
+      onFailure();
+      return;
+    }
+    // Deliberately no ctx.fillRect here (downloadPng's canvasFill branch) —
+    // an untouched canvas is transparent, which is the whole point of this
+    // export.
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(svgUrl);
+    canvas.toBlob((png) => {
+      if (png === null) {
+        onFailure();
+        return;
+      }
+      triggerDownload(png, `${filenameBase}.png`);
+    }, 'image/png');
+  };
+  image.src = svgUrl;
+}
+
+// #215: PDF vector export — the SAME attributed (and, when framed, framed)
+// markup the SVG download serializes, so a PDF can never show different text
+// than the SVG (mirrors #170(3)'s "a PNG and an SVG of the same chart can
+// never show different text" invariant, extended to the third format).
+// jspdf + svg2pdf.js are loaded through a dynamic import so neither library
+// reaches the main bundle unless a user actually picks "Download as PDF"
+// (ADR 053). Page size is the exported SVG's own width/height in pt, no
+// margins — never a fixed paper size that would crop or pad the chart.
+// Known limitation (ADR 053): the SVG's web-font text falls back to
+// svg2pdf.js's own standard PDF fonts, so PDF text is not pixel-identical to
+// the on-screen/SVG/PNG typeface — accepted for v1.
+async function downloadPdf(
+  svg: SVGSVGElement,
+  attributionText: string,
+  filenameBase: string,
+  onFailure: () => void,
+  frame?: FrameExportInput,
+  headlineText?: string | null,
+): Promise<void> {
+  try {
+    const { markup, width, height } = framedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
+    const [{ jsPDF }, { svg2pdf }] = await Promise.all([import('jspdf'), import('svg2pdf.js')]);
+    // A plain `<div>.innerHTML = markup` (HTML parser, foreign-content SVG
+    // handling) rather than `DOMParser().parseFromString(markup,
+    // 'image/svg+xml')` (strict XML parser): buildAttributedClone's
+    // `clone.setAttribute('xmlns', SVG_NS)` lands as a plain attribute
+    // alongside the namespace declaration XMLSerializer already emits for a
+    // root SVG element, which XMLSerializer happily writes as two literal
+    // `xmlns="..."` occurrences — invalid XML strictly, but harmless to the
+    // lenient consumers this markup already had (an <img> decoding it as a
+    // blob URL, same as downloadPng/downloadSvg) until this PDF path tried
+    // to re-parse it as XML and a strict parser rejected the duplicate.
+    // Re-parsing via the HTML parser instead tolerates it exactly the way
+    // those existing consumers do, with no change to the shared markup
+    // builder both formats already depend on.
+    const container = document.createElement('div');
+    container.innerHTML = markup;
+    const element = container.querySelector('svg');
+    if (element === null) {
+      onFailure();
+      return;
+    }
+    const doc = new jsPDF({ orientation: width >= height ? 'l' : 'p', unit: 'pt', format: [width, height] });
+    await svg2pdf(element, doc, { x: 0, y: 0, width, height });
+    doc.save(`${filenameBase}.pdf`);
+  } catch {
+    onFailure();
+  }
+}
+
+/** #215: the measured YYYY-MM-DD portion of an ISO sync/capture timestamp —
+ * the same extraction source-badge.tsx's own `syncDateLabel` uses (a small
+ * local copy rather than importing that file, which would pull the source
+ * registry and i18n machinery into this leaf component for a two-line
+ * regex). Null when absent/unparseable — the chart-only filename then omits
+ * the date segment rather than guessing one (principle c: never guess). */
+function syncDateForFilename(syncedAt: string | null | undefined): string | null {
+  if (!syncedAt) return null;
+  const match = /^\d{4}-\d{2}-\d{2}/.exec(syncedAt);
+  return match ? match[0] : null;
+}
+
 const MENU_ITEM_CLASS = 'block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted';
 
 export function ChartDownloadMenu({
@@ -762,6 +908,7 @@ export function ChartDownloadMenu({
   frame,
   frameImage = null,
   headlineText = null,
+  syncedAt = null,
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
    * its own <svg> dynamically, so the live node is found at click time
@@ -785,8 +932,19 @@ export function ChartDownloadMenu({
    * keeps today's export byte-identical, and null/undefined both mean "no
    * headline to draw". */
   headlineText?: string | null;
+  /** #215: the ISO timestamp used to name the "PNG, chart only (transparent)"
+   * file — that export bakes in no attribution text, so the filename is how
+   * it stays traceable instead (`<filenameBase>-<YYYY-MM-DD>-chart-only.png`,
+   * ADR 053). Optional and defaults to null (an existing direct render with
+   * no `syncedAt` just omits the date segment) — never used by the other
+   * three (unchanged) export formats. */
+  syncedAt?: string | null;
 }) {
   const frameInput: FrameExportInput | undefined = frame === undefined ? undefined : { values: frame, image: frameImage };
+  const chartOnlyFilenameBase = `${filenameBase}${(() => {
+    const date = syncDateForFilename(syncedAt);
+    return date ? `-${date}` : '';
+  })()}-chart-only`;
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const menuId = useId();
@@ -794,6 +952,12 @@ export function ChartDownloadMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const secondItemRef = useRef<HTMLButtonElement>(null);
+  const thirdItemRef = useRef<HTMLButtonElement>(null);
+  const fourthItemRef = useRef<HTMLButtonElement>(null);
+  // #215: generalized from the old two-item first/second toggle so
+  // ArrowUp/ArrowDown keep cycling correctly now that the menu has four
+  // items (PNG, SVG, PDF, PNG chart-only) — order matches the rendered menu.
+  const itemRefs = [firstItemRef, secondItemRef, thirdItemRef, fourthItemRef];
 
   // WAI-ARIA menu button: focus lands on the first item when the menu opens.
   useEffect(() => {
@@ -823,11 +987,14 @@ export function ChartDownloadMenu({
     if (event.key === 'Escape') {
       event.preventDefault();
       closeAndRefocus();
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault();
-      const next = document.activeElement === firstItemRef.current ? secondItemRef : firstItemRef;
-      next.current?.focus();
+      return;
     }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const currentIndex = itemRefs.findIndex((ref) => ref.current === document.activeElement);
+    const delta = event.key === 'ArrowDown' ? 1 : -1;
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + delta + itemRefs.length) % itemRefs.length;
+    itemRefs[nextIndex].current?.focus();
   }
 
   function withLiveSvg(action: (svg: SVGSVGElement) => void): void {
@@ -887,6 +1054,28 @@ export function ChartDownloadMenu({
             }
           >
             {t(lang, 'chart.download.svg')}
+          </button>
+          <button
+            ref={thirdItemRef}
+            type="button"
+            role="menuitem"
+            className={MENU_ITEM_CLASS}
+            onClick={() =>
+              withLiveSvg((svg) =>
+                downloadPdf(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+              )
+            }
+          >
+            {t(lang, 'chart.download.pdf')}
+          </button>
+          <button
+            ref={fourthItemRef}
+            type="button"
+            role="menuitem"
+            className={MENU_ITEM_CLASS}
+            onClick={() => withLiveSvg((svg) => downloadTransparentPng(svg, chartOnlyFilenameBase, () => setFailed(true)))}
+          >
+            {t(lang, 'chart.download.pngTransparent')}
           </button>
         </div>
       ) : null}

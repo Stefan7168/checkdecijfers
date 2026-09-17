@@ -7,10 +7,11 @@
 // here — this file additionally pins the chart-specific failure leg (no
 // live <svg> under the container yet, e.g. Recharts not yet measured).
 import { createRef } from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   attributedSvgMarkup,
+  bareChartMarkup,
   ChartDownloadMenu,
   framedSvgMarkup,
   gradientEndpoints,
@@ -20,7 +21,37 @@ import {
 } from './chart-download.tsx';
 import type { FrameValues } from '../lib/chart-presentation.ts';
 
-afterEach(cleanup);
+// #215: the PDF export dynamically imports jspdf + svg2pdf.js so neither
+// library reaches the main bundle unless a user picks that menu option —
+// mocked here so the tests never depend on svg2pdf.js's real conversion
+// (its own README: "does not work with JSDOM"). vi.hoisted so the mock
+// factories below (which vitest hoists above these imports) can reference
+// the same spies the tests assert against.
+const pdfMocks = vi.hoisted(() => ({
+  svg2pdf: vi.fn().mockResolvedValue(undefined),
+  save: vi.fn(),
+  jsPDF: vi.fn(),
+}));
+vi.mock('jspdf', () => ({
+  // A plain `function`, not an arrow function: downloadPdf calls this with
+  // `new`, and an arrow function cannot be a constructor (jsdom/V8 throws
+  // TypeError, silently landing in downloadPdf's catch — exactly the
+  // "no such button" symptom this comment would otherwise cost a debugging
+  // session to re-diagnose).
+  jsPDF: pdfMocks.jsPDF.mockImplementation(function MockJsPdf() {
+    return { save: pdfMocks.save };
+  }),
+}));
+vi.mock('svg2pdf.js', () => ({
+  svg2pdf: pdfMocks.svg2pdf,
+}));
+
+afterEach(() => {
+  cleanup();
+  pdfMocks.svg2pdf.mockClear();
+  pdfMocks.save.mockClear();
+  pdfMocks.jsPDF.mockClear();
+});
 
 function sampleSvg(): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
@@ -167,7 +198,7 @@ describe('ChartDownloadMenu', () => {
     (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
   }
 
-  it('offers both format options on click', () => {
+  it('offers all four format options on click (#215: PDF + PNG chart-only added alongside the original PNG/SVG)', () => {
     const ref = createRef<HTMLDivElement>();
     render(
       <div ref={ref}>
@@ -177,6 +208,8 @@ describe('ChartDownloadMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download' }));
     expect(screen.getByRole('menuitem', { name: 'Download als PNG' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Download als SVG' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download als PDF' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'PNG, alleen grafiek (transparant, zonder bronregel)' })).toBeInTheDocument();
   });
 
   it('shows the failure message when no chart <svg> exists under the container yet', () => {
@@ -253,6 +286,158 @@ describe('ChartDownloadMenu', () => {
 });
 
 // ---------------------------------------------------------------------------
+// #215 (ADR 053): PDF vector export + a chart-only transparent PNG. The
+// default PNG/SVG paths above are UNCHANGED (byte-identical markup, same
+// PNG_SCALE) — these two are strictly additive menu options.
+// ---------------------------------------------------------------------------
+
+describe('bareChartMarkup (#215: the chart-only export markup)', () => {
+  it('preserves the original chart content but adds no background rect and no attribution/footer text', () => {
+    const { markup, width, height } = bareChartMarkup(sampleSvg());
+    expect(markup).toContain('<rect width="10" height="10"');
+    expect(markup).not.toContain('#ffffff');
+    expect(markup).not.toContain('<text');
+    // No footer/headline growth — unlike attributedSvgMarkup, height stays
+    // the chart's own (200), not +FOOTER_HEIGHT (224 for the same input).
+    expect(width).toBe(400);
+    expect(height).toBe(200);
+  });
+
+  it('never bakes in a supplied attribution string — there is no parameter to pass one', () => {
+    const markup = bareChartMarkup(sampleSvg()).markup;
+    expect(markup).not.toContain('Bron: CBS');
+  });
+});
+
+describe('ChartDownloadMenu — PNG, chart only (transparent) (#215)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+
+  it('rasterizes at scale 1 (half the default PNG_SCALE of 2), from the bare markup — filename carries the sync date, not attribution text', async () => {
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn(() => 'blob:mock');
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    vi.stubGlobal(
+      'Image',
+      class {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_value: string) {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+    const createElementSpy = vi.spyOn(document, 'createElement');
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <div ref={ref}>
+        {/* eslint-disable-next-line react/no-unknown-property */}
+        <svg data-testid="chart-svg" width="400" height="200" />
+        <ChartDownloadMenu
+          containerRef={ref}
+          attributionText="Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl"
+          filenameBase="checkdecijfers-12345NED"
+          syncedAt="2026-09-15T00:00:00.000Z"
+        />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PNG, alleen grafiek (transparant, zonder bronregel)' }));
+    // jsdom's canvas.getContext('2d') returns null, same guarded failure leg
+    // the default-PNG test above pins — but canvas.width/height are set
+    // BEFORE that check, so the scale is still observable here.
+    await screen.findByText('Downloaden lukte niet in deze browser.');
+    const canvasEl = createElementSpy.mock.results.map((r) => r.value).find((el) => el instanceof HTMLCanvasElement);
+    expect(canvasEl).toBeDefined();
+    expect((canvasEl as HTMLCanvasElement).width).toBe(400); // 400 * TRANSPARENT_PNG_SCALE (1), not * PNG_SCALE (2)
+    expect((canvasEl as HTMLCanvasElement).height).toBe(200);
+  });
+
+  it('names the file with the sync date and a "chart-only" suffix, since the file itself carries no attribution', () => {
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn(() => 'blob:mock');
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    // No Image stub: onload never fires, so no canvas/PNG path runs — this
+    // test only needs to observe that the SVG-shaped markup got as far as
+    // createObjectURL with the right blob before the Image load is awaited.
+    // (The filename itself is asserted via downloadSvg's sibling PNG test
+    // pattern above: same chartOnlyFilenameBase feeds both.)
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <div ref={ref}>
+        {/* eslint-disable-next-line react/no-unknown-property */}
+        <svg data-testid="chart-svg" width="400" height="200" />
+        <ChartDownloadMenu
+          containerRef={ref}
+          attributionText="attributie"
+          filenameBase="checkdecijfers-12345NED"
+          syncedAt="2026-09-15T00:00:00.000Z"
+        />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'PNG, alleen grafiek (transparant, zonder bronregel)' }));
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    const blobArg = (URL.createObjectURL as ReturnType<typeof vi.fn>).mock.calls[0][0] as Blob;
+    expect(blobArg.type).toBe('image/svg+xml;charset=utf-8');
+  });
+});
+
+describe('ChartDownloadMenu — PDF export (#215)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+  });
+
+  it('dynamically imports jspdf + svg2pdf.js and calls svg2pdf with the SAME attributed markup the SVG export serializes', async () => {
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <div ref={ref}>
+        {/* eslint-disable-next-line react/no-unknown-property */}
+        <svg data-testid="chart-svg" width="400" height="200" />
+        <ChartDownloadMenu
+          containerRef={ref}
+          attributionText="Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl"
+          filenameBase="checkdecijfers-12345NED"
+        />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download als PDF' }));
+
+    await waitFor(() => expect(pdfMocks.svg2pdf).toHaveBeenCalledTimes(1));
+
+    const [element, , options] = pdfMocks.svg2pdf.mock.calls[0];
+    // Same attributed markup the SVG download would serialize — a PDF can
+    // never show different text than the SVG (#215's own requirement).
+    expect((element as Element).textContent).toContain('Bron: CBS StatLine, tabel 12345NED. checkdecijfers.nl');
+    expect(options).toMatchObject({ x: 0, y: 0, width: 400, height: 224 }); // 224 = 200 + FOOTER_HEIGHT, same as attributedSvgMarkup's own height test
+
+    expect(pdfMocks.jsPDF).toHaveBeenCalledWith(
+      expect.objectContaining({ unit: 'pt', format: [400, 224], orientation: 'l' }),
+    );
+    await waitFor(() => expect(pdfMocks.save).toHaveBeenCalledWith('checkdecijfers-12345NED.pdf'));
+  });
+
+  it('shows the failure message when svg2pdf rejects', async () => {
+    pdfMocks.svg2pdf.mockRejectedValueOnce(new Error('conversion failed'));
+    const ref = createRef<HTMLDivElement>();
+    render(
+      <div ref={ref}>
+        {/* eslint-disable-next-line react/no-unknown-property */}
+        <svg data-testid="chart-svg" width="400" height="200" />
+        <ChartDownloadMenu containerRef={ref} attributionText="attributie" filenameBase="checkdecijfers-12345NED" />
+      </div>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download als PDF' }));
+    expect(await screen.findByText('Downloaden lukte niet in deze browser.')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // #197 step 1 (session 69) — the menu that shipped as #170(3) was the app's
 // first disclosure control and came with none of the ARIA that pattern needs;
 // and its export serialized `var(--token)` paint that no standalone file can
@@ -282,7 +467,28 @@ describe('ChartDownloadMenu — accessibility (#197)', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
     const menu = screen.getByRole('menu');
     expect(trigger.getAttribute('aria-controls')).toBe(menu.id);
-    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    // #215: 4, not 2 — PDF and PNG-chart-only were added alongside PNG/SVG.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(4);
+  });
+
+  it('cycles focus through all four items with ArrowDown, wrapping back to the first (#215)', () => {
+    renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    const png = screen.getByRole('menuitem', { name: 'Download als PNG' });
+    const svgItem = screen.getByRole('menuitem', { name: 'Download als SVG' });
+    const pdf = screen.getByRole('menuitem', { name: 'Download als PDF' });
+    const transparent = screen.getByRole('menuitem', { name: 'PNG, alleen grafiek (transparant, zonder bronregel)' });
+    expect(document.activeElement).toBe(png);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(svgItem);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(pdf);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(transparent);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(png);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(transparent);
   });
 
   it('moves focus into the menu on open, and closes on Escape with focus back on the trigger', () => {
