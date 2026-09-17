@@ -913,3 +913,40 @@ files / 2500 tests, web 117 files / 1854 tests, `benchmark:run` + `benchmark:sco
 0 fabricated, real `next build` green, `/code-review` LOW clean.**
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
+
+## Session 109 (2026-09-17) — six parallel subagents on standing open-questions items, ALL MERGED to `main` in one verified batch
+
+**Owner instruction (verbatim intent): "spawn a bunch of sub-agents … do not ask me questions, do whatever
+you feel is right."** With no owner-queued priority (same as sessions 108/109 kickoff), the parent session
+picked the six most buildable, mutually independent rows from [open-questions.md](open-questions.md), scoped
+each to its real risk, and dispatched them concurrently (mechanical work on the cheap tier, the one shared
+live-path file change on a higher tier, each in its own worktree). The parent merged every branch itself,
+resolved the three predicted doc/test conflicts, ran the full verification block ONCE serially, ran
+`/code-review` LOW over the whole merged diff (0 findings), and pushed. Per-item as-built notes live in the
+rows and ADRs named here; the measured numbers are in [STATUS.md](STATUS.md)/[status-archive.md](status-archive.md).
+
+- **[#264](open-questions.md) Eurostat DOI — ✅ BUILT.** `registerTables` constructs `10.2908/<CODE>` for
+  `source = 'eurostat'` rows and writes it only after one out-of-band DataCite `findable` confirmation
+  (`src/eurostat-adapter/doi.ts`; ADR [048](decisions/048-eurostat-data-source.md) third addendum). CBS rows
+  never fetch, never get a DOI. **Owner step, not run:** `npm run backfill:eurostat-doi -- --apply` for the
+  already-registered `eurostat:tipsbd30` row (RUNBOOK § DOI backfill).
+- **[#251](open-questions.md) per-cell status — ✅ BUILT.** Optional `CbsObservationRow.status` override in the
+  narrow waist; Eurostat emits the JSON-stat flag verbatim (unflagged → `'Published'`, the registry's single
+  `definitiveStatuses` value; every flag incl. `c`/`:`/`n`/`z` stays provisional); CBS path byte-identical, pinned.
+  Unblocks WP30c E2 on the provisional-marking axis (ADR 048 fourth addendum; `05-data-rules.md` R11 clause).
+- **[#246](open-questions.md) Pro-bucket cost caption — ✅ BUILT.** `getQuestionHistory` and `getThreadRows`
+  now net `pro_bucket_ledger` debits/compensations (incl. the derived websearch/dataset add-on ids) into the
+  displayed cost; non-Pro users byte-identical (pinned). Display-only; unreachable until `PRO_SUBSCRIPTIONS_ENABLED`.
+- **[#252](open-questions.md) live-chat proof URLs — ✅ BUILT.** `askQuestion`/`replyToClarification` return
+  `proofRequestUrls`, computed server-side AFTER the answer is settled and debited, fail-open; the live turn's
+  proof panel now shows "Opgehaalde URL's" like replay/history do (ADR 048 D7(b) note).
+- **[#23](open-questions.md) ingestion alerts — ✅ BUILT (batch failures + quarantines).** At most one Resend
+  admin email per `ingest sync` run or per terminally-failed onboarding-cron row, reusing `sendAdminAlertEmail`;
+  fail-open, silent when env is unset. Missed-sync and `/api/health` alerting remain open (RUNBOOK § Ingestion alerts).
+- **Research (docs-only): [#253](open-questions.md)** — verified the region-set query capability still does not
+  exist; the row now carries a concrete minimal build scope. **[#254](open-questions.md)(a)** — all three
+  household-income alternate concepts verified eligible for `period_change` from the committed 83932NED fixtures;
+  extending needs a per-alternate eligibility marker (the key set is primary-only) and invalidates no LLM fixtures.
+
+**Not done, deliberately:** the `tipsbd30` DOI backfill (live DB write → owner); #254(b) PPI fixture re-record
+(real spend → owner); #245 Action 3 (waits on the owner's three sub-questions); #250(a) Dutch wording sign-off.

@@ -1,5 +1,27 @@
 # STATUS archive — the session log
 
+**Session 109 (2026-09-17, owner present but hands-off — "spawn a bunch of sub-agents … do not ask me questions, do whatever you feel is right") — six open-questions items built/researched by six PARALLEL subagents, ALL merged to `main` by the parent in one verified batch.**
+
+**Opened on a clean checkout at `e776763` (`git pull --ff-only`: already up to date), CI green on the last three `main` runs.** No owner-queued priority. The parent surveyed [open-questions.md](open-questions.md), picked six mutually independent, buildable rows, and dispatched them concurrently — five implementation agents (Sonnet for mechanical work; Opus for #251, the one change to the shared live-money-path file `pipeline.ts`) and one research agent (Sonnet), each in its own `isolation: "worktree"`. Every brief carried the session-108 lesson up front ("no backgrounding, every command one blocking foreground call, you never receive a notification") plus the 8 GB rules (targeted test files only, `--maxWorkers=1`, never the full suite). Result: zero stalls, zero OOM kills, every agent reported once and its worktree git state matched its report (verified by the parent each time).
+
+**Merged, in order (all `--no-ff` except the docs-only research branch):** research `1ac2cc0` (ff) → #264 `25055df` (merge `fa9fc44`) → #23 `7b1560e` (`1ce9dc9`) → #252 `5c317d5` (`a2dc056`) → #251 `3050014` (`94025e5`, three predicted conflicts: ADR 048 addenda, adjacent open-questions rows 251/252, two `describe` blocks appended to `ingestion.test.ts` — all "keep both", plus renumbering #251's ADR section to "Fourth As-built addendum" and its cross-references) → #246 `54e4071` (`a9304c0`).
+
+**(1) [#264](open-questions.md) Eurostat DOI — BUILT.** `registerTables` constructs `10.2908/<CODE>` for Eurostat rows and writes it only on a DataCite `findable` confirmation (`src/eurostat-adapter/doi.ts`, injectable fetch, never throws, null on anything else); CBS rows never fetch. `scripts/backfill-eurostat-doi.ts` (dry-run default) + RUNBOOK step for the one live row `eurostat:tipsbd30` — NOT run (live DB write = owner). ADR 048 third addendum. 5 new hermetic tests.
+
+**(2) [#23](open-questions.md) ingestion alerts — BUILT for batch failures + quarantines.** One Resend admin email per `ingest sync` run / per terminally-failed onboarding-cron row, reusing `sendAdminAlertEmail`; fail-open, silent when env unset. Missed-sync/health alerting still open. RUNBOOK § Ingestion alerts. 12 new tests.
+
+**(3) [#252](open-questions.md) live-chat proof URLs — BUILT.** `AskOutcome.proofRequestUrls`, computed server-side in `askQuestion`/`replyToClarification` AFTER settlement, fail-open; the live turn now shows "Opgehaalde URL's". 3 new tests, 4 fixtures updated.
+
+**(4) [#251](open-questions.md) per-cell status — BUILT.** Optional `CbsObservationRow.status`; `pipeline.ts` uses it, else the per-period lookup (one hunk, CBS byte-identical, pinned across all three CBS statuses in one sync); Eurostat emits the flag verbatim (unflagged → `'Published'`, now the sole `definitiveStatuses` value; `c`/`:`/`n`/`z` and every flag stay provisional); conformance F3 checks per-cell statuses; real `tipsbd30` capture replays 100% provisional, unflagged `demo_pjan` definitive. No migration (column is plain text, verified). ADR 048 fourth addendum, R11 clause. WP30c E2 unblocked on this axis.
+
+**(5) [#246](open-questions.md) Pro-bucket cost caption — BUILT.** `getQuestionHistory`/`getThreadRows` net `pro_bucket_ledger` (incl. derived websearch/dataset add-on ids) into the displayed cost; non-Pro byte-identical, read path never writes (pinned). `threads/` keeps a local duplicate of `deriveAddonRequestId` + the bucket query per its "never touches `src/billing/**`" invariant, with a parity test. ADR 020 addendum. 15 new tests.
+
+**(6) Research (docs-only): [#253](open-questions.md)** — region-set query capability verified still absent (no wildcard region selection anywhere upstream of `run.ts`'s existing `region_code = any(...)`); the row now carries a 5-point minimal build scope. **[#254](open-questions.md)(a)** — all three household-income alternates verified eligible for `period_change` from the committed 83932NED fixtures; `PERIOD_CHANGE_ELIGIBLE_KEYS` is primary-key-only so extension needs a per-alternate marker; no LLM-fixture invalidation.
+
+**Verification (parent, serial, after all merges):** root + web typecheck clean; migrations check OK (33 files); backend 168 files / 2543 tests; hermetic benchmark 14/14 answerable, 6/6 refusal, 0 fabricated, GATE PASS; web 117 files / 1859 tests; real `next build` OK; `/code-review` LOW over `e776763..HEAD`: 0 findings. Pushed as one batch (docs commit on top) — CI run recorded in STATUS's top block.
+
+**Not done, deliberately:** `tipsbd30` DOI backfill (owner); #254(b) PPI fixture re-record (real spend); #245 Action 3 (owner sub-questions); #250(a) Dutch wording.
+
 **Session 108 (2026-09-17, owner present throughout) — no owner-queued priority; three open-questions items dispatched in parallel to subagents ("All use subagents"), all three finished, verified, and either merged or documented.**
 
 **Opened by discovering the local checkout was 32 commits behind `origin/main`** — session 107's work existed only on the remote. `git pull --ff-only` first, then verified the session-108 kickoff brief against real `git log`/`gh run list` output before trusting any of it (it checked out).

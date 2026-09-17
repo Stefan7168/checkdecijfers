@@ -18,53 +18,38 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 108 — verify against `git log`/`gh run
-list` before trusting this, since more may have landed after it was written).** **Session 108 opened
-with NO owner-queued priority** (sessions 106-107 had closed out every standing item); three
-candidates were surfaced from [open-questions.md](open-questions.md) and the owner said "All use
-subagents" — all three dispatched in parallel, each scoped to its actual risk level, ALL DONE, ALL
-MERGED/DOCUMENTED, CI green throughout:
+**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 109 — verify against `git log`/`gh run
+list` before trusting this, since more may have landed after it was written).** **Session 109 had NO
+owner-queued priority; the owner's one instruction was "spawn a bunch of sub-agents … do not ask me
+questions".** Six independent [open-questions.md](open-questions.md) rows were dispatched to six PARALLEL
+subagents (own worktrees; cheap tier for mechanical work, a higher tier for the one shared live-path
+file), then merged by the parent, verified ONCE serially, and pushed as one batch — CI green:
 
-**(1) [#263](open-questions.md) migration-number collision check — MERGED (`eeae1b2`, run
-`35176853182`).** A lightweight, deterministic CI check (`scripts/check-migration-numbers.ts`, `npm
-run migrations:check-numbers`) fails a push/PR if two migration files share a leading number —
-closes the gap that let session 107's real `031` collision go undetected by git itself. Backend
-166 files/2476 tests, web 117/1854, benchmark 14/14+6/6+0 fabricated, `/code-review` LOW clean.
+- **[#264](open-questions.md) Eurostat DOI — BUILT** (`src/eurostat-adapter/doi.ts`; construct
+  `10.2908/<CODE>`, write only on a DataCite `findable` check; CBS never touched). **Owner step pending:**
+  `npm run backfill:eurostat-doi -- --apply` for the live `eurostat:tipsbd30` row (RUNBOOK § DOI backfill).
+- **[#251](open-questions.md) per-cell status — BUILT** (optional `CbsObservationRow.status`; Eurostat
+  unflagged cells now render definitive, every flag provisional; CBS byte-identical, pinned). WP30c E2 is
+  unblocked on the provisional-marking axis.
+- **[#246](open-questions.md) Pro-bucket cost caption — BUILT** (display-only; unreachable until the Pro flag).
+- **[#252](open-questions.md) live-chat proof "Opgehaalde URL's" — BUILT** (server-side, after settlement).
+- **[#23](open-questions.md) ingestion alerts — BUILT** for batch failures + quarantines (one admin email per
+  run, fail-open); missed-sync/health alerting still open.
+- **Research:** [#253](open-questions.md) region-set query still absent (row now has a build scope);
+  [#254](open-questions.md)(a) household-income alternates verified eligible for `period_change`.
 
-**(2) [#264](open-questions.md) Eurostat DOI sourcing — RESEARCHED + DOCUMENTED, nothing built
-(docs-only, `fb503f9`).** Verified LIVE (via the real DataCite REST API, not a guess) that Eurostat
-mints one DOI per dataset, pattern `10.2908/<CODE>` — confirmed for `tipsbd30`, the one table already
-in production. Turns a previously-unscoped gap into a real, small, buildable next step (construct
-deterministically + one verification call at registration time) — a future session's priority call,
-not done here.
+**Measured:** backend 168 files / 2543 tests, web 117 / 1859, benchmark 14/14 + 6/6 + 0 fabricated, real
+`next build`, `/code-review` LOW 0 findings, root+web typecheck clean. Process: "no backgrounding" stated
+up front in every brief → zero subagent stalls (contrast session 108); see
+[lessons-learned.md](lessons-learned.md) session 109.
 
-**(3) [#254](open-questions.md) level-vs-%-change chart toggle — MERGED (`4746f18`), [ADR
-052](decisions/052-period-over-period-percent-change.md) ACCEPTED.** A genuinely different mechanism
-from [ADR 051](decisions/051-chart-alternate-reading-toggle.md)'s toggle (computes the percentage
-itself from an already-answered level series, no second query) covering 7 curated measures with no
-CBS-published mutation sibling. Came back with 4 open design questions; **the owner explicitly
-delegated the decision to the session ("You are deciding that, okay?")** — decided, grounded in
-standing project principles (cheapest-mechanism-first, never-guess), applied, then merged. One
-follow-up deliberately NOT built: a real producer-price-index companion measure (`M003288`) was
-found but wiring it invalidates the intent parser's recorded LLM fixtures project-wide — needs an
-owner-supervised session budgeting a real fixture re-record, logged in #254, not forced through.
-Full verification: backend 167 files/2500 tests, web 117/1854, benchmark 14/14+6/6+0 fabricated,
-real `next build`, `/code-review` LOW clean.
-
-**Process note:** the level-vs-%-change agent (and, once, the migration-check agent) repeatedly
-backgrounded its own long test runs and ended its turn before they finished, reporting "waiting for
-notification" rather than actually blocking — caught every time via `ps aux`/`git status` in the
-agent's own worktree, resumed via `SendMessage` (never a fresh `Agent` call), fixed for good only
-after an explicit "no backgrounding at all" instruction on the third resume. See
-[lessons-learned.md](lessons-learned.md)'s session-108 entry.
-
-**No owner-queued priority remains.** Standing candidates, none urgent: [#253](open-questions.md)
-(map/geo library comparison, still blocked on a query-capability precondition — re-check before
-assuming still blocked), [#260](open-questions.md) (Supademo visual polish, deferred, needs the
-brainstorming skill), plus #254's own two new follow-ups (household-income alternate concepts;
-the PPI fixture re-record above). Full account of sessions 106-108:
-[status-archive.md](status-archive.md). Session 109 kickoff:
-[session-briefs/2026-09-17-session-109-kickoff.md](session-briefs/2026-09-17-session-109-kickoff.md).
+**No owner-queued priority remains.** Standing candidates: the `tipsbd30` DOI backfill (owner-run, 1 min);
+[#253](open-questions.md)'s region-set query (now concretely scoped, the real prerequisite for maps);
+[#254](open-questions.md)(a) extend `period_change` to the income alternates (needs a per-alternate
+marker) and (b) the PPI fixture re-record (owner-supervised spend); WP30c E2 (Eurostat beyond the internal
+explorer; #250(a) wording sign-off still open); [#260](open-questions.md) Supademo polish (deferred, needs
+brainstorming). Full account: [status-archive.md](status-archive.md). Session 110 kickoff:
+[session-briefs/2026-09-17-session-110-kickoff.md](session-briefs/2026-09-17-session-110-kickoff.md).
 
 ## Phase 0 checklist
 
