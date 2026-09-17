@@ -5153,4 +5153,80 @@ describe('ChartView — alternate reading toggle (#254)', () => {
       expect(within(styleDialog).getByRole('button', { name: 'Insluiten' })).toBeDisabled();
     });
   });
+
+  // #262(c) (session 110, ADR 041 addendum): the public embed route
+  // (embedMode=true) wires in ADR 051's reading toggle. The whole ordinary
+  // control row (form tabs, Vanaf/Tot) stays hidden in embedMode — a frozen
+  // embed never lets a reader change form or window — but the reading
+  // dropdown is a narrower, additive case: every alternate is a complete,
+  // independently-built ChartSpec already baked into the audit row at answer
+  // time, so offering it costs no re-query and no new query string. See
+  // web/app/embed/[token]/page.tsx's own comment for why the frozen route
+  // passes `response.chartAlternates` through and the Live branch does not.
+  describe('in embedMode (#262(c), session 110)', () => {
+    it('shows no reading control in embedMode when alternates is empty or omitted (same as non-embed)', () => {
+      const { unmount } = render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" />);
+      expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+      unmount();
+      render(<ChartView spec={threePointSpec()} embedMode embedFooter="x" alternates={[]} />);
+      expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+    });
+
+    it('shows a reading control in embedMode when alternates is non-empty, and switching it renders the alternate data — with none of the other control-row chrome', () => {
+      const alt = altReadingSpec();
+      render(
+        <ChartView
+          spec={threePointSpec()}
+          embedMode
+          embedFooter="x"
+          alternates={[{ label: 'Ongecorrigeerd', spec: alt }]}
+        />,
+      );
+
+      // The rest of the control row (form tablist, Vanaf/Tot) is still gone
+      // in embedMode — this feature is additive, not a reopening of the
+      // whole row.
+      expect(screen.queryByRole('tab', { name: 'Lijn' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Vanaf' })).not.toBeInTheDocument();
+
+      const headline = (): HTMLElement => screen.getByTestId('headline-figure');
+      expect(headline().querySelector('[data-label-for="hi"]')?.textContent).toBe('3,3');
+
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+
+      expect(headline().querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+      expect(headline().querySelector('[data-label-for="hi"]')).toBeNull();
+    });
+
+    it('passes the same whole-card digit-honesty scan in embedMode, alternate reading included', () => {
+      const alt = altReadingSpec();
+      const { container } = render(
+        <ChartView
+          spec={threePointSpec()}
+          embedMode
+          embedFooter="x"
+          alternates={[{ label: REGISTRY_LABEL, spec: alt }]}
+        />,
+      );
+      fireEvent.change(readingControl(), { target: { value: '0' } });
+
+      // Same two-layer scan as the non-embed test above, minus the non-embed
+      // helper's own Vanaf/Tot-select assertion — that row is hidden in
+      // embedMode by design (checked in the previous test), so it can't be
+      // asserted present here. (1) the card minus the reading control's own
+      // subtree, with NO exemption: every digit must trace to the
+      // ALTERNATE's own spec strings.
+      const clone = container.cloneNode(true) as HTMLElement;
+      const control = clone.querySelector('select[id$="-reading"]');
+      expect(control).not.toBeNull();
+      control!.closest('div')!.remove();
+      expect(clone.querySelector('select[id$="-reading"]')).toBeNull();
+      expect(clone.textContent).toContain('9,8');
+      scanForUnboundDigits(clone, harvestSpecStrings(alt));
+
+      // (2) the whole card, control included: the one extra source is the
+      // registry label itself, verbatim (D6).
+      scanForUnboundDigits(container, [...harvestSpecStrings(alt), REGISTRY_LABEL]);
+    });
+  });
 });

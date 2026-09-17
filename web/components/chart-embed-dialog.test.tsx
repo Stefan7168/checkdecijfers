@@ -243,6 +243,35 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.queryByText(/form=bar/)).toBeNull();
   });
 
+  // #229 (ADR 041 addendum, session 110): a >15-series spec's OWN default
+  // form is Tabel (chart-view-state.ts's defaultFormIsTable) — the exact
+  // gap open-questions #229 recorded (a >15-series chart switched to Lijn/
+  // Staaf still embedded as a Tabel with chart-type "Default", since
+  // "Default" meant "omit `form`, let the un-embeddable Tabel default
+  // apply"). `defaultIsTable` is chart.tsx's own call-site flag for exactly
+  // this case: the dialog must not offer "Default" as a real choice, and
+  // must always publish the publisher's CURRENT form instead.
+  it('hides the "Default" chart-type option and always encodes the current form when defaultIsTable is true', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" currentForm="line" defaultIsTable />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByText(/form=line/);
+    // The "Default" radio must not exist at all — not merely disabled —
+    // there is nothing honest for it to do differently from "As shown" here.
+    expect(screen.queryByRole('radio', { name: /^default$/i })).toBeNull();
+    // Only "As shown" remains, and it's already selected/producing form=line
+    // with no interaction needed.
+    expect(screen.getByRole('radio', { name: /as shown/i })).toBeChecked();
+  });
+
+  it('still offers the "Default" chart-type option when defaultIsTable is false (the ordinary case)', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" currentForm="line" defaultIsTable={false} />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByText(/form=line/);
+    expect(screen.getByRole('radio', { name: /^default$/i })).toBeInTheDocument();
+  });
+
   it('Escape closes the dialog and refocuses the trigger', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);

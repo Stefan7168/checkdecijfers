@@ -10,7 +10,7 @@
 // behavior is covered by src/billing/pro.test.ts and
 // src/chart/embed-live.test.ts respectively); this file only proves the
 // ROUTE wires them together correctly.
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditRecord } from '../../../backend/answer/audit/types.ts';
 
@@ -412,6 +412,123 @@ describe('/embed/[token] — digit-honesty scan on the FROZEN chart render (fix 
     );
     const footer = `Frozen on ${record.createdAt.slice(0, 10)} ·`;
     scanForUnboundDigits(container, [...harvestSpecStrings(s), footer]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #262(c) (session 110, ADR 041 addendum): ADR 051's alternate-reading
+// toggle, wired into the FROZEN embed render. `response.chartAlternates` is
+// whatever the answer pipeline already stored on the audit row (D3, built
+// once at answer time) — this route never re-queries for it, and a
+// pre-ADR-051 row simply carries no such key at all (the `undefined` case
+// below), same "absent means not built for this row" reading the rest of
+// the envelope uses.
+// ---------------------------------------------------------------------------
+describe('/embed/[token] — chartAlternates reading toggle (#262(c))', () => {
+  const readingControl = () => screen.getByRole('combobox', { name: /lezing|reading/i });
+
+  function altSpec(overrides: Record<string, unknown> = {}) {
+    return chartSpec({
+      series: [{ label: 'Nederland', regionCode: 'NL01', points: [point({ resultId: 'alt-r1', value: 99, formattedValue: '99,0' })] }],
+      attributionLine: 'Bron: CBS StatLine, tabel 99999NED.',
+      attribution: {
+        tableId: '99999NED',
+        tableTitle: 'Alternate test',
+        tableVersion: 1,
+        syncedAt: '2026-08-26',
+        coveredPeriods: { from: '2024', to: '2024' },
+        license: 'CC BY 4.0',
+      },
+      ...overrides,
+    });
+  }
+
+  it('renders no reading control on a pre-ADR-051 row (no chartAlternates key at all)', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord()); // default response has no chartAlternates key
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+  });
+
+  it('renders no reading control when chartAlternates is an empty array', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(
+      answerRecord({ response: { kind: 'answer', chart: chartSpec(), chartAlternates: [] } }),
+    );
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+  });
+
+  it('renders the reading control and switches to the alternate data when chartAlternates is present', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    const alt = altSpec();
+    loadAuditRecord.mockResolvedValue(
+      answerRecord({
+        response: { kind: 'answer', chart: chartSpec(), chartAlternates: [{ label: 'Ongecorrigeerd', spec: alt }] },
+      }),
+    );
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByTestId('headline-figure').querySelector('[data-label-for="r1"]')?.textContent).toBe('42,0');
+
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    expect(screen.getByTestId('headline-figure').querySelector('[data-label-for="alt-r1"]')?.textContent).toBe('99,0');
+    expect(screen.getAllByText(/99999NED/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('every digit still traces to a spec string (or the frozen footer date) once an alternate reading is selected', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    const alt = altSpec();
+    // A real, digit-bearing registry label (ADR 051 D6's curated-config
+    // exemption) — copied verbatim from chart.test.tsx's own REGISTRY_LABEL
+    // fixture for the identical reason: a digit-free placeholder label would
+    // leave this scan unable to prove the exemption is correctly narrow.
+    const label = 'CPI indexniveau (2025=100), geen mutatiepercentage';
+    const record = answerRecord({
+      response: { kind: 'answer', chart: chartSpec(), chartAlternates: [{ label, spec: alt }] },
+    });
+    loadAuditRecord.mockResolvedValue(record);
+    const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+    const footer = `Bevroren op ${record.createdAt.slice(0, 10)} ·`;
+    scanForUnboundDigits(container, [...harvestSpecStrings(alt), footer, label]);
+  });
+
+  it('suppresses the reading control on a successful Live re-run (stored alternates would pair stale data with a fresh primary)', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(chartSpec());
+    const alt = altSpec();
+    loadAuditRecord.mockResolvedValue(
+      answerRecord({
+        userId: 'user-1',
+        response: { kind: 'answer', chart: chartSpec(), chartAlternates: [{ label: 'Ongecorrigeerd', spec: alt }] },
+      }),
+    );
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByText(/live · gegevens van/i)).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /lezing|reading/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps the reading control when Live re-run fails — the frozen fallback still carries its stored alternates', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    hasProPlan.mockReturnValue(true);
+    rerunLive.mockResolvedValue(null);
+    const alt = altSpec();
+    loadAuditRecord.mockResolvedValue(
+      answerRecord({
+        userId: 'user-1',
+        response: { kind: 'answer', chart: chartSpec(), chartAlternates: [{ label: 'Ongecorrigeerd', spec: alt }] },
+      }),
+    );
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1' }) }));
+    expect(screen.getByRole('combobox', { name: /lezing|reading/i })).toBeInTheDocument();
   });
 });
 

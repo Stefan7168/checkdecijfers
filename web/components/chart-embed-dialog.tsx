@@ -76,11 +76,33 @@ const CHART_TYPE_LABEL_KEY: Record<ChartTypeOption, MessageKey> = {
 
 function buildEmbedCode(
   token: string,
-  opts: { lang: Lang; colour: ColourOption; chartType: ChartTypeOption; currentForm: string | null; live: boolean },
+  opts: {
+    lang: Lang;
+    colour: ColourOption;
+    chartType: ChartTypeOption;
+    currentForm: string | null;
+    live: boolean;
+    /** #229 (ADR 041 addendum, session 110): true when the spec's OWN
+     * default form (chart-view-state.ts's `defaultFormIsTable`, the exact
+     * predicate chart.tsx's own `initialForm` calc uses) is Tabel. "Default"
+     * can never mean "omit `form`, let the spec decide" here — the embed
+     * page structurally refuses `?form=table` and always falls back to the
+     * spec's own default when `form` is absent, which in this case IS
+     * table (open-questions #229's original finding: a >15-series chart the
+     * publisher switched to Lijn/Staaf still embeds as a Tabel with
+     * chart-type "Default"). A belt-and-suspenders check: the caller
+     * (ChartEmbedDialog) already hides the "Default" radio in this case, so
+     * `chartType` should never actually arrive here as `'default'` — this
+     * is the second, independent check the rest of this codebase's
+     * defensive style favours (never trust a UI-only guard for a
+     * correctness fix). */
+    defaultIsTable: boolean;
+  },
   title: string,
 ): string {
   const params = new URLSearchParams({ lang: opts.lang, theme: opts.colour });
-  if (opts.chartType === 'as-shown' && opts.currentForm) params.set('form', opts.currentForm);
+  const effectiveChartType: ChartTypeOption = opts.chartType === 'default' && opts.defaultIsTable ? 'as-shown' : opts.chartType;
+  if (effectiveChartType === 'as-shown' && opts.currentForm) params.set('form', opts.currentForm);
   if (opts.live) params.set('live', '1');
   return `<iframe src="${APP_URL}/embed/${token}?${params.toString()}" width="100%" height="440" title="${title}" loading="lazy" style="border:0"></iframe>`;
 }
@@ -90,6 +112,7 @@ export function ChartEmbedButton({
   tableId,
   lang,
   currentForm = null,
+  defaultIsTable = false,
   open,
   onOpenChange,
   chartSlot,
@@ -103,6 +126,18 @@ export function ChartEmbedButton({
    * case "As shown" degrades to the spec's own default (same as omitting
    * `form` from the query string). */
   currentForm?: string | null;
+  /** #229 (ADR 041 addendum, session 110): true when the PRIMARY spec's own
+   * default form is Tabel (`defaultFormIsTable`, chart-view-state.ts —
+   * chart.tsx passes the exact same predicate its own `initialForm` calc
+   * uses). Table form has never been embeddable — the embed page refuses a
+   * hand-crafted `?form=table` outright — so offering "Default" here would
+   * silently mean "omit `form`, land on the un-embeddable Tabel view
+   * anyway" for exactly the charts this concerns (open-questions #229). The
+   * dialog hides that option in this case instead of offering a choice that
+   * either does nothing useful or would need its own refusal path. Defaults
+   * to `false` for every call site that doesn't pass it (none should be
+   * newly broken; the two real call sites in chart.tsx always pass it). */
+  defaultIsTable?: boolean;
   // Task 3 (chart-visual-embed-pass): controlled, mirroring
   // ChartConfigPanel's own open/onOpenChange contract — chart.tsx lifts this
   // into its shared `openPanel` state so Style/Story/Embed share one slot.
@@ -112,19 +147,28 @@ export function ChartEmbedButton({
    * the embed modal's left pane, mirroring the Style editor's chartSlot. */
   chartSlot: ReactNode;
   /** #254 Task 6 addendum: true while a non-primary reading is selected. An
-   * embed always republishes the PRIMARY reading (the stored audit row
-   * carries no reading selection — `/embed/[token]` has no chartAlternates
-   * concept at all, deliberately out of scope for this feature), but the
-   * dialog's live preview shows whatever is currently on screen — which,
-   * once a reader can switch readings, could be an alternate. Without this,
-   * a reader could switch to an alternate, click Embed, see the alternate's
-   * own data in the preview, and copy code believing it publishes THAT —
-   * when it always publishes the primary instead. Same disabled-with-a-
-   * reason convention as chart.tsx's own Lijn/Vlak/Liggend tabs and story
-   * lock: `disabled` + `title` (pointer) + `aria-describedby` (screen
-   * reader/keyboard) pointing at a co-located `sr-only` reason span, both
-   * owned entirely by this component so the caller only ever passes the one
-   * boolean. */
+   * embed URL always MINTS on the PRIMARY reading — the stored audit row
+   * carries no reading selection, so `?reading=` is never emitted at
+   * generation time — but the dialog's live preview shows whatever is
+   * currently on screen — which, once a reader can switch readings, could
+   * be an alternate. Without this, a reader could switch to an alternate,
+   * click Embed, see the alternate's own data in the preview, and copy code
+   * believing it publishes THAT — when the freshly-minted URL always opens
+   * on the primary instead. Same disabled-with-a- reason convention as
+   * chart.tsx's own Lijn/Vlak/Liggend tabs and story lock: `disabled` +
+   * `title` (pointer) + `aria-describedby` (screen reader/keyboard) pointing
+   * at a co-located `sr-only` reason span, both owned entirely by this
+   * component so the caller only ever passes the one boolean.
+   *
+   * Superseded in part, session 110 (#262(c), ADR 041 addendum): once the
+   * embed page actually loads, `/embed/[token]` NOW does carry a
+   * `chartAlternates` concept — it renders the same reading dropdown chat/
+   * dock do, sourced from the audit row's own stored `chartAlternates`, so a
+   * VIEWER of the published embed can switch reading client-side after the
+   * page loads. That does not change this prop's own reasoning above: the
+   * dialog still disables Embed while previewing a non-primary reading,
+   * because the generated URL/code always starts on the primary regardless
+   * of what the publisher was looking at when they clicked Embed. */
   disabled?: boolean;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -155,6 +199,7 @@ export function ChartEmbedButton({
           tableId={tableId}
           lang={lang}
           currentForm={currentForm}
+          defaultIsTable={defaultIsTable}
           chartSlot={chartSlot}
           onClose={() => {
             onOpenChange(false);
@@ -171,6 +216,7 @@ function ChartEmbedDialog({
   tableId,
   lang,
   currentForm,
+  defaultIsTable,
   chartSlot,
   onClose,
 }: {
@@ -178,6 +224,7 @@ function ChartEmbedDialog({
   tableId: string;
   lang: Lang;
   currentForm: string | null;
+  defaultIsTable: boolean;
   chartSlot: ReactNode;
   onClose: () => void;
 }) {
@@ -236,9 +283,18 @@ function ChartEmbedDialog({
       ? null
       : buildEmbedCode(
           result.token,
-          { lang: embedLang, colour, chartType, currentForm, live },
+          { lang: embedLang, colour, chartType, currentForm, live, defaultIsTable },
           `checkdecijfers.nl — ${tableId}`,
         );
+
+  // #229 (ADR 041 addendum, session 110): when the spec's own default form
+  // is Tabel, "Default" is never a real, distinct choice from "As shown" —
+  // see buildEmbedCode's own `defaultIsTable` comment for why. Filtered out
+  // of the rendered radios entirely rather than shown disabled: `chartType`
+  // starts as `'as-shown'` (below) and this filter means the reader can
+  // never select the value buildEmbedCode's own belt-and-suspenders check
+  // guards against, so both layers agree by construction.
+  const chartTypeOptions = defaultIsTable ? CHART_TYPE_OPTIONS.filter((ct) => ct !== 'default') : CHART_TYPE_OPTIONS;
 
   return (
     <ChartEditModal open onClose={onClose} title={t(lang, 'chart.embed.dialogTitle')} chartSlot={chartSlot}>
@@ -273,7 +329,7 @@ function ChartEmbedDialog({
 
           <fieldset>
             <legend className="text-xs text-muted-foreground">{t(lang, 'chart.embed.chartTypeLabel')}</legend>
-            {CHART_TYPE_OPTIONS.map((ct) => (
+            {chartTypeOptions.map((ct) => (
               <label key={ct} className="mr-3 text-xs">
                 <input type="radio" name="embed-type" checked={chartType === ct} onChange={() => setChartType(ct)} />{' '}
                 {t(lang, CHART_TYPE_LABEL_KEY[ct])}
