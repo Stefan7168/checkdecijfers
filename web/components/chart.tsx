@@ -110,6 +110,7 @@ import {
   // site (chart.test.tsx) keeps working unchanged.
   BAR_LABEL_MAX,
   chartViewReducer,
+  defaultFormFor,
   defaultFormIsTable,
   fallbackForm,
   hbarFormAllowed,
@@ -1353,13 +1354,15 @@ export function ChartView({
   const coarsePointer = useCoarsePointer();
   // #197 step 2: chart or table. A comparison with more bars than the chart
   // can label opens on the table — the idea bank's >15-categories rule, the
-  // honest view for many series.
+  // honest view for many series — UNLESS it is a many-region comparison
+  // that still fits readably as a horizontal bar (session 110,
+  // defaultFormFor's own COMPARISON_HBAR_MAX carve-out).
   // Fix round 2 (item 10): the >15-series table rule is a CHAT-chart rule.
   // The stage has no form tabs, so a many-series story that opened on the
   // table showed a presentation with no chart in it at all — no highlight,
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
-  const initialForm = inStage ? spec.kind : defaultFormIsTable(spec) ? 'table' : spec.kind;
+  const initialForm = inStage ? spec.kind : defaultFormFor(spec);
   const [state, dispatch] = useReducer(
     chartViewReducer,
     initialForm,
