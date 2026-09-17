@@ -8,6 +8,7 @@ import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
 import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
 import { deriveDifference, deriveDirection, deriveFirstLast, deriveMax, deriveUnitExpansion } from './derivations.ts';
+import { NOT_APPLICABLE_ATTRIBUTE, REGION_SET_MAX_MEMBERS } from './region-set.ts';
 import {
   NATIONAL_REGION_CODE,
   normalizeLabel,
@@ -22,6 +23,7 @@ import type {
   FreshnessInfo,
   QueryOutcome,
   QueryRefusal,
+  RegionSetCoverage,
   ResultCell,
   ResultShape,
   StructuredIntent,
@@ -427,12 +429,79 @@ export async function runQuery(
   // Diagnose the earliest missing period (then the intent's region order) so a
   // trailing not-yet-published year reads as freshness, an interior hole as a
   // gap.
-  for (const periodCode of q.periodCodes) {
-    for (const regionCode of q.regionCodes) {
-      if (!byCoordinate.has(`${regionCode}|${periodCode}`)) {
-        return diagnoseMissing(db, q, regionCode, periodCode);
+  //
+  // #253: a `region_set` query is the ONE deliberate, shape-scoped exception to
+  // this all-or-nothing rule (ADR 011 alternative 3, revised by the #253
+  // design). The rule exists so a partial TREND is never silently served; a
+  // region class is neither a trend nor silent — the members we could not serve
+  // are recorded in the coverage record, disclosed structurally, and they
+  // suppress the ranking derivation entirely (RS1), which is a stronger
+  // guarantee than caveating prose. Every other shape is untouched.
+  const regionSetScope = q.regionSet;
+  if (regionSetScope === null) {
+    for (const periodCode of q.periodCodes) {
+      for (const regionCode of q.regionCodes) {
+        if (!byCoordinate.has(`${regionCode}|${periodCode}`)) {
+          return diagnoseMissing(db, q, regionCode, periodCode);
+        }
       }
     }
+  }
+
+  // --- The region-class partition (#253) ------------------------------------
+  // Served: rows that carry a value, plus rows whose value is null for a reason
+  // other than CBS's own `Impossible` (R11 — a withheld value stays present
+  // with its reason, never disappears). Not served: `Impossible` members (CBS
+  // says the coordinate does not exist, so there is no number to carry) and
+  // members with no row at all.
+  const notApplicable: string[] = [];
+  const withheld: string[] = [];
+  const missing: string[] = [];
+  let servedRegionCodes = q.regionCodes;
+  let applicableCount = q.regionCodes.length;
+  if (regionSetScope !== null) {
+    const periodCode = q.periodCodes[0]!;
+    const served: string[] = [];
+    applicableCount = 0;
+    for (const regionCode of q.regionCodes) {
+      const row = byCoordinate.get(`${regionCode}|${periodCode}`);
+      if (row === undefined) {
+        missing.push(regionCode);
+        continue;
+      }
+      if (row.value == null) {
+        if (row.value_attribute === NOT_APPLICABLE_ATTRIBUTE) {
+          notApplicable.push(regionCode);
+          continue;
+        }
+        withheld.push(regionCode);
+        served.push(regionCode);
+        continue;
+      }
+      applicableCount++;
+      served.push(regionCode);
+    }
+    // A member CBS publishes but we never ingested is exactly as unknown to us
+    // as a member with no row — both break completeness, neither is dropped
+    // silently (resolve.ts collected them from the slice filter).
+    missing.push(...regionSetScope.excludedBySlice);
+    if (applicableCount < 2) {
+      return refuse(
+        intent,
+        'no_data',
+        `the region class "${regionSetScope.scope.kind}" has only ${applicableCount} member(s) with a value at ${periodCode} on table "${q.tableId}" — too few to answer over a set`,
+        { axis: 'region' },
+      );
+    }
+    if (served.length > REGION_SET_MAX_MEMBERS) {
+      return refuse(
+        intent,
+        'invalid_intent',
+        `the region class "${regionSetScope.scope.kind}" would carry ${served.length} cells, over the ${REGION_SET_MAX_MEMBERS}-member limit for one answer`,
+        { axis: 'region' },
+      );
+    }
+    servedRegionCodes = served;
   }
 
   // --- Build ordered, labeled cells ------------------------------------------
@@ -440,7 +509,7 @@ export async function runQuery(
 
   const cells: ResultCell[] = [];
   for (const periodCode of q.periodCodes) {
-    for (const regionCode of q.regionCodes) {
+    for (const regionCode of servedRegionCodes) {
       const row = byCoordinate.get(`${regionCode}|${periodCode}`)!;
       const parsed = parsePeriodCode(periodCode)!;
       const status = row.status;
@@ -481,7 +550,14 @@ export async function runQuery(
 
   // --- Derivations: registered functions only (R5) ----------------------------
   const derivations: DerivationRecord[] = [];
-  if (q.derivation === 'difference') {
+  if (regionSetScope !== null) {
+    // #253 / RS1: a region set NEVER routes through deriveMax — that function
+    // knows nothing about coverage and would happily rank a set with withheld
+    // or missing members. The ranking for this shape comes from
+    // deriveRegionRanking, which refuses unless coverage is complete (added in
+    // the next task); until then a region set carries no ranking derivation at
+    // all, which is the fail-closed direction.
+  } else if (q.derivation === 'difference') {
     const derived = deriveDifference(cells);
     if (!derived.ok) return refuse(intent, 'derivation_failed', derived.reason, { axis: 'derivation' });
     derivations.push(derived.record);
@@ -513,7 +589,11 @@ export async function runQuery(
     const firstLast = deriveFirstLast(cells);
     if (firstLast.ok) derivations.push(firstLast.record);
   }
-  if (q.regionCodes.length > 1 && q.derivation !== 'max' && allValuesPresent) {
+  // Same #253 exclusion as above: the pre-registered comparison max is also
+  // coverage-blind, and `allValuesPresent` cannot see a member that never made
+  // it into `cells` at all (a missing row, a slice-excluded code) — so a set
+  // with a hole would otherwise still pre-register a ranking.
+  if (regionSetScope === null && q.regionCodes.length > 1 && q.derivation !== 'max' && allValuesPresent) {
     const comparison = deriveMax(cells, false);
     if (comparison.ok) derivations.push(comparison.record);
   }
@@ -570,14 +650,35 @@ export async function runQuery(
     ...(q.table.doi ? { doi: q.table.doi } : {}),
   };
 
+  // #253: the region class wins over every other shape rule, including an
+  // explicit `max` — a ranked region set must CHART, and 'derived' charts as
+  // null (src/chart/build.ts).
   const shape: ResultShape =
-    q.derivation === 'difference' || q.derivation === 'max'
-      ? 'derived'
-      : q.periodCodes.length > 1
-        ? 'series'
-        : q.regionCodes.length > 1
-          ? 'comparison'
-          : 'single';
+    regionSetScope !== null
+      ? 'region_set'
+      : q.derivation === 'difference' || q.derivation === 'max'
+        ? 'derived'
+        : q.periodCodes.length > 1
+          ? 'series'
+          : q.regionCodes.length > 1
+            ? 'comparison'
+            : 'single';
+
+  const coverage: RegionSetCoverage | null =
+    regionSetScope === null
+      ? null
+      : {
+          scope: regionSetScope.scope,
+          rosterSize: q.regionCodes.length + regionSetScope.excludedBySlice.length,
+          notApplicable,
+          withheld,
+          missing,
+          // RS1, mechanised: `Impossible` members do NOT break completeness
+          // (CBS states they are not members at this coordinate); a withheld
+          // or unknown member does, because either could have been the
+          // maximum.
+          complete: withheld.length === 0 && missing.length === 0,
+        };
 
   return {
     ok: true,
@@ -596,5 +697,8 @@ export async function runQuery(
     // Present-only (A1 discipline): a non-defaulted answer serializes no key,
     // so every pre-WP26 and flag-off envelope stays byte-identical.
     ...(q.regionDefaulted ? { regionDefaulted: true as const } : {}),
+    // #253: present-only, same A1 discipline — only a region-class answer
+    // serializes this key, so every other envelope stays byte-identical.
+    ...(coverage !== null ? { regionSet: coverage } : {}),
   };
 }

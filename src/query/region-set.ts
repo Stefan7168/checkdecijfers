@@ -29,6 +29,23 @@
 import type { Db } from '../db/types.ts';
 import type { RegionScope } from './types.ts';
 
+/** CBS's own `ValueAttribute` for "this coordinate does not exist" — an
+ * abolished gemeente in a year after its abolition, or a seasonally-adjusted
+ * yearly figure that by definition cannot exist. It is the ONE null reason
+ * that does not break a region class's completeness: CBS is stating that the
+ * member is not part of the class at that coordinate, not withholding a value
+ * that might have been the maximum. Keyed on the verbatim CBS string. */
+export const NOT_APPLICABLE_ATTRIBUTE = 'Impossible' as const;
+
+/** Upper bound on the cells one region-set answer may carry (applicable +
+ * withheld). Measured basis: the largest real roster is the 834 gemeenten of
+ * 03759ned, of which at most 355 carry a value in any ingested year — so the
+ * cap sits well above every real case, and below the point where the stored
+ * envelope (R8 keeps result AND chart spec forever) and a bar chart both stop
+ * being usable. Over it, the query refuses rather than storing an envelope
+ * nobody can read back. */
+export const REGION_SET_MAX_MEMBERS = 500;
+
 /** The CBS dimension group holding the provinces. */
 const PROVINCE_GROUP = 'PV';
 /** The CBS dimension group holding the landsdelen. */

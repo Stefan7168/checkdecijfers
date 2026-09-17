@@ -282,6 +282,35 @@ export interface Attribution {
  * ranked region set must chart. Forward-only: no stored row carries it. */
 export type ResultShape = 'single' | 'series' | 'comparison' | 'derived' | 'region_set';
 
+/** #253: what the region CLASS actually covered, recorded so the disclosure
+ * sentence is re-DERIVED at audit time rather than re-decided (R8), and so the
+ * ranking honesty rule (RS1) is a function of stored facts.
+ *
+ * The four buckets are mutually exclusive and, together with the served cells,
+ * account for every roster member:
+ *  - served cells: the member has a row with a value ("applicable"), or a row
+ *    whose value is null for a reason OTHER than `Impossible` ("withheld" — a
+ *    value that exists but is not disclosed, and could be the maximum);
+ *  - `notApplicable`: null with CBS's own `Impossible` — CBS states the
+ *    coordinate does not exist (an abolished gemeente after its abolition), so
+ *    the member is not part of the class at that period and carries no number;
+ *  - `missing`: no row at all, or a member outside our ingested slice — we
+ *    simply do not know.
+ *
+ * `complete` is true only when `withheld` and `missing` are both empty. That is
+ * the whole of RS1: a ranking derivation is produced only for a complete set,
+ * so a superlative has nothing to bind to otherwise (R9 then fails closed). */
+export interface RegionSetCoverage {
+  /** The class asked for — the audit record re-derives the roster from this. */
+  scope: RegionScope;
+  /** Every member CBS lists for this table's class, before any partition. */
+  rosterSize: number;
+  notApplicable: string[];
+  withheld: string[];
+  missing: string[];
+  complete: boolean;
+}
+
 export interface ValidatedResult {
   ok: true;
   schemaVersion: typeof RESULT_SCHEMA_VERSION;
@@ -310,6 +339,10 @@ export interface ValidatedResult {
    * layer (the period axis is resolved before the query runs), same present-only
    * and `?? false` discipline as regionDefaulted. */
   periodDefaulted?: boolean;
+  /** #253: present ONLY on a `region_set` result. Same present-only discipline
+   * as regionDefaulted (docs/13): every row stored before this feature carries
+   * no key at all, so readers use `?? null` and never a bare read. */
+  regionSet?: RegionSetCoverage;
   /** #196 (session 73): the two registry facts the staleness check needs,
    * carried from the SAME cbs_tables row resolveIntent already read
    * (resolve.ts fetchTable) so src/answer/respond/staleness.ts never re-reads
