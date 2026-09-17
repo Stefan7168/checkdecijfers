@@ -2092,6 +2092,28 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 
+  // Row 9 (session 110 UX audit pass 2): Recharts' own chart-level keyboard
+  // handler (wired onto `.recharts-wrapper` by RechartsWrapper.js, an
+  // ANCESTOR of every point) treats 'Enter' specially for its built-in
+  // tooltip keyboard-navigation feature (see
+  // node_modules/recharts/es6/state/keyboardEventsMiddleware.js: 'Enter' is
+  // one of exactly three keys its listener acts on; ' ' is not one of them)
+  // -- so an Enter keydown that already activated a point and then keeps
+  // bubbling hands the SAME keystroke to a second, unrelated feature. A
+  // point's own activation must own the gesture completely, the way a real
+  // <button> would.
+  it("activating a point via Enter does not also let the keystroke reach Recharts' own chart-level keyboard handler", () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    const wrapper = container.querySelector('.recharts-wrapper')!;
+    const seenKeys: string[] = [];
+    wrapper.addEventListener('keydown', (e) => seenKeys.push((e as KeyboardEvent).key));
+    fireEvent.keyDown(dot, { key: 'Enter', bubbles: true });
+    expect(seenKeys).toEqual([]);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
   it('pressing Space on a focused chart point also opens the note entry form', () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);

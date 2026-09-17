@@ -916,6 +916,20 @@ function SeriesDot(
               ? (event: KeyboardEvent<SVGCircleElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): Recharts' own
+                  // `.recharts-wrapper` ancestor has its own onKeyDown
+                  // (RechartsWrapper.js) that feeds its built-in tooltip
+                  // keyboard-navigation feature, and that feature treats
+                  // 'Enter' specially (one of exactly three keys its
+                  // listener middleware acts on) while leaving ' ' alone —
+                  // which is exactly why Enter silently did nothing here
+                  // while Space worked: this activation was competing with
+                  // Recharts' own Enter handling for the same keystroke. A
+                  // point that already activated on this key owns the
+                  // gesture completely, the same way a real <button> would
+                  // never hand the keypress that activated it to an
+                  // ancestor's unrelated keyboard handling.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
@@ -1030,6 +1044,13 @@ function SeriesBar(
               ? (event: KeyboardEvent<SVGRectElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): see SeriesDot's
+                  // identical stopPropagation above — Recharts' own
+                  // `.recharts-wrapper` ancestor onKeyDown treats 'Enter'
+                  // specially for its built-in tooltip keyboard navigation
+                  // (not ' '), which is why only Enter silently did nothing
+                  // here.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
@@ -1124,6 +1145,13 @@ function RegionBar(
               ? (event: KeyboardEvent<SVGRectElement>) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
+                  // Row 9 (session 110 UX audit pass 2): see SeriesDot's
+                  // identical stopPropagation above — Recharts' own
+                  // `.recharts-wrapper` ancestor onKeyDown treats 'Enter'
+                  // specially for its built-in tooltip keyboard navigation
+                  // (not ' '), which is why only Enter silently did nothing
+                  // here.
+                  event.stopPropagation();
                   activate();
                 }
               : undefined
