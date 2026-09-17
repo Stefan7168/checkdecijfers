@@ -215,3 +215,64 @@ Unlike ADR 054's region-set shape, this capability is **reachable by a real user
 it merges** — the parser already emits the intent (spec §"The intent side"). That makes Task 7's
 benchmark run the real go/no-go: the first live confirmation that the parser does in practice what
 its own prompt rules require.
+
+## As-built notes (tasks 1–2)
+
+Built session 110, branch `s110/mrs12`. Both tasks landed as specified; the
+deviations below are the ones a later task owner needs to know about.
+
+1. **Task 1's "no existing `tests/query/*` test changes" could not hold, and
+   should not have.** `tests/query/query.test.ts`'s pin *"several regions AND
+   several periods at once is out of contract"* used **two** named regions over
+   **two** period codes — which is exactly the case this feature accepts. The
+   pin now exercises the over-the-cap case (7 named provincies) and keeps its
+   `multi_region_multi_period` assertion; nothing else in `tests/query` moved.
+2. **The one-varying-axis check moved to AFTER the derivation-arity switch** in
+   `resolve.ts`, which is what makes Task 1's own test list true (a
+   `difference`/`max` ask over several regions hits its own arity refusal on the
+   `derivation` axis, not the generic scope limit). Consequence worth knowing:
+   a region CLASS combined with `max`/`difference` over several periods now gets
+   the arity message instead of `multi_region_multi_period`. No test pinned that
+   combination, and the answer layer's chip builder keys on the sub-reason, so
+   that case simply reads as a derivation-arity refusal.
+3. **The internal refusal `message` gained a per-case detail suffix** (which cap
+   was hit, or that a region class spans several periods). It still contains the
+   verbatim `one varying axis per question` that existing tests match on. The
+   user-facing wording in `refusals.ts` is untouched — Task 4 owns it.
+4. **`src/answer/compose/template.ts` needed an interim `region_series` case.**
+   `renderTemplateBody`'s switch is exhaustive over `ResultShape`, so adding the
+   member breaks `npm run typecheck` until every renderer knows it. The interim
+   branch returns the design's own fail-closed floor — the claim-free per-cell
+   listing `renderSeries` produces, each line naming its region, period and
+   value, no trend word — so MS1 holds before Task 4 exists. **Task 4 replaces
+   this branch with `renderRegionSeries`.**
+5. **The floor is literally today's `diagnoseMissing`, so its kind depends on the
+   gap class.** A period beyond the freshest gives `freshness` (test-pinned); an
+   unpublished period gives `not_published`; a period outside the slice refuses
+   in the resolver. A *seeded* interior deleted row still gives `no_data` —
+   identical to what a single-region `series` over the same hole gets today,
+   which is the point: the floor adds no new refusal vocabulary. The spec's
+   "deliberately not `no_data`" is about not *manufacturing* one, and that holds.
+   Pinned both ways: the multi-region refusal's `kind` and `axis` are asserted
+   equal to the single-region series' over the same coordinate.
+6. **"A seeded case where `deriveMax` would otherwise have fired" is not
+   constructible.** `deriveMax` refuses any multi-period cells array
+   (`derivations.ts`), so no seed makes it fire on this shape; the explicit
+   `!isRegionSeries` guard is stated anyway (the rule belongs to `run.ts`, not to
+   another function's internals). The test asserts zero `max` records on the
+   shape **and** that the same three regions at one period still pre-register
+   their comparison `max` — the contrast that proves the exclusion is
+   shape-scoped, not a dead branch.
+7. **Known red outside `tests/query`, for Tasks 4 and 6 to fix — measured, not
+   predicted.** Three existing suites build a 2-named-region-over-a-range intent
+   and assert it REFUSES, which is exactly what now answers end to end:
+   - `tests/answer/query-refusal-chips.test.ts` — **4 failed / 5 passed** (the
+     whole row-13 block, including its flag-off byte-identity pin);
+   - `tests/answer/region-set-answer.test.ts` — **1 failed / 11 passed**;
+   - `tests/audit/region-set-r8.test.ts` — the row-13 `beforeAll` throws
+     *"expected a refusal, got answer"*, so that suite reports **13 passed /
+     5 skipped** and the file fails.
+
+   Each needs re-pointing at a still-refused case (over the cap, or a region
+   class), the same edit `tests/query/query.test.ts` took in note 1. Tasks 4 and
+   6 own them; nothing in `src/` is wrong.

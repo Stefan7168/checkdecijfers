@@ -30,6 +30,7 @@ import type {
   FreshnessInfo,
   QueryOutcome,
   QueryRefusal,
+  RegionSeriesCoverage,
   RegionSetCoverage,
   ResultCell,
   ResultShape,
@@ -444,15 +445,98 @@ export async function runQuery(
   // are recorded in the coverage record, disclosed structurally, and they
   // suppress the ranking derivation entirely (RS1), which is a stronger
   // guarantee than caveating prose. Every other shape is untouched.
+  //
+  // ADR 055: `region_series` is the SECOND such exception, and a narrower one.
+  // A named region we cannot serve at every requested period is never served
+  // short (a line across an unsampled hole is what the #64 rule forbids) and
+  // never silently dropped: it is recorded in the coverage record below,
+  // disclosed structurally, and it gets NO direction/first_last derivation, so
+  // no trend word can bind to it (MS1). Below two surviving regions the shape
+  // is not a multi-region series at all and the query falls back to exactly
+  // today's all-or-nothing diagnosis.
   const regionSetScope = q.regionSet;
+  /** ADR 055: DERIVED, never declared — the intent contract is unchanged. A
+   * region CLASS is excluded by construction (the resolver refuses a class over
+   * several periods), and so are `difference`/`max` (their own arity refusals
+   * fire first), so this is exactly "2..6 named regions over a range". */
+  const isRegionSeries =
+    regionSetScope === null && q.regionCodes.length > 1 && q.periodCodes.length > 1;
+  /** The first coordinate with NO ROW, in the same period-major/region-minor
+   * order the all-or-nothing scan has always used — so the fallback refusal
+   * below is diagnosed on exactly the coordinate today's code would pick. */
+  let firstMissing: { regionCode: string; periodCode: string } | null = null;
   if (regionSetScope === null) {
     for (const periodCode of q.periodCodes) {
       for (const regionCode of q.regionCodes) {
         if (!byCoordinate.has(`${regionCode}|${periodCode}`)) {
-          return diagnoseMissing(db, q, regionCode, periodCode);
+          if (!isRegionSeries) return diagnoseMissing(db, q, regionCode, periodCode);
+          firstMissing ??= { regionCode, periodCode };
         }
       }
     }
+  }
+
+  // The regions whose cells are actually BUILT below. Only the two partition
+  // blocks that follow ever narrow it; every other shape serves exactly what
+  // the resolver resolved.
+  let servedRegionCodes = q.regionCodes;
+
+  // --- The multi-region-series partition (ADR 055) ---------------------------
+  // Three buckets over the intent's own region order:
+  //  - complete: a row at every requested period, every one carrying a value —
+  //    the only regions that get their own direction/first_last records, and
+  //    therefore the only ones a trend word can be said about (MS1);
+  //  - partial: served, but at least one requested period has no value. The
+  //    cells stay, nulls with their verbatim CBS reason (R11) — they draw as
+  //    gaps — and the region gets NO derivation record at all, so R9 fails any
+  //    trend claim about it closed;
+  //  - excluded: at least one requested period has no ROW. The region
+  //    contributes zero cells: a shortened line would answer a different
+  //    question than the one asked, and a line across the hole would imply an
+  //    unsampled value.
+  let regionSeriesCoverage: RegionSeriesCoverage | null = null;
+  if (isRegionSeries) {
+    const served: string[] = [];
+    const partial: string[] = [];
+    const excluded: string[] = [];
+    for (const regionCode of q.regionCodes) {
+      let missingRow = false;
+      let valueless = false;
+      for (const periodCode of q.periodCodes) {
+        const row = byCoordinate.get(`${regionCode}|${periodCode}`);
+        if (row === undefined) {
+          missingRow = true;
+          break;
+        }
+        if (row.value == null) valueless = true;
+      }
+      if (missingRow) {
+        excluded.push(regionCode);
+        continue;
+      }
+      served.push(regionCode);
+      if (valueless) partial.push(regionCode);
+    }
+    if (served.length < 2) {
+      // The FLOOR, deliberately not a new refusal kind: with fewer than two
+      // surviving regions there is no multi-region series to disclose, so the
+      // query falls through to the EXISTING all-or-nothing diagnosis and gets
+      // its already-worded freshness / not_published / outside_loaded_slice
+      // refusal. Never `no_data` — that one routes to buildInternalRefusal and
+      // pages the owner for what is an ordinary data gap.
+      const miss = firstMissing ?? {
+        regionCode: excluded[0] ?? q.regionCodes[0]!,
+        periodCode: q.periodCodes[0]!,
+      };
+      return diagnoseMissing(db, q, miss.regionCode, miss.periodCode);
+    }
+    servedRegionCodes = served;
+    regionSeriesCoverage = {
+      requested: [...q.regionCodes],
+      partial,
+      excluded,
+      complete: partial.length === 0 && excluded.length === 0,
+    };
   }
 
   // --- The region-class partition (#253) ------------------------------------
@@ -464,7 +548,6 @@ export async function runQuery(
   const notApplicable: string[] = [];
   const withheld: string[] = [];
   const missing: string[] = [];
-  let servedRegionCodes = q.regionCodes;
   let applicableCount = q.regionCodes.length;
   let coverage: RegionSetCoverage | null = null;
   if (regionSetScope !== null) {
@@ -606,7 +689,26 @@ export async function runQuery(
   // LINE implying the unsampled hole — is closed in chart/build.ts instead;
   // the residual monotonic-describes-the-sample seam (pre-existing since
   // WP14) is recorded at open-questions #100 for the next prompt-touching WP.
-  if (q.periodCodes.length > 1 && allValuesPresent) {
+  if (isRegionSeries) {
+    // ADR 055 / MS1, mechanised by SLICING — not by a new derivation function.
+    // deriveDirection/deriveFirstLast are called once per region over that
+    // region's own cells (period-ascending, because `cells` is built
+    // period-major/region-minor), which is exactly the single-region input
+    // checkSingleRegion already insists on. A region with any valueless cell
+    // gets NO record: deriveDirection's checkComputable would refuse it
+    // anyway, but deriveFirstLast only looks at the endpoints, so the guard is
+    // stated here for BOTH — "no record" is the whole of MS1, and R9 then
+    // fails any trend word about that region closed.
+    for (const regionCode of servedRegionCodes) {
+      const slice = cells.filter((c) => c.regionCode === regionCode);
+      if (slice.length !== q.periodCodes.length) continue;
+      if (!slice.every((c) => c.value !== null)) continue;
+      const direction = deriveDirection(slice);
+      if (direction.ok) derivations.push(direction.record);
+      const firstLast = deriveFirstLast(slice);
+      if (firstLast.ok) derivations.push(firstLast.record);
+    }
+  } else if (q.periodCodes.length > 1 && allValuesPresent) {
     const direction = deriveDirection(cells);
     if (direction.ok) derivations.push(direction.record);
     const firstLast = deriveFirstLast(cells);
@@ -616,7 +718,20 @@ export async function runQuery(
   // coverage-blind, and `allValuesPresent` cannot see a member that never made
   // it into `cells` at all (a missing row, a slice-excluded code) — so a set
   // with a hole would otherwise still pre-register a ranking.
-  if (regionSetScope === null && q.regionCodes.length > 1 && q.derivation !== 'max' && allValuesPresent) {
+  // ADR 055 / MS1: the same exclusion, for the same reason, on the new shape.
+  // NO cross-region claim is made or supported at all — deriveMax is
+  // period-blind in the sense that matters here (it refuses a multi-period
+  // cells array, so it could never have produced a record for this shape), but
+  // the guard is stated explicitly rather than left to depend on another
+  // function's internals: "no max record exists on a region_series" is a rule
+  // this file owns, and R9 fails any superlative closed because of it.
+  if (
+    regionSetScope === null &&
+    !isRegionSeries &&
+    q.regionCodes.length > 1 &&
+    q.derivation !== 'max' &&
+    allValuesPresent
+  ) {
     const comparison = deriveMax(cells, false);
     if (comparison.ok) derivations.push(comparison.record);
   }
@@ -679,7 +794,12 @@ export async function runQuery(
   const shape: ResultShape =
     regionSetScope !== null
       ? 'region_set'
-      : q.derivation === 'difference' || q.derivation === 'max'
+      : // ADR 055: several named regions over a range. Ahead of the
+        // 'series'/'comparison' branches below, both of which describe a
+        // single varying axis and whose every consumer assumes it.
+        isRegionSeries
+        ? 'region_series'
+        : q.derivation === 'difference' || q.derivation === 'max'
         ? 'derived'
         : q.periodCodes.length > 1
           ? 'series'
@@ -708,5 +828,8 @@ export async function runQuery(
     // #253: present-only, same A1 discipline — only a region-class answer
     // serializes this key, so every other envelope stays byte-identical.
     ...(coverage !== null ? { regionSet: coverage } : {}),
+    // ADR 055: present-only, same A1 discipline — only a multi-region series
+    // serializes this key, so every other envelope stays byte-identical.
+    ...(regionSeriesCoverage !== null ? { regionSeries: regionSeriesCoverage } : {}),
   };
 }
