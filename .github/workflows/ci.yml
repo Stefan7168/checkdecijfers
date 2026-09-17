@@ -239,7 +239,7 @@ jobs:
         run: npx playwright test
         working-directory: web
       - name: Playwright report (failures only)
-        if: steps.e2e.outcome == 'failure'
+        if: failure() && steps.e2e.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
