@@ -75,6 +75,8 @@ function answerEnvelopeWithView(opts: {
   /** #253, present-only: omitted entirely unless the caller supplies it, so
    * every existing fixture stays byte-identical to before this field existed. */
   regionSetLine?: string;
+  /** ADR 055 / MS1, present-only: same discipline as regionSetLine above. */
+  regionSeriesLine?: string;
 }): Record<string, unknown> {
   return {
     schemaVersion: 1,
@@ -90,6 +92,7 @@ function answerEnvelopeWithView(opts: {
       attributionLine: 'Bron: CBS StatLine, tabel 37296ned. Licentie: CC BY 4.0.',
       text: opts.finalText,
       ...(opts.regionSetLine !== undefined ? { regionSetLine: opts.regionSetLine } : {}),
+      ...(opts.regionSeriesLine !== undefined ? { regionSeriesLine: opts.regionSeriesLine } : {}),
     },
     chart: opts.chart ?? null,
     suggestions: opts.suggestions ?? [],
@@ -239,6 +242,32 @@ describe('replayParts — R8 + zero-loss answerView (pin 2)', () => {
     });
     // Present-only, absent key on the stored row -> `?? null`, never undefined.
     expect((aWithout as ReplayAssistantPart).answerView?.regionSetLine).toBeNull();
+  });
+
+  it('ADR 055 / MS1: answerView carries regionSeriesLine — null when the stored envelope has no key, the string when it does', () => {
+    const withLine = mkRow({
+      id: 1,
+      kind: 'answer',
+      question: 'q',
+      response: answerEnvelopeWithView({
+        question: 'q',
+        finalText: 'a',
+        regionSeriesLine: 'Dekking: Amsterdam ontbreekt in 2021 en 2022.',
+      }),
+    });
+    const withoutLine = mkRow({
+      id: 2,
+      kind: 'answer',
+      question: 'q2',
+      response: answerEnvelopeWithView({ question: 'q2', finalText: 'a2' }),
+    });
+
+    const [, aWith, , aWithout] = replayParts([withLine, withoutLine]);
+    expect((aWith as ReplayAssistantPart).answerView).toMatchObject({
+      regionSeriesLine: 'Dekking: Amsterdam ontbreekt in 2021 en 2022.',
+    });
+    // Present-only, absent key on the stored row -> `?? null`, never undefined.
+    expect((aWithout as ReplayAssistantPart).answerView?.regionSeriesLine).toBeNull();
   });
 
   it('#134(a): a resumed REFUSAL row replays its retry chip — parity with the live turn (regression: replay dropped refusal suggestions)', () => {

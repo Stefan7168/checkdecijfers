@@ -596,3 +596,13 @@ to prevent. Task 4's brief scoped it to the backend answer layer and its
 `tests/answer` runs, and `web/` has its own co-located suites, so this is left
 for whoever owns the web slice (Task 3's file list is the nearest) — but it must
 not ship without it.
+
+**Gap closed (session 110, branch `s110/mrsline`):** `regionSeriesLine` is now
+carried through every surface named above (`web/lib/chat-message.ts`'s
+`AnswerView`, `web/components/chat.tsx`'s live-response mapping and its muted
+render right after `regionSetLine`, `web/lib/copy-answer.ts`,
+`web/lib/replay-assemble.ts`, `src/threads/replay.ts`'s `ReplayAnswerView` +
+`extractAnswerView`, and `web/test/fake-answer.ts`), mirroring the same-day
+`regionSetLine` parity fix exactly; `src/billing/history.ts`'s narrower
+`answerParts` (dashboard definition expander) was left out again, same
+reasoning as that fix.

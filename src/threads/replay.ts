@@ -33,6 +33,11 @@ export interface ReplayAnswerView {
    * and every answer that is not a region-class answer. Same present-only
    * discipline as assumptionLine above. */
   regionSetLine: string | null;
+  /** ADR 055 / MS1: the multi-region-series coverage disclosure the user was
+   * shown. Replayed from the STORED envelope, never re-decided. Null on every
+   * pre-MS1 row and every answer whose series is complete. Same present-only
+   * discipline as regionSetLine above (the two can never co-occur). */
+  regionSeriesLine: string | null;
   definitionLine: string | null;
   /** #39: the alternate-reading disclosure the user was shown. Replayed from
    * the STORED envelope, never re-decided. Null on every pre-#39 row and every
@@ -95,6 +100,7 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
     body,
     assumptionLine: answer?.assumptionLine ?? null,
     regionSetLine: answer?.regionSetLine ?? null,
+    regionSeriesLine: answer?.regionSeriesLine ?? null,
     definitionLine: answer?.definitionLine ?? null,
     alternatesLine: answer?.alternatesLine ?? null,
     markingLine: answer?.markingLine ?? null,

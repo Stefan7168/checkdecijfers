@@ -69,6 +69,8 @@ export function fakeAnswerResponse(opts: {
   assumptionLine?: string | null;
   /** #253: the region-class coverage disclosure line. */
   regionSetLine?: string | null;
+  /** ADR 055 / MS1: the multi-region-series coverage disclosure line. */
+  regionSeriesLine?: string | null;
   definitionLine?: string | null;
   /** #39: the alternate-reading disclosure line. */
   alternatesLine?: string | null;
@@ -98,6 +100,7 @@ export function fakeAnswerResponse(opts: {
       body,
       assumptionLine: opts.assumptionLine ?? null,
       regionSetLine: opts.regionSetLine ?? null,
+      regionSeriesLine: opts.regionSeriesLine ?? null,
       definitionLine: opts.definitionLine ?? null,
       alternatesLine: opts.alternatesLine ?? null,
       markingLine: opts.markingLine ?? null,
