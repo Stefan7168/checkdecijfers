@@ -3421,6 +3421,11 @@ export function ChartView({
           open={styleOpen}
           onOpenChange={setStyleOpen}
           triggerId={styleTriggerId}
+          // #6 (session 110 UX audit): this panel is always hosted inside
+          // ChartEditModal here, whose Dialog already renders its own Close
+          // (X) button — the panel's own "Sluiten" was a second, redundant
+          // Close control in the same popup.
+          hideCloseButton
           frameImage={frameImage}
           onFrameImage={setFrameImage}
           // R5.2 (ADR 043 decision 6 revisit): a chart with no per-chart

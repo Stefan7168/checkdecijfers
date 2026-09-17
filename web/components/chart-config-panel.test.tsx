@@ -1867,6 +1867,28 @@ describe('ChartConfigPanel — standalone rendering (no dialog/region of its own
     expect(document.activeElement).toBe(trigger);
   });
 
+  // #6 (session 110 UX audit): production always mounts this panel INSIDE
+  // ChartEditModal now (chart.tsx), whose Dialog already renders its own
+  // Close (X) button (ui/dialog.tsx's showCloseButton default) — so the
+  // panel's OWN "Sluiten" button was a second, redundant Close control in
+  // the same popup. `hideCloseButton` lets the one real call site (chart.tsx)
+  // opt out of rendering it while every other render call (this test file's
+  // own standalone Harness, with no surrounding Dialog) keeps it by default.
+  it('hides its own Close button when hideCloseButton is set (chart.tsx: hosted inside ChartEditModal, which has its own)', () => {
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={meta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="hide-close"
+        hideCloseButton
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    expect(screen.queryByRole('button', { name: 'Sluiten' })).toBeNull();
+  });
+
   it("the trigger's aria-controls still resolves to the dialog's id once open", () => {
     render(
       <Harness
