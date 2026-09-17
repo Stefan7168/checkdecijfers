@@ -19,7 +19,7 @@ import type {
   RegionScope,
   StructuredIntent,
 } from './types.ts';
-import { INTENT_SCHEMA_VERSION } from './types.ts';
+import { INTENT_SCHEMA_VERSION, REGION_SERIES_MAX_CELLS, REGION_SERIES_MAX_REGIONS } from './types.ts';
 import { resolveRegionSet } from './region-set.ts';
 
 /** WP26 mechanism B (ADR 024, safelist entry 1): the CBS code for the national
@@ -303,26 +303,6 @@ export async function resolveIntent(
   }
 
   // --- Derivation arity (structural: can never be satisfied) ---------------
-  // Phase 0 supports one varying axis per question: several periods at one
-  // place, or several regions at one period — never both (**Assumption**,
-  // mirrored in docs/open-questions.md; revisit with WP6 if a benchmark-shaped
-  // question needs it).
-  // #253: a region CLASS *is* "several regions", so it lands on exactly the
-  // same side of this rule — this feature does NOT relax ADR 011's
-  // one-varying-axis contract.
-  if (periodCodes.length > 1 && (regions.length > 1 || regionSet !== undefined)) {
-    // Row 13 (session 110, ADR 054 addendum): this is an honest, ordinary
-    // scope limit (ADR 011's one-varying-axis rule), not an internal fault —
-    // mark it exactly like D6's region_scope_on_national_measure so the
-    // answer layer can word it honestly instead of the generic `internal`
-    // wording, which pages the owner (alertInternalRefusal).
-    return refuse(
-      intent,
-      'invalid_intent',
-      'several regions AND several periods in one question is not supported (one varying axis per question)',
-      { subReason: 'multi_region_multi_period' },
-    );
-  }
   switch (intent.derivation) {
     case 'difference':
       if (periodCodes.length !== 2) {
@@ -357,6 +337,53 @@ export async function resolveIntent(
       break;
     default:
       return refuse(intent, 'invalid_intent', `unknown derivation kind "${(intent as { derivation: string }).derivation}"`, { axis: 'derivation' });
+  }
+
+  // --- The one-varying-axis rule, now CONDITIONAL (ADR 011 -> ADR 055) ------
+  // Phase 0 supported one varying axis per question: several periods at one
+  // place, or several regions at one period — never both. Session 110 (UX-audit
+  // pass-3 row 13) relaxes that for exactly ONE case, the multi-region series:
+  // a handful of EXPLICITLY NAMED regions over a period range, one line each,
+  // each region's own first/last/direction, no cross-region claim (MS1).
+  //
+  // Everything else keeps today's refusal, its sub-reason and its offer chip:
+  //  - a region CLASS over a range (#253): still "several regions", but a
+  //    different chart and an unbounded roster — ADR 054's axis is untouched;
+  //  - more than REGION_SERIES_MAX_REGIONS named regions, or a cross-product
+  //    over REGION_SERIES_MAX_CELLS cells: a named region is never silently
+  //    dropped to fit, so the whole ask refuses (principle c);
+  //  - a `difference`/`max` derivation: those have their own, more specific
+  //    arity refusals ABOVE (which is why this check now runs after the switch
+  //    — "difference compares periods at one place" names the real problem,
+  //    on the derivation axis, instead of the generic scope limit).
+  //
+  // NOT checked here: whether the table actually has a geo dimension. That is
+  // a DATA fact resolved below, and an explicit region on a region-less table
+  // already has its own refusal there — the same one a single region gets.
+  const regionSeriesEligible =
+    regionSet === undefined &&
+    regions.length > 1 &&
+    regions.length <= REGION_SERIES_MAX_REGIONS &&
+    (intent.derivation === 'none' || intent.derivation === 'series') &&
+    regions.length * periodCodes.length <= REGION_SERIES_MAX_CELLS;
+  if (periodCodes.length > 1 && (regions.length > 1 || regionSet !== undefined) && !regionSeriesEligible) {
+    // Row 13 (session 110, ADR 054 addendum): this is an honest, ordinary
+    // scope limit (ADR 011's one-varying-axis rule), not an internal fault —
+    // mark it exactly like D6's region_scope_on_national_measure so the
+    // answer layer can word it honestly instead of the generic `internal`
+    // wording, which pages the owner (alertInternalRefusal).
+    const detail =
+      regionSet !== undefined
+        ? `the region class "${regionSet.kind}" spans ${periodCodes.length} periods`
+        : regions.length > REGION_SERIES_MAX_REGIONS
+          ? `${regions.length} named regions is over the ${REGION_SERIES_MAX_REGIONS}-region limit for a multi-region series`
+          : `${regions.length} regions x ${periodCodes.length} periods is over the ${REGION_SERIES_MAX_CELLS}-cell limit for one answer`;
+    return refuse(
+      intent,
+      'invalid_intent',
+      `several regions AND several periods in one question is not supported (one varying axis per question): ${detail}`,
+      { subReason: 'multi_region_multi_period' },
+    );
   }
 
   // --- Target resolution ----------------------------------------------------

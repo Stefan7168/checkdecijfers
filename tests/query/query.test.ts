@@ -559,9 +559,17 @@ describe('typed refusals: intent validity', () => {
     await expectRefusal(population({ derivation: 'series' }), 'invalid_intent');
   });
 
-  it('several regions AND several periods at once is out of contract', async () => {
+  it('several regions AND several periods at once is out of contract ABOVE the multi-region-series caps', async () => {
+    // ADR 055 (session 110) relaxed this rule for a SMALL, explicitly named
+    // set of regions over a range — see tests/query/region-series-resolve.ts
+    // for the accepted side. What stays out of contract is the unbounded ask:
+    // more named regions than one chart can honestly carry (and, below, a
+    // region CLASS over a range).
     const refusal = await expectRefusal(
-      population({ regions: ['GM0363', 'GM0599'], period: { kind: 'codes', codes: ['2023JJ00', '2024JJ00'] } }),
+      population({
+        regions: ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26'],
+        period: { kind: 'codes', codes: ['2023JJ00', '2024JJ00'] },
+      }),
       'invalid_intent',
     );
     // Row 13 (session 110, ADR 054 addendum): this is an honest, structural

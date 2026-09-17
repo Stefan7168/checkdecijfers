@@ -283,6 +283,13 @@ export function renderTemplateBody(result: ValidatedResult): string {
       // derived shape with a non-explicit or missing derivation record —
       // fall back to the safest general rendering.
       return result.cells.length === 1 ? renderSingle(result) : renderSeries(result);
+    case 'region_series':
+      // ADR 055, INTERIM (plan tasks 1-2 land the query contract; task 4 lands
+      // `renderRegionSeries`). renderSeries is the fail-closed floor the design
+      // itself names: claim-free per-cell lines, each naming its own region,
+      // period and value — no trend word, so MS1 holds by construction even
+      // before the per-region clause renderer exists.
+      return renderSeries(result);
     // 'region_set' has already returned above — TypeScript narrows it out of
     // this switch, so adding a case here is a compile error, not an omission.
   }

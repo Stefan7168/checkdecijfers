@@ -286,8 +286,40 @@ export interface Attribution {
  * CLASS. It is its own shape rather than a 'comparison' because it carries a
  * coverage record (ValidatedResult.regionSet) and because 'derived' — what an
  * explicit `max` produces — charts as null (src/chart/build.ts), while a
- * ranked region set must chart. Forward-only: no stored row carries it. */
-export type ResultShape = 'single' | 'series' | 'comparison' | 'derived' | 'region_set';
+ * ranked region set must chart. Forward-only: no stored row carries it.
+ *
+ * ADR 055 (session 110): `'region_series'` is one measure, 2..6 EXPLICITLY
+ * NAMED regions, over a period range — one line per region. It is its own
+ * shape rather than a widened `'series'` because every `'series'` consumer
+ * assumes a single region (src/answer/compose/period-change.ts,
+ * deriveDirection's checkSingleRegion, src/answer/respond/suggestions.ts), and
+ * because it carries its own per-region coverage record
+ * (ValidatedResult.regionSeries). Derived, not declared: the intent contract
+ * is unchanged (INTENT_SCHEMA_VERSION stays 1) — the shape follows from
+ * `regions.length > 1 && periodCodes.length > 1`. Forward-only: no stored row
+ * carries it. */
+export type ResultShape =
+  | 'single'
+  | 'series'
+  | 'comparison'
+  | 'derived'
+  | 'region_set'
+  | 'region_series';
+
+/** ADR 055 (session 110, UX-audit pass-3 row 13): the largest number of
+ * EXPLICITLY NAMED regions one multi-region series may carry. Measured basis:
+ * the chart's DEFAULT_PALETTE has 8 entries (web/lib/chart-presentation.ts),
+ * so at 6 no two lines ever share a colour, and small multiples is offered at
+ * every series count above 1 — colour is never the only channel. Over the cap
+ * the query keeps today's one-varying-axis refusal (the honest scope limit),
+ * it never silently drops a named region. */
+export const REGION_SERIES_MAX_REGIONS = 6;
+
+/** ADR 055: the largest cross-product (regions x periods) one multi-region
+ * series may carry. Same stored-envelope basis as REGION_SET_MAX_MEMBERS (R8
+ * keeps the result AND the chart spec forever); it binds in practice — a
+ * KW-grain measure over 6 regions and 30 years would be 720 cells. */
+export const REGION_SERIES_MAX_CELLS = 500;
 
 /** #253: what the region CLASS actually covered, recorded so the disclosure
  * sentence is re-DERIVED at audit time rather than re-decided (R8), and so the
@@ -315,6 +347,39 @@ export interface RegionSetCoverage {
   notApplicable: string[];
   withheld: string[];
   missing: string[];
+  complete: boolean;
+}
+
+/** ADR 055 / **MS1** — what a multi-region series actually covered, per
+ * region, recorded so the disclosure sentence is re-DERIVED at audit time
+ * rather than re-decided (R8), and so the trend-honesty rule is a function of
+ * stored facts.
+ *
+ * The three buckets partition `requested` (the intent's own region order):
+ *  - neither `partial` nor `excluded`: the region has a CELL at every
+ *    requested period and every one of them carries a value, so it gets its
+ *    own `direction` + `first_last` records and may carry a trend word;
+ *  - `partial`: served (its cells are in `cells`, nulls kept with their CBS
+ *    reason — R11) but at least one requested period has no VALUE, so it gets
+ *    NO derivation record and therefore no trend word can bind to it (R9 fails
+ *    any such claim closed);
+ *  - `excluded`: at least one requested period has no ROW at all, so the
+ *    region contributes ZERO cells — a line drawn across an unsampled hole is
+ *    exactly what the #64 rule forbids, and a shortened line would silently
+ *    answer a different question than the one asked.
+ *
+ * `complete` is true only when `partial` and `excluded` are both empty. MS1 in
+ * one line: a trend claim about a region exists only when that region has its
+ * own derivation record, and no cross-region claim is supported at all (no
+ * registered derivation ranks change across regions). */
+export interface RegionSeriesCoverage {
+  /** Every region the intent named, in the intent's own order. */
+  requested: string[];
+  /** Served, but with at least one valueless requested period — no trend. */
+  partial: string[];
+  /** Not served at all: at least one requested period has no row. */
+  excluded: string[];
+  /** `partial` and `excluded` are both empty. */
   complete: boolean;
 }
 
@@ -350,6 +415,11 @@ export interface ValidatedResult {
    * as regionDefaulted (docs/13): every row stored before this feature carries
    * no key at all, so readers use `?? null` and never a bare read. */
   regionSet?: RegionSetCoverage;
+  /** ADR 055: present ONLY on a `region_series` result. Same present-only
+   * discipline as regionSet above (docs/13): every row stored before this
+   * feature carries no key at all, so readers use `?? null`, never a bare
+   * read. */
+  regionSeries?: RegionSeriesCoverage;
   /** #196 (session 73): the two registry facts the staleness check needs,
    * carried from the SAME cbs_tables row resolveIntent already read
    * (resolve.ts fetchTable) so src/answer/respond/staleness.ts never re-reads
