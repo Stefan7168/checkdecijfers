@@ -478,3 +478,13 @@ components/chart-config-panel.test.tsx` 90/90; `vitest run components/chart-stor
 section used for the 1,348,403-byte baseline) is left to whichever session runs the next real
 `next build` from the main checkout — this worktree only ran component tests, per its own
 process rules.
+
+**Parent measurement + one revert, session 110 (after the second attempt merged).** Real Turbopack
+builds in the main checkout, landing (`/`) client-reference-manifest chunks: before 8 chunks /
+1,351,443 bytes raw, largest 601,137; after (all five dynamic) 10 manifest entries / 1,311,908, largest
+461,356 — the two extra entries are the lazy chunks, not first-load. `ChartStoryPanel` was then made
+STATIC again (the landing's first gallery card pre-opens it, so lazy-loading it dropped the insights
+text from the server HTML and added a layout shift — the one place a first paint needs it; 301 lines):
+final largest chunk 472,477 bytes (−21% raw on the critical chunk), `chart.test.tsx` 284/284,
+`gallery.test.tsx` green. The modal, the 1,900-line style panel, the story stage and the notes editor
+stay `dynamic({ ssr: false })`.

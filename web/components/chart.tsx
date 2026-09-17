@@ -96,6 +96,7 @@ import { buildFindings } from '../lib/chart-insights.ts';
 import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryTrigger } from './chart-story-trigger.tsx';
+import { ChartStoryPanel } from './chart-story.tsx';
 import type { ChartNote, PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
@@ -142,7 +143,7 @@ export { BAR_LABEL_MAX };
 // button and 1900-line panel alike — into this file's chunk, which would
 // silently defeat the split below. With the triggers gone, chart.tsx now
 // holds zero static import edges into chart-config-panel.tsx,
-// chart-edit-modal.tsx, chart-story.tsx, chart-story-stage.tsx or
+// chart-edit-modal.tsx, chart-story-stage.tsx or
 // chart-notes.tsx — only the dynamic() calls below reference them, each
 // becoming its own on-demand chunk.
 //
@@ -172,10 +173,12 @@ const ChartConfigPanel = dynamic(() => import('./chart-config-panel.tsx').then((
   ssr: false,
   loading: () => <Skeleton className="h-64 w-full rounded-lg" />,
 });
-const ChartStoryPanel = dynamic(() => import('./chart-story.tsx').then((m) => m.ChartStoryPanel), {
-  ssr: false,
-  loading: () => null,
-});
+// ChartStoryPanel stays a STATIC import (parent decision, session 110): the
+// landing's first gallery card pre-opens it (`initialPanel="story"`), so a
+// lazy chunk would drop the insights text from the server HTML and add a
+// layout shift on every landing view — the one place a first paint needs it.
+// It is 300 lines; the ~1900-line style panel, the modal, the stage and the
+// notes editor are the weight, and those stay dynamic.
 const ChartStoryStage = dynamic(() => import('./chart-story-stage.tsx').then((m) => m.ChartStoryStage), {
   ssr: false,
   loading: () => null,
