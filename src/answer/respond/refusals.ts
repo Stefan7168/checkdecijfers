@@ -7,7 +7,12 @@
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import { resolveSource } from '../../sources/registry.ts';
-import { freshestForCanonical, type FreshnessInfo, type QueryRefusal } from '../../query/index.ts';
+import {
+  freshestForCanonical,
+  type FreshnessInfo,
+  type QueryRefusal,
+  type StructuredIntent,
+} from '../../query/index.ts';
 import type { Db } from '../../db/types.ts';
 import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts';
 import type { ConversationContext } from '../context/types.ts';
@@ -45,8 +50,17 @@ export interface BuiltRefusal {
    * the same #134 servability gate every other refusal-side chip shares
    * before it may ever reach the chip carrier. Every other builder leaves
    * this undefined; toRefusalResponse never reads it directly (the call site
-   * does, ahead of the envelope assembly). */
-  offerChip?: { canonicalKey: string; periodCode: string; label: string } | null;
+   * does, ahead of the envelope assembly).
+   *
+   * Session 110 (row 13/row 15): the two query-refusal builders below
+   * (`buildRegionScopeOnNationalMeasureRefusal`,
+   * `buildMultiRegionMultiPeriodRefusal`) widen this to a full-intent
+   * candidate instead of the canonical-key + one-period shape — see
+   * `rescue.ts`'s `OfferChipIntentCandidate`. */
+  offerChip?:
+    | { canonicalKey: string; periodCode: string; label: string }
+    | { intent: StructuredIntent; label: string }
+    | null;
 }
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
@@ -466,6 +480,41 @@ function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
  * The offer is real: the same measure without a region axis IS servable, and
  * that is the national figure. What never happens is serving that number here,
  * relabelled "per provincie" (principle c). */
+/** Row 15 (session 110, ADR 054 addendum + ADR 029 #134(c) note): the region-
+ * scope refusal's own "Ik kan je wel het landelijke cijfer geven" offer,
+ * turned into ONE takeable-chip CANDIDATE — the SAME intent with the region
+ * axis dropped entirely (no `regions`, no `regionSet`) and the derivation
+ * reset to `'none'` (a ranking derivation cannot survive losing every region
+ * it would have ranked over; a plain national lookup is exactly what the
+ * prose offers). Canonical target + exactly one period code only — mirrors
+ * `definitionLabelForRefusal`'s own canonical-only gate; by construction this
+ * refusal always carries a single period code (a multi-period ask with a
+ * region axis hits the sibling `multi_region_multi_period` refusal first, in
+ * resolve.ts, before this one is ever reached). No match ⇒ null ⇒ no chip,
+ * never a guess. */
+function regionScopeOnNationalMeasureOfferChip(
+  refusal: QueryRefusal,
+): { intent: StructuredIntent; label: string } | null {
+  const intent = refusal.intent;
+  const target = intent.target;
+  if (target.kind !== 'canonical') return null;
+  if (intent.period.kind !== 'codes' || intent.period.codes.length !== 1) return null;
+  const periodCode = intent.period.codes[0]!;
+  const definitionLabel = definitionLabelByKey.get(target.key);
+  if (definitionLabel === undefined) return null;
+  const measure = CANONICAL_MEASURES.find((m) => m.key === target.key);
+  const subject = measure?.everydayTerms[0] ?? definitionLabel;
+  return {
+    intent: {
+      schemaVersion: intent.schemaVersion,
+      target,
+      period: intent.period,
+      derivation: 'none',
+    },
+    label: wasSubjectInPeriodNl(subject, periodCode),
+  };
+}
+
 function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
   const body = definitionLabel
@@ -481,6 +530,7 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
     guidance,
     freshness: null,
     internalNote: null,
+    offerChip: regionScopeOnNationalMeasureOfferChip(refusal),
   };
 }
 
@@ -504,6 +554,53 @@ function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal
     guidance: null,
     freshness: null,
     internalNote: null,
+    offerChip: multiRegionMultiPeriodOfferChip(refusal),
+  };
+}
+
+/** Row 15's chip candidate, above, but for row 13: the FIRST explicitly named
+ * region (a region CLASS ask names no single region to fall back to, so that
+ * shape gets no chip — `regions` empty ⇒ null), the full asked period RANGE
+ * unchanged, derivation forced to `'series'` because the label PROMISES a
+ * trend ("Hoe ontwikkelde … zich"), mirroring suggestions.ts's own `trend()`
+ * chip generator (which does the same override for the same reason).
+ *
+ * Only a `period.kind === 'range'` ask is handled — an explicit multi-`codes`
+ * ask is not sorted on the stored intent (resolve.ts sorts a LOCAL copy for
+ * validation only), so picking a "from"/"to" pair from it without re-parsing
+ * every code would risk a wrong-order label; that shape gets no chip rather
+ * than a guess (**Assumption**, mirrored in docs/open-questions.md).
+ *
+ * **Assumption** (mirrored in docs/open-questions.md): the region is named by
+ * its bare CBS code, not a registry label — this module is a pure,
+ * DB-free template layer for the invalid_intent builders (unlike
+ * suggestions.ts's `buildRefusalSuggestions`, which has an injected
+ * registry-label lookup), and ADR 054 D6 already accepts a bare code as a
+ * display name for this exact region-set feature area. A labelled follow-up
+ * is a later enhancement, not required for this fix. */
+function multiRegionMultiPeriodOfferChip(
+  refusal: QueryRefusal,
+): { intent: StructuredIntent; label: string } | null {
+  const intent = refusal.intent;
+  const target = intent.target;
+  if (target.kind !== 'canonical') return null;
+  if (intent.period.kind !== 'range') return null;
+  const regions = intent.regions ?? [];
+  if (regions.length === 0) return null;
+  const firstRegion = regions[0]!;
+  const definitionLabel = definitionLabelByKey.get(target.key);
+  if (definitionLabel === undefined) return null;
+  return {
+    intent: {
+      schemaVersion: intent.schemaVersion,
+      target,
+      regions: [firstRegion],
+      period: intent.period,
+      derivation: 'series',
+    },
+    label:
+      `Hoe ontwikkelde ${definitionLabel} in ${firstRegion} zich van ` +
+      `${periodCodeToNl(intent.period.from)} tot en met ${periodCodeToNl(intent.period.to)}?`,
   };
 }
 

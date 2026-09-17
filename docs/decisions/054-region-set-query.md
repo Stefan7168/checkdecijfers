@@ -368,3 +368,53 @@ coverage disclosure the day it becomes reachable.
   query/chart/answer side, not yet on the parser side.
 - **"Alle landsdelen" made servable** — widen `03759ned`'s ingest slice to include the `LD`
   dimension group and re-sync (owner-delegated decision 2: not done now).
+
+## Addendum: a second honest sub-reason (row 13, session 110, 2026-09-17)
+
+The session-110 UX audit pass 3
+([docs/session-briefs/2026-09-17-session-110-ux-audit-pass3.md](../session-briefs/2026-09-17-session-110-ux-audit-pass3.md)
+row 13) found the SAME class of bug D6 fixed, on the sibling structural refusal: "Hoe ontwikkelde de
+bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024?" — several regions AND several periods
+in one question — hits `src/query/resolve.ts`'s pre-existing one-varying-axis refusal (ADR 011,
+unchanged by D2 above) and was served as the generic `internal` wording, which PAGES THE OWNER
+(`src/answer/audit/alerts.ts`) for what is an ordinary, honest scope limit exactly like D6's own case.
+
+**Mechanised identically to D6, reusing the same field:** `QueryRefusal.refusal.subReason` (D6) gained
+a second present-only value, `'multi_region_multi_period'`, set at the SAME `resolve.ts` refusal site
+that already existed (no new refusal site, no new `RefusalKind`) — the guard already distinguishes
+"several regions" (an explicit list *or* a region CLASS, D2's own reasoning: a `regionSet` counts as
+"several regions" for this rule too) crossed with "several periods." A new `RefusalReason`,
+`'multi_region_multi_period'`, gets its own honest wording in `refusals.ts`
+(`buildMultiRegionMultiPeriodRefusal`), routed in `buildQueryRefusal` exactly like D6's branch — an
+`if` beside the existing one, never a rewrite of it. `INTENT_SCHEMA_VERSION` is untouched (nothing
+about the intent SHAPE changed, only which value a pre-existing field can carry) and nothing under
+`src/answer/intent/prompt.ts`/`schema.ts`/`tests/fixtures/llm/` moved — this shape is already
+reachable through the parser today (an explicit `regions` list + a period range is existing
+vocabulary, unlike D1's `regionScope`, which needs Task 9).
+
+**The offer, and its own #134(c) chip (row 15).** The refusal's wording offers the natural fallback:
+one region over the whole period, or several regions at one period — never both. Session 110 also
+turned this offer, and D6's own "Ik kan je wel het landelijke cijfer geven" offer, into ONE takeable
+chip each, via the existing #134(c) mechanism (ADR 029's addendum below) rather than prose alone. The
+row-13 chip takes the FIRST explicitly named region, the full asked period range unchanged, and forces
+`derivation: 'series'` (the label promises a trend, mirroring `suggestions.ts`'s own `trend()`
+generator, which does the same override for the same reason) — a region CLASS ask (`regionSet`, no
+explicit `regions`) has no single region to fall back to and gets no chip at all, the same
+drop-never-guess rule every other chip in the product follows. **Assumption** (mirrored in
+[docs/open-questions.md](../open-questions.md)): the chip names the region by its bare CBS code, not a
+registry label — `refusals.ts` stays a pure, DB-free template layer for these `invalid_intent`
+builders (unlike `suggestions.ts`'s `buildRefusalSuggestions`, which has an injected registry-label
+lookup for its own region-carrying chips), and this is the same accepted display convention D6 already
+uses for the region-set coverage line's excluded-member codes. A labelled follow-up is a later
+enhancement.
+
+**R8 (audit):** `src/answer/audit/reconstruct.ts`'s subReason⟺reason pairing check (D7) is generalized
+from a single hardcoded value to a `subReason → RefusalReason` map, checked in both directions —
+so a sub-reason bolted onto its SIBLING (the other honest reason) is caught too, not only one bolted
+onto an unrelated refusal. Pinned in `tests/audit/region-set-r8.test.ts`.
+
+**Verified:** `tests/query/query.test.ts`, `tests/query/region-set-resolve.test.ts`,
+`tests/answer/region-set-answer.test.ts`, `tests/answer/query-refusal-chips.test.ts` (new, 9 cases:
+both refusals' wording, both offer chips, both no-chip cases, both flag-off byte-identical envelopes),
+`tests/audit/region-set-r8.test.ts` (18, was 10). Root `npm run typecheck` clean. Zero
+prompt/fixture bytes changed.

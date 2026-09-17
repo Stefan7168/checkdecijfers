@@ -577,3 +577,41 @@ suggestions; extending chips there is still the open option below, now unblocked
 - Measured: a filled chip question that produced a clarification round (audit rows show it) →
   tighten that generator's template or drop it.
 - Onboarded-answer surface (#117/#74 dashboard work) → extend chips there with the same generators.
+
+## As-built note (#134(c) extended to the two region-axis query refusals, row 13/row 15, session 110, 2026-09-17)
+
+The session-110 UX audit pass 3 row 15
+([docs/session-briefs/2026-09-17-session-110-ux-audit-pass3.md](../session-briefs/2026-09-17-session-110-ux-audit-pass3.md))
+flagged that D6's `region_scope_on_national_measure` refusal (ADR [054](054-region-set-query.md)) — "Ik
+kan je wel het landelijke cijfer geven" — was prose only, unlike the forecast/causal chips this ADR
+already ships. Row 13's new sibling refusal (`multi_region_multi_period`, ADR 054's own addendum)
+needed the same treatment from day one.
+
+- **The mechanism did not change — the CANDIDATE shape did.** `BuiltRefusal.offerChip` (already a
+  `{ canonicalKey, periodCode, label } | null` candidate) widened to also accept
+  `{ intent: StructuredIntent, label: string }` (`rescue.ts`'s new `OfferChipIntentCandidate`) — the
+  two new query-refusal chips need more than a bare canonical key + one period: one drops the region
+  axis entirely (national), the other keeps a single named region over a period RANGE, neither of
+  which `intentFor(key, periodCode)` can shape. `buildOfferChip` branches on `'intent' in candidate`;
+  every existing forecast/causal call site is untouched (still the narrow shape, still routes through
+  `intentFor`).
+- **Wired at the QUERY-refusal call site for the first time.** Until now `buildOfferChip` only ran at
+  `respondToParseOutcome`'s parse-refusal site; `respondToIntent`'s query-refusal branch only ever had
+  the non-clickable `buildRefusalSuggestions` chips (#134(a)/(b), period-axis only). Row 13/15's
+  candidates are query refusals (`invalid_intent` with a `subReason`), so `respondToIntent` now also
+  calls `buildOfferChip` — same servability dry-run, same chip-carrier `pending` shape, same
+  `suggestions: [chip.label]` — beside (never replacing) the existing period-axis suggestions, which
+  stay `[]` for these two `subReason`s (they only ever fire for freshness/outside_loaded_slice/
+  not_published). Same FAIL-OPEN belt: a chip hiccup here can never turn an honest refusal into an
+  internal error.
+- **Both candidates are minted in `refusals.ts` beside the offer text that already names them** —
+  `regionScopeOnNationalMeasureOfferChip` (the same intent, region axis dropped, derivation reset to
+  `'none'`) and `multiRegionMultiPeriodOfferChip` (the first named region, the full period range,
+  derivation forced to `'series'`) — never a second, independently-computed alternative that could
+  drift from the prose.
+- **Verified:** `tests/answer/query-refusal-chips.test.ts` (new, 9 cases — both refusals: a servable
+  candidate → one chip, the click-take answers with zero LLM calls; a region-CLASS ask (row 13) or an
+  unservable first region → no chip, byte-identical envelope; flag off → no chip, no `pending` key,
+  byte-identical text/reason/offer). `tests/answer/refusal-offer-chip.test.ts` (the forecast/causal
+  chips) and `tests/answer/rescue-chip.test.ts` unaffected — the narrow candidate shape and its call
+  site are untouched. Root `npm run typecheck` clean; zero prompt/fixture bytes changed.

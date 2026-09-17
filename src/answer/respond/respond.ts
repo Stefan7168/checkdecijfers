@@ -444,7 +444,42 @@ export async function respondToIntent(
     } catch {
       suggestions = [];
     }
-    return toRefusalResponse({ question, built: built.refusal, parse, queryRefusal: outcome, suggestions });
+    // Row 13 / row 15 (session 110, ADR 054 addendum + ADR 029 #134(c) note):
+    // the two invalid_intent sub-reasons (region_scope_on_national_measure,
+    // multi_region_multi_period) may each carry ONE offerChip CANDIDATE
+    // (refusals.ts) — turned into a real takeable chip through the SAME
+    // mechanism and servability dry-run the parse-refusal site uses below.
+    // FAIL-OPEN belt, same as every other #134 chip: a hiccup here must never
+    // turn an honest refusal into an internal error.
+    let chip: Awaited<ReturnType<typeof buildOfferChip>> = null;
+    if (options.clickOptionsEnabled === true) {
+      try {
+        chip = await buildOfferChip(built.refusal.offerChip, (intent) => echoServability(db, intent, queryOptions));
+      } catch {
+        chip = null;
+      }
+    }
+    return toRefusalResponse({
+      question,
+      built: built.refusal,
+      parse,
+      queryRefusal: outcome,
+      suggestions: chip ? [chip.label] : suggestions,
+      ...(chip
+        ? {
+            pending: {
+              version: RESPONSE_SCHEMA_VERSION,
+              question,
+              referenceDate: options.referenceDate,
+              axes: ['measure'],
+              questionNl: built.refusal.text,
+              options: [chip.label],
+              clickOptions: [chip.option],
+              rescueOnly: true,
+            },
+          }
+        : {}),
+    });
   }
 
   // WP26 mechanism B-period (ADR 024): the period axis is resolved by the
