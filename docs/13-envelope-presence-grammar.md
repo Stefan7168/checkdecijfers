@@ -8,7 +8,11 @@
 >
 > **Scope:** `ComposedResponse` ([src/answer/respond/types.ts](../src/answer/respond/types.ts)),
 > `ComposedAnswer` ([src/answer/compose/types.ts](../src/answer/compose/types.ts)),
-> `PendingClarification`, and the two WP26 flags on `ValidatedResult`.
+> `PendingClarification`, `ValidatedResult` and `QueryRefusal`
+> ([src/query/types.ts](../src/query/types.ts)) — the last two because a result and a query refusal are
+> stored *inside* a response envelope, so their own optional keys are absent on old rows for exactly the
+> same reasons. (Since #253 the manifest test covers every declared member of `ValidatedResult`, not just
+> the two WP26 flags it used to name here.)
 > **The mechanical half** is [tests/audit/envelope-key-manifest.test.ts](../tests/audit/envelope-key-manifest.test.ts),
 > which fails when a new envelope key lands without a decision about its R8 treatment. This doc is the part a
 > test cannot state: *why* the shapes differ.
@@ -60,7 +64,12 @@ chip carrier: the comparison chips first, every takeable follow-up chip since #7
 `ClickOption.questionShaped` (#73 v2 — the literal `true` or absent, never `false`: marks a carrier chip whose
 label is a complete question, so thread resume may replay it as a plain fill-the-input chip),
 `PendingClarification.conversationContext` (nullable),
-and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted` and
+`ComposedAnswer.regionSetLine` (nullable, #253 — the region-class coverage disclosure; absent on every
+answer that is not a region-class answer and on every row stored before #253),
+and on the query side `ValidatedResult.regionDefaulted` / `.periodDefaulted`,
+`ValidatedResult.regionSet` (#253 — the coverage record; present ONLY on a `region_set` result),
+`ValidatedResult.registry` (#196 — the staleness inputs; absent on synthetic results),
+`QueryRefusal.refusal.subReason` (#253 — see below) and
 `Attribution.alternates` (#39 — absent on explicit targets, on canonical measures without
 registry-recorded alternates, and on every row stored before #39).
 
@@ -70,6 +79,27 @@ registry-recorded alternates, and on every row stored before #39).
 `.onboarding`.
 
 Everything else is always present.
+
+## A present-only key that changes what a refusal MEANS: `subReason` (#253)
+
+Most present-only keys add something to a row. `QueryRefusal.refusal.subReason`
+([src/query/types.ts](../src/query/types.ts)) re-classifies one: an `invalid_intent` query refusal is an
+internal fault by default — and a served internal refusal **pages the owner**
+([src/answer/audit/alerts.ts](../src/answer/audit/alerts.ts)) — while the same kind *carrying*
+`subReason: 'region_scope_on_national_measure'` is an honest scope limit ("the CBS publishes this figure
+nationally only") with its own user-facing wording. It is a field rather than a new `RefusalKind` because
+the kind is right and the answer layer's only alternative was matching on `message`, owner-facing English
+prose (the #253 design).
+
+Two consequences for readers, both pinned by
+[tests/audit/region-set-r8.test.ts](../tests/audit/region-set-r8.test.ts):
+
+- `?? null` and a plain equality test, never a truthiness read — every refusal stored before #253, and
+  every other refusal since, serializes no key at all.
+- The served `reason` is a pure function of it, so reconstruction checks the pairing in **both**
+  directions, the same shape check the WP16 `onboarding` field gets: a stored row carrying the sub-reason
+  under any other reason — or that reason without the sub-reason — records a refusal its own inputs could
+  not have produced.
 
 ## The `suggestions` fork — deliberate, and worth keeping
 

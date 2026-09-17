@@ -20,10 +20,17 @@
 //     no-unbacked-numbers guarantee is structural + belt-checked by the WP9
 //     suites at produce time, and the benchmark scorer re-scans refusal texts
 //     against run-time whitelists.
-import { DERIVED_DATA_MARKING, isDerivedResult } from '../../query/index.ts';
+import { DERIVED_DATA_MARKING, isDerivedResult, RESULT_SCHEMA_VERSION } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
-import { buildAlternatesLine, buildAssumptionLine, buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
+import {
+  buildAlternatesLine,
+  buildAssumptionLine,
+  buildAttributionLine,
+  buildDefinitionLine,
+  buildRegionSetLine,
+} from '../compose/format.ts';
+import { renderTemplateBody } from '../compose/template.ts';
 import { applyUnitExpansions } from '../compose/expand.ts';
 import { findSuspectTokens } from '../compose/semantic-check.ts';
 import { buildSlotContext, fillSlots, validateSlotBody } from '../compose/slots.ts';
@@ -63,6 +70,19 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   if (response.kind === 'answer' && response.answer.schemaVersion !== ANSWER_SCHEMA_VERSION) {
     problems.push(
       `answer schemaVersion ${response.answer.schemaVersion} is not the v${ANSWER_SCHEMA_VERSION} this reconstructor handles`,
+    );
+  }
+  // The stored RESULT's own version pin, added with the #253 manifest rows
+  // (tests/audit/envelope-key-manifest.test.ts now covers ValidatedResult):
+  // every re-derivation below reads the stored result as a v1 shape, so a
+  // future v2 result inside a v1 envelope must be a loud failure here rather
+  // than a silent misreading further down — the same doctrine the three pins
+  // above already apply. `schemaVersion` has been a required field of
+  // ValidatedResult since the query layer's first commit (WP5), long before
+  // any audit row existed, so no stored row can be missing it.
+  if (response.kind === 'answer' && response.result.schemaVersion !== RESULT_SCHEMA_VERSION) {
+    problems.push(
+      `result schemaVersion ${response.result.schemaVersion} is not the v${RESULT_SCHEMA_VERSION} this reconstructor handles`,
     );
   }
   if (record.finalText !== response.text) {
@@ -109,6 +129,28 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
     if (shouldHaveOnboarding !== (onboarding !== null)) {
       problems.push(
         `onboarding envelope field ${onboarding !== null ? 'present' : 'absent'} does not match reason '${response.reason}'`,
+      );
+    }
+  }
+  // #253: `QueryRefusal.refusal.subReason` — the one machine-readable marker
+  // that turns an `invalid_intent` (an internal fault by default, which PAGES
+  // THE OWNER through src/answer/audit/alerts.ts) into the honest scope-limit
+  // refusal "this measure is published nationally only". The served
+  // `reason` is a pure function of it (refusals.ts buildQueryRefusal), so the
+  // two must agree on a stored row in BOTH directions: a row carrying the
+  // sub-reason with any other reason, or that reason without the sub-reason,
+  // records a refusal its own inputs cannot produce.
+  //
+  // Same shape check (not a numeric one) and the same `?? null` discipline as
+  // the onboarding pairing above: every refusal stored before #253 — and every
+  // other refusal since — serializes no `subReason` key at all, and
+  // `undefined !== null` would flag all of them.
+  if (response.kind === 'refusal') {
+    const subReason = response.queryRefusal?.refusal.subReason ?? null;
+    const isScopeLimit = response.reason === 'region_scope_on_national_measure';
+    if (isScopeLimit !== (subReason === 'region_scope_on_national_measure')) {
+      problems.push(
+        `queryRefusal subReason ${subReason === null ? 'absent' : `'${subReason}'`} does not match reason '${response.reason}'`,
       );
     }
   }
@@ -239,7 +281,8 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   }
 
   // WP26 mechanism B (ADR 024): the defaulted-axis disclosure re-derives from
-  // the stored result's own flags through the SAME builder compose.ts used —
+  // the stored result's own flags (`regionDefaulted` / `periodDefaulted`,
+  // read inside buildAssumptionLine) through the SAME builder compose.ts used —
   // R8's point being that the assumption the user was shown must be a function
   // of the recorded state, not a policy this reader re-decides. `?? null` (A1):
   // pre-WP26 rows serialize no key, and `undefined !== null` would flag every
@@ -248,18 +291,56 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   if ((answer.assumptionLine ?? null) !== assumptionLine) {
     problems.push('assumption line does not re-derive from the stored result');
   }
+
+  // #253: the region-class coverage disclosure re-derives from the stored
+  // COVERAGE RECORD (`result.regionSet`) through the SAME builder compose.ts
+  // used. This is where a tampered coverage record fails: `complete`, and the
+  // notApplicable/withheld/missing partition, are exactly what the sentence
+  // states — and `complete` is also what suppresses the ranking derivation
+  // (RS1), so a row whose coverage was edited after the fact no longer
+  // reconstructs the line the user actually read. `?? null` (A1): every
+  // non-region-class answer, and every row stored before #253, serializes no
+  // key at all.
+  const regionSetLine = buildRegionSetLine(result);
+  if ((answer.regionSetLine ?? null) !== regionSetLine) {
+    problems.push('region-set coverage line does not re-derive from the stored result');
+  }
+
+  // #253: unlike every other answer body, a region-class body has a
+  // DETERMINISTIC ground truth — composeAnswer is template-only BY SHAPE for
+  // `region_set` (never an LLM call, so never LLM prose), and
+  // renderTemplateBody is a pure function of the stored result. So this one
+  // shape's body is re-derived byte-identically rather than only re-validated:
+  // the validator accepts any body whose digits are backed by stored cells,
+  // which would let a dropped or reordered claim through on the shape where
+  // RS1 makes the claim-set itself the honesty question. Scoped to
+  // `region_set` on purpose — for an LLM-written body there is nothing to
+  // re-derive against, which is why `body` stays `revalidated` everywhere
+  // else (see tests/audit/envelope-key-manifest.test.ts).
+  if (result.shape === 'region_set') {
+    if (answer.source !== 'template') {
+      problems.push(`a region_set answer must be template-composed, stored source is '${answer.source}'`);
+    }
+    // The SPLICED body is what compose stores (assemble → applyUnitExpansions),
+    // so the re-derivation applies the same splice.
+    const rederivedBody = applyUnitExpansions(renderTemplateBody(result), result);
+    if (answer.body !== rederivedBody) {
+      problems.push('region-set body does not re-derive from the stored result');
+    }
+  }
   const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
   if (answer.markingLine !== markingLine) {
     problems.push('derived-data marking line does not re-derive from the stored derivations');
   }
 
   // The rendered text re-assembles byte-identically from its stored parts —
-  // in the SAME order compose.ts assembles them (assumption → definition →
-  // alternates → marking → attribution).
+  // in the SAME order compose.ts assembles them (assumption → region-set
+  // coverage → definition → alternates → marking → attribution).
   const text = [
     answer.body,
     '',
     ...(assumptionLine ? [assumptionLine] : []),
+    ...(regionSetLine ? [regionSetLine] : []),
     ...(definitionLine ? [definitionLine] : []),
     ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),

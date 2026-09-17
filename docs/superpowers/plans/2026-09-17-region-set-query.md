@@ -430,3 +430,100 @@ Deviations from the plan as written, and why:
 Measured at the end of task 6: `npx vitest run tests/answer --maxWorkers=1` → **790 passed, 32
 files**; root `npm run typecheck` clean; `git status` shows zero files touched under
 `tests/fixtures/`.
+
+---
+
+## As-built notes (task 7)
+
+Built on branch `s110/rs7` (session 110, worktree), on top of the merged tasks 1–6. **Task 7 is DONE**
+(tasks 8 and 9 are untouched). What the plan asked for, what was found, and the deviations:
+
+1. **The plan's first test found a REAL bug, not a missing manifest row.** Before this task,
+   `reconstruct.ts` re-assembled an answer's `text` from body + assumption + definition + alternates +
+   marking + attribution — with **no `regionSetLine`**. So every region-set answer row would have failed
+   R8 on `answer text does not re-assemble from its stored parts`, for a line the composer genuinely
+   wrote. The fix is one entry in that array, in the same position `compose.ts` puts it (after
+   `assumptionLine`), plus the re-derivation itself: `buildRegionSetLine(result)` compared
+   `?? null` against the stored key, exactly like `assumptionLine` / `alternatesLine`.
+
+2. **The coverage record is checked THROUGH the line it determines, not against a re-resolved roster —
+   deliberately.** Re-resolving the class at audit time would ask TODAY's `dimension_labels` about a row
+   written months ago (the same argument that keeps the chip dry-run out of reconstruction). The
+   disclosure sentence, however, is a pure function of the stored coverage, so a tampered record — a
+   `complete` flip, a member moved between `withheld` and `missing`, an invented `missing` entry — stops
+   re-deriving and fails loudly. All three tampers are pinned.
+
+3. **Region-set BODIES are now `rederived`, not just `revalidated` — a deliberate strengthening the plan
+   did not spell out but its test list implies.** `composeAnswer` is template-only BY SHAPE for
+   `region_set` (task 6, note 4), so this is the one body in the product with a deterministic ground
+   truth: `applyUnitExpansions(renderTemplateBody(result), result)` must reproduce it byte-identically.
+   The pin that justifies it drops the "lowest value" sentence from a stored body — every remaining digit
+   is still backed by a stored cell, so `validateAnswerBody` accepts it, and ONLY the byte comparison
+   catches it. On a shape where RS1 makes the claim-set itself the honesty question, that gap mattered.
+   Scoped to this shape: an LLM-written body has nothing to re-derive against, so `body` stays
+   `revalidated` everywhere else. The check also asserts `answer.source === 'template'` for the shape.
+
+4. **`queryRefusal.refusal.subReason`: the opaque `queryRefusal` entry does NOT suffice, and the
+   reconstructor now checks the pairing in both directions.** The manifest's one entry covers the nested
+   keys that feed refusal WORDING (`ignored` by the same argument as `offer`/`guidance`). `subReason` is
+   different in kind: the served `reason` is a pure function of it, and it is what separates an honest
+   scope limit from the generic `internal` refusal that **pages the owner**
+   (`src/answer/audit/alerts.ts`). So `reason === 'region_scope_on_national_measure'` ⟺
+   `queryRefusal.refusal.subReason === 'region_scope_on_national_measure'` is asserted on every refusal
+   row — modelled one-for-one on the WP16 `onboarding` presence/reason pairing, `?? null` and all. Three
+   pins: the real row reconstructs, a stripped sub-reason fails, and a sub-reason bolted onto the
+   *sibling* case (an `invalid_intent` with the same axis, which must keep the generic wording) fails.
+   The decision is written up in `docs/13-envelope-presence-grammar.md` under its own heading, and as a
+   `note` on the manifest's `queryRefusal` entry.
+
+5. **The manifest grew a whole `ValidatedResult` section, not just one row.** The plan says "add the
+   manifest rows for `ValidatedResult.regionSet` and `ComposedAnswer.regionSetLine`", and the manifest
+   test is bidirectional by design — so covering one key of an interface means covering all eleven. That
+   is the right outcome rather than a cost: nothing previously stopped a new key landing on the stored
+   result with no R8 decision, which is exactly how `regionSet` (and before it
+   `regionDefaulted`/`periodDefaulted`) arrived unmanifested. Categories: `shape-checked` for the nine
+   substrate keys (`schemaVersion`, `shape`, `cells`, `derivations`, `attribution`, `intent`,
+   `regionDefaulted`, `periodDefaulted`, `regionSet`); `ignored`, with the argument stated, for `ok` (a
+   `true` literal discriminant nothing reads) and `registry` (#196 staleness INPUTS — the verdict they
+   feed depends on wall-clock time at serve, which no later reader can reproduce, so the warning is
+   replayed verbatim rather than re-derived). Nothing on a stored result is `rederived`: a result is the
+   ground truth the answer surface re-derives FROM, never itself re-computed.
+   `ComposedAnswer.regionSetLine` is `rederived`; the member count moved 16 → 17.
+
+6. **Writing that section surfaced one genuinely unchecked field, so it is checked now:
+   `ValidatedResult.schemaVersion`.** The record, envelope and answer schema versions were all pinned;
+   the stored result's was not, even though every re-derivation below reads it as a v1 shape. One line,
+   same doctrine as the three pins above it. Zero risk to history: `schemaVersion` has been a REQUIRED
+   field of `ValidatedResult` since the query layer's first commit (`3c4370d`, WP5), long before any
+   audit row existed, and `RESULT_SCHEMA_VERSION` has only ever been `1`.
+
+7. **`known-divergences.ts` needed no entry.** The register is for rows stored under an older, less-safe
+   builder rule; `region_set` is forward-only (no stored row carries the shape — `src/query/types.ts`),
+   and the two changes that touch pre-existing rows are a new version pin that cannot fire on them and a
+   presence pairing whose both sides are absent on them.
+
+8. **The ingestion conformance check is its own file,
+   `tests/ingestion/region-set-groups.test.ts`** (`ingestion.test.ts` untouched, per the dispatch brief —
+   another agent may be in that file). For every *registered* geo table — read from `cbs_tables`'
+   `expected_dimensions`, never a hardcoded list — every `PV` code must have a non-empty `GM<pv>` group.
+   Measured: 2 geo tables (`03759ned`, `83625NED`), 12 provinces each, all 24 groups non-empty. A
+   non-vacuity test sits beside it (the fixture set losing its regional tables would otherwise pass an
+   empty loop). This turns a CBS group rename from "every gemeente question about that province refuses,
+   silently, at answer time" into a red ingestion suite.
+
+**Not done here, flagged for whoever finishes the feature:** `regionSetLine` is assembled into
+`answer.text` but is NOT yet carried by the per-line answer VIEW that `src/threads/replay.ts`,
+`web/lib/copy-answer.ts` and `web/components/chat.tsx` render field-by-field (they each list
+`assumptionLine`/`definitionLine`/… explicitly). Invisible today — the shape is unreachable through the
+parser until task 9 — but a replayed or copied region-set answer would silently drop its coverage
+disclosure. Out of task 7's scope (audit/R8), and not a doc this task is allowed to touch.
+
+Measured at the end of task 7: `npx vitest run tests/audit --maxWorkers=1` → **187 passed, 24 files**
+(including the new `region-set-r8.test.ts`, 13 tests, and the manifest test, 10);
+`npx vitest run tests/ingestion/region-set-groups.test.ts --maxWorkers=1` → **2 passed**;
+the five non-audit suites that also call `reconstructionReport`
+(`tests/invariants/invariants.test.ts`, `tests/sources/conformance-failures.test.ts`,
+`tests/answer/comparison-chips.test.ts`, `tests/answer/wp29-click-take.test.ts`,
+`tests/ingestion/eviction.test.ts`) → **116 passed, 5 files**; root `npm run typecheck` clean.
+`npm run audit:verify` (live DB) was NOT run — it needs `.env`; the parent session decides. It is
+expected to pass unchanged: see the report's reasoning, and points 6 and 7 above.
