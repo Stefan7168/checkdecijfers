@@ -706,6 +706,13 @@ export function ChartTooltip({
  * everything it needs straight off the row instead of a seriesKey-indexed
  * lookup — there is exactly one series (the region itself) per row.
  */
+/** Session 110 UX audit pass 3, row 10: which rows of an hbar chart carry a
+ * value label. 'all' (the pre-existing rule, <= BAR_LABEL_MAX plotted rows)
+ * labels every row; 'extremesOnly' (> BAR_LABEL_MAX) labels only the first
+ * and last PLOTTED row so the chart is never left with zero numbers; 'none'
+ * is the pre-existing empty case (no plotted rows at all). */
+type HbarLabelMode = 'all' | 'extremesOnly' | 'none';
+
 interface RegionChartRow {
   key: string;
   label: string;
@@ -1189,7 +1196,8 @@ function SeriesBar(
  * ChartView, same fallback tableModel's bar-kind header already uses). */
 function RegionBar(
   periodLabel: string,
-  showLabels: boolean,
+  labelMode: HbarLabelMode,
+  extremeKeys: ReadonlySet<string>,
   onPointClick?: (point: PendingPoint) => void,
   lang: Lang = 'nl',
 ) {
@@ -1203,7 +1211,15 @@ function RegionBar(
     const { x, y, width, height, payload } = props;
     if (x == null || y == null || width == null || height == null || !payload) return null;
     if (payload.value == null) return null;
-    const { label, value_display, value_provisional, value_resultId, color, dimmed, patternId } = payload;
+    const { key, label, value_display, value_provisional, value_resultId, color, dimmed, patternId } = payload;
+    // Session 110 UX audit pass 3, row 10 (decided by the parent session):
+    // 'all' labels every plotted row (the pre-existing rule, unchanged at or
+    // below BAR_LABEL_MAX); 'extremesOnly' labels ONLY the first and last
+    // PLOTTED row (the ranking's top/bottom when a ranking record sorted
+    // them, otherwise simply the first/last rows — computed once by the
+    // caller as `extremeKeys`) so a 16-40 bar chart is never left with zero
+    // numbers anywhere on it; 'none' matches the pre-existing empty case.
+    const showLabel = labelMode === 'all' ? true : labelMode === 'extremesOnly' ? extremeKeys.has(key) : false;
     const activate = (): void => {
       if (value_resultId == null || !onPointClick) return;
       onPointClick({ resultId: value_resultId, periodLabel, seriesLabel: label });
@@ -1257,7 +1273,7 @@ function RegionBar(
               : undefined
           }
         />
-        {showLabels && value_display != null ? (
+        {showLabel && value_display != null ? (
           <text
             x={x + width + 4}
             y={y + height / 2 + 4}
@@ -2227,8 +2243,29 @@ export function ChartView({
   // idea-bank's >15-categories rule) — counted over EVERY region in the
   // spec, not just the visible ones, so hiding a region can never make
   // labels that were already suppressed reappear.
-  const hbarPlottedCount = regionChartRowsAll.filter((r) => r.value !== null && r.value_display !== null).length;
-  const hbarLabelsShown = hbarPlottedCount > 0 && hbarPlottedCount <= BAR_LABEL_MAX;
+  const hbarPlottedRows = regionChartRowsAll.filter((r) => r.value !== null && r.value_display !== null);
+  const hbarPlottedCount = hbarPlottedRows.length;
+  // Session 110 UX audit pass 3, row 10 (decided by the parent session): a
+  // 16-40-bar hbar (above BAR_LABEL_MAX, still within COMPARISON_HBAR_MAX)
+  // kept "no invented ticks" (the x-axis draws no ticks by design, below)
+  // AND the >BAR_LABEL_MAX thinning rule, leaving the chart with ZERO
+  // numbers anywhere. Fix: keep both rules, but ALWAYS label the extremes —
+  // the first and last PLOTTED row, in the spec's own order (R6: never
+  // re-sorted here). When a ranking record sorted the series (ADR 054),
+  // those are the ranking's top and bottom member; otherwise they are
+  // simply the first/last rows. Computed over EVERY region
+  // (regionChartRowsAll/hbarPlottedRows), matching hbarPlottedCount above,
+  // so hiding a region can never change which rows are the labelled
+  // extremes. The vertical bar form (SeriesBar/valueLabelPlan's barLabels)
+  // keeps its OWN unchanged all-or-nothing rule — its labels sit ABOVE each
+  // bar and collide horizontally as bars narrow; hbar rows have the
+  // chart's full width to themselves, so two lone extreme labels never
+  // collide with the unlabelled rows between them.
+  const hbarLabelMode: HbarLabelMode =
+    hbarPlottedCount === 0 ? 'none' : hbarPlottedCount <= BAR_LABEL_MAX ? 'all' : 'extremesOnly';
+  const hbarExtremeKeys = new Set<string>(
+    hbarPlottedRows.length > 0 ? [hbarPlottedRows[0]!.key, hbarPlottedRows[hbarPlottedRows.length - 1]!.key] : [],
+  );
   const longestRegionLabel = regionChartRowsAll.reduce(
     (longest, r) => (r.label.length > longest.length ? r.label : longest),
     '',
@@ -2238,7 +2275,7 @@ export function ChartView({
     const text = `${r.value_display ?? ''}${r.value_provisional ? '*' : ''}`;
     return text.length > longest.length ? text : longest;
   }, '');
-  const rightMarginForLabels = hbarLabelsShown && longestRegionValueText ? labelWidthPx(longestRegionValueText) : 8;
+  const rightMarginForLabels = hbarLabelMode !== 'none' && longestRegionValueText ? labelWidthPx(longestRegionValueText) : 8;
   // A comparison has exactly one period shared by every region; this is the
   // SAME fallback tableModel's own bar-kind header above already uses for
   // the identical "which period label represents every region" question.
@@ -2927,7 +2964,7 @@ export function ChartView({
               <Bar
                 dataKey="value"
                 isAnimationActive={false}
-                shape={RegionBar(regionPeriodLabel, hbarLabelsShown, onPointClick, chartLang)}
+                shape={RegionBar(regionPeriodLabel, hbarLabelMode, hbarExtremeKeys, onPointClick, chartLang)}
               />
             </BarChart>
           ) : (

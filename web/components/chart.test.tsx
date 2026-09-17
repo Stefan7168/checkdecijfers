@@ -5574,3 +5574,51 @@ describe('ChartView — #253 region_set bar chart (Task 5)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 });
+
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 3, row 10 (decided by the parent session): "no
+// invented ticks" (chart.tsx's hbar XAxis draws tick={false} by design) plus
+// the pre-existing >BAR_LABEL_MAX value-label thinning rule together left a
+// 16-40-bar hbar chart with ZERO numbers anywhere on it. Both rules stay;
+// the fix always labels the EXTREMES — the first and last PLOTTED row, in
+// the spec's own order (R6: never re-sorted here) — everything else stays
+// unlabelled. `regionSetBarSpec`'s own values (`count - i`, descending)
+// double as a stand-in ranking, so "first/last row" and "ranking top/
+// bottom" coincide here exactly as ADR 054's `deriveRegionRanking` would
+// produce for a real ranked class.
+// ---------------------------------------------------------------------------
+describe('ChartView — #253/row 10 hbar extreme-only value labels above BAR_LABEL_MAX', () => {
+  it('a 26-row hbar renders exactly two value labels, on the first and last row, both real spec strings', () => {
+    const s = regionSetBarSpec(26);
+    const { container } = render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(26);
+    const labels = container.querySelectorAll('[data-role="bar-label"]');
+    expect(labels).toHaveLength(2);
+    const first = s.series[0]!.points[0]!;
+    const last = s.series[s.series.length - 1]!.points[0]!;
+    expect(container.querySelector(`[data-role="bar-label"][data-label-for="${first.resultId}"]`)?.textContent).toBe(
+      first.formattedValue,
+    );
+    expect(container.querySelector(`[data-role="bar-label"][data-label-for="${last.resultId}"]`)?.textContent).toBe(
+      last.formattedValue,
+    );
+    // Every digit on screen (the two labels, plus the y-axis region names)
+    // still traces to a real spec string — the honesty contract is
+    // unaffected by which rows the thinning rule chose to label.
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('a 12-row hbar (at or below BAR_LABEL_MAX) still labels every row — the pre-existing rule, unchanged', () => {
+    const s = regionSetBarSpec(12);
+    const { container } = render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(12);
+    const labels = container.querySelectorAll('[data-role="bar-label"]');
+    expect(labels).toHaveLength(12);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+});
+
