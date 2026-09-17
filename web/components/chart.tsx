@@ -120,6 +120,9 @@ import {
   hbarChartHeight,
   hbarFormAllowed,
   initialViewState,
+  // Session 110 pass 3 row 11: which specs get a single palette colour for
+  // every series — see the `colorFor` comment below.
+  isComparisonShaped,
   lineFormAllowed,
   windowSpec,
   type ChartForm,
@@ -2121,7 +2124,19 @@ export function ChartView({
   // included) is computed above, ahead of the schemaVersion guard — see the
   // comment there. `colorFor` feeds buildRows so every legend swatch,
   // tooltip swatch and hatch pattern reads the SAME effective colour.
-  const colorFor = (i: number) => seriesColor(pres, i);
+  // Session 110 UX audit pass 3, row 11: a comparison-shaped `displaySpec`
+  // (isComparisonShaped — every series one point, >= 2 series; a region-set
+  // answer is the canonical example) passes `paletteIndex: 0` for every
+  // series, so every un-overridden bar/row shares the palette's FIRST
+  // colour instead of cycling through 8 and repeating from the 9th region
+  // on — the region is the axis and the measure is the same, so colour was
+  // never carrying information there. An explicit per-series `seriesColors`
+  // override (the Style panel) still wins: `seriesColor` looks that up on
+  // `i`, never on `paletteIndex` (see its own comment). A genuine time
+  // series (any line/area, or a multi-point `kind: 'bar'`) is never
+  // comparison-shaped and keeps the unchanged per-series cycling palette.
+  const comparisonPalette = isComparisonShaped(displaySpec);
+  const colorFor = (i: number) => seriesColor(pres, i, comparisonPalette ? 0 : i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
   // #254: the ACTIVE reading's own pinned coordinates. This is the subtitle
   // that NAMES the reading (e.g. "SeizoensCorrectie: Niet gecorrigeerd") —

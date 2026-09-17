@@ -5622,3 +5622,59 @@ describe('ChartView — #253/row 10 hbar extreme-only value labels above BAR_LAB
   });
 });
 
+// ---------------------------------------------------------------------------
+// Session 110 UX audit pass 3, row 11 (decided by the parent session): the
+// 8-colour DEFAULT_PALETTE cycled on a comparison-shaped chart (every
+// series one point, >= 2 series — isComparisonShaped, chart-view-state.ts),
+// so a 12-province chart repeated colours after the 8th region even though
+// colour was never carrying information there (the region is the axis, the
+// measure is the same). Fix: a comparison-shaped chart's un-overridden
+// series all resolve to the palette's FIRST colour (seriesColor's new
+// `paletteIndex` parameter, chart-presentation.ts); a genuine time series
+// (any multi-point series) is unaffected and keeps the cycling palette; an
+// explicit per-series `seriesColors` override still wins.
+// ---------------------------------------------------------------------------
+describe('ChartView — #253/row 11 single palette colour for a comparison-shaped chart', () => {
+  it('a 12-series region comparison renders every bar with the same fill (the palette\'s first colour)', () => {
+    const s = regionSetBarSpec(12);
+    const { container } = render(<ChartView spec={s} />);
+    const bars = container.querySelectorAll('rect[data-point="value"]');
+    expect(bars).toHaveLength(12);
+    const fills = Array.from(bars).map((b) => b.getAttribute('fill'));
+    expect(fills.every((f) => f === DEFAULT_PALETTE[0])).toBe(true);
+  });
+
+  it('a 3-series time series keeps 3 distinct palette colours (never comparison-shaped)', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Nederland', regionCode: null, points: [point({ resultId: 'a1', periodCode: '2020', periodLabel: '2020', value: 1, formattedValue: '1' }), point({ resultId: 'a2', periodCode: '2021', periodLabel: '2021', value: 2, formattedValue: '2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'b1', periodCode: '2020', periodLabel: '2020', value: 3, formattedValue: '3' }), point({ resultId: 'b2', periodCode: '2021', periodLabel: '2021', value: 4, formattedValue: '4' })] },
+        { label: 'Groningen', regionCode: 'GM0014', points: [point({ resultId: 'c1', periodCode: '2020', periodLabel: '2020', value: 5, formattedValue: '5' }), point({ resultId: 'c2', periodCode: '2021', periodLabel: '2021', value: 6, formattedValue: '6' })] },
+      ],
+    });
+    const { container } = render(<ChartView spec={s} />);
+    // Multi-point series: not comparison-shaped, stays on the vertical Staaf
+    // form (spec.kind), never Liggend.
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    const bars = container.querySelectorAll('.recharts-bar-rectangle rect, rect[data-point="value"]');
+    const fills = new Set(Array.from(bars).map((b) => b.getAttribute('fill')).filter((f): f is string => f != null && f.startsWith('#')));
+    expect(fills).toEqual(new Set(DEFAULT_PALETTE.slice(0, 3)));
+  });
+
+  it('an explicit seriesColors override on a comparison-shaped chart still wins per series', () => {
+    const s = regionSetBarSpec(3);
+    const { container } = render(
+      <ChartStyleProvider initial={{ seriesColors: { 1: '#123456' } }}>
+        <ChartView spec={s} />
+      </ChartStyleProvider>,
+    );
+    const bars = Array.from(container.querySelectorAll('rect[data-point="value"]'));
+    expect(bars).toHaveLength(3);
+    // Series 0 and 2 fall back to the shared comparison colour; series 1's
+    // explicit override wins regardless.
+    expect(bars[0]?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
+    expect(bars[1]?.getAttribute('fill')).toBe('#123456');
+    expect(bars[2]?.getAttribute('fill')).toBe(DEFAULT_PALETTE[0]);
+  });
+});

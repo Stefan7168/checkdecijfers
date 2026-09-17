@@ -307,6 +307,21 @@ describe('resolvePresentation', () => {
     expect(seriesColor(r.values, 9)).toBe(DEFAULT_PALETTE[1]); // cycles like seriesStyle did
   });
 
+  // Session 110 UX audit pass 3, row 11: an optional `paletteIndex` (default
+  // `index`, so every pre-existing call site above is byte-identical) lets a
+  // comparison-shaped chart (chart.tsx) pass `0` for every series so an
+  // un-overridden run of bars shares one colour instead of cycling — while
+  // an explicit `seriesColors` override still wins per series, looked up on
+  // `index`, never on `paletteIndex`.
+  it('an explicit paletteIndex picks the palette slot, independent of the series index — an override still wins on the series index', () => {
+    const plain = { seriesColors: {} };
+    expect(seriesColor(plain, 5)).toBe(DEFAULT_PALETTE[5]); // unchanged default: paletteIndex defaults to index
+    expect(seriesColor(plain, 5, 0)).toBe(DEFAULT_PALETTE[0]); // every series forced to the first colour
+    expect(seriesColor(plain, 11, 0)).toBe(DEFAULT_PALETTE[0]); // same, past the 8-colour wrap
+    const overridden = { seriesColors: { 5: '#123456' } };
+    expect(seriesColor(overridden, 5, 0)).toBe('#123456'); // the override on index 5 still wins over paletteIndex 0
+  });
+
   it('an empty seriesColors override still counts as pristine', () => {
     expect(resolvePresentation(lineCtx, { seriesColors: {} }).pristine).toBe(true);
   });
