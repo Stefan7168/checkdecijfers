@@ -488,6 +488,10 @@ const nl = {
   // this left tracked.
   'chart.story.trigger': 'Inzichten',
   'chart.story.regionLabel': 'Inzichten bij de grafiek',
+  // Session 110 a11y audit (#Fix-now 3): the findings-card scroll area's own
+  // aria-label — it's a distinct focusable/scrollable region NESTED inside
+  // the panel above, so it needs its own accessible name.
+  'chart.story.findingsListLabel': 'Lijst met bevindingen',
   'chart.story.hint': 'Scroll of gebruik de pijlen',
   'chart.story.prev': 'Vorige',
   'chart.story.next': 'Volgende',
@@ -1279,6 +1283,7 @@ const en: Messages = {
 
   'chart.story.trigger': 'Insights',
   'chart.story.regionLabel': 'Insights for this chart',
+  'chart.story.findingsListLabel': 'Findings list',
   'chart.story.hint': 'Scroll or use the arrows',
   'chart.story.prev': 'Previous',
   'chart.story.next': 'Next',

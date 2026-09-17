@@ -21,6 +21,13 @@ afterEach(() => {
 });
 
 describe('PrivacyPage — nl (default)', () => {
+  // Session 110 a11y audit (#Fix-now 2): axe-core flagged landmark-one-main +
+  // region on this page — the content wrapper was a plain <div>.
+  it('wraps the page content in a <main> landmark', async () => {
+    render(await PrivacyPage());
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
   it('renders the heading, retention terms and the draft note', async () => {
     render(await PrivacyPage());
     expect(screen.getByRole('heading', { name: 'Privacy', level: 1 })).toBeInTheDocument();

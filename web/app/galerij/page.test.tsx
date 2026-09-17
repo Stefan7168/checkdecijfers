@@ -9,7 +9,17 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../components/site-header.tsx', () => ({ SiteHeader: () => <div data-testid="site-header" /> }));
-vi.mock('../../components/gallery.tsx', () => ({ GalleryGrid: () => null }));
+
+// Session 110 a11y audit (#Fix-now 4): captures the props this page passes
+// to GalleryGrid, so the headingLevel={2} wiring is pinned here rather than
+// only exercised inside components/gallery.test.tsx's own render.
+const galleryGridProps = vi.hoisted(() => ({ current: undefined as { headingLevel?: number } | undefined }));
+vi.mock('../../components/gallery.tsx', () => ({
+  GalleryGrid: (props: { headingLevel?: number }) => {
+    galleryGridProps.current = props;
+    return null;
+  },
+}));
 
 const { getLang } = vi.hoisted(() => ({ getLang: vi.fn() }));
 vi.mock('../../lib/i18n/server.ts', () => ({ getLang }));
@@ -33,6 +43,15 @@ describe('GaleryPage — nl', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Zelf inline insluiten komt binnenkort.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Begin met vragen' })).toHaveAttribute('href', '/login');
+  });
+
+  // Session 110 a11y audit (#Fix-now 4): this page's <h1> has no <h2> before
+  // the cards, so GalleryGrid must render its card titles as <h2>, not the
+  // default <h3> (axe-core heading-order, moderate).
+  it('passes headingLevel={2} to GalleryGrid', async () => {
+    getLang.mockResolvedValue('nl');
+    render(await GaleryPage());
+    expect(galleryGridProps.current).toEqual({ headingLevel: 2 });
   });
 
   it('sets noindex metadata', async () => {
