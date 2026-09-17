@@ -86,7 +86,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       category: 'ignored',
       why: 'an answer takes its intent from result.intent, so the parse outcome is not read here; the LLM parse has no deterministic ground truth to re-derive against (same policy as llm_calls)',
     },
-    result: { category: 'shape-checked' }, // the substrate everything above re-derives FROM; itself checked via resultIds/tables/intentHash
+    result: {
+      category: 'shape-checked',
+      note: 'the substrate everything above re-derives FROM; itself checked via resultIds/tables/intentHash. Since #253 it is also a container whose own keys are manifested below, under ValidatedResult.',
+    },
     suggestions: {
       category: 'ignored',
       why: 'servability-gated at PRODUCE time by a dry-run against live data; re-running that dry-run at audit time would check the database of today against a chip offered months ago. Assembled after the audited text, so it cannot alter it.',
@@ -117,7 +120,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     guidance: { category: 'ignored', why: 'same as offer' },
     freshness: { category: 'ignored', why: 'period + status only, never a value (open-questions #37); produce-time structural guarantee' },
     parse: { category: 'shape-checked' }, // read by resolvedIntent when there is no queryRefusal
-    queryRefusal: { category: 'shape-checked' }, // read by resolvedIntent — the intent the hash must recompute from
+    queryRefusal: {
+      category: 'shape-checked',
+      note: 'read by resolvedIntent — the intent the hash must recompute from. ONE nested key is checked in its own right rather than opaquely: #253\'s present-only `refusal.subReason`, because the served `reason` is a pure function of it (an invalid_intent WITH it is the honest "published nationally only" scope limit; the same kind WITHOUT it is the internal fault that pages the owner). reconstruct checks that pairing in both directions, like the onboarding one. Every OTHER nested key stays covered by this one opaque entry: they feed the refusal WORDING, which is `ignored` by the same argument as `offer`/`guidance` (deterministic, value-free templates).',
+    },
     internalNote: { category: 'ignored', why: 'an owner-readable diagnostic, never rendered to the user and never part of the answer surface' },
     onboarding: { category: 'shape-checked' }, // presence must match reason === 'onboarding_pending'
     pending: { category: 'ignored', why: 'WP26c rescue state; like the clarification-side pending, the reply turn\'s copy is what reconstruct checks' },
@@ -126,8 +132,12 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
   ComposedAnswer: {
     schemaVersion: { category: 'shape-checked' }, // version pin
     source: { category: 'shape-checked' }, // must equal the promoted answer_source column
-    body: { category: 'revalidated' }, // R1/R3/R9/R10/R11 re-run against the stored result
+    body: {
+      category: 'revalidated',
+      note: "R1/R3/R9/R10/R11 re-run against the stored result. ONE shape is stronger: #253's `region_set` body is composed template-only BY SHAPE (never LLM prose), so it is a pure function of the stored result and reconstruct re-derives it BYTE-IDENTICALLY as well — the validator alone would accept a region-set body with a claim quietly dropped, which is precisely the honesty question on that shape (RS1). Everywhere else there is no deterministic ground truth to compare against, which is what this category means.",
+    },
     assumptionLine: { category: 'rederived' }, // buildAssumptionLine, byte-identical, `?? null` (A1)
+    regionSetLine: { category: 'rederived' }, // #253 buildRegionSetLine, byte-identical, `?? null` (A1)
     definitionLine: { category: 'rederived' }, // buildDefinitionLine, byte-identical
     alternatesLine: { category: 'rederived' }, // #39 buildAlternatesLine, byte-identical, `?? null` (A1)
     markingLine: { category: 'rederived' }, // from result.derivations
@@ -144,6 +154,45 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       note: 'rawBody is recorded LLM output (no deterministic ground truth of its own, like body) but everything around it re-derives: the slot map must re-compute byte-identically from the stored result (buildSlotContext), the raw body must re-pass the slot pre-fill validator, and the stored body must re-derive byte-identically by re-filling rawBody through the deterministic filler (+ unit-expansion splice) — the #162 R1/R8 rule. Present-only: absent = flag off / pre-#162 row / template body.',
     },
   },
+  // #253: the stored RESULT joined this manifest with the region-class
+  // coverage record. It is not a response envelope, but it is stored inside
+  // one (AnswerResponse.result) and it is the SUBSTRATE every re-derivation
+  // above reads — so a new key landing here without an R8 decision is exactly
+  // the silent addition this file exists to prevent, and until now nothing
+  // caught one (`regionSet`, and before it `regionDefaulted`/`periodDefaulted`,
+  // all arrived unmanifested).
+  //
+  // Nothing on a stored result is `rederived`: a result is not re-computed at
+  // audit time (that would query today's database about a row written months
+  // ago — the same argument that keeps the `suggestions` dry-run out of
+  // reconstruction). The result is the GROUND TRUTH the answer surface is
+  // re-derived FROM, so its own keys are read and asserted against: hence
+  // `shape-checked` almost throughout.
+  ValidatedResult: {
+    ok: {
+      category: 'ignored',
+      why: "a `true` literal discriminant of QueryOutcome, already narrowed away before a result can be stored at all (only the ok branch produces a ValidatedResult, and only an AnswerResponse carries one) — there is no other value a stored row could hold, so there is nothing to check",
+    },
+    schemaVersion: { category: 'shape-checked' }, // version pin (#253), same doctrine as the record/envelope/answer pins
+    shape: { category: 'shape-checked' }, // dispatches the region_set body re-derivation; also what buildChartSpec keys on
+    cells: { category: 'shape-checked' }, // must equal the promoted result_ids column, in order
+    derivations: { category: 'shape-checked' }, // markingLine and the chart spec re-derive FROM it (R5 marking, R9 backing)
+    attribution: { category: 'shape-checked' }, // must equal the promoted tables/table_ids; the R4/definition/alternates lines re-derive FROM it
+    intent: { category: 'shape-checked' }, // must equal the promoted intent column and recompute intent_hash
+    regionDefaulted: {
+      category: 'shape-checked',
+      note: 'WP26 (ADR 024): read THROUGH the line it determines — buildAssumptionLine is re-run over the stored flag and must reproduce the stored assumptionLine byte-identically, so an edited flag fails there. Present-only, `?? false` (A1).',
+    },
+    periodDefaulted: { category: 'shape-checked', note: 'same as regionDefaulted — checked through buildAssumptionLine.' },
+    regionSet: {
+      category: 'shape-checked',
+      note: '#253: the coverage record, read THROUGH the line it determines — buildRegionSetLine is re-run over the stored coverage and must reproduce the stored regionSetLine byte-identically, so a `complete` flip or a member moved between buckets fails loudly. That indirection is deliberate: the coverage record has no independent ground truth at audit time (re-resolving the roster would ask TODAY\'s dimension_labels about a row written months ago), but the sentence the user actually read is a pure function of it. Present-only, `?? null` (A1).',
+    },
+    registry: {
+      category: 'ignored',
+      why: "#196 staleness INPUTS (update cadence, last sync), captured at query time. The staleness verdict they feed depends on wall-clock time at serve, which no later reader can reproduce — so the warning itself is replayed verbatim (AnswerResponse.stalenessWarning, shape-checked through the text re-assembly) rather than re-derived, and these inputs with it. Present-only: synthetic results carry no key.",
+    },
+  },
 };
 
 /** Interfaces whose own members the manifest must cover, in the file that
@@ -156,6 +205,13 @@ const SOURCES: { file: string; interfaces: string[] }[] = [
   {
     file: fileURLToPath(new URL('../../src/answer/compose/types.ts', import.meta.url)),
     interfaces: ['ComposedAnswer'],
+  },
+  {
+    // #253: not a response envelope of its own, but stored inside one and the
+    // substrate every answer-side re-derivation reads — see the ValidatedResult
+    // block in MANIFEST for why it is covered here.
+    file: fileURLToPath(new URL('../../src/query/types.ts', import.meta.url)),
+    interfaces: ['ValidatedResult'],
   },
 ];
 
@@ -257,7 +313,8 @@ describe('the envelope-key manifest covers the declared types', () => {
       AnswerResponse: 9, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`
       ClarificationResponse: 6,
       RefusalResponse: 11,
-      ComposedAnswer: 16,
+      ComposedAnswer: 17, // #253: + present-only `regionSetLine`
+      ValidatedResult: 11, // #253: the stored result joined this manifest
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
       expect(declared.get(name)?.length, `${name} parsed an unexpected member count`).toBe(count);
@@ -336,6 +393,10 @@ describe('the envelope-key manifest covers the declared types', () => {
       'kind',
       'options',
       'model',
+      // #253: `ValidatedResult.ok` is a literal discriminant nobody reads, but
+      // `ok` is also the field name of every report/validation flag inside
+      // reconstruct.ts — a bare-identifier match cannot tell them apart.
+      'ok',
     ]);
     const nowRead: string[] = [];
     for (const [name, entries] of Object.entries(MANIFEST)) {
