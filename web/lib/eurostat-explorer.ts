@@ -81,19 +81,28 @@ export interface ExplorerFilter {
    * grain/dimension picker is out of E1's scope. */
   fromYear: string;
   toYear: string;
+  /** Session 110 UX audit pass 3, row 5: present only when the chosen
+   * table's own geo dimension (`geoDimensionForTable` below) requires one —
+   * a single region code from that table's own roster, never free text. */
+  region?: string;
 }
 
-/** The picked-table + year-range filter is ALL the explicit-target
- * StructuredIntent this route ever builds by hand (D5: zero new query/chart
- * code) — everything downstream of it is the real pipeline. Dims are
- * deliberately left empty: a table whose expected_dimensions declares an
- * unpinned plain Dimension simply resolves to a clarification, which the
- * route renders plainly (see page.tsx) rather than crashing on — a full
- * dimension picker is a named, explicit residual, not silently missing. */
+/** The picked-table + year-range (+ optional region) filter is ALL the
+ * explicit-target StructuredIntent this route ever builds by hand (D5: zero
+ * new query/chart code) — everything downstream of it is the real pipeline.
+ * Non-geo dims are still deliberately left empty: a table whose
+ * expected_dimensions declares an unpinned plain Dimension simply resolves
+ * to a clarification, which the route renders plainly (see page.tsx) rather
+ * than crashing on — a full arbitrary-dimension picker stays a named,
+ * explicit residual. The GEO dimension is no longer one of those residuals
+ * (session 110 UX audit pass 3, row 5): `filter.region`, when present, is
+ * this route's own real answer to "which region", sourced from the table's
+ * OWN roster (geoDimensionForTable) — never a fabricated code. */
 function buildIntent(filter: ExplorerFilter): StructuredIntent {
   return {
     schemaVersion: 1,
     target: { kind: 'explicit', tableId: filter.tableId, measure: filter.measure },
+    ...(filter.region !== undefined ? { regions: [filter.region] } : {}),
     period: { kind: 'range', from: `${filter.fromYear}JJ00`, to: `${filter.toYear}JJ00` },
     derivation: 'none',
   };
@@ -125,6 +134,70 @@ function buildParseOutcome(question: string, intent: StructuredIntent): Extract<
     impliedRecency: false,
     ranked: [],
   };
+}
+
+export interface GeoDimensionOption {
+  code: string;
+  label: string;
+}
+
+export interface GeoDimensionInfo {
+  /** The table's own geo dimension name (e.g. Eurostat's `geo`) — carried
+   * through so the form can label the picker honestly instead of a generic
+   * "Region". */
+  dimension: string;
+  /** The table's own roster, in its own sort order (`sort_index`, then code
+   * for rows left unindexed — same convention src/query/region-set.ts's
+   * `codesInGroups` already uses), capped at GEO_OPTION_LIMIT so a table
+   * with an unusually large roster still renders a usable `<select>`. */
+  options: GeoDimensionOption[];
+  /** A common Eurostat aggregate (PREFERRED_DEFAULT_GEO_CODE) when the
+   * table's OWN roster actually contains it — never invented, never a
+   * guessed "the country the reader probably means" (principle c). null
+   * when absent; the picker then starts on its disabled placeholder. */
+  defaultCode: string | null;
+}
+
+const GEO_OPTION_LIMIT = 200;
+
+/** Eurostat's own common aggregate code for "the 27 EU member states"
+ * (src/eurostat-adapter/jsonstat.ts's EU_EFTA_STAND_IN_GEO_CODES carries the
+ * same literal) — the one geo code likely to exist across many registered
+ * Eurostat tables, so it is a reasonable, honest default IF the table's own
+ * roster actually has it. Not a general "national code": Eurostat tables
+ * have no single such thing the way CBS's NATIONAL_REGION_CODE does. */
+const PREFERRED_DEFAULT_GEO_CODE = 'EU27_2020';
+
+/** Session 110 UX audit pass 3, row 5: the only registered Eurostat table
+ * (demo_pjan) has a geo dimension, and this route sent no region for it —
+ * every query landed on resolve.ts's region-missing gate and refused to
+ * "Kun je aangeven voor welke regio?", a chat clarification this form had no
+ * field to answer (the table, chart, CSV and proof panel were all
+ * unreachable). Reads the table's OWN expected_dimensions (does it have a
+ * GeoDimension at all?) and, if so, its OWN dimension_labels roster — never
+ * invents a geography. Returns null for a table with no geo dimension,
+ * exactly the untouched pre-fix shape (no region field renders, no region is
+ * sent). Zero new query/chart code (D5): this only builds the picker's own
+ * option list; `buildIntent` above still does the one line of intent-
+ * building work. */
+export async function geoDimensionForTable(db: Db, tableId: string): Promise<GeoDimensionInfo | null> {
+  const { rows } = await db.query(`select expected_dimensions from cbs_tables where id = $1`, [tableId]);
+  const raw = rows[0]?.expected_dimensions as unknown;
+  const dims: { name: string; kind: string }[] =
+    typeof raw === 'string' ? JSON.parse(raw) : ((raw as { name: string; kind: string }[] | null) ?? []);
+  const geo = dims.find((d) => d.kind === 'GeoDimension');
+  if (!geo) return null;
+
+  const { rows: labelRows } = await db.query(
+    `select code, label from dimension_labels
+      where table_id = $1 and dimension = $2
+      order by coalesce(sort_index, 2147483647), code
+      limit $3`,
+    [tableId, geo.name, GEO_OPTION_LIMIT],
+  );
+  const options = labelRows.map((r) => ({ code: r.code as string, label: r.label as string }));
+  const defaultCode = options.some((o) => o.code === PREFERRED_DEFAULT_GEO_CODE) ? PREFERRED_DEFAULT_GEO_CODE : null;
+  return { dimension: geo.name, options, defaultCode };
 }
 
 /** THE real pipeline call (D5): runQuery -> composeAnswer(templateOnly) ->
