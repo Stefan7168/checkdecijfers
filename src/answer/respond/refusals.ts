@@ -593,6 +593,22 @@ function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal
  * registry-label lookup), and ADR 054 D6 already accepts a bare code as a
  * display name for this exact region-set feature area. A labelled follow-up
  * is a later enhancement, not required for this fix. */
+/** Row 5 (session 110 UX audit pass 4, #269): the one sentence template for
+ * this chip, parameterised over the region's DISPLAY text — shared by the
+ * bare-code fallback below and by `relabelMultiRegionMultiPeriodOfferChip`
+ * (respond.ts's DB-aware re-labelling step), so the two can never say the
+ * sentence two different ways. */
+function multiRegionMultiPeriodOfferLabel(
+  definitionLabel: string,
+  regionDisplay: string,
+  period: { from: string; to: string },
+): string {
+  return (
+    `Hoe ontwikkelde ${definitionLabel} in ${regionDisplay} zich van ` +
+    `${periodCodeToNl(period.from)} tot en met ${periodCodeToNl(period.to)}?`
+  );
+}
+
 function multiRegionMultiPeriodOfferChip(
   refusal: QueryRefusal,
 ): { intent: StructuredIntent; label: string } | null {
@@ -613,10 +629,39 @@ function multiRegionMultiPeriodOfferChip(
       period: intent.period,
       derivation: 'series',
     },
-    label:
-      `Hoe ontwikkelde ${definitionLabel} in ${firstRegion} zich van ` +
-      `${periodCodeToNl(intent.period.from)} tot en met ${periodCodeToNl(intent.period.to)}?`,
+    // Bare-code fallback (#269, mirrored in open-questions.md): this module
+    // is a pure, DB-free template layer (see the file header) and cannot
+    // resolve a registry label itself. respond.ts — the DB-aware call site,
+    // which already injects the same honest code→label source into
+    // `buildRefusalSuggestions` (#138) — overwrites this label with
+    // `relabelMultiRegionMultiPeriodOfferChip` whenever it can resolve one;
+    // this bare-code sentence only ever reaches the user when that lookup
+    // itself fails closed (unlabelable code / no geo dimension).
+    label: multiRegionMultiPeriodOfferLabel(definitionLabel, firstRegion, intent.period),
   };
+}
+
+/** Row 5 (session 110 UX audit pass 4, #269): respond.ts's re-labelling step
+ * for the chip above, called once it has resolved the region's registry
+ * LABEL (via `regionTermsFor`, context/build.ts — the same honest
+ * code→label source #138 already injects into `buildRefusalSuggestions`).
+ * Goes through the SAME template as the fallback above
+ * (`multiRegionMultiPeriodOfferLabel`), so relabelling can only ever change
+ * which region name appears, never the sentence shape. Returns the
+ * candidate UNCHANGED whenever the intent no longer has the shape this chip
+ * requires — defensive only; respond.ts calls this with the exact candidate
+ * `multiRegionMultiPeriodOfferChip` just returned, so the guards should
+ * never trigger in practice (fail-closed: keep the bare-code label rather
+ * than throw). */
+export function relabelMultiRegionMultiPeriodOfferChip(
+  candidate: { intent: StructuredIntent; label: string },
+  regionLabel: string,
+): { intent: StructuredIntent; label: string } {
+  const { intent } = candidate;
+  if (intent.target.kind !== 'canonical' || intent.period.kind !== 'range') return candidate;
+  const definitionLabel = definitionLabelByKey.get(intent.target.key);
+  if (definitionLabel === undefined) return candidate;
+  return { intent, label: multiRegionMultiPeriodOfferLabel(definitionLabel, regionLabel, intent.period) };
 }
 
 function buildQuarantinedRefusal(): BuiltRefusal {
