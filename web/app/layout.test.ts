@@ -144,3 +144,42 @@ describe('RootLayout — forcedTheme wiring into <ThemeProvider> (final review, 
     expect(themeProvider!.props.forcedTheme).toBeUndefined();
   });
 });
+
+// Session 110 (UX audit pass 2, row 2b): inside a third-party iframe the
+// document must grow with its content, so a host auto-resize script can read
+// the real height and the attribution block is never below an inner scroller's
+// fold. The app shell keeps its viewport-locked scroller (ADR 033 D6).
+describe('RootLayout — embed routes grow with content, the app shell stays viewport-locked', () => {
+  function bodyClass(element: ReactNode): string {
+    const body = findElement<{ className?: string }>(element, 'body');
+    return body?.props.className ?? '';
+  }
+  function hasInnerScroller(element: ReactNode): boolean {
+    const walk = (node: ReactNode): boolean => {
+      if (node == null || typeof node !== 'object') return false;
+      if (Array.isArray(node)) return node.some(walk);
+      if (!isValidElement(node)) return false;
+      const props = node.props as { className?: string; children?: ReactNode };
+      if (typeof props.className === 'string' && props.className.includes('overflow-y-auto')) return true;
+      return walk(props.children ?? null);
+    };
+    return walk(element);
+  }
+
+  it('an embed route gets a min-h-dvh body and no overflow-y-auto scroller', async () => {
+    headers.mockResolvedValue(fakeHeaders({ 'x-embed-route': '1' }));
+    getLang.mockResolvedValue('nl');
+    const element = await RootLayout({ children: null });
+    expect(bodyClass(element)).toContain('min-h-dvh');
+    expect(bodyClass(element).split(' ')).not.toContain('h-dvh');
+    expect(hasInnerScroller(element)).toBe(false);
+  });
+
+  it('an ordinary route keeps the h-dvh body and the inner overflow-y-auto scroller', async () => {
+    headers.mockResolvedValue(fakeHeaders({}));
+    getLang.mockResolvedValue('nl');
+    const element = await RootLayout({ children: null });
+    expect(bodyClass(element).split(' ')).toContain('h-dvh');
+    expect(hasInnerScroller(element)).toBe(true);
+  });
+});

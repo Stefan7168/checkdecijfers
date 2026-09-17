@@ -122,7 +122,7 @@ export default async function RootLayout({
       {/* App shell: the page scrolls inside the flex-1 region so the one
           site-wide footer (ADR 033 D6) stays in view and the chat workspace
           can size its cards to the viewport. */}
-      <body className="flex h-dvh flex-col">
+      <body className={isEmbedRoute ? "flex min-h-dvh flex-col" : "flex h-dvh flex-col"}>
         <LangProvider lang={lang}>
           <ThemeProvider forcedTheme={forcedTheme}>
             {/* Task 6 (chart frame plan): one Style panel open per page —
@@ -136,7 +136,19 @@ export default async function RootLayout({
                   every page, not tied to any one chart mount. */}
               <ChartUsageTracker />
               {/* ADR 042: [scrollbar-gutter:stable] keeps this scrollbar's appear/disappear from changing the width a chart's height-follows-width rule reacts to. */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">{children}</div>
+              {/* Session 110 (UX audit pass 2, row 2b): inside a third-party
+                  iframe the document must GROW with its content — a fixed
+                  h-dvh body plus an inner scroller pins scrollHeight to the
+                  iframe's declared height, so an auto-resize host script can
+                  never see the real content height and the attribution block
+                  ends up below the fold. Embeds get a natural-flow body; the
+                  app shell keeps the viewport-locked scroller it was built
+                  around (ADR 033 D6). */}
+              {isEmbedRoute ? (
+                <div className="flex flex-1 flex-col">{children}</div>
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-gutter:stable]">{children}</div>
+              )}
               {/* Fix round (Task 5 review, Piece 2): the embed iframe is
                   meant to be a clean, chart-only surface (spec Part B3) — the
                   site-wide footer has no business appearing inside a
