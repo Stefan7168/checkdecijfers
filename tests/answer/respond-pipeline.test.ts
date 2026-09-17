@@ -291,6 +291,14 @@ describe('chartAlternates (#254)', () => {
     expect(response.chartAlternates.length).toBeGreaterThan(0);
     expect(response.chartAlternates[0]!.label).toBe('CPI indexniveau (2025=100), geen mutatiepercentage');
     expect(response.chartAlternates[0]!.spec.attribution.tableId).toBe(response.chart?.attribution.tableId);
+    // #254(a), ADR 052 session 110 addendum: buildAlternateReading's result
+    // now ALSO carries `validated` (the alternate's own ValidatedResult, for
+    // the period-change-eligible-alternate wiring below) — respond.ts must
+    // destructure label/spec explicitly rather than push that object
+    // wholesale, so an alternate WITHOUT the marker (this one) stays exactly
+    // the two keys it always was. A regression here would silently balloon
+    // every stored answer's audit envelope.
+    expect(Object.keys(response.chartAlternates[0]!).sort()).toEqual(['label', 'spec']);
   });
 
   it('B11 (a single-value answer, no chart) returns an empty array, not undefined', async () => {

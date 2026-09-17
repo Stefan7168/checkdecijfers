@@ -49,6 +49,19 @@ import type { ChartSpec } from './types.ts';
 export interface AlternateReadingResult {
   label: string;
   spec: ChartSpec;
+  /** #254(a), ADR 052 session 110 addendum: the alternate's own resolved
+   * ValidatedResult (the same `altOutcome` this function already built the
+   * spec from) — exposed so a caller can feed IT, not just the chart spec,
+   * into buildPeriodChangeReading (which needs a ValidatedResult's cells,
+   * not a rendered ChartSpec) to offer a period-change reading of THIS
+   * alternate. Named `validated`, not `result`, to avoid a confusing
+   * `outcome.result.result` at call sites (the outer discriminated union
+   * already uses `result` for THIS whole object). Additive only: existing
+   * callers (curated.ts) that read only `.label`/`.spec` are unaffected, and
+   * respond.ts never spreads this object wholesale into the stored
+   * AnswerResponse.chartAlternates entry — it destructures label/spec
+   * explicitly, so this field never reaches the audit envelope. */
+  validated: ValidatedResult;
 }
 
 export type AlternateReadingOutcome = { ok: true; result: AlternateReadingResult } | { ok: false; reason: string };
@@ -157,7 +170,7 @@ export async function buildAlternateReading(
   try {
     const spec = buildChartSpec(altOutcome);
     if (spec === null) return { ok: false, reason: `alternate reading shape '${altOutcome.shape}' yields no chart` };
-    return { ok: true, result: { label: alt.label, spec } };
+    return { ok: true, result: { label: alt.label, spec, validated: altOutcome } };
   } catch (err) {
     return { ok: false, reason: `alternate reading chart build failed: ${err instanceof Error ? err.message : String(err)}` };
   }

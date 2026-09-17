@@ -23,6 +23,18 @@ export interface CanonicalMeasureAlternate {
   /** Present when the alternate differs by dimension coordinate(s). */
   dims?: Record<string, string>;
   label: string;
+  /** #254(a), ADR 052 session 110 addendum: true when a person has reviewed
+   * THIS specific alternate's own data (period regularity, no zero/negative
+   * history — the same check ADR 052 D3's 7 primary-measure entries each
+   * got) and confirmed it is safe to offer a period-over-period %-change
+   * reading of it too, alongside the primary's own (independent) eligibility
+   * in PERIOD_CHANGE_ELIGIBLE_KEYS. Absent/false for every other alternate —
+   * never inferred from the primary measure's own eligibility, and never a
+   * runtime heuristic over the data (same discipline as
+   * PERIOD_CHANGE_ELIGIBLE_KEYS itself). Round-trips through
+   * canonical_measures.alternates (registry/apply.ts JSON.stringify) onto
+   * query/types.ts's AttributionAlternate, which mirrors this shape. */
+  periodChangeEligible?: true;
 }
 
 export interface CanonicalMeasure {

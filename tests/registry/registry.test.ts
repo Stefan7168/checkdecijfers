@@ -111,6 +111,29 @@ describe('registry defaults (ADR 010)', () => {
     const cm = CANONICAL_MEASURES.find((c) => c.key === 'solar_electricity_production')!;
     expect(cm.alternates).toBeUndefined();
   });
+
+  it('#254(a), ADR 052 session 110 addendum: periodChangeEligible is set on exactly the three household-income alternates, nothing else', () => {
+    const marked: { key: string; label: string }[] = [];
+    for (const cm of CANONICAL_MEASURES) {
+      for (const alt of cm.alternates ?? []) {
+        if (alt.periodChangeEligible === true) marked.push({ key: cm.key, label: alt.label });
+      }
+    }
+    marked.sort((a, b) => a.label.localeCompare(b.label));
+    expect(marked).toEqual([
+      { key: 'average_disposable_household_income', label: 'bruto inkomen' },
+      { key: 'average_disposable_household_income', label: 'gestandaardiseerd inkomen' },
+      { key: 'average_disposable_household_income', label: 'primair inkomen' },
+    ]);
+  });
+
+  it('#254(a): average_disposable_household_income carries exactly 3 alternates, every one marked eligible', () => {
+    const cm = CANONICAL_MEASURES.find((c) => c.key === 'average_disposable_household_income')!;
+    expect(cm.alternates).toHaveLength(3);
+    for (const alt of cm.alternates!) {
+      expect(alt.periodChangeEligible, alt.label).toBe(true);
+    }
+  });
 });
 
 describe('canonical measures vs. the frozen benchmark answer key (cross-check, no DB)', () => {
