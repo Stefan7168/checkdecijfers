@@ -183,3 +183,25 @@ describe('SiteHeader — phone right-edge gutter (row 8)', () => {
     expect(header.className).not.toMatch(/\bpx-3\b/);
   });
 });
+
+// Row 8 recheck (session 110 UX audit pass 5, #P2): the pass-1 padding fix
+// above did not hold — every item in the right cluster (this balance badge,
+// the language switch, the Account button, which inherits `shrink-0` from
+// the shared Button component's own base variant class) refused to shrink,
+// so the cluster's min-content width still pushed the Account button 8px
+// past a 375px viewport regardless of padding. The real fix lets the least
+// important item — the balance badge — give up its width first.
+describe('SiteHeader — right cluster can shrink before the Account button clips (row 8, pass 5)', () => {
+  it('lets the balance badge shrink and truncate instead of forcing its full content width', () => {
+    render(<SiteHeader balance={12345} />);
+    const badge = screen.getByText(/12[.,]345|12345/).closest('span, div') ?? screen.getByText(/12[.,]345|12345/);
+    expect(badge.className).toMatch(/\bmin-w-0\b/);
+    expect(badge.className).toMatch(/\btruncate\b/);
+    expect(badge.className).not.toMatch(/\bshrink-0\b/);
+  });
+
+  it('keeps the Account button legible (not the item forced to shrink)', () => {
+    render(<SiteHeader balance={10} />);
+    expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+  });
+});
