@@ -287,6 +287,20 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.getByRole('radio', { name: /^default$/i })).toBeInTheDocument();
   });
 
+  // Row 5 (session 110 UX audit pass 2): the dialog used to add its OWN
+  // "Close" button alongside ChartEditModal's built-in × (which also carries
+  // the accessible name "Close", per ui/dialog.tsx's DialogContent default),
+  // giving the dialog two identically-named close controls — the same shape
+  // as pass 1's row 6 on the Style dialog. Fixed by dropping the dialog's own
+  // button; the shell's × is the only close control left.
+  it('has exactly one control named "Close" (no duplicate close button)', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await screen.findByText(/copy code/i);
+    expect(screen.getAllByRole('button', { name: /^close$/i })).toHaveLength(1);
+  });
+
   it('Escape closes the dialog and refocuses the trigger', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);

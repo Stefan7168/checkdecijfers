@@ -400,6 +400,13 @@ function ChartEmbedDialog({
           ) : null}
 
           <pre className="max-h-32 overflow-auto rounded bg-muted p-2 text-xs">{code}</pre>
+          {/* Row 5 (session 110 UX audit pass 2): this row used to end with a
+            * SECOND "Close" button, alongside ChartEditModal's own built-in ×
+            * (ui/dialog.tsx's DialogContent, `showCloseButton` default true —
+            * also accessibly named "Close") — two identically-named close
+            * controls in one dialog, the same shape pass 1's row 6 fixed on
+            * the Style dialog. Dropped rather than relabelled, matching that
+            * fix: the shell's own × is the only close control a reader needs. */}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -424,9 +431,6 @@ function ChartEmbedDialog({
               }}
             >
               {copied ? t(lang, 'chart.embed.copyCodeCopied') : t(lang, 'chart.embed.copyCode')}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              {t(lang, 'chart.embed.close')}
             </Button>
           </div>
         </>
