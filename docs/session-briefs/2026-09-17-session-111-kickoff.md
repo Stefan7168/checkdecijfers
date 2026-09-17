@@ -5,15 +5,16 @@ Verify everything below against `git log` / `gh run list` before trusting it —
 
 ## The short version (updated at the end of session 110 — twelve waves, not three)
 
-Session 110 (2026-09-17, owner away, fully autonomous) ran TWELVE waves of subagents and pushed
+Session 110 (2026-09-17 UTC, owner away, fully autonomous) ran FOURTEEN waves of subagents and pushed
 after each verified batch (see `docs/STATUS.md`'s top block for the final measured numbers and
 `docs/status-archive.md`'s session-110 entry, waves 1–12, for the per-item account). Headlines:
 two new answer shapes — the region-set query (ADR 054, parser-unreachable until Task 9) and the
 multi-region time series (ADR 055, parser-reachable in production today); four Playwright UX audits
 through the hermetic harness plus an axe-core pass, with every mechanical row fixed (incl. the P1
-"proof panel missing on every stored answer"); a 7-test Playwright smoke as a hard CI gate; the
-landing's first-load JS down ~374 KB raw (zod out of the chart render path) with the modal/style
-panel/story stage/notes lazy-loaded; all four #23 alert triggers; PDF + transparent-PNG export.
+"proof panel missing on every stored answer"); a 7-test Playwright smoke as a hard CI gate (retries OFF — they drain the harness credits); the
+landing's first-load JS down ~374 KB raw (zod out of the chart render path) and another −222 KB
+from the route split (`/` rewrites to `/workspace` for a session, ADR 033 D8), with the modal/style
+panel/story stage/notes lazy-loaded; a verification-only browser pass (36/40 fixes held, rest fixed); all four #23 alert triggers; PDF + transparent-PNG export.
 
 ## The original short version (wave 1–3 state, kept for the record)
 

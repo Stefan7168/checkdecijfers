@@ -18,11 +18,15 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 110 — verify against `git log`/`gh run
-list` before trusting this, since more may have landed after it was written).** **Session 110 was
+**▶ NEXT SESSION STARTS HERE (written 2026-09-17 UTC, session 110 — the session ran ~05:50Z to ~17:30Z,
+which is already 2026-09-18 in the machine's local time zone, so `git log` shows both dates — verify
+against `git log`/`gh run list` before trusting this).** **Session 110 was
 fully autonomous (owner away: "work for hours, use subagents, make the web app finished, do not ask
-me questions").** Three waves, 19 subagents in their own worktrees, **20 branches merged into `main`
-in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full account:
+me questions").** FOURTEEN waves, ~60 subagents in their own worktrees, every batch merged into
+`main`, verified once serially and pushed — 226 commits, 276 files, from `261d254` to `6745194`.
+CI: green on every code push except two (`35239287984`, `35247423023` — a stale e2e pin, fixed by
+`42f0eb3`, run `35248020384` green; last code run `35250447097` green incl. deploy). Production
+(`checkdecijfers.vercel.app`) answered 200 on `/` and `/api/health` at wrap-up. Full account:
 [status-archive.md](status-archive.md) session 110.
 
 - **[#253](open-questions.md) region-set query — BUILT, tasks 1–8** ([ADR 054](decisions/054-region-set-query.md),
