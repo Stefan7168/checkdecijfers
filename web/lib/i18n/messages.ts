@@ -37,6 +37,11 @@ const nl = {
   // chat.tsx (the CBS chat loop). Task 2 (WP218 phase 4, #219).
   'chat.placeholder': 'Stel een vraag…',
   'chat.send': 'Verstuur',
+  // #20 (session 110 UX audit): the composer's near-the-cap character
+  // counter (e.g. "412/500") — language-neutral punctuation, kept as its
+  // own key (rather than hardcoded in chat.tsx) per this catalogue's own
+  // convention that every interface string lives here.
+  'chat.composerCounter': '{current}/{max}',
   'chat.copyCitation': 'Kopieer',
   'chat.copyCitationCopied': 'Gekopieerd!',
   'chat.downloadCsv': 'CSV',
@@ -877,6 +882,8 @@ const en: Messages = {
 
   'chat.placeholder': 'Ask a question…',
   'chat.send': 'Send',
+  // #20 (session 110 UX audit): see the nl entry's comment.
+  'chat.composerCounter': '{current}/{max}',
   'chat.copyCitation': 'Copy',
   'chat.copyCitationCopied': 'Copied!',
   'chat.downloadCsv': 'CSV',

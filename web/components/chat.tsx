@@ -59,6 +59,7 @@ import { StatCard } from './stat-card.tsx';
 import { Button } from './ui/button.tsx';
 import { Card, CardContent, CardFooter } from './ui/card.tsx';
 import { Input } from './ui/input.tsx';
+import { Textarea } from './ui/textarea.tsx';
 
 // Session 87 visual redesign (owner decision, docs/superpowers/specs/
 // 2026-09-07-chat-chart-visual-redesign-design.md): the #75 example-question
@@ -599,7 +600,7 @@ export function Chat({
   // #75 fill-don't-send convention, like every other example/follow-up
   // chip) and moves focus there so the click reads as "now edit or send",
   // not a silent no-op.
-  const composerInputRef = useRef<HTMLInputElement>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
 
   // WP202b preview (owner request, session 86): "Link toevoegen" opens the
   // inline URL row the original design sketched (D10), so the intended flow
@@ -1671,21 +1672,48 @@ export function Chat({
         <p className="text-xs text-destructive">{uploadError}</p>
       ) : null}
       <form onSubmit={handleSubmit} className="flex gap-2">
-        <Input
-          ref={composerInputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={busy}
-          maxLength={500}
-          placeholder={
-            // WP26c: a RESCUE pending must not make the box look like it is
-            // waiting for an answer — nothing was asked. Only a real
-            // clarification round echoes its question here.
-            pending && pending.rescueOnly !== true ? pending.questionNl : t('chat.placeholder')
-          }
-          className="h-10 flex-1 bg-background px-3.5"
-        />
+        {/* #20 (session 110 UX audit): the composer used to be a single-line
+          * `<input maxlength=500>` — a realistic 291-character question
+          * showed only ~60 characters at a time (never wrapped) and the cap
+          * cut input silently, with no counter. An auto-growing textarea
+          * (min 1 row, capped around ~6 rows, then its own scrollbar) keeps
+          * the 500-char maxLength but makes a long question readable while
+          * typing it; Enter still sends (matching the old input's behavior),
+          * Shift+Enter inserts a newline instead. */}
+        <div className="relative flex-1">
+          <Textarea
+            ref={composerInputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // sendText already guards on busy/empty/nothingSelected —
+                // same no-op-when-not-ready behavior the Send button's own
+                // `disabled` gate gives it.
+                void sendText(input.trim());
+              }
+            }}
+            disabled={busy}
+            maxLength={500}
+            rows={1}
+            placeholder={
+              // WP26c: a RESCUE pending must not make the box look like it is
+              // waiting for an answer — nothing was asked. Only a real
+              // clarification round echoes its question here.
+              pending && pending.rescueOnly !== true ? pending.questionNl : t('chat.placeholder')
+            }
+            className="max-h-40 min-h-10 w-full resize-none overflow-y-auto bg-background px-3.5 py-2"
+          />
+          {/* Counter appears once the question is getting close to the cap
+            * — not on every keystroke from character 1, which would just be
+            * noise. */}
+          {input.length >= 400 ? (
+            <span className="pointer-events-none absolute bottom-1.5 right-2.5 text-xs text-muted-foreground tnum">
+              {t('chat.composerCounter', { current: input.length, max: 500 })}
+            </span>
+          ) : null}
+        </div>
         <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || !input.trim() || nothingSelected}>
           {t('chat.send')}
         </Button>

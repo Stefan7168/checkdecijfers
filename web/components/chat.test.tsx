@@ -2059,6 +2059,49 @@ describe('Chat — #197 step 3 comparison chips on an answer (chip-carrier pendi
   });
 });
 
+describe('Chat — composer textarea (#20, session 110 UX audit)', () => {
+  // The single-line `<input maxlength=500>` hid a long question (only
+  // ~60 characters visible at a time, never wrapping) and silently capped
+  // input with no counter. Now an auto-growing textarea, cap kept.
+  it('is a textarea (not a single-line input) with the 500-char cap kept, resize disabled', () => {
+    render(<Chat />);
+    const box = screen.getByPlaceholderText('Stel een vraag…');
+    expect(box.tagName).toBe('TEXTAREA');
+    expect(box).toHaveAttribute('maxlength', '500');
+    expect(box.className).toContain('resize-none');
+  });
+
+  it('Enter submits the question (same as clicking Verstuur)', async () => {
+    askQuestion.mockResolvedValue(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    const box = screen.getByPlaceholderText('Stel een vraag…');
+    fireEvent.change(box, { target: { value: 'Hoeveel inwoners heeft Nederland?' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(askQuestion).toHaveBeenCalledTimes(1);
+  });
+
+  it('Shift+Enter inserts a newline instead of submitting', () => {
+    render(<Chat />);
+    const box = screen.getByPlaceholderText('Stel een vraag…');
+    fireEvent.change(box, { target: { value: 'Hoeveel inwoners heeft Nederland?' } });
+    fireEvent.keyDown(box, { key: 'Enter', shiftKey: true });
+    expect(askQuestion).not.toHaveBeenCalled();
+    expect(box).toHaveValue('Hoeveel inwoners heeft Nederland?');
+  });
+
+  it('shows a live "current/500" counter once the question reaches 400 characters, not before', () => {
+    render(<Chat />);
+    const box = screen.getByPlaceholderText('Stel een vraag…');
+    fireEvent.change(box, { target: { value: 'a'.repeat(399) } });
+    expect(screen.queryByText('399/500')).toBeNull();
+    fireEvent.change(box, { target: { value: 'a'.repeat(400) } });
+    expect(screen.getByText('400/500')).toBeInTheDocument();
+    fireEvent.change(box, { target: { value: 'a'.repeat(412) } });
+    expect(screen.getByText('412/500')).toBeInTheDocument();
+  });
+});
+
 describe('Chat — attachment entry points (#201/#202, session 83 scoping; ADR 037 D10)', () => {
   // #15 (session 110 UX audit): these three chips used to use the native
   // `disabled` attribute, which drops a control from the Tab order — their
