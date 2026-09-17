@@ -41,7 +41,9 @@ function outcome(
   context: ConversationContext | null = null,
   threadId: number | null = null,
 ): AskOutcome {
-  return { gated, context, threadId, onboardingOffer: null };
+  // #252: AskOutcome also gained proofRequestUrls (session 109); none of
+  // this suite's tests exercise it, so it defaults to null.
+  return { gated, context, threadId, onboardingOffer: null, proofRequestUrls: null };
 }
 
 const WEB_HEADER = 'Van het web (niet door checkdecijfers geverifieerd)';

@@ -90,13 +90,18 @@ export interface ChatMessage {
    * request_urls` lookup for `proof`'s own batch ids, kept OUTSIDE the
    * R8-reconstructed envelope (a fresh DB read, never something replayed
    * from stored JSON) and passed to <AnswerProof> as its own extra prop —
-   * never merged into `proof` itself. Wired at BOTH server-side call sites
-   * that can reach a database (replay-assemble.ts, question-history.tsx).
-   * Always `null` on a LIVE chat.tsx message: that component is `'use
-   * client'` with no server execution context to add the lookup into
-   * (Amendment B5, WP30c/E1 brief) — an explicit, named residual, not a
-   * silent gap. Also `null` on every non-answer and on a redacted row, same
-   * as `proof`. */
+   * never merged into `proof` itself. Wired at all THREE call sites now
+   * (#252, session 109): the two server-side ones that always had a DB
+   * handle in scope (replay-assemble.ts, question-history.tsx), and
+   * chat.tsx's own LIVE turn — that component is `'use client'` with no
+   * server execution context of its own, so its value comes from
+   * `AskOutcome.proofRequestUrls`, computed server-side inside
+   * askQuestion/replyToClarification (web/app/actions.ts,
+   * outcomeProofRequestUrls) AFTER the answer is produced and debited, then
+   * threaded through the client exactly like `context`/`threadId`/
+   * `onboardingOffer` already are. `null` on every non-answer, on a redacted
+   * row, and on any lookup miss (a deleted batch, a DB hiccup) — same
+   * fail-open posture as before, just no longer a gap for a live turn. */
   proofRequestUrls: RequestUrlsByBatch | null;
   /** WP23 (#90): structural answer rendering; null on non-answers. */
   answerView: AnswerView | null;

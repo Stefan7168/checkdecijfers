@@ -109,7 +109,11 @@ function outcome(
 ): AskOutcome {
   // WP135: AskOutcome gained threadId; these pre-existing tests are not
   // thread-aware (no onThreadId), so it defaults to null.
-  return { gated, context, threadId, onboardingOffer: null };
+  // #252: AskOutcome also gained proofRequestUrls (session 109) — defaults
+  // to null here too, since none of these pre-existing tests exercise the
+  // server-side request_urls lookup itself (that belt lives in
+  // web/app/actions.test.ts, mirroring the real outcomeProofRequestUrls).
+  return { gated, context, threadId, onboardingOffer: null, proofRequestUrls: null };
 }
 
 async function submit(text: string) {
@@ -2602,6 +2606,9 @@ describe('Chat — onboarding confirm-first offer (ADR 026 addendum, #109)', () 
       context: null,
       threadId: null,
       onboardingOffer: { token, priceCredits },
+      // #252: an onboarding_pending refusal carries no validated cells to
+      // look request_urls up against — null, same as `proof` itself.
+      proofRequestUrls: null,
     };
   }
 

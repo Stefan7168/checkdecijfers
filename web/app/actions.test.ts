@@ -71,6 +71,23 @@ vi.mock('../lib/error-report.ts', () => errorReport);
 const chartStyles = vi.hoisted(() => ({ deleteUserChartStyle: vi.fn() }));
 vi.mock('../backend/chart/user-styles.ts', () => chartStyles);
 
+// #252 (session 109): the live ingestion_batches.request_urls side-lookup —
+// mocked wholesale so this suite pins the WIRING (outcomeProofRequestUrls
+// calls buildAnswerProof/batchIdsForProof/fetchRequestUrlsByBatch on the
+// settled response and threads the result onto AskOutcome, fail-open on a
+// throw) rather than re-testing the SQL/dedup behavior fetchRequestUrlsByBatch
+// already owns. Defaulted in beforeEach below to `buildAnswerProof` returning
+// null (the realistic result for `fakeAnswer()`'s envelope-less fixture),
+// exactly like a real refusal/clarification/malformed-envelope turn — no
+// existing test in this file inspects `proofRequestUrls`, so this default
+// leaves every pre-existing assertion on `gated` untouched.
+const answerProof = vi.hoisted(() => ({
+  buildAnswerProof: vi.fn(),
+  batchIdsForProof: vi.fn(),
+  fetchRequestUrlsByBatch: vi.fn(),
+}));
+vi.mock('../lib/answer-proof.ts', () => answerProof);
+
 import { askQuestion, deleteMyQuestionHistory, replyToClarification } from './actions.ts';
 
 const fakeDb = {} as Db;
@@ -102,6 +119,12 @@ beforeEach(() => {
   billing.compensateSplit.mockResolvedValue(undefined);
   vi.stubEnv('WEBSEARCH_ENABLED', '1');
   vi.stubEnv('ONBOARDING_ENABLED', '0');
+  // #252: the realistic default (no proof to look up against) — the two
+  // tests below override this to exercise the happy path and the fail-open
+  // belt specifically.
+  answerProof.buildAnswerProof.mockReturnValue(null);
+  answerProof.batchIdsForProof.mockReturnValue([]);
+  answerProof.fetchRequestUrlsByBatch.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -247,6 +270,76 @@ describe('askQuestion / replyToClarification — argument TYPE guards (untrusted
     const { gated } = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', RID);
     expect(gated.kind).toBe('ok');
     expect((gated as { response: ComposedResponse }).response).toMatchObject({ chartAlternates });
+  });
+});
+
+// #252 (open-questions #252, ADR 048 D7(b), session 109): the live turn's
+// proof panel never showed "Opgehaalde URL's" because chat.tsx is a client
+// component with no DB context — fixed by running the SAME
+// ingestion_batches.request_urls lookup replay-assemble.ts / question-
+// history.tsx already had, HERE, server-side, after the answer/debit is
+// already settled, and threading the result onto AskOutcome. STRICTLY
+// additive: these tests pin that the rest of the payload (netCost, auditId,
+// response, context, threadId, onboardingOffer) is byte-identical to before
+// this task, and that a throwing lookup degrades to `null` rather than
+// failing the already-paid-for answer.
+describe('askQuestion — #252 live request_urls threading (ADR 048 D7(b))', () => {
+  it('threads the lookup result onto AskOutcome.proofRequestUrls, payload otherwise unchanged', async () => {
+    const response = fakeAnswer();
+    driveGate(response, 1, 20);
+    const fakeProof = { cells: [{ batchId: 7 }] } as unknown as ReturnType<
+      typeof answerProof.buildAnswerProof
+    >;
+    answerProof.buildAnswerProof.mockReturnValue(fakeProof);
+    answerProof.batchIdsForProof.mockReturnValue([7]);
+    const requestUrls = { 7: ['https://opendata.cbs.nl/ODataFeed/odata/86141NED'] };
+    answerProof.fetchRequestUrlsByBatch.mockResolvedValue(requestUrls);
+
+    const outcome = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', RID);
+
+    expect(outcome.proofRequestUrls).toEqual(requestUrls);
+    // The lookup runs off the SAME settled response and the SAME db handle
+    // the rest of the action uses — never a second/duplicated SQL path.
+    expect(answerProof.buildAnswerProof).toHaveBeenCalledWith(response);
+    expect(answerProof.batchIdsForProof).toHaveBeenCalledWith(fakeProof);
+    expect(answerProof.fetchRequestUrlsByBatch).toHaveBeenCalledWith(fakeDb, [7]);
+    // Nothing else about the payload moved: same netCost/auditId/response,
+    // and context/threadId/onboardingOffer keep their pre-#252 values.
+    expect(outcome.gated).toMatchObject({ kind: 'ok', netCost: 20, auditId: 1, response });
+    expect(outcome.context).toBeNull();
+    expect(outcome.threadId).toBeNull();
+    expect(outcome.onboardingOffer).toBeNull();
+  });
+
+  it('degrades to proofRequestUrls: null and still returns the paid-for answer when the lookup throws', async () => {
+    driveGate(fakeAnswer(), 1, 20);
+    answerProof.buildAnswerProof.mockReturnValue({
+      cells: [{ batchId: 7 }],
+    } as unknown as ReturnType<typeof answerProof.buildAnswerProof>);
+    answerProof.batchIdsForProof.mockReturnValue([7]);
+    answerProof.fetchRequestUrlsByBatch.mockRejectedValue(new Error('db unreachable'));
+
+    const outcome = await askQuestion('Hoeveel inwoners had Amsterdam in 2024?', RID);
+
+    expect(outcome.proofRequestUrls).toBeNull();
+    // The answer itself is completely unaffected by the lookup failing.
+    expect(outcome.gated).toMatchObject({ kind: 'ok', netCost: 20, auditId: 1 });
+  });
+
+  it('replyToClarification threads the same lookup onto its own AskOutcome', async () => {
+    driveGate(fakeAnswer(), 9, 20);
+    const fakeProof = { cells: [{ batchId: 3 }] } as unknown as ReturnType<
+      typeof answerProof.buildAnswerProof
+    >;
+    answerProof.buildAnswerProof.mockReturnValue(fakeProof);
+    answerProof.batchIdsForProof.mockReturnValue([3]);
+    const requestUrls = { 3: ['https://opendata.cbs.nl/ODataFeed/odata/12345NED'] };
+    answerProof.fetchRequestUrlsByBatch.mockResolvedValue(requestUrls);
+
+    const outcome = await replyToClarification(validPending, '2024', RID);
+
+    expect(outcome.proofRequestUrls).toEqual(requestUrls);
+    expect(outcome.gated).toMatchObject({ kind: 'ok', netCost: 20, auditId: 9 });
   });
 });
 

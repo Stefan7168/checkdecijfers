@@ -162,8 +162,9 @@ function creditsLine(lang: Lang, n: number, isTotal: boolean): string {
 // rather than rendering `<QuestionHistory/>` directly (the trial.tsx /
 // ontdek.tsx precedent) -- jsdom's client renderer cannot invoke an async
 // function component itself.
-/** WP30c D7(b) (ADR 048, Amendment 6, brief Task 6): one of the two
- * genuinely server-side `buildAnswerProof` call sites — built once here,
+/** WP30c D7(b) (ADR 048, Amendment 6, brief Task 6): one of the three
+ * `buildAnswerProof` call sites (the others are replay-assemble.ts and,
+ * since #252, web/app/actions.ts's live-turn lookup) — built once here,
  * BEFORE the JSX render below, so the render itself stays a plain
  * synchronous `.map()` (a React Server Component's `.map()` callback must
  * not itself be `async`). Keyed by the SAME `${item.source}-${item.id}`
