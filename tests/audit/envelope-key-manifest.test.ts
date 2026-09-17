@@ -138,6 +138,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     },
     assumptionLine: { category: 'rederived' }, // buildAssumptionLine, byte-identical, `?? null` (A1)
     regionSetLine: { category: 'rederived' }, // #253 buildRegionSetLine, byte-identical, `?? null` (A1)
+    regionSeriesLine: {
+      category: 'rederived',
+      note: 'ADR 055: buildRegionSeriesLine over the stored per-region coverage record, byte-identical, `?? null` (A1). Present-only in a second way its region-set sibling is not — a COMPLETE multi-region series has nothing to disclose, so the key is absent on rows OF THIS VERY SHAPE as well as on every other shape and every pre-ADR-055 row. The `?? null` read is therefore load-bearing twice over, and a stripped line still fails (tests/audit/region-series-r8.test.ts).',
+    },
     definitionLine: { category: 'rederived' }, // buildDefinitionLine, byte-identical
     alternatesLine: { category: 'rederived' }, // #39 buildAlternatesLine, byte-identical, `?? null` (A1)
     markingLine: { category: 'rederived' }, // from result.derivations
@@ -187,6 +191,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     regionSet: {
       category: 'shape-checked',
       note: '#253: the coverage record, read THROUGH the line it determines — buildRegionSetLine is re-run over the stored coverage and must reproduce the stored regionSetLine byte-identically, so a `complete` flip or a member moved between buckets fails loudly. That indirection is deliberate: the coverage record has no independent ground truth at audit time (re-resolving the roster would ask TODAY\'s dimension_labels about a row written months ago), but the sentence the user actually read is a pure function of it. Present-only, `?? null` (A1).',
+    },
+    regionSeries: {
+      category: 'shape-checked',
+      note: 'ADR 055: the per-region coverage record, read THROUGH the line it determines — buildRegionSeriesLine is re-run over the stored coverage and must reproduce the stored regionSeriesLine byte-identically, so a `complete` flip, a region moved between `partial`/`excluded`, or an invented `excluded` entry fails loudly. Same indirection argument as regionSet above (re-resolving the coverage at audit time would ask TODAY\'s database about a row written months ago), plus one more: the line\'s digits are counted from the SERVED CELLS, so a tampered roster also disagrees with the cells stored beside it. It is MS1\'s ledger — a region in either bucket has no derivation record and therefore no clause in the (byte-identically re-derived) body. Present-only, `?? null` (A1).',
     },
     registry: {
       category: 'ignored',
@@ -313,8 +321,8 @@ describe('the envelope-key manifest covers the declared types', () => {
       AnswerResponse: 9, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`
       ClarificationResponse: 6,
       RefusalResponse: 11,
-      ComposedAnswer: 17, // #253: + present-only `regionSetLine`
-      ValidatedResult: 11, // #253: the stored result joined this manifest
+      ComposedAnswer: 18, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`
+      ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
       expect(declared.get(name)?.length, `${name} parsed an unexpected member count`).toBe(count);

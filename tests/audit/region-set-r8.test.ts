@@ -120,7 +120,9 @@ function recordFor(response: ComposedResponse): AuditRecord {
 }
 
 /** Re-assembles the three text copies of a tampered ANSWER record from its
- * (tampered) parts, in composeAnswer's own order. Used so a tamper test can
+ * (tampered) parts, in composeAnswer's own order — including ADR 055's
+ * `regionSeriesLine`, which sits immediately after `regionSetLine` (the two
+ * can never co-occur, but the slot is part of the order either way). Used so a tamper test can
  * isolate ONE reconstruction check: without it every body/line edit would also
  * trip the text-reassembly check, and the assertion would prove nothing about
  * the check under test. */
@@ -132,6 +134,7 @@ function reassemble(record: AuditRecord): void {
     '',
     ...(a.assumptionLine ? [a.assumptionLine] : []),
     ...(a.regionSetLine ? [a.regionSetLine] : []),
+    ...(a.regionSeriesLine ? [a.regionSeriesLine] : []),
     ...(a.definitionLine ? [a.definitionLine] : []),
     ...(a.alternatesLine ? [a.alternatesLine] : []),
     ...(a.markingLine ? [a.markingLine] : []),
