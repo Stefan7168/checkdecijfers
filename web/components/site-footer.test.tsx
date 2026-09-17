@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
+import { MESSAGES } from '../lib/i18n/messages.ts';
 import { FOOTER_ATTRIBUTION, SiteFooter } from './site-footer.tsx';
 
 vi.mock('next/navigation', () => ({ usePathname: () => '/chat' }));
@@ -23,17 +24,23 @@ describe('SiteFooter', () => {
   });
 });
 
-// WP218 phase 4 (#219): proves the language switch reaches the gear link —
-// FOOTER_ATTRIBUTION itself stays byte-pinned Dutch (never translated).
-// WP-B (journey programme): the Werkwijze/Privacy labels DO translate.
+// WP218 phase 4 (#219): proves the language switch reaches the gear link and
+// the trust-page links. Session 110 UX audit row 21 REVERSES this file's
+// earlier pin that the attribution itself stayed byte-pinned Dutch under
+// EN — an English page showing Dutch attribution copy read as unfinished
+// (audit finding #21). It now translates via messages.ts like everything
+// else here; "CBS StatLine (CC BY 4.0)" (R4 attribution) is asserted
+// verbatim in both languages in messages.test.ts.
 describe('SiteFooter — en', () => {
-  it('translates the gear-link label/title and the trust-page links, but not the attribution', () => {
+  it('translates the attribution sentence, the gear-link label/title, and the trust-page links', () => {
     render(
       <LangProvider lang="en">
         <SiteFooter />
       </LangProvider>,
     );
-    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION + ' · How we work · Privacy');
+    expect(document.querySelector('footer')!.textContent).toBe(
+      MESSAGES.en['footer.attribution'] + ' · How we work · Privacy',
+    );
     expect(screen.getByRole('link', { name: 'System map' })).toHaveAttribute('title', 'System map');
     expect(screen.getByRole('link', { name: 'How we work' })).toHaveAttribute('href', '/werkwijze');
   });

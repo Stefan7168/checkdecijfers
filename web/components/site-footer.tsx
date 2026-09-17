@@ -35,10 +35,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useT } from '../lib/i18n/lang-provider.tsx';
+import { MESSAGES } from '../lib/i18n/messages.ts';
 
-/** The attribution sentence without the trailing separator. */
-export const FOOTER_ATTRIBUTION =
-  'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel';
+/** The Dutch attribution sentence without the trailing separator — kept as a
+ * plain export (many other test files build an expected default-language
+ * footer string from it) and sourced from the catalogue's `nl` entry so
+ * there is exactly one place this copy lives. Session 110 UX audit row 21:
+ * the RENDERED sentence now goes through `t('footer.attribution')` and
+ * translates under EN (it used to stay byte-pinned Dutch in both
+ * languages) — this constant is the nl value that decision translates FROM. */
+export const FOOTER_ATTRIBUTION = MESSAGES.nl['footer.attribution'];
 /** The exact footer prefix on the home page (ADR 033 D6, byte-pinned in the
  * tests; owner gave the final look at PR review). */
 export const FOOTER_PREFIX = FOOTER_ATTRIBUTION + ' · ';
@@ -86,7 +92,7 @@ export function SiteFooter() {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
   const t = useT();
-  const { main: attributionMain, clause: attributionClause } = splitAttribution(FOOTER_ATTRIBUTION);
+  const { main: attributionMain, clause: attributionClause } = splitAttribution(t('footer.attribution'));
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-background px-4 py-2.5 text-xs text-muted-foreground">
       <span>

@@ -285,7 +285,12 @@ const nl = {
     "Bij aanmelding krijg je eenmalig {grant} credits. Een gewone vraag kost {price} credits — {grant} credits zijn dus goed voor zo'n {questions} vragen.",
   'account.explainerNoQuestions': 'Bij aanmelding krijg je eenmalig {grant} credits. Een gewone vraag kost {price} credits.',
 
-  // site-footer.tsx (FOOTER_ATTRIBUTION itself stays byte-pinned, untranslated).
+  // site-footer.tsx. Session 110 UX audit row 21 REVERSES the earlier
+  // "FOOTER_ATTRIBUTION stays byte-pinned, untranslated" decision — an
+  // English page showing Dutch attribution copy read as unfinished. Both
+  // languages must keep "CBS StatLine (CC BY 4.0)" verbatim (R4 attribution;
+  // asserted in messages.test.ts).
+  'footer.attribution': 'Cijfers: CBS StatLine (CC BY 4.0) · Elk getal herleidbaar tot een officiële CBS-tabel',
   'footer.aboutLabel': 'Over dit project',
   'footer.systemMapLabel': 'Systeemoverzicht',
 
@@ -1079,6 +1084,7 @@ const en: Messages = {
     "Signing up gets you {grant} credits once. An ordinary question costs {price} credits — so {grant} credits is good for about {questions} questions.",
   'account.explainerNoQuestions': 'Signing up gets you {grant} credits once. An ordinary question costs {price} credits.',
 
+  'footer.attribution': 'Figures: CBS StatLine (CC BY 4.0) · Every number traceable to an official CBS table',
   'footer.aboutLabel': 'About this project',
   'footer.systemMapLabel': 'System map',
 
