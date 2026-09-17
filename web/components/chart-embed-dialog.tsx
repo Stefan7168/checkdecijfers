@@ -350,7 +350,17 @@ function ChartEmbedDialog({
   const chartTypeOptions = defaultIsTable ? CHART_TYPE_OPTIONS.filter((ct) => ct !== 'default') : CHART_TYPE_OPTIONS;
 
   return (
-    <ChartEditModal open onClose={onClose} title={t(lang, 'chart.embed.dialogTitle')} chartSlot={chartSlot}>
+    <ChartEditModal
+      open
+      onClose={onClose}
+      title={t(lang, 'chart.embed.dialogTitle')}
+      // Session 110 UX audit pass 3, row 7: resolved via this file's own
+      // explicit `lang` prop, matching `title` right above it — never the
+      // ambient LangProvider this file deliberately doesn't depend on (see
+      // this file's header comment).
+      closeLabel={t(lang, 'common.close')}
+      chartSlot={chartSlot}
+    >
       <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
       <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.autoResizeExplain')}</p>
 

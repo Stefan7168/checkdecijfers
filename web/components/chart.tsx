@@ -3579,6 +3579,11 @@ export function ChartView({
             document.getElementById(styleTriggerId)?.focus();
           }}
           title={t(chartLang, 'chart.panel.regionLabel')}
+          // Session 110 UX audit pass 3, row 7: resolved via chartLang,
+          // matching `title` right above it — never the ambient
+          // LangProvider this file's own `t(chartLang, …)` convention
+          // deliberately doesn't depend on.
+          closeLabel={t(chartLang, 'common.close')}
           chartSlot={
             <>
               {canvasNode}

@@ -14,6 +14,16 @@ import { cn } from "cn"
 // here and this one-line fix will need to be re-applied.
 import { Button } from "./button.tsx"
 import { XIcon } from "lucide-react"
+// Session 110 UX audit pass 3, row 7: the × below used to hardcode the
+// English word "Close" regardless of language — every modal in the Dutch UI
+// announced "Close" as its last accessible name. useT() is the same
+// client-side language hook every other component reads from
+// lib/i18n/lang-provider.tsx (app/layout.tsx wraps the whole tree in a
+// LangProvider; an isolated unit test with no provider above it gets the
+// 'nl' default, matching the app's own default). A SECOND hand-patched
+// import alongside the Button one above — a future `npx shadcn add dialog`
+// regen will need BOTH re-applied, not just the one the older comment names.
+import { useT } from "../../lib/i18n/lang-provider.tsx"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -51,10 +61,29 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  closeLabel,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /** Session 110 UX audit pass 3, row 7: was a hardcoded English "Close" —
+   * now reads the shared catalogue key (common.close) via the ambient
+   * client-side language context by default. A caller that already threads
+   * its OWN `lang` prop explicitly (chart.tsx/chart-embed-dialog.tsx's
+   * documented "no ambient LangProvider dependency" convention, via
+   * ChartEditModal) passes its own `t(lang, 'common.close')` here instead,
+   * so the × always matches that surface's chosen language even when no
+   * LangProvider wraps the test/render tree — the ambient useT() fallback
+   * below is for a (today hypothetical) plain consumer of DialogContent
+   * that relies on the page-wide LangProvider the way most of the app does. */
+  closeLabel?: string
 }) {
+  // Session 110 UX audit pass 3, row 7: was a hardcoded English "Close" —
+  // now reads the same catalogue key (common.close) every other close
+  // control in the app uses, via the shared client-side language context —
+  // unless a caller overrides it with its own already-resolved `closeLabel`
+  // (see that prop's own comment above).
+  const t = useT()
+  const resolvedCloseLabel = closeLabel ?? t('common.close')
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -80,7 +109,7 @@ function DialogContent({
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{resolvedCloseLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
