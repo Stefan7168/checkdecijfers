@@ -82,6 +82,33 @@ uses. See ADR 052 for the full design and its own explicit Alternatives entry
 on why `IntentDerivation` itself was left alone. **ADR 052 is ACCEPTED
 (2026-09-17, owner-delegated) and merged.**
 
+## Addendum (2026-09-17, see ADR 054)
+
+[ADR 054](054-region-set-query.md) adds a second new result shape, `'region_set'`
+(`ResultShape`), and one new present-only field on `StructuredIntent`, `regionSet?:
+RegionScope` — a region CLASS ("alle provincies", "de gemeenten in Utrecht") as an
+alternative to decision #1's explicit region-code list, mutually exclusive with
+`regions`. `INTENT_SCHEMA_VERSION` is **not bumped**, for the same reason ADR 052's
+addendum above did not bump it: the field is additive-optional (every intent stored
+before this feature carries no key, `?? undefined` reads), so a bump would needlessly
+break every live embed token (`src/chart/embed-live.ts`) and in-flight pending
+clarification (`src/answer/respond/validate-pending.ts`). Decision #1's one-varying-axis
+rule is **not relaxed** — a region CLASS is still one axis (region) at one period; "several
+regions and several periods" (this ADR's own Revisit trigger below) remains refused.
+
+This is a **scoped deviation from Alternatives #3 above** ("serving partial series...
+Rejected... all-or-nothing"): for the new `'region_set'` shape only, a missing or withheld
+roster member does not refuse the whole query — it is disclosed (a new coverage record,
+`ValidatedResult.regionSet`) and it suppresses any ranking claim (ADR 054's RS1), rather
+than either being served silently or refusing outright. Every other shape keeps decision
+#3's original all-or-nothing rule unchanged; this deviation exists because a region-set
+answer is not a trend the way a `series` answer is — partiality there is disclosed and
+non-silent by construction, which is a different honesty question than a silently-shortened
+series would raise. See ADR 054 for the full mechanism, the coverage record's four buckets,
+and why `Impossible`-null members do not count as a gap. **Tasks 1–7 of ADR 054 are built
+and merged (session 110, 2026-09-17); Task 9 (parser exposure) is not built — see ADR 054's
+own status line.**
+
 ## Revisit triggers
 
 - A benchmark-shaped question needs several regions *and* several periods
