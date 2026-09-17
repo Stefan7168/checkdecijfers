@@ -1,7 +1,7 @@
 // Stage-1 recall: hermetic FTS over the real catalog fixture, plus the
 // principle-(c) exclusions (Text-type, non-nl) proven with synthetic rows.
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../src/catalog/recall.ts';
 import { expandTopicTerms, ALIAS_HINTS } from '../../src/catalog/aliases.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { Db } from '../../src/db/types.ts';
 import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY } from '../../src/sources/registry.ts';
 
@@ -75,12 +76,18 @@ describe('recallCandidates', () => {
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): boots ONE PGlite instance for the
+  // whole describe instead of once per test; the fixture ingest re-runs
+  // after every TRUNCATE reset (beforeEach).
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
-    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
+    await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
 
   it('recalls on-topic tables for "bijstand", ranked, all numeric', async () => {
@@ -149,8 +156,17 @@ describe('recallCandidates — Regulier-first quota (WP27 A2)', () => {
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): boots ONE PGlite instance for the
+  // whole describe; the synthetic-row setup re-runs after every TRUNCATE
+  // reset (beforeEach), same as before the reset was a full boot.
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
+  });
+  afterAll(async () => {
+    await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
     // NO fixture catalog: fully synthetic, so counts are exact. Discontinued
     // rows repeat the term (higher FTS rank); Regulier rows mention it once —
     // the crowding shape measured live.
@@ -170,9 +186,6 @@ describe('recallCandidates — Regulier-first quota (WP27 A2)', () => {
         status: 'Regulier',
       });
     }
-  });
-  afterEach(async () => {
-    await close();
   });
 
   it('fills the default shortlist with the Regulier quota + the historic slots', async () => {
@@ -253,8 +266,17 @@ describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)',
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): boots ONE PGlite instance for the
+  // whole describe; the synthetic-row setup re-runs after every TRUNCATE
+  // reset (beforeEach).
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
+  });
+  afterAll(async () => {
+    await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
     // A strong, unambiguous match for 'kwarkproductie' — no CBS row competes
     // for this term, so a non-empty shortlist can ONLY mean the eurostat row
     // got through.
@@ -264,9 +286,6 @@ describe('recallCandidates — the Eurostat deny gate (WP30c/E1, Amendment B2)',
       summary: 'Synthetic Eurostat test row (Amendment B2) — never a real dataset.',
       source: EUROSTAT_SOURCE_KEY,
     });
-  });
-  afterEach(async () => {
-    await close();
   });
 
   it('an eurostat: candidate is NEVER recalled, unconditionally, even though it is the only match for the term', async () => {

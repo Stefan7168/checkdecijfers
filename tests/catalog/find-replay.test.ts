@@ -12,7 +12,7 @@
 // re-record (`npm run tablefinder:record`), exactly like the intent fixtures.
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReplayLlmClient } from '../../src/answer/llm/client.ts';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog, findTable, rerankShortlist, DEFAULT_FIND_TABLE_CONFIG, candidateWalk } from '../../src/catalog/index.ts';
@@ -55,11 +55,15 @@ describe('table finder — end-to-end replay against the labelled set', () => {
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): every test here only READS through
+  // findTable() (no db.query writes) — the finder does not mutate state — so
+  // boot+ingest runs ONCE for the whole describe (beforeAll) instead of once
+  // per labelled case, with no per-test TRUNCATE reset needed at all.
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
     await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(CATALOG_DIR)), CBS_SOURCE_KEY);
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await close();
   });
 

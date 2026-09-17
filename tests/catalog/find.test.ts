@@ -2,12 +2,13 @@
 // stub rerank so the routing is proven WITHOUT recorded LLM fixtures. Recall is
 // the real FTS over the ingested fixture.
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadCatalogFixture } from '../../src/cbs-adapter/fixture-source.ts';
 import { ingestCatalog } from '../../src/catalog/ingest.ts';
 import { findTable, DISCLOSE_LIMIT } from '../../src/catalog/find.ts';
 import type { CatalogCandidate, FindTableQuery, RerankFn, RerankResult } from '../../src/catalog/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { Db } from '../../src/db/types.ts';
 import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../src/sources/registry.ts';
 
@@ -35,11 +36,14 @@ describe('findTable routing', () => {
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): every test in this describe only
+  // READS through findTable() (no db.query writes) — so boot+ingest runs
+  // ONCE (beforeAll), no per-test reset needed.
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
     await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await close();
   });
 
@@ -170,8 +174,19 @@ describe('findTable — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => 
   let db: Db;
   let close: () => Promise<void>;
 
-  beforeEach(async () => {
+  // Perf (#245 Action 3, session 110): boots ONE PGlite instance for the
+  // whole describe (beforeAll/afterAll) instead of once per test; the
+  // ingestCatalog + synthetic-row setup (cheap relative to a PGlite boot)
+  // re-runs after every TRUNCATE reset (beforeEach) so each test still sees
+  // exactly the same starting state a fresh createTestDb() per test gave it.
+  beforeAll(async () => {
     ({ db, close } = await createTestDb());
+  });
+  afterAll(async () => {
+    await close();
+  });
+  beforeEach(async () => {
+    await resetTestDb(db);
     await ingestCatalog(db, new FixtureSource({}, loadCatalogFixture(FIXTURES_DIR)), CBS_SOURCE_KEY);
     // No CBS table competes for this made-up term — a non-empty outcome can
     // only mean the eurostat: candidate reached the shortlist.
@@ -188,9 +203,6 @@ describe('findTable — the Eurostat deny gate (WP30c/E1, Amendment B2)', () => 
         EUROSTAT_SOURCE_KEY,
       ],
     );
-  });
-  afterEach(async () => {
-    await close();
   });
 
   it('an eurostat: candidate is NEVER reachable, unconditionally, even to a rerank that would confidently pick it', async () => {
