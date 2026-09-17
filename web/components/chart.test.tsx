@@ -905,7 +905,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     const css = readFileSync(globalsCssPath, 'utf8');
     expect(css).toMatch(/circle\[data-marker="hidden"\]:focus-visible\s*\{\s*opacity:\s*1;?\s*\}/);
   });
-  it('a hairline baseline in the grid colour replaces the x-axis line by default; Aslijnen on draws real axis lines; grid Geen removes the baseline too', () => {
+  it('a hairline baseline in the grid colour replaces the x-axis line by default; Aslijnen on draws real axis lines; grid Geen removes the baseline too', async () => {
     render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1 (session 101, real Style modal): once the panel is open
     // the chart itself lives inside the portaled dialog, a DOM sibling of
@@ -916,7 +916,7 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(xLine()?.getAttribute('stroke')).toBe('var(--border)');
     expect(yLine()).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     expect(xLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
     expect(yLine()?.getAttribute('stroke')).toBe('var(--muted-foreground)');
@@ -1094,14 +1094,14 @@ describe('ADR 042 — height follows width once measured', () => {
     expect(panel.style.height).toContain('dvh');
   });
 
-  it('a frame aspect ratio switches the measured height off — the frame sizes the box and the container goes h-full with no inline height', () => {
+  it('a frame aspect ratio switches the measured height off — the frame sizes the box and the container goes h-full with no inline height', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const panel = container.querySelector('[role="tabpanel"]') as HTMLElement;
     panel.getBoundingClientRect = () => ({ width: 700 }) as DOMRect;
     fireResize(panel);
     expect(panel.style.height).toBe('360px');
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Breedbeeld' }));
     // WP218 phase 1 (session 101): the panel is open, so the export
     // container (this same [role="tabpanel"]) now lives inside the portaled
@@ -2088,32 +2088,35 @@ describe('ChartView series highlight', () => {
 });
 
 describe('ChartView click-to-annotate', () => {
-  it('clicking a chart point opens the note entry form for that point', () => {
+  it('clicking a chart point opens the note entry form for that point', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.click(dot);
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    // ChartNotes is next/dynamic-loaded (session 110 perf pass): the editor
+    // resolves a microtask after the click, so this must await rather than
+    // assert synchronously — see chart.tsx's own "Lazy-load applied" note.
+    expect(await screen.findByRole('textbox')).toBeInTheDocument();
   });
 
-  it('a saved note is never rendered inside the chart export container', () => {
+  it('a saved note is never rendered inside the chart export container', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.click(dot);
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Test notitie' } });
+    fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'Test notitie' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
     const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(exportContainer?.textContent).not.toContain('Test notitie');
     expect(screen.getByText('Test notitie')).toBeInTheDocument();
   });
 
-  it('does not carry a pending click or a saved note over to a different spec on the same mounted instance', () => {
+  it('does not carry a pending click or a saved note over to a different spec on the same mounted instance', async () => {
     const s = twoSeriesLineSpec();
     const { rerender } = render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.click(dot);
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Blijft niet over' } });
+    fireEvent.change(await screen.findByRole('textbox'), { target: { value: 'Blijft niet over' } });
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
     expect(screen.getByText('Blijft niet over')).toBeInTheDocument();
 
@@ -2128,12 +2131,12 @@ describe('ChartView click-to-annotate', () => {
   // Enter/Space activation from the browser the way a real <button> would.
   // Without an onKeyDown handler mirroring onClick, pressing Enter or Space
   // on a focused point silently does nothing.
-  it('pressing Enter on a focused chart point opens the note entry form, same as a click', () => {
+  it('pressing Enter on a focused chart point opens the note entry form, same as a click', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.keyDown(dot, { key: 'Enter' });
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(await screen.findByRole('textbox')).toBeInTheDocument();
   });
 
   // Row 9 (session 110 UX audit pass 2): Recharts' own chart-level keyboard
@@ -2146,7 +2149,7 @@ describe('ChartView click-to-annotate', () => {
   // bubbling hands the SAME keystroke to a second, unrelated feature. A
   // point's own activation must own the gesture completely, the way a real
   // <button> would.
-  it("activating a point via Enter does not also let the keystroke reach Recharts' own chart-level keyboard handler", () => {
+  it("activating a point via Enter does not also let the keystroke reach Recharts' own chart-level keyboard handler", async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
@@ -2155,15 +2158,15 @@ describe('ChartView click-to-annotate', () => {
     wrapper.addEventListener('keydown', (e) => seenKeys.push((e as KeyboardEvent).key));
     fireEvent.keyDown(dot, { key: 'Enter', bubbles: true });
     expect(seenKeys).toEqual([]);
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(await screen.findByRole('textbox')).toBeInTheDocument();
   });
 
-  it('pressing Space on a focused chart point also opens the note entry form', () => {
+  it('pressing Space on a focused chart point also opens the note entry form', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
     const dot = document.querySelector('circle[data-point="value"]')!;
     fireEvent.keyDown(dot, { key: ' ' });
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(await screen.findByRole('textbox')).toBeInTheDocument();
   });
 
   // Final review finding: a new note's id used to be
@@ -2174,7 +2177,7 @@ describe('ChartView click-to-annotate', () => {
   // reproduces that exact sequence: a note on P1, a note on P2, delete the P1
   // note (shrinking the notes array), a second note on P2 (recreating the
   // collision under the old scheme), then delete one of the two P2 notes.
-  it('deleting one note leaves the other note on the same point intact, even after a delete-then-recreate sequence', () => {
+  it('deleting one note leaves the other note on the same point intact, even after a delete-then-recreate sequence', async () => {
     const s = twoSeriesLineSpec();
     render(<ChartView spec={s} />);
 
@@ -2182,9 +2185,11 @@ describe('ChartView click-to-annotate', () => {
       Array.from(document.querySelectorAll('circle[data-point="value"]')).find(
         (el) => el.getAttribute('data-result-id') === resultId,
       )!;
-    const addNote = (resultId: string, text: string): void => {
+    // ChartNotes is next/dynamic-loaded (session 110 perf pass): awaits the
+    // textbox rather than asserting synchronously, same as the tests above.
+    const addNote = async (resultId: string, text: string): Promise<void> => {
       fireEvent.click(dotFor(resultId));
-      fireEvent.change(screen.getByRole('textbox'), { target: { value: text } });
+      fireEvent.change(await screen.findByRole('textbox'), { target: { value: text } });
       fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
     };
     const noteItems = (): HTMLElement[] => Array.from(document.querySelectorAll('ul li'));
@@ -2195,10 +2200,10 @@ describe('ChartView click-to-annotate', () => {
 
     // twoSeriesLineSpec's points carry resultIds 'nl-2020'/'nl-2021'
     // (Nederland, P1) and 'ut-2020'/'ut-2021' (Utrecht, P2).
-    addNote('nl-2020', 'P1 note');
-    addNote('ut-2020', 'P2 note A');
+    await addNote('nl-2020', 'P1 note');
+    await addNote('ut-2020', 'P2 note A');
     deleteNoteByText('P1 note');
-    addNote('ut-2020', 'P2 note B');
+    await addNote('ut-2020', 'P2 note B');
 
     expect(noteItems()).toHaveLength(2);
     deleteNoteByText('P2 note A');
@@ -2276,7 +2281,7 @@ function harvestSpecStrings(s: ChartSpec): string[] {
 }
 
 describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
-  it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', () => {
+  it('pre-fills with what is on screen: after Dik, the line is 3 px and the panel says Dik; after Lijn→Staaf→Lijn it still says Dik', async () => {
     render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1 (session 101): Opmaak is now a real modal — the
     // Weergave tablist (a dock row-mate of the Opmaak trigger) is inert
@@ -2285,7 +2290,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const staafTab = screen.getByRole('tab', { name: 'Staaf' });
     const lijnTab = screen.getByRole('tab', { name: 'Lijn' });
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    // ChartEditModal/ChartConfigPanel are next/dynamic-loaded (session 110
+    // perf pass): await the first control inside the now-open modal before
+    // the rest of this test's synchronous queries run.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
     fireEvent.click(staafTab);
@@ -2293,7 +2301,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('R11: with "Alleen voorlopige" the hollow marker stays, final dots are transparent but still present as points', () => {
+  it('R11: with "Alleen voorlopige" the hollow marker stays, final dots are transparent but still present as points', async () => {
     const s = threePointSpec({
       series: [
         {
@@ -2317,7 +2325,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container } = render(<ChartView spec={s} />);
     const before = container.querySelectorAll('[data-point="value"]').length;
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // WP218 phase 1 (session 101): the chart itself now lives inside the
     // portaled Style dialog while it's open — document.querySelector still
@@ -2330,13 +2338,13 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(hollow?.getAttribute('opacity')).not.toBe('0');
   });
 
-  it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', () => {
+  it('grid Geen removes the grid; Aslijnen toggles the axis lines; Schuin tilts the x labels and reserves height', async () => {
     // WP218 phase 1 (session 101): the panel opens before any query below
     // runs, so the chart lives inside the portaled Style dialog for the
     // whole test — every query here reads via `document`, not `container`.
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     // ADR 042: axis lines are off by default — switch them on to measure the plot bottom off the y-axis line.
     fireEvent.click(screen.getByRole('button', { name: 'Aslijnen' }));
     const flatBottom = Number(
@@ -2364,7 +2372,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(document.querySelector('.recharts-yAxis .recharts-cartesian-axis-line')).toBeNull();
   });
 
-  it('Y-as vanaf nul on a line switches the domain to zero (bar is always zero regardless)', () => {
+  it('Y-as vanaf nul on a line switches the domain to zero (bar is always zero regardless)', async () => {
     const s = threePointSpec({
       series: [
         {
@@ -2380,7 +2388,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const { container } = render(<ChartView spec={s} />);
     const beforeY = Number(container.querySelector('[data-role="axis-tick"][data-label-for="lo"]')?.getAttribute('y'));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Y-as vanaf nul' }));
     // WP218 phase 1 (session 101): the panel is now open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -2399,10 +2407,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(yAxisDomain('bar')).toEqual([0, 'auto']);
   });
 
-  it('a colour change recolours line, legend swatch and tooltip swatch together', () => {
+  it('a colour change recolours line, legend swatch and tooltip swatch together', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hexInput = screen.getByRole('textbox', { name: /Kleur van Nederland/ });
     fireEvent.change(hexInput, { target: { value: '#ff0000' } });
     fireEvent.keyDown(hexInput, { key: 'Enter' });
@@ -2428,10 +2436,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // readings already checked) rather than a third DOM read.
   });
 
-  it('a spec swap on the same mounted chart also drops the panel\'s per-row state (a refusal alert typed for the old chart never shows on the new one)', () => {
+  it('a spec swap on the same mounted chart also drops the panel\'s per-row state (a refusal alert typed for the old chart never shows on the new one)', async () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hex = screen.getByRole('textbox', { name: /hex-code/ }) as HTMLInputElement;
     fireEvent.change(hex, { target: { value: '#fefefe' } });
     fireEvent.keyDown(hex, { key: 'Enter' });
@@ -2442,10 +2450,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('2');
   });
 
-  it('a spec swap on the same mounted chart clears the presentation (owner E)', () => {
+  it('a spec swap on the same mounted chart clears the presentation (owner E)', async () => {
     const { container, rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -2475,7 +2483,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(screen.queryByRole('dialog', { name: 'Opmaak van de grafiek' })).toBeNull();
   });
 
-  it('Terug naar standaard restores the byte-identical stock svg', () => {
+  it('Terug naar standaard restores the byte-identical stock svg', async () => {
     render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1 (session 101): opening Style now genuinely REMOUNTS the
     // chart into the portaled dialog (a fresh mount, per the "option A
@@ -2489,7 +2497,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // SAME mount and the comparison stays meaningful.
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     const stock = document.querySelector('svg.recharts-surface')!.outerHTML;
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Geen' }));
     expect(document.querySelector('svg.recharts-surface')!.outerHTML).not.toBe(stock);
@@ -2497,7 +2505,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(document.querySelector('svg.recharts-surface')!.outerHTML).toBe(stock);
   });
 
-  it('the whole-card digit scan still passes with the panel open on every tab (line and bar)', () => {
+  it('the whole-card digit scan still passes with the panel open on every tab (line and bar)', async () => {
     const lineSpec = threePointSpec({
       provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
       nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
@@ -2524,7 +2532,11 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     // (found while wiring up this fix). The dialog is the right scope
     // either way: it is the ONE thing that genuinely holds both the chart
     // and the panel's own tabs together, nothing more, nothing stale.
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    // Same nested-Suspense-boundary reasoning as the tests above: the tabs
+    // live in ChartConfigPanel, its own separately next/dynamic-loaded
+    // chunk, so wait for at least one before iterating.
+    await within(dialog).findByRole('tab', { name: 'Grafiek' });
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
       const activePanel = document.getElementById(tab.getAttribute('aria-controls')!);
@@ -2538,7 +2550,8 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     const barSpec = multiRegionBarSpec();
     const { container: barContainer } = render(<ChartView spec={barSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const barDialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const barDialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    await within(barDialog).findByRole('tab', { name: 'Grafiek' });
     for (const tab of screen.getAllByRole('tab', { name: /Grafiek|Kleuren|Lettertype|Sjablonen/ })) {
       fireEvent.click(tab);
       const activePanel = document.getElementById(tab.getAttribute('aria-controls')!);
@@ -2590,12 +2603,15 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // grid (h-auto) rather than being forced into the frame's fixed aspect
   // box (h-full) — which would clip panels past a handful of series, the
   // exact bug h-auto was originally added to avoid.
-  it('small multiples stays h-auto even when a frame aspect ratio is set', () => {
+  it('small multiples stays h-auto even when a frame aspect ratio is set', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
-    fireEvent.click(within(dialog).getByRole('tab', { name: 'Kader' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
+    // nested inside the (already-resolved) dialog shell — its own tabs need
+    // their own await rather than reusing the dialog's.
+    fireEvent.click(await within(dialog).findByRole('tab', { name: 'Kader' }));
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Vierkant' }));
     const panel = screen.getByRole('tabpanel', { name: 'Grafiek' });
     expect(panel.className).toContain('h-auto');
@@ -2618,7 +2634,7 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // exclusion from the tablist's own row). This one assertion is updated to
   // match — not weakened, corrected to the plan's own stated new layout;
   // everything below about the modal relocation is unaffected and unchanged.
-  it('the trigger stays in the card\'s header actions cluster in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', () => {
+  it('the trigger stays in the card\'s header actions cluster in the dock; opening the panel relocates the chart into a real dialog together with the panel\'s own tabs', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     const chartTabpanelBeforeOpen = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
     expect(chartTabpanelBeforeOpen).not.toBeNull();
@@ -2639,8 +2655,11 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
     // Session 101: a real, portaled Base UI Dialog now carries BOTH the
     // chart (canvas) and the panel's own tabs together.
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
-    const chartTabpanelInDialog = within(dialog).getByRole('tabpanel', { name: 'Grafiek' });
+    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
+    // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
+    // nested inside the (already-resolved) dialog shell — its own tabpanel
+    // needs its own await rather than reusing the dialog's.
+    const chartTabpanelInDialog = await within(dialog).findByRole('tabpanel', { name: 'Grafiek' });
     expect(chartTabpanelInDialog).not.toBe(chartTabpanelBeforeOpen);
     // "First the graph on top, then the design settings" (owner) survives
     // the move into the dialog: the chart is a PRECEDING sibling of the
@@ -2661,14 +2680,18 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
   // pane (the legend, say) — rather than anything in the panel a reader
   // actually opened "Opmaak" to reach. ChartConfigPanel focuses its own
   // active tab on mount specifically to prevent that.
-  it('opening Opmaak focuses the panel\'s own active tab, not a control in the chart pane', () => {
+  it('opening Opmaak focuses the panel\'s own active tab, not a control in the chart pane', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const dialog = screen.getByRole('dialog', { name: 'Opmaak van de grafiek' });
+    const dialog = await screen.findByRole('dialog', { name: 'Opmaak van de grafiek' });
     // Whichever tab opens active (a pristine chart opens on Sjablonen per
     // R5.2/ADR 043, not Grafiek) — the point is that focus lands on THAT
     // tab, never on something in the chart pane preceding it in the DOM.
-    expect(document.activeElement).toBe(within(dialog).getByRole('tab', { selected: true }));
+    // ChartConfigPanel is its own, separately next/dynamic-loaded chunk
+    // nested inside the (already-resolved) dialog shell, so its own active
+    // tab needs its own await rather than reusing the dialog's.
+    const activeTab = await within(dialog).findByRole('tab', { selected: true });
+    expect(document.activeElement).toBe(activeTab);
   });
 
   it('the disabled Lijn tab on a region comparison carries its reason via aria-describedby', () => {
@@ -2682,10 +2705,10 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
     expect(lineTab).toHaveAttribute('title', expect.stringContaining('regio'));
   });
 
-  it('the SVG export carries the chosen stroke-width verbatim', () => {
+  it('the SVG export carries the chosen stroke-width verbatim', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart's own svg
     // lives inside the portaled Style dialog — document.querySelector
@@ -2698,13 +2721,13 @@ describe('WP218 phase 1 — the Opmaak panel on the chart card', () => {
 
 // Task 4 (ADR 043): applying a template from the Sjablonen tab.
 describe('templates (ADR 043) — applying a look from the Sjablonen tab', () => {
-  it('Klassiek: every point drawn, vertical grid, axis lines, classic colour; Basis restores the designed default; the counter records the pick', () => {
+  it('Klassiek: every point drawn, vertical grid, axis lines, classic colour; Basis restores the designed default; the counter records the pick', async () => {
     const events: string[] = [];
     setChartUsageSink((e) => { events.push(e); });
     try {
       render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Sjablonen' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Klassiek' }));
       // WP218 phase 1 (session 101): the panel is open, so the chart lives
       // inside the portaled Style dialog — document.querySelector reaches
@@ -2724,10 +2747,10 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     }
   });
 
-  it("a template replaces earlier tweaks (reset first); Terug naar standaard afterwards returns to the default", () => {
+  it("a template replaces earlier tweaks (reset first); Terug naar standaard afterwards returns to the default", async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -2741,7 +2764,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     expect(document.querySelector('.recharts-cartesian-grid-horizontal')).not.toBeNull();
   });
 
-  it('the whole card stays digit-free apart from spec strings with the Sjablonen tab open', () => {
+  it('the whole card stays digit-free apart from spec strings with the Sjablonen tab open', async () => {
     const lineSpec = threePointSpec({
       provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
       nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
@@ -2749,7 +2772,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     });
     const { container } = render(<ChartView spec={lineSpec} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Sjablonen' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Sjablonen' }));
     // WP218 phase 1 (session 101): the panel's own tab content now lives
     // inside the portaled Style dialog, a DOM sibling of `container` rather
     // than a descendant of it — scanning `container` here would silently
@@ -2783,7 +2806,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     );
   });
 
-  it('the whole card stays digit-free apart from spec strings with the Templates tab open, in English', () => {
+  it('the whole card stays digit-free apart from spec strings with the Templates tab open, in English', async () => {
     const lineSpec = threePointSpec({
       provisionalNote: 'Voorlopige cijfers (2024) zijn gemarkeerd met *.',
       nullNotes: ['2021: geen gegevens beschikbaar (geheim).'],
@@ -2795,7 +2818,7 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
       </LangProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Templates' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Templates' }));
     // WP218 phase 1 (session 101): same relocation as the Dutch case above —
     // sanity-check that the dialog really carries the panel's own (English)
     // chrome and scan it directly, never the whole `document.body` (see the
@@ -2840,11 +2863,11 @@ describe('WP218 phase 6 — anonymous style-panel usage counter', () => {
     setChartUsageSink(null);
   });
 
-  it('tracks panel_open exactly once on open, and option_changed exactly once when Dik is clicked', () => {
+  it('tracks panel_open exactly once on open, and option_changed exactly once when Dik is clicked', async () => {
     render(<ChartView spec={threePointSpec()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     expect(sink).toHaveBeenCalledTimes(1);
     expect(sink).toHaveBeenCalledWith('panel_open');
 
@@ -2874,7 +2897,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     chartStyleActions.forgetMyChartStyle.mockReset();
   });
 
-  it('a saved lineWidth:thick default renders at 3 px, panel pristine, Dik checked, hint shown', () => {
+  it('a saved lineWidth:thick default renders at 3 px, panel pristine, Dik checked, hint shown', async () => {
     const { container } = render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
@@ -2883,7 +2906,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(container.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     expect(screen.getByRole('radio', { name: 'Dik' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeDisabled();
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
@@ -2894,36 +2917,36 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
   // saved account default is pristine too, so they landed on the gallery and
   // never saw "Mijn standaard is actief.", which renders inside the Grafiek
   // panel. A saved default now suppresses the templates-first open.
-  it('MEDIUM-1: with a SAVED account default the panel opens on Grafiek (so the "Mijn standaard is actief." hint is visible), not on Sjablonen', () => {
+  it('MEDIUM-1: with a SAVED account default the panel opens on Grafiek (so the "Mijn standaard is actief." hint is visible), not on Sjablonen', async () => {
     render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: 'Grafiek' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByText('Mijn standaard is actief.')).toBeInTheDocument();
   });
 
-  it('MEDIUM-1: with NO saved account default a pristine chart still opens on Sjablonen (R5.2 unchanged)', () => {
+  it('MEDIUM-1: with NO saved account default a pristine chart still opens on Sjablonen (R5.2 unchanged)', async () => {
     render(
       <ChartStyleProvider initial={{}}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByRole('tab', { name: 'Sjablonen' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it("clicking Dun then Terug naar standaard returns to 3 px — the account default, not stock", () => {
+  it("clicking Dun then Terug naar standaard returns to 3 px — the account default, not stock", async () => {
     render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -2934,14 +2957,14 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     expect(document.querySelector('.recharts-line-curve')?.getAttribute('stroke-width')).toBe('3');
   });
 
-  it('a spec swap keeps the account default as the base while clearing per-chart tweaks', () => {
+  it('a spec swap keeps the account default as the base while clearing per-chart tweaks', async () => {
     const { container, rerender } = render(
       <ChartStyleProvider initial={{ lineWidth: 'thick' }}>
         <ChartView spec={threePointSpec()} />
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Dun' }));
     // WP218 phase 1 (session 101): the panel is open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -2976,7 +2999,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Bewaar als mijn standaard' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
     const saved = chartStyleActions.saveMyChartStyle.mock.calls[0][0] as Record<string, unknown>;
     // Bar form forces zeroBaseline to 'zero' on screen; the account had no
@@ -3001,7 +3024,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     // An unrelated tweak (the font) is what a reader actually does before
     // re-saving — this must not disturb the valueLabels default at all.
-    fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Lettertype' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Lettertype' }), { target: { value: 'Roboto' } });
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
@@ -3025,7 +3048,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         </ChartStyleProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
 
       expect(await screen.findByRole('status')).toHaveTextContent('Opgeslagen.');
@@ -3055,7 +3078,7 @@ describe('WP218 phase 2 — account default for chart styling (owner C)', () => 
         </ChartStyleProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Vergeet mijn standaard' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Vergeet mijn standaard' }));
 
       expect(await screen.findByRole('status')).toHaveTextContent('Vergeten.');
       expect(sink).toHaveBeenCalledWith('default_forgotten');
@@ -3118,10 +3141,10 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
     chartStyleActions.saveMyChartStyle.mockReset();
   });
 
-  it('without a provider (not signed in): no Merkkleuren block at all', () => {
+  it('without a provider (not signed in): no Merkkleuren block at all', async () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     expect(screen.queryByRole('button', { name: 'Pas merkkleuren toe' })).toBeNull();
   });
 
@@ -3146,7 +3169,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
         </ChartStyleProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
       fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
 
       await screen.findByRole('status');
@@ -3180,7 +3203,7 @@ describe('WP218 phase 3 — brand colours wired into ChartView (owner B)', () =>
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pas merkkleuren toe' }));
     await waitFor(() => expect(chartStyleActions.lookupBrand).toHaveBeenCalledTimes(1));
 
@@ -3355,7 +3378,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
   });
 
-  it('a per-chart language override wins over the app language: LangProvider lang="en" + choosing Nederlands flips this ONE chart to Dutch', () => {
+  it('a per-chart language override wins over the app language: LangProvider lang="en" + choosing Nederlands flips this ONE chart to Dutch', async () => {
     render(
       <LangProvider lang="en">
         <ChartView spec={englishWordListSpec()} />
@@ -3364,7 +3387,7 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     // The app is English by default: the panel trigger and tabs read English.
     expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Style' }));
-    const languageSelect = screen.getByRole('combobox', { name: 'Chart language' });
+    const languageSelect = await screen.findByRole('combobox', { name: 'Chart language' });
     fireEvent.change(languageSelect, { target: { value: 'nl' } });
 
     // The per-chart override wins inside the (still open) Style dialog too
@@ -3580,11 +3603,11 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     expect(zeroY).toBeLessThan(autoY - 50);
   });
 
-  it('locks Y-as vanaf nul with its own area-specific reason rather than hiding the control (unlike bar, which deletes it)', () => {
+  it('locks Y-as vanaf nul with its own area-specific reason rather than hiding the control (unlike bar, which deletes it)', async () => {
     render(<ChartView spec={areaSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     const toggle = screen.getByRole('button', { name: 'Y-as vanaf nul' });
     expect(toggle).toBeDisabled();
     const reasonId = toggle.getAttribute('aria-describedby')!;
@@ -3602,7 +3625,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 
-  it('area form fills with a vertical gradient by default (a <linearGradient> per series, fill url(#…)), and flat when areaFill is flat', () => {
+  it('area form fills with a vertical gradient by default (a <linearGradient> per series, fill url(#…)), and flat when areaFill is flat', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Vlak' }));
     const gradient = container.querySelector('svg defs linearGradient');
@@ -3613,7 +3636,7 @@ describe('ChartView — area form (WP218 phase 5)', () => {
     const area = container.querySelector('.recharts-area-area');
     expect(area?.getAttribute('fill')).toBe(`url(#${gradient!.getAttribute('id')})`);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('button', { name: 'Verloop in het vlak' }));
     // WP218 phase 1 (session 101): the panel is now open, so the chart lives
     // inside the portaled Style dialog — document.querySelector reaches it.
@@ -3809,7 +3832,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
   // "alleen voorlopige" marker — the ring itself carries a dashed stroke as
   // a distinct visual channel, and the ringed point's own filled marker must
   // stay visible even while every other final marker is hidden.
-  it('the story ring never looks like the hollow provisional marker, even in "alleen voorlopige" mode', () => {
+  it('the story ring never looks like the hollow provisional marker, even in "alleen voorlopige" mode', async () => {
     const { container } = render(<ChartView spec={threePointSpec()} />);
     // WP218 phase 1 (session 101): Opmaak is now a real modal — the
     // Inzichten trigger, a dock row-mate of Opmaak's own trigger, is inert
@@ -3817,7 +3840,7 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     // dialog ever opens.
     const storyTrigger = screen.getByRole('button', { name: 'Inzichten' });
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Alleen voorlopige' }));
     // threePointSpec's first finding (chart-insights.ts) already rings "lo"
     // the moment the panel opens — no "Volgende" click needed (unlike the
@@ -4063,16 +4086,20 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
     Element.prototype.scrollIntoView = originalScrollIntoView;
   });
 
-  it('Presenteren opens a dialog in document.body carrying the same step titles as the compact panel', () => {
+  it('Presenteren opens a dialog in document.body carrying the same step titles as the compact panel', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    // ChartStoryPanel is next/dynamic-loaded (session 110 perf pass): await
+    // it before reading its content, same reasoning as the Style-panel
+    // tests above.
+    const region = await screen.findByRole('region', { name: 'Inzichten bij de grafiek' });
     const compactTitles = within(region)
       .getAllByRole('article')
       .map((article) => article.querySelector('p')?.textContent);
     expect(screen.queryByRole('dialog')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-    const dialog = screen.getByRole('dialog');
+    // ChartStoryStage is its own, separately next/dynamic-loaded chunk.
+    const dialog = await screen.findByRole('dialog');
     expect(dialog.parentElement).toBe(document.body);
     // getAllByText, not getByText: two findings can legitimately share a
     // title (e.g. two "Sterke stijging" steps) — the assertion is presence,
@@ -4082,24 +4109,24 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
     }
   });
 
-  it('ArrowRight inside the dialog moves the stage and the compact panel to the same step', () => {
+  it('ArrowRight inside the dialog moves the stage and the compact panel to the same step', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const region = await screen.findByRole('region', { name: 'Inzichten bij de grafiek' });
     fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.keyDown(dialog, { key: 'ArrowRight' });
     expect(dialog.querySelector('[data-stage-step="1"]')).toHaveAttribute('aria-current', 'step');
     expect(dialog.querySelector('[data-stage-step="0"]')).not.toHaveAttribute('aria-current');
     expect(within(region).getAllByRole('article')[1]).toHaveAttribute('aria-current', 'step');
   });
 
-  it('Escape closes the dialog and returns focus to the Present button', () => {
+  it('Escape closes the dialog and returns focus to the Present button', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    const present = screen.getByRole('button', { name: 'Presenteren' });
+    const present = await screen.findByRole('button', { name: 'Presenteren' });
     fireEvent.click(present);
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(present);
@@ -4110,21 +4137,21 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
   // compact panel's own region: both `chart.story.close` and
   // `chart.stage.close` translate to the same Dutch word ("Sluiten"), so an
   // unscoped query would be ambiguous while the stage is open.
-  it('closing the compact story (Sluiten in the panel) also closes the stage', () => {
+  it('closing the compact story (Sluiten in the panel) also closes the stage', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const region = await screen.findByRole('region', { name: 'Inzichten bij de grafiek' });
     fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
     fireEvent.click(within(region).getByRole('button', { name: 'Sluiten' }));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('a spec swap on the same instance closes the stage', () => {
+  it('a spec swap on the same instance closes the stage', async () => {
     const { rerender } = render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Presenteren' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
     rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -4150,12 +4177,12 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
   // stage is open the panel's index reporting is inert (jsdom has no
   // IntersectionObserver, so its dots stand in for the same code path: both
   // reach the shared index through the panel's `onIndexChange`).
-  it('with the stage open the compact panel can no longer move the shared step', () => {
+  it('with the stage open the compact panel can no longer move the shared step', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-    const region = screen.getByRole('region', { name: 'Inzichten bij de grafiek' });
+    const region = await screen.findByRole('region', { name: 'Inzichten bij de grafiek' });
     fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-    const dialog = screen.getByRole('dialog');
+    const dialog = await screen.findByRole('dialog');
     expect(dialog.querySelector('[data-stage-step="0"]')).toHaveAttribute('aria-current', 'step');
 
     const dots = within(region).getByRole('list', { name: 'Stappen' });
@@ -4169,7 +4196,7 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
   // Fix round 2 (item 10): the count used to fire inside the `setAutoplay`
   // updater, which React may run twice (Strict Mode) — an activation could
   // be counted twice.
-  it('the stage auto-play toggle records stage_autoplay exactly once per activation', () => {
+  it('the stage auto-play toggle records stage_autoplay exactly once per activation', async () => {
     const events: ChartStyleEvent[] = [];
     setChartUsageSink((e) => {
       events.push(e);
@@ -4177,8 +4204,8 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
     try {
       render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Presenteren' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Automatisch afspelen' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Presenteren' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Automatisch afspelen' }));
       expect(events).toEqual(['story_open', 'stage_open', 'stage_autoplay']);
     } finally {
       setChartUsageSink(null);
@@ -4221,7 +4248,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     chartStyleActions.saveMyChartStyle.mockReset();
   });
 
-  it('a frame control change fires frame_changed in addition to option_changed', () => {
+  it('a frame control change fires frame_changed in addition to option_changed', async () => {
     const events: ChartStyleEvent[] = [];
     setChartUsageSink((e) => {
       events.push(e);
@@ -4229,7 +4256,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     try {
       render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
       expect(events).toEqual(['panel_open', 'option_changed', 'frame_changed']);
     } finally {
@@ -4237,7 +4264,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     }
   });
 
-  it('a plain (non-frame) control change fires only option_changed, never frame_changed', () => {
+  it('a plain (non-frame) control change fires only option_changed, never frame_changed', async () => {
     const events: ChartStyleEvent[] = [];
     setChartUsageSink((e) => {
       events.push(e);
@@ -4245,7 +4272,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     try {
       render(<ChartView spec={threePointSpec()} />);
       fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-      fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+      fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
       fireEvent.click(screen.getByRole('radio', { name: 'Dik' }));
       expect(events).toEqual(['panel_open', 'option_changed']);
     } finally {
@@ -4260,10 +4287,10 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
   // override. A gradient whose own two ends are set to the EXACT series hex
   // is guaranteed unreadable against itself (contrast ratio 1, well under
   // the refusal threshold) regardless of the hex's absolute luminance.
-  it('a frame background that would hide a per-chart series colour is refused; the series override is left untouched', () => {
+  it('a frame background that would hide a per-chart series colour is refused; the series override is left untouched', async () => {
     render(<ChartView spec={threePointSpec()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kleuren' }));
     const hex = screen.getByRole('textbox', { name: 'Kleur van Nederland (hex-code)' }) as HTMLInputElement;
     fireEvent.change(hex, { target: { value: '#446688' } });
     fireEvent.keyDown(hex, { key: 'Enter' });
@@ -4300,7 +4327,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Eigen afbeelding' }));
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
     expect(await screen.findByRole('status')).toHaveTextContent(
@@ -4318,7 +4345,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
       </ChartStyleProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Kleur' }));
     fireEvent.click(screen.getByRole('button', { name: 'Bewaar als mijn standaard' }));
     const status = await screen.findByRole('status');
@@ -4338,7 +4365,7 @@ describe('Task 5 — Frame tab wiring in chart.tsx', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
 
     // Navigate to Frame tab and upload an image
-    fireEvent.click(screen.getByRole('tab', { name: 'Kader' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Kader' }));
 
     // Select "Eigen afbeelding" to activate the image upload
     fireEvent.click(screen.getByRole('radio', { name: 'Eigen afbeelding' }));
@@ -4972,10 +4999,10 @@ describe('ChartView — phone tap targets (R9.1, #238)', () => {
 // either, a gallery of ~10 stories would need a click per chart to show
 // anything, and no way to give each one its own template.
 describe('#237/ADR 046 — initialPresentation and initialPanel', () => {
-  it('initialPresentation is applied as the starting per-chart overrides', () => {
+  it('initialPresentation is applied as the starting per-chart overrides', async () => {
     render(<ChartView spec={threePointSpec()} initialPresentation={{ markers: 'ends' }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Grafiek' }));
     // "Standaard" is disabled only on a pristine (no-override) panel — an
     // initialPresentation is itself an override, so it must render enabled
     // from the first open, without the reader having touched anything.
