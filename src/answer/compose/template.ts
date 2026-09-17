@@ -114,6 +114,83 @@ function renderSeries(result: ValidatedResult): string {
   return `${subjectSentenceStart(result)} per periode: ${lines}.`;
 }
 
+/** ADR 055 / **MS1** — the PARTICIPLE form of a direction, for the per-region
+ * clause below ("... (gestegen)"). A third grammatical form beside
+ * TREND_VERB_BY_DIRECTION (the finite verb a headline sentence needs) and
+ * prompt.ts's TREND_WORD_BY_DIRECTION (the noun form used as a phrasing
+ * hint): three forms, three tables, none of them a rewording of a CBS label.
+ * 'gelijk gebleven' is deliberately the exact phrase validate.ts's FLAT_WORDS
+ * recognises — the template's own words are judged by the same validator
+ * every other body is. */
+const TREND_PARTICIPLE_BY_DIRECTION: Record<'up' | 'down' | 'flat', string> = {
+  up: 'gestegen',
+  down: 'gedaald',
+  flat: 'gelijk gebleven',
+};
+
+/** ADR 055 — one measure, 2..REGION_SERIES_MAX_REGIONS EXPLICITLY NAMED
+ * regions, over a period range: one clause per region.
+ *
+ * **MS1 is implemented here exactly the way RS1 is implemented in
+ * renderRegionSet: by keying on the existence of a DERIVATION RECORD, never
+ * by filtering words out of prose.** run.ts produces a `direction` (and a
+ * `first_last`) record per region that has a value at EVERY requested period,
+ * computed by the registered functions over that region's own cells alone
+ * (deriveDirection's checkSingleRegion is what makes a per-region slice the
+ * only legal input). A region with any gap simply has no record, so this
+ * renderer has nothing to phrase a direction from and writes no clause for
+ * it at all — and R9 then fails any trend word about that region closed from
+ * the other side. Its cells still DRAW (chart gaps + nullNotes, R11) and its
+ * coverage is disclosed by the structural line buildRegionSeriesLine builds.
+ *
+ * **No cross-region claim of any kind is made or supported**: no registered
+ * derivation ranks change across regions (deriveMax refuses a multi-period
+ * cells array, and run.ts additionally gates it off this shape), so there is
+ * no `max` record here and a superlative would fail R9 closed.
+ *
+ * Clause boundaries are ';'/':'/', ' (validate.ts splitClauses), so each
+ * region's direction word sits in a clause carrying that region's OWN two
+ * endpoint values and its own name — which is exactly what
+ * resolveTrendBacking needs to bind the word to that region's record and
+ * nothing else (MS1, the validator half, task 5).
+ *
+ * With NO region carrying a record the body falls back to renderSeries' own
+ * claim-free per-cell listing — the fail-closed floor of the R3 ladder, each
+ * line naming its region, period and value, no trend word anywhere. */
+function renderRegionSeries(result: ValidatedResult): string {
+  const byId = new Map(result.cells.map((c) => [c.resultId, c]));
+  // The intent's own region order — which is also the chart's series order
+  // (R6: the chart is a verbatim projection, spec order is render order). The
+  // fallback keeps this renderer total for a hand-built result rather than
+  // throwing inside the fail-closed floor of the R3 ladder, the same
+  // defensive posture renderRegionSet takes with `scope`.
+  const requested =
+    result.regionSeries?.requested ??
+    [...new Set(result.cells.map((c) => c.regionCode).filter((code): code is string => code !== null))];
+  const clauses: string[] = [];
+  for (const regionCode of requested) {
+    const direction = result.derivations.find(
+      (d): d is Extract<DerivationRecord, { kind: 'direction' }> =>
+        d.kind === 'direction' && byId.get(d.firstResultId)?.regionCode === regionCode,
+    );
+    if (direction === undefined) continue;
+    const first = byId.get(direction.firstResultId);
+    const last = byId.get(direction.lastResultId);
+    // Unreachable for a real result (a registered derivation's endpoints are
+    // always cells of the same result, and a record only exists for a region
+    // whose every cell carries a value) — fail closed rather than throw.
+    if (first?.value == null || last?.value == null) continue;
+    const name = first.regionLabel === null ? regionCode : baseRegionLabel(first.regionLabel);
+    clauses.push(
+      `${name} ging van ${displayValueUnit(first.value, first.decimals, first.unit)}${provisionalSuffix(first)} ` +
+        `in ${first.periodLabel} naar ${displayValueUnit(last.value, last.decimals, last.unit)}${provisionalSuffix(last)} ` +
+        `in ${last.periodLabel} (${TREND_PARTICIPLE_BY_DIRECTION[direction.direction]})`,
+    );
+  }
+  if (clauses.length === 0) return renderSeries(result);
+  return `${subjectSentenceStart(result)} per regio: ${clauses.join('; ')}.`;
+}
+
 function renderComparison(result: ValidatedResult): string {
   const lines = result.cells.map((cell) => cellLine(cell)).join('; ');
   const max = result.derivations.find((d) => d.kind === 'max');
@@ -284,12 +361,11 @@ export function renderTemplateBody(result: ValidatedResult): string {
       // fall back to the safest general rendering.
       return result.cells.length === 1 ? renderSingle(result) : renderSeries(result);
     case 'region_series':
-      // ADR 055, INTERIM (plan tasks 1-2 land the query contract; task 4 lands
-      // `renderRegionSeries`). renderSeries is the fail-closed floor the design
-      // itself names: claim-free per-cell lines, each naming its own region,
-      // period and value — no trend word, so MS1 holds by construction even
-      // before the per-region clause renderer exists.
-      return renderSeries(result);
+      // ADR 055 / MS1: one clause per region that has its OWN direction
+      // record; a region with a gap gets no clause (and no trend word), and
+      // with no complete region at all the renderer falls back to
+      // renderSeries' claim-free per-cell floor.
+      return renderRegionSeries(result);
     // 'region_set' has already returned above — TypeScript narrows it out of
     // this switch, so adding a case here is a compile error, not an omission.
   }

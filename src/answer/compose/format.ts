@@ -6,7 +6,7 @@
 // parses every numeric token in the produced text back to a number and checks
 // it against the result's cells and registered derivations. Formatting may
 // localize; the value may not change (R3).
-import type { RegionScope, ValidatedResult } from '../../query/index.ts';
+import type { PeriodGrain, RegionScope, ValidatedResult } from '../../query/index.ts';
 import { EUROSTAT_SOURCE_KEY, resolveSource } from '../../sources/registry.ts';
 
 /** Region label as prose uses it: "Utrecht (gemeente)" → "Utrecht". Lives
@@ -382,6 +382,76 @@ export function buildRegionSetLine(result: ValidatedResult): string | null {
     parts.push('Daarom noemt dit antwoord geen rangorde.');
   }
   return parts.join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// ADR 055 — the multi-region-series coverage disclosure
+// (RegionSeriesCoverage → one line)
+// ---------------------------------------------------------------------------
+
+/** The Dutch noun for the period grain, singular + plural — the unit the
+ * coverage sentence counts in ("in 2 van de 6 gevraagde jaren"). CBS's own
+ * grain, never reworded (principle a). */
+const PERIOD_GRAIN_NOUNS: Record<PeriodGrain, readonly [string, string]> = {
+  JJ: ['jaar', 'jaren'],
+  KW: ['kwartaal', 'kwartalen'],
+  MM: ['maand', 'maanden'],
+};
+
+/** ADR 055 / **MS1**: the per-region coverage disclosure of a multi-region
+ * series — which named region could not be given a development, and why.
+ *
+ * The SINGLE source of truth, exactly like buildRegionSetLine above:
+ * compose.ts builds the line with it and audit/reconstruct.ts re-derives it
+ * byte-identically from the stored result (R8), so the shown disclosure and
+ * the audited one can never drift.
+ *
+ * Why it is a structural line and not prose in the body: its digits count
+ * REQUESTED PERIODS and MISSING CELLS — the coverage record's own facts —
+ * rather than any CBS cell value. R1's exemptions are structural, never
+ * pattern-based, so those digits inside the scanned body would be unbacked
+ * numbers and would rightly fail. Outside it, assembled by deterministic code
+ * from the validated coverage record, it is the same class of line as the
+ * definition, assumption and region-set lines.
+ *
+ * `null` when the coverage is COMPLETE — there is nothing to disclose, and
+ * every answer of another shape (and every row stored before ADR 055) carries
+ * no `regionSeries` key at all (`?? null`, A1, docs/13).
+ *
+ * A `partial` region has cells, so it is named by its verbatim CBS label; an
+ * `excluded` region has none, so it is named by its bare CBS region code —
+ * the same **Assumption** ADR 054 D6 recorded for the region-set line's
+ * excluded members, which open-questions #266 already mirrors. */
+export function buildRegionSeriesLine(result: ValidatedResult): string | null {
+  const coverage = result.regionSeries ?? null;
+  if (coverage === null) return null;
+  if (coverage.complete) return null;
+  // The requested periods: every SERVED region carries a cell at each of them
+  // (a region missing a row is excluded entirely, never shortened), so the
+  // distinct period codes of the served cells ARE the asked window.
+  const requestedPeriods = new Set(result.cells.map((c) => c.periodCode)).size;
+  const [singular, plural] = PERIOD_GRAIN_NOUNS[result.cells[0]?.grain ?? 'JJ'];
+  const noun = (n: number): string => (n === 1 ? singular : plural);
+  const parts: string[] = [];
+  for (const code of coverage.partial) {
+    // R11 keeps a withheld cell present WITH its CBS reason, so the count is a
+    // fact about the served cells, not a guess.
+    const missing = result.cells.filter((c) => c.regionCode === code && c.value === null).length;
+    parts.push(
+      `Voor ${regionMemberName(code, result)} ontbreekt een cijfer in ${missing} van de ${requestedPeriods} ` +
+        `gevraagde ${noun(requestedPeriods)}; daarom noemt dit antwoord geen ontwikkeling voor die regio.`,
+    );
+  }
+  if (coverage.excluded.length > 0) {
+    // Said out loud because the user NAMED this region: it is absent from the
+    // answer entirely, and the reason is ours (no rows), not a CBS judgement.
+    const names = coverage.excluded.map((code) => regionMemberName(code, result)).join(', ');
+    parts.push(
+      `Over ${names} zegt dit antwoord niets: in onze database ontbreken cijfers voor een of meer van de ` +
+        `gevraagde ${noun(requestedPeriods)}.`,
+    );
+  }
+  return parts.length > 0 ? parts.join(' ') : null;
 }
 
 /** #39: a registry alternate label, cleaned for display. The curated labels

@@ -279,12 +279,20 @@ describe('region_set — a class ask on a national-only measure', () => {
   });
 });
 
-describe('row 13 (session 110, ADR 054 addendum) — several regions AND several periods', () => {
+describe('row 13 (session 110, ADR 054 addendum + ADR 055) — several regions AND several periods', () => {
+  // ADR 055 re-point: two NAMED regions over a range is no longer a refusal —
+  // it is the `region_series` answer (tests/answer/region-series-answer.test.ts
+  // owns that side). What still refuses, with the unchanged sub-reason, is
+  // everything outside that shape: more named regions than the cap allows
+  // (here), and a region CLASS over a range (below). The assertions are the
+  // same ones, on the case that still reaches the refusal.
+  const OVER_CAP_REGIONS = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26'];
+
   it('refuses with its own wording, never the internal bucket that pages the owner', async () => {
     const outcome = await runQuery(
       db,
       population({
-        regions: ['GM0363', 'GM0599'],
+        regions: OVER_CAP_REGIONS,
         period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
       }),
     );
@@ -299,7 +307,14 @@ describe('row 13 (session 110, ADR 054 addendum) — several regions AND several
     expect(built.refusal.reason).toBe('multi_region_multi_period');
     expect(built.refusal.reason).not.toBe('internal');
     expect(built.refusal.internalNote).toBeNull();
-    expect(built.refusal.text).toMatch(/meerdere regio's over meerdere periodes/i);
+    // ADR 055: the wording names what is still out of scope — a whole GROUP of
+    // regions, or more regions than one answer can carry...
+    expect(built.refusal.text).toMatch(/hele groep regio's/i);
+    expect(built.refusal.text).toMatch(/meer regio's dan in één antwoord passen/i);
+    // ...and it must NOT go on claiming the shape itself is unsupported, which
+    // is what the pre-ADR-055 wording said and is now simply false.
+    expect(built.refusal.text).not.toMatch(/nog niet/i);
+    expect(built.refusal.text).toMatch(/kan ik voor een paar met name genoemde regio's samen laten zien/i);
     // A refusal carries no data value (open-questions #37 policy).
     expect(built.refusal.text).not.toMatch(/\d/);
     expect(built.refusal.text.trim().endsWith('?')).toBe(false);

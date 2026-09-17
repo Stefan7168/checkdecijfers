@@ -931,24 +931,36 @@ function trendCandidates(result: ValidatedResult, cellsById: Map<string, ResultC
 }
 
 /** Which candidate backs a trend claim in this piece of text (a clause, or a
- * sentence for the comparative fallback below). With exactly one candidate
- * (every ordinary single-region `series`/`difference` result, unchanged
- * behaviour), that candidate always backs it — region mentions are never
- * consulted, so this stays byte-identical to the pre-#264 single-`direction`
- * behaviour. With MORE than one candidate (a multi-region result), a claim
- * is backed only when the text names EXACTLY one candidate's region — naming
- * none or naming several is fail-closed (MS1: no ambiguous or borrowed
- * backing, ever). */
-function resolveTrendBacking(scopeText: string, candidates: TrendCandidate[]): TrendCandidate | null {
+ * sentence for the comparative fallback below). On a SINGLE-REGION result
+ * (every ordinary `series`/`difference` result) the priority candidate always
+ * backs it — region mentions are never consulted, so this stays
+ * byte-identical to the pre-#264 single-`direction` behaviour. On a
+ * MULTI-REGION result a claim is backed only when the text names EXACTLY one
+ * candidate's region — naming none, naming several, or naming a region that
+ * has no record at all is fail-closed (MS1: no ambiguous or borrowed backing,
+ * ever).
+ *
+ * `multiRegionResult` is a property of the RESULT, not of the candidate list
+ * (ADR 055 task 4, hardening the task-5 mechanism). Gating on "the candidates
+ * span several regions" leaves the exact hole MS1 exists to close: a
+ * `region_series` in which only ONE region is complete carries only ONE
+ * candidate, and a hand-written clause claiming a trend for the PARTIAL
+ * region — the one deliberately given no record — would silently borrow the
+ * complete region's backing and pass. Gating on the result's own distinct
+ * region count makes "no record" mean "no claim", which is the whole of
+ * MS1. */
+function resolveTrendBacking(
+  scopeText: string,
+  candidates: TrendCandidate[],
+  multiRegionResult: boolean,
+): TrendCandidate | null {
   if (candidates.length === 0) return null;
   // A single-region result can still carry TWO candidates (an explicit
   // `difference` alongside the pre-registered `direction`, e.g. B13) — that
   // is not the multi-region ambiguity MS1 targets, so it keeps the OLD
   // priority (direction over difference) unconditionally, with no region
-  // mention required. Only genuinely distinct regions across candidates
-  // trigger the "name exactly one" rule below.
-  const distinctRegionsOverall = new Set(candidates.map((c) => c.regionCode));
-  if (distinctRegionsOverall.size <= 1) {
+  // mention required.
+  if (!multiRegionResult) {
     return candidates.find((c) => c.kind === 'direction') ?? candidates[0]!;
   }
   const matching = candidates.filter((c) => c.sourceCells.some((cell) => sentenceMentionsCellRegion(scopeText, cell)));
@@ -1034,6 +1046,10 @@ function checkDirectionWords(
   const maxDerivation = result.derivations.find((d) => d.kind === 'max');
   const cellsById = new Map(result.cells.map((c) => [c.resultId, c]));
   const candidates = trendCandidates(result, cellsById);
+  // ADR 055 / MS1: on a result that carries more than one region, EVERY trend
+  // claim must name exactly one region that has its own record (see
+  // resolveTrendBacking) — a region without a record can never borrow one.
+  const multiRegionResult = new Set(result.cells.map((c) => c.regionCode)).size > 1;
 
   for (const sentence of sentences) {
     const saysSuperlative = SUPERLATIVE_WORDS.test(sentence.text);
@@ -1044,11 +1060,11 @@ function checkDirectionWords(
       const saysDown = DOWN_WORDS.test(clause.text) && !negatedMatch(clause.text, DOWN_WORDS);
       const saysFlat = FLAT_WORDS.test(clause.text) && !negatedMatch(clause.text, FLAT_WORDS);
       if (!saysUp && !saysDown && !saysFlat) continue;
-      const backing = resolveTrendBacking(clause.text, candidates);
+      const backing = resolveTrendBacking(clause.text, candidates, multiRegionResult);
       if (!backing) {
         const reason = candidates.length === 0
           ? 'zonder direction/difference-derivatie om aan te binden'
-          : "kan niet aan precies één regio's direction-derivatie worden gebonden (meerdere regio's in dit resultaat)";
+          : "kan niet aan precies één regio's eigen direction-derivatie worden gebonden (meerdere regio's in dit resultaat)";
         problems.push(`R9: trendwoord in "${clause.text.trim()}" ${reason}`);
         continue;
       }
@@ -1114,8 +1130,11 @@ function checkDirectionWords(
       } else if (UP_WORDS.test(sentence.text) || DOWN_WORDS.test(sentence.text)) {
         // 'steeg … hoger dan vorig jaar' — the clause-level trend branch
         // above already judged this sentence's direction claims.
-      } else if (/\b(hoger|lager|meer|minder|groter|kleiner)\b/i.test(comparative[0]) && resolveTrendBacking(sentence.text, candidates)) {
-        const backing = resolveTrendBacking(sentence.text, candidates)!;
+      } else if (
+        /\b(hoger|lager|meer|minder|groter|kleiner)\b/i.test(comparative[0]) &&
+        resolveTrendBacking(sentence.text, candidates, multiRegionResult)
+      ) {
+        const backing = resolveTrendBacking(sentence.text, candidates, multiRegionResult)!;
         const expected = expectedTrendForClause(sentence, tokens, result, backing);
         const claimsUp = /\b(meer|hoger|groter)\b/i.test(comparative[0]);
         if (claimsUp && expected !== 'up') problems.push(`R9: vergelijkend 'meer/hoger dan' strookt niet met richting '${expected}': "${sentence.text.trim()}"`);

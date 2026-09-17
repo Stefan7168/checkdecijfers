@@ -94,6 +94,17 @@ const NATIONAL_MEASURE_INTENT: StructuredIntent = {
   regionSet: { kind: 'all_provincies' },
 };
 
+/** ADR 055 re-point: a 2-named-region range is no longer a refusal at all —
+ * it is the `region_series` answer this feature exists to give. The row-13
+ * refusal (and its chip) now lives on what is still OUTSIDE that shape, and
+ * the case with the SAME shape of chip is the over-the-cap one: more named
+ * regions than REGION_SERIES_MAX_REGIONS allows, which still names a first
+ * region to fall back to. These are the 12 provincie codes of 03759ned, in
+ * roster order (the same source tests/query/region-series-resolve.test.ts
+ * uses); PV20 has a value at every year of the asked range, so the chip's
+ * take-path answers with a real 5-period series. */
+const OVER_CAP_REGIONS = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26'];
+
 function multiPeriodRegionsIntent(regions: string[]): StructuredIntent {
   return {
     schemaVersion: 1,
@@ -158,8 +169,8 @@ describe('row 15 — region_scope_on_national_measure offer chip', () => {
 describe('row 13 — multi_region_multi_period refusal and its offer chip', () => {
   it('refuses honestly, not as an internal fault', async () => {
     const response = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(OVER_CAP_REGIONS),
     );
     if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
     expect(response.reason).toBe('multi_region_multi_period');
@@ -171,17 +182,17 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
 
   it('carries exactly one takeable chip: the FIRST named region, the full period range, as a trend', async () => {
     const response = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(OVER_CAP_REGIONS),
       true,
     );
     if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
     expect(response.suggestions).toHaveLength(1);
-    expect(response.suggestions[0]).toMatch(/^Hoe ontwikkelde .+ in GM0363 zich van .+ tot en met .+\?$/);
+    expect(response.suggestions[0]).toMatch(/^Hoe ontwikkelde .+ in PV20 zich van .+ tot en met .+\?$/);
     const clickOptions = response.pending?.clickOptions ?? [];
     expect(clickOptions).toHaveLength(1);
     expect(clickOptions[0]!.intent.target).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
-    expect(clickOptions[0]!.intent.regions).toEqual(['GM0363']);
+    expect(clickOptions[0]!.intent.regions).toEqual(['PV20']);
     expect(clickOptions[0]!.intent.period).toEqual({ kind: 'range', from: '2020JJ00', to: '2024JJ00' });
     expect(clickOptions[0]!.intent.derivation).toBe('series');
     expect(clickOptions[0]!.impliedRecency).toBe(false);
@@ -189,8 +200,8 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
 
   it('taking the chip answers WITHOUT an LLM call, a real series over the first region alone', async () => {
     const refusal = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(OVER_CAP_REGIONS),
       true,
     );
     if (refusal.kind !== 'refusal' || !refusal.pending) throw new Error('expected an offer-chip pending');
@@ -202,7 +213,7 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
     });
     expect(taken.kind).toBe('answer');
     if (taken.kind !== 'answer') throw new Error('unreachable');
-    expect(taken.result.intent.regions).toEqual(['GM0363']);
+    expect(taken.result.intent.regions).toEqual(['PV20']);
     expect(taken.result.cells.map((c) => c.periodCode)).toEqual([
       '2020JJ00',
       '2021JJ00',
@@ -228,25 +239,30 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
   });
 
   it('an unservable first-named region gets no chip — byte-identical envelope', async () => {
+    // Still the over-the-cap refusal (8 named regions), so the chip CANDIDATE
+    // is built and then dry-run — which is the gate under test here. Without
+    // the cap the whole ask would now be answered, and an unknown region code
+    // would refuse on the region axis instead, never reaching this gate.
     const response = await respond(
-      'hoe ontwikkelde de bevolking van een onbekende regio en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM9999', 'GM0599']),
+      'hoe ontwikkelde de bevolking van een onbekende regio en zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM9999', ...OVER_CAP_REGIONS]),
       true,
     );
     if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.reason).toBe('multi_region_multi_period');
     expect(response.suggestions).toEqual([]);
     expect(response.pending).toBeUndefined();
   });
 
   it('flag off: no chip, no pending key, byte-identical text', async () => {
     const flagOff = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(OVER_CAP_REGIONS),
       false,
     );
     const flagOn = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
-      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(OVER_CAP_REGIONS),
       true,
     );
     if (flagOff.kind !== 'refusal' || flagOn.kind !== 'refusal') throw new Error('unreachable');

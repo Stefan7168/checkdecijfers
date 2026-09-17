@@ -449,3 +449,150 @@ that "web changes actually needed: exactly one, and it is not the chart."
   `src/answer/audit/` (Task 6 owns that), and the dispatch brief scoped this
   worktree to the targeted commands above; a later session should still run
   it once before treating the whole plan as done, per Task 5's own note.
+
+## As-built notes (task 4)
+
+Built session 110 in worktree `s110-mrs4` (branch `s110/mrs4`), on top of the
+merged tasks 1–2 and 5. Two commits: the answer layer + its tests, then the
+re-pointing of the three suites tasks 1–2 turned red.
+
+**What the body actually reads** (measured against the real hermetic ingest,
+not sketched):
+
+> Bevolking op 1 januari per regio: Amsterdam ging van 872.757 in 2020 naar
+> 931.298 in 2024 (gestegen); Rotterdam ging van 651.157 in 2020 naar 670.610
+> in 2024 (gestegen).
+
+with one region withheld in 2022:
+
+> Bevolking op 1 januari per regio: Amsterdam ging van 872.757 in 2020 naar
+> 931.298 in 2024 (gestegen).
+> *Voor Rotterdam ontbreekt een cijfer in 1 van de 5 gevraagde jaren; daarom
+> noemt dit antwoord geen ontwikkeling voor die regio.*
+
+and, for a region with no row at some requested period:
+
+> *Over GM0344 zegt dit antwoord niets: in onze database ontbreken cijfers voor
+> een of meer van de gevraagde jaren.*
+
+1. **Deviation from the spec's sketch: the header carries no period range.**
+   The spec sketched `"… per regio, van 2020 tot en met 2024: …"`; as built the
+   header is `"${subject} per regio: …"`, mirroring `renderSeries`' proven
+   `"… per periode:"` exactly. Every period is still stated — inside each
+   region's own clause (`van X in 2020 naar Y in 2024`), which is the
+   structure `renderDifference` has always used and the validator has always
+   accepted. A bare year after `van` in a header is a numeric token with a
+   *different* grounding path, and this floor renderer is not the place to
+   take that risk for a fragment the clauses already carry.
+2. **A third direction word-form table was needed.** `renderRegionSeries` uses
+   the PARTICIPLE (`gestegen`/`gedaald`/`gelijk gebleven`), beside
+   `TREND_VERB_BY_DIRECTION` (finite verb, chart headline) and `prompt.ts`'s
+   noun form. `'gelijk gebleven'` is deliberately the exact phrase
+   `validate.ts`'s `FLAT_WORDS` recognises — the template's own words are
+   judged by the same validator every other body is.
+3. **MS1 had a real hole that task 5's mechanism did not close, and task 4
+   closed it in `validate.ts`.** `resolveTrendBacking` gated its "the clause
+   must name exactly one region" rule on *the CANDIDATES spanning more than one
+   region*. A `region_series` in which only ONE region is complete carries only
+   ONE candidate — so a hand-written clause claiming a trend for the PARTIAL
+   region (the one deliberately given no record) silently borrowed the complete
+   region's backing and PASSED. The gate is now the RESULT's own distinct
+   region count (`multiRegionResult`, computed once in `checkDirectionWords`
+   and threaded into the three `resolveTrendBacking` call sites). Single-region
+   results — including B13's two-candidate shape, which task 5's note warns
+   about — take the unchanged path. Pinned by the first MS1 test.
+4. **The MS1 block lives in `tests/answer/region-series-answer.test.ts`, not in
+   `tests/invariants/invariants.test.ts`.** The plan's Task 4 named the
+   invariants file (beside R5/R9/RS1); the dispatch brief scoped this task's
+   test runs to `tests/answer` + `tests/audit/region-set-r8.test.ts`. The four
+   pins the plan asks for are all present, verbatim in intent — a trend word
+   about a partial region, a superlative, a cross-region comparative, and the
+   `deriveDirection`/`deriveFirstLast` multi-region-array regression pin — just
+   in the answer suite beside the rendering they judge. A later task may lift
+   them into the invariants file; nothing about them depends on where they sit.
+5. **The chart half is NOT asserted here.** The plan's Task 4 test list says a
+   partial region's values are "absent from the body but present in the chart
+   spec"; Task 3 (the chart) is a parallel, unmerged branch, so
+   `buildChartSpec` still returns `null` for this shape in this worktree. The
+   test asserts the honest half available here: absent from the body, present
+   in `result.cells` (R11). Task 3 owns the chart-side assertion.
+6. **The refusal wording changed, because the old one became false.** It said
+   *"Ik kan meerdere regio's over meerdere periodes nog niet in één antwoord
+   combineren"* — which this feature disproves. It now states what IS possible
+   and what is still outside it (a whole GROUP of regions, or more regions than
+   one answer can carry), as a disjunction: exactly one of the two holds for
+   every ask that reaches the builder, and this template layer cannot tell
+   which without the resolver's internal detail (a refusal carries no digits,
+   #37). Sub-reason, offer chip and the no-chip-for-a-class rule are unchanged.
+7. **A stale comment in `derivations.ts` was corrected** (`checkSingleRegion`
+   claimed no caller can ever pass a multi-region array "because resolve.ts
+   refuses that shape"). `run.ts` now calls these functions per-region *because*
+   of this guard — that is the whole of MS1's mechanism.
+
+**For Task 6 (audit / R8), the three things it must know:**
+
+- **The new envelope key is `ComposedAnswer.regionSeriesLine`**, present-only
+  (`?? null`): serialized ONLY when `result.regionSeries` exists AND
+  `complete === false`. A COMPLETE multi-region series carries **no key at
+  all** — `buildRegionSeriesLine` returns `null` for it, exactly like a
+  non-region-set answer's `regionSetLine`. The manifest row should be
+  `rederived`, and the shape-check argument is the coverage record it is
+  derived from (`ValidatedResult.regionSeries`), the same pairing the
+  `regionSet` entry uses.
+- **The line order is: body, '', assumptionLine, regionSetLine,
+  regionSeriesLine, definitionLine, alternatesLine, markingLine,
+  attributionLine.** `regionSeriesLine` sits immediately after `regionSetLine`
+  in `compose.ts`'s `text` assembly and in the returned object. The two can
+  never co-occur (a region CLASS over a range is still refused), but the order
+  is fixed here and must be mirrored in `reconstruct.ts`'s re-assembly and in
+  `tests/audit/region-set-r8.test.ts`'s own `reassemble()` helper — which does
+  NOT yet include the key.
+- **The body re-derives byte-identically, and `answer.source` must be
+  `'template'`.** `region_series` is template-only BY SHAPE in both
+  `composeAnswer` (the guard the test pins) and `respond.ts` (the explicit
+  wiring), so the shape-scoped re-derivation block at `reconstruct.ts:320-331`
+  extends to it unchanged. Tampering with the coverage record must stop the
+  LINE re-deriving: a `complete` flip flips the line between `null` and a
+  sentence; moving a region between `partial`/`excluded` changes both which
+  name form is used (verbatim label vs bare code) and which sentence it lands
+  in; an invented `excluded` entry adds a name to the second sentence. The
+  line's digits (`N van de M gevraagde jaren`) come from the SERVED CELLS, not
+  from the coverage record, so a tampered `partial` roster and the stored cells
+  disagree loudly.
+
+**Verification run (this task only):**
+- `npx vitest run tests/answer/region-series-answer.test.ts --maxWorkers=1` →
+  13 passed, 0 failed (new file).
+- `npx vitest run tests/answer/query-refusal-chips.test.ts --maxWorkers=1` →
+  9 passed (was 4 failed / 5 passed).
+- `npx vitest run tests/answer/region-set-answer.test.ts --maxWorkers=1` →
+  12 passed (was 1 failed / 11 passed).
+- `npx vitest run tests/audit/region-set-r8.test.ts --maxWorkers=1` → 18
+  passed (was a failing file: 13 passed / 5 skipped after a throwing
+  `beforeAll`).
+- `npx vitest run tests/answer --maxWorkers=1` → **841 passed, 0 failed**
+  (828 before this task + the 13 new).
+- `npx vitest run tests/audit/slot-phrasing-r8.test.ts
+  tests/benchmark/scorer-teeth.test.ts tests/sources/registry.test.ts
+  tests/invariants/invariants.test.ts --maxWorkers=1` → 75 passed — the other
+  four suites that exercise `validateAnswerBody`/`composeAnswer`, run because
+  note 3 changed the validator.
+- `npm run typecheck` (root) → clean.
+- `npm run audit:verify` was NOT run (needs the live DB, out of scope for this
+  hermetic worktree task) — Task 6's own done-definition names it.
+
+**⚠ A GAP THIS PLAN HAS NO TASK FOR — found in task 4, deliberately not fixed
+here.** `regionSetLine` has a whole surface beyond the composer, and the new
+sibling key is absent from every one of them, so **today the coverage sentence
+would be assembled and stored but never SHOWN**: `web/lib/chat-message.ts`
+(`AnswerView`), `web/components/chat.tsx` (`:903` maps it onto the view,
+`:1144` renders it), `web/lib/copy-answer.ts` (`:31`),
+`web/lib/replay-assemble.ts` (`:127`), `src/threads/replay.ts` (`:35`, `:97`)
+and `web/test/fake-answer.ts`. The rendered `answer.text` does contain the line
+(compose.ts assembles it), but the chat UI renders the PARTS, not `text` — so a
+partial/excluded region would be silently missing from the answer with no
+disclosure on screen, which is the one outcome the design's honesty rule exists
+to prevent. Task 4's brief scoped it to the backend answer layer and its
+`tests/answer` runs, and `web/` has its own co-located suites, so this is left
+for whoever owns the web slice (Task 3's file list is the nearest) — but it must
+not ship without it.

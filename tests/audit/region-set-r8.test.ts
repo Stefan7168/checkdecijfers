@@ -364,11 +364,18 @@ describe('R8: the region-class refusal and its sub-reason', () => {
 describe('R8: row 13 — the multi-region-multi-period refusal and its sub-reason', () => {
   let record: AuditRecord;
 
+  // ADR 055 re-point: two NAMED regions over a range now ANSWERS (the
+  // `region_series` shape), so the refusal this block audits is reached by the
+  // case that is still outside that shape — more named regions than
+  // REGION_SERIES_MAX_REGIONS allows. Same refusal, same sub-reason, same
+  // reconstruction and tamper pins.
+  const OVER_CAP_REGIONS = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26'];
+
   beforeAll(async () => {
     const response = await respond(
-      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
       population({
-        regions: ['GM0363', 'GM0599'],
+        regions: OVER_CAP_REGIONS,
         period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
       }),
     );

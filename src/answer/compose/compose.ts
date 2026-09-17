@@ -18,6 +18,7 @@ import {
   buildAssumptionLine,
   buildAttributionLine,
   buildDefinitionLine,
+  buildRegionSeriesLine,
   buildRegionSetLine,
   normalizeForScan,
 } from './format.ts';
@@ -114,6 +115,13 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // co-occur in practice — a region CLASS is not a defaulted region — but the
   // order is fixed here and in reconstruct either way.)
   const regionSetLine = buildRegionSetLine(result);
+  // ADR 055 / MS1: the multi-region-series coverage disclosure, in the SAME
+  // slot as the region-set line it sits beside (the two can never co-occur —
+  // a region CLASS over several periods is still refused). Same
+  // single-builder discipline: audit/reconstruct.ts re-derives it through
+  // buildRegionSeriesLine, so the shown disclosure and the audited one can
+  // never drift. Null (and no key) whenever the series is complete.
+  const regionSeriesLine = buildRegionSeriesLine(result);
   const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
   const text = [
@@ -121,6 +129,7 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     '',
     ...(assumptionLine ? [assumptionLine] : []),
     ...(regionSetLine ? [regionSetLine] : []),
+    ...(regionSeriesLine ? [regionSeriesLine] : []),
     ...(definitionLine ? [definitionLine] : []),
     ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),
@@ -136,6 +145,9 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     // #253: present-only, same discipline — only a region-class answer
     // serializes this key, so every other envelope stays byte-identical.
     ...(regionSetLine !== null ? { regionSetLine } : {}),
+    // ADR 055: present-only, same discipline — only an INCOMPLETE
+    // multi-region series serializes this key.
+    ...(regionSeriesLine !== null ? { regionSeriesLine } : {}),
     definitionLine,
     // #39: present-only, same discipline — no alternates, no key.
     ...(alternatesLine !== null ? { alternatesLine } : {}),
@@ -256,7 +268,16 @@ export async function composeAnswer(result: ValidatedResult, options: ComposeOpt
   //    respond.ts passes it too (the explicit wiring), but this guard is what
   //    makes "zero LLM calls for this shape" a property of composeAnswer
   //    itself, which is what the test pins.
-  const templateOnly = options.templateOnly === true || result.shape === 'region_set';
+  //
+  // ADR 055: `region_series` is template-only by shape for the same two
+  // reasons plus a third. Cost/fabrication surface: up to
+  // REGION_SERIES_MAX_CELLS numbers across several regions is exactly the
+  // payload a phrasing model is most likely to cross-attribute — and
+  // cross-region attribution is the one thing MS1 forbids outright. And the
+  // body being a pure function of the stored result is what lets R8 re-derive
+  // it BYTE-IDENTICALLY at audit time (spec §Answer).
+  const templateOnly =
+    options.templateOnly === true || result.shape === 'region_set' || result.shape === 'region_series';
 
   if (!hasNullCells && !templateOnly) {
     // #162: flag on → the slot rung replaces the two see-and-echo LLM rungs

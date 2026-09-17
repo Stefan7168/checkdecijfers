@@ -44,11 +44,14 @@ function checkComputable(cells: ResultCell[]): string | null {
 /** #203: a "first cell vs last cell" derivation (direction, first_last) is
  * only meaningful when every cell tracks the SAME place over time — mixing
  * regions turns "first vs last" into an arbitrary cross-region diff, not a
- * trend. No current caller passes a multi-region cells array here
- * (resolve.ts refuses "several regions AND several periods" before a
- * StructuredQuery is ever built; no other caller constructs one either) —
- * this guard means that stays true even if a future caller's own discipline
- * doesn't, rather than relying on every future call site to remember. */
+ * trend. No caller passes a multi-region cells array here: ADR 055's
+ * `region_series` shape is the one query shape whose cells span several
+ * regions at several periods, and run.ts calls these functions once per
+ * region over that region's OWN slice precisely because this guard makes a
+ * single-region slice the only legal input (MS1 is mechanised by slicing, not
+ * by a new function). This guard means that stays true even if a future
+ * caller's own discipline doesn't, rather than relying on every future call
+ * site to remember. */
 function checkSingleRegion(cells: ResultCell[]): string | null {
   const regions = new Set(cells.map((c) => c.regionCode));
   if (regions.size > 1) {

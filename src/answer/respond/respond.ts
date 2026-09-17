@@ -530,7 +530,12 @@ export async function respondToIntent(
     // model ever sees a class's worth of numbers (spec §Billing). composeAnswer
     // enforces the same rule by shape; this is the explicit wiring, so the
     // decision is visible at the call site too.
-    ...(options.templateOnly || result.shape === 'region_set' ? { templateOnly: true } : {}),
+    // ADR 055: the same rule for a multi-region series — no phrasing model
+    // ever sees several regions' numbers at once (MS1's cross-attribution
+    // surface), and the deterministic body is what R8 re-derives byte-exactly.
+    ...(options.templateOnly || result.shape === 'region_set' || result.shape === 'region_series'
+      ? { templateOnly: true }
+      : {}),
     // #162: absent unless the SLOT_PHRASING_ENABLED wire is on (flag-off
     // compose options stay byte-identical to today).
     ...(options.slotPhrasing === true ? { slotPhrasing: true } : {}),
