@@ -79,3 +79,29 @@ competing jump — a pre-existing, unrelated dynamic — outscores the level rec
 `web/lib/chart-insights.test.ts`'s existing `fourPointSpec` case updated (its 2021 point, below the
 series mean but not the series minimum, now asserts `belowAverage` instead of the previous, overclaiming
 `recordLow`) plus new title-text assertions in both languages.
+
+## Session 110 addendum (audit pass 2, row 14) — disambiguating same-kind step names by period
+
+**Context (2026-09-17).** The addendum above fixed WHICH kind a finding gets; a second-pass audit found
+that the Insights carousel's and the Story stage's "position" dots still name every step by kind alone
+(`aria-label` = `step.title`) — two `belowAverage` findings on one chart (e.g. 2021 and 2024) produce two
+buttons with the IDENTICAL accessible name. A sighted reader tells them apart by the caption text next
+to each dot; a screen-reader user hitting the dot list alone cannot.
+
+**Decision.** Append the finding's own period to the ACCESSIBLE name only — `"Below average — 2021"` —
+leaving the visible dot (a plain coloured circle, no text) and the caption cards unchanged.
+`web/lib/chart-insights.ts`'s `Finding.point` now also carries `periodLabel` (alongside the pre-existing
+`seriesKey`/`periodCode`), and a new exported `stepAccessibleName(step)` builds the string, falling back
+to the title alone for a step with no point (`overview`/`explore`, never duplicated by kind).
+`chart-story.ts` (the shared `StoryStep` type) and chart.tsx's `storySteps` mapping were both out of this
+fix's file scope, so `stepAccessibleName`'s parameter is a small duck-typed shape (`{title, point:
+{periodLabel?}}`), not an import of `StoryStep` — avoiding a circular type-only import back into
+chart-insights.ts. chart.tsx's existing `point: f.point` assignment forwards the extra field by
+reference unchanged, so it reaches every real `StoryStep` at runtime despite the type never declaring it.
+
+**As-built.** `web/lib/chart-insights.ts` (`Finding.point.periodLabel`, `stepAccessibleName`),
+`web/components/chart-story.tsx` and `web/components/chart-story-stage.tsx` (both dot lists now call
+`stepAccessibleName` instead of reading `step.title` directly). Test coverage: `stepAccessibleName` unit
+tests plus the updated `buildFindings` point-shape assertion in `chart-insights.test.ts`; a dedicated
+two-same-kind-findings test in both `chart-story.test.tsx` and `chart-story-stage.test.tsx` asserting
+distinct `aria-label`s and an unchanged visible card/caption.
