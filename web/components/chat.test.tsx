@@ -596,6 +596,39 @@ describe('Chat — WP23 display smalls', () => {
     expect(screen.getByText(assumptionLine)).toBeInTheDocument();
   });
 
+  it('renders the #253 region-set coverage disclosure, muted like assumptionLine, right after it', async () => {
+    const body = 'In 26 van de 42 gemeenten was de gemiddelde WOZ-waarde hoger dan het landelijk gemiddelde.';
+    const regionSetLine = 'Dekking: 26 van de 42 gemeenten hebben een cijfer.';
+    const response = fakeAnswerResponse({
+      body,
+      text: [body, '', regionSetLine].join('\n'),
+      regionSetLine,
+      cells: [fakeCell()],
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel gemeenten hebben een WOZ-waarde boven het landelijk gemiddelde?');
+    expect(await screen.findByText(body)).toBeInTheDocument();
+    const line = screen.getByText(regionSetLine);
+    expect(line).toBeInTheDocument();
+    // Same muted style as assumptionLine, per the #253 discipline.
+    expect(line).toHaveClass('text-sm', 'text-muted-foreground');
+  });
+
+  it('omits the region-set coverage element when regionSetLine is null', async () => {
+    const body = 'Nederland telde 17.900.000 inwoners.';
+    const response = fakeAnswerResponse({ body, text: body, cells: [fakeCell()] });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(<Chat />);
+    await submit('Hoeveel inwoners heeft Nederland?');
+    expect(await screen.findByText(body)).toBeInTheDocument();
+    expect(screen.queryByText(/^Dekking:/)).not.toBeInTheDocument();
+  });
+
   it('a rescue chip takes the reply path, but any OTHER text takes the question path (WP26c)', async () => {
     // Review finding (session 56): replyToClarification deliberately wires no
     // table finder, so routing a fresh question through it would silently drop

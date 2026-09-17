@@ -25,6 +25,12 @@ export interface AnswerView {
    * sentence, shown directly under the body. Null when no axis was defaulted,
    * and on every answer stored before WP26 (A1: the key is simply absent). */
   assumptionLine: string | null;
+  /** #253: the region-class coverage disclosure ("Dekking: 26 van de 42
+   * gemeenten hebben een cijfer. …") — deterministic code's own sentence,
+   * shown directly under the assumption line it sits beside (compose.ts's
+   * text order). Null when the answer is not a region-class answer, and on
+   * every answer stored before #253 (A1: the key is simply absent). */
+  regionSetLine: string | null;
   stalenessWarning: string | null;
   definitionLine: string | null;
   /** #39: the alternate-reading disclosure ("Er is ook een andere lezing

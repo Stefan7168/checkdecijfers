@@ -61,6 +61,9 @@ function answerEnvelopeWithView(opts: {
   provisionalCell?: boolean;
   chart?: unknown;
   suggestions?: string[];
+  /** #253, present-only: omitted entirely unless the caller supplies it, so
+   * every existing fixture stays byte-identical to before this field existed. */
+  regionSetLine?: string;
 }): Record<string, unknown> {
   return {
     schemaVersion: 1,
@@ -75,6 +78,7 @@ function answerEnvelopeWithView(opts: {
       markingLine: null,
       attributionLine: 'Bron: CBS StatLine, tabel 37296ned. Licentie: CC BY 4.0.',
       text: opts.finalText,
+      ...(opts.regionSetLine !== undefined ? { regionSetLine: opts.regionSetLine } : {}),
     },
     chart: opts.chart ?? null,
     suggestions: opts.suggestions ?? [],
@@ -198,6 +202,32 @@ describe('replayParts — R8 + zero-loss answerView (pin 2)', () => {
     expect([uA.role, aA!.role, uB.role, aB!.role, uC.role, aC!.role]).toEqual([
       'user', 'assistant', 'user', 'assistant', 'user', 'assistant',
     ]);
+  });
+
+  it('#253: answerView carries regionSetLine — null when the stored envelope has no key, the string when it does', () => {
+    const withLine = mkRow({
+      id: 1,
+      kind: 'answer',
+      question: 'q',
+      response: answerEnvelopeWithView({
+        question: 'q',
+        finalText: 'a',
+        regionSetLine: 'Dekking: 26 van de 42 gemeenten hebben een cijfer.',
+      }),
+    });
+    const withoutLine = mkRow({
+      id: 2,
+      kind: 'answer',
+      question: 'q2',
+      response: answerEnvelopeWithView({ question: 'q2', finalText: 'a2' }),
+    });
+
+    const [, aWith, , aWithout] = replayParts([withLine, withoutLine]);
+    expect((aWith as ReplayAssistantPart).answerView).toMatchObject({
+      regionSetLine: 'Dekking: 26 van de 42 gemeenten hebben een cijfer.',
+    });
+    // Present-only, absent key on the stored row -> `?? null`, never undefined.
+    expect((aWithout as ReplayAssistantPart).answerView?.regionSetLine).toBeNull();
   });
 
   it('#134(a): a resumed REFUSAL row replays its retry chip — parity with the live turn (regression: replay dropped refusal suggestions)', () => {

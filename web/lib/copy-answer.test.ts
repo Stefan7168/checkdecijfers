@@ -11,6 +11,7 @@ function view(overrides: Partial<AnswerView> = {}): AnswerView {
   return {
     body: 'Nederland telt 18.044.027 inwoners.',
     assumptionLine: null,
+    regionSetLine: null,
     stalenessWarning: null,
     definitionLine: null,
     alternatesLine: null,
@@ -34,10 +35,11 @@ describe('buildAnswerCopy', () => {
     );
   });
 
-  it('pins the order: body, assumption, staleness, definition, alternates, marking, attribution, URL', () => {
+  it('pins the order: body, assumption, region-set coverage, staleness, definition, alternates, marking, attribution, URL', () => {
     const { text } = buildAnswerCopy(
       view({
         assumptionLine: 'Dit is het landelijke cijfer.',
+        regionSetLine: 'Dekking: 26 van de 42 gemeenten hebben een cijfer.',
         stalenessWarning: 'Dit cijfer kan verouderd zijn.',
         definitionLine: 'Dit betreft de standaardpopulatie.',
         alternatesLine: 'Er is ook een andere lezing beschikbaar.',
@@ -49,6 +51,7 @@ describe('buildAnswerCopy', () => {
       [
         'Nederland telt 18.044.027 inwoners.',
         'Dit is het landelijke cijfer.',
+        'Dekking: 26 van de 42 gemeenten hebben een cijfer.',
         'Dit cijfer kan verouderd zijn.',
         'Dit betreft de standaardpopulatie.',
         'Er is ook een andere lezing beschikbaar.',
@@ -57,6 +60,11 @@ describe('buildAnswerCopy', () => {
         'https://opendata.cbs.nl/x',
       ].join('\n\n'),
     );
+  });
+
+  it('omits regionSetLine when null (non-region-class answer, or a row stored before #253)', () => {
+    const { text } = buildAnswerCopy(view(), 'https://opendata.cbs.nl/x');
+    expect(text).not.toContain('Dekking:');
   });
 
   it('omits the URL line entirely when no source URL is available', () => {

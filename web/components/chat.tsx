@@ -897,6 +897,10 @@ export function Chat({
                   // WP26 mechanism B: `?? null` guards the deploy-window skew
                   // (an old server bundle omits the key), like suggestions.
                   assumptionLine: response.answer.assumptionLine ?? null,
+                  // #253: `?? null` guards the deploy-window skew AND every
+                  // answer that is not a region-class answer (the key is
+                  // simply absent — A1).
+                  regionSetLine: response.answer.regionSetLine ?? null,
                   stalenessWarning: response.stalenessWarning,
                   definitionLine: response.answer.definitionLine,
                   // #39: `?? null` guards the deploy-window skew AND every
@@ -1132,6 +1136,13 @@ export function Chat({
                     * lose its point. */}
                   {message.answerView.assumptionLine ? (
                     <p className="text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
+                  ) : null}
+                  {/* #253: the region-class coverage disclosure — same
+                    * muted, body-adjacent weight as the assumption line it
+                    * sits directly beside, matching compose.ts's text
+                    * order. */}
+                  {message.answerView.regionSetLine ? (
+                    <p className="text-sm text-muted-foreground">{message.answerView.regionSetLine}</p>
                   ) : null}
                   {message.answerView.stalenessWarning ? (
                     <p className="text-sm text-warning">{message.answerView.stalenessWarning}</p>

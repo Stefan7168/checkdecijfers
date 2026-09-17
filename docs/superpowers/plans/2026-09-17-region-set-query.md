@@ -518,6 +518,13 @@ Built on branch `s110/rs7` (session 110, worktree), on top of the merged tasks 1
 parser until task 9 — but a replayed or copied region-set answer would silently drop its coverage
 disclosure. Out of task 7's scope (audit/R8), and not a doc this task is allowed to touch.
 
+**Gap closed (session 110, branch `s110/rsline`):** `regionSetLine` is now carried through
+`src/threads/replay.ts`'s `ReplayAnswerView`, `web/lib/chat-message.ts`'s `AnswerView`,
+`web/lib/replay-assemble.ts`, `web/lib/copy-answer.ts` and `web/components/chat.tsx` (both the
+live-response mapping and the muted render right after `assumptionLine`), matching compose's text
+order; `src/billing/history.ts`'s narrower `answerParts` dashboard-expander view was left untouched, since
+it already omits `assumptionLine` by design and was never part of this parity fix.
+
 Measured at the end of task 7: `npx vitest run tests/audit --maxWorkers=1` → **187 passed, 24 files**
 (including the new `region-set-r8.test.ts`, 13 tests, and the manifest test, 10);
 `npx vitest run tests/ingestion/region-set-groups.test.ts --maxWorkers=1` → **2 passed**;

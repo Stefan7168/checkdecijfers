@@ -64,6 +64,8 @@ export function fakeAnswerResponse(opts: {
   /** WP23 (#90): the structural answer lines the chat now renders. */
   /** WP26 mechanism B (ADR 024): the defaulted-axis disclosure. */
   assumptionLine?: string | null;
+  /** #253: the region-class coverage disclosure line. */
+  regionSetLine?: string | null;
   definitionLine?: string | null;
   /** #39: the alternate-reading disclosure line. */
   alternatesLine?: string | null;
@@ -92,6 +94,7 @@ export function fakeAnswerResponse(opts: {
     answer: {
       body,
       assumptionLine: opts.assumptionLine ?? null,
+      regionSetLine: opts.regionSetLine ?? null,
       definitionLine: opts.definitionLine ?? null,
       alternatesLine: opts.alternatesLine ?? null,
       markingLine: opts.markingLine ?? null,

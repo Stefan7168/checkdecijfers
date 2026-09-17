@@ -124,6 +124,7 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<Chat
       : {
           body: part.answerView.body,
           assumptionLine: part.answerView.assumptionLine,
+          regionSetLine: part.answerView.regionSetLine ?? null,
           stalenessWarning: part.answerView.stalenessWarning,
           definitionLine: part.answerView.definitionLine,
           alternatesLine: part.answerView.alternatesLine ?? null,
