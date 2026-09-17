@@ -233,7 +233,19 @@ export function ChartStoryPanel({
           </a>
         </p>
       ) : null}
-      <div ref={scrollRef} className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
+      {/* Session 110 a11y audit (#Fix-now 3): scrollable but was not
+        * focusable — a keyboard user could never reach or scroll it, even
+        * though the panel's own hint above says to. tabIndex + role="region"
+        * + its own aria-label (distinct from the outer panel's) make it a
+        * reachable, named landmark; focus-visible:ring-2 matches the outer
+        * panel's own focus-ring class for a consistent look. */}
+      <div
+        ref={scrollRef}
+        tabIndex={0}
+        role="region"
+        aria-label={t(lang, 'chart.story.findingsListLabel')}
+        className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         {/* Final-review fix (a11y): no `onClick` here — the Vorige/Volgende
           * buttons and the dots below already reach every step, so a
           * non-focusable, clickable `<article>` was a keyboard trap risk

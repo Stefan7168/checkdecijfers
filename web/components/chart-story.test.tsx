@@ -56,6 +56,18 @@ describe('ChartStoryTrigger + ChartStoryPanel', () => {
     expect(trigger).toHaveAttribute('aria-controls', 'c1-story');
   });
 
+  // Session 110 a11y audit (#Fix-now 3): axe-core's scrollable-region-focusable
+  // (serious) — the findings-card list scrolls but had no tabIndex, so a
+  // keyboard user could never reach or scroll it, despite the panel's own
+  // "Scroll of gebruik de pijlen"/"Scroll or use the arrows" hint above it.
+  it('the findings list is a focusable, labelled, scrollable region', () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    const findingsList = screen.getByRole('region', { name: 'Lijst met bevindingen' });
+    expect(findingsList).toHaveAttribute('tabIndex', '0');
+    expect(findingsList.className).toContain('overflow-y-auto');
+  });
+
   it('renders every step as a card, marks the active one, and walks with Next/Previous without leaving the ends', () => {
     const onIndexChange = vi.fn();
     render(<Harness onIndexChange={onIndexChange} />);
