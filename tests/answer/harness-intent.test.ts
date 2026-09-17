@@ -89,6 +89,17 @@ describe('tryHarnessInjectedIntent (pure)', () => {
       process.env[HARNESS_INTENT_ENV_FLAG] = '1';
     });
 
+    it('NODE_ENV=production disables the injector even with the flag set (parent belt, session 110)', () => {
+      const before = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        expect(tryHarnessInjectedIntent('!!regionset provincies')).toBeNull();
+      } finally {
+        if (before === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = before;
+      }
+    });
+
     it('an ordinary question (no magic prefix) still returns null', () => {
       expect(tryHarnessInjectedIntent('Hoeveel inwoners heeft Nederland?')).toBeNull();
     });

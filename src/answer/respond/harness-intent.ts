@@ -45,7 +45,10 @@ const NAMED_INTENTS: Record<string, StructuredIntent> = {
 };
 
 function harnessInjectEnabled(): boolean {
-  return process.env[HARNESS_INTENT_ENV_FLAG] === '1';
+  // Belt on top of the flag (parent review, session 110): a production build
+  // (NODE_ENV=production on Vercel) never honours the flag even if someone
+  // sets it there by mistake — the injector is a dev-harness tool only.
+  return process.env[HARNESS_INTENT_ENV_FLAG] === '1' && process.env.NODE_ENV !== 'production';
 }
 
 /** A minimal, non-validating shape guard — this is a harness convenience, not
