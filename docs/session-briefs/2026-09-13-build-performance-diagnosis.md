@@ -814,3 +814,69 @@ real signed-in request instead of reading source and guessing. One real, sharpen
 `fix(harness): let CDC_PGLITE_HARNESS reach next start's production db seam` — `npm run typecheck`
 clean, `app/actions.test.ts` 36/36 passed as a representative check of every `getDb`-mocking test
 file's continued behaviour.
+
+## Route split (session 110)
+
+**Task:** act on the finding the "Logged-in workspace bundle" pass above ended on — the anonymous
+landing and the signed-in workspace ship the SAME 15 chunks because `web/app/page.tsx` is one
+Server Component that statically imports `Landing`, `Dashboard` and `Workspace`. Not with
+`next/dynamic()` (measured twice, doesn't work — pass 2 by chunk-sum, pass 3 Target B by real
+request), but with the structural change those passes named: a genuinely separate route segment, so
+the anonymous request's own module graph never references the signed-in tree. Keep the URL `/`.
+
+**What was built.** `web/proxy.ts` rewrites `/` to `/workspace` when `getClaims()` validated a
+session; `web/app/page.tsx` now imports only `Landing`; `web/app/workspace/page.tsx` holds the
+Dashboard/Workspace branches, their flags and reads, moved verbatim (plus `runtime` and the ⟨W2⟩
+`maxDuration = 90`, since a Server Action posts to the URL the browser is on and the proxy resolves
+that to this segment). `/workspace` is internal: the proxy 307s any direct request for it — or
+anything under it — back to `/`, unconditionally and before it reads the session, so it is not a URL
+a browser can ask for; from `/` a signed-in visitor is rewritten straight back in. Full rationale,
+trade-off and revisit trigger: ADR 033 D8.
+
+**Measured, same method as pass 3** (`next build` without `NODE_OPTIONS`, `next start -p 3141` with
+it, curl the served HTML as an anonymous and as a signed-in visitor, sum every `<script src>` /
+preload-as-script from disk):
+
+| Request | Before | After | Δ |
+|---|---|---|---|
+| Anonymous `/` | 15 tags, **1,503,395 bytes** | 13 tags, **1,280,984 bytes** | **−222,411 (−14.8%)** |
+| Signed-in `/` | 15 tags, **1,503,395 bytes** | 15 tags, **1,498,886 bytes** | −4,509 (did not grow) |
+
+The anonymous request stops fetching the 203,647-byte Workspace/Chat/ThreadSidebar/VisualDock chunk
+(pass 2 and the logged-in pass both identified it), a 35,489-byte lucide-icon chunk and an 862-byte
+sibling; it gains one 17,587-byte chunk (the landing's own, now split from the shared graph). The
+480 KB recharts chunk and the framework chunks are unchanged — the landing genuinely needs them.
+Both responses were confirmed to render the right surface first (the anonymous one the landing's
+three gallery charts, the signed-in one `chat-composer`/`chat-panel`), and the signed-in HTML's own
+markers are identical before and after.
+
+**Live-verified on the built app, beyond the byte count:** direct `/workspace` and `/workspace/deep`
+both 307 to `/` (signed in AND signed out) while `/workspace-debug` still 404s (the exact-match
+discipline holds); `/?purchase=success` still reaches the page's `searchParams` through the rewrite;
+`/geschiedenis` and `/credits` unaffected; `<html lang>` and the `generateMetadata` title resolve
+identically from the `lang` cookie on the rewritten route (EN and NL checked); a hand-set
+`x-source-route: eurostat` on `/` is still stripped (the footer stays CBS), i.e. the
+strip-then-set discipline survives the rewrite.
+
+**Gotcha worth recording, on top of the two the logged-in pass found.** `next build` must run with
+the harness env (`scripts/dev-harness/env.sh`) sourced, `NODE_OPTIONS` unset — not with a bare env.
+`NEXT_PUBLIC_*` values are inlined **at build time**, so a build without
+`NEXT_PUBLIC_SUPABASE_URL` bakes `undefined` into the proxy's Supabase client: every signed-in
+request then reads as anonymous and `next start` silently serves the LANDING to a cookie-carrying
+curl. That cost one of this pass's three builds to diagnose (the first "signed-in" measurement was
+a landing render in disguise). Second, smaller trap: the harness's auth stub generates a fresh
+signing key on every start, so a `session-cookie.json` written by an EARLIER stub validates against
+nothing — if the stub was restarted, re-derive the cookie (or reuse the file the running stub
+itself wrote).
+
+**Tests:** `proxy.test.ts` (+9 route-split cases), `app/workspace/page.test.tsx` (new — the props
+survived the move, and the source pin that `app/page.tsx` never imports the signed-in tree again),
+`app/dormancy.test.tsx` (its signed-in pins now render the new route; `/` pinned as
+landing-only, session-independent), the three source-scan wiring tests repointed at the moved file,
+`components/landing.test.tsx`, `components/workspace.test.tsx`, `app/layout.test.ts`,
+`app/health.test.ts` — 150 tests, all green; `npm run typecheck` clean. Playwright: 6 passed, 1
+failed — `answer.spec.ts` "(g) an over-cap multi-region refusal…" expects a chip labelled
+`… in PV20 …` while the app renders `… in Groningen …`. Confirmed **pre-existing**: stashed the
+whole change, moved the new route folder aside and re-ran that spec on the baseline — identical
+failure, same locator. Not this pass's to fix (it is a test-expectation/label-resolution mismatch);
+worth its own row.

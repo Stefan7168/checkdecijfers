@@ -13,6 +13,8 @@ import {
   applyEmbedRequestHeaders,
   applySourceRouteHeader,
   embedRequestHeaders,
+  INTERNAL_APP_PATH,
+  isInternalAppPath,
   isPublicPath,
   proxy,
   sourceRouteHeaders,
@@ -352,5 +354,104 @@ describe('proxy() — a malformed auth cookie must not 500 the whole app (row 2,
     expect(logged).not.toContain('super-secret-token-value');
     errorSpy.mockRestore();
     warnSpy.mockRestore();
+  });
+});
+
+// Session 110 route split (ADR 033 D8). `/` serves the public landing to
+// everyone and is REWRITTEN to the internal signed-in segment when the request
+// carries a JWT-validated session — same URL, separate client bundle (before
+// the split every anonymous visitor downloaded the whole chat workspace:
+// docs/session-briefs/2026-09-13-build-performance-diagnosis.md). Three things
+// must hold, and only this file can see them: the rewrite happens for a
+// session, it does NOT happen without one, and the internal path is not a URL
+// anybody can ask for directly.
+describe('isInternalAppPath (route split)', () => {
+  it('matches the internal segment and anything nested under it', () => {
+    expect(isInternalAppPath(INTERNAL_APP_PATH)).toBe(true);
+    expect(isInternalAppPath(`${INTERNAL_APP_PATH}/anything`)).toBe(true);
+  });
+
+  it('does NOT swallow a sibling route that merely starts with the same letters', () => {
+    // Same exact-match discipline PUBLIC_EXACT_PATHS uses: a future
+    // /workspace-debug must not inherit this rule by accident.
+    expect(isInternalAppPath(`${INTERNAL_APP_PATH}-debug`)).toBe(false);
+    expect(isInternalAppPath('/')).toBe(false);
+    expect(isInternalAppPath('/credits')).toBe(false);
+  });
+
+  it('is not public — it is never reached without a session in the first place', () => {
+    expect(isPublicPath(INTERNAL_APP_PATH)).toBe(false);
+  });
+});
+
+describe('proxy() — the route split keeps the URL at / (ADR 033 D8)', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const signedIn = () => getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } } });
+  const signedOut = () => getClaims.mockResolvedValue({ data: null });
+
+  it('rewrites / to the internal signed-in segment for a validated session', async () => {
+    signedIn();
+    const response = await proxy(new NextRequest('https://example.com/'));
+
+    // A rewrite is internal: no 3xx, no Location — the visitor's address bar
+    // still says `/`, which is what keeps bookmarks and the e2e tests valid.
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.headers.get('x-middleware-rewrite')).toContain(INTERNAL_APP_PATH);
+  });
+
+  it('keeps the query string on the rewrite (the Stripe /?purchase=success return)', async () => {
+    signedIn();
+    const response = await proxy(new NextRequest('https://example.com/?purchase=success'));
+    expect(response.headers.get('x-middleware-rewrite')).toContain('purchase=success');
+  });
+
+  it('does NOT rewrite / without a session — an anonymous visitor gets the landing', async () => {
+    signedOut();
+    const response = await proxy(new NextRequest('https://example.com/'));
+    expect(response.headers.get('x-middleware-rewrite')).toBeNull();
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('does not rewrite any OTHER path, signed in or not', async () => {
+    signedIn();
+    for (const path of ['/credits', '/geschiedenis', '/galerij']) {
+      const response = await proxy(new NextRequest(`https://example.com${path}`));
+      expect(response.headers.get('x-middleware-rewrite')).toBeNull();
+    }
+  });
+
+  it('redirects a DIRECT request for the internal path back to / — with a session', async () => {
+    signedIn();
+    const response = await proxy(new NextRequest(`https://example.com${INTERNAL_APP_PATH}`));
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('https://example.com/');
+    // The redirect is unconditional, so the session is never even read for it.
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it('redirects a direct request for the internal path back to / — without one', async () => {
+    signedOut();
+    const response = await proxy(new NextRequest(`https://example.com${INTERNAL_APP_PATH}/deep`));
+    expect(response.status).toBe(307);
+    // NOT /login: `/` is public, and from there an anonymous visitor sees the
+    // landing while a signed-in one is rewritten straight back in.
+    expect(response.headers.get('location')).toBe('https://example.com/');
+  });
+
+  it('strips a spoofed trusted header on the rewritten request too', async () => {
+    // applyEmbedRequestHeaders/applySourceRouteHeader run BEFORE the rewrite
+    // and the rewrite is built from that same mutated request, so a forged
+    // header cannot ride the one path that gets rewritten.
+    signedIn();
+    const request = new NextRequest('https://example.com/', {
+      headers: { 'x-embed-route': '1', 'x-source-route': 'eurostat' },
+    });
+    await proxy(request);
+    expect(request.headers.get('x-embed-route')).toBeNull();
+    expect(request.headers.get('x-source-route')).toBeNull();
   });
 });

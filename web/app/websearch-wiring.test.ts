@@ -56,7 +56,10 @@ describe('WP129+130 websearch gate-placement wiring (source pins)', () => {
 });
 
 describe('WP129+130 page.tsx price read is behind the flag (source pins)', () => {
-  const page = read('page.tsx');
+  // Session 110 route split (ADR 033 D8): the signed-in branches (and with
+  // them this flag-gated price read and the ⟨W2⟩ maxDuration export) moved from
+  // app/page.tsx to the app/workspace segment proxy.ts rewrites `/` to.
+  const page = read('workspace/page.tsx');
 
   it('reads the web_addon price ONLY behind WEBSEARCH_ENABLED (deploy-order-safe)', () => {
     // The web_addon action_class_prices row is seeded only in the supervised

@@ -1,166 +1,43 @@
-// Server Component boundary: only Server Components may export the runtime
-// segment config (ADR 018 decision 4) — 'nodejs' is already Next's default,
-// set explicitly as insurance since the DB pool (pg) and the pinned-CA
-// filesystem read cannot run on the Edge runtime.
+// `/` — the PUBLIC face of the product, and since the session-110 route split
+// (ADR 033 D8) nothing else. A logged-out visitor gets the landing (no
+// chargeable entry point; its only data reads are the cached, fail-safe Ontdek
+// discovery charts — session 52, ADR 035 — and, since the journey programme
+// (session 97, R4), the equally cached, fail-safe coverage disclosure: one
+// registry read + one freshest-period read per measure every 30 minutes, never
+// per request) instead of a context-free login redirect (session-51 owner
+// decision); proxy.ts allowlists '/' exact-match to let them reach it.
+//
+// THE SIGNED-IN PRODUCT IS NOT IMPORTED HERE, DELIBERATELY. Next builds a
+// route's client-reference manifest from its static import graph, not from
+// which runtime branch executes, so while this one file imported `Dashboard`
+// and `Workspace` too, every anonymous visitor downloaded the entire chat
+// workspace before the landing could paint (measured: the anonymous and the
+// signed-in response shipped the exact same 15 script tags / ~1.50 MB —
+// docs/session-briefs/2026-09-13-build-performance-diagnosis.md). `next/dynamic()`
+// was measured twice and does not help. The signed-in tree now lives in its own
+// route segment, web/app/workspace/page.tsx, which web/proxy.ts rewrites `/` to
+// when the request carries a valid session — same URL, separate bundle.
+// `app/workspace/page.test.tsx` pins that this file never imports it again.
 export const runtime = 'nodejs';
-// Measured live latency (WP11): median 6.5s, max ~14s.
-// ⟨W2⟩ (WP129+130, ADR 032): raised 30 → 90. When the "Internet" chip is on,
-// the web-search call (WEBSEARCH_TIMEOUT_MS = 45s) stacks ON TOP of the CBS
-// pipeline INSIDE the same Server Action invocation. A 30s ceiling could kill
-// the invocation between the web reserve and the settlement — orphaning a
-// 10-credit debit AND skipping the audit write. 14s + 45s + margin fits in 90s;
-// Vercel's current default ceiling is 300s on all plans (re-verify against the
-// deployed plan in the RUNBOOK go-live step). Unconditional — a ceiling is not
-// a hold, and a static segment-config export cannot be flag-conditional.
+// Kept from the pre-split page: the anonymous TRIAL chat (components/trial.tsx →
+// trial-chat.tsx) posts its Server Action to THIS route, and that action runs
+// the same CBS pipeline the signed-in one does (measured median 6.5s, max ~14s,
+// WP11). A ceiling is not a hold.
 export const maxDuration = 90;
+// This page no longer reads cookies (the session branch moved out), so nothing
+// else forces per-request rendering — without this export Next could prerender
+// the landing at BUILD time and freeze the coverage disclosure and the Ontdek
+// gallery into the build output. Both are deliberately request-time reads
+// behind their own 30-minute caches (ADR 035/046), so the landing must stay
+// dynamic, exactly as it was before the split.
+export const dynamic = 'force-dynamic';
 
-import {
-  getActionClassPrice,
-  getActivePacks,
-  getBalance,
-  getQuestionHistory,
-  getSignupGrantCredits,
-} from '../backend/billing/index.ts';
-import { Dashboard } from '../components/dashboard.tsx';
-import { QuestionHistory } from '../components/question-history.tsx';
-import { Workspace } from '../components/workspace.tsx';
-import { listThreads } from '../backend/threads/index.ts';
-import { getUserChartStyle } from '../backend/chart/user-styles.ts';
-import { currentUserId } from '../lib/current-user.ts';
 import { Landing } from '../components/landing.tsx';
-import { getDb } from '../lib/db.ts';
 import { loadCoverageDisclosure } from '../lib/coverage-disclosure.ts';
-import { PURCHASE_PARAM, PURCHASE_SUCCESS_VALUE } from '../lib/purchase.ts';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ [PURCHASE_PARAM]?: string }>;
-}) {
-  // Belt-and-suspenders (WP13 precedent, /credits/page.tsx): proxy.ts already
-  // redirects unauthenticated visits away from "/", but a proxy matcher is
-  // an optimistic check, never the authorization boundary for the balance/
-  // history reads below.
-  const { [PURCHASE_PARAM]: purchase } = await searchParams;
-  const userId = await currentUserId();
-  // WP-E (R4): the coverage disclosure is read in BOTH branches below —
-  // logged-out (Landing's "Dit weten we nu" section) and logged-in (the
-  // chat composer's collapsed link) — from its own 30-min cache
-  // (web/lib/coverage-disclosure.ts), so a single server read serves the
-  // whole request regardless of which branch runs.
+export default async function Home() {
+  // WP-E (R4): read from the 30-min cache (web/lib/coverage-disclosure.ts), so
+  // a single server read serves the whole request.
   const coverage = await loadCoverageDisclosure();
-  if (userId === null) {
-    // Session-51 owner decision: '/' is the product's public face. A
-    // logged-out visitor gets the landing (no chargeable entry point; its
-    // only data reads are the cached, fail-safe Ontdek discovery charts —
-    // session 52, ADR 035 — and, since the journey programme (session 97,
-    // R4), the equally cached, fail-safe coverage disclosure: one registry
-    // read + one freshest-period read per measure every 30 minutes, never
-    // per request) instead of a context-free login redirect;
-    // proxy.ts allowlists '/' exact-match to let them reach it.
-    return <Landing coverage={coverage} />;
-  }
-
-  const db = getDb();
-  // WP129+130 (#129/#130, ADR 032): the web-search add-on price is read ONLY
-  // when the flag is on (the ONBOARDING_ENABLED dormancy pattern). Flag off ⇒
-  // the read never runs — so getActionClassPrice('web_addon') can never throw
-  // pre-`pricing:apply` (migration 018 seeds the row only in the supervised
-  // go-live) — AND the websearch prop is absent, so the chat renders no chips
-  // and behaves byte-identically to today (deploy-order-safe).
-  const websearchEnabled = process.env.WEBSEARCH_ENABLED === '1';
-
-  // ADR 037 D14/WP202a: the same dormancy pattern as `websearchEnabled` above
-  // — Workspace/Chat are already built and tested against `attachments`'
-  // presence, so this flag is the ONLY remaining step to reach it (no price
-  // read needed here: dataset_turn/dataset_ingest prices aren't in
-  // pricing-defaults.ts yet, §8 Q1 still open, unrelated to this flag).
-  // Dashboard has no dataset-chat integration at all, so this only ever
-  // matters inside the WORKSPACE_ENABLED branch below.
-  const attachmentsEnabled = process.env.ATTACHMENTS_ENABLED === '1';
-
-  // Row 11 (session 110 UX audit pass 5, still-broken recheck): a plain env
-  // presence check, no dormancy flag involved (Brandfetch itself has been
-  // live since WP218 phase 3) — this is the SAME fact chart-style-actions.ts's
-  // `lookupBrand` checks before any per-user work, read here once so it can
-  // reach the render instead of only surfacing after a failed click.
-  const brandLookupAvailable = Boolean(process.env.BRANDFETCH_API_KEY);
-
-  // WP135 (ADR 033 D7): dormant behind WORKSPACE_ENABLED (the WP129 pattern).
-  // Flag ON → the chat workspace + site shell. Flag OFF → today's <Dashboard>,
-  // rendered byte-identically below (no new props, no thread reads). The
-  // workspace branch does NOT read the question history (it moved to
-  // /geschiedenis, ⟨A5⟩).
-  if (process.env.WORKSPACE_ENABLED === '1') {
-    // Threads read server-side (like every other page read), handed to the
-    // workspace as initialThreads — no client fetch-on-mount.
-    const [wsBalance, wsSimplePrice, wsClarificationPrice, wsThreads, wsWebAddonPrice, wsChartStyle, wsPacks] =
-      await Promise.all([
-        getBalance(db, userId),
-        getActionClassPrice(db, 'simple'),
-        getActionClassPrice(db, 'clarification'),
-        listThreads(db, userId),
-        websearchEnabled ? getActionClassPrice(db, 'web_addon') : Promise.resolve(null),
-        // WP218 phase 2 (owner C): the account default for chart styling.
-        // getUserChartStyle already degrades to null on an absent table
-        // (deploy-order safety, see the store's own header); this extra
-        // `.catch` is belt-and-suspenders against any OTHER throw (a real
-        // connection failure, say) so a chart-style read can never take
-        // down the whole workspace page the way an un-caught Promise.all
-        // rejection would.
-        getUserChartStyle(db, userId).catch(() => null),
-        // R2.2 (WP-D, #69/#75/#211): the same server read /credits/page.tsx
-        // already does (ADR 006), narrowed to the plain {id, label, credits}
-        // shape Chat's insufficient-credits message needs — never priced
-        // client-side, /credits stays the one place that quotes € amounts.
-        getActivePacks(db),
-      ]);
-    return (
-      <Workspace
-        initialBalance={wsBalance}
-        simplePrice={wsSimplePrice}
-        clarificationPrice={wsClarificationPrice}
-        initialThreads={wsThreads}
-        purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
-        chartStyle={wsChartStyle?.style ?? null}
-        brandLookupAvailable={brandLookupAvailable}
-        packs={wsPacks.map((pack) => ({ id: pack.id, label: pack.label, credits: pack.credits }))}
-        coverage={coverage}
-        {...(websearchEnabled && wsWebAddonPrice !== null
-          ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
-          : {})}
-        {...(attachmentsEnabled ? { attachments: { enabled: true as const } } : {})}
-      />
-    );
-  }
-
-  // simplePrice + signupGrantCredits: live pricing-config reads (ADR 006 --
-  // the #69 warning threshold and #76 explainer copy must track the tables,
-  // never a hardcoded number).
-  const [balance, history, simplePrice, clarificationPrice, signupGrantCredits, webAddonPrice] =
-    await Promise.all([
-      getBalance(db, userId),
-      // includeOnboarding rides the same master switch as the finder injection
-      // (actions.ts): while ONBOARDING_ENABLED is unset, the history read never
-      // touches the not-yet-migrated pending_table_requests table.
-      getQuestionHistory(db, userId, { includeOnboarding: process.env.ONBOARDING_ENABLED === '1' }),
-      getActionClassPrice(db, 'simple'),
-      getActionClassPrice(db, 'clarification'),
-      getSignupGrantCredits(db),
-      websearchEnabled ? getActionClassPrice(db, 'web_addon') : Promise.resolve(null),
-    ]);
-
-  return (
-    <Dashboard
-      initialBalance={balance}
-      simplePrice={simplePrice}
-      clarificationPrice={clarificationPrice}
-      signupGrantCredits={signupGrantCredits}
-      history={<QuestionHistory items={history} />}
-      purchaseSuccess={purchase === PURCHASE_SUCCESS_VALUE}
-      {...(websearchEnabled && webAddonPrice !== null
-        ? { websearch: { enabled: true as const, addonPrice: webAddonPrice } }
-        : {})}
-    />
-  );
+  return <Landing coverage={coverage} />;
 }

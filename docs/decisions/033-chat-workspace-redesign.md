@@ -314,3 +314,54 @@ a dataset thread routes to ADR 037 D13's `deleteOneDataset` instead. No `chat_th
 "timestamps only, no text" holds. Deleting the ACTIVE chat resets to a fresh chat (the D5 explicit reset), since its
 messages no longer exist server-side. Pins: `tests/audit/retention.test.ts`, `web/app/actions-threads.test.ts`,
 `web/components/thread-sidebar.test.tsx`, `web/components/workspace.test.tsx`.
+
+## D8 — `/` is one URL served by two route segments (session 110, 2026-09-17)
+
+**Context.** #98/D6 answered "one merged `/`" for the *user-facing* URL, and the implementation took
+that literally: a single `web/app/page.tsx` Server Component imported `Landing`, `Dashboard` AND
+`Workspace` and picked one at request time. Next builds a route's client bundle from its **static
+import graph**, not from which runtime branch renders, so every anonymous visitor's browser
+downloaded the whole signed-in workspace before the landing could paint. Measured, not assumed
+(`docs/session-briefs/2026-09-13-build-performance-diagnosis.md`, "Logged-in workspace bundle"):
+the anonymous and the signed-in response shipped the **exact same 15 script tags / 1,503,395 bytes
+raw**. `next/dynamic()` was tried twice (pass 2 by chunk-sum, pass 3 Target B by real browser
+trace) and does **not** help — Next still emits an unconditional `<script src>` for every chunk
+reachable from the route's graph, whichever branch executes.
+
+**Decision.** The URL stays `/` for everyone; the signed-in tree moves to its own route segment:
+
+- `web/app/page.tsx` imports **only** `Landing` (plus the cached coverage disclosure). It reads no
+  session at all, so it carries an explicit `dynamic = 'force-dynamic'` — the session read used to
+  be what kept the landing's request-time, 30-minute-cached reads (ADR 035/046) out of the build
+  output.
+- `web/app/workspace/page.tsx` is the signed-in segment: the Dashboard/Workspace branches, their
+  flags (`WORKSPACE_ENABLED`, `WEBSEARCH_ENABLED`, `ATTACHMENTS_ENABLED`, `BRANDFETCH_API_KEY`),
+  their reads and the `/?purchase=success` flag, moved verbatim — plus `runtime`/`maxDuration = 90`
+  (⟨W2⟩), because a Server Action posts to the URL the browser is on and the proxy resolves that to
+  this segment.
+- `web/proxy.ts` **rewrites** `/` to that segment when — and only when — `getClaims()` validated a
+  session, carrying over any refreshed session cookie and the non-internal response headers. A
+  rewrite keeps the address bar on `/`, so bookmarks, the header's wordmark link, the Stripe return
+  and the e2e specs are untouched.
+- `/workspace` is an **internal** path: the proxy unconditionally 307s any direct request for it
+  (or anything under it) back to `/`, signed in or not, before it even reads the session — the same
+  "close the one entry point rather than trust that nothing reaches it" discipline
+  `applyEmbedRequestHeaders`'s strip-then-set has. From `/` a signed-in visitor is rewritten right
+  back in, so the redirect costs them nothing.
+
+**Measured result** (`next build` + `next start`, the pass-3 method: curl the served HTML, sum every
+`<script src>`/preload-as-script on disk): anonymous first load **1,503,395 → 1,280,984 bytes**
+(15 → 13 tags, **−222,411 bytes / −14.8%**); signed-in **1,503,395 → 1,498,886** (15 tags — it did
+not grow). The ~203 KB chat/workspace/dock chunk and its two small siblings simply stop being sent
+to visitors who never see them.
+
+**Trade-off.** One more moving part between URL and file: `/`'s behaviour now depends on a proxy
+rewrite, so a future change to `web/proxy.ts` can break the signed-in homepage without touching a
+page file. Mitigated by pins in `web/proxy.test.ts` (rewrite for a session, no rewrite without one,
+direct `/workspace` redirects back, spoofed trusted headers still stripped on the rewritten path)
+and in `web/app/workspace/page.test.tsx` (a source pin that `app/page.tsx` never imports the
+signed-in tree again — the perf win's only real regression risk, and one no runtime test can see).
+
+**Revisit trigger.** If Next gains real per-branch bundling for a single route (making the split
+unnecessary), or if a third audience-specific branch appears on `/` — at which point a route group
+per audience beats a second rewrite rule.
