@@ -619,7 +619,20 @@ production row corrected directly via SQL, verified against the live database.
 
 **Still genuinely open:** `doi` was never populated for this table (stays `null`) — nothing in
 `registerTables` sources a DOI from anywhere, so ADR D7(a)'s "populated at catalog/registration time" was
-itself never implemented, a separate, not-yet-scoped gap from the column-tagging bug above. A full browser
+itself never implemented, a separate, not-yet-scoped gap from the column-tagging bug above.
+
+**Research update, session 108 (2026-09-17, subagent, docs-only — [open-questions #264](../open-questions.md)):**
+D7(a)'s DOI source is now VERIFIED, closing the "not yet scoped" gap above. Eurostat mints one DOI per
+dataset, pattern `10.2908/<CODE>` (code uppercased) per Eurostat's own "Anchoring of datasets" guide —
+confirmed live via the public DataCite REST API (`GET https://api.datacite.org/dois/10.2908/<code>`) for
+three real datasets including `tipsbd30` itself (200, `state: "findable"`, title matching what's already
+registered here); the `doi.org` resolver path was confirmed live too. Neither the Catalogue endpoint nor
+the Statistics API expose it — DataCite is the only verified programmatic source, and would be a NEW
+third-party ingestion-time dependency (out-of-band, never the request path — consistent with principle
+(b)) if built: construct the DOI deterministically, verify it with one DataCite call at registration time,
+write `doi` only on a confirmed `findable` response, leave `null` otherwise rather than store an unverified
+guess. Not built yet — still a future session's scoping/priority call; see open-questions #264 for the
+full write-up. A full browser
 click-through of `/eurostat-explorer` was not done (would need either flipping the production
 `EUROSTAT_EXPLORER_ENABLED` flag, itself owner-supervised, or contending with another session's already-
 running local dev server) — the explorer's own backing SQL query, run directly against the live database,
