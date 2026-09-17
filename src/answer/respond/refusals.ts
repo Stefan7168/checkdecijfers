@@ -405,6 +405,38 @@ function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
   };
 }
 
+/** #253 question 3: a region-CLASS ask ("per provincie", "welke gemeente …")
+ * on a measure CBS publishes only nationally.
+ *
+ * Routed by the query refusal's structural `subReason`, never by matching its
+ * English message, and deliberately NOT the generic internal wording: the
+ * intent is invalid, but the underlying fact is an ordinary, honest scope
+ * limit the user can act on — and an 'internal' refusal pages the owner
+ * (src/answer/audit/alerts.ts). It also must not read like the intent layer's
+ * max_needs_regions template ("noem twee gemeenten"), which asks for something
+ * that does not exist on a table with no regional dimension at all.
+ *
+ * The offer is real: the same measure without a region axis IS servable, and
+ * that is the national figure. What never happens is serving that number here,
+ * relabelled "per provincie" (principle c). */
+function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltRefusal {
+  const definitionLabel = definitionLabelForRefusal(refusal);
+  const body = definitionLabel
+    ? `De cijfers over ${definitionLabel} publiceert het CBS alleen landelijk, voor heel Nederland: in deze tabel zit geen uitsplitsing naar gemeente, provincie of landsdeel.`
+    : 'Deze cijfers publiceert het CBS alleen landelijk, voor heel Nederland: in deze tabel zit geen uitsplitsing naar gemeente, provincie of landsdeel.';
+  const offer = 'Ik kan je wel het landelijke cijfer geven.';
+  const guidance =
+    "Voor een vergelijking tussen regio's is een onderwerp nodig dat het CBS wél per regio publiceert.";
+  return {
+    reason: 'region_scope_on_national_measure',
+    text: assertNotAQuestion(joinParts([body, offer, guidance])),
+    offer,
+    guidance,
+    freshness: null,
+    internalNote: null,
+  };
+}
+
 function buildQuarantinedRefusal(): BuiltRefusal {
   const body =
     'Deze tabel is tijdelijk niet beschikbaar omdat we de gegevens opnieuw aan het controleren zijn (kwaliteitscheck na een mogelijke wijziging bij CBS).';
@@ -527,6 +559,13 @@ export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
     case 'table_evicted':
       return { kind: 'refusal', refusal: buildEvictedRefusal(refusal) };
     case 'invalid_intent':
+      // #253: one structurally-marked invalid_intent is NOT an internal fault
+      // — a region class on a national-only measure. Every other one (over the
+      // cap, both axes given, a malformed period) keeps the generic wording.
+      if (refusal.refusal.subReason === 'region_scope_on_national_measure') {
+        return { kind: 'refusal', refusal: buildRegionScopeOnNationalMeasureRefusal(refusal) };
+      }
+      return { kind: 'refusal', refusal: buildInternalRefusal(refusal) };
     case 'table_not_registered':
     case 'no_data':
     case 'derivation_failed':

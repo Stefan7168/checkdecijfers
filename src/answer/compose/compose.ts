@@ -18,6 +18,7 @@ import {
   buildAssumptionLine,
   buildAttributionLine,
   buildDefinitionLine,
+  buildRegionSetLine,
   normalizeForScan,
 } from './format.ts';
 import { buildPhrasingRequest, COMPOSE_PROMPT_VERSION, PHRASING_MODEL } from './prompt.ts';
@@ -105,12 +106,21 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
   // re-assembles in this exact order; changing it here without changing it
   // there breaks R8 for every defaulted answer.
   const assumptionLine = buildAssumptionLine(result);
+  // #253: the region-class coverage disclosure, directly after the assumption
+  // it sits beside — both qualify what the body just said, before the reader
+  // meets the definition and the source. Same single-builder discipline:
+  // audit/reconstruct.ts re-derives it through buildRegionSetLine, so the
+  // shown disclosure and the audited one can never drift. (The two can never
+  // co-occur in practice — a region CLASS is not a defaulted region — but the
+  // order is fixed here and in reconstruct either way.)
+  const regionSetLine = buildRegionSetLine(result);
   const markingLine = isDerivedResult(result) ? `— ${DERIVED_DATA_MARKING}` : null;
   const attribution = buildAttributionLine(result);
   const text = [
     body,
     '',
     ...(assumptionLine ? [assumptionLine] : []),
+    ...(regionSetLine ? [regionSetLine] : []),
     ...(definitionLine ? [definitionLine] : []),
     ...(alternatesLine ? [alternatesLine] : []),
     ...(markingLine ? [markingLine] : []),
@@ -123,6 +133,9 @@ function assemble(result: ValidatedResult, rawBody: string, source: AnswerSource
     // Present-only: an answer with no defaulted axis serializes no key, so
     // every pre-WP26 and flag-off envelope stays byte-identical.
     ...(assumptionLine !== null ? { assumptionLine } : {}),
+    // #253: present-only, same discipline — only a region-class answer
+    // serializes this key, so every other envelope stays byte-identical.
+    ...(regionSetLine !== null ? { regionSetLine } : {}),
     definitionLine,
     // #39: present-only, same discipline — no alternates, no key.
     ...(alternatesLine !== null ? { alternatesLine } : {}),
@@ -233,7 +246,19 @@ export async function composeAnswer(result: ValidatedResult, options: ComposeOpt
   // adds phrasing risk to an answer that contains no number to phrase.
   const hasNullCells = result.cells.some((c) => c.value === null);
 
-  if (!hasNullCells && options.templateOnly !== true) {
+  // #253: a region-CLASS answer is template-only BY SHAPE, not by caller. Two
+  // reasons, both structural rather than stylistic (spec §Billing):
+  //  - cost/fabrication surface: this shape can carry up to
+  //    REGION_SET_MAX_MEMBERS cells, so handing it to a phrasing model is the
+  //    most expensive AND the highest-fabrication-surface call in the product —
+  //    for a sentence the ranking derivation already fully determines;
+  //  - it must not depend on every call site remembering to pass the option.
+  //    respond.ts passes it too (the explicit wiring), but this guard is what
+  //    makes "zero LLM calls for this shape" a property of composeAnswer
+  //    itself, which is what the test pins.
+  const templateOnly = options.templateOnly === true || result.shape === 'region_set';
+
+  if (!hasNullCells && !templateOnly) {
     // #162: flag on → the slot rung replaces the two see-and-echo LLM rungs
     // below (same template floor). Flag off/absent → byte-identical ladder.
     if (options.slotPhrasing === true) {

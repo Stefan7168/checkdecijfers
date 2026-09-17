@@ -143,6 +143,21 @@ export interface ComposedAnswer {
    * OPTIONAL and present-only: an answer with no defaulted axis, and every row
    * stored before WP26, carries no key at all — readers MUST use `?? null`. */
   assumptionLine?: string | null;
+  /** #253: the region-class coverage disclosure ("Dekking: 26 van de 42
+   * gemeenten hebben een cijfer. …") — assembled by deterministic code
+   * (buildRegionSetLine) from the validated coverage record, outside the
+   * LLM-scanned body, and re-derived byte-identically at audit time (R8) by
+   * the same builder.
+   *
+   * It lives OUT here rather than in `body` for a structural reason, not a
+   * stylistic one: its digits count ROSTER MEMBERS, not CBS cells, so R1 —
+   * whose exemptions are structural, never pattern-based — would (correctly)
+   * reject them inside the scanned body. Same class of line as assumptionLine.
+   *
+   * OPTIONAL and present-only: every answer that is not a region-class answer,
+   * and every row stored before #253, carries no key at all — readers MUST use
+   * `?? null`. */
+  regionSetLine?: string | null;
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;

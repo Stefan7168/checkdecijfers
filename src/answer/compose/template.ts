@@ -5,7 +5,7 @@
 // Stilted Dutch is the accepted cost; a template answer can be ugly, never
 // wrong. docs/02 reports the template-fallback count.
 import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/index.ts';
-import { formatValueNl } from './format.ts';
+import { formatValueNl, regionSetBodyNoun } from './format.ts';
 import { resolveSource } from '../../sources/registry.ts';
 import { baseRegionLabel } from './validate.ts';
 
@@ -127,16 +127,67 @@ function renderComparison(result: ValidatedResult): string {
   return `${subjectSentenceStart(result)}: ${lines}.${winnerSentence}`;
 }
 
-/** #253 INTERIM (Task 3/4 landed the shape and its ranking record; Task 6 owns
- * the finished phrasing plus the structural coverage line). Delegates to
- * renderComparison, which is already RS1-safe by construction: its superlative
- * sentence exists only when a `max` derivation record does, and a region set
- * only ever gets one when its coverage is complete
- * (src/query/derivations.ts deriveRegionRanking). So an incomplete set renders
- * its values with no ranking claim — the honesty rule holds today; it is the
- * wording and the disclosure sentence that are still owed. */
+/** #253 — one measure, one period, a whole region CLASS.
+ *
+ * RS1 is not implemented here as a word filter; it is implemented by the two
+ * branches below keying on the RANKING DERIVATION's existence. `run.ts` routes
+ * this shape through `deriveRegionRanking`, which refuses on an incomplete
+ * class (src/query/derivations.ts) — so "no record" means "we could not
+ * establish the ranking", and this renderer simply has nothing to phrase a
+ * superlative from. R9 then backs the same rule from the other side: a ranking
+ * word with no derivation behind it fails the validator closed.
+ *
+ * COMPLETE (a record exists) — a summary, never a list. The top and the bottom
+ * member with their own verbatim cell values, in the ranking derivation's own
+ * order (never re-sorted here). A class can carry up to REGION_SET_MAX_MEMBERS
+ * cells; renderMax's spell-out-every-runner-up rendering is right for a
+ * four-city comparison and unreadable at 342 gemeenten — and the chart is the
+ * real reading for the full set (R6: the chart is a verbatim projection).
+ *
+ * INCOMPLETE (no record) — the per-member lines, claim-free, exactly as
+ * renderComparison states them: with no ranking there is no honest summary to
+ * give, so the answer states the data itself, including each withheld member's
+ * own CBS reason (R11). The count is bounded by the same cap.
+ *
+ * The coverage itself (roster size, excluded members, and the fact that no
+ * ranking is claimed) is disclosed by the STRUCTURAL line buildRegionSetLine
+ * assembles, outside this scanned body — see format.ts for why its digits
+ * could not legally live here. */
 function renderRegionSet(result: ValidatedResult): string {
-  return renderComparison(result);
+  // `scope` is present on every real region_set result (run.ts writes the
+  // coverage record and the shape together); the fallback keeps this renderer
+  // total for a hand-built result rather than throwing inside the fail-closed
+  // floor of the R3 ladder.
+  const scope = result.regionSet?.scope ?? null;
+  const classNoun = (count: number): string =>
+    scope === null ? (count === 1 ? 'regio' : "regio's") : regionSetBodyNoun(scope, count);
+  const byId = new Map(result.cells.map((c) => [c.resultId, c]));
+  const ranking = result.derivations.find((d) => d.kind === 'max');
+  const winner = ranking?.kind === 'max' ? byId.get(ranking.winnerResultId) : undefined;
+  const lowestId =
+    ranking?.kind === 'max' ? ranking.rankingResultIds[ranking.rankingResultIds.length - 1] : undefined;
+  const lowest = lowestId === undefined ? undefined : byId.get(lowestId);
+  // The claim-free rendering is ALSO the fallback when a ranking record exists
+  // but cannot be resolved against this result's own cells — a shape that
+  // should not occur (a registered derivation's ids always come from the same
+  // result), but this function is the fail-closed FLOOR of the R3 ladder: it
+  // renders something honest or the pipeline has nothing left to serve. Same
+  // defensive posture renderTrendHeadline already takes.
+  if (winner?.value == null || lowest?.value == null) {
+    const lines = result.cells.map((cell) => cellLine(cell)).join('; ');
+    return `${subjectSentenceStart(result)} per ${classNoun(1)}: ${lines}.`;
+  }
+  const winnerName = winner.regionLabel ? baseRegionLabel(winner.regionLabel) : winner.periodLabel;
+  const lowestName = lowest.regionLabel ? baseRegionLabel(lowest.regionLabel) : lowest.periodLabel;
+  // The count is the number of members we SERVED (the distinct regions in the
+  // cells), which is what validate.ts's structural region count matches. The
+  // roster size is a different number and lives in the disclosure line.
+  const served = new Set(result.cells.map((c) => c.regionCode)).size;
+  return (
+    `Van de ${served} ${classNoun(served)} had ${winnerName} in ${winner.periodLabel} de hoogste waarde voor ` +
+    `${subject(result)}: ${displayValueUnit(winner.value, winner.decimals, winner.unit)}${provisionalSuffix(winner)}. ` +
+    `${lowestName} had de laagste waarde: ${displayValueUnit(lowest.value, lowest.decimals, lowest.unit)}${provisionalSuffix(lowest)}.`
+  );
 }
 
 function renderDifference(result: ValidatedResult, derivation: Extract<DerivationRecord, { kind: 'difference' }>): string {

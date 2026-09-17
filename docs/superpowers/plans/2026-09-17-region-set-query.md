@@ -296,3 +296,70 @@ tasks 5–9 are untouched. Deviations from the plan as written, and why:
 
 Measured at the end of task 4: `tests/query` 183 passed (13 files), `tests/invariants` 26 passed,
 `tests/answer/compose-template.test.ts` 42 passed, root `npm run typecheck` clean.
+
+---
+
+## As-built notes (task 6)
+
+Built on branch `s110/rs6` (session 110), on top of the merged tasks 1–4. **Task 6 is DONE.**
+Deviations from the plan as written, and why:
+
+1. **The refusal reason landed on the RESPOND side (`RefusalReason`), not as a
+   `ResolutionFailure.reason`.** The spec put `region_scope_on_national_measure` on the intent
+   layer's `ResolutionFailure`, but as built (task 2) this case never reaches that layer: the QUERY
+   resolver refuses it (`resolve.ts`, `invalid_intent` + axis `region`), so an intent-layer reason
+   would have been dead code. It is therefore a new `RefusalReason` in
+   `src/answer/respond/types.ts` with its wording in `refusals.ts`. Neither location feeds an LLM
+   request, so **no fixture hash moves** — `requestHash` (`src/answer/llm/client.ts`) hashes the
+   built `LlmRequest`, and `prompt.ts`/`schema.ts` are built from `CANONICAL_MEASURES`, never from
+   any refusal taxonomy. `INTENT_SCHEMA_VERSION` stays `1`; nothing under `src/answer/intent/` or
+   `tests/fixtures/llm/` was touched.
+
+2. **Routing it needed ONE new present-only field on the query refusal:
+   `QueryRefusal.refusal.subReason`.** The spec says "no new `RefusalKind` in the query layer", and
+   there is none — but the answer layer cannot otherwise tell this refusal apart from the OTHER
+   `invalid_intent` + axis `region` + `regionSet`-shaped refusal, the over-the-cap one (`run.ts`),
+   which must keep the generic internal wording. The alternative was matching on `refusal.message`,
+   owner-facing English prose. Present-only, `?? null`-safe, and pinned from both sides (the
+   national-measure case sets it, the over-cap case must not).
+
+3. **Not the `internal` bucket — which is a real bug fix, not only a wording nicety.** Before this
+   task the question "wat is de werkloosheid per provincie?" would have been served as reason
+   `internal`, and every served `internal` refusal **pages the owner**
+   (`src/answer/audit/alerts.ts`). An honest scope limit would have generated a false alert on every
+   such question once task 9 exposes the shape through the parser.
+
+4. **`composeAnswer` enforces `templateOnly` BY SHAPE, in addition to respond.ts passing it.** The
+   plan wired the option at the call site only. The test the plan asks for ("zero LLM calls for this
+   shape") is a claim about `composeAnswer`, and a call-site-only wire makes it a claim about every
+   caller remembering. Both are in place: the guard in `compose.ts` and the explicit
+   `templateOnly: true` in `respond.ts`.
+
+5. **The body is a SUMMARY when complete, the full per-member list when incomplete** — deliberately
+   asymmetric. With a ranking derivation there is an honest one-sentence summary (top + bottom, in
+   the derivation's own order, never re-sorted), which stays readable at 342 members and leaves the
+   full set to the chart. With no ranking record there is no honest summary at all, so the body
+   states the data itself — including each withheld member's own CBS reason (R11) — exactly as the
+   interim renderer did.
+
+6. **Excluded members are named by their CBS region CODE, not a label.** `RegionSetCoverage` stores
+   codes, and a not-applicable/missing member has no cell, so no label exists anywhere in the stored
+   result — and `buildRegionSetLine` must stay a pure function of the stored result for R8 to
+   re-derive it. Withheld members DO have cells, so they are named by their verbatim region label
+   (via `baseRegionLabel`). Marked `**Assumption:**` inline in `format.ts`; a follow-up could carry
+   roster labels in the coverage record. Names are listed at ≤ 5 members, counts only above that.
+
+7. **`baseRegionLabel` moved from `validate.ts` to `format.ts`** (re-exported from `validate.ts`, so
+   every existing importer is unchanged). `buildRegionSetLine` lives beside the other structural
+   line builders in `format.ts` and must name a region exactly as the body does; importing the
+   validator from there would have created a `format → validate → format` cycle.
+
+8. **Left red for task 7, deliberately:** `tests/audit/envelope-key-manifest.test.ts` now fails with
+   exactly 2 failures (the `ComposedAnswer` member count 16 → 17, and `regionSetLine` having no
+   manifest entry). That is the guard doing its job — the manifest rows are task 7's own
+   done-definition, and a non-`ignored` entry is only accepted once `reconstruct.ts` actually
+   mentions the key.
+
+Measured at the end of task 6: `npx vitest run tests/answer --maxWorkers=1` → **790 passed, 32
+files**; root `npm run typecheck` clean; `git status` shows zero files touched under
+`tests/fixtures/`.

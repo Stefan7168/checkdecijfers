@@ -6,8 +6,16 @@
 // parses every numeric token in the produced text back to a number and checks
 // it against the result's cells and registered derivations. Formatting may
 // localize; the value may not change (R3).
-import type { ValidatedResult } from '../../query/index.ts';
+import type { RegionScope, ValidatedResult } from '../../query/index.ts';
 import { EUROSTAT_SOURCE_KEY, resolveSource } from '../../sources/registry.ts';
+
+/** Region label as prose uses it: "Utrecht (gemeente)" → "Utrecht". Lives
+ * here (not in validate.ts, which re-exports it) so the structural line
+ * builders below can name a region exactly as the body does, without the
+ * builders importing the validator that in turn imports this file. */
+export function baseRegionLabel(label: string): string {
+  return label.replace(/\s*\(.*\)\s*$/, '').trim();
+}
 
 /** Canonical form for scanning: NFKC folds fullwidth/compatibility digits
  * (９→9, ¹→1) into ASCII so no digit shape escapes the tokenizer, and
@@ -253,6 +261,127 @@ export function buildAssumptionLine(result: ValidatedResult): string | null {
     parts.push('Vraag gerust naar alleen het laatste cijfer of naar een andere periode.');
   }
   return parts.length > 0 ? parts.join(' ') : null;
+}
+
+// ---------------------------------------------------------------------------
+// #253 — the region-class coverage disclosure (RegionSetCoverage → one line)
+// ---------------------------------------------------------------------------
+
+/** The Dutch noun for each region class, singular + plural. CBS's own class
+ * names, never reworded (principle a). */
+const REGION_SET_NOUNS: Record<RegionScope['kind'], readonly [string, string]> = {
+  all_provincies: ['provincie', 'provincies'],
+  all_landsdelen: ['landsdeel', 'landsdelen'],
+  all_gemeenten: ['gemeente', 'gemeenten'],
+  gemeenten_in_provincie: ['gemeente', 'gemeenten'],
+};
+
+/** The class noun for the STRUCTURAL disclosure line, which no validator
+ * scans — so it may name the class exactly as CBS does. */
+export function regionSetNoun(scope: RegionScope, count: number): string {
+  const [singular, plural] = REGION_SET_NOUNS[scope.kind];
+  return count === 1 ? singular : plural;
+}
+
+/** The class noun the BODY may use, which is NOT the same question: a count in
+ * the scanned body is only structural when the word right after it is one of
+ * validate.ts's own REGION_COUNT_NOUNS ("gemeenten", "provincies", "regio's",
+ * "steden"). 'landsdelen' is not among them — deliberately, since that set is
+ * the granularities the product actually serves — so a landsdeel class counts
+ * itself as "regio's" rather than smuggling a new noun into the validator.
+ * `count` only ever distinguishes the counted plural ("Van de 26 gemeenten",
+ * always ≥ 2 — run.ts refuses below two applicable members) from the
+ * uncounted singular of a "per gemeente" header. */
+export function regionSetBodyNoun(scope: RegionScope, count: number): string {
+  if (scope.kind === 'all_landsdelen') return count === 1 ? 'regio' : "regio's";
+  return regionSetNoun(scope, count);
+}
+
+/** How many excluded members are named rather than merely counted. Above this,
+ * a list stops informing and starts being a wall of text (a 342-gemeente class
+ * can exclude dozens); the count itself is never dropped. */
+const REGION_SET_NAMED_LIMIT = 5;
+
+/** A roster member's display name. The SERVED members carry their verbatim CBS
+ * region label on their own cell; an excluded member has no cell (and the
+ * coverage record stores codes, not labels), so it is named by its CBS region
+ * code — a real, checkable identifier rather than a guessed name.
+ * **Assumption:** a CBS region code is an acceptable display name for an
+ * excluded member. Carrying the roster's labels in the coverage record would
+ * remove the assumption; nothing today needs them. (#253 task 8 owns the
+ * open-questions row — this task's own doc scope is the plan's as-built note.) */
+function regionMemberName(code: string, result: ValidatedResult): string {
+  const cell = result.cells.find((c) => c.regionCode === code);
+  return cell?.regionLabel ? baseRegionLabel(cell.regionLabel) : code;
+}
+
+function namedSuffix(codes: string[], result: ValidatedResult): string {
+  if (codes.length > REGION_SET_NAMED_LIMIT) return '';
+  return ` (${codes.map((code) => regionMemberName(code, result)).join(', ')})`;
+}
+
+/** #253: the region-class coverage disclosure — which members of the class the
+ * answer actually covers, and which it could not.
+ *
+ * The SINGLE source of truth, exactly like buildAssumptionLine above:
+ * compose.ts builds the line with it and audit/reconstruct.ts re-derives it
+ * byte-identically from the stored result (R8), so the shown disclosure and
+ * the audited one can never drift.
+ *
+ * Why it is a structural line and not prose in the body: it is the one part of
+ * a region-class answer whose digits describe the ROSTER (42 members, 16 of
+ * them excluded) rather than any CBS cell. R1's exemptions are structural,
+ * never pattern-based — a roster count inside the scanned body would be an
+ * unbacked number and would rightly fail. Outside it, assembled by
+ * deterministic code from the validated coverage record, it is the same class
+ * of line as the definition, assumption and attribution lines.
+ *
+ * `?? null` (A1, docs/13): every non-region-set result, and every row stored
+ * before #253, carries no `regionSet` key at all. */
+export function buildRegionSetLine(result: ValidatedResult): string | null {
+  const coverage = result.regionSet ?? null;
+  if (coverage === null) return null;
+  const scope = coverage.scope;
+  const noun = (n: number): string => regionSetNoun(scope, n);
+  // "Applicable" is a property of the served cells, not of the buckets: a
+  // withheld member IS a cell (R11 keeps it, with its reason) but carries no
+  // number.
+  const applicable = result.cells.filter((c) => c.value !== null).length;
+
+  const parts: string[] = [
+    applicable === coverage.rosterSize
+      ? `Dekking: alle ${coverage.rosterSize} ${noun(coverage.rosterSize)} in deze tabel hebben een cijfer.`
+      : `Dekking: ${applicable} van de ${coverage.rosterSize} ${noun(coverage.rosterSize)} hebben een cijfer.`,
+  ];
+
+  if (coverage.notApplicable.length > 0) {
+    const n = coverage.notApplicable.length;
+    parts.push(
+      `${n} ${noun(n)} ${n === 1 ? 'bestond' : 'bestonden'} in deze periode niet volgens het CBS` +
+        `${namedSuffix(coverage.notApplicable, result)}.`,
+    );
+  }
+  if (coverage.withheld.length > 0) {
+    const n = coverage.withheld.length;
+    // The REASON per withheld member is stated in the body itself: a withheld
+    // member always makes the class incomplete, and an incomplete class
+    // renders the per-member lines (template.ts renderRegionSet), each with
+    // its own CBS reason (R11). This line counts and names them.
+    parts.push(`Voor ${n} ${noun(n)} publiceert het CBS geen waarde${namedSuffix(coverage.withheld, result)}.`);
+  }
+  if (coverage.missing.length > 0) {
+    const n = coverage.missing.length;
+    parts.push(
+      `Van ${n} ${noun(n)} hebben wij geen cijfer in onze database${namedSuffix(coverage.missing, result)}.`,
+    );
+  }
+  if (!coverage.complete) {
+    // RS1, said out loud. Deliberately phrased WITHOUT the words it is
+    // explaining the absence of ("hoogste"/"laagste"): those belong to a claim
+    // this answer is not making.
+    parts.push('Daarom noemt dit antwoord geen rangorde.');
+  }
+  return parts.join(' ');
 }
 
 /** #39: a registry alternate label, cleaned for display. The curated labels

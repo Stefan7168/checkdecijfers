@@ -435,6 +435,22 @@ export interface QueryRefusal {
     /** Owner-readable English summary (internal; user-facing Dutch phrasing
      * is the answer layer's job, WP7/WP9). */
     message: string;
+    /** #253: a machine-readable SUB-reason, for the one case where a refusal
+     * kind that is otherwise an internal fault is in fact an honest, ordinary
+     * scope limit the answer layer must word differently.
+     *
+     * Why a field and not a new RefusalKind (which the #253 design explicitly
+     * rules out): `invalid_intent` is the right kind — the intent genuinely
+     * cannot be satisfied — and the answer layer's alternative is matching on
+     * `message`, English prose that exists for the owner's eyes and may be
+     * reworded any day. It is also NOT derivable from the intent alone: an
+     * over-the-cap region set refuses with the same kind, the same axis and
+     * the same intent shape, and must keep the generic wording.
+     *
+     * Present-only (docs/13): absent on every other refusal and on every row
+     * stored before #253, so readers use `?? null` and a plain equality test —
+     * never a bare truthiness read. */
+    subReason?: 'region_scope_on_national_measure';
     /** For freshness refusals: what we can serve instead. */
     freshness?: FreshnessInfo;
     /** For scope refusals: the nearest answerable alternative, as a CBS code

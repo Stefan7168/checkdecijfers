@@ -496,7 +496,11 @@ export async function respondToIntent(
   const answer = await composeAnswer(result, {
     client: options.answerClient,
     ...(options.semanticCheck ? { semanticCheck: options.semanticCheck } : {}),
-    ...(options.templateOnly ? { templateOnly: true } : {}),
+    // #253: a region-class answer is deterministic by design — no phrasing
+    // model ever sees a class's worth of numbers (spec §Billing). composeAnswer
+    // enforces the same rule by shape; this is the explicit wiring, so the
+    // decision is visible at the call site too.
+    ...(options.templateOnly || result.shape === 'region_set' ? { templateOnly: true } : {}),
     // #162: absent unless the SLOT_PHRASING_ENABLED wire is on (flag-off
     // compose options stay byte-identical to today).
     ...(options.slotPhrasing === true ? { slotPhrasing: true } : {}),
