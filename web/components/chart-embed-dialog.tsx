@@ -301,7 +301,13 @@ function ChartEmbedDialog({
       <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
 
       {result === 'loading' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.loading')}</p> : null}
-      {result === 'unavailable' ? <p className="text-xs text-destructive">{t(lang, 'chart.embed.unavailable')}</p> : null}
+      {/* #12 (session 110 UX audit): availability is only known AFTER this
+        * round trip (EMBED_TOKEN_SECRET is a server-only check inside
+        * createEmbedCode — the button has no earlier render-time signal to
+        * gate on). Styled as a neutral, muted hint rather than a red
+        * destructive error: the reader did nothing wrong, this is a
+        * disabled-state message, not a failure they caused. */}
+      {result === 'unavailable' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.unavailable')}</p> : null}
 
       {code !== null && result !== 'loading' && result !== 'unavailable' ? (
         <>
