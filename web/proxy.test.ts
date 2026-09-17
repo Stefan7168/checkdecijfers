@@ -9,7 +9,14 @@
 // pure decision the proxy makes; pinning it here fails that regression loudly.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { applyEmbedRequestHeaders, embedRequestHeaders, isPublicPath, proxy } from './proxy.ts';
+import {
+  applyEmbedRequestHeaders,
+  applySourceRouteHeader,
+  embedRequestHeaders,
+  isPublicPath,
+  proxy,
+  sourceRouteHeaders,
+} from './proxy.ts';
 
 // Row 2 (session 110 UX audit, #P1): a malformed/truncated sb-*-auth-token
 // cookie makes the real supabase-js `getClaims()` THROW (e.g. it JSON.parses
@@ -249,6 +256,51 @@ describe('applyEmbedRequestHeaders (Bundle A, final review)', () => {
     applyEmbedRequestHeaders(headers, '/credits', new URLSearchParams());
     expect(headers.get('cookie')).toBe('session=abc');
     expect(headers.get('accept')).toBe('text/html');
+  });
+});
+
+// Session 110 UX audit row 18 (ADR 048 addendum): the global footer's trust
+// line is CBS-specific everywhere (#7/#207) except the one internal page
+// that is entirely Eurostat data. Same shape as embedRequestHeaders/
+// applyEmbedRequestHeaders above: a pure, exact-matched pathname -> header
+// mapping, plus a strip-then-set applier so a client-supplied header can
+// never survive on any path other than the real route.
+describe('sourceRouteHeaders (pass-2 row 18)', () => {
+  it('sets x-source-route: eurostat for the exact /eurostat-explorer path', () => {
+    expect(sourceRouteHeaders('/eurostat-explorer')).toEqual({ 'x-source-route': 'eurostat' });
+  });
+
+  it('sets nothing for every other path, including a near-miss prefix', () => {
+    expect(sourceRouteHeaders('/')).toEqual({});
+    expect(sourceRouteHeaders('/chat')).toEqual({});
+    expect(sourceRouteHeaders('/eurostat-explorer/sub')).toEqual({});
+    expect(sourceRouteHeaders('/eurostat-explorer-legacy')).toEqual({});
+  });
+});
+
+describe('applySourceRouteHeader (pass-2 row 18)', () => {
+  it('sets x-source-route: eurostat on the real path', () => {
+    const headers = new Headers();
+    applySourceRouteHeader(headers, '/eurostat-explorer');
+    expect(headers.get('x-source-route')).toBe('eurostat');
+  });
+
+  it('strips a client-supplied x-source-route header on every other path', () => {
+    const headers = new Headers({ 'x-source-route': 'eurostat' });
+    applySourceRouteHeader(headers, '/chat');
+    expect(headers.get('x-source-route')).toBeNull();
+  });
+
+  it('strips a spoofed value on the homepage too', () => {
+    const headers = new Headers({ 'x-source-route': 'eurostat' });
+    applySourceRouteHeader(headers, '/');
+    expect(headers.get('x-source-route')).toBeNull();
+  });
+
+  it('leaves unrelated headers untouched', () => {
+    const headers = new Headers({ 'x-source-route': 'spoofed', cookie: 'session=abc' });
+    applySourceRouteHeader(headers, '/credits');
+    expect(headers.get('cookie')).toBe('session=abc');
   });
 });
 

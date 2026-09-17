@@ -88,11 +88,24 @@ function splitAttribution(attribution: string): { main: string; clause: string }
   };
 }
 
-export function SiteFooter() {
+// Session 110 UX audit row 18 (ADR 048 addendum): the footer's trust line is
+// CBS-specific everywhere (#7/#207) except the one internal page that is
+// entirely Eurostat data (web/app/eurostat-explorer/page.tsx). layout.tsx
+// resolves this prop from the `x-source-route` request header web/proxy.ts
+// sets ONLY for that exact path (and strips a client-supplied value on every
+// other path) — SiteFooter itself stays a plain, pathname-agnostic renderer;
+// it never re-derives the route decision from usePathname() itself, since
+// the header is already the one place that decision is made and tested.
+export interface SiteFooterProps {
+  sourceRoute?: 'eurostat';
+}
+
+export function SiteFooter({ sourceRoute }: SiteFooterProps = {}) {
   const pathname = usePathname();
   const showAbout = useAboutTargetPresent(pathname);
   const t = useT();
-  const { main: attributionMain, clause: attributionClause } = splitAttribution(t('footer.attribution'));
+  const attributionKey = sourceRoute === 'eurostat' ? 'footer.attributionEurostat' : 'footer.attribution';
+  const { main: attributionMain, clause: attributionClause } = splitAttribution(t(attributionKey));
   return (
     <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-background px-4 py-2.5 text-xs text-muted-foreground">
       <span>

@@ -46,6 +46,36 @@ describe('SiteFooter — en', () => {
   });
 });
 
+// Session 110 UX audit row 18 (ADR 048 addendum): the Eurostat-explorer page
+// is entirely Eurostat data, so its footer must say so instead of the CBS
+// wording every other route keeps (pinned above and in the phone-layout
+// block below). layout.tsx passes `sourceRoute="eurostat"` only for that one
+// route (via proxy.ts's x-source-route header); every other call site keeps
+// omitting the prop, which must fall back to the plain CBS attribution.
+describe('SiteFooter — sourceRoute="eurostat" (pass-2 row 18)', () => {
+  it('renders the Eurostat attribution line instead of the CBS one', () => {
+    render(<SiteFooter sourceRoute="eurostat" />);
+    const footer = document.querySelector('footer')!;
+    expect(footer.textContent).toContain('Eurostat (CC BY 4.0)');
+    expect(footer.textContent).not.toContain('CBS StatLine');
+  });
+
+  it('translates the Eurostat attribution line under English too', () => {
+    render(
+      <LangProvider lang="en">
+        <SiteFooter sourceRoute="eurostat" />
+      </LangProvider>,
+    );
+    const footer = document.querySelector('footer')!;
+    expect(footer.textContent).toContain(MESSAGES.en['footer.attributionEurostat']);
+  });
+
+  it('with no sourceRoute prop (every other route), still renders the plain CBS attribution', () => {
+    render(<SiteFooter />);
+    expect(document.querySelector('footer')!.textContent).toBe(FOOTER_ATTRIBUTION + ' · Werkwijze · Privacy');
+  });
+});
+
 // Row 11 (session 110 UX audit, #P2): at 375px the footer wrapped to two
 // lines on every screen and had no background colour at all
 // (`rgba(0,0,0,0)`), so content at the scroller's bottom edge abutted the

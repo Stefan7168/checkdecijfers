@@ -69,4 +69,12 @@ describe('MESSAGES — catalogue-wide invariants', () => {
     expect(MESSAGES.nl['footer.attribution']).toContain('CBS StatLine (CC BY 4.0)');
     expect(MESSAGES.en['footer.attribution']).toContain('CBS StatLine (CC BY 4.0)');
   });
+
+  // Session 110 UX audit row 18 (ADR 048 addendum): the Eurostat-explorer's
+  // own footer line, source-checked against src/sources/registry.ts's
+  // Eurostat entry (attributionLabel: 'Eurostat', license: 'CC BY 4.0').
+  it('keeps "Eurostat (CC BY 4.0)" verbatim in both languages for the Eurostat-explorer footer line', () => {
+    expect(MESSAGES.nl['footer.attributionEurostat']).toContain('Eurostat (CC BY 4.0)');
+    expect(MESSAGES.en['footer.attributionEurostat']).toContain('Eurostat (CC BY 4.0)');
+  });
 });

@@ -31,6 +31,7 @@ vi.mock('next/font/google', () => ({
 }));
 vi.mock('./globals.css', () => ({}));
 
+import { SiteFooter } from '../components/site-footer.tsx';
 import { ThemeProvider } from '../components/theme-provider.tsx';
 import RootLayout, { generateMetadata, resolveEmbedForcedTheme } from './layout.tsx';
 
@@ -181,5 +182,39 @@ describe('RootLayout — embed routes grow with content, the app shell stays vie
     const element = await RootLayout({ children: null });
     expect(bodyClass(element).split(' ')).toContain('h-dvh');
     expect(hasInnerScroller(element)).toBe(true);
+  });
+});
+
+// Session 110 UX audit row 18 (ADR 048 addendum): web/proxy.ts sets
+// x-source-route: eurostat ONLY for the exact /eurostat-explorer path (see
+// proxy.test.ts); this proves RootLayout reads that header and wires it into
+// <SiteFooter sourceRoute="eurostat">, and that every other request (header
+// absent) keeps rendering the plain SiteFooter with no sourceRoute prop —
+// the "every other route stays byte-identical" pin for this change.
+describe('RootLayout — sourceRoute wiring into <SiteFooter> (pass-2 row 18)', () => {
+  it('passes sourceRoute="eurostat" through to SiteFooter when x-source-route: eurostat', async () => {
+    headers.mockResolvedValue(fakeHeaders({ 'x-source-route': 'eurostat' }));
+    getLang.mockResolvedValue('nl');
+    const element = await RootLayout({ children: null });
+    const siteFooter = findElement<{ sourceRoute?: string }>(element, SiteFooter);
+    expect(siteFooter).not.toBeNull();
+    expect(siteFooter!.props.sourceRoute).toBe('eurostat');
+  });
+
+  it('passes no sourceRoute prop on an ordinary route with no x-source-route header', async () => {
+    headers.mockResolvedValue(fakeHeaders({}));
+    getLang.mockResolvedValue('nl');
+    const element = await RootLayout({ children: null });
+    const siteFooter = findElement<{ sourceRoute?: string }>(element, SiteFooter);
+    expect(siteFooter).not.toBeNull();
+    expect(siteFooter!.props.sourceRoute).toBeUndefined();
+  });
+
+  it('ignores an unrecognized x-source-route value (defense in depth — proxy.ts should never send one)', async () => {
+    headers.mockResolvedValue(fakeHeaders({ 'x-source-route': 'cbs' }));
+    getLang.mockResolvedValue('nl');
+    const element = await RootLayout({ children: null });
+    const siteFooter = findElement<{ sourceRoute?: string }>(element, SiteFooter);
+    expect(siteFooter!.props.sourceRoute).toBeUndefined();
   });
 });

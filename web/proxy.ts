@@ -164,6 +164,33 @@ export function applyEmbedRequestHeaders(headers: Headers, pathname: string, sea
   }
 }
 
+/** Session 110 UX audit row 18 (ADR 048 addendum): the global footer's
+ * trust line names CBS everywhere (#7/#207) except the one internal page
+ * that is entirely Eurostat data —
+ * web/app/eurostat-explorer/page.tsx. Exact match, not a prefix: this route
+ * has no sub-paths, and an exact match is the same discipline `'/'` and the
+ * `PUBLIC_EXACT_PATHS` entries above already use so a future sibling never
+ * inherits this by accident. Consumed by layout.tsx via a request header
+ * (same mechanism as `x-embed-route` above) rather than prop-drilling
+ * through every layer between this proxy and the footer. */
+export function sourceRouteHeaders(pathname: string): Record<string, string> {
+  return pathname === '/eurostat-explorer' ? { 'x-source-route': 'eurostat' } : {};
+}
+
+/** Mirrors `TRUSTED_EMBED_HEADER_KEYS`/`applyEmbedRequestHeaders` above: the
+ * one place the key `sourceRouteHeaders` can ever set is named, and the
+ * applier deletes it FIRST on every request before conditionally
+ * re-setting it, so a client-supplied `x-source-route` header can never
+ * survive on any path other than the real one. */
+const TRUSTED_SOURCE_ROUTE_HEADER_KEYS = ['x-source-route'] as const;
+
+export function applySourceRouteHeader(headers: Headers, pathname: string): void {
+  for (const key of TRUSTED_SOURCE_ROUTE_HEADER_KEYS) headers.delete(key);
+  for (const [key, value] of Object.entries(sourceRouteHeaders(pathname))) {
+    headers.set(key, value);
+  }
+}
+
 export async function proxy(request: NextRequest) {
   // Computed once, right here, and applied by MUTATING the one shared
   // `request.headers` Headers instance — not by cloning it into a second
@@ -185,6 +212,9 @@ export async function proxy(request: NextRequest) {
   // spoofed value under any of these names can never survive on any path —
   // see that function's own comment above.
   applyEmbedRequestHeaders(request.headers, request.nextUrl.pathname, request.nextUrl.searchParams);
+  // Row 18: same strip-then-set discipline, for the Eurostat-explorer
+  // footer header — see applySourceRouteHeader's own comment above.
+  applySourceRouteHeader(request.headers, request.nextUrl.pathname);
 
   let response = NextResponse.next({ request });
 
