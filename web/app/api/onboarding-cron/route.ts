@@ -19,13 +19,17 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 import { AnthropicLlmClient } from '../../../backend/answer/llm/client.ts';
-import { maybeAlertIngestionRunProblems } from '../../../backend/answer/audit/alerts.ts';
+import {
+  maybeAlertHealthProbeFailure,
+  maybeAlertIngestionRunProblems,
+} from '../../../backend/answer/audit/alerts.ts';
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
 import { runOnboardingJob } from '../../../backend/ingestion/onboarding.ts';
 import { productionNotifier } from '../../../backend/ingestion/onboarding-notify.ts';
 import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.ts';
 import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
+import { runHealthChecks } from '../health/route.ts';
 
 /** 'today' in the product's own timezone — same computation as the chat
  * action's referenceDate(), so the delivery re-run resolves relative periods
@@ -84,6 +88,26 @@ export async function GET(request: Request): Promise<Response> {
       notify: productionNotifier(db),
       referenceDate: referenceDate(),
     });
+
+    // #23 (health-probe alert, session 110): AFTER the main job, re-run the
+    // SAME checks /api/health runs (#114) and alert ONCE if the app itself is
+    // broken on this live DB — between deploys nobody otherwise watches that
+    // route at all. Fail-open, wrapped in its own try/catch so a probe/alert
+    // failure can never turn a successful onboarding run into an error
+    // response. Accepted limit: if the database itself were unreachable,
+    // runOnboardingJob above would already have thrown and this code would
+    // never be reached — that failure mode surfaces as the cron's own
+    // Vercel-log error instead (see the #23 RUNBOOK note this session added).
+    try {
+      const healthResult = await runHealthChecks(db, {
+        onboardingEnabled: process.env.ONBOARDING_ENABLED === '1',
+        websearchEnabled: process.env.WEBSEARCH_ENABLED === '1',
+        workspaceEnabled: process.env.WORKSPACE_ENABLED === '1',
+      });
+      await maybeAlertHealthProbeFailure({ failed: healthResult.failed });
+    } catch (healthError) {
+      console.warn('onboarding-cron: health-probe alert failed (job result unaffected):', healthError);
+    }
 
     // #23: proactive owner alert on a terminally-failed onboarding row (the
     // on-demand single-table ingest for THIS run). Every 'failed' path in

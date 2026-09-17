@@ -457,6 +457,71 @@ export async function maybeAlertTableStatusFlip(
 // baseline this mechanism doesn't have (what "missed" even means requires
 // knowing the expected cadence per table) — out of scope here, tracked as the
 // #23 residual rather than guessed at.
+// #23 (2026-09-17, session 110): the HEALTH-PROBE alert — the last of #23's
+// three original triggers (ingestion-run problems above, missed syncs,
+// health-probe failures). /api/health (#114) is only ever checked by the CI
+// post-deploy smoke; between deploys nobody watches it. The daily onboarding
+// cron (web/app/api/onboarding-cron/route.ts) now re-runs the SAME dashboard
+// probes after its own job, via the extracted `runHealthChecks` (#114's
+// route module), and this alert fires when any of them fail. Same fail-soft
+// mechanism and posture as every alert above (Resend via
+// sendAdminAlertEmail, no new module, no new provider — CLAUDE.md "cheapest
+// mechanism first"): console.error is the floor, e-mail when configured. At
+// most one email per cron run needs no further dedupe beyond that — the cron
+// itself only runs once a day.
+//
+// Accepted limit, recorded honestly rather than guessed past (see the
+// RUNBOOK note this session added): if the database itself is unreachable,
+// the cron's own job almost certainly already failed before reaching this
+// probe — that failure mode surfaces as the cron route's own thrown-error
+// response in Vercel's logs, not this alert. This alert catches "the app is
+// broken on a live DB", not "the DB is unreachable".
+export interface HealthProbeFailureAlert {
+  /** Check names from runHealthChecks' `failed` list — never error text,
+   * matching the health route's own leak rule (#114). */
+  failed: string[];
+}
+
+export async function alertHealthProbeFailure(
+  alert: HealthProbeFailureAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const subject =
+    alert.failed.length === 1
+      ? `checkdecijfers: de gezondheidscheck faalt (${alert.failed[0]})`
+      : `checkdecijfers: de gezondheidscheck faalt op ${alert.failed.length} punten`;
+  const body = [
+    'De dagelijkse onboarding-cron heeft na zijn eigen taak dezelfde controles gedraaid als ' +
+      '/api/health (#23/#114), en minstens één daarvan faalt.',
+    '',
+    'Wat dit betekent: iets in de app zelf werkt niet op een levende database (bijvoorbeeld een ' +
+      'ontbrekende tabel/kolom, of een kapotte query-vorm) — dit is NIET hetzelfde als "de ' +
+      'database is onbereikbaar": in dat geval was deze cron-run zelf al mislukt (zichtbaar in ' +
+      'de Vercel-logs), nog vóórdat deze controle ooit draait.',
+    '',
+    `Gefaalde controle(s): ${alert.failed.join(', ')}`,
+    `Tijd: ${new Date().toISOString()}`,
+    '',
+    'Naslaan: /api/health rechtstreeks opvragen geeft dezelfde uitslag terug.',
+  ].join('\n');
+  await sendAdminAlertEmail(subject, body, fetchImpl);
+}
+
+/** Fail-soft wrapper: logs the floor, never throws — the onboarding cron's
+ * main job must never fail or block on this. No-op when nothing failed. */
+export async function maybeAlertHealthProbeFailure(
+  alert: HealthProbeFailureAlert,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  if (alert.failed.length === 0) return;
+  console.error(`[health-probe] failed check(s): ${alert.failed.join(', ')}`);
+  try {
+    await alertHealthProbeFailure(alert, fetchImpl);
+  } catch (err) {
+    console.error('[health-probe] alert e-mail failed:', err);
+  }
+}
+
 export interface IngestionRunProblem {
   tableId: string;
   /** The table's source key ('cbs', 'eurostat', ...) — sources/registry.ts's

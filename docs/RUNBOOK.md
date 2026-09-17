@@ -741,6 +741,33 @@ Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dor
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
 
+## Health-probe alert (#23, built session 110, 2026-09-17)
+
+**What it is.** The last of #23's three original triggers (ingestion-run problems — see the
+"Ingestion alerts" section right below — and the still-open "missed sync" residual are the other
+two). `/api/health` (#114) was only ever checked by the CI post-deploy smoke, so between deploys
+nobody watched it. The daily onboarding cron (`web/app/api/onboarding-cron/route.ts`, `0 6 * * *`)
+now re-runs the exact same dashboard-read probes AFTER its own job, via a new exported
+`runHealthChecks(db, flags)` in `web/app/api/health/route.ts` (the route's own `GET` was refactored
+to call it too — same checks, same stop-at-first-failure order, same response bytes; pinned by the
+existing `web/app/health.test.ts`). When any check fails, ONE e-mail goes out via a new
+`alertHealthProbeFailure` / `maybeAlertHealthProbeFailure` pair in `src/answer/audit/alerts.ts` —
+same Resend mechanism, same fail-soft posture as every alert in this doc, listing only the failed
+check name(s), never error text (matching `/api/health`'s own leak rule). No further dedupe needed
+beyond "at most one per run": the cron itself only runs once a day.
+
+**Accepted limit, stated plainly:** this catches "the app itself is broken on a live database" —
+for example a missing table or a query that no longer matches the schema. It does **not** catch "the
+database is unreachable at all": if the database itself were down, the cron's own main job
+(`runOnboardingJob`) would already have thrown before this probe ever runs, and that failure shows
+up as the cron route's own error in the Vercel logs instead of this e-mail. Nothing today alerts on
+that second case proactively; it is a residual worth knowing about, not a bug in what shipped.
+
+**How to test it without spending anything:** hermetically covered by
+`tests/audit/health-probe-alert.test.ts` (stubbed `fetch`, no real Resend call, no env needed) and
+`web/app/health.test.ts` (the refactored route still returns identical bytes/status codes). A
+wiring pin lives in `web/app/onboarding-cron.test.ts`.
+
 ## Ingestion alerts (#23, built session 109, 2026-09-17)
 
 **What it is.** A proactive owner e-mail — reusing the SAME Resend mechanism as every alert above
