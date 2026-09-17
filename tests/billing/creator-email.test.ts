@@ -7,18 +7,37 @@
 // distinctly, but both surface as a thrown query error this function must
 // swallow identically).
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { lookupUserEmail } from '../../src/billing/creator-email.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+  // resetTestDb() only TRUNCATEs the public schema (ADR 009's own PGlite
+  // db has no auth schema by default — that's this file's whole premise).
+  // Two tests below CREATE a stub `auth.users` from scratch; on the shared
+  // instance the schema/table would still exist from the previous test
+  // (TRUNCATE doesn't touch DDL), so the second CREATE would throw
+  // "already exists". Drop it every test so each one starts from the same
+  // "no auth schema at all" state a fresh createTestDb() gave it.
+  await sharedDb.query('drop schema if exists auth cascade');
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 describe('lookupUserEmail', () => {

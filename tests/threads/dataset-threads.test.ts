@@ -3,20 +3,31 @@
 // lazy CBS one) and validateDatasetThreadOwnership (the double bind: the
 // thread must belong to the caller AND be paired with THIS dataset).
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createDatasetThread, getThreadDatasetId, validateDatasetThreadOwnership } from '../../src/threads/index.ts';
 import { insertDataset } from '../../src/attachments/store.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
+
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
 
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 const MINIMAL_PROFILE: DatasetProfile = { columns: [], rowCount: 0 };
@@ -142,8 +153,18 @@ describe('getThreadDatasetId — loadMyThread\'s dispatch point (ADR 037 D10)', 
   // "column dataset_id does not exist" instead of returning null — the exact
   // bug that broke every real thread selection in production once the
   // long-broken CI deploy pipeline started working again.
+  // Perf (#245 Action 3, session 110): this test does SCHEMA DDL (drops a
+  // column, drops a table) to reproduce the real pre-migration-026
+  // production shape — a TRUNCATE-based reset can't undo that (the dropped
+  // column/table would stay gone for every test after this one in a shared
+  // instance; it happens to be the last test in this file today, but that's
+  // an accident of ordering, not a guarantee). It keeps its OWN private,
+  // freshly-migrated db rather than the file's shared one, exactly like
+  // every test in this file did before this file was converted to share one
+  // instance.
   it('pre-migration (dataset_id column and user_datasets table absent): returns null instead of throwing', async () => {
-    await withDb(async (db) => {
+    const { db, close } = await createTestDb();
+    try {
       const userId = randomUUID();
       const { rows } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [
         userId,
@@ -157,6 +178,8 @@ describe('getThreadDatasetId — loadMyThread\'s dispatch point (ADR 037 D10)', 
       await db.query('alter table chat_threads drop column dataset_id', []);
       await db.query('drop table if exists user_datasets cascade', []);
       expect(await getThreadDatasetId(db, userId, threadId)).toBeNull();
-    });
+    } finally {
+      await close();
+    }
   });
 });

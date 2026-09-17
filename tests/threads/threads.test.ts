@@ -9,7 +9,7 @@
 // never inserts, and attachOrCreateThread can only move the CALLING user's own
 // audit rows.
 import { randomUUID } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   attachOrCreateThread,
   createDatasetThread,
@@ -34,15 +34,26 @@ import { debitBucket, grantBucket } from '../../src/billing/pro-bucket.ts';
 import { applyPricingDefaults } from '../../src/billing/pricing-apply.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
+import { resetTestDb } from '../helpers/reset-db.ts';
 import type { AuditedResponse } from '../../src/answer/audit/index.ts';
 
+let sharedDb: Db;
+let closeSharedDb: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db: sharedDb, close: closeSharedDb } = await createTestDb());
+});
+
+afterAll(async () => {
+  await closeSharedDb();
+});
+
+beforeEach(async () => {
+  await resetTestDb(sharedDb);
+});
+
 async function withDb(fn: (db: Db) => Promise<void>): Promise<void> {
-  const { db, close } = await createTestDb();
-  try {
-    await fn(db);
-  } finally {
-    await close();
-  }
+  await fn(sharedDb);
 }
 
 async function createThread(db: Db, userId: string, lastActivityAt?: string): Promise<number> {
@@ -418,8 +429,16 @@ describe('listThreads — dataset threads (ADR 037 D10)', () => {
   // for EVERY call — breaking the workspace sidebar, /api/health's
   // threads-read check, and thread resume for every signed-in user the
   // moment the long-broken CI deploy pipeline started working again.
+  // Perf (#245 Action 3, session 110): this test does SCHEMA DDL (drops a
+  // column, drops a table) to reproduce the real pre-migration-026
+  // production shape — a TRUNCATE-based reset can't undo that (the dropped
+  // column/table would stay gone for every test that runs after this one in
+  // the shared instance). It keeps its OWN private, freshly-migrated db
+  // rather than the file's shared one, exactly like every test in this file
+  // did before this file was converted to share one instance.
   it('pre-migration (dataset_id column and user_datasets table absent): behaves exactly like before ADR 037, never throws', async () => {
-    await withDb(async (db) => {
+    const { db, close } = await createTestDb();
+    try {
       const userId = randomUUID();
       const threadId = await createThread(db, userId);
       await insertRow(db, userId, { kind: 'answer', question: 'een CBS-vraag', threadId });
@@ -432,7 +451,9 @@ describe('listThreads — dataset threads (ADR 037 D10)', () => {
         lastActivityAt: entry!.lastActivityAt,
         kind: 'cbs',
       });
-    });
+    } finally {
+      await close();
+    }
   });
 });
 
