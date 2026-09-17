@@ -1990,6 +1990,19 @@ for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwrig
   and the fixture ingest runs fine against it (`src/db/migrate.ts` + `FixtureSource` + `syncTable`, ~30 s) — useful
   for CLI scripts, useless for the web app because of the pinned-CA point above.
 
+### `CDC_PGLITE_HARNESS=1` — the harness under a production build (added session 110, 2026-09-17)
+
+`web/lib/db.ts`'s dev seam (the PGlite database the harness preloads) used to be reachable only when
+`NODE_ENV !== 'production'`. A Turbopack production build inlines `NODE_ENV` to the literal
+`'production'` at build time, so under `next build` + `next start` that branch is dead code and every
+signed-in harness request failed with "DATABASE_URL is not set". The seam now ALSO opens when the
+ordinary runtime env var `CDC_PGLITE_HARNESS` is `1` — set by `scripts/dev-harness/env.sh` and
+`run-next-dev.mjs`, never by any real deploy (do not add it to Vercel; production behaviour is
+unchanged when it is unset). Two gotchas measured while adding it: `NODE_OPTIONS` (the PGlite
+`--import` preload) must be UNSET for `next build` (it breaks the build's own `tsc --showConfig`
+subprocess) and set only for `next start`; and Turbopack refuses a worktree whose `node_modules` is a
+symlink into another checkout — run a real `npm ci` in the worktree before building there.
+
 ### CI e2e smoke — the harness as a gate (added session 110, 2026-09-17)
 
 The harness is no longer only a manual tool: **seven Playwright tests run it on every CI push** (`web/e2e/`,
