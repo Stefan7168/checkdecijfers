@@ -40,10 +40,12 @@
 // dashboard's per-answer cost display both depend on). `isDeleted` is
 // derived HERE, once, from the sentinel match, so the UI never needs to know
 // the redaction implementation -- it just renders the placeholder branch.
-import type { Db } from '../db/types.ts';
+import type { Db, QueryResultRow } from '../db/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import { listRequestsForHistory, type PendingRequestStatus } from '../ingestion/onboarding-store.ts';
 import type { AnswerResponse, ComposedResponse } from '../answer/respond/types.ts';
+import { deriveAddonRequestId } from './ledger.ts';
+import { getBucketNetCosts } from './pro-bucket.ts';
 
 // Mirrors src/threads/index.ts's own (unexported) decodeResponse — the pg
 // driver may return a JSONB column already parsed or still as a string
@@ -156,6 +158,70 @@ function sumCosts(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : a + b;
 }
 
+/** #246 fix (session 109): every candidate pro_bucket_ledger request_id this
+ * page of rows could possibly have a bucket debit under -- the base request_id
+ * (the question/onboarding-ack debit's own bucketRequestId default) plus the
+ * two derived add-on ids (splitDebit's disambiguation for
+ * reserveWebSearchDebit/reserveDatasetDebit, see deriveAddonRequestId's doc
+ * comment in ledger.ts). Onboarding DELIVERY rows are skipped: their
+ * onboarding_cost debit is deliberately never bucket-eligible (see
+ * reserveOnboardingDebit's doc comment), so they have nothing to look up
+ * here -- their credits come from onboarding_delivery_credits alone,
+ * untouched by this fix. Deduplicated (a Set) since the same base
+ * request_id can appear more than once across a page in principle and the
+ * two derived ids are each 32 bytes of SHA-256 -- no reason to ask Postgres
+ * to match the same uuid twice. */
+function collectBucketCandidateIds(rows: readonly QueryResultRow[]): string[] {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (Boolean(row.is_onboarding_delivery)) continue;
+    if (row.request_id === null || row.request_id === undefined) continue;
+    const requestId = String(row.request_id);
+    ids.add(requestId);
+    ids.add(deriveAddonRequestId(requestId, 'websearch'));
+    ids.add(deriveAddonRequestId(requestId, 'dataset'));
+  }
+  return [...ids];
+}
+
+/** #246 fix (session 109): the null-or-number decision the SQL used to make
+ * alone (a single CASE collapsing straight to null when credit_transactions
+ * had nothing) now also needs the bucket side, since a fully Pro-bucket-
+ * funded turn's ONLY trace is a pro_bucket_ledger row (splitDebit never
+ * writes a credit_transactions row when the whole charge came from the
+ * bucket). The null guard fires only when NEITHER table has a matching
+ * debit -- a turn attributable to just one of the two tables (the common
+ * split-debit case: part bucket, part permanent ledger) still reports a
+ * real number, summing both sides. Non-Pro byte-identity: a non-Pro user
+ * never has a pro_bucket_ledger row at all, so `bucketNetCosts` is always
+ * empty for them and this collapses to exactly the pre-#246 ledger-only
+ * formula. */
+function resolveCreditsCharged(row: QueryResultRow, bucketNetCosts: Map<string, number>): number | null {
+  if (Boolean(row.is_onboarding_delivery)) {
+    return row.onboarding_delivery_credits === null ? null : Number(row.onboarding_delivery_credits);
+  }
+  const ledgerNet = Number(row.ledger_net);
+  const ledgerHasDebit = Boolean(row.ledger_has_debit);
+  let bucketNet = 0;
+  let bucketHasDebit = false;
+  if (row.request_id !== null && row.request_id !== undefined) {
+    const requestId = String(row.request_id);
+    for (const candidate of [
+      requestId,
+      deriveAddonRequestId(requestId, 'websearch'),
+      deriveAddonRequestId(requestId, 'dataset'),
+    ]) {
+      const net = bucketNetCosts.get(candidate);
+      if (net !== undefined) {
+        bucketHasDebit = true;
+        bucketNet += net;
+      }
+    }
+  }
+  if (!ledgerHasDebit && !bucketHasDebit) return null;
+  return ledgerNet + bucketNet;
+}
+
 /** #14: a row is "deleted" iff its question text is exactly the redaction
  * sentinel (src/answer/audit/retention.ts) -- the one place this project's
  * redaction and its dashboard rendering agree on what "deleted" means. */
@@ -188,6 +254,7 @@ export async function getQuestionHistory(
        a.created_at,
        a.reply_text,
        a.response,
+       a.request_id,
        a.pending_clarification->>'questionNl' as replied_question_nl,
        a.response->'pending'->>'questionNl' as offered_question_nl,
        -- #115 (definition expander): the answer envelope's own display
@@ -198,69 +265,84 @@ export async function getQuestionHistory(
        a.response->'answer'->>'markingLine' as answer_marking_line,
        a.response->'answer'->>'attributionLine' as answer_attribution_line,
        a.response->>'stalenessWarning' as answer_staleness_warning,
-       case
-         -- WP16 sub-part 2 (design §5-dashboard): an onboarding DELIVERY row
-         -- was never charged its own question_cost debit (the 100-credit
-         -- onboarding_cost debit already covers it, from the earlier
-         -- trigger turn) -- report that 100 here instead, so the delivered
-         -- answer's dashboard entry shows its real cost rather than null.
-         -- Scoped to source_tag = 'onboarding_delivery' so this can never
-         -- fan out against the SAME request_id's own question_cost debit
-         -- (the trigger turn's acknowledgment row, tagged 'user', is a
-         -- different audit row and takes the branch below instead).
-         when a.source_tag = 'onboarding_delivery' then
-           case when onboarding_debit.id is null then null else -onboarding_debit.delta end
-         -- Ordinary question turn: net EVERY request-scoped debit -- the base
-         -- 'question_cost' debit AND, on a web-opted turn, the SEPARATE
-         -- 'websearch_cost' add-on debit (migration 018, WP129+130 / ADR 032)
-         -- -- minus every compensation that reversed one of those debits. This
-         -- is the SAME netting src/threads/index.ts getThreadRows applies for
-         -- replay: a KEPT add-on stands with no compensation and lifts the
-         -- shown cost by +10 (settleWebAddon bumps the LIVE netCost in memory
-         -- only -- the debit is its sole persisted trace, so the dashboard MUST
-         -- net it or it silently drops the add-on the user actually paid for);
-         -- a refunded add-on carries its own compensation row
-         -- (related_transaction_id -> the web debit) that nets back out. Each
-         -- debit is independently refundable, so the base question refund and
-         -- the web add-on refund coexist for one turn as two distinct
-         -- compensations (migration 018's one-compensation-per-debit index).
-         -- Written as correlated subqueries, NOT extra LEFT JOINs: two debits
-         -- plus up to two compensations would multiply the row (a cartesian
-         -- product) under a join, double-counting the cost. Compensations are
-         -- matched by related_transaction_id (the structural ledger link, FK +
-         -- validation-trigger enforced), never by audit_answer_id -- the web
-         -- refund's audit_answer_id points at this same row too, so an
-         -- audit-id match would have needed a SUM anyway. Null ONLY when the
-         -- turn has no attributable debit at all (a pre-migration-010 row with
-         -- no request_id).
-         when not exists (
-           select 1
-           from credit_transactions d
-           where d.user_id::text = a.user_id
-             and d.request_id = a.request_id
-             and d.reason in ('question_cost', 'websearch_cost')
-         ) then null
-         else
-           coalesce((
-             select -sum(d.delta)
+       -- WP16 sub-part 2 (design §5-dashboard): an onboarding DELIVERY row
+       -- was never charged its own question_cost debit (the 100-credit
+       -- onboarding_cost debit already covers it, from the earlier
+       -- trigger turn) -- report that 100 here instead, so the delivered
+       -- answer's dashboard entry shows its real cost rather than null.
+       -- Scoped to source_tag = 'onboarding_delivery' so this can never
+       -- fan out against the SAME request_id's own question_cost debit
+       -- (the trigger turn's acknowledgment row, tagged 'user', is a
+       -- different audit row and takes the ledger_net/ledger_has_debit
+       -- columns below instead). onboarding_cost is deliberately excluded
+       -- from the Pro bucket mechanic (src/billing/ledger.ts's
+       -- reserveOnboardingDebit doc comment) -- this column is untouched by
+       -- #246's bucket fix, unlike the two below.
+       (a.source_tag = 'onboarding_delivery') as is_onboarding_delivery,
+       case when onboarding_debit.id is null then null else -onboarding_debit.delta end
+         as onboarding_delivery_credits,
+       -- Ordinary question turn: net EVERY request-scoped LEDGER debit -- the
+       -- base 'question_cost' debit AND, on a web-opted turn, the SEPARATE
+       -- 'websearch_cost' add-on debit (migration 018, WP129+130 / ADR 032)
+       -- -- minus every compensation that reversed one of those debits. This
+       -- is the SAME netting src/threads/index.ts getThreadRows applies for
+       -- replay: a KEPT add-on stands with no compensation and lifts the
+       -- shown cost by +10 (settleWebAddon bumps the LIVE netCost in memory
+       -- only -- the debit is its sole persisted trace, so the dashboard MUST
+       -- net it or it silently drops the add-on the user actually paid for);
+       -- a refunded add-on carries its own compensation row
+       -- (related_transaction_id -> the web debit) that nets back out. Each
+       -- debit is independently refundable, so the base question refund and
+       -- the web add-on refund coexist for one turn as two distinct
+       -- compensations (migration 018's one-compensation-per-debit index).
+       -- Written as correlated subqueries, NOT extra LEFT JOINs: two debits
+       -- plus up to two compensations would multiply the row (a cartesian
+       -- product) under a join, double-counting the cost. Compensations are
+       -- matched by related_transaction_id (the structural ledger link, FK +
+       -- validation-trigger enforced), never by audit_answer_id -- the web
+       -- refund's audit_answer_id points at this same row too, so an
+       -- audit-id match would have needed a SUM anyway.
+       --
+       -- #246 fix (session 109): this used to be a single CASE collapsing
+       -- straight to null when nothing matched here -- but "nothing in
+       -- credit_transactions" no longer means "nothing was charged": a
+       -- fully Pro-bucket-funded turn has ITS debit in pro_bucket_ledger
+       -- instead (splitDebit, src/billing/ledger.ts). So this query now
+       -- reports the LEDGER side's own number (always numeric, 0 when this
+       -- turn has no ledger debit) plus a separate ledger_has_debit flag,
+       -- and getBucketNetCosts (src/billing/pro-bucket.ts) supplies the
+       -- bucket side afterwards in JS -- the null-or-number decision moves
+       -- to application code, which is also where deriveAddonRequestId's
+       -- add-on ids get computed to find the bucket side's websearch/dataset
+       -- add-on legs (pro_bucket_ledger has no reason column to filter by,
+       -- only a request_id it derives specially for those two -- see
+       -- ledger.ts's own doc comment on deriveAddonRequestId).
+       coalesce((
+         select -sum(d.delta)
+         from credit_transactions d
+         where d.user_id::text = a.user_id
+           and d.request_id = a.request_id
+           and d.reason in ('question_cost', 'websearch_cost')
+       ), 0)
+       - coalesce((
+         select sum(c.delta)
+         from credit_transactions c
+         where c.reason = 'compensation'
+           and c.related_transaction_id in (
+             select d.id
              from credit_transactions d
              where d.user_id::text = a.user_id
                and d.request_id = a.request_id
                and d.reason in ('question_cost', 'websearch_cost')
-           ), 0)
-           - coalesce((
-             select sum(c.delta)
-             from credit_transactions c
-             where c.reason = 'compensation'
-               and c.related_transaction_id in (
-                 select d.id
-                 from credit_transactions d
-                 where d.user_id::text = a.user_id
-                   and d.request_id = a.request_id
-                   and d.reason in ('question_cost', 'websearch_cost')
-               )
-           ), 0)
-       end as credits_charged
+           )
+       ), 0) as ledger_net,
+       exists (
+         select 1
+         from credit_transactions d
+         where d.user_id::text = a.user_id
+           and d.request_id = a.request_id
+           and d.reason in ('question_cost', 'websearch_cost')
+       ) as ledger_has_debit
      from audit_answers a
      left join credit_transactions onboarding_debit
        -- credit_transactions.user_id is uuid; audit_answers.user_id is text
@@ -297,13 +379,18 @@ export async function getQuestionHistory(
      limit $2`,
     [userId, limit * 2],
   );
+  // #246 fix (session 109): a second, batched round trip against
+  // pro_bucket_ledger for every row's candidate bucket ids -- see
+  // resolveCreditsCharged's doc comment for why a request_id alone isn't
+  // enough for the websearch/dataset add-on legs.
+  const bucketNetCosts = await getBucketNetCosts(db, userId, collectBucketCandidateIds(rows));
   const fetched: HistoryRow[] = rows.map((row) => ({
     id: Number(row.id),
     kind: row.kind as QuestionHistoryEntry['kind'],
     question: String(row.question),
     finalText: String(row.final_text),
     createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
-    creditsCharged: row.credits_charged === null ? null : Number(row.credits_charged),
+    creditsCharged: resolveCreditsCharged(row, bucketNetCosts),
     replyText: row.reply_text === null ? null : String(row.reply_text),
     repliedQuestionNl: row.replied_question_nl === null ? null : String(row.replied_question_nl),
     offeredQuestionNl: row.offered_question_nl === null ? null : String(row.offered_question_nl),

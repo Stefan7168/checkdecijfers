@@ -37,8 +37,21 @@ import { compensateBucket, debitBucket, getBucketBalance } from './pro-bucket.ts
  * check either, only the 8-4-4-4-12 hex shape, so that is not needed for
  * correctness here. Reuses this codebase's existing
  * `createHash('sha256')...digest('hex')` idiom (src/answer/llm/client.ts,
- * src/answer/audit/write.ts) rather than introducing a UUID library. */
-function deriveAddonRequestId(requestId: string, suffix: string): string {
+ * src/answer/audit/write.ts) rather than introducing a UUID library.
+ *
+ * **Exported (#246 fix, session 109):** src/billing/history.ts (same module)
+ * imports this directly to find an add-on's bucket leg (pro_bucket_ledger
+ * has no per-reason column, only `request_id`, so the only way to find a
+ * websearch/dataset add-on's bucket debit is to recompute the exact id
+ * splitDebit derived when it was written). src/threads/index.ts needs the
+ * SAME derivation but, per that module's own "NEVER touches src/billing/**"
+ * invariant, keeps a local byte-for-byte DUPLICATE instead of importing this
+ * — see that file's own copy for why, and for the cross-check test
+ * (tests/threads/replay.test.ts) that closes the drift risk a duplicate
+ * would otherwise carry (a hash-derived identity key must match the
+ * writer's algorithm byte-for-byte forever, or matching silently breaks —
+ * exactly the #246 bug this fixes). */
+export function deriveAddonRequestId(requestId: string, suffix: string): string {
   const hex = createHash('sha256').update(`${requestId}:${suffix}`).digest('hex').slice(0, 32);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
