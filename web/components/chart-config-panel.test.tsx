@@ -242,7 +242,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeDisabled();
     unmount();
 
     const onReset = vi.fn();
@@ -256,7 +256,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    const reset = screen.getByRole('button', { name: 'Standaard' });
+    const reset = screen.getByRole('button', { name: 'Terug naar standaard' });
     expect(reset).not.toBeDisabled();
     fireEvent.click(reset);
     expect(onReset).toHaveBeenCalledTimes(1);
@@ -395,25 +395,25 @@ describe('ChartConfigPanel — Grafiek tab', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
     expect(screen.getByText('Waarom geen taart- of gestapelde grafiek?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
     // Kleuren keeps its own, separate reset, ALONGSIDE the whole-panel one.
     expect(screen.getByRole('button', { name: 'Standaardkleuren' })).toBeInTheDocument();
-    const resetOnKleuren = screen.getByRole('button', { name: 'Standaard' });
+    const resetOnKleuren = screen.getByRole('button', { name: 'Terug naar standaard' });
     expect(resetOnKleuren).toBeInTheDocument();
     expect(resetOnKleuren).not.toBeDisabled();
     fireEvent.click(resetOnKleuren);
     expect(onReset).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Lettertype' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
     expect(screen.queryByText('Waarom geen taart- of gestapelde grafiek?')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Grafiek' }));
-    expect(screen.getByRole('button', { name: 'Standaard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Terug naar standaard' })).toBeInTheDocument();
   });
 });
 

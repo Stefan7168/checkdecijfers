@@ -519,7 +519,11 @@ const nl = {
   'chart.panel.zeroBaseline': 'Y-as vanaf nul',
   'chart.panel.areaFill': 'Verloop in het vlak',
   'chart.panel.showGroup': 'Tonen',
-  'chart.panel.reset': 'Standaard',
+  // Audit pass 2, row 12 (2026-09-17): the whole accessible name of this
+  // control used to be just "Standaard" — sitting directly above "Bewaar
+  // als mijn standaard" it read as a state label, not the reset action it
+  // actually is.
+  'chart.panel.reset': 'Terug naar standaard',
   'chart.panel.lineWidthOption.thin': 'Dun',
   'chart.panel.lineWidthOption.normal': 'Normaal',
   'chart.panel.lineWidthOption.thick': 'Dik',
@@ -1277,7 +1281,8 @@ const en: Messages = {
   'chart.panel.zeroBaseline': 'Y-axis from zero',
   'chart.panel.areaFill': 'Gradient fill',
   'chart.panel.showGroup': 'Show',
-  'chart.panel.reset': 'Default',
+  // Audit pass 2, row 12 (2026-09-17): see the `nl` entry above.
+  'chart.panel.reset': 'Reset to default',
   'chart.panel.lineWidthOption.thin': 'Thin',
   'chart.panel.lineWidthOption.normal': 'Normal',
   'chart.panel.lineWidthOption.thick': 'Thick',
