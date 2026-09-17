@@ -741,6 +741,73 @@ Rollback at any point: unset `SEMANTIC_CHECK_ENABLED` and redeploy — fully dor
 verdicts on already-written rows stay valid for R8 (the reconstructor checks them whenever the
 key is present, flag state irrelevant).
 
+## Ingestion alerts (#23, built session 109, 2026-09-17)
+
+**What it is.** A proactive owner e-mail — reusing the SAME Resend mechanism as every alert above
+(`sendAdminAlertEmail` in `src/answer/audit/alerts.ts`, `ADMIN_ALERT_EMAIL` + `RESEND_API_KEY`, the
+`noreply@mail.checkdecijfers.nl` sender) — for ingestion problems, instead of those only being
+visible to whoever happened to be watching a sync's own console output or the dashboard. Two new
+exported functions: `alertIngestionRunProblems` / `maybeAlertIngestionRunProblems`. **At most ONE
+e-mail per run**, listing every affected table (never one e-mail per table) — same batching
+contract as the existing `alertTableStatusFlip` (#108).
+
+**What triggers an e-mail.** Any table in a run that:
+- **(a)** failed its ingestion batch (`ingestion_batches.outcome = 'failed'`), or
+- **(b)** was quarantined — set to `cbs_tables.status = 'needs_review'` by one of the five ordered
+  validation checks (docs/05-data-rules.md), or
+- **(c)** the sync itself threw (an infrastructure error, not one of the five checks — e.g. a
+  network failure; per [open-questions #30](open-questions.md), a bare fetch failure does NOT
+  quarantine the table, but IS still a failed batch and IS still alerted).
+
+A fully clean run (nothing above happened to any table) sends nothing — not even a floor
+`console.error`, matching every sibling alert's contract.
+
+**Where it's wired:**
+1. **`npm run ingest sync [...] [--all]`** (`src/ingestion/cli.ts`) — the real multi-table case.
+   Every table's `SyncResult` (a real `failureStage`, `failureSummary`, `batchId`) or thrown error
+   is collected into one list; ONE alert fires after the whole run finishes, whether that's one
+   table or the full `--all` set. This is the path with full detail (batch id included).
+2. **`/api/onboarding-cron`** (`web/app/api/onboarding-cron/route.ts`, the on-demand single-table
+   onboarding job, WP16) — after `runOnboardingJob` returns, a `processed.outcome === 'failed'`
+   fires ONE alert for that row's table. Gated on `'failed'` specifically, NOT `'unanswerable'`:
+   every `'failed'` path in `src/ingestion/onboarding.ts` is exactly the #23 scope (a
+   `registerAndSync` quarantine/batch failure, or an unexpected throw caught at the top of
+   `processOneRow`); `'unanswerable'` is ordinary business logic (no candidate table answers the
+   question) and correctly stays silent here — that outcome already gets its OWN user-facing
+   e-mail via `onboarding-notify.ts`, unrelated to this owner alert.
+   **Assumption/residual:** this path's `batchId` is always `null` in the alert — `registerAndSync`
+   (in `onboarding.ts`) discards the `SyncResult`'s `batchId` once it maps a failure onto a plain
+   Dutch summary string, and threading it through would have meant touching
+   `src/ingestion/pipeline.ts`, kept out of scope for this change (two other sessions were editing
+   that file concurrently — see the #23 open-questions row). The message text (read back from
+   `pending_table_requests.failure_summary` via `getPendingRequest`) still names the table and the
+   failure reason.
+3. **NOT wired:** the `ingest register` command (registers new tables; it doesn't run a "batch" in
+   the `ingestion_batches` sense the alert's `(a)`/`(b)` triggers describe) and `scripts/sync-from-
+   capture.ts` (the slow-stream escape hatch, session-50 — a rare, already-supervised manual
+   procedure where the operator is watching the terminal by construction).
+
+**What the owner does on receipt:** exactly the existing playbook line above ("When an alert
+arrives … start a session and paste the alert. Nothing more is expected of you technically") — the
+e-mail names the table, its source, which check failed (or `threw`), the batch id when known, and
+the plain-language message; a session investigates from there (a needs_review table is excluded
+from answering until re-reviewed — see the release-day sync procedure above for the common
+`--accept-new-codes`/`--rebaseline` recovery).
+
+**How to test it without spending anything:** the mechanism is hermetically covered by
+`tests/audit/ingestion-run-alert.test.ts` (stubbed `fetch`, no real Resend call, no env needed).
+To see a REAL e-mail land (owner-supervised only, costs one Resend send): with `RESEND_API_KEY` +
+`ADMIN_ALERT_EMAIL` set, run `node --env-file=.env src/ingestion/cli.ts sync some-unregistered-id`
+— the "not registered" throw is a free, side-effect-free way to trigger the `(c)` path and confirm
+delivery end-to-end.
+
+**Explicitly NOT built (#23's other two original triggers, still open):** alerting for a *missed*
+sync (a table that should have refreshed by now but silently didn't) or for `/api/health` check
+failures. Both need a scheduler/expected-cadence baseline this mechanism doesn't have — what
+"missed" even means requires knowing each table's expected refresh cadence, which isn't tracked
+anywhere today. Deliberately out of scope here rather than guessed at; tracked as the #23 residual
+in [open-questions.md](open-questions.md).
+
 ## ⚠ Supabase free tier: 15 SESSION-MODE connections — deploy bursts exhaust it (measured 2026-07-25)
 
 **Measured live, session 56.** After five production deploys inside ~an hour, the pooler refused new

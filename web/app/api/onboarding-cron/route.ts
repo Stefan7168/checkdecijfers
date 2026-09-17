@@ -19,9 +19,12 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 import { AnthropicLlmClient } from '../../../backend/answer/llm/client.ts';
+import { maybeAlertIngestionRunProblems } from '../../../backend/answer/audit/alerts.ts';
 import { ODataV4Source } from '../../../backend/cbs-adapter/odata-v4.ts';
 import { runOnboardingJob } from '../../../backend/ingestion/onboarding.ts';
 import { productionNotifier } from '../../../backend/ingestion/onboarding-notify.ts';
+import { getPendingRequest } from '../../../backend/ingestion/onboarding-store.ts';
+import { sourceKeyForTableId } from '../../../backend/sources/registry.ts';
 import { getDb } from '../../../lib/db.ts';
 
 /** 'today' in the product's own timezone — same computation as the chat
@@ -81,6 +84,40 @@ export async function GET(request: Request): Promise<Response> {
       notify: productionNotifier(db),
       referenceDate: referenceDate(),
     });
+
+    // #23: proactive owner alert on a terminally-failed onboarding row (the
+    // on-demand single-table ingest for THIS run). Every 'failed' path in
+    // onboarding.ts is exactly the #23 scope (a registerAndSync/quarantine
+    // failure, or an unexpected throw) — never a plain 'unanswerable' (no fit
+    // table, a normal refusal), which stays silent here on purpose. Same
+    // fail-open contract as the rest of this route: an alert problem must
+    // never turn a real job result into an error response.
+    if (summary.processed?.outcome === 'failed') {
+      try {
+        const row = await getPendingRequest(db, summary.processed.id);
+        const tableId = summary.processed.tableId;
+        await maybeAlertIngestionRunProblems({
+          problems: [
+            {
+              tableId,
+              source: sourceKeyForTableId(tableId),
+              check: 'onboarding-sync-failed',
+              message: row?.failureSummary ?? '(no failure summary recorded)',
+              // Not available here: registerAndSync (onboarding.ts) discards
+              // the SyncResult's batchId once it maps a failure onto a plain
+              // Dutch summary string. Documented residual — see the #23 row
+              // in docs/open-questions.md — not threaded through further to
+              // avoid touching src/ingestion/pipeline.ts (out of scope for
+              // this change).
+              batchId: null,
+            },
+          ],
+        });
+      } catch (alertError) {
+        console.warn('onboarding-cron: owner alert failed (job result unaffected):', alertError);
+      }
+    }
+
     return Response.json(summary, { status: 200 });
   } catch (error) {
     // A throw here means the job's OWN orchestration failed (not a per-row
