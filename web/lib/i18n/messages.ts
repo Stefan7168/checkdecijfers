@@ -1078,7 +1078,7 @@ const en: Messages = {
   'answerProof.colPeriodCode': 'Period code',
   'answerProof.colBatch': 'Batch',
   'answerProof.dateUnknown': 'unknown',
-  'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · license {license}',
+  'answerProof.tableCaption': 'Table {tableId} — {tableTitle} · version {version} · synced {date} · licence {license}',
   'answerProof.highlightLinkTitle': 'View this cell at CBS',
   'answerProof.requestUrlsHeading': 'Fetched URLs',
   'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
@@ -1244,7 +1244,7 @@ const en: Messages = {
   'chart.headline.save': 'Save',
   'chart.headline.cancel': 'Cancel',
   'chart.headline.drafting': 'Drafting…',
-  'chart.headline.unauthenticated': 'Sign in to add a headline.',
+  'chart.headline.unauthenticated': 'Log in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
   'chart.headline.draftError': 'Could not suggest a headline.',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
@@ -1488,7 +1488,7 @@ const en: Messages = {
   'privacy.heading': 'Privacy',
   'privacy.storedHeading': 'What we store',
   'privacy.storedBody':
-    'We store your questions and answers as an audit trail (so every number stays traceable) and your account details (e-mail address). Questions from visitors without an account are stored separately from your account.',
+    'We store your questions and answers as an audit trail (so every number stays traceable) and your account details (email address). Questions from visitors without an account are stored separately from your account.',
   'privacy.retentionHeading': 'How long we keep it',
   'privacy.retentionBody':
     'Question history tied to an account is kept for 2 years; questions from anonymous visitors (trial questions) are kept for 90 days. You can always delete your own question history yourself via the account menu.',
@@ -1502,7 +1502,7 @@ const en: Messages = {
   'privacy.cookiesBody':
     'To keep you signed in we use one necessary session cookie. If you use the trial without an account, we also set a cookie holding a random visitor number and store an encrypted (hashed) version of your IP address — both only to limit abuse of the free trial, and deleted after 90 days. We also count how often certain actions happen per day, as bare totals with no account, user name or IP address, so they cannot be traced back to a person. Beyond that: no tracking cookies and no third-party analytics.',
   'privacy.contactHeading': 'Contact',
-  'privacy.contactBody': 'Questions about your data? E-mail [contact e-mail — owner fills in].',
+  'privacy.contactBody': 'Questions about your data? Email [contact email — owner fills in].',
 
   // Mirrors the Dutch /about block above.
   'about.pageTitle': 'About us — Check de Cijfers',
@@ -1511,9 +1511,9 @@ const en: Messages = {
   'about.introBody':
     'Check de Cijfers answers questions about official CBS statistics. A language model reads your question, but never does the calculation itself: every number comes from a database of CBS data and can be traced back to its source table and date. We build it for journalists, researchers and students who need a reliable figure fast, with a source they can stand behind.',
   'about.contactHeading': 'Contact',
-  'about.contactIntro': 'Questions, comments or feedback? E-mail us at',
+  'about.contactIntro': 'Questions, comments or feedback? Email us at',
 
-  'landing.ontdekCaption': 'Try it right away: Format (templates), Insights, Present — and download as PNG.',
+  'landing.ontdekCaption': 'Try it right away: Style (templates), Insights, Present — and download as PNG.',
   'landing.step4Title': 'Publish',
   'landing.step4Body': 'Pick a template, download or embed — source and date travel with it.',
   // WP-C (journey programme, session 96): mirrors the Dutch block above —
