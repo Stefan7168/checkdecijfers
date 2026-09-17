@@ -69,6 +69,16 @@ export function VisualDock({
       >
         {visuals.map((visual) => {
           const selected = visual.id === active.id;
+          // Session 110 UX audit row 5: `chart`/`card` tabs get a localized
+          // "Chart n"/"Card n" label from their `count`; everything else
+          // (userChart's already-English "Your chart n", or a hand-built
+          // DockVisual with no `count`) falls back to the literal `label`.
+          const tabLabel =
+            visual.count !== undefined && visual.kind === 'chart'
+              ? t('dock.chartTab', { n: visual.count })
+              : visual.count !== undefined && visual.kind === 'card'
+                ? t('dock.cardTab', { n: visual.count })
+                : visual.label;
           return (
             <button
               key={visual.id}
@@ -85,9 +95,9 @@ export function VisualDock({
                   ? 'border-foreground text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
-              title={`${visual.label} · ${visual.question}`}
+              title={`${tabLabel} · ${visual.question}`}
             >
-              {visual.label}
+              {tabLabel}
               {visual.question !== '' ? <span className="text-muted-foreground"> · {visual.question}</span> : null}
             </button>
           );

@@ -26,8 +26,18 @@ export interface DockVisual {
    * the index to wire their reference chip to this tab). */
   id: string;
   kind: 'chart' | 'card' | 'userChart';
-  /** "Grafiek 1" / "Kaart 2" / "Your chart 1" — deterministic, per-kind running count. */
+  /** "Grafiek 1" / "Kaart 2" / "Your chart 1" — deterministic, per-kind running
+   * count. Dutch/English-independent renderers (tests constructing a
+   * DockVisual by hand, and the `userChart` kind, whose "Your chart n" is
+   * English by design — see the file header) still use this literal. */
   label: string;
+  /** Session 110 UX audit row 5: the same per-kind running count `label` was
+   * built from, exposed separately so a `chart`/`card` visual's tab text can
+   * be localized at render time (`dock.chartTab`/`dock.cardTab` in
+   * messages.ts) instead of staying baked into Dutch. Left unset (undefined)
+   * for `userChart` visuals and for any DockVisual built by hand (tests) —
+   * the renderer falls back to `label` in that case. */
+  count?: number;
   /** The originating question (nearest preceding user turn), truncated. */
   question: string;
   chart: ChatMessage['chart'];
@@ -97,6 +107,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         id: visualId(index),
         kind: 'chart',
         label: `Grafiek ${chartCount}`,
+        count: chartCount,
         question: truncate(lastQuestion),
         chart: message.chart,
         chartAlternates: message.chartAlternates,
@@ -110,6 +121,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         id: visualId(index),
         kind: 'card',
         label: `Kaart ${cardCount}`,
+        count: cardCount,
         question: truncate(lastQuestion),
         chart: null,
         chartAlternates: [],

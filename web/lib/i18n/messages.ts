@@ -134,6 +134,11 @@ const nl = {
   // visual-dock.tsx.
   'dock.header': 'Grafieken',
   'dock.tablistLabel': 'Visualisaties',
+  // Session 110 UX audit row 5: the per-visual tab label (dock-visuals.ts's
+  // `count` field) — kept byte-identical to the old hardcoded template
+  // literals (`Grafiek ${n}` / `Kaart ${n}`) in Dutch.
+  'dock.chartTab': 'Grafiek {n}',
+  'dock.cardTab': 'Kaart {n}',
 
   // dataset-chat.tsx.
   'datasetChat.needsDecisionFallback': 'Niets meer te beslissen.',
@@ -961,6 +966,8 @@ const en: Messages = {
 
   'dock.header': 'Charts',
   'dock.tablistLabel': 'Visualizations',
+  'dock.chartTab': 'Chart {n}',
+  'dock.cardTab': 'Card {n}',
 
   'datasetChat.needsDecisionFallback': 'Nothing left to decide.',
   'datasetChat.noLongerNeedsDecision': 'This file no longer needs a decision — it may have been deleted.',
