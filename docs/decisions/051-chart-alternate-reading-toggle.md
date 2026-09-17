@@ -159,7 +159,10 @@ surface, so D7's disable addendum does not apply here.
 
 ## Revisit triggers
 
-- Level-vs-%-change gets scheduled — needs its own ADR 011 revision, not an extension of this one.
+- ~~Level-vs-%-change gets scheduled — needs its own ADR 011 revision, not an extension of this one.~~
+  **RESOLVED, session 108 (2026-09-17): built as a separate mechanism, ADR [052](052-period-over-period-percent-change.md)
+  (ACCEPTED), offered on this same reading dropdown as one more entry — confirming this ADR's own
+  prediction that it would need its own ADR, not an extension of `buildAlternateReading`.**
 - Consumer confidence's raw sibling (table 83694NED) gets bulk-ingested — would register a real
   `alternates` entry for a measure this design explicitly found lacking one.
 - Registry entries grow enough alternates, or audit-row volume grows enough, that the

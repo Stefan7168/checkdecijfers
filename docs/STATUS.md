@@ -18,49 +18,53 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 107 — spanned 2026-09-16 into 2026-09-17;
-verify against `git log`/`gh pr list` before trusting this, since more may have landed after it was
-written).** **Session 107 closed out TWO independent threads, both merged to `main`, CI green on
-both:**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 108 — verify against `git log`/`gh run
+list` before trusting this, since more may have landed after it was written).** **Session 108 opened
+with NO owner-queued priority** (sessions 106-107 had closed out every standing item); three
+candidates were surfaced from [open-questions.md](open-questions.md) and the owner said "All use
+subagents" — all three dispatched in parallel, each scoped to its actual risk level, ALL DONE, ALL
+MERGED/DOCUMENTED, CI green throughout:
 
-**(1) The chart alternate-reading toggle** — [ADR 051](decisions/051-chart-alternate-reading-toggle.md),
-resumed from session 106's pause (Task 6 finished: the anonymous trial chat wired in, owner's
-explicit choice), whole-branch review, **MERGED (`b31d84a`, run `35115201383`)**.
-[#254](open-questions.md)'s second gap is resolved for the seasonally-adjusted/same-measure-alternate
-half (~20 registered concepts); level-vs-%-change stays open, needs a new registered derivation +
-an ADR 011 revision.
+**(1) [#263](open-questions.md) migration-number collision check — MERGED (`eeae1b2`, run
+`35176853182`).** A lightweight, deterministic CI check (`scripts/check-migration-numbers.ts`, `npm
+run migrations:check-numbers`) fails a push/PR if two migration files share a leading number —
+closes the gap that let session 107's real `031` collision go undetected by git itself. Backend
+166 files/2476 tests, web 117/1854, benchmark 14/14+6/6+0 fabricated, `/code-review` LOW clean.
 
-**(2) Eurostat WP30c E1's "Constraint 0"** — resolved directly by the owner in chat ("no real API
-spend" meant money, not any live call). The live fixture capture found + fixed two real API-shape
-defects (the Catalogue endpoint's real TSV shape; the Statistics API's real sparse `value` object
-shape — [ADR 048](decisions/048-eurostat-data-source.md)'s As-built addendum) and a genuine
-cross-branch migration-number collision (`031_source_doi.sql` vs. an unrelated
-`031_chart_headlines.sql`, renumbered to 032/033). **MERGED (`46527a8` + `1b23298`, run
-`35125746817`).** Full verification (covers both threads combined, run after the second merge):
-backend 165 files/2466 tests, web 117 files/1854 tests, benchmark 14/14 + 6/6 + 0 fabricated, real
-`next build`, both typechecks clean, `/code-review` LOW clean on each thread.
+**(2) [#264](open-questions.md) Eurostat DOI sourcing — RESEARCHED + DOCUMENTED, nothing built
+(docs-only, `fb503f9`).** Verified LIVE (via the real DataCite REST API, not a guess) that Eurostat
+mints one DOI per dataset, pattern `10.2908/<CODE>` — confirmed for `tipsbd30`, the one table already
+in production. Turns a previously-unscoped gap into a real, small, buildable next step (construct
+deterministically + one verification call at registration time) — a future session's priority call,
+not done here.
 
-**Owner then explicitly asked to apply migrations and register a real table — RUNBOOK "WP30c E1"
-steps 4-5, now done.** Migrations 032/033 applied to production, verified live. `eurostat:tipsbd30`
-(Tier-1 capital ratio banking sector) registered and synced: 532 real rows, 0 corrections. **This
-surfaced a fourth real defect, in `registerTables` itself:** its own insert never wrote
-`cbs_tables.source`, so every table ever registered silently landed tagged `'cbs'` — invisible until
-the first non-CBS registration. Not a live-chat safety gap (the deny gate derives source from the
-table id's own prefix, never this column) but a real display bug (the explorer's own query couldn't
-find the table). Fixed + regression-tested (`0a5c2c8`, CI green, run `35132208250`); the one
-affected production row corrected directly, verified against the live DB. Full account: ADR 048's
-second As-built addendum. **Eurostat WP30c E1 is now fully through all 5 RUNBOOK steps** — still
-genuinely open: `doi` is never populated ([#264](open-questions.md), a separate gap), and a full
-`/eurostat-explorer` browser click-through wasn't done (needs the owner-supervised
-`EUROSTAT_EXPLORER_ENABLED` flip) — the explorer's own backing query, run directly against the live
-database, does confirm the table is findable.
+**(3) [#254](open-questions.md) level-vs-%-change chart toggle — MERGED (`4746f18`), [ADR
+052](decisions/052-period-over-period-percent-change.md) ACCEPTED.** A genuinely different mechanism
+from [ADR 051](decisions/051-chart-alternate-reading-toggle.md)'s toggle (computes the percentage
+itself from an already-answered level series, no second query) covering 7 curated measures with no
+CBS-published mutation sibling. Came back with 4 open design questions; **the owner explicitly
+delegated the decision to the session ("You are deciding that, okay?")** — decided, grounded in
+standing project principles (cheapest-mechanism-first, never-guess), applied, then merged. One
+follow-up deliberately NOT built: a real producer-price-index companion measure (`M003288`) was
+found but wiring it invalidates the intent parser's recorded LLM fixtures project-wide — needs an
+owner-supervised session budgeting a real fixture re-record, logged in #254, not forced through.
+Full verification: backend 167 files/2500 tests, web 117/1854, benchmark 14/14+6/6+0 fabricated,
+real `next build`, `/code-review` LOW clean.
 
-Session 106 also shipped, separately and already live before this: the Supademo chart-polish
-comparison's one pending decision (`framePadding: 'none' → 'small'`, owner-confirmed, `c934f1d`) —
-the broader "match Supademo's polish" question stays logged, not built ([#260](open-questions.md)).
-The 3D-demo thread stays closed — do not resume it without a new, explicit owner ask. Full account
-of sessions 106-107: [status-archive.md](status-archive.md). Session 108 kickoff:
-[session-briefs/2026-09-17-session-108-kickoff.md](session-briefs/2026-09-17-session-108-kickoff.md).
+**Process note:** the level-vs-%-change agent (and, once, the migration-check agent) repeatedly
+backgrounded its own long test runs and ended its turn before they finished, reporting "waiting for
+notification" rather than actually blocking — caught every time via `ps aux`/`git status` in the
+agent's own worktree, resumed via `SendMessage` (never a fresh `Agent` call), fixed for good only
+after an explicit "no backgrounding at all" instruction on the third resume. See
+[lessons-learned.md](lessons-learned.md)'s session-108 entry.
+
+**No owner-queued priority remains.** Standing candidates, none urgent: [#253](open-questions.md)
+(map/geo library comparison, still blocked on a query-capability precondition — re-check before
+assuming still blocked), [#260](open-questions.md) (Supademo visual polish, deferred, needs the
+brainstorming skill), plus #254's own two new follow-ups (household-income alternate concepts;
+the PPI fixture re-record above). Full account of sessions 106-108:
+[status-archive.md](status-archive.md). Session 109 kickoff:
+[session-briefs/2026-09-17-session-109-kickoff.md](session-briefs/2026-09-17-session-109-kickoff.md).
 
 ## Phase 0 checklist
 
