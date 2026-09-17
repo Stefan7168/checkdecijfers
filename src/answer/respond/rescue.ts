@@ -157,18 +157,34 @@ export async function buildRescueOffer(
  * period, default coordinates). `candidate` is null whenever that builder
  * found nothing to offer (no definitionLabel match, or no freshest period) —
  * this function then returns null too, without ever calling `servability`. */
+/** The canonical-key + single-period shape every #134(c) candidate started
+ * with (forecast/causal — default coordinates, no regions). */
 export interface OfferChipCandidate {
   canonicalKey: string;
   periodCode: string;
   label: string;
 }
 
+/** Session 110 (row 13/row 15, ADR 054 addendum + ADR 029 #134(c) note): the
+ * two new query-refusal chips (region_scope_on_national_measure,
+ * multi_region_multi_period) need more than a bare canonical key + one
+ * period — one drops the region axis entirely, the other keeps a single
+ * named region over a period RANGE — so they hand over the fully-built
+ * intent themselves rather than reconstructing it through `intentFor`, which
+ * only ever shapes a canonical/no-region/one-period lookup. Still just a
+ * CANDIDATE: `buildOfferChip` dry-runs it through the same servability gate
+ * as every other shape before it may become a chip. */
+export interface OfferChipIntentCandidate {
+  intent: StructuredIntent;
+  label: string;
+}
+
 export async function buildOfferChip(
-  candidate: OfferChipCandidate | null | undefined,
+  candidate: OfferChipCandidate | OfferChipIntentCandidate | null | undefined,
   servability: (intent: StructuredIntent) => Promise<EchoServability>,
 ): Promise<RescueOffer | null> {
   if (!candidate) return null;
-  const intent = intentFor(candidate.canonicalKey, candidate.periodCode);
+  const intent = 'intent' in candidate ? candidate.intent : intentFor(candidate.canonicalKey, candidate.periodCode);
   const verdict = await servability(intent);
   if (!verdict.servable) return null;
   return {

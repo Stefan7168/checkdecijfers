@@ -83,6 +83,18 @@ export type RefusalReason =
    * the measure is published nationally only and offers that national figure;
    * it never relabels a national number "per provincie". */
   | 'region_scope_on_national_measure'
+  /** Row 13 (session 110, ADR 054 addendum, docs/session-briefs/2026-09-17-
+   * session-110-ux-audit-pass3.md): "several regions AND several periods in
+   * one question" (ADR 011's one-varying-axis rule) — e.g. "Hoe ontwikkelde
+   * de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024?". Its own
+   * reason for the same reason `region_scope_on_national_measure` has one:
+   * `invalid_intent` is otherwise an internal fault that PAGES THE OWNER
+   * (src/answer/audit/alerts.ts), but this is an honest, structural scope
+   * limit the user can act on by asking one region over the period, or
+   * several regions at one period. Routed by `QueryRefusal.refusal.subReason
+   * === 'multi_region_multi_period'` (src/query/resolve.ts), never by
+   * matching the English message. */
+  | 'multi_region_multi_period'
   /** Still ambiguous after the one clarification round: refusal-with-guidance,
    * never a second question (docs/05 failure table). */
   | 'still_ambiguous'

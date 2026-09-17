@@ -278,3 +278,43 @@ describe('region_set — a class ask on a national-only measure', () => {
     expect(built.refusal.reason).toBe('internal');
   });
 });
+
+describe('row 13 (session 110, ADR 054 addendum) — several regions AND several periods', () => {
+  it('refuses with its own wording, never the internal bucket that pages the owner', async () => {
+    const outcome = await runQuery(
+      db,
+      population({
+        regions: ['GM0363', 'GM0599'],
+        period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+      }),
+    );
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.kind).toBe('invalid_intent');
+    expect(outcome.refusal.subReason).toBe('multi_region_multi_period');
+
+    const built = buildQueryRefusal(outcome);
+    expect(built.kind).toBe('refusal');
+    if (built.kind !== 'refusal') throw new Error('unreachable');
+    expect(built.refusal.reason).toBe('multi_region_multi_period');
+    expect(built.refusal.reason).not.toBe('internal');
+    expect(built.refusal.internalNote).toBeNull();
+    expect(built.refusal.text).toMatch(/meerdere regio's over meerdere periodes/i);
+    // A refusal carries no data value (open-questions #37 policy).
+    expect(built.refusal.text).not.toMatch(/\d/);
+    expect(built.refusal.text.trim().endsWith('?')).toBe(false);
+  });
+
+  it('a region CLASS ask over several periods hits the SAME sub-reason (regionSet counts as "several regions" too)', async () => {
+    const outcome = await runQuery(
+      db,
+      population({
+        regionSet: { kind: 'all_provincies' },
+        period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+      }),
+    );
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) throw new Error('unreachable');
+    expect(outcome.refusal.subReason).toBe('multi_region_multi_period');
+  });
+});

@@ -1,0 +1,259 @@
+// Session 110 UX audit pass 3, rows 13 + 15
+// (docs/session-briefs/2026-09-17-session-110-ux-audit-pass3.md), ADR 054
+// addendum + ADR 029 #134(c) note.
+//
+// Row 13: "several regions AND several periods in one question" (ADR 011's
+// one-varying-axis rule) was served as the GENERIC `internal` refusal, which
+// PAGES THE OWNER (src/answer/audit/alerts.ts) for what is an honest,
+// structural scope limit — the same class of bug D6's
+// region_scope_on_national_measure fixed. This gives it its own subReason
+// ('multi_region_multi_period') and honest wording, routed exactly like D6.
+//
+// Row 15: BOTH the D6 refusal's own "Ik kan je wel het landelijke cijfer
+// geven" offer and row 13's new "one region over the period" fallback are
+// turned into ONE takeable chip each, via the SAME #134(c) mechanism the
+// forecast/causal refusal chips use (tests/answer/refusal-offer-chip.test.ts)
+// — a servability-gated `BuiltRefusal.offerChip` candidate, dry-run through
+// `buildOfferChip` (rescue.ts), riding the same chip-carrier `pending` shape.
+//
+// What is pinned here:
+//  1. Both refusals' TEXT/classification: honest wording, NOT the internal
+//     bucket, no owner alert, no digits, never ends in '?'.
+//  2. Each carries exactly one takeable chip when the candidate dry-runs as
+//     servable — byte-identical envelope (no `pending` key, empty
+//     `suggestions`) when the flag is off, when there is no candidate to
+//     build (a region CLASS ask names no single region for row 13), or when
+//     the candidate does not resolve.
+//  3. Taking either chip answers deterministically (zero LLM calls) through
+//     the ordinary reply path, a REAL new validated result.
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Db } from '../../src/db/types.ts';
+import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { respondToIntent, respondToClarificationReply } from '../../src/answer/respond/index.ts';
+import { periodCodeToNl } from '../../src/answer/respond/period-nl.ts';
+import type { StructuredIntent } from '../../src/query/index.ts';
+import type { ParseOutcome } from '../../src/answer/intent/types.ts';
+import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
+
+let db: Db;
+let close: () => Promise<void>;
+
+beforeAll(async () => {
+  ({ db, close } = await createIngestedDb());
+}, 300_000);
+
+afterAll(async () => {
+  await close();
+});
+
+const REFERENCE_DATE = '2026-09-17';
+
+/** Fails the test if the phrasing/parse model is ever reached — every case
+ * here must resolve deterministically (a hand-built intent skips the parser
+ * entirely, and a click-take must never re-parse). */
+class UnreachableLlmClient implements LlmClient {
+  async complete(): Promise<LlmResponse> {
+    throw new Error('this path must never reach an LLM');
+  }
+}
+
+function stubIntent(question: string, intent: StructuredIntent): Extract<ParseOutcome, { kind: 'intent' }> {
+  return {
+    kind: 'intent',
+    question,
+    raw: {
+      version: 3,
+      kind: 'data_query',
+      candidates: [],
+      unmatchedMeasureTerm: null,
+      nearestCanonicalKeys: [],
+      note: null,
+    },
+    model: 'stub',
+    usage: { inputTokens: 0, outputTokens: 0 },
+    intent,
+    confidence: 0.97,
+    impliedRecency: false,
+    ranked: [],
+  };
+}
+
+async function respond(question: string, intent: StructuredIntent, clickOptionsEnabled?: boolean) {
+  return respondToIntent(db, question, stubIntent(question, intent), {
+    answerClient: new UnreachableLlmClient(),
+    referenceDate: REFERENCE_DATE,
+    ...(clickOptionsEnabled === undefined ? {} : { clickOptionsEnabled }),
+  });
+}
+
+const NATIONAL_MEASURE_INTENT: StructuredIntent = {
+  schemaVersion: 1,
+  target: { kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' },
+  period: { kind: 'codes', codes: ['2024KW04'] },
+  derivation: 'none',
+  regionSet: { kind: 'all_provincies' },
+};
+
+function multiPeriodRegionsIntent(regions: string[]): StructuredIntent {
+  return {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'population_on_1_january' },
+    regions,
+    period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+    derivation: 'none',
+  };
+}
+
+describe('row 15 — region_scope_on_national_measure offer chip', () => {
+  it('carries exactly one takeable chip: the same measure, national, at the asked period', async () => {
+    const response = await respond('wat is de werkloosheid per provincie', NATIONAL_MEASURE_INTENT, true);
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.reason).toBe('region_scope_on_national_measure');
+    expect(response.reason).not.toBe('internal');
+    expect(response.internalNote).toBeNull();
+
+    expect(response.suggestions).toHaveLength(1);
+    expect(response.suggestions[0]).toBe(`Wat was de werkloosheid in ${periodCodeToNl('2024KW04')}?`);
+    const clickOptions = response.pending?.clickOptions ?? [];
+    expect(clickOptions).toHaveLength(1);
+    expect(clickOptions[0]!.label).toBe(response.suggestions[0]);
+    expect(clickOptions[0]!.intent.target).toEqual({ kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' });
+    expect(clickOptions[0]!.intent.period).toEqual({ kind: 'codes', codes: ['2024KW04'] });
+    expect(clickOptions[0]!.intent.regions).toBeUndefined();
+    expect(clickOptions[0]!.intent.regionSet).toBeUndefined();
+    expect(clickOptions[0]!.intent.derivation).toBe('none');
+    expect(clickOptions[0]!.impliedRecency).toBe(false);
+    expect(response.pending?.rescueOnly).toBe(true);
+  });
+
+  it('taking the chip answers WITHOUT an LLM call, the national figure at the asked period', async () => {
+    const refusal = await respond('wat is de werkloosheid per provincie', NATIONAL_MEASURE_INTENT, true);
+    if (refusal.kind !== 'refusal' || !refusal.pending) throw new Error('expected an offer-chip pending');
+    const taken = await respondToClarificationReply(db, refusal.pending, refusal.suggestions[0]!, {
+      intentClient: new UnreachableLlmClient(),
+      answerClient: new UnreachableLlmClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    expect(taken.kind).toBe('answer');
+    if (taken.kind !== 'answer') throw new Error('unreachable');
+    expect(taken.result.cells).toHaveLength(1);
+    expect(taken.result.cells[0]!.periodCode).toBe('2024KW04');
+    expect(taken.result.intent.regions ?? []).toHaveLength(0);
+    expect(taken.answer.source).toBe('template');
+  });
+
+  it('flag off: no chip, no pending key, byte-identical text', async () => {
+    const flagOff = await respond('wat is de werkloosheid per provincie', NATIONAL_MEASURE_INTENT, false);
+    const flagOn = await respond('wat is de werkloosheid per provincie', NATIONAL_MEASURE_INTENT, true);
+    if (flagOff.kind !== 'refusal' || flagOn.kind !== 'refusal') throw new Error('unreachable');
+    expect(flagOff.suggestions).toEqual([]);
+    expect(Object.hasOwn(flagOff, 'pending')).toBe(false);
+    expect(flagOn.text).toBe(flagOff.text);
+    expect(flagOn.reason).toBe(flagOff.reason);
+    expect(flagOn.offer).toBe(flagOff.offer);
+  });
+});
+
+describe('row 13 — multi_region_multi_period refusal and its offer chip', () => {
+  it('refuses honestly, not as an internal fault', async () => {
+    const response = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+    );
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.reason).toBe('multi_region_multi_period');
+    expect(response.reason).not.toBe('internal');
+    expect(response.internalNote).toBeNull();
+    expect(response.text).not.toMatch(/\d/);
+    expect(response.text.trim().endsWith('?')).toBe(false);
+  });
+
+  it('carries exactly one takeable chip: the FIRST named region, the full period range, as a trend', async () => {
+    const response = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      true,
+    );
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.suggestions).toHaveLength(1);
+    expect(response.suggestions[0]).toMatch(/^Hoe ontwikkelde .+ in GM0363 zich van .+ tot en met .+\?$/);
+    const clickOptions = response.pending?.clickOptions ?? [];
+    expect(clickOptions).toHaveLength(1);
+    expect(clickOptions[0]!.intent.target).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(clickOptions[0]!.intent.regions).toEqual(['GM0363']);
+    expect(clickOptions[0]!.intent.period).toEqual({ kind: 'range', from: '2020JJ00', to: '2024JJ00' });
+    expect(clickOptions[0]!.intent.derivation).toBe('series');
+    expect(clickOptions[0]!.impliedRecency).toBe(false);
+  });
+
+  it('taking the chip answers WITHOUT an LLM call, a real series over the first region alone', async () => {
+    const refusal = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      true,
+    );
+    if (refusal.kind !== 'refusal' || !refusal.pending) throw new Error('expected an offer-chip pending');
+    const taken = await respondToClarificationReply(db, refusal.pending, refusal.suggestions[0]!, {
+      intentClient: new UnreachableLlmClient(),
+      answerClient: new UnreachableLlmClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    expect(taken.kind).toBe('answer');
+    if (taken.kind !== 'answer') throw new Error('unreachable');
+    expect(taken.result.intent.regions).toEqual(['GM0363']);
+    expect(taken.result.cells.map((c) => c.periodCode)).toEqual([
+      '2020JJ00',
+      '2021JJ00',
+      '2022JJ00',
+      '2023JJ00',
+      '2024JJ00',
+    ]);
+  });
+
+  it('a region CLASS ask (regionSet, no explicit region) gets no chip — there is no single region to fall back to', async () => {
+    const intent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'population_on_1_january' },
+      regionSet: { kind: 'all_provincies' },
+      period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+      derivation: 'none',
+    };
+    const response = await respond('hoe ontwikkelden alle provincies zich van 2020 tot 2024', intent, true);
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.reason).toBe('multi_region_multi_period');
+    expect(response.suggestions).toEqual([]);
+    expect(response.pending).toBeUndefined();
+  });
+
+  it('an unservable first-named region gets no chip — byte-identical envelope', async () => {
+    const response = await respond(
+      'hoe ontwikkelde de bevolking van een onbekende regio en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM9999', 'GM0599']),
+      true,
+    );
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    expect(response.suggestions).toEqual([]);
+    expect(response.pending).toBeUndefined();
+  });
+
+  it('flag off: no chip, no pending key, byte-identical text', async () => {
+    const flagOff = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      false,
+    );
+    const flagOn = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      multiPeriodRegionsIntent(['GM0363', 'GM0599']),
+      true,
+    );
+    if (flagOff.kind !== 'refusal' || flagOn.kind !== 'refusal') throw new Error('unreachable');
+    expect(flagOff.suggestions).toEqual([]);
+    expect(Object.hasOwn(flagOff, 'pending')).toBe(false);
+    expect(flagOn.text).toBe(flagOff.text);
+    expect(flagOn.reason).toBe(flagOff.reason);
+    expect(flagOn.offer).toBe(flagOff.offer);
+  });
+});

@@ -28,6 +28,14 @@
 // PAGES THE OWNER. So the stored pairing (reason ⟺ sub-reason) is checked in
 // both directions, exactly like the WP16 onboarding pairing it is modelled on.
 //
+// Session 110 (row 13, ADR 054 addendum) added a SECOND honest sub-reason,
+// 'multi_region_multi_period' ("several regions AND several periods in one
+// question" — ADR 011's one-varying-axis rule), reusing the same field and
+// the same both-directions pairing check in reconstruct.ts — now generalized
+// to a subReason→reason map so a sub-reason bolted onto its SIBLING (the
+// other honest reason) is caught too, not only onto an unrelated refusal.
+//
+
 // Everything is driven from REAL results of the hermetic ingest (ADR 009)
 // through a hand-authored intent — the parser cannot reach this shape until
 // Task 9 (owner-supervised, real LLM spend). Test ORDER is load-bearing from
@@ -345,6 +353,77 @@ describe('R8: the region-class refusal and its sub-reason', () => {
   });
 
   it('a pre-#253 refusal row (no subReason key at all) still reconstructs', async () => {
+    const response = await respond('bevolking van een onbekende regio', population({ regions: ['PV99'] }));
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    const old = recordFor(response);
+    expect('subReason' in (old.response as RefusalResponse).queryRefusal!.refusal).toBe(false);
+    expect(reconstructionReport(old).problems).toEqual([]);
+  });
+});
+
+describe('R8: row 13 — the multi-region-multi-period refusal and its sub-reason', () => {
+  let record: AuditRecord;
+
+  beforeAll(async () => {
+    const response = await respond(
+      'hoe ontwikkelde de bevolking van Amsterdam en Rotterdam zich van 2020 tot 2024',
+      population({
+        regions: ['GM0363', 'GM0599'],
+        period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+      }),
+    );
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    record = recordFor(response);
+  }, 300_000);
+
+  it('reconstructs — the stored sub-reason matches the served reason', () => {
+    const refusal = record.response as RefusalResponse;
+    expect(refusal.reason).toBe('multi_region_multi_period');
+    expect(refusal.queryRefusal?.refusal.subReason).toBe('multi_region_multi_period');
+
+    expect(reconstructionReport(record).problems).toEqual([]);
+  });
+
+  it('a stripped sub-reason fails loudly — the row would claim a wording its own refusal cannot produce', () => {
+    const tampered = clone(record);
+    delete (tampered.response as RefusalResponse).queryRefusal!.refusal.subReason;
+    const report = reconstructionReport(tampered);
+    expect(report.problems.some((p) => p.includes('subReason'))).toBe(true);
+    expect(report.ok).toBe(false);
+  });
+
+  it('the sub-reason bolted onto its SIBLING refusal (region_scope_on_national_measure) fails loudly — the generalized pairing check catches cross-wiring, not only an unrelated refusal', async () => {
+    const response = await respond('wat is de werkloosheid per provincie', {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' },
+      period: { kind: 'codes', codes: ['2024KW04'] },
+      derivation: 'none',
+      regionSet: { kind: 'all_provincies' },
+    });
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    const tampered = recordFor(response);
+    const refusal = tampered.response as RefusalResponse;
+    expect(refusal.reason).toBe('region_scope_on_national_measure');
+    expect(reconstructionReport(tampered).problems).toEqual([]);
+
+    refusal.queryRefusal!.refusal.subReason = 'multi_region_multi_period';
+    expect(reconstructionReport(tampered).problems.some((p) => p.includes('subReason'))).toBe(true);
+  });
+
+  it('a sub-reason bolted onto an unrelated refusal fails loudly too — the pairing is checked both ways', async () => {
+    const response = await respond('bevolking van een onbekende regio', population({ regions: ['PV99'] }));
+    if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
+    const tampered = recordFor(response);
+    const refusal = tampered.response as RefusalResponse;
+    expect(refusal.queryRefusal?.refusal.kind).toBe('invalid_intent');
+    expect(refusal.reason).not.toBe('multi_region_multi_period');
+    expect(reconstructionReport(tampered).problems).toEqual([]);
+
+    refusal.queryRefusal!.refusal.subReason = 'multi_region_multi_period';
+    expect(reconstructionReport(tampered).problems.some((p) => p.includes('subReason'))).toBe(true);
+  });
+
+  it('a pre-row-13 refusal row (no subReason key at all) still reconstructs', async () => {
     const response = await respond('bevolking van een onbekende regio', population({ regions: ['PV99'] }));
     if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
     const old = recordFor(response);
