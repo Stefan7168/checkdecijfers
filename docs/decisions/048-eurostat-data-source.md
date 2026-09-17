@@ -641,3 +641,54 @@ datasets rendered end-to-end" and the Amendment-12 live smoke probe are now reac
 registered) but not yet exercised through the actual page. D6's `definitiveStatuses: []` correction and the
 [#251](../open-questions.md) `pipeline.ts` per-cell-status prerequisite are unaffected by anything in this
 addendum.
+
+## Third As-built addendum — D7(a) DOI construction + verification built (session 109, 2026-09-17, #264)
+
+`registerTables` (`src/ingestion/pipeline.ts`) now sources a DOI for every newly registered Eurostat table,
+closing the gap the previous two addenda left open. New module `src/eurostat-adapter/doi.ts`:
+
+- `eurostatDoiFor(tableIdOrCode)` — deterministic construction, zero API calls: `10.2908/<CODE uppercased>`,
+  stripping an `eurostat:` prefix if present (a local `nativeIdFrom`, duplicated on purpose per this
+  codebase's existing per-adapter convention, not imported from `src/sources/registry.ts`'s private helper).
+- `verifyEurostatDoi(doi, { fetchImpl?, timeoutMs? })` — one cheap, out-of-band (never the request path) call
+  to the public, unauthenticated DataCite REST API (`GET https://api.datacite.org/dois/<doi>`); returns
+  `true` only on a 200 with `data.attributes.state === "findable"`. NEVER throws — a 404, any other non-2xx,
+  a network error, a JSON-parse error, or a timeout all resolve to `false`, mirroring
+  `src/chart/brandfetch.ts`'s `fetchBrand` fail-safe shape. `fetchImpl` is injectable so tests never touch
+  the real network.
+
+`registerTables` calls both, scoped to `sourceKeyForTableId(table.id) === EUROSTAT_SOURCE_KEY` rows only —
+CBS has no DOI concept, so `cbs_tables.doi` stays `null` for every CBS row forever, with zero API calls
+attempted for them (cheapest-mechanism-first). A `findable` result writes the constructed DOI in the same
+insert as the rest of the registration row; anything else (unconfirmed, or a genuinely unexpected exception
+from the verification call, belt-and-braces around a function that already never throws) leaves `doi` null
+and logs a plain-language `console.warn` — this can never block or fail registration itself (D7(a)'s DOI
+remains presentation-only support for the proof panel, not a fifth validation-pipeline check).
+
+**`cbs_catalog.doi` is intentionally NOT populated by this change** — checked, not assumed:
+`registerTables` never writes `cbs_catalog` at all; that table is refreshed separately by
+`ingestCatalog` (`src/catalog/ingest.ts`), whose own upsert has no `doi` column in its `UPSERT_SQL` and
+sources rows from the bulk Catalogue fetch, which (per the session-108 research this addendum builds on)
+does not expose a DOI at all. D7(a)'s "populated at catalog/registration time" refers to the registration
+step (`registerTables`), which is what this change does; extending `cbs_catalog` would be a separate,
+unscoped gap if ever wanted.
+
+**Backfill**: the already-registered `eurostat:tipsbd30` production row predates this fix and was NOT
+touched by it (registration is a one-time, already-registered-tables-are-skipped operation). A new
+idempotent script, `scripts/backfill-eurostat-doi.ts` (`npm run backfill:eurostat-doi`, dry-run by default,
+`--apply` to write, mirroring `scripts/gdpr-purge.ts`'s shape), finds `source = 'eurostat' and doi is null`
+rows and applies the same construct-then-verify rule. Not run against the live database by this session
+(no live DB writes from a dispatched session) — documented as an owner RUNBOOK step
+(docs/RUNBOOK.md's "DOI backfill" section under WP30c E1).
+
+**Tests** (hermetic, `tests/ingestion/ingestion.test.ts`, PGlite, no real network): a Eurostat table gets
+`doi` on a 200/`findable` DataCite response; stays `null` on a 404; stays `null` when the injected
+`fetchImpl` throws (registration still succeeds); a CBS table never gets a `doi` and never triggers a
+DataCite fetch at all; re-registering an already-registered table is a no-op skip with no second DataCite
+call.
+
+**Assumption carried forward** (mirrored in open-questions #264): DataCite's `findable` state for a
+constructed `10.2908/<CODE>` DOI is being trusted as the correctness signal per the session-108 research
+(3 real datasets spot-checked, no counter-example found); the rollout may not yet cover every one of
+Eurostat's ~10,331 catalog entries, so a legitimately-published Eurostat dataset without a live DOI yet
+would correctly register with `doi = null` under this rule, not a false negative in the code.
