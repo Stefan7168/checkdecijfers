@@ -572,7 +572,24 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     // corrections (docs/05 corrections log covers *value* changes).
     // A period without a status fails at stage 3 — never defaulted here
     // (R11: status is required; principle (c): never guess).
-    const status = periodStatusByCode.get(periodCode);
+    //
+    // #251 (session 109): the OPTIONAL per-CELL override. CBS's adapter never
+    // sets `row.status` (its statuses are per-PERIOD by construction), so for
+    // every CBS row `override` is undefined and this falls through to the
+    // unchanged `periodStatusByCode` lookup below — byte-identical, pinned by
+    // test. A source whose statuses really are per cell (Eurostat's JSON-stat
+    // flags, ADR 048 D6 + its #251 addendum) supplies them here instead.
+    const override = row.status;
+    if (override !== undefined && override.trim().length === 0) {
+      // Setting the field but leaving it blank is an adapter authoring bug,
+      // and the one reading of it we must never take is "definitive"
+      // (principle (c)). Omitting the field is the way to defer to the period.
+      throw new Error(
+        `adapter supplied an EMPTY per-cell status for period "${periodCode}" in table "${tableId}" — ` +
+          `omit CbsObservationRow.status to fall back to the period status; never send a blank one.`,
+      );
+    }
+    const status = override ?? periodStatusByCode.get(periodCode);
     if (status === undefined) {
       throw new Error(`internal error: period "${periodCode}" without status survived period_parsing`);
     }

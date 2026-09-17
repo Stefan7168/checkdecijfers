@@ -35,14 +35,31 @@ import { AsyncApiRequiredError, UnsupportedGrainError, type JsonStatCategory, ty
  * ADR's own measured figure for the sync/async boundary. */
 export const SYNC_CELL_THRESHOLD = 500_000;
 
-/** D6: "Eurostat has no per-period publication status; the adapter reports
+/**
+ * D6: "Eurostat has no per-period publication status; the adapter reports
  * every observed period as published, which the ingestion validator's
  * step-3 status requirement accepts as honest." A fixed, non-null constant
  * (never null — src/ingestion/validate.ts's checkPeriodParsing refuses any
- * period with a null status) — its VALUE is inert for provisional display
- * (Amendment B1: the registry's `definitiveStatuses: []` makes every
- * Eurostat cell provisional regardless of this string), but it must exist. */
-export const EUROSTAT_PERIOD_STATUS = 'Published';
+ * period with a null status).
+ *
+ * #251 (session 109, D6 addendum): this is now ALSO the per-CELL status of
+ * an UNFLAGGED Eurostat observation, and the SOLE member of the registry
+ * entry's `definitiveStatuses`. One constant deliberately serving both
+ * levels: an unflagged cell's status is then identical whether it arrives
+ * via the per-cell override or via the period fallback, so the two paths can
+ * never disagree about what "Eurostat published this, nothing flagged"
+ * means. Every Eurostat observation flag (`p e s f b c d u n z :`) is a
+ * DIFFERENT string, hence never definitive — the fail-safe direction
+ * (principle (c)).
+ */
+export const EUROSTAT_DEFINITIVE_STATUS = 'Published';
+
+/** Eurostat's own "not available" marker. #251: also the per-cell STATUS of
+ * a cell that is absent from BOTH `value` and `status` — the sparse shape
+ * described at its use site below. Never definitive (it is not
+ * EUROSTAT_DEFINITIVE_STATUS), and it is already a registered
+ * `nullReasonLabels` key, so R11 can state the true reason. */
+export const EUROSTAT_NOT_AVAILABLE = ':';
 
 /**
  * D6 licence exceptions ("licence exceptions enforced structurally at slice
@@ -378,9 +395,13 @@ export interface ParsedEurostatDataset {
  *   observed maximum precision for that unit);
  * - `time` mapped through `mapEurostatPeriod` (throws `UnsupportedGrainError`
  *   for semester/weekly/daily, per Amendment B4 — never caught here);
- * - every observation's flag rides verbatim into `valueAttribute` (Amendment
- *   B1 — this is NOT a per-cell provisional-status mechanism; see the
- *   registry's own `definitiveStatuses: []` comment for why that is safe);
+ * - every observation's flag rides verbatim into `valueAttribute` AND into
+ *   the per-cell `status` (#251, session 109 — the D6 addendum that SUPERSEDES
+ *   Amendment B1's "no per-cell provisional-status mechanism": the narrow
+ *   waist now carries an optional `CbsObservationRow.status`, so an unflagged
+ *   Eurostat cell can honestly render definitive while every flag — `c` and
+ *   the not-available family included — stays provisional; see the status
+ *   line's own comment in the row loop);
  * - the D6 licence-exception geographies are excluded STRUCTURALLY (never
  *   even reach `rows`/`codeLists`), via the stand-in `EU_EFTA_STAND_IN_GEO_CODES`
  *   list (Assumption 2 — pending the real legal-reviewed list);
@@ -459,7 +480,27 @@ export function parseJsonStatDataset(
     // ':' (not-available) flag, already registered in registry.ts's
     // nullReasonLabels, is the honest default for a null cell with no
     // explicit flag; 'None' stays the default only when a value IS present.
-    const valueAttribute = flag ?? (value === null ? ':' : 'None');
+    const valueAttribute = flag ?? (value === null ? EUROSTAT_NOT_AVAILABLE : 'None');
+
+    // #251 (session 109, D6 addendum): the per-CELL STATUS, carried through
+    // the narrow waist's optional CbsObservationRow.status and written to
+    // observations.status by src/ingestion/pipeline.ts — the column R11's
+    // isProvisionalStatus actually reads. Same flag as valueAttribute above,
+    // differing ONLY in the unflagged default, which is the whole point:
+    //  - flagged  -> the flag VERBATIM ('p','e','s','f','b','c','d','u','n',
+    //    'z',':'). Lossless, so the registry's provisionalDisplay can render
+    //    the specific Dutch suffix, and — since none of them equals
+    //    EUROSTAT_DEFINITIVE_STATUS — every flagged cell is provisional. That
+    //    includes 'c' (confidential) and 'z'/'n'/':' (not available / not
+    //    significant), which must NEVER read as definitive.
+    //  - unflagged WITH a value -> EUROSTAT_DEFINITIVE_STATUS: Eurostat
+    //    published this figure and flagged nothing about it. This is the one
+    //    state that renders without a provisional marker.
+    //  - unflagged WITHOUT a value (the sparse shape described above) ->
+    //    EUROSTAT_NOT_AVAILABLE, mirroring valueAttribute: nothing was
+    //    reported, so claiming "published, definitive" would be a guess
+    //    (principle (c)).
+    const status = flag ?? (value === null ? EUROSTAT_NOT_AVAILABLE : EUROSTAT_DEFINITIVE_STATUS);
 
     if (value !== null) {
       const bucket = observedByUnit.get(unitCode) ?? [];
@@ -473,6 +514,7 @@ export function parseJsonStatDataset(
       value,
       valueAttribute,
       stringValue: null,
+      status,
     });
   }
 
@@ -520,7 +562,7 @@ export function parseJsonStatDataset(
         code: mapEurostatPeriod(nativeTimeCode),
         title: dimLabels[dimName]?.[nativeTimeCode] ?? nativeTimeCode,
         dimensionGroup: null,
-        status: EUROSTAT_PERIOD_STATUS,
+        status: EUROSTAT_DEFINITIVE_STATUS,
         index: i,
       }));
     } else {

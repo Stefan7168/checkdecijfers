@@ -272,13 +272,14 @@ function checkRegistryEntry(
   }
   // WP30c/E1 (ADR 048 Amendment B1): an EMPTY definitiveStatuses is not
   // automatically an authoring omission — it is the correct, deliberate,
-  // safe fail-direction for a source whose per-cell status has no plumbing
-  // into isProvisionalStatus at all (Eurostat's registry entry: every cell
-  // renders provisional, unconditionally, rather than guessing). This check
-  // used to hard-fail on empty, written back when CBS (which always has a
-  // real per-period status) was the only source; that assumption doesn't
-  // generalize. Nothing is UNSAFE about an empty array — it is strictly
-  // MORE cautious than any non-empty one — so this is no longer a failure.
+  // safe fail-direction for a source that cannot vouch for ANY of its
+  // statuses, making isProvisionalStatus return true unconditionally. This
+  // check used to hard-fail on empty, written back when CBS (which always
+  // has a real per-period status) was the only source; that assumption
+  // doesn't generalize. Nothing is UNSAFE about an empty array — it is
+  // strictly MORE cautious than any non-empty one — so this is no longer a
+  // failure. (Eurostat WAS the motivating example; since #251 it declares a
+  // real definitive value, so the empty case is currently hypothetical.)
   const undeclaredDefinitive = info.definitiveStatuses.filter((s) => !periodStatuses.has(s));
   if (undeclaredDefinitive.length > 0) {
     f0(`definitiveStatuses value(s) not in declaredPeriodStatuses: ${undeclaredDefinitive.join(', ')}.`);
@@ -478,11 +479,30 @@ async function checkTable(
   const declaredAttributes = new Set(manifest.declaredValueAttributes);
   const undeclaredAttrs = new Set<string>();
   const unlabeledNullAttrs = new Set<string>();
+  // #251 (session 109): the narrow waist's OPTIONAL per-cell status override.
+  // When an adapter sets it, that verbatim string becomes observations.status
+  // — the column isProvisionalStatus reads — so it must be part of the
+  // source's DECLARED status vocabulary, exactly like a period-level status
+  // (F2 above). An undeclared one is how a typo'd flag could quietly land
+  // outside definitiveStatuses/provisionalDisplay and render unmarked.
+  const undeclaredRowStatuses = new Set<string>();
   for (const row of rows) {
     if (!declaredAttributes.has(row.valueAttribute)) undeclaredAttrs.add(row.valueAttribute);
     if (row.value === null && !(row.valueAttribute in info.nullReasonLabels)) {
       unlabeledNullAttrs.add(row.valueAttribute);
     }
+    if (row.status !== undefined && !declaredPeriodStatuses.has(row.status)) {
+      undeclaredRowStatuses.add(row.status);
+    }
+  }
+  if (undeclaredRowStatuses.size > 0) {
+    add(
+      'F3_statuses',
+      `per-cell observation status(es) not in declaredPeriodStatuses: ` +
+        `${[...undeclaredRowStatuses].slice(0, 10).join(', ')} — a status the manifest does not declare ` +
+        `cannot be reasoned about by definitiveStatuses/provisionalDisplay (R11).`,
+      id,
+    );
   }
   if (undeclaredAttrs.size > 0) {
     add(

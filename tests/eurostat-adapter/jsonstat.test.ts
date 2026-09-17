@@ -2,11 +2,14 @@
 // proving the amendments the brief's own second adversarial review folded
 // in — none of these need the conformance harness (per Amendment B4, the
 // harness has no "expected to throw" mechanism at all).
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CbsSlice } from '../../src/cbs-adapter/types.ts';
 import { encodePeriodCode, parsePeriodCode } from '../../src/ingestion/periods.ts';
+import { isProvisionalStatus, SOURCES } from '../../src/sources/registry.ts';
 import {
   EU_EFTA_STAND_IN_GEO_CODES,
+  EUROSTAT_DEFINITIVE_STATUS,
   eurostatBaseLabel,
   eurostatFactorUnit,
   mapEurostatPeriod,
@@ -191,9 +194,8 @@ describe('parseJsonStatDataset — flags ride verbatim into valueAttribute (Amen
     expect(parsed.rows[0]!.valueAttribute).toBe(':');
   });
 
-  it('a flag on a NON-null cell ALSO rides verbatim — this is not a per-cell provisional mechanism, ' +
-    'just a verbatim carry (Amendment B1: pipeline.ts has no per-cell status path; the registry\'s own ' +
-    '"definitiveStatuses: []" is what actually keeps every Eurostat cell provisional, not this field)', () => {
+  it('a flag on a NON-null cell ALSO rides verbatim into valueAttribute (since #251 it additionally ' +
+    'drives the per-cell status — see the dedicated describe block below)', () => {
     const raw = dataset({
       id: ['unit', 'geo', 'time'],
       size: [1, 1, 1],
@@ -215,6 +217,92 @@ describe('parseJsonStatDataset — flags ride verbatim into valueAttribute (Amen
     const raw = dataset(); // default: 1 cell, value 1, no status
     const parsed = parseJsonStatDataset(raw, 'eurostat:plain_test');
     expect(parsed.rows[0]!.valueAttribute).toBe('None');
+  });
+});
+
+// #251 (session 109) — the per-CELL status, the D6 addendum that supersedes
+// Amendment B1. Every assertion here is about the narrow waist's optional
+// CbsObservationRow.status, which src/ingestion/pipeline.ts writes verbatim
+// into observations.status — the column R11's isProvisionalStatus reads.
+describe('parseJsonStatDataset — per-cell status (#251, ADR 048 D6 addendum)', () => {
+  /** One-cell dataset with an explicit value and (optionally) one flag. */
+  function oneCell(value: number | null, flag?: string) {
+    return dataset({
+      value: [value],
+      ...(flag === undefined ? {} : { status: { '0': flag } }),
+    });
+  }
+
+  it('an UNFLAGGED cell with a value is the one definitive state', () => {
+    const parsed = parseJsonStatDataset(oneCell(1), 'eurostat:plain_test');
+    expect(parsed.rows[0]!.status).toBe(EUROSTAT_DEFINITIVE_STATUS);
+    expect(isProvisionalStatus(SOURCES.eurostat!, parsed.rows[0]!.status!)).toBe(false);
+  });
+
+  it('an unflagged cell with NO value is ":" (not available), never definitive — a sparse Eurostat ' +
+    'cell was not "published, nothing to flag", it was not reported at all (principle c)', () => {
+    const parsed = parseJsonStatDataset(oneCell(null), 'eurostat:plain_test');
+    expect(parsed.rows[0]!.status).toBe(':');
+    expect(isProvisionalStatus(SOURCES.eurostat!, parsed.rows[0]!.status!)).toBe(true);
+  });
+
+  it('every D6 observation flag rides through VERBATIM and is provisional — confidential (c) and the ' +
+    'not-available family (":", n, z) included, which must NEVER read as definitive', () => {
+    for (const flag of ['p', 'e', 's', 'f', 'b', 'c', 'd', 'u', 'n', 'z', ':']) {
+      const parsed = parseJsonStatDataset(oneCell(flag === ':' ? null : 1, flag), 'eurostat:flag_test');
+      expect(parsed.rows[0]!.status, flag).toBe(flag);
+      expect(isProvisionalStatus(SOURCES.eurostat!, parsed.rows[0]!.status!), flag).toBe(true);
+    }
+  });
+
+  it('no flag equals the definitive status, so no flag can ever be mistaken for one', () => {
+    for (const flag of ['p', 'e', 's', 'f', 'b', 'c', 'd', 'u', 'n', 'z', ':']) {
+      expect(flag, flag).not.toBe(EUROSTAT_DEFINITIVE_STATUS);
+    }
+  });
+
+  it('the status is never an empty string — pipeline.ts rejects a blank override loudly, so the ' +
+    'adapter must never emit one', () => {
+    for (const raw of [oneCell(1), oneCell(null), oneCell(2, 'p')]) {
+      const parsed = parseJsonStatDataset(raw, 'eurostat:blank_test');
+      for (const row of parsed.rows) {
+        expect(typeof row.status).toBe('string');
+        expect(row.status!.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('REAL captured data (tipsbd30, 551 cells): every flagged cell is provisional, and the ' +
+    'unflagged-and-absent ones are ":" — no cell in this capture is definitive', () => {
+    const raw = JSON.parse(
+      readFileSync(new URL('../fixtures/eurostat/tipsbd30/dataset.json', import.meta.url), 'utf8'),
+    ) as unknown;
+    const parsed = parseJsonStatDataset(raw, 'eurostat:tipsbd30');
+    expect(parsed.rows.length).toBeGreaterThan(0);
+
+    const byStatus = new Map<string, number>();
+    for (const row of parsed.rows) {
+      expect(row.status, JSON.stringify(row.coordinates)).toBeTypeOf('string');
+      byStatus.set(row.status!, (byStatus.get(row.status!) ?? 0) + 1);
+    }
+    // The real capture carries only 'e' and 'p' flags plus sparse holes.
+    expect([...byStatus.keys()].sort()).toEqual([':', 'e', 'p']);
+    for (const row of parsed.rows) {
+      expect(isProvisionalStatus(SOURCES.eurostat!, row.status!)).toBe(true);
+    }
+  });
+
+  it('REAL captured data with UNFLAGGED cells (demo_pjan) comes out definitive', () => {
+    const raw = JSON.parse(
+      readFileSync(new URL('../fixtures/eurostat/demo_pjan/dataset.json', import.meta.url), 'utf8'),
+    ) as unknown;
+    const parsed = parseJsonStatDataset(raw, 'eurostat:demo_pjan');
+    const withValues = parsed.rows.filter((r) => r.value !== null);
+    expect(withValues.length).toBeGreaterThan(0);
+    for (const row of withValues) {
+      expect(row.status).toBe(EUROSTAT_DEFINITIVE_STATUS);
+      expect(isProvisionalStatus(SOURCES.eurostat!, row.status!)).toBe(false);
+    }
   });
 });
 

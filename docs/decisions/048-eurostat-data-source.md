@@ -156,7 +156,9 @@ obligations:**
   (`p` provisional, `e` estimated, `s` Eurostat estimate, `f` forecast, `b` break, `c` confidential, `d`
   definition differs, `u` low reliability, `n` not significant, `z` not applicable, `:` not available) rides in
   `observations.status`; the registry entry declares `definitiveStatuses: ['']` (the unflagged state — every
-  flagged cell renders provisional unless `provisionalDisplay` gives it a specific suffix) and
+  flagged cell renders provisional unless `provisionalDisplay` gives it a specific suffix) — **⚠ SUPERSEDED,
+  see the third as-built addendum (#251, session 109): the unflagged state is emitted as `'Published'`, not
+  `''`, and the per-cell path this bullet assumed did not exist until #251 built it** — and
   `nullReasonLabels` for `:`/`c`/`z`. All Dutch suffix and null-reason wording is an **owner sign-off** (the
   guide's rule). Eurostat has no per-period publication status; the adapter reports every observed period as
   published (its provisional concept is per cell), which the ingestion validator's step-3 status requirement
@@ -491,7 +493,10 @@ core-product code, never auto-merged (#118(b)).
   datasets rendered," a live smoke probe) is therefore NOT met by this build — a narrower, disclosed
   done-definition in the executor brief was met instead. If this reading is overly conservative, that is the
   owner's call on PR review, not this session's to assume.
-- **D6's `definitiveStatuses: ['']` is shipped as `[]` instead.** D6 assumed the unflagged status reaches
+- **D6's `definitiveStatuses: ['']` is shipped as `[]` instead.** **⚠ NO LONGER THE AS-BUILT STATE — superseded
+  by the third as-built addendum (#251, session 109): it is now `['Published']` and the prerequisite named at
+  the end of this bullet is BUILT.** The paragraph below records why `[]` was correct at the time.
+  D6 assumed the unflagged status reaches
   `isProvisionalStatus` as a genuine per-cell status; it doesn't — `src/ingestion/pipeline.ts`'s `status`
   column has no per-cell path at all, only a per-period-code one (the CBS shape). An empty array makes every
   Eurostat cell render provisional unconditionally instead — strictly safer, per principle (c), but a real
@@ -639,5 +644,74 @@ running local dev server) — the explorer's own backing SQL query, run directly
 does now return this table, which is the load-bearing fact step 4 needed proven. Amendment 7/D9's "≥3 real
 datasets rendered end-to-end" and the Amendment-12 live smoke probe are now reachable (one real table is
 registered) but not yet exercised through the actual page. D6's `definitiveStatuses: []` correction and the
-[#251](../open-questions.md) `pipeline.ts` per-cell-status prerequisite are unaffected by anything in this
-addendum.
+[#251](../open-questions.md) `pipeline.ts` per-cell-status prerequisite were unaffected by anything in this
+addendum — both were then settled by the next one, below.
+
+## Third As-built addendum — D6 per-CELL statuses BUILT; Amendment B1's `definitiveStatuses: []` superseded (session 109, 2026-09-17, [#251](../open-questions.md))
+
+**What was wrong.** D6 said the observation flag "rides in `observations.status`" and that the registry
+declares `definitiveStatuses: ['']`. Neither was true as built. `src/ingestion/pipeline.ts` derived
+`observations.status` — the one column R11's `isProvisionalStatus` ever reads — *exclusively* from
+`periodStatusByCode`, a per-PERIOD-code lookup built from the time dimension's code list. That is the honest
+CBS shape (every cell in a CBS period shares one CBS status) but it left Eurostat's real per-CELL flags with
+no path into the column at all. E1's fix (Amendment B1) was to ship `definitiveStatuses: []`, which makes
+`isProvisionalStatus` return `true` unconditionally: every Eurostat cell rendered provisional, forever. Safe
+(principle (c)) but permanently over-cautious, and an explicit prerequisite for E2.
+
+**What is built now.** An **optional per-row status override in the narrow waist**:
+`CbsObservationRow.status?: string` (`src/cbs-adapter/types.ts`). `pipeline.ts`'s staging loop reads
+`row.status ?? periodStatusByCode.get(periodCode)` — the override when an adapter supplies one, the unchanged
+per-period lookup otherwise. A present-but-blank override is a loud throw, never a silent definitive
+(principle (c)). **CBS is untouched:** its adapter never sets the field (pinned by test — the key is absent
+from every parsed CBS row, not merely `undefined`), so the new branch is never taken on a CBS sync and every
+CBS status still comes from the period code list.
+
+**The flag → status mapping (the D6 vocabulary, as built).** `src/eurostat-adapter/jsonstat.ts` emits one
+status per observation. Deliberately *lossless*: the JSON-stat flag rides through verbatim, so
+`provisionalDisplay` can render its specific Dutch suffix, and R11 can always separate provisional from
+definitive.
+
+| Eurostat cell state | emitted `status` | `isProvisionalStatus` | Why |
+| --- | --- | --- | --- |
+| no flag, value present | `Published` (`EUROSTAT_DEFINITIVE_STATUS`) | **false — definitive** | Eurostat published the figure and flagged nothing about it. The one definitive state. |
+| `p` provisional | `p` | true | ' (voorlopig cijfer)' |
+| `e` estimated | `e` | true | ' (schatting)' |
+| `s` Eurostat estimate | `s` | true | ' (schatting door Eurostat)' |
+| `f` forecast | `f` | true | ' (prognose)' |
+| `b` break in series | `b` | true | ' (methodebreuk)' |
+| `c` confidential | `c` | true | **Never definitive.** Also a `nullReasonLabels` key. |
+| `d` definition differs | `d` | true | ' (afwijkende definitie)' |
+| `u` low reliability | `u` | true | ' (lage betrouwbaarheid)' |
+| `n` not significant | `n` | true | **Never definitive.** |
+| `z` not applicable | `z` | true | **Never definitive.** Also a `nullReasonLabels` key. |
+| `:` not available | `:` | true | **Never definitive.** Also a `nullReasonLabels` key. |
+| no flag, **no value** (Eurostat's sparse shape) | `:` | true | Nothing was reported for this coordinate, so "published, definitive" would be a guess. Mirrors the same cell's `valueAttribute`. |
+
+The mechanism that makes this safe is deliberately *structural*, not a list of exceptions: `definitiveStatuses`
+holds exactly one value (`['Published']`), and **no Eurostat flag is that string**, so `c` / `:` / `n` / `z`
+cannot become definitive even if the flag vocabulary grows. A new, unrecognised Eurostat flag lands outside
+`definitiveStatuses` and is therefore marked provisional — the fail-safe direction, unchanged.
+
+`'Published'` is the SAME constant the adapter already reported as each period's status (D6's "Eurostat has no
+per-period publication status; the adapter reports every observed period as published"), on purpose: an
+unflagged cell then gets an identical status whether it arrives via the override or via the period fallback,
+so the two paths can never disagree. The registry spells it as a literal rather than importing it — that
+module is a pure leaf bundled into client code — and a test pins the two equal.
+
+**Consequently:** D6's `definitiveStatuses: ['']` text is superseded by `['Published']` (the `''` was always
+unreachable — the empty string is not a status any adapter emits), and Amendment B1 / the first as-built
+addendum's "`[]` instead" note describes a state that no longer exists.
+
+**No migration.** `observations.status` is plain `text not null` with no CHECK constraint
+(`migrations/001_ingestion_schema.sql`; nothing later alters it), so a new status vocabulary needs no DDL —
+verified before writing this, and deliberately not accompanied by a migration file.
+
+**Also added:** conformance family F3 now fails a source whose adapter emits a per-cell status that is not in
+its manifest's `declaredPeriodStatuses` — the same discipline F2 already applies to period-level statuses. An
+undeclared status is exactly how a typo'd flag could slip outside both `definitiveStatuses` and
+`provisionalDisplay` and render unmarked.
+
+**Still unchanged by this addendum:** Constraint 0's two remaining E1 inertness gates — `chatSelectable: false`
+(Eurostat is still not selectable in live chat) and `currentCatalogStatuses: []` (confirmed permanent for that
+endpoint, [#250](../open-questions.md)) — and the open owner sign-off on the Dutch suffix / null-reason
+wording (Amendment 11, [#250](../open-questions.md)(a)).

@@ -94,6 +94,28 @@ export interface CbsObservationRow {
   valueAttribute: string;
   /** Non-numeric payload; unexpected for the Phase 0 set, must fail loudly. */
   stringValue: string | null;
+  /**
+   * #251 (session 109): OPTIONAL per-CELL publication status — the narrow
+   * waist's one path for a source whose statuses are NOT a property of the
+   * period.
+   *
+   * ABSENT (the CBS shape, and the default): the ingestion pipeline derives
+   * `observations.status` from the per-PERIOD-code lookup it always has
+   * (`periodStatusByCode`, built from the time dimension's own code list).
+   * The CBS adapter never sets this field — every CBS cell in a period
+   * genuinely shares one CBS status (Definitief / Voorlopig /
+   * NaderVoorlopig), so the per-period derivation is the honest one and
+   * stays byte-identical (pinned by test in tests/ingestion/ingestion.test.ts).
+   *
+   * PRESENT: this verbatim string becomes the cell's `observations.status`
+   * INSTEAD of the period status. It is what `isProvisionalStatus` (R11)
+   * reads, so a source setting it must guarantee the value is definitive
+   * ONLY when the source really says so — Eurostat's JSON-stat per-cell
+   * flags (ADR 048 D6 + its #251 addendum) are the first user. An empty /
+   * whitespace-only string is rejected loudly by the pipeline: omit the
+   * field rather than sending a blank one (principle (c) — never guess).
+   */
+  status?: string;
 }
 
 export interface CbsSource {

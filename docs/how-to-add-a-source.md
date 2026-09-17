@@ -39,7 +39,7 @@ lookups only). Every field is load-bearing:
 | `license` | the attribution line's license clause | legal-checked first |
 | `deepLink(tableId)` | "Bekijk bij …" link | `null` if the source has no public viewer; must be `https://` and embed the id verbatim |
 | `provisionalDisplay` | R11 suffixes per VERBATIM status (A2: a MAP, e.g. two-tier for CBS) | keys ⊆ your declared period statuses |
-| `definitiveStatuses` | which cells are NOT provisional + the freshness query | fail-safe: anything else renders as provisional |
+| `definitiveStatuses` | which cells are NOT provisional + the freshness query | fail-safe: anything else renders as provisional. Only values your source genuinely vouches for; **never** a confidential / not-available marker |
 | `nullReasonLabels` | R11 null-reason wording per verbatim value attribute | **owner-approved Dutch** — new wording is an owner sign-off |
 | `currentCatalogStatuses` | the finder's current-first shortlist quota (A6) | a DIFFERENT axis than cell statuses: per-table lifecycle |
 
@@ -70,6 +70,15 @@ changes):
   conformance family checks this yet (WP30c wiring point 5 below).
 - **Statuses VERBATIM** — never translate a source's status/marker words; interpretation lives in
   the registry maps (principle a / R11).
+- **Per-PERIOD or per-CELL statuses — pick the one your source really has** (#251, session 109).
+  The default is per-period: the pipeline derives `observations.status` from your time dimension's
+  code list (`CbsCode.status`), which is CBS's real shape. If your source marks *individual cells*
+  instead (Eurostat's JSON-stat flags), set the OPTIONAL `CbsObservationRow.status` per row and it
+  overrides the period lookup for that cell. Set it on every row or none — a row that omits it
+  falls back to the period status, and a present-but-blank value is a loud pipeline error, never a
+  silent "definitive". Whatever you emit must appear in your manifest's `declaredPeriodStatuses`
+  (conformance F3 fails otherwise) and only the value(s) your source genuinely vouches for may go
+  in `definitiveStatuses` — never a confidential or not-available marker (principle c).
 - **Dimension kinds faithfully** — exactly ONE `TimeDimension` per table; `GeoDimension` for the
   region dimension. The fit gate's deliverability pre-checks key on these (ADR 030 A7).
 - **Table ids: `'<key>:<native-id>'`, spoken NATIVELY by the adapter** (D4). Your
@@ -120,7 +129,8 @@ npx vitest run tests/sources
 
 Green = the D6 contract holds: **F0** registry-entry coherence, **F1** replay through real parse
 code + the D4 id discipline + exactly-one-TimeDimension, **F2** period-grammar round-trip +
-declared statuses, **F3** value-attribute/null-reason completeness, **F4** catalog-lifecycle
+declared statuses, **F3** value-attribute/null-reason completeness **+ per-cell-status
+declaration** (#251), **F4** catalog-lifecycle
 completeness (A6), **F5** the five ingestion validators (registration semantics — proves the
 pipeline's gates ACCEPT your shapes; drift detection stays sync-time work). Failure summaries are
 plain language — read them, fix the adapter or the declarations, never the harness.

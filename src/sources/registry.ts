@@ -110,10 +110,12 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     currentCatalogStatuses: ['Regulier'],
     chatSelectable: true,
   },
-  // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2; Amendment B1 folded in):
-  // second source, registered but E1-inert for everything Constraint 0 or
-  // the pipeline.ts per-period status shape blocks — see the two field-level
-  // comments below before changing either.
+  // WP30c/E1 (ADR 048 D6/D7, this brief's Task 2): second source, registered
+  // but still E1-inert for everything Constraint 0 blocks (chatSelectable,
+  // currentCatalogStatuses) — see those two field-level comments before
+  // changing either. The THIRD E1 limitation, Amendment B1's "every cell
+  // provisional, unconditionally", was lifted by #251 in session 109: per-cell
+  // statuses now reach isProvisionalStatus for real.
   [EUROSTAT_SOURCE_KEY]: {
     key: EUROSTAT_SOURCE_KEY,
     displayName: 'Eurostat',
@@ -129,13 +131,12 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
     // on the exact wording is still OPEN (see docs/open-questions.md) —
     // routine, not a build blocker, since this is display-only (R11).
     //
-    // Per Amendment B1: this map is INERT in E1. Nothing today can key into
-    // it per-cell — pipeline.ts's `status` column is derived only from a
-    // per-PERIOD-code lookup (the CBS shape; see isProvisionalStatus below
-    // and definitiveStatuses' own comment), so no Eurostat cell's per-cell
-    // flag ever reaches this lookup yet. Kept only as forward documentation
-    // for when a real per-cell status mechanism exists (a scoped pipeline.ts
-    // change, tracked as a residual in the WP30c/E1 brief).
+    // #251 (session 109) — this map is now LIVE, no longer the inert
+    // forward-documentation Amendment B1 described. The narrow waist carries
+    // an optional per-CELL status (`CbsObservationRow.status`), the Eurostat
+    // adapter fills it with the JSON-stat flag verbatim, and pipeline.ts
+    // writes it to `observations.status` — the exact column this map and
+    // isProvisionalStatus key into.
     provisionalDisplay: {
       p: ' (voorlopig cijfer)',
       e: ' (schatting)',
@@ -147,19 +148,25 @@ export const SOURCES: Readonly<Record<string, SourceInfo>> = {
       u: ' (lage betrouwbaarheid)',
       n: ' (niet significant)',
     },
-    // Amendment B1 (HIGH, confirmed): deliberately EMPTY, NOT `['']` as D6's
-    // literal text says. D6 assumed the unflagged state ('') reaches
-    // isProvisionalStatus as a per-cell status, but pipeline.ts's `status`
-    // column has no per-cell path at all — only periodStatusByCode's
-    // per-PERIOD-code lookup (the CBS shape). An empty list makes
-    // isProvisionalStatus return true UNCONDITIONALLY for every Eurostat
-    // cell, regardless of what periodStatusByCode produces: every cell
-    // renders provisional. This is the safe fail-direction (principle c) —
-    // over-cautious, never under — and needs no pipeline.ts change. Real
-    // per-cell provisional propagation is a follow-up, scoped pipeline.ts
-    // change (tracked as a residual in the WP30c/E1 brief), required before
-    // any Eurostat cell may honestly render as definitive.
-    definitiveStatuses: [],
+    // #251 (session 109) — was `[]` (Amendment B1's over-cautious
+    // "everything provisional, unconditionally", correct while no per-cell
+    // status could reach this lookup at all). The prerequisite that entry
+    // named is now BUILT: `CbsObservationRow.status` carries a per-CELL
+    // status through the narrow waist, the Eurostat adapter emits one per
+    // observation, and pipeline.ts writes it. So exactly ONE value may be
+    // declared definitive here — `EUROSTAT_DEFINITIVE_STATUS` from
+    // src/eurostat-adapter/jsonstat.ts ('Published'), the status of a cell
+    // Eurostat published with NO flag on it. Spelled as a literal rather
+    // than imported: this module is a PURE LEAF bundled into client code
+    // (see the file header) and must never pull the adapter graph in; the
+    // two are pinned equal by test (tests/sources/registry.test.ts).
+    //
+    // Every Eurostat observation flag is a DIFFERENT string, so
+    // isProvisionalStatus keeps returning true for all of them — including
+    // 'c' (confidential) and the not-available family (':', 'n', 'z'), which
+    // must never read as definitive (principle c). The unflagged-but-absent
+    // cell is emitted as ':' for the same reason, never as 'Published'.
+    definitiveStatuses: ['Published'],
     // D6's null-reason flags (R11), Dutch wording matching the CBS entries'
     // register above (owner sign-off open, same Amendment 11 as above).
     nullReasonLabels: {
