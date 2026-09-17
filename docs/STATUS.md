@@ -41,8 +41,8 @@ in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full accou
 - **[#23](open-questions.md) alerts COMPLETE** — missed-sync (cadence from `period_semantics`) + health-probe, both on the daily cron.
 - **Wave 9:** pass-3 design rows built (hbar extreme labels, one colour per comparison, "Hoogste/
   Laagste" insight titles, an honest multi-region × multi-period refusal + offer chips) and a
-  **Playwright e2e smoke in CI** through the hermetic harness (`continue-on-error` until first green —
-  flip it in `.github/workflows/ci.yml` once run green).
+  **Playwright e2e smoke in CI** through the hermetic harness (a hard gate since its first green run,
+  run `35223290808`).
 - **Waves 7–8:** a third UX audit (via the harness's intent injector) + an axe-core audit, all
   mechanical rows FIXED — **P1** the proof panel was missing on every STORED answer (a `'use client'`
   import in a server path, throw swallowed); comparison charts open on horizontal bars at every

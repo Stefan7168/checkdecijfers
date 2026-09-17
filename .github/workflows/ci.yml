@@ -229,18 +229,13 @@ jobs:
       - name: Install Chromium (Playwright)
         run: npx playwright install --with-deps chromium
         working-directory: web
-      # continue-on-error until the FIRST green CI run: the tests themselves are
-      # verified (5/5 passing against the real harness on a developer machine,
-      # session 110), but two halves of THIS step could not be exercised there —
-      # `playwright install` could not reach its download CDN from that machine
-      # (a local network restriction; the run used an already-cached Chromium),
-      # and the harness has never started on a Linux runner. A first run that
-      # fails for an environment reason must not block the deploy of code that
-      # passed every other gate. Flip this to a hard gate as soon as one run is
-      # green — that is the whole point of adding it.
+      # A HARD gate since its first green run (run 35223290808, 2026-09-17,
+      # session 110: Chromium installed, the harness started on the Linux
+      # runner, 5/5 passed). It was added with `continue-on-error: true` for
+      # exactly one run so an environment-only failure could not block the
+      # deploy of code that passed every other gate; that reservation is spent.
       - name: Web app end-to-end smoke (dev harness, real browser)
         id: e2e
-        continue-on-error: true
         run: npx playwright test
         working-directory: web
       - name: Playwright report (failures only)
