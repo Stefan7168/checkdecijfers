@@ -994,6 +994,63 @@ describe('ChartConfigPanel — WP218 phase 3 (owner B): Merkkleuren block', () =
     }
   });
 
+  // Audit pass 2, row 11 (2026-09-17): "unavailable" means the deployment
+  // has no Brandfetch key at all (a FIXED condition, checked before any
+  // per-user work in chart-style-actions.ts) — not a transient failure a
+  // reader should be invited to retry. The button cannot be gated on this
+  // at render (that needs a prop from chart.tsx, out of this fix's
+  // scope), so the first click still has to try and report why; this pins
+  // that a SECOND click is refused (no second `lookup` call) and the
+  // button carries `aria-disabled` + an `aria-describedby` pointing at the
+  // reason, once that first click has learned it — never for a reason
+  // that stays retryable (`not_found` here, unaffected).
+  it('unavailable: a repeat click never re-runs the lookup, and the button is aria-disabled with the reason attached; a retryable reason is unaffected (#11)', async () => {
+    const lookup = vi.fn().mockResolvedValue({ ok: false, reason: 'unavailable' });
+    const { unmount } = render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-unavail"
+        brand={{ lookup }}
+      />,
+    );
+    openTab('Kleuren');
+    const button = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    fireEvent.click(button);
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Merkkleuren ophalen is op dit moment niet mogelijk.');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAttribute('aria-describedby', status.id);
+    expect(status.id).toBeTruthy();
+
+    fireEvent.click(button);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    unmount();
+
+    // A retryable reason (not_found) never latches: no aria-disabled, and
+    // a second click DOES re-run the lookup.
+    const retryLookup = vi.fn().mockResolvedValue({ ok: false, reason: 'not_found' });
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, {})}
+        seriesMeta={colorMeta}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        idPrefix="br-retry"
+        brand={{ lookup: retryLookup }}
+      />,
+    );
+    openTab('Kleuren');
+    const retryButton = screen.getByRole('button', { name: 'Pas merkkleuren toe' });
+    fireEvent.click(retryButton);
+    await screen.findByRole('status');
+    expect(retryButton).not.toHaveAttribute('aria-disabled');
+    fireEvent.click(retryButton);
+    expect(retryLookup).toHaveBeenCalledTimes(2);
+  });
+
   it('busy-disables the apply button while a lookup is pending, re-enables once it settles', async () => {
     let resolveLookup!: (value: { ok: false; reason: 'unavailable' }) => void;
     const lookup = vi.fn(
