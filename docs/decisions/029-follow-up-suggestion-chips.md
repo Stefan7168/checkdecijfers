@@ -16,7 +16,10 @@ follow-up chip is now such a take; see the first as-built note directly below.
 FIXED [#195](../open-questions.md)/[#196](../open-questions.md) (session 72, 2026-09-03, branch
 `fix/195-196-eviction-probe-touch`; review round 2 session 73, `ebd341f`; **PR #121 MERGED + LIVE 2026-09-03 —
 session 75, owner-approved in chat, squash `527ef2e`**) — the dry-run primitive this ADR's chips run through no
-longer bumps `last_queried_at`; see the second as-built note below.**
+longer bumps `last_queried_at`; see the second as-built note below. EXTENDED with the
+[#134](../open-questions.md)(c) forecast/causal offer chip (session 110, 2026-09-17, branch `s110/refchip`) —
+the forecast/causal refusal's own honest offer is now one takeable chip on the same carrier; see the as-built
+note above the WP29 original note below.**
 
 ## As-built note (#73 v2 — every chip takeable, session 72, 2026-09-03, autonomous; MERGED + LIVE 2026-09-03 as PR #122, session 75)
 
@@ -378,6 +381,66 @@ principle (c) forbids.
 - Verified: full gate green (backend 1280, web 305, benchmark 14/14 + 6/6 + 0 fabricated, both
   typechecks, real `next build`); zero prompt/fixture bytes changed. PR #41
   (squash `12518eb`), MERGED + LIVE.
+
+## As-built note (#134(c) forecast/causal offer chip, session 110, 2026-09-17)
+
+The [#134](../open-questions.md) family's last gap on the PARSE-refusal side: `buildForecastRefusal`
+and `buildCausalRefusal` (`src/answer/respond/refusals.ts`) already compute a concrete, honest
+alternative — the nearest canonical measure's own freshest available period — but only ever said it
+in prose ("Ik kan wel het gerealiseerde cijfer over X voor juni 2026 voor je opzoeken."). Flagged by
+the session-110 UX audit (row 23, `docs/session-briefs/2026-09-17-session-110-ux-audit.md`): "Answers
+get clickable follow-up chips; refusals do not." This note turns that SAME offer into one takeable
+chip on the existing #134/#73-v2 chip carrier — no new mechanism.
+
+- **The candidate is minted where the offer text already is.** `BuiltRefusal` gained an
+  `offerChip?: { canonicalKey, periodCode, label } | null` field, set by `buildForecastRefusal`/
+  `buildCausalRefusal` themselves (a private `forecastCausalOfferChip` helper), from EXACTLY the same
+  `nearestCanonicalKeys[0]` + `freshestForCanonical` pair the prose reads — never a second lookup that
+  could drift from what the text says. Causal only sets it in the branch that already has a
+  `definitionLabel` (mirroring the causal offer's own `else` branch, which has none to name). Every
+  other builder leaves it `undefined`; the field is a CANDIDATE, never a proof — respond.ts dry-runs
+  it before it may ever become a chip, the same discipline `buildRefusalSuggestions` already applies
+  to the query-refusal side (a)/(b) chips above.
+- **Chip label reuses the shared "Wat was de X in Y?" template**, extracted from `exampleQuestionNl`'s
+  own inline string into `wasSubjectInPeriodNl(subject, periodCode)` so both call sites (the
+  out-of-scope/smalltalk quoted example, and this unquoted chip) share one source of truth. Subject is
+  the specific nearest measure's own everyday term (`everydayTerms[0]`, falling back to its
+  `definitionLabel` defensively, matching `exampleQuestionNl`'s own fallback) — NOT the raw
+  `definitionLabel` the #134(a)/(b) query-refusal chips use, because those chips retry the SAME
+  measure the user already named (so the formal label reads fine), while here the measure comes from
+  `nearestCanonicalKeys` — a fuzzy match on a misclassified question — and the natural, colloquial term
+  reads better as "did you mean...".
+- **Wired beside the existing WP26c rescue chip, at the same call site**
+  (`respondToParseOutcome` in `respond.ts`): `buildOfferChip` (new, `rescue.ts`, sharing `rescue.ts`'s
+  now-exported `intentFor`) dry-runs the candidate through `echoServability` and returns the same
+  `RescueOffer` shape the misfire rescue does, so one `chip = rescue ?? offerChip` line feeds the
+  SAME carrier-building code both mechanisms already shared. Tried ONLY when the rescue chip did not
+  already fire: a rescue is the more specific "you actually meant an already-published period"
+  correction (forecast/smalltalk misfires only); stacking a second, more generic chip pointing at a
+  similar kind of alternative would just clutter one carrier for no benefit. Causal never produces a
+  rescue chip, so this is the only chip a causal refusal can ever carry. FAIL-OPEN, same belt as the
+  rescue chip: a hiccup here can never turn an honest refusal into an internal error.
+- **A genuine interaction, measured and re-pinned:** when the misfire-rescue's OWN dry-run fails (an
+  unservable named period, or 2+ ambiguous `nearestCanonicalKeys`) this chip now fires INSTEAD, using
+  `nearestCanonicalKeys[0]` — the exact key the prose offer already names regardless of how many
+  candidates there were. Two pre-existing `tests/answer/rescue-chip.test.ts` cases asserted "no chip"
+  for exactly those two conditions; both were re-pinned to the new, correct behaviour (a chip now
+  appears, pointing at the freshest period, never at the unservable/ambiguous one) rather than left
+  broken or silently loosened.
+- **Text stays byte-identical.** `offer`/`text` are computed exactly as before this change; the new
+  field only feeds the chip machinery. Pinned: a same-question, flag-on-vs-flag-off comparison
+  (`tests/answer/refusal-offer-chip.test.ts`) plus the untouched `tests/answer/respond-refusals.test.ts`
+  offer-text assertions and the benchmark's B15–B20 exact-text pins.
+- **Verified:** `tests/answer/refusal-offer-chip.test.ts` (9 new, both refusal kinds: servable →
+  one chip resolving to the freshest period; the click-take answers with zero LLM calls, attributed to
+  that period; unservable candidate → no chip, byte-identical envelope; no `nearestCanonicalKeys` match
+  → no chip; flag off → no chip, no `pending` key at all); `tests/answer/rescue-chip.test.ts` re-pinned
+  (10 → 12 tests, all green); `tests/answer/respond-refusals.test.ts` (97), `tests/answer/suggestions.test.ts`
+  unaffected; the full `tests/answer` suite (800/800) and root `npm run typecheck` both clean. Zero
+  prompt/fixture bytes changed; `INTENT_SCHEMA_VERSION` untouched.
+- **Pre-existing, unrelated failure noted, not fixed:** `tests/audit/envelope-key-manifest.test.ts`
+  fails on this branch before AND after this change (a `regionSetLine` field from the parallel
+  region-set task 6 merge, `01a4c08`, has no manifest entry) — out of this change's scope.
 
 ## As-built note (WP29, 2026-07-11)
 

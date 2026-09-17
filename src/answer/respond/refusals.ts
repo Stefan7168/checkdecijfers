@@ -36,6 +36,17 @@ export interface BuiltRefusal {
    * toRefusalResponse defaults it to null (the envelope field is present-only
    * on that one reason). */
   onboarding?: OnboardingEnvelope | null;
+  /** #134(c) (ADR 029): the forecast/causal refusal's own "I can look up X for
+   * period Y" offer (see `offer` above), restated as a takeable-chip
+   * CANDIDATE — set only by buildForecastRefusal/buildCausalRefusal, and only
+   * when they found a definitionLabel AND a freshest period to name (no
+   * candidate ⇒ no chip, same as no offer). This is a CANDIDATE, never a proof
+   * of servability: respond.ts's parse-refusal call site dry-runs it through
+   * the same #134 servability gate every other refusal-side chip shares
+   * before it may ever reach the chip carrier. Every other builder leaves
+   * this undefined; toRefusalResponse never reads it directly (the call site
+   * does, ahead of the envelope assembly). */
+  offerChip?: { canonicalKey: string; periodCode: string; label: string } | null;
 }
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
@@ -81,6 +92,16 @@ function loadedTopicsCompact(): string {
   return CANONICAL_MEASURES.map((m) => m.everydayTerms[0]).join(', ');
 }
 
+/** "Wat was de <subject> in <period>?" (period omitted when none is known) —
+ * the short natural-language question form shared by exampleQuestionNl below
+ * (quoted, as an embedded suggestion inside refusal prose) and, since #134(c),
+ * the forecast/causal refusal's own offer chip label (unquoted, a real
+ * clickable chip — see buildForecastRefusal/buildCausalRefusal). */
+function wasSubjectInPeriodNl(subject: string, periodCode: string | null): string {
+  const periodPhrase = periodCode ? ` in ${periodCodeToNl(periodCode)}` : '';
+  return `Wat was de ${subject}${periodPhrase}?`;
+}
+
 /** A genuinely answerable, grammatical example question over a loaded topic —
  * the out_of_scope/smalltalk offer and the still-ambiguous guidance example.
  * Prefers the inflation measure because "Wat was de inflatie in {periode}?"
@@ -93,20 +114,42 @@ async function exampleQuestionNl(db: Db): Promise<string> {
   const preferred = CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation');
   const measure = preferred ?? CANONICAL_MEASURES[0]!;
   const freshest = await freshestForCanonical(db, measure.key);
-  const periodPhrase = freshest ? ` in ${periodCodeToNl(freshest.periodCode)}` : '';
   const subject = preferred ? preferred.everydayTerms[0] : measure.definitionLabel;
-  return `"Wat was de ${subject}${periodPhrase}?"`;
+  return `"${wasSubjectInPeriodNl(subject, freshest?.periodCode ?? null)}"`;
+}
+
+/** #134(c) (ADR 029): the offerChip candidate both buildForecastRefusal and
+ * buildCausalRefusal mint from the SAME nearestKey/freshest pair their prose
+ * offer already names — the measure's own everyday term as subject (falling
+ * back to its definitionLabel, mirroring exampleQuestionNl's own fallback),
+ * the freshest available period, no regions (default coordinates: exactly
+ * what the prose offers, nothing more). Never touches the query layer —
+ * respond.ts's call site dry-runs this candidate before it may become a chip. */
+function forecastCausalOfferChip(
+  nearestKey: string,
+  definitionLabel: string,
+  freshest: { periodCode: string },
+): { canonicalKey: string; periodCode: string; label: string } {
+  const measure = CANONICAL_MEASURES.find((m) => m.key === nearestKey);
+  const subject = measure?.everydayTerms[0] ?? definitionLabel;
+  return {
+    canonicalKey: nearestKey,
+    periodCode: freshest.periodCode,
+    label: wasSubjectInPeriodNl(subject, freshest.periodCode),
+  };
 }
 
 async function buildForecastRefusal(db: Db, raw: { nearestCanonicalKeys: string[] }): Promise<BuiltRefusal> {
   const nearestKey = raw.nearestCanonicalKeys[0];
   const definitionLabel = nearestKey ? definitionLabelByKey.get(nearestKey) : undefined;
   let offer: string | null = null;
+  let offerChip: BuiltRefusal['offerChip'] = null;
   if (definitionLabel) {
     const freshest = await freshestForCanonical(db, nearestKey!);
     offer = freshest
       ? `Ik kan wel het gerealiseerde cijfer over ${definitionLabel} voor ${periodWithStatusNl(freshest)} voor je opzoeken.`
       : `Ik kan wel het meest recente gerealiseerde cijfer over ${definitionLabel} voor je opzoeken.`;
+    if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   }
   const body = 'CBS publiceert gerealiseerde cijfers, geen voorspellingen — ik kan geen toekomstig cijfer geven.';
   return {
@@ -116,6 +159,7 @@ async function buildForecastRefusal(db: Db, raw: { nearestCanonicalKeys: string[
     guidance: null,
     freshness: null,
     internalNote: null,
+    offerChip,
   };
 }
 
@@ -125,11 +169,13 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
   const body =
     'Ik kan geen oorzakelijk verband beoordelen — CBS-cijfers beschrijven wát er is gemeten, niet waardóór het komt.';
   let offer: string | null = null;
+  let offerChip: BuiltRefusal['offerChip'] = null;
   if (definitionLabel) {
     const freshest = await freshestForCanonical(db, nearestKey!);
     offer = freshest
       ? `Ik kan wel de onderliggende cijfers over ${definitionLabel} laten zien, voor ${periodWithStatusNl(freshest)} of een andere periode.`
       : `Ik kan wel de onderliggende cijfers over ${definitionLabel} laten zien.`;
+    if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   } else {
     offer = `Ik heb hierover geen cijfers geladen — mijn bronnen dekken momenteel: ${loadedTopicsCompact()}.`;
   }
@@ -140,6 +186,7 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
     guidance: null,
     freshness: null,
     internalNote: null,
+    offerChip,
   };
 }
 
