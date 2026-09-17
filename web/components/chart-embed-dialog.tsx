@@ -92,6 +92,36 @@ const CHART_TYPE_LABEL_KEY: Record<ChartTypeOption, MessageKey> = {
   default: 'chart.embed.chartTypeDefault',
 };
 
+// Session 110 (embed auto-resize, ADR 041 addendum): the inline listener
+// appended after the <iframe> by buildEmbedCode. Plain ES5 — no arrow
+// functions, no let/const, no dependencies — since it runs verbatim on
+// whatever third-party host page the reader pastes it into, with no build
+// step of its own. One-way and minimal by design (HARD LIMIT): it only ever
+// reads `event.data`/`event.source`, it never sends anything back, and the
+// only field it acts on is a plain pixel height — matching EmbedResize's own
+// (web/app/embed/[token]/embed-resize.tsx) one-way, no-token payload.
+// `event.source === iframe.contentWindow` is what lets several embeds on the
+// same host page each resize only THEIR OWN iframe — `data-checkdecijfers-
+// embed` (set to this embed's own token, already unique per embed) is the
+// selector that finds the right one, mirroring EmbedResize's message
+// `type` string exactly (`checkdecijfers:embed-height`) so the two halves of
+// this mechanism can never silently drift apart.
+function buildEmbedResizeScript(token: string): string {
+  return [
+    '<script>',
+    '(function () {',
+    `  var f = document.querySelector('iframe[data-checkdecijfers-embed="${token}"]');`,
+    "  window.addEventListener('message', function (e) {",
+    '    var d = e.data;',
+    "    if (!d || d.type !== 'checkdecijfers:embed-height' || !f) return;",
+    '    if (e.source !== f.contentWindow) return;',
+    "    f.style.height = d.height + 'px';",
+    '  });',
+    '})();',
+    '</script>',
+  ].join('\n');
+}
+
 function buildEmbedCode(
   token: string,
   opts: {
@@ -122,7 +152,12 @@ function buildEmbedCode(
   const effectiveChartType: ChartTypeOption = opts.chartType === 'default' && opts.defaultIsTable ? 'as-shown' : opts.chartType;
   if (effectiveChartType === 'as-shown' && opts.currentForm) params.set('form', opts.currentForm);
   if (opts.live) params.set('live', '1');
-  return `<iframe src="${APP_URL}/embed/${token}?${params.toString()}" width="100%" height="${EMBED_DEFAULT_HEIGHT_PX}" title="${title}" loading="lazy" style="border:0"></iframe>`;
+  // `data-checkdecijfers-embed="${token}"` (session 110): the token is
+  // already unique per embed, so it doubles as the selector the appended
+  // script uses to find THIS iframe among possibly several on the same host
+  // page — no separate id generator needed (cheapest-mechanism-first).
+  const iframe = `<iframe src="${APP_URL}/embed/${token}?${params.toString()}" width="100%" height="${EMBED_DEFAULT_HEIGHT_PX}" title="${title}" loading="lazy" style="border:0" data-checkdecijfers-embed="${token}"></iframe>`;
+  return `${iframe}\n${buildEmbedResizeScript(token)}`;
 }
 
 export function ChartEmbedButton({
@@ -317,6 +352,7 @@ function ChartEmbedDialog({
   return (
     <ChartEditModal open onClose={onClose} title={t(lang, 'chart.embed.dialogTitle')} chartSlot={chartSlot}>
       <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
+      <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.autoResizeExplain')}</p>
 
       {result === 'loading' ? <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.loading')}</p> : null}
       {/* #12 (session 110 UX audit): availability is only known AFTER this

@@ -138,3 +138,53 @@ each run solo with `--maxWorkers=1`: `components/chart.test.tsx` 283/283 (2 new)
 session's own verification block covers those). Rows 1 and 3 (the trial-chat / trial-actions
 fixes from the same audit pass) are recorded in ADR 036's own session 110 addendum instead, since
 neither touches the embed surface this ADR covers.
+
+## Session 110 as-built addendum — the embed posts its own height, the snippet resizes to fit (worktree `s110-resize`)
+
+Row 2's own "other, larger half" (recorded above as a residual once the app-shell fix landed) is
+now closed for real: a default-height iframe (`height="680"`, `EMBED_DEFAULT_HEIGHT_PX`) is still
+correct for the common case, but any chart taller or shorter than that measured default (markers,
+a wrapped footer line, a small sidebar frame) now resizes the iframe to fit instead of clipping or
+leaving blank space. Built as two small, one-way-only halves, cheapest mechanism first — no new
+dependency, no schema/DB change:
+
+- **The embed side** (`web/app/embed/[token]/embed-resize.tsx`, a `'use client'` component mounted
+  by `page.tsx` in both its render branches — the chart view and the "no longer available" state):
+  on mount, on `load`, once `document.fonts.ready` resolves, and on every `ResizeObserver` callback
+  against `document.documentElement`, it posts `{ type: 'checkdecijfers:embed-height', height:
+  document.documentElement.scrollHeight }` to `window.parent` — only when `window.parent !==
+  window` (never fires for a direct, non-iframed visit to the embed URL), debounced to at most one
+  `postMessage` per animation frame. It relies on this same ADR's own earlier session-110 addendum
+  (the `isEmbedRoute`-conditional `min-h-dvh` body, commit `080dbd4`) for `scrollHeight` to reflect
+  the page's real content height in the first place — this component is the half that reads that
+  now-accurate number and gets it out to the host page.
+- **The snippet side** (`chart-embed-dialog.tsx`'s `buildEmbedCode`): the generated `<iframe>` gains
+  a `data-checkdecijfers-embed="<token>"` attribute (the token is already unique per embed, so it
+  doubles as the selector with no separate id generator needed), and one inline `<script>` (plain
+  ES5, ~9 lines, no dependencies — it runs verbatim on whatever third-party page it's pasted into,
+  with no build step of its own) is appended right after it. The script listens for `message`,
+  checks `event.data.type === 'checkdecijfers:embed-height'`, confirms `event.source` is that exact
+  iframe's `contentWindow` (so several embeds on one host page each resize only their own iframe,
+  never a sibling's), and sets `iframe.style.height = height + 'px'`. The `height="680"` attribute
+  stays exactly as before — the no-JS/blocked-script fallback for a host that can't run the script.
+- **One-way by construction (HARD LIMIT, both halves):** the embed never listens for inbound
+  messages, and the snippet never posts anything back — the only thing that ever crosses this
+  channel is a plain pixel number, never chart data or the token as a payload field (only as a DOM
+  selector attribute the host page already has, being the one who pasted the snippet). `postMessage`'s
+  `targetOrigin` is `'*'` on both ends because a public embed's host origin is unknown by design —
+  any site can paste the snippet, there is no allowlist to name — which is safe here specifically
+  because nothing sensitive ever rides in the payload.
+- **Copy:** the dialog's own explanation gained one sentence (`chart.embed.autoResizeExplain`,
+  nl + en, `web/lib/i18n/messages.ts`): "The chart resizes itself to its content; the height
+  attribute is the fallback when scripts are blocked."
+
+Verification (measured, this addendum only): `cd web && npm run typecheck` clean. Targeted suites,
+each run solo with `--maxWorkers=1`: `app/embed/[token]/embed-resize.test.tsx` 6/6 (new file — a
+jsdom `ResizeObserver` stub + a spied `postMessage`, plus a grep-shaped test pinning that no route
+outside `app/embed/[token]/` ever imports this component), `components/chart-embed-dialog.test.tsx`
+25/25 (1 new, pinning the snippet's shape: the `<script>`, the `data-checkdecijfers-embed`
+attribute, the `checkdecijfers:embed-height` type string, and the height fallback all present
+together), `app/embed/[token]/page.test.tsx` 38/38 (unchanged — `EmbedResize` renders `null` and
+is a no-op outside a real iframe, so the existing suite needed no new assertions to stay green with
+it mounted) — all green; no full suite or `next build` run in this worktree by design (the parent
+session's own verification block covers those).

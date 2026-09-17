@@ -264,6 +264,32 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.queryByText(/height="440"/)).toBeNull();
   });
 
+  // Session 110 (embed auto-resize): pins the SHAPE of the appended inline
+  // <script> — it must exist, must select the iframe by this embed's own
+  // token (data-checkdecijfers-embed, unique per embed by construction), and
+  // must listen for the SAME message type string EmbedResize itself posts
+  // (web/app/embed/[token]/embed-resize.tsx) — the two halves of this
+  // mechanism drift silently apart if either side's literal string changes
+  // without the other. Also pins the height="680" (EMBED_DEFAULT_HEIGHT_PX)
+  // fallback attribute staying on the <iframe> itself, and the one-sentence
+  // explanation of the mechanism in the dialog's own copy.
+  it('appends a resize <script> that targets this embed by its token and listens for the embed-height message, alongside the height fallback', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    const pre = await screen.findByText(/<iframe/);
+    const code = pre.textContent ?? '';
+
+    expect(code).toContain('<script>');
+    expect(code).toContain('data-checkdecijfers-embed="42.abc"');
+    expect(code).toContain('checkdecijfers:embed-height');
+    expect(code).toMatch(new RegExp(`height="${EMBED_DEFAULT_HEIGHT_PX}"`));
+
+    expect(
+      screen.getByText('The chart resizes itself to its content; the height attribute is the fallback when scripts are blocked.'),
+    ).toBeInTheDocument();
+  });
+
   it('changing the chart-type option to "As shown" adds a form= query param from currentForm', async () => {
     createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
     render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" currentForm="bar" />);

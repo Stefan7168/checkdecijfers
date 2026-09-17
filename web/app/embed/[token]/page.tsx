@@ -64,6 +64,7 @@ import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
 import { isChartForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
+import { EmbedResize } from './embed-resize.tsx';
 
 // Per-request: the token names a different audit row on every request, so
 // this can never be statically prerendered as one page — same reasoning
@@ -164,9 +165,12 @@ export default async function EmbedPage({
   // there is no "current user" to compare against.
   if (response.kind !== 'answer' || response.chart === null || isRedacted(response)) {
     return (
-      <main className="flex min-h-[200px] items-center justify-center p-4 text-sm text-muted-foreground">
-        {lang === 'en' ? 'This chart is no longer available.' : 'Deze grafiek is niet meer beschikbaar.'}
-      </main>
+      <>
+        <EmbedResize />
+        <main className="flex min-h-[200px] items-center justify-center p-4 text-sm text-muted-foreground">
+          {lang === 'en' ? 'This chart is no longer available.' : 'Deze grafiek is niet meer beschikbaar.'}
+        </main>
+      </>
     );
   }
 
@@ -333,23 +337,22 @@ export default async function EmbedPage({
   // lives (the `x-embed-theme` request header -> `<ThemeProvider
   // forcedTheme={...}>`, applied at the root, not per-route here).
   //
-  // Row 2 (session 110 UX audit pass 2) — recorded, not fixed here: this
-  // `<main>` deliberately carries no fixed height or overflow of its own
-  // (see this file's own test, "wraps the chart in a plain <main>..."), but
-  // the page still cannot GROW past the iframe's declared height, because
-  // web/app/layout.tsx wraps every route's children (this page included) in
-  // `<body className="flex h-dvh flex-col">` and a
-  // `flex-1 overflow-y-auto` div — a fixed-height ancestor this route did
-  // not opt out of. That ancestor is what makes `document.documentElement.
-  // scrollHeight` stay pinned to the iframe's own height regardless of how
-  // tall this page's content actually is, which is what stops a host page's
-  // auto-resize script from ever reading the true content height. Closing
-  // that fully needs an `isEmbedRoute`-conditional branch in layout.tsx
-  // (already reads `x-embed-route` for the SiteFooter toggle — the same
-  // condition would apply here) — outside this change's file scope; raising
-  // chart-embed-dialog.tsx's EMBED_DEFAULT_HEIGHT_PX to the real measured
-  // default content height (this row's other half) is what actually fixes
-  // the reported repro without it, for the common case of a chart whose
-  // content fits under that constant.
-  return <main className="p-2">{chartView}</main>;
+  // Row 2 (session 110 UX audit pass 2) — CLOSED. This `<main>` deliberately
+  // carries no fixed height or overflow of its own (see this file's own
+  // test, "wraps the chart in a plain <main>..."); web/app/layout.tsx's
+  // isEmbedRoute-conditional min-h-dvh body (commit 080dbd4) then lets this
+  // page's document actually GROW past the iframe's own declared height
+  // instead of clipping at it. `<EmbedResize />` (mounted below) is what
+  // reads the now-accurate `document.documentElement.scrollHeight` and
+  // posts it to the host page, so the snippet's own inline listener
+  // (chart-embed-dialog.tsx's buildEmbedCode) can resize the `<iframe>` to
+  // fit — closing the loop this comment used to describe as an open
+  // residual. `EMBED_DEFAULT_HEIGHT_PX` (chart-embed-dialog.tsx) remains the
+  // no-JS/blocked-script fallback for a host that can't run the snippet.
+  return (
+    <>
+      <EmbedResize />
+      <main className="p-2">{chartView}</main>
+    </>
+  );
 }
