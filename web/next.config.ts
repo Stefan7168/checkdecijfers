@@ -14,6 +14,15 @@ import type { NextConfig } from "next";
 const CA_PATH = fileURLToPath(new URL("../config/supabase-prod-ca-2021.pem", import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Session 110 performance pass: silences Turbopack's "Next.js inferred
+  // your workspace root" build warning. This repo IS a monorepo-style
+  // layout on purpose (root package-lock.json + web/package-lock.json,
+  // ADR 018's `web/backend -> ../src` symlink is the same pattern) —
+  // Turbopack was already inferring the repo root correctly on its own;
+  // this just states it explicitly instead of re-guessing on every build.
+  turbopack: {
+    root: fileURLToPath(new URL("..", import.meta.url)),
+  },
   env: {
     DATABASE_CA_CERT: readFileSync(CA_PATH, "utf8"),
   },

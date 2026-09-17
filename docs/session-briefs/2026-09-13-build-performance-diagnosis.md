@@ -345,3 +345,85 @@ does any test run DDL (`drop`/`alter`/`create table`), and does any test touch a
 all 40 converted files pass individually, but the full backend suite / CI has not been run against this
 branch. The owner's 3 sub-questions from Action 2 are unaffected by this action and remain open for the
 CI-sharding tier specifically.
+
+## Landing bundle (session 110)
+
+**Task:** investigate whether the landing's client JS (26 requests / 595 KB cold, largest chunk
+169 KB per the session 110 UX audit) has an easy, safe reduction — the audit's own suggestion was
+`next/dynamic`-loading interaction-only chart UI (style modal, story stage, download menu,
+embed dialog, notes editor) that a first-time reader never needs before clicking something.
+
+**Setup note (second worktree attempt):** the worktree's `node_modules`/`web/node_modules` were
+symlinks into the main checkout; Turbopack refuses to build across a symlink that points outside
+the project root. Fix: `rm` the two symlinks, then a real `npm ci` at the repo root and inside
+`web/` (a few minutes each, disk-only cost). `next build` (Turbopack) then runs clean.
+
+**Baseline measurement.** Turbopack's production build output in Next 16.3.4 does **not** print
+the classic webpack-era "Size / First Load JS" route table — `next build`'s route list is names
+only. First Load JS for `/` was instead computed by reading
+`.next/server/app/page_client-reference-manifest.js`'s `clientModules` chunk list for the root
+route and summing those chunk files' sizes on disk:
+
+- 8 chunks, **1,348,403 bytes (≈1.32 MB) raw/uncompressed** total for `/`'s first load.
+- Largest single chunk: `2vra43ef2jbr1.js`, **599,116 bytes**. (This is the raw, uncompressed
+  local-build size; the audit's "169 KB" figure was a production, gzipped-over-the-wire number —
+  the two are consistent once you account for gzip, not a discrepancy.)
+- Confirmed via string search inside that chunk: it contains **Recharts** (`recharts-*` class
+  names, `ResponsiveContainer`, `LineChart`, `AreaChart` all present) — expected, since `ChartView`
+  (`components/chart.tsx`) must stay a plain SSR'd import for the gallery's first paint/SEO, per
+  the audit's own framing.
+- Confirmed jsPDF/svg2pdf.js are **already** excluded from this chunk (session 110's own earlier
+  fix): the only match for `jsPDF`/`svg2pdf` in the chunk is the destructuring site of a
+  `Promise.all([e.A(415512), e.A(598590)])` dynamic-chunk call inside the download-export function
+  — the actual library code lives in separate, on-demand chunks, not here. Nothing to fix there.
+- Confirmed the 3D demo (`/bevolking-3d-demo`, `three`/`@react-three`) does **not** leak into the
+  landing's first load: zero matches for `three`/`@react-three` across any of the 8 root-page
+  chunks; it's already an isolated route via its own `next/dynamic({ssr:false})` loader
+  (`app/bevolking-3d-demo/map3d-loader.tsx`).
+
+**What was tried, and reverted.** `components/chart.tsx` (`'use client'`, the file `ChartView`
+lives in) statically imports five interaction-only children directly into its own module graph —
+`ChartEditModal`, `ChartConfigPanel` (1,882 lines), `ChartStoryPanel`/`ChartStoryStage` (325 +
+736 lines), `ChartNotes` — each mounted unconditionally (visibility controlled by an internal
+`open` prop) and each invisible on first paint by default. In principle this is exactly the
+`next/dynamic({ssr:false})` case the codebase already has one precedent for
+(`map3d-loader.tsx`). Two of the five (`ChartConfigPanel`/`ChartConfigTrigger`,
+`ChartStoryPanel`/`ChartStoryTrigger`) share a source file with a small, always-visible trigger
+button, so a clean split first needed pulling each trigger into its own tiny file
+(`chart-config-trigger.tsx`, `chart-story-trigger.tsx`) re-exported from the original file for
+test back-compat, then converting the five heavy components in `chart.tsx` to
+`dynamic(() => import(...).then(m => m.X), { ssr: false })`.
+
+`npm run typecheck` was clean and the five components' own isolated test files
+(`chart-config-panel.test.tsx`, `chart-edit-modal.test.tsx`, `chart-story.test.tsx`,
+`chart-story-stage.test.tsx`, `chart-notes.test.tsx` — 154 tests) all passed unchanged. But
+`components/chart.test.tsx` (5,375 lines, the integration suite that exercises all of this
+*through* `ChartView`) came back **56 failed / 225 passed of 281** — every failure a
+`fireEvent.click(trigger); expect(screen.getByRole(...)).toBeInTheDocument()` pair with no
+`await`/`findBy` in between. The dynamically-imported component resolves its `import()` on a
+later microtask than the synchronous assertion that follows the click, so the dialog/region
+genuinely isn't in the DOM yet at assertion time — a real timing break, not a flake. Rewriting
+that scale of the test file (dozens of synchronous assertions spread across style/story/notes
+flows) to `await screen.findByRole(...)` is a large, separate piece of work, not a "cheap,
+preserves-behaviour" fix, and well outside "run the test files of the components you touch." Per
+this task's own instruction — revert rather than force through a change that isn't a clean win —
+the whole change (both new trigger files, the `chart.tsx`/`chart-config-panel.tsx`/
+`chart-story.tsx` edits) was reverted with `git checkout` before committing anything. **First
+Load JS for `/` is therefore unchanged: 1,348,403 bytes before and after.** This is a real,
+properly-scoped follow-up (its own work package, budgeted for updating `chart.test.tsx`'s
+assertions to `findBy`/`waitFor` alongside the `next/dynamic` split), not something to redo as a
+"cheap" pass.
+
+**What was kept: `turbopack.root`.** `web/next.config.ts` sets `turbopack.root` to the repo root
+(`fileURLToPath(new URL("..", import.meta.url))`), silencing Turbopack's "Next.js inferred your
+workspace root" warning — this repo's monorepo-style layout (root `package-lock.json` +
+`web/package-lock.json`, the same shape as ADR 018's `web/backend -> ../src` symlink) was already
+being inferred correctly; this just states it instead of re-guessing on every build. Zero
+behaviour change: rebuilding after the config edit reproduced the exact same 8 chunks and the
+exact same 1,348,403-byte total, with the warning gone. `npm run typecheck` and
+`next.config.test.ts` (6 tests, unaffected — it only asserts on `nextConfig.headers`) both pass.
+
+**Net result:** no landing bundle-size win this pass (the one safe, real lever — a config
+warning fix — has no bytes attached; the byte-bearing lever needs the `chart.test.tsx` rewrite
+first). Commit: `perf(web): silence Turbopack workspace-root warning` (config-only, no code
+behaviour change) on branch `s110/perf2`. Not merged.
