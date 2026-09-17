@@ -3797,7 +3797,7 @@ export function ChartView({
         * this route: there is no Embed button here (a page already reached
         * via a signed embed token never re-offers its own embed dialog). */}
       {embedMode && !inStage && alternates.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground" data-slot="chart-controls-embed">
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground" data-slot="chart-controls-embed">
           <label htmlFor={`${domId}-reading`}>{t(chartLang, 'chart.reading.label')}</label>
           <select
             id={`${domId}-reading`}
@@ -3806,7 +3806,7 @@ export function ChartView({
             onChange={(e) =>
               dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
             }
-            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
+            className="w-full min-w-0 max-w-full rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
           >
             <option value="primary">{t(chartLang, 'chart.reading.primary')}</option>
             {/* Same curated-label digit exemption as the non-embed dropdown
