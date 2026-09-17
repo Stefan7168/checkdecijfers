@@ -1,3 +1,5 @@
+> **Historical — superseded by [2026-09-17-session-111-kickoff.md](2026-09-17-session-111-kickoff.md) (session 110 ran and built most of what this brief lists as open).**
+
 # Session 110 kickoff — checkdecijfers.nl
 
 Read `CLAUDE.md` first, then `docs/STATUS.md`'s top block (authoritative over anything below it). Verify

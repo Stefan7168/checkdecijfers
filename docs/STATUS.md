@@ -18,38 +18,39 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 109 — verify against `git log`/`gh run
-list` before trusting this, since more may have landed after it was written).** **Session 109 had NO
-owner-queued priority; the owner's one instruction was "spawn a bunch of sub-agents … do not ask me
-questions".** Six independent [open-questions.md](open-questions.md) rows were dispatched to six PARALLEL
-subagents (own worktrees; cheap tier for mechanical work, a higher tier for the one shared live-path
-file), then merged by the parent, verified ONCE serially, and pushed as one batch — CI green incl. deploy (`719220d`, run `35187124626`):
+**▶ NEXT SESSION STARTS HERE (written 2026-09-17, session 110 — verify against `git log`/`gh run
+list` before trusting this, since more may have landed after it was written).** **Session 110 was
+fully autonomous (owner away: "work for hours, use subagents, make the web app finished, do not ask
+me questions").** Three waves, 19 subagents in their own worktrees, **20 branches merged into `main`
+in ONE verified batch** (`2bdbb4c`, 169 files, CI run `35196289551`). Full account:
+[status-archive.md](status-archive.md) session 110.
 
-- **[#264](open-questions.md) Eurostat DOI — BUILT** (`src/eurostat-adapter/doi.ts`; construct
-  `10.2908/<CODE>`, write only on a DataCite `findable` check; CBS never touched). **Owner step pending:**
-  `npm run backfill:eurostat-doi -- --apply` for the live `eurostat:tipsbd30` row (RUNBOOK § DOI backfill).
-- **[#251](open-questions.md) per-cell status — BUILT** (optional `CbsObservationRow.status`; Eurostat
-  unflagged cells now render definitive, every flag provisional; CBS byte-identical, pinned). WP30c E2 is
-  unblocked on the provisional-marking axis.
-- **[#246](open-questions.md) Pro-bucket cost caption — BUILT** (display-only; unreachable until the Pro flag).
-- **[#252](open-questions.md) live-chat proof "Opgehaalde URL's" — BUILT** (server-side, after settlement).
-- **[#23](open-questions.md) ingestion alerts — BUILT** for batch failures + quarantines (one admin email per
-  run, fail-open); missed-sync/health alerting still open.
-- **Research:** [#253](open-questions.md) region-set query still absent (row now has a build scope);
-  [#254](open-questions.md)(a) household-income alternates verified eligible for `period_change`.
+- **[#253](open-questions.md) region-set query — BUILT, tasks 1–8** ([ADR 054](decisions/054-region-set-query.md),
+  [plan](superpowers/plans/2026-09-17-region-set-query.md)): "alle provincies / gemeenten in Utrecht"
+  → one cell per region, ranking claimed ONLY over a complete set (RS1), sorted bars, template-only
+  answer, R8 reconstruction. **Reachable only via a hand-authored intent until Task 9** (parser
+  exposure = owner-supervised 103-fixture re-record, [#267](open-questions.md)).
+- **UX audit + fixes** — [session-briefs/2026-09-17-session-110-ux-audit.md](session-briefs/2026-09-17-session-110-ux-audit.md):
+  25 findings; 17 mechanical + 4 design-decided rows FIXED (P1: phone sidebar overlay; a malformed
+  auth cookie no longer 500s every route). Left for the owner: row 22 (trust pages' "Draft" banner).
+- **Chart export** — PDF (vector) + "PNG, chart only (transparent)" ([ADR 053](decisions/053-chart-export-formats.md)); defaults byte-identical.
+- **[#23](open-questions.md) alerts COMPLETE** — missed-sync (cadence from `period_semantics`) + health-probe, both on the daily cron.
+- **Smaller:** [#254](open-questions.md)(a) %-change on income alternates; [#262](open-questions.md)(c)/[#229](open-questions.md)
+  embed toggle + live embeds rebuild alternates; [#216](open-questions.md) live-scorer B20 data-conditional;
+  [#134](open-questions.md)(c) refusal offer chip; 16–40-series comparisons open on hbar;
+  [#245](open-questions.md) Action 3 test-DB reset helper (795 s → 200 s over 40 files).
 
-**Measured:** backend 168 files / 2543 tests, web 117 / 1859, benchmark 14/14 + 6/6 + 0 fabricated, real
-`next build`, `/code-review` LOW 0 findings, root+web typecheck clean. Process: "no backgrounding" stated
-up front in every brief → zero subagent stalls (contrast session 108); see
-[lessons-learned.md](lessons-learned.md) session 109.
+**Measured:** backend 180 files / 2666 tests, web 117 / 1933, benchmark 14/14 + 6/6 + 0 fabricated,
+real `next build`, `/code-review` LOW 0 findings, root + web typecheck clean.
 
-**No owner-queued priority remains.** Standing candidates: the `tipsbd30` DOI backfill (owner-run, 1 min);
-[#253](open-questions.md)'s region-set query (now concretely scoped, the real prerequisite for maps);
-[#254](open-questions.md)(a) extend `period_change` to the income alternates (needs a per-alternate
-marker) and (b) the PPI fixture re-record (owner-supervised spend); WP30c E2 (Eurostat beyond the internal
-explorer; #250(a) wording sign-off still open); [#260](open-questions.md) Supademo polish (deferred, needs
-brainstorming). Full account: [status-archive.md](status-archive.md). Session 110 kickoff:
-[session-briefs/2026-09-17-session-110-kickoff.md](session-briefs/2026-09-17-session-110-kickoff.md).
+**Owner steps pending (in order):** `npm run registry:apply` (#254(a) marker lives in the live
+`canonical_measures.alternates`); `npm run backfill:eurostat-doi -- --apply` (#264, session 109);
+`npm run benchmark:run:live` (confirms #216, real spend); region-set Task 9 (#267, real spend); audit
+row 22 sign-off. **Standing candidates:** a second UX-audit pass over the surfaces the first could not
+reach (chart notes, headline, story stage, small multiples, trial answering, embed page, Eurostat
+explorer); landing bundle (169 KB chunk) lazy-load; WP30c E2 (#250(a) wording sign-off first);
+[#260](open-questions.md) Supademo polish (needs brainstorming). Session 111 kickoff:
+[session-briefs/2026-09-17-session-111-kickoff.md](session-briefs/2026-09-17-session-111-kickoff.md).
 
 ## Phase 0 checklist
 

@@ -914,6 +914,30 @@ files / 2500 tests, web 117 files / 1854 tests, `benchmark:run` + `benchmark:sco
 
 *When a WP completes: tick it in [STATUS.md](STATUS.md), record measured results, and — if a design decision here changed — update this file so it stays the plan of record.*
 
+## Session 110 (2026-09-17) — fully autonomous, three waves of subagents, 20 branches merged to `main` in one verified batch
+
+**Owner instruction:** "work for hours autonomously, use subagents, make the web app finished, do not ask me
+questions." The parent session read every open row, dispatched 19 subagents across three waves (own
+worktrees; cheap tier for mechanical work, higher tier for design, invariant-heavy query work and the UX
+audit), merged every branch locally, ran the verification block ONCE, then pushed (`2bdbb4c`, CI run
+`35196289551`). **Measured:** backend 180/2666, web 117/1933, benchmark 14/14 + 6/6 + 0 fabricated, real
+build, `/code-review` LOW 0 findings.
+
+**Landed (see [status-archive.md](status-archive.md) session 110 for the per-item account):** the WP253
+region-set query tasks 1–8 (entry above; Task 9 owner-supervised); a Playwright UX audit
+([session-briefs/2026-09-17-session-110-ux-audit.md](session-briefs/2026-09-17-session-110-ux-audit.md)) with
+21 of its 25 findings fixed; chart export PDF + transparent PNG ([ADR 053](decisions/053-chart-export-formats.md));
+#23 missed-sync + health-probe alerts (all four triggers built); #254(a), #262(c)/#229, live-embed
+alternates, #216, #134(c), the 16–40-series hbar default, and #245 Action 3 (test-DB reset helper, 4x).
+
+**Process (reusable):** worktrees created BY THE PARENT from local `main` (`git worktree add … -b s110/x main`
++ `node_modules` symlinks) so later waves build on earlier merges; briefs name the FILES each agent may not
+touch; "no backgrounding" stated up front; agents report what they saw and did not do — each such note became
+a follow-up agent and several found real bugs. Lessons: [lessons-learned.md](lessons-learned.md) session 110.
+
+**Next:** owner steps (registry:apply, DOI backfill, live benchmark, Task 9, audit row 22); a second UX-audit
+pass over unreached surfaces; landing bundle lazy-load; WP30c E2 after #250(a).
+
 ## Session 109 (2026-09-17) — six parallel subagents on standing open-questions items, ALL MERGED to `main` in one verified batch
 
 **Owner instruction (verbatim intent): "spawn a bunch of sub-agents … do not ask me questions, do whatever
@@ -942,7 +966,7 @@ rows and ADRs named here; the measured numbers are in [STATUS.md](STATUS.md)/[st
   proof panel now shows "Opgehaalde URL's" like replay/history do (ADR 048 D7(b) note).
 - **[#23](open-questions.md) ingestion alerts — ✅ BUILT (batch failures + quarantines).** At most one Resend
   admin email per `ingest sync` run or per terminally-failed onboarding-cron row, reusing `sendAdminAlertEmail`;
-  fail-open, silent when env is unset. Missed-sync and `/api/health` alerting remain open (RUNBOOK § Ingestion alerts).
+  fail-open, silent when env is unset. Missed-sync and `/api/health` alerting remain open (RUNBOOK § Ingestion alerts). **→ both BUILT session 110 (see the session-110 entry above).**
 - **Research (docs-only): [#253](open-questions.md)** — verified the region-set query capability still does not
   exist; the row now carries a concrete minimal build scope. **[#254](open-questions.md)(a)** — all three
   household-income alternate concepts verified eligible for `period_change` from the committed 83932NED fixtures;
