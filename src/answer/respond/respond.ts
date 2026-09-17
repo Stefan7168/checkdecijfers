@@ -44,7 +44,7 @@ import {
 } from './refusals.ts';
 import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
-import { buildRescueOffer } from './rescue.ts';
+import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { checkStaleness } from './staleness.ts';
 import { buildAnswerChips, buildRefusalSuggestions } from './suggestions.ts';
 import type {
@@ -611,22 +611,44 @@ async function respondToParseOutcome(
         rescue = null;
       }
     }
+    // #134(c) (ADR 029): the forecast/causal refusal's own "I can look up X for
+    // period Y" offer — already computed by refusals.ts as `built.offerChip` —
+    // turned into ONE takeable chip through the SAME servability dry-run gate
+    // every other #134 chip uses. Tried only when the rescue chip above did NOT
+    // already fire: a rescue is the more specific "you actually meant an
+    // already-published period" correction, and stacking a second, more
+    // generic chip pointing at a similar kind of alternative would just
+    // clutter one carrier for no benefit. Causal never produces a rescue chip,
+    // so this is the only chip a causal refusal can ever carry. FAIL-OPEN
+    // belt, same as the rescue above: a chip hiccup must never turn an honest
+    // refusal into an internal error.
+    let offerChip: Awaited<ReturnType<typeof buildOfferChip>> = null;
+    if (options.clickOptionsEnabled === true && rescue === null) {
+      try {
+        offerChip = await buildOfferChip(built.offerChip, (intent) =>
+          echoServability(db, intent, { answerFirstEnabled: options.answerFirstEnabled === true }),
+        );
+      } catch {
+        offerChip = null;
+      }
+    }
+    const chip = rescue ?? offerChip;
     return toRefusalResponse({
       question,
       built,
       parse,
       queryRefusal: null,
-      ...(rescue
+      ...(chip
         ? {
-            suggestions: [rescue.label],
+            suggestions: [chip.label],
             pending: {
               version: RESPONSE_SCHEMA_VERSION,
               question,
               referenceDate: options.referenceDate,
               axes: ['measure'],
               questionNl: built.text,
-              options: [rescue.label],
-              clickOptions: [rescue.option],
+              options: [chip.label],
+              clickOptions: [chip.option],
               rescueOnly: true,
             },
           }

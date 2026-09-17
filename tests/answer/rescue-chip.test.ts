@@ -23,6 +23,7 @@ import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import { respondToQuestion, respondToClarificationReply } from '../../src/answer/respond/index.ts';
 import { absolutePeriodInText } from '../../src/answer/respond/rescue.ts';
+import { freshestForCanonical } from '../../src/query/index.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
 
@@ -138,26 +139,49 @@ describe('the forecast misfire', () => {
     expect(taken.answer.source).toBe('template');
   });
 
-  it('offers nothing when the period is not one we can serve', async () => {
-    // 1850 is loaded nowhere: the dry-run fails, so no chip is offered and the
-    // refusal is byte-identical to today's.
+  it('offers the general #134(c) offer chip instead, when the misfire-specific period is not one we can serve', async () => {
+    // 1850 is loaded nowhere: the misfire-rescue's OWN dry-run (for 1850)
+    // fails, so no chip points at 1850 — but nearestCanonicalKeys still
+    // resolves the measure, so #134(c)'s general offer chip (the SAME
+    // "freshest available period" alternative buildForecastRefusal's prose
+    // already names) fires instead, exactly as it does for any other forecast
+    // refusal naming this measure.
+    const freshest = await freshestForCanonical(db, 'cpi_yearly_inflation');
     const response = await ask(
       'Wat was de inflatie in 1850?',
       misfire('forecast_request', ['cpi_yearly_inflation']),
       true,
     );
     if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.suggestions).toHaveLength(1);
+    expect(response.suggestions[0]).not.toContain('1850');
+    const clickOptions = response.pending?.clickOptions ?? [];
+    expect(clickOptions).toHaveLength(1);
+    expect(clickOptions[0]!.id).toBe('offer-1');
+    expect(clickOptions[0]!.intent.period).toEqual({ kind: 'codes', codes: [freshest!.periodCode] });
+  });
+
+  it('offers nothing at all when there is no nearestCanonicalKeys match', async () => {
+    const response = await ask(QUESTION, misfire('forecast_request', []), true);
+    if (response.kind !== 'refusal') throw new Error('unreachable');
     expect(response.suggestions).toEqual([]);
     expect(response.pending).toBeUndefined();
   });
 
-  it('offers nothing when the topic is not ONE strong match', async () => {
-    for (const nearest of [[], ['cpi_yearly_inflation', 'population_on_1_january']]) {
-      const response = await ask(QUESTION, misfire('forecast_request', nearest), true);
-      if (response.kind !== 'refusal') throw new Error('unreachable');
-      expect(response.suggestions).toEqual([]);
-      expect(response.pending).toBeUndefined();
-    }
+  it('the misfire-specific rescue does not fire on an ambiguous match (2+ nearestCanonicalKeys), but #134(c)\'s general offer chip does — nearestCanonicalKeys[0], the same key the prose offer already names', async () => {
+    const freshest = await freshestForCanonical(db, 'cpi_yearly_inflation');
+    const response = await ask(
+      QUESTION,
+      misfire('forecast_request', ['cpi_yearly_inflation', 'population_on_1_january']),
+      true,
+    );
+    if (response.kind !== 'refusal') throw new Error('unreachable');
+    expect(response.suggestions).toHaveLength(1);
+    const clickOptions = response.pending?.clickOptions ?? [];
+    expect(clickOptions).toHaveLength(1);
+    expect(clickOptions[0]!.id).toBe('offer-1');
+    expect(clickOptions[0]!.intent.target).toEqual({ kind: 'canonical', key: 'cpi_yearly_inflation' });
+    expect(clickOptions[0]!.intent.period).toEqual({ kind: 'codes', codes: [freshest!.periodCode] });
   });
 });
 

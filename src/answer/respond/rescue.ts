@@ -79,7 +79,11 @@ export interface RescueDeps {
   freshest: (canonicalKey: string) => Promise<{ periodCode: string } | null>;
 }
 
-function intentFor(key: string, periodCode: string): StructuredIntent {
+/** Exported: #134(c)'s forecast/causal offer chip (below) builds the exact
+ * same shape — a canonical key + one period code, no regions (default
+ * coordinates), derivation 'none' — so both mechanisms share one source of
+ * truth for it rather than a second hand-copy drifting from this one. */
+export function intentFor(key: string, periodCode: string): StructuredIntent {
   return {
     schemaVersion: INTENT_SCHEMA_VERSION,
     target: { kind: 'canonical', key },
@@ -136,6 +140,45 @@ export async function buildRescueOffer(
       intent,
       // A rescue names an explicit, already-published period — it makes no
       // "what is it now" claim, so the staleness rule must not treat it as one.
+      impliedRecency: false,
+    },
+  };
+}
+
+/** #134(c) (ADR 029) — the forecast/causal refusal's own honest "I can look up
+ * X for period Y" offer, turned into ONE takeable chip: the same shape and the
+ * same servability dry-run gate as the misfire rescue above, so respond.ts's
+ * parse-refusal site can carry either (or neither) on one chip carrier.
+ *
+ * Unlike the rescue above, this is NOT correcting a misfire — the refusal
+ * stays exactly as honest as it was, and the candidate is exactly the
+ * concrete alternative refusals.ts's buildForecastRefusal/buildCausalRefusal
+ * already computed (nearestCanonicalKeys[0], its own freshest available
+ * period, default coordinates). `candidate` is null whenever that builder
+ * found nothing to offer (no definitionLabel match, or no freshest period) —
+ * this function then returns null too, without ever calling `servability`. */
+export interface OfferChipCandidate {
+  canonicalKey: string;
+  periodCode: string;
+  label: string;
+}
+
+export async function buildOfferChip(
+  candidate: OfferChipCandidate | null | undefined,
+  servability: (intent: StructuredIntent) => Promise<EchoServability>,
+): Promise<RescueOffer | null> {
+  if (!candidate) return null;
+  const intent = intentFor(candidate.canonicalKey, candidate.periodCode);
+  const verdict = await servability(intent);
+  if (!verdict.servable) return null;
+  return {
+    label: candidate.label,
+    option: {
+      id: 'offer-1',
+      label: candidate.label,
+      intent,
+      // The chip names an explicit, already-published (freshest) period — no
+      // "what is it now" claim, so staleness must not treat a take as one.
       impliedRecency: false,
     },
   };
