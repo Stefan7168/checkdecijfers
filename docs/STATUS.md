@@ -78,8 +78,11 @@ CI: green on every code push except two (`35239287984`, `35247423023` — a stal
   [#245](open-questions.md) Action 3 test-DB reset helper (795 s → 200 s over 40 files).
 
 **Measured (final tree, after wave 14):** backend 188 files / 2769 tests, web 121 / 2108 (+ 7 Playwright e2e), benchmark
-14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings (both batches), root + web
-typecheck clean. First batch (`2bdbb4c`, run `35196289551`): backend 180/2666, web 117/1933.
+14/14 + 6/6 + 0 fabricated, real `next build`, `/code-review` LOW 0 findings (every batch), root + web
+typecheck clean; **live `audit:verify` (read-only, ids 1–900 at wrap-up): every existing row
+reconstructs — 271 clean, 2 pinned known divergences, 36 redacted rows verified, 0 problems** — so
+the session's reconstructor changes (regionSetLine/regionSeriesLine, the subReason pairing, the
+date-scoped region-series tolerance) hold on production data. First batch (`2bdbb4c`, run `35196289551`): backend 180/2666, web 117/1933.
 
 **Owner steps pending (in order):** `npm run registry:apply` (#254(a) marker lives in the live
 `canonical_measures.alternates`); `npm run backfill:eurostat-doi -- --apply` (#264, session 109);

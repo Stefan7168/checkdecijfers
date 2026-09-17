@@ -588,7 +588,7 @@ script, per #133). **(b) ✅ DONE** — grants/RLS on `answer_feedback` LIVE-VER
 **(c)** the owner's live 👍/👎 click test — ✅ DONE (session 39, 2026-07-12, owner in-chat). Baseline verified read-only at 0 rows (sessions 38+39); the owner then asked real questions on production and clicked feedback on two real answers. Read-only verification (`select audit_answer_id, verdict, feedback_text from answer_feedback order by created_at asc`) confirmed exactly the expected shape: row 1 (audit_answer_id 242) verdict='down' with feedback_text set ("Dit is een test. Ik heb aangeklikt dat deze antwoord 'duimpje omlaag' is."); row 2 (audit_answer_id 243) verdict='up' with feedback_text null. **WP128 is now fully complete — no remaining steps.**
 
 **Script usage** (kept for the next time a range needs re-checking):
-`node --env-file=.env scripts/verify-audit-rows.ts <fromId> <toId>` (NOT `npm run audit:verify --`
+`node --env-file=.env scripts/verify-audit-rows.ts <fromId> <toId>` — it queries one id at a time, so keep `<toId>` near the table's last row (a 1–100000 range ran for hours in session 110) (NOT `npm run audit:verify --`
 — the `--` passthrough breaks direct `node` invocation; use `npm run audit:verify -- <from> <to>`
 OR call the script directly without `--`).
 
