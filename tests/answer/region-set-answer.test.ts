@@ -27,7 +27,7 @@
 // mutates this suite's own private PGlite (tests/helpers/fixture-snapshot.ts
 // gives every createIngestedDb caller its own).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { runQuery } from '../../src/query/index.ts';
+import { runQuery, REGION_SERIES_MAX_REGIONS } from '../../src/query/index.ts';
 import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -314,8 +314,16 @@ describe('row 13 (session 110, ADR 054 addendum + ADR 055) — several regions A
     // ...and it must NOT go on claiming the shape itself is unsupported, which
     // is what the pre-ADR-055 wording said and is now simply false.
     expect(built.refusal.text).not.toMatch(/nog niet/i);
-    expect(built.refusal.text).toMatch(/kan ik voor een paar met name genoemde regio's samen laten zien/i);
-    // A refusal carries no data value (open-questions #37 policy).
+    // Row 9 (session 110 UX audit pass 4, #269 context): the refusal now
+    // NAMES the cap, in Dutch words (never a digit — see the assertion
+    // below). This guard fails loudly if REGION_SERIES_MAX_REGIONS ever
+    // changes without updating the hardcoded 'zes' here AND refusals.ts's
+    // own SMALL_CARDINAL_NL map (which itself throws on an unmapped cap).
+    expect(REGION_SERIES_MAX_REGIONS).toBe(6);
+    expect(built.refusal.text).toMatch(/kan ik voor maximaal zes met name genoemde regio's samen laten zien/i);
+    expect(built.refusal.text).toMatch(/vraag tot zes regio's met naam over die periode/i);
+    // A refusal carries no data value (open-questions #37 policy) — true even
+    // though the cap is now named, since it is spelled out as a WORD.
     expect(built.refusal.text).not.toMatch(/\d/);
     expect(built.refusal.text.trim().endsWith('?')).toBe(false);
   });

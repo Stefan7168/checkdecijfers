@@ -31,6 +31,9 @@ import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import { respondToIntent, respondToClarificationReply } from '../../src/answer/respond/index.ts';
 import { periodCodeToNl } from '../../src/answer/respond/period-nl.ts';
+// Row 5 (session 110 UX audit pass 4, #269): the pure re-labelling step
+// itself, unit-tested DB-free below (respond.ts is the only real caller).
+import { relabelMultiRegionMultiPeriodOfferChip } from '../../src/answer/respond/refusals.ts';
 import type { StructuredIntent } from '../../src/query/index.ts';
 import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
@@ -180,7 +183,7 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
     expect(response.text.trim().endsWith('?')).toBe(false);
   });
 
-  it('carries exactly one takeable chip: the FIRST named region, the full period range, as a trend', async () => {
+  it('carries exactly one takeable chip: the FIRST named region, the full period range, as a trend, the region named by its REGISTRY LABEL (row 5, session 110 pass 4, #269) — never the bare CBS code', async () => {
     const response = await respond(
       'hoe ontwikkelde de bevolking van zeven provincies zich van 2020 tot 2024',
       multiPeriodRegionsIntent(OVER_CAP_REGIONS),
@@ -188,10 +191,16 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
     );
     if (response.kind !== 'refusal') throw new Error(`expected a refusal, got ${response.kind}`);
     expect(response.suggestions).toHaveLength(1);
-    expect(response.suggestions[0]).toMatch(/^Hoe ontwikkelde .+ in PV20 zich van .+ tot en met .+\?$/);
+    // PV20's registry label is 'Groningen (PV)' (tests/fixtures/cbs/03759ned/
+    // codes-RegioS.json); baseLabel strips the '(PV)' qualifier, same as the
+    // #138 retry chip already does for buildRefusalSuggestions.
+    expect(response.suggestions[0]).toMatch(/^Hoe ontwikkelde .+ in Groningen zich van .+ tot en met .+\?$/);
+    expect(response.suggestions[0]).not.toContain('PV20');
     const clickOptions = response.pending?.clickOptions ?? [];
     expect(clickOptions).toHaveLength(1);
     expect(clickOptions[0]!.intent.target).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    // The TAKEABLE intent still carries the real CBS code — only the
+    // DISPLAY label changed; the query layer needs the code, never the name.
     expect(clickOptions[0]!.intent.regions).toEqual(['PV20']);
     expect(clickOptions[0]!.intent.period).toEqual({ kind: 'range', from: '2020JJ00', to: '2024JJ00' });
     expect(clickOptions[0]!.intent.derivation).toBe('series');
@@ -271,5 +280,40 @@ describe('row 13 — multi_region_multi_period refusal and its offer chip', () =
     expect(flagOn.text).toBe(flagOff.text);
     expect(flagOn.reason).toBe(flagOff.reason);
     expect(flagOn.offer).toBe(flagOff.offer);
+  });
+});
+
+// Row 5 (session 110 UX audit pass 4, #269): `relabelMultiRegionMultiPeriodOfferChip`
+// (refusals.ts) is the pure function respond.ts calls once it has resolved a
+// registry LABEL via `regionTermsFor` (context/build.ts) — unit-tested here
+// DB-free, since the DB-aware wiring itself is already covered by the
+// 'the region named by its REGISTRY LABEL' case above.
+describe('relabelMultiRegionMultiPeriodOfferChip (row 5, #269) — pure re-labelling step', () => {
+  const baseCandidate = {
+    intent: {
+      schemaVersion: 1 as const,
+      target: { kind: 'canonical' as const, key: 'population_on_1_january' },
+      regions: ['PV20'],
+      period: { kind: 'range' as const, from: '2020JJ00', to: '2024JJ00' },
+      derivation: 'series' as const,
+    },
+    label: 'Hoe ontwikkelde bevolking op 1 januari in PV20 zich van 2020 tot en met 2024?',
+  };
+
+  it('swaps the bare code for the resolved label, keeping the rest of the sentence and the intent untouched', () => {
+    const relabelled = relabelMultiRegionMultiPeriodOfferChip(baseCandidate, 'Groningen');
+    expect(relabelled.label).toBe(
+      'Hoe ontwikkelde bevolking op 1 januari in Groningen zich van 2020 tot en met 2024?',
+    );
+    expect(relabelled.label).not.toContain('PV20');
+    expect(relabelled.intent).toBe(baseCandidate.intent);
+  });
+
+  it('falls back to the candidate UNCHANGED when the intent no longer has the range-period/canonical-target shape this chip requires', () => {
+    const codesCandidate = {
+      intent: { ...baseCandidate.intent, period: { kind: 'codes' as const, codes: ['2020JJ00'] } },
+      label: baseCandidate.label,
+    };
+    expect(relabelMultiRegionMultiPeriodOfferChip(codesCandidate, 'Groningen')).toBe(codesCandidate);
   });
 });

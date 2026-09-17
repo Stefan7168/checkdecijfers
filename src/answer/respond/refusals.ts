@@ -9,6 +9,7 @@ import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import { resolveSource } from '../../sources/registry.ts';
 import {
   freshestForCanonical,
+  REGION_SERIES_MAX_REGIONS,
   type FreshnessInfo,
   type QueryRefusal,
   type StructuredIntent,
@@ -64,6 +65,38 @@ export interface BuiltRefusal {
 }
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
+
+/** Row 9 (session 110 UX audit pass 4): a small Dutch cardinal-number-word
+ * table, so a refusal can NAME a compile-time cap (e.g.
+ * `REGION_SERIES_MAX_REGIONS`) without ever putting a digit in refusal
+ * prose — refusal text carries no digits at all (#37, pinned by test). The
+ * range is deliberately narrow: every cap this module names today is small
+ * and fixed at build time (never user input), so an unmapped value THROWS
+ * rather than silently falling back to the digit or guessing a word — a
+ * loud build-time failure the moment a cap constant changes beats a
+ * refusal that quietly starts lying about the limit. */
+const SMALL_CARDINAL_NL: Readonly<Record<number, string>> = {
+  1: 'één',
+  2: 'twee',
+  3: 'drie',
+  4: 'vier',
+  5: 'vijf',
+  6: 'zes',
+  7: 'zeven',
+  8: 'acht',
+  9: 'negen',
+  10: 'tien',
+  11: 'elf',
+  12: 'twaalf',
+};
+
+function cardinalNl(n: number): string {
+  const word = SMALL_CARDINAL_NL[n];
+  if (word === undefined) {
+    throw new Error(`internal: cardinalNl has no Dutch word mapped for ${n} — extend SMALL_CARDINAL_NL`);
+  }
+  return word;
+}
 
 /** R11: state the source's status inline whenever a freshest-available
  * period is offered — the wording comes from the SOURCE REGISTRY (WP30a:
@@ -555,13 +588,22 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
  *
  * The offer is unchanged in kind: name a few regions over the period, or ask
  * the whole group for one period — and the chip below still takes the first
- * named region over the full range. */
+ * named region over the full range.
+ *
+ * Row 9 (session 110 UX audit pass 4): the old wording never stated the CAP
+ * itself — a journalist asking for seven regions was never told six is the
+ * limit. Named below via `cardinalNl(REGION_SERIES_MAX_REGIONS)`, a Dutch
+ * WORD rather than the digit: refusal text carries no digits at all (#37,
+ * pinned by test — `outcome.refusal.text).not.toMatch(/\d/)`), so the cap
+ * must be spelled out, and spelled out FROM the constant so the two can
+ * never silently drift apart (a bare `'zes'` literal beside the `6` would be
+ * exactly that drift risk). */
 function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal {
+  const cap = cardinalNl(REGION_SERIES_MAX_REGIONS);
   const body =
-    "Een ontwikkeling over meerdere periodes kan ik voor een paar met name genoemde regio's samen laten zien, " +
+    `Een ontwikkeling over meerdere periodes kan ik voor maximaal ${cap} met name genoemde regio's samen laten zien, ` +
     "maar deze vraag gaat over een hele groep regio's, of over meer regio's dan in één antwoord passen.";
-  const offer =
-    "Vraag een paar regio's met naam over die periode, of de hele groep voor één periode.";
+  const offer = `Vraag tot ${cap} regio's met naam over die periode, of de hele groep voor één periode.`;
   return {
     reason: 'multi_region_multi_period',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -593,6 +635,22 @@ function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal
  * registry-label lookup), and ADR 054 D6 already accepts a bare code as a
  * display name for this exact region-set feature area. A labelled follow-up
  * is a later enhancement, not required for this fix. */
+/** Row 5 (session 110 UX audit pass 4, #269): the one sentence template for
+ * this chip, parameterised over the region's DISPLAY text — shared by the
+ * bare-code fallback below and by `relabelMultiRegionMultiPeriodOfferChip`
+ * (respond.ts's DB-aware re-labelling step), so the two can never say the
+ * sentence two different ways. */
+function multiRegionMultiPeriodOfferLabel(
+  definitionLabel: string,
+  regionDisplay: string,
+  period: { from: string; to: string },
+): string {
+  return (
+    `Hoe ontwikkelde ${definitionLabel} in ${regionDisplay} zich van ` +
+    `${periodCodeToNl(period.from)} tot en met ${periodCodeToNl(period.to)}?`
+  );
+}
+
 function multiRegionMultiPeriodOfferChip(
   refusal: QueryRefusal,
 ): { intent: StructuredIntent; label: string } | null {
@@ -613,10 +671,39 @@ function multiRegionMultiPeriodOfferChip(
       period: intent.period,
       derivation: 'series',
     },
-    label:
-      `Hoe ontwikkelde ${definitionLabel} in ${firstRegion} zich van ` +
-      `${periodCodeToNl(intent.period.from)} tot en met ${periodCodeToNl(intent.period.to)}?`,
+    // Bare-code fallback (#269, mirrored in open-questions.md): this module
+    // is a pure, DB-free template layer (see the file header) and cannot
+    // resolve a registry label itself. respond.ts — the DB-aware call site,
+    // which already injects the same honest code→label source into
+    // `buildRefusalSuggestions` (#138) — overwrites this label with
+    // `relabelMultiRegionMultiPeriodOfferChip` whenever it can resolve one;
+    // this bare-code sentence only ever reaches the user when that lookup
+    // itself fails closed (unlabelable code / no geo dimension).
+    label: multiRegionMultiPeriodOfferLabel(definitionLabel, firstRegion, intent.period),
   };
+}
+
+/** Row 5 (session 110 UX audit pass 4, #269): respond.ts's re-labelling step
+ * for the chip above, called once it has resolved the region's registry
+ * LABEL (via `regionTermsFor`, context/build.ts — the same honest
+ * code→label source #138 already injects into `buildRefusalSuggestions`).
+ * Goes through the SAME template as the fallback above
+ * (`multiRegionMultiPeriodOfferLabel`), so relabelling can only ever change
+ * which region name appears, never the sentence shape. Returns the
+ * candidate UNCHANGED whenever the intent no longer has the shape this chip
+ * requires — defensive only; respond.ts calls this with the exact candidate
+ * `multiRegionMultiPeriodOfferChip` just returned, so the guards should
+ * never trigger in practice (fail-closed: keep the bare-code label rather
+ * than throw). */
+export function relabelMultiRegionMultiPeriodOfferChip(
+  candidate: { intent: StructuredIntent; label: string },
+  regionLabel: string,
+): { intent: StructuredIntent; label: string } {
+  const { intent } = candidate;
+  if (intent.target.kind !== 'canonical' || intent.period.kind !== 'range') return candidate;
+  const definitionLabel = definitionLabelByKey.get(intent.target.key);
+  if (definitionLabel === undefined) return candidate;
+  return { intent, label: multiRegionMultiPeriodOfferLabel(definitionLabel, regionLabel, intent.period) };
 }
 
 function buildQuarantinedRefusal(): BuiltRefusal {

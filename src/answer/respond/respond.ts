@@ -37,6 +37,10 @@ import {
   buildQueryRefusal,
   buildStillAmbiguousRefusal,
   buildWebOnlyRefusal,
+  // Row 5 (session 110 UX audit pass 4, #269): re-labels the
+  // multi_region_multi_period offer chip's bare region CODE with the
+  // resolved registry NAME, once this DB-aware module has one.
+  relabelMultiRegionMultiPeriodOfferChip,
   statusSuffixNl,
   toClarificationResponse,
   toInternalRefusal,
@@ -454,7 +458,30 @@ export async function respondToIntent(
     let chip: Awaited<ReturnType<typeof buildOfferChip>> = null;
     if (options.clickOptionsEnabled === true) {
       try {
-        chip = await buildOfferChip(built.refusal.offerChip, (intent) => echoServability(db, intent, queryOptions));
+        let offerChip = built.refusal.offerChip;
+        // Row 5 (session 110 UX audit pass 4, #269): the
+        // multi_region_multi_period chip is built DB-free (refusals.ts) with
+        // the region's bare CBS code; resolve the registry LABEL here, the
+        // same honest code→label source #138 already injects into
+        // buildRefusalSuggestions above, and re-word the chip's display text
+        // before it becomes takeable. Fail-closed: any lookup miss (null, or
+        // not exactly one term back for one code) keeps the bare-code
+        // fallback rather than dropping the chip — a working chip with a
+        // less pretty label beats none.
+        if (
+          offerChip &&
+          'intent' in offerChip &&
+          outcome.refusal.kind === 'invalid_intent' &&
+          outcome.refusal.subReason === 'multi_region_multi_period' &&
+          offerChip.intent.target.kind === 'canonical' &&
+          (offerChip.intent.regions ?? []).length === 1
+        ) {
+          const terms = await regionTermsFor(db, offerChip.intent.target.key, offerChip.intent.regions!);
+          if (terms !== null && terms.length === 1) {
+            offerChip = relabelMultiRegionMultiPeriodOfferChip(offerChip, terms[0]!.name);
+          }
+        }
+        chip = await buildOfferChip(offerChip, (intent) => echoServability(db, intent, queryOptions));
       } catch {
         chip = null;
       }
