@@ -954,3 +954,64 @@ describe('headline in exports', () => {
     expect(result.height).toBeGreaterThanOrEqual(expectedMinHeight);
   });
 });
+
+// Session 110 security review: downloadPdf re-parses attributedSvgMarkup's
+// output via `container.innerHTML = markup` (an HTML parser, not a strict
+// XML parser — see that function's own comment on why) rather than
+// DOMParser. Every value baked into the markup here (headline text, footer
+// attribution, frame background colours) is set via textContent/setAttribute
+// on real DOM nodes, never raw string concatenation — so XMLSerializer always
+// escapes `<`/`&`/`"` in the emitted string, and re-parsing that escaped text
+// through ANY parser (HTML or XML) can only ever reconstruct inert text, never
+// a new element or a live event-handler attribute. This locks that invariant
+// in: a classic `<img src=x onerror=...>` payload — the one exploit that does
+// NOT require the container to be attached to a live document, since an HTML
+// <img>'s onerror fires purely off the fetch lifecycle — must survive the
+// exact round-trip downloadPdf performs as inert text, never as a real,
+// wired-up <img>/<script> element.
+describe('security: user-supplied text can never inject a live element through the SVG export markup (#215 PDF re-parse)', () => {
+  const payload = '<img src=x onerror="window.__pwned = true">';
+
+  function reparseLikeDownloadPdf(markup: string): HTMLDivElement {
+    // Exactly downloadPdf's own re-parse step (chart-download.tsx): a plain
+    // `<div>`, never inserted into `document`, `.innerHTML` set once.
+    const container = document.createElement('div');
+    container.innerHTML = markup;
+    return container;
+  }
+
+  afterEach(() => {
+    delete (window as unknown as { __pwned?: boolean }).__pwned;
+  });
+
+  it('escapes a hostile headline so no <img>/<script> element is created on re-parse', () => {
+    const { markup } = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, payload);
+    const container = reparseLikeDownloadPdf(markup);
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    // The literal text is still present (nothing silently dropped) — just
+    // never as markup.
+    expect(container.textContent).toContain('onerror');
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+
+  it('escapes a hostile attribution line the same way', () => {
+    const { markup } = framedSvgMarkup(sampleSvg(), payload);
+    const container = reparseLikeDownloadPdf(markup);
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+
+  it('escapes a hostile frame background colour the same way', () => {
+    const frameInput: FrameExportInput = {
+      values: { ...pristineFrame, framePadding: 'small', frameBackground: { kind: 'solid', hex: payload } },
+      image: null,
+    };
+    const { markup } = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, frameInput);
+    const container = reparseLikeDownloadPdf(markup);
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
+  });
+});
