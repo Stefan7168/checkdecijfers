@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useMemo, useReducer, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Area,
@@ -92,7 +92,14 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 // truncation — so the client-side optimistic update can never drift from
 // what normalizeHeadlineText would actually store server-side.
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
+import { Redo2, Undo2 } from 'lucide-react';
 import { Button } from './ui/button.tsx';
+// Chart co-pilot phase 1 (session 112, ADR 056): one command vocabulary,
+// one history. Every READER edit below goes through `dispatchCommand`; the
+// app moving the view itself (story steps, stage mode, the spec-swap reset,
+// the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
+import { initialDocState, newCommandId } from '../lib/chart-commands.ts';
+import { useChartHistory } from '../lib/use-chart-history.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
 import { ChartFrame } from './chart-frame.tsx';
@@ -103,7 +110,7 @@ import { headlineFigure } from '../lib/chart-headline.ts';
 import type { StoryStep } from '../lib/chart-story.ts';
 import { ChartStoryTrigger } from './chart-story-trigger.tsx';
 import { ChartStoryPanel } from './chart-story.tsx';
-import type { ChartNote, PendingPoint } from './chart-notes.tsx';
+import type { PendingPoint } from './chart-notes.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { SourceBadge } from './source-badge.tsx';
 import { Skeleton } from './ui/skeleton.tsx';
@@ -125,7 +132,6 @@ import {
   // so every existing `import { BAR_LABEL_MAX } from './chart.tsx'` call
   // site (chart.test.tsx) keeps working unchanged.
   BAR_LABEL_MAX,
-  chartViewReducer,
   defaultFormFor,
   defaultFormIsTable,
   fallbackForm,
@@ -133,7 +139,6 @@ import {
   // comment in chart-view-state.ts.
   hbarChartHeight,
   hbarFormAllowed,
-  initialViewState,
   // Session 110 pass 3 row 11: which specs get a single palette colour for
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
@@ -846,7 +851,12 @@ function SeriesLegend({
 }) {
   const lockedTitle = disabled ? t(lang, 'chart.story.controlsLocked') : undefined;
   return (
-    <div role="group" aria-label={t(lang, 'chart.seriesGroupLabel')} className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+    <div
+      role="group"
+      aria-label={t(lang, 'chart.seriesGroupLabel')}
+      data-command-kind="setSeriesView"
+      className="mt-2 flex flex-wrap gap-x-3 gap-y-1"
+    >
       {seriesMeta.map((s) => {
         const hidden = hiddenKeys.has(s.key);
         const highlighted = highlightedKey === s.key;
@@ -861,6 +871,7 @@ function SeriesLegend({
                * elsewhere in this codebase for the same mistake (see
                * chart-toggle.tsx). */
               aria-pressed={!hidden}
+              data-command-kind="toggleSeries"
               disabled={disabled}
               onClick={() => onToggle(s.key)}
               title={lockedTitle}
@@ -885,6 +896,7 @@ function SeriesLegend({
             <button
               type="button"
               aria-pressed={highlighted}
+              data-command-kind="setHighlight"
               disabled={hidden || disabled}
               onClick={() => onHighlight(highlighted ? null : s.key)}
               /* A locked legend takes priority over the plain highlight-title
@@ -1711,11 +1723,16 @@ export function ChartView({
   // no ring, no spotlight, nothing for a step to drive. In stage mode the
   // spec's own kind always wins.
   const initialForm = inStage ? spec.kind : defaultFormFor(spec);
-  const [state, dispatch] = useReducer(
-    chartViewReducer,
-    initialForm,
-    (form: ChartForm) => initialViewState(form, initialPresentation),
-  );
+  const {
+    state,
+    canUndo,
+    canRedo,
+    dispatch: dispatchCommand,
+    dispatchRaw,
+    undo,
+    redo,
+    seal: sealHistory,
+  } = useChartHistory(initialDocState(initialForm, initialPresentation));
   // #254: WHICH reading's data the chart draws — the primary `spec` prop, or
   // one of `alternates`. Computed here, above every derivation that reads
   // series/cell VALUES, so one substitution (`viewSpec` below, plus the
@@ -1757,7 +1774,7 @@ export function ChartView({
           : initialFormOverride === 'hbar'
             ? hbarFormAllowed(spec)
             : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
-    if (allowed) dispatch({ type: 'setForm', form: initialFormOverride });
+    if (allowed) dispatchRaw({ type: 'setForm', form: initialFormOverride });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately once-on-mount only: initialFormOverride is a one-shot prop from the embed route, never expected to change on a live instance, and a later spec swap is this component's own `reset` action's job (below), not this effect re-firing.
   }, []);
   const lineTabRef = useRef<HTMLButtonElement>(null);
@@ -1769,11 +1786,14 @@ export function ChartView({
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
 
-  // Task 6 (#212 click-to-annotate): session-only, plain component state —
-  // never persisted, never sent anywhere, never touches ChartSpec or the
-  // audit record. Reset by the same specIdentity guard below (a new chart's
-  // clicks must not carry over another chart's notes).
-  const [notes, setNotes] = useState<ChartNote[]>([]);
+  // Task 6 (#212 click-to-annotate): session-only — never persisted, never
+  // sent anywhere, never touches ChartSpec or the audit record. The notes
+  // themselves now live in the command history's doc state (`state.notes`,
+  // co-pilot phase 1) so adding/removing one is undoable like every other
+  // reader edit; the PENDING click (an editor that is merely open) is not an
+  // edit at all and stays plain component state. Both are reset by the same
+  // specIdentity guard below — a new chart's clicks must not carry over
+  // another chart's notes.
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
 
   // Journalist chart-headline (Task 6): named `chartHeadline`, deliberately
@@ -1803,16 +1823,6 @@ export function ChartView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted chart, keyed by auditId identity below
   }, [embed?.auditId]);
-
-  // Final review finding: a new note's id used to be
-  // `${resultId}-${prev.length}`, but `prev.length` is not monotonic — it
-  // shrinks on delete — so two notes on the same point could end up with the
-  // identical id after a delete-then-recreate sequence. `onDelete` filters by
-  // id, so a duplicate id meant clicking delete on ONE note silently deleted
-  // BOTH. A ref-backed counter only ever increases, regardless of deletion
-  // order, and (unlike component state) incrementing it never itself
-  // triggers a re-render.
-  const noteIdCounter = useRef(0);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -1981,10 +1991,14 @@ export function ChartView({
   if (specIdentity !== lastSpecIdentity) {
     setLastSpecIdentity(specIdentity);
     setChartEpoch((n) => n + 1);
-    dispatch({ type: 'reset', initialForm: state.form, initialPresentation });
+    // Raw, never a command: a genuinely different chart is not a reader
+    // edit — `dispatchRaw`'s own `reset` branch empties the history too, so
+    // the new chart starts with nothing to undo (and no way to "undo" into
+    // the previous chart's view). It also clears `state.notes`, which is
+    // why the old `setNotes([])` line is gone from this block.
+    dispatchRaw({ type: 'reset', initialForm: state.form, initialPresentation });
     setSmallMultiples(false);
     setAxisMode('shared');
-    setNotes([]);
     setPendingPoint(null);
     setOpenPanel(null);
     setStoryIndex(0);
@@ -2164,7 +2178,7 @@ export function ChartView({
   // receives a new spec (whose `reset` clears the highlight).
   useEffect(() => {
     if (stage) {
-      dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null } });
+      dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage?.step?.id, specIdentity]);
@@ -2613,8 +2627,35 @@ export function ChartView({
     // Tabel), or `openPanel` stays stuck on 'style' and the panel silently
     // reappears the moment the user switches back to a chart form.
     if (next === 'table') setOpenPanel(null);
-    dispatch({ type: 'setForm', form: next });
+    dispatchCommand({ kind: 'setForm', form: next }, 'panel');
     formTabRef[next].current?.focus();
+  }
+
+  /** Chart co-pilot phase 1 (session 112, ADR 056): ⌘Z / ⇧⌘Z (and the
+   * Windows Ctrl+Z / Ctrl+Y) on the card itself. Never in embed or stage
+   * mode — neither offers an edit to undo. A text field's OWN native undo
+   * always wins inside an input/textarea/contenteditable. */
+  function onHistoryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (embedMode || inStage) return;
+    if (!(event.metaKey || event.ctrlKey)) return;
+    const target = event.target as HTMLElement | null;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+    const key = event.key.toLowerCase();
+    if (key === 'z' && event.shiftKey) {
+      event.preventDefault();
+      redo();
+      return;
+    }
+    if (key === 'z') {
+      event.preventDefault();
+      undo();
+      return;
+    }
+    if (key === 'y' && event.ctrlKey) {
+      event.preventDefault();
+      redo();
+    }
   }
 
   function onFormTabKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
@@ -2671,7 +2712,7 @@ export function ChartView({
     // setView BEFORE setOpenPanel: so the first render of the OPEN story
     // already shows the first step's own highlight/full-range view, never a
     // stray frame with the reader's own state still showing.
-    dispatch({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
+    dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
     setStoryIndex(0);
     setOpenPanel('story');
     if (opts?.track !== false) trackChartStyleEvent('story_open');
@@ -2731,7 +2772,7 @@ export function ChartView({
   function closeStory(): void {
     const snapshot = storySnapshot.current;
     storySnapshot.current = null;
-    if (snapshot) dispatch({ type: 'setView', view: snapshot });
+    if (snapshot) dispatchRaw({ type: 'setView', view: snapshot });
     setOpenPanel(null);
     // Task 5 (Story-stage plan): closing the compact story also closes the
     // stage — there is no "story closed, stage still up" state.
@@ -2757,7 +2798,7 @@ export function ChartView({
 
   function onStoryIndexChange(next: number): void {
     setStoryIndex(next);
-    dispatch({ type: 'setHighlight', key: storySteps[next]?.highlight ?? null });
+    dispatchRaw({ type: 'setHighlight', key: storySteps[next]?.highlight ?? null });
     trackChartStyleEvent('story_step');
   }
 
@@ -3366,8 +3407,8 @@ export function ChartView({
               seriesMeta={seriesMeta}
               hiddenKeys={state.hiddenKeys}
               highlightedKey={state.highlightedKey}
-              onToggle={(key) => dispatch({ type: 'toggleSeries', key })}
-              onHighlight={(key) => dispatch({ type: 'setHighlight', key })}
+              onToggle={(key) => dispatchCommand({ kind: 'toggleSeries', key }, 'canvas')}
+              onHighlight={(key) => dispatchCommand({ kind: 'setHighlight', key }, 'canvas')}
               lang={chartLang}
               disabled={storyOpen}
               disabledReasonId={storyLockId}
@@ -3383,22 +3424,26 @@ export function ChartView({
 
   const notesNode = state.form !== 'table' && !embedMode && !inStage ? (
         <ChartNotes
-          notes={notes}
+          notes={state.notes}
           pendingPoint={pendingPoint}
           idPrefix={domId}
           lang={chartLang}
           onSave={(text) => {
             if (!pendingPoint) return;
-            setNotes((prev) => [...prev, { id: `${pendingPoint.resultId}-${noteIdCounter.current++}`, ...pendingPoint, text }]);
+            // `newCommandId()` (random + time-based), not a counter: the id
+            // must be unique across the whole session regardless of delete
+            // order — the old ref-backed counter's job, now covered by the
+            // command vocabulary's own id minting.
+            dispatchCommand({ kind: 'addNote', note: { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text } }, 'canvas');
             setPendingPoint(null);
           }}
           onCancelPending={() => setPendingPoint(null)}
-          onDelete={(id) => setNotes((prev) => prev.filter((n) => n.id !== id))}
+          onDelete={(id) => dispatchCommand({ kind: 'removeNote', noteId: id }, 'canvas')}
         />
       ) : null;
 
   return (
-    <div className={frameClass}>
+    <div className={frameClass} onKeyDown={onHistoryKeyDown}>
       {/* Chart-card polish (2026-09-15): title + subtitle on the left, the
         * card's two actions (Inzichten, Opmaak) top-right — the universal
         * card-actions idiom. The heading's next sibling stays the subtitle
@@ -3440,6 +3485,34 @@ export function ChartView({
             {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => v).join(' · ')}</span> : null}
           </div>
         </div>
+        <div className="flex shrink-0 items-start gap-1">
+        {!embedMode && !inStage ? (
+          <div className="flex shrink-0 items-center gap-1" data-slot="chart-history-actions">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={undo}
+              disabled={!canUndo}
+              aria-label={t(chartLang, 'chart.history.undo')}
+              title={t(chartLang, 'chart.history.undoHint')}
+            >
+              <Undo2 className="size-4" aria-hidden="true" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={redo}
+              disabled={!canRedo}
+              aria-label={t(chartLang, 'chart.history.redo')}
+              title={t(chartLang, 'chart.history.redoHint')}
+            >
+              <Redo2 className="size-4" aria-hidden="true" />
+            </Button>
+            {/* Task 4 adds <ChartHistoryMenu …/> here. */}
+          </div>
+        ) : null}
         {!embedMode && !inStage && (storyAvailable || state.form !== 'table') ? (
           <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
             {/* Story mode (session 92): the colourful trigger is offered
@@ -3483,6 +3556,7 @@ export function ChartView({
             ) : null}
           </div>
         ) : null}
+        </div>
       </div>
       {/* Journalist chart-headline (Task 6): the sentence headline leads,
         * the headlineFigure big-number block (below) follows. Named state
@@ -3598,6 +3672,7 @@ export function ChartView({
               ref={lineTabRef}
               type="button"
               role="tab"
+              data-command-kind="setForm"
               aria-selected={activeForm === 'line'}
               aria-controls={panelId}
               aria-describedby={canUseLine ? undefined : `${domId}-line-reason`}
@@ -3613,6 +3688,7 @@ export function ChartView({
               ref={areaTabRef}
               type="button"
               role="tab"
+              data-command-kind="setForm"
               aria-selected={activeForm === 'area'}
               aria-controls={panelId}
               aria-describedby={canUseArea ? undefined : `${domId}-area-reason`}
@@ -3628,6 +3704,7 @@ export function ChartView({
               ref={barTabRef}
               type="button"
               role="tab"
+              data-command-kind="setForm"
               aria-selected={activeForm === 'bar'}
               aria-controls={panelId}
               tabIndex={activeForm === 'bar' ? 0 : -1}
@@ -3640,6 +3717,7 @@ export function ChartView({
               ref={hbarTabRef}
               type="button"
               role="tab"
+              data-command-kind="setForm"
               aria-selected={activeForm === 'hbar'}
               aria-controls={panelId}
               aria-describedby={canUseHbar ? undefined : `${domId}-hbar-reason`}
@@ -3655,6 +3733,7 @@ export function ChartView({
               ref={tableTabRef}
               type="button"
               role="tab"
+              data-command-kind="setForm"
               aria-selected={activeForm === 'table'}
               aria-controls={panelId}
               tabIndex={activeForm === 'table' ? 0 : -1}
@@ -3704,8 +3783,9 @@ export function ChartView({
                 disabled={storyOpen}
                 title={storyLockedTitle}
                 aria-describedby={storyOpen ? storyLockId : undefined}
+                data-command-kind="setReading"
                 onChange={(e) =>
-                  dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
+                  dispatchCommand({ kind: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) }, 'panel')
                 }
                 className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -3757,6 +3837,7 @@ export function ChartView({
               <select
                 id={`${domId}-from`}
                 aria-label={t(chartLang, 'chart.from')}
+                data-command-kind="setPeriodRange"
                 value={state.periodRange?.[0] ?? allPeriodCodes[0]}
                 disabled={storyOpen}
                 title={storyLockedTitle}
@@ -3766,13 +3847,16 @@ export function ChartView({
                     e.target.value,
                     state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1],
                   );
-                  dispatch({
-                    type: 'setPeriodRange',
-                    range:
-                      from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
-                        ? null
-                        : [from, clampedTo],
-                  });
+                  dispatchCommand(
+                    {
+                      kind: 'setPeriodRange',
+                      range:
+                        from === allPeriodCodes[0] && clampedTo === allPeriodCodes[allPeriodCodes.length - 1]
+                          ? null
+                          : [from, clampedTo],
+                    },
+                    'panel',
+                  );
                 }}
                 className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -3786,6 +3870,7 @@ export function ChartView({
               <select
                 id={`${domId}-to`}
                 aria-label={t(chartLang, 'chart.to')}
+                data-command-kind="setPeriodRange"
                 value={state.periodRange?.[1] ?? allPeriodCodes[allPeriodCodes.length - 1]}
                 disabled={storyOpen}
                 title={storyLockedTitle}
@@ -3795,13 +3880,16 @@ export function ChartView({
                     state.periodRange?.[0] ?? allPeriodCodes[0],
                     e.target.value,
                   );
-                  dispatch({
-                    type: 'setPeriodRange',
-                    range:
-                      clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
-                        ? null
-                        : [clampedFrom, to],
-                  });
+                  dispatchCommand(
+                    {
+                      kind: 'setPeriodRange',
+                      range:
+                        clampedFrom === allPeriodCodes[0] && to === allPeriodCodes[allPeriodCodes.length - 1]
+                          ? null
+                          : [clampedFrom, to],
+                    },
+                    'panel',
+                  );
                 }}
                 className="rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -3842,8 +3930,9 @@ export function ChartView({
             id={`${domId}-reading`}
             aria-label={t(chartLang, 'chart.reading.label')}
             value={state.selectedReading ?? 'primary'}
+            data-command-kind="setReading"
             onChange={(e) =>
-              dispatch({ type: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) })
+              dispatchCommand({ kind: 'setReading', index: e.target.value === 'primary' ? null : Number(e.target.value) }, 'panel')
             }
             className="w-full min-w-0 max-w-full rounded-md border border-border bg-background px-1.5 py-0.5 text-foreground"
           >
@@ -3993,7 +4082,12 @@ export function ChartView({
             // make a series colour illegible — so there is nothing left for
             // this callback to silently drop or adjust afterwards. Series
             // colours are never changed by the frame feature.
-            dispatch({ type: 'setPresentation', patch });
+            // A colour drag emits one patch per pointer move: those merge
+            // into ONE undo entry (transient), sealed when the field is
+            // done with (`onSeal` below). Every other option is a discrete
+            // choice and gets its own entry.
+            const transient = Object.keys(patch).every((k) => k === 'seriesColors' || k === 'frameBackground');
+            dispatchCommand({ kind: 'setPresentation', patch }, 'panel', { transient });
             trackChartStyleEvent('option_changed');
             // Task 5: every frame control change ALSO counts as its own
             // frame_changed event, in addition to (never instead of) the
@@ -4009,13 +4103,17 @@ export function ChartView({
             // for a hand-picked value. The uploaded frame image is cleared
             // like the full reset does. Owner decision E is untouched: this
             // chart only; the account default is the only persistence.
-            dispatch({ type: 'resetPresentation' });
-            dispatch({ type: 'setPresentation', patch: templateById(id).overrides });
+            // ONE command, not reset-then-patch: a template is a single
+            // undoable step (its inverse is the full presentation it
+            // replaced), and `applyCommand` resolves the template id to the
+            // same `templateById(id).overrides` this used to inline.
+            dispatchCommand({ kind: 'applyTemplate', templateId: id }, 'panel');
             setFrameImage(null);
             trackChartStyleEvent(`template_${id}`);
           }}
+          onSeal={sealHistory}
           onReset={() => {
-            dispatch({ type: 'resetPresentation' });
+            dispatchCommand({ kind: 'resetPresentation' }, 'panel');
             // Final-review fix: "Standaardkleuren" (a partial reset) goes
             // through onChange and was already counted; "Standaard" (the
             // full reset) fired nothing, so the #220 usage counter — whose

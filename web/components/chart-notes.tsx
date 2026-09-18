@@ -116,6 +116,7 @@ export function ChartNotes({
               </span>
               <button
                 type="button"
+                data-command-kind="removeNote"
                 onClick={() => onDelete(note.id)}
                 aria-label={t(lang, 'chart.notes.deleteAriaLabel', { series: note.seriesLabel, period: note.periodLabel })}
                 className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
@@ -149,6 +150,7 @@ export function ChartNotes({
           <div className="flex gap-2">
             <button
               type="button"
+              data-command-kind="addNote"
               onClick={save}
               className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
             >

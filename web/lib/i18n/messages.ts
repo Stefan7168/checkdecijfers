@@ -443,6 +443,13 @@ const nl = {
   // AI draft showed "Kon de kop niet opslaan", which is false: nothing was
   // being saved yet. Own string for the draft failure.
   'chart.headline.draftError': 'Kon de kop niet voorstellen.',
+  // Chart co-pilot phase 1 (session 112, ADR 056): the card's undo/redo
+  // pair. Digit-free by construction — the chart card's own digit scan
+  // (chart.test.tsx) treats every rendered digit as a claim about data.
+  'chart.history.undo': 'Ongedaan maken',
+  'chart.history.redo': 'Opnieuw',
+  'chart.history.undoHint': 'Ongedaan maken (⌘Z / Ctrl+Z)',
+  'chart.history.redoHint': 'Opnieuw (⇧⌘Z / Ctrl+Y)',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1293,6 +1300,10 @@ const en: Messages = {
   'chart.headline.unauthenticated': 'Log in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
   'chart.headline.draftError': 'Could not suggest a headline.',
+  'chart.history.undo': 'Undo',
+  'chart.history.redo': 'Redo',
+  'chart.history.undoHint': 'Undo (⌘Z / Ctrl+Z)',
+  'chart.history.redoHint': 'Redo (⇧⌘Z / Ctrl+Y)',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',

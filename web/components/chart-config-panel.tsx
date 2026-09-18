@@ -365,6 +365,7 @@ function ColorField({
   onBlur,
   onKeyDown,
   onPickerChange,
+  onSeal,
   ariaLabelHex,
   ariaLabelPicker,
   ariaDescribedBy,
@@ -376,6 +377,11 @@ function ColorField({
   onBlur: (value: string) => void;
   onKeyDown?: (value: string, key: string) => void;
   onPickerChange: (value: string) => void;
+  /** Chart co-pilot phase 1 (session 112): a colour drag emits a stream of
+   * `setPresentation` commands that the history merges into ONE transient
+   * entry — this closes that entry when the reader is done with the field,
+   * so the next edit is a separate undo step. Never a value change itself. */
+  onSeal?: () => void;
   ariaLabelHex: string;
   ariaLabelPicker: string;
   ariaDescribedBy?: string;
@@ -390,7 +396,10 @@ function ColorField({
         aria-describedby={ariaDescribedBy}
         value={textValue}
         onChange={(e) => onTextChange(e.target.value)}
-        onBlur={(e) => onBlur(e.target.value)}
+        onBlur={(e) => {
+          onBlur(e.target.value);
+          onSeal?.();
+        }}
         onKeyDown={(e) => onKeyDown?.(e.currentTarget.value, e.key)}
         className={className ?? 'w-24'}
       />
@@ -399,6 +408,7 @@ function ColorField({
         aria-label={ariaLabelPicker}
         value={pickerValue}
         onChange={(e) => onPickerChange(e.target.value)}
+        onBlur={() => onSeal?.()}
       />
     </>
   );
@@ -415,11 +425,13 @@ function ColorField({
 function FrameHexField({
   value,
   onCommit,
+  onSeal,
   ariaLabelHex,
   ariaLabelPicker,
 }: {
   value: string;
   onCommit: (hex: string) => void;
+  onSeal?: () => void;
   ariaLabelHex: string;
   ariaLabelPicker: string;
 }): ReactNode {
@@ -442,6 +454,7 @@ function FrameHexField({
         if (key === 'Enter') commit(v);
       }}
       onPickerChange={commit}
+      onSeal={onSeal}
       ariaLabelHex={ariaLabelHex}
       ariaLabelPicker={ariaLabelPicker}
     />
@@ -652,6 +665,11 @@ export interface ChartConfigPanelProps {
   seriesMeta: { key: string; label: string; color: string }[];
   onChange: (patch: PresentationOverrides) => void;
   onReset: () => void;
+  /** Chart co-pilot phase 1 (session 112, ADR 056): "this run of colour
+   * tweaks is finished" — the caller closes the merged, transient history
+   * entry a colour drag produced. Optional: a caller that keeps no history
+   * (every existing test render) simply omits it. */
+  onSeal?: () => void;
   idPrefix: string;
   lang?: PanelLang;
   /** Review fix (chart-panel-layout, option A): the previous version of this
@@ -742,6 +760,7 @@ export function ChartConfigPanel({
   seriesMeta,
   onChange,
   onReset,
+  onSeal,
   idPrefix,
   lang = 'nl',
   open,
@@ -1211,7 +1230,7 @@ export function ChartConfigPanel({
   // left for this panel to label itself; `id={regionId}` survives only
   // because the Style trigger's `aria-controls` still points at it.
   const dialogContent = open ? (
-    <div id={regionId} className="w-full text-xs">
+    <div id={regionId} className="w-full text-xs" data-command-kind="setPresentation replacePresentation">
       {/* Layout refactor (owner: option A): the region's header row is now
         * common to every tab — the Grafiek/Kleuren/Lettertype tablist on the
         * left, "Taal van de grafiek" and a Close button on the right (its
@@ -1302,6 +1321,7 @@ export function ChartConfigPanel({
                   aria-label={t(lang, template.nameKey)}
                   aria-checked={current}
                   tabIndex={tabIndex}
+                  data-command-kind="applyTemplate"
                   onClick={() => onApplyTemplate?.(template.id)}
                   className={cn(
                     'flex flex-col items-start gap-1 rounded-lg border p-2 text-left text-xs transition-colors hover:bg-muted',
@@ -1493,6 +1513,7 @@ export function ChartConfigPanel({
                         if (key === 'Enter') commitColor(series.key, index, series.color, v);
                       }}
                       onPickerChange={(v) => commitColor(series.key, index, series.color, v)}
+                      onSeal={onSeal}
                     />
                     {warning ? (
                       <p id={warnId} className="w-full text-muted-foreground">
@@ -1688,6 +1709,7 @@ export function ChartConfigPanel({
                         key={bg.hex}
                         value={bg.hex}
                         onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'solid', hex } })}
+                        onSeal={onSeal}
                         ariaLabelHex={`${copy.frameBackground} (hex)`}
                         ariaLabelPicker={copy.frameBackground}
                       />
@@ -1732,6 +1754,7 @@ export function ChartConfigPanel({
                             key={`from-${bg.from}`}
                             value={bg.from}
                             onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } })}
+                            onSeal={onSeal}
                             ariaLabelHex={`${copy.frameFrom} (hex)`}
                             ariaLabelPicker={copy.frameFrom}
                           />
@@ -1740,6 +1763,7 @@ export function ChartConfigPanel({
                             key={`to-${bg.to}`}
                             value={bg.to}
                             onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } })}
+                            onSeal={onSeal}
                             ariaLabelHex={`${copy.frameTo} (hex)`}
                             ariaLabelPicker={copy.frameTo}
                           />
@@ -1860,7 +1884,7 @@ export function ChartConfigPanel({
         * are all unchanged. */}
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3">
         <span />
-        <Button type="button" variant="outline" size="xs" disabled={resolved.pristine} onClick={onReset}>
+        <Button type="button" variant="outline" size="xs" data-command-kind="resetPresentation" disabled={resolved.pristine} onClick={onReset}>
           {copy.reset}
         </Button>
       </div>
