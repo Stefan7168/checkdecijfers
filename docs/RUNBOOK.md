@@ -464,7 +464,7 @@ code revert.
 "Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
 session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
-## Supervised live step — migrations 034 + 035 chart_edits (FILE-ONLY, NOT YET RUN — Chart co-pilot phases 1 + 2, sessions 112/113, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
+## Supervised live step — migrations 034 + 035 chart_edits (✅ RUN 2026-09-18 11:14 UTC, session 114, owner present — `npm run db:migrate` applied exactly 034 then 035; post-checks: table present with both keys, RLS on, 0 anon/authenticated grants, 0 policies, 3 indexes. Chart co-pilot phases 1 + 2, sessions 112/113, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
 
 **Session 113 addendum — apply 034 AND 035 in one `npm run db:migrate`.** Phase 2 added
 `migrations/035_chart_edits_dataset_turns.sql`: a second, mutually exclusive key on `chart_edits`
@@ -1215,7 +1215,7 @@ alias; the deploy job's log of each run prints the SHA it shipped (`gh run view 
 the deployment built from the newest commit (the `vercel deploy` line in that run's deploy log). Habit that
 avoids it entirely: after a merge, let its run finish before pushing anything else.
 
-## WP202 eigen data (chat with your own data) — the supervised go-live (migration step ✅ DONE 2026-09-14; remaining steps still pending)
+## WP202 eigen data (chat with your own data) — the supervised go-live (✅ LIVE 2026-09-18, session 114: steps 2, 3, 4, 5 done — `pricing:apply` upserted `dataset_turn`, `ATTACHMENTS_ENABLED=1` set in Vercel Production and deployed by re-running CI run 35325857423; step 4b `attachments:record` BLOCKED by the Anthropic workspace usage cap until 2026-10-01 00:00 UTC, see [#288](open-questions.md); step 6's model-backed turns refuse until then too — the upload, chart, Data panel and undo persistence are the live smoke test for now)
 
 **Status when this section was written:** the entire feature (backend + UI) is built, tested, and
 merged on `main` — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the full commit
