@@ -446,6 +446,17 @@ const nl = {
   // Chart co-pilot phase 1 (session 112, ADR 056): the card's undo/redo
   // pair. Digit-free by construction — the chart card's own digit scan
   // (chart.test.tsx) treats every rendered digit as a claim about data.
+  // Task 5 (co-pilot phase 1): in-place title and caption editing. The
+  // reader's OWN words — digit-free strings by construction, like the
+  // undo/redo pair below, so the whole-card digit scan stays clean.
+  'chart.title.edit': 'Titel bewerken',
+  'chart.title.placeholder': 'Eigen titel',
+  'chart.title.original': 'Oorspronkelijke titel: {title}',
+  'chart.caption.add': 'Bijschrift toevoegen',
+  'chart.caption.edit': 'Bijschrift bewerken',
+  'chart.caption.placeholder': 'Bijschrift onder de grafiek',
+  'chart.caption.save': 'Opslaan',
+  'chart.caption.cancel': 'Annuleren',
   'chart.history.undo': 'Ongedaan maken',
   'chart.history.redo': 'Opnieuw',
   'chart.history.undoHint': 'Ongedaan maken (⌘Z / Ctrl+Z)',
@@ -1328,6 +1339,14 @@ const en: Messages = {
   'chart.headline.unauthenticated': 'Log in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
   'chart.headline.draftError': 'Could not suggest a headline.',
+  'chart.title.edit': 'Edit title',
+  'chart.title.placeholder': 'Your own title',
+  'chart.title.original': 'Original title: {title}',
+  'chart.caption.add': 'Add a caption',
+  'chart.caption.edit': 'Edit caption',
+  'chart.caption.placeholder': 'Caption under the chart',
+  'chart.caption.save': 'Save',
+  'chart.caption.cancel': 'Cancel',
   'chart.history.undo': 'Undo',
   'chart.history.redo': 'Redo',
   'chart.history.undoHint': 'Undo (⌘Z / Ctrl+Z)',

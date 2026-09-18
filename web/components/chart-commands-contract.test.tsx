@@ -126,13 +126,21 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
 
     const found = kindsInDom(document.body);
     const missing = CHART_COMMAND_KINDS.filter(
-      (k) => !found.has(k) && !NOTE_KINDS.includes(k) && k !== 'setTitle' && k !== 'setCaption',
+      (k) => !found.has(k) && !NOTE_KINDS.includes(k),
     );
     expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
     expect(PANEL_KINDS.every((k) => found.has(k))).toBe(true);
   });
 
-  it.todo('setTitle and setCaption have in-place controls (Task 5 turns this on)');
+  // Task 5: the reader's own title and caption edit IN PLACE on the card —
+  // no panel to open, so a plain non-embed render already carries both
+  // controls (the pencil next to the heading and the "add a caption" button).
+  it('setTitle and setCaption have in-place controls', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    const found = kindsInDom(container);
+    expect(found.has('setTitle')).toBe(true);
+    expect(found.has('setCaption')).toBe(true);
+  });
 
   it('addNote/removeNote controls exist in the notes editor', async () => {
     const { ChartNotes } = await import('./chart-notes.tsx');

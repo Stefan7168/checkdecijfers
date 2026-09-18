@@ -92,14 +92,14 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 // truncation — so the client-side optimistic update can never drift from
 // what normalizeHeadlineText would actually store server-side.
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
-import { Redo2, Undo2 } from 'lucide-react';
+import { Pencil, Redo2, Undo2 } from 'lucide-react';
 import { Button } from './ui/button.tsx';
 import { ChartHistoryMenu } from './chart-history-menu.tsx';
 // Chart co-pilot phase 1 (session 112, ADR 056): one command vocabulary,
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
 // the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
-import { initialDocState, newCommandId } from '../lib/chart-commands.ts';
+import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId } from '../lib/chart-commands.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
@@ -1798,6 +1798,19 @@ export function ChartView({
   // another chart's notes.
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
 
+  // Task 5 (co-pilot phase 1, ADR 056): the reader's own title and caption.
+  // The VALUES live in the command document (`state.title` / `state.caption`,
+  // undoable like every other edit); only "is an editor open, and what is
+  // typed in it so far" is plain component state, the same split as
+  // `pendingPoint` above. `titleCancelledRef` lets Escape close the title
+  // editor without the unmount-time blur committing the draft behind it (the
+  // caption editor commits on Save only, so it needs no such guard).
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const titleCancelledRef = useRef(false);
+  const [captionEditing, setCaptionEditing] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState('');
+
   // Journalist chart-headline (Task 6): named `chartHeadline`, deliberately
   // NOT `headline` — that identifier is already taken below by
   // `headlineFigure`'s result (the big NUMBER a chart leads with, an
@@ -2002,6 +2015,11 @@ export function ChartView({
     setSmallMultiples(false);
     setAxisMode('shared');
     setPendingPoint(null);
+    // Task 5: a different chart is a different title/caption — `reset`
+    // already clears the stored values, so any open editor must close too
+    // rather than commit the previous chart's draft onto the new one.
+    setTitleEditing(false);
+    setCaptionEditing(false);
     setOpenPanel(null);
     setStoryIndex(0);
     setStageOpen(false);
@@ -2708,6 +2726,50 @@ export function ChartView({
   const storyLockId = `${domId}-story-lock`;
   const storyLockedTitle = storyOpen ? t(chartLang, 'chart.story.controlsLocked') : undefined;
 
+  // Task 5 (co-pilot phase 1): in-place title and caption editing.
+  //
+  // `titleEditable` mirrors every other reader control on this card: never in
+  // embed mode (the published card is read-only) and never in the stage. The
+  // story lock applies too — the same `disabled` / `title` /
+  // `aria-describedby` trio the Undo button uses — because a retitle while a
+  // step's caption is on screen would contradict it.
+  const titleEditable = !embedMode && !inStage;
+  /** What the heading shows: the reader's own title if they set one, the
+   * (display-language) spec title otherwise. */
+  const shownTitle = state.title ?? displaySpec.title;
+  function startTitleEdit() {
+    if (!titleEditable || storyOpen) return;
+    titleCancelledRef.current = false;
+    setTitleDraft(shownTitle);
+    setTitleEditing(true);
+  }
+  function commitTitle() {
+    const trimmed = titleDraft.trim();
+    // Only the reader's OWN words are ever stored: an empty box, or the spec
+    // title typed back unchanged, means "no override" (null), never a copy of
+    // CBS's measure name masquerading as a reader edit.
+    const next = trimmed === '' || trimmed === displaySpec.title ? null : trimmed;
+    // No history entry for a no-op — pressing Enter on an unchanged title
+    // must not put a do-nothing step in the undo stack.
+    if (next !== state.title) dispatchCommand({ kind: 'setTitle', title: next }, 'canvas');
+    setTitleEditing(false);
+  }
+  function cancelTitleEdit() {
+    titleCancelledRef.current = true;
+    setTitleEditing(false);
+  }
+  function startCaptionEdit() {
+    if (!titleEditable || storyOpen) return;
+    setCaptionDraft(state.caption ?? '');
+    setCaptionEditing(true);
+  }
+  function commitCaption() {
+    const trimmed = captionDraft.trim();
+    const next = trimmed === '' ? null : trimmed;
+    if (next !== state.caption) dispatchCommand({ kind: 'setCaption', caption: next }, 'canvas');
+    setCaptionEditing(false);
+  }
+
   // #237/ADR 046 fix-wave finding 1: `initialPanel="story"` auto-opens the
   // panel on mount via THIS function — unconditionally counting that as a
   // `story_open` would fire the site-wide `countChartStyleEvent` server
@@ -2986,6 +3048,11 @@ export function ChartView({
         role={inStage ? undefined : 'tabpanel'}
         aria-label={inStage ? undefined : t(chartLang, 'chart.graphPanelLabel')}
         ref={chartContainerRef}
+        // Task 5 (co-pilot phase 1): the ONE stable hook a test can use to
+        // assert that a reader's own words (title editor, caption) sit
+        // OUTSIDE the export container. The div carried only a generated
+        // `id` before, which a test cannot address.
+        data-testid="chart-container"
         className={
           // ADR 042: a 300 ms fade/rise of the export CONTAINER on mount —
           // outside the exported <svg>, so a download can never capture it;
@@ -3432,6 +3499,81 @@ export function ChartView({
         )
       ) : null;
 
+  // Task 5 (co-pilot phase 1): the reader's own caption under the chart.
+  // Rendered at the same slots as `notesNode`, just before it, and — like
+  // the notes — ALWAYS outside chartContainerRef, so a reader's own words
+  // can never be scanned as chart data or baked into a PNG/SVG export.
+  // Unlike the notes it is offered in the table form too: a caption is about
+  // the card, not about a clicked chart point.
+  const captionNode = !embedMode && !inStage ? (
+        // No margin on the wrapper: each branch below carries its own
+        // top spacing (the caption paragraph's `mt-2` is its own).
+        <div>
+          {captionEditing ? (
+            <>
+              <input
+                type="text"
+                value={captionDraft}
+                onChange={(e) => setCaptionDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitCaption();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setCaptionEditing(false);
+                  }
+                }}
+                placeholder={t(chartLang, 'chart.caption.placeholder')}
+                aria-label={t(chartLang, 'chart.caption.placeholder')}
+                maxLength={CHART_CAPTION_MAX_LENGTH}
+                className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                autoFocus
+              />
+              <div className="mt-1 flex gap-2">
+                <button type="button" onClick={commitCaption} className="text-xs font-medium text-foreground">
+                  {t(chartLang, 'chart.caption.save')}
+                </button>
+                <button type="button" onClick={() => setCaptionEditing(false)} className="text-xs text-muted-foreground">
+                  {t(chartLang, 'chart.caption.cancel')}
+                </button>
+              </div>
+            </>
+          ) : state.caption !== null ? (
+            <div className="flex items-center gap-1">
+              <p data-testid="chart-caption" className="mt-2 text-sm text-muted-foreground">
+                {state.caption}
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-command-kind="setCaption"
+                onClick={startCaptionEdit}
+                disabled={storyOpen}
+                aria-label={t(chartLang, 'chart.caption.edit')}
+                title={storyLockedTitle ?? t(chartLang, 'chart.caption.edit')}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+              >
+                <Pencil className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              data-command-kind="setCaption"
+              onClick={startCaptionEdit}
+              disabled={storyOpen}
+              title={storyLockedTitle}
+              aria-describedby={storyOpen ? storyLockId : undefined}
+              className={'mt-2 text-xs text-muted-foreground underline underline-offset-2' + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
+            >
+              {t(chartLang, 'chart.caption.add')}
+            </button>
+          )}
+        </div>
+      ) : null;
+
   const notesNode = state.form !== 'table' && !embedMode && !inStage ? (
         <ChartNotes
           notes={state.notes}
@@ -3466,21 +3608,87 @@ export function ChartView({
           {/* Row 10/#p2-10 recheck (pass 5): title compacts to text-xs below
             * a 300px-tall embed frame — the chart itself is the point of a
             * tiny sidebar embed, not a full title. */}
-          <div
-            role="heading"
-            aria-level={3}
-            className={
-              embedMode
-                ? 'text-base font-semibold leading-snug text-foreground [@media(max-height:300px)]:text-xs [@media(max-height:300px)]:leading-tight'
-                : 'text-base font-semibold leading-snug text-foreground'
-            }
-          >
-            {displaySpec.title}
-          </div>
+          {/* Task 5 (co-pilot phase 1): the title editor REPLACES the heading
+            * element while it is open, so the subtitle below stays the
+            * heading's next element sibling either way (several tests read
+            * the header by exactly that relationship). The editor lives
+            * here, outside chartContainerRef, like the caption and the
+            * notes: a reader's own words never enter a PNG/SVG export. */}
+          {titleEditing ? (
+            <input
+              type="text"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => {
+                // Escape already closed the editor; the unmount must not
+                // commit the draft it just discarded.
+                if (titleCancelledRef.current) {
+                  titleCancelledRef.current = false;
+                  return;
+                }
+                commitTitle();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitTitle();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelTitleEdit();
+                }
+              }}
+              placeholder={t(chartLang, 'chart.title.placeholder')}
+              aria-label={t(chartLang, 'chart.title.edit')}
+              maxLength={CHART_TITLE_MAX_LENGTH}
+              className="w-full rounded-md border border-input bg-background px-2 py-1 text-base font-semibold leading-snug"
+              autoFocus
+            />
+          ) : (
+            <div
+              role="heading"
+              aria-level={3}
+              onDoubleClick={titleEditable ? startTitleEdit : undefined}
+              className={
+                embedMode
+                  ? 'flex items-center gap-1 text-base font-semibold leading-snug text-foreground [@media(max-height:300px)]:text-xs [@media(max-height:300px)]:leading-tight'
+                  : 'flex items-center gap-1 text-base font-semibold leading-snug text-foreground'
+              }
+            >
+              {shownTitle}
+              {/* The pencil sits INSIDE the heading (it carries no text of
+                * its own, so `heading.textContent` is still just the title)
+                * rather than after it — the subtitle must remain the
+                * heading's next sibling. Story lock: same
+                * disabled/title/aria-describedby trio as Undo. */}
+              {titleEditable ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  data-command-kind="setTitle"
+                  onClick={startTitleEdit}
+                  disabled={storyOpen}
+                  aria-label={t(chartLang, 'chart.title.edit')}
+                  title={storyLockedTitle ?? t(chartLang, 'chart.title.edit')}
+                  aria-describedby={storyOpen ? storyLockId : undefined}
+                >
+                  <Pencil className="size-4" aria-hidden="true" />
+                </Button>
+              ) : null}
+            </div>
+          )}
           {/* ADR 042: one muted subtitle line — the unit first, then the pinned
             * dimensions — as separate spans (tests and the digit scan read them
             * per text node). */}
           <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            {/* Task 5: with a reader's own title on the heading, the OFFICIAL
+              * measure name moves here — first span, so it never leaves the
+              * card (R4-adjacent: what the numbers actually measure stays
+              * visible next to them). Still a spec string, so the whole-card
+              * digit scan is unaffected. */}
+            {state.title !== null ? (
+              <span title={t(chartLang, 'chart.title.original', { title: displaySpec.title })}>{displaySpec.title}</span>
+            ) : null}
             <span>{displaySpec.unit}</span>
             {/* #18 (session 110 UX audit): human labels only — the raw CBS
               * dimension KEY (e.g. "Bestedingscategorieen") used to prefix
@@ -4077,6 +4285,7 @@ export function ChartView({
             <>
               {canvasNode}
               {legendNode}
+              {captionNode}
               {notesNode}
             </>
           }
@@ -4381,6 +4590,7 @@ export function ChartView({
         * chart point, not a table cell. Spec Part B3: also off in embedMode
         * — click-to-annotate is a viewer's own reading aid, session-only and
         * never part of the honest card an embed re-publishes elsewhere. */}
+      {!styleOpen ? captionNode : null}
       {!styleOpen ? notesNode : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured
