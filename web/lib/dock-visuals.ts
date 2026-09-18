@@ -14,6 +14,7 @@
 // this exact string (session 84's Dutch→English translation, alongside the
 // badge/disclaimer copy), not a fresh naming choice made here.
 import type { ChatMessage } from './chat-message.ts';
+import { extendsPreviousChart } from './chat-message.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { UserChartEditContext } from '../components/user-chart.tsx';
@@ -66,6 +67,21 @@ export interface DockVisual {
    * its own `embed.auditId` key), for a chart turn with no stored row behind
    * it, and for a DockVisual built by hand (tests). */
   userChartEdit: UserChartEditContext | null;
+  /** Co-pilot phase 3 (session 114, Task 3): the thread's own send, so a
+   * "this asks for other data" reply on a DOCKED CBS chart can become a
+   * follow-up question too — the same callback the in-flow bubble gets.
+   * Undefined for `card`/`userChart` visuals (chart.tsx ignores the prop on
+   * a `card`; `userChart` renders UserChartView, a different component with
+   * its own doorway). Optional so a hand-built DockVisual (tests) needs no
+   * change. */
+  onAskFollowUp?: (message: string) => void;
+  /** Co-pilot phase 3 (session 114, Task 3): the "Grafiek uitgebreid" badge
+   * condition (extendsPreviousChart), computed once here over the full
+   * messages array so the dock tab agrees with the in-flow bubble for the
+   * same message. `false`/undefined for `card`/`userChart` visuals and for
+   * a hand-built DockVisual (tests) — optional so every existing call site
+   * and fixture stays byte-identical. */
+  extendsPrevious?: boolean;
 }
 
 const QUESTION_MAX_LENGTH = 48;
@@ -104,8 +120,14 @@ export function datasetMessageHasVisual(message: DatasetChatMessage): boolean {
   return message.role === 'assistant' && message.kind === 'chart';
 }
 
-/** Derive the ordered dock visuals from the full messages array. */
-export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
+/** Derive the ordered dock visuals from the full messages array.
+ *
+ * `onAskFollowUp` (co-pilot phase 3, Task 3): the thread's own send —
+ * carried onto every `chart` visual unchanged, so a docked CBS card's
+ * "this asks for other data" reply can hand off a follow-up question the
+ * same way the in-flow bubble does. Omitted call sites (every one before
+ * this task) get `undefined`, identical to before this prop existed. */
+export function deriveVisuals(messages: ChatMessage[], onAskFollowUp?: (message: string) => void): DockVisual[] {
   const visuals: DockVisual[] = [];
   let chartCount = 0;
   let cardCount = 0;
@@ -130,6 +152,8 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         userChart: null,
         auditId: message.auditId,
         userChartEdit: null,
+        onAskFollowUp,
+        extendsPrevious: extendsPreviousChart(messages, index),
       });
     } else if (message.card !== null) {
       cardCount += 1;
@@ -145,6 +169,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         userChart: null,
         auditId: message.auditId,
         userChartEdit: null,
+        extendsPrevious: false,
       });
     }
   });
@@ -190,6 +215,9 @@ export function deriveDatasetVisuals(
         edit === undefined || message.turnId === null
           ? null
           : { ...edit, turnId: message.turnId, lastInstruction: message.lastInstruction },
+      // UserChartView (this visual's own renderer) has no "extends the
+      // previous chart" concept — the badge is CBS/Eurostat-only.
+      extendsPrevious: false,
     });
   });
   return visuals;

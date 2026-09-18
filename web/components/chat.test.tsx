@@ -18,7 +18,7 @@ import { buildAnswerCsv } from '../lib/csv.ts';
 import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
-import { Chat } from './chat.tsx';
+import { Chat, extendsPreviousChart } from './chat.tsx';
 
 // #211 (Task 3): SiteFooter needs usePathname. '/chat' (not '/') deliberately
 // keeps its "Over dit project" anchor-probe branch inert here, matching the
@@ -209,6 +209,77 @@ function fakeContext(topicKey = 'bevolking'): ConversationContext {
     derivation: 'none',
   };
 }
+
+/** Task 3, Step 5: the minimal fields `extendsPreviousChart` reads (`chart`,
+ * `role`) plus every OTHER field ChatMessage requires, filled with inert
+ * defaults — the same discipline as `fakeAnswerResponse`/CHART_SPEC above:
+ * a real, complete shape, never a cast-away partial. */
+function chartMessage(chart: ChartSpec | null, role: ChatMessage['role'] = 'assistant'): ChatMessage {
+  return {
+    role,
+    kind: chart !== null ? 'answer' : null,
+    text: 'x',
+    chart,
+    chartAlternates: [],
+    cost: null,
+    citation: null,
+    card: null,
+    csv: null,
+    proof: null,
+    proofRequestUrls: null,
+    answerView: null,
+    provisional: false,
+    suggestions: [],
+    auditId: null,
+    webSection: null,
+    carrier: null,
+    insufficientCredits: null,
+    onboardingOffer: null,
+  };
+}
+
+describe('extendsPreviousChart (co-pilot phase 3, Task 3)', () => {
+  it('is true for the second of two answers sharing table/unit/kind/dims', () => {
+    const messages = [chartMessage(CHART_SPEC), chartMessage(CHART_SPEC)];
+    expect(extendsPreviousChart(messages, 0)).toBe(false);
+    expect(extendsPreviousChart(messages, 1)).toBe(true);
+  });
+
+  it('is false when the unit differs', () => {
+    const other: ChartSpec = { ...CHART_SPEC, unit: 'aantal' };
+    const messages = [chartMessage(CHART_SPEC), chartMessage(other)];
+    expect(extendsPreviousChart(messages, 1)).toBe(false);
+  });
+
+  it('is false when the table id differs', () => {
+    const other: ChartSpec = { ...CHART_SPEC, attribution: { ...CHART_SPEC.attribution, tableId: '99999NED' } };
+    const messages = [chartMessage(CHART_SPEC), chartMessage(other)];
+    expect(extendsPreviousChart(messages, 1)).toBe(false);
+  });
+
+  it('is false when the pinned dims differ', () => {
+    const other: ChartSpec = { ...CHART_SPEC, dims: { Kenmerk: '999999' } };
+    const messages = [chartMessage(CHART_SPEC), chartMessage(other)];
+    expect(extendsPreviousChart(messages, 1)).toBe(false);
+  });
+
+  it('does not care about field order in dims (deep-equal, not byte-equal)', () => {
+    const reordered: ChartSpec = { ...CHART_SPEC, dims: { ...CHART_SPEC.dims, Extra: 'A' }, dimLabels: {} };
+    const same: ChartSpec = { ...CHART_SPEC, dims: { Extra: 'A', ...CHART_SPEC.dims } };
+    const messages = [chartMessage(reordered), chartMessage(same)];
+    expect(extendsPreviousChart(messages, 1)).toBe(true);
+  });
+
+  it('a user message in between does not matter', () => {
+    const messages = [chartMessage(CHART_SPEC), chartMessage(null, 'user'), chartMessage(CHART_SPEC)];
+    expect(extendsPreviousChart(messages, 2)).toBe(true);
+  });
+
+  it('is false for the very first message, and for a message with no chart', () => {
+    expect(extendsPreviousChart([chartMessage(CHART_SPEC)], 0)).toBe(false);
+    expect(extendsPreviousChart([chartMessage(CHART_SPEC), chartMessage(null)], 1)).toBe(false);
+  });
+});
 
 describe('Chat — GatedResponse branches', () => {
   it('shows a sign-in prompt for kind "unauthenticated", never the generic error', async () => {

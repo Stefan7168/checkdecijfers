@@ -45,8 +45,14 @@ vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
 // mocks it, so the real 'use server' module never loads in jsdom.
 const datasetActions = vi.hoisted(() => ({ renderDatasetInstruction: vi.fn() }));
 vi.mock('../app/dataset-actions.ts', () => datasetActions);
+// Co-pilot phase 3 (session 114), Task 3: the CBS chat doorway itself now
+// mounts on this card too (with embed.auditId given), so its own Server
+// Action module needs the same jsdom-import guard as the others above.
+const chartCopilotActions = vi.hoisted(() => ({ adjustCbsChart: vi.fn() }));
+vi.mock('../app/chart-copilot-actions.ts', () => chartCopilotActions);
 
 import { ChartView } from './chart.tsx';
+import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';
 import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
 
 // chart.test.tsx does not export its fixtures, so its `point`/`spec`/
@@ -152,6 +158,26 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     );
     expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
     expect(PANEL_KINDS.every((k) => found.has(k))).toBe(true);
+  });
+
+  // Task 3, Step 4: the CBS/Eurostat co-pilot's own vocabulary
+  // (cbsViewCommandSchema) is read straight off the schema — never a
+  // hand-copied kind list that could drift from it — and every kind it can
+  // produce must already have an on-screen control on THIS card (the ADR
+  // 056 §6 "no chat-only capability" contract, now over the actual schema
+  // instead of the phase-1 CHART_COMMAND_KINDS superset).
+  it('every kind cbsViewCommandSchema can produce has an on-screen control', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await screen.findByRole('tab', { name: 'Grafiek' });
+
+    const found = kindsInDom(document.body);
+    const cbsKinds = cbsViewCommandSchema.options.map((option) => option.shape.kind.value as string);
+    // addNote's control only exists once a point has been clicked (same
+    // NOTE_KINDS carve-out the phase-1 assertion above makes) — asserted
+    // separately, over the notes editor itself, further down.
+    const missing = cbsKinds.filter((k) => !found.has(k) && !NOTE_KINDS.includes(k as ChartCommandKind));
+    expect(missing, `CBS co-pilot command kinds with no control: ${missing.join(', ')}`).toEqual([]);
   });
 
   // Task 5: the reader's own title and caption edit IN PLACE on the card —

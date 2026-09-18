@@ -197,3 +197,36 @@ export function messageKind(response: ComposedResponse): MessageKind {
   }
   return response.kind;
 }
+
+/** Co-pilot phase 3 (session 114, Task 3): whether the chart on
+ * `messages[index]` continues an EARLIER chart in the same thread — the
+ * "Grafiek uitgebreid" badge's own condition. Defined here (a pure leaf
+ * both chat.tsx and dock-visuals.ts already import, no new cross-import) so
+ * the inline bubble and the docked tab agree on the same answer for the
+ * same message without either importing the other.
+ *
+ * "Continues" = same measure (attribution.tableId), same unit, same chart
+ * kind, and the identical pinned dims (deep-equal over a key-sorted copy,
+ * so field ORDER never matters). A user message in between is irrelevant —
+ * only the nearest EARLIER message that itself carries a chart counts, and
+ * "some earlier chart", not just the immediately preceding one. */
+export function extendsPreviousChart(messages: ChatMessage[], index: number): boolean {
+  const current = messages[index]?.chart;
+  if (current === undefined || current === null) return false;
+  const dimsKey = (dims: Record<string, string>): string =>
+    JSON.stringify(Object.fromEntries(Object.entries(dims).sort(([a], [b]) => a.localeCompare(b))));
+  const currentDimsKey = dimsKey(current.dims);
+  for (let i = 0; i < index; i++) {
+    const chart = messages[i]?.chart;
+    if (chart === undefined || chart === null) continue;
+    if (
+      chart.attribution.tableId === current.attribution.tableId &&
+      chart.unit === current.unit &&
+      chart.kind === current.kind &&
+      dimsKey(chart.dims) === currentDimsKey
+    ) {
+      return true;
+    }
+  }
+  return false;
+}

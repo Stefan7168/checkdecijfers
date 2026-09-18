@@ -65,6 +65,12 @@ export interface CopilotReply {
   canUndo: boolean;
   /** The reader's own message, re-sent by Retry. */
   message: string;
+  /** Phase 3: the reader's original message when the reply said "this asks
+   * for other data" (CbsCopilotReply's own `dataRequest: true`) — the strip
+   * shows one chip that sends it as a follow-up question instead. null/absent
+   * on every own-data reply and on a CBS reply that did carry an applicable
+   * chart change. */
+  followUp?: string | null;
 }
 
 /** The applied chips + the refusal lines. Shared by the card's live reply and
@@ -132,8 +138,10 @@ function ReplyStrip(props: {
   onFeedback: (turnId: number, vote: 'up' | 'down') => Promise<{ ok: boolean }>;
   onOpen: (target: ChipOpens) => void;
   canOpen: (target: ChipOpens) => boolean;
+  /** Phase 3: present only when `reply.followUp` is a string. */
+  onAskFollowUp?: (message: string) => void;
 }): ReactNode {
-  const { reply, lang, busy, onUndoReply, onRetry, onFeedback, onOpen, canOpen } = props;
+  const { reply, lang, busy, onUndoReply, onRetry, onFeedback, onOpen, canOpen, onAskFollowUp } = props;
   // The feedback-buttons.tsx contract, verbatim: the vote is only "taken"
   // once the action SAYS so. An expired session, a turn that is not the
   // caller's, or a transport failure shows the failure line and leaves both
@@ -159,6 +167,14 @@ function ReplyStrip(props: {
   return (
     <div className="mt-2 rounded-lg border border-border bg-muted/40 p-2.5">
       <p className="text-sm text-foreground">{reply.text}</p>
+      {typeof reply.followUp === 'string' && onAskFollowUp !== undefined ? (
+        <>
+          <p className="mt-1.5 text-xs text-muted-foreground">{t(lang, 'chart.copilot.followUpHint')}</p>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onAskFollowUp(reply.followUp as string)}>
+            {t(lang, 'chart.copilot.followUp')}
+          </Button>
+        </>
+      ) : null}
       <RecipeChips
         applied={reply.applied}
         refused={reply.refused}
@@ -255,10 +271,19 @@ export function ChartCopilotInput(props: {
    * refuse as `internal`, and points the field's accessible description at
    * that line rather than printing the sentence a second time. */
   disabledReasonId?: string | null;
+  /** Phase 3: the thread's own send, so a "this asks for other data" reply
+   * can become a follow-up question in ONE click. Absent = no chip (gallery,
+   * embed, stage). */
+  onAskFollowUp?: (message: string) => void;
+  /** Phase 3: one sentence above the field explaining that figures do not
+   * change here (CBS tier only) — e.g. "Deze knop past alleen de weergave
+   * aan, nooit de cijfers." Absent/null on the own-data tier. */
+  lockedNote?: string | null;
 }): ReactNode {
-  const { lang, busy, examples, reply, error, onSend, onUndoReply, onRetry, onFeedback, onOpen } = props;
+  const { lang, busy, examples, reply, error, onSend, onUndoReply, onRetry, onFeedback, onOpen, onAskFollowUp } = props;
   const canOpen = props.canOpen ?? ((target: ChipOpens) => target !== 'none');
   const disabledReasonId = props.disabledReasonId ?? null;
+  const lockedNote = props.lockedNote ?? null;
   const blocked = busy || disabledReasonId !== null;
   const [value, setValue] = useState('');
   /** Phones (< sm) start collapsed to a single chip: the card is already
@@ -286,6 +311,7 @@ export function ChartCopilotInput(props: {
         </button>
       )}
       <div className={expanded ? '' : 'max-sm:hidden'}>
+        {lockedNote !== null ? <p className="mb-1 text-xs text-muted-foreground">{lockedNote}</p> : null}
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -341,6 +367,7 @@ export function ChartCopilotInput(props: {
             onFeedback={onFeedback}
             onOpen={onOpen}
             canOpen={canOpen}
+            onAskFollowUp={onAskFollowUp}
           />
         ) : null}
       </div>

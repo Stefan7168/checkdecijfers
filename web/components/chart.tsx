@@ -92,13 +92,26 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 // truncation — so the client-side optimistic update can never drift from
 // what normalizeHeadlineText would actually store server-side.
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
+// Co-pilot phase 3 (session 114, Task 3): own tiny-import-graph file, the
+// same reasoning as chart-headline-actions.ts above — never
+// web/app/actions.ts's much larger graph.
+import { adjustCbsChart, type AdjustCbsChartOutcome } from '../app/chart-copilot-actions.ts';
+import { cbsCapabilities, cbsExampleChips } from '../lib/chart-capabilities.ts';
+import { acceptReply, type ChipOpens } from '../lib/chart-copilot-reply.ts';
+import { ChartCopilotInput, type CopilotReply } from './chart-copilot-input.tsx';
 import { Pencil } from 'lucide-react';
 import { Button } from './ui/button.tsx';
 // Chart co-pilot phase 1 (session 112, ADR 056): one command vocabulary,
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
 // the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
-import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId } from '../lib/chart-commands.ts';
+import {
+  CHART_CAPTION_MAX_LENGTH,
+  CHART_TITLE_MAX_LENGTH,
+  initialDocState,
+  newCommandId,
+  type CommandContext,
+} from '../lib/chart-commands.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -1498,6 +1511,8 @@ export function ChartView({
   stage,
   initialPresentation,
   initialPanel,
+  onAskFollowUp,
+  extendsPrevious,
 }: {
   spec: ChartSpec;
   /** #254: every registry-recorded ALTERNATE READING of the same answered
@@ -1581,6 +1596,13 @@ export function ChartView({
    * extra click. Applied once, on mount, never re-applied on a later spec
    * swap. */
   initialPanel?: 'story';
+  /** Phase 3: the thread's own send, so a "this asks for other data" reply
+   * can become a follow-up question in ONE click. Absent = no chip (gallery,
+   * embed, stage). */
+  onAskFollowUp?: (message: string) => void;
+  /** Phase 3: this answer's chart continues the previous card in the thread
+   * (same table, unit, kind, dims) — shows the "Grafiek uitgebreid" badge. */
+  extendsPrevious?: boolean;
 }) {
   // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
   // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
@@ -2575,6 +2597,131 @@ export function ChartView({
     formTabRef[next].current?.focus();
   }
 
+  // --- the CBS/Eurostat chat doorway (Task 3, co-pilot phase 3) -----------
+  // Mirrors user-chart.tsx's own doorway B (Task 8) almost verbatim — the
+  // same reply shape, the same validate-before-dispatch discipline via
+  // acceptReply — minus everything that doorway needs for a DATA command
+  // (`edit`/`instruction`/`renderFailure`/cache): this tier never proposes
+  // different data (R1/R6/R11), so there is nothing here to re-render
+  // deterministically before a command can validate against it.
+  const [copilotBusy, setCopilotBusy] = useState(false);
+  const [copilotReply, setCopilotReply] = useState<CopilotReply | null>(null);
+  const [copilotError, setCopilotError] = useState<string | null>(null);
+  /** The notes strip, so a "Notities" chip can put the reader there — same
+   * `tabIndex={-1}` idiom as the own-data card's own notesRef. */
+  const notesRef = useRef<HTMLDivElement>(null);
+
+  function openCopilotTarget(target: ChipOpens): void {
+    if (target === 'style') setStyleOpen(true);
+    else if (target === 'form') formTabRef[activeForm].current?.focus();
+    else if (target === 'notes') notesRef.current?.focus();
+    // 'data' never occurs on this tier (no data chip is ever produced).
+  }
+
+  /** The reply, accepted. Every branch ends in ONE `copilotReply` or ONE
+   * error line — never both, and never a chart this card did not validate. */
+  function applyCopilotOutcome(message: string, outcome: AdjustCbsChartOutcome): void {
+    if (outcome.kind === 'unauthenticated') {
+      setCopilotError(t(chartLang, 'common.sessionExpired'));
+      return;
+    }
+    if (outcome.kind === 'duplicate_request') {
+      setCopilotError(t(chartLang, 'chart.copilot.error.duplicate'));
+      return;
+    }
+    if (outcome.kind === 'insufficient_credits') {
+      setCopilotError(t(chartLang, 'datasetChat.insufficientCredits', { required: outcome.required, balance: outcome.balance }));
+      return;
+    }
+    if (outcome.kind === 'invalid_spec') {
+      setCopilotError(t(chartLang, 'chart.copilot.error.failed'));
+      return;
+    }
+    const reply = outcome.reply;
+    // No vote on this tier (`turnId: null`) — nothing was stored to attach
+    // 👍/👎 to; this tier never writes audit_answers (billing/chart-edit-
+    // gate.ts's own header comment).
+    const base = { text: reply.text, turnId: null, netCost: outcome.netCost, message, undone: false, canUndo: false };
+    if (reply.kind !== 'edit') {
+      // A clarification or a refusal: the turn's own deterministic text, and
+      // nothing to apply.
+      setCopilotReply({ ...base, applied: [], refused: [], dropped: 0, commandIds: [], followUp: null });
+      return;
+    }
+    // SECOND, authoritative check (acceptReply's own header comment): the
+    // server already mapped labels onto keys by lookup against the spec it
+    // executed; this re-validates every command against the spec this card
+    // is about to draw — nothing is dispatched unless it survives.
+    const ctx: CommandContext = { spec, alternatesCount: alternates.length };
+    const { applied, dropped } = acceptReply(reply.commands, ctx, chartLang);
+    // `source: 'chat'` — the history menu shows WHICH doorway made each
+    // change, and the ids are what one "undo this reply" walks back.
+    const commandIds = applied.map((chip) => dispatchCommand(chip.command, 'chat'));
+    setCopilotReply({
+      ...base,
+      applied,
+      refused: reply.refused,
+      dropped,
+      commandIds,
+      // A "this asks for other data" reply carries the reader's own message
+      // back out, so ChartCopilotInput can offer it as a one-click follow-up
+      // question (respond.ts's DATA_REQUEST_TEXT).
+      followUp: reply.dataRequest ? message : null,
+    });
+  }
+
+  async function sendToCopilot(message: string): Promise<void> {
+    if (copilotBusy) return;
+    setCopilotBusy(true);
+    setCopilotError(null);
+    setCopilotReply(null);
+    try {
+      const outcome = await adjustCbsChart(
+        spec,
+        message,
+        // One fresh id per submit — so a Retry is a genuinely new turn
+        // rather than a replay of the charged one.
+        crypto.randomUUID(),
+        cbsCapabilities({ spec, form: activeForm, applicable: resolved.applicable, zoomAvailable, lang: chartLang }),
+      );
+      applyCopilotOutcome(message, outcome);
+    } catch {
+      setCopilotError(t(chartLang, 'chart.copilot.error.failed'));
+    } finally {
+      setCopilotBusy(false);
+    }
+  }
+
+  /** Whether the group Undo would still do anything: the top of the history
+   * has to be one of THIS reply's own commands. Recomputed every render, so
+   * a change the reader makes afterwards disables the button (with its
+   * reason) instead of leaving one that silently does nothing. */
+  function replyIsUndoable(reply: CopilotReply): boolean {
+    if (reply.undone || reply.commandIds.length === 0) return false;
+    const top = history.past[history.past.length - 1];
+    return top !== undefined && reply.commandIds.includes(top.command.id);
+  }
+
+  /** One Undo for the whole reply: walk back exactly the trailing run of
+   * commands THIS reply dispatched, so a change the reader made afterwards
+   * is never swept away with it. */
+  function undoCopilotReply(ids: string[]): void {
+    let n = 0;
+    for (let i = history.past.length - 1; i >= 0 && ids.includes(history.past[i]!.command.id); i--) n++;
+    if (n === 0) return;
+    for (; n > 0; n--) undo();
+    setCopilotReply((reply) => (reply === null ? null : { ...reply, undone: true }));
+  }
+
+  /** Which doorway a reply chip can actually open right now. Tabel form
+   * mounts neither the Style panel nor the notes strip, so a chip pointing
+   * at either must not look clickable there. */
+  function copilotCanOpen(target: ChipOpens): boolean {
+    if (target === 'none') return false;
+    if (target === 'style' || target === 'notes') return state.form !== 'table';
+    return true;
+  }
+
   /** Chart co-pilot phase 1 (session 112, ADR 056): ⌘Z / ⇧⌘Z (and the
    * Windows Ctrl+Z / Ctrl+Y) on the card itself. Never in embed or stage
    * mode — neither offers an edit to undo. A text field's OWN native undo
@@ -3445,24 +3592,35 @@ export function ChartView({
       ) : null;
 
   const notesNode = state.form !== 'table' && !embedMode && !inStage ? (
-        <ChartNotes
-          notes={state.notes}
-          pendingPoint={pendingPoint}
-          idPrefix={domId}
-          lang={chartLang}
-          onSave={(text) => {
-            if (!pendingPoint) return;
-            // `newCommandId()` (random + time-based), not a counter: the id
-            // must be unique across the whole session regardless of delete
-            // order — the old ref-backed counter's job, now covered by the
-            // command vocabulary's own id minting.
-            dispatchCommand({ kind: 'addNote', note: { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text } }, 'canvas');
-            setPendingPoint(null);
-          }}
-          onCancelPending={() => setPendingPoint(null)}
-          onDelete={(id) => dispatchCommand({ kind: 'removeNote', noteId: id }, 'canvas')}
-        />
+        // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
+        // focuses (Task 3) — the strip itself has no single control to aim
+        // at, the own-data card's own notesRef idiom.
+        <div ref={notesRef} tabIndex={-1} className="outline-none">
+          <ChartNotes
+            notes={state.notes}
+            pendingPoint={pendingPoint}
+            idPrefix={domId}
+            lang={chartLang}
+            onSave={(text) => {
+              if (!pendingPoint) return;
+              // `newCommandId()` (random + time-based), not a counter: the id
+              // must be unique across the whole session regardless of delete
+              // order — the old ref-backed counter's job, now covered by the
+              // command vocabulary's own id minting.
+              dispatchCommand({ kind: 'addNote', note: { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text } }, 'canvas');
+              setPendingPoint(null);
+            }}
+            onCancelPending={() => setPendingPoint(null)}
+            onDelete={(id) => dispatchCommand({ kind: 'removeNote', noteId: id }, 'canvas')}
+          />
+        </div>
       ) : null;
+
+  // Task 3: the same gate as chart_edits persistence (editsKey !== null) —
+  // signed in, in-app, saved answer. Not shown in embed/stage (editsKey is
+  // already forced null there) and not in table form / while the story is
+  // open (mount check below, the same rule the notes strip follows).
+  const copilotAvailable = editsKey !== null;
 
   return (
     <div
@@ -3538,6 +3696,16 @@ export function ChartView({
               }
             >
               {shownTitle}
+              {/* Task 3: "this chart continues the previous one" — never in
+                * embed/stage, where there is no thread to continue. */}
+              {extendsPrevious && !embedMode && !inStage ? (
+                <span
+                  title={t(chartLang, 'chart.extended.hint')}
+                  className="rounded-full border border-border px-2 py-0.5 text-xs font-normal text-muted-foreground"
+                >
+                  {t(chartLang, 'chart.extended.badge')}
+                </span>
+              ) : null}
               {/* The pencil sits INSIDE the heading (it carries no text of
                 * its own, so `heading.textContent` is still just the title)
                 * rather than after it — the subtitle must remain the
@@ -4448,6 +4616,28 @@ export function ChartView({
         * never part of the honest card an embed re-publishes elsewhere. */}
       {!styleOpen ? captionNode : null}
       {!styleOpen ? notesNode : null}
+      {/* Task 3 (co-pilot phase 3): mounted directly after the notes strip,
+        * outside chartContainerRef like the caption and the notes — a
+        * reader's own words never enter a PNG/SVG export. Not in table form
+        * and not while the story panel is open, the same rule notesNode
+        * follows. */}
+      {copilotAvailable && state.form !== 'table' && !storyOpen ? (
+        <ChartCopilotInput
+          lang={chartLang}
+          busy={copilotBusy}
+          examples={cbsExampleChips({ spec, state, zoomAvailable, lang: chartLang })}
+          reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
+          error={copilotError}
+          onSend={(m) => void sendToCopilot(m)}
+          onUndoReply={undoCopilotReply}
+          onRetry={(m) => void sendToCopilot(m)}
+          onFeedback={async () => ({ ok: false })}
+          onOpen={openCopilotTarget}
+          canOpen={copilotCanOpen}
+          onAskFollowUp={onAskFollowUp}
+          lockedNote={t(chartLang, 'chart.copilot.cbsLocked')}
+        />
+      ) : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured
         * sync date + deep link, from spec.attribution only (the source key is
