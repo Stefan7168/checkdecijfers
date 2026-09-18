@@ -126,6 +126,16 @@ digits, not because notes are exempt.*
   line under its heading ("Notes stay in this session and are not included in downloads or
   embeds." / nl equivalent, `chart.notes.sessionOnly` in `web/lib/i18n/messages.ts`) stating both
   facts. No mechanism change — F itself is unchanged, only now disclosed.
+- **Addendum (session 112, 2026-09-18): decision F is superseded.** Notes (and every other view-state
+  edit this ADR introduced — form, zoom, hide/highlight) are no longer session-only: the Chart
+  co-pilot (ADR [056](056-chart-copilot.md), [open-questions #274](../open-questions.md)) put this
+  reducer under a command log with undo/redo, and phase 1 persists that log per (user, chart) in a
+  chart_edits table (migration 034, file-only, see [RUNBOOK.md](../RUNBOOK.md)). Once that
+  migration is applied, a note survives a reload the same as every other edit — the "session-only"
+  disclosure line above becomes stale at that point and should be removed from chart-notes.tsx
+  and messages.ts in the same change that applies the migration. This reducer itself is
+  unchanged; it now sits underneath ADR 056's command layer rather than being driven by React
+  useState calls directly.
 
 ## Revisit triggers
 

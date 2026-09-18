@@ -464,6 +464,44 @@ code revert.
 "Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
 session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
+## Supervised live step — migration 034 chart_edits (FILE-ONLY, NOT YET RUN — Chart co-pilot phase 1, session 112, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
+
+The chart co-pilot's per-account undo/edit log (form, zoom, hidden/highlighted series, style,
+template, notes, title, caption — never a data value) was built session 112 on branch
+`s112/copilot-p1`: `web/lib/chart-commands.ts` (the command vocabulary), `web/lib/chart-history.ts`
+(the undo/redo log), `web/components/chart.tsx` (every control dispatches a command; hydrate +
+800&nbsp;ms debounced save), `src/chart/edits-store.ts` (the store), `web/app/chart-edits-actions.ts`
+(the server actions), and a retention leg in `src/answer/audit/retention.ts`'s `hardDeletes[]`
+(same discipline as `chart_headlines`, migration 031). The migration itself is committed but not
+applied anywhere.
+
+1. **`npm run db:migrate` from the repo root** — should apply exactly one pending migration:
+   `034_chart_edits.sql`. Additive only (one new table, `chart_edits`); zero changes to any
+   existing table.
+2. **Before the apply:** `src/chart/edits-store.ts` checks `to_regclass('public.chart_edits')`
+   before every read/write and returns "no edits yet" / "cannot save right now" rather than
+   throwing — so the app runs fine today, it just silently does not save or restore a reader's
+   chart edits (the debounced save effect in `chart.tsx` calls the server action, the action
+   calls the store, the store finds no table and returns `false` — no error surfaces to the
+   reader).
+3. **After the apply:** saving and restoring start working with no redeploy needed (same
+   deploy-order-safe pattern as migrations 016/017/019/026/028/030/031).
+4. **Smoke test after applying (you, signed in, on a chart with a chart):** hide a series or
+   change the form, wait ~1 second, reload the page — the edit should still be applied.
+   Read-only check: `select audit_answer_id, user_id, jsonb_array_length(log) as commands,
+   updated_at from chart_edits order by updated_at desc limit 5;`.
+5. **Standard per-migration check for a NEW table** (migration-011 queries): `chart_edits` must
+   show 0 `anon`/`authenticated` grants + RLS enabled, 0 policies (migration 003's
+   `rls_auto_enable` locks it down automatically, same as every table since).
+6. **Retention:** the GDPR purge job's redaction path already has a `chart_edits` hard-delete leg
+   wired into all three callers in `src/answer/audit/retention.ts` (thread delete, account delete,
+   retention-window expiry) — no separate step needed; it activates the moment the table exists,
+   guarded the same `to_regclass` way so it is a no-op before this migration runs.
+
+**Rollback:** nothing to unset for the code — every reader/writer degrades gracefully when the
+table is absent. Dropping `chart_edits` would simply make chart edits stop persisting again
+(readers keep editing charts in the current session; nothing survives a reload).
+
 ## Supervised live step — migration 031 chart_headlines (✅ RUN 2026-09-16, session 105, owner present — built + merged + deployed same session via subagent-driven development on branch `worktree-chart-journalist-headline`, ADR [050](decisions/050-journalist-chart-headline.md))
 
 The journalist chart-headline feature ([open-questions #259](open-questions.md)) was built, reviewed
