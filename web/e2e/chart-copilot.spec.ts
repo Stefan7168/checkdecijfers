@@ -48,14 +48,24 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await redoButton.click();
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
 
-    // Keyboard. The handler sits on the CARD's own div (no tabIndex of its
-    // own), so the shortcut only reaches it while focus is inside the card —
-    // hence focusing a control that is currently enabled rather than clicking
-    // the heading, which is not focusable and would leave focus on <body>.
-    await undoButton.focus();
+    // Keyboard. The handler sits on the card's own div, which now carries
+    // `tabIndex={-1}` (fix round 1, finding 6) — so a plain click on any
+    // NON-interactive part of the card focuses the card itself and makes ⌘Z
+    // work. Before that change this exact click did nothing at all.
+    //
+    // The click lands on the card's own padding rather than on the heading:
+    // this answer's chart renders inside the visual dock, where Playwright
+    // reports the `role="heading"` div as having no box and refuses to click
+    // it (`getByRole('heading', { level: 3 })` times out, with and without a
+    // visible filter). The card root is the honest target for "a click
+    // anywhere in the card" anyway — it is the element the handler is on.
+    const card = page
+      .locator('div[tabindex="-1"]')
+      .filter({ has: page.getByRole('button', { name: 'Ongedaan maken' }) })
+      .first();
+    await card.click({ position: { x: 4, y: 4 } });
     await page.keyboard.press(UNDO);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
-    await redoButton.focus();
     await page.keyboard.press(REDO);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
 

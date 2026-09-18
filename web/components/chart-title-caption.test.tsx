@@ -96,6 +96,37 @@ function twoSeriesLineSpec(): ChartSpec {
   };
 }
 
+// Fix round 1, finding 5: the story lock needs a spec `buildFindings` actually
+// returns something for, or the Insights trigger is never offered. Copied from
+// chart-history-ui.test.tsx's own `twoSeriesFindingsSpec`, which exists for the
+// same reason.
+function twoSeriesFindingsSpec(): ChartSpec {
+  return {
+    ...twoSeriesLineSpec(),
+    title: 'Werkloosheidspercentage',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: 'NL01',
+        points: [
+          point({ resultId: 'nl-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 3.0, formattedValue: '3,0' }),
+          point({ resultId: 'nl-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 3.1, formattedValue: '3,1' }),
+          point({ resultId: 'nl-2025', periodCode: '2025JJ00', periodLabel: '2025', value: 5.2, formattedValue: '5,2' }),
+        ],
+      },
+      {
+        label: 'Utrecht',
+        regionCode: 'PV26',
+        points: [
+          point({ resultId: 'ut-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 2.0, formattedValue: '2,0' }),
+          point({ resultId: 'ut-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 2.1, formattedValue: '2,1' }),
+          point({ resultId: 'ut-2025', periodCode: '2025JJ00', periodLabel: '2025', value: 2.2, formattedValue: '2,2' }),
+        ],
+      },
+    ],
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -150,6 +181,23 @@ describe('caption', () => {
     expect(screen.queryByTestId('chart-caption')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
     expect(screen.getByTestId('chart-caption')).toHaveTextContent('Bron: eigen bewerking');
+  });
+
+  // Fix round 1, finding 5: `commitCaption` itself obeys the story lock, not
+  // only the buttons that OPEN the editor — an editor already open when the
+  // story starts must not be able to write a caption through the lock.
+  it('a Save pressed while the story is open writes nothing', () => {
+    render(<ChartView spec={twoSeriesFindingsSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
+    fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: 'Mag niet' } });
+    // The story opens with the caption editor still on screen.
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+    const save = screen.getByRole('button', { name: 'Opslaan' });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(screen.queryByTestId('chart-caption')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
   });
 
   it('the caption is rendered outside the export container', () => {

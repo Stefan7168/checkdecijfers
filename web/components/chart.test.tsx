@@ -30,6 +30,14 @@ const chartStyleActions = vi.hoisted(() => ({
   lookupBrand: vi.fn(),
 }));
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
+// Fix round 1, finding 3: chart.tsx imports the chart_edits Server Action
+// module directly — without this mock the real module (and its db/auth
+// imports) would load in jsdom.
+const chartEditsActions = vi.hoisted(() => ({
+  fetchChartEdits: vi.fn().mockResolvedValue({ ok: true, log: null }),
+  saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
 // Task 4 (spec Part B1): ChartEmbedButton (mounted in the footer whenever
 // `embed` is passed) calls this same 'use server' action on open — mocked
 // here for the same reason as chartStyleActions above, so the Embed-button
@@ -1110,7 +1118,12 @@ describe('ADR 042 — the designed default renders its literals', () => {
     expect(framed.className).toContain('rounded-xl');
     cleanup();
     const frameless = render(<ChartView spec={threePointSpec()} frameless />).container.firstElementChild as HTMLElement;
-    expect(frameless.className).toBe('');
+    // Fix round 1, finding 6: the card root is now `tabIndex={-1}` so ⌘Z works
+    // after a click anywhere in it, and carries `outline-none` so that focus
+    // draws no ring around the whole card. That one utility is the ONLY class
+    // a frameless surface gets — no border, no padding, no background.
+    expect(frameless.className).toBe('outline-none');
+    expect(frameless).toHaveAttribute('tabindex', '-1');
   });
 });
 

@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Area,
@@ -2161,6 +2161,41 @@ export function ChartView({
    * effect's dependency list (which would re-fetch on every edit). */
   const historyRef = useRef(history);
   historyRef.current = history;
+  /** A save that is debounced but not yet sent, with the key it belongs to.
+   * Carrying the key HERE (not in a closure) is what lets the flush below
+   * write it to the right row even when the card has meanwhile been handed a
+   * different chart. */
+  const pendingSaveRef = useRef<{ key: number; json: string } | null>(null);
+
+  // Fix round 1, finding 1 (CRITICAL). The same mounted ChartView is handed a
+  // DIFFERENT chart by the visual dock and the Ontdek toggle (no `key` at
+  // either call site — see the specIdentity block below, which resets the
+  // history to empty for exactly that reason). Without this reset,
+  // `lastSavedEditsRef` still held the PREVIOUS chart's JSON, so the save
+  // effect compared the new chart's empty `[]` against it, saw a difference,
+  // and armed a write of `[]` against the NEW audit row — wiping that chart's
+  // stored log purely because the reader tabbed onto it. React's own
+  // "adjusting state when a prop changes" shape: compare against the
+  // last-seen key and fix up during render, so the reset is already in place
+  // before the effects below run in the same commit.
+  const lastEditsKeyRef = useRef(editsKey);
+  if (lastEditsKeyRef.current !== editsKey) {
+    lastEditsKeyRef.current = editsKey;
+    lastSavedEditsRef.current = '[]';
+  }
+
+  /** Fix round 1, finding 2. Sends whatever the debounce is still holding,
+   * against the key it was queued for. Dependency-free (everything it needs
+   * is in `pendingSaveRef`), so the unmount/key-change effect below can hold
+   * it for the life of the card. */
+  const flushPendingSave = useCallback(() => {
+    const pending = pendingSaveRef.current;
+    if (pending === null) return;
+    pendingSaveRef.current = null;
+    void saveChartEdits(pending.key, JSON.parse(pending.json) as unknown).then((result) => {
+      if (result.ok) lastSavedEditsRef.current = pending.json;
+    });
+  }, []);
 
   // Hydrate. Deliberately NOT applied when the reader has already started
   // editing (`history.past.length > 0`): a slow fetch resolving after the
@@ -2186,7 +2221,7 @@ export function ChartView({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per chart identity: `editsKey` is the audit row this card belongs to, and the rest (spec/alternates/initialForm/initialPresentation) are read at resolution time via the refs/props of that same card. Re-running on a spec object identity change would re-fetch on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `spec`/`alternates`/`initialForm`/`initialPresentation` ARE captured by this effect's closure and deliberately not listed: `editsKey` is the audit row this card belongs to, and every real chart swap that has an audit id at all also changes that id — so the closure is re-made whenever it could be stale. Listing `spec` (a fresh object on every render) would re-fetch continuously instead.
   }, [editsKey]);
 
   // Save, debounced. `serializeHistory` drops a TRANSIENT (unsealed) top
@@ -2195,14 +2230,29 @@ export function ChartView({
   useEffect(() => {
     if (editsKey === null) return;
     const json = JSON.stringify(serializeHistory(history));
-    if (json === lastSavedEditsRef.current) return;
-    const timer = setTimeout(() => {
-      void saveChartEdits(editsKey, JSON.parse(json) as unknown).then((result) => {
-        if (result.ok) lastSavedEditsRef.current = json;
-      });
-    }, CHART_EDITS_SAVE_DEBOUNCE_MS);
+    if (json === lastSavedEditsRef.current) {
+      pendingSaveRef.current = null;
+      return;
+    }
+    pendingSaveRef.current = { key: editsKey, json };
+    const timer = setTimeout(flushPendingSave, CHART_EDITS_SAVE_DEBOUNCE_MS);
+    // Only the TIMER is cancelled here, never the queued save: this cleanup
+    // runs on every single edit (the effect is keyed on `history`), so
+    // flushing here would send one write per click and defeat the debounce.
+    // The flush belongs to the effect below, which only tears down when the
+    // card unmounts or changes chart.
     return () => clearTimeout(timer);
-  }, [history, editsKey]);
+  }, [history, editsKey, flushPendingSave]);
+
+  // Fix round 1, finding 2 (IMPORTANT): a reader who edits and immediately
+  // closes the chat, switches chart, or navigates away used to lose the last
+  // 800 ms of work — the cleanup above only cleared the timer. React runs
+  // cleanups in effect-definition order, so this one fires AFTER the
+  // clearTimeout above, on the same unmount/key change, and sends the queued
+  // log against the key it was queued for.
+  useEffect(() => {
+    return () => flushPendingSave();
+  }, [editsKey, flushPendingSave]);
 
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
@@ -3681,7 +3731,20 @@ export function ChartView({
       ) : null;
 
   return (
-    <div className={frameClass} onKeyDown={onHistoryKeyDown}>
+    <div
+      className={`${frameClass} outline-none`.trim()}
+      /* Fix round 1, finding 6: `onHistoryKeyDown` sits on THIS div, so ⌘Z
+       * only ever reached it while focus was already inside the card —
+       * a reader who had clicked nothing focusable got no shortcut at all.
+       * `tabIndex={-1}` makes the card itself click-focusable (and
+       * programmatically focusable) without adding a stop to the tab order;
+       * `outline-none` keeps that from drawing a focus ring around the whole
+       * card, since this is never a keyboard-reachable control in its own
+       * right — every real control inside it keeps its own visible focus
+       * style. */
+      tabIndex={-1}
+      onKeyDown={onHistoryKeyDown}
+    >
       {/* Chart-card polish (2026-09-15): title + subtitle on the left, the
         * card's two actions (Inzichten, Opmaak) top-right — the universal
         * card-actions idiom. The heading's next sibling stays the subtitle

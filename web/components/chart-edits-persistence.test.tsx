@@ -189,6 +189,67 @@ describe('chart_edits persistence', () => {
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
   });
 
+  // Fix round 1, finding 1 (CRITICAL): the visual dock and the Ontdek toggle
+  // hand a DIFFERENT chart to the SAME mounted ChartView (no `key` at either
+  // call site), which resets the history to empty. If the "last saved" marker
+  // still held the previous chart's log, the save effect would see a change
+  // and write `[]` over the NEW chart's stored row — destroying another
+  // chart's edits for nothing but a tab switch.
+  it('a chart swap on the same mounted card never writes an empty log over the new chart', async () => {
+    const { rerender } = render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />
+      </Provider>,
+    );
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith(1));
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
+      expect(chartEditsActions.saveChartEdits.mock.calls[0]![0]).toBe(1);
+
+      const other = twoSeriesLineSpec();
+      other.title = 'Een andere grafiek';
+      rerender(
+        <Provider>
+          <ChartView spec={other} embed={{ auditId: 2 }} />
+        </Provider>,
+      );
+      await act(() => vi.advanceTimersByTimeAsync(2000));
+      for (const call of chartEditsActions.saveChartEdits.mock.calls) {
+        expect(call[0]).not.toBe(2);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Fix round 1, finding 2: a reader who edits and immediately closes the chat
+  // (or switches chart) used to lose the last 800 ms of work — the effect
+  // cleanup only cancelled the timer.
+  it('a save still in the debounce window is flushed when the card goes away', async () => {
+    const { unmount } = render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+      await act(() => vi.advanceTimersByTimeAsync(100)); // well inside the 800 ms window
+      expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+      unmount();
+      expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
+      const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
+      expect(id).toBe(5);
+      expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setForm']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('an untouched chart never saves an empty log', async () => {
     render(
       <Provider>
