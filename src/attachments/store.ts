@@ -204,6 +204,31 @@ export async function insertDatasetTurn(db: Db, params: InsertDatasetTurnParams)
   return Number((rows[0] as { id: string | number }).id);
 }
 
+/**
+ * The co-pilot's thumbs up/down on one stored edit turn (session 113,
+ * co-pilot phase 2). Ownership-bound like every other function here, and
+ * deliberately a SURGICAL jsonb_set of exactly one path: the rest of the
+ * envelope is the turn's own audit record and must stay byte-untouched
+ * (reconstruct.ts re-derives the chart from it). `envelope ? 'copilot'`
+ * makes a vote on a turn that has no co-pilot record a no-op returning
+ * false, rather than inventing the key.
+ */
+export async function setDatasetTurnCopilotFeedback(
+  db: Db,
+  userId: string,
+  turnId: number,
+  vote: 'up' | 'down',
+): Promise<boolean> {
+  const { rows } = await db.query(
+    `update dataset_turns
+     set envelope = jsonb_set(envelope, '{copilot,feedback}', to_jsonb($3::text))
+     where id = $1 and user_id = $2::uuid and envelope ? 'copilot'
+     returning id`,
+    [turnId, userId, vote],
+  );
+  return rows.length === 1;
+}
+
 /** The status re-check `writeTurn` (audit.ts) runs as the FIRST statement of
  * its own transaction, immediately followed by the insert above, both
  * inside the same `db.withTransaction` call — the delete-vs-write race fix

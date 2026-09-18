@@ -12,6 +12,7 @@ import {
   lockDatasetStatus,
   markDatasetFailed,
   resolveDatasetDecision,
+  setDatasetTurnCopilotFeedback,
 } from '../../src/attachments/store.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -215,6 +216,65 @@ describe('insertDatasetTurn', () => {
         latencyMs: 120,
       });
       expect(id).toBeGreaterThan(0);
+    });
+  });
+});
+
+describe('setDatasetTurnCopilotFeedback', () => {
+  // The SQL-level contract (the co-pilot's own end-to-end case lives in
+  // copilot-respond.test.ts): owner-bound, one jsonb path, no-op when the
+  // turn carries no co-pilot record.
+  async function insertTurn(db: Db, userId: string, envelope: unknown): Promise<number> {
+    const dataset = await insertDataset(db, datasetParams(userId));
+    const threadId = await insertThread(db, userId);
+    return insertDatasetTurn(db, {
+      userId,
+      datasetId: dataset.id,
+      threadId,
+      requestId: randomUUID(),
+      kind: 'chart',
+      question: 'maak de lijn dikker',
+      envelope,
+      finalText: 'Done — see the chips below.',
+      instruction: null,
+      chartEmitted: true,
+      promptVersions: { copilot: 1 },
+      llmCalls: [],
+      inputTokens: 1,
+      outputTokens: 1,
+      latencyMs: 1,
+    });
+  }
+
+  const WITH_COPILOT = {
+    schemaVersion: 1,
+    kind: 'chart',
+    copilot: { message: 'dikker', commands: [], refused: [], targetTurnId: 3, feedback: null },
+  };
+
+  it('sets the vote for the owner and leaves the rest of the envelope alone', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const turnId = await insertTurn(db, userId, WITH_COPILOT);
+      expect(await setDatasetTurnCopilotFeedback(db, userId, turnId, 'up')).toBe(true);
+      const { rows } = await db.query('select envelope from dataset_turns where id = $1', [turnId]);
+      expect(rows[0]!.envelope).toEqual({ ...WITH_COPILOT, copilot: { ...WITH_COPILOT.copilot, feedback: 'up' } });
+    });
+  });
+
+  it('refuses another user\'s turn', async () => {
+    await withDb(async (db) => {
+      const owner = randomUUID();
+      const turnId = await insertTurn(db, owner, WITH_COPILOT);
+      expect(await setDatasetTurnCopilotFeedback(db, randomUUID(), turnId, 'down')).toBe(false);
+    });
+  });
+
+  it('is a no-op on a turn with no copilot record', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const turnId = await insertTurn(db, userId, { schemaVersion: 1, kind: 'chart' });
+      expect(await setDatasetTurnCopilotFeedback(db, userId, turnId, 'down')).toBe(false);
     });
   });
 });

@@ -9,6 +9,22 @@ export function chartReplyText(): string {
   return "Here's your chart.";
 }
 
+/**
+ * The co-pilot turn's reply text (session 113, co-pilot phase 2) — English,
+ * and DIGIT-FREE by construction: the counts are described, never printed,
+ * so this tier's one deterministic reply sentence can never be mistaken for
+ * a number about the data. The chips below it (the stored commands and
+ * refusals) are what the reader actually reads.
+ */
+export function copilotReplyText(applied: number, refused: number): string {
+  if (refused > 0) {
+    return applied === 0
+      ? 'Nothing applied — see below.'
+      : 'Done in part — some requests need a click, see below.';
+  }
+  return applied === 0 ? 'Nothing to change.' : 'Done — see the chips below.';
+}
+
 /** Suggestion chips for the profile card / a low-confidence clarification —
  * built entirely from the profile's own headers, never LLM text (the #75
  * fill-don't-send convention). Fixed in review: D8 requires clarifications
