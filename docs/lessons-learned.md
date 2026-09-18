@@ -28,7 +28,7 @@ transaction on a 034-without-035 database — the GDPR purge and per-file delete
 in that window. (4) The model's `refused[].request` prose reached the screen without the digit
 guard the title/caption got. **Lesson:** the per-task reviewer's "named risks" list and the final
 whole-branch review on the most capable tier are where these live — budget for a fix round per task
-(this session: 7 of 9 tasks needed exactly one) and one final wave.
+(this session: 5 of 9 tasks needed exactly one) and one final wave.
 
 **Two implementers in disjoint worktrees per wave was the sweet spot on this 8 GB machine.** The
 plan's file map made disjointness provable; merges were clean every time; a third parallel

@@ -22,8 +22,8 @@
 `git log` / `gh run list` before trusting this).** Session 113 BUILT **chart co-pilot phase 2 — the
 own-data co-pilot** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 2", ADR
 [037](decisions/037-user-data-attachments.md) addendum) via subagent-driven development — 9 tasks,
-~30 subagents, 7 tasks needed one fix round, one final whole-branch review + one fix wave — merged
-fast-forward to `main` `f5bb6cd..caa23a7` (24 code/docs commits). CI run `35325857423` green incl. deploy; production answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
+~30 subagents, 5 tasks needed one fix round, one final whole-branch review + one fix wave — merged
+fast-forward to `main` `f5bb6cd..caa23a7` (25 commits). CI run `35325857423` green incl. deploy; production answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
 [session-briefs/2026-09-18-session-114-kickoff.md](session-briefs/2026-09-18-session-114-kickoff.md).
 
 - **What is built (dormant behind `ATTACHMENTS_ENABLED`, unset everywhere):** on a chart from the
