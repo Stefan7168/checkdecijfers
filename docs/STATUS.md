@@ -18,6 +18,51 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 113 — owner present; verify against
+`git log` / `gh run list` before trusting this).** Session 113 BUILT **chart co-pilot phase 2 — the
+own-data co-pilot** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 2", ADR
+[037](decisions/037-user-data-attachments.md) addendum) via subagent-driven development — 9 tasks,
+~30 subagents, 7 tasks needed one fix round, one final whole-branch review + one fix wave — merged
+fast-forward to `main` `f5bb6cd..caa23a7` (24 code/docs commits). CI run `35325857423` green incl. deploy; production answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
+[session-briefs/2026-09-18-session-114-kickoff.md](session-briefs/2026-09-18-session-114-kickoff.md).
+
+- **What is built (dormant behind `ATTACHMENTS_ENABLED`, unset everywhere):** on a chart from the
+  reader's own file — a fixed aggregate/derived set computed by the executor with traceable rowRefs
+  (schema v2), the shared card shell (one undo history, style panel, notes, title/caption,
+  per-turn persistence), a deterministic Data panel, and the "Pas deze grafiek aan" chat doorway
+  (one cheap-tier call; label→key mapping + allowlists + digit guard server-side, `validateCommand`
+  client-side; recipe chips, per-reply Undo/Retry/👍👎, three example chips). Hermetic proof:
+  four hand-authored LLM fixtures + `web/e2e/own-data-copilot.spec.ts` (upload → chart → chat →
+  bars + chips → ⌘Z → reload → restored), green in a real browser with zero model calls.
+- **⚠ OWNER STEPS (RUNBOOK):** (1) `npm run db:migrate` applies 034 + 035 together (`chart_edits`
+  + its own-data key; until then chart edits are silently not saved); (2) `npm run attachments:record`
+  once — four real cheap-tier calls, read the printed diff; (3) flip `ATTACHMENTS_ENABLED=1` + the
+  WP202 smoke test. Order matters: 1 → 2 → 3.
+- **Found on the way:** the own-data tier had NEVER run in a real browser — its first run crashed on
+  a pg `Date` reaching the card (fixed at the row mapper, `b6ea88b`); four more real defects caught
+  by the review loops (`oneOf` schema, hydrate ordering, retention leg pre-035, refused-text digit
+  guard) — see [lessons-learned.md](lessons-learned.md).
+- **New open rows:** [#280](open-questions.md)–[#284](open-questions.md) (chip click opens the
+  panel not the row; `count` semantics; the Data panel's English problem line; reply lives in the
+  card; the fixture/record scripts). Stale "phase 1 not yet merged" wording in architecture/scope
+  docs corrected.
+- **THE NEXT BUILD PRIORITY IS PHASE 3 — the CBS/Eurostat chat doorway** (spec §3.3, §5 phase 3):
+  the same `ChartCopilotInput` on `ChartView`, a selection-only schema generated from the live
+  chart's `capabilities`, compatible follow-ups shown as "Grafiek uitgebreid"; numbers never through
+  the model (R1/R6/R11). Also worth the owner's eye first: apply 034 + 035 and flip the flag so
+  phase 2 gets real use before phase 3 lands on the CBS card.
+- **Owner steps pending — unchanged from sessions 110/111** (registry:apply, DOI backfill, live
+  benchmark, region-set Task 9, audit row 22) **plus the three above.**
+
+**Measured (session 113, at merge, HEAD `caa23a7`):** root typecheck + web typecheck clean; root
+196 files / 2,908 tests; web 139 files / 2,346 tests; benchmark 14/14 answerable, 6/6
+refusal/clarify, 0 fabricated; Playwright `chart-copilot.spec.ts` + `own-data-copilot.spec.ts`
+2/2 green; `next build` clean; `/code-review` LOW 0 findings.
+
+---
+
+**Previous top block (session 112, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 112 — owner present; verify against
 `git log` / `gh run list` before trusting this).** Session 112 BUILT **chart co-pilot phase 1**
 (ADR [056](decisions/056-chart-copilot.md) decisions 1 + 4) via subagent-driven development —
@@ -56,38 +101,6 @@ answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
 green; benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated; web 129 files / 2166 tests;
 `next build` clean; `/code-review` LOW 0 findings; Playwright `web/e2e/chart-copilot.spec.ts` green
 locally and in CI.
-
----
-
-**Previous top block (session 111, kept verbatim below for one session):**
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 111 — owner present; verify against
-`git log` before trusting this).** Session 111 was a **research + decision session, no product code**:
-it ran read-only in parallel with session 110's tail (so it worked on a branch and merged after 110's
-wrap-up, merge `e99e3e3`). Kickoff for the next session: [session-briefs/2026-09-18-session-112-kickoff.md](session-briefs/2026-09-18-session-112-kickoff.md).
-
-- **THE NEXT BUILD PRIORITY IS THE CHART CO-PILOT** — chat + the existing controls interleaved on one
-  chart, one undo history, two trust tiers: ADR [056](decisions/056-chart-copilot.md), spec
-  [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md),
-  WP in [08-build-plan.md](08-build-plan.md) (last section), phase 1 first (command log + undo +
-  in-place title + `chart_edits` persistence, zero LLM). The owner LIFTED the session-88 parking of
-  [#212](open-questions.md); three decisions taken: fixed derived-column set, account persistence from
-  phase 1 ([#274](open-questions.md)), input label "Pas deze grafiek aan".
-- **Competitor study done** ([session-briefs/2026-09-17-competitor-g-deep-dive.md](session-briefs/2026-09-17-competitor-g-deep-dive.md)):
-  hands-on in the competitor's app incl. five AI-edit tests; their chat cannot restyle or annotate and
-  its steps are stateless; their chart-type advice is rule-based (no LLM); their SDK is closed-source
-  under a size-capped licence — do not build on it. **The repo is PUBLIC: the competitor is never named
-  here ("Competitor G", [#276](open-questions.md)).**
-- **Rebrand noted, not the focus:** domain graphmaker.studio bought ([#7](open-questions.md)); homepage
-  "themes" row wanted later ([#275](open-questions.md)).
-- **Owner steps pending — unchanged from session 110** (registry:apply, DOI backfill, live benchmark,
-  region-set Task 9, audit row 22) — nothing new from session 111 ([#276](open-questions.md) closed by the owner: accept, no
-  GitHub Support; the stray test chart in the competitor app: leave it).
-- Side finding: no ⌘Z-style history exists anywhere in our chart UI today either — phase 1 is the
-  prerequisite for everything else in the co-pilot.
-
-**Measured (session 111):** no code changed; CI not triggered (docs-only pushes skip CI by design);
-main at session start `a294a84`, CI green on the last code run of session 110.
 
 ---
 

@@ -1136,7 +1136,7 @@ so a `npm run benchmark:run:live` pass against this shape is the real go/no-go a
 run — owner-supervised spend, tracked as its own step, not a residual bug. Unlike WP253/ADR 054, this
 capability needs **no** further parser work to become reachable — it already is.
 
-## Chart co-pilot — chat and direct controls interleaved on one chart (owner decision 2026-09-17/18, session 111; ADR [056](decisions/056-chart-copilot.md), spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)) — phase 1 BUILT (session 112), phase 2 ▶ NEXT BUILD PRIORITY
+## Chart co-pilot — chat and direct controls interleaved on one chart (owner decision 2026-09-17/18, session 111; ADR [056](decisions/056-chart-copilot.md), spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)) — phases 1 + 2 BUILT (sessions 112/113), phase 3 ▶ NEXT BUILD PRIORITY
 
 **Why now:** the owner lifted the session-88 deferral of [#212](open-questions.md) ("chat-driven chart editing waits for usage evidence") — the focus is chart quality and specifically editing by chatting, "door elkaar heen" with the existing controls, "dat het echt een fijne UX is". Research that shaped it: [session-briefs/2026-09-17-competitor-g-deep-dive.md](session-briefs/2026-09-17-competitor-g-deep-dive.md).
 

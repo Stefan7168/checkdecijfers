@@ -6,6 +6,45 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 113 (2026-09-18, owner present) — a real browser finds what 5,200 unit tests cannot; two worktrees at a time is the right parallelism
+
+**The first real-browser run of a dormant feature crashed on a bug no test could see.** The own-data
+("Eigen data") tier had been "built, tested, merged" since session 85 and never once run behind
+`ATTACHMENTS_ENABLED=1` in a real browser. Task 9's Playwright spec died on its first card:
+`getDataset` returned `created_at` as a pg `Date`, a Server Action forwarded the `Date` as a `Date`,
+and `capturedAt.slice(0, 10)` threw — 2,900 root tests and 2,300 web tests were all green because
+every fixture hands the component a string. **Lesson:** a hermetic e2e through the real harness is
+a different kind of test, not a slower unit test; run it the first time a tier gets a UI, not the
+first time it gets a flag. The fix went at the only row mapper (`rowToDataset`), pinned by a test.
+
+**Review loops caught four defects that would have gone live, every one at a boundary a single task
+cannot see.** (1) The co-pilot's JSON schema emitted `oneOf` (zod's discriminated union), which
+Anthropic structured outputs reject — the whole chat doorway would have failed on its first real
+call; the intent parser had solved this months ago (`oneOfToAnyOf`), now a shared module. (2) The
+own-data card's hydrate replayed a stored `setInstruction` with a context built from the OLD spec,
+silently dropping every view/note edit made after it and then persisting the loss. (3) The
+retention leg's `catch (42703)` idiom, fine in autocommit, aborts the surrounding redaction
+transaction on a 034-without-035 database — the GDPR purge and per-file delete would have failed
+in that window. (4) The model's `refused[].request` prose reached the screen without the digit
+guard the title/caption got. **Lesson:** the per-task reviewer's "named risks" list and the final
+whole-branch review on the most capable tier are where these live — budget for a fix round per task
+(this session: 7 of 9 tasks needed exactly one) and one final wave.
+
+**Two implementers in disjoint worktrees per wave was the sweet spot on this 8 GB machine.** The
+plan's file map made disjointness provable; merges were clean every time; a third parallel
+implementer would have OOM-killed a vitest run (session-107 lesson). Cost that came with it: the
+plan had to be re-cut once (Task 3's `replay.ts`/`types.ts` edits moved to Tasks 5/7) to keep the
+waves disjoint — do that in the plan, before dispatch, not in a merge. Playwright and `next dev`
+cannot run in a worktree with symlinked `node_modules` (Turbopack refuses them), so the controller
+ran every e2e in the main checkout.
+
+**`TaskOutput` with a timeout dumps the subagent's JSONL transcript into the controller's context
+(~15k tokens a time).** Waiting on a subagent is cheaper as a background `until` loop on the
+worktree's `git rev-parse HEAD` (one notification when the commit lands) and reading the report
+afterwards. Also: the disk hit `ENOSPC` mid-session (Playwright had installed a second Chromium next
+to the old one; `web/.next` was 540 MB) — check `df -h` before the first `next build`/Playwright run,
+and delete superseded `ms-playwright` browser folders.
+
 ## Session 112 (2026-09-18, owner present) — subagent-driven development pays for itself in caught bugs, not speed
 
 **The review loop found four real defects the plan itself had mandated or missed.** Task 1's brief
