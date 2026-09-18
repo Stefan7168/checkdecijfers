@@ -6,6 +6,53 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 114 (2026-09-18, owner present, then "doe wat je wilt") — a usage cap is not a bug; a plan's "acceptable" is read as "optional"; a stub match can be better than the error you planned for
+
+**The Anthropic usage cap blocked an owner step and the session routed around it instead of stalling.**
+`npm run attachments:record` failed with the workspace's 400 "usage limits … 2026-10-01" — the same cap
+that has refused every live chat since 2026-09-14. It is not a code bug and there is no self-service
+fix, so the right move was to say so in one line, keep the hand-authored fixtures as the test basis,
+flip the flag anyway (the deterministic half of the own-data tier is the live smoke test until
+October) and continue to phase 3. **Lesson:** when a known external block reappears, name it, record
+the owner step it blocks ([#288](open-questions.md)), and move on — do not burn the session on it.
+
+**`vercel --prod` from the laptop is the wrong redeploy; re-running the last green CI run is the right
+one.** Three direct deploys failed on `Module not found: pg / @anthropic-ai/sdk` because CI's deploy
+job installs the ROOT `node_modules` before `vercel build` (ADR 018 point 9) and a bare `vercel --prod`
+does not. Production was never touched (the alias stayed on the last good build). `gh run rerun <id>`
+of the last green run picked up the new env var and deployed in the normal way. **Lesson:** an env-var
+flip is redeployed by CI, never by hand.
+
+**An implementer read "acceptable" in the plan as "optional" and skipped a whole feature leg.** The
+carried-over look for "Grafiek uitgebreid" was specified with the sentence "before that the card
+mounts plainly — acceptable" (meaning: until the fetch resolves). The Task-3 implementer took it as
+permission to skip the leg and said so in its report — which is the right behaviour for an
+implementer, and a fix round built it in twenty minutes. **Lesson:** never put a soft word next to a
+required leg in a plan; write "REQUIRED — until X resolves, do Y".
+
+**A fix-round subagent spawned its own child, then reported "running in the background" twice.** The
+child did the work (file mtimes advancing, a real commit), but the parent agent's reports were
+unusable and it kept spawning monitors after being told to stop; it was stopped with TaskStop once
+the commit landed. **Lesson:** the "no backgrounding" line in the brief does not prevent an agent
+delegating to a child; watch the worktree's HEAD, not the agent's words, and stop the agent once the
+artefact exists.
+
+**The Playwright proof was wrong three times, and every time the FEATURE was right.** (1) A
+`getByText(/credits/)` locator matched both "Kostte 10 credits" and the Retry button's "(kost
+credits)"; (2) the follow-up hand-off did not produce the error line the spec assumed — the harness
+stub matched a follow-up fixture and answered with a real clarification, which is a better proof;
+(3) the last assertion expected an undone edit to survive a reload, but only the history's PAST is
+saved (the own-data spec had documented this). **Lesson:** write the e2e AFTER reading the sibling
+specs' comments on persistence semantics, and assert exact strings, not regexes, on a strip that has
+two digit-bearing controls.
+
+**The final review on the most capable tier found what per-task reviews cannot: a reply strip that
+unmounts in the same commit that applies "zet het in een tabel".** The chat could emit `setForm:
+table`, and the input was mounted only in non-table form — so the reply's chips and group Undo
+vanished exactly when they were needed. Plus a zoom chip pointing at the Style panel and a
+double-submit window on a credited call. Fixed in one wave. **Lesson (again):** budget the final
+review as a real phase, not a formality.
+
 ## Session 113 (2026-09-18, owner present) — a real browser finds what 5,200 unit tests cannot; two worktrees at a time is the right parallelism
 
 **The first real-browser run of a dormant feature crashed on a bug no test could see.** The own-data
