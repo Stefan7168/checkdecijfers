@@ -156,7 +156,7 @@ describe('chart_edits persistence', () => {
       await act(() => vi.advanceTimersByTimeAsync(1000));
       expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
       const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
-      expect(id).toBe(5);
+      expect(id).toEqual({ kind: 'answer', id: 5 });
       expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setForm', 'setForm']);
       fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
       await act(() => vi.advanceTimersByTimeAsync(1000));
@@ -201,13 +201,13 @@ describe('chart_edits persistence', () => {
         <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />
       </Provider>,
     );
-    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith({ kind: 'answer', id: 1 }));
     vi.useFakeTimers();
     try {
       fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
       await act(() => vi.advanceTimersByTimeAsync(1000));
       expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
-      expect(chartEditsActions.saveChartEdits.mock.calls[0]![0]).toBe(1);
+      expect(chartEditsActions.saveChartEdits.mock.calls[0]![0]).toEqual({ kind: 'answer', id: 1 });
 
       const other = twoSeriesLineSpec();
       other.title = 'Een andere grafiek';
@@ -218,7 +218,7 @@ describe('chart_edits persistence', () => {
       );
       await act(() => vi.advanceTimersByTimeAsync(2000));
       for (const call of chartEditsActions.saveChartEdits.mock.calls) {
-        expect(call[0]).not.toBe(2);
+        expect(call[0]).not.toEqual({ kind: 'answer', id: 2 });
       }
     } finally {
       vi.useRealTimers();
@@ -243,7 +243,7 @@ describe('chart_edits persistence', () => {
       unmount();
       expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
       const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
-      expect(id).toBe(5);
+      expect(id).toEqual({ kind: 'answer', id: 5 });
       expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setForm']);
     } finally {
       vi.useRealTimers();
@@ -257,7 +257,7 @@ describe('chart_edits persistence', () => {
       </Provider>,
     );
     await act(() => new Promise((r) => setTimeout(r, 900)));
-    expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith(5);
+    expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith({ kind: 'answer', id: 5 });
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
   });
 });
@@ -367,7 +367,7 @@ describe('an edit during the hydrate fetch', () => {
     expect(screen.getByRole('tab', { name: /Staaf|Bar/ })).toHaveAttribute('aria-selected', 'true');
     await waitFor(() => expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1), { timeout: 3000 });
     const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
-    expect(id).toBe(5);
+    expect(id).toEqual({ kind: 'answer', id: 5 });
     expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setTitle', 'setForm']);
   });
 });

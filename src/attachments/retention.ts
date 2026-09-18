@@ -18,6 +18,7 @@
 // module's own call volume justifies the shared-transaction refactor.
 import type { Db } from '../db/types.ts';
 import { twoYearsBefore } from '../answer/audit/retention.ts';
+import { deleteChartEditsForTurns } from '../chart/edits-store.ts';
 import { redactedDatasetEnvelope, REDACTED_DATASET_TEXT, type DatasetProfile } from './types.ts';
 import { FILE_BYTES_RETENTION_DAYS } from './limits.ts';
 
@@ -63,6 +64,14 @@ async function redactTurnsForDatasets(tx: Db, datasetIds: number[]): Promise<num
   const { rows } = await tx.query(
     `select id, kind from dataset_turns where dataset_id = any($1::bigint[])`,
     [datasetIds],
+  );
+  // Session 113 (chart co-pilot phase 2, migration 035): a redacted turn no
+  // longer carries a real chart to replay against, so its edit log (if any)
+  // is dead weight — hard-delete it in the SAME transaction as the turn
+  // redaction below, before the turns themselves are overwritten.
+  await deleteChartEditsForTurns(
+    tx,
+    rows.map((r) => (r as { id: number }).id),
   );
   for (const row of rows) {
     const kind = (row as { kind: 'chart' | 'clarification' | 'refusal' }).kind;

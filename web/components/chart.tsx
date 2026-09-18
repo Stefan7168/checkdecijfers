@@ -2212,7 +2212,7 @@ export function ChartView({
     const pending = pendingSaveRef.current;
     if (pending === null) return;
     pendingSaveRef.current = null;
-    void saveChartEdits(pending.key, JSON.parse(pending.json) as unknown).then((result) => {
+    void saveChartEdits({ kind: 'answer', id: pending.key }, JSON.parse(pending.json) as unknown).then((result) => {
       // Final-review finding M1: by the time this resolves the card may have
       // been handed a DIFFERENT chart, whose own "last saved" marker was just
       // reset to `[]`. Writing the old chart's JSON into it would make the
@@ -2234,7 +2234,7 @@ export function ChartView({
       return;
     }
     let cancelled = false;
-    void fetchChartEdits(editsKey).then((result) => {
+    void fetchChartEdits({ kind: 'answer', id: editsKey }).then((result) => {
       if (cancelled) return;
       const parsed = result.ok && result.log ? parseCommandLog(result.log) : null;
       if (parsed !== null && parsed.length > 0) {

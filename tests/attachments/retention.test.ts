@@ -17,6 +17,7 @@ import {
 } from '../../src/attachments/retention.ts';
 import { getDataset, insertDataset, insertDatasetTurn } from '../../src/attachments/store.ts';
 import { REDACTED_DATASET_TEXT } from '../../src/attachments/types.ts';
+import { getOwnChartEdits, upsertChartEdits } from '../../src/chart/edits-store.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { resetTestDb } from '../helpers/reset-db.ts';
@@ -156,6 +157,30 @@ describe('deleteUserDatasets — self-service, full redaction', () => {
       await seedDataset(db, userId);
       await deleteUserDatasets(db, userId);
       await expect(deleteUserDatasets(db, userId)).resolves.toEqual({ datasets: 1, turns: 0 });
+    });
+  });
+});
+
+describe('deleteUserDatasets — chart_edits turn leg (session 113, migration 035)', () => {
+  it('removes a chart_edits row keyed by a turn of the deleted dataset, and leaves an unrelated one', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const datasetId = await seedDataset(db, userId);
+      const threadId = await seedThread(db, userId);
+      const turnId = await seedTurn(db, userId, datasetId, threadId);
+
+      // An unrelated turn, on a dataset that is NOT being deleted.
+      const otherDatasetId = await seedDataset(db, userId);
+      const otherTurnId = await seedTurn(db, userId, otherDatasetId, threadId);
+
+      const log = [{ kind: 'setTitle', title: 'x' }];
+      expect(await upsertChartEdits(db, { key: { kind: 'turn', id: turnId }, userId, log })).toBe(true);
+      expect(await upsertChartEdits(db, { key: { kind: 'turn', id: otherTurnId }, userId, log })).toBe(true);
+
+      await deleteOneDataset(db, userId, datasetId);
+
+      expect(await getOwnChartEdits(db, { kind: 'turn', id: turnId }, userId)).toBeNull();
+      expect(await getOwnChartEdits(db, { kind: 'turn', id: otherTurnId }, userId)).toEqual(log);
     });
   });
 });
