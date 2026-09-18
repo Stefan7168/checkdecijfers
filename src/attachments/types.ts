@@ -241,6 +241,28 @@ export function reviveClientInstruction(client: ClientChartInstruction): ChartIn
   };
 }
 
+/**
+ * A validated, label-mapped command as the co-pilot stored it — structurally
+ * the web `ChartCommandParams` subset the chat may emit; web/lib re-validates
+ * on dispatch. Deliberately structural (`kind` + unknown fields) rather than
+ * a second copy of `ChartCommandParams`: that type lives in web/lib and
+ * carries React-side types (`ChartNote`), and a duplicated union here would
+ * be exactly the drift #203 warns about. The guarantee this tier owes is
+ * that nothing here is a VALUE the model wrote — copilot/map.ts derives every
+ * field from the executed chart by lookup, and copilot/text-guard.ts refuses
+ * any free text carrying a number that is not on it (session 113).
+ */
+export type CopilotCommand = { kind: string } & Record<string, unknown>;
+
+/** One request the co-pilot could NOT honour, with the control that can.
+ * `unplotted_number` and `invalid` are added by our own deterministic
+ * mapping, never by the model (copilot/schema.ts's narrower enum). */
+export interface CopilotRefusal {
+  request: string;
+  reason: 'not_available' | 'not_on_this_chart' | 'needs_click' | 'unplotted_number' | 'invalid';
+  control: 'notes' | 'style' | 'data' | 'form' | 'none';
+}
+
 /** Why a plotted point is null — the R11 analog: a gap is shown, never
  * silently omitted (U11). */
 export type MissingValueReason = 'leeg in bron' | 'geen getal' | 'geen vorige waarde';
@@ -334,6 +356,13 @@ export type DatasetTurnEnvelope =
       instruction: ChartInstruction;
       chart: UserChartSpec;
       state: { datasetId: number; lastInstruction: ClientChartInstruction };
+      // The co-pilot's own edit record (session 113, co-pilot phase 2) —
+      // OPTIONAL: every chart turn written before phase 2, and every chart
+      // turn from the plain question flow (respond.ts), has no such key.
+      // Written on ONE line because tests/attachments/envelope-key-manifest.test.ts's
+      // declaration parser reads one member per line and only understands a
+      // member whose type terminates on its own line.
+      copilot?: { message: string; commands: CopilotCommand[]; refused: CopilotRefusal[]; targetTurnId: number; feedback: 'up' | 'down' | null };
     }
   | {
       schemaVersion: typeof DATASET_TURN_ENVELOPE_VERSION;

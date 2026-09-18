@@ -57,10 +57,14 @@ const MANIFEST: Record<'chart' | 'clarification' | 'refusal', Record<string, Ent
     question: { category: 'shape-checked' }, // must equal record.question
     text: {
       category: 'shape-checked',
-      note: 'must equal record.finalText (checkEnvelopeIntegrity). Not further re-derived for this kind: chartReplyText() is a fixed literal ("Here\'s your chart.") with nothing else to check it against — unlike clarification/refusal, where text IS re-derived per `reason` (see those variants).',
+      note: 'must equal record.finalText (checkEnvelopeIntegrity). Not further re-derived for this kind: the question flow\'s chartReplyText() is a fixed literal ("Here\'s your chart.") and the co-pilot flow\'s copilotReplyText(applied, refused) is one of four fixed, digit-free sentences chosen by the COUNTS in `copilot` below — neither carries data, and neither has anything else to check it against — unlike clarification/refusal, where text IS re-derived per `reason` (see those variants).',
     },
     instruction: { category: 'shape-checked' }, // must equal the promoted `instruction` column (checkChartReconstruction)
     chart: { category: 'rederived' }, // buildUserChartSpec(dataset, envelope.instruction), byte-identical (H1/H2's guarantee made mechanical)
+    copilot: {
+      category: 'ignored',
+      why: "the chart it produced is reconstructed from `instruction` like every chart envelope; the recipe is the reader's own edit record, never re-derived. Optional (session 113, co-pilot phase 2): a chart turn from the question flow, and every chart turn written before phase 2, has no such key at all. Its `feedback` field is additionally the ONE part of a stored envelope this tier ever mutates after the fact (store.ts's setDatasetTurnCopilotFeedback, a surgical jsonb_set of that single path) — a re-derivation check on it would be checking a vote against nothing.",
+    },
     state: {
       category: 'shape-checked',
       note: '`state.datasetId` is shape-checked (must equal the current dataset row\'s id); `state.lastInstruction` IS rederived — must equal toClientInstruction(envelope.instruction) exactly, the one narrowing path a server-only field (reading/confidence/unsupported.detail) could otherwise leak through.',
@@ -245,7 +249,7 @@ describe('the DatasetTurnEnvelope key manifest covers the declared variants', ()
     // throwing on anything it cannot classify is the real guard) that
     // catches a variant silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
-      chart: 7,
+      chart: 8,
       clarification: 7,
       refusal: 6,
     };
