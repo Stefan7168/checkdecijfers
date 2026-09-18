@@ -148,6 +148,23 @@ describe('rule 4 — setPresentation strips nulls and maps series colours', () =
     expect(commands).toEqual([{ kind: 'setPresentation', patch: { seriesColors: { 0: '#123456' } } }]);
   });
 
+  it('keeps a font family the panel would accept', () => {
+    const { commands } = map(output([patch({ fontFamily: 'Playfair Display' })]));
+    expect(commands).toEqual([{ kind: 'setPresentation', patch: { fontFamily: 'Playfair Display' } }]);
+  });
+
+  it('drops a font family the panel would silently reject', () => {
+    // web/lib's FONT_FAMILY_NAME: letters, digits and spaces, 1..40 chars.
+    const { commands, refused } = map(output([patch({ fontFamily: '"Comic Sans MS", cursive' })]));
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([]);
+  });
+
+  it('keeps the rest of a patch whose font family was dropped', () => {
+    const { commands } = map(output([patch({ fontFamily: 'x'.repeat(41), grid: 'none' })]));
+    expect(commands).toEqual([{ kind: 'setPresentation', patch: { grid: 'none' } }]);
+  });
+
   it('drops an entirely empty patch silently', () => {
     const { commands, refused } = map(output([patch({})]));
     expect(commands).toEqual([]);

@@ -25,6 +25,9 @@ export const CHART_FIXTURE: UserChartSpec = {
       points: [
         { rowRef: 'r3:c2', xKey: '2020', xLabel: '2020', value: 1234.5, formattedValue: '1.234,5', sourceText: '1234,5' },
         { rowRef: 'r4:c2', xKey: '2021', xLabel: '2021', value: null, formattedValue: null, sourceText: '', reason: 'leeg in bron' },
+        // A negative value and a source cell carrying a currency symbol —
+        // the digit guard must recognise the NUMBER inside both.
+        { rowRef: 'r5:c2', xKey: '2022', xLabel: '2022', value: -24, formattedValue: '-24', sourceText: '€ -24,00' },
       ],
     },
   ],

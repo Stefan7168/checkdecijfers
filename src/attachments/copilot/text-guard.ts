@@ -18,17 +18,23 @@ function trimTrailing(run: string): string {
   return run.replace(/[.,]+$/, '');
 }
 
-/** Everything a reader can already see: every point's formatted value, its
- * raw source text and its x label, plus every digit run inside the chart's
- * own column headers (a unit like 'x 1.000 euro' is quotable). */
+/**
+ * Everything a reader can already see, as DIGIT RUNS. The same extraction is
+ * applied to every string on the chart — formatted values, raw source text, x
+ * labels and column headers alike (fix, review round 1: matching a point's
+ * value as a WHOLE string made '-24', '€ 1.234' or '12%' unrecognisable, so
+ * a title quoting the number the reader is looking at was refused as
+ * fabricated). The guard's job is "is this NUMBER on the chart", and a
+ * number's sign, currency symbol and percent sign are not part of the digits.
+ */
 function plottedNumbers(chart: UserChartSpec): Set<string> {
   const allowed = new Set<string>();
   const add = (value: string | null): void => {
     if (value === null) return;
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return;
-    allowed.add(trimmed);
-    allowed.add(trimTrailing(trimmed));
+    for (const run of value.match(DIGIT_RUN) ?? []) {
+      allowed.add(run);
+      allowed.add(trimTrailing(run));
+    }
   };
   for (const series of chart.series) {
     for (const point of series.points) {
@@ -37,9 +43,7 @@ function plottedNumbers(chart: UserChartSpec): Set<string> {
       add(point.xLabel);
     }
   }
-  for (const header of [chart.xHeader, ...chart.yHeaders]) {
-    for (const run of header.match(DIGIT_RUN) ?? []) add(run);
-  }
+  for (const header of [chart.xHeader, ...chart.yHeaders]) add(header);
   return allowed;
 }
 

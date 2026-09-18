@@ -10,6 +10,10 @@
 // quarter 1-4, confidence 0-1) in deterministic code, not in the schema.
 import { z } from 'zod';
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
+// The oneOf→anyOf rewrite every structured-output schema built from a union
+// needs (session 113: extracted from this file so the co-pilot's schema uses
+// the same single copy).
+import { oneOfToAnyOf } from '../llm/json-schema.ts';
 import { RawParseValidationError } from './types.ts';
 import type { RawParse } from './types.ts';
 
@@ -118,21 +122,6 @@ export function rawParseSchemaWith(extraKeys: readonly string[]) {
     nearestCanonicalKeys: z.array(keySchema),
     note: z.string().nullable(),
   });
-}
-
-/** zod renders discriminated unions as oneOf; the structured-outputs schema
- * dialect only accepts anyOf. Our union members are disjoint (discriminated
- * on "kind"), so the rewrite is semantically identical. */
-function oneOfToAnyOf(node: unknown): unknown {
-  if (Array.isArray(node)) return node.map(oneOfToAnyOf);
-  if (node !== null && typeof node === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-      out[key === 'oneOf' ? 'anyOf' : key] = oneOfToAnyOf(value);
-    }
-    return out;
-  }
-  return node;
 }
 
 /** JSON schema for output_config.format — generated from the zod schema so

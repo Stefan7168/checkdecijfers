@@ -20,6 +20,13 @@ const NOTE_MAX = 280;
 const REQUEST_MAX = 80;
 
 const HEX = /^#[0-9a-f]{6}$/i;
+/** Mirrors web/lib/chart-presentation.ts's FONT_FAMILY_NAME exactly — the
+ * ONE model-authored string that would otherwise reach a stored command
+ * unchecked. Without this, an off-pattern font name is dropped silently by
+ * `sanitizeOverrides` on dispatch, i.e. an "applied" chip that changes
+ * nothing (review round 1). Same treatment as a malformed hex: drop the
+ * key, and drop the patch when that empties it. */
+const FONT_FAMILY_NAME = /^[A-Za-z0-9 ]{1,40}$/;
 
 function cap(text: string): string {
   return text.slice(0, REQUEST_MAX);
@@ -138,7 +145,9 @@ export function mapCopilotOutput(
         const patch: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(command.patch)) {
           if (key === 'seriesColors') continue;
-          if (value !== null) patch[key] = value;
+          if (value === null) continue;
+          if (key === 'fontFamily' && !(typeof value === 'string' && FONT_FAMILY_NAME.test(value))) continue;
+          patch[key] = value;
         }
         const colors: Record<number, string> = {};
         for (const { seriesLabel, hex } of command.patch.seriesColors) {

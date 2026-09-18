@@ -126,6 +126,16 @@ describe('validateCopilotOutput', () => {
     expect(() => validateCopilotOutput(reply({ confidence: 1.4 }), PROFILE)).toThrow(InstructionValidationError);
   });
 
+  it('produces a JSON schema carrying no oneOf — the API rejects that dialect', () => {
+    // The view commands are a discriminated union, which zod renders as
+    // `oneOf`; the structured-output schema dialect accepts only `anyOf`
+    // (src/answer/llm/json-schema.ts). A regression here fails every real
+    // co-pilot call, and nothing else in this suite would notice.
+    const json = JSON.stringify(copilotOutputJsonSchema());
+    expect(json).not.toContain('"oneOf"');
+    expect(json).toContain('"anyOf"');
+  });
+
   it('produces a JSON schema for the structured-output call', () => {
     const schema = copilotOutputJsonSchema();
     expect(schema.type).toBe('object');

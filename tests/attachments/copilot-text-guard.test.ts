@@ -33,6 +33,16 @@ describe('unplottedDigits', () => {
     expect(unplottedDigits('De bron zegt 1234,5', CHART_FIXTURE)).toEqual([]);
   });
 
+  it('accepts the number inside a negative formatted value', () => {
+    // formattedValue is '-24': the minus sign is not part of the digits.
+    expect(unplottedDigits('Rotterdam fell by 24', CHART_FIXTURE)).toEqual([]);
+  });
+
+  it('accepts a number the source cell shows with a currency symbol', () => {
+    // sourceText is '€ -24,00'.
+    expect(unplottedDigits('De cel zegt 24,00', CHART_FIXTURE)).toEqual([]);
+  });
+
   it('is clean for text with no digits at all', () => {
     expect(unplottedDigits('Omzet per stad', CHART_FIXTURE)).toEqual([]);
   });

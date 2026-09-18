@@ -11,6 +11,7 @@
 // PRESENT AND NULLABLE and code — never the JSON schema — enforces the
 // allowlists that depend on THIS chart.
 import { z } from 'zod';
+import { oneOfToAnyOf } from '../../answer/llm/json-schema.ts';
 import { InstructionValidationError, chartInstructionSchema, validateInstructionObject } from '../instruct/schema.ts';
 import type { DatasetProfile } from '../types.ts';
 import type { CopilotOutput } from './types.ts';
@@ -64,8 +65,13 @@ export const copilotOutputSchema = z.strictObject({
   reading: z.string(),
 });
 
+/** `viewCommandSchema` is a discriminated union, which zod renders as
+ * `oneOf` — a schema dialect the structured-output API REJECTS, so the call
+ * would fail outright in production. The shared oneOf→anyOf walker (the same
+ * one src/answer/intent/schema.ts uses) is mandatory here, not cosmetic;
+ * copilot-schema.test.ts pins that no `oneOf` survives. */
 export function copilotOutputJsonSchema(): Record<string, unknown> {
-  return z.toJSONSchema(copilotOutputSchema) as Record<string, unknown>;
+  return oneOfToAnyOf(z.toJSONSchema(copilotOutputSchema)) as Record<string, unknown>;
 }
 
 /**

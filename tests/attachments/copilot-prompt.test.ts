@@ -79,9 +79,9 @@ describe('serializeCopilotRequest', () => {
     expect(payload).toContain(JSON.stringify(CURRENT_FIXTURE));
   });
 
-  it('shows the chart series and x labels', () => {
-    expect(payload).toContain('Amsterdam');
-    expect(payload).toContain('2021');
+  it('shows the chart series and x labels as their own rendered lines', () => {
+    expect(payload).toContain('- series labels: [Amsterdam | Rotterdam]');
+    expect(payload).toContain('- x labels: [2020 | 2021]');
   });
 
   it('shows the capabilities of this chart', () => {

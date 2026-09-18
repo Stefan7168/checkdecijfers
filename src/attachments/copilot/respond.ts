@@ -174,7 +174,12 @@ async function produceOutcome(input: RespondToChartEditInput): Promise<Outcome> 
   if (validated === null) return noLlmCallOutcome(refusal(message, 'internal'));
 
   // Step 2 — the client's claimed capabilities, enum-checked before they
-  // can reach the prompt.
+  // can reach the prompt. This list is ADVISORY: it only ever narrows what
+  // the model is TOLD this chart offers (so it refuses rather than asks for
+  // something unavailable). The authority on whether a command may apply is
+  // the client's own `validateCommand` (web/lib/chart-commands.ts) on
+  // dispatch, plus copilot/map.ts's allowlists here — never this list, which
+  // the browser supplied.
   const caps = sanitizeCapabilities(capabilities);
 
   // Step 3.
