@@ -39,7 +39,7 @@ export type ChartCommandParams =
   /** `index` is set only by an inverse (undo of a removal) so the note
    * returns to its original position. */
   | { kind: 'addNote'; note: ChartNote; index?: number }
-  | { kind: 'removeNote'; id: string }
+  | { kind: 'removeNote'; noteId: string }
   | { kind: 'setTitle'; title: string | null }
   | { kind: 'setCaption'; caption: string | null };
 
@@ -120,7 +120,7 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
       return { ...state, notes };
     }
     case 'removeNote':
-      return { ...state, notes: state.notes.filter((n) => n.id !== cmd.id) };
+      return { ...state, notes: state.notes.filter((n) => n.id !== cmd.noteId) };
     case 'setTitle':
       return { ...state, title: cmd.title };
     case 'setCaption':
@@ -148,11 +148,11 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
     case 'setReading':
       return { kind: 'setReading', index: before.selectedReading };
     case 'addNote':
-      return { kind: 'removeNote', id: cmd.note.id };
+      return { kind: 'removeNote', noteId: cmd.note.id };
     case 'removeNote': {
-      const index = before.notes.findIndex((n) => n.id === cmd.id);
+      const index = before.notes.findIndex((n) => n.id === cmd.noteId);
       // Unknown id: the removal is a no-op, so its inverse is the same no-op.
-      return index === -1 ? { kind: 'removeNote', id: cmd.id } : { kind: 'addNote', note: before.notes[index]!, index };
+      return index === -1 ? { kind: 'removeNote', noteId: cmd.noteId } : { kind: 'addNote', note: before.notes[index]!, index };
     }
     case 'setTitle':
       return { kind: 'setTitle', title: before.title };
@@ -219,7 +219,7 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
     case 'addNote':
       return resultIds(ctx.spec).has(cmd.note.resultId) && cmd.note.text.trim().length > 0 && cmd.note.text.length <= CHART_NOTE_MAX_LENGTH;
     case 'removeNote':
-      return typeof cmd.id === 'string' && cmd.id.length > 0;
+      return typeof cmd.noteId === 'string' && cmd.noteId.length > 0;
     case 'setTitle':
       return cmd.title === null || (cmd.title.trim().length > 0 && cmd.title.length <= CHART_TITLE_MAX_LENGTH);
     case 'setCaption':
@@ -253,11 +253,7 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('applyTemplate'), templateId: z.string(), ...envelope }),
   z.object({ kind: z.literal('setReading'), index: z.number().int().nullable(), ...envelope }),
   z.object({ kind: z.literal('addNote'), note: noteSchema, index: z.number().int().optional(), ...envelope }),
-  // `removeNote`'s own `id` (the note to remove) and the envelope's command
-  // `id` are the SAME field per ChartCommand's type (`ChartCommandParams &
-  // {id, at, source}` collapses two `id: string` members into one) — the
-  // envelope's schema already covers it, so it is not repeated here.
-  z.object({ kind: z.literal('removeNote'), ...envelope }),
+  z.object({ kind: z.literal('removeNote'), noteId: z.string(), ...envelope }),
   z.object({ kind: z.literal('setTitle'), title: z.string().max(CHART_TITLE_MAX_LENGTH).nullable(), ...envelope }),
   z.object({ kind: z.literal('setCaption'), caption: z.string().max(CHART_CAPTION_MAX_LENGTH).nullable(), ...envelope }),
 ]);

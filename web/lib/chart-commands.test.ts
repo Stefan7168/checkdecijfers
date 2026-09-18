@@ -61,7 +61,7 @@ function randomCommand(r: () => number, state: ChartDocState, n: number): ChartC
     case 'applyTemplate': return { kind, templateId: pick(r, ['classic', 'newsroom'] as const) };
     case 'setReading': return { kind, index: pick(r, [null, 0]) };
     case 'addNote': return { kind, note: { id: `n${n}`, resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Nederland', text: `noot ${n}` } };
-    case 'removeNote': return state.notes.length > 0 ? { kind, id: pick(r, state.notes).id } : { kind: 'setCaption', caption: null };
+    case 'removeNote': return state.notes.length > 0 ? { kind, noteId: pick(r, state.notes).id } : { kind: 'setCaption', caption: null };
     case 'setTitle': return { kind, title: r() < 0.3 ? null : `titel ${n}` };
     case 'setCaption': return { kind, caption: r() < 0.3 ? null : `bijschrift ${n}` };
   }
@@ -96,7 +96,7 @@ describe('applyCommand / invertCommand', () => {
     const b = { id: 'b', resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Nederland', text: 'b' };
     s = applyCommand(s, { kind: 'addNote', note: a });
     s = applyCommand(s, { kind: 'addNote', note: b });
-    const remove: ChartCommandParams = { kind: 'removeNote', id: 'a' };
+    const remove: ChartCommandParams = { kind: 'removeNote', noteId: 'a' };
     const inv = invertCommand(s, remove);
     s = applyCommand(applyCommand(s, remove), inv);
     expect(s.notes.map((n) => n.id)).toEqual(['a', 'b']);
