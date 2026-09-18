@@ -23,6 +23,7 @@ process.env.CLARIFY_CLICK_ENABLED = '1';
 process.env.ANSWER_FIRST_ENABLED = '1';
 process.env.SEMANTIC_CHECK_ENABLED = '1';
 process.env.EUROSTAT_EXPLORER_ENABLED = '1'; // dev-harness Task 2: /eurostat-explorer now has a registered table
+process.env.ATTACHMENTS_ENABLED = '1'; // co-pilot phase 2 Task 9: the "Bestand uploaden" control + the own-data chat
 process.env.HARNESS_INTENT_INJECT = '1'; // dev-harness Task 1: "!!regionset <name>" / "!!intent {json}" bypass
 process.env.NO_PROXY = 'localhost,127.0.0.1';
 process.env.no_proxy = 'localhost,127.0.0.1';

@@ -42,6 +42,8 @@
     "usage:report": "node --env-file=.env scripts/usage-report.ts",
     "tables:evict": "node --env-file=.env scripts/table-eviction.ts",
     "trialpot:set": "node --env-file=.env scripts/trial-pot-set.ts",
+    "attachments:fixtures": "node scripts/attachments-fixtures.ts",
+    "attachments:record": "node --env-file-if-exists=.env scripts/attachments-fixtures.ts --record",
     "intent:eval": "node --env-file-if-exists=.env scripts/intent-eval.ts",
     "intent:record": "node --env-file-if-exists=.env scripts/intent-eval.ts --record",
     "onboarding-delivery:record": "node --env-file=.env scripts/onboarding-delivery-record.ts",
