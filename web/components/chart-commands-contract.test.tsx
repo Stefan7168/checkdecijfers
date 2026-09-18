@@ -10,8 +10,9 @@
 // Server Action module chart.tsx imports directly.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CHART_COMMAND_KINDS, type ChartCommandKind } from '../lib/chart-commands.ts';
+import { CHART_COMMAND_KINDS, validateCommand, type ChartCommandKind, type CommandContext } from '../lib/chart-commands.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 
 const chartHeadlineActions = vi.hoisted(() => ({
   draftChartHeadline: vi.fn(),
@@ -39,8 +40,14 @@ const chartStyleActions = vi.hoisted(() => ({
 vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
 const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
 vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
+// Co-pilot phase 2 (session 113), Task 6: the own-data card imports the
+// dataset render action directly — mocked here the way user-chart.test.tsx
+// mocks it, so the real 'use server' module never loads in jsdom.
+const datasetActions = vi.hoisted(() => ({ renderDatasetInstruction: vi.fn() }));
+vi.mock('../app/dataset-actions.ts', () => datasetActions);
 
 import { ChartView } from './chart.tsx';
+import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
 
 // chart.test.tsx does not export its fixtures, so its `point`/`spec`/
 // `twoSeriesLineSpec` factories are copied here (chart.test.tsx:87-125 and
@@ -172,5 +179,124 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     const found = kindsInDom(container);
     expect(found.has('addNote')).toBe(true);
     expect(found.has('removeNote')).toBe(true);
+  });
+});
+
+// --- the own-data card (co-pilot phase 2, session 113, Task 6) -------------
+// The SAME contract over the other card: with the Style and Data panels open,
+// every command kind an own-data chat doorway (Task 8) could emit already has
+// an on-screen control. Two kinds are CBS-only and are asserted to be
+// *impossible* here rather than merely absent.
+const CBS_ONLY_KINDS: ChartCommandKind[] = ['setPeriodRange', 'setReading'];
+
+const USER_PROFILE: DatasetProfile = {
+  columns: [
+    { id: 'c0', header: 'Jaar', type: 'year', distinct: ['2023', '2024'], min: 2023, max: 2024, nulls: 0 },
+    { id: 'c1', header: 'Omzet', type: 'number', numberFormat: 'nl', min: 0, max: 100, nulls: 0 },
+  ],
+  rowCount: 2,
+};
+
+const USER_INSTRUCTION: ClientChartInstruction = {
+  version: 2,
+  kind: 'line',
+  x: 'c0',
+  y: ['c1'],
+  seriesBy: null,
+  filters: [],
+  sort: null,
+  limit: null,
+  aggregate: null,
+  derived: null,
+  unsupported: null,
+};
+
+function userEdit(): UserChartEditContext {
+  return { datasetId: 3, threadId: 42, turnId: 7, profile: USER_PROFILE, lastInstruction: USER_INSTRUCTION };
+}
+
+/** Two series, two points each — the legend (toggleSeries/setHighlight/
+ * setSeriesView) only mounts above one series. */
+function twoSeriesUserSpec(): UserChartSpec {
+  const point = (rowRef: string, xKey: string, value: number, formattedValue: string) => ({
+    rowRef,
+    xKey,
+    xLabel: xKey,
+    value,
+    formattedValue,
+    sourceText: formattedValue,
+  });
+  return {
+    schemaVersion: 1,
+    origin: 'user_dataset',
+    trust: 'unverified',
+    kind: 'line',
+    xHeader: 'Jaar',
+    yHeaders: ['Omzet'],
+    series: [
+      { label: 'Amsterdam', points: [point('r1:c1', '2023', 40, '40,0'), point('r2:c1', '2024', 42, '42,0')] },
+      { label: 'Rotterdam', points: [point('r1:c2', '2023', 20, '20,0'), point('r2:c2', '2024', 24, '24,0')] },
+    ],
+    provenance: {
+      datasetId: 7,
+      sourceKind: 'file_csv',
+      displayName: 'omzet.csv',
+      sourceUrlHost: null,
+      capturedAt: '2026-09-18T12:00:00.000Z',
+      contentSha256: 'deadbeef',
+    },
+    disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
+  };
+}
+
+describe('own-data card — the same command ↔ control contract (Task 6)', () => {
+  it('every command kind except the CBS-only ones is reachable from an on-screen control', async () => {
+    render(<UserChartView spec={twoSeriesUserSpec()} edit={userEdit()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await screen.findByRole('tab', { name: 'Grafiek' });
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+
+    const found = kindsInDom(document.body);
+    const missing = CHART_COMMAND_KINDS.filter(
+      (k) => !found.has(k) && !CBS_ONLY_KINDS.includes(k) && !NOTE_KINDS.includes(k),
+    );
+    expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
+    // The one kind the CBS card cannot offer at all.
+    expect(found.has('setInstruction')).toBe(true);
+  });
+
+  it('validateCommand refuses the two CBS-only kinds on an own-data context', () => {
+    const ctx: CommandContext = {
+      spec: {
+        kind: 'line',
+        series: twoSeriesUserSpec().series.map((s) => ({
+          label: s.label,
+          regionCode: null,
+          points: s.points.map((p) => ({
+            resultId: p.rowRef,
+            periodCode: p.xKey,
+            periodLabel: p.xLabel,
+            value: p.value,
+            formattedValue: p.formattedValue,
+            decimals: 0,
+            status: '',
+            provisional: false,
+            valueAttribute: '',
+          })),
+        })),
+      },
+      alternatesCount: 0,
+      profile: USER_PROFILE,
+    };
+    // No alternate readings on own data.
+    expect(validateCommand({ kind: 'setReading', index: 0 }, ctx)).toBe(false);
+    // `periodCodes()` reads point.periodCode — which is the own-data xKey, so
+    // a range of real x keys would otherwise validate. The explicit rule: a
+    // non-null range is invalid whenever the context carries a profile (an
+    // own-data card has no zoom control to produce one).
+    expect(validateCommand({ kind: 'setPeriodRange', range: ['2023', '2024'] }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setPeriodRange', range: null }, ctx)).toBe(true);
+    // …and the same non-null range still validates on a CBS context.
+    expect(validateCommand({ kind: 'setPeriodRange', range: ['2023', '2024'] }, { ...ctx, profile: undefined })).toBe(true);
   });
 });

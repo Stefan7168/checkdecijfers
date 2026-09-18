@@ -73,6 +73,7 @@ import {
   type SeriesMeta,
 } from './chart.tsx';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
+import { ChartDataPanel, ChartDataTrigger } from './chart-data-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartEditableText } from './chart-editable-text.tsx';
 import { ChartFrame } from './chart-frame.tsx';
@@ -443,6 +444,18 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const styleControlsId = `${domId}-style`;
   const panelId = `${domId}-panel`;
 
+  // --- the Data panel (Task 6) ---------------------------------------------
+  // Doorway A for a data command. Offered only with an edit context: without
+  // the dataset's profile there is nothing to validate an instruction
+  // against (the ADR 037 D11 guard), and without an instruction there is
+  // nothing to patch.
+  const [dataOpen, setDataOpen] = useState(false);
+  const dataTriggerId = `${domId}-data-trigger`;
+  const dataControlsId = `${domId}-data`;
+  // One object rather than a boolean, so the two values the panel needs are
+  // narrowed once here instead of asserted at the mount point.
+  const dataEdit = profile !== undefined && state.instruction !== null ? { profile, instruction: state.instruction } : null;
+
   // --- text ----------------------------------------------------------------
   const heading = t(chartLang, 'userChart.heading', { y: activeSpec.yHeaders.join(', '), x: activeSpec.xHeader });
   const accessibleName = t(chartLang, 'userChart.accessibleName', { heading: state.title ?? heading });
@@ -807,8 +820,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               compact
             />
           ) : null}
-          {/* Task 6 mounts the Data trigger here (the data-command doorway);
-            * nothing of it is built in this task. */}
+          {dataEdit !== null ? (
+            <ChartDataTrigger
+              open={dataOpen}
+              onToggle={() => setDataOpen((open) => !open)}
+              controlsId={dataControlsId}
+              triggerId={dataTriggerId}
+              lang={chartLang}
+            />
+          ) : null}
         </div>
       </div>
       <div
@@ -908,6 +928,20 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         as="p"
         className="text-sm text-muted-foreground"
       />
+      {/* Under the plot, above the Style region — and available in Tabel form
+        * too: WHICH data is drawn is orthogonal to how it is shown. */}
+      {dataEdit !== null ? (
+        <ChartDataPanel
+          instruction={dataEdit.instruction}
+          profile={dataEdit.profile}
+          lang={chartLang}
+          open={dataOpen}
+          onOpenChange={setDataOpen}
+          triggerId={dataTriggerId}
+          idPrefix={domId}
+          onChange={(instruction, summary) => dispatch({ kind: 'setInstruction', instruction, summary }, 'panel')}
+        />
+      ) : null}
       {activeForm !== 'table' ? (
         <ChartConfigPanel
           resolved={resolved}
