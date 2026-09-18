@@ -464,6 +464,15 @@ code revert.
 "Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
 session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
+## Owner step — `npm run chart-copilot:record` (chart co-pilot phase 3, session 114; not yet run — blocked by the API cap, [#288](open-questions.md))
+
+Three real cheap-tier calls (`claude-haiku-4-5`) replacing the hand-authored CBS co-pilot fixtures under
+`tests/fixtures/llm/chart-copilot/` with the real model output and printing the diff against
+`tests/fixtures/chart-copilot/cases.ts`. Same procedure as `attachments:record` (WP202 step 4b): run once,
+read the diff, update `cases.ts` if the real output is the one to test against (or revert the recording),
+`npx vitest run tests/chart` green, commit. Never from CI or a subagent. Nothing on production depends on it —
+the chat doorway runs the live model regardless; the fixtures only serve the hermetic proof.
+
 ## Supervised live step — migrations 034 + 035 chart_edits (✅ RUN 2026-09-18 11:14 UTC, session 114, owner present — `npm run db:migrate` applied exactly 034 then 035; post-checks: table present with both keys, RLS on, 0 anon/authenticated grants, 0 policies, 3 indexes. Chart co-pilot phases 1 + 2, sessions 112/113, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
 
 **Session 113 addendum — apply 034 AND 035 in one `npm run db:migrate`.** Phase 2 added

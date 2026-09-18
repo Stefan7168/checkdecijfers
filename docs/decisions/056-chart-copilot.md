@@ -233,6 +233,57 @@ select the exact row; no streaming of chips (one call, one reply); `count` ignor
 own-data table form has no CSV export; the Data panel's problem line shows the validator's English
 message; the reply lives in the card and only appears in the thread after a reload.
 
+## As built — phase 3, the CBS/Eurostat chat doorway (session 114, 2026-09-18)
+
+Plan: [superpowers/plans/2026-09-18-chart-copilot-phase3.md](../superpowers/plans/2026-09-18-chart-copilot-phase3.md).
+Built via subagent-driven development (four implementer tasks in two waves, two worktrees; one fix
+round; the Playwright proof and the final review by the session).
+
+- **Selection only, by construction.** `src/chart/copilot/` mirrors `src/attachments/copilot/` file for
+  file but its schema has NO instruction field: the model may emit `setForm`, `setSeriesView` (by series
+  LABEL), `setPeriodRange` (by period LABEL, only when the card offers the zoom), `setPresentation`,
+  `applyTemplate`, `resetPresentation`, `setTitle`, `setCaption`, `addNote` (series label + period label),
+  plus one boolean `dataRequest`. The prompt payload carries the chart's title, unit, kind, series labels
+  and period labels — never a `formattedValue`, `value` or `resultId` (pinned by
+  `tests/chart/copilot-respond.test.ts`). `map.ts` turns labels into `s${index}` keys and period CODES by
+  lookup against the spec; a label that does not resolve is a refusal naming the control, never a guess.
+  The digit guard (`text-guard.ts`) allows only digit runs present in the spec's own formatted values,
+  period labels/codes, title, unit and covered-period bounds. The card re-validates every stored command
+  with `validateCommand` before dispatching with `source: 'chat'` (R1/R6/R11 untouched; `windowSpec()`
+  unchanged).
+- **"En Amsterdam erbij" is a data request, not an edit.** The model sets `dataRequest: true` with an empty
+  view; the reply strip then shows one chip "Stel als vervolgvraag" that sends the reader's OWN words
+  through the thread's existing question path (`chat.tsx`'s `sendText`, ADR 021 follow-up context) —
+  the model never rewrites the question. When the resulting answer's chart is compatible with an earlier
+  card in the thread (same `attribution.tableId`, `unit`, `kind` and `dims` — `extendsPreviousChart` in
+  `web/lib/chat-message.ts`) the new card carries the badge "Grafiek uitgebreid" and mounts in the
+  previous card's saved form and look (its `chart_edits` log folded into `initialFormOverride` +
+  `initialPresentation`). The two answers stay two cards with two audit rows; merging their series into
+  one drawn spec is [#287](../open-questions.md).
+- **Billing without DDL.** `src/billing/chart-edit-gate.ts` (the dataset-gate pattern; hot path untouched)
+  reserves the existing `clarification` action-class price through the existing `question_cost`
+  reservation with a fresh request id; an `edit` reply keeps the debit, a clarification/refusal refunds
+  in full; every compensation passes `auditAnswerId: null`. **A chart edit never writes `audit_answers`**
+  (spec §6). What survives: the ledger rows and the applied commands in the card's `chart_edits` log
+  (phase 1). The reply text, refusals and token counts are not stored, so this tier has no 👍/👎 —
+  [#285](../open-questions.md) (re-pricing), [#286](../open-questions.md) (a turn record).
+- **Gating on the CBS card** (`web/components/chart.tsx`): the input mounts only where the history
+  actions do — signed in, in-app, a saved answer behind the card (`editsKey !== null`), never in embed or
+  stage mode, not in table form, not while the story panel is open. The reply strip renders outside the
+  export container (no credit figure can enter a PNG/SVG). Three deterministic example chips
+  (`cbsExampleChips`): spotlight the top visible series, "Alleen de laatste jaren" when the zoom is on
+  offer, a title suggestion — zero model calls.
+- **Hermetic proof.** `tests/fixtures/chart-copilot/cases.ts` holds three hand-authored cases over the
+  exact spec the harness draws for the phase-1 e2e question (captured through the same PGlite snapshot +
+  `runQuery` + `buildChartSpec` route the harness uses); `npm run chart-copilot:fixtures` writes them
+  under their real request hash (drift test `tests/chart/copilot-fixtures.test.ts`);
+  `npm run chart-copilot:record` is the owner's live check (blocked by the API cap until 2026-10-01,
+  [#288](../open-questions.md)); `web/e2e/cbs-copilot.spec.ts` walks hide → ⌘Z → data request →
+  follow-up hand-off → reload in a real browser with zero model calls.
+- **Not built (by decision):** series merging for "Grafiek uitgebreid" ([#287](../open-questions.md));
+  a reading (`setReading`) command through the chat — the reading select stays panel-only for now (an
+  alternate reading is a different measure and deserves the panel's explicit label).
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
