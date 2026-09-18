@@ -116,6 +116,8 @@ export function VisualDock({
             alternates={active.chartAlternates}
             frameless
             embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
+            onAskFollowUp={active.onAskFollowUp}
+            extendsPrevious={active.extendsPrevious}
           />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
           <UserChartView spec={active.userChart} edit={active.userChartEdit ?? undefined} />

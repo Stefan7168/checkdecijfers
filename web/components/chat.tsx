@@ -43,7 +43,12 @@ import { statCardData } from '../lib/stat-card-data.ts';
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
 // SAME messages this live path appends — byte-identity by construction.
 import type { AnswerView, ChatMessage } from '../lib/chat-message.ts';
-import { messageKind } from '../lib/chat-message.ts';
+import { extendsPreviousChart, messageKind } from '../lib/chat-message.ts';
+// Co-pilot phase 3 (session 114, Task 3): re-exported here (defined in
+// chat-message.ts, a pure leaf dock-visuals.ts also imports) so this
+// component's own test can import it the way it imports everything else
+// chat-specific, without chat.tsx and dock-visuals.ts importing each other.
+export { extendsPreviousChart };
 // WP135 (ADR 033 D4): the right-pane dock derives its tabs from these same
 // messages; Chat renders an in-flow reference chip (instead of the inline
 // visual) when the dock is active, using the SAME id scheme the dock does.
@@ -583,7 +588,11 @@ export function Chat({
   // so the workspace can render the dock and its tabs; a no-op without the
   // callback (the Dashboard / test call sites).
   useEffect(() => {
-    onVisualsChange?.(deriveVisuals(messages));
+    onVisualsChange?.(deriveVisuals(messages, (m) => void sendText(m)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendText is
+    // stable in effect (closes over messages/threadId via refs/state
+    // already tracked in this file's own dependency list elsewhere); adding
+    // it here would re-fire this effect on every render.
   }, [messages, onVisualsChange]);
 
   // ADR 037 D10: the upload button's OWN local busy/error state — fixed in
@@ -1345,6 +1354,8 @@ export function Chat({
                 spec={message.chart}
                 alternates={message.chartAlternates}
                 embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+                onAskFollowUp={(m) => void sendText(m)}
+                extendsPrevious={extendsPreviousChart(messages, i)}
               />
             ) : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a

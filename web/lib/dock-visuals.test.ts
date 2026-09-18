@@ -83,6 +83,9 @@ describe('deriveDatasetVisuals', () => {
       // Co-pilot phase 2 (session 113): no dataset/thread context passed →
       // the docked card gets no edit context and stays read-only.
       userChartEdit: null,
+      // Co-pilot phase 3 (session 114, Task 3): UserChartView has no
+      // "extends the previous chart" concept — the badge is CBS-only.
+      extendsPrevious: false,
     });
     expect(visuals[1]!.id).toBe('visual-3');
     expect(visuals[1]!.label).toBe('Your chart 2');

@@ -237,6 +237,43 @@ describe('ChartCopilotInput — the reply', () => {
   });
 });
 
+describe('ChartCopilotInput — phase 3: follow-up hand-off and the locked note', () => {
+  it('offers the follow-up chip and forwards the original message', () => {
+    const onAskFollowUp = vi.fn();
+    render(
+      <ChartCopilotInput
+        {...props({
+          reply: reply({ followUp: 'gemiddelde temperatuur in Utrecht', applied: [], commandIds: [] }),
+          onAskFollowUp,
+        })}
+      />,
+    );
+    expect(screen.getByText('Dit vraagt om andere data. Als vervolgvraag krijgt het een eigen antwoord en grafiek.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Stel als vervolgvraag' }));
+    expect(onAskFollowUp).toHaveBeenCalledWith('gemiddelde temperatuur in Utrecht');
+  });
+
+  it('does not offer the follow-up chip without a handler, or without a followUp on the reply', () => {
+    const { unmount } = render(
+      <ChartCopilotInput {...props({ reply: reply({ followUp: 'iets anders' }) })} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Stel als vervolgvraag' })).not.toBeInTheDocument();
+    unmount();
+    render(<ChartCopilotInput {...props({ reply: reply({ followUp: null }), onAskFollowUp: vi.fn() })} />);
+    expect(screen.queryByRole('button', { name: 'Stel als vervolgvraag' })).not.toBeInTheDocument();
+  });
+
+  it('renders the locked note above the field when given', () => {
+    render(<ChartCopilotInput {...props({ lockedNote: 'Dit past alleen de weergave aan, nooit de cijfers.' })} />);
+    expect(screen.getByText('Dit past alleen de weergave aan, nooit de cijfers.')).toBeInTheDocument();
+  });
+
+  it('renders no locked note when absent', () => {
+    render(<ChartCopilotInput {...props()} />);
+    expect(screen.queryByText(/nooit de cijfers/)).not.toBeInTheDocument();
+  });
+});
+
 describe('RecipeChips — also the replayed edit message in the thread', () => {
   it('renders labels with their panel icon, without needing a click handler', () => {
     render(<RecipeChips applied={[{ label: 'Data: Omzet per Gemeente', icon: 'data' }]} refused={[]} lang="nl" />);
