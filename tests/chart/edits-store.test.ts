@@ -130,6 +130,41 @@ describe('chart_edits store — answer key (phase 1)', () => {
       expect(await getOwnChartEdits(db, { kind: 'answer', id: mine }, 'u1')).toBeNull();
     });
   });
+
+  // Fix round 1 (code review, session 113): the live table, BEFORE the
+  // owner applies migration 035, still has the plain (predicate-less)
+  // primary key `(audit_answer_id, user_id)` — not the two partial unique
+  // indexes 035 adds. Postgres's ON CONFLICT target inference with an
+  // explicit WHERE predicate matches ONLY an existing partial unique index
+  // with that exact predicate; it does not fall back to a full unique
+  // index/PK. Reverts a fully-migrated test db back to the exact pre-035
+  // shape (rather than applying migrations only through 034 — no such
+  // helper exists in tests/helpers) to prove the answer leg still works in
+  // that real, currently-live deploy window.
+  it('answer leg still round-trips on the pre-035 schema (deploy-window regression)', async () => {
+    await withDb(async (db) => {
+      await db.query('drop index chart_edits_answer_user');
+      await db.query('drop index chart_edits_turn_user');
+      await db.query('alter table chart_edits drop constraint chart_edits_one_key');
+      await db.query('alter table chart_edits drop column dataset_turn_id');
+      await db.query('alter table chart_edits drop constraint chart_edits_pkey');
+      await db.query('alter table chart_edits alter column audit_answer_id set not null');
+      await db.query('alter table chart_edits add primary key (audit_answer_id, user_id)');
+
+      const mine = await insertAuditRow(db, { userId: 'u1' });
+      const log = [{ kind: 'setForm', form: 'bar', id: 'a', at: '2026-09-18T00:00:00.000Z', source: 'panel' }];
+      expect(await upsertChartEdits(db, { key: { kind: 'answer', id: mine }, userId: 'u1', log })).toBe(true);
+      expect(await getOwnChartEdits(db, { kind: 'answer', id: mine }, 'u1')).toEqual(log);
+      // A second upsert updates the same row rather than raising 42P10 or
+      // duplicating it (proves the conflict target actually matched).
+      expect(await upsertChartEdits(db, { key: { kind: 'answer', id: mine }, userId: 'u1', log: [] })).toBe(true);
+      expect(await getOwnChartEdits(db, { kind: 'answer', id: mine }, 'u1')).toEqual([]);
+      const { rows } = await db.query('select count(*)::int as n from chart_edits where audit_answer_id = $1', [
+        mine,
+      ]);
+      expect(Number((rows[0] as { n: number }).n)).toBe(1);
+    });
+  });
 });
 
 describe('chart_edits store — turn key (phase 2, migration 035)', () => {

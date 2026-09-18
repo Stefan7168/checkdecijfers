@@ -54,19 +54,57 @@ async function tableExists(db: Db): Promise<boolean> {
   return rows[0]?.t != null;
 }
 
+/** Fix round 1 (code review, session 113): whether migration 035 has been
+ * applied — checked via `information_schema.columns` rather than
+ * `to_regclass` (that only answers "does the table/index exist", not "does
+ * this column"). 035 is one atomic transaction (`applyMigrations` in
+ * src/db/migrate.ts wraps every migration file in `db.withTransaction`), so
+ * `dataset_turn_id` existing is a reliable proxy for "the two partial
+ * unique indexes exist too, and the old plain PK is gone" — the deploy
+ * window is strictly before-035 or after-035, never half-applied. Used by
+ * `upsertAnswerEdits` to pick its `ON CONFLICT` target: Postgres's conflict-
+ * target inference with an explicit `WHERE` predicate matches ONLY an
+ * existing partial unique index with that exact predicate — it does NOT
+ * fall back to a full (predicate-less) unique index/PK. Before 035, the
+ * live table still has the old `(audit_answer_id, user_id)` primary key, so
+ * a `where audit_answer_id is not null` conflict target would raise 42P10
+ * ("no unique or exclusion constraint matching") on every save of the
+ * already-live phase-1 feature — exactly the deploy-window breakage this
+ * function exists to avoid. */
+async function turnColumnExists(db: Db): Promise<boolean> {
+  const { rows } = await db.query(
+    `select 1 from information_schema.columns where table_name = 'chart_edits' and column_name = 'dataset_turn_id'`,
+  );
+  return rows.length > 0;
+}
+
 export interface UpsertChartEditsInput {
   key: ChartEditsKey;
   userId: string;
   log: unknown[];
 }
 
-async function upsertAnswerEdits(db: Db, key: { id: number }, userId: string, json: string): Promise<boolean> {
+async function upsertAnswerEdits(
+  db: Db,
+  key: { id: number },
+  userId: string,
+  json: string,
+  post035: boolean,
+): Promise<boolean> {
+  // Pre-035: the live table still has the old, predicate-less PK
+  // `(audit_answer_id, user_id)` — the conflict target must match it
+  // exactly (no `where`). Post-035: the PK is gone, replaced by the
+  // partial unique index this predicate matches. See turnColumnExists's
+  // comment for why a 42P10 error is the alternative if this picks wrong.
+  const conflictTarget = post035
+    ? '(audit_answer_id, user_id) where audit_answer_id is not null'
+    : '(audit_answer_id, user_id)';
   const { rows } = await db.query(
     `insert into chart_edits (audit_answer_id, user_id, log)
      select a.id, $3::text, $2::jsonb
        from audit_answers a
       where a.id = $1 and a.user_id = $3 and a.kind = 'answer' and a.source_tag = 'user' and a.chart_emitted
-     on conflict (audit_answer_id, user_id) where audit_answer_id is not null do update
+     on conflict ${conflictTarget} do update
        set log = excluded.log, updated_at = now()
      returning audit_answer_id`,
     [key.id, json, userId],
@@ -102,9 +140,9 @@ export async function upsertChartEdits(db: Db, input: UpsertChartEditsInput): Pr
   const json = JSON.stringify(input.log);
   if (json.length > CHART_EDITS_MAX_JSON) return false;
   if (!(await tableExists(db))) return false;
-  return input.key.kind === 'answer'
-    ? upsertAnswerEdits(db, input.key, input.userId, json)
-    : upsertTurnEdits(db, input.key, input.userId, json);
+  if (input.key.kind === 'turn') return upsertTurnEdits(db, input.key, input.userId, json);
+  const post035 = await turnColumnExists(db);
+  return upsertAnswerEdits(db, input.key, input.userId, json, post035);
 }
 
 function toLog(raw: unknown): unknown[] | null {
