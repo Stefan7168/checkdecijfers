@@ -181,3 +181,109 @@ describe('executeInstruction — the points cap is a refusal, never silent trunc
     expect(() => executeInstruction(bigDataset, instruction({ y: ['c1'] }))).toThrow(TooManyPointsError);
   });
 });
+
+const SALES = [
+  ['Jaar', 'Gemeente', 'Omzet', 'Kosten'],
+  ['2020', 'Amsterdam', '100', '60'],
+  ['2020', 'Rotterdam', '50', '20'],
+  ['2021', 'Amsterdam', '150', '90'],
+  ['2021', 'Rotterdam', '', '10'],
+  ['2021', 'Utrecht', '30', '0'],
+];
+describe('aggregate (fixed set)', () => {
+  it('sum per x groups rows and traces every source cell', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' } }));
+    expect(points.map((p) => [p.xRaw, p.computed?.value])).toEqual([['2020', 150], ['2021', 180]]);
+    expect(points[0]!.computed!.rowRef).toBe('agg:sum:r1:c2+r2:c2');
+    expect(points[1]!.computed!.rowRef).toBe('agg:sum:r3:c2+r4:c2+r5:c2'); // the empty cell is listed, not counted
+  });
+  it('mean uses 2 decimals, count counts rows, min/max pick', () => {
+    const mean = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'mean' } }));
+    expect(mean.map((p) => [p.computed?.value, p.computed?.decimals])).toEqual([[75, 2], [90, 2]]);
+    const count = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'count' } }));
+    expect(count.map((p) => p.computed?.value)).toEqual([2, 3]);
+    const max = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'max' } }));
+    expect(max.map((p) => [p.xRaw, p.computed?.value])).toEqual([['Amsterdam', 150], ['Rotterdam', 50], ['Utrecht', 30]]);
+  });
+  it('aggregate with seriesBy groups per (series, x)', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'line', x: 'c0', y: ['c2'], seriesBy: 'c1', aggregate: { fn: 'sum' } }));
+    expect(points.map((p) => [p.seriesKey, p.xRaw, p.computed?.value])).toEqual([
+      ['Amsterdam', '2020', 100], ['Rotterdam', '2020', 50], ['Amsterdam', '2021', 150], ['Rotterdam', '2021', null], ['Utrecht', '2021', 30],
+    ]);
+  });
+  it('sort by value desc + limit orders aggregated bars', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'sum' }, sort: { by: 'value', direction: 'desc' }, limit: 2 }));
+    expect(points.map((p) => [p.xRaw, p.computed?.value])).toEqual([['Amsterdam', 250], ['Rotterdam', 50]]);
+  });
+});
+describe('derived (fixed set)', () => {
+  it('difference a − b per row with a joined rowRef', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2020'] }], derived: { op: 'difference', b: 'c3' } }));
+    expect(points.map((p) => [p.xRaw, p.computed?.value, p.computed?.rowRef])).toEqual([['Amsterdam', 40, 'der:difference:r1:c2|r1:c3'], ['Rotterdam', 30, 'der:difference:r2:c2|r2:c3']]);
+  });
+  it('ratio: b = 0 gives a null with reason geen getal', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2021'] }], derived: { op: 'ratio', b: 'c3' } }));
+    expect(points.map((p) => [p.xRaw, p.computed?.value, p.computed?.reason])).toEqual([['Amsterdam', 150 / 90, undefined], ['Rotterdam', null, 'geen getal'], ['Utrecht', null, 'geen getal']]);
+  });
+  it('share_of_total sums non-null values of the series', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2020'] }], derived: { op: 'share_of_total', b: null } }));
+    expect(points.map((p) => p.computed?.value)).toEqual([100 / 150 * 100, 50 / 150 * 100]);
+    expect(points[0]!.computed!.decimals).toBe(1);
+  });
+  it('percent_change: first point null with reason geen vorige waarde, then (a−prev)/|prev|×100', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'line', x: 'c0', y: ['c2'], filters: [{ column: 'c1', op: 'in', values: ['Amsterdam'] }], derived: { op: 'percent_change', b: null } }));
+    expect(points.map((p) => [p.computed?.value, p.computed?.reason])).toEqual([[null, 'geen vorige waarde'], [50, undefined]]);
+  });
+  it('aggregate then derive: share of total over yearly sums', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' }, derived: { op: 'share_of_total', b: null } }));
+    expect(points.map((p) => p.computed?.value)).toEqual([150 / 330 * 100, 180 / 330 * 100]);
+  });
+});
+
+describe('aggregate/sort-by-value edge cases (fix round 1)', () => {
+  it('multi-y + aggregate: each y column aggregates independently as its own series', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2', 'c3'], aggregate: { fn: 'sum' } }));
+    const bySeries = new Map<string, [string, number | null, string | undefined][]>();
+    for (const p of points) {
+      const arr = bySeries.get(p.seriesKey) ?? [];
+      arr.push([p.xRaw, p.computed?.value ?? null, p.computed?.rowRef]);
+      bySeries.set(p.seriesKey, arr);
+    }
+    expect(bySeries.get('c2')).toEqual([
+      ['2020', 150, 'agg:sum:r1:c2+r2:c2'],
+      ['2021', 180, 'agg:sum:r3:c2+r4:c2+r5:c2'],
+    ]);
+    expect(bySeries.get('c3')).toEqual([
+      ['2020', 80, 'agg:sum:r1:c3+r2:c3'],
+      ['2021', 100, 'agg:sum:r3:c3+r4:c3+r5:c3'],
+    ]);
+  });
+
+  it('sort by value with a null group: the null point is last in both directions, non-null points ordered correctly', () => {
+    const cells = [
+      ['Jaar', 'Gemeente', 'Omzet'],
+      ['2020', 'Amsterdam', '100'],
+      ['2020', 'Rotterdam', '50'],
+      ['2020', 'Den Haag', ''],
+    ];
+    const asc = executeInstruction(
+      dataset(cells),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'max' }, sort: { by: 'value', direction: 'asc' } }),
+    );
+    expect(asc.map((p) => [p.xRaw, p.computed?.value])).toEqual([
+      ['Rotterdam', 50],
+      ['Amsterdam', 100],
+      ['Den Haag', null],
+    ]);
+
+    const desc = executeInstruction(
+      dataset(cells),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'max' }, sort: { by: 'value', direction: 'desc' } }),
+    );
+    expect(desc.map((p) => [p.xRaw, p.computed?.value])).toEqual([
+      ['Amsterdam', 100],
+      ['Rotterdam', 50],
+      ['Den Haag', null],
+    ]);
+  });
+});
