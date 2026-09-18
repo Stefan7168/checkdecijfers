@@ -12,6 +12,7 @@ letting a user adjust how an already-answered CBS chart is *displayed* — line/
 period-range zoom, series hide/highlight — and add personal click-to-annotate notes, all without
 an LLM call, a database change, or a prompt-byte change for the first three phases. The panel's
 converged decision was "no LLM instruction schema in v1": a deterministic view-state reducer
+*(Superseded 2026-09-18, session 111: the owner lifted that parking — chat-driven editing is now decided and scheduled as the Chart co-pilot, ADR [056](056-chart-copilot.md); this reducer becomes the state its command log applies to.)*
 driven by direct on-screen controls, matching the owner's own click-first steer on annotations
 (session 88, given in passing) and the CLAUDE.md "cheapest mechanism first" convention this whole
 plan was itself the worked example of.
