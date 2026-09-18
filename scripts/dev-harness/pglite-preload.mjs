@@ -41,6 +41,22 @@ if (process.env.CDC_PGLITE_HARNESS === '1' && !globalThis.__checkdecijfersDb) {
   await applyPricingDefaults(db);
   if (process.env.CDC_HARNESS_USER_ID) {
     try { await db.query('select public.grant_signup_credits($1::uuid)', [process.env.CDC_HARNESS_USER_ID]); } catch (e) { console.log('[pglite-harness] grant:', String(e).slice(0, 120)); }
+    // Co-pilot phase 2 Task 9: the signup grant is 100 credits and the e2e
+    // suite already spends every one of them (5 paid CBS turns at 20 +
+    // chart-copilot's own), so the own-data walk — a dataset question plus a
+    // co-pilot edit, 20 each — had nothing left to spend and refused for
+    // "insufficient credits". A local top-up, priced like a purchase because
+    // that is the ledger's only positive reason with no once-per-user index
+    // (`signup_grant` has one); idempotent on its fixed session id, so a
+    // restarted harness never stacks a second one.
+    try {
+      await db.query(
+        `insert into credit_transactions (user_id, delta, reason, stripe_checkout_session_id, note)
+         values ($1::uuid, 2000, 'purchase', 'harness-topup', 'dev harness top-up')
+         on conflict do nothing`,
+        [process.env.CDC_HARNESS_USER_ID],
+      );
+    } catch (e) { console.log('[pglite-harness] top-up:', String(e).slice(0, 200)); }
   }
   try {
     const source = new EurostatFixtureSource(loadEurostatFixtureTree(EUROSTAT_FIXTURES_DIR));

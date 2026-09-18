@@ -79,6 +79,23 @@ confirm the question string reaches `answerQuestionAudited` → `respondToQuesti
 A session with Playwright available should still do the real click-through once; this is the harness's own
 gap, not a claim that it was seen in a browser.
 
+## A third surface: the own-data chat and its chart co-pilot (session 113, co-pilot phase 2 Task 9)
+
+`ATTACHMENTS_ENABLED=1` (now set by `env.sh`/`run-next-dev.mjs`) makes the composer's "Bestand uploaden"
+control real, so a harness run can upload a CSV, get an own-data chart and adjust it through "Pas deze
+grafiek aan" — with no model call at all. `tests/fixtures/attachments/verkoop.csv` plus the four cases in
+`tests/fixtures/attachments/cases.ts` are written into `tests/fixtures/llm/attachments/` by
+`npm run attachments:fixtures` (offline, no key, no spend): the generator builds each turn's request with
+the REAL builders (`buildDatasetInstructRequest`, `buildCopilotRequest`), so the stub's (model, system,
+question) match is exact. `npm run attachments:record` is the live variant — it calls the real model once
+per case and prints the diff against the hand-authored output; it SPENDS and is owner-supervised.
+`tests/attachments/fixtures.test.ts` is the drift guard: change a prompt or a schema without regenerating
+and the unit suite fails before the browser proof ever runs. `web/e2e/own-data-copilot.spec.ts` drives the
+whole chain (upload -> question -> chart -> "maak er staven van" -> undo -> reload). `pglite-preload.mjs`
+also tops the harness user up by 2.000 credits on top of the 100-credit signup grant: the CBS e2e tests
+already spend that grant to the last credit, and two own-data turns at 20 each would otherwise refuse for
+"insufficient credits" rather than exercise the feature.
+
 Two build-time worktree gotchas hit while starting this harness (Turbopack, not `next dev`'s own runtime —
 same root cause as the existing "Turbopack refuses a symlinked `node_modules`" RUNBOOK note, but this
 repo's own symlinked `node_modules`/`web/node_modules` in a FRESH worktree hits it twice, once per
