@@ -20,6 +20,8 @@ const NOTE_MAX = 280;
 /** A refused request is a label for the reader, not a transcript. */
 const REQUEST_MAX = 80;
 
+const FONT_FAMILY_NAME = /^[A-Za-z0-9 ]{1,40}$/;
+
 function cap(text: string): string {
   return text.slice(0, REQUEST_MAX);
 }
@@ -156,6 +158,11 @@ export function mapCbsCopilotOutput(
         for (const [key, value] of Object.entries(command.patch)) {
           if (key === 'seriesColors') continue;
           if (value === null) continue;
+          // Mirrors web/lib/chart-presentation.ts's FONT_FAMILY_NAME (the
+          // own-data map's rule): an off-pattern font name would be dropped
+          // silently by `sanitizeOverrides` on dispatch — an "applied" chip
+          // that changes nothing.
+          if (key === 'fontFamily' && !(typeof value === 'string' && FONT_FAMILY_NAME.test(value))) continue;
           patch[key] = value;
         }
         const colors: Record<number, string> = {};

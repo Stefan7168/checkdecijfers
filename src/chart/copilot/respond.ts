@@ -63,7 +63,7 @@ export async function respondToCbsChartEdit(input: RespondToCbsChartEditInput): 
 
   const { commands, refused } = mapCbsCopilotOutput(output, spec, caps);
   const text =
-    commands.length === 0 && refused.length > 0
+    commands.length === 0
       ? 'Nothing could be applied.'
       : commands.length === 1
         ? 'Applied one change.'

@@ -12,6 +12,8 @@
 // standing rule): three deterministic, digit-free suggestions computed from
 // the chart already on screen. No prompt, no spend, no new way to misfire.
 import { PRESENTATION_KEYS, TEMPLATE_IDS, type CopilotCapabilities } from '../backend/attachments/copilot/types.ts';
+import type { CbsCopilotCapabilities } from '../backend/chart/copilot/types.ts';
+export type { CbsCopilotCapabilities };
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { ChartDocState } from './chart-commands.ts';
 import { columnHeaderLabel, digitFree } from './chart-data-instruction.ts';
@@ -56,18 +58,7 @@ export function ownDataCapabilities(input: {
 }
 
 // Co-pilot phase 3 (session 114, Task 2) — the CBS/Eurostat tier's own
-// capability list + example chips. Session 114's backend (`src/chart/copilot/
-// types.ts`, built in a parallel worktree) owns the real `CbsCopilotCapabilities`
-// type; declared LOCALLY here for now so this task can typecheck standalone —
-// the session re-points this import at `../backend/chart/copilot/types.ts` on
-// merge. Keep this shape byte-identical to that file's until then.
-export interface CbsCopilotCapabilities {
-  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table')[];
-  presentationKeys: string[];
-  templates: string[];
-  zoom: boolean;
-  lang: 'nl' | 'en';
-}
+// capability list + example chips; the type is the backend's own.
 
 /** No data-side capability on this tier at all (R1/R6/R11: selection only) —
  * `formsFor` is reused unchanged, over the same three predicates the card's
