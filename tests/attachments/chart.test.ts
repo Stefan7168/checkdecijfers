@@ -172,3 +172,23 @@ describe('buildUserChartSpec — provenance, disclaimer, headers (U9/H2)', () =>
     expect(result.success).toBe(false);
   });
 });
+
+const SALES = [
+  ['Jaar', 'Gemeente', 'Omzet', 'Kosten'],
+  ['2020', 'Amsterdam', '100', '60'],
+  ['2020', 'Rotterdam', '50', '20'],
+  ['2021', 'Amsterdam', '150', '90'],
+  ['2021', 'Rotterdam', '', '10'],
+  ['2021', 'Utrecht', '30', '0'],
+];
+it('an aggregated spec formats the computed value and labels the series deterministically', () => {
+  const spec = buildUserChartSpec(dataset({ cells: SALES, profile: buildDatasetProfile(SALES) }), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'mean' } }));
+  expect(spec.yHeaders).toEqual(['Average of Omzet']);
+  expect(spec.series[0]!.label).toBe('Average of Omzet');
+  expect(spec.series[0]!.points.map((p) => [p.formattedValue, p.rowRef])).toEqual([['75,00', 'agg:mean:r1:c2+r2:c2'], ['90,00', 'agg:mean:r3:c2+r4:c2+r5:c2']]);
+});
+it('a derived spec labels a − b and keeps sourceText as the a cell', () => {
+  const spec = buildUserChartSpec(dataset({ cells: SALES, profile: buildDatasetProfile(SALES) }), instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2020'] }], derived: { op: 'difference', b: 'c3' } }));
+  expect(spec.yHeaders).toEqual(['Omzet − Kosten']);
+  expect(spec.series[0]!.points[0]).toMatchObject({ formattedValue: '40', sourceText: '100', rowRef: 'der:difference:r1:c2|r1:c3' });
+});

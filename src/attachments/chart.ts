@@ -1,13 +1,16 @@
 // "Eigen data" attachments tier — buildUserChartSpec, the ONLY producer of
 // UserChartSpec (D7 point 3), mirroring src/chart/build.ts's one-producer
-// rule for the CBS side. Every plotted value here is `parseNumber(rawCell,
-// column.numberFormat)` of one stored cell (or null-with-reason, U11) —
-// there is no other code path from a stored cell to a displayed number in
-// this tier.
+// rule for the CBS side. Every plotted value here is either
+// `parseNumber(rawCell, column.numberFormat)` of one stored cell, or — phase
+// 2 (session 113) — a value already computed deterministically by
+// execute.ts's aggregate/derived pipeline (or null-with-reason, U11); there
+// is no other code path from stored cells to a displayed number in this
+// tier.
 import { formatValueNl } from '../answer/compose/format.ts';
 import { columnById, columnIndex } from './columns.ts';
 import { executeInstruction, type RawPoint } from './execute.ts';
 import { decimalsOf, parseNumber } from './ingest/numbers.ts';
+import { aggregateLabel, derivedLabel } from './labels.ts';
 import {
   USER_CHART_SPEC_VERSION,
   USER_DATA_DISCLAIMER,
@@ -25,9 +28,26 @@ function missingReason(raw: string): MissingValueReason {
 }
 
 function buildPoint(raw: RawPoint, yColumnId: string, yColumn: ColumnProfile): UserChartPoint {
+  const xLabel = raw.xRaw.trim();
+
+  if (raw.computed) {
+    const { value, decimals, rowRef, reason } = raw.computed;
+    return {
+      rowRef,
+      xKey: xLabel,
+      xLabel,
+      value,
+      formattedValue: value === null ? null : formatValueNl(value, decimals),
+      // A derived point still traces to the `a` cell's own raw text
+      // (raw.yRaw, carried through unaggregated); an aggregate-only point
+      // no longer corresponds to one cell at all.
+      sourceText: rowRef.startsWith('der:') ? raw.yRaw : '',
+      ...(reason ? { reason } : {}),
+    };
+  }
+
   const format = yColumn.type === 'year' ? 'en' : (yColumn.numberFormat ?? 'nl');
   const value = parseNumber(raw.yRaw, format);
-  const xLabel = raw.xRaw.trim();
   return {
     rowRef: `r${raw.rowIndex}:c${columnIndex(yColumnId)}`,
     xKey: xLabel,
@@ -71,11 +91,35 @@ export function buildUserChartSpec(dataset: UserDataset, instruction: ChartInstr
   // header-based lookup is needed at all.
   const singleY = instruction.seriesBy !== null ? columnById(profile, instruction.y[0]!) : null;
 
+  // Phase 2 (session 113): an aggregate/derived series is labeled by a
+  // deterministic English description of the computation (labels.ts),
+  // never by the raw column header alone — U9's verbatim-header rule only
+  // ever applied to an unmodified column. `derivedLabelText` takes
+  // precedence over aggregate's own label when both are set (derived is
+  // always the LAST stage applied, per execute.ts's pipeline order).
+  const derivedLabelText =
+    instruction.derived !== null
+      ? derivedLabel(
+          instruction.derived.op,
+          columnById(profile, instruction.y[0]!).header,
+          instruction.derived.b === null ? null : columnById(profile, instruction.derived.b).header,
+        )
+      : null;
+
   const series: UserChartSeries[] = [...bySeries.entries()].map(([, points]) => {
     const first = points[0]!;
     const yColumn = singleY ?? columnById(profile, first.seriesKey);
-    return { label: first.seriesLabel, points: points.map((p) => buildPoint(p, yColumn.id, yColumn)) };
+    const label =
+      derivedLabelText ?? (instruction.aggregate !== null ? aggregateLabel(instruction.aggregate.fn, yColumn.header) : first.seriesLabel);
+    return { label, points: points.map((p) => buildPoint(p, yColumn.id, yColumn)) };
   });
+
+  const yHeaders =
+    derivedLabelText !== null
+      ? [derivedLabelText]
+      : instruction.aggregate !== null
+        ? instruction.y.map((id) => aggregateLabel(instruction.aggregate!.fn, columnById(profile, id).header))
+        : instruction.y.map((id) => columnById(profile, id).header);
 
   return {
     schemaVersion: USER_CHART_SPEC_VERSION,
@@ -83,7 +127,7 @@ export function buildUserChartSpec(dataset: UserDataset, instruction: ChartInstr
     trust: 'unverified',
     kind: instruction.kind,
     xHeader: xColumn.header,
-    yHeaders: instruction.y.map((id) => columnById(profile, id).header),
+    yHeaders,
     series,
     provenance: {
       datasetId: dataset.id,
