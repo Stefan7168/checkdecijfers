@@ -1135,3 +1135,19 @@ of the 72 `intent`/23 `followup`/7 `clarify` fixtures scanned carries ≥2 regio
 so a `npm run benchmark:run:live` pass against this shape is the real go/no-go and has not yet been
 run — owner-supervised spend, tracked as its own step, not a residual bug. Unlike WP253/ADR 054, this
 capability needs **no** further parser work to become reachable — it already is.
+
+## Chart co-pilot — chat and direct controls interleaved on one chart (owner decision 2026-09-17/18, session 111; ADR [056](decisions/056-chart-copilot.md), spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)) — ▶ NEXT BUILD PRIORITY, not started
+
+**Why now:** the owner lifted the session-88 deferral of [#212](open-questions.md) ("chat-driven chart editing waits for usage evidence") — the focus is chart quality and specifically editing by chatting, "door elkaar heen" with the existing controls, "dat het echt een fijne UX is". Research that shaped it: [session-briefs/2026-09-17-competitor-g-deep-dive.md](session-briefs/2026-09-17-competitor-g-deep-dive.md).
+
+**Invariants at stake:** R1/R6/R11 for the CBS tier (commands never carry numbers; `windowSpec()` stays a verbatim copy; narrate output passes the digit scan); ADR 037's tier separation; ADR 032 (web findings never become chart data). Cheapest-mechanism rule: phase 1 has zero LLM calls.
+
+**Phases (each its own SDD plan; build order = this order):**
+1. **Command log + undo/redo + in-place title/caption editing + account persistence.** `web/lib/chart-commands.ts` (pure), the existing reducer actions become command kinds, one gesture = one entry, ⌘Z/⇧⌘Z, a history popover; `chart_edits` table via a numbered migration (owner-supervised) + GDPR retention leg ([#274](open-questions.md)). No model.
+2. **Own-data co-pilot:** widen `src/attachments/instruct/schema.ts` per ADR 037's addendum (aggregate + fixed derived set, all forms, style, notes, narrate); seed the log from `replay.ts`'s refinement referent; input "Pas deze grafiek aan" under the chart; recipe chips; per-reply Undo/Retry/👍👎; then the owner flips `ATTACHMENTS_ENABLED`.
+3. **CBS/Eurostat co-pilot:** same route, selection-only schema generated from the live chart's `capabilities`; compatible follow-ups presented as "Grafiek uitgebreid" in the same card.
+4. **Storytelling primitives via both doorways:** goal line, average line (server-derived, traced), difference arrow (registered derivation), dim-not-hide, era shading, headline number.
+5. **Chart-fit scorer (rule-based, no LLM) + new honest forms:** stacked, 100 % stacked, dumbbell, slope, heatmap, scatter, pie/donut (scorer-gated). Then the six house styles + homepage themes row ([#275](open-questions.md)).
+
+**Done-definition per phase:** the spec's §6 tests (apply/invert property test; chat-chip ↔ panel-control contract test; Playwright type→chips→panel→⌘Z; own-data executor fixture), benchmark 14/14 + 6/6 + 0 fabricated unchanged, no audit rows written by chart edits, `/code-review` LOW clean.
+

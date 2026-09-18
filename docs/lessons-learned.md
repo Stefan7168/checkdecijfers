@@ -6,6 +6,43 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 111 (2026-09-17/18, owner present) — a competitor study is not done until you have used the product
+
+**A text fetch of a marketing site is not "looking at the website".** The first pass summarised the
+competitor's pages through a fetch-and-summarise tool and the owner rightly said "je komt met zo weinig".
+What produced the real findings was, in order of value per token: (1) logging in (the owner did it in
+the browser pane; the session may not create accounts or enter passwords) and **using the product** —
+five real prompts to their AI revealed limits no page states ("I can't change the line thickness
+directly", stateless steps that drop earlier edits, no ⌘Z); (2) the competitor's own design blog post
+with editor screenshots, opened at full size; (3) their SDK docs index and the npm package's licence
+file; (4) a fact-checked research fan-out, whose verified surprise was that their chart-type advice is
+rule-based, no LLM. Next time: open the app first, fetch pages last.
+
+**Do not frame-grab videos.** Five product videos were downloaded and stepped through in the browser;
+seeking gave black frames, playing in a background tab paused, and the article screenshots showed the
+same UI anyway. The owner called it out. Rule: a screenshot of a page beats a frame of a video every time.
+
+**A narrow browser pane changes an app's layout; screenshot before clicking after any navigation.**
+A click at the coordinates of a chart thumbnail hit "+ Chart" in the narrow layout and created an extra
+chart in the owner's account (a paid-tier counter). Also: an emulated 1280 px viewport made clicks miss
+in that app — reset to the desktop preset and click by element reference.
+
+**Undo your tests in someone else's account and check the result.** The competitor's per-message undo
+restored the data and goal line but not the title; the session only noticed by re-reading the page and
+fixed it by hand. Verify the restored state, not the undo click.
+
+**"Change nothing in the repo" plus "make sure we forget nothing" resolve to a research branch from
+`origin/main` in a scratch worktree** — new files only, merged after the other session's wrap-up.
+That kept two parallel sessions conflict-free. Two mistakes inside it: a quoting bug in a substitution
+script silently did nothing and the push went out with the competitor's name (the repo is PUBLIC —
+verify visibility with `gh repo view`, never from memory); and `set -e` did not stop the pipeline
+because the failing command was a heredoc-fed interpreter. Grep the pushed ref for the forbidden
+string as the last step, not the working tree.
+
+**A stale memory note nearly misled the privacy call.** Memory said the repo was private (true in
+August, false now). Anything with a security consequence gets re-verified against the source the
+moment it matters.
+
 ## Session 110, wave 14 (2026-09-17, into 2026-09-18 local) — the e2e gate bit its own author twice, then earned its keep
 
 **A hard e2e gate turned two consecutive `main` pushes red for a reason no unit test could see, and the cause was a fix from the same session.** Pass-4 row 5 changed the over-cap refusal chip to name the region ("Groningen") instead of the CBS code ("PV20"); the e2e test written one wave earlier still pinned the code. Locally the e2e agent had run before that merge, and the parent's verification block does not run Playwright (only CI does). The retry pass then re-spent the harness user's finite signup credits and made an unrelated refusal test fail with "no credits", so the red run looked like two bugs. **Lessons:** (1) the parent's verification block must include `npx playwright test` whenever a wave touches answer text, chip labels or the chart DOM — CI must not be the first place the e2e runs; (2) a hermetic e2e suite sharing one finite budget must run with retries OFF, because a retry both hides flakes and manufactures failures; (3) when a fix wave changes user-visible strings, grep `web/e2e/` for the old string in the same brief.

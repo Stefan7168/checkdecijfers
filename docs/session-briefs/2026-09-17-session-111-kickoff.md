@@ -1,5 +1,7 @@
 # Session 111 kickoff — checkdecijfers.nl
 
+> **Superseded 2026-09-18:** session 111 became the owner-present research + decision session (competitor study, Chart co-pilot decision). The owner steps below still stand; the BUILD priority moved to the Chart co-pilot — read [2026-09-18-session-112-kickoff.md](2026-09-18-session-112-kickoff.md) first.
+
 Read `CLAUDE.md` first, then `docs/STATUS.md`'s top block (authoritative over anything below it).
 Verify everything below against `git log` / `gh run list` before trusting it — this brief may be stale.
 

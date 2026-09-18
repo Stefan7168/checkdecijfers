@@ -38,23 +38,23 @@ deliberately left out of this branch to avoid collisions.
   Finding: Competitor G's app only has 12 colour palettes; the real house styles live in their SDK recipes. Plan:
   port six house styles as our own templates (spec §6 "then house styles"), show them on the landing.
 
-## Updates to make at merge time
+## Updates to make at merge time — ✅ ALL DONE 2026-09-18 by session 111 itself after session 110's wrap-up (ADR 056; ADR 037 addendum; #7/#207/#212/#218 updated; #274–#276 added; build-plan WP; 03-mvp-scope row; STATUS + archive; lessons; session-112 kickoff)
 
-- [ ] `docs/open-questions.md`: rows #7, #207 (rebrand), #212 (lifted + scheduled), #218 (co-pilot extends
+- [x] `docs/open-questions.md`: rows #7, #207 (rebrand), #212 (lifted + scheduled), #218 (co-pilot extends
       the style panel), a new row for `chart_edits` persistence + GDPR retention, a new row for the
       homepage themes row.
-- [ ] New ADR: "Chart co-pilot — one command log, two doorways, two trust tiers" (context, decision,
+- [x] New ADR: "Chart co-pilot — one command log, two doorways, two trust tiers" (context, decision,
       alternatives: Competitor G's SDK / chat-only / panel-only, revisit triggers).
-- [ ] ADR 037 addendum (own-data tier freedom; aggregate/derive allowed; fixed set).
-- [ ] `docs/08-build-plan.md`: new WP for the co-pilot with the five phases from the spec §5.
-- [ ] `docs/03-mvp-scope.md` Visualisatie Studio row: chat editing now IN scope (narrow the non-goal again).
-- [ ] `docs/STATUS.md` top block + `status-archive.md` entry for this research session.
-- [ ] `docs/lessons-learned.md`: (a) a WebFetch text summary of a marketing site is not "looking at the
+- [x] ADR 037 addendum (own-data tier freedom; aggregate/derive allowed; fixed set).
+- [x] `docs/08-build-plan.md`: new WP for the co-pilot with the five phases from the spec §5.
+- [x] `docs/03-mvp-scope.md` Visualisatie Studio row: chat editing now IN scope (narrow the non-goal again).
+- [x] `docs/STATUS.md` top block + `status-archive.md` entry for this research session.
+- [x] `docs/lessons-learned.md`: (a) a WebFetch text summary of a marketing site is not "looking at the
       website" — screenshots/hands-on found the real limits; (b) do not burn tokens frame-grabbing
       videos, article screenshots had the same UI; (c) in the built-in browser, a narrow pane changes an
       app's layout and a blind click created a chart in the owner's account — screenshot before clicking
       after any navigation; (d) an emulated 1280px viewport made clicks miss in Competitor G — reset to desktop.
-- [ ] Memory: the research-session memory file already exists on the machine (see MEMORY.md).
+- [x] Memory: the research-session memory file already exists on the machine (see MEMORY.md).
 
 ## Hands-on facts worth keeping even if nothing else is read
 

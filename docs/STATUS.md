@@ -18,6 +18,39 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 111 — owner present; verify against
+`git log` before trusting this).** Session 111 was a **research + decision session, no product code**:
+it ran read-only in parallel with session 110's tail (so it worked on a branch and merged after 110's
+wrap-up, merge `e99e3e3`). Kickoff for the next session: [session-briefs/2026-09-18-session-112-kickoff.md](session-briefs/2026-09-18-session-112-kickoff.md).
+
+- **THE NEXT BUILD PRIORITY IS THE CHART CO-PILOT** — chat + the existing controls interleaved on one
+  chart, one undo history, two trust tiers: ADR [056](decisions/056-chart-copilot.md), spec
+  [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md),
+  WP in [08-build-plan.md](08-build-plan.md) (last section), phase 1 first (command log + undo +
+  in-place title + `chart_edits` persistence, zero LLM). The owner LIFTED the session-88 parking of
+  [#212](open-questions.md); three decisions taken: fixed derived-column set, account persistence from
+  phase 1 ([#274](open-questions.md)), input label "Pas deze grafiek aan".
+- **Competitor study done** ([session-briefs/2026-09-17-competitor-g-deep-dive.md](session-briefs/2026-09-17-competitor-g-deep-dive.md)):
+  hands-on in the competitor's app incl. five AI-edit tests; their chat cannot restyle or annotate and
+  its steps are stateless; their chart-type advice is rule-based (no LLM); their SDK is closed-source
+  under a size-capped licence — do not build on it. **The repo is PUBLIC: the competitor is never named
+  here ("Competitor G", [#276](open-questions.md)).**
+- **Rebrand noted, not the focus:** domain graphmaker.studio bought ([#7](open-questions.md)); homepage
+  "themes" row wanted later ([#275](open-questions.md)).
+- **Owner steps pending — unchanged from session 110** (registry:apply, DOI backfill, live benchmark,
+  region-set Task 9, audit row 22) plus: decide [#276](open-questions.md) (purge two unreachable commits
+  via GitHub Support, or accept); a test chart "Example column chart" was created in the owner's
+  competitor-app account by a mis-click (3/5 free slots) — delete or keep.
+- Side finding: no ⌘Z-style history exists anywhere in our chart UI today either — phase 1 is the
+  prerequisite for everything else in the co-pilot.
+
+**Measured (session 111):** no code changed; CI not triggered (docs-only pushes skip CI by design);
+main at session start `a294a84`, CI green on the last code run of session 110.
+
+---
+
+**Previous top block (session 110, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-17 UTC, session 110 — the session ran ~05:50Z to ~17:30Z,
 which is already 2026-09-18 in the machine's local time zone, so `git log` shows both dates — verify
 against `git log`/`gh run list` before trusting this).** **Session 110 was

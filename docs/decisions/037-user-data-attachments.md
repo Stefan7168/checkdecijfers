@@ -166,3 +166,16 @@ represent a $0 charge, a missing double-click guard).
 - A future paid ingest kind (PDF/HTML) needs the ledger's `dataset_ingest` price row actually
   charging — the mechanism (source-kind gate, not a $0 price row) is already designed for this in
   the session-brief D12.
+
+## Owner decision addendum — the own-data tier gets full freedom (2026-09-17, session 111)
+
+The owner, in chat: on their OWN data (upload, paste, sheet) people "mogen alle vrijheid hebben om
+ermee te doen wat ze willen" — and the sessions should stop restating honesty caveats for this tier.
+Consequences for this ADR's as-built instruction path (`src/attachments/instruct/schema.ts`): the
+`unsupported.reason` values `'aggregation'` and `'computation'` are to be REMOVED and replaced by
+`aggregate` (sum/mean/min/max/count over a group) and `derived` (a closed set: difference, share of
+total, percent change, ratio of two columns — owner decision 2026-09-18: fixed set, free arithmetic
+only later on logged demand); all chart forms, style keys, notes and title/caption become reachable
+from chat; the executor still computes, the model still only selects. The trust-tier separation
+itself is unchanged: this never touches CBS/Eurostat data, and internet findings never become chart
+data (ADR 032). Built as phase 2 of ADR [056](056-chart-copilot.md).
