@@ -18,6 +18,52 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 114 — owner present at the start, then
+fully delegated; verify against `git log` / `gh run list` before trusting this).** Session 114 did the
+phase-2 owner steps as far as the world allowed AND built **chart co-pilot phase 3 — the CBS/Eurostat
+chat doorway** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 3", plan
+[superpowers/plans/2026-09-18-chart-copilot-phase3.md](superpowers/plans/2026-09-18-chart-copilot-phase3.md))
+via subagent-driven development — 4 tasks in two worktree waves, 1 fix round, a final review on the
+most capable tier (8 minor findings, 4 fixed in a final wave, 4 recorded), pushed to `main`
+`6c7d9c4e..f09945c7` (16 commits) + docs. CI run `35361186023` green incl. deploy; production
+answered 200 on `/api/health` afterwards. Kickoff for the next session:
+[session-briefs/2026-09-18-session-115-kickoff.md](session-briefs/2026-09-18-session-115-kickoff.md).
+
+- **Owner steps DONE (live):** migrations 034 + 035 applied 11:14 UTC (RUNBOOK checks pass);
+  `pricing:apply` upserted `dataset_turn`; `ATTACHMENTS_ENABLED=1` set in Vercel Production and
+  deployed by re-running CI run `35325857423` (a bare `vercel --prod` fails — lessons-learned). The
+  own-data tier is LIVE for upload, chart, Data panel, undo and persistence.
+- **Owner step BLOCKED:** `npm run attachments:record` (and the new `chart-copilot:record`) hit the
+  Anthropic workspace usage cap — 400 "regain access on 2026-10-01" — the same cap refusing every
+  live chat since 2026-09-14. Not a bug ([#288](open-questions.md)); hand-authored fixtures remain
+  the test basis. Every model-backed path (chat, both co-pilot doorways) refuses until the cap lifts.
+- **What phase 3 is:** under a CBS/Eurostat chart, "Pas deze grafiek aan" → one cheap-tier call
+  returns SELECTION-ONLY view commands by label (form, hide/spotlight, period range, style, template,
+  title/caption, a note at a point) + a `dataRequest` flag; code maps labels to keys against the spec,
+  digit-guards text against the spec's own strings, the card re-validates and dispatches with
+  `source: 'chat'`. Priced at the `clarification` class via `question_cost` (no DDL); never writes
+  `audit_answers`. A data request becomes the chip "Stel als vervolgvraag" (the reader's own words
+  through the follow-up path); a compatible follow-up card is badged "Grafiek uitgebreid" and mounts in
+  the previous card's saved look. Hermetic: 3 fixtures + `web/e2e/cbs-copilot.spec.ts`.
+- **New open rows:** [#285](open-questions.md) (pricing; zero-command edits keep the debit — owner
+  decision wanted), [#286](open-questions.md) (no turn record for CBS chat edits), [#287](open-questions.md)
+  (series merge; remount + colour-index residuals), [#288](open-questions.md) (`:record` blocked).
+- **THE NEXT BUILD PRIORITY IS PHASE 4 — storytelling primitives via both doorways** (spec §5
+  phase 4): goal line, average line (server-derived, traced), difference arrow, dim-not-hide, era
+  shading, headline number — every one a panel control first, chat second; provenance rule per
+  primitive against R1/R6 before building.
+- **Owner steps pending — unchanged from sessions 110/111** (registry:apply, DOI backfill, live
+  benchmark, region-set Task 9, audit row 22) **plus the two `:record` runs after 2026-10-01.**
+
+**Measured (session 114, at push, HEAD `f09945c7`):** root typecheck + web typecheck clean; root
+202 files / 2,970 tests; web 140 files / 2,383 tests; benchmark 14/14 answerable, 6/6
+refusal/clarify, 0 fabricated; Playwright `chart-copilot`, `own-data-copilot`, `cbs-copilot` 3/3
+green; `next build` clean; `/code-review` LOW 0 findings; final review (most capable tier) 0 critical.
+
+---
+
+**Previous top block (session 113, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 113 — owner present; verify against
 `git log` / `gh run list` before trusting this).** Session 113 BUILT **chart co-pilot phase 2 — the
 own-data co-pilot** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 2", ADR
@@ -61,48 +107,6 @@ refusal/clarify, 0 fabricated; Playwright `chart-copilot.spec.ts` + `own-data-co
 
 ---
 
-**Previous top block (session 112, kept verbatim below for one session):**
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 112 — owner present; verify against
-`git log` / `gh run list` before trusting this).** Session 112 BUILT **chart co-pilot phase 1**
-(ADR [056](decisions/056-chart-copilot.md) decisions 1 + 4) via subagent-driven development —
-7 tasks, ~15 subagents, a final whole-branch review — merged fast-forward to `main`
-`7a9b737..3c295f1` (13 code commits + docs), CI run `35306079885` green incl. deploy; production
-answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
-[session-briefs/2026-09-18-session-113-kickoff.md](session-briefs/2026-09-18-session-113-kickoff.md).
-
-- **What is live:** every chart control (form tabs, legend hide/highlight, zoom, reading, style
-  panel, templates, notes) dispatches a serialisable command on one undo/redo history per chart;
-  Undo/Redo buttons + ⌘Z/⇧⌘Z/Ctrl+Z/Ctrl+Y; a history menu with source icons; in-place title and
-  caption editing; the log is saved per (user, answer) in `chart_edits` with an 800 ms debounce and
-  restored on reopen. Zero model calls. Plan + ledger rulings:
-  [superpowers/plans/2026-09-18-chart-copilot-phase1.md](superpowers/plans/2026-09-18-chart-copilot-phase1.md).
-- **⚠ OWNER STEP — migration 034 `chart_edits` is FILE-ONLY:** until `npm run db:migrate` runs
-  (RUNBOOK § "Supervised live step — migration 034"), the app silently does not save or restore
-  chart edits (the `to_regclass` guard); everything else works.
-- **Review-loop record:** the plan itself carried two real defects the loop caught (a field-name
-  collision; a dock tab switch writing an empty log over another chart's row) and the final review
-  found two more (an unsealed colour drag never saved; an early click during the load clobbering
-  the stored log). All fixed before merge. See [lessons-learned.md](lessons-learned.md).
-- **THE NEXT BUILD PRIORITY IS PHASE 2 — the own-data co-pilot** (spec §3.2/§3.3/§5). Two
-  design facts the next session must settle first (recorded in the kickoff): `UserChartView`
-  (`web/components/user-chart.tsx`) does NOT reuse `ChartView` — by ADR 037 D11 a `UserChartSpec`
-  must not parse as a `ChartSpec` — so the command/history/panel machinery is not on the own-data
-  card yet; and widening `src/attachments/instruct/schema.ts` bumps `DATASET_INSTRUCT_PROMPT_VERSION`,
-  which means re-recording fixtures with real model calls (owner-supervised spend; there is no
-  `attachments:record` script today).
-- **New open rows:** [#277](open-questions.md) (headline not on the history; the public embed page
-  does not read `chart_edits`), [#278](open-questions.md) (exports exclude the reader's title/
-  caption/notes), [#279](open-questions.md) (seeded generator instead of fast-check).
-- **Owner steps pending — unchanged from sessions 110/111** (registry:apply, DOI backfill, live
-  benchmark, region-set Task 9, audit row 22) **plus migration 034 above.**
-
-**Measured (session 112, at merge, HEAD `24f72e4`/`3c295f1`):** root typecheck + 17 root suites
-green; benchmark 14/14 answerable, 6/6 refusal/clarify, 0 fabricated; web 129 files / 2166 tests;
-`next build` clean; `/code-review` LOW 0 findings; Playwright `web/e2e/chart-copilot.spec.ts` green
-locally and in CI.
-
----
 
 ## Phase 0 checklist
 

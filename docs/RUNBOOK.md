@@ -1230,7 +1230,7 @@ avoids it entirely: after a merge, let its run finish before pushing anything el
 merged on `main` — see [08-build-plan.md](08-build-plan.md)'s WP202a section for the full commit
 history. **Update 2026-09-14:** migrations 026/027 are now APPLIED to production (run together with
 028/029/030 in one `npm run db:migrate` — see the Pro subscription go-live section's incident note
-above). `ATTACHMENTS_ENABLED` still does not exist as a Vercel env var, and `dataset_ingest`/
+above). **Update 2026-09-18 (session 114): `ATTACHMENTS_ENABLED=1` IS set in Vercel Production and deployed, and `dataset_turn` has its price row (`pricing:apply`) — the sentence that follows is historical.** `ATTACHMENTS_ENABLED` still does not exist as a Vercel env var, and `dataset_ingest`/
 `dataset_turn` still have no price rows — every other step below is still not executed. This
 section is written in advance, the WP135/WP26 way, so the actual go-live session has a checklist
 rather than a from-scratch design conversation.
