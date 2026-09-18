@@ -179,3 +179,16 @@ only later on logged demand); all chart forms, style keys, notes and title/capti
 from chat; the executor still computes, the model still only selects. The trust-tier separation
 itself is unchanged: this never touches CBS/Eurostat data, and internet findings never become chart
 data (ADR 032). Built as phase 2 of ADR [056](056-chart-copilot.md).
+
+**BUILT — session 113 (2026-09-18).** D3 ("v1 computes nothing") is superseded: the executor
+(`src/attachments/execute.ts`) now computes a FIXED set, deterministically, with every computed point
+carrying a traceable `rowRef` (`agg:<fn>:r1:c2+r2:c2`, `der:<op>:<refA>|<refB>`): `aggregate`
+(sum/mean/min/max/count over y[0] per x, and per series when `seriesBy` is set — nulls skipped,
+`count` counts rows) and `derived` (difference and ratio of two columns; share of the series total;
+change versus the previous point in x order — first point null, "geen vorige waarde"), applied
+after aggregation; `sort.by` may be `'value'`. The unsupported reasons `aggregation`/`computation`
+are no longer emittable (`LegacyUnsupportedReason` keeps stored rows readable). Labels are built
+deterministically ("Sum of Omzet", "Omzet − Kosten", "Omzet, share of total (%)"). Instruction
+schema v2 (`version: 2`); a stored v1 instruction is upgraded on read (`upgradeInstruction`). The
+chat doorway (`src/attachments/copilot/`) and the on-screen Data panel are described in ADR 056's
+"As built — phase 2" section.

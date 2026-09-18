@@ -464,7 +464,19 @@ code revert.
 "Voor dit domein is geen merk gevonden." for a website that certainly has a brand, tell the next
 session: it is a one-constant change in `src/chart/brandfetch.ts`.
 
-## Supervised live step — migration 034 chart_edits (FILE-ONLY, NOT YET RUN — Chart co-pilot phase 1, session 112, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
+## Supervised live step — migrations 034 + 035 chart_edits (FILE-ONLY, NOT YET RUN — Chart co-pilot phases 1 + 2, sessions 112/113, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
+
+**Session 113 addendum — apply 034 AND 035 in one `npm run db:migrate`.** Phase 2 added
+`migrations/035_chart_edits_dataset_turns.sql`: a second, mutually exclusive key on `chart_edits`
+(`dataset_turn_id`, for charts drawn from a reader's own file), a synthetic primary key and two
+partial unique indexes. Deploy-order-safe both ways: before 035 the store detects the old shape and
+uses the old `ON CONFLICT` target; the own-data leg treats a missing column as "no edits yet". The
+migration file is wrapped in one transaction by `src/db/migrate.ts`. Expect exactly two pending
+migrations, `034_chart_edits.sql` then `035_chart_edits_dataset_turns.sql`. Smoke test for the new
+leg (only meaningful once `ATTACHMENTS_ENABLED=1`, see the WP202 section): open a chart from an
+uploaded file, hide a series, reload — still hidden; read-only check:
+`select dataset_turn_id, user_id, jsonb_array_length(log) from chart_edits where dataset_turn_id is not null;`.
+
 
 The chart co-pilot's per-account undo/edit log (form, zoom, hidden/highlighted series, style,
 template, notes, title, caption — never a data value) was built session 112 (merged to `main`, `7a9b737..3c295f1`, live): `web/lib/chart-commands.ts` (the command vocabulary), `web/lib/chart-history.ts`
@@ -1240,6 +1252,14 @@ Steps, in order, owner present:
    `dataset_turns`' FKs to `user_datasets`/`chat_threads`). Also confirm grants/RLS inherited
    locked on both new tables: 0 anon/authenticated grants, RLS on, 0 policies (the migration-003
    posture, same check as every prior new-table go-live above).
+4b. **Session 113 (chart co-pilot phase 2) — before the flag flip, record the four own-data LLM
+   fixtures live once:** `npm run attachments:record` (four cheap-tier calls, real spend, owner
+   present). It replaces the hand-authored fixtures under `tests/fixtures/llm/attachments/` with the
+   real model output and PRINTS THE DIFF against the hand-authored version — read it: a difference
+   in the model's instruction or view commands for the four cases is the first real signal of how
+   the prompt behaves. Then run `npx vitest run tests/attachments` (the drift test must stay green)
+   and commit the regenerated fixtures. Migrations 034 + 035 must be applied first (own-data chart
+   edits are keyed by the dataset turn). Never run `attachments:record` from CI or a subagent.
 5. **Set the flag** — in Vercel: add env var `ATTACHMENTS_ENABLED=1` (Production), then redeploy.
    (Requires `WORKSPACE_ENABLED=1` to already be set — the attachments UI only exists inside the
    `Workspace` component, not the older `Dashboard`.)

@@ -154,6 +154,82 @@ by-construction pattern ADR 038 already used for notes (R6 needs no new exemptio
   click-focusable, meaning ⌘Z/⌘⇧Z work after any click inside the card, not only after focusing a
   specific button.
 
+## As built — phase 2, the own-data co-pilot (session 113, 2026-09-18)
+
+Built via subagent-driven development from
+[superpowers/plans/2026-09-18-chart-copilot-phase2.md](../superpowers/plans/2026-09-18-chart-copilot-phase2.md)
+(nine tasks, one implementer + one reviewer per task, every task with a fix round where the reviewer
+found something real — see the plan's ledger rulings in the status archive). In plain words: on a
+chart drawn from a reader's OWN uploaded file, the reader can now change the data itself (which
+columns, filters, series, sort, top-N, **a total/average/min/max/count per group, and one of four
+derived readings: difference, share of total, change versus the previous point, ratio of two
+columns**), the chart form, the style, notes and the title/caption — by clicking controls OR by typing
+under the chart — and every one of those edits sits on the same undo history phase 1 built, saved
+per account.
+
+**The shared card shell is hooks and small components, not a JSX extraction.** `ChartView`
+(CBS data, ~4,600 lines) and `UserChartView` (own data) stay two components over two spec types —
+the ADR 037 D11 type guard is untouched: a `UserChartSpec` still cannot parse as a `ChartSpec`, and
+`ChartView` never receives one. What both cards now compose from shared modules: `useChartEdits`
+(`web/lib/use-chart-edits.ts`, the hydrate/save block lifted out of `chart.tsx` with every phase-1
+review rule intact), `ChartHistoryActions` (Undo/Redo/History), `ChartEditableText` (the in-place
+caption/title editor), `ChartSeriesLegend` (hide/highlight), and — new — `ChartCopilotInput` (the
+chat doorway) and `ChartDataPanel` (the data doorway). `chart.tsx` shrank by ~250 lines and its
+behaviour is pinned unchanged by the phase-1 suites and the phase-1 Playwright proof.
+
+**A data change is a command.** The instruction the model selects (schema v2:
+`aggregate`, `derived`, `sort.by: 'value'`, `CHART_INSTRUCTION_SCHEMA_VERSION = 2`,
+`DATASET_INSTRUCT_PROMPT_VERSION = 2`) lives in the card's document state; changing it is a
+`setInstruction` command like any other, so it undoes/redoes with the rest. Its validation
+(`validateCommand`) runs the server's own `validateInstructionObject` against the dataset profile the
+card carries — and is `false` without a profile, which is how the type guard reaches the command
+log: a CBS card can never validate an own-data command, and `setPeriodRange` (zoom) is never valid
+on an own-data card. The chart for an instruction comes from a **free, deterministic** server
+action, `renderDatasetInstruction` (no credit reserve, the D12 CSV-ingest precedent), cached per
+instruction in the card so undo/redo never re-fetch; on hydrate the card pre-renders every stored
+instruction before replaying the log, and the replay validates each command against the spec that
+was on screen *before* it (a Task 5 review finding: without that, every view/note edit made after a
+stored data command was silently dropped and then persisted away).
+
+**Persistence keyed by the turn.** `chart_edits` gained a second, mutually exclusive key
+(`dataset_turn_id`, migration 035 — FILE-ONLY, applied together with 034; the store picks its
+`ON CONFLICT` target from the live schema so the answer leg keeps working before 035 is applied);
+own-data edits are deleted with their dataset (retention leg in `src/attachments/retention.ts`).
+
+**The chat doorway.** `adjustDatasetChart` (`web/app/dataset-copilot-actions.ts`) runs through the
+same credit gate as a question (`dataset_turn`, 20 credits) and one cheap-tier call
+(`src/attachments/copilot/`: schema, prompt v1, parse, `map.ts`, `text-guard.ts`, `respond.ts`).
+The model returns a FULL instruction (or null when the data stays) plus view commands that name
+series by LABEL; deterministic code executes the instruction first and then maps every view command
+by lookup against the chart it just drew (label → `s<i>` key, note point → `rowRef`), allowlists
+template ids, hex colours and font names, and digit-guards title/caption/note text (every digit run
+must be a plotted value, source cell, x label or header token — else the item is refused as
+`unplotted_number`). The client validates every stored command AGAIN with `validateCommand` before
+dispatching with `source: 'chat'`. Two defects the review loop caught here: the output JSON schema
+emitted `oneOf` (structured outputs reject it — the intent parser's `oneOfToAnyOf` walker is now a
+shared module, `src/answer/llm/json-schema.ts`, with a no-`oneOf` test), and the model's font name
+reached the stored log unvalidated. The turn is stored as a `dataset_turns` row of kind `chart` with
+a `copilot` envelope field (message, mapped commands, refusals, feedback); on replay it shows as a
+compact recipe message in the thread, never a second chart card, while the card itself restores from
+`chart_edits`. The reply in the card: recipe chips with the panel's own icons (click → the panel
+that owns the setting), one plain sentence per refused item naming the click path, Undo (the reply's
+commands as a group; disabled with a reason once the reader has edited on top), Retry (a new call),
+👍/👎 (stored on the turn; "thanks" only once the server confirms — a review finding), and three
+deterministic example chips. Capabilities the client sends are advisory for the prompt only; the
+client's validation and the server's allowlists are the authority.
+
+**Hermetic proof.** Four hand-authored LLM fixtures (`tests/fixtures/attachments/cases.ts`,
+generated by `npm run attachments:fixtures` with the real request builders, so the harness stub
+matches byte-for-byte; `npm run attachments:record` is the owner-supervised live variant) and
+`web/e2e/own-data-copilot.spec.ts`: upload → question → chart → "totaal per gemeente, hoogste eerst,
+en maak er staven van" → bars + recipe chips + the Data panel reading "Som" → ⌘Z twice → back →
+reload → restored.
+
+**Not built (recorded in open-questions):** a chip click opens the owning panel but does not
+select the exact row; no streaming of chips (one call, one reply); `count` ignores the y column; the
+own-data table form has no CSV export; the Data panel's problem line shows the validator's English
+message; the reply lives in the card and only appears in the thread after a reload.
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
