@@ -126,6 +126,11 @@ export function describeCommand(cmd: ChartCommand, lang: Lang): string {
       return cmd.title !== null ? t(lang, 'chart.command.setTitle') : t(lang, 'chart.command.setTitleOff');
     case 'setCaption':
       return cmd.caption !== null ? t(lang, 'chart.command.setCaption') : t(lang, 'chart.command.setCaptionOff');
+    case 'setInstruction':
+      // The doorway's own summary — deterministic and digit-free by
+      // construction (validateCommand enforces both), so this stays inside
+      // the "never a data value" rule above.
+      return t(lang, 'chart.command.setInstruction', { summary: cmd.summary });
   }
 }
 
