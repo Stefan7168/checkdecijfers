@@ -17,7 +17,7 @@ interface UserDatasetRow {
   profile: DatasetProfile;
   status: DatasetStatus;
   content_sha256: string;
-  created_at: string;
+  created_at: string | Date;
 }
 
 function rowToDataset(row: UserDatasetRow): UserDataset {
@@ -31,7 +31,11 @@ function rowToDataset(row: UserDatasetRow): UserDataset {
     profile: row.profile,
     status: row.status,
     contentSha256: row.content_sha256,
-    createdAt: row.created_at,
+    // Session 113, found by the first real-browser run of this tier: pg hands
+    // `timestamptz` back as a Date, and a Server Action forwards a Date as a
+    // Date — so `capturedAt.slice(0, 10)` in the card threw and the page died.
+    // The type says string; make it one here, at the only row mapper.
+    createdAt: typeof row.created_at === 'string' ? row.created_at : new Date(row.created_at).toISOString(),
   };
 }
 
