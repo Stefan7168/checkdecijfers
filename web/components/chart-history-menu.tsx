@@ -6,8 +6,10 @@
 import { History, MessageSquare, MousePointerClick, SlidersHorizontal } from 'lucide-react';
 import type { ChartCommand, ChartCommandSource } from '../lib/chart-commands.ts';
 import type { ChartHistory } from '../lib/chart-history.ts';
+import type { PresentationKey } from '../lib/chart-presentation.ts';
+import { templateById, type ChartTemplate, type ChartTemplateId } from '../lib/chart-templates.ts';
 import type { ChartForm } from '../lib/chart-view-state.ts';
-import { t, type Lang } from '../lib/i18n/messages.ts';
+import { t, type MessageKey, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu.tsx';
 
@@ -27,6 +29,50 @@ function formLabel(form: ChartForm, lang: Lang): string {
     case 'hbar':
       return t(lang, 'chart.form.hbar');
   }
+}
+
+/** Final-review finding M2: a presentation key is an INTERNAL name
+ * ('seriesColors'), never something to show a reader. Every key maps to the
+ * label of the Style panel row that sets it — the words the reader just
+ * clicked — so no new copy (and no new translation) is invented here. All of
+ * them are digit-free, which the digit-scan test below relies on. */
+const PRESENTATION_KEY_LABEL: Record<PresentationKey, MessageKey> = {
+  lineWidth: 'chart.panel.lineWidth',
+  markers: 'chart.panel.markers',
+  grid: 'chart.panel.grid',
+  xLabels: 'chart.panel.xLabels',
+  axisLines: 'chart.panel.axisLines',
+  valueLabels: 'chart.panel.valueLabels',
+  zeroBaseline: 'chart.panel.zeroBaseline',
+  areaFill: 'chart.panel.areaFill',
+  seriesColors: 'chart.panel.tabColors',
+  fontFamily: 'chart.panel.font',
+  language: 'chart.panel.languageLabel',
+  frameBackground: 'chart.panel.frameBackground',
+  framePadding: 'chart.panel.framePadding',
+  frameCorners: 'chart.panel.frameCorners',
+  frameShadow: 'chart.panel.frameShadow',
+  frameInset: 'chart.panel.frameInset',
+  frameAspect: 'chart.panel.frameAspect',
+};
+
+/** The Sjablonen gallery labels a template by `t(lang, template.nameKey)`;
+ * so does the history. `templateById` returns undefined for an id no longer
+ * in the set (an old stored log) — fall back to the raw id then. */
+function templateName(id: ChartTemplateId, lang: Lang): string {
+  const template = templateById(id) as ChartTemplate | undefined;
+  return template ? t(lang, template.nameKey) : id;
+}
+
+function presentationKeysLabel(patch: object, lang: Lang): string {
+  return Object.keys(patch)
+    // A key the map doesn't know (an older stored log, a future key) falls
+    // back to its own name rather than rendering "undefined".
+    .map((key) => {
+      const messageKey = PRESENTATION_KEY_LABEL[key as PresentationKey];
+      return messageKey ? t(lang, messageKey) : key;
+    })
+    .join(', ');
 }
 
 const SOURCE_ICON: Record<ChartCommandSource, typeof SlidersHorizontal> = {
@@ -62,13 +108,14 @@ export function describeCommand(cmd: ChartCommand, lang: Lang): string {
     case 'setPeriodRange':
       return cmd.range !== null ? t(lang, 'chart.command.setPeriodRange') : t(lang, 'chart.command.setPeriodRangeOff');
     case 'setPresentation':
-      return t(lang, 'chart.command.setPresentation', { keys: Object.keys(cmd.patch).join(', ') });
+      return t(lang, 'chart.command.setPresentation', { keys: presentationKeysLabel(cmd.patch, lang) });
     case 'replacePresentation':
       return t(lang, 'chart.command.replacePresentation');
     case 'resetPresentation':
       return t(lang, 'chart.command.resetPresentation');
     case 'applyTemplate':
-      return t(lang, 'chart.command.applyTemplate', { id: cmd.templateId });
+      // The gallery's own name for that look ("Redactie"), not its id.
+      return t(lang, 'chart.command.applyTemplate', { id: templateName(cmd.templateId, lang) });
     case 'setReading':
       return t(lang, 'chart.command.setReading');
     case 'addNote':

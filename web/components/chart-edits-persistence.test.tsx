@@ -261,3 +261,113 @@ describe('chart_edits persistence', () => {
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
   });
 });
+
+// Final-review finding I1 (IMPORTANT): a colour drag is pushed as a TRANSIENT
+// entry and `serializeHistory` drops those, while the only seal the panel
+// fires is the picker's own blur — which Chrome skips when the modal unmounts.
+// A drag that is the reader's LAST action was therefore never saved at all.
+describe('an unsealed colour drag is still saved', () => {
+  async function openColorPicker() {
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await screen.findByRole('tab', { name: 'Grafiek' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    return (await screen.findByLabelText('Kleur van Nederland kiezen')) as HTMLInputElement;
+  }
+
+  it('a transient colour change that is never sealed is written after the debounce', async () => {
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    const picker = await openColorPicker();
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(picker, { target: { value: '#ff8800' } });
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
+      const log = chartEditsActions.saveChartEdits.mock.calls[0]![1] as { kind: string }[];
+      expect(log.map((c) => c.kind)).toEqual(['setPresentation']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('closing the Style panel seals the drag, so the next drag is its own step', async () => {
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    const picker = await openColorPicker();
+    fireEvent.change(picker, { target: { value: '#ff8800' } });
+    // Close the panel — no blur is fired on the picker, exactly like the
+    // browser case this finding is about (the modal unmounts under the
+    // cursor and Chrome skips the blur).
+    fireEvent.keyDown(document.querySelector('[role=dialog]')!, { key: 'Escape' });
+    await act(async () => {});
+    const again = await openColorPicker();
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(again, { target: { value: '#33aa55' } });
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      const calls = chartEditsActions.saveChartEdits.mock.calls;
+      const log = calls[calls.length - 1]![1] as { kind: string }[];
+      expect(log.map((c) => c.kind)).toEqual(['setPresentation', 'setPresentation']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// Final-review finding I2 (IMPORTANT): a click made WHILE the hydrate fetch is
+// in flight used to destroy the stored log — hydration was skipped (the reader
+// had started editing) and the save then overwrote the row with only the new
+// click. The stored log and the reader's own commands are merged instead, and
+// nothing is written until the fetch has settled.
+describe('an edit during the hydrate fetch', () => {
+  function deferredFetch() {
+    let resolve!: (v: { ok: boolean; log: unknown }) => void;
+    const promise = new Promise<{ ok: boolean; log: unknown }>((r) => {
+      resolve = r;
+    });
+    chartEditsActions.fetchChartEdits.mockReturnValueOnce(promise);
+    return { resolve };
+  }
+  const storedLog = [{ kind: 'setTitle', title: 'Hersteld', id: 'y', at: '2026-09-18T00:00:00.000Z', source: 'canvas' }];
+
+  it('nothing is saved while the fetch is still in flight', async () => {
+    deferredFetch();
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+    await act(() => new Promise((r) => setTimeout(r, 1000)));
+    expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+  });
+
+  it('the stored log and the reader’s own click are merged, oldest first', async () => {
+    const { resolve } = deferredFetch();
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+    await act(async () => {
+      resolve({ ok: true, log: storedLog });
+      await Promise.resolve();
+    });
+    // Both edits are in the live state: the stored title AND the new form.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Hersteld'));
+    expect(screen.getByRole('tab', { name: /Staaf|Bar/ })).toHaveAttribute('aria-selected', 'true');
+    await waitFor(() => expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
+    expect(id).toBe(5);
+    expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setTitle', 'setForm']);
+  });
+});

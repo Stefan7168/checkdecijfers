@@ -45,6 +45,22 @@ describe('ChartHistoryMenu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit history' }));
     expect(screen.getByText('No edits yet')).toBeTruthy();
   });
+  // Final-review finding M2: the menu used to show raw internal keys
+  // ('Opmaak: seriesColors, lineWidth') and raw template ids ('Sjabloon:
+  // classic'). Every key gets the Style panel's own row label; a template
+  // gets its own display name.
+  it('a style change names the controls the reader touched, not the internal keys', () => {
+    const cmd = makeCommand({ kind: 'setPresentation', patch: { lineWidth: 'thick', seriesColors: { 0: '#112233' } } }, 'panel');
+    expect(describeCommand(cmd, 'nl')).toBe('Opmaak: Lijndikte, Kleuren');
+    expect(describeCommand(cmd, 'en')).toBe('Style: Line thickness, Colours');
+  });
+
+  it('a template is named, not identified', () => {
+    const cmd = makeCommand({ kind: 'applyTemplate', templateId: 'classic' }, 'panel');
+    expect(describeCommand(cmd, 'nl')).toBe('Sjabloon: Klassiek');
+    expect(describeCommand(cmd, 'en')).toBe('Template: Classic');
+  });
+
   it('describeCommand never emits a digit for a command without typed text', () => {
     const cmds = [
       makeCommand({ kind: 'setPeriodRange', range: ['2020JJ00', '2024JJ00'] }, 'panel'),

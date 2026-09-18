@@ -99,8 +99,8 @@ import { ChartHistoryMenu } from './chart-history-menu.tsx';
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
 // the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
-import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId, parseCommandLog } from '../lib/chart-commands.ts';
-import { replayLog, serializeHistory } from '../lib/chart-history.ts';
+import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId, parseCommandLog, validateCommand } from '../lib/chart-commands.ts';
+import { pushCommand, replayLog, seal, serializeHistory } from '../lib/chart-history.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { fetchChartEdits, saveChartEdits } from '../app/chart-edits-actions.ts';
 
@@ -1962,6 +1962,16 @@ export function ChartView({
     claimStylePanel(domId);
     return () => releaseStylePanel(domId);
   }, [styleOpen, domId, claimStylePanel, releaseStylePanel]);
+  // Final-review finding I1: closing the Style panel ENDS the gesture. The
+  // colour picker's blur is the only other seal, and the browser skips it
+  // when the panel (a portaled modal) unmounts under the cursor — leaving the
+  // drag merged-and-open, so the reader's very next colour tweak would fold
+  // into the same undo step. Sealing here is idempotent (`seal` returns the
+  // same history when the top entry is already sealed, and the hook then
+  // keeps the same snapshot), so the mount pass costs nothing.
+  useEffect(() => {
+    if (!styleOpen) sealHistory();
+  }, [styleOpen, sealHistory]);
   // Opening another chart's panel (which claims the slot with ITS domId)
   // closes this one's. Deliberately keyed on [stylePanelOwner, domId] only
   // (not styleOpen): on the very commit where THIS chart's own click above
@@ -2179,9 +2189,19 @@ export function ChartView({
   // last-seen key and fix up during render, so the reset is already in place
   // before the effects below run in the same commit.
   const lastEditsKeyRef = useRef(editsKey);
+  /** Final-review finding I2. False until this chart's hydrate fetch has
+   * SETTLED (or there is nothing to fetch). While it is false no save may go
+   * out: a write before the stored log has come back is a write that does not
+   * know what it is replacing. Read synchronously by the save effect;
+   * `hydrateSettled` below is the state that makes that effect re-run once it
+   * flips, so an edit made DURING the fetch is still saved without waiting
+   * for the reader's next click. */
+  const hydrateSettledRef = useRef(false);
+  const [hydrateSettled, setHydrateSettled] = useState(0);
   if (lastEditsKeyRef.current !== editsKey) {
     lastEditsKeyRef.current = editsKey;
     lastSavedEditsRef.current = '[]';
+    hydrateSettledRef.current = false;
   }
 
   /** Fix round 1, finding 2. Sends whatever the debounce is still holding,
@@ -2193,30 +2213,52 @@ export function ChartView({
     if (pending === null) return;
     pendingSaveRef.current = null;
     void saveChartEdits(pending.key, JSON.parse(pending.json) as unknown).then((result) => {
-      if (result.ok) lastSavedEditsRef.current = pending.json;
+      // Final-review finding M1: by the time this resolves the card may have
+      // been handed a DIFFERENT chart, whose own "last saved" marker was just
+      // reset to `[]`. Writing the old chart's JSON into it would make the
+      // save effect believe the new chart's row already holds that log.
+      if (result.ok && lastEditsKeyRef.current === pending.key) lastSavedEditsRef.current = pending.json;
     });
   }, []);
 
-  // Hydrate. Deliberately NOT applied when the reader has already started
-  // editing (`history.past.length > 0`): a slow fetch resolving after the
-  // first click must never throw away what they just did.
+  // Hydrate. Final-review finding I2: the old version SKIPPED hydration
+  // outright when the reader had already started editing
+  // (`history.past.length > 0`) — which protected the click but destroyed the
+  // stored log, because the save effect then wrote the reader's one command
+  // over a row that held ten. The stored log is the base and the reader's own
+  // commands are replayed ON TOP of it (validated like any other replayed
+  // command, oldest first), so both survive and the next save carries both.
   useEffect(() => {
-    if (editsKey === null) return;
+    if (editsKey === null) {
+      hydrateSettledRef.current = true;
+      return;
+    }
     let cancelled = false;
     void fetchChartEdits(editsKey).then((result) => {
-      if (cancelled || !result.ok || !result.log) return;
-      const parsed = parseCommandLog(result.log);
-      if (parsed === null || historyRef.current.past.length > 0) return;
-      const replayed = replayLog(initialDocState(initialForm, initialPresentation), parsed, {
-        spec,
-        alternatesCount: alternates.length,
-      });
-      replaceHistory({ state: replayed.state, history: replayed.history });
-      // What we just restored IS what the server holds — recording it here
-      // stops the save effect below from immediately writing it straight
-      // back (and, worse, writing a REPLAYED-and-dropped log over a good one
-      // before the reader has touched anything).
-      lastSavedEditsRef.current = JSON.stringify(serializeHistory(replayed.history));
+      if (cancelled) return;
+      const parsed = result.ok && result.log ? parseCommandLog(result.log) : null;
+      if (parsed !== null && parsed.length > 0) {
+        const ctx = { spec, alternatesCount: alternates.length };
+        const replayed = replayLog(initialDocState(initialForm, initialPresentation), parsed, ctx);
+        let history = replayed.history;
+        let state = replayed.state;
+        // Whatever the reader did while the fetch was in flight. Empty in the
+        // ordinary case, so this is exactly the old plain-restore path.
+        for (const entry of historyRef.current.past) {
+          if (!validateCommand(entry.command, ctx)) continue;
+          ({ history, state } = pushCommand(history, state, entry.command, { transient: entry.transient }));
+        }
+        replaceHistory({ state, history });
+        // The STORED log's serialisation, deliberately — not the merged one.
+        // What the server holds is the stored log, so recording that both
+        // stops an immediate no-op write of an untouched chart AND leaves the
+        // merged log looking "changed", so it is saved on the next tick.
+        lastSavedEditsRef.current = JSON.stringify(serializeHistory(replayed.history));
+      }
+      // Settled: ok, empty, unparseable or refused — every path ends here,
+      // because "we asked and got an answer" is what unblocks the save.
+      hydrateSettledRef.current = true;
+      setHydrateSettled((n) => n + 1);
     });
     return () => {
       cancelled = true;
@@ -2224,12 +2266,21 @@ export function ChartView({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `spec`/`alternates`/`initialForm`/`initialPresentation` ARE captured by this effect's closure and deliberately not listed: `editsKey` is the audit row this card belongs to, and every real chart swap that has an audit id at all also changes that id — so the closure is re-made whenever it could be stale. Listing `spec` (a fresh object on every render) would re-fetch continuously instead.
   }, [editsKey]);
 
-  // Save, debounced. `serializeHistory` drops a TRANSIENT (unsealed) top
-  // entry, so a colour picker mid-drag produces no write at all — the save
-  // only ever sees sealed, finished gestures.
+  // Save, debounced.
+  //
+  // Final-review finding I1: this used to serialise `history` as-is, and
+  // `serializeHistory` DROPS a transient (unsealed) top entry — so a colour
+  // drag that was the reader's last action was never saved at all (the only
+  // seal the picker fires is its own blur, which the browser skips when the
+  // modal unmounts). It serialises a SEALED VIEW instead: `seal` is pure and
+  // does not touch the live history, so the entry can still merge with the
+  // rest of the drag while the picker is open — only what gets WRITTEN
+  // changes. (The panel closing also seals for real, see the effect below.)
   useEffect(() => {
     if (editsKey === null) return;
-    const json = JSON.stringify(serializeHistory(history));
+    // Finding I2: never write before the stored log has come back.
+    if (!hydrateSettledRef.current) return;
+    const json = JSON.stringify(serializeHistory(seal(history)));
     if (json === lastSavedEditsRef.current) {
       pendingSaveRef.current = null;
       return;
@@ -2242,7 +2293,10 @@ export function ChartView({
     // The flush belongs to the effect below, which only tears down when the
     // card unmounts or changes chart.
     return () => clearTimeout(timer);
-  }, [history, editsKey, flushPendingSave]);
+    // `hydrateSettled` is not read in the body (the REF is, synchronously) —
+    // it is listed so this effect re-runs the moment hydration settles, which
+    // is what saves an edit made while the fetch was still in flight.
+  }, [history, editsKey, flushPendingSave, hydrateSettled]);
 
   // Fix round 1, finding 2 (IMPORTANT): a reader who edits and immediately
   // closes the chat, switches chart, or navigates away used to lose the last
@@ -2868,6 +2922,12 @@ export function ChartView({
     setTitleEditing(true);
   }
   function commitTitle() {
+    // Final-review finding M4: the story lock covers the COMMIT too, not only
+    // the buttons that open the editor — exactly like `commitCaption` below.
+    // An editor already open when the story starts must not be able to write
+    // a title through the lock (Enter, or the blur the story's own click
+    // causes in a real browser).
+    if (storyOpen) return;
     const trimmed = titleDraft.trim();
     // Only the reader's OWN words are ever stored: an empty box, or the spec
     // title typed back unchanged, means "no override" (null), never a copy of

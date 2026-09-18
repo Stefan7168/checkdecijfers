@@ -162,8 +162,23 @@ describe('parseCommandLog', () => {
     expect(parseCommandLog([{ ...log[0], kind: 'launchMissiles' }])).toBeNull();
     expect(parseCommandLog([{ ...log[0], source: 'robot' }])).toBeNull();
   });
+  // Final-review finding M9: the old version of this test proved the point
+  // for ONE hand-written command. It now runs over every command list the
+  // 200-seed property generator above produces — the same corpus that proves
+  // undo, so a new kind that leaked a data value would fail here too.
   it('a command carries only keys, codes, enum values and typed text — never a data value', () => {
-    const log = [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'canvas')];
-    expect(JSON.stringify(log)).not.toMatch(/"value"|formattedValue/);
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = rng(seed);
+      let state = initialDocState('line', {});
+      const commands: ChartCommandParams[] = [];
+      const len = 1 + Math.floor(r() * 12);
+      for (let i = 0; i < len; i++) {
+        const cmd = randomCommand(r, state, i);
+        commands.push(cmd);
+        state = applyCommand(state, cmd);
+      }
+      const log = commands.map((c) => makeCommand(c, 'canvas'));
+      expect(JSON.stringify(log), `seed ${seed}`).not.toMatch(/"value"|formattedValue/);
+    }
   });
 });

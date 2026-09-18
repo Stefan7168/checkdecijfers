@@ -162,6 +162,22 @@ describe('in-place title', () => {
     expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
   });
 
+  // Final-review finding M4: `commitTitle` must obey the story lock exactly
+  // like `commitCaption` does — an editor already open when the story starts
+  // must not be able to write a title through the lock.
+  it('Enter pressed in the title editor while the story is open writes nothing', () => {
+    render(<ChartView spec={twoSeriesFindingsSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
+    const input = screen.getByPlaceholderText('Eigen titel') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'Mag niet' } });
+    // The story opens with the title editor still on screen.
+    fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+    expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+    expect(screen.queryByText('Mag niet')).toBeNull();
+  });
+
   it('embed mode shows no edit button', () => {
     render(<ChartView spec={twoSeriesLineSpec()} embedMode embed={{ auditId: 1 }} embedFooter="x" />);
     expect(screen.queryByRole('button', { name: 'Titel bewerken' })).toBeNull();
