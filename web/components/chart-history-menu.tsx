@@ -111,7 +111,7 @@ export function ChartHistoryMenu(props: {
             {pastNewestFirst.map(({ entry, i }) => {
               const SourceIcon = SOURCE_ICON[entry.command.source];
               return (
-                <DropdownMenuItem key={entry.command.id} closeOnClick={false} onClick={() => onUndoTo(i)}>
+                <DropdownMenuItem key={entry.command.id} onClick={() => onUndoTo(i)}>
                   <SourceIcon className="size-4" aria-hidden="true" />
                   <span className="sr-only">{sourceLabel(entry.command.source, lang)}</span>
                   {describeCommand(entry.command, lang)}
@@ -123,7 +123,6 @@ export function ChartHistoryMenu(props: {
               return (
                 <DropdownMenuItem
                   key={entry.command.id}
-                  closeOnClick={false}
                   onClick={() => onRedoTo(i)}
                   className="text-muted-foreground"
                 >

@@ -30,11 +30,14 @@ describe('ChartHistoryMenu', () => {
     const onUndoTo = vi.fn();
     const onRedoTo = vi.fn();
     render(<ChartHistoryMenu history={history()} lang="nl" onUndoTo={onUndoTo} onRedoTo={onRedoTo} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Geschiedenis van bewerkingen' }));
-    const items = screen.getAllByRole('menuitem');
-    fireEvent.click(items[1]!);
+    const trigger = screen.getByRole('button', { name: 'Geschiedenis van bewerkingen' });
+    // The menu closes on click, like every other menu in the app — re-open
+    // and re-query between the two clicks rather than reusing a stale node.
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getAllByRole('menuitem')[1]!);
     expect(onUndoTo).toHaveBeenCalledWith(0);
-    fireEvent.click(items[2]!);
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getAllByRole('menuitem')[2]!);
     expect(onRedoTo).toHaveBeenCalledWith(0);
   });
   it('empty history shows the empty line', () => {
