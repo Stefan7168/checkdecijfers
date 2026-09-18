@@ -47,7 +47,7 @@ describe('serializeDatasetInstructRequest', () => {
   });
 
   it('includes the previous instruction verbatim when given', () => {
-    const previous = { version: 1 as const, kind: 'line' as const, x: 'c0', y: ['c2'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null };
+    const previous = { version: 2 as const, kind: 'line' as const, x: 'c0', y: ['c2'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null };
     const request = serializeDatasetInstructRequest(PROFILE, previous, 'make it a bar chart');
     expect(request).toContain('"kind":"line"');
   });
@@ -71,7 +71,7 @@ describe('serializeDatasetInstructRequest', () => {
 describe('previousInstructionForPrompt — reuses the ClientChartInstruction split (H1)', () => {
   it('strips reading/confidence/unsupported.detail from a full ChartInstruction', () => {
     const full: ChartInstruction = {
-      version: 1,
+      version: 2,
       kind: 'line',
       x: 'c0',
       y: ['c2'],
@@ -79,14 +79,16 @@ describe('previousInstructionForPrompt — reuses the ClientChartInstruction spl
       filters: [],
       sort: null,
       limit: null,
+      aggregate: null,
+      derived: null,
       confidence: 0.95,
       reading: 'a secret internal note',
-      unsupported: { reason: 'aggregation', detail: 'a secret internal detail' },
+      unsupported: { reason: 'other', detail: 'a secret internal detail' },
     };
     const projected = previousInstructionForPrompt(full);
     expect(projected).not.toHaveProperty('reading');
     expect(projected).not.toHaveProperty('confidence');
-    expect(projected?.unsupported).toEqual({ reason: 'aggregation' });
+    expect(projected?.unsupported).toEqual({ reason: 'other' });
     expect(JSON.stringify(projected)).not.toContain('secret');
   });
 

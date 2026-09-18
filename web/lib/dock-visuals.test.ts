@@ -28,7 +28,7 @@ function chartMessage(): DatasetChatMessage {
     kind: 'chart',
     text: "Here's your chart.",
     chart: CHART_SPEC,
-    lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null },
+    lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null },
   };
 }
 

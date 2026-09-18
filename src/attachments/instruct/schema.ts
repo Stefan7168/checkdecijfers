@@ -17,10 +17,10 @@
 // ColumnId-bearing fields across WP202b-d; centralizing the collection once
 // is what stops that from recurring here.
 import { z } from 'zod';
-import type { ChartInstruction, ColumnProfile, DatasetProfile, FilterClause } from '../types.ts';
+import { DERIVED_OPS_WITH_B, type ChartInstruction, type ColumnProfile, type DatasetProfile, type FilterClause } from '../types.ts';
 import { MAX_LIMIT, MAX_SERIES, MAX_Y_COLUMNS } from '../limits.ts';
 
-export const CHART_INSTRUCTION_SCHEMA_VERSION = 1;
+export const CHART_INSTRUCTION_SCHEMA_VERSION = 2;
 
 export class InstructionValidationError extends Error {
   readonly outputText: string;
@@ -37,7 +37,12 @@ const filterClauseSchema = z.union([
   z.strictObject({ column: z.string(), op: z.literal('between'), from: z.number(), to: z.number() }),
 ]);
 
-const chartInstructionSchema = z.strictObject({
+const aggregateSchema = z.strictObject({ fn: z.enum(['sum', 'mean', 'min', 'max', 'count']) }).nullable();
+const derivedSchema = z
+  .strictObject({ op: z.enum(['difference', 'share_of_total', 'percent_change', 'ratio']), b: z.string().nullable() })
+  .nullable();
+
+export const chartInstructionSchema = z.strictObject({
   version: z.literal(CHART_INSTRUCTION_SCHEMA_VERSION),
   kind: z.enum(['line', 'bar']),
   x: z.string(),
@@ -46,11 +51,13 @@ const chartInstructionSchema = z.strictObject({
   filters: z.array(filterClauseSchema),
   sort: z.strictObject({ by: z.string(), direction: z.enum(['asc', 'desc']) }).nullable(),
   limit: z.number().nullable(),
+  aggregate: aggregateSchema,
+  derived: derivedSchema,
   confidence: z.number(),
   reading: z.string(),
   unsupported: z
     .strictObject({
-      reason: z.enum(['aggregation', 'computation', 'compare_with_cbs', 'not_chartable', 'other']),
+      reason: z.enum(['compare_with_cbs', 'not_chartable', 'other']),
       detail: z.string(),
     })
     .nullable(),
@@ -68,7 +75,8 @@ function collectColumnRefs(data: z.infer<typeof chartInstructionSchema>): string
   const refs = [data.x, ...data.y];
   if (data.seriesBy !== null) refs.push(data.seriesBy);
   for (const filter of data.filters) refs.push(filter.column);
-  if (data.sort !== null && data.sort.by !== 'x') refs.push(data.sort.by);
+  if (data.sort !== null && data.sort.by !== 'x' && data.sort.by !== 'value') refs.push(data.sort.by);
+  if (data.derived !== null && data.derived.b !== null) refs.push(data.derived.b);
   return refs;
 }
 
@@ -92,10 +100,23 @@ export function validateInstruction(outputText: string, profile: DatasetProfile)
   } catch (error) {
     fail(`instruction output is not valid JSON: ${(error as Error).message}`, outputText);
   }
+  return validateInstructionObject(parsed, profile, outputText);
+}
 
-  const result = chartInstructionSchema.safeParse(parsed);
+/** The same allowlist/range checks over an already-parsed object — the
+ * entry the co-pilot (Task 7) and the client-side Data panel (Task 6, via
+ * web/backend) use, which never have a raw model outputText string to
+ * begin with. `outputText` is optional purely for the error's audit
+ * payload; when omitted, the JSON-stringified object stands in for it. */
+export function validateInstructionObject(
+  rawInput: unknown,
+  profile: DatasetProfile,
+  outputText?: string,
+): ChartInstruction {
+  const text = outputText ?? JSON.stringify(rawInput);
+  const result = chartInstructionSchema.safeParse(rawInput);
   if (!result.success) {
-    fail(`instruction output violates the schema: ${result.error.message}`, outputText);
+    fail(`instruction output violates the schema: ${result.error.message}`, text);
   }
   const data = result.data;
 
@@ -105,17 +126,17 @@ export function validateInstruction(outputText: string, profile: DatasetProfile)
   // profile column — a single pass over ALL ColumnId-bearing fields.
   for (const ref of collectColumnRefs(data)) {
     if (!columnsById.has(ref)) {
-      fail(`instruction references column id '${ref}' which is NOT in the dataset's profile`, outputText);
+      fail(`instruction references column id '${ref}' which is NOT in the dataset's profile`, text);
     }
   }
 
   if (data.y.length < 1 || data.y.length > MAX_Y_COLUMNS) {
-    fail(`instruction has ${data.y.length} y column(s), outside the allowed 1..${MAX_Y_COLUMNS}`, outputText);
+    fail(`instruction has ${data.y.length} y column(s), outside the allowed 1..${MAX_Y_COLUMNS}`, text);
   }
   for (const yId of data.y) {
     const column = columnsById.get(yId)!;
     if (column.type !== 'number' && column.type !== 'year') {
-      fail(`y column '${yId}' has type '${column.type}', not 'number' or 'year'`, outputText);
+      fail(`y column '${yId}' has type '${column.type}', not 'number' or 'year'`, text);
     }
     // Fixed in review: a 'number' column whose numberFormat is still
     // 'ambiguous' (D5) must never be plotted — it blocks charting until
@@ -124,24 +145,24 @@ export function validateInstruction(outputText: string, profile: DatasetProfile)
     // omitting min/max, so this reads as an explicit rule rather than a
     // side-effect of a different check.
     if (column.numberFormat === 'ambiguous') {
-      fail(`y column '${yId}' has an unresolved ambiguous number format — ask the user to disambiguate first`, outputText);
+      fail(`y column '${yId}' has an unresolved ambiguous number format — ask the user to disambiguate first`, text);
     }
   }
 
   if (data.kind === 'line') {
     const xColumn = columnsById.get(data.x)!;
     if (xColumn.type !== 'year' && xColumn.type !== 'date' && xColumn.type !== 'number') {
-      fail(`line chart x column '${data.x}' has type '${xColumn.type}', which has no natural order`, outputText);
+      fail(`line chart x column '${data.x}' has type '${xColumn.type}', which has no natural order`, text);
     }
     if (xColumn.numberFormat === 'ambiguous') {
-      fail(`line chart x column '${data.x}' has an unresolved ambiguous number format`, outputText);
+      fail(`line chart x column '${data.x}' has an unresolved ambiguous number format`, text);
     }
   }
 
   if (data.seriesBy !== null) {
     const seriesColumn = columnsById.get(data.seriesBy)!;
     if (seriesColumn.distinct === undefined) {
-      fail(`seriesBy column '${data.seriesBy}' has no distinct value list to split series on`, outputText);
+      fail(`seriesBy column '${data.seriesBy}' has no distinct value list to split series on`, text);
     }
     // Fixed in review: exceeding the cap is a validation THROW (routed to a
     // clarification), never a silently-truncated legend — the "never
@@ -150,23 +171,42 @@ export function validateInstruction(outputText: string, profile: DatasetProfile)
       fail(
         `seriesBy column '${data.seriesBy}' has ${seriesColumn.distinct.length} distinct values, ` +
           `more than the ${MAX_SERIES} series cap — ask the user to filter first`,
-        outputText,
+        text,
       );
     }
   }
 
   for (const filter of data.filters) {
-    validateFilter(filter, columnsById, outputText);
+    validateFilter(filter, columnsById, text);
   }
 
   if (data.limit !== null) {
     if (!Number.isInteger(data.limit) || data.limit < 1 || data.limit > MAX_LIMIT) {
-      fail(`instruction limit ${data.limit} is outside the allowed 1..${MAX_LIMIT}`, outputText);
+      fail(`instruction limit ${data.limit} is outside the allowed 1..${MAX_LIMIT}`, text);
     }
   }
 
+  if (data.derived !== null) {
+    if (data.y.length !== 1) fail(`derived '${data.derived.op}' needs exactly one y column`, text);
+    const needsB = DERIVED_OPS_WITH_B.includes(data.derived.op);
+    if (needsB && data.derived.b === null) fail(`derived '${data.derived.op}' needs a second column b`, text);
+    if (!needsB && data.derived.b !== null) fail(`derived '${data.derived.op}' takes no second column`, text);
+    if (data.derived.b !== null) {
+      const b = columnsById.get(data.derived.b)!;
+      if (b.type !== 'number' && b.type !== 'year') {
+        fail(`derived column b '${data.derived.b}' has type '${b.type}', not 'number' or 'year'`, text);
+      }
+      if (b.numberFormat === 'ambiguous') {
+        fail(`derived column b '${data.derived.b}' has an unresolved ambiguous number format`, text);
+      }
+    }
+  }
+  if (data.sort !== null && data.sort.by !== 'x' && data.sort.by !== 'value' && (data.aggregate !== null || data.derived !== null)) {
+    fail(`with aggregate/derived, sort by 'x' or 'value' only (got '${data.sort.by}')`, text);
+  }
+
   if (!Number.isFinite(data.confidence) || data.confidence < 0 || data.confidence > 1) {
-    fail(`instruction confidence ${data.confidence} is outside 0..1`, outputText);
+    fail(`instruction confidence ${data.confidence} is outside 0..1`, text);
   }
 
   return data;

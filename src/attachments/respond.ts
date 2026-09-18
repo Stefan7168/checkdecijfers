@@ -11,6 +11,7 @@ import { buildUserChartSpec } from './chart.ts';
 import { NoRowsError, TooManyPointsError } from './execute.ts';
 import type { DatasetInstructOptions } from './instruct/parse.ts';
 import { DatasetInstructFailure, parseDatasetInstruction } from './instruct/parse.ts';
+import { DATASET_INSTRUCT_PROMPT_VERSION } from './instruct/prompt.ts';
 import { validateInstruction } from './instruct/schema.ts';
 import {
   chartReplyText,
@@ -23,6 +24,7 @@ import {
 import {
   reviveClientInstruction,
   toClientInstruction,
+  upgradeInstruction,
   type ChartInstruction,
   type ClientChartInstruction,
   type DatasetTurnEnvelope,
@@ -65,7 +67,10 @@ function revalidatePrevious(
 ): ChartInstruction | null {
   if (rawState === null) return null;
   try {
-    const revived = reviveClientInstruction(rawState.lastInstruction);
+    // A v1 referent held by an open tab keeps working instead of falling
+    // back to a standalone parse — see upgradeInstruction's own doc.
+    const upgraded = upgradeInstruction(rawState.lastInstruction) as ClientChartInstruction;
+    const revived = reviveClientInstruction(upgraded);
     return validateInstruction(JSON.stringify(revived), dataset.profile);
   } catch {
     return null;
@@ -188,7 +193,7 @@ async function parseAndBuildChart(
     instruction = parsed.instruction;
     llmCall = {
       model: parsed.model,
-      promptVersion: 1,
+      promptVersion: DATASET_INSTRUCT_PROMPT_VERSION,
       inputTokens: parsed.usage.inputTokens,
       outputTokens: parsed.usage.outputTokens,
     };
@@ -205,7 +210,7 @@ async function parseAndBuildChart(
       instruction: null,
       chartEmitted: false,
       llmCalls: [
-        { model: error.model, promptVersion: 1, inputTokens: error.usage.inputTokens, outputTokens: error.usage.outputTokens },
+        { model: error.model, promptVersion: DATASET_INSTRUCT_PROMPT_VERSION, inputTokens: error.usage.inputTokens, outputTokens: error.usage.outputTokens },
       ],
       latencyMs: Date.now() - startedAt,
     };

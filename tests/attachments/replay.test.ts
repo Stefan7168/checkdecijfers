@@ -61,7 +61,7 @@ function baseRecord(overrides: Partial<DatasetTurnRecord> = {}): DatasetTurnReco
 }
 
 const CHART_INSTRUCTION: ChartInstruction = {
-  version: 1,
+  version: 2,
   kind: 'line',
   x: 'c0',
   y: ['c1'],
@@ -69,6 +69,8 @@ const CHART_INSTRUCTION: ChartInstruction = {
   filters: [],
   sort: null,
   limit: null,
+  aggregate: null,
+  derived: null,
   confidence: 0.9,
   reading: 'r',
   unsupported: null,
@@ -125,6 +127,29 @@ describe('replayDatasetTurns — pure function', () => {
     expect(messages[1]).toMatchObject({ role: 'assistant', kind: 'chart', chart: CHART_SPEC });
   });
 
+  it('upgrades a stored v1 lastInstruction to v2 (a pre-schema-v2 row)', () => {
+    const v1LastInstruction = { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null };
+    const record = baseRecord({
+      kind: 'chart',
+      question: 'show revenue',
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'show revenue',
+        text: "Here's your chart.",
+        instruction: CHART_INSTRUCTION,
+        chart: CHART_SPEC,
+        state: { datasetId: 1, lastInstruction: v1LastInstruction as never },
+      },
+    });
+    const messages = replayDatasetTurns([record]);
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      kind: 'chart',
+      lastInstruction: { version: 2, aggregate: null, derived: null },
+    });
+  });
+
   it('⟨A7⟩ analog: a redacted row replays as ONE placeholder, never a user+assistant pair', () => {
     const record = baseRecord({
       question: '[deleted question]',
@@ -166,6 +191,15 @@ describe('lastChartState — the D8 step 2 resumed refinement referent', () => {
     const first = chartRecord(1, { ...CHART_INSTRUCTION, unsupported: null, limit: 1 });
     const second = chartRecord(2, { ...CHART_INSTRUCTION, unsupported: null, limit: 2 });
     expect(lastChartState([first, second])).toEqual({ datasetId: 1, lastInstruction: { ...CHART_INSTRUCTION, unsupported: null, limit: 2 } });
+  });
+
+  it('upgrades a stored v1 lastInstruction to v2 (a pre-schema-v2 row)', () => {
+    const v1LastInstruction = { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null };
+    const record = chartRecord(1, v1LastInstruction as never);
+    expect(lastChartState([record])).toMatchObject({
+      datasetId: 1,
+      lastInstruction: { version: 2, aggregate: null, derived: null },
+    });
   });
 
   it('skips a redacted chart row (the D9 "check redaction first" discipline)', () => {

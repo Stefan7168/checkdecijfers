@@ -79,7 +79,7 @@ function fakeClient(outputText: string): LlmClient {
 
 function chartInstructionOutput(fields: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     kind: 'line',
     x: 'c0',
     y: ['c2'],
@@ -87,6 +87,8 @@ function chartInstructionOutput(fields: Record<string, unknown> = {}): string {
     filters: [],
     sort: null,
     limit: null,
+    aggregate: null,
+    derived: null,
     confidence: 0.9,
     reading: 'Revenue over time.',
     unsupported: null,
@@ -252,18 +254,18 @@ describe('reconstructDatasetTurn — clarification and refusal turns', () => {
     });
   });
 
-  it('reconstructs an aggregation refusal (LLM marks the instruction unsupported)', async () => {
+  it('reconstructs a not-chartable refusal (LLM marks the instruction unsupported)', async () => {
     await withDb(async (db) => {
       const { dataset, threadId } = await seed(db);
       await respondToDatasetQuestion(db, {
         dataset,
         threadId,
-        question: 'what is the total revenue',
+        question: 'write me a poem about this data',
         requestId: randomUUID(),
         rawState: null,
         llmOptions: {
           client: fakeClient(
-            chartInstructionOutput({ unsupported: { reason: 'aggregation', detail: 'totals are not supported yet' } }),
+            chartInstructionOutput({ unsupported: { reason: 'not_chartable', detail: "that isn't a chart" } }),
           ),
         },
       });

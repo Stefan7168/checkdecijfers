@@ -72,9 +72,9 @@ describe('DatasetChat — normal turn flow', () => {
         kind: 'chart',
         question: 'show revenue by year',
         text: "Here's your chart.",
-        instruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, confidence: 0.9, reading: 'r', unsupported: null },
+        instruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, confidence: 0.9, reading: 'r', unsupported: null },
         chart: CHART_SPEC,
-        state: { datasetId: 1, lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null } },
+        state: { datasetId: 1, lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null } },
       },
     });
     render(<DatasetChat {...baseProps()} />);
@@ -94,16 +94,16 @@ describe('DatasetChat — normal turn flow', () => {
         kind: 'chart',
         question: 'q1',
         text: 't',
-        instruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, confidence: 0.9, reading: 'r', unsupported: null },
+        instruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, confidence: 0.9, reading: 'r', unsupported: null },
         chart: CHART_SPEC,
-        state: { datasetId: 1, lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: 5, unsupported: null } },
+        state: { datasetId: 1, lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: 5, aggregate: null, derived: null, unsupported: null } },
       },
     });
     render(<DatasetChat {...baseProps()} />);
     await submit('q1');
     await submit('q2');
     const secondCallRawState = askDataset.mock.calls[1]![4];
-    expect(secondCallRawState).toEqual({ datasetId: 1, lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: 5, unsupported: null } });
+    expect(secondCallRawState).toEqual({ datasetId: 1, lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: 5, aggregate: null, derived: null, unsupported: null } });
   });
 
   it('renders a clarification and fills the input on chip click (fill-don\'t-send)', async () => {
@@ -173,9 +173,9 @@ describe('DatasetChat — dock mode (ADR 037 D10/WP202a)', () => {
         kind: 'chart',
         question: 'show revenue by year',
         text: "Here's your chart.",
-        instruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, confidence: 0.9, reading: 'r', unsupported: null },
+        instruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, confidence: 0.9, reading: 'r', unsupported: null },
         chart: CHART_SPEC,
-        state: { datasetId: 1, lastInstruction: { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null } },
+        state: { datasetId: 1, lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null } },
       },
     };
   }

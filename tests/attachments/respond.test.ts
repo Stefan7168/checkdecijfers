@@ -73,7 +73,7 @@ function fakeClient(outputText: string): LlmClient {
 
 function chartInstructionOutput(fields: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     kind: 'line',
     x: 'c0',
     y: ['c2'],
@@ -81,6 +81,8 @@ function chartInstructionOutput(fields: Record<string, unknown> = {}): string {
     filters: [],
     sort: null,
     limit: null,
+    aggregate: null,
+    derived: null,
     confidence: 0.9,
     reading: 'Revenue over time.',
     unsupported: null,
@@ -195,22 +197,22 @@ describe('respondToDatasetQuestion — low confidence clarifies instead of guess
 });
 
 describe('respondToDatasetQuestion — unsupported requests refuse honestly', () => {
-  it('refuses an aggregation ask with the model\'s own detail', async () => {
+  it('refuses a not-chartable ask with the model\'s own detail', async () => {
     await withDb(async (db) => {
       const { dataset, threadId } = await seed(db);
       const result = await respondToDatasetQuestion(db, {
         dataset,
         threadId,
-        question: 'what is the total revenue',
+        question: 'write me a poem about this data',
         requestId: randomUUID(),
         rawState: null,
         llmOptions: {
           client: fakeClient(
-            chartInstructionOutput({ unsupported: { reason: 'aggregation', detail: 'totals are not supported yet' } }),
+            chartInstructionOutput({ unsupported: { reason: 'not_chartable', detail: "that isn't a chart" } }),
           ),
         },
       });
-      expect(result.envelope).toMatchObject({ kind: 'refusal', reason: 'aggregation' });
+      expect(result.envelope).toMatchObject({ kind: 'refusal', reason: 'not_chartable' });
     });
   });
 });
@@ -289,7 +291,7 @@ describe('respondToDatasetQuestion — rawState revalidation (D8 step 2)', () =>
     await withDb(async (db) => {
       const { dataset, threadId } = await seed(db);
       const previous: ChartInstruction = {
-        version: 1,
+        version: 2,
         kind: 'line',
         x: 'c0',
         y: ['c2'],
@@ -297,6 +299,8 @@ describe('respondToDatasetQuestion — rawState revalidation (D8 step 2)', () =>
         filters: [],
         sort: null,
         limit: null,
+        aggregate: null,
+        derived: null,
         confidence: 0.95,
         reading: '',
         unsupported: null,
@@ -321,11 +325,47 @@ describe('respondToDatasetQuestion — rawState revalidation (D8 step 2)', () =>
     });
   });
 
+  it('upgrades a stored v1 rawState.lastInstruction instead of dropping it (a v1 referent held by an open tab)', async () => {
+    await withDb(async (db) => {
+      const { dataset, threadId } = await seed(db);
+      const v1LastInstruction = {
+        version: 1,
+        kind: 'line',
+        x: 'c0',
+        y: ['c2'],
+        seriesBy: null,
+        filters: [],
+        sort: null,
+        limit: null,
+        unsupported: null,
+      };
+      let seenQuestion = '';
+      const client: LlmClient = {
+        complete: async (request) => {
+          seenQuestion = request.question;
+          return fakeClient(chartInstructionOutput({ kind: 'bar' })).complete(request);
+        },
+      };
+      await respondToDatasetQuestion(db, {
+        dataset,
+        threadId,
+        question: 'make it a bar chart',
+        requestId: randomUUID(),
+        rawState: { datasetId: dataset.id, lastInstruction: v1LastInstruction as never },
+        llmOptions: { client },
+      });
+      // The v1 referent survived revalidation (upgraded to v2) and reached
+      // the prompt as the previous instruction, instead of being dropped.
+      expect(seenQuestion).toContain('"kind":"line"');
+      expect(seenQuestion).not.toContain('None — this is a fresh question.');
+    });
+  });
+
   it('drops an invalid rawState (off-allowlist column) and parses fresh instead of crashing', async () => {
     await withDb(async (db) => {
       const { dataset, threadId } = await seed(db);
       const staleInvalid: ChartInstruction = {
-        version: 1,
+        version: 2,
         kind: 'line',
         x: 'c99', // no longer/never a real column
         y: ['c2'],
@@ -333,6 +373,8 @@ describe('respondToDatasetQuestion — rawState revalidation (D8 step 2)', () =>
         filters: [],
         sort: null,
         limit: null,
+        aggregate: null,
+        derived: null,
         confidence: 0.95,
         reading: '',
         unsupported: null,

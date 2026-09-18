@@ -32,7 +32,7 @@ function fakeClient(outputText: string): LlmClient {
 
 function validOutput(fields: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     kind: 'line',
     x: 'c0',
     y: ['c1'],
@@ -40,6 +40,8 @@ function validOutput(fields: Record<string, unknown> = {}): string {
     filters: [],
     sort: null,
     limit: null,
+    aggregate: null,
+    derived: null,
     confidence: 0.9,
     reading: 'Revenue over time.',
     unsupported: null,

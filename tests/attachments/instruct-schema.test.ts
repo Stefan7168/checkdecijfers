@@ -9,7 +9,7 @@ import {
   chartInstructionJsonSchema,
   validateInstruction,
 } from '../../src/attachments/instruct/schema.ts';
-import type { DatasetProfile } from '../../src/attachments/types.ts';
+import { upgradeInstruction, type DatasetProfile } from '../../src/attachments/types.ts';
 import { MAX_SERIES } from '../../src/attachments/limits.ts';
 
 const PROFILE: DatasetProfile = {
@@ -34,6 +34,7 @@ const PROFILE: DatasetProfile = {
       nulls: 0,
     },
     { id: 'c2', header: 'Omzet', type: 'number', numberFormat: 'nl', min: 120.5, max: 9800, nulls: 0 },
+    { id: 'c3', header: 'Kosten', type: 'number', numberFormat: 'nl', min: 10, max: 500, nulls: 0 },
   ],
 };
 
@@ -47,6 +48,8 @@ function out(fields: Record<string, unknown> = {}): string {
     filters: [],
     sort: null,
     limit: null,
+    aggregate: null,
+    derived: null,
     confidence: 0.9,
     reading: 'Omzet per jaar.',
     unsupported: null,
@@ -300,5 +303,82 @@ describe('chartInstructionJsonSchema', () => {
   it('renders a JSON schema object', () => {
     const schema = chartInstructionJsonSchema();
     expect(schema).toHaveProperty('properties');
+  });
+});
+
+describe('schema v2 — aggregate, derived, sort by value', () => {
+  it('accepts an aggregate over a text x with a numeric y', () => {
+    const result = validateInstruction(
+      out({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'sum' }, sort: { by: 'value', direction: 'desc' } }),
+      PROFILE,
+    );
+    expect(result.aggregate).toEqual({ fn: 'sum' });
+    expect(result.sort).toEqual({ by: 'value', direction: 'desc' });
+  });
+
+  it('rejects derived difference without b, and with a non-numeric b', () => {
+    expect(() => validateInstruction(out({ derived: { op: 'difference', b: null } }), PROFILE)).toThrow(
+      /needs a second column/,
+    );
+    expect(() => validateInstruction(out({ derived: { op: 'difference', b: 'c1' } }), PROFILE)).toThrow(
+      /not 'number' or 'year'/,
+    );
+  });
+
+  it('rejects a b column for share_of_total and percent_change', () => {
+    expect(() => validateInstruction(out({ derived: { op: 'share_of_total', b: 'c2' } }), PROFILE)).toThrow(
+      /takes no second column/,
+    );
+  });
+
+  it('rejects derived with more than one y column', () => {
+    expect(() =>
+      validateInstruction(out({ y: ['c2', 'c3'], derived: { op: 'percent_change', b: null } }), PROFILE),
+    ).toThrow(/exactly one y column/);
+  });
+
+  it("rejects sort by a column id when aggregate or derived is set", () => {
+    expect(() =>
+      validateInstruction(
+        out({ kind: 'bar', x: 'c1', aggregate: { fn: 'count' }, sort: { by: 'c2', direction: 'asc' } }),
+        PROFILE,
+      ),
+    ).toThrow(/sort by 'x' or 'value'/);
+  });
+
+  it('rejects the old unsupported reasons and version 1', () => {
+    expect(() => validateInstruction(out({ unsupported: { reason: 'aggregation', detail: 'x' } }), PROFILE)).toThrow(
+      /schema/,
+    );
+    expect(() => validateInstruction(out({ version: 1 }), PROFILE)).toThrow(/schema/);
+  });
+
+  it('upgradeInstruction adds the v2 fields to a v1 object and leaves v2 alone', () => {
+    expect(
+      upgradeInstruction({
+        version: 1,
+        kind: 'line',
+        x: 'c0',
+        y: ['c2'],
+        seriesBy: null,
+        filters: [],
+        sort: null,
+        limit: null,
+      }),
+    ).toEqual({
+      version: 2,
+      kind: 'line',
+      x: 'c0',
+      y: ['c2'],
+      seriesBy: null,
+      filters: [],
+      sort: null,
+      limit: null,
+      aggregate: null,
+      derived: null,
+    });
+    const v2 = { version: 2, aggregate: { fn: 'sum' } };
+    expect(upgradeInstruction(v2)).toBe(v2);
+    expect(upgradeInstruction('nope')).toBe('nope');
   });
 });

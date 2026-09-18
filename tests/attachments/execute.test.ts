@@ -33,7 +33,7 @@ function dataset(cells: string[][] = CELLS): UserDataset {
 
 function instruction(fields: Partial<ChartInstruction> = {}): ChartInstruction {
   return {
-    version: 1,
+    version: 2,
     kind: 'line',
     x: 'c0',
     y: ['c2'],
@@ -41,6 +41,8 @@ function instruction(fields: Partial<ChartInstruction> = {}): ChartInstruction {
     filters: [],
     sort: null,
     limit: null,
+    aggregate: null,
+    derived: null,
     confidence: 0.9,
     reading: '',
     unsupported: null,

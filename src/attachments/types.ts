@@ -105,12 +105,18 @@ export type FilterClause =
   | { column: ColumnId; op: 'in'; values: string[] }
   | { column: ColumnId; op: 'between'; from: number; to: number };
 
-export type UnsupportedReason =
-  | 'aggregation'
-  | 'computation'
-  | 'compare_with_cbs'
-  | 'not_chartable'
-  | 'other';
+export type AggregateFn = 'sum' | 'mean' | 'min' | 'max' | 'count';
+export type DerivedOp = 'difference' | 'share_of_total' | 'percent_change' | 'ratio';
+export const AGGREGATE_FNS: readonly AggregateFn[] = ['sum', 'mean', 'min', 'max', 'count'];
+export const DERIVED_OPS: readonly DerivedOp[] = ['difference', 'share_of_total', 'percent_change', 'ratio'];
+/** Ops that need a second column `b` (a is always y[0]). */
+export const DERIVED_OPS_WITH_B: readonly DerivedOp[] = ['difference', 'ratio'];
+
+export type UnsupportedReason = 'compare_with_cbs' | 'not_chartable' | 'other';
+/** Only ever read back from rows stored before schema v2 — never produced
+ * again (v1's 'aggregation'/'computation' refusals; both are now supported
+ * via aggregate/derived). Kept so a pre-v2 stored row still type-checks. */
+export type LegacyUnsupportedReason = 'aggregation' | 'computation';
 
 /**
  * The model's WHOLE output surface (D6). SERVER-SIDE / STORED SHAPE ONLY.
@@ -126,7 +132,7 @@ export type UnsupportedReason =
  * convention" was found insufficient).
  */
 export interface ChartInstruction {
-  version: 1;
+  version: 2;
   kind: ChartKind;
   /** Must be a profile column id — validated by instruct/schema.ts. */
   x: ColumnId;
@@ -138,10 +144,18 @@ export interface ChartInstruction {
   seriesBy: ColumnId | null;
   filters: FilterClause[];
   /** Bar charts only; ignored (not an error) on a line chart, which always
-   * orders by x ascending. */
-  sort: { by: 'x' | ColumnId; direction: 'asc' | 'desc' } | null;
+   * orders by x ascending. 'value' = the plotted (possibly computed) value —
+   * the only way to order aggregated/derived points; a column id is legal
+   * only without aggregate/derived. */
+  sort: { by: 'x' | 'value' | ColumnId; direction: 'asc' | 'desc' } | null;
   /** Top-N after sort, 1..50. */
   limit: number | null;
+  /** Group by (x[, seriesBy]); fn over y[0] (count: rows in the group).
+   * Computed by the executor (Task 2) — never by the model. */
+  aggregate: { fn: AggregateFn } | null;
+  /** a = y[0]; b required for difference/ratio, null otherwise. Computed by
+   * the executor (Task 2) — never by the model. */
+  derived: { op: DerivedOp; b: ColumnId | null } | null;
   /** 0..1; the threshold is applied by deterministic code (the R7 analog),
    * never by the model itself. */
   confidence: number;
@@ -149,6 +163,18 @@ export interface ChartInstruction {
    * server via any client-facing type. */
   reading: string;
   unsupported: null | { reason: UnsupportedReason; detail: string };
+}
+
+/** A stored/held v1 instruction object gains the v2 fields (aggregate/
+ * derived, both null — v1 never had them); anything already v2, or not an
+ * instruction-shaped object at all, is returned as-is (unchanged, same
+ * reference for a v2 object). Used wherever a stored/rawState instruction
+ * might still be v1 (respond.ts's revalidatePrevious, replay.ts). */
+export function upgradeInstruction(raw: unknown): unknown {
+  if (raw === null || typeof raw !== 'object') return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.version !== 1) return raw;
+  return { ...o, version: 2, aggregate: o.aggregate ?? null, derived: o.derived ?? null };
 }
 
 /**
@@ -179,6 +205,8 @@ export function toClientInstruction(instruction: ChartInstruction): ClientChartI
     filters: instruction.filters,
     sort: instruction.sort,
     limit: instruction.limit,
+    aggregate: instruction.aggregate,
+    derived: instruction.derived,
     unsupported: instruction.unsupported === null ? null : { reason: instruction.unsupported.reason },
   };
 }
@@ -205,6 +233,8 @@ export function reviveClientInstruction(client: ClientChartInstruction): ChartIn
     filters: client.filters,
     sort: client.sort,
     limit: client.limit,
+    aggregate: client.aggregate,
+    derived: client.derived,
     confidence: 1,
     reading: '',
     unsupported: client.unsupported === null ? null : { reason: client.unsupported.reason, detail: '' },
@@ -213,7 +243,7 @@ export function reviveClientInstruction(client: ClientChartInstruction): ChartIn
 
 /** Why a plotted point is null — the R11 analog: a gap is shown, never
  * silently omitted (U11). */
-export type MissingValueReason = 'leeg in bron' | 'geen getal';
+export type MissingValueReason = 'leeg in bron' | 'geen getal' | 'geen vorige waarde';
 
 /** One plotted value — a projection of exactly one stored cell, traced by
  * `rowRef` (D7 point 3, U1's own traceability handle). `rowRef` format:
@@ -323,6 +353,10 @@ export type DatasetTurnEnvelope =
       // set ('computation'/'other' were missing) plus this tier's own
       // execution-level reasons — a refusal built from a validated
       // instruction's `unsupported` field must always have a home here.
+      // 'aggregation' | 'computation' here are LegacyUnsupportedReason's two
+      // literals, spelled out (not referenced as the type alias) because
+      // tests/attachments/envelope-key-manifest.test.ts's declaration parser
+      // only understands quoted-literal union arms, one per line.
       reason:
         | 'aggregation'
         | 'computation'

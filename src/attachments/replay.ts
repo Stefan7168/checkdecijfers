@@ -14,7 +14,7 @@
 // redacted row replays as ONE placeholder message, never a user+assistant
 // pair (mirrors CBS's ⟨A7⟩), and `lastChartState` skips redacted rows when
 // scanning backward for the last chart turn's refinement referent.
-import type { ClientChartInstruction, DatasetTurnRecord, UserChartSpec } from './types.ts';
+import { upgradeInstruction, type ClientChartInstruction, type DatasetTurnRecord, type UserChartSpec } from './types.ts';
 
 export type DatasetChatMessage =
   | { role: 'user'; text: string }
@@ -36,7 +36,7 @@ function assistantMessage(envelope: LiveEnvelope): DatasetChatMessage {
       kind: 'chart',
       text: envelope.text,
       chart: envelope.chart,
-      lastInstruction: envelope.state.lastInstruction,
+      lastInstruction: upgradeInstruction(envelope.state.lastInstruction) as ClientChartInstruction,
     };
   }
   if (envelope.kind === 'clarification') {
@@ -71,7 +71,12 @@ export function lastChartState(rows: DatasetTurnRecord[]): { datasetId: number; 
     const record = rows[i]!;
     if (isRedacted(record.envelope)) continue;
     const envelope = record.envelope as LiveEnvelope;
-    if (envelope.kind === 'chart') return envelope.state;
+    if (envelope.kind === 'chart') {
+      return {
+        ...envelope.state,
+        lastInstruction: upgradeInstruction(envelope.state.lastInstruction) as ClientChartInstruction,
+      };
+    }
   }
   return null;
 }
