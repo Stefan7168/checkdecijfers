@@ -94,6 +94,7 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
 import { Redo2, Undo2 } from 'lucide-react';
 import { Button } from './ui/button.tsx';
+import { ChartHistoryMenu } from './chart-history-menu.tsx';
 // Chart co-pilot phase 1 (session 112, ADR 056): one command vocabulary,
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
@@ -1725,6 +1726,7 @@ export function ChartView({
   const initialForm = inStage ? spec.kind : defaultFormFor(spec);
   const {
     state,
+    history,
     canUndo,
     canRedo,
     dispatch: dispatchCommand,
@@ -3524,7 +3526,24 @@ export function ChartView({
               >
                 <Redo2 className="size-4" aria-hidden="true" />
               </Button>
-              {/* Task 4 adds <ChartHistoryMenu …/> here. */}
+              {/* The story lock covers every history control (see the
+                * Undo/Redo `disabled`/`title`/`aria-describedby` pattern
+                * above); the popover itself has no equivalent lockable
+                * trigger state to wire up, so — simpler — it's just not
+                * rendered while the story is open, same as it would be if
+                * it had nothing left to show. */}
+              {!storyOpen ? (
+                <ChartHistoryMenu
+                  history={history}
+                  lang={chartLang}
+                  onUndoTo={(i) => {
+                    for (let n = history.past.length - 1 - i; n > 0; n--) undo();
+                  }}
+                  onRedoTo={(i) => {
+                    for (let n = 0; n <= i; n++) redo();
+                  }}
+                />
+              ) : null}
             </div>
             {storyAvailable || state.form !== 'table' ? (
               <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
