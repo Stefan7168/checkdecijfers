@@ -107,6 +107,13 @@ afterEach(cleanup);
 const PANEL_KINDS: ChartCommandKind[] = ['setPresentation', 'replacePresentation', 'resetPresentation', 'applyTemplate'];
 /** Kinds whose control only exists once a point has been clicked / a note exists. */
 const NOTE_KINDS: ChartCommandKind[] = ['addNote', 'removeNote'];
+/** Co-pilot phase 2 (session 113), Task 4: kinds whose control lives on the
+ * OWN-DATA card, not this CBS one. `setInstruction` names dataset columns, so
+ * a CBS chart has no control for it and — by the ADR 037 D11 type guard —
+ * could not validate one anyway. Its own-data control is covered by that
+ * card's suite (Task 5/6), which scans the same `data-command-kind`
+ * attribute. */
+const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction'];
 
 function kindsInDom(root: HTMLElement): Set<string> {
   const out = new Set<string>();
@@ -134,7 +141,7 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
 
     const found = kindsInDom(document.body);
     const missing = CHART_COMMAND_KINDS.filter(
-      (k) => !found.has(k) && !NOTE_KINDS.includes(k),
+      (k) => !found.has(k) && !NOTE_KINDS.includes(k) && !OWN_DATA_KINDS.includes(k),
     );
     expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
     expect(PANEL_KINDS.every((k) => found.has(k))).toBe(true);

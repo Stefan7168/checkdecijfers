@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyCommand,
   CHART_COMMAND_KINDS,
+  CHART_INSTRUCTION_SUMMARY_MAX_LENGTH,
   initialDocState,
   invertCommand,
   makeCommand,
@@ -11,6 +12,8 @@ import {
   type ChartDocState,
 } from './chart-commands.ts';
 import type { ChartPoint, ChartSeries, ChartSpec } from '../backend/chart/types.ts';
+import { buildDatasetProfile } from '../backend/attachments/ingest/profile.ts';
+import type { ClientChartInstruction } from '../backend/attachments/types.ts';
 
 function point(periodCode: string, value: number): ChartPoint {
   return { resultId: `r-${periodCode}`, periodCode, periodLabel: periodCode, value, formattedValue: String(value), provisional: false, note: null } as unknown as ChartPoint;
@@ -36,6 +39,32 @@ function spec(): ChartSpec {
 
 const ctx = { spec: spec(), alternatesCount: 1 };
 
+// Co-pilot phase 2 (session 113), Task 4. The own-data card's context carries
+// a DatasetProfile; the CBS card's (`ctx` above) never does — which is the
+// whole point of the setInstruction type guard below (ADR 037 D11).
+const profile = buildDatasetProfile([
+  ['jaar', 'omzet'],
+  ['2020', '10'],
+  ['2021', '12'],
+]);
+const dataCtx = { ...ctx, profile };
+function instruction(overrides: Partial<ClientChartInstruction> = {}): ClientChartInstruction {
+  return {
+    version: 2,
+    kind: 'bar',
+    x: 'c0',
+    y: ['c1'],
+    seriesBy: null,
+    filters: [],
+    sort: null,
+    limit: null,
+    aggregate: null,
+    derived: null,
+    unsupported: null,
+    ...overrides,
+  };
+}
+
 /** Deterministic PRNG so a failing run can be replayed by seed. */
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -47,9 +76,18 @@ function rng(seed: number): () => number {
 function pick<T>(r: () => number, xs: readonly T[]): T {
   return xs[Math.floor(r() * xs.length)]!;
 }
-function randomCommand(r: () => number, state: ChartDocState, n: number): ChartCommandParams {
+/** `allowInstruction` is false for the inverse-round-trip property below: a
+ * setInstruction inverse deliberately restores only the previous INSTRUCTION,
+ * never the hidden/highlight/zoom view it reset (see chart-commands.ts —
+ * those keys belong to the old data), so it is not a state-restoring
+ * inverse and has its own targeted tests instead. */
+function randomCommand(r: () => number, state: ChartDocState, n: number, allowInstruction = false): ChartCommandParams {
   const kind = pick(r, CHART_COMMAND_KINDS);
   switch (kind) {
+    case 'setInstruction':
+      return allowInstruction
+        ? { kind, instruction: instruction({ kind: r() < 0.5 ? 'bar' : 'line', x: 'c0' }), summary: `staaf per jaar ${'x'.repeat(n)}` }
+        : { kind: 'setCaption', caption: null };
     case 'setForm': return { kind, form: pick(r, ['line', 'bar', 'table'] as const) };
     case 'toggleSeries': return { kind, key: pick(r, ['s0', 's1']) };
     case 'setHighlight': return { kind, key: pick(r, ['s0', 's1', null]) };
@@ -131,6 +169,80 @@ describe('applyCommand / invertCommand', () => {
   });
 });
 
+// Co-pilot phase 2 (session 113), Task 4: the own-data card's one data
+// command. It carries the reader's INSTRUCTION (column ids, enum values), a
+// digit-free summary for the history menu — and never a data value.
+describe('setInstruction', () => {
+  it('is part of the command vocabulary', () => {
+    expect(CHART_COMMAND_KINDS).toContain('setInstruction');
+  });
+
+  it('validates only when the context carries a dataset profile (ADR 037 D11)', () => {
+    const cmd: ChartCommandParams = { kind: 'setInstruction', instruction: instruction(), summary: 'omzet per jaar' };
+    expect(validateCommand(cmd, ctx)).toBe(false);
+    expect(validateCommand(cmd, dataCtx)).toBe(true);
+  });
+
+  it('rejects an instruction whose columns are not in the profile', () => {
+    expect(
+      validateCommand({ kind: 'setInstruction', instruction: instruction({ x: 'c9' }), summary: 'onbekend' }, dataCtx),
+    ).toBe(false);
+    expect(
+      validateCommand({ kind: 'setInstruction', instruction: instruction({ y: ['c0', 'nope'] }), summary: 'onbekend' }, dataCtx),
+    ).toBe(false);
+  });
+
+  it('rejects a summary that is empty, too long, or carries a digit', () => {
+    const bad = (summary: string) => validateCommand({ kind: 'setInstruction', instruction: instruction(), summary }, dataCtx);
+    expect(bad('')).toBe(false);
+    expect(bad('   ')).toBe(false);
+    expect(bad('x'.repeat(CHART_INSTRUCTION_SUMMARY_MAX_LENGTH + 1))).toBe(false);
+    expect(bad('omzet per jaar, top 5')).toBe(false);
+    expect(bad('x'.repeat(CHART_INSTRUCTION_SUMMARY_MAX_LENGTH))).toBe(true);
+  });
+
+  it('apply resets the hidden set, the highlight and the zoom window but keeps the notes', () => {
+    let s = initialDocState('line');
+    const note = { id: 'a', resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland', text: 'a' };
+    s = applyCommand(s, { kind: 'addNote', note });
+    s = applyCommand(s, { kind: 'setSeriesView', hiddenKeys: ['s0'], highlightedKey: 's1' });
+    s = applyCommand(s, { kind: 'setPeriodRange', range: ['2020', '2021'] });
+    const next = applyCommand(s, { kind: 'setInstruction', instruction: instruction(), summary: 'omzet per jaar' });
+    expect([...next.hiddenKeys]).toEqual([]);
+    expect(next.highlightedKey).toBeNull();
+    expect(next.periodRange).toBeNull();
+    expect(next.notes.map((n) => n.id)).toEqual(['a']);
+    expect(next.instruction).toEqual(instruction());
+  });
+
+  it('invert restores the previous instruction, and is a no-op when there was none', () => {
+    const first = instruction({ kind: 'bar' });
+    const second = instruction({ kind: 'line', x: 'c0' });
+    let s = initialDocState('line');
+    expect(s.instruction).toBeNull();
+    // Nothing to go back to: the inverse re-sets the unchanged title (the
+    // no-op idiom addNote already uses).
+    expect(invertCommand(s, { kind: 'setInstruction', instruction: first, summary: 'eerste' })).toEqual({
+      kind: 'setTitle',
+      title: null,
+    });
+    s = applyCommand(s, { kind: 'setInstruction', instruction: first, summary: 'eerste' });
+    const inv = invertCommand(s, { kind: 'setInstruction', instruction: second, summary: 'tweede' });
+    s = applyCommand(applyCommand(s, { kind: 'setInstruction', instruction: second, summary: 'tweede' }), inv);
+    expect(s.instruction).toEqual(first);
+  });
+
+  it('parseCommandLog accepts it and rejects an over-long summary', () => {
+    const ok = makeCommand({ kind: 'setInstruction', instruction: instruction(), summary: 'omzet per jaar' }, 'chat');
+    expect(parseCommandLog(JSON.parse(JSON.stringify([ok])))).toEqual([ok]);
+    const tooLong = makeCommand(
+      { kind: 'setInstruction', instruction: instruction(), summary: 'x'.repeat(CHART_INSTRUCTION_SUMMARY_MAX_LENGTH + 1) },
+      'chat',
+    );
+    expect(parseCommandLog(JSON.parse(JSON.stringify([tooLong])))).toBeNull();
+  });
+});
+
 describe('validateCommand', () => {
   it('rejects a series key, period code, reading index or form the chart does not have', () => {
     expect(validateCommand({ kind: 'toggleSeries', key: 's9' }, ctx)).toBe(false);
@@ -173,7 +285,7 @@ describe('parseCommandLog', () => {
       const commands: ChartCommandParams[] = [];
       const len = 1 + Math.floor(r() * 12);
       for (let i = 0; i < len; i++) {
-        const cmd = randomCommand(r, state, i);
+        const cmd = randomCommand(r, state, i, true);
         commands.push(cmd);
         state = applyCommand(state, cmd);
       }

@@ -92,22 +92,17 @@ import { draftChartHeadline, fetchChartHeadline, saveChartHeadline } from '../ap
 // truncation — so the client-side optimistic update can never drift from
 // what normalizeHeadlineText would actually store server-side.
 import { CHART_HEADLINE_MAX_LENGTH, normalizeHeadlineText } from '../backend/chart/headline-store.ts';
-import { Pencil, Redo2, Undo2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Button } from './ui/button.tsx';
-import { ChartHistoryMenu } from './chart-history-menu.tsx';
 // Chart co-pilot phase 1 (session 112, ADR 056): one command vocabulary,
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
 // the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
-import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId, parseCommandLog, validateCommand } from '../lib/chart-commands.ts';
-import { pushCommand, replayLog, seal, serializeHistory } from '../lib/chart-history.ts';
+import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId } from '../lib/chart-commands.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
-import { fetchChartEdits, saveChartEdits } from '../app/chart-edits-actions.ts';
-
-/** Long enough that a burst of clicks (form tab, then legend, then zoom) is
- * one write; short enough that a reader who edits and immediately reloads
- * still gets their work back. */
-const CHART_EDITS_SAVE_DEBOUNCE_MS = 800;
+import { useChartEdits } from '../lib/use-chart-edits.ts';
+import { ChartHistoryActions } from './chart-history-actions.tsx';
+import { ChartEditableText } from './chart-editable-text.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
 import { ChartFrame } from './chart-frame.tsx';
@@ -1816,8 +1811,6 @@ export function ChartView({
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const titleCancelledRef = useRef(false);
-  const [captionEditing, setCaptionEditing] = useState(false);
-  const [captionDraft, setCaptionDraft] = useState('');
 
   // Journalist chart-headline (Task 6): named `chartHeadline`, deliberately
   // NOT `headline` — that identifier is already taken below by
@@ -2035,9 +2028,10 @@ export function ChartView({
     setPendingPoint(null);
     // Task 5: a different chart is a different title/caption — `reset`
     // already clears the stored values, so any open editor must close too
-    // rather than commit the previous chart's draft onto the new one.
+    // rather than commit the previous chart's draft onto the new one. The
+    // caption's editor now lives inside ChartEditableText, which the
+    // `key={chartEpoch}` at its mount below remounts for exactly this.
     setTitleEditing(false);
-    setCaptionEditing(false);
     setOpenPanel(null);
     setStoryIndex(0);
     setStageOpen(false);
@@ -2151,162 +2145,24 @@ export function ChartView({
 
   // Task 7 (co-pilot phase 1, ADR 056, #274): the reader's command log,
   // saved per account against the chart's own audit row and replayed when
-  // they come back to it.
+  // they come back to it. The hydrate/save mechanism itself — and every
+  // review finding behind it — lives in `useChartEdits` (session 113
+  // Task 4), shared verbatim with the own-data card.
   //
-  // ONE key decides whether this feature is live at all for this card, and
-  // every effect below starts by checking it: a signed-in, in-app chat card
-  // with a saved answer behind it. Never in embed mode (a published card is
-  // read-only and its viewer is not the author), never in the stage (a story
-  // presentation drives the view itself), never signed out (there is no
-  // account to key a row off), never without an audit id (nothing to key on
-  // at all — a gallery/preview chart).
+  // ONE key decides whether this feature is live at all for this card: a
+  // signed-in, in-app chat card with a saved answer behind it. Never in embed
+  // mode (a published card is read-only and its viewer is not the author),
+  // never in the stage (a story presentation drives the view itself), never
+  // signed out (there is no account to key a row off), never without an
+  // audit id (nothing to key on at all — a gallery/preview chart).
   const editsKey = !embedMode && !inStage && signedIn && embed?.auditId !== undefined ? embed.auditId : null;
-  /** The last log we know the server has, as JSON. Starts at `'[]'` so an
-   * untouched chart — whose serialised history is exactly `[]` — never
-   * writes an empty row just for being looked at. */
-  const lastSavedEditsRef = useRef('[]');
-  /** Read by the hydrate effect's own async continuation, so "has the reader
-   * started editing?" is answered at the moment the fetch RESOLVES rather
-   * than at the moment it was fired — without putting `history` in that
-   * effect's dependency list (which would re-fetch on every edit). */
-  const historyRef = useRef(history);
-  historyRef.current = history;
-  /** A save that is debounced but not yet sent, with the key it belongs to.
-   * Carrying the key HERE (not in a closure) is what lets the flush below
-   * write it to the right row even when the card has meanwhile been handed a
-   * different chart. */
-  const pendingSaveRef = useRef<{ key: number; json: string } | null>(null);
-
-  // Fix round 1, finding 1 (CRITICAL). The same mounted ChartView is handed a
-  // DIFFERENT chart by the visual dock and the Ontdek toggle (no `key` at
-  // either call site — see the specIdentity block below, which resets the
-  // history to empty for exactly that reason). Without this reset,
-  // `lastSavedEditsRef` still held the PREVIOUS chart's JSON, so the save
-  // effect compared the new chart's empty `[]` against it, saw a difference,
-  // and armed a write of `[]` against the NEW audit row — wiping that chart's
-  // stored log purely because the reader tabbed onto it. React's own
-  // "adjusting state when a prop changes" shape: compare against the
-  // last-seen key and fix up during render, so the reset is already in place
-  // before the effects below run in the same commit.
-  const lastEditsKeyRef = useRef(editsKey);
-  /** Final-review finding I2. False until this chart's hydrate fetch has
-   * SETTLED (or there is nothing to fetch). While it is false no save may go
-   * out: a write before the stored log has come back is a write that does not
-   * know what it is replacing. Read synchronously by the save effect;
-   * `hydrateSettled` below is the state that makes that effect re-run once it
-   * flips, so an edit made DURING the fetch is still saved without waiting
-   * for the reader's next click. */
-  const hydrateSettledRef = useRef(false);
-  const [hydrateSettled, setHydrateSettled] = useState(0);
-  if (lastEditsKeyRef.current !== editsKey) {
-    lastEditsKeyRef.current = editsKey;
-    lastSavedEditsRef.current = '[]';
-    hydrateSettledRef.current = false;
-  }
-
-  /** Fix round 1, finding 2. Sends whatever the debounce is still holding,
-   * against the key it was queued for. Dependency-free (everything it needs
-   * is in `pendingSaveRef`), so the unmount/key-change effect below can hold
-   * it for the life of the card. */
-  const flushPendingSave = useCallback(() => {
-    const pending = pendingSaveRef.current;
-    if (pending === null) return;
-    pendingSaveRef.current = null;
-    void saveChartEdits({ kind: 'answer', id: pending.key }, JSON.parse(pending.json) as unknown).then((result) => {
-      // Final-review finding M1: by the time this resolves the card may have
-      // been handed a DIFFERENT chart, whose own "last saved" marker was just
-      // reset to `[]`. Writing the old chart's JSON into it would make the
-      // save effect believe the new chart's row already holds that log.
-      if (result.ok && lastEditsKeyRef.current === pending.key) lastSavedEditsRef.current = pending.json;
-    });
-  }, []);
-
-  // Hydrate. Final-review finding I2: the old version SKIPPED hydration
-  // outright when the reader had already started editing
-  // (`history.past.length > 0`) — which protected the click but destroyed the
-  // stored log, because the save effect then wrote the reader's one command
-  // over a row that held ten. The stored log is the base and the reader's own
-  // commands are replayed ON TOP of it (validated like any other replayed
-  // command, oldest first), so both survive and the next save carries both.
-  useEffect(() => {
-    if (editsKey === null) {
-      hydrateSettledRef.current = true;
-      return;
-    }
-    let cancelled = false;
-    void fetchChartEdits({ kind: 'answer', id: editsKey }).then((result) => {
-      if (cancelled) return;
-      const parsed = result.ok && result.log ? parseCommandLog(result.log) : null;
-      if (parsed !== null && parsed.length > 0) {
-        const ctx = { spec, alternatesCount: alternates.length };
-        const replayed = replayLog(initialDocState(initialForm, initialPresentation), parsed, ctx);
-        let history = replayed.history;
-        let state = replayed.state;
-        // Whatever the reader did while the fetch was in flight. Empty in the
-        // ordinary case, so this is exactly the old plain-restore path.
-        for (const entry of historyRef.current.past) {
-          if (!validateCommand(entry.command, ctx)) continue;
-          ({ history, state } = pushCommand(history, state, entry.command, { transient: entry.transient }));
-        }
-        replaceHistory({ state, history });
-        // The STORED log's serialisation, deliberately — not the merged one.
-        // What the server holds is the stored log, so recording that both
-        // stops an immediate no-op write of an untouched chart AND leaves the
-        // merged log looking "changed", so it is saved on the next tick.
-        lastSavedEditsRef.current = JSON.stringify(serializeHistory(replayed.history));
-      }
-      // Settled: ok, empty, unparseable or refused — every path ends here,
-      // because "we asked and got an answer" is what unblocks the save.
-      hydrateSettledRef.current = true;
-      setHydrateSettled((n) => n + 1);
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `spec`/`alternates`/`initialForm`/`initialPresentation` ARE captured by this effect's closure and deliberately not listed: `editsKey` is the audit row this card belongs to, and every real chart swap that has an audit id at all also changes that id — so the closure is re-made whenever it could be stale. Listing `spec` (a fresh object on every render) would re-fetch continuously instead.
-  }, [editsKey]);
-
-  // Save, debounced.
-  //
-  // Final-review finding I1: this used to serialise `history` as-is, and
-  // `serializeHistory` DROPS a transient (unsealed) top entry — so a colour
-  // drag that was the reader's last action was never saved at all (the only
-  // seal the picker fires is its own blur, which the browser skips when the
-  // modal unmounts). It serialises a SEALED VIEW instead: `seal` is pure and
-  // does not touch the live history, so the entry can still merge with the
-  // rest of the drag while the picker is open — only what gets WRITTEN
-  // changes. (The panel closing also seals for real, see the effect below.)
-  useEffect(() => {
-    if (editsKey === null) return;
-    // Finding I2: never write before the stored log has come back.
-    if (!hydrateSettledRef.current) return;
-    const json = JSON.stringify(serializeHistory(seal(history)));
-    if (json === lastSavedEditsRef.current) {
-      pendingSaveRef.current = null;
-      return;
-    }
-    pendingSaveRef.current = { key: editsKey, json };
-    const timer = setTimeout(flushPendingSave, CHART_EDITS_SAVE_DEBOUNCE_MS);
-    // Only the TIMER is cancelled here, never the queued save: this cleanup
-    // runs on every single edit (the effect is keyed on `history`), so
-    // flushing here would send one write per click and defeat the debounce.
-    // The flush belongs to the effect below, which only tears down when the
-    // card unmounts or changes chart.
-    return () => clearTimeout(timer);
-    // `hydrateSettled` is not read in the body (the REF is, synchronously) —
-    // it is listed so this effect re-runs the moment hydration settles, which
-    // is what saves an edit made while the fetch was still in flight.
-  }, [history, editsKey, flushPendingSave, hydrateSettled]);
-
-  // Fix round 1, finding 2 (IMPORTANT): a reader who edits and immediately
-  // closes the chat, switches chart, or navigates away used to lose the last
-  // 800 ms of work — the cleanup above only cleared the timer. React runs
-  // cleanups in effect-definition order, so this one fires AFTER the
-  // clearTimeout above, on the same unmount/key change, and sends the queued
-  // log against the key it was queued for.
-  useEffect(() => {
-    return () => flushPendingSave();
-  }, [editsKey, flushPendingSave]);
+  useChartEdits({
+    editsKey: editsKey === null ? null : { kind: 'answer', id: editsKey },
+    history,
+    replaceHistory,
+    ctx: { spec, alternatesCount: alternates.length },
+    initial: initialDocState(initialForm, initialPresentation),
+  });
 
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
@@ -2923,7 +2779,8 @@ export function ChartView({
   }
   function commitTitle() {
     // Final-review finding M4: the story lock covers the COMMIT too, not only
-    // the buttons that open the editor — exactly like `commitCaption` below.
+    // the buttons that open the editor — exactly like ChartEditableText's
+    // own commit (the caption's, lifted out in session 113).
     // An editor already open when the story starts must not be able to write
     // a title through the lock (Enter, or the blur the story's own click
     // causes in a real browser).
@@ -2941,22 +2798,6 @@ export function ChartView({
   function cancelTitleEdit() {
     titleCancelledRef.current = true;
     setTitleEditing(false);
-  }
-  function startCaptionEdit() {
-    if (!titleEditable || storyOpen) return;
-    setCaptionDraft(state.caption ?? '');
-    setCaptionEditing(true);
-  }
-  function commitCaption() {
-    // Task 5 review polish: the story lock covers the COMMIT too, not only
-    // the buttons that open the editor — an editor already open when the
-    // story starts must not be able to write through the lock (the same
-    // belt-and-braces `startTitleEdit`/`startCaptionEdit` already apply).
-    if (storyOpen) return;
-    const trimmed = captionDraft.trim();
-    const next = trimmed === '' ? null : trimmed;
-    if (next !== state.caption) dispatchCommand({ kind: 'setCaption', caption: next }, 'canvas');
-    setCaptionEditing(false);
   }
 
   // #237/ADR 046 fix-wave finding 1: `initialPanel="story"` auto-opens the
@@ -3695,79 +3536,22 @@ export function ChartView({
   // Unlike the notes it is offered in the table form too: a caption is about
   // the card, not about a clicked chart point.
   const captionNode = !embedMode && !inStage ? (
-        // No margin on the wrapper: each branch below carries its own
-        // top spacing (the caption paragraph's `mt-2` is its own).
-        <div>
-          {captionEditing ? (
-            <>
-              <input
-                type="text"
-                value={captionDraft}
-                onChange={(e) => setCaptionDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    commitCaption();
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setCaptionEditing(false);
-                  }
-                }}
-                placeholder={t(chartLang, 'chart.caption.placeholder')}
-                aria-label={t(chartLang, 'chart.caption.placeholder')}
-                maxLength={CHART_CAPTION_MAX_LENGTH}
-                className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                autoFocus
-              />
-              <div className="mt-1 flex gap-2">
-                <button
-                  type="button"
-                  onClick={commitCaption}
-                  disabled={storyOpen}
-                  title={storyLockedTitle}
-                  aria-describedby={storyOpen ? storyLockId : undefined}
-                  className={'text-xs font-medium text-foreground' + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
-                >
-                  {t(chartLang, 'chart.caption.save')}
-                </button>
-                <button type="button" onClick={() => setCaptionEditing(false)} className="text-xs text-muted-foreground">
-                  {t(chartLang, 'chart.caption.cancel')}
-                </button>
-              </div>
-            </>
-          ) : state.caption !== null ? (
-            <div className="mt-2 flex items-center gap-1">
-              <p data-testid="chart-caption" className="text-sm text-muted-foreground">
-                {state.caption}
-              </p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                data-command-kind="setCaption"
-                onClick={startCaptionEdit}
-                disabled={storyOpen}
-                aria-label={t(chartLang, 'chart.caption.edit')}
-                title={storyLockedTitle ?? t(chartLang, 'chart.caption.edit')}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-              >
-                <Pencil className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              data-command-kind="setCaption"
-              onClick={startCaptionEdit}
-              disabled={storyOpen}
-              title={storyLockedTitle}
-              aria-describedby={storyOpen ? storyLockId : undefined}
-              className={'mt-2 text-xs text-muted-foreground underline underline-offset-2' + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
-            >
-              {t(chartLang, 'chart.caption.add')}
-            </button>
-          )}
-        </div>
+        <ChartEditableText
+          key={chartEpoch}
+          value={state.caption}
+          commandKind="setCaption"
+          placeholder={t(chartLang, 'chart.caption.placeholder')}
+          editLabel={t(chartLang, 'chart.caption.edit')}
+          addLabel={t(chartLang, 'chart.caption.add')}
+          saveLabel={t(chartLang, 'chart.caption.save')}
+          cancelLabel={t(chartLang, 'chart.caption.cancel')}
+          maxLength={CHART_CAPTION_MAX_LENGTH}
+          onCommit={(next) => dispatchCommand({ kind: 'setCaption', caption: next }, 'canvas')}
+          locked={storyOpen ? { title: storyLockedTitle!, describedBy: storyLockId } : undefined}
+          testId="chart-caption"
+          as="p"
+          className="text-sm text-muted-foreground"
+        />
       ) : null;
 
   const notesNode = state.form !== 'table' && !embedMode && !inStage ? (
@@ -3926,50 +3710,15 @@ export function ChartView({
           * embed/stage mode render no empty box at all. */}
         {!embedMode && !inStage ? (
           <div className="flex shrink-0 items-start gap-1">
-            <div className="flex shrink-0 items-center gap-1" data-slot="chart-history-actions">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={undo}
-                disabled={!canUndo || storyOpen}
-                aria-label={t(chartLang, 'chart.history.undo')}
-                title={storyLockedTitle ?? t(chartLang, 'chart.history.undoHint')}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-              >
-                <Undo2 className="size-4" aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={redo}
-                disabled={!canRedo || storyOpen}
-                aria-label={t(chartLang, 'chart.history.redo')}
-                title={storyLockedTitle ?? t(chartLang, 'chart.history.redoHint')}
-                aria-describedby={storyOpen ? storyLockId : undefined}
-              >
-                <Redo2 className="size-4" aria-hidden="true" />
-              </Button>
-              {/* The story lock covers every history control (see the
-                * Undo/Redo `disabled`/`title`/`aria-describedby` pattern
-                * above); the popover itself has no equivalent lockable
-                * trigger state to wire up, so — simpler — it's just not
-                * rendered while the story is open, same as it would be if
-                * it had nothing left to show. */}
-              {!storyOpen ? (
-                <ChartHistoryMenu
-                  history={history}
-                  lang={chartLang}
-                  onUndoTo={(i) => {
-                    for (let n = history.past.length - 1 - i; n > 0; n--) undo();
-                  }}
-                  onRedoTo={(i) => {
-                    for (let n = 0; n <= i; n++) redo();
-                  }}
-                />
-              ) : null}
-            </div>
+            <ChartHistoryActions
+              undo={undo}
+              redo={redo}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              history={history}
+              lang={chartLang}
+              locked={storyOpen ? { title: storyLockedTitle!, describedBy: storyLockId } : undefined}
+            />
             {storyAvailable || state.form !== 'table' ? (
               <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
                 {/* Story mode (session 92): the colourful trigger is offered

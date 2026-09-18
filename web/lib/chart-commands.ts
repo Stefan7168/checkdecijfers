@@ -4,6 +4,8 @@
 // codes, presentation enum values, template ids and text the reader typed.
 import { z } from 'zod';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { validateInstructionObject } from '../backend/attachments/instruct/schema.ts';
+import { reviveClientInstruction, type ClientChartInstruction, type DatasetProfile } from '../backend/attachments/types.ts';
 import type { ChartNote } from '../components/chart-notes.tsx';
 import {
   chartViewReducer,
@@ -41,7 +43,13 @@ export type ChartCommandParams =
   | { kind: 'addNote'; note: ChartNote; index?: number }
   | { kind: 'removeNote'; noteId: string }
   | { kind: 'setTitle'; title: string | null }
-  | { kind: 'setCaption'; caption: string | null };
+  | { kind: 'setCaption'; caption: string | null }
+  /** Co-pilot phase 2 (session 113): the own-data card's data command — WHICH
+   * columns, aggregate and derived reading the chart draws. Still never a
+   * data value: an instruction is column ids and enum values only. `summary`
+   * is the doorway's own deterministic, digit-free label for the history
+   * menu (Task 6's summarizeInstruction). */
+  | { kind: 'setInstruction'; instruction: ClientChartInstruction; summary: string };
 
 export type ChartCommandKind = ChartCommandParams['kind'];
 export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
@@ -59,6 +67,7 @@ export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
   'removeNote',
   'setTitle',
   'setCaption',
+  'setInstruction',
 ];
 
 export type ChartCommand = ChartCommandParams & { id: string; at: string; source: ChartCommandSource };
@@ -68,14 +77,22 @@ export interface ChartDocState extends ChartViewState {
   /** Reader's own title; null = the spec's title. */
   title: string | null;
   caption: string | null;
+  /** Co-pilot phase 2: the own-data chart's instruction; null on a CBS chart,
+   * which draws a server-built spec instead. */
+  instruction: ClientChartInstruction | null;
 }
 
 export const CHART_TITLE_MAX_LENGTH = 120;
 export const CHART_CAPTION_MAX_LENGTH = 280;
 export const CHART_NOTE_MAX_LENGTH = 280;
+export const CHART_INSTRUCTION_SUMMARY_MAX_LENGTH = 120;
 
-export function initialDocState(initialForm: ChartForm, initialPresentation: PresentationOverrides = {}): ChartDocState {
-  return { ...initialViewState(initialForm, initialPresentation), notes: [], title: null, caption: null };
+export function initialDocState(
+  initialForm: ChartForm,
+  initialPresentation: PresentationOverrides = {},
+  instruction: ClientChartInstruction | null = null,
+): ChartDocState {
+  return { ...initialViewState(initialForm, initialPresentation), notes: [], title: null, caption: null, instruction };
 }
 
 export function newCommandId(): string {
@@ -125,6 +142,15 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
       return { ...state, title: cmd.title };
     case 'setCaption':
       return { ...state, caption: cmd.caption };
+    case 'setInstruction':
+      // A data change invalidates the series keys, the zoom window and the
+      // note anchors: all three name rowRefs/codes of the OLD chart. The
+      // first two are reset here. The NOTES are deliberately kept: the
+      // inverse can only be ONE command (a history entry carries a single
+      // inverse), and restoring the instruction is the one that matters —
+      // so the card filters notes to those whose resultId exists in the
+      // current spec at render time, and a note comes back with its data.
+      return { ...state, instruction: cmd.instruction, hiddenKeys: new Set(), highlightedKey: null, periodRange: null };
   }
 }
 
@@ -163,12 +189,25 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
       return { kind: 'setTitle', title: before.title };
     case 'setCaption':
       return { kind: 'setCaption', caption: before.caption };
+    case 'setInstruction':
+      // Nothing to go back to: the same no-op idiom addNote uses above.
+      // The summary is the FORWARD command's — a doorway only ever labels
+      // the instruction it is applying, so the previous one's label is not
+      // recoverable here; it is a history-menu caption, never a value the
+      // chart depends on.
+      return before.instruction === null
+        ? { kind: 'setTitle', title: before.title }
+        : { kind: 'setInstruction', instruction: before.instruction, summary: cmd.summary };
   }
 }
 
 export interface CommandContext {
   spec: Pick<ChartSpec, 'kind' | 'series'>;
   alternatesCount: number;
+  /** Present ONLY on an own-data card — the dataset's closed vocabulary
+   * (ADR 037 D6). Its absence is what makes `setInstruction` invalid on a
+   * CBS chart (D11). */
+  profile?: DatasetProfile;
 }
 
 function seriesKeys(spec: CommandContext['spec']): Set<string> {
@@ -229,6 +268,24 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
       return cmd.title === null || (cmd.title.trim().length > 0 && cmd.title.length <= CHART_TITLE_MAX_LENGTH);
     case 'setCaption':
       return cmd.caption === null || (cmd.caption.trim().length > 0 && cmd.caption.length <= CHART_CAPTION_MAX_LENGTH);
+    case 'setInstruction': {
+      // ADR 037 D11 type guard: no dataset profile, no valid instruction —
+      // an own-data command can never replay onto a CBS chart, where there
+      // is nothing to check its column ids against.
+      if (ctx.profile === undefined) return false;
+      if (cmd.summary.trim().length === 0 || cmd.summary.length > CHART_INSTRUCTION_SUMMARY_MAX_LENGTH) return false;
+      // Digit-free, like every other history-menu label (R6/#254): a summary
+      // is the reader's own words about columns, never a figure.
+      if (/\d/.test(cmd.summary)) return false;
+      try {
+        // The SAME allowlist the server runs (src/attachments/instruct/
+        // schema.ts) — never a second, drifting copy of those checks.
+        validateInstructionObject(reviveClientInstruction(cmd.instruction), ctx.profile);
+        return true;
+      } catch {
+        return false;
+      }
+    }
   }
 }
 
@@ -261,6 +318,15 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('removeNote'), noteId: z.string(), ...envelope }),
   z.object({ kind: z.literal('setTitle'), title: z.string().max(CHART_TITLE_MAX_LENGTH).nullable(), ...envelope }),
   z.object({ kind: z.literal('setCaption'), caption: z.string().max(CHART_CAPTION_MAX_LENGTH).nullable(), ...envelope }),
+  // The instruction is left as a bare object here: its own schema needs the
+  // dataset profile, which only the card has — `validateCommand` above runs
+  // the real check at replay time.
+  z.object({
+    kind: z.literal('setInstruction'),
+    instruction: z.record(z.string(), z.unknown()),
+    summary: z.string().max(CHART_INSTRUCTION_SUMMARY_MAX_LENGTH),
+    ...envelope,
+  }),
 ]);
 // The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
 export const commandLogSchema = z.array(commandSchema).max(200);

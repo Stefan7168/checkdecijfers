@@ -489,6 +489,7 @@ const nl = {
   'chart.command.setTitleOff': 'Titel hersteld',
   'chart.command.setCaption': 'Bijschrift aangepast',
   'chart.command.setCaptionOff': 'Bijschrift verwijderd',
+  'chart.command.setInstruction': 'Data: {summary}',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1375,6 +1376,7 @@ const en: Messages = {
   'chart.command.setTitleOff': 'Title restored',
   'chart.command.setCaption': 'Caption edited',
   'chart.command.setCaptionOff': 'Caption removed',
+  'chart.command.setInstruction': 'Data: {summary}',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',
