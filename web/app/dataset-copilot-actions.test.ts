@@ -24,6 +24,9 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock('../backend/attachments/store.ts', () => store);
 
+const read = vi.hoisted(() => ({ isOwnChartTurn: vi.fn() }));
+vi.mock('../backend/attachments/read.ts', () => read);
+
 const threads = vi.hoisted(() => ({ validateDatasetThreadOwnership: vi.fn() }));
 vi.mock('../backend/threads/index.ts', () => threads);
 
@@ -84,6 +87,7 @@ beforeEach(() => {
   store.getDataset.mockResolvedValue(fakeDataset());
   store.setDatasetTurnCopilotFeedback.mockResolvedValue(true);
   threads.validateDatasetThreadOwnership.mockResolvedValue(42);
+  read.isOwnChartTurn.mockResolvedValue(true);
   gate.chargeAndRunDataset.mockResolvedValue({ kind: 'ok', envelope: { kind: 'chart' }, auditId: 1, datasetGone: false, netCost: 4 });
 });
 
@@ -97,6 +101,15 @@ describe('adjustDatasetChart', () => {
   it('returns not_found when the thread/dataset pairing does not validate', async () => {
     threads.validateDatasetThreadOwnership.mockResolvedValue(null);
     expect(await adjustDatasetChart(1, 42, 7, 'hi', RID, INSTRUCTION, CAPABILITIES)).toEqual({ kind: 'not_found' });
+    expect(gate.chargeAndRunDataset).not.toHaveBeenCalled();
+  });
+
+  // Final review (session 113): the turn id is bound to the caller AND this
+  // thread before it can reach the stored envelope / the edits key.
+  it('returns not_found when the target turn is not the callers own chart turn in this thread', async () => {
+    read.isOwnChartTurn.mockResolvedValue(false);
+    expect(await adjustDatasetChart(1, 42, 7, 'hi', RID, INSTRUCTION, CAPABILITIES)).toEqual({ kind: 'not_found' });
+    expect(read.isOwnChartTurn).toHaveBeenCalledWith(fakeDb, 'user-1', 42, 7);
     expect(gate.chargeAndRunDataset).not.toHaveBeenCalled();
   });
 

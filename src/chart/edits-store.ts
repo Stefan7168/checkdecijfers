@@ -184,17 +184,22 @@ export async function getOwnChartEdits(db: Db, key: ChartEditsKey, userId: strin
  * against any more, so its edit log is dead weight rather than something to
  * redact in place — a hard delete, called from the SAME transaction as the
  * turn redaction. Returns 0 (never throws) on an empty list or when the
- * column is absent — the pre-035 deploy window has nothing to delete yet. */
+ * column is absent — the pre-035 deploy window has nothing to delete yet.
+ *
+ * Final review (session 113): the column-absent case is PROBED, not caught.
+ * This is the one leg that runs inside the caller's transaction, and a
+ * failed statement puts Postgres into "current transaction is aborted" —
+ * catching 42703 here would still leave the retention transaction dead, so
+ * the following `update dataset_turns …` (and with it deleteOneDataset /
+ * deleteUserDatasets / the GDPR purge) would throw. `turnColumnExists` is a
+ * plain select against information_schema and never aborts anything. */
 export async function deleteChartEditsForTurns(db: Db, turnIds: number[]): Promise<number> {
   if (turnIds.length === 0) return 0;
   if (!(await tableExists(db))) return 0;
-  try {
-    const { rows } = await db.query(`delete from chart_edits where dataset_turn_id = any($1::bigint[]) returning dataset_turn_id`, [
-      turnIds,
-    ]);
-    return rows.length;
-  } catch (err) {
-    if (isUndefinedColumnError(err)) return 0;
-    throw err;
-  }
+  if (!(await turnColumnExists(db))) return 0;
+  const { rows } = await db.query(
+    `delete from chart_edits where dataset_turn_id = any($1::bigint[]) returning dataset_turn_id`,
+    [turnIds],
+  );
+  return rows.length;
 }

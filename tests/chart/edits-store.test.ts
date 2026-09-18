@@ -218,11 +218,21 @@ describe('chart_edits store — turn key (phase 2, migration 035)', () => {
     });
   });
 
-  it('deleteChartEditsForTurns returns 0 on an empty list and when the column is absent', async () => {
+  // Final review (session 113): the column-absent case is asserted INSIDE a
+  // transaction, because that is the only way this leg is ever called
+  // (src/attachments/retention.ts's redactTurnsForDatasets). A caught 42703
+  // would still have aborted the transaction, so the assertion that matters
+  // is "a following statement in the same transaction still works".
+  it('deleteChartEditsForTurns returns 0 on an empty list and when the column is absent, without aborting the transaction', async () => {
     await withDb(async (db) => {
       expect(await deleteChartEditsForTurns(db, [])).toBe(0);
       await db.query('alter table chart_edits drop column dataset_turn_id');
-      expect(await deleteChartEditsForTurns(db, [1, 2])).toBe(0);
+      const stillAlive = await db.withTransaction(async (tx) => {
+        expect(await deleteChartEditsForTurns(tx, [1, 2])).toBe(0);
+        const { rows } = await tx.query('select 1 as ok');
+        return rows[0]?.ok;
+      });
+      expect(Number(stillAlive)).toBe(1);
     });
   });
 });

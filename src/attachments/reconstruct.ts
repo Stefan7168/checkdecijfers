@@ -25,17 +25,17 @@ import type { DatasetTurnRecord, UserDataset } from './types.ts';
  * imported: a generic JSON canonicalizer is cheap to keep as a pure leaf in
  * this module (ADR 001's boundary), not worth crossing into src/answer/ for.
  *
- * Date special-case (found live, writing this module's own tests): despite
- * `UserDataset.createdAt` being typed `string`, the pg/PGlite driver
- * actually hands back a live `Date` instance for a `timestamptz` column on
- * every plain `select` (no type-parser override exists in src/db/) — only
- * `JSON.stringify`'s own `Date.prototype.toJSON` call (already baked into
- * every stored envelope at write time) turns it into an ISO string. Without
- * this branch, a freshly-fetched dataset's `createdAt` recurses into
- * `Object.entries(date)` (no own enumerable properties) and serializes as
- * `{}`, silently comparing unequal against the stored ISO-string copy on
- * EVERY chart turn — not a corruption, a false positive in the reconstructor
- * itself. Delegating to `JSON.stringify` for a Date matches exactly how the
+ * Date special-case (found live, writing this module's own tests): the
+ * pg/PGlite driver hands back a live `Date` instance for a `timestamptz`
+ * column on a plain `select` (no type-parser override exists in src/db/),
+ * and a `Date` reached here would recurse into `Object.entries(date)` (no
+ * own enumerable properties) and serialize as `{}` — silently unequal
+ * against the stored ISO-string copy on EVERY chart turn, a false positive
+ * in the reconstructor itself. Kept as a belt, NOT as the fix: since
+ * session 113 `store.ts`'s `rowToDataset` normalises `created_at` to an ISO
+ * string, so `UserDataset.createdAt` really is the `string` it is typed as
+ * on the store path. This branch still covers any other value that arrives
+ * as a Date, and delegating to `JSON.stringify` matches exactly how the
  * envelope was serialized in the first place. */
 function stableStringify(value: unknown): string {
   if (value instanceof Date) {

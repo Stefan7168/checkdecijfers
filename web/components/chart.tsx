@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Area,

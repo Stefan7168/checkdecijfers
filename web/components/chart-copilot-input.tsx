@@ -248,9 +248,18 @@ export function ChartCopilotInput(props: {
   /** Which doorways are mounted right now (Tabel form has no Style panel and
    * no notes strip). Default: everything but 'none'. */
   canOpen?: (target: ChipOpens) => boolean;
+  /** Final review (session 113): the id of the line that already says WHY
+   * the composer is closed — today only the card's own "could not be drawn"
+   * warning. Non-null disables the field, the send button and the example
+   * chips, so the reader never spends a credit on a turn the server would
+   * refuse as `internal`, and points the field's accessible description at
+   * that line rather than printing the sentence a second time. */
+  disabledReasonId?: string | null;
 }): ReactNode {
   const { lang, busy, examples, reply, error, onSend, onUndoReply, onRetry, onFeedback, onOpen } = props;
   const canOpen = props.canOpen ?? ((target: ChipOpens) => target !== 'none');
+  const disabledReasonId = props.disabledReasonId ?? null;
+  const blocked = busy || disabledReasonId !== null;
   const [value, setValue] = useState('');
   /** Phones (< sm) start collapsed to a single chip: the card is already
    * tall there, and a permanent composer under it pushes the chart itself
@@ -260,7 +269,7 @@ export function ChartCopilotInput(props: {
 
   function submit(): void {
     const message = value.trim();
-    if (message.length === 0 || busy) return;
+    if (message.length === 0 || blocked) return;
     setValue('');
     onSend(message);
   }
@@ -288,18 +297,19 @@ export function ChartCopilotInput(props: {
             type="text"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            disabled={busy}
+            disabled={blocked}
+            aria-describedby={disabledReasonId ?? undefined}
             maxLength={MESSAGE_MAX_LENGTH}
             placeholder={placeholder}
             className="h-9 flex-1"
           />
-          <Button type="submit" size="sm" className="h-9 px-3" disabled={busy || value.trim().length === 0}>
+          <Button type="submit" size="sm" className="h-9 px-3" disabled={blocked || value.trim().length === 0}>
             {t(lang, busy ? 'chart.copilot.busy' : 'chart.copilot.send')}
           </Button>
         </form>
         {/* The examples are the empty state: once there is a reply, the chips
           * that describe what CHANGED take their place. */}
-        {reply === null && !busy && examples.length > 0 ? (
+        {reply === null && !blocked && examples.length > 0 ? (
           <div className="mt-1.5 flex flex-wrap gap-1.5" aria-label={t(lang, 'chart.copilot.examplesLabel')} role="group">
             {examples.map((example) => (
               <button

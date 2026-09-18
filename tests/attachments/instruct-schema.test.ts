@@ -337,6 +337,45 @@ describe('schema v2 — aggregate, derived, sort by value', () => {
     ).toThrow(/exactly one y column/);
   });
 
+  // Final review (session 113): two field-by-field-valid combinations that
+  // are nonsense on screen.
+  it("rejects a 'count' aggregate together with a two-column derived op", () => {
+    expect(() =>
+      validateInstruction(
+        out({ kind: 'bar', x: 'c1', aggregate: { fn: 'count' }, derived: { op: 'difference', b: 'c3' } }),
+        PROFILE,
+      ),
+    ).toThrow(/cannot be combined with aggregate 'count'/);
+    expect(() =>
+      validateInstruction(
+        out({ kind: 'bar', x: 'c1', aggregate: { fn: 'count' }, derived: { op: 'ratio', b: 'c3' } }),
+        PROFILE,
+      ),
+    ).toThrow(/cannot be combined with aggregate 'count'/);
+  });
+
+  it("accepts a 'count' aggregate with a one-column derived op", () => {
+    const ok = validateInstruction(
+      out({ kind: 'bar', x: 'c1', aggregate: { fn: 'count' }, derived: { op: 'share_of_total', b: null } }),
+      PROFILE,
+    );
+    expect(ok.derived).toEqual({ op: 'share_of_total', b: null });
+  });
+
+  it("rejects derived 'percent_change' on a text x column", () => {
+    expect(() =>
+      validateInstruction(
+        out({ kind: 'bar', x: 'c1', derived: { op: 'percent_change', b: null } }),
+        PROFILE,
+      ),
+    ).toThrow(/percent_change' x column 'c1' has type 'text', which has no natural order/);
+  });
+
+  it("accepts derived 'percent_change' on an ordered x column", () => {
+    const ok = validateInstruction(out({ derived: { op: 'percent_change', b: null } }), PROFILE);
+    expect(ok.derived).toEqual({ op: 'percent_change', b: null });
+  });
+
   it("rejects sort by a column id when aggregate or derived is set", () => {
     expect(() =>
       validateInstruction(

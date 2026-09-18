@@ -18,6 +18,7 @@ import type { GatedDatasetResponse } from '../backend/billing/types.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import { respondToChartEdit } from '../backend/attachments/copilot/respond.ts';
 import { sanitizeCapabilities } from '../backend/attachments/copilot/types.ts';
+import { isOwnChartTurn } from '../backend/attachments/read.ts';
 import { getDataset, setDatasetTurnCopilotFeedback } from '../backend/attachments/store.ts';
 import type { DatasetProfile } from '../backend/attachments/types.ts';
 import { validateDatasetThreadOwnership } from '../backend/threads/index.ts';
@@ -88,6 +89,13 @@ export async function adjustDatasetChart(
   const db = getDb();
   const threadId = await validateDatasetThreadOwnership(db, userId, rawThreadId, datasetId);
   if (threadId === null) {
+    return { kind: 'not_found' };
+  }
+  // Final review (session 113): the turn id the browser sent is stored in
+  // the new turn's envelope and reused as the chart-edits key, so it is
+  // bound to the caller AND this thread here — not trusted because the
+  // thread check above passed.
+  if (!(await isOwnChartTurn(db, userId, threadId, targetTurnId))) {
     return { kind: 'not_found' };
   }
   const dataset = await getDataset(db, userId, datasetId);

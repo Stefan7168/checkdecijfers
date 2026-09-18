@@ -397,3 +397,52 @@ describe('UserChartView — the chat doorway (co-pilot phase 2, Task 8)', () => 
     }
   });
 });
+
+// Final review (session 113): a data change that could NOT be drawn leaves
+// the held instruction undrawable, so the composer closes rather than
+// letting the reader spend a credit on a turn the server refuses as
+// 'internal'.
+describe('UserChartView — the chat doorway is closed while a render failed', () => {
+  const FAILED_LINE = 'Geen rijen voldoen aan dit filter.';
+
+  function storedFailingLog() {
+    return [
+      {
+        kind: 'setInstruction',
+        instruction: SUMMED_INSTRUCTION,
+        summary: 'Som van Omzet per Gemeente',
+        id: 'c1',
+        at: '2026-09-18T00:00:00.000Z',
+        source: 'chat',
+      },
+    ];
+  }
+
+  it('disables the field and the send button, shows the reason, and never calls the action', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'invalid', reason: 'zero_rows' });
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: storedFailingLog() });
+    renderCard();
+
+    await screen.findByText(FAILED_LINE);
+    const field = screen.getByPlaceholderText('Pas deze grafiek aan');
+    expect(field).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Versturen' })).toBeDisabled();
+    // The reason is the line already on screen, not a second copy of it.
+    expect(field.getAttribute('aria-describedby')).toBe(screen.getByText(FAILED_LINE).id);
+
+    // Even forcing the submit through does not spend a credit.
+    fireEvent.change(field, { target: { value: 'tel de omzet op per gemeente' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Versturen' }));
+    await waitFor(() => expect(copilotActions.adjustDatasetChart).not.toHaveBeenCalled());
+  });
+
+  it('re-opens the composer once a drawable instruction is back (Undo)', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'invalid', reason: 'zero_rows' });
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: storedFailingLog() });
+    renderCard();
+
+    await screen.findByText(FAILED_LINE);
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(screen.getByPlaceholderText('Pas deze grafiek aan')).not.toBeDisabled());
+  });
+});

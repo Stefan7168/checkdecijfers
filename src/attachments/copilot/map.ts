@@ -8,7 +8,7 @@
 // does not resolve becomes a refusal naming the control that CAN do it,
 // never a guess at the nearest match.
 import { toClientInstruction, type ClientChartInstruction, type CopilotCommand, type CopilotRefusal, type UserChartSpec } from '../types.ts';
-import { unplottedDigits } from './text-guard.ts';
+import { stripDigits, unplottedDigits } from './text-guard.ts';
 import { TEMPLATE_IDS, type CopilotOutput } from './types.ts';
 
 /** The same caps web/lib's chart-commands.ts enforces on dispatch — applied
@@ -81,14 +81,21 @@ function guardText(
  * `summary` is the plain-language description of the new instruction
  * (Task 6's summarizeInstruction, injected by respond.ts) shown on the
  * data chip — deterministic text, never the model's own prose.
+ *
+ * `noteIdSuffix` disambiguates the note ids this reply mints (final review,
+ * session 113): two chat notes on the SAME point used to share the id
+ * `chat-${rowRef}`, and the second was silently deduped by `applyCommand`
+ * while its chip claimed "applied". Tests pass a fixed suffix.
  */
 export function mapCopilotOutput(
   output: CopilotOutput,
   chart: UserChartSpec,
   current: ClientChartInstruction,
   summary: string,
+  noteIdSuffix: string = Date.now().toString(36),
 ): Mapped {
   const out: Mapped = { commands: [], refused: [] };
+  let noteCount = 0;
 
   // Rule 1: the data change comes FIRST — every view command below is
   // expressed against the chart that instruction produces.
@@ -197,8 +204,10 @@ export function mapCopilotOutput(
       }
 
       // Rule 7: the note anchors to a REAL point, found by (series label, x
-      // label). Its id is derived from that point's rowRef, so replaying
-      // the same stored command can never mint a different anchor.
+      // label). `resultId` — the anchor — is the point's rowRef, so replaying
+      // the same stored command can never move the note. The `id` adds this
+      // reply's suffix and the note's index within the reply, so two notes on
+      // one point are two notes (see noteIdSuffix above).
       case 'addNote': {
         const point = chart.series
           .find((series) => series.label === command.seriesLabel)
@@ -216,7 +225,7 @@ export function mapCopilotOutput(
         out.commands.push({
           kind: 'addNote',
           note: {
-            id: `chat-${point.rowRef}`,
+            id: `chat-${point.rowRef}-${noteCount++}${noteIdSuffix}`,
             resultId: point.rowRef,
             periodLabel: command.xLabel,
             seriesLabel: command.seriesLabel,
@@ -228,9 +237,15 @@ export function mapCopilotOutput(
     }
   }
 
-  // Rule 8: the model's own refusals, after our mapping's.
+  // Rule 8: the model's own refusals, after our mapping's. The `request`
+  // text is model-authored and DOES reach the screen (chart-copilot-reply's
+  // refusalLine, replayed by dataset-chat), so it owes the reader the same
+  // digit guard as a title/caption/note — but a refusal can't itself be
+  // refused, so an unplotted number is stripped and the sentence kept
+  // (final review, session 113).
   for (const item of output.refused) {
-    out.refused.push({ request: cap(item.request), reason: item.reason, control: item.control });
+    const request = unplottedDigits(item.request, chart).length > 0 ? stripDigits(item.request) : item.request;
+    out.refused.push({ request: cap(request), reason: item.reason, control: item.control });
   }
 
   return out;

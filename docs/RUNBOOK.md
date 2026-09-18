@@ -469,8 +469,11 @@ session: it is a one-constant change in `src/chart/brandfetch.ts`.
 **Session 113 addendum — apply 034 AND 035 in one `npm run db:migrate`.** Phase 2 added
 `migrations/035_chart_edits_dataset_turns.sql`: a second, mutually exclusive key on `chart_edits`
 (`dataset_turn_id`, for charts drawn from a reader's own file), a synthetic primary key and two
-partial unique indexes. Deploy-order-safe both ways: before 035 the store detects the old shape and
-uses the old `ON CONFLICT` target; the own-data leg treats a missing column as "no edits yet". The
+partial unique indexes. Safe in both deploy orders, and here is exactly what "safe" means: with 034
+applied and 035 not, saving/loading a CBS chart's edits keeps working (the store detects the old
+shape and uses the old `ON CONFLICT` target), every own-data read or write answers "no edits yet"
+instead of erroring, and the retention/GDPR leg probes for the column before deleting, so deleting a
+dataset still redacts its turns in one working transaction. After 035 both legs are live. The
 migration file is wrapped in one transaction by `src/db/migrate.ts`. Expect exactly two pending
 migrations, `034_chart_edits.sql` then `035_chart_edits_dataset_turns.sql`. Smoke test for the new
 leg (only meaningful once `ATTACHMENTS_ENABLED=1`, see the WP202 section): open a chart from an
@@ -1257,8 +1260,9 @@ Steps, in order, owner present:
    present). It replaces the hand-authored fixtures under `tests/fixtures/llm/attachments/` with the
    real model output and PRINTS THE DIFF against the hand-authored version — read it: a difference
    in the model's instruction or view commands for the four cases is the first real signal of how
-   the prompt behaves. Then run `npx vitest run tests/attachments` (the drift test must stay green)
-   and commit the regenerated fixtures. Migrations 034 + 035 must be applied first (own-data chart
+   the prompt behaves. Then run `npx vitest run tests/attachments`: if any case differs, update
+   `tests/fixtures/attachments/cases.ts` to match the real output (or revert the recording) until the
+   drift test is green, then commit. Migrations 034 + 035 must be applied first (own-data chart
    edits are keyed by the dataset turn). Never run `attachments:record` from CI or a subagent.
 5. **Set the flag** — in Vercel: add env var `ATTACHMENTS_ENABLED=1` (Production), then redeploy.
    (Requires `WORKSPACE_ENABLED=1` to already be set — the attachments UI only exists inside the

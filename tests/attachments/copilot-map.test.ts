@@ -15,8 +15,12 @@ function output(view: CopilotViewCommand[], fields: Partial<CopilotOutput> = {})
 
 const SUMMARY = 'Sum of Revenue per Year';
 
+/** A fixed note-id suffix — in production it is derived from Date.now(), so
+ * the tests pin it to keep the ids assertable (final review, session 113). */
+const SUFFIX = 'zz1';
+
 function map(out: CopilotOutput) {
-  return mapCopilotOutput(out, CHART_FIXTURE, CURRENT_FIXTURE, SUMMARY);
+  return mapCopilotOutput(out, CHART_FIXTURE, CURRENT_FIXTURE, SUMMARY, SUFFIX);
 }
 
 const NEW_INSTRUCTION: ChartInstruction = {
@@ -230,7 +234,7 @@ describe('rule 7 — addNote resolves a point by series + x label', () => {
       {
         kind: 'addNote',
         note: {
-          id: 'chat-r2:c2',
+          id: 'chat-r2:c2-0zz1',
           resultId: 'r2:c2',
           periodLabel: '2021',
           seriesLabel: 'Amsterdam',
@@ -248,6 +252,18 @@ describe('rule 7 — addNote resolves a point by series + x label', () => {
     expect(refused).toEqual([
       { request: 'note: Amsterdam @ 2019', reason: 'not_on_this_chart', control: 'notes' },
     ]);
+  });
+
+  it('gives two notes on the SAME point two distinct ids', () => {
+    const { commands } = map(
+      output([
+        { kind: 'addNote', seriesLabel: 'Amsterdam', xLabel: '2021', text: 'Eerste' },
+        { kind: 'addNote', seriesLabel: 'Amsterdam', xLabel: '2021', text: 'Tweede' },
+      ]),
+    );
+    const ids = commands.map((c) => (c as unknown as { note: { id: string } }).note.id);
+    expect(ids).toEqual(['chat-r2:c2-0zz1', 'chat-r2:c2-1zz1']);
+    expect(new Set(ids).size).toBe(2);
   });
 
   it('digit-guards the note text like a title', () => {
@@ -269,9 +285,27 @@ describe('rule 8 — the model own refusals pass through', () => {
   it('appends them after the mapping refusals', () => {
     const { refused } = map(
       output([{ kind: 'applyTemplate', templateId: 'neon' }], {
-        refused: [{ request: 'make it 3D', reason: 'not_available', control: 'none' }],
+        refused: [{ request: 'make it three-dimensional', reason: 'not_available', control: 'none' }],
       }),
     );
-    expect(refused.map((r) => r.request)).toEqual(['template: neon', 'make it 3D']);
+    expect(refused.map((r) => r.request)).toEqual(['template: neon', 'make it three-dimensional']);
+  });
+
+  // Final review (session 113): the model's refusal text reaches the screen
+  // too, so it owes the reader the same digit guard as a title/caption/note
+  // — but stripped, never dropped: a hidden refusal is worse than a
+  // number-free one.
+  it('strips a number that is not on the chart from the request text', () => {
+    const { refused } = map(
+      output([], { refused: [{ request: 'the total of 4.521', reason: 'needs_click', control: 'none' }] }),
+    );
+    expect(refused).toEqual([{ request: 'the total of', reason: 'needs_click', control: 'none' }]);
+  });
+
+  it('keeps a number that IS plotted in the request text', () => {
+    const { refused } = map(
+      output([], { refused: [{ request: 'why is 150 the top?', reason: 'needs_click', control: 'none' }] }),
+    );
+    expect(refused).toEqual([{ request: 'why is 150 the top?', reason: 'needs_click', control: 'none' }]);
   });
 });

@@ -200,6 +200,24 @@ export function validateInstructionObject(
         fail(`derived column b '${data.derived.b}' has an unresolved ambiguous number format`, text);
       }
     }
+    // Final review (session 113): two combinations that validate field by
+    // field but are nonsense on screen. A count aggregate makes both
+    // operands the same row count, so the deterministic label would read
+    // "Count of rows − Count of rows"; and percent_change compares each
+    // point with the PREVIOUS one, which needs an ordered x — the same rule
+    // (and message) the line chart's x already carries above.
+    if (DERIVED_OPS_WITH_B.includes(data.derived.op) && data.aggregate?.fn === 'count') {
+      fail(`derived '${data.derived.op}' cannot be combined with aggregate 'count'`, text);
+    }
+    if (data.derived.op === 'percent_change') {
+      const xColumn = columnsById.get(data.x)!;
+      if (xColumn.type === 'text') {
+        fail(
+          `derived 'percent_change' x column '${data.x}' has type '${xColumn.type}', which has no natural order`,
+          text,
+        );
+      }
+    }
   }
   if (data.sort !== null && data.sort.by !== 'x' && data.sort.by !== 'value' && (data.aggregate !== null || data.derived !== null)) {
     fail(`with aggregate/derived, sort by 'x' or 'value' only (got '${data.sort.by}')`, text);

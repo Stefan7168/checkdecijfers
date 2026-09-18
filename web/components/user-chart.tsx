@@ -605,7 +605,11 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   }
 
   async function sendToCopilot(message: string): Promise<void> {
-    if (edit === undefined || state.instruction === null || copilotBusy) return;
+    // Final review (session 113): with a failed render on screen, the held
+    // instruction is one this chart could not draw — sending it would spend
+    // a credit on a turn the server refuses as `internal`. The composer is
+    // disabled for the same reason; this is the belt behind it.
+    if (edit === undefined || state.instruction === null || copilotBusy || renderFailure !== null) return;
     setCopilotBusy(true);
     setCopilotError(null);
     setCopilotReply(null);
@@ -1015,7 +1019,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       {/* A data command that could not be drawn: one digit-free line, and the
         * previous chart stays on screen so Undo is a real way back. */}
       {renderFailure !== null ? (
-        <p role="status" className="mt-2 text-xs text-warning">
+        <p id={`${domId}-render-failure`} role="status" className="mt-2 text-xs text-warning">
           {t(chartLang, renderFailure)}
         </p>
       ) : null}
@@ -1097,6 +1101,9 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           onFeedback={(turnId, vote) => submitCopilotFeedback(turnId, vote)}
           onOpen={openCopilotTarget}
           canOpen={copilotCanOpen}
+          // The line above the plot already says why — the composer points at
+          // it instead of repeating the sentence.
+          disabledReasonId={renderFailure === null ? null : `${domId}-render-failure`}
         />
       ) : null}
       {/* Under the plot, above the Style region — and available in Tabel form

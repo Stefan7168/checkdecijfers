@@ -204,7 +204,10 @@ series by LABEL; deterministic code executes the instruction first and then maps
 by lookup against the chart it just drew (label → `s<i>` key, note point → `rowRef`), allowlists
 template ids, hex colours and font names, and digit-guards title/caption/note text (every digit run
 must be a plotted value, source cell, x label or header token — else the item is refused as
-`unplotted_number`). The client validates every stored command AGAIN with `validateCommand` before
+`unplotted_number`). The guard also covers the model's OWN refusal text, which reaches the screen
+as well (final review): there an unplotted number is STRIPPED and the sentence kept, because a
+refusal cannot itself be refused without hiding from the reader that the request was declined.
+The client validates every stored command AGAIN with `validateCommand` before
 dispatching with `source: 'chat'`. Two defects the review loop caught here: the output JSON schema
 emitted `oneOf` (structured outputs reject it — the intent parser's `oneOfToAnyOf` walker is now a
 shared module, `src/answer/llm/json-schema.ts`, with a no-`oneOf` test), and the model's font name

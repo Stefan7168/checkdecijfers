@@ -61,3 +61,19 @@ export function unplottedDigits(text: string, chart: UserChartSpec): string[] {
   }
   return offenders;
 }
+
+/**
+ * `text` with every digit run replaced by a space (whitespace collapsed,
+ * trimmed) — the same transform web/lib/chart-data-instruction.ts's
+ * `digitFree` applies to a reader's column header, reproduced here because
+ * src/ cannot import web/lib/* (src/threads/replay.ts's layering rule).
+ *
+ * Used for the model's own refusal text (final review, session 113): that
+ * string reaches the screen too, and unlike a title/caption/note there is
+ * nothing to refuse — dropping the refusal would hide from the reader that
+ * their request was declined. So the number comes out and the sentence
+ * stays.
+ */
+export function stripDigits(text: string): string {
+  return text.replace(DIGIT_RUN, ' ').replace(/\s+/g, ' ').trim();
+}

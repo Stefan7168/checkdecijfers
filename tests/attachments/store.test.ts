@@ -75,6 +75,20 @@ describe('insertDataset / getDataset', () => {
     });
   });
 
+  // Session 113: `rowToDataset` normalises `created_at` — the driver hands
+  // back a live Date for a timestamptz, and `UserDataset.createdAt` is typed
+  // `string` (the own-data card slices it, and reconstruct.ts compares it).
+  it('hands back createdAt as an ISO string on both the insert and the read', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const inserted = await insertDataset(db, datasetParams(userId));
+      const fetched = await getDataset(db, userId, inserted.id);
+      expect(typeof inserted.createdAt).toBe('string');
+      expect(typeof fetched!.createdAt).toBe('string');
+      expect(fetched!.createdAt).toBe(new Date(fetched!.createdAt).toISOString());
+    });
+  });
+
   it('CROSS-USER: a different user cannot read the dataset', async () => {
     await withDb(async (db) => {
       const owner = randomUUID();

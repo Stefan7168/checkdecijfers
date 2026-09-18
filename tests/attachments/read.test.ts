@@ -1,8 +1,10 @@
 // getDatasetTurnById (read.ts) — the AuditRecord-analog reader for
 // dataset_turns, used by reconstruct.ts and scripts/verify-dataset-turns.ts.
+// Plus isOwnChartTurn (session 113 final review), the ownership check the
+// co-pilot's Server Action runs on the turn id the browser sent.
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { getDatasetTurnById } from '../../src/attachments/read.ts';
+import { getDatasetTurnById, isOwnChartTurn } from '../../src/attachments/read.ts';
 import { insertDataset, insertDatasetTurn } from '../../src/attachments/store.ts';
 import type { DatasetProfile } from '../../src/attachments/types.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -101,6 +103,65 @@ describe('getDatasetTurnById', () => {
         latencyMs: 0,
         createdAt: expect.any(String),
       });
+    });
+  });
+});
+
+describe('isOwnChartTurn', () => {
+  async function seed(db: Db, kind: 'chart' | 'clarification') {
+    const userId = randomUUID();
+    const dataset = await insertDataset(db, {
+      userId,
+      sourceKind: 'file_csv',
+      displayName: 'x.csv',
+      sourceUrl: null,
+      mimeSniffed: 'text/csv',
+      byteSize: 42,
+      contentSha256: 'deadbeef',
+      requestId: null,
+      fileBytes: null,
+      cells: [['a'], ['1']],
+      profile: MINIMAL_PROFILE,
+      status: 'ready',
+    });
+    const threadId = await insertThread(db, userId);
+    const turnId = await insertDatasetTurn(db, {
+      userId,
+      datasetId: dataset.id,
+      threadId,
+      requestId: randomUUID(),
+      kind,
+      question: 'q',
+      envelope: { schemaVersion: 1, kind: 'refusal', question: 'q', text: 'no', reason: 'other', guidance: null },
+      finalText: 'no',
+      instruction: null,
+      chartEmitted: kind === 'chart',
+      promptVersions: {},
+      llmCalls: [],
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: 0,
+    });
+    return { userId, threadId, turnId };
+  }
+
+  it('accepts the caller own chart turn in this thread', async () => {
+    await withDb(async (db) => {
+      const { userId, threadId, turnId } = await seed(db, 'chart');
+      expect(await isOwnChartTurn(db, userId, threadId, turnId)).toBe(true);
+    });
+  });
+
+  it('rejects another user id, another thread, a non-chart turn and a nonexistent id', async () => {
+    await withDb(async (db) => {
+      const { userId, threadId, turnId } = await seed(db, 'chart');
+      const otherThread = await insertThread(db, userId);
+      expect(await isOwnChartTurn(db, randomUUID(), threadId, turnId)).toBe(false);
+      expect(await isOwnChartTurn(db, userId, otherThread, turnId)).toBe(false);
+      expect(await isOwnChartTurn(db, userId, threadId, 999999)).toBe(false);
+
+      const other = await seed(db, 'clarification');
+      expect(await isOwnChartTurn(db, other.userId, other.threadId, other.turnId)).toBe(false);
     });
   });
 });
