@@ -294,6 +294,16 @@ const nl = {
   'chart.copilot.example.addTitle': 'Geef de grafiek een kop',
   'chart.copilot.example.makeBar': 'Maak er een staafdiagram van',
   'chart.copilot.example.hideGrid': 'Verberg het raster',
+  // Co-pilot phase 3 (session 114, Task 2): the CBS/Eurostat tier's own
+  // example chips + follow-up hand-off + the "figures don't change" note.
+  'chart.copilot.example.lastYears': 'Alleen de laatste jaren',
+  'chart.copilot.example.newsroomLook': 'Geef het de nieuwsroom-look',
+  'chart.copilot.followUp': 'Stel als vervolgvraag',
+  'chart.copilot.followUpHint': 'Dit vraagt om andere data. Als vervolgvraag krijgt het een eigen antwoord en grafiek.',
+  'chart.copilot.cbsLocked':
+    'De cijfers zelf veranderen hier niet: dit is een officiële grafiek. Vorm, periode, reeksen, opmaak en tekst wel.',
+  'chart.extended.badge': 'Grafiek uitgebreid',
+  'chart.extended.hint': 'Vervolg op de vorige grafiek: dezelfde bron en eenheid, in dezelfde vorm en opmaak.',
 
   // feedback-buttons.tsx.
   'feedback.helpful': 'Nuttig antwoord',
@@ -1368,6 +1378,14 @@ const en: Messages = {
   'chart.copilot.example.addTitle': 'Give the chart a title',
   'chart.copilot.example.makeBar': 'Make it a bar chart',
   'chart.copilot.example.hideGrid': 'Hide the grid',
+  'chart.copilot.example.lastYears': 'Only the last few years',
+  'chart.copilot.example.newsroomLook': 'Give it the newsroom look',
+  'chart.copilot.followUp': 'Ask as a follow-up question',
+  'chart.copilot.followUpHint': 'This asks for other data. As a follow-up it gets its own answer and chart.',
+  'chart.copilot.cbsLocked':
+    'The figures themselves do not change here: this is an official chart. Form, period, series, style and text do.',
+  'chart.extended.badge': 'Chart extended',
+  'chart.extended.hint': 'Continues the previous chart: the same source and unit, in the same form and look.',
 
   'feedback.helpful': 'Helpful answer',
   'feedback.notHelpful': 'Not helpful',

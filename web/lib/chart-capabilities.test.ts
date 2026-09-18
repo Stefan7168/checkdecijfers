@@ -4,7 +4,7 @@
 // Both are deterministic; the chips are also digit-free, which is what keeps
 // the whole-card digit scan clean while they are on screen.
 import { describe, expect, it } from 'vitest';
-import { exampleChips, ownDataCapabilities } from './chart-capabilities.ts';
+import { cbsCapabilities, cbsExampleChips, exampleChips, ownDataCapabilities } from './chart-capabilities.ts';
 import { PRESENTATION_KEYS, TEMPLATE_IDS } from '../backend/attachments/copilot/types.ts';
 import { initialDocState, type ChartDocState } from './chart-commands.ts';
 import type { PresentationKey } from './chart-presentation.ts';
@@ -173,5 +173,80 @@ describe('exampleChips', () => {
         }
       }
     }
+  });
+});
+
+// Co-pilot phase 3 (session 114, Task 2) — the CBS/Eurostat tier's own
+// capability list and example chips. Same pure-leaf shape, narrower
+// vocabulary (no data-side capability at all — that tier only ever offers
+// a view change or a follow-up hand-off).
+function cbsPoint(periodLabel: string, value: number | null) {
+  return { periodCode: periodLabel, periodLabel, value, formattedValue: value === null ? null : String(value), provisional: false, resultId: `r-${periodLabel}-${value}` };
+}
+
+function cbsSpec(kind: 'line' | 'bar', series: { label: string; points: ReturnType<typeof cbsPoint>[] }[]): PlottableSpec {
+  return { kind, series };
+}
+
+const CBS_ONE_SERIES: PlottableSpec = cbsSpec('bar', [{ label: 'Amsterdam', points: [cbsPoint('2020', 1)] }]);
+const CBS_TWO_SERIES: PlottableSpec = cbsSpec('line', [
+  { label: 'Amsterdam', points: [cbsPoint('2020', 1), cbsPoint('2021', 9)] },
+  { label: 'Rotterdam', points: [cbsPoint('2020', 4), cbsPoint('2021', 2)] },
+]);
+
+function cbsState(overrides: Partial<Pick<ChartDocState, 'title' | 'hiddenKeys'>> = {}): Pick<ChartDocState, 'title' | 'hiddenKeys'> {
+  return { title: null, hiddenKeys: new Set(), ...overrides };
+}
+
+describe('cbsCapabilities', () => {
+  it('forms for a 2-series line spec are line/bar/table', () => {
+    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' });
+    expect(caps.forms).toEqual(['line', 'bar', 'table']);
+  });
+
+  it('a bar spec with one series offers line/bar/hbar/table', () => {
+    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    expect(caps.forms).toEqual(['line', 'bar', 'hbar', 'table']);
+  });
+
+  it('templates are empty in table form', () => {
+    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'table', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    expect(caps.templates).toEqual([]);
+  });
+
+  it('zoom mirrors the input', () => {
+    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' }).zoom).toBe(true);
+    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' }).zoom).toBe(false);
+  });
+});
+
+describe('cbsExampleChips', () => {
+  it('returns exactly three chips, all digit-free', () => {
+    for (const lang of ['nl', 'en'] as const) {
+      const chips = cbsExampleChips({ spec: CBS_TWO_SERIES, state: cbsState(), zoomAvailable: true, lang });
+      expect(chips).toHaveLength(3);
+      for (const c of chips) {
+        expect(c.label).not.toMatch(/\d/);
+        expect(c.message).toBe(c.label);
+      }
+    }
+  });
+
+  it('the spotlight chip names the top series (highest last value)', () => {
+    const chips = cbsExampleChips({ spec: CBS_TWO_SERIES, state: cbsState(), zoomAvailable: false, lang: 'nl' });
+    expect(chips.map((c) => c.label)).toContain('Zet Amsterdam in de schijnwerper');
+  });
+
+  it('drops makeBar on a bar spec (already bars) and offers the newsroom-look filler instead', () => {
+    const chips = cbsExampleChips({ spec: CBS_ONE_SERIES, state: cbsState({ title: 'x' }), zoomAvailable: false, lang: 'nl' });
+    expect(chips.map((c) => c.label)).not.toContain('Maak er een staafdiagram van');
+    expect(chips).toHaveLength(3);
+  });
+
+  it('offers "lastYears" only when zoomAvailable is true', () => {
+    const withZoom = cbsExampleChips({ spec: CBS_TWO_SERIES, state: cbsState({ title: 'x' }), zoomAvailable: true, lang: 'nl' });
+    expect(withZoom.map((c) => c.label)).toContain('Alleen de laatste jaren');
+    const withoutZoom = cbsExampleChips({ spec: CBS_TWO_SERIES, state: cbsState({ title: 'x' }), zoomAvailable: false, lang: 'nl' });
+    expect(withoutZoom.map((c) => c.label)).not.toContain('Alleen de laatste jaren');
   });
 });

@@ -55,6 +55,102 @@ export function ownDataCapabilities(input: {
   };
 }
 
+// Co-pilot phase 3 (session 114, Task 2) — the CBS/Eurostat tier's own
+// capability list + example chips. Session 114's backend (`src/chart/copilot/
+// types.ts`, built in a parallel worktree) owns the real `CbsCopilotCapabilities`
+// type; declared LOCALLY here for now so this task can typecheck standalone —
+// the session re-points this import at `../backend/chart/copilot/types.ts` on
+// merge. Keep this shape byte-identical to that file's until then.
+export interface CbsCopilotCapabilities {
+  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table')[];
+  presentationKeys: string[];
+  templates: string[];
+  zoom: boolean;
+  lang: 'nl' | 'en';
+}
+
+/** No data-side capability on this tier at all (R1/R6/R11: selection only) —
+ * `formsFor` is reused unchanged, over the same three predicates the card's
+ * own tabs use, so the chat never offers a form the reader could not also
+ * reach by clicking. */
+export function cbsCapabilities(input: {
+  spec: PlottableSpec;
+  form: ChartForm;
+  applicable: ReadonlySet<PresentationKey>;
+  /** chart.tsx's own `zoomAvailable` (line kind, more than one period code). */
+  zoomAvailable: boolean;
+  lang: Lang;
+}): CbsCopilotCapabilities {
+  const { spec, form, applicable, zoomAvailable, lang } = input;
+  return {
+    forms: formsFor(spec, spec.series.length),
+    presentationKeys: PRESENTATION_KEYS.filter((key) => applicable.has(key)),
+    templates: form === 'table' ? [] : [...TEMPLATE_IDS],
+    zoom: zoomAvailable,
+    lang,
+  };
+}
+
+/** The visible series (not hidden by `hiddenKeys`, the `s${index}` key
+ * convention chart.tsx's own `seriesMeta` uses) whose LAST non-null value is
+ * highest — "the line on top right now". Mirrors `topSeriesLabel` above but
+ * over a `PlottableSpec` (server-drawn CBS points, not a `UserChartSpec`). */
+function topVisibleCbsSeriesLabel(spec: PlottableSpec, hiddenKeys: ReadonlySet<string>): string | null {
+  let best: { label: string; value: number } | null = null;
+  for (const [index, series] of spec.series.entries()) {
+    if (hiddenKeys.has(`s${index}`)) continue;
+    const plotted = series.points.filter((p) => p.value !== null);
+    const last = plotted[plotted.length - 1];
+    if (last?.value == null) continue;
+    if (best === null || last.value > best.value) best = { label: series.label, value: last.value };
+  }
+  if (best === null) return null;
+  const label = digitFree(best.label);
+  return label.length === 0 ? null : label;
+}
+
+const CBS_FALLBACK_KEYS_LINE: readonly MessageKey[] = [
+  'chart.copilot.example.makeBar',
+  'chart.copilot.example.hideGrid',
+  'chart.copilot.example.newsroomLook',
+];
+const CBS_FALLBACK_KEYS_OTHER: readonly MessageKey[] = ['chart.copilot.example.hideGrid', 'chart.copilot.example.newsroomLook'];
+
+/**
+ * Exactly three chips for the CBS/Eurostat tier, deterministic, digit-free,
+ * in this priority (Task 2 brief): (1) spotlight the top visible series on a
+ * multi-series chart, (2) "only the last few years" when the zoom is on
+ * offer, (3) a title suggestion per `state.title` — then fill to three from
+ * the fallback list (`makeBar` skipped on a chart that is already bars).
+ */
+export function cbsExampleChips(input: {
+  spec: PlottableSpec;
+  state: Pick<ChartDocState, 'title' | 'hiddenKeys'>;
+  zoomAvailable: boolean;
+  lang: Lang;
+}): ExampleChip[] {
+  const { spec, state, zoomAvailable, lang } = input;
+  const chips: ExampleChip[] = [];
+
+  const hasVisibleSeries = spec.series.some((_, index) => !state.hiddenKeys.has(`s${index}`));
+  if (spec.series.length > 1 && hasVisibleSeries) {
+    const top = topVisibleCbsSeriesLabel(spec, state.hiddenKeys);
+    if (top !== null) chips.push(chip(t(lang, 'chart.copilot.example.spotlight', { series: top })));
+  }
+
+  if (zoomAvailable) chips.push(chip(t(lang, 'chart.copilot.example.lastYears')));
+
+  chips.push(chip(t(lang, state.title !== null ? 'chart.copilot.example.shorterTitle' : 'chart.copilot.example.addTitle')));
+
+  const fallback = spec.kind === 'line' ? CBS_FALLBACK_KEYS_LINE : CBS_FALLBACK_KEYS_OTHER;
+  for (const key of fallback) {
+    if (chips.length >= 3) break;
+    const filler = chip(t(lang, key));
+    if (!chips.some((c) => c.message === filler.message)) chips.push(filler);
+  }
+  return chips.slice(0, 3);
+}
+
 export interface ExampleChip {
   label: string;
   /** What is SENT — always the chip's own words, so the reader asks for
