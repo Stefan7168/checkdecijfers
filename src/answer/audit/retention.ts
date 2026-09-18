@@ -223,13 +223,15 @@ interface PendingRedaction {
   params: unknown[];
 }
 
-/** Session 105 (journalist chart-headline feature, migration 031): the paired
- * chart_headlines hard-delete a caller runs in the SAME transaction as its
- * redaction — same to_regclass existence guard as `feedbackDelete` (the
- * table is FILE-ONLY until the owner-supervised apply, so a deploy window
- * where audit_answers redaction must succeed while chart_headlines does not
- * yet exist is expected, not an error). */
-interface HeadlineDelete {
+/** Session 105 (journalist chart-headline feature, migration 031), generalised
+ * session 112 (chart co-pilot phase 1, migration 034, #274) to a LIST of
+ * table-scoped hard-deletes a caller runs in the SAME transaction as its
+ * redaction — each entry guarded by its OWN to_regclass existence check, same
+ * discipline as `feedbackDelete` (a listed table may be FILE-ONLY at commit
+ * time, so a deploy window where audit_answers redaction must succeed while
+ * one of these tables does not yet exist is expected, not an error). */
+interface HardDelete {
+  table: string;
   sql: string;
   params: unknown[];
 }
@@ -240,7 +242,7 @@ async function redactMatchingRows(
   params: unknown[],
   feedbackDelete?: FeedbackDelete,
   pendingRedaction?: PendingRedaction,
-  headlineDelete?: HeadlineDelete,
+  hardDeletes: HardDelete[] = [],
 ): Promise<RedactedRow[]> {
   // Single statement: select the rows to redact (id + kind, to build the
   // per-kind envelope) and update them, atomically, so a concurrent read
@@ -258,15 +260,15 @@ async function redactMatchingRows(
         await tx.query(feedbackDelete.sql, feedbackDelete.params);
       }
     }
-    if (headlineDelete) {
-      // Same guard discipline as feedbackDelete above: migration 031 is
-      // FILE-ONLY at commit time, so the table may not exist yet in a given
-      // environment. The guard must be a check, not a catch — an error inside
-      // a transaction aborts the whole redaction.
-      const { rows: reg } = await tx.query(`select to_regclass('public.chart_headlines') as t`);
-      if (reg[0]?.t != null) {
-        await tx.query(headlineDelete.sql, headlineDelete.params);
-      }
+    // Each entry's own guard, same discipline as feedbackDelete above: its
+    // table may be FILE-ONLY at commit time, so it may not exist yet in a
+    // given environment. The guard must be a check, not a catch — an error
+    // inside a transaction aborts the whole redaction. Covers chart_headlines
+    // (migration 031, session 105) and chart_edits (migration 034, session
+    // 112, #274).
+    for (const del of hardDeletes) {
+      const { rows: reg } = await tx.query(`select to_regclass($1) as t`, [`public.${del.table}`]);
+      if (reg[0]?.t != null) await tx.query(del.sql, del.params);
     }
     const { rows } = await tx.query(
       `select id, kind from audit_answers where ${whereClause} for update`,
@@ -359,13 +361,25 @@ export async function deleteUserQuestionHistory(db: Db, userId: string): Promise
             where user_id = $1`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
-    {
-      // Session 105: this user's chart headlines (migration 031) hard-delete,
-      // same-parameter scoping as the redaction itself.
-      sql: `delete from chart_headlines where audit_answer_id in
+    [
+      {
+        // Session 105: this user's chart headlines (migration 031) hard-delete,
+        // same-parameter scoping as the redaction itself.
+        table: 'chart_headlines',
+        sql: `delete from chart_headlines where audit_answer_id in
             (select id from audit_answers where user_id = $1)`,
-      params: [userId],
-    },
+        params: [userId],
+      },
+      {
+        // Session 112 (#274): this user's chart co-pilot edit logs
+        // (migration 034) hard-delete, same-parameter scoping as the
+        // redaction itself.
+        table: 'chart_edits',
+        sql: `delete from chart_edits where audit_answer_id in
+            (select id from audit_answers where user_id = $1)`,
+        params: [userId],
+      },
+    ],
   );
 }
 
@@ -421,12 +435,23 @@ export async function deleteThreadQuestionHistory(
               )`,
       params: [userId, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID, threadId, userId],
     },
-    {
-      // Session 105: this thread's chart headlines (migration 031) hard-delete.
-      sql: `delete from chart_headlines where audit_answer_id in
+    [
+      {
+        // Session 105: this thread's chart headlines (migration 031) hard-delete.
+        table: 'chart_headlines',
+        sql: `delete from chart_headlines where audit_answer_id in
             (select id from audit_answers where user_id = $1 and thread_id = $2)`,
-      params: [userId, threadId],
-    },
+        params: [userId, threadId],
+      },
+      {
+        // Session 112 (#274): this thread's chart co-pilot edit logs
+        // (migration 034) hard-delete.
+        table: 'chart_edits',
+        sql: `delete from chart_edits where audit_answer_id in
+            (select id from audit_answers where user_id = $1 and thread_id = $2)`,
+        params: [userId, threadId],
+      },
+    ],
   );
 }
 
@@ -479,13 +504,25 @@ export async function purgeExpiredQuestionHistory(
             where ${PENDING_PURGE_WHERE}`,
       params: [cutoffIso, REDACTED_QUESTION_TEXT, REDACTED_TABLE_ID],
     },
-    {
-      // Session 105: chart headlines (migration 031) attached to purged
-      // answers go with them — same window as the redaction itself.
-      sql: `delete from chart_headlines where audit_answer_id in
+    [
+      {
+        // Session 105: chart headlines (migration 031) attached to purged
+        // answers go with them — same window as the redaction itself.
+        table: 'chart_headlines',
+        sql: `delete from chart_headlines where audit_answer_id in
             (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
-      params: [cutoffIso, anonIso],
-    },
+        params: [cutoffIso, anonIso],
+      },
+      {
+        // Session 112 (#274): chart co-pilot edit logs (migration 034)
+        // attached to purged answers go with them — same window as the
+        // redaction itself.
+        table: 'chart_edits',
+        sql: `delete from chart_edits where audit_answer_id in
+            (select id from audit_answers where ${AUDIT_PURGE_WHERE})`,
+        params: [cutoffIso, anonIso],
+      },
+    ],
   );
 }
 

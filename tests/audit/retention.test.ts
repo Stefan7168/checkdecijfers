@@ -653,3 +653,41 @@ describe('anonymous_trial rows (#53, ADR 036 D4 — session 52 scope widening)',
     });
   });
 });
+
+// Session 112 (chart co-pilot phase 1, migration 034, #274): chart_edits
+// joins the retention job in the SAME change as chart_headlines (migration
+// 031) did in session 105 — these two pins mirror that module's existing
+// chart_headlines coverage in the hard-delete legs above.
+describe('chart_edits hard-delete legs (migration 034, session 112, #274)', () => {
+  it("deleting a user's history hard-deletes their chart_edits rows too (migration 034)", async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const id = await insertAuditRow(db, userId, { kind: 'answer', question: 'vraag' }); // reuse the file's own audit-row helper
+      await db.query(`insert into chart_edits (audit_answer_id, user_id, log) values ($1, $2, '[]'::jsonb)`, [
+        id,
+        userId,
+      ]);
+      await deleteUserQuestionHistory(db, userId);
+      const { rows } = await db.query(`select count(*)::int as n from chart_edits`);
+      expect(rows[0]!.n).toBe(0);
+    });
+  });
+
+  it('the expiry purge takes chart_edits with the purged answers', async () => {
+    await withDb(async (db) => {
+      const userId = randomUUID();
+      const id = await insertAuditRow(db, userId, { kind: 'answer', question: 'vraag' });
+      await db.query(`insert into chart_edits (audit_answer_id, user_id, log) values ($1, $2, '[]'::jsonb)`, [
+        id,
+        userId,
+      ]);
+      // Cutoff in the future, same convention as this file's other purge
+      // tests (twoYearsBefore(NOW) etc.): every row is older than a future
+      // instant, so the purge scoops it up regardless of createdAt.
+      const futureCutoff = new Date('2099-01-01T00:00:00Z');
+      await purgeExpiredQuestionHistory(db, futureCutoff, futureCutoff);
+      const { rows } = await db.query(`select count(*)::int as n from chart_edits`);
+      expect(rows[0]!.n).toBe(0);
+    });
+  });
+});
