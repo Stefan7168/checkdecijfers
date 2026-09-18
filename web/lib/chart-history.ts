@@ -84,16 +84,30 @@ export function redo(h: ChartHistory, state: ChartDocState): { history: ChartHis
   return { history: { past: [...h.past, entry], future: rest }, state: applyCommand(state, head.command) };
 }
 
+/** A replay context, or a function that derives one from the state a command
+ * is about to be applied to. Co-pilot phase 2 (session 113, Task 5 review
+ * finding): a stored log can contain `setInstruction`, and every command
+ * AFTER it names series keys / rowRefs / a form belonging to THAT
+ * instruction's spec — validating them against the one spec the card
+ * happened to be showing dropped them all, and the next save then wrote the
+ * loss to the row. So the caller may hand a function, which is asked once
+ * per command with the state BEFORE that command. */
+export type ReplayContext = CommandContext | ((state: ChartDocState) => CommandContext);
+
+export function resolveReplayContext(ctx: ReplayContext, state: ChartDocState): CommandContext {
+  return typeof ctx === 'function' ? ctx(state) : ctx;
+}
+
 export function replayLog(
   initial: ChartDocState,
   log: ChartCommand[],
-  ctx: CommandContext,
+  ctx: ReplayContext,
 ): { history: ChartHistory; state: ChartDocState; dropped: number } {
   let state = initial;
   let history = emptyHistory();
   let dropped = 0;
   for (const command of log) {
-    if (!validateCommand(command, ctx)) {
+    if (!validateCommand(command, resolveReplayContext(ctx, state))) {
       dropped++;
       continue;
     }

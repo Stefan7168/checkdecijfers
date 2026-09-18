@@ -28,9 +28,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { renderDatasetInstruction } from '../app/dataset-actions.ts';
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import {
   LINE_WIDTH_PX,
@@ -52,6 +52,8 @@ import {
   CHART_TITLE_MAX_LENGTH,
   initialDocState,
   newCommandId,
+  type ChartCommand,
+  type ChartDocState,
   type CommandContext,
 } from '../lib/chart-commands.ts';
 import { areaFormAllowed, defaultFormFor, fallbackForm, hbarFormAllowed, lineFormAllowed, type ChartForm } from '../lib/chart-view-state.ts';
@@ -170,6 +172,14 @@ function instructionKey(instruction: ClientChartInstruction | null): string {
   return JSON.stringify(instruction);
 }
 
+/** The one line a failed render shows. `invalid` is the reader's own doing
+ * (a combination that cannot be drawn); the other two are the dataset or the
+ * session having gone away, which already have their own copy elsewhere. */
+function failureMessage(outcome: Exclude<RenderDatasetInstructionOutcome, { kind: 'ok' }>): MessageKey {
+  if (outcome.kind === 'invalid') return `userChart.renderFailed.${outcome.reason}` as MessageKey;
+  return outcome.kind === 'unauthenticated' ? 'common.sessionExpired' : 'datasetChat.notFound';
+}
+
 const FORM_TABS: readonly { form: ChartForm; label: MessageKey }[] = [
   { form: 'line', label: 'chart.tabLine' },
   { form: 'area', label: 'chart.form.area' },
@@ -177,6 +187,25 @@ const FORM_TABS: readonly { form: ChartForm; label: MessageKey }[] = [
   { form: 'hbar', label: 'chart.form.hbar' },
   { form: 'table', label: 'chart.tabTable' },
 ];
+
+/** ADR 042's value-label look, copied from chart.tsx (where it is
+ * module-private): 12 px with a card-coloured halo, so a label stays legible
+ * where it crosses a line or a bar. */
+const VALUE_LABEL_PROPS = { fontSize: 12, paintOrder: 'stroke', stroke: 'var(--card)', strokeWidth: 3, strokeLinejoin: 'round' } as const;
+
+/** The `valueLabels` presentation key, honoured (Task 5 review finding
+ * IMPORTANT 1: it used to be a live toggle that changed nothing, and the
+ * resolver FORCES it on for bar/hbar — "zonder waarden heeft een
+ * staafdiagram geen schaal", which was exactly what an own-data bar showed:
+ * no number anywhere but the tooltip).
+ *
+ * The label's text is `row[`${key}_display`]` — the point's OWN
+ * `formattedValue`, carried into the row by `buildRows` — so a drawn label
+ * is a spec string, never a number this card formatted (the whole-card digit
+ * scan pins that). */
+function valueLabels(seriesKey: string, position: 'top' | 'right'): ReactNode {
+  return <LabelList dataKey={`${seriesKey}_display`} position={position} fill="var(--foreground)" {...VALUE_LABEL_PROPS} />;
+}
 
 /** The plot's own dot: the click-to-annotate target (#212) and the marker
  * mode's on/off switch. A simplified `SeriesDot` (chart.tsx) — this tier has
@@ -272,7 +301,17 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // produced).
   const [activeSpec, setActiveSpec] = useState(spec);
   const cacheRef = useRef(new Map<string, UserChartSpec>([[instructionKey(edit?.lastInstruction ?? null), spec]]));
+  /** Instructions that already came back refused, with the line they showed.
+   * Undoing and redoing across a failed data edit must not fire the action
+   * again (nor flash a stale chart as if it had worked) — the outcome of a
+   * deterministic render over unchanged cells cannot differ the second
+   * time. */
+  const failedRef = useRef(new Map<string, MessageKey>());
   const [renderFailure, setRenderFailure] = useState<MessageKey | null>(null);
+  /** Read by the hydrate `prepare`/`ctx` callbacks, which run long after the
+   * render that created them. */
+  const activeSpecRef = useRef(activeSpec);
+  activeSpecRef.current = activeSpec;
 
   // --- the command document ------------------------------------------------
   const initialForm = defaultFormFor(toCommandSpec(spec));
@@ -282,18 +321,6 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const plottable = toPlottableSpec(activeSpec);
   const seriesCount = plottable.series.length;
   const activeForm = fallbackForm(state.form, plottable, seriesCount);
-  const ctx: CommandContext = { spec: toCommandSpec(activeSpec), alternatesCount: 0, profile: edit?.profile };
-
-  // Persistence: the same hook, the same rules, as the CBS card — keyed by
-  // the dataset turn instead of the audit answer (Task 3). No edit context or
-  // no account means no row to key on, and then the hook does nothing at all.
-  useChartEdits({
-    editsKey: edit !== undefined && signedIn ? { kind: 'turn', id: edit.turnId } : null,
-    history,
-    replaceHistory: replace,
-    ctx,
-    initial,
-  });
 
   // The data command, end to end: an instruction the reader (or a doorway)
   // set becomes a spec. Cache hit → instant, which is what makes Undo/Redo
@@ -310,7 +337,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       setRenderFailure(null);
       return;
     }
+    const failed = failedRef.current.get(key);
+    if (failed !== undefined) {
+      setRenderFailure(failed);
+      return;
+    }
     let cancelled = false;
+    // A new attempt clears the previous line immediately: leaving it up while
+    // a different instruction is being drawn would describe the wrong edit.
+    setRenderFailure(null);
     void renderDatasetInstruction(datasetId, state.instruction).then((outcome) => {
       if (cancelled) return;
       if (outcome.kind === 'ok') {
@@ -319,18 +354,58 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         setRenderFailure(null);
         return;
       }
-      setRenderFailure(
-        outcome.kind === 'invalid'
-          ? (`userChart.renderFailed.${outcome.reason}` as MessageKey)
-          : outcome.kind === 'unauthenticated'
-            ? 'common.sessionExpired'
-            : 'datasetChat.notFound',
-      );
+      const message = failureMessage(outcome);
+      failedRef.current.set(key, message);
+      setRenderFailure(message);
     });
     return () => {
       cancelled = true;
     };
   }, [state.instruction, datasetId]);
+
+  // Hydrate's prerequisite (Task 5 review finding): a stored log can contain
+  // `setInstruction`, and every command after it names series keys, rowRefs
+  // or a form belonging to THAT instruction's spec. So each distinct
+  // instruction in the log is rendered into the cache BEFORE the log is
+  // replayed, and `ctxForReplay` below then answers per command from the
+  // cache. Sequential (the same dataset, one cheap deterministic call each)
+  // and failure-tolerant: a refused instruction simply leaves the commands
+  // that depended on it to be dropped, exactly as they are today.
+  const prepareForReplay = useCallback(
+    async (log: ChartCommand[]): Promise<void> => {
+      if (datasetId === undefined) return;
+      for (const command of log) {
+        if (command.kind !== 'setInstruction') continue;
+        const key = instructionKey(command.instruction);
+        if (cacheRef.current.has(key) || failedRef.current.has(key)) continue;
+        const outcome = await renderDatasetInstruction(datasetId, command.instruction);
+        if (outcome.kind === 'ok') cacheRef.current.set(key, outcome.chart);
+        else failedRef.current.set(key, failureMessage(outcome));
+      }
+    },
+    [datasetId],
+  );
+  const profile = edit?.profile;
+  const ctxForReplay = useCallback(
+    (docState: ChartDocState): CommandContext => ({
+      spec: toCommandSpec(cacheRef.current.get(instructionKey(docState.instruction)) ?? activeSpecRef.current),
+      alternatesCount: 0,
+      profile,
+    }),
+    [profile],
+  );
+
+  // Persistence: the same hook, the same rules, as the CBS card — keyed by
+  // the dataset turn instead of the audit answer (Task 3). No edit context or
+  // no account means no row to key on, and then the hook does nothing at all.
+  useChartEdits({
+    editsKey: edit !== undefined && signedIn ? { kind: 'turn', id: edit.turnId } : null,
+    history,
+    replaceHistory: replace,
+    ctx: ctxForReplay,
+    initial,
+    prepare: prepareForReplay,
+  });
 
   // --- presentation --------------------------------------------------------
   const base = withAccountDefault(accountStyle);
@@ -443,7 +518,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const visibleSeries = seriesMeta.filter((s) => !state.hiddenKeys.has(s.key));
   const dimmedFor = (s: SeriesMeta): boolean => state.highlightedKey !== null && state.highlightedKey !== s.key;
   const xLabelProps = {
-    angle: pres.xLabels === 'tilted' ? -35 : 0,
+    angle: pres.xLabels === 'tilted' ? -45 : 0,
     textAnchor: pres.xLabels === 'tilted' ? ('end' as const) : ('middle' as const),
     ...(pres.xLabels === 'tilted' ? { height: 56 } : {}),
   };
@@ -475,10 +550,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     />,
     <Tooltip key="tip" content={<ChartTooltip seriesMeta={seriesMeta} />} />,
   ];
+  // Forced on for bar/hbar by the resolver, the reader's own choice on
+  // line/area.
+  const showValueLabels = pres.valueLabels === 'shown';
   const dotFor = (s: SeriesMeta): ReturnType<typeof UserSeriesDot> =>
     UserSeriesDot(
       s.key,
-      dimmedFor(s) ? 0.35 : 1,
+      dimmedFor(s) ? 0.25 : 1,
       s.label,
       onPointClick,
       { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
@@ -552,13 +630,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                  strokeOpacity={dimmedFor(s) ? 0.35 : 1}
+                  strokeOpacity={dimmedFor(s) ? 0.25 : 1}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   connectNulls={false}
                   dot={dotFor(s)}
                   activeDot={false}
                   isAnimationActive={false}
-                />
+                >
+                  {showValueLabels ? valueLabels(s.key, 'top') : null}
+                </Line>
               ))}
             </LineChart>
           ) : activeForm === 'area' ? (
@@ -582,13 +662,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   fill={pres.areaFill === 'gradient' ? `url(#fill-${domId}-${s.key})` : s.color}
                   fillOpacity={pres.areaFill === 'gradient' ? (dimmedFor(s) ? 0.4 : 1) : dimmedFor(s) ? 0.1 : 0.25}
                   strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                  strokeOpacity={dimmedFor(s) ? 0.35 : 1}
+                  strokeOpacity={dimmedFor(s) ? 0.25 : 1}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   connectNulls={false}
                   dot={dotFor(s)}
                   activeDot={false}
                   isAnimationActive={false}
-                />
+                >
+                  {showValueLabels ? valueLabels(s.key, 'top') : null}
+                </Area>
               ))}
             </AreaChart>
           ) : activeForm === 'hbar' ? (
@@ -624,10 +706,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   dataKey={s.key}
                   name={s.label}
                   fill={s.color}
-                  fillOpacity={dimmedFor(s) ? 0.35 : 1}
+                  fillOpacity={dimmedFor(s) ? 0.25 : 1}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   isAnimationActive={false}
-                />
+                >
+                  {showValueLabels ? valueLabels(s.key, 'right') : null}
+                </Bar>
               ))}
             </BarChart>
           ) : (
@@ -659,10 +743,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   dataKey={s.key}
                   name={s.label}
                   fill={s.color}
-                  fillOpacity={dimmedFor(s) ? 0.35 : 1}
+                  fillOpacity={dimmedFor(s) ? 0.25 : 1}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   isAnimationActive={false}
-                />
+                >
+                  {showValueLabels ? valueLabels(s.key, 'top') : null}
+                </Bar>
               ))}
             </BarChart>
           )}

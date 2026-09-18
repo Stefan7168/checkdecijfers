@@ -15,9 +15,17 @@
 // nothing at all.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchChartEdits, saveChartEdits } from '../app/chart-edits-actions.ts';
-import { parseCommandLog, validateCommand, type ChartDocState, type CommandContext } from './chart-commands.ts';
+import { parseCommandLog, validateCommand, type ChartCommand, type ChartDocState } from './chart-commands.ts';
 import { editsKeyToString, type ChartEditsKey } from './chart-edits-key.ts';
-import { pushCommand, replayLog, seal, serializeHistory, type ChartHistory } from './chart-history.ts';
+import {
+  pushCommand,
+  replayLog,
+  resolveReplayContext,
+  seal,
+  serializeHistory,
+  type ChartHistory,
+  type ReplayContext,
+} from './chart-history.ts';
 
 export const CHART_EDITS_SAVE_DEBOUNCE_MS = 800;
 
@@ -27,13 +35,23 @@ export interface UseChartEditsInput {
   replaceHistory: (next: { state: ChartDocState; history: ChartHistory }) => void;
   /** Built by the caller from the CURRENT spec; read at hydrate time through
    * a ref, never a dependency — it is a fresh object on every render, and
-   * listing it would re-fetch continuously. */
-  ctx: CommandContext;
+   * listing it would re-fetch continuously. Co-pilot phase 2 (Task 5 review
+   * finding): may instead be a FUNCTION of the state a command is about to
+   * apply to, which is what lets the own-data card validate the commands
+   * after a stored `setInstruction` against that instruction's own spec (see
+   * `ReplayContext`). */
+  ctx: ReplayContext;
   initial: ChartDocState;
+  /** Co-pilot phase 2 (Task 5 review finding): a chance to fetch whatever the
+   * stored log needs before it is replayed — the own-data card renders every
+   * `setInstruction` in the log into its spec cache here, so the function
+   * `ctx` above can answer for each one. Awaited BEFORE replay, and hydrate
+   * counts as unsettled (no save may go out) until it resolves. */
+  prepare?: (log: ChartCommand[]) => Promise<void>;
 }
 
 export function useChartEdits(input: UseChartEditsInput): void {
-  const { editsKey, history, replaceHistory, ctx, initial } = input;
+  const { editsKey, history, replaceHistory, ctx, initial, prepare } = input;
   /** The key's stable string identity — the object literal is fresh on every
    * render, so this is what the effects below depend on. */
   const keyId = editsKey === null ? null : editsKeyToString(editsKey);
@@ -52,6 +70,8 @@ export function useChartEdits(input: UseChartEditsInput): void {
   ctxRef.current = ctx;
   const initialRef = useRef(initial);
   initialRef.current = initial;
+  const prepareRef = useRef(prepare);
+  prepareRef.current = prepare;
   const editsKeyRef = useRef(editsKey);
   editsKeyRef.current = editsKey;
   /** A save that is debounced but not yet sent, with the key it belongs to.
@@ -117,10 +137,24 @@ export function useChartEdits(input: UseChartEditsInput): void {
       return;
     }
     let cancelled = false;
-    void fetchChartEdits(key).then((result) => {
+    void (async () => {
+      const result = await fetchChartEdits(key);
       if (cancelled) return;
       const parsed = result.ok && result.log ? parseCommandLog(result.log) : null;
       if (parsed !== null && parsed.length > 0) {
+        // Task 5 review finding: whatever the log needs in order to be
+        // validated at all is fetched FIRST. A throw here must not leave
+        // hydrate permanently unsettled (that would block every save for the
+        // life of the card), so it degrades to "replay with what we have" —
+        // the same outcome as before this hook had a `prepare`.
+        if (prepareRef.current !== undefined) {
+          try {
+            await prepareRef.current(parsed);
+          } catch {
+            /* fall through: replay validates against whatever is cached */
+          }
+          if (cancelled) return;
+        }
         const ctxNow = ctxRef.current;
         const replayed = replayLog(initialRef.current, parsed, ctxNow);
         let history = replayed.history;
@@ -128,7 +162,7 @@ export function useChartEdits(input: UseChartEditsInput): void {
         // Whatever the reader did while the fetch was in flight. Empty in the
         // ordinary case, so this is exactly the old plain-restore path.
         for (const entry of historyRef.current.past) {
-          if (!validateCommand(entry.command, ctxNow)) continue;
+          if (!validateCommand(entry.command, resolveReplayContext(ctxNow, state))) continue;
           ({ history, state } = pushCommand(history, state, entry.command, { transient: entry.transient }));
         }
         replaceHistory({ state, history });
@@ -142,7 +176,7 @@ export function useChartEdits(input: UseChartEditsInput): void {
       // because "we asked and got an answer" is what unblocks the save.
       hydrateSettledRef.current = true;
       setHydrateSettled((n) => n + 1);
-    });
+    })();
     return () => {
       cancelled = true;
     };

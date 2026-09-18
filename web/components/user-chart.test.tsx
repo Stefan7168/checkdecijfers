@@ -12,7 +12,7 @@
 // per-turn persistence). The Server Action modules are mocked the way
 // chart-edits-persistence.test.tsx mocks them — without that, the imports
 // would reach the real 'use server' modules in jsdom.
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
@@ -28,6 +28,7 @@ const chartEditsActions = vi.hoisted(() => ({
 }));
 vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
 
+import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
 import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
 
 afterEach(() => {
@@ -35,6 +36,7 @@ afterEach(() => {
   vi.clearAllMocks();
   chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: null });
   chartEditsActions.saveChartEdits.mockResolvedValue({ ok: true });
+  datasetActions.renderDatasetInstruction.mockReset();
 });
 
 function point(overrides: Partial<UserChartSpec['series'][0]['points'][0]> = {}) {
@@ -239,6 +241,49 @@ describe('UserChartView — the form switch (co-pilot phase 2)', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
     expect(screen.getByRole('tab', { name: 'Vlak' })).toBeDisabled();
   });
+
+  // §6's command ↔ control contract: every command kind the chat can emit has
+  // an on-screen control, and the control SAYS which kind it is.
+  it('marks every form tab with data-command-kind="setForm"', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel']) {
+      expect(screen.getByRole('tab', { name, hidden: true })).toHaveAttribute('data-command-kind', 'setForm');
+    }
+  });
+});
+
+// Review fix round 1 (IMPORTANT 1): `valueLabels` used to be a live toggle in
+// the style panel that changed nothing on this card — and the resolver FORCES
+// it on for bar/hbar ("zonder waarden heeft een staafdiagram geen schaal"),
+// which is exactly the state the own-data bar was in: no number anywhere but
+// the tooltip.
+describe('UserChartView — value labels (co-pilot phase 2)', () => {
+  function labelTexts(): string[] {
+    return [...document.querySelectorAll('.recharts-label-list text')].map((el) => el.textContent ?? '');
+  }
+
+  it('bar form labels every point with its own formattedValue', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    const texts = labelTexts();
+    for (const value of ['40,0', '42,0', '20,0', '24,0']) expect(texts).toContain(value);
+  });
+
+  // Through the one real product path that sets a presentation value before
+  // the first paint: the signed-in account default (`withAccountDefault`).
+  it('draws no value label at all once the reader turns them off (line form)', () => {
+    render(
+      <ChartStyleProvider initial={{ valueLabels: 'hidden' }}>
+        <UserChartView spec={twoSeriesSpec()} />
+      </ChartStyleProvider>,
+    );
+    expect(labelTexts()).toEqual([]);
+  });
+
+  it('labels a line chart\'s points while they are shown (the stock default)', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(labelTexts()).toContain('42,0');
+  });
 });
 
 // (c) The lifted legend — one component, both cards.
@@ -317,6 +362,67 @@ describe('UserChartView — per-turn persistence (co-pilot phase 2)', () => {
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true'));
     expect(chartEditsActions.fetchChartEdits).not.toHaveBeenCalled();
     expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+  });
+});
+
+// Review fix round 1 (IMPORTANT 2): a stored log whose first command is a
+// DATA change, followed by commands that name the series of the spec that
+// data change produces. Before the fix, hydrate validated those later
+// commands against the spec the card happened to be showing, dropped them
+// all, and the next debounce persisted the loss.
+describe('UserChartView — hydrating a stored data edit (co-pilot phase 2)', () => {
+  const OTHER_INSTRUCTION: ClientChartInstruction = { ...LAST_INSTRUCTION, kind: 'bar' };
+
+  function storedLog() {
+    return [
+      { kind: 'setInstruction', instruction: OTHER_INSTRUCTION, summary: 'Omzet per gemeente', id: 'c1', at: '2026-09-18T00:00:00.000Z', source: 'chat' },
+      { kind: 'toggleSeries', key: 's1', id: 'c2', at: '2026-09-18T00:00:01.000Z', source: 'canvas' },
+    ];
+  }
+
+  it('renders the stored instruction\'s chart with the stored series hidden — never dropping the toggle', async () => {
+    // The card mounts on a ONE-series spec, so 's1' is invalid against it and
+    // only the freshly rendered two-series spec makes the toggle replayable.
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: twoSeriesSpec() });
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: storedLog() });
+
+    render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={spec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rotterdam' })).toHaveAttribute('aria-pressed', 'false'));
+    expect(lineCurves()).toBe(1);
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledWith(3, OTHER_INSTRUCTION);
+
+    // …and nothing writes the dropped command back to the row.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, CHART_EDITS_SAVE_DEBOUNCE_MS + 200));
+    });
+    for (const call of chartEditsActions.saveChartEdits.mock.calls) {
+      expect((call[1] as { kind: string }[]).map((c) => c.kind)).toContain('toggleSeries');
+    }
+  });
+
+  it('does not re-fire a refused instruction when the reader redoes across it', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'invalid', reason: 'zero_rows' });
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: storedLog() });
+
+    render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={spec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+
+    // The refusal line shows, the previous chart stands, and the action was
+    // called exactly once however often the instruction is revisited.
+    expect(await screen.findByText('Geen rijen voldoen aan dit filter.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(screen.queryByText('Geen rijen voldoen aan dit filter.')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    await screen.findByText('Geen rijen voldoen aan dit filter.');
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -34,14 +34,21 @@ function series(label: string): ChartSeries {
 const spec = { kind: 'line', series: [series('Nederland'), series('Utrecht')] } as unknown as ChartSpec;
 const ctx = { spec, alternatesCount: 0 };
 
-function harness(editsKey: ChartEditsKey | null) {
+function harness(
+  editsKey: ChartEditsKey | null,
+  // Co-pilot phase 2, Task 5 review: the hook now also takes a FUNCTION ctx
+  // and a `prepare` step. Both default to the phase-1 behaviour, so every
+  // test above/below is unchanged.
+  extra: { ctx?: Parameters<typeof useChartEdits>[0]['ctx']; prepare?: (log: unknown[]) => Promise<void> } = {},
+) {
   const history = useChartHistory(initialDocState('line'));
   useChartEdits({
     editsKey,
     history: history.history,
     replaceHistory: history.replace,
-    ctx,
+    ctx: extra.ctx ?? ctx,
     initial: initialDocState('line'),
+    prepare: extra.prepare as Parameters<typeof useChartEdits>[0]['prepare'],
   });
   return history;
 }
@@ -158,5 +165,47 @@ describe('useChartEdits — a key change', () => {
     for (const call of chartEditsActions.saveChartEdits.mock.calls) {
       expect(call[0]).not.toEqual({ kind: 'turn', id: 7 });
     }
+  });
+});
+
+// Review fix round 1 (IMPORTANT 2): a stored log can contain `setInstruction`,
+// after which every series/note/form command belongs to a DIFFERENT spec. Two
+// mechanisms make that replay honest, and both are pinned here.
+describe('useChartEdits — prepare + a function ctx (co-pilot phase 2)', () => {
+  it('awaits `prepare` before replaying, and writes nothing until it resolves', async () => {
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: JSON.parse(JSON.stringify(storedLog)) });
+    let release!: () => void;
+    const prepare = vi.fn(() => new Promise<void>((r) => (release = r)));
+    const { result } = renderHook(() => harness({ kind: 'turn', id: 7 }, { prepare }));
+
+    await act(async () => {});
+    expect(prepare).toHaveBeenCalledTimes(1);
+    // Not replayed yet, and — the load-bearing half — hydrate is still
+    // unsettled, so no save may go out over a log we have not applied.
+    expect(result.current.state.title).toBeNull();
+    vi.useFakeTimers();
+    act(() => result.current.dispatch({ kind: 'setForm', form: 'bar' }, 'panel'));
+    await act(() => vi.advanceTimersByTimeAsync(CHART_EDITS_SAVE_DEBOUNCE_MS * 2));
+    expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+    vi.useRealTimers();
+
+    await act(async () => {
+      release();
+    });
+    expect(result.current.state.title).toBe('Hersteld');
+  });
+
+  it('asks a function ctx once per command, with the state BEFORE that command', async () => {
+    const log = [makeCommand({ kind: 'setTitle', title: 'A' }, 'canvas'), makeCommand({ kind: 'setTitle', title: 'B' }, 'canvas')];
+    chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: JSON.parse(JSON.stringify(log)) });
+    const seen: (string | null)[] = [];
+    const ctxFn = (state: { title: string | null }) => {
+      seen.push(state.title);
+      return ctx;
+    };
+    const { result } = renderHook(() => harness({ kind: 'turn', id: 7 }, { ctx: ctxFn as never }));
+    await act(async () => {});
+    expect(seen).toEqual([null, 'A']);
+    expect(result.current.state.title).toBe('B');
   });
 });
