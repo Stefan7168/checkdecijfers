@@ -99,8 +99,15 @@ import { ChartHistoryMenu } from './chart-history-menu.tsx';
 // one history. Every READER edit below goes through `dispatchCommand`; the
 // app moving the view itself (story steps, stage mode, the spec-swap reset,
 // the embed `?form=` seed) goes through `dispatchRaw` and is never undoable.
-import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId } from '../lib/chart-commands.ts';
+import { CHART_CAPTION_MAX_LENGTH, CHART_TITLE_MAX_LENGTH, initialDocState, newCommandId, parseCommandLog } from '../lib/chart-commands.ts';
+import { replayLog, serializeHistory } from '../lib/chart-history.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
+import { fetchChartEdits, saveChartEdits } from '../app/chart-edits-actions.ts';
+
+/** Long enough that a burst of clicks (form tab, then legend, then zoom) is
+ * one write; short enough that a reader who edits and immediately reloads
+ * still gets their work back. */
+const CHART_EDITS_SAVE_DEBOUNCE_MS = 800;
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
 import { ChartFrame } from './chart-frame.tsx';
@@ -1734,6 +1741,7 @@ export function ChartView({
     undo,
     redo,
     seal: sealHistory,
+    replace: replaceHistory,
   } = useChartHistory(initialDocState(initialForm, initialPresentation));
   // #254: WHICH reading's data the chart draws — the primary `spec` prop, or
   // one of `alternates`. Computed here, above every derivation that reads
@@ -2130,6 +2138,72 @@ export function ChartView({
   // to `accountStyle`, so "Standaard" and a fresh chart both fall back to
   // THIS base, not stock).
   const { accountStyle, signedIn, setAccountStyle, brandLookupAvailable } = useChartStyle();
+
+  // Task 7 (co-pilot phase 1, ADR 056, #274): the reader's command log,
+  // saved per account against the chart's own audit row and replayed when
+  // they come back to it.
+  //
+  // ONE key decides whether this feature is live at all for this card, and
+  // every effect below starts by checking it: a signed-in, in-app chat card
+  // with a saved answer behind it. Never in embed mode (a published card is
+  // read-only and its viewer is not the author), never in the stage (a story
+  // presentation drives the view itself), never signed out (there is no
+  // account to key a row off), never without an audit id (nothing to key on
+  // at all — a gallery/preview chart).
+  const editsKey = !embedMode && !inStage && signedIn && embed?.auditId !== undefined ? embed.auditId : null;
+  /** The last log we know the server has, as JSON. Starts at `'[]'` so an
+   * untouched chart — whose serialised history is exactly `[]` — never
+   * writes an empty row just for being looked at. */
+  const lastSavedEditsRef = useRef('[]');
+  /** Read by the hydrate effect's own async continuation, so "has the reader
+   * started editing?" is answered at the moment the fetch RESOLVES rather
+   * than at the moment it was fired — without putting `history` in that
+   * effect's dependency list (which would re-fetch on every edit). */
+  const historyRef = useRef(history);
+  historyRef.current = history;
+
+  // Hydrate. Deliberately NOT applied when the reader has already started
+  // editing (`history.past.length > 0`): a slow fetch resolving after the
+  // first click must never throw away what they just did.
+  useEffect(() => {
+    if (editsKey === null) return;
+    let cancelled = false;
+    void fetchChartEdits(editsKey).then((result) => {
+      if (cancelled || !result.ok || !result.log) return;
+      const parsed = parseCommandLog(result.log);
+      if (parsed === null || historyRef.current.past.length > 0) return;
+      const replayed = replayLog(initialDocState(initialForm, initialPresentation), parsed, {
+        spec,
+        alternatesCount: alternates.length,
+      });
+      replaceHistory({ state: replayed.state, history: replayed.history });
+      // What we just restored IS what the server holds — recording it here
+      // stops the save effect below from immediately writing it straight
+      // back (and, worse, writing a REPLAYED-and-dropped log over a good one
+      // before the reader has touched anything).
+      lastSavedEditsRef.current = JSON.stringify(serializeHistory(replayed.history));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per chart identity: `editsKey` is the audit row this card belongs to, and the rest (spec/alternates/initialForm/initialPresentation) are read at resolution time via the refs/props of that same card. Re-running on a spec object identity change would re-fetch on every render.
+  }, [editsKey]);
+
+  // Save, debounced. `serializeHistory` drops a TRANSIENT (unsealed) top
+  // entry, so a colour picker mid-drag produces no write at all — the save
+  // only ever sees sealed, finished gestures.
+  useEffect(() => {
+    if (editsKey === null) return;
+    const json = JSON.stringify(serializeHistory(history));
+    if (json === lastSavedEditsRef.current) return;
+    const timer = setTimeout(() => {
+      void saveChartEdits(editsKey, JSON.parse(json) as unknown).then((result) => {
+        if (result.ok) lastSavedEditsRef.current = json;
+      });
+    }, CHART_EDITS_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [history, editsKey]);
+
   const base = withAccountDefault(accountStyle);
   const resolved = resolvePresentation(
     { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
@@ -2764,6 +2838,11 @@ export function ChartView({
     setCaptionEditing(true);
   }
   function commitCaption() {
+    // Task 5 review polish: the story lock covers the COMMIT too, not only
+    // the buttons that open the editor — an editor already open when the
+    // story starts must not be able to write through the lock (the same
+    // belt-and-braces `startTitleEdit`/`startCaptionEdit` already apply).
+    if (storyOpen) return;
     const trimmed = captionDraft.trim();
     const next = trimmed === '' ? null : trimmed;
     if (next !== state.caption) dispatchCommand({ kind: 'setCaption', caption: next }, 'canvas');
@@ -3531,7 +3610,14 @@ export function ChartView({
                 autoFocus
               />
               <div className="mt-1 flex gap-2">
-                <button type="button" onClick={commitCaption} className="text-xs font-medium text-foreground">
+                <button
+                  type="button"
+                  onClick={commitCaption}
+                  disabled={storyOpen}
+                  title={storyLockedTitle}
+                  aria-describedby={storyOpen ? storyLockId : undefined}
+                  className={'text-xs font-medium text-foreground' + (storyOpen ? ' cursor-not-allowed opacity-60' : '')}
+                >
                   {t(chartLang, 'chart.caption.save')}
                 </button>
                 <button type="button" onClick={() => setCaptionEditing(false)} className="text-xs text-muted-foreground">
@@ -3540,8 +3626,8 @@ export function ChartView({
               </div>
             </>
           ) : state.caption !== null ? (
-            <div className="flex items-center gap-1">
-              <p data-testid="chart-caption" className="mt-2 text-sm text-muted-foreground">
+            <div className="mt-2 flex items-center gap-1">
+              <p data-testid="chart-caption" className="text-sm text-muted-foreground">
                 {state.caption}
               </p>
               <Button
@@ -3687,7 +3773,15 @@ export function ChartView({
               * visible next to them). Still a spec string, so the whole-card
               * digit scan is unaffected. */}
             {state.title !== null ? (
-              <span title={t(chartLang, 'chart.title.original', { title: displaySpec.title })}>{displaySpec.title}</span>
+              <>
+                {/* Task 5 review polish: the `title` attribute is a mouse-only
+                  * affordance — a screen reader gets the bare measure name with
+                  * no hint that it is the ORIGINAL title the reader replaced.
+                  * The visible span keeps its tooltip; this sr-only sibling
+                  * says the same thing out loud. */}
+                <span title={t(chartLang, 'chart.title.original', { title: displaySpec.title })}>{displaySpec.title}</span>
+                <span className="sr-only">{t(chartLang, 'chart.title.original', { title: displaySpec.title })}</span>
+              </>
             ) : null}
             <span>{displaySpec.unit}</span>
             {/* #18 (session 110 UX audit): human labels only — the raw CBS

@@ -1,0 +1,202 @@
+// Chart co-pilot phase 1, Task 7 (session 112, ADR 056, #274): the command
+// log is saved per account and restored when the reader reopens the chart.
+//
+// Mock block and fixture copied verbatim from chart-history-ui.test.tsx (the
+// sibling Task 3 suite), plus the new `../app/chart-edits-actions.ts` mock —
+// without it chart.tsx's import would reach the real Server Action module in
+// jsdom. `signedIn` is the PRESENCE of ChartStyleProvider, not a prop
+// (web/lib/chart-style-context.tsx's module header), so the `Provider`
+// helper below wraps or doesn't.
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
+import type { ChartSpec } from '../backend/chart/types.ts';
+
+const chartHeadlineActions = vi.hoisted(() => ({
+  draftChartHeadline: vi.fn(),
+  saveChartHeadline: vi.fn(),
+  fetchChartHeadline: vi.fn().mockResolvedValue({ ok: true, headline: null }),
+}));
+vi.mock('../app/chart-headline-actions.ts', () => chartHeadlineActions);
+const chartEditsActions = vi.hoisted(() => ({
+  fetchChartEdits: vi.fn().mockResolvedValue({ ok: true, log: null }),
+  saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
+const chartInsightsActions = vi.hoisted(() => ({
+  generateInsights: vi.fn().mockResolvedValue({ ok: true, phrased: {} }),
+}));
+vi.mock('../app/chart-insights-actions.ts', () => chartInsightsActions);
+const chartStyleActions = vi.hoisted(() => ({
+  saveMyChartStyle: vi.fn(),
+  forgetMyChartStyle: vi.fn(),
+  lookupBrand: vi.fn(),
+}));
+vi.mock('../app/chart-style-actions.ts', () => chartStyleActions);
+const { createEmbedCode } = vi.hoisted(() => ({ createEmbedCode: vi.fn() }));
+vi.mock('../app/embed-actions.ts', () => ({ createEmbedCode }));
+
+import { ChartView } from './chart.tsx';
+
+function point(overrides: Partial<ChartSpec['series'][0]['points'][0]> = {}) {
+  return {
+    resultId: 'r1',
+    periodCode: '2024JJ00',
+    periodLabel: '2024',
+    value: 42,
+    formattedValue: '42,0',
+    decimals: 1,
+    status: 'Definitief',
+    provisional: false,
+    valueAttribute: 'None',
+    ...overrides,
+  };
+}
+
+function twoSeriesLineSpec(): ChartSpec {
+  return {
+    schemaVersion: 1,
+    kind: 'line',
+    title: 'Testreeks',
+    dims: { Kenmerk: '000000' },
+    dimLabels: { Kenmerk: 'Alle kenmerken' },
+    unit: '%',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: null,
+        points: [
+          point({ resultId: 'nl-2020', periodCode: '2020', periodLabel: '2020', value: 100, formattedValue: '100' }),
+          point({ resultId: 'nl-2021', periodCode: '2021', periodLabel: '2021', value: 110, formattedValue: '110' }),
+        ],
+      },
+      {
+        label: 'Utrecht',
+        regionCode: 'GM0344',
+        points: [
+          point({ resultId: 'ut-2020', periodCode: '2020', periodLabel: '2020', value: 50, formattedValue: '50' }),
+          point({ resultId: 'ut-2021', periodCode: '2021', periodLabel: '2021', value: 55, formattedValue: '55' }),
+        ],
+      },
+    ],
+    provisionalNote: null,
+    nullNotes: [],
+    definitionLine: null,
+    attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+    attribution: {
+      tableId: '12345NED',
+      tableTitle: 'Test',
+      tableVersion: 1,
+      syncedAt: '2026-07-01',
+      coveredPeriods: { from: '2020', to: '2024' },
+      license: 'CC BY 4.0',
+    },
+  };
+}
+
+function Provider({ signedIn = true, children }: { signedIn?: boolean; children: React.ReactNode }) {
+  return signedIn ? <ChartStyleProvider initial={{}}>{children}</ChartStyleProvider> : <>{children}</>;
+}
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: null });
+  chartEditsActions.saveChartEdits.mockResolvedValue({ ok: true });
+  chartHeadlineActions.fetchChartHeadline.mockResolvedValue({ ok: true, headline: null });
+});
+
+describe('chart_edits persistence', () => {
+  it('a saved log is replayed on mount and stays undoable', async () => {
+    chartEditsActions.fetchChartEdits.mockResolvedValueOnce({
+      ok: true,
+      log: [{ kind: 'setForm', form: 'bar', id: 'a', at: '2026-09-18T00:00:00.000Z', source: 'panel' }],
+    });
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: /Staaf|Bar/ })).toHaveAttribute('aria-selected', 'true'),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: /Lijn|Line/ })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('an invalid stored command is dropped, the rest applied', async () => {
+    chartEditsActions.fetchChartEdits.mockResolvedValueOnce({
+      ok: true,
+      log: [
+        { kind: 'toggleSeries', key: 's9', id: 'x', at: 'now', source: 'panel' },
+        { kind: 'setTitle', title: 'Hersteld', id: 'y', at: 'now', source: 'canvas' },
+      ],
+    });
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Hersteld'));
+  });
+
+  it('an edit is saved once, debounced, with the serialised log; undo saves the shorter log', async () => {
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    // Let the hydrate effect settle (it resolves `{ log: null }`) before the
+    // fake clock takes over, so no real-timer promise is left pending.
+    await waitFor(() => expect(chartEditsActions.fetchChartEdits).toHaveBeenCalled());
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole('tab', { name: /Staaf|Bar/ }));
+      fireEvent.click(screen.getByRole('tab', { name: /Lijn|Line/ }));
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(1);
+      const [id, log] = chartEditsActions.saveChartEdits.mock.calls[0]!;
+      expect(id).toBe(5);
+      expect((log as { kind: string }[]).map((c) => c.kind)).toEqual(['setForm', 'setForm']);
+      fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+      await act(() => vi.advanceTimersByTimeAsync(1000));
+      expect(chartEditsActions.saveChartEdits).toHaveBeenCalledTimes(2);
+      expect((chartEditsActions.saveChartEdits.mock.calls[1]![1] as unknown[]).length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never fetches or saves when signed out, in embed mode, or without an audit id', async () => {
+    render(
+      <Provider signedIn={false}>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embedMode embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} />
+      </Provider>,
+    );
+    fireEvent.click(screen.getAllByRole('tab', { name: /Staaf|Bar/ })[0]!);
+    await act(() => new Promise((r) => setTimeout(r, 900)));
+    expect(chartEditsActions.fetchChartEdits).not.toHaveBeenCalled();
+    expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+  });
+
+  it('an untouched chart never saves an empty log', async () => {
+    render(
+      <Provider>
+        <ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 5 }} />
+      </Provider>,
+    );
+    await act(() => new Promise((r) => setTimeout(r, 900)));
+    expect(chartEditsActions.fetchChartEdits).toHaveBeenCalledWith(5);
+    expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+  });
+});

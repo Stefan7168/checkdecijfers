@@ -20,6 +20,14 @@ const chartHeadlineActions = vi.hoisted(() => ({
   fetchChartHeadline: vi.fn().mockResolvedValue({ ok: true, headline: null }),
 }));
 vi.mock('../app/chart-headline-actions.ts', () => chartHeadlineActions);
+// Task 7 (co-pilot phase 1): chart.tsx imports the chart_edits Server Action
+// module directly — without this mock the real module (and its db/auth
+// imports) would load in jsdom.
+const chartEditsActions = vi.hoisted(() => ({
+  fetchChartEdits: vi.fn().mockResolvedValue({ ok: true, log: null }),
+  saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
 const chartInsightsActions = vi.hoisted(() => ({
   generateInsights: vi.fn().mockResolvedValue({ ok: true, phrased: {} }),
 }));
