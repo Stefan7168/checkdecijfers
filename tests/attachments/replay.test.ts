@@ -147,6 +147,47 @@ describe('replayDatasetTurns — pure function', () => {
     expect(replayDatasetTurns([record])[1]).toMatchObject({ kind: 'chart', turnId: 9 });
   });
 
+  // Co-pilot phase 2 (session 113, Task 8): a chart envelope carrying a
+  // `copilot` record is the READER's OWN edit of an earlier chart, not a new
+  // chart. It replays as one compact `edit` message (the recipe chips in the
+  // thread) — never a second chart card, whose edits already live on the
+  // target turn's own card.
+  it('replays a copilot chart envelope as an edit message, never a chart message', () => {
+    const record = baseRecord({
+      id: 12,
+      kind: 'chart',
+      question: 'maak er een staafdiagram van',
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'maak er een staafdiagram van',
+        text: 'Twee dingen aangepast.',
+        instruction: CHART_INSTRUCTION,
+        chart: CHART_SPEC,
+        state: { datasetId: 1, lastInstruction: { ...CHART_INSTRUCTION, unsupported: null } },
+        copilot: {
+          message: 'maak er een staafdiagram van',
+          commands: [{ kind: 'setForm', form: 'bar' }],
+          refused: [{ request: 'kleur van de lijn', reason: 'not_available', control: 'style' }],
+          targetTurnId: 7,
+          feedback: null,
+        },
+      },
+    });
+    expect(replayDatasetTurns([record])).toEqual([
+      { role: 'user', text: 'maak er een staafdiagram van' },
+      {
+        role: 'assistant',
+        kind: 'edit',
+        text: 'Twee dingen aangepast.',
+        commands: [{ kind: 'setForm', form: 'bar' }],
+        refused: [{ request: 'kleur van de lijn', reason: 'not_available', control: 'style' }],
+        targetTurnId: 7,
+        turnId: 12,
+      },
+    ]);
+  });
+
   it('upgrades a stored v1 lastInstruction to v2 (a pre-schema-v2 row)', () => {
     const v1LastInstruction = { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null };
     const record = baseRecord({

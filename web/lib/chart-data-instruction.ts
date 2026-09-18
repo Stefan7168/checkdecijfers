@@ -53,23 +53,34 @@ const COUNT_KEYS: readonly MessageKey[] = [
 /** A maximal digit run, as in src/attachments/copilot/text-guard.ts. */
 const DIGIT_RUN = /[0-9][0-9.,]*/g;
 
+/** Any reader-supplied string (a column header, a series label), with every
+ * digit run taken out — the one place that rule lives, so the Data panel's
+ * summaries and the chat's example chips strip identically. Empty when
+ * nothing but digits was there. */
+export function digitFree(text: string): string {
+  return text.replace(DIGIT_RUN, ' ').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * A column's header, digit-free. The reader's own file supplies these
  * headers, and one like "Omzet 2024" would make the whole summary invalid
  * (the digit rule above) — so the digits come out of the LABEL, never out of
  * the numbers on the chart. A header that was nothing but digits falls back
  * to the generic word.
+ *
+ * Exported since Task 8: the chat doorway's example chips name a column too
+ * ("Totaal per <header>") and owe the reader the SAME digit-free label.
  */
-function headerFor(id: ColumnId | null, profile: DatasetProfile, lang: Lang): string {
+export function columnHeaderLabel(id: ColumnId | null, profile: DatasetProfile, lang: Lang): string {
   const column = id === null ? undefined : profile.columns.find((c) => c.id === id);
-  const stripped = (column?.header ?? '').replace(DIGIT_RUN, ' ').replace(/\s+/g, ' ').trim();
+  const stripped = digitFree(column?.header ?? '');
   return stripped.length === 0 ? t(lang, 'chart.data.summary.column') : stripped;
 }
 
 function valuePart(i: ClientChartInstruction, profile: DatasetProfile, lang: Lang): string {
-  const a = headerFor(i.y[0] ?? null, profile, lang);
+  const a = columnHeaderLabel(i.y[0] ?? null, profile, lang);
   if (i.derived !== null) {
-    const b = headerFor(i.derived.b, profile, lang);
+    const b = columnHeaderLabel(i.derived.b, profile, lang);
     switch (i.derived.op) {
       case 'difference':
         return t(lang, 'chart.data.summary.difference', { a, b });
@@ -87,7 +98,7 @@ function valuePart(i: ClientChartInstruction, profile: DatasetProfile, lang: Lan
     if (i.aggregate.fn === 'count') return t(lang, AGGREGATE_KEYS.count);
     return t(lang, 'chart.data.summary.aggregate', { fn: t(lang, AGGREGATE_KEYS[i.aggregate.fn]), y: a });
   }
-  return i.y.map((id) => headerFor(id, profile, lang)).join(' + ');
+  return i.y.map((id) => columnHeaderLabel(id, profile, lang)).join(' + ');
 }
 
 function sortPart(i: ClientChartInstruction, profile: DatasetProfile, lang: Lang): string | null {
@@ -95,7 +106,7 @@ function sortPart(i: ClientChartInstruction, profile: DatasetProfile, lang: Lang
   if (i.sort.by === 'value') {
     return t(lang, i.sort.direction === 'desc' ? 'chart.data.summary.highestFirst' : 'chart.data.summary.lowestFirst');
   }
-  const col = i.sort.by === 'x' ? headerFor(i.x, profile, lang) : headerFor(i.sort.by, profile, lang);
+  const col = i.sort.by === 'x' ? columnHeaderLabel(i.x, profile, lang) : columnHeaderLabel(i.sort.by, profile, lang);
   return t(lang, i.sort.direction === 'asc' ? 'chart.data.summary.sortAsc' : 'chart.data.summary.sortDesc', { col });
 }
 
@@ -113,10 +124,10 @@ function limitPart(limit: number | null, lang: Lang): string | null {
  * things `validateCommand`'s `setInstruction` arm insists on.
  */
 export function summarizeInstruction(i: ClientChartInstruction, profile: DatasetProfile, lang: Lang): string {
-  const parts: string[] = [`${valuePart(i, profile, lang)} ${t(lang, 'chart.data.summary.by', { x: headerFor(i.x, profile, lang) })}`];
-  if (i.seriesBy !== null) parts.push(t(lang, 'chart.data.summary.splitBy', { s: headerFor(i.seriesBy, profile, lang) }));
+  const parts: string[] = [`${valuePart(i, profile, lang)} ${t(lang, 'chart.data.summary.by', { x: columnHeaderLabel(i.x, profile, lang) })}`];
+  if (i.seriesBy !== null) parts.push(t(lang, 'chart.data.summary.splitBy', { s: columnHeaderLabel(i.seriesBy, profile, lang) }));
   if (i.filters.length > 0) {
-    const cols = i.filters.map((f) => headerFor(f.column, profile, lang)).join(' + ');
+    const cols = i.filters.map((f) => columnHeaderLabel(f.column, profile, lang)).join(' + ');
     parts.push(t(lang, 'chart.data.summary.filtered', { cols }));
   }
   const sort = sortPart(i, profile, lang);

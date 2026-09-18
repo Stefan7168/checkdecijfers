@@ -25,12 +25,21 @@
 // (the Data panel) and Task 8 (the chat input); this file owns the effect
 // that turns an instruction into a spec, and the mount points those doorways
 // plug into.
+//
+// Task 8 adds doorway B, "Pas deze grafiek aan": ONE credited call per typed
+// message (`adjustDatasetChart`), zero for the example chips, for Undo and
+// for the 👍/👎. What comes back is a recipe, not a rendering: every stored
+// command is re-validated here against the NEW chart (`acceptReply`) before
+// it is dispatched with `source: 'chat'` into the SAME history the panel and
+// the canvas write to — so one Undo, one saved log, one story of who changed
+// what.
 'use client';
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
+import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import {
   LINE_WIDTH_PX,
@@ -45,6 +54,8 @@ import {
 } from '../lib/chart-presentation.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
+import { exampleChips, ownDataCapabilities } from '../lib/chart-capabilities.ts';
+import { acceptReply, type ChipOpens } from '../lib/chart-copilot-reply.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import {
@@ -73,6 +84,7 @@ import {
   type SeriesMeta,
 } from './chart.tsx';
 import { ChartConfigTrigger } from './chart-config-trigger.tsx';
+import { ChartCopilotInput, type CopilotReply } from './chart-copilot-input.tsx';
 import { ChartDataPanel, ChartDataTrigger } from './chart-data-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartEditableText } from './chart-editable-text.tsx';
@@ -521,6 +533,133 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     selectForm(order[(idx + dir + order.length) % order.length]!);
   }
 
+  // --- the chat doorway (Task 8) -------------------------------------------
+  // Doorway B, with the same prerequisite as the Data panel: no profile, no
+  // instruction, no chat (there would be nothing to validate a data command
+  // against — the ADR 037 D11 guard).
+  const [copilotBusy, setCopilotBusy] = useState(false);
+  const [copilotReply, setCopilotReply] = useState<CopilotReply | null>(null);
+  const [copilotError, setCopilotError] = useState<string | null>(null);
+  /** The notes strip, so a "Notities" chip can put the reader there. */
+  const notesRef = useRef<HTMLDivElement>(null);
+
+  function openCopilotTarget(target: ChipOpens): void {
+    if (target === 'data') setDataOpen(true);
+    else if (target === 'style') setStyleOpen(true);
+    else if (target === 'form') tabRefs.current[activeForm]?.focus();
+    else if (target === 'notes') notesRef.current?.focus();
+  }
+
+  /** The reply, accepted. Every branch ends in ONE `copilotReply` or ONE
+   * error line — never both, and never a chart this card did not validate. */
+  function applyCopilotOutcome(message: string, outcome: AdjustDatasetChartOutcome): void {
+    if (outcome.kind === 'unauthenticated') {
+      setCopilotError(t(chartLang, 'common.sessionExpired'));
+      return;
+    }
+    if (outcome.kind === 'duplicate_request') {
+      // The same requestId was already settled, so there is no envelope to
+      // apply — and unlike a question turn (DatasetChat swallows this one)
+      // the reader is looking at a chart that may already carry the edit.
+      // Say so rather than leaving the send look like it did nothing.
+      setCopilotError(t(chartLang, 'chart.copilot.error.duplicate'));
+      return;
+    }
+    if (outcome.kind === 'insufficient_credits') {
+      setCopilotError(t(chartLang, 'datasetChat.insufficientCredits', { required: outcome.required, balance: outcome.balance }));
+      return;
+    }
+    if (outcome.kind === 'not_found' || outcome.kind === 'needs_decision') {
+      setCopilotError(t(chartLang, 'datasetChat.notFound'));
+      return;
+    }
+    const envelope = outcome.envelope;
+    // `canUndo` is recomputed per render at the mount point; `false` here is
+    // just the initial value for a reply with nothing to undo.
+    const base = { text: envelope.text, turnId: outcome.auditId, netCost: outcome.netCost, message, undone: false, canUndo: false };
+    if (envelope.kind !== 'chart' || envelope.copilot === undefined) {
+      // A clarification or a refusal: the turn's own deterministic text, and
+      // nothing to apply.
+      setCopilotReply({ ...base, applied: [], refused: [], dropped: 0, commandIds: [] });
+      return;
+    }
+    // The chart the reply's own `setInstruction` draws came WITH the envelope,
+    // so it goes into the cache BEFORE anything is dispatched — the render
+    // effect then hits the cache instead of making a second (free, but
+    // pointless) round trip for a chart we already hold.
+    //
+    // KEY EQUALITY, relied on here: `envelope.state.lastInstruction` and the
+    // stored `setInstruction.instruction` are the SAME value — copilot/
+    // respond.ts builds both from one `toClientInstruction(next)` call — and
+    // `instructionKey` is JSON.stringify, so their field order (fixed by that
+    // one function) matches too. If the two ever diverge the effect simply
+    // misses the cache and re-renders deterministically, so this is a
+    // performance assumption, never a correctness one.
+    cacheRef.current.set(instructionKey(envelope.state.lastInstruction), envelope.chart);
+    const ctx: CommandContext = { spec: toCommandSpec(envelope.chart), alternatesCount: 0, profile };
+    const { applied, dropped } = acceptReply(envelope.copilot.commands, ctx, chartLang);
+    // `source: 'chat'` — the history menu shows WHICH doorway made each
+    // change, and the ids are what one "undo this reply" walks back.
+    const commandIds = applied.map((chip) => dispatch(chip.command, 'chat'));
+    setCopilotReply({ ...base, applied, refused: envelope.copilot.refused, dropped, commandIds });
+  }
+
+  async function sendToCopilot(message: string): Promise<void> {
+    if (edit === undefined || state.instruction === null || copilotBusy) return;
+    setCopilotBusy(true);
+    setCopilotError(null);
+    setCopilotReply(null);
+    try {
+      const outcome = await adjustDatasetChart(
+        edit.datasetId,
+        edit.threadId,
+        edit.turnId,
+        message,
+        // One fresh id per submit — so a Retry is a genuinely new turn rather
+        // than a replay of the charged one (chat.tsx's own convention).
+        crypto.randomUUID(),
+        state.instruction,
+        ownDataCapabilities({ spec: plottable, form: activeForm, seriesCount, applicable: resolved.applicable, lang: chartLang }),
+      );
+      applyCopilotOutcome(message, outcome);
+    } catch {
+      setCopilotError(t(chartLang, 'chart.copilot.error.failed'));
+    } finally {
+      setCopilotBusy(false);
+    }
+  }
+
+  /** Whether the group Undo would still do anything: the top of the history
+   * has to be one of THIS reply's own commands. Recomputed every render, so a
+   * change the reader makes afterwards disables the button (with its reason)
+   * instead of leaving one that silently does nothing. */
+  function replyIsUndoable(reply: CopilotReply): boolean {
+    if (reply.undone || reply.commandIds.length === 0) return false;
+    const top = history.past[history.past.length - 1];
+    return top !== undefined && reply.commandIds.includes(top.command.id);
+  }
+
+  /** One Undo for the whole reply: walk back exactly the trailing run of
+   * commands THIS reply dispatched, so a change the reader made afterwards is
+   * never swept away with it. The chips then stay as a struck-through record
+   * of what the reply had done; its text, Retry and the vote stay too. */
+  function undoCopilotReply(ids: string[]): void {
+    let n = 0;
+    for (let i = history.past.length - 1; i >= 0 && ids.includes(history.past[i]!.command.id); i--) n++;
+    if (n === 0) return;
+    for (; n > 0; n--) undo();
+    setCopilotReply((reply) => (reply === null ? null : { ...reply, undone: true }));
+  }
+
+  /** Which doorway a reply chip can actually open right now. Tabel form
+   * mounts neither the Style panel nor the notes strip, so a chip pointing
+   * at either must not look clickable there. */
+  function copilotCanOpen(target: ChipOpens): boolean {
+    if (target === 'none') return false;
+    if (target === 'style' || target === 'notes') return activeForm !== 'table';
+    return true;
+  }
+
   // --- the plot ------------------------------------------------------------
   const endpointsByKey = new Map<string, SeriesEndpoints>(
     plottable.series.map((series, i): [string, SeriesEndpoints] => {
@@ -899,20 +1038,24 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         </>
       ) : null}
       {activeForm !== 'table' ? (
-        <ChartNotes
-          notes={visibleNotes}
-          pendingPoint={pendingPoint}
-          idPrefix={domId}
-          lang={chartLang}
-          onSave={(text) => {
-            if (!pendingPoint) return;
-            const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
-            dispatch({ kind: 'addNote', note }, 'canvas');
-            setPendingPoint(null);
-          }}
-          onCancelPending={() => setPendingPoint(null)}
-          onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
-        />
+        // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
+        // focuses (Task 8) — the strip itself has no single control to aim at.
+        <div ref={notesRef} tabIndex={-1} className="outline-none">
+          <ChartNotes
+            notes={visibleNotes}
+            pendingPoint={pendingPoint}
+            idPrefix={domId}
+            lang={chartLang}
+            onSave={(text) => {
+              if (!pendingPoint) return;
+              const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
+              dispatch({ kind: 'addNote', note }, 'canvas');
+              setPendingPoint(null);
+            }}
+            onCancelPending={() => setPendingPoint(null)}
+            onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
+          />
+        </div>
       ) : null}
       <ChartEditableText
         value={state.caption}
@@ -928,6 +1071,34 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         as="p"
         className="text-sm text-muted-foreground"
       />
+      {/* Doorway B, directly under the caption (Task 8). OUTSIDE
+        * `containerRef` like everything the reader wrote, so the one figure
+        * it can show — the turn's credit cost — never enters an export. */}
+      {dataEdit !== null ? (
+        <ChartCopilotInput
+          lang={chartLang}
+          busy={copilotBusy}
+          examples={exampleChips({
+            instruction: dataEdit.instruction,
+            profile: dataEdit.profile,
+            spec: activeSpec,
+            state,
+            lang: chartLang,
+          })}
+          reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
+          error={copilotError}
+          onSend={(message) => void sendToCopilot(message)}
+          onUndoReply={undoCopilotReply}
+          // A retry is the same words with a NEW requestId — a new turn, and
+          // a new charge; the control says so in words.
+          onRetry={(message) => void sendToCopilot(message)}
+          // Returned, not fired and forgotten: the strip only says "thanks"
+          // once the action confirms the vote landed.
+          onFeedback={(turnId, vote) => submitCopilotFeedback(turnId, vote)}
+          onOpen={openCopilotTarget}
+          canOpen={copilotCanOpen}
+        />
+      ) : null}
       {/* Under the plot, above the Style region — and available in Tabel form
         * too: WHICH data is drawn is orthogonal to how it is shown. */}
       {dataEdit !== null ? (

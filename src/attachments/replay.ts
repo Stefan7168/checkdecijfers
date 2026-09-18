@@ -14,7 +14,14 @@
 // redacted row replays as ONE placeholder message, never a user+assistant
 // pair (mirrors CBS's ⟨A7⟩), and `lastChartState` skips redacted rows when
 // scanning backward for the last chart turn's refinement referent.
-import { upgradeInstruction, type ClientChartInstruction, type DatasetTurnRecord, type UserChartSpec } from './types.ts';
+import {
+  upgradeInstruction,
+  type ClientChartInstruction,
+  type CopilotCommand,
+  type CopilotRefusal,
+  type DatasetTurnRecord,
+  type UserChartSpec,
+} from './types.ts';
 
 export type DatasetChatMessage =
   | { role: 'user'; text: string }
@@ -24,6 +31,22 @@ export type DatasetChatMessage =
    * a stored row behind it (a freshly-sent turn whose audit insert produced
    * no id, `AuditedDatasetTurn.auditId`); a replayed row always has one. */
   | { role: 'assistant'; kind: 'chart'; text: string; chart: UserChartSpec; lastInstruction: ClientChartInstruction; turnId: number | null }
+  /** Co-pilot phase 2 (session 113, Task 8): the reader's OWN edit of an
+   * earlier chart, replayed as one compact message — the recipe chips, not a
+   * second chart card. The edits themselves already live on the TARGET
+   * turn's card (its saved command log), so re-rendering a chart here would
+   * show the same chart twice and invite a second, divergent edit history.
+   * `dock-visuals.ts`'s `datasetMessageHasVisual` is false for this kind for
+   * exactly that reason. */
+  | {
+      role: 'assistant';
+      kind: 'edit';
+      text: string;
+      commands: CopilotCommand[];
+      refused: CopilotRefusal[];
+      targetTurnId: number;
+      turnId: number;
+    }
   | { role: 'assistant'; kind: 'clarification'; text: string; options: string[] }
   | { role: 'assistant'; kind: 'refusal'; text: string; guidance: string | null }
   | { role: 'redacted' };
@@ -36,6 +59,15 @@ function isRedacted(envelope: DatasetTurnRecord['envelope']): boolean {
 
 function assistantMessage(envelope: LiveEnvelope, turnId: number): DatasetChatMessage {
   if (envelope.kind === 'chart') {
+    // A `copilot` record is what distinguishes an EDIT turn from a chart
+    // turn: same envelope kind (one chart was executed either way), but this
+    // one was produced by the card's own chat doorway against an existing
+    // chart. Checked FIRST, so an edit can never fall through to the chart
+    // branch and mint a duplicate card.
+    if (envelope.copilot !== undefined) {
+      const { commands, refused, targetTurnId } = envelope.copilot;
+      return { role: 'assistant', kind: 'edit', text: envelope.text, commands, refused, targetTurnId, turnId };
+    }
     return {
       role: 'assistant',
       kind: 'chart',

@@ -48,7 +48,11 @@ export interface UseChartHistory {
   history: ChartHistory;
   canUndo: boolean;
   canRedo: boolean;
-  dispatch: (params: ChartCommandParams, source: ChartCommandSource, opts?: { transient?: boolean }) => void;
+  /** Returns the id minted for this command. Co-pilot phase 2 (session 113,
+   * Task 8): the chat doorway dispatches a whole reply's worth of commands
+   * and needs their ids to offer ONE "undo this reply"; every other caller
+   * ignores the return. */
+  dispatch: (params: ChartCommandParams, source: ChartCommandSource, opts?: { transient?: boolean }) => string;
   dispatchRaw: (action: ChartViewAction) => void;
   undo: () => void;
   redo: () => void;
@@ -61,7 +65,9 @@ export function useChartHistory(initial: ChartDocState): UseChartHistory {
   // id/at are minted HERE (impure), never inside the reducer — React may
   // run a reducer twice in StrictMode and the two runs must agree.
   const dispatch = useCallback<UseChartHistory['dispatch']>((params, source, opts) => {
-    send({ type: 'command', command: makeCommand(params, source), transient: opts?.transient === true });
+    const command = makeCommand(params, source);
+    send({ type: 'command', command, transient: opts?.transient === true });
+    return command.id;
   }, []);
   const dispatchRaw = useCallback((action: ChartViewAction) => send({ type: 'raw', action }), []);
   const undo = useCallback(() => send({ type: 'undo' }), []);
