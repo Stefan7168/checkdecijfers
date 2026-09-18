@@ -1730,7 +1730,7 @@ export function ChartConfigPanel({
                       <FrameHexField
                         key={bg.hex}
                         value={bg.hex}
-                        onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'solid', hex } })}
+                        onCommit={(hex, meta) => tryFrameChange({ frameBackground: { kind: 'solid', hex } }, meta)}
                         onSeal={onSeal}
                         ariaLabelHex={`${copy.frameBackground} (hex)`}
                         ariaLabelPicker={copy.frameBackground}
@@ -1775,7 +1775,7 @@ export function ChartConfigPanel({
                           <FrameHexField
                             key={`from-${bg.from}`}
                             value={bg.from}
-                            onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } })}
+                            onCommit={(hex, meta) => tryFrameChange({ frameBackground: { kind: 'gradient', from: hex, to: bg.to } }, meta)}
                             onSeal={onSeal}
                             ariaLabelHex={`${copy.frameFrom} (hex)`}
                             ariaLabelPicker={copy.frameFrom}
@@ -1784,7 +1784,7 @@ export function ChartConfigPanel({
                           <FrameHexField
                             key={`to-${bg.to}`}
                             value={bg.to}
-                            onCommit={(hex) => tryFrameChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } })}
+                            onCommit={(hex, meta) => tryFrameChange({ frameBackground: { kind: 'gradient', from: bg.from, to: hex } }, meta)}
                             onSeal={onSeal}
                             ariaLabelHex={`${copy.frameTo} (hex)`}
                             ariaLabelPicker={copy.frameTo}

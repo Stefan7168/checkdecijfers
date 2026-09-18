@@ -1505,6 +1505,28 @@ describe('ChartConfigPanel — Frame tab', () => {
     expect(onChange).toHaveBeenCalledWith({ frameBackground: { kind: 'solid', hex: '#8884d8' } });
   });
 
+  // Co-pilot phase 1 (fix round 2): the Frame tab's colour fields must mark
+  // a picker drag `transient` exactly like the Kleuren tab's per-series rows
+  // do — otherwise dragging the frame background leaves one undo entry per
+  // pointer tick. The hex-box path directly above stays a plain
+  // one-argument call: it is a single, deliberate commit, not a drag.
+  it('the frame background picker marks its change transient; the hex box does not', () => {
+    const onChange = vi.fn();
+    render(
+      <Harness
+        resolved={resolvePresentation(lineCtx, { frameBackground: { kind: 'solid', hex: '#ffffff' }, frameInset: 'small' })}
+        seriesMeta={colorMeta}
+        onChange={onChange}
+        onReset={vi.fn()}
+        idPrefix="fr12b"
+      />,
+    );
+    openFrameTab();
+    const picker = screen.getByLabelText('Achtergrond', { selector: 'input[type="color"]' }) as HTMLInputElement;
+    fireEvent.change(picker, { target: { value: '#8884d8' } });
+    expect(onChange).toHaveBeenCalledWith({ frameBackground: { kind: 'solid', hex: '#8884d8' } }, { transient: true });
+  });
+
   it('Own image: a 3 MB file is refused now that the limit is 2 MB', () => {
     const onChange = vi.fn();
     const onFrameImage = vi.fn();
