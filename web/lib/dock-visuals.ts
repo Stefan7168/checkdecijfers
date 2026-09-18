@@ -18,6 +18,9 @@ import { extendsPreviousChart } from './chat-message.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { UserChartEditContext } from '../components/user-chart.tsx';
+import type { ChartDocState } from './chart-commands.ts';
+import type { ChartForm } from './chart-view-state.ts';
+import type { PresentationOverrides } from './chart-presentation.ts';
 
 /** One dockable visual. `chart`/`card`/`userChart` carry the payload verbatim
  * so the dock renders the SAME ChartView/StatCard/UserChartView components,
@@ -82,6 +85,13 @@ export interface DockVisual {
    * a hand-built DockVisual (tests) — optional so every existing call site
    * and fixture stays byte-identical. */
   extendsPrevious?: boolean;
+  /** Co-pilot phase 3 fix round (session 114): the same "continuing chart
+   * mounts in the previous card's form/look" seed the in-flow bubble gets
+   * (chat.tsx), threaded onto the docked tab too — same `undefined`-means-
+   * "mount plainly" contract, same reason it's optional (every existing
+   * call site and hand-built test fixture stays byte-identical). */
+  initialFormOverride?: ChartForm;
+  initialPresentation?: PresentationOverrides;
 }
 
 const QUESTION_MAX_LENGTH = 48;
@@ -127,7 +137,17 @@ export function datasetMessageHasVisual(message: DatasetChatMessage): boolean {
  * "this asks for other data" reply can hand off a follow-up question the
  * same way the in-flow bubble does. Omitted call sites (every one before
  * this task) get `undefined`, identical to before this prop existed. */
-export function deriveVisuals(messages: ChatMessage[], onAskFollowUp?: (message: string) => void): DockVisual[] {
+export function deriveVisuals(
+  messages: ChatMessage[],
+  onAskFollowUp?: (message: string) => void,
+  /** Co-pilot phase 3 fix round (session 114): chat.tsx's own `chartSeeds`
+   * state, keyed by the SAME auditId `embed.auditId`/`FeedbackButtons` etc.
+   * already key on — so the docked tab seeds from the identical fold the
+   * in-flow bubble does, never a second computation. Omitted (every call
+   * site before this fix, and every test) ⇒ every visual mounts plainly,
+   * byte-identical to before this parameter existed. */
+  chartSeeds?: Record<number, Pick<ChartDocState, 'form' | 'presentation'>>,
+): DockVisual[] {
   const visuals: DockVisual[] = [];
   let chartCount = 0;
   let cardCount = 0;
@@ -140,6 +160,7 @@ export function deriveVisuals(messages: ChatMessage[], onAskFollowUp?: (message:
     if (message.role !== 'assistant') return;
     if (message.chart !== null) {
       chartCount += 1;
+      const seed = message.auditId !== null ? chartSeeds?.[message.auditId] : undefined;
       visuals.push({
         id: visualId(index),
         kind: 'chart',
@@ -153,6 +174,8 @@ export function deriveVisuals(messages: ChatMessage[], onAskFollowUp?: (message:
         auditId: message.auditId,
         userChartEdit: null,
         onAskFollowUp,
+        initialFormOverride: seed?.form,
+        initialPresentation: seed?.presentation,
         extendsPrevious: extendsPreviousChart(messages, index),
       });
     } else if (message.card !== null) {

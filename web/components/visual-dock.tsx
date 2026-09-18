@@ -118,6 +118,8 @@ export function VisualDock({
             embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
             onAskFollowUp={active.onAskFollowUp}
             extendsPrevious={active.extendsPrevious}
+            initialFormOverride={active.initialFormOverride}
+            initialPresentation={active.initialPresentation}
           />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
           <UserChartView spec={active.userChart} edit={active.userChartEdit ?? undefined} />

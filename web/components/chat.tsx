@@ -43,12 +43,21 @@ import { statCardData } from '../lib/stat-card-data.ts';
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
 // SAME messages this live path appends — byte-identity by construction.
 import type { AnswerView, ChatMessage } from '../lib/chat-message.ts';
-import { extendsPreviousChart, messageKind } from '../lib/chat-message.ts';
+import { extendsPreviousChart, messageKind, previousCompatibleChartIndex } from '../lib/chat-message.ts';
 // Co-pilot phase 3 (session 114, Task 3): re-exported here (defined in
 // chat-message.ts, a pure leaf dock-visuals.ts also imports) so this
 // component's own test can import it the way it imports everything else
 // chat-specific, without chat.tsx and dock-visuals.ts importing each other.
 export { extendsPreviousChart };
+// Co-pilot phase 3 fix round (session 114): a continuing chart's own seed —
+// mounts wearing the earlier compatible card's form/presentation instead of
+// plainly. Zero LLM calls: the reader's OWN previously-saved command log
+// (chart-edits-actions.ts) is fetched, parsed and folded — the exact same
+// mechanism ChartView's own useChartEdits hook already uses to restore a
+// single card's edits, just applied here to seed a NEW card before mount.
+import { fetchChartEdits } from '../app/chart-edits-actions.ts';
+import { applyCommand, initialDocState, parseCommandLog, type ChartDocState } from '../lib/chart-commands.ts';
+import { defaultFormFor } from '../lib/chart-view-state.ts';
 // WP135 (ADR 033 D4): the right-pane dock derives its tabs from these same
 // messages; Chat renders an in-flow reference chip (instead of the inline
 // visual) when the dock is active, using the SAME id scheme the dock does.
@@ -444,6 +453,19 @@ export function Chat({
   // 'ok' response with no honest referent, e.g. a clarification) leaves the
   // held context untouched, so a smalltalk/refusal detour never erases it.
   const [context, setContext] = useState<ConversationContext | null>(initialContext ?? null);
+  // Co-pilot phase 3 fix round (session 114): a continuing chart's seed
+  // (form + presentation folded from the earlier compatible card's own
+  // saved command log), keyed by the NEW message's auditId — so it survives
+  // this component's own re-renders without being refetched/recomputed, and
+  // a message with no seed (not extending, no auditId, no stored log, or
+  // still in flight) simply has no entry. A plain object keyed by number
+  // (never a Map) — this is the same "small lookup, cheapest mechanism"
+  // shape the rest of this file already uses for its refs.
+  const [chartSeeds, setChartSeeds] = useState<Record<number, Pick<ChartDocState, 'form' | 'presentation'>>>({});
+  // Guards the fetch itself (not just the seed): without this, two renders
+  // between the fetch firing and `chartSeeds` updating would both see "no
+  // seed yet" and fire a second fetch for the same auditId.
+  const chartSeedRequestedRef = useRef<Set<number>>(new Set());
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   // R11 (#211, WP-D): an HONEST elapsed-time reassurance line — real wait
@@ -588,12 +610,49 @@ export function Chat({
   // so the workspace can render the dock and its tabs; a no-op without the
   // callback (the Dashboard / test call sites).
   useEffect(() => {
-    onVisualsChange?.(deriveVisuals(messages, (m) => void sendText(m)));
+    onVisualsChange?.(deriveVisuals(messages, (m) => void sendText(m), chartSeeds));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sendText is
     // stable in effect (closes over messages/threadId via refs/state
     // already tracked in this file's own dependency list elsewhere); adding
     // it here would re-fire this effect on every render.
-  }, [messages, onVisualsChange]);
+  }, [messages, onVisualsChange, chartSeeds]);
+
+  // Co-pilot phase 3 fix round (session 114): seed a continuing chart with
+  // the earlier compatible card's own form/presentation, folded from that
+  // card's saved command log. Fires once per new answer that extends an
+  // earlier chart (guarded by `chartSeedRequestedRef`, keyed on the NEW
+  // message's auditId) — never for a non-extending answer, and never twice
+  // for the same auditId. `fetchChartEdits` itself already returns
+  // `{ ok: false }` when the reader is signed out, so no separate signed-in
+  // check is needed here.
+  useEffect(() => {
+    messages.forEach((message, i) => {
+      if (message.role !== 'assistant' || message.auditId === null) return;
+      if (message.auditId in chartSeeds) return;
+      if (chartSeedRequestedRef.current.has(message.auditId)) return;
+      const prevIndex = previousCompatibleChartIndex(messages, i);
+      if (prevIndex === null) return;
+      const prevMessage = messages[prevIndex];
+      const prevAuditId = prevMessage.auditId;
+      const prevSpec = prevMessage.chart;
+      if (prevAuditId === null || prevSpec === null) return;
+      const auditId = message.auditId;
+      chartSeedRequestedRef.current.add(auditId);
+      void (async () => {
+        const result = await fetchChartEdits({ kind: 'answer', id: prevAuditId });
+        if (!result.ok || result.log === null) return;
+        const commands = parseCommandLog(result.log);
+        if (commands === null) return;
+        let state = initialDocState(defaultFormFor(prevSpec));
+        for (const command of commands) state = applyCommand(state, command);
+        setChartSeeds((prev) => ({ ...prev, [auditId]: { form: state.form, presentation: state.presentation } }));
+      })();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `chartSeeds`
+    // is read only to skip work already done; including it would re-run this
+    // effect (harmlessly, since the ref/membership guards below still hold)
+    // on every seed it sets — simpler to depend on `messages` alone.
+  }, [messages]);
 
   // ADR 037 D10: the upload button's OWN local busy/error state — fixed in
   // review, explicitly NOT this component's main `busy`/`onBusyChange` (that
@@ -1350,13 +1409,28 @@ export function Chat({
               </>
             )}
             {!dockMode && message.chart ? (
-              <ChartView
-                spec={message.chart}
-                alternates={message.chartAlternates}
-                embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
-                onAskFollowUp={(m) => void sendText(m)}
-                extendsPrevious={extendsPreviousChart(messages, i)}
-              />
+              (() => {
+                // Co-pilot phase 3 fix round: `initialFormOverride`/
+                // `initialPresentation` are applied ONCE, on mount (chart.tsx's
+                // own prop comments) — but the seed above resolves
+                // asynchronously, after this card has already mounted plainly.
+                // Cheapest mechanism for a log that is only ever a few
+                // commands: force a clean remount once the seed is ready by
+                // changing `key`, rather than teaching ChartView to accept a
+                // late-arriving override.
+                const seed = message.auditId !== null ? chartSeeds[message.auditId] : undefined;
+                return (
+                  <ChartView
+                    key={`${i}-${seed ? 'seeded' : 'plain'}`}
+                    spec={message.chart}
+                    alternates={message.chartAlternates}
+                    embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+                    onAskFollowUp={(m) => void sendText(m)}
+                    extendsPrevious={extendsPreviousChart(messages, i)}
+                    {...(seed ? { initialFormOverride: seed.form, initialPresentation: seed.presentation } : {})}
+                  />
+                );
+              })()
             ) : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
