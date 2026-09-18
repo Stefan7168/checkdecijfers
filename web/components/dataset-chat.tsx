@@ -101,8 +101,10 @@ export function DatasetChat({
   }, [threadId, onThreadId]);
 
   useEffect(() => {
-    onVisualsChange?.(deriveDatasetVisuals(messages));
-  }, [messages, onVisualsChange]);
+    // Co-pilot phase 2 (session 113): the dock's own-data card is editable
+    // too, so the tab carries the same edit context the in-flow bubble does.
+    onVisualsChange?.(deriveDatasetVisuals(messages, { datasetId, threadId, profile }));
+  }, [messages, onVisualsChange, datasetId, threadId, profile]);
 
   async function submitDecision(format: NumberFormat): Promise<void> {
     const columns = ambiguousColumns(profile);
@@ -161,7 +163,13 @@ export function DatasetChat({
         const envelope = result.envelope;
         if (envelope.kind === 'chart') {
           setRawState({ datasetId, lastInstruction: envelope.state.lastInstruction });
-          setMessages((prev) => [...prev, { role: 'assistant', kind: 'chart', text: envelope.text, chart: envelope.chart, lastInstruction: envelope.state.lastInstruction }]);
+          // `auditId` IS the inserted dataset_turns row (AuditedDatasetTurn)
+          // — the key the card's saved edits hang off. Null (no stored row)
+          // simply leaves this chart un-editable rather than guessing an id.
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', kind: 'chart', text: envelope.text, chart: envelope.chart, lastInstruction: envelope.state.lastInstruction, turnId: result.auditId },
+          ]);
         } else if (envelope.kind === 'clarification') {
           setMessages((prev) => [...prev, { role: 'assistant', kind: 'clarification', text: envelope.text, options: envelope.options }]);
         } else {
@@ -273,7 +281,14 @@ export function DatasetChat({
                     {t('datasetChat.chipChartInPanel')}
                   </button>
                 ) : (
-                  <UserChartView spec={message.chart} />
+                  <UserChartView
+                    spec={message.chart}
+                    edit={
+                      message.turnId === null
+                        ? undefined
+                        : { datasetId, threadId, turnId: message.turnId, profile, lastInstruction: message.lastInstruction }
+                    }
+                  />
                 )
               ) : null}
             </div>

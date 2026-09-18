@@ -15,7 +15,8 @@
 // badge/disclaimer copy), not a fresh naming choice made here.
 import type { ChatMessage } from './chat-message.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
-import type { UserChartSpec } from '../backend/attachments/types.ts';
+import type { DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
+import type { UserChartEditContext } from '../components/user-chart.tsx';
 
 /** One dockable visual. `chart`/`card`/`userChart` carry the payload verbatim
  * so the dock renders the SAME ChartView/StatCard/UserChartView components,
@@ -58,6 +59,13 @@ export interface DockVisual {
    * all — a user-uploaded dataset chart is never an audited CBS answer, so
    * there is nothing for an embed token to sign). */
   auditId: number | null;
+  /** Co-pilot phase 2 (session 113): what makes a DOCKED own-data card
+   * editable — the same context the in-flow bubble hands `UserChartView`, so
+   * a reader's edits and their saved log follow the chart into the right
+   * pane. Null for every `chart`/`card` visual (a CBS chart is edited through
+   * its own `embed.auditId` key), for a chart turn with no stored row behind
+   * it, and for a DockVisual built by hand (tests). */
+  userChartEdit: UserChartEditContext | null;
 }
 
 const QUESTION_MAX_LENGTH = 48;
@@ -114,6 +122,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         card: null,
         userChart: null,
         auditId: message.auditId,
+        userChartEdit: null,
       });
     } else if (message.card !== null) {
       cardCount += 1;
@@ -128,6 +137,7 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
         card: message.card,
         userChart: null,
         auditId: message.auditId,
+        userChartEdit: null,
       });
     }
   });
@@ -137,7 +147,14 @@ export function deriveVisuals(messages: ChatMessage[]): DockVisual[] {
 /** The DatasetChat analog of `deriveVisuals` (ADR 037 D10): one tab per
  * chart-kind assistant turn, in stored/sent order. Never stored — a resumed
  * dataset thread reconstructs its dock for free, exactly like the CBS side. */
-export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual[] {
+export function deriveDatasetVisuals(
+  messages: DatasetChatMessage[],
+  /** Co-pilot phase 2 (session 113): the dataset/thread/profile the whole
+   * thread belongs to. Given → each chart tab with a turn id carries the edit
+   * context an editable card needs; omitted (every pre-phase-2 call site and
+   * every test that only cares about the tabs) → every tab is read-only. */
+  edit?: { datasetId: number; threadId: number; profile: DatasetProfile },
+): DockVisual[] {
   const visuals: DockVisual[] = [];
   let chartCount = 0;
   let lastQuestion = '';
@@ -162,6 +179,10 @@ export function deriveDatasetVisuals(messages: DatasetChatMessage[]): DockVisual
       // CBS answer row, so there is no id an embed token could sign. See
       // the DockVisual.auditId doc comment above.
       auditId: null,
+      userChartEdit:
+        edit === undefined || message.turnId === null
+          ? null
+          : { ...edit, turnId: message.turnId, lastInstruction: message.lastInstruction },
     });
   });
   return visuals;

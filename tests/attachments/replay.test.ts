@@ -127,6 +127,26 @@ describe('replayDatasetTurns — pure function', () => {
     expect(messages[1]).toMatchObject({ role: 'assistant', kind: 'chart', chart: CHART_SPEC });
   });
 
+  // Co-pilot phase 2 (session 113): a replayed chart message carries its own
+  // dataset_turns row id, which is what the card's per-turn edit history is
+  // keyed on (Task 3's ChartEditsKey).
+  it('puts the row id on the replayed chart message as turnId', () => {
+    const record = baseRecord({
+      id: 9,
+      kind: 'chart',
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'q',
+        text: 't',
+        instruction: CHART_INSTRUCTION,
+        chart: CHART_SPEC,
+        state: { datasetId: 1, lastInstruction: { ...CHART_INSTRUCTION, unsupported: null } },
+      },
+    });
+    expect(replayDatasetTurns([record])[1]).toMatchObject({ kind: 'chart', turnId: 9 });
+  });
+
   it('upgrades a stored v1 lastInstruction to v2 (a pre-schema-v2 row)', () => {
     const v1LastInstruction = { version: 1, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, unsupported: null };
     const record = baseRecord({
@@ -190,7 +210,18 @@ describe('lastChartState — the D8 step 2 resumed refinement referent', () => {
   it('returns the LAST chart turn\'s state, not the first', () => {
     const first = chartRecord(1, { ...CHART_INSTRUCTION, unsupported: null, limit: 1 });
     const second = chartRecord(2, { ...CHART_INSTRUCTION, unsupported: null, limit: 2 });
-    expect(lastChartState([first, second])).toEqual({ datasetId: 1, lastInstruction: { ...CHART_INSTRUCTION, unsupported: null, limit: 2 } });
+    expect(lastChartState([first, second])).toEqual({
+      datasetId: 1,
+      turnId: 2,
+      lastInstruction: { ...CHART_INSTRUCTION, unsupported: null, limit: 2 },
+    });
+  });
+
+  // Co-pilot phase 2 (session 113): the own-data card keys its saved command
+  // log on the dataset turn the chart came from, so the referent must carry
+  // that row id — never re-derived from the message index.
+  it('carries the chart turn\'s OWN row id as turnId', () => {
+    expect(lastChartState([chartRecord(7)])).toMatchObject({ turnId: 7 });
   });
 
   it('upgrades a stored v1 lastInstruction to v2 (a pre-schema-v2 row)', () => {

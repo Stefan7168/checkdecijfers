@@ -1,6 +1,7 @@
 // DatasetChat (ADR 037 D8/D10) — the dataset-chat loop's first test file.
 // Mocks the Server Action module exactly like chat.test.tsx mocks
 // '../app/actions.ts'; askDataset/decideDatasetFormat never really run.
+import { createElement } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AskDatasetOutcome, DecideDatasetFormatOutcome } from '../app/dataset-actions.ts';
@@ -10,15 +11,38 @@ import type { DatasetProfile } from '../backend/attachments/types.ts';
 
 Element.prototype.scrollIntoView = vi.fn();
 
-const { askDataset, decideDatasetFormat } = vi.hoisted(() => ({
+const { askDataset, decideDatasetFormat, renderDatasetInstruction } = vi.hoisted(() => ({
   askDataset: vi.fn<(...args: unknown[]) => Promise<AskDatasetOutcome>>(),
   decideDatasetFormat: vi.fn<(...args: unknown[]) => Promise<DecideDatasetFormatOutcome>>(),
+  // Co-pilot phase 2 (session 113): user-chart.tsx imports it; nothing in
+  // this file changes an instruction, so it is never actually called.
+  renderDatasetInstruction: vi.fn(),
 }));
-vi.mock('../app/dataset-actions.ts', () => ({ askDataset, decideDatasetFormat }));
+vi.mock('../app/dataset-actions.ts', () => ({ askDataset, decideDatasetFormat, renderDatasetInstruction }));
+const chartEditsActions = vi.hoisted(() => ({
+  fetchChartEdits: vi.fn().mockResolvedValue({ ok: true, log: null }),
+  saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
+// Co-pilot phase 2 (session 113): the REAL card still renders (every existing
+// assertion about its badge/chrome stands) — this wrapper only records the
+// props DatasetChat hands it, which is where the edit context is asserted.
+const userChartProps = vi.hoisted(() => [] as { edit?: { turnId: number } }[]);
+vi.mock('./user-chart.tsx', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./user-chart.tsx')>();
+  return {
+    ...actual,
+    UserChartView: (props: Parameters<typeof actual.UserChartView>[0]) => {
+      userChartProps.push(props);
+      return createElement(actual.UserChartView, props);
+    },
+  };
+});
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  userChartProps.length = 0;
 });
 
 const READY_PROFILE: DatasetProfile = {
@@ -248,5 +272,56 @@ describe('DatasetChat — en', () => {
     );
     expect(screen.getByPlaceholderText('Ask about your data…')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send' })).toBeInTheDocument();
+  });
+});
+
+// Co-pilot phase 2 (session 113): the own-data card is editable, and every
+// edit is saved against the dataset turn the chart came from — so the card
+// has to be handed that turn's id, which for a freshly-sent turn is the
+// inserted dataset_turns row (`AuditedDatasetTurn.auditId`).
+describe('DatasetChat — the own-data card gets its edit context', () => {
+  function chartOutcome(auditId: number | null): AskDatasetOutcome {
+    return {
+      kind: 'ok',
+      auditId,
+      datasetGone: false,
+      netCost: 5,
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'show revenue by year',
+        text: "Here's your chart.",
+        instruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, confidence: 0.9, reading: 'r', unsupported: null },
+        chart: CHART_SPEC,
+        state: { datasetId: 1, lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null } },
+      },
+    };
+  }
+
+  it('a fresh chart turn\'s card receives edit.turnId === the result\'s auditId', async () => {
+    askDataset.mockResolvedValue(chartOutcome(31));
+    render(<DatasetChat {...baseProps()} />);
+    await submit('show revenue by year');
+    await screen.findByText('Your data · unverified');
+    const withEdit = userChartProps.filter((p) => p.edit !== undefined);
+    expect(withEdit.length).toBeGreaterThan(0);
+    expect(withEdit.at(-1)!.edit).toMatchObject({ datasetId: 1, threadId: 42, turnId: 31 });
+  });
+
+  it('a turn with no audit row gets no edit context at all (read-only card)', async () => {
+    askDataset.mockResolvedValue(chartOutcome(null));
+    render(<DatasetChat {...baseProps()} />);
+    await submit('show revenue by year');
+    await screen.findByText('Your data · unverified');
+    expect(userChartProps.every((p) => p.edit === undefined)).toBe(true);
+  });
+
+  it('reports the dock visuals with the same edit context on the tab', async () => {
+    askDataset.mockResolvedValue(chartOutcome(31));
+    const onVisualsChange = vi.fn();
+    render(<DatasetChat {...baseProps()} onVisualsChange={onVisualsChange} />);
+    await submit('show revenue by year');
+    const lastCall = onVisualsChange.mock.calls.at(-1)![0];
+    expect(lastCall[0].userChartEdit).toMatchObject({ datasetId: 1, threadId: 42, turnId: 31 });
   });
 });

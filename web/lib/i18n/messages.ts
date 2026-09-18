@@ -171,6 +171,17 @@ const nl = {
   'userChart.heading': '{y} per {x}',
   'userChart.accessibleName': 'Grafiek: {heading}',
   'userChart.provenanceLine': 'Uit bestand {file}, geüpload op {date} · {count} punten weergegeven',
+  // Co-pilot phase 2 (session 113): the own-data card's own title (the CBS
+  // card's caption keys — chart.caption.* — are tier-neutral and reused as
+  // they are), and the three ways a data command can fail to draw.
+  'userChart.title.placeholder': 'Titel boven de grafiek',
+  'userChart.title.edit': 'Titel bewerken',
+  'userChart.title.add': 'Titel toevoegen',
+  'userChart.title.save': 'Opslaan',
+  'userChart.title.cancel': 'Annuleren',
+  'userChart.renderFailed.validation': 'Deze combinatie kan niet worden getekend.',
+  'userChart.renderFailed.zero_rows': 'Geen rijen voldoen aan dit filter.',
+  'userChart.renderFailed.too_many_points': 'Te veel punten — filter eerst.',
 
   // feedback-buttons.tsx.
   'feedback.helpful': 'Nuttig antwoord',
@@ -1139,6 +1150,14 @@ const en: Messages = {
   'userChart.heading': '{y} by {x}',
   'userChart.accessibleName': 'Chart: {heading}',
   'userChart.provenanceLine': 'From file {file}, uploaded {date} · {count} points plotted',
+  'userChart.title.placeholder': 'Title above the chart',
+  'userChart.title.edit': 'Edit title',
+  'userChart.title.add': 'Add a title',
+  'userChart.title.save': 'Save',
+  'userChart.title.cancel': 'Cancel',
+  'userChart.renderFailed.validation': "This combination can't be drawn.",
+  'userChart.renderFailed.zero_rows': 'No rows match this filter.',
+  'userChart.renderFailed.too_many_points': 'Too many points — filter first.',
 
   'feedback.helpful': 'Helpful answer',
   'feedback.notHelpful': 'Not helpful',

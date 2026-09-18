@@ -18,7 +18,12 @@ import { upgradeInstruction, type ClientChartInstruction, type DatasetTurnRecord
 
 export type DatasetChatMessage =
   | { role: 'user'; text: string }
-  | { role: 'assistant'; kind: 'chart'; text: string; chart: UserChartSpec; lastInstruction: ClientChartInstruction }
+  /** Co-pilot phase 2 (session 113): `turnId` is this chart's OWN
+   * dataset_turns row — what the card's saved command log is keyed on
+   * (Task 3's ChartEditsKey). Null only for a chart a caller pushed without
+   * a stored row behind it (a freshly-sent turn whose audit insert produced
+   * no id, `AuditedDatasetTurn.auditId`); a replayed row always has one. */
+  | { role: 'assistant'; kind: 'chart'; text: string; chart: UserChartSpec; lastInstruction: ClientChartInstruction; turnId: number | null }
   | { role: 'assistant'; kind: 'clarification'; text: string; options: string[] }
   | { role: 'assistant'; kind: 'refusal'; text: string; guidance: string | null }
   | { role: 'redacted' };
@@ -29,7 +34,7 @@ function isRedacted(envelope: DatasetTurnRecord['envelope']): boolean {
   return 'redacted' in envelope && envelope.redacted === true;
 }
 
-function assistantMessage(envelope: LiveEnvelope): DatasetChatMessage {
+function assistantMessage(envelope: LiveEnvelope, turnId: number): DatasetChatMessage {
   if (envelope.kind === 'chart') {
     return {
       role: 'assistant',
@@ -37,6 +42,7 @@ function assistantMessage(envelope: LiveEnvelope): DatasetChatMessage {
       text: envelope.text,
       chart: envelope.chart,
       lastInstruction: upgradeInstruction(envelope.state.lastInstruction) as ClientChartInstruction,
+      turnId,
     };
   }
   if (envelope.kind === 'clarification') {
@@ -56,7 +62,7 @@ export function replayDatasetTurns(rows: DatasetTurnRecord[]): DatasetChatMessag
       continue;
     }
     messages.push({ role: 'user', text: record.question });
-    messages.push(assistantMessage(record.envelope as LiveEnvelope));
+    messages.push(assistantMessage(record.envelope as LiveEnvelope, record.id));
   }
   return messages;
 }
@@ -66,7 +72,9 @@ export function replayDatasetTurns(rows: DatasetTurnRecord[]): DatasetChatMessag
  * chart" works immediately after resuming a thread, exactly as it does
  * mid-session. Null when the thread has no live chart turn yet (every turn
  * so far was a clarification/refusal, or the only chart turn is redacted). */
-export function lastChartState(rows: DatasetTurnRecord[]): { datasetId: number; lastInstruction: ClientChartInstruction } | null {
+export function lastChartState(
+  rows: DatasetTurnRecord[],
+): { datasetId: number; lastInstruction: ClientChartInstruction; turnId: number } | null {
   for (let i = rows.length - 1; i >= 0; i--) {
     const record = rows[i]!;
     if (isRedacted(record.envelope)) continue;
@@ -75,6 +83,9 @@ export function lastChartState(rows: DatasetTurnRecord[]): { datasetId: number; 
       return {
         ...envelope.state,
         lastInstruction: upgradeInstruction(envelope.state.lastInstruction) as ClientChartInstruction,
+        // Co-pilot phase 2: the row this chart came from, so a resumed
+        // thread's card can key its saved edits on the same turn.
+        turnId: record.id,
       };
     }
   }

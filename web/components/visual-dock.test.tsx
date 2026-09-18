@@ -74,6 +74,7 @@ function chartVisual(overrides: Partial<DockVisual> = {}): DockVisual {
     card: null,
     userChart: null,
     auditId: null,
+    userChartEdit: null,
     ...overrides,
   };
 }
@@ -95,6 +96,7 @@ describe('VisualDock — chart/card visuals stay byte-identical (userChart: null
       id: 'visual-1',
       kind: 'card',
       label: 'Kaart 1',
+      userChartEdit: null,
       question: 'hoeveel',
       chart: null,
       chartAlternates: [],
@@ -151,7 +153,7 @@ describe('VisualDock — threads chartAlternates into ChartView\'s alternates pr
 
 describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
   it('renders UserChartView (its H2 badge/chrome) for a userChart visual', () => {
-    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, chartAlternates: [], card: null, userChart: USER_CHART_SPEC, auditId: null };
+    const visual: DockVisual = { id: 'visual-0', kind: 'userChart', label: 'Your chart 1', question: 'show revenue by year', chart: null, chartAlternates: [], card: null, userChart: USER_CHART_SPEC, auditId: null, userChartEdit: null };
     render(<VisualDock visuals={[visual]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
     expect(screen.getByRole('tab', { name: /Your chart 1/ })).toBeInTheDocument();
     expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
@@ -161,7 +163,7 @@ describe('VisualDock — the userChart branch (ADR 037 D10/WP202a)', () => {
     const onSelect = vi.fn();
     const visuals = [
       chartVisual({ id: 'visual-0', label: 'Grafiek 1' }),
-      { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, chartAlternates: [], card: null, userChart: USER_CHART_SPEC, auditId: null },
+      { id: 'visual-1', kind: 'userChart' as const, label: 'Your chart 1', question: 'q', chart: null, chartAlternates: [], card: null, userChart: USER_CHART_SPEC, auditId: null, userChartEdit: null },
     ];
     const { rerender } = render(<VisualDock visuals={visuals} activeVisualId="visual-0" onSelect={onSelect} busy={false} />);
     expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
@@ -229,6 +231,7 @@ describe('VisualDock — en', () => {
       id: 'visual-1',
       kind: 'card',
       label: 'Kaart 1',
+      userChartEdit: null,
       count: 1,
       question: '',
       chart: null,

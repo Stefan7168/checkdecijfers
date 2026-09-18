@@ -118,7 +118,7 @@ export function VisualDock({
             embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
           />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
-          <UserChartView spec={active.userChart} />
+          <UserChartView spec={active.userChart} edit={active.userChartEdit ?? undefined} />
         ) : active.card !== null ? (
           <StatCard data={active.card} />
         ) : null}
