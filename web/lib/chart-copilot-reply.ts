@@ -55,6 +55,9 @@ function iconFor(kind: ChartCommandParams['kind']): ChipIcon {
     case 'setInstruction':
       return 'data';
     case 'setForm':
+    // Co-pilot phase 3 (session 114): the CBS chat can emit a zoom; its chip
+    // points at the Vanaf/Tot selects next to the form tabs, not at Style.
+    case 'setPeriodRange':
       return 'form';
     case 'toggleSeries':
     case 'setHighlight':
@@ -69,9 +72,8 @@ function iconFor(kind: ChartCommandParams['kind']): ChipIcon {
     case 'addNote':
     case 'removeNote':
       return 'note';
-    // setPresentation/replacePresentation/resetPresentation, plus the two
-    // kinds the chat cannot emit at all (setPeriodRange, setReading) — all of
-    // them are Style-panel business.
+    // setPresentation/replacePresentation/resetPresentation, plus setReading
+    // (which no chat tier emits) — all of them are Style-panel business.
     default:
       return 'style';
   }

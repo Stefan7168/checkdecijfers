@@ -2605,6 +2605,10 @@ export function ChartView({
   // different data (R1/R6/R11), so there is nothing here to re-render
   // deterministically before a command can validate against it.
   const [copilotBusy, setCopilotBusy] = useState(false);
+  // Final review (session 114): `copilotBusy` is React state, so two submits
+  // in one tick both read `false` and both take a real debit — the same
+  // HIGH-3(b) hole chat.tsx's `sendingRef` closes. Set synchronously.
+  const copilotSendingRef = useRef(false);
   const [copilotReply, setCopilotReply] = useState<CopilotReply | null>(null);
   const [copilotError, setCopilotError] = useState<string | null>(null);
   /** The notes strip, so a "Notities" chip can put the reader there — same
@@ -2671,7 +2675,8 @@ export function ChartView({
   }
 
   async function sendToCopilot(message: string): Promise<void> {
-    if (copilotBusy) return;
+    if (copilotBusy || copilotSendingRef.current) return;
+    copilotSendingRef.current = true;
     setCopilotBusy(true);
     setCopilotError(null);
     setCopilotReply(null);
@@ -2688,6 +2693,7 @@ export function ChartView({
     } catch {
       setCopilotError(t(chartLang, 'chart.copilot.error.failed'));
     } finally {
+      copilotSendingRef.current = false;
       setCopilotBusy(false);
     }
   }
@@ -4618,13 +4624,17 @@ export function ChartView({
       {!styleOpen ? notesNode : null}
       {/* Task 3 (co-pilot phase 3): mounted directly after the notes strip,
         * outside chartContainerRef like the caption and the notes — a
-        * reader's own words never enter a PNG/SVG export. Not in table form
-        * and not while the story panel is open, the same rule notesNode
-        * follows. */}
-      {copilotAvailable && state.form !== 'table' && !storyOpen ? (
+        * reader's own words never enter a PNG/SVG export. Final review
+        * (session 114): stays MOUNTED in table form and while the story panel
+        * is open, DISABLED with its reason — unmounting it discarded the
+        * reply strip (chips, the dropped line, group Undo) in the very commit
+        * that applied "zet het in een tabel", leaving the reader a silently
+        * transformed chart with no reachable undo. */}
+      {copilotAvailable ? (
         <ChartCopilotInput
           lang={chartLang}
           busy={copilotBusy}
+          disabledReasonId={storyOpen ? storyLockId : state.form === 'table' ? `${domId}-copilot-table-reason` : null}
           examples={cbsExampleChips({ spec, state, zoomAvailable, lang: chartLang })}
           reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
           error={copilotError}
@@ -4637,6 +4647,11 @@ export function ChartView({
           onAskFollowUp={onAskFollowUp}
           lockedNote={t(chartLang, 'chart.copilot.cbsLocked')}
         />
+      ) : null}
+      {copilotAvailable && state.form === 'table' ? (
+        <span id={`${domId}-copilot-table-reason`} className="sr-only">
+          {t(chartLang, 'chart.copilot.tableLocked')}
+        </span>
       ) : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
         * badge is the same attribution made SCANNABLE — table id + measured

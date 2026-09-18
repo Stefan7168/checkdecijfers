@@ -300,6 +300,7 @@ const nl = {
   'chart.copilot.example.newsroomLook': 'Geef het de nieuwsroom-look',
   'chart.copilot.followUp': 'Stel als vervolgvraag',
   'chart.copilot.followUpHint': 'Dit vraagt om andere data. Als vervolgvraag krijgt het een eigen antwoord en grafiek.',
+  'chart.copilot.tableLocked': 'In tabelvorm is de chat uit: kies eerst een grafiekvorm boven de grafiek.',
   'chart.copilot.cbsLocked':
     'De cijfers zelf veranderen hier niet: dit is een officiële grafiek. Vorm, periode, reeksen, opmaak en tekst wel.',
   'chart.extended.badge': 'Grafiek uitgebreid',
@@ -1382,6 +1383,7 @@ const en: Messages = {
   'chart.copilot.example.newsroomLook': 'Give it the newsroom look',
   'chart.copilot.followUp': 'Ask as a follow-up question',
   'chart.copilot.followUpHint': 'This asks for other data. As a follow-up it gets its own answer and chart.',
+  'chart.copilot.tableLocked': 'In table form the chat is off: pick a chart form above the chart first.',
   'chart.copilot.cbsLocked':
     'The figures themselves do not change here: this is an official chart. Form, period, series, style and text do.',
   'chart.extended.badge': 'Chart extended',
