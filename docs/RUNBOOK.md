@@ -467,8 +467,7 @@ session: it is a one-constant change in `src/chart/brandfetch.ts`.
 ## Supervised live step — migration 034 chart_edits (FILE-ONLY, NOT YET RUN — Chart co-pilot phase 1, session 112, ADR [056](decisions/056-chart-copilot.md), [#274](open-questions.md))
 
 The chart co-pilot's per-account undo/edit log (form, zoom, hidden/highlighted series, style,
-template, notes, title, caption — never a data value) was built session 112 on branch
-`s112/copilot-p1`: `web/lib/chart-commands.ts` (the command vocabulary), `web/lib/chart-history.ts`
+template, notes, title, caption — never a data value) was built session 112 (merged to `main`, `7a9b737..3c295f1`, live): `web/lib/chart-commands.ts` (the command vocabulary), `web/lib/chart-history.ts`
 (the undo/redo log), `web/components/chart.tsx` (every control dispatches a command; hydrate +
 800&nbsp;ms debounced save), `src/chart/edits-store.ts` (the store), `web/app/chart-edits-actions.ts`
 (the server actions), and a retention leg in `src/answer/audit/retention.ts`'s `hardDeletes[]`

@@ -6,6 +6,33 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 112 (2026-09-18, owner present) — subagent-driven development pays for itself in caught bugs, not speed
+
+**The review loop found four real defects the plan itself had mandated or missed.** Task 1's brief
+put a `removeNote { id }` param under an envelope that already had `id` (the implementer caught it);
+Task 7's dock-tab-switch path would have written an empty log over another chart's saved edits (the
+task reviewer caught it — no test covered a spec swap); the final whole-branch review found that a
+colour drag as the reader's last action was never saved (Chrome fires no blur when the modal unmounts)
+and that one early click during the hydrate fetch clobbered the stored log. None of these would have
+surfaced from "tests pass". Rule kept: every task gets its own reviewer, and the whole-branch review at
+the end runs on the most capable tier — that is where the cross-task bugs live.
+
+**A verification subagent will still background a long suite and stall.** The pre-push agent stopped
+with "waiting for the background billing run" despite an explicit foreground instruction — the same
+pattern as sessions 105/110. Resuming it with "never background; re-run in the foreground with a
+10-minute timeout" worked. Detect it by the notification text, not by waiting.
+
+**Watch the disk when an agent runs Playwright + `next dev` + suites.** Free space fell from 3 GB to
+0.8 GB mid-session; `next build` refused with "No space left on device". `npm cache clean --force`
+(4.6 GB) and deleting `web/.next` recovered ~9 GB in a minute. Check `df -h` before the build step.
+
+**Playwright cannot click the dock's `role="heading"` div** (reports no box), so the e2e focuses the
+card root instead — a small a11y curiosity worth its own look, recorded in the plan's ledger.
+
+**Parallelism that is safe:** one implementer at a time in the shared tree, but a read-only reviewer,
+a docs subagent (docs/ only) and the verification block can run alongside it. Two implementers in one
+tree is where staging collisions start; a docs agent must be told "stage nothing".
+
 ## Session 111 (2026-09-17/18, owner present) — a competitor study is not done until you have used the product
 
 **A text fetch of a marketing site is not "looking at the website".** The first pass summarised the

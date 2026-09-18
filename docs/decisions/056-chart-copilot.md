@@ -2,7 +2,7 @@
 
 **Status:** accepted 2026-09-18 (session 111, owner present in chat; decisions recorded in
 [open-questions #212](../open-questions.md) and #274); **phase 1 BUILT 2026-09-18 (session 112,
-branch `s112/copilot-p1`, not yet merged/deployed at time of writing)**. Spec:
+merged fast-forward to `main` `7a9b737..3c295f1`, CI run 35306079885 green incl. deploy, live on production the same day)**. Spec:
 [superpowers/specs/2026-09-17-chart-copilot-design.md](../superpowers/specs/2026-09-17-chart-copilot-design.md).
 Research that shaped it: [session-briefs/2026-09-17-competitor-g-deep-dive.md](../session-briefs/2026-09-17-competitor-g-deep-dive.md).
 
