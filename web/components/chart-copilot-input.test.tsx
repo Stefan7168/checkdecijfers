@@ -32,7 +32,7 @@ function props(overrides: Partial<Parameters<typeof ChartCopilotInput>[0]> = {})
     onSend: vi.fn(),
     onUndoReply: vi.fn(),
     onRetry: vi.fn(),
-    onFeedback: vi.fn(),
+    onFeedback: vi.fn().mockResolvedValue({ ok: true }),
     onOpen: vi.fn(),
     ...overrides,
   };
@@ -46,6 +46,8 @@ function reply(overrides: Partial<NonNullable<Parameters<typeof ChartCopilotInpu
     turnId: 12,
     netCost: 4,
     commandIds: ['id-1', 'id-2'],
+    undone: false,
+    canUndo: true,
     message: 'maak er een staafdiagram van',
     text: 'Twee dingen aangepast.',
     ...overrides,
@@ -164,21 +166,68 @@ describe('ChartCopilotInput — the reply', () => {
     expect(onRetry).toHaveBeenCalledWith('maak er een staafdiagram van');
   });
 
-  it('takes a vote once and then disables both buttons', () => {
-    const onFeedback = vi.fn();
+  it('takes a vote once the action CONFIRMS it, then disables both buttons', async () => {
+    const onFeedback = vi.fn().mockResolvedValue({ ok: true });
     render(<ChartCopilotInput {...props({ reply: reply(), onFeedback })} />);
     const up = screen.getByRole('button', { name: 'Dit antwoord was goed' });
     fireEvent.click(up);
     expect(onFeedback).toHaveBeenCalledWith(12, 'up');
-    fireEvent.click(up);
-    expect(onFeedback).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('Bedankt voor je feedback.')).toBeInTheDocument();
     expect(up).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Dit antwoord was niet goed' })).toBeDisabled();
+    fireEvent.click(up);
+    expect(onFeedback).toHaveBeenCalledTimes(1);
+  });
+
+  it('never says thanks for a vote the action refused — and leaves a retry possible', async () => {
+    const onFeedback = vi.fn().mockResolvedValue({ ok: false });
+    render(<ChartCopilotInput {...props({ reply: reply(), onFeedback })} />);
+    const up = screen.getByRole('button', { name: 'Dit antwoord was goed' });
+    fireEvent.click(up);
+    expect(await screen.findByText('Feedback kon niet worden opgeslagen.')).toBeInTheDocument();
+    expect(screen.queryByText('Bedankt voor je feedback.')).not.toBeInTheDocument();
+    expect(up).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Dit antwoord was niet goed' })).toBeEnabled();
+  });
+
+  it('handles a REJECTED feedback call the same way — no unhandled rejection', async () => {
+    const onFeedback = vi.fn().mockRejectedValue(new Error('offline'));
+    render(<ChartCopilotInput {...props({ reply: reply(), onFeedback })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Dit antwoord was goed' }));
+    expect(await screen.findByText('Feedback kon niet worden opgeslagen.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dit antwoord was goed' })).toBeEnabled();
   });
 
   it('offers no vote at all without a stored turn to attach it to', () => {
     render(<ChartCopilotInput {...props({ reply: reply({ turnId: null }) })} />);
     expect(screen.queryByRole('button', { name: 'Dit antwoord was goed' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a stale group Undo visible but disabled, with its reason', () => {
+    render(<ChartCopilotInput {...props({ reply: reply({ canUndo: false }) })} />);
+    const undo = screen.getByRole('button', { name: 'Dit antwoord ongedaan maken' });
+    expect(undo).toBeDisabled();
+    expect(undo).toHaveAttribute('title', 'Dit antwoord staat niet meer bovenaan. Gebruik Ongedaan maken of de geschiedenis.');
+  });
+
+  it('marks the chips as undone once the reply was taken back, and drops the Undo control', () => {
+    render(<ChartCopilotInput {...props({ reply: reply({ undone: true }) })} />);
+    expect(screen.queryByRole('button', { name: 'Dit antwoord ongedaan maken' })).not.toBeInTheDocument();
+    const chip = screen.getByRole('button', { name: /Weergave: Staaf/ });
+    expect(chip.className).toContain('line-through');
+    expect(chip).toBeDisabled();
+    // The strike-through is invisible to a screen reader, so it is said.
+    expect(chip).toHaveAccessibleName('Weergave: Staaf ongedaan gemaakt');
+  });
+
+  it('does not offer a chip whose doorway is not mounted right now (Tabel form)', () => {
+    const onOpen = vi.fn();
+    render(<ChartCopilotInput {...props({ reply: reply(), onOpen, canOpen: (target) => target === 'form' })} />);
+    const style = screen.getByRole('button', { name: 'Opmaak teruggezet' });
+    expect(style).toBeDisabled();
+    fireEvent.click(style);
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Weergave: Staaf' })).toBeEnabled();
   });
 
   it('shows a clarification/refusal reply as text alone — no chips, no Undo', () => {

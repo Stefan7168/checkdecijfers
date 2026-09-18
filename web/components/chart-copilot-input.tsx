@@ -54,6 +54,15 @@ export interface CopilotReply {
   /** The ids the card minted while dispatching `applied` — what one Undo
    * walks back. */
   commandIds: string[];
+  /** True once the reader took this whole reply back: the chips stay on
+   * screen as a record, struck through, rather than reading as if they were
+   * still in effect. */
+  undone: boolean;
+  /** Whether the group Undo would still do anything — false once the reader
+   * has changed something else on top of this reply (the card recomputes it
+   * from the live history each render). The button then stays, disabled with
+   * its reason, rather than silently doing nothing. */
+  canUndo: boolean;
   /** The reader's own message, re-sent by Retry. */
   message: string;
 }
@@ -65,8 +74,14 @@ export function RecipeChips(props: {
   refused: CopilotRefusal[];
   lang: Lang;
   onOpen?: (target: ChipOpens) => void;
+  /** Whether a doorway is actually mounted right now — in Tabel form the
+   * Style panel and the notes strip are not, and a chip that opens nothing
+   * must not look clickable. Default: everything but 'none'. */
+  canOpen?: (target: ChipOpens) => boolean;
+  /** Renders the chips as a record of an UNDONE reply. */
+  undone?: boolean;
 }): ReactNode {
-  const { applied, refused, lang, onOpen } = props;
+  const { applied, refused, lang, onOpen, canOpen = (target) => target !== 'none', undone = false } = props;
   if (applied.length === 0 && refused.length === 0) return null;
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
@@ -79,11 +94,18 @@ export function RecipeChips(props: {
               <button
                 key={`${chip.label}-${i}`}
                 type="button"
-                // Nothing to open, or nobody listening: the chip is a label,
-                // and saying so keeps it out of the tab order.
-                disabled={onOpen === undefined || target === 'none'}
+                // Nothing to open, nobody listening, that doorway is not
+                // mounted, or the reply is already undone: the chip is a
+                // label, and saying so keeps it out of the tab order.
+                disabled={onOpen === undefined || undone || !canOpen(target)}
+                // An undone chip says so in its NAME: the strike-through
+                // below is invisible to a screen reader.
+                aria-label={undone ? `${chip.label} ${t(lang, 'chart.copilot.undone')}` : undefined}
                 onClick={() => onOpen?.(target)}
-                className="inline-flex max-w-full items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground enabled:hover:bg-muted enabled:hover:text-foreground disabled:cursor-default"
+                className={
+                  'inline-flex max-w-full items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs enabled:hover:bg-muted enabled:hover:text-foreground disabled:cursor-default ' +
+                  (undone ? 'text-muted-foreground line-through opacity-60' : 'text-muted-foreground')
+                }
               >
                 <Icon className="size-3.5 shrink-0" aria-hidden="true" />
                 <span className="truncate">{chip.label}</span>
@@ -107,29 +129,60 @@ function ReplyStrip(props: {
   busy: boolean;
   onUndoReply: (commandIds: string[]) => void;
   onRetry: (message: string) => void;
-  onFeedback: (turnId: number, vote: 'up' | 'down') => void;
+  onFeedback: (turnId: number, vote: 'up' | 'down') => Promise<{ ok: boolean }>;
   onOpen: (target: ChipOpens) => void;
+  canOpen: (target: ChipOpens) => boolean;
 }): ReactNode {
-  const { reply, lang, busy, onUndoReply, onRetry, onFeedback, onOpen } = props;
-  const [voted, setVoted] = useState(false);
+  const { reply, lang, busy, onUndoReply, onRetry, onFeedback, onOpen, canOpen } = props;
+  // The feedback-buttons.tsx contract, verbatim: the vote is only "taken"
+  // once the action SAYS so. An expired session, a turn that is not the
+  // caller's, or a transport failure shows the failure line and leaves both
+  // buttons usable — a lost vote must never read as "Bedankt".
+  const [voteBusy, setVoteBusy] = useState(false);
+  const [voteStatus, setVoteStatus] = useState<'idle' | 'thanks' | 'failed'>('idle');
   const turnId = reply.turnId;
 
-  function vote(value: 'up' | 'down'): void {
-    if (voted || turnId === null) return;
-    setVoted(true);
-    onFeedback(turnId, value);
+  async function vote(value: 'up' | 'down'): Promise<void> {
+    if (voteBusy || voteStatus === 'thanks' || turnId === null) return;
+    setVoteBusy(true);
+    try {
+      const result = await onFeedback(turnId, value);
+      setVoteStatus(result.ok ? 'thanks' : 'failed');
+    } catch {
+      setVoteStatus('failed');
+    } finally {
+      // Always resets — a failure must leave a retry possible.
+      setVoteBusy(false);
+    }
   }
 
   return (
     <div className="mt-2 rounded-lg border border-border bg-muted/40 p-2.5">
       <p className="text-sm text-foreground">{reply.text}</p>
-      <RecipeChips applied={reply.applied} refused={reply.refused} lang={lang} onOpen={onOpen} />
+      <RecipeChips
+        applied={reply.applied}
+        refused={reply.refused}
+        lang={lang}
+        onOpen={onOpen}
+        canOpen={canOpen}
+        undone={reply.undone}
+      />
       {reply.dropped > 0 ? (
         <p className="mt-1.5 text-xs text-warning">{t(lang, reply.dropped === 1 ? 'chart.copilot.dropped' : 'chart.copilot.droppedMany')}</p>
       ) : null}
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {reply.commandIds.length > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => onUndoReply(reply.commandIds)}>
+        {reply.commandIds.length > 0 && !reply.undone ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            // Stale rather than gone: the reader changed something on top of
+            // this reply, so walking it back would either do nothing or undo
+            // the wrong thing. The reason is on the control itself.
+            disabled={!reply.canUndo}
+            title={reply.canUndo ? undefined : t(lang, 'chart.copilot.undoUnavailable')}
+            onClick={() => onUndoReply(reply.commandIds)}
+          >
             {t(lang, 'chart.copilot.undoReply')}
           </Button>
         ) : null}
@@ -143,10 +196,10 @@ function ReplyStrip(props: {
               type="button"
               variant="ghost"
               size="sm"
-              disabled={voted}
+              disabled={voteBusy || voteStatus === 'thanks'}
               aria-label={t(lang, 'chart.copilot.thumbsUp')}
               title={t(lang, 'chart.copilot.thumbsUp')}
-              onClick={() => vote('up')}
+              onClick={() => void vote('up')}
             >
               <ThumbsUp className="size-4" aria-hidden="true" />
             </Button>
@@ -154,10 +207,10 @@ function ReplyStrip(props: {
               type="button"
               variant="ghost"
               size="sm"
-              disabled={voted}
+              disabled={voteBusy || voteStatus === 'thanks'}
               aria-label={t(lang, 'chart.copilot.thumbsDown')}
               title={t(lang, 'chart.copilot.thumbsDown')}
-              onClick={() => vote('down')}
+              onClick={() => void vote('down')}
             >
               <ThumbsDown className="size-4" aria-hidden="true" />
             </Button>
@@ -168,7 +221,15 @@ function ReplyStrip(props: {
           <span className="ml-auto text-xs text-muted-foreground">{t(lang, 'chart.copilot.cost', { n: reply.netCost })}</span>
         ) : null}
       </div>
-      {voted ? <p className="mt-1 text-xs text-muted-foreground">{t(lang, 'chart.copilot.feedbackThanks')}</p> : null}
+      {voteStatus === 'thanks' ? <p className="mt-1 text-xs text-muted-foreground">{t(lang, 'chart.copilot.feedbackThanks')}</p> : null}
+      {/* `feedback.failed` is the exact same sentence the CBS answer's own
+        * 👍/👎 shows (feedback-buttons.tsx) — one string, not a second
+        * translation of it. */}
+      {voteStatus === 'failed' ? (
+        <p role="status" className="mt-1 text-xs text-destructive">
+          {t(lang, 'feedback.failed')}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -182,10 +243,14 @@ export function ChartCopilotInput(props: {
   onSend: (message: string) => void;
   onUndoReply: (commandIds: string[]) => void;
   onRetry: (message: string) => void;
-  onFeedback: (turnId: number, vote: 'up' | 'down') => void;
+  onFeedback: (turnId: number, vote: 'up' | 'down') => Promise<{ ok: boolean }>;
   onOpen: (target: ChipOpens) => void;
+  /** Which doorways are mounted right now (Tabel form has no Style panel and
+   * no notes strip). Default: everything but 'none'. */
+  canOpen?: (target: ChipOpens) => boolean;
 }): ReactNode {
   const { lang, busy, examples, reply, error, onSend, onUndoReply, onRetry, onFeedback, onOpen } = props;
+  const canOpen = props.canOpen ?? ((target: ChipOpens) => target !== 'none');
   const [value, setValue] = useState('');
   /** Phones (< sm) start collapsed to a single chip: the card is already
    * tall there, and a permanent composer under it pushes the chart itself
@@ -265,6 +330,7 @@ export function ChartCopilotInput(props: {
             onRetry={onRetry}
             onFeedback={onFeedback}
             onOpen={onOpen}
+            canOpen={canOpen}
           />
         ) : null}
       </div>

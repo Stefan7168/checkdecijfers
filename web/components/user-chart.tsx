@@ -558,8 +558,11 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       return;
     }
     if (outcome.kind === 'duplicate_request') {
-      // A client retry of an already-processed submit — nothing new to show
-      // (the same rule DatasetChat applies to a duplicate question).
+      // The same requestId was already settled, so there is no envelope to
+      // apply — and unlike a question turn (DatasetChat swallows this one)
+      // the reader is looking at a chart that may already carry the edit.
+      // Say so rather than leaving the send look like it did nothing.
+      setCopilotError(t(chartLang, 'chart.copilot.error.duplicate'));
       return;
     }
     if (outcome.kind === 'insufficient_credits') {
@@ -571,7 +574,9 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       return;
     }
     const envelope = outcome.envelope;
-    const base = { text: envelope.text, turnId: outcome.auditId, netCost: outcome.netCost, message };
+    // `canUndo` is recomputed per render at the mount point; `false` here is
+    // just the initial value for a reply with nothing to undo.
+    const base = { text: envelope.text, turnId: outcome.auditId, netCost: outcome.netCost, message, undone: false, canUndo: false };
     if (envelope.kind !== 'chart' || envelope.copilot === undefined) {
       // A clarification or a refusal: the turn's own deterministic text, and
       // nothing to apply.
@@ -582,6 +587,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     // so it goes into the cache BEFORE anything is dispatched — the render
     // effect then hits the cache instead of making a second (free, but
     // pointless) round trip for a chart we already hold.
+    //
+    // KEY EQUALITY, relied on here: `envelope.state.lastInstruction` and the
+    // stored `setInstruction.instruction` are the SAME value — copilot/
+    // respond.ts builds both from one `toClientInstruction(next)` call — and
+    // `instructionKey` is JSON.stringify, so their field order (fixed by that
+    // one function) matches too. If the two ever diverge the effect simply
+    // misses the cache and re-renders deterministically, so this is a
+    // performance assumption, never a correctness one.
     cacheRef.current.set(instructionKey(envelope.state.lastInstruction), envelope.chart);
     const ctx: CommandContext = { spec: toCommandSpec(envelope.chart), alternatesCount: 0, profile };
     const { applied, dropped } = acceptReply(envelope.copilot.commands, ctx, chartLang);
@@ -616,15 +629,35 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     }
   }
 
+  /** Whether the group Undo would still do anything: the top of the history
+   * has to be one of THIS reply's own commands. Recomputed every render, so a
+   * change the reader makes afterwards disables the button (with its reason)
+   * instead of leaving one that silently does nothing. */
+  function replyIsUndoable(reply: CopilotReply): boolean {
+    if (reply.undone || reply.commandIds.length === 0) return false;
+    const top = history.past[history.past.length - 1];
+    return top !== undefined && reply.commandIds.includes(top.command.id);
+  }
+
   /** One Undo for the whole reply: walk back exactly the trailing run of
    * commands THIS reply dispatched, so a change the reader made afterwards is
-   * never swept away with it. The spent button then goes (the rest of the
-   * reply — its text, its chips, Retry, the vote — stays). */
+   * never swept away with it. The chips then stay as a struck-through record
+   * of what the reply had done; its text, Retry and the vote stay too. */
   function undoCopilotReply(ids: string[]): void {
     let n = 0;
     for (let i = history.past.length - 1; i >= 0 && ids.includes(history.past[i]!.command.id); i--) n++;
+    if (n === 0) return;
     for (; n > 0; n--) undo();
-    setCopilotReply((reply) => (reply === null ? null : { ...reply, commandIds: [] }));
+    setCopilotReply((reply) => (reply === null ? null : { ...reply, undone: true }));
+  }
+
+  /** Which doorway a reply chip can actually open right now. Tabel form
+   * mounts neither the Style panel nor the notes strip, so a chip pointing
+   * at either must not look clickable there. */
+  function copilotCanOpen(target: ChipOpens): boolean {
+    if (target === 'none') return false;
+    if (target === 'style' || target === 'notes') return activeForm !== 'table';
+    return true;
   }
 
   // --- the plot ------------------------------------------------------------
@@ -1008,20 +1041,20 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
         // focuses (Task 8) — the strip itself has no single control to aim at.
         <div ref={notesRef} tabIndex={-1} className="outline-none">
-        <ChartNotes
-          notes={visibleNotes}
-          pendingPoint={pendingPoint}
-          idPrefix={domId}
-          lang={chartLang}
-          onSave={(text) => {
-            if (!pendingPoint) return;
-            const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
-            dispatch({ kind: 'addNote', note }, 'canvas');
-            setPendingPoint(null);
-          }}
-          onCancelPending={() => setPendingPoint(null)}
-          onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
-        />
+          <ChartNotes
+            notes={visibleNotes}
+            pendingPoint={pendingPoint}
+            idPrefix={domId}
+            lang={chartLang}
+            onSave={(text) => {
+              if (!pendingPoint) return;
+              const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
+              dispatch({ kind: 'addNote', note }, 'canvas');
+              setPendingPoint(null);
+            }}
+            onCancelPending={() => setPendingPoint(null)}
+            onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
+          />
         </div>
       ) : null}
       <ChartEditableText
@@ -1052,15 +1085,18 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             state,
             lang: chartLang,
           })}
-          reply={copilotReply}
+          reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
           error={copilotError}
           onSend={(message) => void sendToCopilot(message)}
           onUndoReply={undoCopilotReply}
           // A retry is the same words with a NEW requestId — a new turn, and
           // a new charge; the control says so in words.
           onRetry={(message) => void sendToCopilot(message)}
-          onFeedback={(turnId, vote) => void submitCopilotFeedback(turnId, vote)}
+          // Returned, not fired and forgotten: the strip only says "thanks"
+          // once the action confirms the vote landed.
+          onFeedback={(turnId, vote) => submitCopilotFeedback(turnId, vote)}
           onOpen={openCopilotTarget}
+          canOpen={copilotCanOpen}
         />
       ) : null}
       {/* Under the plot, above the Style region — and available in Tabel form

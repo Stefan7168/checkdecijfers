@@ -246,15 +246,79 @@ describe('UserChartView — the chat doorway (co-pilot phase 2, Task 8)', () => 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Opmaak' })).toHaveAttribute('aria-expanded', 'true'));
   });
 
-  it('sends the vote once', async () => {
+  it('sends the vote once, and only says thanks when the action confirms it', async () => {
     copilotActions.adjustDatasetChart.mockResolvedValue(okReply());
     renderCard();
     send();
     const up = await screen.findByRole('button', { name: 'Dit antwoord was goed' });
     fireEvent.click(up);
     await waitFor(() => expect(copilotActions.submitCopilotFeedback).toHaveBeenCalledWith(21, 'up'));
+    expect(await screen.findByText('Bedankt voor je feedback.')).toBeInTheDocument();
     fireEvent.click(up);
     expect(copilotActions.submitCopilotFeedback).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the failure line — not thanks — when the vote could not be stored', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue(okReply());
+    copilotActions.submitCopilotFeedback.mockResolvedValue({ ok: false });
+    renderCard();
+    send();
+    fireEvent.click(await screen.findByRole('button', { name: 'Dit antwoord was goed' }));
+    expect(await screen.findByText('Feedback kon niet worden opgeslagen.')).toBeInTheDocument();
+    expect(screen.queryByText('Bedankt voor je feedback.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dit antwoord was goed' })).toBeEnabled();
+  });
+
+  it('survives a REJECTED vote call with the same line (no unhandled rejection)', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue(okReply());
+    copilotActions.submitCopilotFeedback.mockRejectedValue(new Error('offline'));
+    renderCard();
+    send();
+    fireEvent.click(await screen.findByRole('button', { name: 'Dit antwoord was goed' }));
+    expect(await screen.findByText('Feedback kon niet worden opgeslagen.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dit antwoord was goed' })).toBeEnabled();
+  });
+
+  it('marks the reply chips as undone once the group Undo ran', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue(okReply());
+    renderCard();
+    send();
+    fireEvent.click(await screen.findByRole('button', { name: 'Dit antwoord ongedaan maken' }));
+    const chip = await screen.findByRole('button', { name: 'Weergave: Staaf ongedaan gemaakt' });
+    expect(chip.className).toContain('line-through');
+    expect(screen.queryByRole('button', { name: 'Dit antwoord ongedaan maken' })).not.toBeInTheDocument();
+  });
+
+  it('disables the group Undo — with its reason — once the reader changed something on top of it', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue(okReply());
+    renderCard();
+    send();
+    await screen.findByRole('button', { name: 'Dit antwoord ongedaan maken' });
+    // A reader edit AFTER the reply: the reply is no longer the top of the
+    // history, so walking its ids back would do nothing.
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Dit antwoord ongedaan maken' })).toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Dit antwoord ongedaan maken' })).toHaveAttribute(
+      'title',
+      'Dit antwoord staat niet meer bovenaan. Gebruik Ongedaan maken of de geschiedenis.',
+    );
+  });
+
+  it('does not offer a Style chip in Tabel form, where that panel is not mounted', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue(okReply({ commands: [{ kind: 'resetPresentation' }] }));
+    renderCard();
+    send();
+    const chip = await screen.findByRole('button', { name: 'Opmaak teruggezet' });
+    expect(chip).toBeEnabled();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Opmaak teruggezet' })).toBeDisabled());
+  });
+
+  it('says so when the same submit was already settled', async () => {
+    copilotActions.adjustDatasetChart.mockResolvedValue({ kind: 'duplicate_request' });
+    renderCard();
+    send();
+    expect(await screen.findByText('Deze aanpassing is al verwerkt. Vernieuw de pagina om het resultaat te zien.')).toBeInTheDocument();
   });
 
   it('retries with a NEW requestId and the same message', async () => {
