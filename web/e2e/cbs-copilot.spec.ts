@@ -25,6 +25,7 @@ const HIDE = 'verberg Rotterdam';
 const OTHER_DATA = 'en Utrecht erbij';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
+const REDO = process.platform === 'darwin' ? 'Shift+Meta+z' : 'Control+y';
 
 test.describe.serial('the CBS chart co-pilot', () => {
   test.beforeEach(async ({ context, baseURL }) => {
@@ -50,7 +51,7 @@ test.describe.serial('the CBS chart co-pilot', () => {
     // the cost line (the ONE digit-bearing string on this strip).
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
     await expect(copilot.getByText('Applied one change.')).toBeVisible();
-    await expect(copilot.getByText(/credits/)).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
 
     // 2. ⌘Z on the card walks the chat edit back like any other edit.
     const card = page
@@ -60,27 +61,31 @@ test.describe.serial('the CBS chart co-pilot', () => {
     await card.click({ position: { x: 4, y: 4 } });
     await page.keyboard.press(UNDO);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    // ...and redo puts it back: only the history's PAST is saved, so the
+    // edit must be in effect again for the reload below to prove anything.
+    await page.keyboard.press(REDO);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
 
     // 3. A request for OTHER data is not a view change: the reply offers to
     // ask it as a follow-up, and clicking sends the reader's OWN words into
-    // the thread as a new question (the stub has no fixture for it, so the
-    // answer is the chat's honest error line — what is proven here is the
-    // hand-off, not the follow-up answer).
+    // the thread as a new question through the follow-up path (ADR 021 —
+    // the harness's follow-up fixtures answer it, here with a clarification
+    // naming the credits it would cost). What is proven is the hand-off.
     await copilot.getByPlaceholder('Pas deze grafiek aan').fill(OTHER_DATA);
     await copilot.getByRole('button', { name: 'Versturen' }).click();
     const followUp = copilot.getByRole('button', { name: 'Stel als vervolgvraag' });
     await expect(followUp).toBeVisible({ timeout: 60_000 });
     await followUp.click();
     await expect(page.getByText(OTHER_DATA, { exact: true })).toBeVisible();
-    await expect(page.getByText('Er ging iets mis bij het ophalen van het antwoord. Probeer het opnieuw.')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(/antwoorden op de wedervraag kost/)).toBeVisible({ timeout: 60_000 });
 
     // 4. Persistence: the chat edit went into the SAME chart_edits log the
-    // panel edits use (the undo above is the last entry). Past the 800 ms
-    // debounce, a fresh page, the thread reopened from the sidebar.
+    // panel edits use. Past the 800 ms debounce, a fresh page, the thread
+    // reopened from the sidebar: Rotterdam is still hidden, Undo is offered.
     await page.waitForTimeout(1500);
     await page.reload();
     await page.getByRole('button', { name: /^!!intent/ }).first().click();
-    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
-    await expect(page.getByRole('button', { name: 'Opnieuw' })).toBeEnabled();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Ongedaan maken' }).first()).toBeEnabled();
   });
 });
