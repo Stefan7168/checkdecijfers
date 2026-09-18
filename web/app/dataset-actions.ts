@@ -19,13 +19,14 @@ import { MAX_DATASETS_PER_USER, MAX_FILE_BYTES, MAX_TOTAL_BYTES_PER_USER } from 
 import { deleteOneDataset } from '../backend/attachments/retention.ts';
 import { respondToDatasetQuestion } from '../backend/attachments/respond.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
+import { renderInstructionForDataset, type RenderInstructionFailure } from '../backend/attachments/render.ts';
 import { activeDatasetUsage, getDataset, insertDataset, resolveDatasetDecision } from '../backend/attachments/store.ts';
 import {
   ingestFileTooLargeText,
   ingestQuotaExceededText,
   ingestUnsupportedFileTypeText,
 } from '../backend/attachments/templates.ts';
-import type { ColumnId, DatasetProfile, DatasetStatus, NumberFormat, SourceKind } from '../backend/attachments/types.ts';
+import type { ColumnId, DatasetProfile, DatasetStatus, NumberFormat, SourceKind, UserChartSpec } from '../backend/attachments/types.ts';
 import { createDatasetThread, validateDatasetThreadOwnership } from '../backend/threads/index.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
@@ -300,6 +301,48 @@ export async function askDataset(
   } catch (error) {
     console.error('askDataset failed:', error);
     await reportError('askDataset', error, { requestId, userId });
+    throw error;
+  }
+}
+
+export type RenderDatasetInstructionOutcome =
+  | { kind: 'ok'; chart: UserChartSpec }
+  | { kind: 'unauthenticated' }
+  | { kind: 'not_found' }
+  | { kind: 'invalid'; reason: RenderInstructionFailure };
+
+/**
+ * Chart co-pilot phase 2 (session 113) — the zero-LLM render of a reader's own
+ * data command (the Data panel, Task 6; the chat co-pilot's applied
+ * instruction, Task 8). DELIBERATELY not gated: unlike `askDataset` there is
+ * no model call and no `chargeAndRunDataset` reserve here, because nothing
+ * about re-running the deterministic validate → execute → build pipeline over
+ * already-stored cells costs anything (the D12 CSV-ingest precedent).
+ *
+ * Ownership is `getDataset`'s own userId-bound read — a dataset that is not
+ * the caller's, or not `ready`, is indistinguishable from one that does not
+ * exist. No thread id is involved at all: this action writes nothing and
+ * returns only a chart built from THIS dataset, so there is no turn to bind
+ * to a thread.
+ */
+export async function renderDatasetInstruction(datasetId: number, rawInstruction: unknown): Promise<RenderDatasetInstructionOutcome> {
+  guardPositiveInteger(datasetId, 'datasetId');
+
+  const userId = await currentUserId();
+  if (userId === null) {
+    return { kind: 'unauthenticated' };
+  }
+
+  const dataset = await getDataset(getDb(), userId, datasetId);
+  if (dataset === null || dataset.status !== 'ready') {
+    return { kind: 'not_found' };
+  }
+
+  try {
+    return renderInstructionForDataset(dataset, rawInstruction);
+  } catch (error) {
+    console.error('renderDatasetInstruction failed:', error);
+    await reportError('renderDatasetInstruction', error, { userId });
     throw error;
   }
 }

@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { datasetMessageHasVisual, deriveDatasetVisuals } from './dock-visuals.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
-import type { UserChartSpec } from '../backend/attachments/types.ts';
+import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 
 const CHART_SPEC: UserChartSpec = {
   schemaVersion: 1,
@@ -22,13 +22,24 @@ const CHART_SPEC: UserChartSpec = {
   disclaimerLine: 'User-uploaded data — not verified by checkdecijfers.',
 };
 
-function chartMessage(): DatasetChatMessage {
+const LAST_INSTRUCTION: ClientChartInstruction = { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null };
+
+const PROFILE: DatasetProfile = {
+  columns: [
+    { id: 'c0', header: 'Year', type: 'year', nulls: 0 },
+    { id: 'c1', header: 'Revenue', type: 'number', numberFormat: 'nl', nulls: 0 },
+  ],
+  rowCount: 2,
+};
+
+function chartMessage(turnId: number | null = 7): DatasetChatMessage {
   return {
     role: 'assistant',
     kind: 'chart',
     text: "Here's your chart.",
     chart: CHART_SPEC,
-    lastInstruction: { version: 2, kind: 'line', x: 'c0', y: ['c1'], seriesBy: null, filters: [], sort: null, limit: null, aggregate: null, derived: null, unsupported: null },
+    lastInstruction: { ...LAST_INSTRUCTION },
+    turnId,
   };
 }
 
@@ -69,6 +80,9 @@ describe('deriveDatasetVisuals', () => {
       // (a user-uploaded dataset chart is never an audited CBS answer), so
       // every userChart visual gets a hardcoded null — never an embed token.
       auditId: null,
+      // Co-pilot phase 2 (session 113): no dataset/thread context passed →
+      // the docked card gets no edit context and stays read-only.
+      userChartEdit: null,
     });
     expect(visuals[1]!.id).toBe('visual-3');
     expect(visuals[1]!.label).toBe('Your chart 2');
@@ -86,5 +100,30 @@ describe('deriveDatasetVisuals', () => {
       { role: 'assistant', kind: 'clarification', text: 'Did you mean…', options: [] },
     ];
     expect(deriveDatasetVisuals(messages)).toEqual([]);
+  });
+});
+
+// Co-pilot phase 2 (session 113): the dock renders the SAME editable own-data
+// card as the in-flow bubble, so the edit context has to travel with the tab.
+describe('deriveDatasetVisuals — userChartEdit (co-pilot phase 2)', () => {
+  const ctx = { datasetId: 3, threadId: 42, profile: PROFILE };
+
+  it('populates userChartEdit for a chart message with a turn id', () => {
+    const visuals = deriveDatasetVisuals([{ role: 'user', text: 'q' }, chartMessage(7)], ctx);
+    expect(visuals[0]!.userChartEdit).toEqual({
+      datasetId: 3,
+      threadId: 42,
+      turnId: 7,
+      profile: PROFILE,
+      lastInstruction: { ...LAST_INSTRUCTION },
+    });
+  });
+
+  it('leaves userChartEdit null when the message has no turn id', () => {
+    expect(deriveDatasetVisuals([chartMessage(null)], ctx)[0]!.userChartEdit).toBeNull();
+  });
+
+  it('leaves userChartEdit null when no dataset/thread context is given', () => {
+    expect(deriveDatasetVisuals([chartMessage(7)])[0]!.userChartEdit).toBeNull();
   });
 });
