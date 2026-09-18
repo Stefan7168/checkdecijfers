@@ -27,8 +27,10 @@ import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
 import { ambiguousFormatClarificationText, AMBIGUOUS_FORMAT_OPTIONS } from '../backend/attachments/templates.ts';
 import type { ColumnProfile, DatasetProfile, DatasetStatus, NumberFormat } from '../backend/attachments/types.ts';
+import { replayChips } from '../lib/chart-copilot-reply.ts';
 import { datasetMessageHasVisual, deriveDatasetVisuals, visualId, type DockVisual } from '../lib/dock-visuals.ts';
-import { useT } from '../lib/i18n/lang-provider.tsx';
+import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
+import { RecipeChips } from './chart-copilot-input.tsx';
 import { Button } from './ui/button.tsx';
 import { Input } from './ui/input.tsx';
 import { UserChartView } from './user-chart.tsx';
@@ -87,6 +89,7 @@ export function DatasetChat({
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const t = useT();
+  const lang = useLang();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'nearest' });
@@ -240,7 +243,12 @@ export function DatasetChat({
                     ? 'max-w-[85%] rounded-lg border border-border bg-background px-3.5 py-2.5 text-left text-foreground'
                     : message.kind === 'clarification'
                       ? 'inline-block rounded-lg border border-warning/30 bg-warning-soft px-3.5 py-2.5 text-foreground'
-                      : 'text-[15px] leading-relaxed text-foreground')
+                      : // Co-pilot phase 2 (session 113, Task 8): a replayed
+                        // EDIT reads as a side note about a chart already in
+                        // the thread, not as an answer of its own.
+                        message.kind === 'edit'
+                        ? 'text-xs text-muted-foreground'
+                        : 'text-[15px] leading-relaxed text-foreground')
                 }
               >
                 {message.text}
@@ -261,6 +269,14 @@ export function DatasetChat({
                     </button>
                   ))}
                 </div>
+              ) : null}
+              {/* The recipe, replayed: what that edit changed and what it
+                * could not — the SAME chips the card showed when the reply
+                * arrived (RecipeChips). No chart card: this turn adjusted an
+                * EARLIER chart, whose own card replays those edits from its
+                * saved log (see dock-visuals.ts's datasetMessageHasVisual). */}
+              {message.role === 'assistant' && message.kind === 'edit' ? (
+                <RecipeChips applied={replayChips(message.commands, lang)} refused={message.refused} lang={lang} />
               ) : null}
               {message.role === 'assistant' && message.kind === 'chart' ? (
                 docked ? (

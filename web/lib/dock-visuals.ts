@@ -92,7 +92,14 @@ export function messageHasVisual(message: ChatMessage): boolean {
 
 /** The DatasetChat analog of `messageHasVisual`: a chart-kind assistant turn
  * is the only dataset message that ever contributes a dock tab (there is no
- * dataset-side stat-card concept). */
+ * dataset-side stat-card concept).
+ *
+ * Co-pilot phase 2 (session 113, Task 8): an `edit` message is deliberately
+ * NOT a visual. It is the reader's own adjustment of an EARLIER chart, whose
+ * card (and saved command log) already stands in the thread and in the dock
+ * — a second tab would show the same chart twice, each with its own
+ * divergent edit history. The `kind !== 'chart'` test below already excludes
+ * it; this note is why that must stay true. */
 export function datasetMessageHasVisual(message: DatasetChatMessage): boolean {
   return message.role === 'assistant' && message.kind === 'chart';
 }

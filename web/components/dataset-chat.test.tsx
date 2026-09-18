@@ -24,6 +24,9 @@ const chartEditsActions = vi.hoisted(() => ({
   saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
+// Co-pilot phase 2 (session 113, Task 8): user-chart.tsx imports the chat
+// doorway's own 'use server' module; nothing in this file sends a chart edit.
+vi.mock('../app/dataset-copilot-actions.ts', () => ({ adjustDatasetChart: vi.fn(), submitCopilotFeedback: vi.fn() }));
 // Co-pilot phase 2 (session 113): the REAL card still renders (every existing
 // assertion about its badge/chrome stands) — this wrapper only records the
 // props DatasetChat hands it, which is where the edit context is asserted.
@@ -323,5 +326,32 @@ describe('DatasetChat — the own-data card gets its edit context', () => {
     await submit('show revenue by year');
     const lastCall = onVisualsChange.mock.calls.at(-1)![0];
     expect(lastCall[0].userChartEdit).toMatchObject({ datasetId: 1, threadId: 42, turnId: 31 });
+  });
+});
+
+// Co-pilot phase 2 (session 113, Task 8): a replayed co-pilot turn.
+describe('DatasetChat — a replayed edit turn (co-pilot phase 2)', () => {
+  const EDIT_MESSAGE = {
+    role: 'assistant' as const,
+    kind: 'edit' as const,
+    text: 'Twee dingen aangepast.',
+    commands: [{ kind: 'setForm', form: 'bar' }],
+    refused: [{ request: 'kleur van de lijn', reason: 'not_available' as const, control: 'style' as const }],
+    targetTurnId: 7,
+    turnId: 12,
+  };
+
+  it('shows the recipe chips and the refusal line — and NO second chart card', () => {
+    render(<DatasetChat {...baseProps({ initialMessages: [{ role: 'user', text: 'maak er een staaf van' }, EDIT_MESSAGE] })} />);
+    expect(screen.getByText('Twee dingen aangepast.')).toBeInTheDocument();
+    expect(screen.getByText('Weergave: Staaf')).toBeInTheDocument();
+    expect(screen.getByText(/kleur van de lijn.*Opmaak: open het paneel Opmaak\./)).toBeInTheDocument();
+    expect(screen.queryByText('Your data · unverified')).not.toBeInTheDocument();
+  });
+
+  it('contributes no dock tab of its own', () => {
+    const onVisualsChange = vi.fn();
+    render(<DatasetChat {...baseProps({ initialMessages: [EDIT_MESSAGE] })} onVisualsChange={onVisualsChange} />);
+    expect(onVisualsChange.mock.calls.at(-1)![0]).toEqual([]);
   });
 });
