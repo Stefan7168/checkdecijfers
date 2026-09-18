@@ -110,6 +110,20 @@ describe('applyCommand / invertCommand', () => {
     expect([...s.hiddenKeys]).toEqual(['s1']);
   });
 
+  it('undoing a no-op addNote (duplicate id) is itself a no-op — it must not delete the pre-existing note', () => {
+    let s = initialDocState('line');
+    const a = { id: 'a', resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland', text: 'a' };
+    s = applyCommand(s, { kind: 'addNote', note: a });
+    const afterFirst = s;
+    // Second addNote with the same id is a no-op (applyCommand dedupes on note.id).
+    s = applyCommand(s, { kind: 'addNote', note: a });
+    expect(s).toEqual(afterFirst);
+    const inv = invertCommand(s, { kind: 'addNote', note: a });
+    s = applyCommand(s, inv);
+    expect(s.notes.map((n) => n.id)).toEqual(['a']);
+    expect(plain(s)).toEqual(plain(afterFirst));
+  });
+
   it('applyTemplate replaces the presentation with the template overrides', () => {
     let s = initialDocState('line', { lineWidth: 'thick' });
     s = applyCommand(s, { kind: 'applyTemplate', templateId: 'classic' });

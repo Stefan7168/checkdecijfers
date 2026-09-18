@@ -148,6 +148,11 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
     case 'setReading':
       return { kind: 'setReading', index: before.selectedReading };
     case 'addNote':
+      // applyCommand treats addNote as a no-op when a note with the same id
+      // already exists (before.notes) — its inverse must then also be a
+      // no-op, or undoing it would delete that pre-existing note. Re-setting
+      // the unchanged title is the cheapest genuine no-op; no extra kind needed.
+      if (before.notes.some((n) => n.id === cmd.note.id)) return { kind: 'setTitle', title: before.title };
       return { kind: 'removeNote', noteId: cmd.note.id };
     case 'removeNote': {
       const index = before.notes.findIndex((n) => n.id === cmd.noteId);
@@ -257,6 +262,7 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('setTitle'), title: z.string().max(CHART_TITLE_MAX_LENGTH).nullable(), ...envelope }),
   z.object({ kind: z.literal('setCaption'), caption: z.string().max(CHART_CAPTION_MAX_LENGTH).nullable(), ...envelope }),
 ]);
+// The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
 export const commandLogSchema = z.array(commandSchema).max(200);
 
 /** Presentation patches are re-sanitised on parse so a stored log can never
