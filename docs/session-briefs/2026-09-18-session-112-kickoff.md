@@ -56,9 +56,8 @@ Undo/Retry) if the session has room. Phase 2's flag flip (`ATTACHMENTS_ENABLED`)
 ## Owner steps still pending (from session 110 + 111)
 
 `npm run registry:apply`; `npm run backfill:eurostat-doi -- --apply`; `npm run benchmark:run:live`;
-region-set Task 9 ([#267](../open-questions.md)); audit row 22; decide [#276](../open-questions.md)
-(purge two unreachable commits via GitHub Support, or accept); the stray "Example column chart" in the
-owner's competitor-app account.
+region-set Task 9 ([#267](../open-questions.md)); audit row 22. Nothing new from session 111 — the
+owner closed [#276](../open-questions.md) (accept) and said to leave the stray test chart alone.
 
 ## Tracked, not the focus
 

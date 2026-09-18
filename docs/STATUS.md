@@ -38,9 +38,8 @@ wrap-up, merge `e99e3e3`). Kickoff for the next session: [session-briefs/2026-09
 - **Rebrand noted, not the focus:** domain graphmaker.studio bought ([#7](open-questions.md)); homepage
   "themes" row wanted later ([#275](open-questions.md)).
 - **Owner steps pending — unchanged from session 110** (registry:apply, DOI backfill, live benchmark,
-  region-set Task 9, audit row 22) plus: decide [#276](open-questions.md) (purge two unreachable commits
-  via GitHub Support, or accept); a test chart "Example column chart" was created in the owner's
-  competitor-app account by a mis-click (3/5 free slots) — delete or keep.
+  region-set Task 9, audit row 22) — nothing new from session 111 ([#276](open-questions.md) closed by the owner: accept, no
+  GitHub Support; the stray test chart in the competitor app: leave it).
 - Side finding: no ⌘Z-style history exists anywhere in our chart UI today either — phase 1 is the
   prerequisite for everything else in the co-pilot.
 
