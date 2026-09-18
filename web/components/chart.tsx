@@ -2634,9 +2634,17 @@ export function ChartView({
   /** Chart co-pilot phase 1 (session 112, ADR 056): ⌘Z / ⇧⌘Z (and the
    * Windows Ctrl+Z / Ctrl+Y) on the card itself. Never in embed or stage
    * mode — neither offers an edit to undo. A text field's OWN native undo
-   * always wins inside an input/textarea/contenteditable. */
+   * always wins inside an input/textarea/contenteditable.
+   *
+   * Fix round 1: ALSO inert while the story is open. Every other reader
+   * control that could contradict the active step's caption is already
+   * `disabled={storyOpen}` (the legend, the Vanaf/Tot selects, small
+   * multiples) — an undo that silently put a hidden series back would walk
+   * straight through that lock. (`storyOpen` is declared further down; this
+   * is a function declaration, only ever called from an event handler after
+   * the render that defines it, so there is no TDZ read here.) */
   function onHistoryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
-    if (embedMode || inStage) return;
+    if (embedMode || inStage || storyOpen) return;
     if (!(event.metaKey || event.ctrlKey)) return;
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName;
@@ -3485,78 +3493,84 @@ export function ChartView({
             {dimEntries.length > 0 ? <span>{dimEntries.map(([, v]) => v).join(' · ')}</span> : null}
           </div>
         </div>
-        <div className="flex shrink-0 items-start gap-1">
+        {/* Fix round 1 (Minor 5): the two right-hand groups share ONE
+          * wrapper — the header row is `justify-between` and a third bare
+          * child would be centred — and the wrapper itself is gated, so
+          * embed/stage mode render no empty box at all. */}
         {!embedMode && !inStage ? (
-          <div className="flex shrink-0 items-center gap-1" data-slot="chart-history-actions">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={undo}
-              disabled={!canUndo}
-              aria-label={t(chartLang, 'chart.history.undo')}
-              title={t(chartLang, 'chart.history.undoHint')}
-            >
-              <Undo2 className="size-4" aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={redo}
-              disabled={!canRedo}
-              aria-label={t(chartLang, 'chart.history.redo')}
-              title={t(chartLang, 'chart.history.redoHint')}
-            >
-              <Redo2 className="size-4" aria-hidden="true" />
-            </Button>
-            {/* Task 4 adds <ChartHistoryMenu …/> here. */}
-          </div>
-        ) : null}
-        {!embedMode && !inStage && (storyAvailable || state.form !== 'table') ? (
-          <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
-            {/* Story mode (session 92): the colourful trigger is offered
-              * whenever there is a code-built story (storyAvailable,
-              * computed above next to styleControlsId). */}
-            {storyAvailable ? (
-              <ChartStoryTrigger
-                open={storyOpen}
-                onToggle={toggleStory}
-                controlsId={storyControlsId}
-                triggerId={storyTriggerId}
-                lang={chartLang}
-              />
-            ) : null}
-            {/* Review fix (chart-panel-layout, option A): table form gets NO
-              * frame and NO Style panel (as before the Frame-tab feature) — a
-              * framed table would need its own export path, so the trigger
-              * stays gated on `state.form !== 'table'` exactly like the
-              * ChartConfigPanel mount further down. */}
-            {state.form !== 'table' ? (
-              <ChartConfigTrigger
-                open={styleOpen}
-                onToggle={toggleStylePanel}
-                controlsId={styleControlsId}
-                triggerId={styleTriggerId}
-                lang={chartLang}
-                compact
-              />
-            ) : null}
-            {/* Journalist chart-headline (Task 6): chat context only (the
-              * embed page never shows edit UI, per the spec — Task 7's own
-              * static render is the read-only counterpart) and only when
-              * there's something to draft from (mirrors the Insights
-              * trigger's own storyAvailable-from-findings gate above). */}
-            {embed?.auditId !== undefined && findings.length > 0 ? (
-              <Button type="button" variant="ghost" size="sm" onClick={startHeadlineDraft} disabled={headlineBusy}>
-                {headlineBusy
-                  ? t(chartLang, 'chart.headline.drafting')
-                  : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
+          <div className="flex shrink-0 items-start gap-1">
+            <div className="flex shrink-0 items-center gap-1" data-slot="chart-history-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo || storyOpen}
+                aria-label={t(chartLang, 'chart.history.undo')}
+                title={storyLockedTitle ?? t(chartLang, 'chart.history.undoHint')}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+              >
+                <Undo2 className="size-4" aria-hidden="true" />
               </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo || storyOpen}
+                aria-label={t(chartLang, 'chart.history.redo')}
+                title={storyLockedTitle ?? t(chartLang, 'chart.history.redoHint')}
+                aria-describedby={storyOpen ? storyLockId : undefined}
+              >
+                <Redo2 className="size-4" aria-hidden="true" />
+              </Button>
+              {/* Task 4 adds <ChartHistoryMenu …/> here. */}
+            </div>
+            {storyAvailable || state.form !== 'table' ? (
+              <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
+                {/* Story mode (session 92): the colourful trigger is offered
+                  * whenever there is a code-built story (storyAvailable,
+                  * computed above next to styleControlsId). */}
+                {storyAvailable ? (
+                  <ChartStoryTrigger
+                    open={storyOpen}
+                    onToggle={toggleStory}
+                    controlsId={storyControlsId}
+                    triggerId={storyTriggerId}
+                    lang={chartLang}
+                  />
+                ) : null}
+                {/* Review fix (chart-panel-layout, option A): table form gets NO
+                  * frame and NO Style panel (as before the Frame-tab feature) — a
+                  * framed table would need its own export path, so the trigger
+                  * stays gated on `state.form !== 'table'` exactly like the
+                  * ChartConfigPanel mount further down. */}
+                {state.form !== 'table' ? (
+                  <ChartConfigTrigger
+                    open={styleOpen}
+                    onToggle={toggleStylePanel}
+                    controlsId={styleControlsId}
+                    triggerId={styleTriggerId}
+                    lang={chartLang}
+                    compact
+                  />
+                ) : null}
+                {/* Journalist chart-headline (Task 6): chat context only (the
+                  * embed page never shows edit UI, per the spec — Task 7's own
+                  * static render is the read-only counterpart) and only when
+                  * there's something to draft from (mirrors the Insights
+                  * trigger's own storyAvailable-from-findings gate above). */}
+                {embed?.auditId !== undefined && findings.length > 0 ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={startHeadlineDraft} disabled={headlineBusy}>
+                    {headlineBusy
+                      ? t(chartLang, 'chart.headline.drafting')
+                      : t(chartLang, chartHeadline !== null ? 'chart.headline.edit' : 'chart.headline.suggest')}
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ) : null}
-        </div>
       </div>
       {/* Journalist chart-headline (Task 6): the sentence headline leads,
         * the headlineFigure big-number block (below) follows. Named state
@@ -4075,19 +4089,19 @@ export function ChartView({
           // IS a deliberate look already chosen, so the gallery is not what
           // that reader needs first: open on Grafiek instead.
           openTemplatesWhenPristine={accountStyle === null}
-          onChange={(patch) => {
+          onChange={(patch, meta) => {
             // Final-review fix (Fix 5): ChartConfigPanel now refuses a
             // frame background/inset change UP FRONT (its own contrast
             // guard, before ever calling this onChange) whenever it would
             // make a series colour illegible — so there is nothing left for
             // this callback to silently drop or adjust afterwards. Series
             // colours are never changed by the frame feature.
-            // A colour drag emits one patch per pointer move: those merge
-            // into ONE undo entry (transient), sealed when the field is
-            // done with (`onSeal` below). Every other option is a discrete
-            // choice and gets its own entry.
-            const transient = Object.keys(patch).every((k) => k === 'seriesColors' || k === 'frameBackground');
-            dispatchCommand({ kind: 'setPresentation', patch }, 'panel', { transient });
+            // Fix round 1 (Minor 2): the panel SAYS whether a change is a
+            // mid-drag colour-picker move — no key-shape guessing here, so a
+            // discrete action that happens to touch the same keys (e.g.
+            // "Standaardkleuren") keeps its own undo entry. Transient
+            // entries merge until sealed (`onSeal` below).
+            dispatchCommand({ kind: 'setPresentation', patch }, 'panel', { transient: meta?.transient === true });
             trackChartStyleEvent('option_changed');
             // Task 5: every frame control change ALSO counts as its own
             // frame_changed event, in addition to (never instead of) the

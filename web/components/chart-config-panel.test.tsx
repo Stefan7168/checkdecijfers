@@ -585,7 +585,12 @@ describe('ChartConfigPanel — Kleuren tab', () => {
     openTab('Kleuren');
     const picker = screen.getByLabelText('Kleur van Amsterdam kiezen') as HTMLInputElement;
     fireEvent.change(picker, { target: { value: '#ffc658' } });
-    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } });
+    // Co-pilot phase 1 (fix round 1): a NATIVE colour picker fires once per
+    // pointer move, so it is the one path that marks itself `transient` —
+    // the caller merges those into a single undo entry and seals it when
+    // the field is left. Every other commit path (hex box blur/Enter,
+    // presets, Standaardkleuren) stays a plain one-argument call.
+    expect(onChange).toHaveBeenCalledWith({ seriesColors: { 0: '#ffc658' } }, { transient: true });
     const amsterdamRow = screen.getByRole('group', { name: 'Amsterdam' });
     expect(within(amsterdamRow).getByText('Deze kleur is slecht leesbaar in het lichte thema.')).toBeInTheDocument();
   });

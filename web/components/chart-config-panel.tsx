@@ -430,30 +430,30 @@ function FrameHexField({
   ariaLabelPicker,
 }: {
   value: string;
-  onCommit: (hex: string) => void;
+  onCommit: (hex: string, meta?: { transient?: boolean }) => void;
   onSeal?: () => void;
   ariaLabelHex: string;
   ariaLabelPicker: string;
 }): ReactNode {
   const [text, setText] = useState(value);
-  function commit(raw: string): void {
+  function commit(raw: string, meta?: { transient?: boolean }): void {
     const hex = normalizeHex(raw);
     if (hex === null) {
       setText(value);
       return;
     }
-    onCommit(hex);
+    onCommit(hex, meta);
   }
   return (
     <ColorField
       textValue={text}
       pickerValue={value}
       onTextChange={setText}
-      onBlur={commit}
+      onBlur={(v) => commit(v)}
       onKeyDown={(v, key) => {
         if (key === 'Enter') commit(v);
       }}
-      onPickerChange={commit}
+      onPickerChange={(v) => commit(v, { transient: true })}
       onSeal={onSeal}
       ariaLabelHex={ariaLabelHex}
       ariaLabelPicker={ariaLabelPicker}
@@ -663,7 +663,14 @@ export interface AppliedBrand {
 export interface ChartConfigPanelProps {
   resolved: ResolvedPresentation;
   seriesMeta: { key: string; label: string; color: string }[];
-  onChange: (patch: PresentationOverrides) => void;
+  /** Chart co-pilot phase 1 fix round 1: `meta.transient` marks a MID-DRAG
+   * colour-picker move — the caller merges consecutive transient changes
+   * into one undo entry and seals it via `onSeal`. Only the two native
+   * colour pickers (series rows, frame solid/gradient) ever set it; every
+   * button, radio, toggle and hex-text commit is a discrete choice and
+   * omits it. Optional second argument, so every existing caller and test
+   * that passes a one-argument handler keeps compiling. */
+  onChange: (patch: PresentationOverrides, meta?: { transient?: boolean }) => void;
   onReset: () => void;
   /** Chart co-pilot phase 1 (session 112, ADR 056): "this run of colour
    * tweaks is finished" — the caller closes the merged, transient history
@@ -976,7 +983,16 @@ export function ChartConfigPanel({
   // a given inset/background combination.
   const [frameBgRefused, setFrameBgRefused] = useState(false);
 
-  function tryFrameChange(patch: PresentationOverrides): void {
+  /** Fix round 1: only ever pass the second argument when there IS one. A
+   * consumer cannot tell `onChange(patch)` from `onChange(patch, undefined)`,
+   * but a spy that pins the call shape can — and every non-drag path here is
+   * genuinely a one-argument call. */
+  function emitPatch(patch: PresentationOverrides, meta?: { transient?: boolean }): void {
+    if (meta) onChange(patch, meta);
+    else onChange(patch);
+  }
+
+  function tryFrameChange(patch: PresentationOverrides, meta?: { transient?: boolean }): void {
     const nextValues = { ...resolved.values, ...patch };
     const backdrops = frameBackdrops(nextValues);
     const hidesASeries = seriesMeta.some((series) =>
@@ -987,7 +1003,7 @@ export function ChartConfigPanel({
       return;
     }
     setFrameBgRefused(false);
-    onChange(patch);
+    emitPatch(patch, meta);
   }
 
   const FRAME_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
@@ -1090,7 +1106,13 @@ export function ChartConfigPanel({
     return draft !== undefined && draft.committed && HEX_COLOR.test(draft.text) ? draft.text : effectiveColor;
   }
 
-  function commitColor(key: string, index: number, effectiveColor: string, rawValue: string): void {
+  function commitColor(
+    key: string,
+    index: number,
+    effectiveColor: string,
+    rawValue: string,
+    meta?: { transient?: boolean },
+  ): void {
     const hex = normalizeHex(rawValue);
     if (hex === null) {
       // Garbage: snap back without a word — nothing valid was ever offered.
@@ -1132,7 +1154,7 @@ export function ChartConfigPanel({
       return next;
     });
     setColorDrafts((d) => ({ ...d, [key]: { text: hex, forColor: effectiveColor, committed: true } }));
-    onChange({ seriesColors: { ...currentColors, [index]: hex } });
+    emitPatch({ seriesColors: { ...currentColors, [index]: hex } }, meta);
   }
 
   const regionId = `${idPrefix}-style`;
@@ -1512,7 +1534,7 @@ export function ChartConfigPanel({
                       onKeyDown={(v, key) => {
                         if (key === 'Enter') commitColor(series.key, index, series.color, v);
                       }}
-                      onPickerChange={(v) => commitColor(series.key, index, series.color, v)}
+                      onPickerChange={(v) => commitColor(series.key, index, series.color, v, { transient: true })}
                       onSeal={onSeal}
                     />
                     {warning ? (

@@ -91,6 +91,53 @@ function twoSeriesLineSpec(): ChartSpec {
   };
 }
 
+// Fix round 1: a spec with a sharp jump on the first series, so
+// `buildFindings` returns at least one finding and the Insights story is
+// actually available (`storyAvailable`). Copied from chart-headline-ui.test.tsx's
+// own `twoSeriesFindingsSpec`, which exists for exactly the same reason.
+function twoSeriesFindingsSpec(): ChartSpec {
+  return {
+    schemaVersion: 1,
+    kind: 'line',
+    title: 'Werkloosheidspercentage',
+    dims: { Kenmerk: '000000' },
+    dimLabels: { Kenmerk: 'Alle kenmerken' },
+    unit: '%',
+    series: [
+      {
+        label: 'Nederland',
+        regionCode: 'NL01',
+        points: [
+          point({ resultId: 'nl-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 3.0, formattedValue: '3,0' }),
+          point({ resultId: 'nl-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 3.1, formattedValue: '3,1' }),
+          point({ resultId: 'nl-2025', periodCode: '2025JJ00', periodLabel: '2025', value: 5.2, formattedValue: '5,2' }),
+        ],
+      },
+      {
+        label: 'Utrecht',
+        regionCode: 'PV26',
+        points: [
+          point({ resultId: 'ut-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 2.0, formattedValue: '2,0' }),
+          point({ resultId: 'ut-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 2.1, formattedValue: '2,1' }),
+          point({ resultId: 'ut-2025', periodCode: '2025JJ00', periodLabel: '2025', value: 2.3, formattedValue: '2,3' }),
+        ],
+      },
+    ],
+    provisionalNote: null,
+    nullNotes: [],
+    definitionLine: null,
+    attributionLine: 'Bron: CBS StatLine, tabel 12345NED.',
+    attribution: {
+      tableId: '12345NED',
+      tableTitle: 'Test',
+      tableVersion: 1,
+      syncedAt: '2026-07-01',
+      coveredPeriods: { from: '2023', to: '2025' },
+      license: 'CC BY 4.0',
+    },
+  };
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -156,6 +203,49 @@ describe('undo / redo at the chart card', () => {
     render(<ChartView spec={twoSeriesLineSpec()} embedMode embed={{ auditId: 1 }} embedFooter="x" />);
     expect(screen.queryByRole('button', { name: 'Ongedaan maken' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Opnieuw' })).toBeNull();
+  });
+
+  // Fix round 1 (review finding 1): while the Insights story is open, every
+  // reader control that could contradict the active step's caption is
+  // disabled (the legend, the Vanaf/Tot selects, small multiples). Undo/Redo
+  // must obey the SAME lock — an undo that silently put a hidden series back
+  // would walk straight through it — and a story STEP is the app moving its
+  // own view, never a reader edit, so it leaves no history entry behind.
+  describe('the story-mode control lock', () => {
+    it('disables Undo/Redo while the story is open, and ⌘Z does nothing', () => {
+      const { container } = render(<ChartView spec={twoSeriesFindingsSpec()} />);
+      // One real edit first, so Undo would otherwise be enabled.
+      fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
+      // Back to Lijn: the story is only available off the table form, and
+      // this leaves a second entry so Redo is live too.
+      fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+      expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeEnabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeDisabled();
+
+      const formBefore = screen.getByRole('tab', { name: 'Staaf' }).getAttribute('aria-selected');
+      fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true });
+      fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true, shiftKey: true });
+      expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', formBefore!);
+    });
+
+    it('a story step never creates a history entry', () => {
+      render(<ChartView spec={twoSeriesFindingsSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      expect(screen.getByRole('region', { name: 'Inzichten bij de grafiek' })).toBeInTheDocument();
+      // Stepping through the story moves the highlight (a raw dispatch).
+      fireEvent.click(screen.getByRole('button', { name: 'Volgende' }));
+      // Close the story again: the lock lifts, and there is still nothing to undo.
+      fireEvent.click(screen.getByRole('button', { name: 'Inzichten' }));
+      expect(screen.queryByRole('region', { name: 'Inzichten bij de grafiek' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Opnieuw' })).toBeDisabled();
+    });
   });
 
   it('the embed dialog still receives the current form (the same state serialises as before)', async () => {
