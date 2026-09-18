@@ -16,6 +16,7 @@ import {
   USER_DATA_DISCLAIMER,
   type ChartInstruction,
   type ColumnProfile,
+  type DatasetProfile,
   type MissingValueReason,
   type UserChartPoint,
   type UserChartSeries,
@@ -25,6 +26,16 @@ import {
 
 function missingReason(raw: string): MissingValueReason {
   return raw.trim().length === 0 ? 'leeg in bron' : 'geen getal';
+}
+
+/** A derived label's a/b operand text: the raw column header, or — when
+ * instruction.aggregate is also set — that header wrapped in its
+ * aggregateLabel (execute.ts applies the same aggregate.fn to both a and
+ * b), so a combined aggregate→derive label never drops the aggregation
+ * step from its own axis text. */
+function operandHeader(profile: DatasetProfile, instruction: ChartInstruction, columnId: string): string {
+  const header = columnById(profile, columnId).header;
+  return instruction.aggregate !== null ? aggregateLabel(instruction.aggregate.fn, header) : header;
 }
 
 function buildPoint(raw: RawPoint, yColumnId: string, yColumn: ColumnProfile): UserChartPoint {
@@ -96,13 +107,19 @@ export function buildUserChartSpec(dataset: UserDataset, instruction: ChartInstr
   // never by the raw column header alone — U9's verbatim-header rule only
   // ever applied to an unmodified column. `derivedLabelText` takes
   // precedence over aggregate's own label when both are set (derived is
-  // always the LAST stage applied, per execute.ts's pipeline order).
+  // always the LAST stage applied, per execute.ts's pipeline order) — but
+  // when BOTH are set, the derived label's own a/b operand text must say
+  // "aggregated", not just name the raw column: `aggregate.fn` applies to
+  // `a` AND `b` identically (execute.ts aggregates both with the same fn),
+  // so "sum per year, then share of total" reads "Sum of Omzet, share of
+  // total (%)", never the honesty gap of a bare "Omzet, share of total (%)"
+  // that hides the aggregation step (fix round 1, session 113 review).
   const derivedLabelText =
     instruction.derived !== null
       ? derivedLabel(
           instruction.derived.op,
-          columnById(profile, instruction.y[0]!).header,
-          instruction.derived.b === null ? null : columnById(profile, instruction.derived.b).header,
+          operandHeader(profile, instruction, instruction.y[0]!),
+          instruction.derived.b === null ? null : operandHeader(profile, instruction, instruction.derived.b),
         )
       : null;
 

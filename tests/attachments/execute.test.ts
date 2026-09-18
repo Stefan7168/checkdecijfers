@@ -239,3 +239,51 @@ describe('derived (fixed set)', () => {
     expect(points.map((p) => p.computed?.value)).toEqual([150 / 330 * 100, 180 / 330 * 100]);
   });
 });
+
+describe('aggregate/sort-by-value edge cases (fix round 1)', () => {
+  it('multi-y + aggregate: each y column aggregates independently as its own series', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2', 'c3'], aggregate: { fn: 'sum' } }));
+    const bySeries = new Map<string, [string, number | null, string | undefined][]>();
+    for (const p of points) {
+      const arr = bySeries.get(p.seriesKey) ?? [];
+      arr.push([p.xRaw, p.computed?.value ?? null, p.computed?.rowRef]);
+      bySeries.set(p.seriesKey, arr);
+    }
+    expect(bySeries.get('c2')).toEqual([
+      ['2020', 150, 'agg:sum:r1:c2+r2:c2'],
+      ['2021', 180, 'agg:sum:r3:c2+r4:c2+r5:c2'],
+    ]);
+    expect(bySeries.get('c3')).toEqual([
+      ['2020', 80, 'agg:sum:r1:c3+r2:c3'],
+      ['2021', 100, 'agg:sum:r3:c3+r4:c3+r5:c3'],
+    ]);
+  });
+
+  it('sort by value with a null group: the null point is last in both directions, non-null points ordered correctly', () => {
+    const cells = [
+      ['Jaar', 'Gemeente', 'Omzet'],
+      ['2020', 'Amsterdam', '100'],
+      ['2020', 'Rotterdam', '50'],
+      ['2020', 'Den Haag', ''],
+    ];
+    const asc = executeInstruction(
+      dataset(cells),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'max' }, sort: { by: 'value', direction: 'asc' } }),
+    );
+    expect(asc.map((p) => [p.xRaw, p.computed?.value])).toEqual([
+      ['Rotterdam', 50],
+      ['Amsterdam', 100],
+      ['Den Haag', null],
+    ]);
+
+    const desc = executeInstruction(
+      dataset(cells),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], aggregate: { fn: 'max' }, sort: { by: 'value', direction: 'desc' } }),
+    );
+    expect(desc.map((p) => [p.xRaw, p.computed?.value])).toEqual([
+      ['Amsterdam', 100],
+      ['Rotterdam', 50],
+      ['Den Haag', null],
+    ]);
+  });
+});

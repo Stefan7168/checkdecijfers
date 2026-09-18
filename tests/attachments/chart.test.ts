@@ -192,3 +192,10 @@ it('a derived spec labels a − b and keeps sourceText as the a cell', () => {
   expect(spec.yHeaders).toEqual(['Omzet − Kosten']);
   expect(spec.series[0]!.points[0]).toMatchObject({ formattedValue: '40', sourceText: '100', rowRef: 'der:difference:r1:c2|r1:c3' });
 });
+it('a combined aggregate→derive label keeps the aggregation prefix on the operand (fix round 1)', () => {
+  const spec = buildUserChartSpec(
+    dataset({ cells: SALES, profile: buildDatasetProfile(SALES) }),
+    instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' }, derived: { op: 'share_of_total', b: null } }),
+  );
+  expect(spec.yHeaders).toEqual(['Sum of Omzet, share of total (%)']);
+});

@@ -381,6 +381,9 @@ function derivePoints(
         decimals = 2;
       }
 
+      // 'none' sentinel: no b row/group joined at all (as opposed to a
+      // joined b whose own value is null) — still a real, distinguishable
+      // rowRef suffix, never silently merged with the joined-but-null case.
       const refB = bv?.ref ?? 'none';
       result.push({
         ...p,
