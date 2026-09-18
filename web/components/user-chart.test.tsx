@@ -426,6 +426,46 @@ describe('UserChartView — hydrating a stored data edit (co-pilot phase 2)', ()
   });
 });
 
+// Task 5 review ask, built in Task 6: the card's miss→fetch→apply path
+// through its FIRST real doorway (the Data panel) — a live control change,
+// one free deterministic render call, the plot swapped for what came back,
+// and Undo going back through the cache without a second call.
+describe('UserChartView — a data command from the Data panel (co-pilot phase 2)', () => {
+  function aggregatedSpec(): UserChartSpec {
+    return spec({
+      kind: 'bar',
+      yHeaders: ['Sum of Revenue'],
+      series: [{ label: 'Sum of Revenue', points: [point({ rowRef: 'g1', value: 99, formattedValue: '99,0', sourceText: '99,0' })] }],
+    });
+  }
+
+  it('renders the new spec on a cache miss and restores the original on Undo — one call in total', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: aggregatedSpec() });
+    render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={spec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Revenue per Year');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+    fireEvent.change(screen.getByLabelText('Samenvatten'), { target: { value: 'sum' } });
+
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Sum of Revenue per Year'));
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledWith(3, { ...LAST_INSTRUCTION, aggregate: { fn: 'sum' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Revenue per Year'));
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no Data doorway at all without an edit context (no profile to validate against)', () => {
+    render(<UserChartView spec={spec()} />);
+    expect(screen.queryByRole('button', { name: 'Data' })).not.toBeInTheDocument();
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface (the
 // heading/provenance line the component itself composes; disclaimerLine is
 // backend data and stays as given regardless of language).

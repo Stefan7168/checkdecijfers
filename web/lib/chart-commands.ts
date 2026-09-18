@@ -247,6 +247,13 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
       return cmd.hiddenKeys.every((k) => keys.has(k)) && (cmd.highlightedKey === null || keys.has(cmd.highlightedKey));
     case 'setPeriodRange': {
       if (cmd.range === null) return true;
+      // Co-pilot phase 2 (session 113, Task 6): an own-data card has no zoom
+      // control at all, and `periodCodes()` would happily accept a pair of
+      // its x keys (a UserChartPoint's xKey IS mapped onto `periodCode` by
+      // the card's command-spec adapter) — so a non-null range is refused
+      // outright wherever a dataset profile is present. Without this rule a
+      // stored/chat-borne zoom would replay onto a chart that cannot show one.
+      if (ctx.profile !== undefined) return false;
       const codes = periodCodes(ctx.spec);
       return codes.has(cmd.range[0]) && codes.has(cmd.range[1]) && cmd.range[0] <= cmd.range[1];
     }
