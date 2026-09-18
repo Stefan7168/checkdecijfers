@@ -14,11 +14,13 @@ import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import type { ChatMessage } from '../lib/chat-message.ts';
+import { previousCompatibleChartIndex } from '../lib/chat-message.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat, extendsPreviousChart } from './chat.tsx';
+import { ChartView } from './chart.tsx';
 
 // #211 (Task 3): SiteFooter needs usePathname. '/chat' (not '/') deliberately
 // keeps its "Over dit project" anchor-probe branch inert here, matching the
@@ -90,6 +92,30 @@ vi.mock('../app/actions.ts', () => ({
   confirmOnboardingFetch,
 }));
 
+// Co-pilot phase 3 fix round (session 114): chat.tsx now imports this Server
+// Action module directly (the seed fetch) — mocked the same way
+// chart-commands-contract.test.tsx mocks it for chart.tsx's own import of
+// the same module (`vi.hoisted` + `vi.mock`, default `{ ok: false }` so
+// every OTHER test here — none of which extend a previous chart — sees no
+// behaviour change at all).
+const { fetchChartEdits } = vi.hoisted(() => ({
+  fetchChartEdits: vi.fn().mockResolvedValue({ ok: false }),
+}));
+vi.mock('../app/chart-edits-actions.ts', () => ({ fetchChartEdits }));
+
+// Co-pilot phase 3 fix round: several EXISTING tests below (Task 4 embed
+// wiring, #254 chartAlternates) depend on the REAL ChartView rendering (the
+// Insluiten button, the reading combobox) — so this wraps the real
+// implementation in a spy (same `vi.fn(actual.X)` style
+// `vi.mock('../lib/dock-visuals.ts', ...)` above already uses for
+// `deriveVisuals`) rather than stubbing it out, which would silently break
+// those. `vi.mocked(ChartView).mock.calls` then gives the exact props each
+// mount received, for the new seeding tests.
+vi.mock('./chart.tsx', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./chart.tsx')>();
+  return { ...actual, ChartView: vi.fn(actual.ChartView) };
+});
+
 afterEach(() => {
   cleanup();
   askQuestion.mockReset();
@@ -97,6 +123,9 @@ afterEach(() => {
   submitAnswerFeedback.mockReset();
   confirmOnboardingFetch.mockReset();
   vi.mocked(deriveVisuals).mockClear();
+  fetchChartEdits.mockReset();
+  fetchChartEdits.mockResolvedValue({ ok: false });
+  vi.mocked(ChartView).mockClear();
 });
 
 /** Wraps a GatedResponse into the AskOutcome shape, with no context —
@@ -278,6 +307,34 @@ describe('extendsPreviousChart (co-pilot phase 3, Task 3)', () => {
   it('is false for the very first message, and for a message with no chart', () => {
     expect(extendsPreviousChart([chartMessage(CHART_SPEC)], 0)).toBe(false);
     expect(extendsPreviousChart([chartMessage(CHART_SPEC), chartMessage(null)], 1)).toBe(false);
+  });
+});
+
+describe('previousCompatibleChartIndex (co-pilot phase 3 fix round, session 114)', () => {
+  it('returns null for the very first message, and for a message with no chart', () => {
+    expect(previousCompatibleChartIndex([chartMessage(CHART_SPEC)], 0)).toBeNull();
+    expect(previousCompatibleChartIndex([chartMessage(CHART_SPEC), chartMessage(null)], 1)).toBeNull();
+  });
+
+  it('returns the index of the compatible earlier message', () => {
+    const messages = [chartMessage(CHART_SPEC), chartMessage(CHART_SPEC)];
+    expect(previousCompatibleChartIndex(messages, 1)).toBe(0);
+  });
+
+  it('returns null when nothing earlier is compatible (unit differs)', () => {
+    const other: ChartSpec = { ...CHART_SPEC, unit: 'aantal' };
+    const messages = [chartMessage(CHART_SPEC), chartMessage(other)];
+    expect(previousCompatibleChartIndex(messages, 1)).toBeNull();
+  });
+
+  it('returns the MOST RECENT compatible earlier message, not the earliest', () => {
+    const other: ChartSpec = { ...CHART_SPEC, unit: 'aantal' };
+    // index 0: CHART_SPEC, index 1: other (incompatible), index 2: CHART_SPEC again (compatible with 0)
+    const messages = [chartMessage(CHART_SPEC), chartMessage(other), chartMessage(CHART_SPEC)];
+    // The 4th message (index 3) is compatible with BOTH index 0 and index 2 — the
+    // most recent one (index 2) wins.
+    const withFourth = [...messages, chartMessage(CHART_SPEC)];
+    expect(previousCompatibleChartIndex(withFourth, 3)).toBe(2);
   });
 });
 
@@ -1302,6 +1359,75 @@ describe('Chat — WP128 feedback buttons (#128)', () => {
 // "auditId null vs a real number" gate, same reason (the audit write can
 // fail independently of the answer itself). These prove that mirror holds at
 // the real Chat component, not just in chart.tsx/visual-dock.tsx isolation.
+// Co-pilot phase 3 fix round (session 114): a continuing chart mounts
+// wearing the earlier compatible card's own form/presentation, folded from
+// that card's saved command log (fetchChartEdits, zero LLM calls) — see
+// `previousCompatibleChartIndex` above for the "which earlier message"
+// half; these prove the fetch/fold/thread-onto-ChartView half.
+describe('Chat — a continuing chart seeds from the earlier card (co-pilot phase 3 fix round)', () => {
+  function seededMessage(auditId: number, chart: ChartSpec = CHART_SPEC): ChatMessage {
+    return { ...chartMessage(chart), auditId };
+  }
+
+  it("fetches the earlier compatible chart's saved log exactly once", async () => {
+    const first = seededMessage(11);
+    const second = seededMessage(22);
+    render(<Chat initialMessages={[first, second]} />);
+    await waitFor(() => expect(fetchChartEdits).toHaveBeenCalledTimes(1));
+    expect(fetchChartEdits).toHaveBeenCalledWith({ kind: 'answer', id: 11 });
+  });
+
+  it('threads a parsed setForm/setPresentation log onto the seeded ChartView mount', async () => {
+    const first = seededMessage(11);
+    const second = seededMessage(22);
+    fetchChartEdits.mockResolvedValue({
+      ok: true,
+      log: [
+        { kind: 'setForm', form: 'bar', id: 'c1', at: '2026-01-01T00:00:00.000Z', source: 'chat' },
+        { kind: 'setPresentation', patch: { grid: 'none' }, id: 'c2', at: '2026-01-01T00:00:01.000Z', source: 'chat' },
+      ],
+    });
+    render(<Chat initialMessages={[first, second]} />);
+    await waitFor(() => {
+      const seededCall = vi
+        .mocked(ChartView)
+        .mock.calls.find((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22 && 'initialFormOverride' in call[0]);
+      expect(seededCall).toBeDefined();
+    });
+    const seededCall = vi
+      .mocked(ChartView)
+      .mock.calls.find((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22 && 'initialFormOverride' in call[0]);
+    const props = seededCall?.[0] as { initialFormOverride?: string; initialPresentation?: Record<string, unknown> };
+    expect(props.initialFormOverride).toBe('bar');
+    expect(props.initialPresentation).toMatchObject({ grid: 'none' });
+  });
+
+  it('passes neither initialFormOverride nor initialPresentation when fetchChartEdits reports ok:false', async () => {
+    const first = seededMessage(11);
+    const second = seededMessage(22);
+    fetchChartEdits.mockResolvedValue({ ok: false });
+    render(<Chat initialMessages={[first, second]} />);
+    await waitFor(() => expect(fetchChartEdits).toHaveBeenCalledTimes(1));
+    const secondCalls = vi
+      .mocked(ChartView)
+      .mock.calls.filter((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22);
+    for (const call of secondCalls) {
+      expect(call[0]).not.toHaveProperty('initialFormOverride');
+      expect(call[0]).not.toHaveProperty('initialPresentation');
+    }
+  });
+
+  it('never fetches for an answer that does not extend a previous chart', async () => {
+    const other: ChartSpec = { ...CHART_SPEC, unit: 'aantal' };
+    const first = seededMessage(11);
+    const second = seededMessage(22, other);
+    render(<Chat initialMessages={[first, second]} />);
+    // Give any stray microtask a chance to fire before asserting the negative.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchChartEdits).not.toHaveBeenCalled();
+  });
+});
+
 describe('Chat — Embed button wiring on the inline chart (Task 4)', () => {
   it('an answer with a chart AND an auditId shows the Insluiten/Embed button', async () => {
     const response = { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse;

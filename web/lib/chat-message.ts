@@ -211,12 +211,27 @@ export function messageKind(response: ComposedResponse): MessageKind {
  * only the nearest EARLIER message that itself carries a chart counts, and
  * "some earlier chart", not just the immediately preceding one. */
 export function extendsPreviousChart(messages: ChatMessage[], index: number): boolean {
+  return previousCompatibleChartIndex(messages, index) !== null;
+}
+
+/** Co-pilot phase 3 fix round (session 114): the index of the most recent
+ * EARLIER message whose chart is compatible with `messages[index]`'s chart
+ * — the same "continues" compatibility test `extendsPreviousChart` already
+ * used (same measure/unit/kind and identical pinned dims), factored out so
+ * the caller can go find THAT message's own auditId/chart to seed the new
+ * card's form and presentation from. Scans backward from `index - 1` so
+ * "most recent" is literal — with the same compatibility test this can only
+ * ever change WHICH compatible earlier message is returned when there is
+ * more than one, never whether one exists, so `extendsPreviousChart`'s
+ * boolean behaviour is unchanged. Returns null when `index`'s own message
+ * has no chart, or no earlier compatible chart exists. */
+export function previousCompatibleChartIndex(messages: ChatMessage[], index: number): number | null {
   const current = messages[index]?.chart;
-  if (current === undefined || current === null) return false;
+  if (current === undefined || current === null) return null;
   const dimsKey = (dims: Record<string, string>): string =>
     JSON.stringify(Object.fromEntries(Object.entries(dims).sort(([a], [b]) => a.localeCompare(b))));
   const currentDimsKey = dimsKey(current.dims);
-  for (let i = 0; i < index; i++) {
+  for (let i = index - 1; i >= 0; i--) {
     const chart = messages[i]?.chart;
     if (chart === undefined || chart === null) continue;
     if (
@@ -225,8 +240,8 @@ export function extendsPreviousChart(messages: ChatMessage[], index: number): bo
       chart.kind === current.kind &&
       dimsKey(chart.dims) === currentDimsKey
     ) {
-      return true;
+      return i;
     }
   }
-  return false;
+  return null;
 }
