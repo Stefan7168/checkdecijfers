@@ -6,6 +6,7 @@
 // changes.
 import type { AuditedResponse } from '../answer/audit/index.ts';
 import type { DatasetTurnEnvelope } from '../attachments/types.ts';
+import type { CbsCopilotReply } from '../chart/copilot/types.ts';
 
 // 'onboarding_cost' added WP16 sub-part 2 (migration 012, ADR 026): the
 // 100-credit debit that funds an on-demand CBS table onboarding, alongside
@@ -115,3 +116,13 @@ export type GatedDatasetResponse =
   | { kind: 'unauthenticated' }
   | { kind: 'duplicate_request' }
   | { kind: 'insufficient_credits'; balance: number; required: number };
+
+/** The CBS/Eurostat chart-edit gate's result (src/billing/chart-edit-gate.ts,
+ * co-pilot phase 3). Not layered over an Audited* type the way its two
+ * siblings above are — a chart edit never writes audit_answers or
+ * dataset_turns, so `reply` (chart/copilot/types.ts's CbsCopilotReply) is
+ * carried directly. */
+export type GatedChartEditResponse =
+  | { kind: 'ok'; reply: CbsCopilotReply; netCost: number }
+  | { kind: 'insufficient_credits'; balance: number; required: number }
+  | { kind: 'duplicate_request' };
