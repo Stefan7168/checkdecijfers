@@ -234,11 +234,18 @@ exact chart; the new shapes only change how those same numbers are drawn.
 
 **How "which shapes fit" is decided:** the app already has a small yes/no rule for each existing shape —
 for example, "is a filled area chart sensible for this data." This phase adds three more rules of exactly
-the same kind, one per new shape, sitting next to the existing ones in the same file. The three rules are
-combined with the existing ones into one small ranked list ("of everything that's honestly allowed for
-this chart, which is the best default") — that ranked list is the "chart-fit scorer," and it replaces the
-current hand-written priority logic that picks a chart's starting shape, rather than sitting beside it as
-a second, separate mechanism.
+the same kind, one per new shape, sitting next to the existing ones in the same file. **Correction against
+an earlier draft of this section:** the existing rule that picks a chart's OWN starting shape
+(`defaultFormFor`) is its own carefully-tuned, separately-reasoned function (comparison-shape detection,
+the horizontal-bar row-count ceiling, the "too many bars" table fallback) — area and horizontal-bar's
+existing yes/no rules already don't feed it today, they only gate which tab is enabled/greyed-out in the
+on-screen switcher. The three new rules follow that same, already-proven pattern: they gate the tab
+switcher and the chat's allowed-shapes list, and none of the three new shapes ever becomes a chart's
+*starting* shape — a reader always opts into dumbbell/slope/heatmap deliberately, the same way they
+already opt into area or horizontal-bar today. The "chart-fit scorer" is the one small function that
+gathers all eight yes/no rules (five existing, three new) into a single list of "allowed here, and why
+not for the rest" — used by both the tab switcher and the chat co-pilot's allowed-shapes list, so the two
+can never disagree.
 
 **Switching to a new shape by typing, not just clicking:** shape-switching already works through the chat
 box today (it's one of the very first commands the chart co-pilot ever supported), so once the three new
