@@ -647,6 +647,17 @@ const nl = {
   // screen said so before this line.
   'chart.notes.sessionOnly': 'Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.',
 
+  // chart-goal-line.tsx.
+  'chart.goalLine.heading': 'Uw doellijnen (geen CBS-data)',
+  'chart.goalLine.add': 'Doellijn toevoegen',
+  'chart.goalLine.valueLabel': 'Waarde',
+  'chart.goalLine.textLabel': 'Label',
+  'chart.goalLine.save': 'Opslaan',
+  'chart.goalLine.cancel': 'Annuleren',
+  'chart.goalLine.delete': 'Verwijder',
+  'chart.goalLine.removeAriaLabel': '{label} verwijderen',
+  'chart.goalLine.sessionOnly': 'Doellijnen blijven in deze sessie en staan niet in downloads of embeds.',
+
   // chart-download.tsx.
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Downloadformaat',
@@ -1640,6 +1651,16 @@ const en: Messages = {
   'chart.notes.save': 'Save',
   'chart.notes.cancel': 'Cancel',
   'chart.notes.sessionOnly': 'Notes stay in this session and are not included in downloads or embeds.',
+
+  'chart.goalLine.heading': 'Your goal lines (not CBS data)',
+  'chart.goalLine.add': 'Add goal line',
+  'chart.goalLine.valueLabel': 'Value',
+  'chart.goalLine.textLabel': 'Label',
+  'chart.goalLine.save': 'Save',
+  'chart.goalLine.cancel': 'Cancel',
+  'chart.goalLine.delete': 'Delete',
+  'chart.goalLine.removeAriaLabel': 'Delete {label}',
+  'chart.goalLine.sessionOnly': 'Goal lines stay in this session and are not included in downloads or embeds.',
 
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Download format',
