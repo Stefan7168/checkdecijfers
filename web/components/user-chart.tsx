@@ -672,7 +672,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     }),
   );
   const visibleSeries = seriesMeta.filter((s) => !state.hiddenKeys.has(s.key));
-  const dimmedFor = (s: SeriesMeta): boolean => state.highlightedKey !== null && state.highlightedKey !== s.key;
+  // Returns the opacity value for a series: 0.35 for user-dimmed, 0.25 for
+  // highlight-dimmed, 1 otherwise. Replaces the old boolean dimmedFor that only
+  // checked highlight state.
+  const opacityFor = (s: SeriesMeta): number => {
+    const dimmedByUser = state.dimmedKeys.has(s.key);
+    const dimmedByHighlight = state.highlightedKey !== null && state.highlightedKey !== s.key;
+    return dimmedByUser ? 0.35 : dimmedByHighlight ? 0.25 : 1;
+  };
+  const dimmedFor = (s: SeriesMeta): boolean => state.dimmedKeys.has(s.key) || (state.highlightedKey !== null && state.highlightedKey !== s.key);
   const xLabelProps = {
     angle: pres.xLabels === 'tilted' ? -45 : 0,
     textAnchor: pres.xLabels === 'tilted' ? ('end' as const) : ('middle' as const),
@@ -712,7 +720,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const dotFor = (s: SeriesMeta): ReturnType<typeof UserSeriesDot> =>
     UserSeriesDot(
       s.key,
-      dimmedFor(s) ? 0.25 : 1,
+      opacityFor(s),
       s.label,
       onPointClick,
       { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
@@ -786,7 +794,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   name={s.label}
                   stroke={s.color}
                   strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                  strokeOpacity={dimmedFor(s) ? 0.25 : 1}
+                  strokeOpacity={opacityFor(s)}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   connectNulls={false}
                   dot={dotFor(s)}
@@ -808,7 +816,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 ))}
               </defs>
               {verticalAxes}
-              {visibleSeries.map((s) => (
+              {visibleSeries.map((s) => {
+                const opacity = opacityFor(s);
+                const isDimmed = dimmedFor(s);
+                // fillOpacity for areas: scale down when dimmed, respecting fill type
+                const areaFillOpacity = pres.areaFill === 'gradient'
+                  ? (isDimmed ? 0.4 * opacity : 1 * opacity)
+                  : (isDimmed ? 0.1 * opacity : 0.25 * opacity);
+                return (
                 <Area
                   key={s.key}
                   type="linear"
@@ -816,10 +831,10 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   name={s.label}
                   stroke={s.color}
                   fill={pres.areaFill === 'gradient' ? `url(#fill-${domId}-${s.key})` : s.color}
-                  fillOpacity={pres.areaFill === 'gradient' ? (dimmedFor(s) ? 0.4 : 1) : dimmedFor(s) ? 0.1 : 0.25}
+                  fillOpacity={areaFillOpacity}
                   strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                  strokeOpacity={dimmedFor(s) ? 0.25 : 1}
-                  data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
+                  strokeOpacity={opacity}
+                  data-series-dimmed={isDimmed ? 'true' : undefined}
                   connectNulls={false}
                   dot={dotFor(s)}
                   activeDot={false}
@@ -827,7 +842,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 >
                   {showValueLabels ? valueLabels(s.key, 'top') : null}
                 </Area>
-              ))}
+              );
+              })}
             </AreaChart>
           ) : activeForm === 'hbar' ? (
             // The transposed bar: the x categories move to the category axis,
@@ -862,7 +878,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   dataKey={s.key}
                   name={s.label}
                   fill={s.color}
-                  fillOpacity={dimmedFor(s) ? 0.25 : 1}
+                  fillOpacity={opacityFor(s)}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   isAnimationActive={false}
                 >
@@ -899,7 +915,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   dataKey={s.key}
                   name={s.label}
                   fill={s.color}
-                  fillOpacity={dimmedFor(s) ? 0.25 : 1}
+                  fillOpacity={opacityFor(s)}
                   data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                   isAnimationActive={false}
                 >
