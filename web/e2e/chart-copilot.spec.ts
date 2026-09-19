@@ -97,9 +97,13 @@ test.describe.serial('chart co-pilot phase 1', () => {
     // Submit the form
     await page.getByRole('button', { name: 'Opslaan' }).click();
 
-    // Verify the goal line is visible on the page (the outside-the-export list)
+    // Verify the goal line is visible on the page (the outside-the-export list).
+    // `getByText(/75/)` is ambiguous on a real answer page (the chart's own
+    // data/attribution text can contain "75" too, e.g. a table id) — scope to
+    // the goal line's own rendered format, `chart-goal-line.tsx`'s
+    // `{line.value}: ` span, which is exact and unique.
     await expect(page.getByText(/Target 2025/)).toBeVisible();
-    await expect(page.getByText(/75/)).toBeVisible();
+    await expect(page.getByText('75:', { exact: false })).toBeVisible();
 
     // Final-review fix C2: the goal line used to draw no visual line at all
     // — only this text list rendered. Same assertion era shading's own e2e
