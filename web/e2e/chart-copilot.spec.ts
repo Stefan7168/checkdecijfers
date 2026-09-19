@@ -130,10 +130,16 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
 
-    // Get the initial headline value (the last point's value).
+    // REGION_SERIES_INTENT has TWO regions (Amsterdam + Rotterdam), and
+    // headlineFigure() is deliberately null for several series (chart-
+    // headline.ts's own documented contract — "no single subject to lead
+    // with") — so there is no automatic headline to read here yet, by
+    // design. This is exactly the case the override feature exists for:
+    // the reader picks which point becomes the headline. First-run CI
+    // caught this real premise bug — a prior version of this test assumed
+    // a default headline was already showing before any override.
     const headlineFigure = page.locator('[data-testid="headline-figure"]');
-    const initialHeadline = await headlineFigure.textContent();
-    expect(initialHeadline).toBeTruthy();
+    await expect(headlineFigure).not.toBeVisible();
 
     // Click on an earlier point (the first plotted point on the chart).
     // The chart renders points as SVG circles with data-point="value".
@@ -147,10 +153,9 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(setHeadlineButton).toBeVisible({ timeout: 5000 });
     await setHeadlineButton.click();
 
-    // The headline should change. Get the first point's value from the data.
-    // Since we can't directly access Recharts' data, we verify the UI has
-    // changed by checking that the headline is now different OR that the
-    // "Show default headline" button is now visible (proof of override).
+    // The headline now exists (there was none before) and shows the
+    // "Show default headline" button as proof of an active override.
+    await expect(headlineFigure).toBeVisible({ timeout: 5000 });
     const clearHeadlineButton = page.getByRole('button', { name: 'Toon standaard hoofdcijfer' });
     await expect(clearHeadlineButton).toBeVisible({ timeout: 5000 });
 
@@ -158,9 +163,12 @@ test.describe.serial('chart co-pilot phase 1', () => {
     const undoButton = page.getByRole('button', { name: 'Ongedaan maken' });
     await undoButton.click();
 
-    // After undo, the "Make this the headline" button should be back.
+    // After undo, the "Make this the headline" button should be back, and
+    // the headline itself gone again (this chart has no default — the
+    // whole point of the assertion at the top of this test).
     await expect(setHeadlineButton).toBeVisible({ timeout: 5000 });
     await expect(clearHeadlineButton).not.toBeVisible();
+    await expect(headlineFigure).not.toBeVisible();
   });
 
   test('dim a series via the legend → the series stays visible at reduced opacity → ⌘Z restores it', async ({
