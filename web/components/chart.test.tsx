@@ -1595,6 +1595,20 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     expect(screen.queryByText(/reeksen verborgen/)).toBeNull();
     expect(container.querySelector('svg [data-point="value"][data-result-id="lo"]')).not.toBeNull();
   });
+
+  it('a third legend interaction dims a series instead of hiding it', () => {
+    // Use twoSeriesLineSpec which has multiple points per series so lines are actually rendered
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    // Find the dim button for Nederland
+    const dimButton = screen.getByRole('button', { name: /Dim Nederland/ });
+    expect(dimButton).toBeInTheDocument();
+    fireEvent.click(dimButton);
+    // After dimming, the dim button should be pressed
+    expect(dimButton).toHaveAttribute('aria-pressed', 'true');
+    // The series is still drawn with reduced stroke-opacity (0.35 for user-dimmed series)
+    const dimmedLine = document.querySelector('path[stroke-opacity="0.35"]');
+    expect(dimmedLine).not.toBeNull();
+  });
 });
 
 describe('ChartView — small multiples toggle (idea 8)', () => {

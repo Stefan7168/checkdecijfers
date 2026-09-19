@@ -1029,8 +1029,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           <SeriesLegend
             seriesMeta={seriesMeta}
             hiddenKeys={state.hiddenKeys}
+            dimmedKeys={state.dimmedKeys}
             highlightedKey={state.highlightedKey}
             onToggle={(key) => dispatch({ kind: 'toggleSeries', key }, 'canvas')}
+            onDim={(key, hiddenKeys, dimmedKeys) =>
+              dispatch({ kind: 'setDimmed', hiddenKeys: [...hiddenKeys], dimmedKeys: [...dimmedKeys] }, 'panel')
+            }
             onHighlight={(key) => dispatch({ kind: 'setHighlight', key }, 'canvas')}
             lang={chartLang}
           />
