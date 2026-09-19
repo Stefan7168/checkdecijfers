@@ -40,6 +40,16 @@ describe('requestChartDerivation', () => {
     expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
   });
 
+  it('code-review fix round 3: sorts cells by periodCode before deriving, so clicking the LATER point first never flips the sign', async () => {
+    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    // r2 (2020) clicked first, r1 (2019) clicked second — the reverse of the
+    // chronological order. Before this fix, `requestChartDerivation` passed
+    // resultIds straight through to `deriveDifference`, which treats
+    // cells[0] as "earlier" unconditionally — this would have returned -10.
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r2', 'r1']);
+    expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
+  });
+
   it('refuses a resultId not present on that chart, rather than guessing', async () => {
     loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'not-real']);

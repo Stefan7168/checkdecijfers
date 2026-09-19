@@ -116,56 +116,105 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await expect(page.getByRole('button', { name: /^×/ })).not.toBeVisible();
   });
 
-  test('add a difference arrow by clicking two points and verify the value displays', async ({ page }) => {
+  test('add a difference arrow by clicking two points and verify the computed value displays', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
 
-    // Click "Verschil aanduiden" to activate picker mode
-    const differenceButton = page.getByRole('button', { name: 'Verschil aanduiden' });
+    // Click "Verschil aanduiden" to activate picker mode. Located by its
+    // `title` attribute (stable across the picker toggle) rather than by
+    // accessible name or `[aria-pressed]`: the button's own label TEXT
+    // changes to "Kies twee punten voor het verschil…" the moment picker
+    // mode activates (so a name-based locator re-evaluated after that click
+    // matches nothing), and `aria-pressed` is not unique to this button — the
+    // NL/EN language toggle, the feedback thumbs and the series legend chips
+    // all carry it too.
+    const differenceButton = page.locator('button[title="Verschil aanduiden"]');
     await differenceButton.click();
-
-    // Verify picker mode is active
     await expect(differenceButton).toHaveAttribute('aria-pressed', 'true');
 
-    // Click first chart point
-    const points = page.locator('circle[data-point="value"]');
-    await expect(points.first()).toBeVisible({ timeout: 10_000 });
-    await points.nth(0).click();
+    // Scoped by `data-result-id` (SeriesDot, chart.tsx) rather than by
+    // Recharts' internal group nesting: a resultId is
+    // "<table>:<measure>:<regionCode>:<periodCode>:<dims>" (see
+    // chart-derivation-actions.ts's own log of one), so a substring match on
+    // the region code picks out exactly one series' points regardless of how
+    // Recharts happens to structure the curve/dots DOM in this version (its
+    // `<g class="recharts-line">` wraps ONLY the curve — `Line.js` renders
+    // dots as a separate, un-nested `recharts-line-dots` layer, so scoping
+    // through `.recharts-line circle` finds nothing; this is the same trap
+    // that made the previous three rounds' region-mismatch test impossible
+    // to write for real). GM0363 = Amsterdam, matching REGION_SERIES_INTENT.
+    const amsterdamPoints = page.locator('circle[data-point="value"][data-result-id*="GM0363"]');
+    await expect(amsterdamPoints.first()).toBeVisible({ timeout: 10_000 });
 
-    // Click second chart point
-    await points.nth(1).click();
+    // First point: Amsterdam's earliest plotted period (2020, 872.757 — the
+    // same fixture cell answer.spec.ts (f) asserts in "Amsterdam ging van
+    // 872.757 in 2020 naar 931.298 in 2024").
+    await amsterdamPoints.first().click();
+    // Second point: Amsterdam's latest plotted period (2024, 931.298).
+    await amsterdamPoints.last().click();
 
-    // Verify the overlay was added and the button state was reset
+    // Both points were in the same region, so the picker resets rather than
+    // showing an error.
     await expect(differenceButton).toHaveAttribute('aria-pressed', 'false');
-
-    // Verify the difference value appears (via the remove button or rendered text)
     await expect(page.getByRole('button', { name: /^×/ })).toBeVisible();
 
-    // Undo and verify it disappears
+    // The actual computed value — 931.298 - 872.757 = 58.541, formatted with
+    // this repo's Dutch thousands-separator convention (formatValueNl) —
+    // must render on the chart itself (the ReferenceLine's label), not just
+    // a remove button. This is the part a command dispatching successfully
+    // does NOT prove: it proves the server actually resolved the derivation
+    // and the real number reached the SVG. Asserted unscoped (not nested
+    // under `.recharts-reference-line`): this Recharts version renders a
+    // ReferenceLine's own `<line>` and its text LABEL as siblings in
+    // different z-index layers, not parent/child — confirmed by inspecting
+    // the real rendered SVG rather than assumed. The `<line>` itself DOES
+    // carry `data-label-for` with both source resultIds (R1 traceability),
+    // visible via `.recharts-reference-line line[data-label-for]` below.
+    await expect(page.getByText('58.541')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.recharts-reference-line line[data-label-for]')).toHaveCount(1);
+
+    // Undo and verify both the control and the rendered value disappear.
     const undoButton = page.getByRole('button', { name: 'Ongedaan maken' });
     await undoButton.click();
-    const removedButtons = page.getByRole('button', { name: /^×.*Verschil/ });
-    await expect(removedButtons).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /^×/ })).not.toBeVisible();
+    await expect(page.getByText('58.541')).not.toBeVisible();
   });
 
-  test('difference picker with mismatched regions shows error message', async ({ page }) => {
+  test('difference picker with mismatched regions shows an error message, never a silently drawn arrow', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
-    // Two-region intent to allow region mismatch test
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
 
-    // Activate difference picker
-    const differenceButton = page.getByRole('button', { name: 'Verschil aanduiden' });
+    // Activate difference picker (see the previous test for why this is
+    // located by `title` rather than by accessible name or `[aria-pressed]`).
+    const differenceButton = page.locator('button[title="Verschil aanduiden"]');
     await differenceButton.click();
     await expect(differenceButton).toHaveAttribute('aria-pressed', 'true');
 
-    // In a real multi-region scenario, we would click points from different regions
-    // For now, verify the picker mode works and can be toggled
-    await differenceButton.click();
-    await expect(differenceButton).toHaveAttribute('aria-pressed', 'false');
+    // Same `data-result-id` scoping as the test above, but this time the two
+    // clicks deliberately land in DIFFERENT regions (Amsterdam GM0363, then
+    // Rotterdam GM0599) — a real cross-region pick, not a toggle of the
+    // button.
+    const amsterdamPoints = page.locator('circle[data-point="value"][data-result-id*="GM0363"]');
+    const rotterdamPoints = page.locator('circle[data-point="value"][data-result-id*="GM0599"]');
+    await expect(amsterdamPoints.first()).toBeVisible({ timeout: 10_000 });
+    await expect(rotterdamPoints.first()).toBeVisible();
+
+    await amsterdamPoints.first().click();
+    await rotterdamPoints.first().click();
+
+    // The client-side precheck (chart.tsx's onPointClick, comparing each
+    // point's region via `displaySpec.series`) must catch this BEFORE any
+    // server round-trip: the visible error text, and no overlay/remove
+    // button ever appearing.
+    await expect(page.getByText("Dit kan niet: de punten liggen in verschillende regio's.")).toBeVisible();
+    await expect(page.getByRole('button', { name: /^×/ })).not.toBeVisible();
+
+    // No arrow was silently drawn either.
+    await expect(page.locator('.recharts-reference-line')).toHaveCount(0);
   });
 });
 

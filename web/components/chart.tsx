@@ -1893,17 +1893,33 @@ export function ChartView({
   // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
   // to live) purely because `embedOpen` is derived from `openPanel`, which
   // isn't in scope any earlier in this component.
+  // Task 7 (fix round 3): `PendingPoint` (chart-notes.tsx) carries no
+  // `regionCode` — it was never populated by any of the three point-render
+  // helpers (SeriesDot/SeriesBar/RegionBar), so every prior round's
+  // `p.regionCode` read was `undefined`, making the "same region" check below
+  // compare `undefined !== undefined` (always false) regardless of which
+  // points were actually clicked. That is the reason the client-side
+  // region-mismatch precheck never fired and the corresponding e2e test could
+  // never be written for real. Fixed by looking the region up ourselves from
+  // `displaySpec.series` (each series carries its own `regionCode`, per
+  // src/chart/types.ts) via the clicked point's resultId, rather than
+  // threading a new field through three render-helper signatures.
+  const regionCodeForResultId = (resultId: string): string | null => {
+    const series = displaySpec.series.find((s) => s.points.some((point) => point.resultId === resultId));
+    return series?.regionCode ?? null;
+  };
   // Task 7: capture points for difference overlays when picker is active.
   const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => {
     // Handle difference picker if active
     if (differencePickerActive) {
+      const regionCode = regionCodeForResultId(p.resultId);
       if (firstDifferencePoint === null) {
         // First point: store it
-        setFirstDifferencePoint({ resultId: p.resultId, regionCode: p.regionCode });
+        setFirstDifferencePoint({ resultId: p.resultId, regionCode });
       } else {
         // Second point: validate region and create overlay
         setDifferenceError(null);
-        if (firstDifferencePoint.regionCode !== p.regionCode) {
+        if (firstDifferencePoint.regionCode !== regionCode) {
           setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
           setFirstDifferencePoint(null);
         } else {
@@ -4317,8 +4333,18 @@ export function ChartView({
           ) : null}
           {/* Task 7: derived overlays (difference arrows, average lines) —
             * small controls for on-demand calculations. Rendered inline with
-            * the main controls but after the tabs/reading/zoom selects. */}
-          {spec.kind === 'answer' ? (
+            * the main controls but after the tabs/reading/zoom selects.
+            * Fix round 3: `spec.kind` is `'line' | 'bar'` (the chart FORM),
+            * never `'answer'` — that comparison type-errored (TS2367) and was
+            * always false, so this whole control block was dead code in
+            * every prior round despite the report claiming it worked. The
+            * real "is this a CBS/Eurostat answer chart with a saved audit
+            * row" test is the same one the resolution effect above already
+            * uses (`embed?.auditId`) — `ChartView` only ever receives `embed`
+            * for that case (own-data charts render through the separate
+            * UserChartView component; the internal Eurostat explorer passes
+            * no `embed` at all and correctly gets no derived-overlay UI). */}
+          {embed !== undefined ? (
             <div className="flex flex-wrap items-center gap-1.5 ml-auto">
               <Button
                 type="button"
@@ -4375,8 +4401,8 @@ export function ChartView({
               ) : null}
               {derivationRefusals.size > 0 ? (
                 <div className="text-xs text-destructive">
-                  {Array.from(derivationRefusals.values()).map((error) => (
-                    <div key={error}>{t(chartLang, 'chart.derived.errorOtherIssue')}</div>
+                  {Array.from(derivationRefusals.entries()).map(([id, reason]) => (
+                    <div key={id}>{t(chartLang, 'chart.derived.errorOtherIssue', { reason })}</div>
                   ))}
                 </div>
               ) : null}
