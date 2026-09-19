@@ -392,6 +392,30 @@ export function dotGeometry(w: LineWidth): { r: number; ring: number } {
   return { r: Math.max(4, LINE_WIDTH_PX[w] + 2), ring: 2 };
 }
 
+/** Final-review fix I4 (chart.tsx and user-chart.tsx's own, previously
+ * duplicated, `<Area>` fillOpacity calculations): an area's fill amount is
+ * ONE base fraction per fill type (0.25 for a flat/solid fill, 1 for the
+ * gradient — the full-strength, non-dimmed look) times the series' own
+ * effective `opacity` (1 normal, 0.35 user-dimmed, 0.25 highlight-dimmed —
+ * see chart.tsx's `seriesOpacity`/user-chart.tsx's `opacityFor`), and
+ * `opacity` must be the SOLE multiplier — never stacked with a second,
+ * separate dim-specific shrink. The pre-fix code branched on a `dimmed`
+ * boolean to ALSO swap the base fraction down (0.25→0.1 solid, 1→0.4
+ * gradient) and then multiplied THAT by `opacity` again, so a user-dimmed
+ * series (opacity 0.35) got both reductions at once: 0.1 × 0.35 = 0.035 (a
+ * flat fill at ~3.5% opacity — effectively invisible, defeating the entire
+ * point of "dimmed, not hidden"). Extracted as its own pure, directly
+ * testable function — area form is single-series-only (`areaFormAllowed`
+ * below), so the on-screen legend that drives `opacity` for line/bar charts
+ * never mounts for an area chart at all; the only way this ever runs with a
+ * genuinely dimmed `opacity` is a command dispatched some other way (e.g.
+ * the chat co-pilot's `setDimmed`), which a rendered-UI test cannot easily
+ * reach — a plain unit test over this function is the honest way to prove
+ * the arithmetic itself is right. */
+export function areaFillOpacityFor(areaFill: AreaFill, opacity: number): number {
+  return (areaFill === 'gradient' ? 1 : 0.25) * opacity;
+}
+
 /** The first and last PLOTTED point of one series (periodCodes) — the
  * anchors of the 'ends' marker mode. Built by chart.tsx from the DISPLAYED
  * (possibly zoomed) spec so the visible window's own ends get markers. */

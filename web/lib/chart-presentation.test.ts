@@ -16,6 +16,7 @@ import {
   LOCK_REASONS,
   RECHARTS_PALETTE,
   STOCK_PRESENTATION,
+  areaFillOpacityFor,
   chartHeightForWidth,
   contrastRatio,
   dotGeometry,
@@ -430,6 +431,35 @@ describe('geometry helpers', () => {
     expect(xAxisHeight('flat', '2021 1e kwartaal')).toBeUndefined();
     expect(xAxisHeight('tilted', '2021')).toBe(Math.ceil(4 * 6.5 * 0.71) + 20);
     expect(xAxisHeight('tilted', 'x'.repeat(200))).toBe(96);
+  });
+
+  // Final-review finding I4: chart.tsx's and user-chart.tsx's own identical
+  // <Area> fillOpacity calculations used to stack TWO reductions — a
+  // dim-specific base-fraction shrink (0.25→0.1 solid, 1→0.4 gradient) AND a
+  // second multiplication by the series' own effective `opacity` (1 normal,
+  // 0.35 user-dimmed, 0.25 highlight-dimmed) — so a user-dimmed solid fill
+  // rendered at 0.1 × 0.35 = 0.035 (~3.5% opacity), effectively invisible
+  // and defeating the entire point of "dimmed, not hidden". The fix: one
+  // base fraction per fill type (0.25 solid / 1 gradient), with `opacity` as
+  // the SOLE multiplier against it.
+  it('areaFillOpacityFor: opacity is the SOLE multiplier against one base fraction per fill type (I4)', () => {
+    // Undimmed (opacity 1): unchanged from the pre-fix baseline.
+    expect(areaFillOpacityFor('flat', 1)).toBe(0.25);
+    expect(areaFillOpacityFor('gradient', 1)).toBe(1);
+    // User-dimmed (opacity 0.35): noticeably reduced, but nowhere near the
+    // old ~3.5%/14% double-dimmed values.
+    expect(areaFillOpacityFor('flat', 0.35)).toBeCloseTo(0.0875, 10);
+    expect(areaFillOpacityFor('gradient', 0.35)).toBeCloseTo(0.35, 10);
+    // Highlight-dimmed (opacity 0.25): still visibly reduced, same direction
+    // the pre-fix flat 0.1/0.4 branch always produced, just not stacked with
+    // a second shrink.
+    expect(areaFillOpacityFor('flat', 0.25)).toBeCloseTo(0.0625, 10);
+    expect(areaFillOpacityFor('gradient', 0.25)).toBe(0.25);
+    // The old bug's own arithmetic, named explicitly: 0.1 × 0.35 is what a
+    // double-dimmed solid fill used to render at — this function must never
+    // produce that value for ANY opacity in [0, 1], since it has exactly one
+    // multiplication, not two.
+    expect(areaFillOpacityFor('flat', 0.35)).not.toBeCloseTo(0.1 * 0.35, 10);
   });
 });
 

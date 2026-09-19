@@ -43,6 +43,7 @@ import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutco
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import {
   LINE_WIDTH_PX,
+  areaFillOpacityFor,
   dotGeometry,
   findFont,
   fontStack,
@@ -819,10 +820,17 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               {visibleSeries.map((s) => {
                 const opacity = opacityFor(s);
                 const isDimmed = dimmedFor(s);
-                // fillOpacity for areas: scale down when dimmed, respecting fill type
-                const areaFillOpacity = pres.areaFill === 'gradient'
-                  ? (isDimmed ? 0.4 * opacity : 1 * opacity)
-                  : (isDimmed ? 0.1 * opacity : 0.25 * opacity);
+                // Final-review fix I4 (same bug, same fix, as chart.tsx's
+                // identical area branch): `opacity` already carries the
+                // FULL intended reduction (1 normal, 0.35 user-dimmed, 0.25
+                // highlight-dimmed — opacityFor above) and must be the SOLE
+                // multiplier against each fill type's own base fraction
+                // (0.25 solid / 1 gradient) — not stacked with a second
+                // `isDimmed ? 0.1 : 0.25`-style shrink, which used to
+                // compound to ~3.5% opacity (0.1 × 0.35) for a user-dimmed
+                // series, effectively invisible. Shared, directly unit
+                // tested helper — see chart-presentation.ts.
+                const areaFillOpacity = areaFillOpacityFor(pres.areaFill, opacity);
                 return (
                 <Area
                   key={s.key}
