@@ -118,7 +118,10 @@ Cost: one cheap-tier call per chat edit; zero for panel edits; a rule-based **ch
 4. **Storytelling primitives reachable from both doorways** — goal line (user value), average line
    (server-derived, traced), difference arrow (registered derivation), dim-not-hide, era shading,
    headline number.
-5. **Chart-fit scorer + new forms** — stacked, 100% stacked, dumbbell, slope, heatmap, scatter, pie/donut.
+5. **Chart-fit scorer + new forms** — split session 116, 2026-09-19 (owner: "Split") after a feasibility
+   check found two of the seven sketched forms need real new work first, not just a scorer rule (see §10):
+   dumbbell, slope, heatmap ship now; stacked, 100% stacked, scatter, pie/donut are a later, separate
+   design.
 
 ## 6. Invariants and tests
 
@@ -197,3 +200,67 @@ a calculated value (difference, average) can never appear via a command that car
 — it must always be re-derived from on-file cells through the registered calculation functions.
 
 **Next:** `superpowers:writing-plans` for the implementation plan, then `subagent-driven-development`.
+
+## 10. §5's phase 5 expanded — chart-fit scorer + three new shapes (session 116, 2026-09-19)
+
+Designed via `superpowers:brainstorming`. The original phase-5 sketch (§5, point 5) named seven new chart
+shapes. A feasibility check before writing this addendum found two genuine blockers, so the owner split
+the work ("Split", 2026-09-19):
+
+- **A scatter plot needs two numbers per point** (e.g. two different measures plotted against each
+  other). Every chart point in this app currently holds exactly one number. Adding a second would be a
+  real, separate piece of work, not something a rule can gate.
+- **Pie, donut, stacked, and 100%-stacked charts all draw a "whole"** (a full circle, a full bar) that the
+  slices are claimed to add up to. Today nothing in the app can check whether a set of numbers genuinely
+  adds up to some other real, published CBS figure — there's no concept of "these regions' numbers sum to
+  this country's number" anywhere in the data layer. Without that check, offering these shapes would mean
+  either trusting an unverified sum (against this product's core promise) or building the "verified whole"
+  concept first as its own design.
+
+Both stay out of scope here. **[ADR 039](../decisions/039-chart-presentation-panel.md)'s existing refusal
+of pie/donut/stacked/100%/scatter is unchanged and still correct** — this phase does not reopen it for
+those four; a future session designs the two missing pieces (a verified-whole check; a two-number point)
+before either is revisited.
+
+**What ships in this phase:** three new chart shapes, all honest by construction — none of them involves
+calculating anything new. Every number they show is a value already fetched and already verified for this
+exact chart; the new shapes only change how those same numbers are drawn.
+
+| Shape | What it shows | Why it's honest | When it's offered |
+|---|---|---|---|
+| Dumbbell | Two dots (e.g. a region's 2015 figure and its 2024 figure) joined by a line, one row per thing being compared. | Both dots are real, already-verified numbers; the line is just a visual connector, not a new value. | Whenever the reader has already narrowed the chart down to exactly two time points, using the period control that already exists today. |
+| Slope | The same two-points-per-thing comparison, drawn as parallel sloped lines instead of dot-pairs. | Identical to dumbbell — same two real numbers, different drawing. | Same condition as dumbbell; the reader picks whichever of the two looks clearer once both are available. |
+| Heatmap | A colour-shaded grid instead of lines — one cell per region-and-period combination, shaded by its own value. | It's the same rows the table view already shows, recoloured. Nothing is combined or summed across cells; each cell stands alone. | Whenever there's more than one thing being compared AND more than one time point — a new rule, same shape as the others (a single row or a single column wouldn't read as a grid at all; the table view has no such minimum today and stays available below it). |
+
+**How "which shapes fit" is decided:** the app already has a small yes/no rule for each existing shape —
+for example, "is a filled area chart sensible for this data." This phase adds three more rules of exactly
+the same kind, one per new shape, sitting next to the existing ones in the same file. The three rules are
+combined with the existing ones into one small ranked list ("of everything that's honestly allowed for
+this chart, which is the best default") — that ranked list is the "chart-fit scorer," and it replaces the
+current hand-written priority logic that picks a chart's starting shape, rather than sitting beside it as
+a second, separate mechanism.
+
+**Switching to a new shape by typing, not just clicking:** shape-switching already works through the chat
+box today (it's one of the very first commands the chart co-pilot ever supported), so once the three new
+shapes are added to the list, typing "toon dit als een dumbbell" starts working automatically — nothing
+extra needs to be built for that. The one thing that does need updating: the list of shapes the chat is
+told it is allowed to offer for a given chart must be generated from the new scorer's yes/no rules, so
+chat and the on-screen panel always agree on what's available — never a shape the panel would refuse.
+
+**A risk worth naming plainly:** the list of possible chart shapes is read from in several places across
+the codebase that are not obviously connected to each other. Session 115 (the previous build) hit this
+exact trap with a different list — widening it quietly broke three unrelated spots elsewhere in the code
+that nobody was editing, and each was only caught by accident (a different task's own test failing, a
+stricter build check). This phase's implementation plan requires a full, whole-codebase check for every
+place that reads the shape list — not just the files being changed — before any task is called done.
+
+**Contract test additions:** (1) each new shape's yes/no rule is unit-tested against both a chart it
+should allow and one it should refuse, with the reason a person would be shown; (2) the existing
+"apply-then-undo returns you to where you started" test is extended to cover switching into and out of
+the three new shapes; (3) the chat-vocabulary test (every shape chat can offer must also be a panel
+button) is extended to the three new shapes; (4) the digit-honesty scan (every number on screen must
+trace to the chart's real data) is extended to cover the heatmap's cell labels and the dumbbell/slope's
+endpoint labels, since those are new places numbers get drawn on screen.
+
+**Next:** `superpowers:writing-plans` for the implementation plan, then `subagent-driven-development` with
+implementers on the Fable tier (owner instruction, 2026-09-19: "Use fable subagents").
