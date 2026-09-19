@@ -229,8 +229,12 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await markButton.click();
 
     // Fill in the form
-    await page.getByLabel('Van').selectOption('2020');
-    await page.getByLabel('Tot').selectOption('2021');
+    // exact: true — a bare getByLabel('Van')/('Tot') substring-matches the
+    // chart's OWN zoom control ("Vanaf"/"Tot", the latter identical) and,
+    // for 'Van', even the history-menu button ("Geschiedenis van
+    // bewerkingen") — a real collision the first real-browser run caught.
+    await page.getByLabel('Van', { exact: true }).selectOption('2020');
+    await page.getByLabel('Tot', { exact: true }).selectOption('2021');
     await page.getByLabel('Label').fill('Testperiode');
 
     // Submit the form
