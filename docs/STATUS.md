@@ -27,7 +27,8 @@ via subagent-driven development — 8 tasks in three waves (2 parallel foundatio
 tasks merged one at a time, 1 test-coverage task), a final whole-branch review on the most capable
 tier that found and the session fixed 1 Critical (a real authorization hole) + 10 Important
 cross-task findings in one fix wave + one scoped re-review + a handful of controller-direct
-residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs. Kickoff for the next session:
+residuals, pushed to `main` `edbf6d30..4902737c` (50 commits) + docs. CI run `35440310164` green
+including deploy. Kickoff for the next session:
 [session-briefs/2026-09-19-session-116-kickoff.md](session-briefs/2026-09-19-session-116-kickoff.md).
 
 - **What phase 4 is:** six new chart-editing primitives, panel-only (chat-doorway wiring and
@@ -52,9 +53,18 @@ residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs. Kickoff fo
   account and four related lessons.
 - **Owner step BLOCKED, unchanged from session 114:** `npm run attachments:record` /
   `chart-copilot:record` still hit the Anthropic workspace usage cap (400, "regain access on
-  2026-10-01") — every model-backed path still refuses. Not run/re-checked this session; hand-authored
-  fixtures remain the test basis throughout. Blocks the live benchmark and real-browser Playwright
-  execution for phase 4 too — neither was run this session, for the same reason.
+  2026-10-01") — every model-backed (real API) path still refuses; not run/re-checked this session,
+  hand-authored fixtures remain the test basis. **Correction to an earlier draft of this entry:** the
+  Playwright e2e suite is NOT blocked by this cap — it runs hermetically against an LLM stub, no real
+  Anthropic calls at all, and DID run this session via CI. It found 5 real bugs on its first-ever real
+  execution (none of these tests had run against a real browser before): 3 test-selector bugs (a
+  locator matching 6 elements on a real page instead of 1; Playwright's `getByLabel` substring-matching
+  a wrong element; a hardcoded period-code format that doesn't match real CBS codes) and 2 real product
+  bugs — the goal-line e2e assumption was fine, but Task 5's own e2e test assumed a default headline
+  exists on a 2-series chart (it doesn't, by design), and — the one that actually matters — setting a
+  headline override closed its own popover immediately, so the "show default" toggle it's supposed to
+  reveal could never be seen. All 5 fixed in this session's own final CI-green loop; **only the true
+  live-API paths (`:record`, `benchmark:run:live`) remain blocked by the cap.**
 - **New/changed open rows:** [#289](open-questions.md) (own-data + chat-doorway support deferred for
   all six primitives — a documented scope boundary, not a gap), [#290](open-questions.md) (derived
   overlay is permanently CBS-only, decided), [#291](open-questions.md)–[#294](open-questions.md) (small
@@ -63,15 +73,18 @@ residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs. Kickoff fo
   dumbbell, slope, heatmap, scatter, pie/donut, scorer-gated), then the six house styles + homepage
   themes row ([#275](open-questions.md)).
 - **Owner steps pending — unchanged from sessions 110/111/114** (registry:apply, DOI backfill, live
-  benchmark, region-set Task 9, audit row 22) **plus the two `:record` runs after 2026-10-01, plus a
-  live benchmark + real-browser Playwright run for phase 4 once the cap lifts.**
+  benchmark, region-set Task 9, audit row 22) **plus the two `:record` runs after 2026-10-01, plus the
+  live benchmark (`benchmark:run:live`, real API spend, distinct from the hermetic `benchmark:run` that
+  already runs green in CI) for phase 4 once the cap lifts.**
 
-**Measured (session 115, at push, HEAD `041d3a49`):** root typecheck + web typecheck clean; root
-204 files / 2,977 tests; web 144 files / 2,432 tests; `next build` clean; final whole-branch review
-(most capable tier) — 1 Critical + 10 Important found and fixed, 0 remaining Critical/Important.
-**Not run this session (Anthropic workspace usage cap, unchanged since 2026-09-14):** live benchmark,
-real-browser Playwright execution, the `/code-review` LOW pass (substituted by the more thorough
-whole-branch review above, which is the stronger check but is not literally that command).
+**Measured (session 115, at push, HEAD `4902737c`):** root typecheck + web typecheck clean; root
+204 files / 2,977 tests; web 144 files / 2,433 tests; `next build` clean; final whole-branch review
+(most capable tier) — 1 Critical + 10 Important found and fixed, 0 remaining Critical/Important; CI run
+`35440310164` green (all jobs incl. deploy) — Playwright e2e 18/18, after a 5-round fix loop against
+real CI failures the local jsdom/typecheck/next-build checks couldn't catch (see above). **Not run this
+session:** the live benchmark and the two `:record` scripts (Anthropic workspace usage cap, real API
+spend, unchanged since 2026-09-14); a separate `/code-review` LOW pass as a literal command (substituted
+by the more thorough whole-branch review, which is the stronger check but not literally that command).
 
 ---
 

@@ -6,6 +6,43 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 115 addendum — the Playwright e2e suite is hermetic (LLM stub), not blocked by the API cap; a 5-round real-CI fix loop found 5 real bugs no local check could
+
+**Wrote several docs claiming the Playwright e2e suite was "blocked by the Anthropic usage cap," from
+memory/assumption rather than checking — wrong, and corrected once CI actually ran.** The suite (`web/e2e/*.spec.ts`) runs against an LLM STUB (`[llm-stub] exact ...` in CI logs), not a real
+Anthropic call — it is fully hermetic and was never blocked by the cap that blocks live chat and the
+`:record` scripts. The real gap was narrower: this session's environment has no real browser, so the
+actual `npx playwright test` run could never happen locally, and the session's own verification block
+(typecheck + jsdom/vitest + `next build`) was silently treated as "the verification block" without
+that one piece — then the docs were written as if the missing piece were an external blocker (the cap)
+rather than an environment limitation this session had. **Lesson: don't attribute a gap to a known
+external cause without checking that the cause actually applies to THIS specific check** — "the cap
+blocks live chat" does not mean "the cap blocks everything model-shaped"; a stub-backed test suite is a
+different thing.
+
+**Once actually pushed and run for real in CI, the Playwright suite's first-ever execution against
+phase 4's new e2e cases found 5 real bugs across a 5-round fix loop — 3 test-selector bugs, 2 real
+product bugs — none of them visible to typecheck, jsdom/vitest, or `next build`.** In order: (1) a
+`getByText(/75/)` regex matched 6 elements on a real answer page (a CBS table id like "03759ned"
+contains "75" as a substring) — jsdom tests never render the full page's real attribution text, so this
+never surfaced there. (2) An e2e test assumed a default headline exists on a 2-series test chart; it
+deliberately doesn't (`headlineFigure()`'s own contract) — a premise bug in the test itself, not
+production code, but never caught because the test had never actually run. (3) Fixing (2) then
+uncovered a REAL production bug: setting a headline override closed its own point popover immediately,
+so the "clear override" toggle it's meant to reveal could never be seen — no jsdom test dispatched this
+interaction either (only mocked default props). (4) `getByLabel('Van')`/`getByLabel('Tot')` collided
+with the chart's own zoom control — Playwright's `getByLabel` substring-matches by default, and the
+zoom control's own accessible name is the byte-identical string "Tot" in one case, so even
+`exact: true` didn't fully fix it; the real fix was addressing the form's own minted element ids
+instead of label text. (5) A hardcoded `'2020'`/`'2021'` period-code assumption didn't match the real
+CBS-shaped codes (`2020JJ00`) the actual test fixture produces — fixed by selecting by option index and
+reading back whatever code actually landed, instead of assuming a format. **Lesson: "the code typechecks
+and the jsdom tests pass" is not equivalent to "the feature works in a real browser" — for a product
+whose whole promise is correctness, treat CI's actual Playwright run as part of the real gate, not an
+optional nice-to-have that can be inferred from local checks.** Push earlier and let CI's e2e result
+inform the session's own verification claims, rather than writing "not run, blocked by X" from
+assumption and correcting it after the fact.
+
 ## Session 115 (2026-09-19, owner delegated: "spawn multiple agents") — a subagent committed to the wrong checkout; widening a shared union type breaks exhaustive switches silently; "doesn't crash" masquerades as test coverage; Recharts primitives can't be wrapped
 
 **A subagent produced a real, unreviewed commit directly on `main`'s HEAD — not a "stalled background command" as first diagnosed.** Mid-way through Task 3 (era shading)'s third fix round, the implementer's report claimed a commit SHA that did not exist in its assigned worktree; the first-pass diagnosis (matching the known `feedback_subagent_background_command_stall` pattern) was that a backgrounded test run had stalled and the agent reported before it finished. That diagnosis was wrong: the agent had actually committed real work, but to the *main repo checkout* instead of its own `git worktree`-isolated directory — landing an entirely unreviewed commit on `main`'s tip, on top of already-reviewed, already-merged work. Caught only because the controller ran its own sanity `git log`/`tsc` before starting the next wave, found a stray commit sitting where a clean merge base should be, and traced it back. **Lesson:** when an agent's claimed commit doesn't exist where expected, check the ONE PLACE it shouldn't be (`git log -3` on the main checkout) before assuming a stall — a subagent given a worktree path can still, under confusion, operate against the ambient CWD instead. Remediation was a local `git reset --hard` to the last known-good merge (recoverable via reflog, nothing pushed) — safe here only because the whole session was local and unpushed; this would need `git revert` instead once anything is shared.

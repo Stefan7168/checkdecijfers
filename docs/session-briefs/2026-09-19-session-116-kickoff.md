@@ -10,7 +10,8 @@ present in chat throughout) built **chart co-pilot phase 4 — storytelling prim
 brainstorming → design spec addendum (§9) → implementation plan (8 tasks) → subagent-driven build in
 three waves → a final whole-branch review on the most capable model that found and the session fixed
 1 Critical security hole + 10 Important cross-task findings → one fix wave → one scoped re-review →
-docs. Pushed to `main` `edbf6d30..936ba2c0` (43 commits, including the docs-only wrap-up commit).
+docs, then a 5-round CI fix loop against real Playwright failures (see below). Pushed to `main`
+`edbf6d30..4902737c` (50 commits). CI run `35440310164` green including deploy.
 
 ## What shipped
 
@@ -55,11 +56,17 @@ Full mechanism, every deviation from the original plan, and the provenance reaso
 
 - `npm run registry:apply`, `npm run backfill:eurostat-doi -- --apply`, region-set Task 9
   ([#267](../open-questions.md)), audit row 22 — all still pending, untouched this session.
-- `npm run attachments:record` and `npm run chart-copilot:record` — still blocked by the Anthropic
-  workspace usage cap (resets 2026-10-01, [#288](../open-questions.md)).
-- **New for phase 4:** once the cap lifts, run a live benchmark and the real-browser Playwright suite
-  against phase 4's new e2e cases (`web/e2e/chart-copilot.spec.ts`) — neither was run for real this
-  session (the test CODE was written and reviewed; the hermetic/jsdom half already runs in CI).
+- `npm run attachments:record`, `npm run chart-copilot:record`, and `npm run benchmark:run:live` —
+  still blocked by the Anthropic workspace usage cap (resets 2026-10-01, [#288](../open-questions.md)),
+  since all three make real API calls. **The Playwright e2e suite is NOT in this category** — it runs
+  hermetically against an LLM stub, no real Anthropic calls, and it DID run this session, via CI (all
+  18 e2e tests green as of the final push). Its first-ever real execution against phase 4's new cases
+  found 5 real bugs (3 test-selector issues, 2 real product bugs — see ADR 056's Verification bullet
+  for the full list) across a 5-round CI fix loop after the initial push. **Lesson for you:** this
+  session's own local verification block ran typecheck + jsdom tests + `next build` but never the
+  actual Playwright run (no real browser available in the CLI environment) — that gap is real, and CI
+  is where it surfaces. Push earlier in your own session rather than batching a huge diff and finding
+  out only at the very end whether the e2e suite you wrote actually passes.
 
 ## Your job: phase 5 — chart-fit scorer + new honest forms
 

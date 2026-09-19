@@ -289,8 +289,8 @@ round; the Playwright proof and the final review by the session).
 Plan: [superpowers/plans/2026-09-19-chart-copilot-phase4.md](../superpowers/plans/2026-09-19-chart-copilot-phase4.md).
 Built via subagent-driven development (8 tasks across three waves — a foundation wave, five parallel
 UI tasks merged one at a time, a test-coverage task), a final whole-branch review on the most capable
-model, one fix wave, one scoped re-review, and a small set of controller-fixed residuals. Merged to
-`main` `edbf6d30..041d3a49`.
+model, one fix wave, one scoped re-review, a small set of controller-fixed residuals, and — once pushed
+— a 5-round CI fix loop (see Verification below). Merged to `main` `edbf6d30..4902737c`.
 
 - **The provenance split, in one rule (spec §9):** a primitive shows either the reader's OWN typed
   words (never checked against data, rendered outside `chartContainerRef` so it can never enter a
@@ -322,7 +322,11 @@ model, one fix wave, one scoped re-review, and a small set of controller-fixed r
   `headlineFigure()` (previously always "the last point of a single-series chart") to accept an
   override resultId the reader picks via the same click-to-annotate affordance chart notes already
   use; falls back to the default figure (never blanks the card) when a zoom/alternate-reading makes
-  the override's resultId no longer present on the displayed spec.
+  the override's resultId no longer present on the displayed spec. **A real interaction bug surfaced
+  only by CI's first real-browser run of this flow:** setting an override closed its own point popover
+  immediately, so the "Toon standaard hoofdcijfer" (clear override) toggle it's meant to reveal could
+  never be seen without re-clicking the same point — fixed by leaving the popover open on set/clear
+  (`web/components/chart.tsx`), with a new jsdom test exercising the full flow.
 - **CBS/Eurostat card only this session; own-data support deferred** ([#289](../open-questions.md)) for
   goal line, era shading and the headline override — none has provenance complexity that would make it
   harder there, it just wasn't built. Difference/average are permanently CBS-only by construction
@@ -341,9 +345,18 @@ model, one fix wave, one scoped re-review, and a small set of controller-fixed r
   unrelated exhaustive switches three separate times; a "doesn't crash" test masquerading as coverage
   across two different tasks; a Recharts-specific gotcha — `<ReferenceLine>`/`<ReferenceArea>` must be
   direct JSX children, not wrapped in a custom component).
-- **Verification:** 2432/2432 web tests, 2977/2977 root tests, both typechecks clean, `next build`
-  succeeds. Live benchmark / real-browser Playwright execution not run — blocked by the same Anthropic
-  workspace usage cap as everything model-backed since 2026-09-14 ([#288](../open-questions.md)).
+- **Verification:** 2433/2433 web tests, 2977/2977 root tests, both typechecks clean, `next build`
+  succeeds, CI green including deploy (run `35440310164`). **Correction to an earlier draft: the
+  Playwright e2e suite runs hermetically against an LLM stub — it is NOT blocked by the Anthropic
+  usage cap, and it DID run this session, via CI.** Its first-ever real execution (none of phase 4's
+  new e2e cases had run against a real browser before) surfaced 5 real bugs across a 5-round CI fix
+  loop: 3 were test-selector bugs invisible to jsdom/unit tests (a locator matching 6 elements on a
+  real page instead of the intended 1; Playwright's `getByLabel` substring-matching an unrelated
+  element with a similar accessible name; a hardcoded period-code format that doesn't match real CBS
+  codes), and 2 were real product bugs — Task 5's own e2e test assumed a default headline exists on a
+  2-series chart (it deliberately doesn't), and the headline-override popover bug noted above. Only the
+  true live-API paths (`attachments:record`/`chart-copilot:record`, `benchmark:run:live`) remain
+  blocked by the cap ([#288](../open-questions.md)).
 - **Residuals, all deliberately deferred, not silently dropped:** [#289](../open-questions.md)–[#294](../open-questions.md).
 
 ## Revisit triggers
