@@ -117,8 +117,16 @@ export function buildPhrasingPayload(result: ValidatedResult): PhrasingPayload {
     // which composeAnswer never sees) — filtered here defensively so R2's
     // whitelist stays correct even if that ever changed, rather than relying
     // on "never happens in practice."
+    // mean records (chart co-pilot phase 4, session 115) are excluded the
+    // same way: a 'mean' derivation is only ever produced on demand by
+    // requestChartDerivation for the chart-editing UI's own resolvedOverlays
+    // state — it never enters composeAnswer's result.derivations, since chat
+    // edits never write audit rows or re-run the answer pipeline.
     derivations: result.derivations
-      .filter((d): d is Exclude<typeof d, { kind: 'unit_expansion' | 'period_change' }> => d.kind !== 'unit_expansion' && d.kind !== 'period_change')
+      .filter(
+        (d): d is Exclude<typeof d, { kind: 'unit_expansion' | 'period_change' | 'mean' }> =>
+          d.kind !== 'unit_expansion' && d.kind !== 'period_change' && d.kind !== 'mean',
+      )
       .map((d) => {
       switch (d.kind) {
         case 'difference':
