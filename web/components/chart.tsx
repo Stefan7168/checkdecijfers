@@ -3969,11 +3969,20 @@ export function ChartView({
             headlineOverrideResultId={state.headlineOverrideResultId}
             onSetHeadline={(resultId) => {
               dispatchCommand({ kind: 'setHeadlineOverride', resultId }, 'canvas');
-              setPendingPoint(null);
+              // Real bug, found by the first real-browser CI run of this
+              // flow (never exercised before — no jsdom test dispatched
+              // this either): closing pendingPoint here meant the reader
+              // could never see or use the "Toon standaard hoofdcijfer"
+              // toggle ChartNotes renders once headlineOverrideResultId
+              // matches this point — it only shows while the popover for
+              // THIS point is still open. Stay open so the toggle is
+              // immediately usable; Cancel/outside-click still close it.
             }}
             onClearHeadline={() => {
               dispatchCommand({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
-              setPendingPoint(null);
+              // Same reasoning as onSetHeadline above — stay open so the
+              // reader can toggle straight back to "Maak dit het
+              // hoofdcijfer" without re-clicking the point.
             }}
           />
           {/* Outside chartContainerRef, like the caption and the notes */}

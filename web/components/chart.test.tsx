@@ -2430,6 +2430,29 @@ describe('ChartView click-to-annotate', () => {
     expect(await screen.findByRole('textbox')).toBeInTheDocument();
   });
 
+  // Real bug, found by the first real-browser (Playwright) run of this flow
+  // — no jsdom test exercised it either, only headlineFigure() unit tests
+  // and a never-actually-executed e2e test (Task 5's own reviewer flagged
+  // this exact gap). Setting an override used to close the point's popover
+  // immediately, so the "Toon standaard hoofdcijfer" toggle it's supposed
+  // to reveal could never be seen without re-clicking the same point.
+  it('setting a point as the headline keeps its popover open so the clear-override toggle is immediately visible', async () => {
+    const s = twoSeriesLineSpec();
+    render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    const dot = document.querySelector('circle[data-point="value"]')!;
+    fireEvent.click(dot);
+    const setHeadlineButton = await screen.findByRole('button', { name: 'Maak dit het hoofdcijfer' });
+    fireEvent.click(setHeadlineButton);
+
+    const clearHeadlineButton = await screen.findByRole('button', { name: 'Toon standaard hoofdcijfer' });
+    expect(clearHeadlineButton).toBeInTheDocument();
+    expect(document.querySelector('[data-testid="headline-figure"]')).not.toBeNull();
+
+    fireEvent.click(clearHeadlineButton);
+    expect(await screen.findByRole('button', { name: 'Maak dit het hoofdcijfer' })).toBeInTheDocument();
+    expect(document.querySelector('[data-testid="headline-figure"]')).toBeNull();
+  });
+
   it('a saved note is never rendered inside the chart export container', async () => {
     const s = twoSeriesLineSpec();
     const { container } = render(<ChartView spec={s} />);
