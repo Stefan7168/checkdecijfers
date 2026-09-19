@@ -2,12 +2,28 @@
 
 // Reader-typed goal lines (Phase 4, WP218). A goal line is a user-typed target
 // value and label — it is NEVER sent to the LLM, never stored in a ChartSpec
-// or an audit record, and it is rendered by the PARENT (chart.tsx) structurally
-// OUTSIDE the chart's own chartContainerRef subtree, so it can never be scanned
-// as chart data (no R6 token-scan exemption needed) and is automatically excluded
-// from the PNG/SVG export (which only ever reads the live <svg> inside
-// chartContainerRef). Session-only by owner decision (F): no persistence, nothing
-// here survives a reload.
+// or an audit record: it is the reader's own annotation, never checked
+// against a CBS cell.
+//
+// THIS component renders only the text list and the add/remove form, and it
+// stays structurally OUTSIDE the chart's own chartContainerRef subtree, so
+// the reader's typed LABEL text can never be scanned as chart data (no R6
+// token-scan exemption needed) and never enters a PNG/SVG export. The goal
+// VALUE is drawn separately, as a `<ReferenceLine>` inside chart.tsx's own
+// chart JSX (see chart.tsx's "Task 3 (phase 4)" block / the C2 final-review
+// fix) — that line renders INSIDE chartContainerRef and DOES appear in
+// downloads/embeds; only this component's own list/label text stays
+// excluded.
+//
+// Final-review fix I5: this used to say "Session-only by owner decision (F):
+// no persistence, nothing here survives a reload" — wrong. For a signed-in
+// reader on a saved chart, the WHOLE command (including `addGoalLine`) is
+// part of the saved command log (use-chart-edits.ts) and is replayed on
+// reload, exactly like every other chart-copilot command. It is session-only
+// only in the sense that an anonymous/embed/no-saved-row viewer never gets a
+// chart_edits row to save to at all — the same rule every other command in
+// this file's vocabulary already follows, not something specific to goal
+// lines.
 import { useState } from 'react';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { CHART_GOAL_LINE_LABEL_MAX_LENGTH, type GoalLine } from '../lib/chart-commands.ts';

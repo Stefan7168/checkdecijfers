@@ -671,13 +671,25 @@ const nl = {
   'chart.goalLine.cancel': 'Annuleren',
   'chart.goalLine.delete': 'Verwijder',
   'chart.goalLine.removeAriaLabel': '{label} verwijderen',
-  'chart.goalLine.sessionOnly': 'Doellijnen blijven in deze sessie en staan niet in downloads of embeds.',
+  // Final-review fix I5: the old text claimed goal lines "stay in this
+  // session and are not included in downloads or embeds" — both halves are
+  // now wrong. use-chart-edits.ts saves the FULL command history (goal
+  // lines included), so for a signed-in reader on a saved chart it DOES
+  // survive a reload; and the C2 fix draws the line itself inside the export
+  // (chart.tsx, "Task 3 (phase 4)" block) — only the reader's own typed
+  // label text stays outside it. What stays true, and is worth saying: it's
+  // the reader's own annotation, never checked against a CBS cell.
+  'chart.goalLine.sessionOnly': 'Dit doel is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De lijn zelf is zichtbaar in downloads en embeds; het label dat je typt niet.',
 
   // chart-era-shading.tsx.
   'chart.eraShading.heading': 'Periode markeren (geen CBS-data)',
   'chart.eraShading.delete': 'Verwijder',
   'chart.eraShading.deleteAriaLabel': 'Verwijder de markering {period}',
-  'chart.eraShading.sessionOnly': 'Markeringen blijven in deze sessie en staan niet in downloads of embeds.',
+  // Final-review fix I5: same correction as chart.goalLine.sessionOnly above
+  // — the band (ReferenceArea) genuinely is inside the export (Task 3), and
+  // a signed-in reader's era shadings persist across a reload the same way
+  // goal lines do; only the typed label text stays out.
+  'chart.eraShading.sessionOnly': 'Deze markering is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De band zelf is zichtbaar in downloads en embeds; het label dat je typt niet.',
   'chart.eraShading.trigger': 'Periode markeren',
   'chart.eraShading.fromLabel': 'Van',
   'chart.eraShading.toLabel': 'Tot',
@@ -1183,7 +1195,22 @@ const nl = {
   'chart.derived.meanPeriodRange': 'Gemiddelde over de zichtbare periode',
   'chart.derived.remove': 'Verwijder',
   'chart.derived.errorMissingRegion': 'Dit kan niet: de punten liggen in verschillende regio\'s.',
-  'chart.derived.errorOtherIssue': 'Dit kan niet: {reason}',
+  // Final-review fix I6: replaces the old `errorOtherIssue`, which
+  // interpolated the server's raw English developer-facing reason string
+  // straight into the Dutch UI (e.g. "Dit kan niet: mean needs at least 2
+  // source cells, got 1"). These keys cover the known, literal refusal
+  // reasons from
+  // app/chart-derivation-actions.ts and src/query/derivations.ts
+  // (deriveDifference/deriveMean) — see `derivationRefusalMessage` in
+  // chart.tsx. A reason NOT in that lookup (mostly the ones carrying a
+  // dynamic resultId/count/unit list, which cannot be pre-translated
+  // word-for-word without guessing) falls back to `errorGeneric`.
+  'chart.derived.errorUnavailableChart': 'Dit kan alleen bij een CBS- of Eurostat-grafiek.',
+  'chart.derived.errorAnswerUnavailable': 'Dit antwoord is niet meer beschikbaar.',
+  'chart.derived.errorNoChart': 'Bij dit antwoord hoort geen grafiek om uit af te leiden.',
+  'chart.derived.errorPointNotOnChart': 'Een van de gekozen punten staat niet in deze grafiek.',
+  'chart.derived.errorSamePeriod': 'Kies twee verschillende periodes voor een verschil.',
+  'chart.derived.errorGeneric': 'Dit kan niet met deze punten.',
 
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
@@ -1710,12 +1737,18 @@ const en: Messages = {
   'chart.goalLine.cancel': 'Cancel',
   'chart.goalLine.delete': 'Delete',
   'chart.goalLine.removeAriaLabel': 'Delete {label}',
-  'chart.goalLine.sessionOnly': 'Goal lines stay in this session and are not included in downloads or embeds.',
+  // Final-review fix I5: see the `nl` entry's comment — the line itself now
+  // is inside downloads/embeds (C2), and it persists across a reload for a
+  // signed-in reader on a saved chart (use-chart-edits.ts); only the typed
+  // label text stays out of the export and is never checked against a CBS
+  // cell.
+  'chart.goalLine.sessionOnly': 'This goal is your own note, not checked against CBS figures. The line itself shows up in downloads and embeds; the label you type does not.',
 
   'chart.eraShading.heading': 'Mark period ranges (not CBS data)',
   'chart.eraShading.delete': 'Delete',
   'chart.eraShading.deleteAriaLabel': 'Delete the marking {period}',
-  'chart.eraShading.sessionOnly': 'Markings stay in this session and are not included in downloads or embeds.',
+  // Final-review fix I5: see the `nl` entry's comment.
+  'chart.eraShading.sessionOnly': 'This marking is your own note, not checked against CBS figures. The band itself shows up in downloads and embeds; the label you type does not.',
   'chart.eraShading.trigger': 'Mark period range',
   'chart.eraShading.fromLabel': 'From',
   'chart.eraShading.toLabel': 'To',
@@ -2083,7 +2116,12 @@ const en: Messages = {
   'chart.derived.meanPeriodRange': 'Average over the visible period',
   'chart.derived.remove': 'Remove',
   'chart.derived.errorMissingRegion': 'This cannot be done: the points are in different regions.',
-  'chart.derived.errorOtherIssue': 'This cannot be done: {reason}',
+  'chart.derived.errorUnavailableChart': 'This only works on a CBS or Eurostat chart.',
+  'chart.derived.errorAnswerUnavailable': 'This answer is no longer available.',
+  'chart.derived.errorNoChart': 'This answer has no chart to derive from.',
+  'chart.derived.errorPointNotOnChart': 'One of the chosen points is not on this chart.',
+  'chart.derived.errorSamePeriod': 'Pick two different periods for a difference.',
+  'chart.derived.errorGeneric': 'This cannot be done with these points.',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English
