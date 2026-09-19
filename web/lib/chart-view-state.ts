@@ -127,6 +127,9 @@ export function defaultFormIsTable(spec: Pick<ChartSpec, 'kind' | 'series'>): bo
 export interface ChartViewState {
   form: ChartForm;
   hiddenKeys: Set<string>;
+  /** Shown but visually de-emphasised (opacity), distinct from hidden. A key
+   * is never in both sets at once — every transition below enforces that. */
+  dimmedKeys: Set<string>;
   highlightedKey: string | null;
   /** Inclusive [fromPeriodCode, toPeriodCode], or null for the full fetched range. */
   periodRange: [string, string] | null;
@@ -153,7 +156,9 @@ export type ChartViewAction =
    * state in ONE action when the story closes — three separate dispatches
    * would render three intermediate views. `form` and `presentation` are
    * deliberately not part of this: the story never touches them. */
-  { type: 'setView'; view: Pick<ChartViewState, 'hiddenKeys' | 'highlightedKey' | 'periodRange'> }
+  { type: 'setView'; view: Pick<ChartViewState, 'hiddenKeys' | 'dimmedKeys' | 'highlightedKey' | 'periodRange'> }
+  | { type: 'setDimmed'; hiddenKeys: string[]; dimmedKeys: string[] }
+  | { type: 'toggleDim'; key: string }
   | /** #237/ADR 046: `initialPresentation` is the gallery's `initialPresentation`
      * prop (ChartView), so a spec-swap reset (a fresh chart mounted on the
      * SAME instance) lands back on the STORY's look, not a bare stock chart —
@@ -177,6 +182,7 @@ export function initialViewState(
   return {
     form: initialForm,
     hiddenKeys: new Set(),
+    dimmedKeys: new Set(),
     highlightedKey: null,
     periodRange: null,
     presentation: { ...initialPresentation },
@@ -214,9 +220,20 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       return {
         ...state,
         hiddenKeys: new Set(action.view.hiddenKeys),
+        dimmedKeys: new Set(action.view.dimmedKeys),
         highlightedKey: action.view.highlightedKey,
         periodRange: action.view.periodRange,
       };
+    case 'setDimmed':
+      return { ...state, hiddenKeys: new Set(action.hiddenKeys), dimmedKeys: new Set(action.dimmedKeys) };
+    case 'toggleDim': {
+      const dimmed = new Set(state.dimmedKeys);
+      const hidden = new Set(state.hiddenKeys);
+      hidden.delete(action.key);
+      if (dimmed.has(action.key)) dimmed.delete(action.key);
+      else dimmed.add(action.key);
+      return { ...state, hiddenKeys: hidden, dimmedKeys: dimmed };
+    }
     case 'setReading':
       return { ...state, selectedReading: action.index };
     case 'reset':

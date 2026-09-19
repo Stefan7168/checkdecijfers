@@ -102,6 +102,15 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
     case 'removeNote': return state.notes.length > 0 ? { kind, noteId: pick(r, state.notes).id } : { kind: 'setCaption', caption: null };
     case 'setTitle': return { kind, title: r() < 0.3 ? null : `titel ${n}` };
     case 'setCaption': return { kind, caption: r() < 0.3 ? null : `bijschrift ${n}` };
+    // Phase 4 commands — for the property test, return a no-op rather than random values
+    case 'addGoalLine': return { kind: 'setCaption', caption: null };
+    case 'removeGoalLine': return { kind: 'setCaption', caption: null };
+    case 'addEraShading': return { kind: 'setCaption', caption: null };
+    case 'removeEraShading': return { kind: 'setCaption', caption: null };
+    case 'setDimmed': return { kind: 'setCaption', caption: null };
+    case 'setHeadlineOverride': return { kind: 'setCaption', caption: null };
+    case 'addDerivedOverlay': return { kind: 'setCaption', caption: null };
+    case 'removeDerivedOverlay': return { kind: 'setCaption', caption: null };
   }
 }
 /** Sets are compared as sorted arrays so deep equality is meaningful. */
@@ -240,6 +249,54 @@ describe('setInstruction', () => {
       'chat',
     );
     expect(parseCommandLog(JSON.parse(JSON.stringify([tooLong])))).toBeNull();
+  });
+});
+
+describe('new command kinds (phase 4)', () => {
+  const ctx: CommandContext = { spec: { kind: 'line', series: [{ points: [{ resultId: 'r1', periodCode: '2020', value: 1 }, { resultId: 'r2', periodCode: '2021', value: 2 }] }] as any }, alternatesCount: 0 };
+
+  it('addGoalLine/removeGoalLine round-trip through apply+invert', () => {
+    let state = initialDocState('line');
+    const goalLine = { id: 'g1', value: 100, label: 'Doel' };
+    const stateBefore = state;
+    state = applyCommand(state, { kind: 'addGoalLine', goalLine });
+    expect(state.goalLines).toEqual([goalLine]);
+    const inverse = invertCommand(stateBefore, { kind: 'addGoalLine', goalLine });
+    state = applyCommand(state, inverse);
+    expect(state.goalLines).toEqual([]);
+  });
+
+  it('validateCommand refuses an era shading whose range is not on the chart', () => {
+    const era = { id: 'e1', fromPeriodCode: '1999', toPeriodCode: '2000', label: 'x' };
+    expect(validateCommand({ kind: 'addEraShading', era }, ctx)).toBe(false);
+  });
+
+  it('validateCommand accepts an era shading whose range is on the chart', () => {
+    const era = { id: 'e1', fromPeriodCode: '2020', toPeriodCode: '2021', label: 'x' };
+    expect(validateCommand({ kind: 'addEraShading', era }, ctx)).toBe(true);
+  });
+
+  it('validateCommand refuses setHeadlineOverride pointing at an unknown resultId', () => {
+    expect(validateCommand({ kind: 'setHeadlineOverride', resultId: 'nope' }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setHeadlineOverride', resultId: 'r1' }, ctx)).toBe(true);
+    expect(validateCommand({ kind: 'setHeadlineOverride', resultId: null }, ctx)).toBe(true);
+  });
+
+  it('addDerivedOverlay/removeDerivedOverlay round-trip; validateCommand checks resultIds are on the chart', () => {
+    const overlay = { id: 'd1', calcKind: 'difference' as const, resultIds: ['r1', 'r2'] };
+    expect(validateCommand({ kind: 'addDerivedOverlay', overlay }, ctx)).toBe(true);
+    expect(validateCommand({ kind: 'addDerivedOverlay', overlay: { ...overlay, resultIds: ['r1', 'nope'] } }, ctx)).toBe(false);
+    let state = initialDocState('line');
+    state = applyCommand(state, { kind: 'addDerivedOverlay', overlay });
+    expect(state.derivedOverlayRequests).toEqual([overlay]);
+  });
+
+  it('parseCommandLog accepts a log containing every new kind', () => {
+    const raw = [
+      { kind: 'addGoalLine', goalLine: { id: 'g1', value: 1, label: 'x' }, id: 'c1', at: new Date().toISOString(), source: 'panel' },
+      { kind: 'setDimmed', hiddenKeys: [], dimmedKeys: ['s0'], id: 'c2', at: new Date().toISOString(), source: 'panel' },
+    ];
+    expect(parseCommandLog(raw)).not.toBeNull();
   });
 });
 

@@ -21,6 +21,25 @@ import { CHART_TEMPLATES, templateById, type ChartTemplateId } from './chart-tem
 export type ChartCommandSource = 'panel' | 'canvas' | 'chat';
 export const CHART_COMMAND_SOURCES: readonly ChartCommandSource[] = ['panel', 'canvas', 'chat'];
 
+export interface GoalLine {
+  id: string;
+  value: number;
+  label: string;
+}
+export interface EraShading {
+  id: string;
+  fromPeriodCode: string;
+  toPeriodCode: string;
+  label: string;
+}
+export interface DerivedOverlayRequest {
+  id: string;
+  calcKind: 'difference' | 'mean';
+  resultIds: string[];
+}
+export const CHART_GOAL_LINE_LABEL_MAX_LENGTH = 60;
+export const CHART_ERA_SHADING_LABEL_MAX_LENGTH = 60;
+
 export type ChartCommandParams =
   | { kind: 'setForm'; form: ChartForm }
   | { kind: 'toggleSeries'; key: string }
@@ -49,7 +68,15 @@ export type ChartCommandParams =
    * data value: an instruction is column ids and enum values only. `summary`
    * is the doorway's own deterministic, digit-free label for the history
    * menu (Task 6's summarizeInstruction). */
-  | { kind: 'setInstruction'; instruction: ClientChartInstruction; summary: string };
+  | { kind: 'setInstruction'; instruction: ClientChartInstruction; summary: string }
+  | { kind: 'addGoalLine'; goalLine: GoalLine }
+  | { kind: 'removeGoalLine'; id: string }
+  | { kind: 'addEraShading'; era: EraShading }
+  | { kind: 'removeEraShading'; id: string }
+  | { kind: 'setDimmed'; hiddenKeys: string[]; dimmedKeys: string[] }
+  | { kind: 'setHeadlineOverride'; resultId: string | null }
+  | { kind: 'addDerivedOverlay'; overlay: DerivedOverlayRequest }
+  | { kind: 'removeDerivedOverlay'; id: string };
 
 export type ChartCommandKind = ChartCommandParams['kind'];
 export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
@@ -68,6 +95,14 @@ export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
   'setTitle',
   'setCaption',
   'setInstruction',
+  'addGoalLine',
+  'removeGoalLine',
+  'addEraShading',
+  'removeEraShading',
+  'setDimmed',
+  'setHeadlineOverride',
+  'addDerivedOverlay',
+  'removeDerivedOverlay',
 ];
 
 export type ChartCommand = ChartCommandParams & { id: string; at: string; source: ChartCommandSource };
@@ -80,6 +115,10 @@ export interface ChartDocState extends ChartViewState {
   /** Co-pilot phase 2: the own-data chart's instruction; null on a CBS chart,
    * which draws a server-built spec instead. */
   instruction: ClientChartInstruction | null;
+  goalLines: GoalLine[];
+  eraShadings: EraShading[];
+  headlineOverrideResultId: string | null;
+  derivedOverlayRequests: DerivedOverlayRequest[];
 }
 
 export const CHART_TITLE_MAX_LENGTH = 120;
@@ -92,7 +131,7 @@ export function initialDocState(
   initialPresentation: PresentationOverrides = {},
   instruction: ClientChartInstruction | null = null,
 ): ChartDocState {
-  return { ...initialViewState(initialForm, initialPresentation), notes: [], title: null, caption: null, instruction };
+  return { ...initialViewState(initialForm, initialPresentation), notes: [], title: null, caption: null, instruction, goalLines: [], eraShadings: [], headlineOverrideResultId: null, derivedOverlayRequests: [] };
 }
 
 export function newCommandId(): string {
@@ -151,6 +190,28 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
       // so the card filters notes to those whose resultId exists in the
       // current spec at render time, and a note comes back with its data.
       return { ...state, instruction: cmd.instruction, hiddenKeys: new Set(), highlightedKey: null, periodRange: null };
+    case 'addGoalLine': {
+      if (state.goalLines.some((g) => g.id === cmd.goalLine.id)) return state;
+      return { ...state, goalLines: [...state.goalLines, cmd.goalLine] };
+    }
+    case 'removeGoalLine':
+      return { ...state, goalLines: state.goalLines.filter((g) => g.id !== cmd.id) };
+    case 'addEraShading': {
+      if (state.eraShadings.some((e) => e.id === cmd.era.id)) return state;
+      return { ...state, eraShadings: [...state.eraShadings, cmd.era] };
+    }
+    case 'removeEraShading':
+      return { ...state, eraShadings: state.eraShadings.filter((e) => e.id !== cmd.id) };
+    case 'setDimmed':
+      return withView(state, chartViewReducer(state, { type: 'setDimmed', hiddenKeys: cmd.hiddenKeys, dimmedKeys: cmd.dimmedKeys }));
+    case 'setHeadlineOverride':
+      return { ...state, headlineOverrideResultId: cmd.resultId };
+    case 'addDerivedOverlay': {
+      if (state.derivedOverlayRequests.some((o) => o.id === cmd.overlay.id)) return state;
+      return { ...state, derivedOverlayRequests: [...state.derivedOverlayRequests, cmd.overlay] };
+    }
+    case 'removeDerivedOverlay':
+      return { ...state, derivedOverlayRequests: state.derivedOverlayRequests.filter((o) => o.id !== cmd.id) };
   }
 }
 
@@ -198,6 +259,31 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
       return before.instruction === null
         ? { kind: 'setTitle', title: before.title }
         : { kind: 'setInstruction', instruction: before.instruction, summary: cmd.summary };
+    case 'addGoalLine':
+      if (before.goalLines.some((g) => g.id === cmd.goalLine.id)) return { kind: 'setTitle', title: before.title };
+      return { kind: 'removeGoalLine', id: cmd.goalLine.id };
+    case 'removeGoalLine': {
+      const found = before.goalLines.find((g) => g.id === cmd.id);
+      return found === undefined ? { kind: 'removeGoalLine', id: cmd.id } : { kind: 'addGoalLine', goalLine: found };
+    }
+    case 'addEraShading':
+      if (before.eraShadings.some((e) => e.id === cmd.era.id)) return { kind: 'setTitle', title: before.title };
+      return { kind: 'removeEraShading', id: cmd.era.id };
+    case 'removeEraShading': {
+      const found = before.eraShadings.find((e) => e.id === cmd.id);
+      return found === undefined ? { kind: 'removeEraShading', id: cmd.id } : { kind: 'addEraShading', era: found };
+    }
+    case 'setDimmed':
+      return { kind: 'setDimmed', hiddenKeys: [...before.hiddenKeys], dimmedKeys: [...before.dimmedKeys] };
+    case 'setHeadlineOverride':
+      return { kind: 'setHeadlineOverride', resultId: before.headlineOverrideResultId };
+    case 'addDerivedOverlay':
+      if (before.derivedOverlayRequests.some((o) => o.id === cmd.overlay.id)) return { kind: 'setTitle', title: before.title };
+      return { kind: 'removeDerivedOverlay', id: cmd.overlay.id };
+    case 'removeDerivedOverlay': {
+      const found = before.derivedOverlayRequests.find((o) => o.id === cmd.id);
+      return found === undefined ? { kind: 'removeDerivedOverlay', id: cmd.id } : { kind: 'addDerivedOverlay', overlay: found };
+    }
   }
 }
 
@@ -293,6 +379,37 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
         return false;
       }
     }
+    case 'addGoalLine':
+      return Number.isFinite(cmd.goalLine.value) && cmd.goalLine.label.trim().length > 0 && cmd.goalLine.label.length <= CHART_GOAL_LINE_LABEL_MAX_LENGTH;
+    case 'removeGoalLine':
+      return typeof cmd.id === 'string' && cmd.id.length > 0;
+    case 'addEraShading': {
+      const codes = periodCodes(ctx.spec);
+      return (
+        codes.has(cmd.era.fromPeriodCode) &&
+        codes.has(cmd.era.toPeriodCode) &&
+        cmd.era.fromPeriodCode <= cmd.era.toPeriodCode &&
+        cmd.era.label.trim().length > 0 &&
+        cmd.era.label.length <= CHART_ERA_SHADING_LABEL_MAX_LENGTH
+      );
+    }
+    case 'removeEraShading':
+      return typeof cmd.id === 'string' && cmd.id.length > 0;
+    case 'setDimmed':
+      return (
+        cmd.hiddenKeys.every((k) => keys.has(k)) &&
+        cmd.dimmedKeys.every((k) => keys.has(k)) &&
+        cmd.hiddenKeys.every((k) => !cmd.dimmedKeys.includes(k))
+      );
+    case 'setHeadlineOverride':
+      return cmd.resultId === null || resultIds(ctx.spec).has(cmd.resultId);
+    case 'addDerivedOverlay':
+      return (
+        (cmd.overlay.calcKind === 'difference' ? cmd.overlay.resultIds.length === 2 : cmd.overlay.resultIds.length >= 2) &&
+        cmd.overlay.resultIds.every((id) => resultIds(ctx.spec).has(id))
+      );
+    case 'removeDerivedOverlay':
+      return typeof cmd.id === 'string' && cmd.id.length > 0;
   }
 }
 
@@ -334,6 +451,14 @@ const commandSchema = z.discriminatedUnion('kind', [
     summary: z.string().max(CHART_INSTRUCTION_SUMMARY_MAX_LENGTH),
     ...envelope,
   }),
+  z.object({ kind: z.literal('addGoalLine'), goalLine: z.object({ id: z.string(), value: z.number(), label: z.string().max(CHART_GOAL_LINE_LABEL_MAX_LENGTH) }), ...envelope }),
+  z.object({ kind: z.literal('removeGoalLine'), id: z.string(), ...envelope }),
+  z.object({ kind: z.literal('addEraShading'), era: z.object({ id: z.string(), fromPeriodCode: z.string(), toPeriodCode: z.string(), label: z.string().max(CHART_ERA_SHADING_LABEL_MAX_LENGTH) }), ...envelope }),
+  z.object({ kind: z.literal('removeEraShading'), id: z.string(), ...envelope }),
+  z.object({ kind: z.literal('setDimmed'), hiddenKeys: z.array(z.string()), dimmedKeys: z.array(z.string()), ...envelope }),
+  z.object({ kind: z.literal('setHeadlineOverride'), resultId: z.string().nullable(), ...envelope }),
+  z.object({ kind: z.literal('addDerivedOverlay'), overlay: z.object({ id: z.string(), calcKind: z.enum(['difference', 'mean']), resultIds: z.array(z.string()) }), ...envelope }),
+  z.object({ kind: z.literal('removeDerivedOverlay'), id: z.string(), ...envelope }),
 ]);
 // The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
 export const commandLogSchema = z.array(commandSchema).max(200);
