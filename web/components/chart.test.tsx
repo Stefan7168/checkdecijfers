@@ -97,6 +97,7 @@ import {
   buildDumbbellRows,
   buildRegionRows,
   buildRows,
+  buildStack100Rows,
   ChartTooltip,
   ChartView,
   clampTotChange,
@@ -154,6 +155,123 @@ function spec(overrides: Partial<ChartSpec> = {}): ChartSpec {
     ...overrides,
   };
 }
+
+describe('buildStack100Rows (phase 5b, Task 4 fix round 1)', () => {
+  const KEYS = ['gr', 'fr', 'dr'];
+
+  /** One period × three series the way buildRows shapes it: the raw value
+   * under the series key, plus the `_display` / `_provisional` /
+   * `_resultId` companions the tooltip binds. */
+  function periodRow(periodCode: string, values: Record<string, number | null>): Record<string, string | number | boolean | null> {
+    const row: Record<string, string | number | boolean | null> = { periodCode, periodLabel: periodCode };
+    for (const k of KEYS) {
+      row[k] = values[k] ?? null;
+      row[`${k}_display`] = values[k] === null || values[k] === undefined ? null : String(values[k]);
+      row[`${k}_provisional`] = false;
+      row[`${k}_resultId`] = `${k}-${periodCode}`;
+    }
+    return row;
+  }
+
+  /** The honesty guarantee under test: no share key exists on any output
+   * row unless it is a finite number — a NaN (0/0) or ±Infinity (x/0)
+   * slipping through would be a division that ran on a period with no
+   * honest denominator. */
+  function assertNoUndefinedArithmetic(rows: Record<string, unknown>[]) {
+    for (const row of rows) {
+      for (const [key, value] of Object.entries(row)) {
+        if (typeof value === 'number') expect(Number.isFinite(value), `${key} is not finite`).toBe(true);
+      }
+    }
+  }
+
+  it('a verified period with a positive total gets one share per series that adds up to a full bar, each labelled by the app\'s own formatter', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    const { rows, omitted } = buildStack100Rows([periodRow('2021', { gr: 15, fr: 25, dr: 60 })], KEYS, new Set(['2021']));
+    expect(omitted).toEqual([]);
+    expect(rows).toHaveLength(1);
+    const [row] = rows;
+    expect(KEYS.map((k) => row[`${k}_share`])).toEqual([15, 25, 60]);
+    expect(KEYS.reduce((sum, k) => sum + (row[`${k}_share`] as number), 0)).toBe(100);
+    expect(row.gr_share_label).toBe(`${formatValueNl(15, 1)}%`);
+    expect(row.gr_share_display).toBe(`15 (${formatValueNl(15, 1)}%)`);
+    expect(row.gr_share_provisional).toBe(false);
+    expect(row.gr_share_resultId).toBe('gr-2021');
+    // The real value is still on the row for the tooltip; the input row is untouched.
+    expect(row.gr).toBe(15);
+    assertNoUndefinedArithmetic(rows);
+  });
+
+  it('a verified period whose parts add up to ZERO is omitted BEFORE any division — no row, no share key, no NaN', () => {
+    const input = periodRow('2020', { gr: 0, fr: 0, dr: 0 });
+    const { rows, omitted } = buildStack100Rows([input], KEYS, new Set(['2020']));
+    expect(omitted).toEqual(['2020']);
+    expect(rows).toEqual([]);
+    // Had the division run, 0/0 would have produced NaN on a share key; the
+    // input row must carry no share key at all (the helper copies, never mutates).
+    expect(Object.keys(input).some((k) => k.includes('_share'))).toBe(false);
+  });
+
+  it('a verified period whose parts add up to a NEGATIVE total is omitted the same way', () => {
+    const { rows, omitted } = buildStack100Rows([periodRow('2020', { gr: -10, fr: -20, dr: -70 })], KEYS, new Set(['2020']));
+    expect(omitted).toEqual(['2020']);
+    expect(rows).toEqual([]);
+  });
+
+  it('a verified period with a POSITIVE total but one negative part is omitted too — a stack of signed values is not a whole of parts', () => {
+    // -5 + 10 + 20 = 25 > 0: the total alone would pass; the sign check must not.
+    const { rows, omitted } = buildStack100Rows([periodRow('2020', { gr: -5, fr: 10, dr: 20 })], KEYS, new Set(['2020']));
+    expect(omitted).toEqual(['2020']);
+    expect(rows).toEqual([]);
+  });
+
+  it('a verified period with a null part is omitted — unknown is never zero', () => {
+    const { rows, omitted } = buildStack100Rows([periodRow('2020', { gr: null, fr: 10, dr: 20 })], KEYS, new Set(['2020']));
+    expect(omitted).toEqual(['2020']);
+    expect(rows).toEqual([]);
+  });
+
+  it('zero parts are fine while the total is positive: a zero share is a real share, and no zero-total omission fires', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    const { rows, omitted } = buildStack100Rows([periodRow('2021', { gr: 0, fr: 40, dr: 60 })], KEYS, new Set(['2021']));
+    expect(omitted).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].gr_share).toBe(0);
+    expect(rows[0].gr_share_label).toBe(`${formatValueNl(0, 1)}%`);
+    assertNoUndefinedArithmetic(rows);
+  });
+
+  it('an UNVERIFIED period is skipped before its values are even looked at — dropped silently, never listed in `omitted` (that list is the verified-but-no-share set only)', () => {
+    // The unverified period has a zero total: had it been examined it would
+    // land in `omitted`. It must not — the two omission sets are disjoint
+    // and the note under the chart names each with its own sentence.
+    const { rows, omitted } = buildStack100Rows(
+      [periodRow('2019', { gr: 0, fr: 0, dr: 0 }), periodRow('2020', { gr: 0, fr: 0, dr: 0 }), periodRow('2021', { gr: 15, fr: 25, dr: 60 })],
+      KEYS,
+      new Set(['2020', '2021']),
+    );
+    expect(omitted).toEqual(['2020']);
+    expect(rows.map((r) => r.periodCode)).toEqual(['2021']);
+    assertNoUndefinedArithmetic(rows);
+  });
+
+  it('a mixed input keeps only the honest periods, in input order, and every number on every output row is finite', () => {
+    const { rows, omitted } = buildStack100Rows(
+      [
+        periodRow('2018', { gr: 10, fr: 20, dr: 70 }),
+        periodRow('2019', { gr: 0, fr: 0, dr: 0 }),
+        periodRow('2020', { gr: -1, fr: 1, dr: 1 }),
+        periodRow('2021', { gr: 1, fr: 1, dr: 2 }),
+      ],
+      KEYS,
+      new Set(['2018', '2019', '2020', '2021']),
+    );
+    expect(omitted).toEqual(['2019', '2020']);
+    expect(rows.map((r) => r.periodCode)).toEqual(['2018', '2021']);
+    expect(KEYS.map((k) => rows[1][`${k}_share`])).toEqual([25, 25, 50]);
+    assertNoUndefinedArithmetic(rows);
+  });
+});
 
 describe('buildRows', () => {
   it('carries the raw value for geometry and formattedValue for display, never swapped', () => {
@@ -7692,6 +7810,91 @@ describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
     await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
     expect(labelsByRole(container, 'stack-label').map(([id]) => id).sort()).toEqual(['dr-2021', 'fr-2021', 'gr-2021']);
     expect(screen.getByTestId('whole-note')).toHaveTextContent('Niet getekend voor 2020 — het CBS-totaal ontbreekt daar of klopt niet.');
+  });
+
+  it('100%-stacked: a VERIFIED period whose parts add up to zero is omitted with its OWN sentence, distinct from a refused period\'s — each names only its own year', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    // 2019: the server refuses (no CBS total). 2020: the server VERIFIES —
+    // the CBS total is present and matches, it is simply zero, as are all
+    // three parts. 2021: verified, normal. Saying "the CBS total is missing
+    // or does not match" about 2020 would be false; the note must not.
+    const s = spec({
+      kind: 'bar',
+      unit: 'aantal',
+      regionScope: { kind: 'all_provincies' },
+      series: [
+        {
+          label: 'Groningen',
+          regionCode: 'PV20',
+          points: [
+            point({ resultId: 'gr-2019', periodCode: '2019', periodLabel: '2019', value: 10, formattedValue: '10' }),
+            point({ resultId: 'gr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }),
+            point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 15, formattedValue: '15' }),
+          ],
+        },
+        {
+          label: 'Friesland',
+          regionCode: 'PV21',
+          points: [
+            point({ resultId: 'fr-2019', periodCode: '2019', periodLabel: '2019', value: 20, formattedValue: '20' }),
+            point({ resultId: 'fr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }),
+            point({ resultId: 'fr-2021', periodCode: '2021', periodLabel: '2021', value: 25, formattedValue: '25' }),
+          ],
+        },
+        {
+          label: 'Drenthe',
+          regionCode: 'PV22',
+          points: [
+            point({ resultId: 'dr-2019', periodCode: '2019', periodLabel: '2019', value: 70, formattedValue: '70' }),
+            point({ resultId: 'dr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }),
+            point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 60, formattedValue: '60' }),
+          ],
+        },
+      ],
+    });
+    verdicts({ '2019': { verified: false, reason: 'missing_whole' }, '2020': { verified: true }, '2021': { verified: true } });
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Gestapeld (%)'));
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2019', '2020', '2021']);
+    // Only 2021 is drawn: 2019 never reached the maths, 2020 was verified but has no honest share.
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
+    expect(labelsByRole(container, 'stack-label').map(([id]) => id).sort()).toEqual(['dr-2021', 'fr-2021', 'gr-2021']);
+    expect(container.querySelector('[data-result-id="gr-2020"]')).toBeNull();
+    expect(container.querySelector('[data-result-id="gr-2019"]')).toBeNull();
+    const note = screen.getByTestId('whole-note').textContent ?? '';
+    expect(note).toContain(VERIFIED_NOTE);
+    // The refused year, with the refusal sentence — and ONLY that year in it.
+    expect(note).toContain('Niet getekend voor 2019 — het CBS-totaal ontbreekt daar of klopt niet.');
+    // The verified-but-zero year, with its own sentence — and ONLY that year in it.
+    expect(note).toContain('Niet getekend voor 2020 — de delen tellen daar op tot nul of bevatten een negatief getal, dus een aandeel in procenten is niet te bepalen.');
+    expect(note).not.toContain('2020 — het CBS-totaal');
+    expect(note).not.toContain('2019 — de delen');
+    const shares = [15, 25, 60].map((v) => `${formatValueNl(v, 1)}%`);
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), ...shares]);
+  });
+
+  it('100%-stacked, in English: the verified-but-zero sentence is translated too', async () => {
+    const s = spec({
+      kind: 'bar',
+      unit: 'aantal',
+      regionScope: { kind: 'all_provincies' },
+      series: [
+        { label: 'Groningen', regionCode: 'PV20', points: [point({ resultId: 'gr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }), point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 15, formattedValue: '15' })] },
+        { label: 'Friesland', regionCode: 'PV21', points: [point({ resultId: 'fr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }), point({ resultId: 'fr-2021', periodCode: '2021', periodLabel: '2021', value: 25, formattedValue: '25' })] },
+        { label: 'Drenthe', regionCode: 'PV22', points: [point({ resultId: 'dr-2020', periodCode: '2020', periodLabel: '2020', value: 0, formattedValue: '0' }), point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 60, formattedValue: '60' })] },
+      ],
+    });
+    verdicts({ '2020': { verified: true }, '2021': { verified: true } });
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} embed={{ auditId: 1 }} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Stacked (%)' }));
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
+    const note = screen.getByTestId('whole-note').textContent ?? '';
+    expect(note).toContain('Not drawn for 2020 — the parts there add up to zero or include a negative value, so a percentage share cannot be shown.');
+    expect(note).not.toContain('the CBS total is missing');
   });
 
   it('switching to Taartdiagram then Undo returns to the prior form through the existing setForm history', async () => {

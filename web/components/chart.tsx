@@ -3336,11 +3336,19 @@ export function ChartView({
     seriesMeta.map((s) => s.key),
     stackVerifiedPeriods,
   );
-  const stackOmittedPeriodCodes = activeForm === 'stacked100' ? [...stackRefusedPeriods, ...stack100.omitted] : stackRefusedPeriods;
-  const stackOmittedLabels = stackOmittedPeriodCodes.map((code) => {
+  // Two DISJOINT omission sets, each with its own honest sentence under
+  // the chart (Task 4 fix round 1): a period the server REFUSED (the CBS
+  // total is missing / mismatched / a part withheld) versus a period the
+  // check VERIFIED whose parts add up to zero or include a negative value,
+  // so the 100%-stacked form has no honest share for it. `stack100.omitted`
+  // only ever holds verified periods (`buildStack100Rows` skips unverified
+  // ones before looking at their values), so the two never overlap.
+  const periodLabelFor = (code: string) => {
     const row = rows.find((r) => String(r.periodCode) === code);
     return row ? String(row.periodLabel) : code;
-  });
+  };
+  const stackRefusedLabels = stackRefusedPeriods.map(periodLabelFor);
+  const stackNoShareLabels = activeForm === 'stacked100' ? stack100.omitted.map(periodLabelFor) : [];
   // Final-review fix I8: the series actually shown right now — used to gate
   // the "Gemiddelde tonen" control to exactly one visible series (below),
   // the same visibility test every chart-form branch's own `.filter(...)`
@@ -6273,8 +6281,11 @@ export function ChartView({
       {wholeForm && !wholePending ? (
         <p className="mt-2 text-xs text-muted-foreground" data-testid="whole-note">
           {t(chartLang, 'chart.whole.verifiedNote')}
-          {stackOmittedLabels.length > 0 && activeForm !== 'pie'
-            ? ` ${t(chartLang, 'chart.whole.omittedPeriods', { periods: stackOmittedLabels.join(' · ') })}`
+          {stackRefusedLabels.length > 0 && activeForm !== 'pie'
+            ? ` ${t(chartLang, 'chart.whole.omittedPeriods', { periods: stackRefusedLabels.join(' · ') })}`
+            : ''}
+          {stackNoShareLabels.length > 0
+            ? ` ${t(chartLang, 'chart.whole.omittedNoShare', { periods: stackNoShareLabels.join(' · ') })}`
             : ''}
         </p>
       ) : null}

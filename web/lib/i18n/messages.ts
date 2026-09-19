@@ -1277,6 +1277,13 @@ const nl = {
   // card's digit scan tokenises `\d[\d.,]*`, so "2021." or "2020," would
   // be a token no spec string contains.
   'chart.whole.omittedPeriods': 'Niet getekend voor {periods} — het CBS-totaal ontbreekt daar of klopt niet.',
+  // Task 4 fix round 1: the 100%-stacked form's OWN omission (a period the
+  // check DID verify, whose parts add up to zero or include a negative
+  // value, so no percentage share exists) — a different fact from the
+  // server refusal above, so it gets its own honest sentence. Same
+  // `{periods}` rules as `omittedPeriods`.
+  'chart.whole.omittedNoShare':
+    'Niet getekend voor {periods} — de delen tellen daar op tot nul of bevatten een negatief getal, dus een aandeel in procenten is niet te bepalen.',
   'chart.whole.refused.missing_whole':
     'Het CBS heeft voor deze periode geen totaal gepubliceerd, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
   'chart.whole.refused.withheld_member':
@@ -2219,6 +2226,8 @@ const en: Messages = {
   'chart.whole.checking': 'Checking that the parts add up to the CBS total…',
   'chart.whole.verifiedNote': 'Checked: the parts add up to the CBS total.',
   'chart.whole.omittedPeriods': 'Not drawn for {periods} — the CBS total is missing or does not match there.',
+  'chart.whole.omittedNoShare':
+    'Not drawn for {periods} — the parts there add up to zero or include a negative value, so a percentage share cannot be shown.',
   'chart.whole.refused.missing_whole':
     'CBS has not published a total for this period, so the whole cannot be checked. Choose another period.',
   'chart.whole.refused.withheld_member':
