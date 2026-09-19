@@ -19,7 +19,7 @@ import type { ChartDocState } from './chart-commands.ts';
 import { columnHeaderLabel, digitFree } from './chart-data-instruction.ts';
 import { allowedForms } from './chart-fit.ts';
 import type { PresentationKey } from './chart-presentation.ts';
-import { areaFormAllowed, hbarFormAllowed, lineFormAllowed, type ChartForm } from './chart-view-state.ts';
+import { areaFormAllowed, hbarFormAllowed, isTabularForm, lineFormAllowed, type ChartForm } from './chart-view-state.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 
@@ -85,7 +85,11 @@ export function cbsCapabilities(input: {
   return {
     forms: allowedForms(spec, spec.series.length),
     presentationKeys: PRESENTATION_KEYS.filter((key) => applicable.has(key)),
-    templates: form === 'table' ? [] : [...TEMPLATE_IDS],
+    // Phase 5 final review (Fix 3): the Style panel — and so the template
+    // gallery — is mounted for neither of the two tabular forms (table AND
+    // heatmap, chart.tsx's `tabularForm`), so neither may advertise a
+    // template. Shared predicate, never a second `=== 'table'` spelling.
+    templates: isTabularForm(form) ? [] : [...TEMPLATE_IDS],
     zoom: zoomAvailable,
     lang,
   };

@@ -62,7 +62,7 @@ import { getChartHeadlinePublic } from '../../../backend/chart/headline-store.ts
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
-import { isChartForm, type ChartForm } from '../../../lib/chart-view-state.ts';
+import { isChartForm, isTabularForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
 import { EmbedResize } from './embed-resize.tsx';
 
@@ -293,8 +293,14 @@ export default async function EmbedPage({
   // the dialog itself can never GENERATE a `?form=table` URL — but nothing
   // stopped a hand-crafted one from reaching this public route and
   // rendering the Tabel view anyway, before this guard.
+  //
+  // Phase 5 final review (Fix 2): the heatmap is the table's twin here — the
+  // same "no Embed button" gating (chart.tsx's `tabularForm`), so the same
+  // hand-crafted-URL hole. The exclusion reads chart-view-state.ts's shared
+  // `isTabularForm` rather than naming forms itself, so this route and
+  // chart.tsx can never again disagree on what counts as tabular.
   const formOverride: ChartForm | undefined =
-    isChartForm(query.form) && query.form !== 'table' ? query.form : undefined;
+    isChartForm(query.form) && !isTabularForm(query.form) ? query.form : undefined;
 
   // #262(c) (session 110, ADR 041 as-built addendum) — and its own follow-up,
   // session 110 continuation: the FROZEN embed gets ADR 051's reading toggle

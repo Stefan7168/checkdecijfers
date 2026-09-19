@@ -30,6 +30,21 @@ export function isChartForm(x: unknown): x is ChartForm {
 }
 
 /**
+ * Phase 5 final-review fix (Fix 2/3): the ONE definition of "a form that
+ * draws no chart" — the table and the heatmap (a CSS grid over the table's
+ * own rows: no <svg>, no frame, nothing for the Style panel, a template, the
+ * legend, notes, story, download or the Embed button to act on). chart.tsx's
+ * `tabularForm`, the public embed route's `?form=` allowlist and
+ * chart-capabilities.ts's template list all read THIS, so they can never
+ * again drift apart on which forms count as tabular the way they did when
+ * each spelled out `=== 'table'` on its own and only chart.tsx learned about
+ * the heatmap.
+ */
+export function isTabularForm(form: ChartForm): boolean {
+  return form === 'table' || form === 'heatmap';
+}
+
+/**
  * Phase 5 (chart-fit scorer, session 116): the structural minimum the three
  * phase-5 guards read — how many points each series carries, and whether a
  * point is a real value. A full ChartSpec satisfies it, and so does

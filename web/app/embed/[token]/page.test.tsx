@@ -347,6 +347,67 @@ describe('/embed/[token] — ?form= (fix round, Piece 3)', () => {
     expect(container.querySelector('.recharts-line')).not.toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
   });
+
+  // Phase 5 final review (Fix 2): the heatmap is the table's twin — the same
+  // "no Embed button" gating (chart.tsx's `tabularForm`), so the same
+  // hand-crafted-URL hole the 'table' exclusion above closes. The route now
+  // reads chart-view-state.ts's shared `isTabularForm` instead of naming
+  // 'table' on its own, so the two files cannot drift apart again.
+  describe('?form=heatmap (final review, Fix 2)', () => {
+    /** 2 series × the same 2 periods, every value real — the exact shape
+     * `heatmapFormAllowed` (and `dumbbellFormAllowed`) accepts, so a
+     * `?form=heatmap` that IS honoured would draw the grid here. */
+    function twoSeriesRecord(): AuditRecord {
+      return answerRecord({
+        response: {
+          kind: 'answer',
+          chart: chartSpec({
+            series: [
+              {
+                label: 'Nederland',
+                regionCode: 'NL01',
+                points: [
+                  point({ resultId: 'nl-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 40, formattedValue: '40,0' }),
+                  point({ resultId: 'nl-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 42, formattedValue: '42,0' }),
+                ],
+              },
+              {
+                label: 'Utrecht',
+                regionCode: 'PV26',
+                points: [
+                  point({ resultId: 'ut-2023', periodCode: '2023JJ00', periodLabel: '2023', value: 30, formattedValue: '30,0' }),
+                  point({ resultId: 'ut-2024', periodCode: '2024JJ00', periodLabel: '2024', value: 33, formattedValue: '33,0' }),
+                ],
+              },
+            ],
+          }),
+        },
+      });
+    }
+
+    it('?form=heatmap is ignored — the heatmap is never embeddable, even via a hand-crafted URL', async () => {
+      process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+      verifyEmbedToken.mockReturnValue(42);
+      loadAuditRecord.mockResolvedValue(twoSeriesRecord()); // kind: 'line' -> defaults to Lijn
+      const { container } = render(
+        await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'heatmap' }) }),
+      );
+      expect(container.querySelector('.recharts-line')).not.toBeNull();
+      expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+      expect(screen.queryByRole('table')).toBeNull();
+    });
+
+    it('contrast: the SAME spec does honour ?form=dumbbell (a chart form, embeddable) — so the heatmap refusal above is the guard, not a disqualified spec', async () => {
+      process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+      verifyEmbedToken.mockReturnValue(42);
+      loadAuditRecord.mockResolvedValue(twoSeriesRecord());
+      const { container } = render(
+        await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'dumbbell' }) }),
+      );
+      expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+      expect(container.querySelector('.recharts-line')).toBeNull();
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

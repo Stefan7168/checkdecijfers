@@ -4534,6 +4534,61 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
   });
+
+  // Phase 5 final review (Fix 1): the quieter twin of the heatmap crash. The
+  // guard used to run against the `spec` PROP while the rows were built from
+  // `displaySpec` — the ALTERNATE reading once the Lezing <select> has one
+  // picked (it never resets `state.form`). `buildDumbbellRows` silently
+  // skips every series that no longer has exactly two real points, so a
+  // reading with one point per series (a period-over-period %-change
+  // reading of a two-period primary has exactly that shape) drew an empty
+  // axes-only shell with no explanation. The guard now reads the spec that
+  // is actually drawn, so the choice falls back to bar (fallbackForm's own
+  // dumbbell -> bar policy) with the tab disabled and explained.
+  it('an alternate reading with one point per series, picked while Dumbbell is on screen, falls back to bar — never an empty axes-only shell', () => {
+    const alt = twoSeriesLineSpec();
+    alt.series = alt.series.map((s) => ({ ...s, points: [s.points[1]!] }));
+    const { container } = render(
+      <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Jaarmutatie', spec: alt }]} />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+
+    const reading = screen.getByRole('combobox', { name: /lezing|reading/i });
+    fireEvent.change(reading, { target: { value: '0' } });
+
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('title', DUMBBELL_REASON);
+    // Slope shares the guard, so it is out of reach on this reading too.
+    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+
+    // Back on the primary reading the dumbbell returns by itself — the
+    // reader's own choice survived the detour.
+    fireEvent.change(reading, { target: { value: 'primary' } });
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('a zoom window that leaves one point per series, set while Dumbbell is on screen, falls back to bar the same way', () => {
+    // Same fix, second doorway: the Vanaf/Tot window is applied to what is
+    // drawn (`viewSpec`), and it too is offered on every form.
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2021' } });
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vanaf' }), { target: { value: '2020' } });
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -4747,6 +4802,74 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     // Gated as the table it now renders as — no Style trigger while it does.
     expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+  });
+
+  // Phase 5 final review (Fix 1): the guard used to run against the `spec`
+  // PROP while the grid was drawn from `displaySpec` — the ALTERNATE reading
+  // when the Lezing <select> (same toolbar, never gated on the form, never
+  // resets `state.form`) has one picked. A reading with a null cell, or one
+  // whose series cover different periods, is a perfectly normal CBS shape
+  // and reached `heatmapModel`, whose cell lookup throws on a missing point
+  // ("heatmapFormAllowed should have refused this spec") — and with no
+  // error boundary in web/, that took the whole page down, not just the
+  // card. The guard now reads the spec that is actually drawn.
+  it('an alternate reading with a null cell, picked while Warmtekaart is on screen, falls back to the table — never a thrown render', () => {
+    const alt = twoSeriesLineSpec();
+    alt.series[1]!.points[1] = point({
+      resultId: 'alt-ut-2021',
+      periodCode: '2021',
+      periodLabel: '2021',
+      value: null,
+      formattedValue: null,
+      status: 'Ontbreekt',
+    });
+    const { container } = render(
+      <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+
+    const reading = screen.getByRole('combobox', { name: /lezing|reading/i });
+    expect(() => fireEvent.change(reading, { target: { value: '0' } })).not.toThrow();
+
+    // fallbackForm's own heatmap -> table policy, applied to the reading now
+    // on screen: the table (with the alternate's own cells, the null one
+    // shown as a gap), the Tabel tab selected, Warmtekaart disabled for as
+    // long as this reading is the one drawn.
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    const table = screen.getByRole('table');
+    expect(table.querySelector('[data-label-for="alt-ut-2021"]')?.textContent).toBe('—');
+    expect(table.querySelector('[data-label-for="ut-2020"]')?.textContent).toBe('50');
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('title', HEATMAP_REASON);
+
+    // The reader's own choice was never discarded: back on the primary
+    // reading the grid returns by itself.
+    fireEvent.change(reading, { target: { value: 'primary' } });
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('an alternate reading whose series cover different periods (ragged), picked while Warmtekaart is on screen, falls back to the table', () => {
+    const alt = twoSeriesLineSpec();
+    alt.series[1]!.points = [
+      point({ resultId: 'alt-ut-2019', periodCode: '2019', periodLabel: '2019', value: 45, formattedValue: '45' }),
+      point({ resultId: 'alt-ut-2020', periodCode: '2020', periodLabel: '2020', value: 50, formattedValue: '50' }),
+    ];
+    const { container } = render(
+      <ChartView spec={twoSeriesLineSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+
+    expect(() =>
+      fireEvent.change(screen.getByRole('combobox', { name: /lezing|reading/i }), { target: { value: '0' } }),
+    ).not.toThrow();
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
   });
 });
 

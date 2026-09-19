@@ -168,6 +168,7 @@ import {
   hbarChartHeight,
   hbarFormAllowed,
   heatmapFormAllowed,
+  isTabularForm,
   // Session 110 pass 3 row 11: which specs get a single palette colour for
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
@@ -204,7 +205,7 @@ export { BAR_LABEL_MAX };
 //
 // Loading-fallback choice: all five of these are mounted UNCONDITIONALLY
 // wherever the JSX below places them (gated only on things like
-// `state.form !== 'table'` or `storyAvailable`, never on the open/closed
+// `!tabularForm` — not table, not heatmap — or `storyAvailable`, never on the open/closed
 // state itself) and each already returns `null` internally whenever its own
 // `open`/`pendingPoint` prop says there's nothing to show — that's how a
 // closed Style modal or an un-clicked Notes editor renders nothing today.
@@ -2132,9 +2133,11 @@ export function ChartView({
   // action clears `selectedReading` back to the primary, which is correct:
   // the new chart's alternates are a different set).
   //
-  // Identity-shaped reads deliberately stay on `spec`: the form guards
-  // (canUseLine/canUseArea/canUseHbar/effectiveKind — the chart's TRUE
-  // shape), `allPeriodCodes`/`zoomAvailable`/the Vanaf-Tot options and the
+  // Identity-shaped reads deliberately stay on `spec`: the kind-based form
+  // guards (canUseLine/canUseArea/canUseHbar/effectiveKind — the chart's
+  // TRUE shape; the three phase-5 point-shape guards are the exception, they
+  // read the drawn points — see `guardSpec` at `canUseDumbbell` below),
+  // `allPeriodCodes`/`zoomAvailable`/the Vanaf-Tot options and the
   // zoom disclosure's covered range (every alternate is built over the
   // identical window, so switching reading must never change what periods
   // are selectable), and the embed button's table id (an embed republishes
@@ -2581,17 +2584,71 @@ export function ChartView({
   // `slopeFormAllowed`'s condition — so the Helling tab below reuses the
   // Lijn render branch verbatim (see `effectiveKind` and the render
   // ternary); this guard only decides whether the tab is offered.
-  const canUseSlope = slopeFormAllowed(spec, spec.series.length);
+  //
+  // Task 4 (#212 period-range zoom): the full period-code list for the
+  // Vanaf/Tot selectors, and `viewSpec` — the spec windowed to the currently
+  // selected [from, to] range, or the untouched `activeSpec` when no window
+  // is active or zoom isn't offered at all. Only offered for a line-kind
+  // chart with more than one period: a bar/comparison chart has one period
+  // per region, so there is nothing to zoom into. `windowSpec` only ever
+  // filters `series[].points` (R6 verbatim projection) — it never touches
+  // `spec.kind`/`spec.attribution`/`spec.title`/`spec.unit`, which describe
+  // the chart's identity, not its windowed content, and it never removes a
+  // whole series. Every DATA-derivation call further below (buildRows,
+  // annotationMarkers, valueLabelPlan, tableModel, buildRegionRows,
+  // buildDumbbellRows, heatmapModel) reads `displaySpec`, the translated
+  // projection of THIS; every IDENTITY read (spec.kind, spec.title,
+  // spec.unit) stays on the raw `spec`.
+  // #254: `allPeriodCodes`/`zoomAvailable` (and `periodLabelByCode`, further
+  // below) stay on the PRIMARY `spec` on purpose — every alternate reading is
+  // built over the identical period window, so what is SELECTABLE must not
+  // shift under the reader when they switch reading. What is PLOTTED does:
+  // the window is applied to `activeSpec`, and `displaySpec` (hence the
+  // headline figure, the end/axis labels and the accessible name) follows it.
+  const allPeriodCodes = Array.from(
+    new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
+  ).sort((a, b) => a.localeCompare(b));
+  const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
+  const viewSpec = zoomAvailable ? windowSpec(activeSpec, state.periodRange) : activeSpec;
+  // Phase 5 final review (Fix 1): the three phase-5 guards read POINT SHAPE
+  // (how many points each series has, whether every value is real, whether
+  // every series covers the same periods) — and the points that get drawn
+  // are `displaySpec`'s, i.e. `viewSpec`'s (translation never touches a
+  // value or a period code), NOT the primary `spec`'s. An alternate reading
+  // (the Lezing <select>, which does not reset `state.form`) or a zoom
+  // window can hand the render a spec whose shape no longer qualifies: a
+  // reading with a null cell or ragged periods used to reach `heatmapModel`,
+  // whose cell lookup throws on a missing point ("a guard bug") and, with no
+  // error boundary in web/, took the whole page down; the dumbbell's
+  // `buildDumbbellRows` silently dropped every row that no longer had
+  // exactly two real points and drew an empty axes-only shell. So these
+  // three guards, and the `fallbackForm` call that decides `activeForm`,
+  // read `viewSpec.series` — the guard now runs against the very spec that
+  // is about to be drawn, on every render, and a disqualified choice falls
+  // back exactly as a same-instance spec swap already did (dumbbell/slope
+  // -> bar, heatmap -> table; `fallbackForm`'s own policy), with the tab
+  // disabled and explained for as long as the current reading/window keeps
+  // it out of reach.
+  //
+  // `guardSpec` is deliberately a composite, not `viewSpec` outright: `kind`
+  // and `seriesCount` stay on the primary `spec`, because they are the
+  // chart's IDENTITY — every alternate is built over the primary's own
+  // coordinates and window, `windowSpec` never removes a series, and the
+  // five pre-existing forms' guards (canUseLine/canUseArea/canUseHbar and
+  // `fallbackForm`'s line/area/hbar/bar/table arms) read ONLY those two
+  // inputs — so their behaviour is unchanged by this fix, by construction.
+  const guardSpec = { kind: spec.kind, series: viewSpec.series };
+  const canUseSlope = slopeFormAllowed(guardSpec, spec.series.length);
   // Phase 5 (Task 3): the dumbbell shares slope's condition (exactly two
   // real-valued points per series, at least two series) but has its OWN
   // render branch below — a `BarChart layout="vertical"` shell with no
   // `<Bar>`, drawn entirely by `DumbbellOverlay`.
-  const canUseDumbbell = dumbbellFormAllowed(spec, spec.series.length);
+  const canUseDumbbell = dumbbellFormAllowed(guardSpec, spec.series.length);
   // Phase 5 (Task 4): the heatmap is the table's own rows recoloured (see
   // `heatmapModel`) — offered only for a real grid: at least two series, all
   // covering the same two-or-more periods, every cell a real value.
-  const canUseHeatmap = heatmapFormAllowed(spec, spec.series.length);
-  const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
+  const canUseHeatmap = heatmapFormAllowed(guardSpec, spec.series.length);
+  const activeForm: ChartForm = fallbackForm(state.form, guardSpec, spec.series.length);
   // Phase 5 (Task 4): the two forms that draw NO chart — the table and the
   // heatmap (a CSS grid over the table's own model, no <svg>, no frame,
   // nothing for the Style panel, legend, notes, story or download to act
@@ -2600,8 +2657,11 @@ export function ChartView({
   // `fallbackForm` has just sent back to the table (its own fallback — the
   // view the grid came from) is gated as the table it now renders as.
   // Keyed on `activeForm`, not `state.form`: before this phase nothing ever
-  // fell back TO the table, so the two were interchangeable for it.
-  const tabularForm = activeForm === 'table' || activeForm === 'heatmap';
+  // fell back TO the table, so the two were interchangeable for it. The
+  // predicate itself lives in chart-view-state.ts (`isTabularForm`) so the
+  // public embed route's `?form=` allowlist and chart-capabilities.ts's
+  // template list share the exact same definition (final-review Fix 2/3).
+  const tabularForm = isTabularForm(activeForm);
   // Final-review fix wave residual: the difference picker's controls (and
   // the add-overlay controls generally) are only shown for line/area form
   // (I2) — but `onPointClick` below stays wired on every form, so an
@@ -2650,9 +2710,10 @@ export function ChartView({
   // #254: the ACTIVE reading's own points — a reading whose cells are
   // provisional must get the honesty-locked hollow-marker defaults even when
   // the primary's are all final (and vice versa). `kind`/`seriesCount` below
-  // stay on `spec`: those are the chart's SHAPE, which every alternate
+  // stay on `spec`: those are the chart's IDENTITY, which every alternate
   // shares by construction and which `activeForm`/`canUseLine` above already
-  // derive from the primary.
+  // derive from the primary (the per-point shape is the one thing a reading
+  // may change — see `guardSpec` above).
   const hasProvisional = activeSpec.series.some((s) => s.points.some((p) => p.provisional));
   // WP218 phase 2 (owner C): the signed-in account's saved style is the
   // `base` every chart resolves ON TOP OF — `withAccountDefault` degrades
@@ -2873,9 +2934,10 @@ export function ChartView({
   // definitionLine, provisionalNote, nullNotes, trendHeadline — follow the
   // active reading too, since they describe the cells actually plotted. What
   // stays on the primary is listed at `activeSpec`'s own declaration above.)
-  const allPeriodCodes = Array.from(
-    new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode))),
-  ).sort((a, b) => a.localeCompare(b));
+  // (`allPeriodCodes`, `zoomAvailable` and `viewSpec` used to be declared
+  // right here; they now sit above the form guards — see the phase-5
+  // final-review note at `canUseDumbbell` — because those guards must read
+  // the spec that is actually drawn. Nothing about what they compute moved.)
   // WP218 phase 4: these feed the Vanaf/Tot <select> options and the zoom
   // disclosure sentence below — translated via the SAME word-list converter
   // ChartView uses everywhere else (never a second, independent translation
@@ -2888,15 +2950,6 @@ export function ChartView({
       ]),
     ),
   );
-  const zoomAvailable = spec.kind === 'line' && allPeriodCodes.length > 1;
-  // #254: `allPeriodCodes`/`periodLabelByCode`/`zoomAvailable` above stay on
-  // the PRIMARY `spec` on purpose — every alternate reading is built over the
-  // identical period window, so what is SELECTABLE must not shift under the
-  // reader when they switch reading. What is PLOTTED does: the window is
-  // applied to `activeSpec`, and `displaySpec` below (hence buildRows,
-  // annotationMarkers, valueLabelPlan, tableModel, buildRegionRows, the
-  // headline figure, the end/axis labels and the accessible name) follows it.
-  const viewSpec = zoomAvailable ? windowSpec(activeSpec, state.periodRange) : activeSpec;
   // WP218 phase 4 (design §4): title/unit/series-labels(regions)/period-
   // labels translated ONCE here — every derivation below (buildRows,
   // annotationMarkers, valueLabelPlan, tableModel, the accessible name) reads
@@ -3223,9 +3276,9 @@ export function ChartView({
     'bar',
     ...(canUseHbar ? (['hbar'] as const) : []),
     'table',
-    // Phase 5 (chart-fit scorer): the new forms trail Tabel in the scorer's
-    // own fixed order (dumbbell, slope, heatmap — chart-fit.ts). Task 4
-    // adds the heatmap spread after slope's.
+    // Phase 5 (chart-fit scorer): the three new forms trail Tabel in the
+    // scorer's own fixed order — dumbbell, slope, heatmap (chart-fit.ts's
+    // `allowedForms` emits them in exactly this order too).
     ...(canUseDumbbell ? (['dumbbell'] as const) : []),
     ...(canUseSlope ? (['slope'] as const) : []),
     ...(canUseHeatmap ? (['heatmap'] as const) : []),
@@ -5650,8 +5703,9 @@ export function ChartView({
         * only ever reads the live <svg> inside chartContainerRef, so a note
         * rendered here can never be scanned as chart data or exported by
         * construction, with no separate exemption to maintain. Only offered
-        * for chart forms (state.form !== 'table'): notes anchor to a clicked
-        * chart point, not a table cell. Spec Part B3: also off in embedMode
+        * for chart forms (`!tabularForm` — neither the table nor the heatmap
+        * grid): notes anchor to a clicked chart point, not a cell. Spec Part
+        * B3: also off in embedMode
         * — click-to-annotate is a viewer's own reading aid, session-only and
         * never part of the honest card an embed re-publishes elsewhere. */}
       {!styleOpen ? captionNode : null}
@@ -5691,7 +5745,7 @@ export function ChartView({
       ) : null}
       {copilotAvailable && tabularForm ? (
         <span id={`${domId}-copilot-table-reason`} className="sr-only">
-          {t(chartLang, 'chart.copilot.tableLocked')}
+          {t(chartLang, 'chart.copilot.tabularLocked')}
         </span>
       ) : null}
       {/* #170(1): the R4 prose credit keeps its photo-credit size (#92); the
