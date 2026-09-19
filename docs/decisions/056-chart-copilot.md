@@ -359,6 +359,92 @@ model, one fix wave, one scoped re-review, a small set of controller-fixed resid
   blocked by the cap ([#288](../open-questions.md)).
 - **Residuals, all deliberately deferred, not silently dropped:** [#289](../open-questions.md)–[#294](../open-questions.md).
 
+## As built — phase 5, chart-fit scorer + dumbbell/slope/heatmap (session 116, 2026-09-19)
+
+Plan: [superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md](../superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md).
+Spec addendum: [superpowers/specs/2026-09-17-chart-copilot-design.md](../superpowers/specs/2026-09-17-chart-copilot-design.md) §10.
+Built via subagent-driven development (5 sequential tasks — this file's own tab strip and render tree
+turned out too fragile for parallel edits, so every task ran one at a time on a single worktree), a final
+whole-branch review on the most capable model, one fix wave, one scoped re-review. Merged to `main`
+`dfdaee18..8abd187c` (11 commits).
+
+- **Scope split, decided before any code was written (owner: "Split"):** the original phase-5 sketch
+  named seven new forms. A feasibility check found two of them need real new capabilities that don't
+  exist yet — scatter needs a second measure per plotted point (every `ChartPoint` carries exactly one
+  `value`), and pie/donut/stacked/100%-stacked need a "verified whole" concept (nothing in `src/query`/
+  `src/registry` can check that a set of cells sums to some other real, published cell). Those four stay
+  **out of scope**, [ADR 039](039-chart-presentation-panel.md)'s existing blanket refusal of them is
+  **unchanged** — this phase does not reopen it. Dumbbell, slope, and heatmap shipped instead: all three
+  are honest by construction (nothing computed, every drawn number is a `ChartPoint.value`/
+  `formattedValue` the chart already fetched and verified), gated by a small rule-based scorer
+  (`web/lib/chart-fit.ts`, `allowedForms`), CBS/Eurostat card only (`web/components/chart.tsx`) —
+  `web/components/user-chart.tsx` (own-data) has no matching render code and was not touched.
+- **Slope needed zero new render code.** It reuses the existing line-chart branch verbatim — a slope
+  chart IS a line chart with exactly two points per series, which is exactly `slopeFormAllowed`'s own
+  condition (`web/lib/chart-view-state.ts`).
+- **Dumbbell is a new render mechanism, deliberately NOT what the plan originally sketched.** The
+  original draft proposed a Recharts `ComposedChart` + a "range bar" (`[min,max]` as a `Bar`'s value) +
+  a `Scatter` overlay — untested against this app's actual Recharts version. Corrected before dispatch to
+  reuse a pattern this file already ships and has already been reviewed: `EndLabelsOverlay`'s own
+  `useXAxisScale()`/`useYAxisScale()`/`usePlotArea()` hook technique (a component that reads Recharts'
+  own settled axis scales to independently place arbitrary SVG). `DumbbellOverlay` draws a connecting
+  `<line>` plus a `<circle>` and a `formattedValue` label at each endpoint, inside a `BarChart
+  layout="vertical"` shell with no visible `<Bar>` — the overlay draws everything. The geometry mechanism
+  was independently verified against the actual installed Recharts source (domain-sizing with zero
+  graphical items, category-axis band centring) before being trusted, and a real rendered-DOM test pins
+  each dot's pixel position against Recharts' own axis tick.
+- **Heatmap surfaced a real architecture fact the plan's author hadn't read far enough to know:** the
+  table form does not live inside the main Recharts render tree — it is a sibling `canvasNode` branch,
+  and ~17 separate `state.form !== 'table'` checks elsewhere in `chart.tsx` gate the Style panel, legend,
+  notes, era shading, story mode, download/embed, headline, trend sentence, and the co-pilot input
+  specifically for it. Heatmap ("the same rows the table already shows, recoloured," per spec §10) was
+  made a sibling of the table branch too, inheriting every one of those same gates via one derived flag
+  (`isTabularForm(activeForm)`, later exported and shared with the public embed route — see the final
+  review below). A real guard bug was found and fixed in the same task: the original `heatmapFormAllowed`
+  only checked that every series had the same NUMBER of points, not the same SET of period codes — a
+  ragged spec (two series covering different, same-length period ranges) would have passed and produced
+  a grid cell with no real point behind it. The as-built guard requires the exact same period-code set
+  across every series, plus every value non-null.
+- **The final whole-branch review found two real cross-task bugs, both fixed in one fix wave:**
+  (1) the three new forms' "is this honestly offered" guards were computed from the `spec` PROP, but the
+  actual drawn canvas comes from `displaySpec`/`viewSpec` — reachable through an alternate-reading
+  `<select>` and a zoom window, neither of which resets the selected form. A reader on the heatmap tab
+  picking a disqualifying alternate reading made the render code throw (no error boundary in `web/`); the
+  dumbbell case rendered a blank, unexplained canvas instead. Fixed with a single composite `guardSpec`
+  feeding all three new guards and `fallbackForm`, while the five pre-existing forms' guards — verified by
+  reading their own type signatures, which cannot even read `.series` — are unaffected by construction.
+  (2) the public embed route's `?form=` allowlist excluded `'table'` specifically (a previously-closed
+  hole: nothing else stops a hand-crafted URL reaching the un-embeddable table view) but not `'heatmap'`,
+  reopening that exact hole for heatmap's own table-like twin — fixed by sharing one `isTabularForm`
+  predicate between `chart.tsx` and the embed route instead of two independent literals.
+- **Not chat-reachable via a new prompt vocabulary — but not deferred either, unlike phase 4's
+  primitives.** Chart-form switching has gone through the chat co-pilot since phase 1/3 (`setForm` is an
+  existing command); widening `ChartForm` to eight members automatically extended it. The one thing that
+  did need a same-task fix: `src/chart/copilot/prompt.ts` hand-lists the offered forms directly in the
+  system prompt text (separately from the JSON schema/capabilities), so `CBS_COPILOT_PROMPT_VERSION`
+  bumped 1→2 alongside the widened example list — otherwise the model would have kept anchoring on the
+  five-form example it was shown and never proposed the three new ones even once capabilities allowed them.
+- **Residual, disclosed and parked, not a merge blocker:** `cbsCapabilities`'s advertised `forms` list
+  still reads the primary `spec`, not the new `guardSpec` — so on a disqualifying alternate reading, the
+  chat could still be told a phase-5 form is available even though its tab is now correctly disabled.
+  Harmless (re-validates through `fallbackForm`/`guardSpec` server- and client-side, never crashes, never
+  a wrong number) but the same "chat offers what the panel can't reach" smell the scorer exists to
+  prevent. A one-line follow-up if picked up later.
+- **Verification:** root + web typechecks clean; web suite 2505/2505; real Turbopack production build
+  clean (the worktree's symlinked `node_modules` initially broke Turbopack's own root-boundary check —
+  replaced with real local installs so the actually-configured bundler, not a webpack substitute, ran);
+  full Playwright e2e suite 21/21 (real Chromium, LLM-stub-backed, zero model calls) including a genuine
+  CSS-grid layout assertion (bounding-box row/column alignment, computed `display: grid`/`contents`) for
+  the heatmap — the one real-browser check this phase's CSS-grid work needed, since jsdom has no layout
+  engine. A task-scoped review found and fixed a real, unrelated e2e-fixture staleness bug: Task 1's
+  scorer change silently changed what an EXISTING phase-3 fixture's request bytes should be, masked by
+  the LLM stub's 60-character prefix-match fallback. CI green post-merge (verify the exact run id against
+  `gh run list` before citing it — this doc was written while that run was still in progress).
+- **See [lessons-learned.md](../lessons-learned.md) session 116** for the full account of the
+  guard-vs-drawn-spec bug class, the table's real sibling-branch architecture, the fixture-staleness
+  finding, and a disclosed process deviation (a worktree-removal `--force` used without the
+  human-in-the-loop check the process calls for).
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
