@@ -157,6 +157,11 @@ export type DerivationRecord =
       subtrahendResultId: string;
     })
   | (DerivationBase & {
+      kind: 'mean';
+      /** Arithmetic mean of every source cell's value. */
+      value: number;
+    })
+  | (DerivationBase & {
       kind: 'max';
       value: number;
       winnerResultId: string;
