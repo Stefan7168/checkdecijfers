@@ -80,7 +80,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(page.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
   });
 
-  test('add a goal line via the panel and verify it is excluded from PNG export', async ({ page }) => {
+  test('add a goal line via the panel: the line renders on the chart, the label stays out of the export, delete removes both', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
@@ -97,14 +97,27 @@ test.describe.serial('chart co-pilot phase 1', () => {
     // Submit the form
     await page.getByRole('button', { name: 'Opslaan' }).click();
 
-    // Verify the goal line is visible on the page
+    // Verify the goal line is visible on the page (the outside-the-export list)
     await expect(page.getByText(/Target 2025/)).toBeVisible();
     await expect(page.getByText(/75/)).toBeVisible();
 
-    // Note: Export exclusion is verified by construction — the ChartGoalLine
-    // component is rendered OUTSIDE chartContainerRef, which is the only part
-    // included in PNG/SVG exports. A unit test in chart.test.tsx verifies
-    // this pattern (similar to the note export test).
+    // Final-review fix C2: the goal line used to draw no visual line at all
+    // — only this text list rendered. Same assertion era shading's own e2e
+    // test above makes for its ReferenceArea band.
+    await expect(page.locator('.recharts-reference-line')).toHaveCount(1, { timeout: 5_000 });
+
+    // Export exclusion — the LABEL text is NOT inside the chart export
+    // container (same locator era shading's e2e test above uses); the line's
+    // own numeric position, unlike the label, genuinely is inside it (C2/I5).
+    const chartContainer = page.locator('[data-testid="chart-container"]');
+    const labelInChart = chartContainer.locator(':has-text("Target 2025")');
+    await expect(labelInChart).not.toBeVisible();
+
+    // Delete the goal line: both the visual line and the label disappear.
+    const deleteButton = page.getByRole('button', { name: /Target 2025 verwijderen/ });
+    await deleteButton.click();
+    await expect(page.locator('.recharts-reference-line')).toHaveCount(0);
+    await expect(page.getByText('Target 2025')).not.toBeVisible();
   });
 
   test('Task 5: click a point to make it the headline, undo to revert', async ({ page }) => {
@@ -247,6 +260,13 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
 
+    // Final-review fix I8: "Gemiddelde tonen" now only offers itself when
+    // exactly ONE series is visible (averaging across several different
+    // series was never well-defined here) — hide Rotterdam first, the same
+    // legend toggle the phase-1 spec above uses.
+    await page.getByRole('button', { name: 'Rotterdam', exact: true }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
+
     // Click the "Gemiddelde tonen" button
     const meanButton = page.getByRole('button', { name: 'Gemiddelde tonen' });
     await meanButton.click();
@@ -260,6 +280,11 @@ test.describe.serial('chart co-pilot phase 4 — derived overlays', () => {
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Final-review fix I8: see the previous test — the mean control needs
+    // exactly one visible series.
+    await page.getByRole('button', { name: 'Rotterdam', exact: true }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(1);
 
     // Add a mean line
     await page.getByRole('button', { name: 'Gemiddelde tonen' }).click();

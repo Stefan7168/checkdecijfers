@@ -2,10 +2,24 @@
 
 // Era shading (Phase 4, chart co-pilot): reader-marked period ranges with
 // typed labels. Like notes, era shadings are NEVER sent to the LLM, never
-// stored in a ChartSpec or an audit record, and render OUTSIDE the chart's
-// own chartContainerRef subtree, so they are automatically excluded from
-// PNG/SVG export (which only reads the live <svg> inside chartContainerRef).
-// Session-only by design.
+// stored in a ChartSpec or an audit record: they are the reader's own
+// annotation, never checked against a CBS cell.
+//
+// THIS component renders only the text list and the add/remove form, and it
+// stays OUTSIDE the chart's own chartContainerRef subtree, so the reader's
+// typed LABEL text is automatically excluded from PNG/SVG export. The shaded
+// BAND itself is drawn separately, as a `<ReferenceArea>` inside chart.tsx's
+// own chart JSX ("Task 3 (phase 4)" block) — that band renders INSIDE
+// chartContainerRef and DOES appear in a PNG/SVG download (the C2/I5
+// final-review ruling); only the label text this component renders stays
+// excluded. It never appears in an embed at all — an embed has no saved
+// command log to replay in the first place.
+//
+// Final-review fix I5: this used to say "Session-only by design" — wrong.
+// For a signed-in reader on a saved chart, the WHOLE command (including
+// `addEraShading`) is part of the saved command log (use-chart-edits.ts) and
+// is replayed on reload, exactly like every other chart-copilot command —
+// not specific to era shading.
 import { useEffect, useRef, useState } from 'react';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { CHART_ERA_SHADING_LABEL_MAX_LENGTH } from '../lib/chart-commands.ts';

@@ -71,6 +71,17 @@ const chartInsightsActions = vi.hoisted(() => ({
   generateInsights: vi.fn().mockResolvedValue({ ok: true, phrased: {} }),
 }));
 vi.mock('../app/chart-insights-actions.ts', () => chartInsightsActions);
+// Task 7 (phase 4)/final-review fixes I1-I3: chart.tsx imports the derived-
+// overlay Server Action directly — mocked the same way every other Server
+// Action module above is, both to keep the real db/auth-backed module out of
+// jsdom AND so tests below can control exactly which DerivationRecord a
+// resolved overlay carries (I1's decimals/unit formatting needs a non-zero
+// decimals value to actually exercise, which the default mock's refusal
+// response never provides).
+const chartDerivationActions = vi.hoisted(() => ({
+  requestChartDerivation: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/chart-derivation-actions.ts', () => chartDerivationActions);
 import {
   annotationMarkers,
   BAR_LABEL_MAX,
@@ -1609,6 +1620,32 @@ describe('ChartView — series legend and hide/show (idea 6)', () => {
     const dimmedLine = document.querySelector('path[stroke-opacity="0.35"]');
     expect(dimmedLine).not.toBeNull();
   });
+
+  // Final-review finding I4: user-dimming and the area form's own
+  // highlight-dim fill-shrink used to stack multiplicatively (0.1 × 0.35 =
+  // 0.035 for a solid fill — effectively invisible), defeating the entire
+  // point of "dimmed, not hidden". The arithmetic itself is covered directly
+  // (`areaFillOpacityFor`, lib/chart-presentation.test.ts) rather than
+  // reproduced through this component's own legend click here: area form is
+  // single-series-only (`areaFormAllowed`, chart-view-state.ts) and the
+  // legend/Dim control below only mounts once `seriesMeta.length > 1` — an
+  // area-eligible chart, having exactly one series, never has a Dim button
+  // to click through the UI at all (a `setDimmed` command reaching a dimmed
+  // area some OTHER way — e.g. the chat co-pilot — is the only real path,
+  // which a rendered-UI test cannot easily drive). What IS asserted here
+  // (and was already true before this fix — a regression guard, not new
+  // coverage) is that the area form's own fillOpacity computation still
+  // renders a real, finite, in-range number in the undimmed case.
+  it('an undimmed area series fills at the gradient-default base fraction (fill-opacity 1), never NaN/undefined', () => {
+    // threePointSpec is single-series — the only shape area form ever
+    // allows — and is defined at top level (unlike the area-form describe
+    // block's own local `areaSpec` factory further down this file).
+    render(<ChartView spec={threePointSpec()} initialFormOverride="area" />);
+    const area = document.querySelector('.recharts-area-area');
+    expect(area).not.toBeNull();
+    // A lone, undimmed series has opacity 1 — the `areaFillOpacityFor('gradient', 1) === 1` baseline.
+    expect(area?.getAttribute('fill-opacity')).toBe('1');
+  });
 });
 
 describe('ChartView — small multiples toggle (idea 8)', () => {
@@ -2417,6 +2454,23 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.getByText('Test Doel')).toBeInTheDocument();
   });
 
+  // Final-review finding C2: the goal line used to draw no line at all —
+  // only ChartGoalLine's own text list rendered, and chart.tsx never drew a
+  // <ReferenceLine> for state.goalLines. This asserts the actual visual
+  // element exists, the same way the era-shading band test elsewhere in this
+  // file asserts `.recharts-reference-area-rect`, difference arrows assert
+  // `.recharts-reference-line`, etc.
+  it('a saved goal line renders a real ReferenceLine on the chart', async () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const before = container.querySelectorAll('.recharts-reference-line').length;
+    fireEvent.click(screen.getByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(before);
+  });
+
   it('does not carry a pending click or a saved note over to a different spec on the same mounted instance', async () => {
     const s = twoSeriesLineSpec();
     const { rerender } = render(<ChartView spec={s} />);
@@ -2518,6 +2572,103 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.queryByText(/P2 note A/)).not.toBeInTheDocument();
     expect(screen.getByText(/P2 note B/)).toBeInTheDocument();
     expect(noteItems()).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chart co-pilot phase 4 final-review fixes (I1, I2, I8): derived overlays.
+// ---------------------------------------------------------------------------
+describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
+  // I8: "Gemiddelde tonen" used to always average displaySpec.series[0],
+  // regardless of what the reader had hidden or how many series exist —
+  // silently including a hidden, unnamed series. The smaller, more honest
+  // fix: only offer the control when exactly one series is visible.
+  it('I8: offers no "Gemiddelde tonen" control while more than one series is visible', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  it('I8: hiding one of two series reveals the "Gemiddelde tonen" control; hiding the other one too removes it again', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(screen.getByRole('button', { name: 'Gemiddelde tonen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
+    // Zero visible series is exactly as undefined an "average" as two.
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  // I2: the derived-overlay controls (difference/mean) used to be gated only
+  // on `embed !== undefined`, not on chart FORM — but DerivedOverlaysLayer
+  // (the actual ReferenceLine renderer) only ever mounts inside the
+  // LineChart/AreaChart branches, never bar/hbar. A bar chart used to offer
+  // the controls with nothing behind them.
+  it('I2: offers no derived-overlay controls at all on a bar-form chart', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  // Final-review fix wave residual (found by the scoped re-review, not the
+  // original review): I2's form-gate hides the picker's own button on a
+  // form switch, but an ACTIVE picker left nothing resetting its state —
+  // `onPointClick` stays wired on every form, so it would silently hijack
+  // bar-form point clicks (recording a "first point" with no visible picker
+  // UI to explain why). Switching away from line/area must clear it.
+  it('switching to a bar form while the difference picker is active resets it, rather than leaving it silently armed', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    const pickerButton = screen.getByRole('button', { name: 'Verschil aanduiden' });
+    fireEvent.click(pickerButton);
+    expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+
+    expect(screen.getByRole('button', { name: 'Verschil aanduiden' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  // I1: a resolved overlay's label used to always be
+  // `formatValueNl(record.value, 0)` — 0 decimals, no unit, regardless of
+  // what the underlying series actually carries. twoSeriesLineSpec's points
+  // carry decimals: 1, unit '%' (the spec()/point() factories' own
+  // defaults) — the same values `formatOverlayValue` (chart.tsx) must now
+  // read from the source points instead of hardcoding.
+  it('I1: a resolved mean overlay renders its label at the SOURCE cells\' own decimals and unit, not hardcoded to 0 decimals with no unit', async () => {
+    const { displayValueUnit } = await import('../backend/answer/compose/template.ts');
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    // Recharts' <ReferenceLine> silently discards itself when its `y` falls
+    // outside the plotted Y-axis domain (`ifOverflow`'s default) — Nederland
+    // plots 100/110, so the mean value must sit inside that range for the
+    // line to actually reach the DOM at all; 105.55 both does that AND still
+    // carries a non-0 fractional part to exercise the decimals fix for real.
+    const MEAN_VALUE = 105.55;
+    chartDerivationActions.requestChartDerivation.mockResolvedValueOnce({
+      ok: true,
+      record: {
+        kind: 'mean',
+        explicit: true,
+        sourceResultIds: ['nl-2020', 'nl-2021'],
+        unit: '%',
+        marking: 'bewerking van CBS-gegevens door checkdecijfers.nl',
+        value: MEAN_VALUE,
+      },
+    });
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    // I8's gate: exactly one visible series (Nederland, whose points carry
+    // the resultIds the mocked record's sourceResultIds reference).
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    // The resolution is async (a mocked Server Action call) — wait for the
+    // ReferenceLine it produces rather than asserting synchronously.
+    await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0));
+
+    // The label text is computed through the SAME formatter the test
+    // asserts against — proving decimals=1/unit='%' reached it, never a
+    // hand-typed string this test could accidentally get right by luck.
+    const expected = displayValueUnit(MEAN_VALUE, 1, '%');
+    expect(await screen.findByText(expected)).toBeInTheDocument();
+    // The old bug's own output (0 decimals, no unit) must never appear.
+    expect(screen.queryByText(formatValueNl(MEAN_VALUE, 0))).not.toBeInTheDocument();
   });
 });
 
@@ -5643,6 +5794,38 @@ describe('ChartView — alternate reading toggle (#254)', () => {
     expect(readingControl()).toHaveValue('0');
   });
 
+  // Final-review finding I7: a reader-set headline override (Task 5, "Maak
+  // dit het hoofdcijfer") points at a resultId. Switching to an alternate
+  // reading swaps `displaySpec` to a completely different ChartSpec, built
+  // over its OWN resultIds (see altReadingSpec's header comment) — the
+  // overridden resultId is genuinely gone, `headlineFigure` correctly
+  // returns null (chart-headline.ts's documented "never guess" contract),
+  // and the headline block used to disappear entirely instead of falling
+  // back to the alternate's own default figure.
+  it('a headline override pointing at a resultId the alternate reading does not have falls back to the default headline instead of showing nothing (I7)', async () => {
+    const alt = altReadingSpec();
+    render(<ChartView spec={threePointSpec()} alternates={[{ label: 'Ongecorrigeerd', spec: alt }]} />);
+
+    // Override the headline to the EARLIEST point ('lo', not the default
+    // last-plotted 'hi') so the override is observably different from the
+    // primary's own default figure. ChartNotes (the pendingPoint UI carrying
+    // the "Maak dit het hoofdcijfer" button) is next/dynamic-loaded, so this
+    // awaits it — same as the click-to-annotate tests elsewhere in this file.
+    fireEvent.click(document.querySelector('circle[data-point="value"][data-result-id="lo"]')!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Maak dit het hoofdcijfer' }));
+    expect(screen.getByTestId('headline-figure').querySelector('[data-label-for="lo"]')?.textContent).toBe('1,5');
+
+    // Switch to the alternate reading — 'lo' does not exist there.
+    fireEvent.change(readingControl(), { target: { value: '0' } });
+
+    // The headline must NOT disappear: it falls back to the alternate's own
+    // default figure (its last plotted point, 'alt-hi', formattedValue
+    // '9,8') rather than showing nothing.
+    const headline = screen.getByTestId('headline-figure');
+    expect(headline.querySelector('[data-label-for="alt-hi"]')?.textContent).toBe('9,8');
+    expect(headline.querySelector('[data-label-for="lo"]')).toBeNull();
+  });
+
   it('a genuinely different spec DOES still reset the reading back to the primary (contrast: the identity effect works)', () => {
     const alt = altReadingSpec();
     const alternates = [{ label: 'Ongecorrigeerd', spec: alt }];
@@ -6265,6 +6448,35 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
 
     // Assert the visual band renders
+    expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+
+  // Final-review finding I10/I11: era shading's export-exclusion only had an
+  // e2e-level assertion — this is the same fast, cheap unit-level check the
+  // goal-line test above ('a saved goal line is never rendered inside the
+  // chart export container') already runs for the identical property. Only
+  // the LABEL TEXT is asserted here: the BAND itself (ReferenceArea) is
+  // legitimately inside the export per the C2/I5 final-review ruling — the
+  // previous test in this describe block already proves the band renders.
+  it('a saved era shading LABEL is never rendered inside the chart export container (the band still is)', async () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+    const fromSelect = await screen.findByLabelText('Van');
+    fireEvent.change(fromSelect, { target: { value: '2020' } });
+    const eraShadingRow = fromSelect.closest('div')?.parentElement;
+    if (!eraShadingRow) throw new Error('era shading form row not found');
+    const toSelect = within(eraShadingRow).getByLabelText('Tot');
+    fireEvent.change(toSelect, { target: { value: '2021' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Testperiode label' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
+    expect(exportContainer?.textContent).not.toContain('Testperiode label');
+    // The label text IS still shown to the reader, just outside the export.
+    expect(screen.getByText('Testperiode label')).toBeInTheDocument();
+    // The band itself, unlike the label, genuinely is inside the export.
     expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
   });
 });
