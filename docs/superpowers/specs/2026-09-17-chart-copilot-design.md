@@ -271,3 +271,104 @@ endpoint labels, since those are new places numbers get drawn on screen.
 
 **Next:** `superpowers:writing-plans` for the implementation plan, then `subagent-driven-development` with
 implementers on the Fable tier (owner instruction, 2026-09-19: "Use fable subagents").
+
+## 11. Phase 5b — the "verified whole": pie, stacked, 100%-stacked (session 117, 2026-09-19)
+
+Designed via `superpowers:brainstorming`, owner-approved in chat ("You are the expert... work
+autonomously" after confirming the scope-split and the approach). Reopens the one honesty gap phase 5
+(§10) deliberately left closed: [ADR 039](../decisions/039-chart-presentation-panel.md)'s blanket refusal
+of pie/donut/stacked/100%-stacked stays correct in general — these forms draw a "whole" (a full circle, a
+full bar) that the parts are claimed to add up to, and nothing in this app could ever check that claim.
+This phase builds exactly that check, for exactly the one case where the data needed to check it already
+exists.
+
+**Scope decision (owner, 2026-09-19): region hierarchies only, not every possible breakdown.** CBS
+already tells this product, per table, which region codes form a genuine complete set — the same
+`dimension_group` metadata `src/query/region-set.ts` already uses to answer "alle provincies"/"alle
+gemeenten in Utrecht": group `'PV'` = the 12 provinces, `'LD'` = the 4 landsdelen, `'GM<province-code>'`
+= the gemeenten of one named province, and `'NL'` = the national total. A category breakdown (age
+groups, sectors) has no equivalent verified-complete-set signal anywhere in this codebase today, and
+building one would mean new per-table registry work with no existing foundation — a separate, later
+design if it's ever wanted, not part of this phase.
+
+**Three new `ChartForm` members, not four — donut is styling, not a form.** A donut is a pie with a hole
+in the middle; it needs the same verified whole, the same slice data, and no rendering logic a plain pie
+doesn't already have. Rather than a fourth guard/render/test surface, "donut" is a presentation option
+(a `pie` form with a `holeRatio`-style override, same mechanism as the existing line-thickness/marker
+presentation keys) — cheapest mechanism first, and it means the honesty check is written and tested
+exactly once for both looks.
+
+**The mechanism, in one paragraph:** whenever a chart's own regions are a complete CBS-known roster (the
+same rosters `resolveRegionSet` already knows how to build), pie/stacked/100%-stacked become
+selectable chart forms. The check that the parts genuinely sum to the real total is never precomputed
+and never guessed — it runs on demand, the exact same "Option A" pattern phase 4's difference arrow and
+average line already use: a server action re-fetches the one missing cell (the roster's own parent —
+the national total for provinces/landsdelen, the named province's own cell for a gemeenten-in-provincie
+roster) from data **already sitting in this product's database** (confirmed before this phase was
+designed: normal ingestion never stores province rows for a table without also storing its national row,
+so no new CBS fetch is needed for the case this phase covers), and confirms the visible parts add up to
+it within a small rounding tolerance. If they don't — a genuine data mismatch, or CBS hasn't published
+that exact period's total yet — the reader gets a plain refusal, never a guessed or silently-wrong chart
+(principle (c)).
+
+**Why this needs one new piece of provenance on the chart spec itself.** Today's `ChartSpec` records
+which region CODES are plotted, but not WHETHER they were resolved as a complete CBS roster (via
+`resolveRegionSet`) or hand-picked by the reader/model as an arbitrary subset that happens to include the
+same codes. The panel needs to know this to decide whether to even OFFER the pie/stacked tabs — without
+it, offering the tab would mean either a query round-trip on every chart render (expensive, and contrary
+to this app's own "structural checks are free, numeric checks are on-demand" convention from phase 5) or
+guessing completeness from the code list alone (fragile — a reader could hand-pick exactly the 12
+province codes without CBS ever having vouched they're the complete set for THIS table/period). The fix:
+`buildChartSpec` records which `RegionScope` (if any) produced a chart's regions, as a new optional field
+alongside the existing `attribution`/`annotations` fields (optional so every already-stored spec — R8:
+those rows live forever — still parses unchanged). This field is never shown to the reader and never
+enters a prompt; it exists purely so the panel's own guard predicates can answer "is this a complete
+roster" without a round trip, mirroring how `annotations` already exists purely for the Ontdek curated
+path with no reader-facing surface of its own.
+
+**Provenance table, same shape as §10's:**
+
+| Form | What it shows | Provenance | Where it's calculated |
+|---|---|---|---|
+| Pie (donut = the same form, styled with a hole) | Each region's own real value as a slice of a full circle. | The slice sizes are the reader's own already-verified region values (R1, unchanged); the CLAIM that they form a whole circle is the new thing being verified. | **On demand, server-side**, the moment the reader picks one of these three forms — never on every chart render, never precomputed. |
+| Stacked | Regions stacked as segments of one bar (one bar per period, for a multi-period chart). | Same as pie — real per-region values, the "these segments are the whole bar" claim is what gets checked. | Same — on demand. |
+| 100%-stacked | Same as stacked, each bar normalised to 100%. | Same as stacked, plus the normalisation itself (dividing each part by the verified whole) is pure arithmetic over already-verified numbers — not a new fact, just a different way of drawing the same verified whole. | Same — on demand; the percentage math happens after verification succeeds, never before. |
+
+**What "verified" means, precisely (the tolerance policy):** for EVERY period the chart shows (a
+region-set roster answer can span several periods, not only one moment — a stacked/100%-stacked chart
+would then draw one stack per period), the sum of that period's visible parts' own real `value`s must
+fall within the LARGER of (a) half a unit at that period's total cell's own `decimals` precision, or (b)
+0.5% of that period's total value — whichever tolerance is wider. Checked independently per period: a
+roster that verifies for 2020-2023 but whose 2024 total CBS hasn't published yet must still render the
+verified periods, never fail the whole chart for one gap — **precisely:** for stacked/100%-stacked (which
+can show several periods at once), the unverifiable period's own stack is OMITTED (drawn as a gap in the
+period axis, same convention the line/bar forms already use for a missing point), the verified periods
+render normally; pie only ever shows one period at a time (whichever the reader has zoomed/selected to),
+so an unverifiable single period REFUSES the whole form outright, with the existing "kies een andere
+periode" class of reason. This accounts for CBS's own per-cell independent rounding (parts published to one precision, the total
+published and independently rounded to the same or a coarser one) without silently waving through a
+genuine data problem. **Assumption, mirrored in open-questions.md:** this specific tolerance is a
+reasonable first cut, not empirically tuned against real CBS rounding behaviour across many tables — the
+implementation must make it one named, easily-adjustable constant, not inlined arithmetic repeated at
+each call site, so it can be revisited against real refusal-rate evidence without a design change.
+
+**A roster with a withheld/null member cannot be verified as a whole** — same rule phase 5's heatmap
+guard already established for a different case (session 116's ragged-period fix): a part that CBS marks
+as withheld or not-yet-published is not zero, it's unknown, so the check must refuse rather than silently
+treat a missing part as contributing nothing to the sum.
+
+**Chat-doorway reachability:** these three forms slot into the exact same `setForm` command every other
+form already uses (phase 1 vocabulary, unchanged) — so once `ChartForm` is widened, typing "laat dit zien
+als een taartdiagram" starts working the same way phase 5's three forms did, PROVIDED the CBS chat
+prompt's own hand-listed form example (`src/chart/copilot/prompt.ts`, the same file phase 5's Task 1 had
+to fix for the same reason) is widened too, in the same task that widens the type — do not repeat the
+gap phase 5 found and fixed as an afterthought.
+
+**Contract test additions:** (1) the chat-vocabulary test (every shape chat can offer must also be a
+panel button) extends to the three new shapes; (2) a new test asserting a chart built from a HAND-PICKED
+region subset that happens to numerically match a complete roster's codes still refuses — the guard must
+check provenance, not just code-list equality; (3) the verification function itself is unit-tested
+against a real CBS-shaped roster-plus-total fixture, both a genuine match and a genuine data mismatch,
+and against a roster with one withheld member (must refuse, never treat the gap as zero).
+
+**Next:** `superpowers:writing-plans` for the implementation plan, then `subagent-driven-development`.
