@@ -230,12 +230,22 @@ test.describe.serial('chart co-pilot phase 1', () => {
 
     // Fill in the form. Label text alone can't disambiguate these two
     // selects from the chart's OWN zoom control — "Vanaf"/"Tot" are close
-    // or, for "Tot", byte-identical (both real-browser CI failures this
-    // fixed round-trip in turn). chart-era-shading.tsx mints its own
+    // or, for "Tot", byte-identical. chart-era-shading.tsx mints its own
     // element ids as `${idPrefix}-era-from`/`-era-to` specifically to be
     // addressable — use those directly instead of label text.
-    await page.locator('select[id*="-era-from"]').selectOption('2020');
-    await page.locator('select[id*="-era-to"]').selectOption('2021');
+    //
+    // REGION_SERIES_INTENT's real period codes are CBS-shaped
+    // ("2020JJ00" etc, not plain "2020"), and the list below renders the
+    // raw CODE, not the display label — select by OPTION INDEX (the first
+    // and third available periods) and read back whatever codes actually
+    // landed, rather than hardcoding a code format this test has no
+    // business assuming.
+    const fromSelect = page.locator('select[id*="-era-from"]');
+    const toSelect = page.locator('select[id*="-era-to"]');
+    await fromSelect.selectOption({ index: 0 });
+    await toSelect.selectOption({ index: 2 });
+    const fromCode = await fromSelect.inputValue();
+    const toCode = await toSelect.inputValue();
     await page.getByLabel('Label').fill('Testperiode');
 
     // Submit the form
@@ -248,7 +258,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
 
     // Important #2: Verify the label appears in the list (outside the chart export container)
     await expect(page.getByText('Testperiode')).toBeVisible();
-    await expect(page.getByText(/2020 – 2021/)).toBeVisible();
+    await expect(page.getByText(`${fromCode} – ${toCode}`)).toBeVisible();
 
     // Important #2b: Verify export exclusion — the label text is NOT inside the chart container
     // (the chart export container is identified as having data-testid="chart-container")
