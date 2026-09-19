@@ -76,6 +76,16 @@ describe('requestChartDerivation', () => {
     expect(result.ok).toBe(false);
   });
 
+  // Minor fix (final review): a stored row can have `chart: undefined`
+  // (never written, rather than explicitly written as null) — the old
+  // `spec === null` check missed this case and fell through to the generic
+  // catch/reportError path instead of this specific, honest refusal.
+  it('refuses when the audit row\'s chart is undefined (not explicitly null), with the same honest reason as a null chart', async () => {
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: undefined, cells: [], derivations: [] } });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: false, reason: 'this answer has no chart to derive from' });
+  });
+
   it('refuses derivation on null-valued cells with an accurate CBS reason message', async () => {
     const specWithNull = { unit: 'aantal', series: [{ label: 'x', regionCode: 'GM0599', points: [
       { resultId: 'r1', periodCode: '2019', periodLabel: '2019', value: 10, formattedValue: '10', decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'None' },

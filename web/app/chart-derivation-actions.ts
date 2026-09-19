@@ -46,7 +46,11 @@ export async function requestChartDerivation(
     if (record === null || record.userId !== userId || isRedacted(record.response)) {
       return { ok: false, reason: 'this answer is not available' };
     }
-    const spec = record.response.kind === 'answer' ? record.response.chart : null;
+    // Minor fix (final review): `record.response.chart` can be `undefined`
+    // (not `null`) on certain rows — the old `=== null` check missed that
+    // case and fell through to the generic catch/reportError path below
+    // instead of this honest, specific refusal message.
+    const spec = (record.response.kind === 'answer' ? record.response.chart : null) ?? null;
     if (spec === null) return { ok: false, reason: 'this answer has no chart to derive from' };
     const cellsByResultId = specCellsByResultId(spec);
     const cells = resultIds.data.map((id) => cellsByResultId.get(id));
