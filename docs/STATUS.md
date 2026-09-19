@@ -27,7 +27,8 @@ via subagent-driven development — 8 tasks in three waves (2 parallel foundatio
 tasks merged one at a time, 1 test-coverage task), a final whole-branch review on the most capable
 tier that found and the session fixed 1 Critical (a real authorization hole) + 10 Important
 cross-task findings in one fix wave + one scoped re-review + a handful of controller-direct
-residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs.
+residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs. Kickoff for the next session:
+[session-briefs/2026-09-19-session-116-kickoff.md](session-briefs/2026-09-19-session-116-kickoff.md).
 
 - **What phase 4 is:** six new chart-editing primitives, panel-only (chat-doorway wiring and
   own-data support both deferred, [#289](open-questions.md)) — goal line and era shading (reader-typed
