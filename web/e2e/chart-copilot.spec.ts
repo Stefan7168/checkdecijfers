@@ -80,7 +80,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(page.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
   });
 
-  test('add an era shading → it appears in the list → delete removes it', async ({ page }) => {
+  test('add an era shading → visual band renders → label appears in list (outside export) → delete removes both', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
     await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
@@ -99,15 +99,26 @@ test.describe.serial('chart co-pilot phase 1', () => {
     const saveButton = page.getByRole('button', { name: 'Opslaan' });
     await saveButton.click();
 
-    // Verify the shading appears in the list
+    // Important #2a: Verify the visual band renders on the chart
+    // Recharts renders ReferenceArea as SVG rect elements with this class
+    await expect(page.locator('.recharts-reference-area-rect')).toBeVisible({ timeout: 5_000 });
+
+    // Important #2: Verify the label appears in the list (outside the chart export container)
     await expect(page.getByText('Testperiode')).toBeVisible();
     await expect(page.getByText(/2020 – 2021/)).toBeVisible();
+
+    // Important #2b: Verify export exclusion — the label text is NOT inside the chart container
+    // (the chart export container is identified as having data-testid="chart-container")
+    const chartContainer = page.locator('[data-testid="chart-container"]');
+    const labelInChart = chartContainer.locator(':has-text("Testperiode")');
+    await expect(labelInChart).not.toBeVisible();
 
     // Delete the shading
     const deleteButton = page.getByRole('button', { name: /Verwijder de markering/ });
     await deleteButton.click();
 
-    // Verify it's been removed
+    // Verify both the visual band and label are removed
+    await expect(page.locator('.recharts-reference-area-rect')).not.toBeVisible();
     await expect(page.getByText('Testperiode')).not.toBeVisible();
   });
 });
