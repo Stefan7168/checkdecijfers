@@ -640,6 +640,219 @@ test.describe.serial('chart co-pilot phase 5 — dumbbell, slope, heatmap', () =
   });
 });
 
+// Phase 5b (verified-whole, session 117, Task 5): the three roster-only
+// shapes in a REAL browser — the one place the whole chain runs for real:
+// a region-class answer stored with its `regionScope`, the on-demand
+// `requestWholeVerification` Server Action reading that stored spec and
+// fetching the roster's CBS-published total from the harness database, and
+// the pie/stack drawn ONLY after the parts verified against it. jsdom mocks
+// that action outright (chart.test.tsx), so nothing short of this proves the
+// verdict actually comes back and the real cells actually reach the SVG.
+//
+// The roster: `!!regionset provincies` (src/answer/respond/harness-intent.ts
+// — population on 1 January, ALL 12 provinces, 2025), the same question
+// answer.spec.ts (d) asks, and the only region-set answer the harness can
+// draw; a region class is single-period by construction (region-set.ts), so
+// the stacks below are one stack each. The chat cases replay two
+// hand-authored fixtures (tests/fixtures/chart-copilot/cases.ts,
+// `PIE_MESSAGE`) — zero model calls, same mechanism as the phase-5 block.
+//
+// The twelve cells, formatted the way the chart prints them (formatValueNl,
+// the seed values cases.ts `PROVINCIES_SPEC` carries), and each province's
+// share of the national total (18.044.027, the NL01 cell the check verifies
+// the parts against — the parts sum to exactly that figure in the seed) as
+// `buildStack100Rows` formats it: pure arithmetic over verified reals,
+// written out here so the browser proof asserts real text, never a shape.
+const PROVINCIES_QUESTION = '!!regionset provincies';
+const PIE_MESSAGE = 'toon dit als een taartdiagram';
+const PROVINCES: ReadonlyArray<readonly [code: string, value: string, share: string]> = [
+  ['PV28', '3.863.397', '21,4%'], // Zuid-Holland
+  ['PV27', '2.992.016', '16,6%'], // Noord-Holland
+  ['PV30', '2.664.047', '14,8%'], // Noord-Brabant
+  ['PV25', '2.161.358', '12,0%'], // Gelderland
+  ['PV26', '1.409.144', '7,8%'], // Utrecht
+  ['PV23', '1.195.789', '6,6%'], // Overijssel
+  ['PV31', '1.135.328', '6,3%'], // Limburg
+  ['PV21', '664.222', '3,7%'], // Fryslân
+  ['PV20', '602.833', '3,3%'], // Groningen
+  ['PV22', '506.529', '2,8%'], // Drenthe
+  ['PV24', '456.395', '2,5%'], // Flevoland
+  ['PV29', '392.969', '2,2%'], // Zeeland
+];
+/** A stack segment shorter than STACK_LABEL_MIN_HEIGHT_PX (chart.tsx, 14 px)
+ * draws no label — a geometry gate, so the small provinces' labels depend on
+ * the canvas height. The four largest shares (12 % and up, ≥ 27 px on the
+ * smallest canvas this card renders at) always clear it; every label that
+ * IS drawn must still be one of the twelve real strings. */
+const ALWAYS_LABELLED = PROVINCES.slice(0, 4);
+const VERIFIED_NOTE = 'Gecontroleerd: de delen tellen op tot het CBS-totaal.';
+
+test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked over a verified whole', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signInAsHarnessUser(context, baseURL!);
+  });
+
+  test('an all-provinces chart offers all three tabs; each verifies the whole and draws the twelve real cells', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, PROVINCIES_QUESTION);
+    // Opens on horizontal bars (answer.spec.ts (d)).
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+
+    // `exact`: "Gestapeld" is a substring of "Gestapeld (%)".
+    const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
+    const stackedTab = page.getByRole('tab', { name: 'Gestapeld', exact: true });
+    const stacked100Tab = page.getByRole('tab', { name: 'Gestapeld (%)', exact: true });
+    await expect(pieTab).toBeEnabled();
+    await expect(stackedTab).toBeEnabled();
+    await expect(stacked100Tab).toBeEnabled();
+    const note = page.locator('[data-testid="whole-note"]');
+    const checking = page.locator('[data-testid="whole-checking"]');
+
+    // Pie: the verdict comes back (the note only renders once it has — while
+    // pending the canvas shows the checking line and NO chart), then twelve
+    // slices, each bound to its own cell, each labelled with that cell's own
+    // formatted value — no bar, no percentage, no invented number.
+    await pieTab.click();
+    await expect(pieTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveText(VERIFIED_NOTE, { timeout: 15_000 });
+    await expect(checking).toHaveCount(0);
+    const slices = page.locator('path.recharts-sector[data-point="value"]');
+    await expect(slices).toHaveCount(12);
+    const pieLabels = page.locator('[data-role="pie-label"]');
+    await expect(pieLabels).toHaveCount(12);
+    for (const [code, value] of PROVINCES) {
+      await expect(page.locator(`path.recharts-sector[data-point="value"][data-result-id*="${code}:2025JJ00"]`)).toHaveCount(1);
+      await expect(pieLabels.filter({ hasText: value })).toHaveCount(1);
+      await expect(page.locator(`[data-role="pie-label"][data-label-for*="${code}:2025JJ00"]`)).toHaveText(value);
+    }
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(0);
+
+    // Stacked: one stack (one period), twelve segments — Recharts' own
+    // stacking of one <Bar> per province — each bound to its cell; every
+    // segment label drawn is a real formatted value, the four largest are
+    // always drawn, and the x-axis is exactly the one period.
+    await stackedTab.click();
+    await expect(stackedTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveText(VERIFIED_NOTE);
+    const segments = page.locator('rect[data-point="value"]');
+    await expect(segments).toHaveCount(12);
+    for (const [code] of PROVINCES) {
+      await expect(page.locator(`rect[data-point="value"][data-result-id*="${code}:2025JJ00"]`)).toHaveCount(1);
+    }
+    const stackLabels = page.locator('[data-role="stack-label"]');
+    for (const [code, value] of ALWAYS_LABELLED) {
+      await expect(page.locator(`[data-role="stack-label"][data-label-for*="${code}:2025JJ00"]`)).toHaveText(value);
+    }
+    const realValues = new Set(PROVINCES.map(([, value]) => value));
+    for (const text of await stackLabels.allTextContents()) expect(realValues.has(text), `stack label "${text}" is a real cell value`).toBe(true);
+    await expect(page.locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['2025']);
+    await expect(slices).toHaveCount(0);
+
+    // 100%-stacked: the same twelve segments, now labelled with each part's
+    // share of the verified total — computed only after the check passed,
+    // against a fixed hundred-percent axis; the four largest shares always
+    // labelled, every drawn label one of the twelve real shares.
+    await stacked100Tab.click();
+    await expect(stacked100Tab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveText(VERIFIED_NOTE);
+    await expect(segments).toHaveCount(12);
+    for (const [code, , share] of ALWAYS_LABELLED) {
+      await expect(page.locator(`[data-role="stack-label"][data-label-for*="${code}:2025JJ00"]`)).toHaveText(share);
+    }
+    const realShares = new Set(PROVINCES.map(([, , share]) => share));
+    const shareTexts = await stackLabels.allTextContents();
+    expect(shareTexts.length).toBeGreaterThanOrEqual(ALWAYS_LABELLED.length);
+    for (const text of shareTexts) expect(realShares.has(text), `share label "${text}" is a real share`).toBe(true);
+  });
+
+  test(`"${PIE_MESSAGE}" through the chat draws the same verified pie the tab does, and Undo walks it back`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, PROVINCIES_QUESTION);
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+
+    // First the tab, directly: record what it draws.
+    const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
+    const hbarTab = page.getByRole('tab', { name: 'Liggend', exact: true });
+    const note = page.locator('[data-testid="whole-note"]');
+    const slices = page.locator('path.recharts-sector[data-point="value"]');
+    const pieLabels = page.locator('[data-role="pie-label"]');
+    await pieTab.click();
+    await expect(note).toHaveText(VERIFIED_NOTE, { timeout: 15_000 });
+    await expect(slices).toHaveCount(12);
+    const labelsByTab = await pieLabels.allTextContents();
+    const slicesByTab = await slices.evaluateAll((paths) => paths.map((path) => path.getAttribute('data-result-id')));
+    expect(labelsByTab).toHaveLength(12);
+    // Back to the form the card opened in — the chat's capabilities are
+    // built from the CURRENT form, and the fixture was authored for hbar.
+    await hbarTab.click();
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12);
+    await expect(slices).toHaveCount(0);
+
+    // Then the chat: one `setForm` chip, the pie tab selected, the verified
+    // note, and the identical pie — same labels, same resultIds, same order.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(PIE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Weergave: Taartdiagram' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+    await expect(pieTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveText(VERIFIED_NOTE);
+    await expect(slices).toHaveCount(12);
+    expect(await pieLabels.allTextContents()).toEqual(labelsByTab);
+    expect(await slices.evaluateAll((paths) => paths.map((path) => path.getAttribute('data-result-id')))).toEqual(slicesByTab);
+
+    // A chat edit is an edit like any other: the card's own Undo restores
+    // the horizontal bars (`exact`: the reply strip's own undo would match).
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(hbarTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12);
+    await expect(slices).toHaveCount(0);
+    await expect(note).toHaveCount(0);
+  });
+
+  test('a hand-picked two-city chart disables all three tabs with their reasons reachable, and the chat refuses naming the click path', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Amsterdam + Rotterdam are a hand-picked selection (`regions`, never
+    // `regionSet`), so the stored spec carries `regionScope: null` and there
+    // is no whole to verify — each tab is disabled for the STRUCTURAL
+    // reason, carried twice: `title` for the pointer and an
+    // `aria-describedby` target for a screen reader.
+    const reasons: Array<[string, string]> = [
+      ['Taartdiagram', 'Beschikbaar zodra de grafiek één moment toont voor een volledige set regio’s die het CBS zelf als geheel kent, zoals alle provincies.'],
+      ['Gestapeld', 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.'],
+      ['Gestapeld (%)', 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zodat elk aandeel tegen een echt totaal wordt gezet.'],
+    ];
+    for (const [name, reason] of reasons) {
+      const tab = page.getByRole('tab', { name, exact: true });
+      await expect(tab).toBeDisabled();
+      await expect(tab).toHaveAttribute('title', reason);
+      const describedBy = await tab.getAttribute('aria-describedby');
+      expect(describedBy, `${name} aria-describedby`).toBeTruthy();
+      await expect(page.locator(`[id="${describedBy}"]`)).toHaveText(reason);
+    }
+
+    // The chat is told the same list the tabs read, so the model's own
+    // refusal comes back naming the on-screen control — and nothing changes.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(PIE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Nothing could be applied.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByText('taartdiagram: kan deze grafiek niet. Weergave: kies een vorm boven de grafiek.')).toBeVisible();
+    await expect(copilot.getByRole('button', { name: /^Weergave:/ })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(page.locator('path.recharts-sector')).toHaveCount(0);
+    await expect(page.locator('[data-testid="whole-note"]')).toHaveCount(0);
+  });
+});
+
 /** Type a question and send it (copied from answer.spec.ts — same harness,
  * same composer). */
 async function ask(page: import('./harness.ts').Page, question: string): Promise<void> {

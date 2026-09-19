@@ -134,6 +134,26 @@ function twoSeriesLineSpec(): ChartSpec {
   };
 }
 
+/** Phase 5b (verified-whole, Task 5): a region-CLASS chart the way
+ * buildChartSpec draws one — twelve one-point series (one per province, the
+ * codes CBS's own 'PV' dimension group carries), `kind: 'bar'`, and the
+ * `regionScope` provenance only `resolveRegionSet` ever stamps. The codes
+ * and values are shape, not data: nothing here is asserted as a number. */
+function provinciesRosterSpec(): ChartSpec {
+  const codes = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26', 'PV27', 'PV28', 'PV29', 'PV30', 'PV31'];
+  const base = twoSeriesLineSpec();
+  return {
+    ...base,
+    kind: 'bar',
+    series: codes.map((code, i) => ({
+      label: `Provincie ${code}`,
+      regionCode: code,
+      points: [point({ resultId: `${code}-2025`, periodCode: '2025', periodLabel: '2025', value: 100 + i, formattedValue: String(100 + i) })],
+    })),
+    regionScope: { kind: 'all_provincies' },
+  };
+}
+
 afterEach(cleanup);
 
 /** Kinds whose control only exists inside the open Style panel. */
@@ -268,9 +288,9 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
       dumbbell: t('nl', 'chart.form.dumbbell'),
       slope: t('nl', 'chart.form.slope'),
       heatmap: t('nl', 'chart.form.heatmap'),
-      // Phase 5b (verified-whole, Task 3): the type widening needs these
-      // three entries for the exhaustive record; their tabs arrive with
-      // Task 4 and the provenance assertions with Task 5.
+      // Phase 5b (verified-whole): the three roster-only forms — their tabs
+      // landed with Task 4; the shapes below and the provenance test further
+      // down (Task 5) exercise them.
       pie: t('nl', 'chart.form.pie'),
       stacked: t('nl', 'chart.form.stacked'),
       stacked100: t('nl', 'chart.form.stacked100'),
@@ -279,12 +299,18 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // emit without a tab, and no tab the schema cannot name.
     expect([...chatForms].sort()).toEqual((Object.keys(tabLabel) as ChartForm[]).sort());
 
-    // Two shapes: one that qualifies for all three phase-5 forms
-    // (twoSeriesLineSpec: 2 series × 2 shared periods, every value real)
-    // and one that qualifies for none (its first series alone).
+    // Three shapes: one that qualifies for all three phase-5 forms
+    // (twoSeriesLineSpec: 2 series × 2 shared periods, every value real),
+    // one that qualifies for none (its first series alone), and — phase 5b
+    // — a region-class roster that qualifies for the three verified-whole
+    // forms (with `embed.auditId` given, so the card has a saved answer to
+    // check the whole against; no verdict has come back yet, and a pending
+    // verdict leaves the tab enabled — the canvas, not the tab, shows the
+    // checking state).
     const qualifying = twoSeriesLineSpec();
     const single: ChartSpec = { ...qualifying, series: [qualifying.series[0]!] };
-    for (const spec of [qualifying, single]) {
+    const roster = provinciesRosterSpec();
+    for (const spec of [qualifying, single, roster]) {
       const { container, unmount } = render(<ChartView spec={spec} embed={{ auditId: 1 }} />);
       const tabs = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"][data-command-kind="setForm"]')];
       const byForm = new Map<ChartForm, HTMLButtonElement>();
@@ -312,6 +338,54 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
       expect(allowedForms(qualifying, 2), form).toContain(form);
       expect(allowedForms(single, 1), form).not.toContain(form);
     }
+    // The three phase-5b forms, named: offered on the roster, on neither of
+    // the hand-picked shapes.
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(allowedForms(roster, roster.series.length), form).toContain(form);
+      expect(allowedForms(qualifying, 2), form).not.toContain(form);
+      expect(allowedForms(single, 1), form).not.toContain(form);
+    }
+  });
+
+  // Phase 5b (verified-whole, Task 5, spec §11): the same contract at the
+  // TAB, for provenance. chart-fit.test.ts proves the guard reads
+  // `regionScope` and not the code list; this proves the card does what the
+  // guard says — the SAME twelve province codes, one point each, render the
+  // three tabs enabled with a real `regionScope` and disabled, each with its
+  // reason reachable, with `regionScope: null` (a hand-picked or
+  // LLM-assembled selection that merely happens to name every province is
+  // still no whole: only `resolveRegionSet` vouches for a roster).
+  it('pie/stacked/stacked100 tabs follow the regionScope provenance, never the code list', () => {
+    const roster = provinciesRosterSpec();
+    const sameCodesNoScope: ChartSpec = { ...roster, regionScope: null };
+    const forms = [
+      ['pie', t('nl', 'chart.form.pie'), t('nl', 'chart.pieDisabledReason')],
+      ['stacked', t('nl', 'chart.form.stacked'), t('nl', 'chart.stackedDisabledReason')],
+      ['stacked100', t('nl', 'chart.form.stacked100'), t('nl', 'chart.stacked100DisabledReason')],
+    ] as const;
+    const tabFor = (container: HTMLElement, label: string) => {
+      const tab = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"][data-command-kind="setForm"]')].find(
+        (el) => el.textContent === label,
+      );
+      expect(tab, `no setForm tab "${label}"`).toBeDefined();
+      return tab!;
+    };
+
+    const withScope = render(<ChartView spec={roster} embed={{ auditId: 1 }} />);
+    for (const [form, label] of forms) {
+      expect(tabFor(withScope.container, label).disabled, `${form} enabled on the roster`).toBe(false);
+    }
+    withScope.unmount();
+
+    const withoutScope = render(<ChartView spec={sameCodesNoScope} embed={{ auditId: 1 }} />);
+    for (const [form, label, reason] of forms) {
+      const tab = tabFor(withoutScope.container, label);
+      expect(tab.disabled, `${form} disabled without provenance`).toBe(true);
+      expect(tab.getAttribute('title'), `${form} title`).toBe(reason);
+      const described = withoutScope.container.querySelector(`#${CSS.escape(tab.getAttribute('aria-describedby') ?? '')}`);
+      expect(described?.textContent, `${form} aria-describedby`).toBe(reason);
+    }
+    withoutScope.unmount();
   });
 
   // Task 5: the reader's own title and caption edit IN PLACE on the card —

@@ -94,8 +94,12 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
     // Phase 5 (chart-fit scorer, Task 5): heatmap joins (≥2 series, ≥2
     // shared periods, all values real); dumbbell/slope need EXACTLY two
     // periods, which this ctx does not have — see the targeted two-point
-    // round-trip further down. Not `allowedForms(...)`: a literal fails
-    // loudly if a guard change ever stops offering one of these here.
+    // round-trip further down. Phase 5b (verified-whole, Task 5): pie/
+    // stacked/stacked100 need a real `regionScope`, which this ctx — two
+    // hand-named places, no roster — honestly cannot carry, so they are
+    // NOT drawn here either; see the targeted region-set round-trip below.
+    // Not `allowedForms(...)`: a literal fails loudly if a guard change
+    // ever stops offering one of these here.
     case 'setForm': return { kind, form: pick(r, ['line', 'bar', 'table', 'heatmap'] as const) };
     case 'toggleSeries': return { kind, key: pick(r, ['s0', 's1']) };
     case 'setHighlight': return { kind, key: pick(r, ['s0', 's1', null]) };
@@ -172,6 +176,49 @@ describe('applyCommand / invertCommand', () => {
     expect(validateCommand({ kind: 'setForm', form: 'dumbbell' }, ctx)).toBe(false);
     expect(validateCommand({ kind: 'setForm', form: 'slope' }, ctx)).toBe(false);
     expect(validateCommand({ kind: 'setForm', form: 'heatmap' }, ctx)).toBe(true);
+  });
+
+  // Phase 5b (verified-whole, Task 5): pie, stacked and stacked100 need the
+  // `regionScope` provenance only a region-class answer carries
+  // (`pieFormAllowed`/`stackedFormAllowed`), which the shared `ctx` — two
+  // hand-named places — never has; the property above therefore never draws
+  // them, exactly as it never draws dumbbell/slope. The same apply-then-
+  // invert round-trip on a context that qualifies (twelve one-point series
+  // with a real scope, the shape buildChartSpec gives an all-provinces
+  // answer), plus the negatives: the shared ctx refuses all three; the SAME
+  // twelve province codes with `regionScope: null` refuse all three (the
+  // guard reads provenance, not code-list equality — spec §11); and a roster
+  // over several periods refuses pie (one moment only) but not the stacks.
+  it('pie/stacked/stacked100 validate on a region-set context and apply+invert restores the previous form; provenance, not codes, unlocks them', () => {
+    const provinces = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26', 'PV27', 'PV28', 'PV29', 'PV30', 'PV31'];
+    const rosterSeries = (codes: string[]) => provinces.map((code) => ({ ...series(code, codes), regionCode: code }));
+    const roster: CommandContext = {
+      spec: { ...spec(), series: rosterSeries(['2025']), regionScope: { kind: 'all_provincies' } },
+      alternatesCount: 0,
+    };
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, roster), form).toBe(true);
+      const start = initialDocState('bar', {});
+      const cmd = { kind: 'setForm', form } as const;
+      const inverse = invertCommand(start, cmd);
+      const after = applyCommand(start, cmd);
+      expect(after.form).toBe(form);
+      expect(plain(applyCommand(after, inverse)), form).toEqual(plain(start));
+      // The shared context (no scope key at all) refuses.
+      expect(validateCommand({ kind: 'setForm', form }, ctx), `${form} on ctx`).toBe(false);
+      // The identical twelve codes, explicitly WITHOUT provenance, refuse.
+      const sameCodesNoScope: CommandContext = { ...roster, spec: { ...roster.spec, regionScope: null } };
+      expect(validateCommand({ kind: 'setForm', form }, sameCodesNoScope), `${form} without scope`).toBe(false);
+    }
+    // A roster over three periods: no single moment for a pie, but every
+    // period is its own stack.
+    const rosterSeriesOverTime: CommandContext = {
+      spec: { ...spec(), series: rosterSeries(['2023', '2024', '2025']), regionScope: { kind: 'all_provincies' } },
+      alternatesCount: 0,
+    };
+    expect(validateCommand({ kind: 'setForm', form: 'pie' }, rosterSeriesOverTime)).toBe(false);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked' }, rosterSeriesOverTime)).toBe(true);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked100' }, rosterSeriesOverTime)).toBe(true);
   });
 
   it('undoing a note removal puts the note back at its original position', () => {
