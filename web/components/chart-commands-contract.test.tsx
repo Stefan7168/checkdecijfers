@@ -262,6 +262,12 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
       dumbbell: t('nl', 'chart.form.dumbbell'),
       slope: t('nl', 'chart.form.slope'),
       heatmap: t('nl', 'chart.form.heatmap'),
+      // Phase 5b (verified-whole, Task 3): the type widening needs these
+      // three entries for the exhaustive record; their tabs arrive with
+      // Task 4 and the provenance assertions with Task 5.
+      pie: t('nl', 'chart.form.pie'),
+      stacked: t('nl', 'chart.form.stacked'),
+      stacked100: t('nl', 'chart.form.stacked100'),
     };
     // The chat vocabulary IS the panel vocabulary: no form the schema can
     // emit without a tab, and no tab the schema cannot name.

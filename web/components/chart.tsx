@@ -173,7 +173,13 @@ import {
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
   lineFormAllowed,
+  // Phase 5b (verified-whole, session 117): the three roster-only guards,
+  // read here by the `initialFormOverride` effect only until Task 4 wires
+  // the tabs and render branches.
+  pieFormAllowed,
   slopeFormAllowed,
+  stacked100FormAllowed,
+  stackedFormAllowed,
   windowSpec,
   type ChartForm,
   type ChartViewState,
@@ -2165,7 +2171,13 @@ export function ChartView({
                 ? dumbbellFormAllowed(spec, spec.series.length)
                 : initialFormOverride === 'heatmap'
                   ? heatmapFormAllowed(spec, spec.series.length)
-                  : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+                  : initialFormOverride === 'pie'
+                    ? pieFormAllowed(spec, spec.series.length)
+                    : initialFormOverride === 'stacked'
+                      ? stackedFormAllowed(spec, spec.series.length)
+                      : initialFormOverride === 'stacked100'
+                        ? stacked100FormAllowed(spec, spec.series.length)
+                        : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
     // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms are
     // guarded here too. `fallbackForm` below re-checks on every render
     // regardless, so an unguarded override could never render a forbidden
@@ -2188,6 +2200,12 @@ export function ChartView({
   const dumbbellTabRef = useRef<HTMLButtonElement>(null);
   const slopeTabRef = useRef<HTMLButtonElement>(null);
   const heatmapTabRef = useRef<HTMLButtonElement>(null);
+  // Phase 5b (verified-whole, session 117, Task 3): same convention — the
+  // three roster-only forms' refs are declared with the type widening so
+  // `formTabRef` stays exhaustive; Task 4 attaches each to its tab button.
+  const pieTabRef = useRef<HTMLButtonElement>(null);
+  const stackedTabRef = useRef<HTMLButtonElement>(null);
+  const stacked100TabRef = useRef<HTMLButtonElement>(null);
 
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
@@ -3292,6 +3310,9 @@ export function ChartView({
     dumbbell: dumbbellTabRef,
     slope: slopeTabRef,
     heatmap: heatmapTabRef,
+    pie: pieTabRef,
+    stacked: stackedTabRef,
+    stacked100: stacked100TabRef,
   };
   // WP218 phase 5 (Global Constraints): each disabled tab explains itself —
   // the SAME reason string feeds both the pointer `title` and the

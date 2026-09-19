@@ -324,8 +324,11 @@ describe('/embed/[token] — ?form= (fix round, Piece 3)', () => {
     process.env.EMBED_TOKEN_SECRET = 's3cr3t';
     verifyEmbedToken.mockReturnValue(42);
     loadAuditRecord.mockResolvedValue(answerRecord()); // kind: 'line' -> defaults to Lijn
+    // 'scatter' is the invalid example now: phase 5b (verified-whole) made
+    // 'pie' a real ChartForm, so `isChartForm` accepts it (ChartView's own
+    // `initialFormOverride` guard then refuses it for a non-roster spec).
     const { container } = render(
-      await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'pie' }) }),
+      await EmbedPage({ params: params('42.sig'), searchParams: search({ form: 'scatter' }) }),
     );
     expect(container.querySelector('.recharts-line')).not.toBeNull();
   });

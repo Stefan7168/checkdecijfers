@@ -461,7 +461,7 @@ function FrameHexField({
   );
 }
 
-type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline' | 'areaFill';
+type ToggleKey = 'axisLines' | 'valueLabels' | 'zeroBaseline' | 'areaFill' | 'pieHole';
 interface ToggleDef {
   key: ToggleKey;
   label: string;
@@ -475,6 +475,11 @@ function buildToggles(lang: Lang): ToggleDef[] {
     { key: 'valueLabels', label: t(lang, 'chart.panel.valueLabels'), onValue: 'shown', offValue: 'hidden' },
     { key: 'zeroBaseline', label: t(lang, 'chart.panel.zeroBaseline'), onValue: 'zero', offValue: 'auto' },
     { key: 'areaFill', label: t(lang, 'chart.panel.areaFill'), onValue: 'gradient', offValue: 'flat' },
+    // Phase 5b (verified-whole, session 117): the donut look is a PIE
+    // presentation toggle, not a fourth form (spec §11) — `resolvePresentation`
+    // makes `pieHole` applicable in pie form only, so the `visibleToggles`
+    // filter below never shows this row anywhere else.
+    { key: 'pieHole', label: t(lang, 'chart.panel.pieHole'), onValue: 'donut', offValue: 'none' },
   ];
 }
 

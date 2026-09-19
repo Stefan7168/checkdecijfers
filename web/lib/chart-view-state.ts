@@ -6,16 +6,27 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { PresentationOverrides } from './chart-presentation.ts';
 
-export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table' | 'dumbbell' | 'slope' | 'heatmap';
+export type ChartForm =
+  | 'line'
+  | 'area'
+  | 'bar'
+  | 'hbar'
+  | 'table'
+  | 'dumbbell'
+  | 'slope'
+  | 'heatmap'
+  | 'pie'
+  | 'stacked'
+  | 'stacked100';
 
 /** Fix round (Task 5 review, Piece 3): guards an arbitrary value (e.g. the
  * embed route's own `?form=` query-string param) down to a real ChartForm —
  * same convention as messages.ts's own `isLang`. Confirms only that the
- * string is one of the eight real enum members; it says nothing about
+ * string is one of the eleven real enum members; it says nothing about
  * whether that form is actually ALLOWED for a given spec — see
- * lineFormAllowed/areaFormAllowed/hbarFormAllowed and the phase-5 trio
- * below for that (ChartView's own `initialFormOverride` prop applies both
- * checks, in that order). */
+ * lineFormAllowed/areaFormAllowed/hbarFormAllowed, the phase-5 trio and the
+ * phase-5b verified-whole trio below for that (ChartView's own
+ * `initialFormOverride` prop applies both checks, in that order). */
 export function isChartForm(x: unknown): x is ChartForm {
   return (
     x === 'line' ||
@@ -25,7 +36,10 @@ export function isChartForm(x: unknown): x is ChartForm {
     x === 'table' ||
     x === 'dumbbell' ||
     x === 'slope' ||
-    x === 'heatmap'
+    x === 'heatmap' ||
+    x === 'pie' ||
+    x === 'stacked' ||
+    x === 'stacked100'
   );
 }
 
@@ -385,6 +399,66 @@ export function heatmapFormAllowed(spec: SeriesShape, seriesCount: number): bool
 }
 
 /**
+ * Phase 5b (verified-whole, session 117): a pie/stacked/100%-stacked shape
+ * is only ever OFFERED when the chart's own regions are a complete,
+ * CBS-known roster — never guessed from the code list (a reader could
+ * hand-pick exactly the province codes without CBS ever vouching they're
+ * complete for THIS table/period). This is a purely structural check: it
+ * reads `spec.regionScope` (set by buildChartSpec only for a genuine
+ * region-set answer, phase 5b task 2) and does NOT verify the actual sum —
+ * that numeric check runs on demand, server-side, only when the reader
+ * picks one of these three forms (spec §11's "Option A" pattern).
+ *
+ * `regionScope` is OPTIONAL on ChartSpec (ADR 014: every spec stored before
+ * the field existed carries no key at all), so `Pick<ChartSpec,
+ * 'regionScope'>` is satisfied by chart.tsx's PlottableSpec and by
+ * chart-commands.ts's `CommandContext['spec']` too — both call sites that
+ * broke phase 5's first `Pick<ChartSpec, 'series'>` sketch (see
+ * `SeriesShape`). An absent key reads as `undefined`, which `!= null`
+ * treats exactly like the explicit `null` buildChartSpec writes for a
+ * non-roster chart: refuse. That is the safe default — a caller that
+ * forgets to pass provenance can only ever get fewer forms, never more.
+ */
+function hasVerifiableRegionScope(spec: Pick<ChartSpec, 'regionScope'>): boolean {
+  return spec.regionScope != null;
+}
+
+/**
+ * Phase 5b: a pie can only show ONE moment — every series must carry
+ * exactly one point, the same "comparison-shaped" condition
+ * `isComparisonShaped` already checks for a different form (session 110) —
+ * comparing at least two things (a single slice is not a breakdown). The
+ * roster-completeness structural check above applies on top. Every slice
+ * is one region's own real cell value; nothing here computes the whole.
+ */
+export function pieFormAllowed(spec: Pick<ChartSpec, 'regionScope'> & SeriesShape, seriesCount: number): boolean {
+  return hasVerifiableRegionScope(spec) && seriesCount >= 2 && spec.series.every((s) => s.points.length === 1);
+}
+
+/**
+ * Phase 5b: stacked/100%-stacked can show several moments (one stack per
+ * period, spec §11's "checked independently per period" rule) — only the
+ * roster-completeness structural check applies here, not a point-count
+ * restriction. At least two series, or there is nothing to stack.
+ */
+export function stackedFormAllowed(spec: Pick<ChartSpec, 'regionScope'> & SeriesShape, seriesCount: number): boolean {
+  return hasVerifiableRegionScope(spec) && seriesCount >= 2;
+}
+
+/**
+ * Phase 5b: identical condition to stackedFormAllowed, kept as its own named
+ * export — matching the one-guard-per-form convention every other form in
+ * this file follows (see slopeFormAllowed) — rather than every 100%-stacked
+ * call site reaching for a function named after a different form. The
+ * percentage normalisation the form draws is pure arithmetic over the
+ * verified whole, done AFTER the on-demand check succeeds (Task 4), never
+ * here.
+ */
+export function stacked100FormAllowed(spec: Pick<ChartSpec, 'regionScope'> & SeriesShape, seriesCount: number): boolean {
+  return stackedFormAllowed(spec, seriesCount);
+}
+
+/**
  * WP218 phase 5 (Global Constraints): "presentation carries over on a type
  * switch ... a form that becomes disallowed after a same-instance spec swap
  * falls back exactly like the existing line->bar guard." One function so
@@ -395,11 +469,19 @@ export function heatmapFormAllowed(spec: SeriesShape, seriesCount: number): bool
  * dumbbell and slope fall back to bar (a two-point comparison that no longer
  * qualifies is still honestly a bar chart); heatmap falls back to table (the
  * grid IS the table's own rows, recoloured — when the grid no longer reads,
- * the table is the view it came from).
+ * the table is the view it came from). Phase 5b (verified-whole): pie,
+ * stacked and 100%-stacked fall back to table too — like the heatmap they
+ * are "a different way of looking at the same rows", not line/bar-like, and
+ * a spec that has lost its roster provenance (or a pie whose window now
+ * spans several periods) has nothing honest to draw as a whole.
+ *
+ * `spec` also carries `regionScope` from here on (optional on ChartSpec, so
+ * every pre-existing caller — a PlottableSpec, a `Pick<ChartSpec, 'kind' |
+ * 'series'>` — still fits; see hasVerifiableRegionScope).
  */
 export function fallbackForm(
   form: ChartForm,
-  spec: Pick<ChartSpec, 'kind'> & SeriesShape,
+  spec: Pick<ChartSpec, 'kind' | 'regionScope'> & SeriesShape,
   seriesCount: number,
 ): ChartForm {
   switch (form) {
@@ -416,6 +498,12 @@ export function fallbackForm(
       return slopeFormAllowed(spec, seriesCount) ? 'slope' : 'bar';
     case 'heatmap':
       return heatmapFormAllowed(spec, seriesCount) ? 'heatmap' : 'table';
+    case 'pie':
+      return pieFormAllowed(spec, seriesCount) ? 'pie' : 'table';
+    case 'stacked':
+      return stackedFormAllowed(spec, seriesCount) ? 'stacked' : 'table';
+    case 'stacked100':
+      return stacked100FormAllowed(spec, seriesCount) ? 'stacked100' : 'table';
     case 'bar':
     case 'table':
       return form;

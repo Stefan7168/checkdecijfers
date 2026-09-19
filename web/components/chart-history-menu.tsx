@@ -35,6 +35,13 @@ function formLabel(form: ChartForm, lang: Lang): string {
       return t(lang, 'chart.form.slope');
     case 'heatmap':
       return t(lang, 'chart.form.heatmap');
+    // Phase 5b (verified-whole, session 117): the three roster-only forms.
+    case 'pie':
+      return t(lang, 'chart.form.pie');
+    case 'stacked':
+      return t(lang, 'chart.form.stacked');
+    case 'stacked100':
+      return t(lang, 'chart.form.stacked100');
   }
 }
 
@@ -52,6 +59,7 @@ const PRESENTATION_KEY_LABEL: Record<PresentationKey, MessageKey> = {
   valueLabels: 'chart.panel.valueLabels',
   zeroBaseline: 'chart.panel.zeroBaseline',
   areaFill: 'chart.panel.areaFill',
+  pieHole: 'chart.panel.pieHole',
   seriesColors: 'chart.panel.tabColors',
   fontFamily: 'chart.panel.font',
   language: 'chart.panel.languageLabel',

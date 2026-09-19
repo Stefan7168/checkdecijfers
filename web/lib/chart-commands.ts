@@ -288,7 +288,13 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
 }
 
 export interface CommandContext {
-  spec: Pick<ChartSpec, 'kind' | 'series'>;
+  /** Phase 5b (verified-whole): `regionScope` joins so `validateCommand`'s
+   * `setForm` case — which routes through `fallbackForm` — can see the
+   * roster provenance the pie/stacked/stacked100 guards read. Optional on
+   * ChartSpec itself, so every existing context (chart.tsx passes its full
+   * spec; a test passes `{ kind, series }`) still type-checks; a context
+   * without it simply never validates one of those three forms. */
+  spec: Pick<ChartSpec, 'kind' | 'series' | 'regionScope'>;
   alternatesCount: number;
   /** Present ONLY on an own-data card — the dataset's closed vocabulary
    * (ADR 037 D6). Its absence is what makes `setInstruction` invalid on a
@@ -428,7 +434,7 @@ const envelope = { id: z.string().min(1).max(64), at: z.string().min(1).max(40),
 // narrowing, so the envelope fields are spread into every member instead of
 // intersected on afterward.
 const commandSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap']), ...envelope }),
+  z.object({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100']), ...envelope }),
   z.object({ kind: z.literal('toggleSeries'), key: z.string(), ...envelope }),
   z.object({ kind: z.literal('setHighlight'), key: z.string().nullable(), ...envelope }),
   z.object({ kind: z.literal('setSeriesView'), hiddenKeys: z.array(z.string()), highlightedKey: z.string().nullable(), ...envelope }),

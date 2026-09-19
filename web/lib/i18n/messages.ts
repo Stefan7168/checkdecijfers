@@ -564,6 +564,26 @@ const nl = {
   // own. Digit-free (the whole-card digit scan).
   'chart.dumbbellDisabledReason': 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.',
   'chart.heatmapDisabledReason': 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.',
+  // Phase 5b (verified-whole, session 117, spec §11): the three roster-only
+  // Weergave tabs — offered only when the chart's regions are a complete
+  // CBS-known set (alle provincies, alle landsdelen, de gemeenten van één
+  // provincie), whose real total is then checked on demand. Donut is a
+  // styling toggle on the pie (chart.panel.pieHole below), not a tab. The
+  // disabled reasons are digit-free (the whole-card digit scan) and name
+  // the roster condition, never a series count. The stacked100 LABEL is
+  // digit-free too, on purpose — the plan wrote "100% gestapeld", but a tab
+  // is rendered (disabled) on every chart card, and chart.test.tsx's
+  // whole-card scan flags any numeric token not found in the spec's own
+  // strings; "100" would fail it on nearly every chart. '%' is not a digit.
+  'chart.form.pie': 'Taartdiagram',
+  'chart.form.stacked': 'Gestapeld',
+  'chart.form.stacked100': 'Gestapeld (%)',
+  'chart.pieDisabledReason':
+    'Beschikbaar zodra de grafiek één moment toont voor een volledige set regio’s die het CBS zelf als geheel kent, zoals alle provincies.',
+  'chart.stackedDisabledReason':
+    'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.',
+  'chart.stacked100DisabledReason':
+    'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zodat elk aandeel tegen een echt totaal wordt gezet.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -826,6 +846,8 @@ const nl = {
   'chart.panel.valueLabels': 'Waarden',
   'chart.panel.zeroBaseline': 'Y-as vanaf nul',
   'chart.panel.areaFill': 'Verloop in het vlak',
+  // Phase 5b: the donut toggle — pie form only (resolvePresentation).
+  'chart.panel.pieHole': 'Gat in het midden (donut)',
   'chart.panel.showGroup': 'Tonen',
   // Audit pass 2, row 12 (2026-09-17): the whole accessible name of this
   // control used to be just "Standaard" — sitting directly above "Bewaar
@@ -1666,6 +1688,15 @@ const en: Messages = {
   'chart.slopeDisabledReason': "Available once you're comparing exactly two points in time.",
   'chart.dumbbellDisabledReason': 'Available once at least two series each have exactly a start and an end value.',
   'chart.heatmapDisabledReason': "Available once you're comparing at least two series across at least two points in time.",
+  'chart.form.pie': 'Pie chart',
+  'chart.form.stacked': 'Stacked',
+  'chart.form.stacked100': 'Stacked (%)',
+  'chart.pieDisabledReason':
+    'Available once the chart shows a single moment for a complete set of regions that CBS itself defines as a whole, such as all provinces.',
+  'chart.stackedDisabledReason':
+    'Available once the chart shows a complete set of regions that CBS itself defines as a whole, such as all provinces.',
+  'chart.stacked100DisabledReason':
+    'Available once the chart shows a complete set of regions that CBS itself defines as a whole, so every share is set against a real total.',
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',
@@ -1842,6 +1873,7 @@ const en: Messages = {
   'chart.panel.valueLabels': 'Values',
   'chart.panel.zeroBaseline': 'Y-axis from zero',
   'chart.panel.areaFill': 'Gradient fill',
+  'chart.panel.pieHole': 'Hole in the middle (donut)',
   'chart.panel.showGroup': 'Show',
   // Audit pass 2, row 12 (2026-09-17): see the `nl` entry above.
   'chart.panel.reset': 'Reset to default',

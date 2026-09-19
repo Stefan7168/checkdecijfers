@@ -115,9 +115,11 @@ describe('validateCbsCopilotOutput', () => {
 
 describe('sanitizeCbsCapabilities', () => {
   it('drops unknown forms/keys, coerces zoom and lang, keeps known values', () => {
+    // 'scatter' is the off-list example now: phase 5b (verified-whole) made
+    // 'pie' a real CBS-tier form.
     expect(
       sanitizeCbsCapabilities({
-        forms: ['line', 'pie'],
+        forms: ['line', 'scatter'],
         presentationKeys: ['grid', 'bogus'],
         templates: ['newsroom'],
         zoom: 'yes',
@@ -130,5 +132,9 @@ describe('sanitizeCbsCapabilities', () => {
       zoom: false,
       lang: 'nl',
     });
+  });
+
+  it('phase 5b: keeps pie, stacked and stacked100 — CBS-tier forms since the verified whole', () => {
+    expect(sanitizeCbsCapabilities({ forms: ['pie', 'stacked', 'stacked100'] }).forms).toEqual(['pie', 'stacked', 'stacked100']);
   });
 });

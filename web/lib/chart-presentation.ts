@@ -19,6 +19,7 @@ export type XLabelMode = 'flat' | 'tilted';
 export type OnOff = 'shown' | 'hidden';
 export type BaselineMode = 'auto' | 'zero';
 export type AreaFill = 'gradient' | 'flat';
+export type PieHole = 'none' | 'donut';
 
 export interface ChartPresentation {
   lineWidth: LineWidth;
@@ -32,6 +33,12 @@ export interface ChartPresentation {
    * fading to almost nothing at the baseline) or the flat fill. Honest
    * either way because the area form already forces a zero baseline. */
   areaFill: AreaFill;
+  /** Phase 5b (verified-whole, session 117, spec §11 "donut is styling, not
+   * a form"): pie form only — a hole in the middle (the donut look) or none.
+   * Honest either way: the slices are the same verified whole, the hole
+   * draws nothing and hides nothing. Same mechanism as `areaFill` — one
+   * form-specific enum key, never a fourth ChartForm member. */
+  pieHole: PieHole;
   /** Series index → lowercase '#rrggbb'. Absent index = palette colour. */
   seriesColors: Record<number, string>;
   /** A family name from FONT_OPTIONS (or, later, a brand font); null = the page font. */
@@ -102,6 +109,7 @@ export const CLASSIC_PRESENTATION: ChartPresentation = {
   valueLabels: 'shown',
   zeroBaseline: 'auto',
   areaFill: 'flat',
+  pieHole: 'none',
   seriesColors: {},
   fontFamily: null,
   language: null,
@@ -131,6 +139,7 @@ export const STOCK_PRESENTATION: ChartPresentation = {
   valueLabels: 'shown',
   zeroBaseline: 'auto',
   areaFill: 'gradient',
+  pieHole: 'none',
   seriesColors: {},
   fontFamily: null,
   language: null,
@@ -178,6 +187,7 @@ const ENUM_OPTIONS: Partial<Record<PresentationKey, readonly string[]>> = {
   valueLabels: ['shown', 'hidden'],
   zeroBaseline: ['auto', 'zero'],
   areaFill: ['gradient', 'flat'],
+  pieHole: ['none', 'donut'],
   framePadding: ['none', 'small', 'medium', 'large'],
   frameCorners: ['square', 'rounded', 'veryRounded'],
   frameShadow: ['none', 'soft', 'strong'],
@@ -191,7 +201,7 @@ const ENUM_OPTIONS: Partial<Record<PresentationKey, readonly string[]>> = {
 // same way an unrecognised zod-schema key would be.
 const OVERRIDE_KEYS: readonly PresentationKey[] = [
   'lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels',
-  'zeroBaseline', 'areaFill', 'seriesColors', 'fontFamily', 'language',
+  'zeroBaseline', 'areaFill', 'pieHole', 'seriesColors', 'fontFamily', 'language',
   'frameBackground', 'framePadding', 'frameCorners', 'frameShadow',
   'frameInset', 'frameAspect',
 ];
@@ -327,9 +337,19 @@ export const LOCK_REASONS = {
   // so it gets its OWN reason (not zeroBaselineBar) even though the effect
   // — force zero, lock the toggle — is identical in shape to the bar case.
   zeroBaselineArea: 'Een gevuld vlak begint altijd bij nul.',
+  // Phase 5b (verified-whole): a pie has no axis at all, so its slices'
+  // own values are the only CBS numbers on the chart — its OWN reason (not
+  // valueLabelsBar, which names a staafdiagram), same effect: force shown,
+  // lock the toggle.
+  valueLabelsPie: 'Zonder waarden toont een taartdiagram alleen verhoudingen: elke punt draagt bewust zijn eigen cijfer.',
 } as const;
 
-const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'areaFill', 'seriesColors', 'fontFamily'];
+const ALL_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'valueLabels', 'zeroBaseline', 'areaFill', 'pieHole', 'seriesColors', 'fontFamily'];
+/** Phase 5b: the keys that describe an AXIS or a LINE — none of which a
+ * pie has (no x/y axis, no grid, no stroke, no baseline). Removed from
+ * `applicable` in pie form the way `areaFill` is removed outside area form:
+ * not an honesty lock, simply nothing on the chart for them to act on. */
+const AXIS_KEYS: PresentationKey[] = ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'zeroBaseline'];
 const FRAME_KEYS: PresentationKey[] = ['frameBackground', 'framePadding', 'frameCorners', 'frameShadow', 'frameInset', 'frameAspect'];
 
 export function resolvePresentation(
@@ -355,7 +375,15 @@ export function resolvePresentation(
     for (const key of FRAME_KEYS) applicable.add(key);
     // ADR 042: the fill is a property of the area form alone.
     if (ctx.form !== 'area') applicable.delete('areaFill');
-    if (ctx.form === 'bar' || ctx.form === 'hbar') {
+    // Phase 5b: the hole is a property of the pie form alone (spec §11).
+    if (ctx.form !== 'pie') applicable.delete('pieHole');
+    // Phase 5b: stacked and 100%-stacked ARE bar charts (Recharts' own
+    // native stacking of one <Bar> per region), so they take the bar
+    // branch verbatim — value labels forced shown and the baseline forced
+    // to zero, each with the SAME bar reason (they are staafdiagrammen; the
+    // wording holds). A stacked bar drawn from a non-zero baseline would
+    // misstate every segment's share of the whole.
+    if (ctx.form === 'bar' || ctx.form === 'hbar' || ctx.form === 'stacked' || ctx.form === 'stacked100') {
       applicable.delete('lineWidth');
       applicable.delete('markers');
       applicable.delete('zeroBaseline');
@@ -367,6 +395,17 @@ export function resolvePresentation(
       // (y) axis, not the number axis — there is no x-axis label orientation
       // to offer, unlike a vertical bar's period labels.
       if (ctx.form === 'hbar') applicable.delete('xLabels');
+    } else if (ctx.form === 'pie') {
+      // Phase 5b: a pie has no axis and no stroke — every axis/line key is
+      // simply not applicable (AXIS_KEYS). Value labels are forced shown
+      // with their own reason: a pie shows no axis at all, so without each
+      // slice's own real cell value the reader would be left with bare
+      // proportions and not one CBS number (the same honesty rule the bar
+      // lock states, for a chart with even less of a scale). `pieHole`,
+      // `seriesColors`, `fontFamily` and the frame stay on offer.
+      for (const key of AXIS_KEYS) applicable.delete(key);
+      values.valueLabels = 'shown';
+      locks.valueLabels = LOCK_REASONS.valueLabelsPie;
     } else if (ctx.form === 'area') {
       // WP218 phase 5: otherwise identical to 'line' (lineWidth/markers/grid/
       // xLabels/etc. stay applicable and unforced) — only the baseline is

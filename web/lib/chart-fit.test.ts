@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { allowedForms } from './chart-fit.ts';
 import type { ChartPoint, ChartSeries, ChartSpec } from '../backend/chart/types.ts';
+import type { RegionScope } from '../backend/query/index.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 
 function point(periodCode: string, value: number): ChartPoint {
@@ -51,6 +52,14 @@ function shaped(kind: 'line' | 'bar', seriesCount: number, pointsPerSeries: numb
   };
 }
 
+const ALL_PROVINCIES: RegionScope = { kind: 'all_provincies' };
+const ALL_LANDSDELEN: RegionScope = { kind: 'all_landsdelen' };
+
+/** A `shaped` spec stamped with real roster provenance (phase 5b). */
+function rosterSpec(scope: RegionScope, seriesCount: number, pointsPerSeries: number): ChartSpec {
+  return { ...shaped('bar', seriesCount, pointsPerSeries), regionScope: scope };
+}
+
 describe('allowedForms', () => {
   it('offers every co-offerable form, in the fixed order, on the two richest spec shapes', () => {
     // No single spec can reach all eight: area needs exactly ONE series
@@ -63,11 +72,38 @@ describe('allowedForms', () => {
     expect(allowedForms(shaped('line', 2, 2), 2)).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap']);
   });
 
-  it('keeps the fixed display order — the original five first, then dumbbell, slope, heatmap', () => {
-    const forms = allowedForms(shaped('bar', 2, 2), 2);
-    const order = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'];
-    const positions = forms.map((f) => order.indexOf(f));
-    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  it('keeps the fixed display order — the original five first, then dumbbell, slope, heatmap, then pie, stacked, stacked100', () => {
+    const order = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100'];
+    for (const s of [shaped('bar', 2, 2), rosterSpec(ALL_PROVINCIES, 12, 1), rosterSpec(ALL_PROVINCIES, 12, 2)]) {
+      const forms = allowedForms(s, s.series.length);
+      const positions = forms.map((f) => order.indexOf(f));
+      expect(positions.every((p) => p >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    }
+  });
+
+  // Phase 5b (the verified whole, session 117): the three roster-only forms
+  // appear only on a spec carrying a real `regionScope` — provenance, never
+  // the code list — appended after heatmap in the fixed order.
+  it('a single-moment roster offers pie, stacked and stacked100, after the forms it already offered', () => {
+    expect(allowedForms(rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toEqual(['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100']);
+    expect(allowedForms(rosterSpec(ALL_LANDSDELEN, 4, 1), 4)).toEqual(['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100']);
+  });
+
+  it('a multi-period roster offers stacked and stacked100 but never pie (one moment only) — heatmap stays on offer too', () => {
+    expect(allowedForms(rosterSpec(ALL_PROVINCIES, 12, 3), 12)).toEqual(['bar', 'hbar', 'table', 'heatmap', 'stacked', 'stacked100']);
+    // Two periods: dumbbell/slope AND heatmap qualify, then the two stacks.
+    expect(allowedForms(rosterSpec(ALL_PROVINCIES, 12, 2), 12)).toEqual(['bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100']);
+  });
+
+  it('the same shapes with a null or absent regionScope offer none of the three — the pre-5b lists, unchanged', () => {
+    expect(allowedForms({ ...shaped('bar', 12, 1), regionScope: null }, 12)).toEqual(['bar', 'hbar', 'table']);
+    expect(allowedForms(shaped('bar', 12, 1), 12)).toEqual(['bar', 'hbar', 'table']);
+    expect(allowedForms({ ...shaped('bar', 12, 3), regionScope: null }, 12)).toEqual(['bar', 'hbar', 'table', 'heatmap']);
+  });
+
+  it('a single-series roster offers none of the three (nothing to slice or stack)', () => {
+    expect(allowedForms(rosterSpec(ALL_PROVINCIES, 1, 1), 1)).toEqual(['line', 'bar', 'hbar', 'table']);
   });
 
   it('offers none of the three phase-5 forms on the sparsest spec shapes', () => {
@@ -113,5 +149,9 @@ describe('allowedForms', () => {
       ],
     };
     expect(allowedForms(plottable, plottable.series.length)).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap']);
+    // Phase 5b: a PlottableSpec carries no regionScope at all, so it can
+    // never be offered pie/stacked/stacked100 — the absent key reads as
+    // "no roster", the safe default.
+    for (const form of ['pie', 'stacked', 'stacked100']) expect(allowedForms(plottable, 2)).not.toContain(form);
   });
 });
