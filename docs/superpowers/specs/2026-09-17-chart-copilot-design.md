@@ -148,3 +148,52 @@ Cost: one cheap-tier call per chat edit; zero for panel edits; a rule-based **ch
 
 - Exact shape of the `capabilities` payload and how the JSON schema is generated per tier.
 - Whether `chart_edits` also stores notes' free text (yes by default; it is user content, own tier).
+
+## 9. §5.4 expanded — storytelling primitives (session 115, 2026-09-19)
+
+Designed via `superpowers:brainstorming`, owner-approved in chat 2026-09-19 (the calculation-timing
+question below, "Option A"). Reachable from both doorways (CBS/Eurostat and own-data), each a panel
+control first and a chat command second — the existing `chart-commands-contract.test.tsx` pattern
+(every chat-reachable capability must also be a panel control) extends to cover all six.
+
+**The provenance split, in one rule:** a primitive either shows the reader's OWN typed words (never
+checked against data, rendered the same way an existing chart note already is — in a layer drawn
+outside the chart's own image, so it can never be mistaken for a plotted number and is excluded from
+exports the same way notes already are), or it shows a NUMBER WE CALCULATED, which must always trace
+back to real, already-verified CBS/Eurostat cells and is drawn as part of the actual chart image, the
+same way every other plotted number is.
+
+| Primitive | What it is | Provenance | Where it's calculated |
+|---|---|---|---|
+| Goal line | Reader types their own target value + label; a line is drawn at that height. | Reader's own words, like a note. Never checked against data. | Nowhere — nothing to calculate. |
+| Era shading | Reader shades a period range and types a label ("2008–2009 crisis"). | The shaded range is checked against the chart's own real period list (same check the existing zoom control already does); the label is the reader's own words, like a note. | Nowhere for the label; the range check reuses existing code. |
+| Dim instead of hide | A third state for a chart line: shown, dimmed, or hidden (today it's only shown/hidden). | Pure display setting. No data involved at all. | Nowhere. |
+| Headline number | Pull one number already shown on the chart and display it large. | The real number, already verified, already on screen. | Nowhere new — it's a display choice pointing at an existing value, never a fresh value typed into the command. |
+| Difference arrow | An arrow between two points on the chart showing the gap. | A real calculated number, freshly computed. | **On our server, on demand** (Option A) — reuses the difference calculation already used elsewhere in the product (`deriveDifference`), run again over the same verified cells this chart's answer already fetched. No new call to CBS. No new record kept — same as every other small chart edit today. |
+| Average line | A line showing the average of what's on the chart. | A real calculated number, freshly computed. | **On our server, on demand** (Option A) — needs one new small calculation function next to the difference one (there isn't an "average" one yet), run the same way: over already-verified cells, on request, nothing stored beyond the usual chart-edit record. |
+
+**Why "on demand" (Option A) over "calculate everything upfront" (Option B):** the owner's call,
+2026-09-19 — calculating only when a reader actually asks avoids running (and storing) math nobody asked
+for on every single chart. The trade-off (a brief round trip to the server the moment someone clicks
+"add average") is worth it.
+
+**How the on-demand calculation avoids becoming a loophole:** the server already has this chart's
+already-verified numbers on file (they were fetched and checked once, when the chart was first built).
+Asking for an average or a difference does not re-fetch anything from CBS and does not re-check anything
+— it just re-runs our own trusted calculation code over numbers already on file for that exact chart, the
+same code path used elsewhere in the product for the same kind of math. If those numbers can't legally
+be averaged or subtracted (missing values, mismatched units — the existing calculation code already
+refuses in those cases), the reader gets a plain "can't do that here" instead of a guess.
+
+**Command log rule kept intact:** a command still never carries a freshly-calculated number by itself —
+only the "recipe" (which points, which calculation). The actual number only ever lives as part of the
+chart's own drawn data, the same place every other real number already lives, so undo/redo and reloading
+the chart both replay the recipe rather than trusting a smuggled-in figure.
+
+**Contract test additions:** (1) every chip the chat can offer for these six must have a matching panel
+button/control — no chat-only capability; (2) a reader-typed value (goal line, era-shading label) can
+never appear inside the chart's own drawn image, only in the outside-image layer notes already use; (3)
+a calculated value (difference, average) can never appear via a command that carries the number directly
+— it must always be re-derived from on-file cells through the registered calculation functions.
+
+**Next:** `superpowers:writing-plans` for the implementation plan, then `subagent-driven-development`.
