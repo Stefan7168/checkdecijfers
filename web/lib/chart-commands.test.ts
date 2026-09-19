@@ -10,6 +10,7 @@ import {
   validateCommand,
   type ChartCommandParams,
   type ChartDocState,
+  type CommandContext,
 } from './chart-commands.ts';
 import type { ChartPoint, ChartSeries, ChartSpec } from '../backend/chart/types.ts';
 import { buildDatasetProfile } from '../backend/attachments/ingest/profile.ts';

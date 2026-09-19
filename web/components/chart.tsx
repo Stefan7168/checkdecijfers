@@ -1905,7 +1905,7 @@ export function ChartView({
   // The reader's own hidden/highlight/zoom state, taken when the story opens
   // and put back when it closes (the story drives highlight itself and needs
   // the full, unhidden, unzoomed chart so every step's point is on screen).
-  const storySnapshot = useRef<Pick<ChartViewState, 'hiddenKeys' | 'highlightedKey' | 'periodRange'> | null>(null);
+  const storySnapshot = useRef<Pick<ChartViewState, 'hiddenKeys' | 'dimmedKeys' | 'highlightedKey' | 'periodRange'> | null>(null);
   // WP218 phase 3 (owner B): the last brand a signed-in visitor actually
   // applied via "Pas merkkleuren toe" — deliberately NOT reset by the spec-
   // swap block below (unlike notes/pendingPoint), because it describes
@@ -2144,7 +2144,7 @@ export function ChartView({
   // receives a new spec (whose `reset` clears the highlight).
   useEffect(() => {
     if (stage) {
-      dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null } });
+      dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: stage.step?.highlight ?? null, periodRange: null, dimmedKeys: new Set() } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage?.step?.id, specIdentity]);
@@ -2853,11 +2853,11 @@ export function ChartView({
   // avoid. `track` defaults to true (every OTHER call site — the trigger
   // click, toggleStory — is a real reader action and keeps counting).
   function openStory(opts?: { track?: boolean }): void {
-    storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange };
+    storySnapshot.current = { hiddenKeys: state.hiddenKeys, highlightedKey: state.highlightedKey, periodRange: state.periodRange, dimmedKeys: state.dimmedKeys };
     // setView BEFORE setOpenPanel: so the first render of the OPEN story
     // already shows the first step's own highlight/full-range view, never a
     // stray frame with the reader's own state still showing.
-    dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null } });
+    dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(), highlightedKey: storySteps[0]?.highlight ?? null, periodRange: null, dimmedKeys: new Set() } });
     setStoryIndex(0);
     setOpenPanel('story');
     if (opts?.track !== false) trackChartStyleEvent('story_open');

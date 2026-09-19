@@ -70,13 +70,13 @@ export type ChartCommandParams =
    * menu (Task 6's summarizeInstruction). */
   | { kind: 'setInstruction'; instruction: ClientChartInstruction; summary: string }
   | { kind: 'addGoalLine'; goalLine: GoalLine }
-  | { kind: 'removeGoalLine'; id: string }
+  | { kind: 'removeGoalLine'; goalLineId: string }
   | { kind: 'addEraShading'; era: EraShading }
-  | { kind: 'removeEraShading'; id: string }
+  | { kind: 'removeEraShading'; eraShadingId: string }
   | { kind: 'setDimmed'; hiddenKeys: string[]; dimmedKeys: string[] }
   | { kind: 'setHeadlineOverride'; resultId: string | null }
   | { kind: 'addDerivedOverlay'; overlay: DerivedOverlayRequest }
-  | { kind: 'removeDerivedOverlay'; id: string };
+  | { kind: 'removeDerivedOverlay'; overlayId: string };
 
 export type ChartCommandKind = ChartCommandParams['kind'];
 export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
@@ -195,13 +195,13 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
       return { ...state, goalLines: [...state.goalLines, cmd.goalLine] };
     }
     case 'removeGoalLine':
-      return { ...state, goalLines: state.goalLines.filter((g) => g.id !== cmd.id) };
+      return { ...state, goalLines: state.goalLines.filter((g) => g.id !== cmd.goalLineId) };
     case 'addEraShading': {
       if (state.eraShadings.some((e) => e.id === cmd.era.id)) return state;
       return { ...state, eraShadings: [...state.eraShadings, cmd.era] };
     }
     case 'removeEraShading':
-      return { ...state, eraShadings: state.eraShadings.filter((e) => e.id !== cmd.id) };
+      return { ...state, eraShadings: state.eraShadings.filter((e) => e.id !== cmd.eraShadingId) };
     case 'setDimmed':
       return withView(state, chartViewReducer(state, { type: 'setDimmed', hiddenKeys: cmd.hiddenKeys, dimmedKeys: cmd.dimmedKeys }));
     case 'setHeadlineOverride':
@@ -211,7 +211,7 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
       return { ...state, derivedOverlayRequests: [...state.derivedOverlayRequests, cmd.overlay] };
     }
     case 'removeDerivedOverlay':
-      return { ...state, derivedOverlayRequests: state.derivedOverlayRequests.filter((o) => o.id !== cmd.id) };
+      return { ...state, derivedOverlayRequests: state.derivedOverlayRequests.filter((o) => o.id !== cmd.overlayId) };
   }
 }
 
@@ -261,17 +261,17 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
         : { kind: 'setInstruction', instruction: before.instruction, summary: cmd.summary };
     case 'addGoalLine':
       if (before.goalLines.some((g) => g.id === cmd.goalLine.id)) return { kind: 'setTitle', title: before.title };
-      return { kind: 'removeGoalLine', id: cmd.goalLine.id };
+      return { kind: 'removeGoalLine', goalLineId: cmd.goalLine.id };
     case 'removeGoalLine': {
-      const found = before.goalLines.find((g) => g.id === cmd.id);
-      return found === undefined ? { kind: 'removeGoalLine', id: cmd.id } : { kind: 'addGoalLine', goalLine: found };
+      const found = before.goalLines.find((g) => g.id === cmd.goalLineId);
+      return found === undefined ? { kind: 'removeGoalLine', goalLineId: cmd.goalLineId } : { kind: 'addGoalLine', goalLine: found };
     }
     case 'addEraShading':
       if (before.eraShadings.some((e) => e.id === cmd.era.id)) return { kind: 'setTitle', title: before.title };
-      return { kind: 'removeEraShading', id: cmd.era.id };
+      return { kind: 'removeEraShading', eraShadingId: cmd.era.id };
     case 'removeEraShading': {
-      const found = before.eraShadings.find((e) => e.id === cmd.id);
-      return found === undefined ? { kind: 'removeEraShading', id: cmd.id } : { kind: 'addEraShading', era: found };
+      const found = before.eraShadings.find((e) => e.id === cmd.eraShadingId);
+      return found === undefined ? { kind: 'removeEraShading', eraShadingId: cmd.eraShadingId } : { kind: 'addEraShading', era: found };
     }
     case 'setDimmed':
       return { kind: 'setDimmed', hiddenKeys: [...before.hiddenKeys], dimmedKeys: [...before.dimmedKeys] };
@@ -279,10 +279,10 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
       return { kind: 'setHeadlineOverride', resultId: before.headlineOverrideResultId };
     case 'addDerivedOverlay':
       if (before.derivedOverlayRequests.some((o) => o.id === cmd.overlay.id)) return { kind: 'setTitle', title: before.title };
-      return { kind: 'removeDerivedOverlay', id: cmd.overlay.id };
+      return { kind: 'removeDerivedOverlay', overlayId: cmd.overlay.id };
     case 'removeDerivedOverlay': {
-      const found = before.derivedOverlayRequests.find((o) => o.id === cmd.id);
-      return found === undefined ? { kind: 'removeDerivedOverlay', id: cmd.id } : { kind: 'addDerivedOverlay', overlay: found };
+      const found = before.derivedOverlayRequests.find((o) => o.id === cmd.overlayId);
+      return found === undefined ? { kind: 'removeDerivedOverlay', overlayId: cmd.overlayId } : { kind: 'addDerivedOverlay', overlay: found };
     }
   }
 }
@@ -382,7 +382,7 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
     case 'addGoalLine':
       return Number.isFinite(cmd.goalLine.value) && cmd.goalLine.label.trim().length > 0 && cmd.goalLine.label.length <= CHART_GOAL_LINE_LABEL_MAX_LENGTH;
     case 'removeGoalLine':
-      return typeof cmd.id === 'string' && cmd.id.length > 0;
+      return typeof cmd.goalLineId === 'string' && cmd.goalLineId.length > 0;
     case 'addEraShading': {
       const codes = periodCodes(ctx.spec);
       return (
@@ -394,7 +394,7 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
       );
     }
     case 'removeEraShading':
-      return typeof cmd.id === 'string' && cmd.id.length > 0;
+      return typeof cmd.eraShadingId === 'string' && cmd.eraShadingId.length > 0;
     case 'setDimmed':
       return (
         cmd.hiddenKeys.every((k) => keys.has(k)) &&
@@ -409,7 +409,7 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
         cmd.overlay.resultIds.every((id) => resultIds(ctx.spec).has(id))
       );
     case 'removeDerivedOverlay':
-      return typeof cmd.id === 'string' && cmd.id.length > 0;
+      return typeof cmd.overlayId === 'string' && cmd.overlayId.length > 0;
   }
 }
 
@@ -452,13 +452,13 @@ const commandSchema = z.discriminatedUnion('kind', [
     ...envelope,
   }),
   z.object({ kind: z.literal('addGoalLine'), goalLine: z.object({ id: z.string(), value: z.number(), label: z.string().max(CHART_GOAL_LINE_LABEL_MAX_LENGTH) }), ...envelope }),
-  z.object({ kind: z.literal('removeGoalLine'), id: z.string(), ...envelope }),
+  z.object({ kind: z.literal('removeGoalLine'), goalLineId: z.string(), ...envelope }),
   z.object({ kind: z.literal('addEraShading'), era: z.object({ id: z.string(), fromPeriodCode: z.string(), toPeriodCode: z.string(), label: z.string().max(CHART_ERA_SHADING_LABEL_MAX_LENGTH) }), ...envelope }),
-  z.object({ kind: z.literal('removeEraShading'), id: z.string(), ...envelope }),
+  z.object({ kind: z.literal('removeEraShading'), eraShadingId: z.string(), ...envelope }),
   z.object({ kind: z.literal('setDimmed'), hiddenKeys: z.array(z.string()), dimmedKeys: z.array(z.string()), ...envelope }),
   z.object({ kind: z.literal('setHeadlineOverride'), resultId: z.string().nullable(), ...envelope }),
   z.object({ kind: z.literal('addDerivedOverlay'), overlay: z.object({ id: z.string(), calcKind: z.enum(['difference', 'mean']), resultIds: z.array(z.string()) }), ...envelope }),
-  z.object({ kind: z.literal('removeDerivedOverlay'), id: z.string(), ...envelope }),
+  z.object({ kind: z.literal('removeDerivedOverlay'), overlayId: z.string(), ...envelope }),
 ]);
 // The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
 export const commandLogSchema = z.array(commandSchema).max(200);

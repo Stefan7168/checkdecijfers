@@ -21,7 +21,7 @@ describe('useChartHistory', () => {
   it('dispatchRaw applies a view action WITHOUT a history entry, and reset clears notes, title, caption and the history', () => {
     const { result } = renderHook(() => useChartHistory(initialDocState('line')));
     act(() => result.current.dispatch({ kind: 'setTitle', title: 'Kop' }, 'canvas'));
-    act(() => result.current.dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(['s1']), highlightedKey: null, periodRange: null } }));
+    act(() => result.current.dispatchRaw({ type: 'setView', view: { hiddenKeys: new Set(['s1']), highlightedKey: null, periodRange: null, dimmedKeys: new Set() } }));
     expect([...result.current.state.hiddenKeys]).toEqual(['s1']);
     expect(result.current.history.past).toHaveLength(1);
     act(() => result.current.dispatchRaw({ type: 'reset', initialForm: 'bar' }));

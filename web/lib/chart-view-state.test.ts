@@ -417,7 +417,7 @@ describe('setView (story mode: restore the reader\'s own view in one action)', (
     state = chartViewReducer(state, { type: 'toggleSeries', key: 's1' });
     state = chartViewReducer(state, {
       type: 'setView',
-      view: { hiddenKeys: new Set(['s2']), highlightedKey: 's0', periodRange: ['2020JJ00', '2022JJ00'] },
+      view: { hiddenKeys: new Set(['s2']), highlightedKey: 's0', periodRange: ['2020JJ00', '2022JJ00'], dimmedKeys: new Set() },
     });
     expect(state.form).toBe('area');
     expect(state.presentation).toEqual({ lineWidth: 'thick' });
@@ -428,7 +428,7 @@ describe('setView (story mode: restore the reader\'s own view in one action)', (
 
   it('copies the given Set, so a later mutation of the caller\'s Set never leaks into state', () => {
     const hidden = new Set(['s1']);
-    const state = chartViewReducer(initialViewState('line'), { type: 'setView', view: { hiddenKeys: hidden, highlightedKey: null, periodRange: null } });
+    const state = chartViewReducer(initialViewState('line'), { type: 'setView', view: { hiddenKeys: hidden, highlightedKey: null, periodRange: null, dimmedKeys: new Set() } });
     hidden.add('s2');
     expect([...state.hiddenKeys]).toEqual(['s1']);
   });
