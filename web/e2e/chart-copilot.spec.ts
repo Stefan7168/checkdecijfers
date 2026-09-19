@@ -145,6 +145,53 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(setHeadlineButton).toBeVisible({ timeout: 5000 });
     await expect(clearHeadlineButton).not.toBeVisible();
   });
+
+  test('dim a series via the legend → the series stays visible at reduced opacity → ⌘Z restores it', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Find the dim button for Rotterdam (Dim Rotterdam)
+    const dimButton = page.getByRole('button', { name: /Dim Rotterdam/ });
+    await expect(dimButton).toBeVisible();
+
+    // Before dimming: both lines should have full opacity
+    const allLines = page.locator('path[class*="recharts-curve"]');
+    const linesBeforeDim = await allLines.count();
+    expect(linesBeforeDim).toBe(2);
+
+    // Dim the series
+    await dimButton.click();
+
+    // After dimming: both lines should still exist (not removed from DOM)
+    const linesAfterDim = await allLines.count();
+    expect(linesAfterDim).toBe(2);
+
+    // The dim button should be pressed
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'true');
+
+    // One line should have reduced opacity (0.35)
+    const dimmedLines = page.locator('path[stroke-opacity="0.35"]');
+    await expect(dimmedLines).toHaveCount(1);
+
+    // Undo with keyboard
+    const card = page
+      .locator('div[tabindex="-1"]')
+      .filter({ has: page.getByRole('button', { name: 'Ongedaan maken' }) })
+      .first();
+    await card.click({ position: { x: 4, y: 4 } });
+    await page.keyboard.press(UNDO);
+
+    // After undo: dim button should not be pressed
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'false');
+
+    // All lines should have full opacity again
+    const dimmedLinesAfterUndo = page.locator('path[stroke-opacity="0.35"]');
+    await expect(dimmedLinesAfterUndo).toHaveCount(0);
+  });
 });
 
 /** Type a question and send it (copied from answer.spec.ts — same harness,

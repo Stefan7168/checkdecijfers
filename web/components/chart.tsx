@@ -2323,6 +2323,14 @@ export function ChartView({
   const comparisonPalette = isComparisonShaped(displaySpec);
   const colorFor = (i: number) => seriesColor(pres, i, comparisonPalette ? 0 : i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
+  // Helper: compute opacity for a series, accounting for both user-dimming
+  // (0.35) and highlight-based dimming (0.25). Extracted to prevent copy-paste
+  // bugs across the three chart-type branches (Line, Area, Bar) below.
+  const seriesOpacity = (key: string): number => {
+    const dimmedByUser = state.dimmedKeys.has(key);
+    const dimmedByHighlight = state.highlightedKey !== null && state.highlightedKey !== key;
+    return dimmedByUser ? 0.35 : dimmedByHighlight ? 0.25 : 1;
+  };
   // #254: the ACTIVE reading's own pinned coordinates. This is the subtitle
   // that NAMES the reading (e.g. "SeizoensCorrectie: Niet gecorrigeerd") —
   // showing the primary's coordinates over an alternate's data would
@@ -3257,7 +3265,8 @@ export function ChartView({
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
-                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  const opacity = seriesOpacity(s.key);
+                  const dimmed = opacity < 1;
                   return (
                     <Line
                       key={s.key}
@@ -3266,12 +3275,14 @@ export function ChartView({
                       name={s.label}
                       stroke={s.color}
                       strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                      strokeOpacity={dimmed ? 0.25 : 1}
+                      strokeOpacity={opacity}
+                      data-series-key={s.key}
                       data-series-dimmed={dimmed ? 'true' : undefined}
+                      style={{ opacity }}
                       connectNulls={false}
                       dot={SeriesDot(
                         s.key,
-                        dimmed ? 0.25 : 1,
+                        opacity,
                         s.label,
                         onPointClick,
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
@@ -3351,7 +3362,12 @@ export function ChartView({
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
-                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  const opacity = seriesOpacity(s.key);
+                  const dimmed = opacity < 1;
+                  // fillOpacity for areas: scale down when dimmed, respecting fill type
+                  const areaFillOpacity = pres.areaFill === 'gradient'
+                    ? (dimmed ? 0.4 * opacity : 1 * opacity)
+                    : (dimmed ? 0.1 * opacity : 0.25 * opacity);
                   return (
                     <Area
                       key={s.key}
@@ -3360,14 +3376,14 @@ export function ChartView({
                       name={s.label}
                       stroke={s.color}
                       fill={pres.areaFill === 'gradient' ? `url(#fill-${domId}-${s.key})` : s.color}
-                      fillOpacity={pres.areaFill === 'gradient' ? (dimmed ? 0.4 : 1) : dimmed ? 0.1 : 0.25}
+                      fillOpacity={areaFillOpacity}
                       strokeWidth={LINE_WIDTH_PX[pres.lineWidth]}
-                      strokeOpacity={dimmed ? 0.25 : 1}
+                      strokeOpacity={opacity}
                       data-series-dimmed={dimmed ? 'true' : undefined}
                       connectNulls={false}
                       dot={SeriesDot(
                         s.key,
-                        dimmed ? 0.25 : 1,
+                        opacity,
                         s.label,
                         onPointClick,
                         { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
@@ -3522,14 +3538,15 @@ export function ChartView({
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
-                  const dimmed = state.highlightedKey !== null && state.highlightedKey !== s.key;
+                  const opacity = seriesOpacity(s.key);
+                  const dimmed = opacity < 1;
                   return (
                     <Bar
                       key={s.key}
                       dataKey={s.key}
                       name={s.label}
                       fill={s.color}
-                      fillOpacity={dimmed ? 0.25 : 1}
+                      fillOpacity={opacity}
                       data-series-dimmed={dimmed ? 'true' : undefined}
                       isAnimationActive={false}
                       shape={SeriesBar(
@@ -3537,7 +3554,7 @@ export function ChartView({
                         s.color,
                         `hatch-${domId}-${s.key}`,
                         barLabelsByKey.get(s.key) ?? new Map<string, PointLabel>(),
-                        dimmed ? 0.25 : 1,
+                        opacity,
                         s.label,
                         onPointClick,
                         chartLang,
@@ -3562,8 +3579,12 @@ export function ChartView({
             <SeriesLegend
               seriesMeta={seriesMeta}
               hiddenKeys={state.hiddenKeys}
+              dimmedKeys={state.dimmedKeys}
               highlightedKey={state.highlightedKey}
               onToggle={(key) => dispatchCommand({ kind: 'toggleSeries', key }, 'canvas')}
+              onDim={(key, hiddenKeys, dimmedKeys) =>
+                dispatchCommand({ kind: 'setDimmed', hiddenKeys: [...hiddenKeys], dimmedKeys: [...dimmedKeys] }, 'panel')
+              }
               onHighlight={(key) => dispatchCommand({ kind: 'setHighlight', key }, 'canvas')}
               lang={chartLang}
               disabled={storyOpen}

@@ -34,8 +34,10 @@ export interface LegendSeries {
 export function SeriesLegend({
   seriesMeta,
   hiddenKeys,
+  dimmedKeys,
   highlightedKey,
   onToggle,
+  onDim,
   onHighlight,
   lang,
   disabled = false,
@@ -43,8 +45,10 @@ export function SeriesLegend({
 }: {
   seriesMeta: LegendSeries[];
   hiddenKeys: Set<string>;
+  dimmedKeys: Set<string>;
   highlightedKey: string | null;
   onToggle: (key: string) => void;
+  onDim: (key: string, hiddenKeys: Set<string>, dimmedKeys: Set<string>) => void;
   onHighlight: (key: string | null) => void;
   lang: Lang;
   // Story mode (session 92 review fix): while the story is open, the chart
@@ -67,6 +71,7 @@ export function SeriesLegend({
     >
       {seriesMeta.map((s) => {
         const hidden = hiddenKeys.has(s.key);
+        const dimmed = dimmedKeys.has(s.key);
         const highlighted = highlightedKey === s.key;
         return (
           <span key={s.key} className="inline-flex items-center gap-1">
@@ -100,6 +105,26 @@ export function SeriesLegend({
                 className="inline-block h-2.5 w-2.5 rounded-full"
               />
               {s.label}
+            </button>
+            <button
+              type="button"
+              aria-pressed={dimmed}
+              data-command-kind="setDimmed"
+              disabled={hidden || disabled}
+              onClick={() => {
+                const nextDimmed = new Set(dimmedKeys);
+                if (dimmed) nextDimmed.delete(s.key);
+                else nextDimmed.add(s.key);
+                onDim(s.key, hiddenKeys, nextDimmed);
+              }}
+              title={disabled ? lockedTitle : t(lang, 'chart.dimTitle', { label: s.label })}
+              aria-describedby={disabled ? disabledReasonId : undefined}
+              className={
+                'min-h-6 rounded-md px-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 ' +
+                (dimmed ? 'text-foreground font-semibold' : 'text-muted-foreground')
+              }
+            >
+              {t(lang, 'chart.dimButton', { label: s.label })}
             </button>
             <button
               type="button"

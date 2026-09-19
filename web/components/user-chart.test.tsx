@@ -304,6 +304,26 @@ describe('UserChartView — the legend (co-pilot phase 2)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Markeer Amsterdam' }));
     expect(document.querySelector('[data-series-dimmed="true"]')).not.toBeNull();
   });
+
+  it('dims a series via the legend button, keeping it visible at reduced opacity', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    // Both lines visible before dimming
+    expect(lineCurves()).toBe(2);
+
+    // Click the dim button for Amsterdam
+    const dimButton = screen.getByRole('button', { name: /Dim Amsterdam/ });
+    fireEvent.click(dimButton);
+
+    // Series should still be visible (not removed from DOM)
+    expect(lineCurves()).toBe(2);
+
+    // Dim button should be pressed
+    expect(dimButton).toHaveAttribute('aria-pressed', 'true');
+
+    // Amsterdam (s0) line should have 0.35 opacity
+    const dimmedLine = document.querySelector('path[stroke-opacity="0.35"]');
+    expect(dimmedLine).not.toBeNull();
+  });
 });
 
 // (d) The reader's own title, as an undoable command.
