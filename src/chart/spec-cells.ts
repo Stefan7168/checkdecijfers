@@ -8,13 +8,13 @@
 import type { ResultCell } from '../query/types.ts';
 import type { ChartSpec } from './types.ts';
 
-export type DerivationCell = Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value'>;
+export type DerivationCell = Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>;
 
 export function specCellsByResultId(spec: Pick<ChartSpec, 'unit' | 'series'>): Map<string, DerivationCell> {
   const out = new Map<string, DerivationCell>();
   for (const s of spec.series) {
     for (const p of s.points) {
-      out.set(p.resultId, { resultId: p.resultId, periodCode: p.periodCode, regionCode: s.regionCode, unit: spec.unit, value: p.value });
+      out.set(p.resultId, { resultId: p.resultId, periodCode: p.periodCode, regionCode: s.regionCode, unit: spec.unit, value: p.value, valueAttribute: p.valueAttribute });
     }
   }
   return out;

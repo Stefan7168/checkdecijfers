@@ -35,20 +35,33 @@ describe('requestChartDerivation', () => {
   });
 
   it('re-derives a difference over the audited chart\'s own cells, no new CBS fetch, no new audit row', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { chart: spec } });
+    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
     expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
   });
 
   it('refuses a resultId not present on that chart, rather than guessing', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { chart: spec } });
+    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'not-real']);
     expect(result.ok).toBe(false);
   });
 
   it('refuses when the audit row has no chart at all', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { chart: null } });
+    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: null, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
     expect(result.ok).toBe(false);
+  });
+
+  it('refuses derivation on null-valued cells with an accurate CBS reason message', async () => {
+    const specWithNull = { unit: 'aantal', series: [{ label: 'x', regionCode: 'GM0599', points: [
+      { resultId: 'r1', periodCode: '2019', periodLabel: '2019', value: 10, formattedValue: '10', decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'None' },
+      { resultId: 'r2', periodCode: '2020', periodLabel: '2020', value: null, formattedValue: null, decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'DataNotAvailable' },
+    ] }] };
+    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: specWithNull, cells: [], derivations: [] } });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'mean', ['r1', 'r2']);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toContain('DataNotAvailable');
+    }
   });
 });

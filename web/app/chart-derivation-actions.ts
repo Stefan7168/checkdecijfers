@@ -37,7 +37,7 @@ export async function requestChartDerivation(
     const resultIds = resultIdsSchema.safeParse(rawResultIds);
     if (!resultIds.success) return { ok: false };
     const record = await loadAuditRecord(getDb(), key.data.id);
-    const spec = record?.response.chart ?? null;
+    const spec = record !== null && record.response.kind === 'answer' ? record.response.chart : null;
     if (spec === null) return { ok: false, reason: 'this answer has no chart to derive from' };
     const cellsByResultId = specCellsByResultId(spec);
     const cells = resultIds.data.map((id) => cellsByResultId.get(id));

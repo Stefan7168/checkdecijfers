@@ -63,11 +63,11 @@ function checkSingleRegion(cells: ResultCell[]): string | null {
 /** B13-style growth: later period minus earlier period, one coordinate.
  * Requires exactly two cells at the same region/dims, different periods;
  * cells arrive period-ordered from run.ts. */
-export function deriveDifference(cells: Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value'>[]): DerivationResult {
+export function deriveDifference(cells: Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>[]): DerivationResult {
   if (cells.length !== 2) {
     return refuse(`difference needs exactly 2 source cells, got ${cells.length}`);
   }
-  const [earlier, later] = cells as [Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value'>, Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value'>];
+  const [earlier, later] = cells as [Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>, Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>];
   if (earlier.periodCode === later.periodCode) {
     return refuse('difference needs two distinct periods');
   }
@@ -95,7 +95,7 @@ export function deriveDifference(cells: Pick<ResultCell, 'resultId' | 'periodCod
  * periods. Reuses the same refusal discipline as every other derivation:
  * a null cell or a unit mismatch refuses the whole calculation rather than
  * silently skipping a value (principle c). */
-export function deriveMean(cells: Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value'>[]): DerivationResult {
+export function deriveMean(cells: Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`mean needs at least 2 source cells, got ${cells.length}`);
   }

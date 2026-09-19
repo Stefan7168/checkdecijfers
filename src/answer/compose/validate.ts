@@ -108,6 +108,9 @@ function derivationNumbers(d: DerivationRecord): number[] {
       // is, so this switch stays exhaustive and a future prose caller isn't
       // silently unbacked.
       return [d.value];
+    case 'mean':
+      // Co-pilot phase 4: mean derivation value from on-demand chart editing.
+      return [d.value];
   }
 }
 
@@ -835,7 +838,9 @@ function derivationSourceCells(d: DerivationRecord, cellsById: Map<string, Resul
           ? d.sourceResultIds
           : d.kind === 'period_change'
             ? [d.previousResultId, d.currentResultId]
-            : [d.winnerResultId];
+            : d.kind === 'mean'
+              ? d.sourceResultIds
+              : [d.winnerResultId];
   return ids.map((id) => cellsById.get(id)).filter((c): c is ResultCell => c !== undefined);
 }
 
