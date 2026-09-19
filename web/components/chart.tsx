@@ -114,6 +114,8 @@ import {
 } from '../lib/chart-commands.ts';
 import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
 import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
+import { formatValueNl } from '../backend/answer/compose/format.ts';
+import type { DerivationRecord } from '../../src/query/types.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -1741,10 +1743,12 @@ export function ChartView({
   // arrows and average lines). Keyed by overlay id from state.derivedOverlayRequests.
   // The recipes live in the undoable command history; the resolved values
   // (the actual numbers) live here, transient per session.
-  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, any>>(new Map());
+  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, DerivationRecord>>(new Map());
   // Session-local: which point was selected first for a two-point difference.
-  // Cleared on spec swap or when the second point completes the pair.
-  const [firstDifferencePoint, setFirstDifferencePoint] = useState<string | null>(null);
+  // Stores {resultId, regionCode} for the first click; null when mode is off or after completion.
+  const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; regionCode: string | null } | null>(null);
+  // Error from failed difference request (e.g., different regions).
+  const [differenceError, setDifferenceError] = useState<string | null>(null);
 
   // Lazy fetch-on-mount for the chat context only: the embed page already
   // resolved `headlineText` server-side (undefined means "not yet known"
@@ -1777,6 +1781,36 @@ export function ChartView({
     };
     void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(setResolvedOverlays);
   }, [state.derivedOverlayRequests, embed?.auditId]);
+
+  // Task 7: render labels for resolved overlays inside the chart container.
+  // The labels display the formatted values with data-label-for binding.
+  useEffect(() => {
+    if (chartContainerRef.current === null || resolvedOverlays.size === 0) return;
+    // Find or create a labels container inside the chart
+    let labelsContainer = chartContainerRef.current.querySelector('[data-overlay-labels]') as HTMLDivElement | null;
+    if (!labelsContainer) {
+      labelsContainer = document.createElement('div');
+      labelsContainer.setAttribute('data-overlay-labels', 'true');
+      labelsContainer.style.position = 'absolute';
+      labelsContainer.style.inset = '0';
+      labelsContainer.style.pointerEvents = 'none';
+      chartContainerRef.current.appendChild(labelsContainer);
+    }
+    labelsContainer.innerHTML = '';
+    // Render a label for each resolved overlay
+    Array.from(resolvedOverlays.entries()).forEach(([id, record]) => {
+      const label = document.createElement('div');
+      label.setAttribute('data-label-for', record.sourceResultIds.join(','));
+      label.className = 'text-xs font-semibold text-foreground';
+      label.style.position = 'absolute';
+      label.style.backgroundColor = 'var(--background)';
+      label.style.padding = '2px 4px';
+      label.style.borderRadius = '3px';
+      label.style.whiteSpace = 'nowrap';
+      label.textContent = `${record.kind === 'difference' ? '↕' : '–'} ${formatValueNl(record.value, 0)}`;
+      labelsContainer!.appendChild(label);
+    });
+  }, [resolvedOverlays]);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -1880,7 +1914,33 @@ export function ChartView({
   // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
   // to live) purely because `embedOpen` is derived from `openPanel`, which
   // isn't in scope any earlier in this component.
-  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => setPendingPoint(p);
+  // Task 7: also capture the first point for difference overlays when picker is active.
+  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => {
+    setPendingPoint(p);
+    // If difference picker is active (firstDifferencePoint is not null), handle the second point
+    if (firstDifferencePoint !== null) {
+      setDifferenceError(null);
+      // Check if both points are in the same region
+      if (firstDifferencePoint.regionCode !== p.regionCode) {
+        setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
+        setFirstDifferencePoint(null);
+      } else {
+        // Both points are in the same region, create the difference overlay
+        dispatchCommand(
+          {
+            kind: 'addDerivedOverlay',
+            overlay: {
+              id: newCommandId(),
+              calcKind: 'difference',
+              resultIds: [firstDifferencePoint.resultId, p.resultId],
+            },
+          },
+          'panel',
+        );
+        setFirstDifferencePoint(null);
+      }
+    }
+  };
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
   // releases it the moment that stops being true (panel closed, or this
@@ -3274,6 +3334,18 @@ export function ChartView({
                   strokeDasharray="3 3"
                 />
               ))}
+              {/* Task 7: render mean overlay lines */}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
+                record.kind === 'mean' ? (
+                  <ReferenceLine
+                    key={`mean-${id}`}
+                    y={record.value}
+                    stroke="var(--accent)"
+                    strokeDasharray="2 2"
+                    data-label-for={record.sourceResultIds.join(',')}
+                  />
+                ) : null,
+              )}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -3368,6 +3440,18 @@ export function ChartView({
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
+              {/* Task 7: render mean overlay lines */}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
+                record.kind === 'mean' ? (
+                  <ReferenceLine
+                    key={`mean-${id}`}
+                    y={record.value}
+                    stroke="var(--accent)"
+                    strokeDasharray="2 2"
+                    data-label-for={record.sourceResultIds.join(',')}
+                  />
+                ) : null,
+              )}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -4206,13 +4290,16 @@ export function ChartView({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant={firstDifferencePoint ? 'default' : 'outline'}
                 data-command-kind="addDerivedOverlay"
                 title={t(chartLang, 'chart.derived.differenceLabel')}
-                onClick={() => setFirstDifferencePoint(firstDifferencePoint ? null : 'pending')}
+                onClick={() => {
+                  setFirstDifferencePoint(null);
+                  setDifferenceError(null);
+                }}
                 className="text-xs"
               >
-                {firstDifferencePoint ? t(chartLang, 'chart.derived.differencePick') : t(chartLang, 'chart.derived.differenceLabel')}
+                {firstDifferencePoint ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
               </Button>
               <Button
                 type="button"
@@ -4248,6 +4335,9 @@ export function ChartView({
                   × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
                 </Button>
               ))}
+              {differenceError ? (
+                <span className="text-xs text-destructive">{differenceError}</span>
+              ) : null}
             </div>
           ) : null}
         </div>
