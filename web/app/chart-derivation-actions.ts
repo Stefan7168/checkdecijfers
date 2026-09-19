@@ -8,7 +8,7 @@
 // its own aggregate/derive vocabulary (setInstruction, phase 2) and has no
 // audit row for this to re-read.
 import { z } from 'zod';
-import { loadAuditRecord } from '../../src/answer/audit/read.ts';
+import { isRedacted, loadAuditRecord } from '../../src/answer/audit/index.ts';
 import { deriveDifference, deriveMean } from '../../src/query/derivations.ts';
 import { specCellsByResultId } from '../../src/chart/spec-cells.ts';
 import type { DerivationRecord } from '../../src/query/types.ts';
@@ -37,7 +37,16 @@ export async function requestChartDerivation(
     const resultIds = resultIdsSchema.safeParse(rawResultIds);
     if (!resultIds.success) return { ok: false };
     const record = await loadAuditRecord(getDb(), key.data.id);
-    const spec = record !== null && record.response.kind === 'answer' ? record.response.chart : null;
+    // Ownership + redaction check — same as embed-actions.ts's createEmbedCode
+    // for the identical client-supplied-auditId shape. Without this, `id` is
+    // fully guessable (buildResultId is deterministic from public CBS
+    // vocabulary), and the distinct refusal strings below would let any
+    // signed-in user probe which table/region/period ANOTHER user's account
+    // asked about — exactly what GDPR redaction exists to prevent.
+    if (record === null || record.userId !== userId || isRedacted(record.response)) {
+      return { ok: false, reason: 'this answer is not available' };
+    }
+    const spec = record.response.kind === 'answer' ? record.response.chart : null;
     if (spec === null) return { ok: false, reason: 'this answer has no chart to derive from' };
     const cellsByResultId = specCellsByResultId(spec);
     const cells = resultIds.data.map((id) => cellsByResultId.get(id));

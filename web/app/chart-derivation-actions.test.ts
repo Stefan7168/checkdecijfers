@@ -14,10 +14,11 @@ const { currentUserId, getDb } = vi.hoisted(() => ({
 vi.mock('../lib/current-user.ts', () => ({ currentUserId }));
 vi.mock('../lib/db.ts', () => ({ getDb }));
 
-const { loadAuditRecord } = vi.hoisted(() => ({
+const { loadAuditRecord, isRedacted } = vi.hoisted(() => ({
   loadAuditRecord: vi.fn(),
+  isRedacted: vi.fn().mockReturnValue(false),
 }));
-vi.mock('../../src/answer/audit/read.ts', () => ({ loadAuditRecord }));
+vi.mock('../../src/answer/audit/index.ts', () => ({ loadAuditRecord, isRedacted }));
 
 vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
 
@@ -35,13 +36,13 @@ describe('requestChartDerivation', () => {
   });
 
   it('re-derives a difference over the audited chart\'s own cells, no new CBS fetch, no new audit row', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
     expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
   });
 
   it('code-review fix round 3: sorts cells by periodCode before deriving, so clicking the LATER point first never flips the sign', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     // r2 (2020) clicked first, r1 (2019) clicked second — the reverse of the
     // chronological order. Before this fix, `requestChartDerivation` passed
     // resultIds straight through to `deriveDifference`, which treats
@@ -51,13 +52,26 @@ describe('requestChartDerivation', () => {
   });
 
   it('refuses a resultId not present on that chart, rather than guessing', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'not-real']);
     expect(result.ok).toBe(false);
   });
 
+  it('refuses an answer belonging to a different user, rather than leaking its data (security fix, final review)', async () => {
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'someone-else', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result.ok).toBe(false);
+  });
+
+  it('refuses a redacted answer', async () => {
+    isRedacted.mockReturnValueOnce(true);
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result.ok).toBe(false);
+  });
+
   it('refuses when the audit row has no chart at all', async () => {
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: null, cells: [], derivations: [] } });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: null, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
     expect(result.ok).toBe(false);
   });
@@ -67,7 +81,7 @@ describe('requestChartDerivation', () => {
       { resultId: 'r1', periodCode: '2019', periodLabel: '2019', value: 10, formattedValue: '10', decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'None' },
       { resultId: 'r2', periodCode: '2020', periodLabel: '2020', value: null, formattedValue: null, decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'DataNotAvailable' },
     ] }] };
-    loadAuditRecord.mockResolvedValue({ id: 5, response: { kind: 'answer', chart: specWithNull, cells: [], derivations: [] } });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: specWithNull, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'mean', ['r1', 'r2']);
     expect(result.ok).toBe(false);
     if (!result.ok) {
