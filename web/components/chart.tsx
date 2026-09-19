@@ -112,6 +112,8 @@ import {
   newCommandId,
   type CommandContext,
 } from '../lib/chart-commands.ts';
+import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
+import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -1735,6 +1737,15 @@ export function ChartView({
   const [headlineBusy, setHeadlineBusy] = useState(false);
   const [headlineError, setHeadlineError] = useState<string | null>(null);
 
+  // Chart co-pilot phase 4 (Task 7): resolved derived overlays (difference
+  // arrows and average lines). Keyed by overlay id from state.derivedOverlayRequests.
+  // The recipes live in the undoable command history; the resolved values
+  // (the actual numbers) live here, transient per session.
+  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, any>>(new Map());
+  // Session-local: which point was selected first for a two-point difference.
+  // Cleared on spec swap or when the second point completes the pair.
+  const [firstDifferencePoint, setFirstDifferencePoint] = useState<string | null>(null);
+
   // Lazy fetch-on-mount for the chat context only: the embed page already
   // resolved `headlineText` server-side (undefined means "not yet known"
   // here, never "known absent" — that's `null`), and there's nothing to
@@ -1751,6 +1762,21 @@ export function ChartView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted chart, keyed by auditId identity below
   }, [embed?.auditId]);
+
+  // Chart co-pilot phase 4 (Task 7): resolve pending derived overlay requests
+  // (difference/mean recipes) to their real numbers via the server action.
+  // Never touches the command history — the recipe stays undoable, the resolved
+  // value lives here transiently.
+  useEffect(() => {
+    const requester = async (calcKind: 'difference' | 'mean', resultIds: string[]) => {
+      return requestChartDerivation(
+        { kind: 'answer', id: embed?.auditId ?? 0 },
+        calcKind,
+        resultIds,
+      );
+    };
+    void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(setResolvedOverlays);
+  }, [state.derivedOverlayRequests, embed?.auditId]);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -4170,6 +4196,58 @@ export function ChartView({
                   </option>
                 ))}
               </select>
+            </div>
+          ) : null}
+          {/* Task 7: derived overlays (difference arrows, average lines) —
+            * small controls for on-demand calculations. Rendered inline with
+            * the main controls but after the tabs/reading/zoom selects. */}
+          {spec.kind === 'answer' ? (
+            <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-command-kind="addDerivedOverlay"
+                title={t(chartLang, 'chart.derived.differenceLabel')}
+                onClick={() => setFirstDifferencePoint(firstDifferencePoint ? null : 'pending')}
+                className="text-xs"
+              >
+                {firstDifferencePoint ? t(chartLang, 'chart.derived.differencePick') : t(chartLang, 'chart.derived.differenceLabel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-command-kind="addDerivedOverlay"
+                title={t(chartLang, 'chart.derived.meanLabel')}
+                onClick={() => {
+                  const visibleCodes = displaySpec.series[0]?.points
+                    .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
+                    .map((p) => p.resultId) ?? [];
+                  if (visibleCodes.length >= 2) {
+                    dispatchCommand(
+                      { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
+                      'panel',
+                    );
+                  }
+                }}
+                className="text-xs"
+              >
+                {t(chartLang, 'chart.derived.meanLabel')}
+              </Button>
+              {state.derivedOverlayRequests.map((overlay) => (
+                <Button
+                  key={overlay.id}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  data-command-kind="removeDerivedOverlay"
+                  onClick={() => dispatchCommand({ kind: 'removeDerivedOverlay', overlayId: overlay.id }, 'panel')}
+                  className="text-xs h-6 px-2"
+                >
+                  × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
+                </Button>
+              ))}
             </div>
           ) : null}
         </div>
