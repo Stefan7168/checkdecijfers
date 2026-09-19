@@ -24,7 +24,7 @@
 // emits, so stored specs (R8) and `reconstruct.ts` are untouched.
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import {
   Area,
@@ -49,6 +49,7 @@ import {
 } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
+  areaFillOpacityFor,
   CHART_MIN_HEIGHT_PX,
   chartHeightForWidth,
   DEFAULT_PALETTE,
@@ -78,7 +79,7 @@ import {
 } from '../lib/i18n/cbs-words.ts';
 import { useLang } from '../lib/i18n/lang-provider.tsx';
 import { useStylePanelOwner } from '../lib/style-panel-owner.tsx';
-import { t, type Lang } from '../lib/i18n/messages.ts';
+import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 // WP218 phase 2 (owner C): the account-default Server Actions live in their
 // OWN tiny-import-graph file, never web/app/actions.ts — see that file's own
 // header for why (the usage-actions.ts precedent this mirrors).
@@ -115,7 +116,9 @@ import {
 } from '../lib/chart-commands.ts';
 import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
 import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
-import { formatValueNl } from '../backend/answer/compose/format.ts';
+// Final-review fix I1: the same value+unit formatters the answer body's own
+// derivation rendering uses (answer-proof.ts) — see formatOverlayValue below.
+import { displayDifferenceUnit, displayValueUnit } from '../backend/answer/compose/template.ts';
 import type { DerivationRecord } from '../../src/query/types.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
@@ -988,6 +991,126 @@ function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
       </g>
     </ZIndexLayer>
   );
+}
+
+/** Final-review fix I1: formats a resolved derived-overlay value (mean or
+ * difference) through the SAME helpers the answer body's own derivation
+ * rendering uses (`displayValueUnit`/`displayDifferenceUnit`,
+ * src/answer/compose/template.ts — see answer-proof.ts's identical use for
+ * the difference/mean sentences), at the SOURCE cells' own decimals and
+ * unit. Replaces the old hardcoded `formatValueNl(record.value, 0)`, which
+ * always rounded to 0 decimals and dropped the unit regardless of what the
+ * underlying series actually carries (a mean of 10.55 on a '%' series used
+ * to render as the wrong number, "11", inside the chart and its export).
+ * `points` is every point across every series of the DISPLAYED spec — the
+ * same "look the source cell up by resultId" pattern chart.tsx's own
+ * difference-arrow render already uses just below. Falls back to 0 decimals
+ * only if none of the overlay's own source points can be found, which
+ * should not happen in practice: `requestChartDerivation` only ever resolves
+ * an overlay from resultIds that came from this same displaySpec. */
+function formatOverlayValue(
+  record: Extract<DerivationRecord, { kind: 'mean' } | { kind: 'difference' }>,
+  points: ChartPoint[],
+): string {
+  const decimals =
+    record.sourceResultIds
+      .map((id) => points.find((p) => p.resultId === id)?.decimals)
+      .find((d): d is number => d !== undefined) ?? 0;
+  return record.kind === 'mean'
+    ? displayValueUnit(record.value, decimals, record.unit)
+    : displayDifferenceUnit(record.value, decimals, record.unit);
+}
+
+/** Final-review fix I6: the known, LITERAL server refusal reasons (English
+ * developer strings from app/chart-derivation-actions.ts and the registered
+ * derivation functions in src/query/derivations.ts — deriveDifference /
+ * deriveMean's `checkComputable`/`checkSingleRegion` guards) mapped to a
+ * translated message, so a Dutch reader never sees raw English mixed into
+ * the chart card. Deliberately a flat exact-match lookup, not a parser: most
+ * of derivations.ts's own refusal strings interpolate a resultId, a count,
+ * or a unit list, which cannot be pre-translated word-for-word without
+ * guessing at their content — those (and anything else unrecognised) fall
+ * back to one generic Dutch/English sentence via `errorGeneric`. */
+const KNOWN_DERIVATION_REFUSAL_KEYS: Record<string, MessageKey> = {
+  'only a CBS/Eurostat chart can be re-derived this way': 'chart.derived.errorUnavailableChart',
+  'this answer is not available': 'chart.derived.errorAnswerUnavailable',
+  'this answer has no chart to derive from': 'chart.derived.errorNoChart',
+  'one of those points is not on this chart': 'chart.derived.errorPointNotOnChart',
+  'difference needs two distinct periods': 'chart.derived.errorSamePeriod',
+  // Same underlying problem the client-side picker already precludes with
+  // its own `errorMissingRegion` message (chart.tsx's `onPointClick`) — this
+  // covers the server reaching the same refusal by a different path.
+  'difference compares periods at one place — regions differ': 'chart.derived.errorMissingRegion',
+};
+
+function derivationRefusalMessage(lang: Lang, reason: string): string {
+  const key = KNOWN_DERIVATION_REFUSAL_KEYS[reason];
+  return t(lang, key ?? 'chart.derived.errorGeneric');
+}
+
+/** Task 7 (derived overlays), extracted for the final-review I2/I3 fix: this
+ * was ~40 lines duplicated verbatim between the LineChart and AreaChart
+ * branches below (I3) — the exact duplication that let I2 happen, since a
+ * third copy for the bar branches was simply never made. Now the ONE place
+ * both branches render derived overlays from; I1's decimals/unit fix lives
+ * here too, so it applies everywhere at once. Bar/hbar forms render nothing
+ * at all here — I2's chosen fix gates the add-overlay CONTROLS to the
+ * line/area forms instead (see the `activeForm === 'line' || activeForm ===
+ * 'area'` gate further down), so `state.derivedOverlayRequests` can never be
+ * non-empty while a bar/hbar form is active and this function would have
+ * nothing to draw there regardless.
+ *
+ * Deliberately a plain FUNCTION returning an array — NOT a React component
+ * (no `<DerivedOverlaysLayer />` JSX element). Recharts decides what to
+ * render by scanning its chart container's own DIRECT children for known
+ * element types (Line, Area, ReferenceLine, ReferenceArea, …) at the point
+ * the JSX tree is authored, the same way `state.eraShadings.map(...)`'s
+ * ReferenceAreas above work; it cannot see INTO a custom component to find
+ * the ReferenceLines it eventually renders, so a `<DerivedOverlaysLayer />`
+ * element silently drew nothing at all when tried (caught empirically while
+ * fixing I1 — the resolved value reached React state correctly, but no
+ * ReferenceLine ever reached the DOM). Calling this as `{derivedOverlayElements(...)}`
+ * instead evaluates to a literal array of ReferenceLine elements, spliced
+ * directly into LineChart/AreaChart's children exactly like the era-shading
+ * map above — which Recharts' scan sees just fine. */
+function derivedOverlayElements(
+  resolvedOverlays: Map<string, DerivationRecord>,
+  displaySpec: Pick<ChartSpec, 'series'>,
+): ReactNode[] {
+  const allPoints = displaySpec.series.flatMap((s) => s.points);
+  return Array.from(resolvedOverlays.entries()).map(([id, record]) => {
+    if (record.kind === 'mean') {
+      return (
+        <ReferenceLine
+          key={`mean-${id}`}
+          y={record.value}
+          stroke="var(--accent)"
+          strokeDasharray="2 2"
+          label={{ value: formatOverlayValue(record, allPoints), position: 'right' }}
+          data-label-for={record.sourceResultIds.join(',')}
+        />
+      );
+    }
+    if (record.kind === 'difference') {
+      const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
+      const b = allPoints.find((p) => p.resultId === record.minuendResultId);
+      if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
+      return (
+        <ReferenceLine
+          key={`diff-${id}`}
+          segment={[
+            { x: a.periodLabel as string | number, y: a.value as number },
+            { x: b.periodLabel as string | number, y: b.value as number },
+          ]}
+          stroke="var(--accent)"
+          strokeWidth={2}
+          label={{ value: formatOverlayValue(record, allPoints), position: 'top' }}
+          data-label-for={record.sourceResultIds.join(',')}
+        />
+      );
+    }
+    return null;
+  });
 }
 
 /** Line-chart point marker: filled in the series colour, hollow when
@@ -2417,6 +2540,11 @@ export function ChartView({
   const comparisonPalette = isComparisonShaped(displaySpec);
   const colorFor = (i: number) => seriesColor(pres, i, comparisonPalette ? 0 : i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
+  // Final-review fix I8: the series actually shown right now — used to gate
+  // the "Gemiddelde tonen" control to exactly one visible series (below),
+  // the same visibility test every chart-form branch's own `.filter(...)`
+  // already applies when it decides what to draw.
+  const visibleSeriesMeta = seriesMeta.filter((s) => !state.hiddenKeys.has(s.key));
   // Helper: compute opacity for a series, accounting for both user-dimming
   // (0.35) and highlight-based dimming (0.25). Extracted to prevent copy-paste
   // bugs across the three chart-type branches (Line, Area, Bar) below.
@@ -2448,7 +2576,20 @@ export function ChartView({
   // untouched by translation (translateSpecForDisplay).
   // Task 5: pass the reader's headline override if set, allowing them to
   // click a different point and make THAT the featured number.
-  const headline = headlineFigure(displaySpec, state.headlineOverrideResultId);
+  // Final-review fix I7: a reader-set override can point at a resultId that
+  // no longer exists in `displaySpec` (a zoom or an alternate-reading switch
+  // changes which resultIds are present) — `headlineFigure` correctly
+  // returns null rather than guess (its documented "never guess" contract,
+  // chart-headline.ts), but that used to blank the whole headline block
+  // instead of falling back to the chart's own default figure. Recompute
+  // without the override in that one case so the card never goes from "a
+  // number" to "nothing" just because the override target scrolled out of
+  // view.
+  const overriddenHeadline = headlineFigure(displaySpec, state.headlineOverrideResultId);
+  const headline =
+    overriddenHeadline === null && state.headlineOverrideResultId
+      ? headlineFigure(displaySpec)
+      : overriddenHeadline;
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
   // from the DISPLAYED spec (a zoomed window's own ends get the markers).
@@ -3356,41 +3497,12 @@ export function ChartView({
                   strokeDasharray="3 3"
                 />
               ))}
-              {/* Task 7: render derived overlay lines */}
-              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
-                if (record.kind === 'mean') {
-                  return (
-                    <ReferenceLine
-                      key={`mean-${id}`}
-                      y={record.value}
-                      stroke="var(--accent)"
-                      strokeDasharray="2 2"
-                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
-                      data-label-for={record.sourceResultIds.join(',')}
-                    />
-                  );
-                }
-                if (record.kind === 'difference') {
-                  const allPoints = displaySpec.series.flatMap((s) => s.points);
-                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
-                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
-                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
-                  return (
-                    <ReferenceLine
-                      key={`diff-${id}`}
-                      segment={[
-                        { x: a.periodLabel as string | number, y: a.value as number },
-                        { x: b.periodLabel as string | number, y: b.value as number },
-                      ]}
-                      stroke="var(--accent)"
-                      strokeWidth={2}
-                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
-                      data-label-for={record.sourceResultIds.join(',')}
-                    />
-                  );
-                }
-                return null;
-              })}
+              {/* Task 7 (I2/I3 final-review fix): render derived overlay
+                * lines from the ONE shared function both the LineChart and
+                * AreaChart branches now use — see derivedOverlayElements's
+                * own doc comment above (a plain function, not a component —
+                * load-bearing for Recharts to actually draw these). */}
+              {derivedOverlayElements(resolvedOverlays, displaySpec)}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -3442,6 +3554,22 @@ export function ChartView({
                   />
                 );
               })}
+              {/* Final-review fix C2: goal lines, rendered as ReferenceLine —
+                * the reader-typed target VALUE only. Mirrors era shading
+                * immediately above (same gating: line/area forms only, same
+                * "skip silently if the reader picked no value" discipline is
+                * unneeded here since a saved goal line always carries a
+                * number). Deliberately NO `label` prop: a `label` would put
+                * the reader's own typed text inside the exported PNG/SVG —
+                * that text stays ONLY in ChartGoalLine's own list, which
+                * renders outside chartContainerRef (see notesNode below) and
+                * so never enters an export. The line's Y POSITION (the bare
+                * number, not the reader's words) is the only thing this
+                * draws, and — like the era shading band above it — that
+                * value genuinely is inside the export. */}
+              {state.goalLines.map((line) => (
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" />
+              ))}
               {/* Row 3 (session 110 UX audit pass 4): the LAST child, so it
                 * paints after every Line above — see EndLabelsOverlay's own
                 * doc comment. */}
@@ -3507,50 +3635,37 @@ export function ChartView({
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
-              {/* Task 7: render derived overlay lines */}
-              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
-                if (record.kind === 'mean') {
-                  return (
-                    <ReferenceLine
-                      key={`mean-${id}`}
-                      y={record.value}
-                      stroke="var(--accent)"
-                      strokeDasharray="2 2"
-                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
-                      data-label-for={record.sourceResultIds.join(',')}
-                    />
-                  );
-                }
-                if (record.kind === 'difference') {
-                  const allPoints = displaySpec.series.flatMap((s) => s.points);
-                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
-                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
-                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
-                  return (
-                    <ReferenceLine
-                      key={`diff-${id}`}
-                      segment={[
-                        { x: a.periodLabel as string | number, y: a.value as number },
-                        { x: b.periodLabel as string | number, y: b.value as number },
-                      ]}
-                      stroke="var(--accent)"
-                      strokeWidth={2}
-                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
-                      data-label-for={record.sourceResultIds.join(',')}
-                    />
-                  );
-                }
-                return null;
-              })}
+              {/* Task 7 (I2/I3 final-review fix): see the LineChart branch
+                * above — same shared function, same reasoning. */}
+              {derivedOverlayElements(resolvedOverlays, displaySpec)}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
                   const opacity = seriesOpacity(s.key);
                   const dimmed = opacity < 1;
-                  // fillOpacity for areas: scale down when dimmed, respecting fill type
-                  const areaFillOpacity = pres.areaFill === 'gradient'
-                    ? (dimmed ? 0.4 * opacity : 1 * opacity)
-                    : (dimmed ? 0.1 * opacity : 0.25 * opacity);
+                  // Final-review fix I4: `opacity` already carries the FULL
+                  // intended reduction (1 normal, 0.35 user-dimmed, 0.25
+                  // highlight-dimmed — seriesOpacity above) — it must be the
+                  // SOLE multiplier against each fill type's own base
+                  // fraction (0.25 solid / 1 gradient), never stacked with a
+                  // second dim-specific shrink. The old `dimmed ? 0.1 : 0.25`
+                  // (solid) / `dimmed ? 0.4 : 1` (gradient) branching
+                  // predates user-dimming (Task 4) and was correct on its
+                  // own for highlight-dimming alone; once Task 4 additionally
+                  // multiplied that whole branch by `* opacity`, a
+                  // user-dimmed area's fill got BOTH reductions at once
+                  // (0.1 × 0.35 = 0.035 — ~3.5% opacity, effectively
+                  // invisible, defeating the entire point of "dimmed, not
+                  // hidden"). A highlight-dimmed area is still visibly
+                  // reduced under the single-multiplier formula (0.25 × 0.25
+                  // = 0.0625 solid, 1 × 0.25 = 0.25 gradient) — same
+                  // direction as before, just not double-applied. Extracted
+                  // to chart-presentation.ts's `areaFillOpacityFor` — shared
+                  // with user-chart.tsx's identical branch and directly unit
+                  // tested there (area form is single-series-only, so no
+                  // on-screen legend ever reaches this with a genuinely
+                  // dimmed opacity to click through).
+                  const areaFillOpacity = areaFillOpacityFor(pres.areaFill, opacity);
                   return (
                     <Area
                       key={s.key}
@@ -3578,6 +3693,12 @@ export function ChartView({
                     />
                   );
                 })}
+              {/* Final-review fix C2: goal lines — see the LineChart branch
+                * above for the full reasoning (no `label` prop, the reader's
+                * typed text stays out of the export). */}
+              {state.goalLines.map((line) => (
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" />
+              ))}
               {/* Row 3 (session 110 UX audit pass 4): see the LineChart
                 * branch above — same overlay, same reasoning. */}
               <EndLabelsOverlay specs={endLabelSpecs} />
@@ -4430,8 +4551,16 @@ export function ChartView({
             * uses (`embed?.auditId`) — `ChartView` only ever receives `embed`
             * for that case (own-data charts render through the separate
             * UserChartView component; the internal Eurostat explorer passes
-            * no `embed` at all and correctly gets no derived-overlay UI). */}
-          {embed !== undefined ? (
+            * no `embed` at all and correctly gets no derived-overlay UI).
+            * Final-review fix I2: also gated on `activeForm` — derivedOverlayElements
+            * (the ReferenceLine renderer, above) only ever runs inside the
+            * LineChart/AreaChart branches, never bar/hbar, so offering these
+            * controls on a bar chart used to let a reader add an overlay,
+            * see its own remove chip appear, and watch nothing render —
+            * the control implied a capability the bar/hbar forms don't
+            * have. Mirrors the `activeForm === 'line' || activeForm ===
+            * 'area'` test `effectiveKind` already uses above. */}
+          {embed !== undefined && (activeForm === 'line' || activeForm === 'area') ? (
             <div className="flex flex-wrap items-center gap-1.5 ml-auto">
               <Button
                 type="button"
@@ -4449,27 +4578,45 @@ export function ChartView({
               >
                 {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                data-command-kind="addDerivedOverlay"
-                title={t(chartLang, 'chart.derived.meanLabel')}
-                onClick={() => {
-                  const visibleCodes = displaySpec.series[0]?.points
-                    .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
-                    .map((p) => p.resultId) ?? [];
-                  if (visibleCodes.length >= 2) {
-                    dispatchCommand(
-                      { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
-                      'panel',
-                    );
-                  }
-                }}
-                className="text-xs"
-              >
-                {t(chartLang, 'chart.derived.meanLabel')}
-              </Button>
+              {/* Final-review fix I8: "Gemiddelde tonen" used to always
+                * average `displaySpec.series[0]` regardless of what the
+                * reader had hidden or how many series the chart actually
+                * has — silently including a hidden, unnamed series in a
+                * button whose own label implies "the average of what's on
+                * the chart". An average across several DIFFERENT series was
+                * never well-defined here (which one? all of them combined?),
+                * so — the smaller, more honest fix — the control now only
+                * offers itself when exactly one series is visible, matching
+                * the `seriesMeta.filter((s) => !state.hiddenKeys.has(s.key))`
+                * visibility check every chart-form branch above already
+                * uses for rendering. */}
+              {visibleSeriesMeta.length === 1 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  data-command-kind="addDerivedOverlay"
+                  title={t(chartLang, 'chart.derived.meanLabel')}
+                  onClick={() => {
+                    // seriesMeta keys are positional ('s0', 's1', ... — see
+                    // buildRows above), so the one visible series' index is
+                    // its key with the 's' prefix stripped.
+                    const visibleIndex = Number(visibleSeriesMeta[0]!.key.slice(1));
+                    const visibleCodes = (displaySpec.series[visibleIndex]?.points ?? [])
+                      .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
+                      .map((p) => p.resultId);
+                    if (visibleCodes.length >= 2) {
+                      dispatchCommand(
+                        { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
+                        'panel',
+                      );
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  {t(chartLang, 'chart.derived.meanLabel')}
+                </Button>
+              ) : null}
               {state.derivedOverlayRequests.map((overlay) => (
                 <Button
                   key={overlay.id}
@@ -4488,8 +4635,10 @@ export function ChartView({
               ) : null}
               {derivationRefusals.size > 0 ? (
                 <div className="text-xs text-destructive">
+                  {/* Final-review fix I6: translated, never the server's raw
+                    * English reason string — see derivationRefusalMessage. */}
                   {Array.from(derivationRefusals.entries()).map(([id, reason]) => (
-                    <div key={id}>{t(chartLang, 'chart.derived.errorOtherIssue', { reason })}</div>
+                    <div key={id}>{derivationRefusalMessage(chartLang, reason)}</div>
                   ))}
                 </div>
               ) : null}
