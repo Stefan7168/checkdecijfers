@@ -54,3 +54,59 @@ describe('headlineFigure — the last plotted point of a single time series, a s
     expect(headlineFigure(s)?.value).toBe('17.590.672');
   });
 });
+
+describe('headlineFigure — reader override (Task 5)', () => {
+  it('an override resultId selects that point instead of the last one', () => {
+    const s = single([
+      point({ resultId: 'a', periodLabel: '2022', value: 1000, formattedValue: '1.000,0' }),
+      point({ resultId: 'b', periodLabel: '2023', value: 1300, formattedValue: '1.300,0' }),
+    ]);
+    const figure = headlineFigure(s, s.series[0]!.points[0]!.resultId);
+    expect(figure?.resultId).toBe('a');
+    expect(figure?.value).toBe('1.000,0');
+  });
+
+  it('an override resultId works from any series, not only single-series line charts', () => {
+    const multi = {
+      kind: 'line' as const,
+      unit: 'x 1 000',
+      series: [
+        { label: 'Nederland', regionCode: null, points: [point({ resultId: 'nl1', periodLabel: '2022', formattedValue: '100,0' }), point({ resultId: 'nl2', periodLabel: '2023', formattedValue: '200,0' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'u1', periodLabel: '2022', formattedValue: '50,0' }), point({ resultId: 'u2', periodLabel: '2023', formattedValue: '75,0' })] },
+      ],
+    };
+    const figure = headlineFigure(multi, 'u1');
+    expect(figure?.resultId).toBe('u1');
+    expect(figure?.value).toBe('50,0');
+  });
+
+  it('an override resultId not present in the spec falls back to null, never guesses', () => {
+    const s = single([point({ resultId: 'a', formattedValue: '1,0' })]);
+    expect(headlineFigure(s, 'not-a-real-id')).toBeNull();
+  });
+
+  it('no override keeps the existing last-point default behaviour', () => {
+    const s = single([
+      point({ resultId: 'a', periodLabel: '2022', value: 1000, formattedValue: '1.000,0' }),
+      point({ resultId: 'b', periodLabel: '2023', value: 1300, formattedValue: '1.300,0' }),
+    ]);
+    expect(headlineFigure(s)).toEqual(headlineFigure(s, undefined));
+  });
+
+  it('null override is treated as no override (shows the default)', () => {
+    const s = single([
+      point({ resultId: 'a', periodLabel: '2022', value: 1000, formattedValue: '1.000,0' }),
+      point({ resultId: 'b', periodLabel: '2023', value: 1300, formattedValue: '1.300,0' }),
+    ]);
+    expect(headlineFigure(s, null)).toEqual(headlineFigure(s, undefined));
+  });
+
+  it('handles an override with a null formattedValue (honest CBS gap) as empty string', () => {
+    const s = single([
+      point({ resultId: 'a', periodLabel: '2022', value: 1000, formattedValue: '1.000,0' }),
+      point({ resultId: 'b', periodLabel: '2023', value: null, formattedValue: null, valueAttribute: 'Geheim' }),
+    ]);
+    const figure = headlineFigure(s, 'b');
+    expect(figure?.value).toBe('');
+  });
+});

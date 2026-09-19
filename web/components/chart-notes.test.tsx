@@ -6,14 +6,20 @@ afterEach(cleanup);
 
 const NOTE: ChartNote = { id: 'n1', resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland', text: 'Coronapiek' };
 
+const defaultProps = {
+  headlineOverrideResultId: null as string | null,
+  onSetHeadline: vi.fn(),
+  onClearHeadline: vi.fn(),
+};
+
 describe('ChartNotes', () => {
   it('renders nothing when there are no notes and no pending click', () => {
-    render(<ChartNotes notes={[]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    render(<ChartNotes notes={[]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
     expect(screen.queryByText('Uw aantekeningen (geen CBS-data)')).not.toBeInTheDocument();
   });
 
   it('lists existing notes with their point context, under a clear non-CBS heading', () => {
-    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
     expect(screen.getByText('Uw aantekeningen (geen CBS-data)')).toBeInTheDocument();
     expect(screen.getByText(/Nederland.*2020/)).toBeInTheDocument();
     expect(screen.getByText('Coronapiek')).toBeInTheDocument();
@@ -21,7 +27,7 @@ describe('ChartNotes', () => {
 
   it('deleting a note calls onDelete with its id', () => {
     const onDelete = vi.fn();
-    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={onDelete} />);
+    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={onDelete} {...defaultProps} />);
     fireEvent.click(screen.getByRole('button', { name: /verwijder/i }));
     expect(onDelete).toHaveBeenCalledWith('n1');
   });
@@ -32,7 +38,7 @@ describe('ChartNotes', () => {
   // way to tell them apart.
   it("names each note's delete button with its own series and period, so several notes are distinguishable", () => {
     const noteB: ChartNote = { id: 'n2', resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Utrecht', text: 'Andere piek' };
-    render(<ChartNotes notes={[NOTE, noteB]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    render(<ChartNotes notes={[NOTE, noteB]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
     expect(screen.getByRole('button', { name: 'Verwijder de notitie bij Nederland · 2020' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Verwijder de notitie bij Utrecht · 2021' })).toBeInTheDocument();
   });
@@ -41,7 +47,7 @@ describe('ChartNotes', () => {
   // session-only and excluded from downloads/embeds (both deliberate, ADR
   // 038) — the affordance read like a normal, persisted annotation feature.
   it('discloses that notes are session-only and excluded from downloads/embeds', () => {
-    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
     expect(screen.getByText('Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.')).toBeInTheDocument();
   });
 
@@ -54,6 +60,7 @@ describe('ChartNotes', () => {
         onSave={vi.fn()}
         onCancelPending={vi.fn()}
         onDelete={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByText(/Utrecht.*2021/)).toBeInTheDocument();
@@ -71,6 +78,7 @@ describe('ChartNotes', () => {
         onSave={onSave}
         onCancelPending={onCancelPending}
         onDelete={vi.fn()}
+        {...defaultProps}
       />,
     );
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Piek na fusie' } });
@@ -88,6 +96,7 @@ describe('ChartNotes', () => {
         onSave={onSave}
         onCancelPending={vi.fn()}
         onDelete={vi.fn()}
+        {...defaultProps}
       />,
     );
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '   ' } });
@@ -104,12 +113,12 @@ describe('ChartNotes', () => {
     const pointA: PendingPoint = { resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland' };
     const pointB: PendingPoint = { resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Utrecht' };
     const { rerender } = render(
-      <ChartNotes notes={[]} pendingPoint={pointA} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />,
+      <ChartNotes notes={[]} pendingPoint={pointA} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />,
     );
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Coronapiek' } });
     expect(screen.getByRole('textbox')).toHaveValue('Coronapiek');
 
-    rerender(<ChartNotes notes={[]} pendingPoint={pointB} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />);
+    rerender(<ChartNotes notes={[]} pendingPoint={pointB} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
 
     expect(screen.getByText(/Utrecht.*2021/)).toBeInTheDocument();
     expect(screen.getByRole('textbox')).toHaveValue('');
@@ -123,7 +132,7 @@ describe('ChartNotes', () => {
   it('scopes the note textarea id to the supplied idPrefix, so two instances never collide', () => {
     const point: PendingPoint = { resultId: 'r-2021', periodLabel: '2021', seriesLabel: 'Utrecht' };
     render(
-      <ChartNotes notes={[]} pendingPoint={point} idPrefix="chart-abc123" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} />,
+      <ChartNotes notes={[]} pendingPoint={point} idPrefix="chart-abc123" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />,
     );
     expect(screen.getByRole('textbox')).toHaveAttribute('id', 'chart-abc123-note-draft');
   });
@@ -147,7 +156,7 @@ describe('ChartNotes', () => {
       return (
         <div>
           <button type="button">Add a note at Nederland, 2020</button>
-          <ChartNotes notes={[]} pendingPoint={pending} idPrefix="test" onSave={onSave} onCancelPending={onCancelPending} onDelete={vi.fn()} />
+          <ChartNotes notes={[]} pendingPoint={pending} idPrefix="test" onSave={onSave} onCancelPending={onCancelPending} onDelete={vi.fn()} {...defaultProps} />
         </div>
       );
     }

@@ -32,7 +32,30 @@ export interface HeadlineFigure {
   resultId: string;
 }
 
-export function headlineFigure(spec: Pick<ChartSpec, 'kind' | 'series' | 'unit'>): HeadlineFigure | null {
+export function headlineFigure(
+  spec: Pick<ChartSpec, 'kind' | 'series' | 'unit'>,
+  overrideResultId?: string | null,
+): HeadlineFigure | null {
+  // Task 5: reader-chosen headline number. If an override resultId is given,
+  // search all series for that point and return it. If not found, or if the
+  // point's formattedValue is null (an honest CBS gap — R11 allows such
+  // gaps), surface as an empty string rather than crash.
+  if (overrideResultId) {
+    for (const s of spec.series) {
+      const point = s.points.find((p) => p.resultId === overrideResultId);
+      if (point) {
+        return {
+          value: point.formattedValue ?? '',
+          provisional: point.provisional,
+          periodLabel: point.periodLabel,
+          unit: spec.unit,
+          resultId: point.resultId,
+        };
+      }
+    }
+    return null;
+  }
+  // Default path: the last plotted point of a single time series.
   if (spec.kind !== 'line' || spec.series.length !== 1) return null;
   const last = lastPlottedPoint(spec.series[0]!.points);
   if (!last) return null;

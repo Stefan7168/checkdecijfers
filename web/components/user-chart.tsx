@@ -1058,6 +1058,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             }}
             onCancelPending={() => setPendingPoint(null)}
             onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
+            headlineOverrideResultId={state.headlineOverrideResultId}
+            onSetHeadline={(resultId) => {
+              dispatch({ kind: 'setHeadlineOverride', resultId }, 'canvas');
+              setPendingPoint(null);
+            }}
+            onClearHeadline={() => {
+              dispatch({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
+              setPendingPoint(null);
+            }}
           />
         </div>
       ) : null}
