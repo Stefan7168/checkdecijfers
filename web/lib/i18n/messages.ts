@@ -673,6 +673,19 @@ const nl = {
   'chart.goalLine.removeAriaLabel': '{label} verwijderen',
   'chart.goalLine.sessionOnly': 'Doellijnen blijven in deze sessie en staan niet in downloads of embeds.',
 
+  // chart-era-shading.tsx.
+  'chart.eraShading.heading': 'Periode markeren (geen CBS-data)',
+  'chart.eraShading.delete': 'Verwijder',
+  'chart.eraShading.deleteAriaLabel': 'Verwijder de markering {period}',
+  'chart.eraShading.sessionOnly': 'Markeringen blijven in deze sessie en staan niet in downloads of embeds.',
+  'chart.eraShading.trigger': 'Periode markeren',
+  'chart.eraShading.fromLabel': 'Van',
+  'chart.eraShading.toLabel': 'Tot',
+  'chart.eraShading.labelLabel': 'Label',
+  'chart.eraShading.labelPlaceholder': 'Bijv. financiële crisis',
+  'chart.eraShading.save': 'Opslaan',
+  'chart.eraShading.cancel': 'Annuleren',
+
   // chart-download.tsx.
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Downloadformaat',
@@ -1689,6 +1702,18 @@ const en: Messages = {
   'chart.goalLine.delete': 'Delete',
   'chart.goalLine.removeAriaLabel': 'Delete {label}',
   'chart.goalLine.sessionOnly': 'Goal lines stay in this session and are not included in downloads or embeds.',
+
+  'chart.eraShading.heading': 'Mark period ranges (not CBS data)',
+  'chart.eraShading.delete': 'Delete',
+  'chart.eraShading.deleteAriaLabel': 'Delete the marking {period}',
+  'chart.eraShading.sessionOnly': 'Markings stay in this session and are not included in downloads or embeds.',
+  'chart.eraShading.trigger': 'Mark period range',
+  'chart.eraShading.fromLabel': 'From',
+  'chart.eraShading.toLabel': 'To',
+  'chart.eraShading.labelLabel': 'Label',
+  'chart.eraShading.labelPlaceholder': 'E.g. financial crisis',
+  'chart.eraShading.save': 'Save',
+  'chart.eraShading.cancel': 'Cancel',
 
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Download format',

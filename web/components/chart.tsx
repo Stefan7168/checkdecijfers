@@ -35,6 +35,7 @@ import {
   DefaultZIndexes,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -232,6 +233,10 @@ const ChartNotes = dynamic(() => import('./chart-notes.tsx').then((m) => m.Chart
   loading: () => null,
 });
 const ChartGoalLine = dynamic(() => import('./chart-goal-line.tsx').then((m) => m.ChartGoalLine), {
+  ssr: false,
+  loading: () => null,
+});
+const ChartEraShading = dynamic(() => import('./chart-era-shading.tsx').then((m) => m.ChartEraShading), {
   ssr: false,
   loading: () => null,
 });
@@ -3294,6 +3299,25 @@ export function ChartView({
                     />
                   );
                 })}
+              {/* Task 3 (phase 4): era shading bands, rendered as ReferenceArea
+                * components. Each band is positioned by period label (the same
+                * way Line.dataKey and the x-axis key off period labels), so
+                * no manual x-scale pixel math is needed — Recharts handles the
+                * positioning internally. */}
+              {state.eraShadings.map((era) => {
+                const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
+                const toLabel = periodLabelByCode.get(era.toPeriodCode);
+                if (!fromLabel || !toLabel) return null; // Skip if period codes are not found
+                return (
+                  <ReferenceArea
+                    key={era.id}
+                    x1={fromLabel}
+                    x2={toLabel}
+                    fill="#4f46e5"
+                    fillOpacity={0.1}
+                  />
+                );
+              })}
               {/* Row 3 (session 110 UX audit pass 4): the LAST child, so it
                 * paints after every Line above — see EndLabelsOverlay's own
                 * doc comment. */}
@@ -3665,6 +3689,23 @@ export function ChartView({
           />
         </div>
       ) : null;
+
+  // Task 3: era shading — reader-marked period ranges with typed labels.
+  // Same gate as notes: not shown in embed/stage/table form.
+  const eraShadingNode = state.form !== 'table' && !embedMode && !inStage ? (
+    <div tabIndex={-1} className="outline-none">
+      <ChartEraShading
+        eraShadings={state.eraShadings}
+        periodOptions={spec.series[0]?.points.map((p) => ({ code: p.periodCode, label: p.periodLabel })) ?? []}
+        lang={chartLang}
+        idPrefix={domId}
+        onAdd={(fromPeriodCode, toPeriodCode, label) => {
+          dispatchCommand({ kind: 'addEraShading', era: { id: newCommandId(), fromPeriodCode, toPeriodCode, label } }, 'canvas');
+        }}
+        onRemove={(id) => dispatchCommand({ kind: 'removeEraShading', eraShadingId: id }, 'canvas')}
+      />
+    </div>
+  ) : null;
 
   // Task 3: the same gate as chart_edits persistence (editsKey !== null) —
   // signed in, in-app, saved answer. Not shown in embed/stage (editsKey is
@@ -4363,6 +4404,7 @@ export function ChartView({
               {legendNode}
               {captionNode}
               {notesNode}
+              {eraShadingNode}
             </>
           }
         >
@@ -4668,6 +4710,13 @@ export function ChartView({
         * never part of the honest card an embed re-publishes elsewhere. */}
       {!styleOpen ? captionNode : null}
       {!styleOpen ? notesNode : null}
+      {/* Controller fix (session 115, Task 3 fix round 4): eraShadingNode was
+       * only ever passed to ChartEditModal's `chartSlot` (rendered only when
+       * `styleOpen` is true — see the "SAME lifted values" comment above),
+       * so the era-shading trigger never appeared in the default,
+       * non-modal dock — the same `!styleOpen ? X : null` mirroring every
+       * other dock node here (captionNode, notesNode) already uses. */}
+      {!styleOpen ? eraShadingNode : null}
       {/* Task 3 (co-pilot phase 3): mounted directly after the notes strip,
         * outside chartContainerRef like the caption and the notes — a
         * reader's own words never enter a PNG/SVG export. Final review

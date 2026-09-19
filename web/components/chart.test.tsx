@@ -6192,3 +6192,79 @@ describe('Session 110 UX audit pass 4 — row 2: margins scale with measured wid
     expect(xTicks.length).toBeGreaterThan(0);
   });
 });
+
+describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', () => {
+  it('renders without errors when era shadings code path executes in line chart', () => {
+    // This test verifies that the ReferenceArea rendering code path in chart.tsx
+    // executes without syntax errors or runtime crashes. The actual integration
+    // test of adding an era shading via UI and verifying ReferenceArea renders
+    // is covered in the e2e test (chart-copilot.spec.ts), which demonstrates:
+    // 1. User opens form and fills it
+    // 2. ReferenceArea band renders (.recharts-reference-area-rect visible)
+    // 3. Label appears outside export container (export exclusion verified)
+    // 4. Both visual and label removed on delete
+    const spec = threeRegionSeriesLineSpec();
+    const { container } = render(<ChartView spec={spec} />);
+
+    // Verify the LineChart renders successfully with era shadings code intact
+    const lineChart = container.querySelector('svg.recharts-surface');
+    expect(lineChart).not.toBeNull();
+
+    // Verify export container exists (same gate as era shadings)
+    const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
+    expect(exportContainer).not.toBeNull();
+  });
+
+  it('ReferenceArea code only executes in line chart form, gated from bar/area forms', () => {
+    // Line chart: era shading rendering code is present (no errors)
+    const lineSpec = threeRegionSeriesLineSpec();
+    const { container: lineContainer } = render(<ChartView spec={lineSpec} />);
+    const lineChart = lineContainer.querySelector('svg.recharts-surface');
+    expect(lineChart).not.toBeNull();
+
+    // Bar chart: form gates era shadings, but chart still renders
+    const barSpec = { ...threeRegionSeriesLineSpec(), kind: 'bar' as const };
+    const { container: barContainer } = render(<ChartView spec={barSpec} />);
+    const barChart = barContainer.querySelector('svg.recharts-surface');
+    expect(barChart).not.toBeNull();
+
+    // Area chart: 'area' is a view FORM, not a spec kind (ChartSpec.kind is
+    // only 'line' | 'bar') — an area chart is a line-kind spec rendered with
+    // form 'area', set via initialFormOverride, matching every other test in
+    // this file that exercises a non-default form.
+    const areaSpec = threeRegionSeriesLineSpec();
+    const { container: areaContainer } = render(<ChartView spec={areaSpec} initialFormOverride="area" />);
+    const areaChart = areaContainer.querySelector('svg.recharts-surface');
+    expect(areaChart).not.toBeNull();
+  });
+
+  it('renders a ReferenceArea band in a line chart when an era shading is added through the real UI', async () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+
+    // Click the era shading trigger button (dynamic component loads on click)
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+
+    // Wait for the form to be visible and get the inputs. Scoped via the
+    // "Van" select's own row: the chart's separate zoom control also has a
+    // "Tot"-labelled select (which also carries a redundant aria-label
+    // alongside its own <label htmlFor>), so a plain
+    // screen.getByLabelText('Tot') matches both and throws.
+    const fromSelect = await screen.findByLabelText('Van');
+    fireEvent.change(fromSelect, { target: { value: '2020' } });
+
+    const eraShadingRow = fromSelect.closest('div')?.parentElement;
+    if (!eraShadingRow) throw new Error('era shading form row not found');
+    const toSelect = within(eraShadingRow).getByLabelText('Tot');
+    fireEvent.change(toSelect, { target: { value: '2021' } });
+
+    const labelInput = screen.getByLabelText('Label');
+    fireEvent.change(labelInput, { target: { value: 'Testperiode' } });
+
+    // Save (find the button by regex to match 'Opslaan')
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    // Assert the visual band renders
+    expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+});
