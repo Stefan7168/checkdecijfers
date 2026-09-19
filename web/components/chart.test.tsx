@@ -2391,6 +2391,18 @@ describe('ChartView click-to-annotate', () => {
     expect(screen.getByText('Test notitie')).toBeInTheDocument();
   });
 
+  it('a saved goal line is never rendered inside the chart export container', async () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+    const exportContainer = container.querySelector('[role="tabpanel"][aria-label="Grafiek"]');
+    expect(exportContainer?.textContent).not.toContain('Test Doel');
+    expect(screen.getByText('Test Doel')).toBeInTheDocument();
+  });
+
   it('does not carry a pending click or a saved note over to a different spec on the same mounted instance', async () => {
     const s = twoSeriesLineSpec();
     const { rerender } = render(<ChartView spec={s} />);

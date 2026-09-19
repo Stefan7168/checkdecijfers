@@ -231,6 +231,10 @@ const ChartNotes = dynamic(() => import('./chart-notes.tsx').then((m) => m.Chart
   ssr: false,
   loading: () => null,
 });
+const ChartGoalLine = dynamic(() => import('./chart-goal-line.tsx').then((m) => m.ChartGoalLine), {
+  ssr: false,
+  loading: () => null,
+});
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -3618,6 +3622,14 @@ export function ChartView({
             }}
             onCancelPending={() => setPendingPoint(null)}
             onDelete={(id) => dispatchCommand({ kind: 'removeNote', noteId: id }, 'canvas')}
+          />
+          {/* Outside chartContainerRef, like the caption and the notes */}
+          <ChartGoalLine
+            goalLines={state.goalLines}
+            lang={chartLang}
+            idPrefix={domId}
+            onAdd={(value, label) => dispatchCommand({ kind: 'addGoalLine', goalLine: { id: newCommandId(), value, label } }, 'panel')}
+            onRemove={(id) => dispatchCommand({ kind: 'removeGoalLine', goalLineId: id }, 'panel')}
           />
         </div>
       ) : null;
