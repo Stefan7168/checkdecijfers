@@ -1744,6 +1744,8 @@ export function ChartView({
   // The recipes live in the undoable command history; the resolved values
   // (the actual numbers) live here, transient per session.
   const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, DerivationRecord>>(new Map());
+  // Server refusals for derivation requests (e.g., different regions, invalid selection).
+  const [derivationRefusals, setDerivationRefusals] = useState<Map<string, string>>(new Map());
   // Session-local: whether difference picker mode is active.
   const [differencePickerActive, setDifferencePickerActive] = useState(false);
   // Session-local: which point was selected first for a two-point difference.
@@ -1783,7 +1785,10 @@ export function ChartView({
         resultIds,
       );
     };
-    void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(setResolvedOverlays);
+    void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(({ resolvedMap, refusals }) => {
+      setResolvedOverlays(resolvedMap);
+      setDerivationRefusals(refusals);
+    });
   }, [state.derivedOverlayRequests, embed?.auditId]);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
@@ -3317,18 +3322,40 @@ export function ChartView({
                 />
               ))}
               {/* Task 7: render derived overlay lines */}
-              {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
-                record.kind === 'mean' ? (
-                  <ReferenceLine
-                    key={`mean-${id}`}
-                    y={record.value}
-                    stroke="var(--accent)"
-                    strokeDasharray="2 2"
-                    label={{ value: formatValueNl(record.value, 0), position: 'right' }}
-                    data-label-for={record.sourceResultIds.join(',')}
-                  />
-                ) : null,
-              )}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
+                if (record.kind === 'mean') {
+                  return (
+                    <ReferenceLine
+                      key={`mean-${id}`}
+                      y={record.value}
+                      stroke="var(--accent)"
+                      strokeDasharray="2 2"
+                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                if (record.kind === 'difference') {
+                  const allPoints = displaySpec.series.flatMap((s) => s.points);
+                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
+                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
+                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
+                  return (
+                    <ReferenceLine
+                      key={`diff-${id}`}
+                      segment={[
+                        { x: a.periodLabel as string | number, y: a.value as number },
+                        { x: b.periodLabel as string | number, y: b.value as number },
+                      ]}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                return null;
+              })}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -3424,18 +3451,40 @@ export function ChartView({
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
               {/* Task 7: render derived overlay lines */}
-              {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
-                record.kind === 'mean' ? (
-                  <ReferenceLine
-                    key={`mean-${id}`}
-                    y={record.value}
-                    stroke="var(--accent)"
-                    strokeDasharray="2 2"
-                    label={{ value: formatValueNl(record.value, 0), position: 'right' }}
-                    data-label-for={record.sourceResultIds.join(',')}
-                  />
-                ) : null,
-              )}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
+                if (record.kind === 'mean') {
+                  return (
+                    <ReferenceLine
+                      key={`mean-${id}`}
+                      y={record.value}
+                      stroke="var(--accent)"
+                      strokeDasharray="2 2"
+                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                if (record.kind === 'difference') {
+                  const allPoints = displaySpec.series.flatMap((s) => s.points);
+                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
+                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
+                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
+                  return (
+                    <ReferenceLine
+                      key={`diff-${id}`}
+                      segment={[
+                        { x: a.periodLabel as string | number, y: a.value as number },
+                        { x: b.periodLabel as string | number, y: b.value as number },
+                      ]}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                return null;
+              })}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -4323,6 +4372,13 @@ export function ChartView({
               ))}
               {differenceError ? (
                 <span className="text-xs text-destructive">{differenceError}</span>
+              ) : null}
+              {derivationRefusals.size > 0 ? (
+                <div className="text-xs text-destructive">
+                  {Array.from(derivationRefusals.values()).map((error) => (
+                    <div key={error}>{t(chartLang, 'chart.derived.errorOtherIssue')}</div>
+                  ))}
+                </div>
               ) : null}
             </div>
           ) : null}
