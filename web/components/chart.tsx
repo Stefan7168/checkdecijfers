@@ -231,6 +231,10 @@ const ChartNotes = dynamic(() => import('./chart-notes.tsx').then((m) => m.Chart
   ssr: false,
   loading: () => null,
 });
+const ChartEraShading = dynamic(() => import('./chart-era-shading.tsx').then((m) => m.ChartEraShading), {
+  ssr: false,
+  loading: () => null,
+});
 
 /**
  * ADR 037 D11: the minimal structural subset `buildRows`/`valueLabelPlan`
@@ -3622,6 +3626,23 @@ export function ChartView({
         </div>
       ) : null;
 
+  // Task 3: era shading — reader-marked period ranges with typed labels.
+  // Same gate as notes: not shown in embed/stage/table form.
+  const eraShadingNode = state.form !== 'table' && !embedMode && !inStage ? (
+    <div tabIndex={-1} className="outline-none">
+      <ChartEraShading
+        eraShadings={state.eraShadings}
+        periodOptions={spec.series[0]?.points.map((p) => ({ code: p.periodCode, label: p.periodLabel })) ?? []}
+        lang={chartLang}
+        idPrefix={domId}
+        onAdd={(fromPeriodCode, toPeriodCode, label) => {
+          dispatchCommand({ kind: 'addEraShading', era: { id: newCommandId(), fromPeriodCode, toPeriodCode, label } }, 'canvas');
+        }}
+        onRemove={(id) => dispatchCommand({ kind: 'removeEraShading', eraShadingId: id }, 'canvas')}
+      />
+    </div>
+  ) : null;
+
   // Task 3: the same gate as chart_edits persistence (editsKey !== null) —
   // signed in, in-app, saved answer. Not shown in embed/stage (editsKey is
   // already forced null there) and not in table form / while the story is
@@ -4317,6 +4338,7 @@ export function ChartView({
               {legendNode}
               {captionNode}
               {notesNode}
+              {eraShadingNode}
             </>
           }
         >

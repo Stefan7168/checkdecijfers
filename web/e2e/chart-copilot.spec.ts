@@ -79,6 +79,37 @@ test.describe.serial('chart co-pilot phase 1', () => {
     await expect(page.locator('.recharts-line-curve')).toHaveCount(1, { timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Ongedaan maken' })).toBeEnabled();
   });
+
+  test('add an era shading → it appears in the list → delete removes it', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Open the era shading form
+    const markButton = page.getByRole('button', { name: 'Periode markeren' });
+    await markButton.click();
+
+    // Fill in the form
+    await page.getByLabel('Van').selectOption('2020');
+    await page.getByLabel('Tot').selectOption('2021');
+    await page.getByLabel('Label').fill('Testperiode');
+
+    // Submit the form
+    const saveButton = page.getByRole('button', { name: 'Opslaan' });
+    await saveButton.click();
+
+    // Verify the shading appears in the list
+    await expect(page.getByText('Testperiode')).toBeVisible();
+    await expect(page.getByText(/2020 – 2021/)).toBeVisible();
+
+    // Delete the shading
+    const deleteButton = page.getByRole('button', { name: /Verwijder de markering/ });
+    await deleteButton.click();
+
+    // Verify it's been removed
+    await expect(page.getByText('Testperiode')).not.toBeVisible();
+  });
 });
 
 /** Type a question and send it (copied from answer.spec.ts — same harness,
