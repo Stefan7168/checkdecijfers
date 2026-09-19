@@ -553,6 +553,12 @@ const nl = {
   // Phase 5 (chart-fit scorer, Task 2): the Helling tab's disabled reason —
   // digit-free on purpose (the whole-card digit scan in chart.test.tsx).
   'chart.slopeDisabledReason': 'Beschikbaar zodra je precies twee momenten vergelijkt.',
+  // Phase 5 (Task 3): the Dumbbell tab's disabled reason. Same condition as
+  // slope's (plus: every point must have a real value), worded differently
+  // on purpose — a spec that disables both tabs would otherwise render the
+  // identical sentence twice, and the reason should read as the dumbbell's
+  // own. Digit-free (the whole-card digit scan).
+  'chart.dumbbellDisabledReason': 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -1653,6 +1659,7 @@ const en: Messages = {
   // real reason is the time axis, not the region count.
   'chart.formReason.hbarTimeSeries': 'Horizontal bars show one period; this chart spans several.',
   'chart.slopeDisabledReason': "Available once you're comparing exactly two points in time.",
+  'chart.dumbbellDisabledReason': 'Available once at least two series each have exactly a start and an end value.',
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',

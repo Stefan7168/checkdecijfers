@@ -86,6 +86,7 @@ import {
   annotationMarkers,
   BAR_LABEL_MAX,
   baselineAxisLine,
+  buildDumbbellRows,
   buildRegionRows,
   buildRows,
   ChartTooltip,
@@ -3918,13 +3919,14 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 // ---------------------------------------------------------------------------
 
 describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
-  it('offers all six tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Helling', () => {
-    // Phase 5 (chart-fit scorer, Task 2): Helling (slope) trails Tabel, in
-    // the scorer's own fixed order — always rendered, disabled when the spec
-    // doesn't carry exactly two time points per series.
+  it('offers all seven tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling', () => {
+    // Phase 5 (chart-fit scorer, Tasks 2-3): Dumbbell and Helling (slope)
+    // trail Tabel, in the scorer's own fixed order (dumbbell, slope) —
+    // always rendered, disabled when the spec doesn't carry exactly two
+    // real-valued time points per series.
     render(<ChartView spec={threePointSpec()} />);
     const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
-    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling']);
+    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling']);
   });
 
   it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
@@ -3992,10 +3994,11 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     );
   });
 
-  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Helling -> Lijn)', () => {
-    // Phase 5 (Task 2): twoSeriesLineSpec carries exactly two periods per
-    // series, so Helling (slope) is allowed here and joins the order after
-    // Tabel; the disabled Vlak/Liggend are still skipped.
+  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Dumbbell -> Helling -> Lijn)', () => {
+    // Phase 5 (Tasks 2-3): twoSeriesLineSpec carries exactly two periods per
+    // series, so Dumbbell and Helling (slope) are allowed here and join the
+    // order after Tabel, dumbbell first; the disabled Vlak/Liggend are still
+    // skipped.
     render(<ChartView spec={twoSeriesLineSpec()} />);
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     lineTab.focus();
@@ -4004,6 +4007,8 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Staaf' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Tabel' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Dumbbell' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Helling' })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Helling' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveFocus();
@@ -4147,6 +4152,275 @@ describe('ChartView — slope form (phase 5, Task 2)', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('.recharts-line-curve')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 (chart-fit scorer, session 116, Task 3): the Dumbbell tab. Unlike
+// slope this is genuinely NEW drawing: a `BarChart layout="vertical"` shell
+// with no <Bar>, and a `DumbbellOverlay` (modelled on EndLabelsOverlay) that
+// reads Recharts' own settled scales and draws each row's connector, two
+// dots and two labels itself. These tests pin the REAL rendered geometry —
+// dot positions linear in the values and aligned with Recharts' own axis
+// ticks — plus the honesty bindings (each label is its point's own
+// formattedValue, bound via data-label-for), never just "it rendered".
+//   twoSeriesLineSpec()         — 2 series × 2 periods: dumbbell allowed
+//   twoSeriesFourYearLineSpec() — 2 series × 4 periods: disallowed
+// ---------------------------------------------------------------------------
+
+describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
+  const DUMBBELL_REASON = 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.';
+
+  /** twoSeriesLineSpec with Utrecht's 2021 cell missing (a real CBS null). */
+  function nullPointSpec(): ChartSpec {
+    const s = twoSeriesLineSpec();
+    s.series[1]!.points[1] = point({
+      resultId: 'ut-2021',
+      periodCode: '2021',
+      periodLabel: '2021',
+      value: null,
+      formattedValue: null,
+      status: 'Ontbreekt',
+    });
+    return s;
+  }
+
+  /** A comparison where one region FELL (from > to) and one end is
+   * provisional — the label-side rule and the ' *' suffix are pinned on it. */
+  function fallingSpec(): ChartSpec {
+    return spec({
+      kind: 'line',
+      series: [
+        {
+          label: 'Groningen',
+          regionCode: 'PV20',
+          points: [
+            point({ resultId: 'gr-2020', periodCode: '2020', periodLabel: '2020', value: 80, formattedValue: '80' }),
+            point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 60, formattedValue: '60', provisional: true }),
+          ],
+        },
+        {
+          label: 'Drenthe',
+          regionCode: 'PV22',
+          points: [
+            point({ resultId: 'dr-2020', periodCode: '2020', periodLabel: '2020', value: 20, formattedValue: '20' }),
+            point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 30, formattedValue: '30' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  function dot(container: HTMLElement, resultId: string): SVGCircleElement {
+    const el = container.querySelector<SVGCircleElement>(`svg [data-role="dumbbell-dot"][data-result-id="${resultId}"]`);
+    expect(el, `no dumbbell dot for ${resultId}`).not.toBeNull();
+    return el!;
+  }
+  function label(container: HTMLElement, resultId: string): SVGTextElement {
+    const el = container.querySelector<SVGTextElement>(`svg [data-role="dumbbell-label"][data-label-for="${resultId}"]`);
+    expect(el, `no dumbbell label for ${resultId}`).not.toBeNull();
+    return el!;
+  }
+  const num = (el: Element, attr: string): number => Number(el.getAttribute(attr));
+
+  it('a 2-series × 2-point spec offers Dumbbell enabled; selecting it draws two bound dots per row and no bar or line', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Dumbbell' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // The shell carries no graphical item at all — nothing on a dumbbell is
+    // a bar, and no line is drawn through Recharts either.
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+    expect(container.querySelector('.recharts-line-curve')).toBeNull();
+    expect(container.querySelector('.recharts-area')).toBeNull();
+
+    // Exactly four dots, one per real point, each bound to its resultId.
+    const dots = [...container.querySelectorAll('svg [data-role="dumbbell-dot"]')];
+    expect(dots.map((d) => d.getAttribute('data-result-id')).sort()).toEqual(['nl-2020', 'nl-2021', 'ut-2020', 'ut-2021']);
+    // Exactly one connector per row, keyed like every other form's series.
+    const rows = [...container.querySelectorAll('svg [data-role="dumbbell-row"]')];
+    expect(rows.map((r) => r.getAttribute('data-series-key'))).toEqual(['s0', 's1']);
+    expect(container.querySelectorAll('svg [data-role="dumbbell-connector"]')).toHaveLength(2);
+  });
+
+  it('every label is its point\'s OWN formattedValue, bound via data-label-for; the whole card passes the digit scan', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(label(container, 'nl-2020').textContent).toBe('100');
+    expect(label(container, 'nl-2021').textContent).toBe('110');
+    expect(label(container, 'ut-2020').textContent).toBe('50');
+    expect(label(container, 'ut-2021').textContent).toBe('55');
+    expect(container.querySelectorAll('svg [data-role="dumbbell-label"]')).toHaveLength(4);
+    // The region names on the category axis are the spec's own labels.
+    const ticks = [...container.querySelectorAll('svg [data-role="region-axis-tick"]')].map((el) => el.textContent);
+    expect(ticks).toEqual(['Nederland', 'Utrecht']);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('geometry: dot x-positions are linear in the values, both ends of a row sit on that row\'s own axis tick, and the connector joins the two dots', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    const nl20 = dot(container, 'nl-2020'); // 100
+    const nl21 = dot(container, 'nl-2021'); // 110
+    const ut20 = dot(container, 'ut-2020'); // 50
+    const ut21 = dot(container, 'ut-2021'); // 55
+
+    // Ordered left-to-right exactly as the values order (50 < 55 < 100 < 110).
+    expect(num(ut20, 'cx')).toBeLessThan(num(ut21, 'cx'));
+    expect(num(ut21, 'cx')).toBeLessThan(num(nl20, 'cx'));
+    expect(num(nl20, 'cx')).toBeLessThan(num(nl21, 'cx'));
+    // Linear: 10 value-units span exactly twice the pixels 5 do, and the 50
+    // units between the two "2020" dots span five times the 10.
+    const pxPer10 = num(nl21, 'cx') - num(nl20, 'cx');
+    const pxPer5 = num(ut21, 'cx') - num(ut20, 'cx');
+    expect(pxPer10).toBeGreaterThan(0);
+    expect(pxPer10 / pxPer5).toBeCloseTo(2, 6);
+    expect((num(nl20, 'cx') - num(ut20, 'cx')) / pxPer10).toBeCloseTo(5, 6);
+    // A zero-anchored domain (hbar's own [0, 'auto']): value 0 would sit to
+    // the LEFT of every dot, never past the leftmost one.
+    const xAtZero = num(ut20, 'cx') - 50 * (pxPer10 / 10);
+    expect(xAtZero).toBeLessThan(num(ut20, 'cx'));
+    expect(xAtZero).toBeGreaterThan(0);
+
+    // Both dots of a row share one y — the band CENTRE, which is exactly
+    // where Recharts placed that row's own category tick (RegionAxisTick
+    // renders at the tick's y, with a +4 dy for baseline alignment).
+    expect(num(nl20, 'cy')).toBe(num(nl21, 'cy'));
+    expect(num(ut20, 'cy')).toBe(num(ut21, 'cy'));
+    expect(num(nl20, 'cy')).not.toBe(num(ut20, 'cy'));
+    const tickFor = (name: string) =>
+      [...container.querySelectorAll('svg [data-role="region-axis-tick"]')].find((el) => el.textContent === name)!;
+    expect(num(nl20, 'cy')).toBeCloseTo(num(tickFor('Nederland'), 'y'), 6);
+    expect(num(ut20, 'cy')).toBeCloseTo(num(tickFor('Utrecht'), 'y'), 6);
+
+    // The connector runs between the two dots of its row, at their y.
+    const nlRow = container.querySelector('svg [data-role="dumbbell-row"][data-series-key="s0"]')!;
+    const line = nlRow.querySelector('[data-role="dumbbell-connector"]')!;
+    expect(num(line, 'x1')).toBe(num(nl20, 'cx'));
+    expect(num(line, 'x2')).toBe(num(nl21, 'cx'));
+    expect(num(line, 'y1')).toBe(num(nl20, 'cy'));
+    expect(num(line, 'y2')).toBe(num(nl20, 'cy'));
+
+    // Labels: the leftmost dot's label sits to its left (end-anchored), the
+    // rightmost dot's to its right (start-anchored) — on the dot's own y.
+    const l20 = label(container, 'nl-2020');
+    const l21 = label(container, 'nl-2021');
+    expect(l20.getAttribute('text-anchor')).toBe('end');
+    expect(num(l20, 'x')).toBeLessThan(num(nl20, 'cx'));
+    expect(l21.getAttribute('text-anchor')).toBe('start');
+    expect(num(l21, 'x')).toBeGreaterThan(num(nl21, 'cx'));
+    expect(num(l20, 'y')).toBe(num(nl20, 'cy') + 4);
+  });
+
+  it('a row whose value FELL draws its start dot on the right (label side follows the pixel order), and a provisional end gets the shared " *" suffix', () => {
+    const s = fallingSpec();
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    const from = dot(container, 'gr-2020'); // 80
+    const to = dot(container, 'gr-2021'); // 60, provisional
+    expect(num(to, 'cx')).toBeLessThan(num(from, 'cx'));
+    expect(label(container, 'gr-2021').getAttribute('text-anchor')).toBe('end');
+    expect(label(container, 'gr-2020').getAttribute('text-anchor')).toBe('start');
+    expect(label(container, 'gr-2021').textContent).toBe('60*');
+    expect(label(container, 'gr-2020').textContent).toBe('80');
+    // Drenthe rose (20 -> 30): its start dot is the left one.
+    expect(num(dot(container, 'dr-2020'), 'cx')).toBeLessThan(num(dot(container, 'dr-2021'), 'cx'));
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('hiding a series via the legend drops its row entirely (no dots, no connector), order kept', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    expect(container.querySelector('svg [data-role="dumbbell-dot"][data-result-id="ut-2020"]')).toBeNull();
+    expect(container.querySelector('svg [data-role="dumbbell-dot"][data-result-id="ut-2021"]')).toBeNull();
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(2);
+    expect(container.querySelectorAll('svg [data-role="dumbbell-connector"]')).toHaveLength(1);
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+  });
+
+  it('a spec with a null point in one series renders Dumbbell disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', () => {
+    render(<ChartView spec={nullPointSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Dumbbell' });
+    expect(tab).toBeDisabled();
+    expect(tab).toHaveAttribute('title', DUMBBELL_REASON);
+    const describedById = tab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const hint = document.getElementById(describedById!);
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveClass('sr-only');
+    expect(hint?.textContent).toBe(DUMBBELL_REASON);
+    expect(screen.getAllByText(DUMBBELL_REASON)).toHaveLength(1);
+    // Clicking a disabled tab does nothing: Lijn stays selected.
+    fireEvent.click(tab);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    // Slope shares the null-value rule (same guard), with its own wording —
+    // the two reasons are never the same sentence twice on one card.
+    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+  });
+
+  it('a 2-series × 4-point spec and a single-series spec both render Dumbbell disabled', () => {
+    const { unmount } = render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+    unmount();
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+  });
+
+  it('buildDumbbellRows: one row per eligible series in spec order, both ends verbatim, range = [min, max]; an ineligible series is skipped, not half-drawn', () => {
+    const s = fallingSpec();
+    const rows = buildDumbbellRows(s);
+    expect(rows.map((r) => r.key)).toEqual(['s0', 's1']);
+    expect(rows[0]).toMatchObject({
+      label: 'Groningen',
+      from: { value: 80, formattedValue: '80', resultId: 'gr-2020', periodLabel: '2020', provisional: false },
+      to: { value: 60, formattedValue: '60', resultId: 'gr-2021', periodLabel: '2021', provisional: true },
+      range: [60, 80],
+    });
+    expect(rows[1]!.range).toEqual([20, 30]);
+    // A windowed display spec can leave a series with one point, or a null
+    // value: that series yields NO row; the others keep their own keys.
+    const windowed = { series: [{ ...s.series[0]!, points: [s.series[0]!.points[0]!] }, s.series[1]!] };
+    expect(buildDumbbellRows(windowed).map((r) => r.key)).toEqual(['s1']);
+    expect(buildDumbbellRows(nullPointSpec()).map((r) => r.key)).toEqual(['s0']);
+  });
+
+  it('switching to Dumbbell then Undo returns to the prior form through the existing setForm history', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+  });
+
+  it('a spec swap from a dumbbell-chosen spec to one with more than two periods falls back to bar', () => {
+    // fallbackForm's own convention (chart-view-state.ts): dumbbell -> bar.
+    const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll('svg [data-role="dumbbell-dot"]')).toHaveLength(4);
+
+    rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
   });
 });
 

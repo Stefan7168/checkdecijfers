@@ -311,9 +311,16 @@ export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind'>): boolean {
  * both forms are real, already-verified cells; nothing is computed. Shared
  * here so the two forms can never silently drift apart from each other —
  * see slopeFormAllowed immediately below.
+ *
+ * Task 3 tightening: every point must also carry a real value. A dumbbell
+ * draws exactly two dots per row and a slope exactly two ends per line — a
+ * `value: null` point (a CBS cell that is missing or suppressed) has no
+ * honest place on either, and unlike the line/bar forms there is no gap or
+ * skipped bar to fall back on. Refusing the form is principle (c); the
+ * table still shows the missing cell as missing.
  */
 export function dumbbellFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
-  return seriesCount >= 2 && spec.series.every((s) => s.points.length === 2);
+  return seriesCount >= 2 && spec.series.every((s) => s.points.length === 2 && s.points.every((p) => p.value !== null));
 }
 
 /**
@@ -332,10 +339,12 @@ export function slopeFormAllowed(spec: SeriesShape, seriesCount: number): boolea
  * single column is already better served by the existing hbar/bar/line
  * forms. Every cell it draws is one series' own real point value; nothing is
  * combined or summed across cells (unlike the still-deferred pie/stacked
- * work, §10).
+ * work, §10). Task 3 tightening, same reasoning as dumbbellFormAllowed: a
+ * grid cell with no real value has nothing honest to colour, so every point
+ * must carry a value.
  */
 export function heatmapFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
-  return seriesCount >= 2 && spec.series.every((s) => s.points.length >= 2);
+  return seriesCount >= 2 && spec.series.every((s) => s.points.length >= 2 && s.points.every((p) => p.value !== null));
 }
 
 /**

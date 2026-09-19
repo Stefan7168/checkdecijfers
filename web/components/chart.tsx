@@ -161,6 +161,7 @@ import {
   BAR_LABEL_MAX,
   defaultFormFor,
   defaultFormIsTable,
+  dumbbellFormAllowed,
   fallbackForm,
   // Session 110 pass 3 row 3: the hbar row-height floor — see its own
   // comment in chart-view-state.ts.
@@ -468,6 +469,68 @@ export function buildRegionRows(
   });
   const colors = spec.series.map((_, i) => colorFor(i));
   return { rows, colors };
+}
+
+/** Phase 5 (chart-fit scorer, Task 3): one endpoint of a dumbbell row — a
+ * point's own already-verified value and display string, verbatim (R6),
+ * plus the resultId the drawn label is bound to (R1, `data-label-for`). */
+export interface DumbbellEnd {
+  value: number;
+  formattedValue: string;
+  resultId: string;
+  periodLabel: string;
+  provisional: boolean;
+}
+
+/** Phase 5 (Task 3): the dumbbell form's own row model — one row per SERIES
+ * (a region, say), its two points as the row's two dots. `range` is the
+ * `[min, max]` of the two values and exists ONLY so the numeric x-axis can
+ * derive its extent from the chart data through its own `dataKey` (Recharts
+ * 3.x derives a numeric axis domain from `axis.dataKey` when the chart has
+ * no graphical items, and accepts a `[lo, hi]` pair — verified against the
+ * installed 3.10.1 `axisSelectors`). It is never drawn or shown as a number;
+ * every visible digit comes from `from`/`to`'s own `formattedValue`. */
+export interface DumbbellRow {
+  key: string;
+  label: string;
+  from: DumbbellEnd;
+  to: DumbbellEnd;
+  range: [number, number];
+}
+
+/** Phase 5 (Task 3): builds the dumbbell rows from the spec's series, in
+ * spec order (R6: never re-sorted), keyed `s${i}` exactly like `seriesMeta`
+ * so colour/hidden/highlight state joins on the same key every other form
+ * uses. `dumbbellFormAllowed` (chart-view-state.ts) already guarantees the
+ * ORIGINAL spec has exactly two real-valued points per series — but the spec
+ * this is handed is the DISPLAYED (period-windowed) one, so a series the
+ * Vanaf/Tot window has narrowed below two points, or whose point lost its
+ * display string, is skipped here rather than drawn half-way: a row is
+ * either both real dots or nothing (principle (c)), mirroring how RegionBar
+ * draws nothing for a null value. Exported for direct testing, mirroring
+ * buildRegionRows. */
+export function buildDumbbellRows(spec: Pick<PlottableSpec, 'series'>): DumbbellRow[] {
+  const rows: DumbbellRow[] = [];
+  spec.series.forEach((series, i) => {
+    if (series.points.length !== 2) return;
+    const [from, to] = series.points as [PlottablePoint, PlottablePoint];
+    if (from.value === null || to.value === null || from.formattedValue === null || to.formattedValue === null) return;
+    const end = (p: PlottablePoint, value: number, formattedValue: string): DumbbellEnd => ({
+      value,
+      formattedValue,
+      resultId: p.resultId,
+      periodLabel: p.periodLabel,
+      provisional: p.provisional,
+    });
+    rows.push({
+      key: `s${i}`,
+      label: series.label,
+      from: end(from, from.value, from.formattedValue),
+      to: end(to, to.value, to.formattedValue),
+      range: [Math.min(from.value, to.value), Math.max(from.value, to.value)],
+    });
+  });
+  return rows;
 }
 
 /** #170(4): which curated annotations to draw, resolved to the exact
@@ -989,6 +1052,118 @@ function EndLabelsOverlay({ specs }: { specs: EndLabelSpec[] }) {
             {i === 0 && l.periodOmitted && xAxisIsTickless ? `${l.periodLabel}: ${l.text}` : l.text}
           </text>
         ))}
+      </g>
+    </ZIndexLayer>
+  );
+}
+
+/** Phase 5 (Task 3): a dumbbell row as the overlay draws it — the pure
+ * `DumbbellRow` (buildDumbbellRows) plus the SAME resolved colour and
+ * highlight-dimming every other form derives from `seriesMeta`/
+ * `state.highlightedKey`, joined in ChartView on the shared `s${i}` key. */
+interface DumbbellChartRow extends DumbbellRow {
+  color: string;
+  dimmed: boolean;
+}
+
+/** Dot radius and the gap between a dot's edge and its label. */
+const DUMBBELL_DOT_R = 5;
+const DUMBBELL_LABEL_GAP_PX = 4;
+
+/** Phase 5 (chart-fit scorer, Task 3): the dumbbell chart's whole drawing.
+ * Modelled directly on `EndLabelsOverlay` above — the SAME mechanism, not a
+ * new one: a plain descendant of the `<BarChart layout="vertical">` shell
+ * that reads Recharts' own settled scales through `useXAxisScale`/
+ * `useYAxisScale` and draws ordinary SVG inside the shared `label` z-index
+ * layer. The shell (axes, grid) exists only to establish the coordinate
+ * system; it carries NO `<Bar>` — nothing on a dumbbell is a bar, so nothing
+ * is drawn through one.
+ *
+ * Per row: a `<line>` from `xScale(from.value)` to `xScale(to.value)` at the
+ * row's own category position — `yScale(label, { position: 'middle' })`, the
+ * band CENTRE, which is exactly where Recharts places that row's own axis
+ * tick (RegionAxisTick) — and a `<circle>` at each end. Every drawn number is
+ * that endpoint's own `formattedValue` (plus the same ' *' provisional
+ * suffix every other form uses), rendered as `<text>` beside its dot with
+ * `data-label-for="<resultId>"` (R1), exactly like EndLabelsOverlay's own
+ * labels. The leftmost dot's label sits to its left and the rightmost dot's
+ * to its right, so the two never cross the connector or each other; the
+ * shell's x-axis `padding` (set in ChartView from the longest label) is what
+ * keeps a label at the domain's edge from running into the region-name
+ * column or off the right edge — layout only, the domain itself is never
+ * touched. A row whose position the scale cannot resolve (a label not in the
+ * category domain, or a value outside a finite range) is skipped, never
+ * approximated. */
+function DumbbellOverlay({ rows }: { rows: DumbbellChartRow[] }) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  if (!xScale || !yScale || rows.length === 0) return null;
+  const positioned = rows
+    .map((row) => ({
+      row,
+      cy: Number(yScale(row.label, { position: 'middle' })),
+      xFrom: Number(xScale(row.from.value)),
+      xTo: Number(xScale(row.to.value)),
+    }))
+    .filter((p) => Number.isFinite(p.cy) && Number.isFinite(p.xFrom) && Number.isFinite(p.xTo));
+  const labelText = (end: DumbbellEnd): string => `${end.formattedValue}${end.provisional ? '*' : ''}`;
+  return (
+    <ZIndexLayer zIndex={DefaultZIndexes.label}>
+      <g data-role="dumbbell-canvas">
+        {positioned.map(({ row, cy, xFrom, xTo }) => {
+          const opacity = row.dimmed ? 0.25 : 1;
+          // Which end is drawn left/right is a pixel question (a value can
+          // fall or rise), settled from the scale's own output, not from
+          // comparing the values again here.
+          const fromIsLeft = xFrom <= xTo;
+          const ends: Array<{ end: DumbbellEnd; x: number; side: 'from' | 'to'; leftOf: boolean }> = [
+            { end: row.from, x: xFrom, side: 'from', leftOf: fromIsLeft },
+            { end: row.to, x: xTo, side: 'to', leftOf: !fromIsLeft },
+          ];
+          return (
+            <g key={row.key} data-role="dumbbell-row" data-series-key={row.key} data-series-dimmed={row.dimmed ? 'true' : undefined}>
+              <line
+                x1={xFrom}
+                y1={cy}
+                x2={xTo}
+                y2={cy}
+                stroke={row.color}
+                strokeWidth={2}
+                strokeOpacity={opacity}
+                data-role="dumbbell-connector"
+              />
+              {ends.map(({ end, x, side, leftOf }) => (
+                <g key={side}>
+                  <circle
+                    cx={x}
+                    cy={cy}
+                    r={DUMBBELL_DOT_R}
+                    fill={row.color}
+                    fillOpacity={opacity}
+                    stroke="var(--card)"
+                    strokeWidth={1.5}
+                    data-role="dumbbell-dot"
+                    data-point={side}
+                    data-result-id={end.resultId}
+                  />
+                  <text
+                    x={leftOf ? x - DUMBBELL_DOT_R - DUMBBELL_LABEL_GAP_PX : x + DUMBBELL_DOT_R + DUMBBELL_LABEL_GAP_PX}
+                    y={cy + 4}
+                    {...VALUE_LABEL_PROPS}
+                    fill="var(--foreground)"
+                    fillOpacity={opacity}
+                    textAnchor={leftOf ? 'end' : 'start'}
+                    data-role="dumbbell-label"
+                    data-point={side}
+                    data-label-for={end.resultId}
+                  >
+                    {labelText(end)}
+                  </text>
+                </g>
+              ))}
+            </g>
+          );
+        })}
       </g>
     </ZIndexLayer>
   );
@@ -2244,6 +2419,11 @@ export function ChartView({
   // Lijn render branch verbatim (see `effectiveKind` and the render
   // ternary); this guard only decides whether the tab is offered.
   const canUseSlope = slopeFormAllowed(spec, spec.series.length);
+  // Phase 5 (Task 3): the dumbbell shares slope's condition (exactly two
+  // real-valued points per series, at least two series) but has its OWN
+  // render branch below — a `BarChart layout="vertical"` shell with no
+  // `<Bar>`, drawn entirely by `DumbbellOverlay`.
+  const canUseDumbbell = dumbbellFormAllowed(spec, spec.series.length);
   const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
   // Final-review fix wave residual: the difference picker's controls (and
   // the add-overlay controls generally) are only shown for line/area form
@@ -2357,9 +2537,12 @@ export function ChartView({
   // `widthHeightPx` is non-null) so a many-region hbar chart never flashes
   // a cramped default height for one paint before the first
   // ResizeObserver callback lands.
+  // Phase 5 (Task 3): the dumbbell form lays out one category row per series
+  // on the same kind of vertical category axis hbar does, so it shares the
+  // same row-pitch floor — same collision otherwise, same fix.
   const autoHeightPx = !autoHeight
     ? null
-    : activeForm === 'hbar'
+    : activeForm === 'hbar' || activeForm === 'dumbbell'
       ? hbarChartHeight(spec.series.length, widthHeightPx ?? CHART_MIN_HEIGHT_PX)
       : widthHeightPx;
   // This is the one Hook `pres` feeds, so it must run unconditionally on
@@ -2828,6 +3011,31 @@ export function ChartView({
   const regionPeriodLabels = new Set(displaySpec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
   const regionPeriodLabel = regionPeriodLabels.size === 1 ? [...regionPeriodLabels][0]! : t(chartLang, 'chart.table.value');
 
+  // Phase 5 (Task 3): the dumbbell form's OWN row model — one row per
+  // series from `buildDumbbellRows` over the SAME `displaySpec`, joined to
+  // `seriesMeta` on the shared `s${i}` key for colour, and to
+  // `state.hiddenKeys`/`state.highlightedKey` exactly like the hbar rows
+  // above (hidden rows DROPPED, order kept; highlight dims every other row).
+  // `dumbbellLabelPadPx` reserves room INSIDE the plot for the widest label
+  // on either side (x-axis `padding`, layout only — the numeric domain is
+  // untouched), so a dot at the domain's edge never has its label run into
+  // the region-name column or off the right edge.
+  const seriesMetaByKey = new Map(seriesMeta.map((s) => [s.key, s]));
+  const dumbbellRowsAll: DumbbellChartRow[] = buildDumbbellRows(displaySpec).map((row) => ({
+    ...row,
+    color: seriesMetaByKey.get(row.key)?.color ?? DEFAULT_PALETTE[0]!,
+    dimmed: state.highlightedKey !== null && state.highlightedKey !== row.key,
+  }));
+  const visibleDumbbellRows = dumbbellRowsAll.filter((r) => !state.hiddenKeys.has(r.key));
+  const longestDumbbellLabel = dumbbellRowsAll.reduce((longest, r) => {
+    for (const end of [r.from, r.to]) {
+      const text = `${end.formattedValue}${end.provisional ? '*' : ''}`;
+      if (text.length > longest.length) longest = text;
+    }
+    return longest;
+  }, '');
+  const dumbbellLabelPadPx = longestDumbbellLabel ? labelWidthPx(longestDumbbellLabel) : 8;
+
   // Task 3 / WP218 phase 5 Task 2: the real five-way Lijn/Vlak/Staaf/Liggend/
   // Tabel switch, tab order per the phase-5 plan. A disallowed tab is
   // skipped from the keyboard order entirely (as Lijn already was) so
@@ -2840,8 +3048,9 @@ export function ChartView({
     ...(canUseHbar ? (['hbar'] as const) : []),
     'table',
     // Phase 5 (chart-fit scorer): the new forms trail Tabel in the scorer's
-    // own fixed order (dumbbell, slope, heatmap — chart-fit.ts). Tasks 3
-    // and 4 add their spreads around this one.
+    // own fixed order (dumbbell, slope, heatmap — chart-fit.ts). Task 4
+    // adds the heatmap spread after slope's.
+    ...(canUseDumbbell ? (['dumbbell'] as const) : []),
     ...(canUseSlope ? (['slope'] as const) : []),
   ];
   const formTabRef: Record<ChartForm, typeof lineTabRef> = {
@@ -2868,6 +3077,7 @@ export function ChartView({
     spec.kind === 'line' ? t(chartLang, 'chart.formReason.areaMultiSeries') : t(chartLang, 'chart.formReason.areaComparison');
   const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
   const slopeDisabledReason = t(chartLang, 'chart.slopeDisabledReason');
+  const dumbbellDisabledReason = t(chartLang, 'chart.dumbbellDisabledReason');
 
   function selectForm(next: ChartForm): void {
     // Review fix (controller decision): a story is only ever meaningful for
@@ -3814,6 +4024,55 @@ export function ChartView({
                 shape={RegionBar(regionPeriodLabel, hbarLabelMode, hbarExtremeKeys, onPointClick, chartLang)}
               />
             </BarChart>
+          ) : activeForm === 'dumbbell' ? (
+            // Phase 5 (chart-fit scorer, Task 3): the dumbbell form. The
+            // SAME category-vs-number shell as the hbar branch above (region
+            // on the category axis, the number axis from zero with no
+            // invented ticks, the same grid semantics) — but with NO `<Bar>`
+            // at all: nothing on a dumbbell is a bar. The axes and grid exist
+            // only to settle the coordinate system; `DumbbellOverlay` reads
+            // those settled scales (useXAxisScale/useYAxisScale, the same
+            // mechanism EndLabelsOverlay already uses on every other form)
+            // and draws every row itself. No <Tooltip>: Recharts builds a
+            // tooltip's payload from the chart's graphical items, of which
+            // this branch deliberately has none — and every value is
+            // already permanently labelled beside its dot, so a hover reveal
+            // has nothing left to reveal. The x-axis `dataKey="range"` is the
+            // row's own [min, max] value pair, used ONLY to size the domain
+            // (see DumbbellRow); its `padding` reserves label room inside
+            // the plot without touching that domain.
+            <BarChart
+              layout="vertical"
+              data={visibleDumbbellRows}
+              margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
+              aria-label={accessibleName}
+            >
+              {pres.grid !== 'none' ? (
+                <CartesianGrid {...GRID_LINE_PROPS} vertical horizontal={pres.grid === 'both'} />
+              ) : null}
+              <XAxis
+                type="number"
+                dataKey="range"
+                domain={[0, 'auto']}
+                padding={{ left: dumbbellLabelPadPx, right: dumbbellLabelPadPx }}
+                tick={false}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={hbarYAxisWidth}
+                interval={0}
+                tick={RegionAxisTick}
+                stroke={AXIS_COLOR}
+                axisLine={baselineAxisLine(pres)}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <DumbbellOverlay rows={visibleDumbbellRows} />
+            </BarChart>
           ) : (
             <BarChart
               data={rows}
@@ -4430,6 +4689,25 @@ export function ChartView({
             >
               {t(chartLang, 'chart.tabTable')}
             </button>
+            {/* Phase 5 (Task 3): Dumbbell sits BEFORE Helling in the DOM so
+              * the visual/keyboard tab order matches FORM_ORDER's array order
+              * (dumbbell, slope, heatmap — the scorer's own fixed order). */}
+            <button
+              ref={dumbbellTabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'dumbbell'}
+              aria-controls={panelId}
+              aria-describedby={canUseDumbbell ? undefined : `${domId}-dumbbell-reason`}
+              tabIndex={activeForm === 'dumbbell' ? 0 : -1}
+              disabled={!canUseDumbbell}
+              title={canUseDumbbell ? undefined : dumbbellDisabledReason}
+              onClick={() => selectForm('dumbbell')}
+              className={quietTab(activeForm === 'dumbbell') + (canUseDumbbell ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.dumbbell')}
+            </button>
             <button
               ref={slopeTabRef}
               type="button"
@@ -4464,6 +4742,11 @@ export function ChartView({
           {!canUseHbar ? (
             <span id={`${domId}-hbar-reason`} className="sr-only">
               {hbarDisabledReason}
+            </span>
+          ) : null}
+          {!canUseDumbbell ? (
+            <span id={`${domId}-dumbbell-reason`} className="sr-only">
+              {dumbbellDisabledReason}
             </span>
           ) : null}
           {!canUseSlope ? (

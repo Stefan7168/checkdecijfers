@@ -300,6 +300,22 @@ describe('dumbbellFormAllowed — exactly two points per series, at least two se
   it('refused for a one-point comparison (that is hbar territory)', () => {
     expect(dumbbellFormAllowed(shaped('bar', 4, 1), 4)).toBe(false);
   });
+  // Task 3 tightening: a dumbbell draws exactly two dots per row, so a
+  // missing (null) value has no honest place on it — the form is refused,
+  // not drawn with a gap.
+  it('refused when any point in any series has a null value (Task 3)', () => {
+    const nullEnd = spec('line', [
+      series('A', [point('2020', 1), point('2021', 2)]),
+      series('B', [point('2020', 3), { ...point('2021', 4), value: null, formattedValue: null }]),
+    ]);
+    expect(dumbbellFormAllowed(nullEnd, 2)).toBe(false);
+    expect(slopeFormAllowed(nullEnd, 2)).toBe(false);
+    const nullStart = spec('line', [
+      series('A', [{ ...point('2020', 1), value: null, formattedValue: null }, point('2021', 2)]),
+      series('B', [point('2020', 3), point('2021', 4)]),
+    ]);
+    expect(dumbbellFormAllowed(nullStart, 2)).toBe(false);
+  });
 });
 
 describe('slopeFormAllowed — the same condition as dumbbell, by construction', () => {
@@ -329,6 +345,13 @@ describe('heatmapFormAllowed — at least two series AND at least two points eac
   it('refused when ANY series is down to a single point', () => {
     const ragged = spec('line', [series('A', [point('2020', 1), point('2021', 2)]), series('B', [point('2020', 3)])]);
     expect(heatmapFormAllowed(ragged, 2)).toBe(false);
+  });
+  it('refused when any cell would have a null value (Task 3 tightening — nothing honest to colour)', () => {
+    const withNull = spec('line', [
+      series('A', [point('2020', 1), point('2021', 2), point('2022', 3)]),
+      series('B', [point('2020', 3), { ...point('2021', 4), value: null, formattedValue: null }, point('2022', 5)]),
+    ]);
+    expect(heatmapFormAllowed(withNull, 2)).toBe(false);
   });
 });
 
