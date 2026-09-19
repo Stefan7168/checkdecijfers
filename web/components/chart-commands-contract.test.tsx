@@ -13,6 +13,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CHART_COMMAND_KINDS, validateCommand, type ChartCommandKind, type CommandContext } from '../lib/chart-commands.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
+import { ChartGoalLine } from './chart-goal-line.tsx';
+import { ChartEraShading } from './chart-era-shading.tsx';
 
 const chartHeadlineActions = vi.hoisted(() => ({
   draftChartHeadline: vi.fn(),
@@ -50,6 +52,15 @@ vi.mock('../app/dataset-actions.ts', () => datasetActions);
 // Action module needs the same jsdom-import guard as the others above.
 const chartCopilotActions = vi.hoisted(() => ({ adjustCbsChart: vi.fn() }));
 vi.mock('../app/chart-copilot-actions.ts', () => chartCopilotActions);
+// Final-review fix I10/I11's removeDerivedOverlay test (below) actually adds
+// a derived-overlay recipe, which fires chart.tsx's resolution effect — the
+// same jsdom-import guard as every Server Action mock above, so that effect
+// resolves against a harmless stub instead of the real db/auth-backed
+// module.
+const chartDerivationActions = vi.hoisted(() => ({
+  requestChartDerivation: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/chart-derivation-actions.ts', () => chartDerivationActions);
 
 import { ChartView } from './chart.tsx';
 import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';
@@ -249,6 +260,72 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     const found = kindsInDom(container);
     expect(found.has('addNote')).toBe(true);
     expect(found.has('removeNote')).toBe(true);
+  });
+
+  // Final-review findings I10/I11: `addNote`/`removeNote` above are the only
+  // NOTE_KINDS members with a compensating test of their own — the other
+  // four kinds this session added to that same exemption list
+  // (`setHeadlineOverride`, `removeGoalLine`, `removeEraShading`,
+  // `removeDerivedOverlay`) got none, despite being just as absent from the
+  // phase-1 scan (NOTE_KINDS excludes them from the "missing" check the same
+  // way it excludes addNote/removeNote). Each test below renders the
+  // component that actually owns the control and asserts its
+  // `data-command-kind` is reachable, mirroring the addNote/removeNote test
+  // immediately above.
+  it('setHeadlineOverride control exists in the notes editor once a point is pending', async () => {
+    const { ChartNotes } = await import('./chart-notes.tsx');
+    const { container } = render(
+      <ChartNotes
+        notes={[]}
+        pendingPoint={{ resultId: 'nl-2020', periodLabel: '2020', seriesLabel: 'Nederland' }}
+        idPrefix="t"
+        onSave={() => {}}
+        onCancelPending={() => {}}
+        onDelete={() => {}}
+        headlineOverrideResultId={null}
+        onSetHeadline={() => {}}
+        onClearHeadline={() => {}}
+      />,
+    );
+    expect(kindsInDom(container).has('setHeadlineOverride')).toBe(true);
+  });
+
+  it('removeGoalLine control exists once a goal line has been saved', () => {
+    const { container } = render(
+      <ChartGoalLine
+        goalLines={[{ id: 'g1', value: 100, label: 'Doel 2026' }]}
+        idPrefix="t"
+        onAdd={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+    expect(kindsInDom(container).has('removeGoalLine')).toBe(true);
+  });
+
+  it('removeEraShading control exists once an era shading has been saved', () => {
+    const { container } = render(
+      <ChartEraShading
+        eraShadings={[{ id: 'e1', fromPeriodCode: '2020', toPeriodCode: '2021', label: 'Testperiode' }]}
+        periodOptions={[{ code: '2020', label: '2020' }, { code: '2021', label: '2021' }]}
+        idPrefix="t"
+        onAdd={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+    expect(kindsInDom(container).has('removeEraShading')).toBe(true);
+  });
+
+  it('removeDerivedOverlay control exists once a derived overlay has been added', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    // Same single-visible-series gate the I8 final-review fix added to the
+    // "Gemiddelde tonen" control: hide one of the two series first.
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    // `addDerivedOverlay`'s recipe lands in state.derivedOverlayRequests
+    // synchronously (the reducer never awaits the async resolution), so the
+    // remove chip is reachable immediately, with no need to wait on
+    // requestChartDerivation.
+    expect(kindsInDom(document.body).has('removeDerivedOverlay')).toBe(true);
   });
 });
 
