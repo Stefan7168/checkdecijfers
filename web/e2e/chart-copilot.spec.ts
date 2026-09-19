@@ -228,13 +228,14 @@ test.describe.serial('chart co-pilot phase 1', () => {
     const markButton = page.getByRole('button', { name: 'Periode markeren' });
     await markButton.click();
 
-    // Fill in the form
-    // exact: true — a bare getByLabel('Van')/('Tot') substring-matches the
-    // chart's OWN zoom control ("Vanaf"/"Tot", the latter identical) and,
-    // for 'Van', even the history-menu button ("Geschiedenis van
-    // bewerkingen") — a real collision the first real-browser run caught.
-    await page.getByLabel('Van', { exact: true }).selectOption('2020');
-    await page.getByLabel('Tot', { exact: true }).selectOption('2021');
+    // Fill in the form. Label text alone can't disambiguate these two
+    // selects from the chart's OWN zoom control — "Vanaf"/"Tot" are close
+    // or, for "Tot", byte-identical (both real-browser CI failures this
+    // fixed round-trip in turn). chart-era-shading.tsx mints its own
+    // element ids as `${idPrefix}-era-from`/`-era-to` specifically to be
+    // addressable — use those directly instead of label text.
+    await page.locator('select[id*="-era-from"]').selectOption('2020');
+    await page.locator('select[id*="-era-to"]').selectOption('2021');
     await page.getByLabel('Label').fill('Testperiode');
 
     // Submit the form
