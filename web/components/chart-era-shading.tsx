@@ -48,7 +48,9 @@ export function ChartEraShading({
   function save(): void {
     const trimmedLabel = label.trim();
     if (trimmedLabel.length === 0) return;
-    onAdd(fromPeriod, toPeriod, trimmedLabel);
+    // Guard against inverted from/to: if from > to, swap them
+    const [from, to] = fromPeriod > toPeriod ? [toPeriod, fromPeriod] : [fromPeriod, toPeriod];
+    onAdd(from, to, trimmedLabel);
     setLabel('');
     setFromPeriod(periodOptions[0]?.code ?? '');
     setToPeriod(periodOptions[0]?.code ?? '');
