@@ -570,7 +570,18 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   // comparing. When the stored spec DOES carry the key, it is compared
   // verbatim below — so a genuinely wrong/corrupted stored value still fails
   // loudly. This is not a general "tolerate any additive field" mechanism;
-  // it names exactly the one field this exception covers.
+  // it names exactly the fields this exception covers — two today:
+  //
+  //  - `attribution.trendHeadline` (#197, above);
+  //  - `regionScope` (chart co-pilot phase 5b, the verified whole): the
+  //    region-class provenance `buildChartSpec` now emits on EVERY spec
+  //    (a real scope for a region_set answer, an explicit `null` for every
+  //    other chart). Every spec stored before this field existed — not only
+  //    region-set rows, every chart-bearing row — carries no `regionScope`
+  //    key at all, while the rebuilt spec always carries one, so the same
+  //    strip-if-absent rule applies: stored key absent → strip it from the
+  //    rebuilt side; stored key present (null or a scope) → compared verbatim
+  //    below, so a tampered or wrong stored scope still fails loudly.
   let comparableRederived = rederived;
   if (
     response.chart !== null &&
@@ -580,6 +591,11 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
     const attribution = { ...rederived.attribution };
     delete attribution.trendHeadline;
     comparableRederived = { ...rederived, attribution };
+  }
+  if (response.chart !== null && comparableRederived !== null && !('regionScope' in response.chart)) {
+    const stripped = { ...comparableRederived };
+    delete stripped.regionScope;
+    comparableRederived = stripped;
   }
   if (stableStringify(response.chart) !== stableStringify(comparableRederived)) {
     problems.push('chart spec does not re-derive from the stored result');

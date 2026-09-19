@@ -100,6 +100,31 @@ describe('buildChartSpec — a complete region_set charts as a ranked bar', () =
     const spec = buildChartSpec(result)!;
     expect(spec.series).toHaveLength(26);
   });
+
+  // Phase 5b task 2: the spec records WHICH region class produced its bars —
+  // verbatim from the result's own coverage record, for a real runQuery
+  // result of each roster kind the fixture DB serves.
+  it('regionScope is the result\'s own coverage scope, verbatim — all_provincies and gemeenten_in_provincie', async () => {
+    const provincies = await answer(population({ regionSet: { kind: 'all_provincies' } }));
+    expect(buildChartSpec(provincies)!.regionScope).toEqual({ kind: 'all_provincies' });
+    expect(buildChartSpec(provincies)!.regionScope).toEqual(provincies.regionSet!.scope);
+
+    const gemeenten = await answer({
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+      period: { kind: 'codes', codes: ['2024JJ00'] },
+      derivation: 'none',
+      regionSet: { kind: 'gemeenten_in_provincie', parent: 'PV26' },
+    });
+    expect(buildChartSpec(gemeenten)!.regionScope).toEqual({ kind: 'gemeenten_in_provincie', parent: 'PV26' });
+
+    // And a plain named-region answer over the same table: explicit null.
+    const named = await answer(population({ regions: ['PV20', 'PV21'] }));
+    expect(named.shape).toBe('comparison');
+    const namedSpec = buildChartSpec(named)!;
+    expect('regionScope' in namedSpec).toBe(true);
+    expect(namedSpec.regionScope).toBeNull();
+  });
 });
 
 describe('buildChartSpec — an incomplete region_set still charts, honestly', () => {

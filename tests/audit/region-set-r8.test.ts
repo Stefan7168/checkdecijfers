@@ -238,6 +238,39 @@ describe('R8: a COMPLETE region-set answer row', () => {
     ).toBe(true);
   });
 
+  // Phase 5b task 2: the chart spec's `regionScope` provenance field, across
+  // the storage boundary — the same three-way pin tests/audit/trend-headline-
+  // r8.test.ts applies to `trendHeadline` (ADR 014 optional-v1-field rule).
+  it('regionScope: the fresh row stores the real scope on its chart and reconstructs (pinned above); a pre-field row (no key) ALSO reconstructs; a tampered scope fails loudly', () => {
+    const response = answerOf(record);
+    expect(response.chart!.regionScope).toEqual({ kind: 'all_provincies' });
+
+    // A row stored before this field existed: the stored spec carries no
+    // `regionScope` key at all, while a rebuild from the SAME unchanged
+    // result now does — reconstruct strips the rebuilt side's key when the
+    // stored side has none, so a genuinely historical row is not falsely
+    // flagged.
+    const preField = clone(record);
+    delete answerOf(preField).chart!.regionScope;
+    expect('regionScope' in answerOf(preField).chart!).toBe(false);
+    expect(reconstructionReport(preField).problems).toEqual([]);
+
+    // The tolerance is scoped to an ABSENT key, never to a present-but-wrong
+    // one: a stored scope that is not what the stored result's own coverage
+    // record says still fails, loudly.
+    const tampered = clone(record);
+    answerOf(tampered).chart!.regionScope = { kind: 'all_landsdelen' };
+    const tamperedReport = reconstructionReport(tampered);
+    expect(tamperedReport.ok).toBe(false);
+    expect(tamperedReport.problems.some((p) => p.includes('chart spec does not re-derive'))).toBe(true);
+
+    // And a stored explicit null on a region_set row is a lie too — the
+    // rebuilt spec carries the real scope, and null is compared verbatim.
+    const nulled = clone(record);
+    answerOf(nulled).chart!.regionScope = null;
+    expect(reconstructionReport(nulled).problems.some((p) => p.includes('chart spec does not re-derive'))).toBe(true);
+  });
+
   it('a body edit the numeric validator would accept STILL fails — this shape has a deterministic ground truth', () => {
     const tampered = clone(record);
     const response = answerOf(tampered);
@@ -306,6 +339,35 @@ describe('R8: rows that predate #253 are untouched', () => {
 
     expect(reconstructionReport(record).problems).toEqual([]);
   });
+
+  // Phase 5b task 2: `buildChartSpec` now emits `regionScope` on EVERY chart
+  // (explicit null off the region-class path), so EVERY chart-bearing row
+  // stored before the field existed — not only region-set rows — meets the
+  // strip-if-absent tolerance. A single-region series is the ordinary case.
+  it('an ordinary chart-bearing answer row stores regionScope: null; the same row without the key (pre-field storage) still reconstructs; a scope invented on it fails loudly', async () => {
+    const record = await answerRecord(
+      'hoe ontwikkelde de bevolking van Utrecht zich van 2020 tot 2024',
+      population({
+        regions: ['PV26'],
+        period: { kind: 'range', from: '2020JJ00', to: '2024JJ00' },
+        derivation: 'series',
+      }),
+    );
+    const response = answerOf(record);
+    expect(response.result.shape).toBe('series');
+    expect(response.chart).not.toBeNull();
+    expect('regionScope' in response.chart!).toBe(true);
+    expect(response.chart!.regionScope).toBeNull();
+    expect(reconstructionReport(record).problems).toEqual([]);
+
+    const preField = clone(record);
+    delete answerOf(preField).chart!.regionScope;
+    expect(reconstructionReport(preField).problems).toEqual([]);
+
+    const tampered = clone(record);
+    answerOf(tampered).chart!.regionScope = { kind: 'all_provincies' };
+    expect(reconstructionReport(tampered).problems.some((p) => p.includes('chart spec does not re-derive'))).toBe(true);
+  }, 300_000);
 });
 
 describe('R8: the region-class refusal and its sub-reason', () => {
