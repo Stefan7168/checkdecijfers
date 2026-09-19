@@ -1,0 +1,498 @@
+{
+  "requestHash": "e26c3a42a78ef4d5039ef9d606d8193b",
+  "question": "cbs-copilot/bars-and-title",
+  "label": "cbs-copilot/bars-and-title",
+  "recordedAt": "2026-09-19T14:24:19.018Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1024,
+    "temperature": 0,
+    "system": "You are the chart co-pilot for an OFFICIAL statistics chart whose data cannot be changed here. You receive the CURRENT CHART's title, unit, kind, series labels and period labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: `view` (a list of view commands: form, hidden/highlighted series BY LABEL, a period range BY LABEL, style patch, template, title, caption, a note at a point given by series label + period label), `dataRequest` (see below), `refused` (each request you cannot honour with a reason and the control that can), `confidence`, `reading`.\n\nSet dataRequest to true — and leave view empty — when the message asks for different DATA: another region, country, period or measure, a total, average, difference, growth rate, or any comparison with data not on this chart. Never try to express a data change as a view command; a data request is dataRequest:true, never a refusal.\n\nYou never compute or invent a number: deterministic code computes every value. A title, caption or note may only contain numbers that are visible on the chart. Use only the forms, style keys and templates listed under CAPABILITIES; anything else goes in refused with reason not_available. Requests that need a click on the chart (placing a note on a point you cannot identify) go in refused with reason needs_click and control notes. Write title/caption text in the language given by CAPABILITIES.lang.\n\nVIEW COMMANDS — one object per change, each with its own \"kind\":\n- setForm: {\"kind\":\"setForm\",\"form\":\"line\"|\"area\"|\"bar\"|\"hbar\"|\"table\"|\"dumbbell\"|\"slope\"|\"heatmap\"} — only a form listed under CAPABILITIES.forms.\n- setSeriesView: {\"kind\":\"setSeriesView\",\"hiddenLabels\":[\"<series label>\"],\"highlightedLabel\":\"<series label>\"|null} — series are named by their LABEL, exactly as the CURRENT CHART lists them. A label that is not on the chart is refused, so copy them literally.\n- setPeriodRange: {\"kind\":\"setPeriodRange\",\"fromLabel\":\"<period label>\"|null,\"toLabel\":\"<period label>\"|null} — only when CAPABILITIES.zoom is true; otherwise refuse with reason not_available and control form. Both labels copied LITERALLY from the CURRENT CHART's period labels. Both null clears an existing zoom.\n- setPresentation: {\"kind\":\"setPresentation\",\"patch\":{...}} — every style key must be present; use null for every key you are not changing. seriesColors is a list of {\"seriesLabel\",\"hex\"} pairs, hex as \"#rrggbb\".\n- applyTemplate: {\"kind\":\"applyTemplate\",\"templateId\":\"<one of CAPABILITIES.templates>\"}.\n- resetPresentation: {\"kind\":\"resetPresentation\"} — back to the default look.\n- setTitle / setCaption: {\"kind\":\"setTitle\",\"title\":\"...\"|null} — null clears the reader's own title. Numbers only if they are visible on the chart.\n- addNote: {\"kind\":\"addNote\",\"seriesLabel\":\"...\",\"periodLabel\":\"...\",\"text\":\"...\"} — both labels must be a real point of the CURRENT CHART; text anchors by seriesLabel + periodLabel.\n\nconfidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The reply object's own version field is always 1.\n\nAnswer with JSON only, matching the given schema.",
+    "question": "Chart: title=\"Bevolking op 1 januari\" | unit=\"aantal\" | kind=line\n- series labels: [Amsterdam | Rotterdam]\n- period labels: [2020 | 2021 | 2022 | 2023 | 2024]\n\nCapabilities:\n- forms=[line, bar, table, heatmap]\n- style keys=[lineWidth, markers, grid, xLabels, axisLines, zeroBaseline, seriesColors, fontFamily, framePadding, frameCorners, frameShadow]\n- templates=[standard, classic, newsroom, presentation, social, minimal, warm, earth]\n- zoom=true\n- lang=nl\n\nUser's message: \"maak er staven van en geef het de kop Bevolking in twee steden\"",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "view": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setForm"
+                  },
+                  "form": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "area",
+                      "bar",
+                      "hbar",
+                      "table",
+                      "dumbbell",
+                      "slope",
+                      "heatmap"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "form"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setSeriesView"
+                  },
+                  "hiddenLabels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "highlightedLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "hiddenLabels",
+                  "highlightedLabel"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setPeriodRange"
+                  },
+                  "fromLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "toLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fromLabel",
+                  "toLabel"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setPresentation"
+                  },
+                  "patch": {
+                    "type": "object",
+                    "properties": {
+                      "lineWidth": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "thin",
+                              "normal",
+                              "thick",
+                              "extraThick"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "markers": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "all",
+                              "ends",
+                              "provisionalOnly"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "grid": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "both",
+                              "horizontal",
+                              "none"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "xLabels": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "flat",
+                              "tilted"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "axisLines": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "shown",
+                              "hidden"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "zeroBaseline": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "zero"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "areaFill": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "gradient",
+                              "flat"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fontFamily": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "seriesColors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "seriesLabel": {
+                              "type": "string"
+                            },
+                            "hex": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "seriesLabel",
+                            "hex"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "framePadding": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "small",
+                              "medium",
+                              "large"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "frameCorners": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "square",
+                              "rounded",
+                              "veryRounded"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "frameShadow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "soft",
+                              "strong"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "lineWidth",
+                      "markers",
+                      "grid",
+                      "xLabels",
+                      "axisLines",
+                      "zeroBaseline",
+                      "areaFill",
+                      "fontFamily",
+                      "seriesColors",
+                      "framePadding",
+                      "frameCorners",
+                      "frameShadow"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "patch"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "applyTemplate"
+                  },
+                  "templateId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "templateId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "resetPresentation"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setTitle"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "title"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setCaption"
+                  },
+                  "caption": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "caption"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "addNote"
+                  },
+                  "seriesLabel": {
+                    "type": "string"
+                  },
+                  "periodLabel": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "seriesLabel",
+                  "periodLabel",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "dataRequest": {
+          "type": "boolean"
+        },
+        "refused": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "request": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "not_available",
+                  "not_on_this_chart",
+                  "needs_click"
+                ]
+              },
+              "control": {
+                "type": "string",
+                "enum": [
+                  "notes",
+                  "style",
+                  "form",
+                  "none"
+                ]
+              }
+            },
+            "required": [
+              "request",
+              "reason",
+              "control"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "view",
+        "dataRequest",
+        "refused",
+        "confidence",
+        "reading"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":1,\"view\":[{\"kind\":\"setForm\",\"form\":\"bar\"},{\"kind\":\"setTitle\",\"title\":\"Bevolking in twee steden\"}],\"dataRequest\":false,\"refused\":[],\"confidence\":0.93,\"reading\":\"Switched to bars and set a new title.\"}",
+    "model": "claude-haiku-4-5",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}

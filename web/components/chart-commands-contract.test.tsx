@@ -65,6 +65,9 @@ vi.mock('../app/chart-derivation-actions.ts', () => chartDerivationActions);
 import { ChartView } from './chart.tsx';
 import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';
 import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
+import { allowedForms } from '../lib/chart-fit.ts';
+import type { ChartForm } from '../lib/chart-view-state.ts';
+import { t } from '../lib/i18n/messages.ts';
 
 // chart.test.tsx does not export its fixtures, so its `point`/`spec`/
 // `twoSeriesLineSpec` factories are copied here (chart.test.tsx:87-125 and
@@ -230,6 +233,73 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // separately, over the notes editor itself, further down.
     const missing = cbsKinds.filter((k) => !found.has(k) && !NOTE_KINDS.includes(k as ChartCommandKind));
     expect(missing, `CBS co-pilot command kinds with no control: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  // Phase 5 (chart-fit scorer, session 116, Task 5): the same §6 contract one
+  // level down, at the VALUE of `setForm`. The kind-level scan above only
+  // proves "some setForm control exists"; this pins that every form the CBS
+  // schema can emit is its own real tab on this card, that the tabs enabled
+  // right now are exactly the scorer's `allowedForms` (the one list both the
+  // tab strip and `cbsCapabilities` read — so the chat is never told about a
+  // shape the reader could not click), and that every disabled tab explains
+  // itself. Read straight off the schema, never a hand-copied form list.
+  it('every form the CBS co-pilot schema can emit is a real tab, enabled exactly when the scorer offers it', () => {
+    const setFormOption = cbsViewCommandSchema.options.find((option) => option.shape.kind.value === 'setForm');
+    expect(setFormOption).toBeDefined();
+    // The union member's `form` enum — read through the shape, since the
+    // union type does not expose the one member's own field.
+    const formSchema = (setFormOption!.shape as { form?: { options: readonly string[] } }).form;
+    expect(formSchema).toBeDefined();
+    const chatForms = [...formSchema!.options] as ChartForm[];
+    // The tab labels, per form, from the same message keys chart.tsx renders
+    // (chart-history-menu.tsx's `formLabel` keeps the identical map).
+    const tabLabel: Record<ChartForm, string> = {
+      line: t('nl', 'chart.tabLine'),
+      bar: t('nl', 'chart.tabBar'),
+      table: t('nl', 'chart.tabTable'),
+      area: t('nl', 'chart.form.area'),
+      hbar: t('nl', 'chart.form.hbar'),
+      dumbbell: t('nl', 'chart.form.dumbbell'),
+      slope: t('nl', 'chart.form.slope'),
+      heatmap: t('nl', 'chart.form.heatmap'),
+    };
+    // The chat vocabulary IS the panel vocabulary: no form the schema can
+    // emit without a tab, and no tab the schema cannot name.
+    expect([...chatForms].sort()).toEqual((Object.keys(tabLabel) as ChartForm[]).sort());
+
+    // Two shapes: one that qualifies for all three phase-5 forms
+    // (twoSeriesLineSpec: 2 series × 2 shared periods, every value real)
+    // and one that qualifies for none (its first series alone).
+    const qualifying = twoSeriesLineSpec();
+    const single: ChartSpec = { ...qualifying, series: [qualifying.series[0]!] };
+    for (const spec of [qualifying, single]) {
+      const { container, unmount } = render(<ChartView spec={spec} embed={{ auditId: 1 }} />);
+      const tabs = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"][data-command-kind="setForm"]')];
+      const byForm = new Map<ChartForm, HTMLButtonElement>();
+      for (const form of chatForms) {
+        const tab = tabs.find((el) => el.textContent === tabLabel[form]);
+        expect(tab, `no setForm tab for "${form}" (label "${tabLabel[form]}")`).toBeDefined();
+        byForm.set(form, tab!);
+      }
+      const enabled = chatForms.filter((form) => !byForm.get(form)!.disabled).sort();
+      expect(enabled).toEqual([...allowedForms(spec, spec.series.length)].sort());
+      // A disabled tab's reason is reachable: `title` for the pointer and a
+      // non-empty `aria-describedby` target for a screen reader.
+      for (const form of chatForms) {
+        const tab = byForm.get(form)!;
+        if (!tab.disabled) continue;
+        expect(tab.getAttribute('title'), `${form} title`).toBeTruthy();
+        const reason = container.querySelector(`#${CSS.escape(tab.getAttribute('aria-describedby') ?? '')}`);
+        expect(reason?.textContent, `${form} aria-describedby`).toBe(tab.getAttribute('title'));
+      }
+      unmount();
+    }
+    // The three phase-5 forms, named: on the qualifying shape they are all
+    // offered, on the single-series shape none is.
+    for (const form of ['dumbbell', 'slope', 'heatmap'] as const) {
+      expect(allowedForms(qualifying, 2), form).toContain(form);
+      expect(allowedForms(single, 1), form).not.toContain(form);
+    }
   });
 
   // Task 5: the reader's own title and caption edit IN PLACE on the card —

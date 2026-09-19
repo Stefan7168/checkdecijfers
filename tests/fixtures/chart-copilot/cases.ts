@@ -186,10 +186,17 @@ export const REGION_SERIES_SPEC: ChartSpec = {
 
 /** What the browser tells the co-pilot this chart can do — a `line` kind
  * with 2 series and 5 period codes (so `zoom: true`), written out by hand
- * the way LINE_CAPABILITIES is in the own-data cases: forms line/bar/table,
+ * the way LINE_CAPABILITIES is in the own-data cases: forms line/bar/table
+ * — plus heatmap since phase 5 (chart-fit scorer, session 116): the tab
+ * strip and `cbsCapabilities` both read chart-fit.ts's `allowedForms`, and
+ * two series over the same five real-valued periods IS a heat-map grid, so
+ * the browser now sends `forms=[line, bar, table, heatmap]` for this chart.
+ * This list must stay byte-equal to what chart.tsx sends, or the llm-stub's
+ * exact match misses and its 60-character PREFIX fallback silently replays
+ * whichever fixture with this title/unit sorts first (Task 5 finding) —
  * presentation = everything but areaFill, all templates, lang nl. */
 export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
-  forms: ['line', 'bar', 'table'],
+  forms: ['line', 'bar', 'table', 'heatmap'],
   presentationKeys: [
     'lineWidth',
     'markers',
@@ -208,7 +215,84 @@ export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
   lang: 'nl',
 };
 
+/** Phase 5 (chart-fit scorer, session 116, Task 5): the SAME captured cells
+ * narrowed to a two-period range — what the harness draws for `!!intent`
+ * with period 2023JJ00–2024JJ00 over the same two regions (the shape that
+ * qualifies for dumbbell, slope AND heatmap: every series exactly two real
+ * points). Derived from REGION_SERIES_SPEC rather than re-captured: the
+ * request bytes carry only title/unit/kind/series labels/period labels
+ * (parse.ts `chartLabels`), all of which narrowing leaves exactly as the
+ * pipeline produces them — and the browser proof (chart-copilot.spec.ts)
+ * only passes on an `exact` llm-stub hit, which is the check that this
+ * derivation matches the real request. */
+function narrowedTo(spec: ChartSpec, periodCodes: readonly string[]): ChartSpec {
+  const series = spec.series.map((s) => ({
+    ...s,
+    points: s.points.filter((point) => periodCodes.includes(point.periodCode)),
+  }));
+  const kept = series[0]!.points;
+  const [fromLabel, toLabel] = [kept[0]!.periodLabel, kept[kept.length - 1]!.periodLabel];
+  return {
+    ...spec,
+    series,
+    attributionLine: spec.attributionLine.replace(/Periode: \S+ t\/m \S+\./, `Periode: ${fromLabel} t/m ${toLabel}.`),
+    attribution: { ...spec.attribution, coveredPeriods: { from: periodCodes[0]!, to: periodCodes[periodCodes.length - 1]! } },
+  };
+}
+
+export const TWO_PERIOD_SPEC: ChartSpec = narrowedTo(REGION_SERIES_SPEC, ['2023JJ00', '2024JJ00']);
+
+/** The same chart with Amsterdam alone (`!!intent` with one region, five
+ * periods): a single series qualifies for none of the three phase-5 forms
+ * (each needs at least two series), and — one series — area IS offered. */
+export const SINGLE_SERIES_SPEC: ChartSpec = { ...REGION_SERIES_SPEC, series: [REGION_SERIES_SPEC.series[0]!] };
+
+/** `allowedForms` (web/lib/chart-fit.ts) for the two shapes above, in the
+ * scorer's own fixed order — the browser sends exactly this list. */
+export const TWO_PERIOD_CAPABILITIES: CbsCopilotCapabilities = {
+  ...REGION_SERIES_CAPABILITIES,
+  forms: ['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap'],
+};
+export const SINGLE_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
+  ...REGION_SERIES_CAPABILITIES,
+  forms: ['line', 'area', 'bar', 'table'],
+};
+
+/** The phase-5 e2e message, verbatim (chart-copilot.spec.ts). */
+export const DUMBBELL_MESSAGE = 'toon dit als een dumbbell';
+
 export const CASES: CbsCopilotCase[] = [
+  // Phase 5 (Task 5): the same message over a chart that offers the form...
+  {
+    label: 'cbs-copilot/dumbbell-two-periods',
+    spec: TWO_PERIOD_SPEC,
+    capabilities: TWO_PERIOD_CAPABILITIES,
+    message: DUMBBELL_MESSAGE,
+    output: {
+      version: 1,
+      view: [{ kind: 'setForm', form: 'dumbbell' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Two moments per city and dumbbell is among the forms on offer: switched.',
+    },
+  },
+  // ...and over one that does not — the prompt's own rule: a form not under
+  // CAPABILITIES goes in `refused` with reason not_available, control form.
+  {
+    label: 'cbs-copilot/dumbbell-single-series',
+    spec: SINGLE_SERIES_SPEC,
+    capabilities: SINGLE_SERIES_CAPABILITIES,
+    message: DUMBBELL_MESSAGE,
+    output: {
+      version: 1,
+      view: [],
+      dataRequest: false,
+      refused: [{ request: 'dumbbell', reason: 'not_available', control: 'form' }],
+      confidence: 0.9,
+      reading: 'One series over five years: dumbbell is not among the forms this chart offers.',
+    },
+  },
   {
     label: 'cbs-copilot/hide-rotterdam',
     spec: REGION_SERIES_SPEC,

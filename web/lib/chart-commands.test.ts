@@ -89,7 +89,14 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
       return allowInstruction
         ? { kind, instruction: instruction({ kind: r() < 0.5 ? 'bar' : 'line', x: 'c0' }), summary: `staaf per jaar ${'x'.repeat(n)}` }
         : { kind: 'setCaption', caption: null };
-    case 'setForm': return { kind, form: pick(r, ['line', 'bar', 'table'] as const) };
+    // Only the forms the shared `ctx` spec (2 series × 3 periods, line kind)
+    // honestly offers — the property asserts `validateCommand` on every draw.
+    // Phase 5 (chart-fit scorer, Task 5): heatmap joins (≥2 series, ≥2
+    // shared periods, all values real); dumbbell/slope need EXACTLY two
+    // periods, which this ctx does not have — see the targeted two-point
+    // round-trip further down. Not `allowedForms(...)`: a literal fails
+    // loudly if a guard change ever stops offering one of these here.
+    case 'setForm': return { kind, form: pick(r, ['line', 'bar', 'table', 'heatmap'] as const) };
     case 'toggleSeries': return { kind, key: pick(r, ['s0', 's1']) };
     case 'setHighlight': return { kind, key: pick(r, ['s0', 's1', null]) };
     case 'setSeriesView': return { kind, hiddenKeys: r() < 0.5 ? ['s0'] : [], highlightedKey: pick(r, ['s0', 's1', null]) };
@@ -139,6 +146,32 @@ describe('applyCommand / invertCommand', () => {
       for (const inv of inverses.reverse()) state = applyCommand(state, inv);
       expect(plain(state), `seed ${seed}`).toEqual(plain(start));
     }
+  });
+
+  // Phase 5 (chart-fit scorer, Task 5): dumbbell and slope need EXACTLY two
+  // periods per series (`dumbbellFormAllowed`), which the shared 3-period
+  // `ctx` above never has — so the property cannot draw them without failing
+  // its own validateCommand check. The same apply-then-invert round-trip,
+  // on a context that qualifies (2 series × 2 periods), plus the negative:
+  // the shared ctx refuses both, and the qualifying one still offers heatmap.
+  it('dumbbell and slope validate on a two-point context, and apply+invert restores the previous form', () => {
+    const twoPoint: CommandContext = {
+      spec: { ...spec(), series: [series('Nederland', ['2020', '2021']), series('Utrecht', ['2020', '2021'])] },
+      alternatesCount: 0,
+    };
+    for (const form of ['dumbbell', 'slope', 'heatmap'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, twoPoint), form).toBe(true);
+      const start = initialDocState('line', {});
+      const cmd = { kind: 'setForm', form } as const;
+      const inverse = invertCommand(start, cmd);
+      const after = applyCommand(start, cmd);
+      expect(after.form).toBe(form);
+      expect(plain(applyCommand(after, inverse)), form).toEqual(plain(start));
+    }
+    // Three periods: exactly-two forms are refused, heatmap is not.
+    expect(validateCommand({ kind: 'setForm', form: 'dumbbell' }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setForm', form: 'slope' }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setForm', form: 'heatmap' }, ctx)).toBe(true);
   });
 
   it('undoing a note removal puts the note back at its original position', () => {

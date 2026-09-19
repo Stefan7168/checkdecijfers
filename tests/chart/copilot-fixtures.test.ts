@@ -27,8 +27,11 @@ function readFixture(hash: string): RecordedFixture {
 }
 
 describe('CBS chart co-pilot LLM fixtures', () => {
-  it('has three cases over one ChartSpec', () => {
-    expect(CASES).toHaveLength(3);
+  // Phase 5 (Task 5): five — the three phase-3 cases over the captured spec,
+  // plus the dumbbell pair over two shapes DERIVED from that same capture
+  // (cases.ts `TWO_PERIOD_SPEC`/`SINGLE_SERIES_SPEC`), still one table.
+  it('has five cases over one captured ChartSpec and its two derived shapes', () => {
+    expect(CASES).toHaveLength(5);
     expect(new Set(CASES.map((c) => c.spec.attribution.tableId))).toEqual(new Set(['03759ned']));
   });
 
