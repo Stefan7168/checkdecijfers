@@ -1744,8 +1744,10 @@ export function ChartView({
   // The recipes live in the undoable command history; the resolved values
   // (the actual numbers) live here, transient per session.
   const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, DerivationRecord>>(new Map());
+  // Session-local: whether difference picker mode is active.
+  const [differencePickerActive, setDifferencePickerActive] = useState(false);
   // Session-local: which point was selected first for a two-point difference.
-  // Stores {resultId, regionCode} for the first click; null when mode is off or after completion.
+  // Stores {resultId, regionCode} for the first click; null when no point selected yet.
   const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; regionCode: string | null } | null>(null);
   // Error from failed difference request (e.g., different regions).
   const [differenceError, setDifferenceError] = useState<string | null>(null);
@@ -1772,45 +1774,17 @@ export function ChartView({
   // Never touches the command history — the recipe stays undoable, the resolved
   // value lives here transiently.
   useEffect(() => {
+    // Only resolve if we have a valid audit id
+    if (embed?.auditId === undefined) return;
     const requester = async (calcKind: 'difference' | 'mean', resultIds: string[]) => {
       return requestChartDerivation(
-        { kind: 'answer', id: embed?.auditId ?? 0 },
+        { kind: 'answer', id: embed.auditId },
         calcKind,
         resultIds,
       );
     };
     void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(setResolvedOverlays);
   }, [state.derivedOverlayRequests, embed?.auditId]);
-
-  // Task 7: render labels for resolved overlays inside the chart container.
-  // The labels display the formatted values with data-label-for binding.
-  useEffect(() => {
-    if (chartContainerRef.current === null || resolvedOverlays.size === 0) return;
-    // Find or create a labels container inside the chart
-    let labelsContainer = chartContainerRef.current.querySelector('[data-overlay-labels]') as HTMLDivElement | null;
-    if (!labelsContainer) {
-      labelsContainer = document.createElement('div');
-      labelsContainer.setAttribute('data-overlay-labels', 'true');
-      labelsContainer.style.position = 'absolute';
-      labelsContainer.style.inset = '0';
-      labelsContainer.style.pointerEvents = 'none';
-      chartContainerRef.current.appendChild(labelsContainer);
-    }
-    labelsContainer.innerHTML = '';
-    // Render a label for each resolved overlay
-    Array.from(resolvedOverlays.entries()).forEach(([id, record]) => {
-      const label = document.createElement('div');
-      label.setAttribute('data-label-for', record.sourceResultIds.join(','));
-      label.className = 'text-xs font-semibold text-foreground';
-      label.style.position = 'absolute';
-      label.style.backgroundColor = 'var(--background)';
-      label.style.padding = '2px 4px';
-      label.style.borderRadius = '3px';
-      label.style.whiteSpace = 'nowrap';
-      label.textContent = `${record.kind === 'difference' ? '↕' : '–'} ${formatValueNl(record.value, 0)}`;
-      labelsContainer!.appendChild(label);
-    });
-  }, [resolvedOverlays]);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -1914,32 +1888,40 @@ export function ChartView({
   // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
   // to live) purely because `embedOpen` is derived from `openPanel`, which
   // isn't in scope any earlier in this component.
-  // Task 7: also capture the first point for difference overlays when picker is active.
+  // Task 7: capture points for difference overlays when picker is active.
   const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => {
-    setPendingPoint(p);
-    // If difference picker is active (firstDifferencePoint is not null), handle the second point
-    if (firstDifferencePoint !== null) {
-      setDifferenceError(null);
-      // Check if both points are in the same region
-      if (firstDifferencePoint.regionCode !== p.regionCode) {
-        setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
-        setFirstDifferencePoint(null);
+    // Handle difference picker if active
+    if (differencePickerActive) {
+      if (firstDifferencePoint === null) {
+        // First point: store it
+        setFirstDifferencePoint({ resultId: p.resultId, regionCode: p.regionCode });
       } else {
-        // Both points are in the same region, create the difference overlay
-        dispatchCommand(
-          {
-            kind: 'addDerivedOverlay',
-            overlay: {
-              id: newCommandId(),
-              calcKind: 'difference',
-              resultIds: [firstDifferencePoint.resultId, p.resultId],
+        // Second point: validate region and create overlay
+        setDifferenceError(null);
+        if (firstDifferencePoint.regionCode !== p.regionCode) {
+          setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
+          setFirstDifferencePoint(null);
+        } else {
+          // Both points in same region: dispatch command and exit picker mode
+          dispatchCommand(
+            {
+              kind: 'addDerivedOverlay',
+              overlay: {
+                id: newCommandId(),
+                calcKind: 'difference',
+                resultIds: [firstDifferencePoint.resultId, p.resultId],
+              },
             },
-          },
-          'panel',
-        );
-        setFirstDifferencePoint(null);
+            'panel',
+          );
+          setDifferencePickerActive(false);
+          setFirstDifferencePoint(null);
+        }
       }
+      return; // Don't open note UI when in picker mode
     }
+    // Normal point click: open note UI
+    setPendingPoint(p);
   };
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
@@ -3334,7 +3316,7 @@ export function ChartView({
                   strokeDasharray="3 3"
                 />
               ))}
-              {/* Task 7: render mean overlay lines */}
+              {/* Task 7: render derived overlay lines */}
               {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
                 record.kind === 'mean' ? (
                   <ReferenceLine
@@ -3342,6 +3324,7 @@ export function ChartView({
                     y={record.value}
                     stroke="var(--accent)"
                     strokeDasharray="2 2"
+                    label={{ value: formatValueNl(record.value, 0), position: 'right' }}
                     data-label-for={record.sourceResultIds.join(',')}
                   />
                 ) : null,
@@ -3440,7 +3423,7 @@ export function ChartView({
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
-              {/* Task 7: render mean overlay lines */}
+              {/* Task 7: render derived overlay lines */}
               {Array.from(resolvedOverlays.entries()).map(([id, record]) =>
                 record.kind === 'mean' ? (
                   <ReferenceLine
@@ -3448,6 +3431,7 @@ export function ChartView({
                     y={record.value}
                     stroke="var(--accent)"
                     strokeDasharray="2 2"
+                    label={{ value: formatValueNl(record.value, 0), position: 'right' }}
                     data-label-for={record.sourceResultIds.join(',')}
                   />
                 ) : null,
@@ -4290,16 +4274,18 @@ export function ChartView({
               <Button
                 type="button"
                 size="sm"
-                variant={firstDifferencePoint ? 'default' : 'outline'}
+                variant={differencePickerActive ? 'default' : 'outline'}
                 data-command-kind="addDerivedOverlay"
+                aria-pressed={differencePickerActive}
                 title={t(chartLang, 'chart.derived.differenceLabel')}
                 onClick={() => {
+                  setDifferencePickerActive((active) => !active);
                   setFirstDifferencePoint(null);
                   setDifferenceError(null);
                 }}
                 className="text-xs"
               >
-                {firstDifferencePoint ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
+                {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
               </Button>
               <Button
                 type="button"
