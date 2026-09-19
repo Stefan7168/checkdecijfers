@@ -660,7 +660,7 @@ const nl = {
   // #17 (session 110 UX audit pass 2): notes are session-only and excluded
   // from every download/embed by construction (ADR 038) — nothing on
   // screen said so before this line.
-  'chart.notes.sessionOnly': 'Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.',
+  'chart.notes.sessionOnly': 'Aantekeningen staan niet in downloads of embeds.',
 
   // chart-goal-line.tsx.
   'chart.goalLine.heading': 'Uw doellijnen (geen CBS-data)',
@@ -679,7 +679,7 @@ const nl = {
   // (chart.tsx, "Task 3 (phase 4)" block) — only the reader's own typed
   // label text stays outside it. What stays true, and is worth saying: it's
   // the reader's own annotation, never checked against a CBS cell.
-  'chart.goalLine.sessionOnly': 'Dit doel is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De lijn zelf is zichtbaar in downloads en embeds; het label dat je typt niet.',
+  'chart.goalLine.sessionOnly': 'Dit doel is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De lijn zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
 
   // chart-era-shading.tsx.
   'chart.eraShading.heading': 'Periode markeren (geen CBS-data)',
@@ -689,7 +689,7 @@ const nl = {
   // — the band (ReferenceArea) genuinely is inside the export (Task 3), and
   // a signed-in reader's era shadings persist across a reload the same way
   // goal lines do; only the typed label text stays out.
-  'chart.eraShading.sessionOnly': 'Deze markering is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De band zelf is zichtbaar in downloads en embeds; het label dat je typt niet.',
+  'chart.eraShading.sessionOnly': 'Deze markering is jouw eigen aantekening, niet gecontroleerd aan CBS-cijfers. De band zelf is zichtbaar in downloads; het label dat je typt niet, en geen van beide verschijnt in een embed.',
   'chart.eraShading.trigger': 'Periode markeren',
   'chart.eraShading.fromLabel': 'Van',
   'chart.eraShading.toLabel': 'Tot',
@@ -1727,7 +1727,7 @@ const en: Messages = {
   'chart.notes.draftLabel': 'Note at {series} · {period}',
   'chart.notes.save': 'Save',
   'chart.notes.cancel': 'Cancel',
-  'chart.notes.sessionOnly': 'Notes stay in this session and are not included in downloads or embeds.',
+  'chart.notes.sessionOnly': 'Notes are not included in downloads or embeds.',
 
   'chart.goalLine.heading': 'Your goal lines (not CBS data)',
   'chart.goalLine.add': 'Add goal line',
@@ -1742,13 +1742,13 @@ const en: Messages = {
   // signed-in reader on a saved chart (use-chart-edits.ts); only the typed
   // label text stays out of the export and is never checked against a CBS
   // cell.
-  'chart.goalLine.sessionOnly': 'This goal is your own note, not checked against CBS figures. The line itself shows up in downloads and embeds; the label you type does not.',
+  'chart.goalLine.sessionOnly': 'This goal is your own note, not checked against CBS figures. The line itself shows up in downloads; the label you type does not, and neither appears in an embed.',
 
   'chart.eraShading.heading': 'Mark period ranges (not CBS data)',
   'chart.eraShading.delete': 'Delete',
   'chart.eraShading.deleteAriaLabel': 'Delete the marking {period}',
   // Final-review fix I5: see the `nl` entry's comment.
-  'chart.eraShading.sessionOnly': 'This marking is your own note, not checked against CBS figures. The band itself shows up in downloads and embeds; the label you type does not.',
+  'chart.eraShading.sessionOnly': 'This marking is your own note, not checked against CBS figures. The band itself shows up in downloads; the label you type does not, and neither appears in an embed.',
   'chart.eraShading.trigger': 'Mark period range',
   'chart.eraShading.fromLabel': 'From',
   'chart.eraShading.toLabel': 'To',

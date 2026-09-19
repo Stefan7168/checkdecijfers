@@ -10,9 +10,10 @@
 // typed LABEL text is automatically excluded from PNG/SVG export. The shaded
 // BAND itself is drawn separately, as a `<ReferenceArea>` inside chart.tsx's
 // own chart JSX ("Task 3 (phase 4)" block) — that band renders INSIDE
-// chartContainerRef and DOES appear in downloads/embeds (the C2/I5
+// chartContainerRef and DOES appear in a PNG/SVG download (the C2/I5
 // final-review ruling); only the label text this component renders stays
-// excluded.
+// excluded. It never appears in an embed at all — an embed has no saved
+// command log to replay in the first place.
 //
 // Final-review fix I5: this used to say "Session-only by design" — wrong.
 // For a signed-in reader on a saved chart, the WHOLE command (including

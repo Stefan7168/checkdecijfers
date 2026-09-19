@@ -2609,6 +2609,24 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
     expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
   });
 
+  // Final-review fix wave residual (found by the scoped re-review, not the
+  // original review): I2's form-gate hides the picker's own button on a
+  // form switch, but an ACTIVE picker left nothing resetting its state —
+  // `onPointClick` stays wired on every form, so it would silently hijack
+  // bar-form point clicks (recording a "first point" with no visible picker
+  // UI to explain why). Switching away from line/area must clear it.
+  it('switching to a bar form while the difference picker is active resets it, rather than leaving it silently armed', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    const pickerButton = screen.getByRole('button', { name: 'Verschil aanduiden' });
+    fireEvent.click(pickerButton);
+    expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+
+    expect(screen.getByRole('button', { name: 'Verschil aanduiden' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
   // I1: a resolved overlay's label used to always be
   // `formatValueNl(record.value, 0)` — 0 decimals, no unit, regardless of
   // what the underlying series actually carries. twoSeriesLineSpec's points

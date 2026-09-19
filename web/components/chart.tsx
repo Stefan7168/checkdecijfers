@@ -1056,9 +1056,12 @@ function derivationRefusalMessage(lang: Lang, reason: string): string {
  * here too, so it applies everywhere at once. Bar/hbar forms render nothing
  * at all here — I2's chosen fix gates the add-overlay CONTROLS to the
  * line/area forms instead (see the `activeForm === 'line' || activeForm ===
- * 'area'` gate further down), so `state.derivedOverlayRequests` can never be
- * non-empty while a bar/hbar form is active and this function would have
- * nothing to draw there regardless.
+ * 'area'` gate further down). This does NOT mean `state.derivedOverlayRequests`
+ * is always empty on bar/hbar: an overlay added on line/area stays in the
+ * (undoable) command log across a later form switch — its remove chip and
+ * any refusal message are simply hidden while bar/hbar is active, same as
+ * this render function drawing nothing for it there; switching back to
+ * line/area or undoing makes both visible again.
  *
  * Deliberately a plain FUNCTION returning an array — NOT a React component
  * (no `<DerivedOverlaysLayer />` JSX element). Recharts decides what to
@@ -2227,6 +2230,20 @@ export function ChartView({
   const canUseArea = areaFormAllowed(spec, spec.series.length);
   const canUseHbar = hbarFormAllowed(spec);
   const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
+  // Final-review fix wave residual: the difference picker's controls (and
+  // the add-overlay controls generally) are only shown for line/area form
+  // (I2) — but `onPointClick` below stays wired on every form, so an
+  // ACTIVE picker left on when the reader switches to bar/hbar/table would
+  // silently hijack bar-point clicks (recording a "first point" with no
+  // visible picker UI to explain why the note editor stopped opening).
+  // Clearing it here the moment the form leaves line/area closes that gap.
+  useEffect(() => {
+    if (activeForm !== 'line' && activeForm !== 'area') {
+      setDifferencePickerActive(false);
+      setFirstDifferencePoint(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only the form matters here, not the setters
+  }, [activeForm]);
   // WP218 phase 5: area renders through the SAME LineChart-shaped data model
   // as line (one row per period, `rows`/`plan`/`markers` all reused
   // verbatim — see the Area branch below), and hbar through the same
@@ -3568,7 +3585,7 @@ export function ChartView({
                 * draws, and — like the era shading band above it — that
                 * value genuinely is inside the export. */}
               {state.goalLines.map((line) => (
-                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" />
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
               ))}
               {/* Row 3 (session 110 UX audit pass 4): the LAST child, so it
                 * paints after every Line above — see EndLabelsOverlay's own
@@ -3697,7 +3714,7 @@ export function ChartView({
                 * above for the full reasoning (no `label` prop, the reader's
                 * typed text stays out of the export). */}
               {state.goalLines.map((line) => (
-                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" />
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
               ))}
               {/* Row 3 (session 110 UX audit pass 4): see the LineChart
                 * branch above — same overlay, same reasoning. */}

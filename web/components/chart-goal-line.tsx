@@ -11,9 +11,10 @@
 // token-scan exemption needed) and never enters a PNG/SVG export. The goal
 // VALUE is drawn separately, as a `<ReferenceLine>` inside chart.tsx's own
 // chart JSX (see chart.tsx's "Task 3 (phase 4)" block / the C2 final-review
-// fix) — that line renders INSIDE chartContainerRef and DOES appear in
-// downloads/embeds; only this component's own list/label text stays
-// excluded.
+// fix) — that line renders INSIDE chartContainerRef and DOES appear in a
+// PNG/SVG download; only this component's own list/label text stays
+// excluded. It never appears in an embed at all (see the I5 note below —
+// an embed has no saved command log to replay in the first place).
 //
 // Final-review fix I5: this used to say "Session-only by owner decision (F):
 // no persistence, nothing here survives a reload" — wrong. For a signed-in
@@ -70,8 +71,9 @@ export function ChartGoalLine({
       <div role="heading" aria-level={4} className="text-xs font-semibold text-muted-foreground">
         {t(lang, 'chart.goalLine.heading')}
       </div>
-      {/* Goal lines are session-only and excluded from every download/embed
-        * by construction (ADR 038) — this is the disclosure that says so. */}
+      {/* The typed label is excluded from every download/embed by
+        * construction (ADR 038); the line itself persists and does appear
+        * in a download (I5) — this is the disclosure that says so. */}
       <p className="mt-0.5 text-[11px] text-muted-foreground">{t(lang, 'chart.goalLine.sessionOnly')}</p>
       {goalLines.length > 0 ? (
         <ul className="mt-2 flex flex-col gap-1.5">

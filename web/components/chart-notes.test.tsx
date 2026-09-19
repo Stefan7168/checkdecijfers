@@ -44,11 +44,16 @@ describe('ChartNotes', () => {
   });
 
   // #17 (session 110 UX audit pass 2): nothing on screen said notes are
-  // session-only and excluded from downloads/embeds (both deliberate, ADR
-  // 038) — the affordance read like a normal, persisted annotation feature.
-  it('discloses that notes are session-only and excluded from downloads/embeds', () => {
+  // excluded from downloads/embeds (deliberate, ADR 038) — the affordance
+  // read like a normal, persisted annotation feature. Final-review fix I5
+  // (session 115): the disclosure used to also claim notes are
+  // "session-only" — wrong, a signed-in reader's notes DO persist via the
+  // saved command log (use-chart-edits.ts), same as every other
+  // chart-copilot command; only the exclusion from downloads/embeds is
+  // actually true.
+  it('discloses that notes are excluded from downloads/embeds', () => {
     render(<ChartNotes notes={[NOTE]} pendingPoint={null} idPrefix="test" onSave={vi.fn()} onCancelPending={vi.fn()} onDelete={vi.fn()} {...defaultProps} />);
-    expect(screen.getByText('Aantekeningen blijven in deze sessie en staan niet in downloads of embeds.')).toBeInTheDocument();
+    expect(screen.getByText('Aantekeningen staan niet in downloads of embeds.')).toBeInTheDocument();
   });
 
   it('shows an entry form when a point is pending, labelled with the clicked point context', () => {
