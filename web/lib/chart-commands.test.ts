@@ -103,15 +103,18 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
     case 'removeNote': return state.notes.length > 0 ? { kind, noteId: pick(r, state.notes).id } : { kind: 'setCaption', caption: null };
     case 'setTitle': return { kind, title: r() < 0.3 ? null : `titel ${n}` };
     case 'setCaption': return { kind, caption: r() < 0.3 ? null : `bijschrift ${n}` };
-    // Phase 4 commands — for the property test, return a no-op rather than random values
-    case 'addGoalLine': return { kind: 'setCaption', caption: null };
-    case 'removeGoalLine': return { kind: 'setCaption', caption: null };
-    case 'addEraShading': return { kind: 'setCaption', caption: null };
-    case 'removeEraShading': return { kind: 'setCaption', caption: null };
-    case 'setDimmed': return { kind: 'setCaption', caption: null };
-    case 'setHeadlineOverride': return { kind: 'setCaption', caption: null };
-    case 'addDerivedOverlay': return { kind: 'setCaption', caption: null };
-    case 'removeDerivedOverlay': return { kind: 'setCaption', caption: null };
+    // Phase 4 commands (Task 8, session 115): real round-trippable values,
+    // mirroring the addNote/removeNote pattern above — a remove kind picks
+    // an existing entry from `state` when one exists, else falls back to a
+    // harmless no-op (setCaption null) the same way removeNote does.
+    case 'addGoalLine': return { kind, goalLine: { id: `g${n}`, value: n, label: `doel ${n}` } };
+    case 'removeGoalLine': return state.goalLines.length > 0 ? { kind, goalLineId: pick(r, state.goalLines).id } : { kind: 'setCaption', caption: null };
+    case 'addEraShading': return { kind, era: { id: `e${n}`, fromPeriodCode: '2020', toPeriodCode: pick(r, ['2021', '2022']), label: `era ${n}` } };
+    case 'removeEraShading': return state.eraShadings.length > 0 ? { kind, eraShadingId: pick(r, state.eraShadings).id } : { kind: 'setCaption', caption: null };
+    case 'setDimmed': return { kind, hiddenKeys: [], dimmedKeys: r() < 0.5 ? ['s0'] : [] };
+    case 'setHeadlineOverride': return { kind, resultId: pick(r, ['r-2020', 'r-2021', null]) };
+    case 'addDerivedOverlay': return { kind, overlay: { id: `d${n}`, calcKind: pick(r, ['difference', 'mean'] as const), resultIds: ['r-2020', 'r-2021'] } };
+    case 'removeDerivedOverlay': return state.derivedOverlayRequests.length > 0 ? { kind, overlayId: pick(r, state.derivedOverlayRequests).id } : { kind: 'setCaption', caption: null };
   }
 }
 /** Sets are compared as sorted arrays so deep equality is meaningful. */
@@ -348,7 +351,14 @@ describe('parseCommandLog', () => {
         state = applyCommand(state, cmd);
       }
       const log = commands.map((c) => makeCommand(c, 'canvas'));
-      expect(JSON.stringify(log), `seed ${seed}`).not.toMatch(/"value"|formattedValue/);
+      // GoalLine.value is a reader-TYPED number, explicitly allowed by the
+      // phase-4 spec's Global Constraints ("reader-typed values... are fine
+      // as command payloads — they are the reader's own words, not a data
+      // claim") — unlike a ChartPoint's data `value`/`formattedValue`, which
+      // this scan exists to catch. Stripped before the blunt scan below so
+      // the one approved exception doesn't mask a real future leak.
+      const scanTarget = JSON.stringify(log).replace(/"goalLine":\{[^}]*\}/g, '"goalLine":{}');
+      expect(scanTarget, `seed ${seed}`).not.toMatch(/"value"|formattedValue/);
     }
   });
 });

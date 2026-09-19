@@ -118,8 +118,18 @@ afterEach(cleanup);
 
 /** Kinds whose control only exists inside the open Style panel. */
 const PANEL_KINDS: ChartCommandKind[] = ['setPresentation', 'replacePresentation', 'resetPresentation', 'applyTemplate'];
-/** Kinds whose control only exists once a point has been clicked / a note exists. */
-const NOTE_KINDS: ChartCommandKind[] = ['addNote', 'removeNote'];
+/** Kinds whose control only exists once a point has been clicked, or once a
+ * note/goal-line/era-shading/derived-overlay already exists to remove.
+ * `setHeadlineOverride` (phase 4, Task 5) lives in the SAME pendingPoint UI
+ * as addNote/removeNote — same gating, same reasoning. */
+const NOTE_KINDS: ChartCommandKind[] = [
+  'addNote',
+  'removeNote',
+  'setHeadlineOverride',
+  'removeGoalLine',
+  'removeEraShading',
+  'removeDerivedOverlay',
+];
 /** Co-pilot phase 2 (session 113), Task 4: kinds whose control lives on the
  * OWN-DATA card, not this CBS one. `setInstruction` names dataset columns, so
  * a CBS chart has no control for it and — by the ADR 037 D11 type guard —
@@ -127,6 +137,27 @@ const NOTE_KINDS: ChartCommandKind[] = ['addNote', 'removeNote'];
  * card's suite (Task 5/6), which scans the same `data-command-kind`
  * attribute. */
 const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction'];
+/** Phase 4, Task 7 (ADR 056): a derived overlay (difference/average) is
+ * computed via `requestChartDerivation`, which only accepts an audited CBS
+ * answer (`{ kind: 'answer', id }`) — own-data charts have no audit row to
+ * re-derive from, and already have full arithmetic freedom via
+ * `setInstruction`'s own aggregate/derive vocabulary (owner decision,
+ * spec §7.1). CBS-only by construction, same as `setPeriodRange`/
+ * `setReading` above. */
+const DERIVED_OVERLAY_KINDS: ChartCommandKind[] = ['addDerivedOverlay', 'removeDerivedOverlay'];
+/** Phase 4 (session 115): goal line, era shading and the reader-chosen
+ * headline override were built for the CBS/Eurostat card only this session
+ * — own-data support is a natural, cheap follow-up (none of the three has
+ * any data-provenance complexity that would make it harder there) but was
+ * not part of this session's scope. Tracked as a residual, not silently
+ * dropped. */
+const CBS_CARD_ONLY_KINDS: ChartCommandKind[] = [
+  'addGoalLine',
+  'removeGoalLine',
+  'addEraShading',
+  'removeEraShading',
+  'setHeadlineOverride',
+];
 
 function kindsInDom(root: HTMLElement): Set<string> {
   const out = new Set<string>();
@@ -148,9 +179,19 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     // Opening the Style panel mounts its kinds. The panel is a portaled,
     // next/dynamic-loaded modal (chart.test.tsx's own note), so this awaits
     // a control inside it and the scan below reads document.body, not the
-    // render container.
+    // render container. Goal line and era shading (phase 4) are ALSO their
+    // own next/dynamic components (`ssr: false`) — their trigger buttons can
+    // resolve a tick after the modal tab, so each is awaited explicitly
+    // before the scan; without this the scan can run before their lazy
+    // import settles and flag them as missing when they are not.
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     await screen.findByRole('tab', { name: 'Grafiek' });
+    // Goal line's and era shading's own `addGoalLine`/`addEraShading`
+    // data-command-kind sits on each form's SAVE button, not its trigger —
+    // same gating as addNote (see NOTE_KINDS), so the forms are opened here
+    // rather than exempting the kinds outright.
+    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
 
     const found = kindsInDom(document.body);
     const missing = CHART_COMMAND_KINDS.filter(
@@ -287,7 +328,12 @@ describe('own-data card — the same command ↔ control contract (Task 6)', () 
 
     const found = kindsInDom(document.body);
     const missing = CHART_COMMAND_KINDS.filter(
-      (k) => !found.has(k) && !CBS_ONLY_KINDS.includes(k) && !NOTE_KINDS.includes(k),
+      (k) =>
+        !found.has(k) &&
+        !CBS_ONLY_KINDS.includes(k) &&
+        !NOTE_KINDS.includes(k) &&
+        !DERIVED_OVERLAY_KINDS.includes(k) &&
+        !CBS_CARD_ONLY_KINDS.includes(k),
     );
     expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
     // The one kind the CBS card cannot offer at all.
