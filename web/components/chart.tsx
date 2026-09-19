@@ -4664,6 +4664,13 @@ export function ChartView({
         * never part of the honest card an embed re-publishes elsewhere. */}
       {!styleOpen ? captionNode : null}
       {!styleOpen ? notesNode : null}
+      {/* Controller fix (session 115, Task 3 fix round 4): eraShadingNode was
+       * only ever passed to ChartEditModal's `chartSlot` (rendered only when
+       * `styleOpen` is true — see the "SAME lifted values" comment above),
+       * so the era-shading trigger never appeared in the default,
+       * non-modal dock — the same `!styleOpen ? X : null` mirroring every
+       * other dock node here (captionNode, notesNode) already uses. */}
+      {!styleOpen ? eraShadingNode : null}
       {/* Task 3 (co-pilot phase 3): mounted directly after the notes strip,
         * outside chartContainerRef like the caption and the notes — a
         * reader's own words never enter a PNG/SVG export. Final review

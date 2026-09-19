@@ -6216,11 +6216,17 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     // Click the era shading trigger button (dynamic component loads on click)
     fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
 
-    // Wait for the form to be visible and get the inputs
+    // Wait for the form to be visible and get the inputs. Scoped via the
+    // "Van" select's own row: the chart's separate zoom control also has a
+    // "Tot"-labelled select (which also carries a redundant aria-label
+    // alongside its own <label htmlFor>), so a plain
+    // screen.getByLabelText('Tot') matches both and throws.
     const fromSelect = await screen.findByLabelText('Van');
     fireEvent.change(fromSelect, { target: { value: '2020' } });
 
-    const toSelect = screen.getByLabelText('Tot');
+    const eraShadingRow = fromSelect.closest('div')?.parentElement;
+    if (!eraShadingRow) throw new Error('era shading form row not found');
+    const toSelect = within(eraShadingRow).getByLabelText('Tot');
     fireEvent.change(toSelect, { target: { value: '2021' } });
 
     const labelInput = screen.getByLabelText('Label');
