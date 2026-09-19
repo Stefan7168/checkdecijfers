@@ -182,6 +182,28 @@ export function heatmapFormAllowed(spec: Pick<ChartSpec, 'series'>, seriesCount:
 }
 ```
 
+**As built, Task 1 (real compile error the code above did not anticipate):** `Pick<ChartSpec, 'series'>`
+does not type-check at two real call sites — `cbsCapabilities` and `user-chart.tsx`'s own `fallbackForm`
+call both hand in `PlottableSpec` (`chart.tsx`'s own local type), whose `PlottableSeries`/`PlottablePoint`
+are not assignable to `ChartSeries`/`ChartPoint`. The three guards, `fallbackForm`, and `allowedForms`
+(Step 4) are typed on a new exported structural type instead:
+
+```ts
+export interface SeriesShape {
+  series: readonly { points: readonly { value: number | null }[] }[];
+}
+```
+
+**Every task below that references `Pick<ChartSpec, 'series'>` for these functions means `SeriesShape`.**
+`value` is included on purpose so Task 3 Step 1's null-point tightening type-checks without a further
+signature change.
+
+**Follow-up, as built in Task 4:** `SeriesShape` was widened once more, to also carry each point's
+`periodCode: string` — needed for the same-period-coverage check Task 4's guard tightening added (see the
+"As built, Task 4" note in Task 4 Step 1). So the final shape is
+`{ series: readonly { points: readonly { value: number | null; periodCode: string }[] }[] }`, not just
+`value`. Both `ChartPoint` and `PlottablePoint` already carry `periodCode`, so no call site changed.
+
 - [ ] **Step 3: Widen `fallbackForm`**
 
 The current signature is `fallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'>, seriesCount:
@@ -300,11 +322,35 @@ In `src/chart/copilot/schema.ts`, change the line-25 zod literal the same way. I
 (`chart-commands.ts` around line 326) already calls `fallbackForm` — once Step 3 lands, it validates the
 three new forms automatically; do not hand-write a parallel check.
 
-- [ ] **Step 7: Check `src/attachments/copilot/types.ts` for a duplicate forms union**
+**Added during Task 1 (real gap the original plan missed):** `src/chart/copilot/prompt.ts:27` hand-lists
+the five forms directly in the system prompt text sent to the model (`"form":"line"|"area"|"bar"|"hbar"|
+"table"`). Widening `CAPABILITIES.forms` alone is not enough — a model anchors on the concrete example
+list it's shown, not only the "only a form listed under CAPABILITIES" caveat that follows it. Widen that
+line to include all eight forms, and bump `CBS_COPILOT_PROMPT_VERSION` from `1` to `2` (this file's own
+existing convention: every prompt-byte change bumps it, recorded on each reply's `llmCalls` entry). Leave
+`src/attachments/copilot/prompt.ts` (the own-data tier's own, separate prompt) untouched — that tier stays
+at five forms this phase, per Step 7.
 
-If `CopilotCapabilities['forms']` there is its own hand-written five-member literal union (rather than an
-import of `ChartForm`), widen it identically. If it already imports `ChartForm`, nothing to do here — note
-which was true in the task report.
+**Also found by Task 1's full typecheck, not listed in the original Global Constraints — already fixed,
+noted here so Tasks 2-4 don't duplicate the work:** `web/components/chart.tsx`'s `formTabRef: Record<
+ChartForm, …>` (an exhaustive record) and `web/components/chart-history-menu.tsx`'s `formLabel` (an
+exhaustive `switch`) both needed the three new members. Task 1 added `dumbbellTabRef`/`slopeTabRef`/
+`heatmapTabRef` refs and their `formTabRef` entries (unattached to any button yet — Tasks 2-4 each attach
+`ref={...TabRef}` to their own new button, not redeclare the ref or the record entry), and added three
+`formLabel` cases plus the three `chart.form.dumbbell`/`chart.form.slope`/`chart.form.heatmap` i18n keys
+(nl/en) this plan's own Tasks 2-4 also call for — **if a task's own i18n step finds these keys already
+present, that is expected, not a conflict; only add the `*DisabledReason` keys.**
+
+- [ ] **Step 7: Check `src/attachments/copilot/types.ts` for a duplicate forms union — and do NOT widen it**
+
+**Corrected against this step's own earlier draft**, which pre-dated the CBS-only Global Constraint above
+and contradicted it. `CopilotCapabilities['forms']` there (and `COPILOT_FORMS`, its sanitize allowlist) IS
+its own hand-written five-member literal union — confirmed as built. Leave it at five members. Widening it
+would let a browser claim `dumbbell`/`slope`/`heatmap` for an own-data chart and have that request reach
+the model, while `user-chart.tsx` has no render code for it — exactly the chat/panel mismatch bug this
+whole architecture exists to prevent. Also leave `src/attachments/copilot/schema.ts`'s own `setForm` enum
+and `src/attachments/copilot/prompt.ts`'s prompt text untouched, for the same reason. Note in the task
+report that this was checked and deliberately left alone.
 
 - [ ] **Step 8: Unit tests**
 
@@ -316,11 +362,17 @@ refused for a 1-series spec, refused for a 1-point-per-series spec. Also test th
 cases (a `'dumbbell'` document state whose spec no longer qualifies falls back to `'bar'`; `'heatmap'`
 falls back to `'table'`).
 
-Create `web/lib/chart-fit.test.ts`: `allowedForms` returns the full eight-member order for a spec that
-qualifies for everything; returns exactly `['bar', 'table']` for a spec that qualifies for nothing extra
-(single series, single point, bar kind); returns `[...][without 'dumbbell'/'slope'/'heatmap']` for a
-normal multi-point time series (3+ points per series) — the three new forms must NOT appear just because
-there are 2+ series.
+Create `web/lib/chart-fit.test.ts`. **Corrected against this step's own earlier draft**, whose three
+illustrative examples below were partly unreachable or contradicted Step 2's own guards — test the REAL
+guard behavior instead: `allowedForms` returns the full set of every form that can co-occur (the "full
+eight-member" case is unreachable — `areaFormAllowed` requires exactly one series, the trio requires two
+or more — so pin the richest reachable combination instead, e.g. a 2-series/2-point bar or line spec);
+`['bar', 'table']` alone is also unreachable whenever the spec's `kind` makes `line`/`hbar` apply too — pin
+the actual sparsest honest list for a real minimal spec instead of an invented one; a 2-series/3-point time
+series DOES qualify for `heatmap` under `heatmapFormAllowed`'s own "≥2 series AND ≥2 points each" rule and
+spec §10's own "more than one thing being compared AND more than one time point" — it must NOT qualify for
+`dumbbell`/`slope` (which need exactly 2 points), so pin `heatmap` present, `dumbbell`/`slope` absent, not
+all three absent as an earlier draft of this step wrongly implied. Also pin the fixed output order.
 
 - [ ] **Step 9: Full verification and commit**
 
@@ -442,15 +494,25 @@ are still exact after Task 2's edits).
 - Modify: `web/lib/i18n/messages.ts`
 - Test: `web/components/chart.test.tsx` (extend)
 
-**What it draws:** one row per series (region/category on the vertical axis, exactly like the existing
-hbar branch), two dots per row at that series' two point values, joined by a connecting line — Recharts
-has no native "dumbbell" chart, so build it as a `ComposedChart` with `layout="vertical"` containing (a) a
-`Bar` whose `dataKey` returns a two-element `[min, max]` tuple per row (Recharts' own "range bar" support —
-this draws the connecting segment) rendered with near-zero visual weight (a thin bar, or a custom `shape`
-drawing just a line — mirror the existing `RegionBar` custom-shape convention used by the hbar branch,
-~line 3787-3791, rather than inventing a new styling mechanism), and (b) a `Scatter` layer plotting both
-endpoint dots on top, coloured and labelled exactly like the hbar branch's own end-of-bar value labels
-(every drawn number is that point's own `formattedValue`, bound via `data-label-for`).
+**What it draws — corrected against this section's own earlier draft, which proposed an unproven Recharts
+"range bar" + `Scatter` combination.** A better-grounded mechanism already exists in this exact file:
+`EndLabelsOverlay` (`chart.tsx`, search for `function EndLabelsOverlay`) is a component rendered as a
+child inside a Recharts chart that calls `useXAxisScale()`/`useYAxisScale()`/`usePlotArea()` — "Recharts
+3.x's documented way for an arbitrary descendant to read the chart's finalized layout" per that function's
+own comment — to independently compute the pixel position of each of its own data points and draw plain
+SVG (`<text>`, wrapped in `<ZIndexLayer>`). Build dumbbell the same way instead of the range-bar/Scatter
+idea: a `BarChart layout="vertical"` shell (mirroring the existing hbar branch's `XAxis type="number"`
+domain-from-zero / `YAxis type="category"` with `RegionAxisTick`/`hbarYAxisWidth` / grid / tooltip setup —
+copy that scaffolding, it already does everything a category-vs-number chart needs) with **no visible
+`<Bar>` at all** — the axes and grid exist only to establish the coordinate system — and a new
+`DumbbellOverlay` component, modelled directly on `EndLabelsOverlay`, that calls `useXAxisScale()` /
+`useYAxisScale()` for each row and draws: a `<line>` from `xScale(row.from.value)` to `xScale(row.to.value)`
+at `y = yScale(row.label)` (both endpoints on the row's own category tick), and a `<circle>` at each
+endpoint. Every drawn number is that point's own `formattedValue`, rendered as `<text>` next to its dot
+exactly like `EndLabelsOverlay`'s own labels, each with `data-label-for="<resultId>"`. This reuses a
+proven mechanism already reviewed and shipped in this file, rather than introducing two new Recharts
+primitives (`ComposedChart`, `Scatter`) this file has never used and whose "array value = range bar"
+behavior was never actually confirmed against this app's installed Recharts version.
 
 **Row-building:** add a new pure helper (co-locate it near the file's other row-builders such as
 `buildRegionRows`, or extract to `web/lib/chart-dumbbell-rows.ts` if `chart.tsx` already delegates its
@@ -516,18 +578,21 @@ next to `chart.tsx`'s other row-builders, following whichever of "inline in char
 
 - [ ] **Step 3: The render branch**
 
-Add imports `ComposedChart, Scatter` to the existing `from 'recharts'` import block (~line 29-49). Add
+Do NOT add `ComposedChart`/`Scatter` imports (see the corrected "What it draws" section above — the
+range-bar/Scatter approach is replaced by an `EndLabelsOverlay`-style overlay). Add
 `canUseDumbbell = dumbbellFormAllowed(spec, spec.series.length)` near `canUseSlope`. Extend `FORM_ORDER`
 (re-read the file to find Task 2's exact current line) to insert `...(canUseDumbbell ? (['dumbbell'] as
 const) : [])` — per the fixed scorer order, insert this spread BEFORE the `slope` spread Task 2 added
 (dumbbell, then slope, then heatmap — matching `chart-fit.ts`'s `allowedForms` order from Task 1).
 
-Add a new render branch in the main ternary, modelled closely on the existing hbar branch (mirror its
-`layout="vertical"`, `YAxis type="category"` with `RegionAxisTick`/`hbarYAxisWidth`, `XAxis type="number"`
-with `domain={[0, 'auto']}` unless `pres.zeroBaseline` says otherwise — match whatever the hbar branch
-does exactly, and the custom tooltip pattern) — condition it on `activeForm === 'dumbbell'`, data from
-`buildDumbbellRows(spec)`, containing the range-`Bar` + `Scatter` pair described above. Every drawn label
-uses each point's own `formattedValue`, with `data-label-for` on both the from-dot and the to-dot.
+Add a new render branch in the main ternary, condition it on `activeForm === 'dumbbell'`: a
+`BarChart layout="vertical"` shell mirroring the existing hbar branch's `YAxis type="category"` (with
+`RegionAxisTick`/`hbarYAxisWidth`), `XAxis type="number"` (`domain={[0, 'auto']}` unless `pres.zeroBaseline`
+says otherwise — match hbar exactly), grid, and tooltip setup — but with NO `<Bar>` element, since nothing
+is drawn as a bar. Inside it, render the new `DumbbellOverlay` component (built as directed in "What it
+draws" above — read `EndLabelsOverlay`'s real source in this file first and follow its exact hook-usage
+pattern) fed `buildDumbbellRows(spec)`. Every drawn label uses each point's own `formattedValue`, with
+`data-label-for` on both the from-dot and the to-dot.
 
 - [ ] **Step 4: Tab button + i18n**
 
@@ -550,7 +615,9 @@ point in one series renders the tab disabled; a 3-point-per-series spec renders 
 - [ ] **Step 6: Full verification and commit**
 
 `cd web && npm run typecheck && npm run test -- chart.test chart-view-state chart-fit && npm run build`.
-Commit: `feat(chart): dumbbell chart — a new ComposedChart range-bar + scatter render (phase 5 task 3)`.
+Commit: `feat(chart): dumbbell chart — a BarChart shell with no Bar, drawn by a scale-reading overlay (phase 5 task 3)`.
+(As built — commit `c0e911aa`; an earlier draft of this line still named the replaced ComposedChart/Scatter
+mechanism, see the corrected "What it draws" section above.)
 
 ## Task 4: Heatmap — new CSS-grid render branch
 
@@ -573,13 +640,46 @@ NUMBER shown is always the real `formattedValue`, the colour is never the only w
 communicated, matching this app's existing colour-blind-safe-plus-pattern convention elsewhere in
 `chart.tsx`, e.g. the hatch patterns already used in `<defs>` for series that need a non-colour cue).
 
-- [ ] **Step 1: Locate and reuse the table form's existing row/column model**
+- [ ] **Step 1: A sibling of `tableModel`, not a wrapper — corrected against this section's own earlier
+  draft**
 
-Read `chart.tsx`'s `'table'` rendering path in full before writing anything. Identify the exact data
-structure it already builds (rows × periods, or rows × series — whichever the existing table uses) and
-its exact field names. Do not build a second, parallel row-shaping function if the table's own is
-reusable as-is or with a thin wrapper — reuse it directly, matching this plan's "it's the same rows the
-table view already shows, recoloured" design commitment (spec §10).
+The table form's real row/column builder is `tableModel(spec, lang)` in `web/components/chart.tsx`
+(exported, search `function tableModel` — the render path calls it as `tableModel(displaySpec,
+chartLang)`). Read it in full before writing anything. Its output, `TableModel`, is `{ caption, header:
+string[], rows: { label: string, cells: TableCell[] }[] }` where `TableCell` is `{ text: string, resultId:
+string | null }` — `text` is already a display string (`tableCellText`, which returns `'—'`/`'— (…)'` for
+a null point, or the point's own `formattedValue`-derived text otherwise), never the raw number.
+
+**A thin wrapper is not enough:** the heatmap's colour scale needs each cell's raw `value` (a number) to
+compute where it falls between the grid's min and max — `TableModel`/`TableCell` deliberately carry no
+such field, since the table form only ever needs display text. Rather than widen `TableCell` itself (which
+would touch the existing, already-shipped table form for no reason a table view has), write a **sibling**
+function, `heatmapModel(spec: PlottableSpec, lang: Lang): HeatmapModel`, that mirrors `tableModel`'s own
+structure and logic **exactly** — same `spec.kind === 'bar'` branch (one column, one row per series) vs.
+the time-series branch (`codes`/`labelByCode`, sorted lexicographically = chronologically, one column per
+period), same header-building — but each cell also carries `value: number` alongside `text`/`resultId`
+(`HeatmapCell = { text: string, resultId: string, value: number }` — `resultId` is non-nullable and
+`value` always present here, unlike `TableCell`, because `heatmapFormAllowed` already guarantees every
+point in a heatmap-eligible spec is non-null; a cell with no point at that row/column intersection simply
+should not occur for an honestly-gated heatmap spec — if you find one can, treat that as a real guard bug
+and report it as a concern rather than silently rendering an empty cell). Do not modify `tableModel`/
+`TableModel`/`TableCell` themselves.
+
+**As built, Task 4 — the guard IS stricter than every earlier statement of it in this plan (this is the
+final, authoritative rule):** Task 4 found exactly the guard bug the paragraph above warned about. The
+`heatmapFormAllowed` written in Task 1 (and re-stated in Task 3 Step 1 and Task 1 Step 6) only checked
+that every series had *at least two* points, i.e. the same NUMBER of points — but the grid is period ×
+series, one cell per intersection, so what it actually needs is that every series covers the EXACT SAME
+SET of period codes. A ragged spec (series A covers 2020 + 2021, series B covers 2019 + 2020 — same
+length, different periods) passed the length-only check and then handed `heatmapModel` an intersection
+with no point behind it. The as-built guard (`web/lib/chart-view-state.ts`) therefore requires: at least
+two series; the union of period codes across all series has at least two entries; every series has
+exactly that many points, all with distinct period codes (no missing period, no duplicate); and every
+point's `value` is non-null. A ragged spec is correctly refused (the table still shows the gap as a gap;
+the heatmap is simply not offered). The final-review fix wave then also made this guard run against the
+spec that is actually DRAWN (an alternate reading or a zoom window can change the point shape without
+changing the `spec` prop — see `guardSpec` in `chart.tsx`), so a disqualifying reading falls back to the
+table instead of reaching `heatmapModel`'s throw.
 
 - [ ] **Step 2: A colour-scale helper**
 
@@ -611,17 +711,21 @@ alongside the other `--chart-*`/`--accent` tokens, both light and dark mode.
 - [ ] **Step 3: The render branch**
 
 Add `canUseHeatmap = heatmapFormAllowed(spec, spec.series.length)` near the other guards. Extend
-`FORM_ORDER` with `...(canUseHeatmap ? (['heatmap'] as const) : [])`, appended last per the scorer's fixed
-order (dumbbell, slope, heatmap). Add a branch to the main render ternary for `activeForm === 'heatmap'`:
-a `<div>` grid (CSS grid, `grid-template-columns`/`grid-template-rows` sized off series/period counts,
-mirroring how the table form already sizes its own layout) where each cell is a `<div>` with
-`background-color` from Step 2's helper and the point's own `formattedValue` as its text content, plus
-`data-label-for="<resultId>"` exactly like every other numeric label in this file. Row headers = series
-labels (reuse the table's own label text, not a re-derivation); column headers = period labels (reuse the
-table's own header row). Respect `pres` where it applies (e.g. font/label scale if the table form already
-does) — a heatmap has no line thickness/grid-line settings, so most `pres` keys are simply inapplicable
-here, same as they already are for the table form today (check how the table form's own tab handles
-`resolvePresentation().applicable` and mirror it for consistency).
+`FORM_ORDER` — re-read its current state first (Task 3 inserted a `dumbbell` spread before the `slope`
+one) — with `...(canUseHeatmap ? (['heatmap'] as const) : [])`, appended LAST, after the `slope` spread,
+per the scorer's fixed order (dumbbell, slope, heatmap). Add a branch to the main render ternary for
+`activeForm === 'heatmap'`: a `<div>` grid (CSS grid, `grid-template-columns`/`grid-template-rows` sized
+off `heatmapModel(displaySpec, chartLang)`'s own row/column counts from Step 1) where each cell is a
+`<div>` with `background-color` from Step 2's helper (fed that cell's `value` and the grid's own
+min/max — compute the min/max once over every cell in the model, not per-cell) and the cell's own `text`
+as its content, plus `data-label-for="<resultId>"` exactly like every other numeric label in this file.
+Row headers = `heatmapModel`'s `rows[].label`; column headers = `heatmapModel`'s `header` (skip its first
+entry, which is the corner label like `tableModel`'s own header does). Respect `pres` where it applies
+(a heatmap has no line thickness/grid-line settings, so most `pres` keys are inapplicable, same as the
+table form today).
+
+**DOM order:** place the Heatmap tab button AFTER the Helling (slope) button — the fixed order is
+Dumbbell, Helling, Warmtekaart, left to right / in keyboard tab order, matching `FORM_ORDER`.
 
 - [ ] **Step 4: Tab button + i18n**
 
@@ -629,6 +733,39 @@ Same pattern as Tasks 2/3. Message keys `chart.form.heatmap` (nl `"Warmtekaart"`
 `chart.heatmapDisabledReason` (nl `"Beschikbaar zodra je minstens twee reeksen en twee momenten
 vergelijkt."`, en `"Available once you're comparing at least two series across at least two points in
 time."`).
+
+- [ ] **Step 4b: Close the `initialFormOverride` guard gap (deferred from Tasks 2 and 3)**
+
+Task 2's implementer found, and the controller ruled to fix once here rather than three times: the
+`initialFormOverride` mount-guard effect in `chart.tsx` (search `initialFormOverride === undefined`) only
+checks `lineFormAllowed`/`areaFormAllowed`/`hbarFormAllowed` for their respective override values, and lets
+every other value (including now `'slope'`, `'dumbbell'`, `'heatmap'`) through unconditionally via its
+final `: true` fallback. This never produces a dishonest render — `fallbackForm` independently re-checks
+the guard on every render regardless — but it can leave a stray, never-valid entry at the bottom of the
+undo/history stack when an embed URL's `?form=` query string names one of the three new forms on a spec
+that doesn't qualify. Extend that effect's ternary chain with three more arms, matching the existing
+line/area/hbar pattern exactly:
+
+```ts
+const allowed =
+  initialFormOverride === 'line'
+    ? lineFormAllowed(spec, spec.series.length)
+    : initialFormOverride === 'area'
+      ? areaFormAllowed(spec, spec.series.length)
+      : initialFormOverride === 'hbar'
+        ? hbarFormAllowed(spec)
+        : initialFormOverride === 'slope'
+          ? slopeFormAllowed(spec, spec.series.length)
+          : initialFormOverride === 'dumbbell'
+            ? dumbbellFormAllowed(spec, spec.series.length)
+            : initialFormOverride === 'heatmap'
+              ? heatmapFormAllowed(spec, spec.series.length)
+              : true; // 'bar' and 'table' are never gated.
+```
+
+Add one test: mounting with `initialFormOverride="dumbbell"` (or slope/heatmap) on a spec that does NOT
+qualify leaves the initial form at its normal default (never dispatches the override), and the history has
+no stray entry (`history.past` stays empty right after mount).
 
 - [ ] **Step 5: Tests**
 
