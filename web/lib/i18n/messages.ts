@@ -577,6 +577,10 @@ const nl = {
   // AI draft showed "Kon de kop niet opslaan", which is false: nothing was
   // being saved yet. Own string for the draft failure.
   'chart.headline.draftError': 'Kon de kop niet voorstellen.',
+  // Task 5 (co-pilot phase 4): reader-chosen headline number. Clicking a
+  // point shows buttons to make it the featured headline or clear an override.
+  'chart.headline.setOverride': 'Maak dit het hoofdcijfer',
+  'chart.headline.clearOverride': 'Toon standaard hoofdcijfer',
   // Chart co-pilot phase 1 (session 112, ADR 056): the card's undo/redo
   // pair. Digit-free by construction — the chart card's own digit scan
   // (chart.test.tsx) treats every rendered digit as a claim about data.
@@ -624,6 +628,15 @@ const nl = {
   'chart.command.setCaption': 'Bijschrift aangepast',
   'chart.command.setCaptionOff': 'Bijschrift verwijderd',
   'chart.command.setInstruction': 'Data: {summary}',
+  'chart.command.setHeadlineOverride': 'Hoofdcijfer aangepast',
+  'chart.command.clearHeadlineOverride': 'Hoofdcijfer hersteld',
+  'chart.command.addGoalLine': 'Doellijn toegevoegd',
+  'chart.command.removeGoalLine': 'Doellijn verwijderd',
+  'chart.command.addEraShading': 'Schaduw toegevoegd',
+  'chart.command.removeEraShading': 'Schaduw verwijderd',
+  'chart.command.setDimmed': 'Serie verzwakt',
+  'chart.command.addDerivedOverlay': 'Overlay toegevoegd',
+  'chart.command.removeDerivedOverlay': 'Overlay verwijderd',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1600,6 +1613,8 @@ const en: Messages = {
   'chart.headline.unauthenticated': 'Log in to add a headline.',
   'chart.headline.error': 'Could not save the headline.',
   'chart.headline.draftError': 'Could not suggest a headline.',
+  'chart.headline.setOverride': 'Make this the featured number',
+  'chart.headline.clearOverride': 'Show default featured number',
   'chart.title.edit': 'Edit title',
   'chart.title.placeholder': 'Your own title',
   'chart.title.original': 'Original title: {title}',
@@ -1637,6 +1652,15 @@ const en: Messages = {
   'chart.command.setCaption': 'Caption edited',
   'chart.command.setCaptionOff': 'Caption removed',
   'chart.command.setInstruction': 'Data: {summary}',
+  'chart.command.setHeadlineOverride': 'Featured number edited',
+  'chart.command.clearHeadlineOverride': 'Featured number restored',
+  'chart.command.addGoalLine': 'Goal line added',
+  'chart.command.removeGoalLine': 'Goal line removed',
+  'chart.command.addEraShading': 'Era shading added',
+  'chart.command.removeEraShading': 'Era shading removed',
+  'chart.command.setDimmed': 'Series dimmed',
+  'chart.command.addDerivedOverlay': 'Overlay added',
+  'chart.command.removeDerivedOverlay': 'Overlay removed',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',

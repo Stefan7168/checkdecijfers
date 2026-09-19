@@ -34,6 +34,9 @@ export function ChartNotes({
   onSave,
   onCancelPending,
   onDelete,
+  headlineOverrideResultId,
+  onSetHeadline,
+  onClearHeadline,
 }: {
   notes: ChartNote[];
   pendingPoint: PendingPoint | null;
@@ -49,6 +52,12 @@ export function ChartNotes({
   onSave: (text: string) => void;
   onCancelPending: () => void;
   onDelete: (id: string) => void;
+  /** Task 5: the current headline override resultId, or null for default. */
+  headlineOverrideResultId: string | null;
+  /** Task 5: dispatch setHeadlineOverride command when setting headline. */
+  onSetHeadline: (resultId: string) => void;
+  /** Task 5: dispatch setHeadlineOverride command with null to clear override. */
+  onClearHeadline: () => void;
 }) {
   const [draft, setDraft] = useState('');
   // #8 (session 110 UX audit pass 2): opening the editor never moved focus
@@ -167,6 +176,35 @@ export function ChartNotes({
             >
               {t(lang, 'chart.notes.cancel')}
             </button>
+          </div>
+          {/* Task 5: headline override actions — set this point as the headline,
+            * or clear the override to show the default. */}
+          <div className="flex gap-2 border-t border-border pt-2">
+            {headlineOverrideResultId === pendingPoint.resultId ? (
+              <button
+                type="button"
+                data-command-kind="setHeadlineOverride"
+                onClick={() => {
+                  onClearHeadline();
+                  returnFocusToTrigger();
+                }}
+                className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+              >
+                {t(lang, 'chart.headline.clearOverride')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-command-kind="setHeadlineOverride"
+                onClick={() => {
+                  onSetHeadline(pendingPoint.resultId);
+                  returnFocusToTrigger();
+                }}
+                className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+              >
+                {t(lang, 'chart.headline.setOverride')}
+              </button>
+            )}
           </div>
         </div>
       ) : null}

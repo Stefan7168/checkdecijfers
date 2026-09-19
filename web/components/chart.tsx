@@ -2344,7 +2344,9 @@ export function ChartView({
   // Vanaf/Tot window leads with its own last point and an English chart
   // shows the translated period/unit; the value/resultId fields are
   // untouched by translation (translateSpecForDisplay).
-  const headline = headlineFigure(displaySpec);
+  // Task 5: pass the reader's headline override if set, allowing them to
+  // click a different point and make THAT the featured number.
+  const headline = headlineFigure(displaySpec, state.headlineOverrideResultId);
   const tickByValue = new Map(plan.axisTicks.map((t) => [t.value, t]));
   // ADR 042 ('ends' marker mode): the first and last PLOTTED point per series,
   // from the DISPLAYED spec (a zoomed window's own ends get the markers).
@@ -3622,6 +3624,15 @@ export function ChartView({
             }}
             onCancelPending={() => setPendingPoint(null)}
             onDelete={(id) => dispatchCommand({ kind: 'removeNote', noteId: id }, 'canvas')}
+            headlineOverrideResultId={state.headlineOverrideResultId}
+            onSetHeadline={(resultId) => {
+              dispatchCommand({ kind: 'setHeadlineOverride', resultId }, 'canvas');
+              setPendingPoint(null);
+            }}
+            onClearHeadline={() => {
+              dispatchCommand({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
+              setPendingPoint(null);
+            }}
           />
           {/* Outside chartContainerRef, like the caption and the notes */}
           <ChartGoalLine
@@ -3893,8 +3904,10 @@ export function ChartView({
         * already covered by the whole-card digit scan (formattedValue,
         * unit, periodLabel); the value is bound to its cell via
         * data-label-for (R1). Not in the table form (it shows everything),
-        * not in stage mode (ADR 044: the caption IS the sentence). */}
-      {headline !== null && !inStage && state.form !== 'table' ? (
+        * not in stage mode (ADR 044: the caption IS the sentence).
+        * Task 5: skip rendering when headline.value is empty (an honest CBS
+        * gap in an overridden point). */}
+      {headline !== null && headline.value !== '' && !inStage && state.form !== 'table' ? (
         <p
           className={
             embedMode

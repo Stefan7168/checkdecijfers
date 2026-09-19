@@ -131,6 +131,22 @@ export function describeCommand(cmd: ChartCommand, lang: Lang): string {
       // construction (validateCommand enforces both), so this stays inside
       // the "never a data value" rule above.
       return t(lang, 'chart.command.setInstruction', { summary: cmd.summary });
+    case 'setHeadlineOverride':
+      return cmd.resultId !== null ? t(lang, 'chart.command.setHeadlineOverride') : t(lang, 'chart.command.clearHeadlineOverride');
+    case 'addGoalLine':
+      return t(lang, 'chart.command.addGoalLine');
+    case 'removeGoalLine':
+      return t(lang, 'chart.command.removeGoalLine');
+    case 'addEraShading':
+      return t(lang, 'chart.command.addEraShading');
+    case 'removeEraShading':
+      return t(lang, 'chart.command.removeEraShading');
+    case 'setDimmed':
+      return t(lang, 'chart.command.setDimmed');
+    case 'addDerivedOverlay':
+      return t(lang, 'chart.command.addDerivedOverlay');
+    case 'removeDerivedOverlay':
+      return t(lang, 'chart.command.removeDerivedOverlay');
   }
 }
 

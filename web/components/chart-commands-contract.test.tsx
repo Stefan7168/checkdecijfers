@@ -200,6 +200,9 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
         onSave={() => {}}
         onCancelPending={() => {}}
         onDelete={() => {}}
+        headlineOverrideResultId={null}
+        onSetHeadline={() => {}}
+        onClearHeadline={() => {}}
       />,
     );
     const found = kindsInDom(container);

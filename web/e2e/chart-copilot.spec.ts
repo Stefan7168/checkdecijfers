@@ -106,6 +106,45 @@ test.describe.serial('chart co-pilot phase 1', () => {
     // included in PNG/SVG exports. A unit test in chart.test.tsx verifies
     // this pattern (similar to the note export test).
   });
+
+  test('Task 5: click a point to make it the headline, undo to revert', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Get the initial headline value (the last point's value).
+    const headlineFigure = page.locator('[data-testid="headline-figure"]');
+    const initialHeadline = await headlineFigure.textContent();
+    expect(initialHeadline).toBeTruthy();
+
+    // Click on an earlier point (the first plotted point on the chart).
+    // The chart renders points as SVG circles with data-point="value".
+    const points = page.locator('circle[data-point="value"]');
+    const firstPoint = points.first();
+    await firstPoint.click();
+
+    // The pending-point UI should show. Look for the "Make this the headline"
+    // button and click it.
+    const setHeadlineButton = page.getByRole('button', { name: 'Maak dit het hoofdcijfer' });
+    await expect(setHeadlineButton).toBeVisible({ timeout: 5000 });
+    await setHeadlineButton.click();
+
+    // The headline should change. Get the first point's value from the data.
+    // Since we can't directly access Recharts' data, we verify the UI has
+    // changed by checking that the headline is now different OR that the
+    // "Show default headline" button is now visible (proof of override).
+    const clearHeadlineButton = page.getByRole('button', { name: 'Toon standaard hoofdcijfer' });
+    await expect(clearHeadlineButton).toBeVisible({ timeout: 5000 });
+
+    // Undo should clear the override and restore the "Make this headline" button.
+    const undoButton = page.getByRole('button', { name: 'Ongedaan maken' });
+    await undoButton.click();
+
+    // After undo, the "Make this the headline" button should be back.
+    await expect(setHeadlineButton).toBeVisible({ timeout: 5000 });
+    await expect(clearHeadlineButton).not.toBeVisible();
+  });
 });
 
 /** Type a question and send it (copied from answer.spec.ts — same harness,
