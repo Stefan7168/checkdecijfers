@@ -1,5 +1,86 @@
 # STATUS archive — the session log
 
+**Session 117 (2026-09-19/20, owner present throughout — chose "phase 5b" over the house-styles
+alternative when offered a choice, then delegated fully: "You are the expert. Just do whatever you
+think is best, work autonomously"; Sonnet 5 session model, subagent-driven development on a single
+worktree, implementers on the Fable tier, task reviewers on standard tier. WRAPPED MID-BUILD on the
+owner's signal — nothing from this session reached `main`.)**
+
+1. **Design, with two real investigations before any spec was written.** `superpowers:brainstorming`
+   (architectural) for the two capabilities split out of phase 5 (a "verified whole" concept for
+   pie/stacked; a two-measure-per-point chart shape for scatter) — flagged as two largely independent
+   sub-projects up front, per the skill's own decomposition guidance, rather than one bundled design. An
+   Explore-agent investigation found BOTH are genuinely greenfield (no existing "these cells sum to a
+   real total" check anywhere in `src/query`/`src/registry`; every `ResultCell`/`ChartPoint` in the
+   CBS/Eurostat pipeline carries exactly one measure), then a second, more specific investigation found
+   the KEY feasibility fact that shaped the whole design: normal ingestion never stores province rows
+   for a table without also storing its national-total row, so verifying a roster's sum needs no new
+   CBS fetch — a purely query-layer check over data already in the database. Owner chose the
+   verified-whole capability first (unlocks 4 form variants vs. scatter's 1), then confirmed a further
+   scope narrowing to region hierarchies only (not arbitrary category breakdowns, which have no existing
+   verified-complete-set signal). Design committed as spec §11 addendum; implementation plan written via
+   `writing-plans` (5 sequential tasks, `chart.tsx`'s fragility under concurrent edits — a session 116
+   lesson — again the reason for strict sequencing).
+2. **Built via subagent-driven development, 4 of 5 tasks, all Fable-tier implementers.** Task 1
+   (`6dc0dd78`, pure verification logic: `parentCellRef`/`verifyPartsSumToWhole`) — found the real
+   `RegionScope` type has FOUR variants, not the three the plan's drafting (reading a `switch`
+   statement, not the type declaration) assumed; the fourth, `all_gemeenten`, was correctly mapped to
+   "no verified whole" after finding CBS's own municipality grouping excludes one real code
+   (`GM0997`/`OVERIG`), so that roster doesn't actually partition the national total on at least one
+   real table — refused rather than guessed, per principle (c). Task 2 (`4d834f0c`, `ChartSpec.
+   regionScope` provenance field) — a new optional-v1 field per ADR 014's documented pattern, always
+   emitted by `buildChartSpec` (explicit null, not omitted), with the matching
+   `src/answer/audit/reconstruct.ts` tolerance entry tested in BOTH directions on real hermetic-DB rows
+   (tolerated when absent, still fails when tampered). Task 3 (`9cdbb4ff`, the three `ChartForm` guards +
+   donut presentation key + scorer wiring) — reused phase 5's own `SeriesShape` type rather than
+   reinventing it; a genuine provenance-not-codes contract test proves the guards check the new field,
+   not code-list equality; two well-reasoned judgment calls beyond the brief's literal scope (a
+   digit-scan-safe label change; `resolvePresentation` extensions for the two new form families that no
+   other task in the plan would have touched). Task 4 (`5eed921a`, the on-demand verification server
+   action + native Recharts pie/stacked rendering) — the biggest task: built the server action to accept
+   an authenticated audit-record id rather than the plan's own literal client-supplied-spec signature,
+   mirroring phase 4's `requestChartDerivation` ownership/redaction-check pattern; 406 new tests
+   asserting real DOM/SQL/security behavior, not smoke tests.
+3. **Every task individually reviewed (standard tier) — Tasks 1-3 approved clean (0 Critical/Important
+   each); Task 4 approved but with 2 Important findings left OPEN when the session wrapped.** The Task 4
+   reviewer independently re-derived an even stronger security justification than either the plan or the
+   implementer had stated: under the plan's own literal signature there would be no audit-record id at
+   all, so the "parts" being verified would necessarily have to come from client-supplied JSON directly —
+   meaning a fabricated spec could make the server report a false "verified: true" for numbers never
+   actually checked against any real cell, a direct violation of "never fabricate," not merely a privacy
+   gap. The 2 open findings: `buildStack100Rows`'s negative/zero-total omission path has zero test
+   coverage; the "omitted period" refusal copy is reused for two different situations and is factually
+   imprecise for one of them (a verified-but-undefined-share period, not a failed verification). Both
+   real, both narrow, neither touches the core security/honesty guarantees, both left for a fix round
+   this session didn't reach.
+4. **Wrapped mid-build on the owner's signal, before Task 4's fix round, Task 5, or the final
+   whole-branch review.** Rather than rushing one more subagent round to reach an artificially "clean"
+   stopping point, or silently marking Task 4 complete despite open Important findings, the SDD ledger
+   (`.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md`) was updated to record the exact
+   resume state — which findings, which implementer agent to resume, the skill's own "rounds 1-3 resume
+   the original implementer" rule — and this wrap-up describes the branch honestly as in-progress, not
+   shipped. `main` is UNCHANGED this session (still at `a02b148a`, the phase 5b PLAN commit — docs only,
+   no code). Branch `verified-whole-phase5b` and worktree `../cdc-wt-verified-whole-phase5b` both left in
+   place, not deleted, not merged.
+5. **Docs:** spec §11 addendum, the implementation plan, `docs/lessons-learned.md` (3 entries — the
+   `RegionScope`-variant-count lesson, the security-reasoning-goes-further-than-asked lesson, the
+   honest-mid-build-wrap-up lesson), this archive entry, STATUS top block, one new open-questions row
+   ([#299](open-questions.md), the `all_gemeenten`/OVERIG scoping decision), a memory state file. No ADR
+   "as built" section yet — phase 5b isn't built yet, only in progress; ADR 056 gets a light in-progress
+   pointer instead of a full as-built section, to avoid overclaiming.
+6. **Process:** 4 commits on the unmerged branch (`6dc0dd78`, `4d834f0c`, `9cdbb4ff`, `5eed921a`); every
+   implementer on the Fable tier per the owner's standing steer; every task review on standard tier,
+   each doing real independent verification (re-deriving the OVERIG/`all_gemeenten` claim from the real
+   fixture files; hand-tracing `buildStack100Rows`'s filter-before-divide order; re-reading
+   `chart-derivation-actions.ts`'s real execution order rather than trusting the report's prose). **Two
+   lessons worth carrying into the next session that resumes this plan:** a plan's own reading of a
+   union/enum type from code that narrows over it (not the type's own declaration) is a floor, not a
+   ceiling — the second time this exact class of gap has shown up in two sessions running; and a
+   security instruction phrased as "match this precedent" is a floor too — both this session's
+   implementer and its reviewer independently found a stronger, more precise justification than the
+   instruction itself stated by reading the new code's actual attack surface fresh. See
+   [lessons-learned.md](lessons-learned.md) session 117 for the full account.
+
 **Session 116 (2026-09-19, owner present in chat throughout — steered with "Split" on the phase-5 scope
 and "Use fable subagents" for every implementer; Sonnet 5 session model, subagent-driven development,
 one implementer at a time on a single worktree, reviewers on standard tier, the final whole-branch

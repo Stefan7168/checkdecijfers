@@ -445,6 +445,21 @@ whole-branch review on the most capable model, one fix wave, one scoped re-revie
   finding, and a disclosed process deviation (a worktree-removal `--force` used without the
   human-in-the-loop check the process calls for).
 
+## Phase 5b — the "verified whole" (session 117, 2026-09-19/20) — IN PROGRESS, NOT YET BUILT
+
+**Not an "as built" section — this phase is not finished.** Design: spec
+[superpowers/specs/2026-09-17-chart-copilot-design.md](../superpowers/specs/2026-09-17-chart-copilot-design.md)
+§11. Plan: [superpowers/plans/2026-09-19-verified-whole-phase5b.md](../superpowers/plans/2026-09-19-verified-whole-phase5b.md).
+4 of 5 planned tasks are built on branch `verified-whole-phase5b` (worktree `../cdc-wt-verified-whole-phase5b`,
+both left in place at session end, not merged to `main`) — the pure sum-verification logic, the
+`ChartSpec.regionScope` provenance field, the three new `ChartForm` guards, and the on-demand
+verification server action + Recharts rendering, the last of which has 2 open Important review findings
+pending a fix round. Task 5 (chat-doorway wiring + coverage) and the final whole-branch review are not
+started. Full state, including the exact resume instructions: `docs/STATUS.md`'s top block,
+`docs/status-archive.md` session 117, and the SDD ledger at
+`.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md`. **A future session should update this
+section with a real "As built" once the phase actually merges — do not treat this paragraph as that.**
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.

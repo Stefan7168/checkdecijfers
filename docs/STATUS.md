@@ -18,111 +18,101 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-19/20, session 117 — owner present throughout, chose
+"phase 5b" over the house-styles alternative when offered a choice, then delegated fully: "You are the
+expert. Just do whatever you think is best, work autonomously"; **wrapped mid-build on the owner's
+signal — nothing from this session is merged to `main`**; verify against `git log`/the SDD ledger
+before trusting this).** Session 117 designed and PARTIALLY built **chart co-pilot phase 5b — the
+"verified whole"** (spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)
+§11, plan [superpowers/plans/2026-09-19-verified-whole-phase5b.md](superpowers/plans/2026-09-19-verified-whole-phase5b.md))
+via subagent-driven development on Fable-tier implementers — **4 of 5 tasks built, on branch
+`verified-whole-phase5b` (worktree `../cdc-wt-verified-whole-phase5b`, both left in place, not
+deleted).** Task 4 was reviewed with 2 open Important findings still pending a fix round when the
+session was asked to wrap up; Task 5, the final whole-branch review, and the merge to `main` were not
+started. `main` itself is UNCHANGED this session (still at the phase 5b **plan** commit, `a02b148a`,
+docs only — no code from phase 5b has reached `main`). Kickoff for the next session:
+[session-briefs/2026-09-19-session-118-kickoff.md](session-briefs/2026-09-19-session-118-kickoff.md) —
+**read it first, this session resumes an unfinished build, it does not start fresh.**
+
+- **What phase 5b is (in progress):** pie, stacked, and 100%-stacked chart forms become honestly
+  offered on a CBS/Eurostat chart when its regions are a complete, CBS-known roster (all provinces of
+  NL, all landsdelen, all gemeenten of one named province) — verified on demand, server-side, that the
+  visible parts genuinely sum to the real published total, reusing this product's existing region-roster
+  logic and needing no new CBS fetch. Donut is a presentation variant of pie, not a fourth chart form.
+  Scatter (the other capability split out of phase 5, [#296](open-questions.md)) stays explicitly
+  deferred, not part of this phase.
+- **A plan-drafting gap found and correctly handled by the first task that touched the real type:** the
+  plan assumed `RegionScope` has three variants (read off a `switch` statement, not the type's own
+  declaration); the real type has a fourth, `all_gemeenten`. The implementer also found a real reason it
+  has no verified-whole concept — CBS's own municipality grouping for "all gemeenten" excludes one real
+  code (`GM0997`/`OVERIG`), so that roster doesn't actually partition the national total on at least one
+  real table — and correctly refused to guess a parent for it rather than assuming a fourth case would
+  just slot in cleanly.
+- **A security design stronger than the plan's own literal spec.** The plan's brief had the new
+  on-demand verification server action accept a client-supplied chart spec directly; the implementer
+  built it to take an authenticated audit-record id instead (the same ownership/redaction-check pattern
+  a past session found missing from a sibling action). The task-scoped review then independently
+  re-derived an even stronger justification: a client-supplied spec would let a fabricated spec make the
+  server report a false "verified" for numbers never actually checked against any real cell — a direct
+  fabrication risk, not just a privacy gap.
+- **Task 4's 2 open Important findings (not yet fixed, next action on resume):** (1) the 100%-stacked
+  form's negative/zero-total omission path has zero test coverage; (2) the "omitted period" reason text
+  is reused for two different situations and is factually imprecise for one of them (a verified period
+  with an undefined share, not a failed verification). Both are real but narrow and low-probability —
+  see the SDD ledger for the exact resume instructions (resume the SAME implementer agent for a fix
+  round, per the skill's own process, before Task 5).
+- **THE NEXT ACTION is resuming this SDD plan, not starting new work:** read
+  `.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md` first — it has the exact task/round
+  state. Do not re-brainstorm or re-plan; the design and plan are sound and already reviewed clean
+  through Task 3.
+- **Owner steps pending — unchanged from sessions 110/111/114/115/116** (registry:apply, DOI backfill,
+  live benchmark, region-set Task 9, audit row 22, the two `:record` runs + `benchmark:run:live` once
+  the Anthropic workspace usage cap lifts, 2026-10-01).
+
+**Measured (session 117, on the unmerged branch, HEAD `5eed921a`):** root typecheck + web typecheck
+clean at every task; full web suite 2,565/2,565 (Task 4's own head); root `tests/query` 225/225; real
+Turbopack `next build` clean (worktree had real `node_modules` installs from the start this time, no
+symlink gap to fix mid-session). Tasks 1-3 individually reviewed clean (0 Critical/Important). Task 4
+reviewed with 0 Critical, 2 Important (open). **Not run this session:** Task 5, the final whole-branch
+review, any CI run (nothing pushed to a shared branch), the live benchmark, the two `:record` scripts.
+
+---
+
+**Previous top block (session 116, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-19, session 116 — owner present in chat throughout,
 gave "Split" and "use Fable subagents" as live steers; verify against `git log`/`gh run list` before
 trusting this).** Session 116 built **chart co-pilot phase 5 — chart-fit scorer + dumbbell/slope/
 heatmap** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 5", plan
 [superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md](superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md))
-via subagent-driven development — 5 sequential tasks (single worktree, one implementer at a time —
-`chart.tsx` proved too fragile for parallel edits), implementers on the Fable tier, a final
+via subagent-driven development — 5 sequential tasks, implementers on the Fable tier, a final
 whole-branch review on the most capable tier that found and the session fixed 2 Important cross-task
 bugs in one fix wave + one scoped re-review, pushed to `main` `dfdaee18..8abd187c` (11 commits). CI
-run `35451048437` green including deploy. Kickoff for the next session:
-[session-briefs/2026-09-19-session-117-kickoff.md](session-briefs/2026-09-19-session-117-kickoff.md).
+run `35451048437` green including deploy.
 
 - **What phase 5 is:** three new honest chart shapes, CBS/Eurostat card only
-  ([#295](open-questions.md)) — slope (zero new render code, reuses the line chart verbatim: a slope
-  chart IS a 2-point line chart); dumbbell (a new render using an existing-in-file Recharts hook
-  technique, `EndLabelsOverlay`'s own `useXAxisScale`/`useYAxisScale`, rather than an unproven
-  mechanism); heatmap (a plain CSS grid, discovered mid-build that the table form it's modelled on
-  lives outside the main chart render tree with ~17 separate gates for surrounding UI — heatmap
-  inherits all of them). All three gated by a small rule-based scorer (`web/lib/chart-fit.ts`,
-  `allowedForms`, no LLM) that both the on-screen tab switcher and the chat co-pilot's capability list
-  read from.
-- **Scope split before any code was written (owner: "Split").** The original 7-form sketch had 2 forms
-  (pie/donut/stacked/100%-stacked count as one honesty question) needing real new capabilities that
-  don't exist yet — a two-measure-per-point chart spec (scatter) and a "verified whole" concept
-  (pie/stacked) — neither built. [ADR 039](decisions/039-chart-presentation-panel.md)'s existing
-  refusal of all four stays unchanged; see [#296](open-questions.md).
-- **The final whole-branch review found 2 real cross-task bugs, both fixed same session:** (1) the
-  three new forms' guards read the `spec` PROP, not the spec actually drawn — a reader on the heatmap
-  tab picking a disqualifying alternate reading made the render code throw (no error boundary in
-  `web/`); dumbbell's twin rendered a blank canvas. Fixed with one composite `guardSpec` feeding every
-  phase-5 guard, while the five pre-existing forms are unaffected by construction (verified by reading
-  their own type signatures). (2) the public embed route's `?form=` allowlist excluded `'table'`
-  specifically (closing a real hand-crafted-URL hole) but not `'heatmap'`, its own table-like twin —
-  reopened that exact hole; fixed by sharing one `isTabularForm` predicate between the two files.
-- **A real bug found in an EARLIER task's own work, by the LAST task's test-writing:** Task 1's scorer
-  change silently changed what an existing e2e fixture's request bytes should be; the LLM stub's own
-  60-character prefix-match fallback masked it, so the existing test kept "passing" on stale evidence.
-  Found, fixed, fixtures re-hashed, verified nothing else moved — see [#298](open-questions.md) for the
-  suggested general drift-guard this class of bug argues for.
-- **A real, disclosed process deviation:** cleaning up the session's worktree, `git worktree remove`
-  was refused (untracked `node_modules`, recently converted from a symlink to a real install to fix a
-  Turbopack build gap) and re-run with `--force` without first showing the owner what was at stake, as
-  `finishing-a-development-branch`'s own process requires. It was safe (only git-ignored
-  `node_modules`, confirmed via `git status` first) but the right sequence wasn't followed — see
-  [lessons-learned.md](lessons-learned.md) session 116.
-- **New/changed open rows:** [#295](open-questions.md) (own-data support deferred, documented
-  boundary), [#296](open-questions.md) (pie/stacked/scatter split out, ADR 039 unchanged),
-  [#297](open-questions.md) (a disclosed, harmless residual — the chat's capability list doesn't yet
-  re-check the same `guardSpec` the panel guards do), [#298](open-questions.md) (the suggested
-  drift-guard test).
-- **THE NEXT BUILD PRIORITY:** the six house styles + homepage themes row
-  ([#275](open-questions.md)) — the chart co-pilot's own phase list (spec §5) is now fully built
-  through phase 5's scope; a NEW phase-5b brainstorming pass (pie/stacked/scatter's two missing
-  capabilities) is the next chart-co-pilot-specific work whenever picked up, not yet started.
-- **Owner steps pending — unchanged from sessions 110/111/114/115** (registry:apply, DOI backfill,
-  live benchmark, region-set Task 9, audit row 22, the two `:record` runs + `benchmark:run:live` once
-  the Anthropic workspace usage cap lifts, 2026-10-01).
+  ([#295](open-questions.md)) — slope (reuses the line chart verbatim), dumbbell (a new render using
+  an existing-in-file Recharts hook technique), heatmap (a CSS grid, discovered mid-build to need the
+  table form's ~17 surrounding-UI gates). All three gated by a rule-based scorer, no LLM.
+- **Scope split before any code was written (owner: "Split").** Pie/donut/stacked/100%-stacked and
+  scatter need real new capabilities that don't exist yet — split into phase 5b, not built this
+  session. [ADR 039](decisions/039-chart-presentation-panel.md)'s refusal of all four stayed unchanged
+  through this session.
+- **The final whole-branch review found 2 real cross-task bugs, both fixed same session:** a guard
+  reading the wrong spec (the prop, not the alternate-reading/zoom-windowed spec actually drawn), and
+  a public-embed-route allowlist gap reopening a previously-closed hole for heatmap.
+- **A real bug found in an EARLIER task's own work, by the LAST task's test-writing:** an existing e2e
+  fixture had gone stale, masked by the LLM stub's own prefix-match fallback. Fixed, fixtures re-hashed.
+- **A real, disclosed process deviation:** a worktree `--force` removal without first showing the owner
+  what was at stake, per `finishing-a-development-branch`'s own process. Safe, but the wrong sequence.
+  See [lessons-learned.md](lessons-learned.md) session 116.
+- **New open rows:** [#295](open-questions.md)-[#298](open-questions.md).
 
 **Measured (session 116, at push, HEAD `8abd187c`):** root typecheck + web typecheck clean; root
-204 files / 2,981 tests; web 145 files / 2,505 tests; real Turbopack `next build` clean (not a
-webpack substitute — a worktree `node_modules`-symlink gap that broke it was fixed mid-session); full
-Playwright e2e suite 21/21 (real Chromium, LLM-stub-backed, zero model calls), including a genuine
-CSS-grid layout assertion for the heatmap (bounding-box row/column alignment, computed
-`display: grid`/`contents`) — the one real-browser check this phase's CSS-grid work needed, since
-jsdom has no layout engine; final whole-branch review (most capable tier) — 2 Important found and
-fixed, 0 remaining Critical/Important; CI run `35451048437` green (all 5 jobs incl. deploy). **Not
-run this session:** the live benchmark and the two `:record` scripts (Anthropic workspace usage cap,
-real API spend, unchanged since 2026-09-14).
-
----
-
-**Previous top block (session 115, kept verbatim below for one session):**
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-19, session 115 — owner delegated: "spawn multiple
-agents and get work done autonomously," present in chat throughout; verify against `git log` before
-trusting this).** Session 115 built **chart co-pilot phase 4 — storytelling primitives** (ADR
-[056](decisions/056-chart-copilot.md) "As built — phase 4", plan
-[superpowers/plans/2026-09-19-chart-copilot-phase4.md](superpowers/plans/2026-09-19-chart-copilot-phase4.md))
-via subagent-driven development — 8 tasks in three waves (2 parallel foundation tasks, 5 parallel UI
-tasks merged one at a time, 1 test-coverage task), a final whole-branch review on the most capable
-tier that found and the session fixed 1 Critical (a real authorization hole) + 10 Important
-cross-task findings in one fix wave + one scoped re-review + a handful of controller-direct
-residuals, pushed to `main` `edbf6d30..4902737c` (50 commits) + docs. CI run `35440310164` green
-including deploy.
-
-- **What phase 4 is:** six new chart-editing primitives, panel-only (chat-doorway wiring and
-  own-data support both deferred, [#289](open-questions.md)) — goal line and era shading, dim-not-hide,
-  a reader-chosen headline number, a difference arrow and an average line (computed server-side, on
-  demand, via `requestChartDerivation` — no new CBS fetch, no new audit row, never in the browser).
-- **A real, live authorization hole was found and fixed same session.** `requestChartDerivation` read
-  any user's audited answer by a fully-guessable client-supplied id with no ownership/GDPR-redaction
-  check — fixed to match its sibling `createEmbedCode`. Never deployed with the hole open.
-- **A real process incident, found and remediated same session:** a subagent operated against the main
-  repo checkout instead of its assigned `git worktree`; remediated with a local `git reset --hard`,
-  nothing pushed, nothing lost. See [lessons-learned.md](lessons-learned.md) session 115.
-- **Correction, same session:** the Playwright e2e suite is NOT blocked by the Anthropic cap — it's
-  hermetic (LLM stub) and DID run via CI, finding 5 real bugs (3 test-selector, 2 real product) across
-  a 5-round CI fix loop, all fixed.
-
-**Measured (session 115, at push, HEAD `4902737c`):** root typecheck + web typecheck clean; root
-204 files / 2,977 tests; web 144 files / 2,433 tests; `next build` clean; final whole-branch review
-(most capable tier) — 1 Critical + 10 Important found and fixed, 0 remaining Critical/Important; CI run
-`35440310164` green (all jobs incl. deploy) — Playwright e2e 18/18, after a 5-round fix loop against
-real CI failures the local jsdom/typecheck/next-build checks couldn't catch. **Not run this session:**
-the live benchmark and the two `:record` scripts (Anthropic workspace usage cap, real API spend).
+204 files / 2,981 tests; web 145 files / 2,505 tests; real Turbopack `next build` clean; full
+Playwright e2e suite 21/21 including a genuine CSS-grid layout assertion for the heatmap; final
+whole-branch review — 2 Important found and fixed, 0 remaining; CI run `35451048437` green (all 5 jobs
+incl. deploy). **Not run this session:** the live benchmark and the two `:record` scripts.
 
 ---
 

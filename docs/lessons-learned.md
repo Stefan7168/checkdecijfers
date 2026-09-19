@@ -6,6 +6,51 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 117 (partial — wrapped mid-build) — a plan's own reading of a type was one variant short, and
+## a security question got a stronger answer than the one it was asked with
+
+**A plan's code sketch, written by reading a `switch` statement rather than the type declaration it
+switches over, was missing a real variant — found by the first task that actually read the type.** The
+phase 5b design/plan assumed `RegionScope` had three kinds (read off `src/query/region-set.ts`'s own
+`switch`), but the real type (`src/query/types.ts`) has a fourth, `all_gemeenten`. The implementer who
+found it also found a second-order fact the plan couldn't have known: CBS's own municipality grouping for
+"all gemeenten" excludes one real municipality-equivalent code (`GM0997`/`OVERIG`), so that roster does
+not actually partition the national total on at least one real table — meaning even a corrected plan
+would have been wrong to just add a fourth case; the right move was refusing to treat it as verifiable at
+all. **Lesson:** when a plan describes a union/enum type by reading code that NARROWS over it (a switch,
+an if-chain) rather than the type's own declaration, treat the plan's list as a floor, not a ceiling, and
+have the first task that touches the real type re-derive it from the declaration — this is now the second
+session running this exact class of gap has shown up (session 116 hit an equivalent case with `ChartForm`
+narrowing sites), so it's worth budgeting for it as a near-certainty on any plan built from partial reads
+of a large codebase, not an unlucky edge case.
+
+**A security-conscious deviation the controller asked for, implemented more strongly than the controller's
+own framing asked for.** Told to give a new server action "the same ownership/redaction check" a past
+session found missing from a sibling action, the implementer went further than a checklist read of that
+instruction would have: it recognized that the PLAN's own literal function signature (accepting a
+client-supplied chart spec directly) had no id to check ownership OF in the first place, and that this
+was the deeper problem — a fabricated spec could make the server report a false "verified" against
+numbers nobody actually checked, not merely leak another user's data. The task-scoped review then went a
+step further again, independently re-deriving the SAME conclusion from the execution order rather than
+the report's prose, and stating the security case more precisely than either the controller's instruction
+or the implementer's own justification had. **Lesson:** a security instruction phrased as "match this
+precedent" is a floor, not the actual requirement — the actual requirement is whatever a fresh, careful
+read of the new code's own attack surface implies, and both an implementer and a reviewer independently
+re-deriving that (rather than pattern-matching the instruction) is exactly the redundancy this process is
+built to provide, not wasted effort.
+
+**Wrapping up mid-build, with an implementer's task-scoped review still holding two open Important
+findings, is a legitimate stopping point — the ledger is what makes it safe.** The owner's wrap-up signal
+landed between a task review completing (2 Important findings, no fix round yet) and this session's next
+planned action. Rather than either rushing one more subagent round to force a "clean" stopping point or
+silently declaring the task done despite the open findings, the ledger was updated to record the exact
+open state (which findings, which round, which agent to resume, per the SDD skill's own "rounds 1-3 resume
+the original implementer" rule) and the wrap-up proceeded honestly describing an in-progress branch, not a
+shipped one. **Lesson:** "the owner wants to stop now" and "leave accurate, resumable state" are not in
+tension — the mistake would have been silently finishing a review-round-worth of work to make the docs
+say something cleaner than what's actually true, or conversely abandoning the ledger update because the
+task wasn't going to reach "complete" this session.
+
 ## Session 116 — chart-fit scorer + dumbbell/slope/heatmap: a guard checked the wrong spec, a real
 ## architecture surprise in `chart.tsx`, and a stub's leniency hid a fixture going stale
 
