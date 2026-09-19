@@ -27,7 +27,8 @@ via subagent-driven development — 5 sequential tasks (single worktree, one imp
 `chart.tsx` proved too fragile for parallel edits), implementers on the Fable tier, a final
 whole-branch review on the most capable tier that found and the session fixed 2 Important cross-task
 bugs in one fix wave + one scoped re-review, pushed to `main` `dfdaee18..8abd187c` (11 commits). CI
-run `35451048437` green including deploy.
+run `35451048437` green including deploy. Kickoff for the next session:
+[session-briefs/2026-09-19-session-117-kickoff.md](session-briefs/2026-09-19-session-117-kickoff.md).
 
 - **What phase 5 is:** three new honest chart shapes, CBS/Eurostat card only
   ([#295](open-questions.md)) — slope (zero new render code, reuses the line chart verbatim: a slope

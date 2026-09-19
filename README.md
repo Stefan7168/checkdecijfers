@@ -9,7 +9,10 @@ freshness date shown. When data is missing, ambiguous, or stale, the product ref
 never guesses. CBS is the primary source; Eurostat is a second data source built as an internal,
 flag-gated adapter (`EUROSTAT_EXPLORER_ENABLED`, [ADR 048](docs/decisions/048-eurostat-data-source.md)) —
 not yet reachable from the public chat. The interface itself is bilingual (a Dutch/English switch
-in the header). A chart can be switched between line/area/bar/horizontal-bar/table, read as its
+in the header). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
+CBS/Eurostat chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when
+comparing multiple regions across multiple periods, each offered only when it stays honest for the
+data on screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5). A chart can also be read as its
 alternate definition or as period-over-period %-change instead of the level, restyled with
 templates — per chart or as an account default — captioned with a journalist headline and free-text
 notes, paired with plain-language insights or built into a multi-chart story, downloaded as PNG,
@@ -42,7 +45,7 @@ For development: a hermetic local harness (`scripts/dev-harness/`, see [docs/RUN
 | [docs/04-architecture.md](docs/04-architecture.md) | System shape, component justifications, future-build seams, GDPR reservation |
 | [docs/05-data-rules.md](docs/05-data-rules.md) | CBS data strategy, testable anti-hallucination invariants, CC BY 4.0, platform risk |
 | [docs/06-roadmap.md](docs/06-roadmap.md) | Phases 0→3; every notes-derived feature slotted or rejected |
-| [docs/decisions/](docs/decisions/) | ADRs for every load-bearing technical choice (55 and counting — [047](docs/decisions/047-repositioning-embedded-sourced-chart.md) is the current positioning/direction one) |
+| [docs/decisions/](docs/decisions/) | ADRs for every load-bearing technical choice (57 and counting — [047](docs/decisions/047-repositioning-embedded-sourced-chart.md) is the current positioning/direction one) |
 | [docs/open-questions.md](docs/open-questions.md) | Open ambiguities + the assumptions made (terminally-closed rows in [open-questions-archive.md](docs/open-questions-archive.md)) |
 | [docs/lessons-learned.md](docs/lessons-learned.md) | Process lessons per session — surprises, dead ends, tool quirks |
 
