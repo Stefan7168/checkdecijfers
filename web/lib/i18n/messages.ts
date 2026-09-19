@@ -907,12 +907,17 @@ const nl = {
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
   // WP218 phase 5 (chart-types plan, Task 3): the Grafiek tab's collapsed
-  // note explaining why pie/donut, stacked, scatter and sorted-by-value
-  // charts are never offered as a form — digit-free per the resolver's own
-  // honesty invariant ('één'/'twee' are words, not numerals).
+  // note explaining when pie/stacked are offered and why scatter and
+  // sorted-by-value charts never are — digit-free per the resolver's own
+  // honesty invariant ('één'/'twee' are words, not numerals). Phase 5b
+  // (verified-whole, Task 4) rewrote the first sentences: pie/stacked are no
+  // longer refused outright — they are offered exactly when the parts are a
+  // complete CBS-known roster AND the parts have been checked against the
+  // published CBS total (chart-whole-verification-actions.ts). The scatter
+  // sentence is unchanged (ADR 039: still never offered).
   'chart.panel.whyNotTitle': 'Waarom geen taart- of gestapelde grafiek?',
   'chart.panel.whyNotBody':
-    'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+    'Een taart- of gestapelde grafiek tekent een geheel waar de delen bij optellen. Die wordt alleen aangeboden als de delen een volledige set regio’s zijn die het CBS zelf als geheel kent, zoals alle provincies, en nadat is gecontroleerd dat ze optellen tot het gepubliceerde CBS-totaal; in elk ander geval staat dat totaal in geen enkele CBS-cel. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
   'chart.panel.tabFrame': 'Kader',
   // ADR 043: chart templates v1 — the catalogue keys for the six named
   // looks plus the brand template shown alongside them.
@@ -1255,6 +1260,33 @@ const nl = {
   'chart.derived.errorPointNotOnChart': 'Een van de gekozen punten staat niet in deze grafiek.',
   'chart.derived.errorSamePeriod': 'Kies twee verschillende periodes voor een verschil.',
   'chart.derived.errorGeneric': 'Dit kan niet met deze punten.',
+
+  // Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand check
+  // that a pie/stacked/100%-stacked chart's parts add up to the CBS-published
+  // total (app/chart-whole-verification-actions.ts). Every string here is
+  // digit-free — the chart card's whole-DOM digit scan must find no numeral
+  // it cannot bind to a spec string. The `refused.*` keys map one-to-one to
+  // the check's own reason codes (src/query/whole-verification.ts) plus the
+  // three client-side cases that never reach the server (no saved answer,
+  // an alternate reading, a hidden series); `{periods}` is a list of the
+  // spec's own period labels, verbatim.
+  'chart.whole.checking': 'De delen worden gecontroleerd tegen het CBS-totaal…',
+  'chart.whole.verifiedNote': 'Gecontroleerd: de delen tellen op tot het CBS-totaal.',
+  // `{periods}` sits mid-sentence, followed by a space, and the list is
+  // joined with ' · ' — never a trailing '.' or a ', ' between labels: the
+  // card's digit scan tokenises `\d[\d.,]*`, so "2021." or "2020," would
+  // be a token no spec string contains.
+  'chart.whole.omittedPeriods': 'Niet getekend voor {periods} — het CBS-totaal ontbreekt daar of klopt niet.',
+  'chart.whole.refused.missing_whole':
+    'Het CBS heeft voor deze periode geen totaal gepubliceerd, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
+  'chart.whole.refused.withheld_member':
+    'Het CBS geeft voor deze periode niet elk deel vrij, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
+  'chart.whole.refused.sum_mismatch':
+    'De delen tellen voor deze periode niet op tot het CBS-totaal, dus deze vorm wordt niet getekend. Kies een andere periode.',
+  'chart.whole.refused.unavailable': 'De controle tegen het CBS-totaal is nu niet mogelijk. Probeer het later opnieuw.',
+  'chart.whole.refused.noAudit': 'Beschikbaar bij een bewaard antwoord, waar de delen tegen het CBS-totaal kunnen worden gecontroleerd.',
+  'chart.whole.refused.alternateReading': 'Bij een andere lezing kan het geheel niet worden gecontroleerd. Kies de eerste lezing.',
+  'chart.whole.refused.hiddenSeries': 'Een taart- of gestapelde grafiek toont alle delen van het geheel. Maak eerst elke reeks weer zichtbaar.',
 
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
@@ -1923,7 +1955,7 @@ const en: Messages = {
   'chart.panel.languageEn': 'English',
   'chart.panel.whyNotTitle': 'Why no pie or stacked chart?',
   'chart.panel.whyNotBody':
-    'A pie or a stacked chart draws a total or a share that no CBS cell contains. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
+    'A pie or a stacked chart draws a whole that its parts add up to. It is offered only when the parts are a complete set of regions that CBS itself defines as a whole, such as all provinces, and after a check that they add up to the published CBS total; in every other case that total sits in no CBS cell. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
   'chart.panel.tabFrame': 'Frame',
   'chart.panel.tabTemplates': 'Templates',
   'chart.template.standard': 'Standard',
@@ -2182,6 +2214,21 @@ const en: Messages = {
   'chart.derived.errorPointNotOnChart': 'One of the chosen points is not on this chart.',
   'chart.derived.errorSamePeriod': 'Pick two different periods for a difference.',
   'chart.derived.errorGeneric': 'This cannot be done with these points.',
+
+  // Chart co-pilot phase 5b (verified-whole, Task 4) — see the `nl` block.
+  'chart.whole.checking': 'Checking that the parts add up to the CBS total…',
+  'chart.whole.verifiedNote': 'Checked: the parts add up to the CBS total.',
+  'chart.whole.omittedPeriods': 'Not drawn for {periods} — the CBS total is missing or does not match there.',
+  'chart.whole.refused.missing_whole':
+    'CBS has not published a total for this period, so the whole cannot be checked. Choose another period.',
+  'chart.whole.refused.withheld_member':
+    'CBS withholds at least one part for this period, so the whole cannot be checked. Choose another period.',
+  'chart.whole.refused.sum_mismatch':
+    'The parts do not add up to the CBS total for this period, so this form is not drawn. Choose another period.',
+  'chart.whole.refused.unavailable': 'The check against the CBS total is not possible right now. Try again later.',
+  'chart.whole.refused.noAudit': 'Available on a saved answer, where the parts can be checked against the CBS total.',
+  'chart.whole.refused.alternateReading': 'The whole cannot be checked for an alternate reading. Choose the first reading.',
+  'chart.whole.refused.hiddenSeries': 'A pie or stacked chart shows every part of the whole. Show every series again first.',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English

@@ -82,6 +82,14 @@ const chartDerivationActions = vi.hoisted(() => ({
   requestChartDerivation: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
 }));
 vi.mock('../app/chart-derivation-actions.ts', () => chartDerivationActions);
+// Phase 5b (verified-whole, Task 4): chart.tsx imports the on-demand whole
+// verification Server Action directly — mocked like every module above,
+// and per-test controllable so the pie/stacked tests below can hand the
+// card a real per-period verdict (verified / sum_mismatch / missing_whole).
+const chartWholeActions = vi.hoisted(() => ({
+  requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/chart-whole-verification-actions.ts', () => chartWholeActions);
 import {
   annotationMarkers,
   BAR_LABEL_MAX,
@@ -4029,14 +4037,16 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 // ---------------------------------------------------------------------------
 
 describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
-  it('offers all eight tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling, Warmtekaart', () => {
+  it('offers all eleven tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling, Warmtekaart, Taartdiagram, Gestapeld, Gestapeld (%)', () => {
     // Phase 5 (chart-fit scorer, Tasks 2-4): Dumbbell, Helling (slope) and
     // Warmtekaart (heatmap) trail Tabel, in the scorer's own fixed order —
     // always rendered, disabled when the spec doesn't qualify (here: one
-    // series, so none of the three is offered).
+    // series, so none of the three is offered). Phase 5b (verified-whole,
+    // Task 4): Taartdiagram, Gestapeld, Gestapeld (%) trail those three,
+    // again always rendered and here disabled (no roster provenance).
     render(<ChartView spec={threePointSpec()} />);
     const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
-    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
+    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']);
   });
 
   it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
@@ -4619,10 +4629,10 @@ describe('ChartView — heatmap form (phase 5, Task 4)', () => {
     return Number(m![1]);
   }
 
-  it('the three phase-5 tabs sit after Tabel in the fixed order Dumbbell, Helling, Warmtekaart', () => {
+  it('the three phase-5 tabs sit after Tabel in the fixed order Dumbbell, Helling, Warmtekaart (the phase-5b trio trails them)', () => {
     render(<ChartView spec={twoSeriesLineSpec()} />);
     const names = screen.getAllByRole('tab').map((el) => el.textContent);
-    expect(names.slice(-4)).toEqual(['Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
+    expect(names.slice(-7, -3)).toEqual(['Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
   });
 
   it('a 2-series × 2-point spec offers Warmtekaart enabled; selecting it renders a grid of bound cells and no chart', () => {
@@ -7355,5 +7365,358 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     expect(screen.getByText('Testperiode label')).toBeInTheDocument();
     // The band itself, unlike the label, genuinely is inside the export.
     expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chart co-pilot phase 5b (verified-whole, session 117, Task 4): the
+// Taartdiagram / Gestapeld / Gestapeld (%) tabs and their on-demand whole
+// check. The tabs are OFFERED on provenance alone (`regionScope`, a
+// structural guard — chart-view-state.test.ts pins that the code list never
+// suffices); whether a period is DRAWN is the mocked Server Action's own
+// per-period verdict. Every drawn number is a point's own formattedValue
+// bound via data-label-for; the 100%-stacked share is the one computed
+// number, formatted by the same formatter and asserted through it.
+// ---------------------------------------------------------------------------
+
+describe('ChartView — verified-whole forms (phase 5b, Task 4)', () => {
+  const PIE_STRUCTURAL = 'Beschikbaar zodra de grafiek één moment toont voor een volledige set regio’s die het CBS zelf als geheel kent, zoals alle provincies.';
+  const STACKED_STRUCTURAL = 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.';
+  const SUM_MISMATCH = 'De delen tellen voor deze periode niet op tot het CBS-totaal, dus deze vorm wordt niet getekend. Kies een andere periode.';
+  const MISSING_WHOLE = 'Het CBS heeft voor deze periode geen totaal gepubliceerd, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.';
+  const NO_AUDIT = 'Beschikbaar bij een bewaard antwoord, waar de delen tegen het CBS-totaal kunnen worden gecontroleerd.';
+  const HIDDEN_SERIES = 'Een taart- of gestapelde grafiek toont alle delen van het geheel. Maak eerst elke reeks weer zichtbaar.';
+  const UNAVAILABLE = 'De controle tegen het CBS-totaal is nu niet mogelijk. Probeer het later opnieuw.';
+  const VERIFIED_NOTE = 'Gecontroleerd: de delen tellen op tot het CBS-totaal.';
+
+  /** Three provinces at one moment, the way a region-set answer is built:
+   * `kind: 'bar'`, one series per region, one point each, and — the whole
+   * point of this phase — `regionScope` set by the builder. Same codes and
+   * values as multiRegionBarSpec(), which carries NO scope. */
+  function provinceRosterSpec(): ChartSpec {
+    return spec({
+      kind: 'bar',
+      unit: 'aantal',
+      regionScope: { kind: 'all_provincies' },
+      series: [
+        { label: 'Groningen', regionCode: 'PV20', points: [point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 10, formattedValue: '10' })] },
+        { label: 'Friesland', regionCode: 'PV21', points: [point({ resultId: 'fr-2021', periodCode: '2021', periodLabel: '2021', value: 20, formattedValue: '20' })] },
+        { label: 'Drenthe', regionCode: 'PV22', points: [point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 70, formattedValue: '70' })] },
+      ],
+    });
+  }
+
+  /** The same roster over two years (a stacked chart draws one stack per
+   * period). Values chosen so every segment is tall enough to carry its
+   * label at the test container's 256 px. */
+  function provinceRosterTwoYearSpec(): ChartSpec {
+    return spec({
+      kind: 'bar',
+      unit: 'aantal',
+      regionScope: { kind: 'all_provincies' },
+      series: [
+        {
+          label: 'Groningen',
+          regionCode: 'PV20',
+          points: [
+            point({ resultId: 'gr-2020', periodCode: '2020', periodLabel: '2020', value: 10, formattedValue: '10' }),
+            point({ resultId: 'gr-2021', periodCode: '2021', periodLabel: '2021', value: 15, formattedValue: '15' }),
+          ],
+        },
+        {
+          label: 'Friesland',
+          regionCode: 'PV21',
+          points: [
+            point({ resultId: 'fr-2020', periodCode: '2020', periodLabel: '2020', value: 20, formattedValue: '20' }),
+            point({ resultId: 'fr-2021', periodCode: '2021', periodLabel: '2021', value: 25, formattedValue: '25' }),
+          ],
+        },
+        {
+          label: 'Drenthe',
+          regionCode: 'PV22',
+          points: [
+            point({ resultId: 'dr-2020', periodCode: '2020', periodLabel: '2020', value: 70, formattedValue: '70' }),
+            point({ resultId: 'dr-2021', periodCode: '2021', periodLabel: '2021', value: 60, formattedValue: '60' }),
+          ],
+        },
+      ],
+    });
+  }
+
+  function verdicts(periods: Record<string, { verified: true } | { verified: false; reason: 'withheld_member' | 'sum_mismatch' | 'missing_whole' }>) {
+    chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: true, periods });
+  }
+
+  function tab(name: string): HTMLElement {
+    return screen.getByRole('tab', { name });
+  }
+
+  function labelsByRole(container: HTMLElement, role: string): [string | null, string | null][] {
+    return [...container.querySelectorAll<HTMLElement>(`[data-role="${role}"]`)].map((el) => [el.getAttribute('data-label-for'), el.textContent]);
+  }
+
+  beforeEach(() => {
+    chartWholeActions.requestWholeVerification.mockReset();
+    chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: false, reason: 'not resolved in this test' });
+  });
+
+  it('the three tabs trail Warmtekaart in the fixed order Taartdiagram, Gestapeld, Gestapeld (%)', () => {
+    render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    const names = screen.getAllByRole('tab').map((el) => el.textContent);
+    expect(names.slice(-4)).toEqual(['Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']);
+  });
+
+  it('a spec with the SAME province codes but no regionScope disables all three tabs with their structural reason — provenance, not codes', () => {
+    render(<ChartView spec={multiRegionBarSpec()} embed={{ auditId: 1 }} />);
+    for (const [name, reason] of [
+      ['Taartdiagram', PIE_STRUCTURAL],
+      ['Gestapeld', STACKED_STRUCTURAL],
+      ['Gestapeld (%)', 'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zodat elk aandeel tegen een echt totaal wordt gezet.'],
+    ] as const) {
+      const el = tab(name);
+      expect(el).toBeDisabled();
+      expect(el).toHaveAttribute('title', reason);
+      const describedBy = el.getAttribute('aria-describedby')!;
+      expect(document.getElementById(describedBy)).toHaveTextContent(reason);
+    }
+    expect(chartWholeActions.requestWholeVerification).not.toHaveBeenCalled();
+  });
+
+  it('a roster spec with no saved answer (no auditId) offers none of the three — there is nothing to verify against', () => {
+    render(<ChartView spec={provinceRosterSpec()} />);
+    expect(tab('Taartdiagram')).toBeDisabled();
+    expect(tab('Taartdiagram')).toHaveAttribute('title', NO_AUDIT);
+    expect(tab('Gestapeld')).toHaveAttribute('title', NO_AUDIT);
+    expect(tab('Gestapeld (%)')).toHaveAttribute('title', NO_AUDIT);
+    expect(chartWholeActions.requestWholeVerification).not.toHaveBeenCalled();
+  });
+
+  it('a roster spec with a saved answer offers all three enabled; the check only runs once a whole form is picked', () => {
+    render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    for (const name of ['Taartdiagram', 'Gestapeld', 'Gestapeld (%)']) {
+      expect(tab(name)).not.toBeDisabled();
+      expect(tab(name)).not.toHaveAttribute('title');
+      expect(tab(name)).not.toHaveAttribute('aria-describedby');
+    }
+    // Structural checks are free; the numeric check is on demand (spec §11).
+    expect(chartWholeActions.requestWholeVerification).not.toHaveBeenCalled();
+  });
+
+  it('pie: picking the tab asks the server for exactly the shown period, shows the checking state, then draws one bound slice per region', async () => {
+    verdicts({ '2021': { verified: true } });
+    const s = provinceRosterSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    expect(tab('Taartdiagram')).toHaveAttribute('aria-selected', 'true');
+    // Nothing chart-shaped until the verdict is in — the checking line instead.
+    expect(container.querySelector('.recharts-pie')).toBeNull();
+    expect(screen.getByTestId('whole-checking')).toHaveTextContent('De delen worden gecontroleerd tegen het CBS-totaal…');
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2021']);
+
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    expect(screen.queryByTestId('whole-checking')).toBeNull();
+    // Three slices, each bound to its region's own cell, in spec order.
+    const sectors = [...container.querySelectorAll<HTMLElement>('.recharts-pie-sector [data-point="value"]')];
+    expect(sectors.map((el) => el.getAttribute('data-result-id'))).toEqual(['gr-2021', 'fr-2021', 'dr-2021']);
+    // Each label is the point's OWN formattedValue — never a Recharts percentage.
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['gr-2021', '10'],
+      ['fr-2021', '20'],
+      ['dr-2021', '70'],
+    ]);
+    expect([...container.querySelectorAll('[data-role="pie-label"]')].some((el) => /%/.test(el.textContent ?? ''))).toBe(false);
+    // A plain pie: every sector path reaches the centre (one arc, no inner arc).
+    for (const path of container.querySelectorAll<SVGPathElement>('.recharts-pie-sector path')) {
+      expect((path.getAttribute('d') ?? '').match(/A/g)?.length ?? 0).toBe(1);
+    }
+    // Slices are told apart by colour (the per-series palette, not the
+    // comparison-shaped single colour the hbar uses).
+    expect(new Set(sectors.map((el) => el.getAttribute('fill'))).size).toBe(3);
+    expect(screen.getByTestId('whole-note')).toHaveTextContent(VERIFIED_NOTE);
+    // Checked exactly once per period per mounted chart.
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('donut: the pieHole presentation key only changes the hole — same slices, same labels, an inner arc on every sector', async () => {
+    verdicts({ '2021': { verified: true } });
+    const s = provinceRosterSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} initialPresentation={{ pieHole: 'donut' }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    for (const path of container.querySelectorAll<SVGPathElement>('.recharts-pie-sector path')) {
+      expect((path.getAttribute('d') ?? '').match(/A/g)?.length ?? 0).toBe(2);
+    }
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['gr-2021', '10'],
+      ['fr-2021', '20'],
+      ['dr-2021', '70'],
+    ]);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('pie: a refused verdict sends the form back to the table, with the verdict\'s own reason on the now-disabled tab', async () => {
+    verdicts({ '2021': { verified: false, reason: 'sum_mismatch' } });
+    const s = provinceRosterSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    await waitFor(() => expect(tab('Taartdiagram')).toBeDisabled());
+    expect(tab('Taartdiagram')).toHaveAttribute('title', SUM_MISMATCH);
+    expect(document.getElementById(tab('Taartdiagram').getAttribute('aria-describedby')!)).toHaveTextContent(SUM_MISMATCH);
+    // The table is what renders (fallbackForm: pie -> table), and is the selected tab.
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelector('.recharts-pie')).toBeNull();
+    expect(tab('Tabel')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('whole-note')).toBeNull();
+    // Stacked forms share the verdict (one shown period, refused): disabled too.
+    expect(tab('Gestapeld')).toBeDisabled();
+    expect(tab('Gestapeld')).toHaveAttribute('title', SUM_MISMATCH);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('pie: a failed round trip (ok: false) is an explained refusal, never a spinner', async () => {
+    chartWholeActions.requestWholeVerification.mockResolvedValue({ ok: false });
+    render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    await waitFor(() => expect(tab('Taartdiagram')).toBeDisabled());
+    expect(tab('Taartdiagram')).toHaveAttribute('title', UNAVAILABLE);
+    expect(screen.queryByTestId('whole-checking')).toBeNull();
+  });
+
+  it('pie: hiding a series while the pie is on screen refuses the whole (a part is missing), and re-showing it restores the pie', async () => {
+    verdicts({ '2021': { verified: true } });
+    const { container } = render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
+    expect(container.querySelector('.recharts-pie')).toBeNull();
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(tab('Taartdiagram')).toBeDisabled();
+    expect(tab('Taartdiagram')).toHaveAttribute('title', HIDDEN_SERIES);
+    // The legend stays on the card (the table alone would have dropped it)
+    // so the reader can show the series again from right here.
+    fireEvent.click(screen.getByRole('button', { name: 'Friesland' }));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    // No second round trip: the verdict for this period was already held.
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+  });
+
+  it('stacked: one stack per verified period, every segment bound and labelled with its own formattedValue', async () => {
+    verdicts({ '2020': { verified: true }, '2021': { verified: true } });
+    const s = provinceRosterTwoYearSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    // A two-period roster is not one moment: no pie, but both stacks.
+    expect(tab('Taartdiagram')).toBeDisabled();
+    expect(tab('Gestapeld')).not.toBeDisabled();
+    fireEvent.click(tab('Gestapeld'));
+    expect(chartWholeActions.requestWholeVerification).toHaveBeenCalledWith({ kind: 'answer', id: 1 }, ['2020', '2021']);
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(6));
+    const ids = [...container.querySelectorAll<HTMLElement>('[data-point="value"]')].map((el) => el.getAttribute('data-result-id'));
+    expect(ids.sort()).toEqual(['dr-2020', 'dr-2021', 'fr-2020', 'fr-2021', 'gr-2020', 'gr-2021']);
+    expect(labelsByRole(container, 'stack-label').sort()).toEqual(
+      [
+        ['gr-2020', '10'],
+        ['fr-2020', '20'],
+        ['dr-2020', '70'],
+        ['gr-2021', '15'],
+        ['fr-2021', '25'],
+        ['dr-2021', '60'],
+      ].sort(),
+    );
+    // No percentage anywhere in the drawn chart: the segment labels are the real values.
+    expect([...container.querySelectorAll('[data-role="stack-label"]')].some((el) => /%/.test(el.textContent ?? ''))).toBe(false);
+    expect(screen.getByTestId('whole-note')).toHaveTextContent(VERIFIED_NOTE);
+    expect(screen.getByTestId('whole-note')).not.toHaveTextContent('Niet getekend');
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('stacked: a period whose verdict is refused is OMITTED — its stack absent, the other drawn, the note naming it', async () => {
+    verdicts({ '2020': { verified: true }, '2021': { verified: false, reason: 'missing_whole' } });
+    const s = provinceRosterTwoYearSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Gestapeld'));
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
+    const ids = [...container.querySelectorAll<HTMLElement>('[data-point="value"]')].map((el) => el.getAttribute('data-result-id'));
+    expect(ids.sort()).toEqual(['dr-2020', 'fr-2020', 'gr-2020']);
+    expect(container.querySelector('[data-result-id="gr-2021"]')).toBeNull();
+    // The tab stays enabled (one period still verifies) and explains nothing.
+    expect(tab('Gestapeld')).not.toBeDisabled();
+    expect(screen.getByTestId('whole-note')).toHaveTextContent(`${VERIFIED_NOTE} Niet getekend voor 2021 — het CBS-totaal ontbreekt daar of klopt niet.`);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('stacked: when EVERY shown period is refused the form falls back to the table with the first verdict\'s reason', async () => {
+    verdicts({ '2020': { verified: false, reason: 'missing_whole' }, '2021': { verified: false, reason: 'sum_mismatch' } });
+    const { container } = render(<ChartView spec={provinceRosterTwoYearSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Gestapeld (%)'));
+    await waitFor(() => expect(tab('Gestapeld (%)')).toBeDisabled());
+    expect(tab('Gestapeld (%)')).toHaveAttribute('title', MISSING_WHOLE);
+    expect(tab('Gestapeld')).toHaveAttribute('title', MISSING_WHOLE);
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelectorAll('[data-point="value"]').length).toBe(0);
+    expect(tab('Tabel')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('100%-stacked: each segment is its share of that period\'s own verified total, computed AFTER the verdict and formatted by the app\'s own formatter', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    verdicts({ '2020': { verified: true }, '2021': { verified: true } });
+    const s = provinceRosterTwoYearSpec();
+    const { container } = render(<ChartView spec={s} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Gestapeld (%)'));
+    // Before the verdict: no segment, no share label anywhere on the card.
+    expect(container.querySelectorAll('[data-point="value"]').length).toBe(0);
+    expect(container.querySelectorAll('[data-role="stack-label"]').length).toBe(0);
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(6));
+    // 2020: 10/20/70 of 100; 2021: 15/25/60 of 100 — shares through the
+    // SAME formatter the assertion uses, never a hand-typed string.
+    const share = (v: number, total: number) => `${formatValueNl((v / total) * 100, 1)}%`;
+    const expected = [
+      ['gr-2020', share(10, 100)],
+      ['fr-2020', share(20, 100)],
+      ['dr-2020', share(70, 100)],
+      ['gr-2021', share(15, 100)],
+      ['fr-2021', share(25, 100)],
+      ['dr-2021', share(60, 100)],
+    ];
+    expect(labelsByRole(container, 'stack-label').sort()).toEqual(expected.slice().sort());
+    expect(expected.map(([, text]) => text)).toEqual(['10,0%', '20,0%', '70,0%', '15,0%', '25,0%', '60,0%']);
+    // The computed shares are the ONE allowed extra source of digits.
+    scanForUnboundDigits(container, [...harvestSpecStrings(s), ...expected.map(([, text]) => text)]);
+  });
+
+  it('100%-stacked: a refused period contributes no shares at all — the maths never runs for it', async () => {
+    verdicts({ '2020': { verified: false, reason: 'withheld_member' }, '2021': { verified: true } });
+    const { container } = render(<ChartView spec={provinceRosterTwoYearSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Gestapeld (%)'));
+    await waitFor(() => expect(container.querySelectorAll('[data-point="value"]').length).toBe(3));
+    expect(labelsByRole(container, 'stack-label').map(([id]) => id).sort()).toEqual(['dr-2021', 'fr-2021', 'gr-2021']);
+    expect(screen.getByTestId('whole-note')).toHaveTextContent('Niet getekend voor 2020 — het CBS-totaal ontbreekt daar of klopt niet.');
+  });
+
+  it('switching to Taartdiagram then Undo returns to the prior form through the existing setForm history', async () => {
+    verdicts({ '2021': { verified: true } });
+    const { container } = render(<ChartView spec={provinceRosterSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(tab('Taartdiagram'));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(container.querySelector('.recharts-pie')).toBeNull();
+    expect(tab('Taartdiagram')).toHaveAttribute('aria-selected', 'false');
+    expect(tab('Liggend')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('renders in English: the same bound slices, the translated checking/verified copy', async () => {
+    verdicts({ '2021': { verified: true } });
+    const s = provinceRosterSpec();
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} embed={{ auditId: 1 }} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Pie chart' }));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-pie-sector').length).toBe(3));
+    expect(screen.getByTestId('whole-note')).toHaveTextContent('Checked: the parts add up to the CBS total.');
+    expect(labelsByRole(container, 'pie-label').map(([id]) => id)).toEqual(['gr-2021', 'fr-2021', 'dr-2021']);
+    scanForUnboundDigits(container, harvestSpecStrings(s));
   });
 });

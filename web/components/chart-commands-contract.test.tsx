@@ -61,6 +61,12 @@ const chartDerivationActions = vi.hoisted(() => ({
   requestChartDerivation: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
 }));
 vi.mock('../app/chart-derivation-actions.ts', () => chartDerivationActions);
+// Phase 5b (verified-whole, Task 4): the on-demand whole check's Server
+// Action module — same jsdom-import guard.
+const chartWholeActions = vi.hoisted(() => ({
+  requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/chart-whole-verification-actions.ts', () => chartWholeActions);
 
 import { ChartView } from './chart.tsx';
 import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';

@@ -345,14 +345,14 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     // attribute above, not text presence.
     expect(
       screen.getByText(
-        'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+        'Een taart- of gestapelde grafiek tekent een geheel waar de delen bij optellen. Die wordt alleen aangeboden als de delen een volledige set regio’s zijn die het CBS zelf als geheel kent, zoals alle provincies, en nadat is gecontroleerd dat ze optellen tot het gepubliceerde CBS-totaal; in elk ander geval staat dat totaal in geen enkele CBS-cel. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
       ),
     ).toBeInTheDocument();
     fireEvent.click(summary);
     expect(details).toHaveAttribute('open');
     expect(
       screen.getByText(
-        'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+        'Een taart- of gestapelde grafiek tekent een geheel waar de delen bij optellen. Die wordt alleen aangeboden als de delen een volledige set regio’s zijn die het CBS zelf als geheel kent, zoals alle provincies, en nadat is gecontroleerd dat ze optellen tot het gepubliceerde CBS-totaal; in elk ander geval staat dat totaal in geen enkele CBS-cel. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
       ),
     ).toBeInTheDocument();
   });
@@ -372,7 +372,7 @@ describe('ChartConfigPanel — Grafiek tab', () => {
     expect(screen.getByText('Why no pie or stacked chart?')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'A pie or a stacked chart draws a total or a share that no CBS cell contains. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
+        'A pie or a stacked chart draws a whole that its parts add up to. It is offered only when the parts are a complete set of regions that CBS itself defines as a whole, such as all provinces, and after a check that they add up to the published CBS total; in every other case that total sits in no CBS cell. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
       ),
     ).toBeInTheDocument();
   });
