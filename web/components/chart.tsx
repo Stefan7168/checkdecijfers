@@ -35,6 +35,7 @@ import {
   DefaultZIndexes,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -3281,6 +3282,25 @@ export function ChartView({
                     />
                   );
                 })}
+              {/* Task 3 (phase 4): era shading bands, rendered as ReferenceArea
+                * components. Each band is positioned by period label (the same
+                * way Line.dataKey and the x-axis key off period labels), so
+                * no manual x-scale pixel math is needed — Recharts handles the
+                * positioning internally. */}
+              {state.eraShadings.map((era) => {
+                const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
+                const toLabel = periodLabelByCode.get(era.toPeriodCode);
+                if (!fromLabel || !toLabel) return null; // Skip if period codes are not found
+                return (
+                  <ReferenceArea
+                    key={era.id}
+                    x1={fromLabel}
+                    x2={toLabel}
+                    fill="#4f46e5"
+                    fillOpacity={0.1}
+                  />
+                );
+              })}
               {/* Row 3 (session 110 UX audit pass 4): the LAST child, so it
                 * paints after every Line above — see EndLabelsOverlay's own
                 * doc comment. */}
