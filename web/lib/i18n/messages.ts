@@ -559,6 +559,7 @@ const nl = {
   // identical sentence twice, and the reason should read as the dumbbell's
   // own. Digit-free (the whole-card digit scan).
   'chart.dumbbellDisabledReason': 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.',
+  'chart.heatmapDisabledReason': 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -1660,6 +1661,7 @@ const en: Messages = {
   'chart.formReason.hbarTimeSeries': 'Horizontal bars show one period; this chart spans several.',
   'chart.slopeDisabledReason': "Available once you're comparing exactly two points in time.",
   'chart.dumbbellDisabledReason': 'Available once at least two series each have exactly a start and an end value.',
+  'chart.heatmapDisabledReason': "Available once you're comparing at least two series across at least two points in time.",
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',

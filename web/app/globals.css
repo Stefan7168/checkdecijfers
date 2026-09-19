@@ -67,6 +67,15 @@
   --warning: oklch(0.47 0.14 60);        /* ~ amber-800 */
   --warning-soft: oklch(0.97 0.03 85);   /* ~ amber-50 */
   --success: oklch(0.45 0.13 150);       /* ~ green-800 */
+
+  /* Phase 5 heatmap (chart.tsx HeatmapGrid): the two ends of the ONE
+   * sequential scale every heatmap cell is mixed from (color-mix in oklch,
+   * low = the grid's smallest value, high = its largest). Neutral like the
+   * rest of this token layer; both ends keep --foreground text >= 4.5:1
+   * (pinned in web/test/contrast.test.ts) — the number in the cell is
+   * always readable, the colour is only ever a second cue. */
+  --heatmap-low: oklch(0.97 0 0);
+  --heatmap-high: oklch(0.62 0 0);
 }
 
 .dark {
@@ -105,6 +114,9 @@
   --warning: oklch(0.83 0.14 80);        /* ~ amber-400 */
   --warning-soft: oklch(0.28 0.05 60);   /* deep amber wash */
   --success: oklch(0.79 0.16 150);       /* ~ green-400 */
+
+  --heatmap-low: oklch(0.269 0 0);
+  --heatmap-high: oklch(0.5 0 0);
 }
 
 @theme inline {
@@ -142,6 +154,8 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-success: var(--success);
+  --color-heatmap-low: var(--heatmap-low);
+  --color-heatmap-high: var(--heatmap-high);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

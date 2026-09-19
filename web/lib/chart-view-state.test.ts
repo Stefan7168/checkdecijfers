@@ -353,6 +353,22 @@ describe('heatmapFormAllowed — at least two series AND at least two points eac
     ]);
     expect(heatmapFormAllowed(withNull, 2)).toBe(false);
   });
+  it('refused when the series do not cover the same periods (Task 4 tightening — an intersection with no cell)', () => {
+    // Both series have two real-valued points, but only 2020 is shared: the
+    // grid would need a 2019 cell for A and a 2021 cell for B that no point
+    // backs. The table form shows such a gap as a gap; the heatmap refuses.
+    const ragged = spec('line', [
+      series('A', [point('2020', 1), point('2021', 2)]),
+      series('B', [point('2019', 3), point('2020', 4)]),
+    ]);
+    expect(heatmapFormAllowed(ragged, 2)).toBe(false);
+    // A duplicate period inside one series is not "covering" it twice.
+    const duplicated = spec('line', [
+      series('A', [point('2020', 1), point('2020', 2)]),
+      series('B', [point('2020', 3), point('2021', 4)]),
+    ]);
+    expect(heatmapFormAllowed(duplicated, 2)).toBe(false);
+  });
 });
 
 describe('fallbackForm', () => {

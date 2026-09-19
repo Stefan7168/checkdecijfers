@@ -94,6 +94,8 @@ import {
   clampTotChange,
   clampVanafChange,
   DEFAULT_PALETTE,
+  heatmapIntensity,
+  heatmapModel,
   RECHARTS_PALETTE,
   seriesStyle,
   tableModel,
@@ -1426,6 +1428,114 @@ describe('tableModel (#197 step 2)', () => {
       { label: 'Amsterdam', cells: [{ text: '4,2', resultId: 'ams' }] },
       { label: 'Utrecht', cells: [{ text: '3,1*', resultId: 'utr' }] },
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 (chart-fit scorer, Task 4): `heatmapModel` — tableModel's sibling.
+// Same rows/columns/header words/chronological order, but every cell also
+// carries its raw `value` (the colour scale's input) and the model carries
+// the grid's own min/max, computed once. It never represents a gap: a
+// missing or null cell is a guard bug and throws.
+// ---------------------------------------------------------------------------
+
+describe('heatmapModel (phase 5, Task 4)', () => {
+  it('lays a line chart out exactly like tableModel — plus each cell\'s raw value and the grid\'s min/max', () => {
+    const s = spec({
+      series: [
+        {
+          label: 'Amsterdam',
+          regionCode: 'GM0363',
+          points: [
+            point({ resultId: 'a23', periodCode: '2023JJ00', periodLabel: '2023', value: 1, formattedValue: '1,0' }),
+            point({ resultId: 'a24', periodCode: '2024JJ00', periodLabel: '2024', value: 2, formattedValue: '2,0', provisional: true }),
+          ],
+        },
+        {
+          label: 'Utrecht',
+          regionCode: 'GM0344',
+          points: [
+            // Given out of order: the rows must still come out chronological.
+            point({ resultId: 'u24', periodCode: '2024JJ00', periodLabel: '2024', value: 3, formattedValue: '3,0' }),
+            point({ resultId: 'u23', periodCode: '2023JJ00', periodLabel: '2023', value: 0.5, formattedValue: '0,5' }),
+          ],
+        },
+      ],
+    });
+    const model = heatmapModel(s);
+    const table = tableModel(s);
+    expect(model.caption).toBe(table.caption);
+    expect(model.header).toEqual(table.header);
+    expect(model.rows).toEqual([
+      {
+        label: '2023',
+        cells: [
+          { text: '1,0', resultId: 'a23', value: 1 },
+          { text: '0,5', resultId: 'u23', value: 0.5 },
+        ],
+      },
+      {
+        label: '2024',
+        cells: [
+          { text: '2,0*', resultId: 'a24', value: 2 },
+          { text: '3,0', resultId: 'u24', value: 3 },
+        ],
+      },
+    ]);
+    // The text side is byte-identical to the table's own cells.
+    expect(model.rows.map((r) => r.cells.map(({ text, resultId }) => ({ text, resultId })))).toEqual(
+      table.rows.map((r) => r.cells),
+    );
+    expect(model.min).toBe(0.5);
+    expect(model.max).toBe(3);
+  });
+
+  it('lays a bar chart out as one row per region under the single period, like tableModel', () => {
+    const s = spec({
+      kind: 'bar',
+      series: [
+        { label: 'Amsterdam', regionCode: 'GM0363', points: [point({ resultId: 'ams', value: 4.2, formattedValue: '4,2' })] },
+        { label: 'Utrecht', regionCode: 'GM0344', points: [point({ resultId: 'utr', value: 3.1, formattedValue: '3,1', provisional: true })] },
+      ],
+    });
+    const model = heatmapModel(s);
+    expect(model.header).toEqual(['Regio', '2024']);
+    expect(model.rows).toEqual([
+      { label: 'Amsterdam', cells: [{ text: '4,2', resultId: 'ams', value: 4.2 }] },
+      { label: 'Utrecht', cells: [{ text: '3,1*', resultId: 'utr', value: 3.1 }] },
+    ]);
+    expect(model.min).toBe(3.1);
+    expect(model.max).toBe(4.2);
+  });
+
+  it('translates its own header words for English, like tableModel', () => {
+    expect(heatmapModel(twoSeriesLineSpec(), 'en').header).toEqual(tableModel(twoSeriesLineSpec(), 'en').header);
+  });
+
+  it('throws — never an empty cell — when a series lacks a period or a cell is null (the guard\'s job to prevent)', () => {
+    const missing = spec({
+      series: [
+        { label: 'A', regionCode: null, points: [point({ resultId: 'a1', periodCode: '2023', periodLabel: '2023', value: 1, formattedValue: '1' })] },
+        { label: 'B', regionCode: null, points: [point({ resultId: 'b1', periodCode: '2024', periodLabel: '2024', value: 2, formattedValue: '2' })] },
+      ],
+    });
+    expect(() => heatmapModel(missing)).toThrow(/heatmapFormAllowed/);
+    const nulled = spec({
+      series: [{ label: 'A', regionCode: null, points: [point({ value: null, formattedValue: null })] }],
+    });
+    expect(() => heatmapModel(nulled)).toThrow(/heatmapFormAllowed/);
+  });
+});
+
+describe('heatmapIntensity (phase 5, Task 4)', () => {
+  it('is 0 at the minimum, 1 at the maximum and linear in between', () => {
+    expect(heatmapIntensity(50, 50, 110)).toBe(0);
+    expect(heatmapIntensity(110, 50, 110)).toBe(1);
+    expect(heatmapIntensity(80, 50, 110)).toBeCloseTo(0.5, 10);
+    expect(heatmapIntensity(-5, -10, 10)).toBeCloseTo(0.25, 10);
+  });
+  it('is 0.5 when every cell holds the same value (nothing to contrast)', () => {
+    expect(heatmapIntensity(7, 7, 7)).toBe(0.5);
   });
 });
 
@@ -3919,14 +4029,14 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 // ---------------------------------------------------------------------------
 
 describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
-  it('offers all seven tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling', () => {
-    // Phase 5 (chart-fit scorer, Tasks 2-3): Dumbbell and Helling (slope)
-    // trail Tabel, in the scorer's own fixed order (dumbbell, slope) —
-    // always rendered, disabled when the spec doesn't carry exactly two
-    // real-valued time points per series.
+  it('offers all eight tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Dumbbell, Helling, Warmtekaart', () => {
+    // Phase 5 (chart-fit scorer, Tasks 2-4): Dumbbell, Helling (slope) and
+    // Warmtekaart (heatmap) trail Tabel, in the scorer's own fixed order —
+    // always rendered, disabled when the spec doesn't qualify (here: one
+    // series, so none of the three is offered).
     render(<ChartView spec={threePointSpec()} />);
     const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
-    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling']);
+    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
   });
 
   it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
@@ -3994,11 +4104,11 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     );
   });
 
-  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Dumbbell -> Helling -> Lijn)', () => {
-    // Phase 5 (Tasks 2-3): twoSeriesLineSpec carries exactly two periods per
-    // series, so Dumbbell and Helling (slope) are allowed here and join the
-    // order after Tabel, dumbbell first; the disabled Vlak/Liggend are still
-    // skipped.
+  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Dumbbell -> Helling -> Warmtekaart -> Lijn)', () => {
+    // Phase 5 (Tasks 2-4): twoSeriesLineSpec carries exactly two periods per
+    // series (a 2 × 2 grid), so Dumbbell, Helling (slope) and Warmtekaart
+    // (heatmap) are all allowed here and join the order after Tabel, in that
+    // order; the disabled Vlak/Liggend are still skipped.
     render(<ChartView spec={twoSeriesLineSpec()} />);
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     lineTab.focus();
@@ -4011,6 +4121,8 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Dumbbell' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Helling' })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Helling' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Warmtekaart' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveFocus();
   });
 
@@ -4421,6 +4533,220 @@ describe('ChartView — dumbbell form (phase 5, Task 3)', () => {
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelector('.recharts-bar')).not.toBeNull();
     expect(container.querySelector('svg [data-role="dumbbell-dot"]')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 (chart-fit scorer, session 116, Task 4): the Warmtekaart (heatmap)
+// tab. NOT a Recharts chart: a CSS grid over `heatmapModel` (tableModel's
+// sibling), each cell its point's OWN formattedValue bound via
+// data-label-for, shaded by that same point's value on the grid's one shared
+// min..max scale. These tests pin the real rendered cells — text, binding,
+// the mix percentage each background is set to — plus the table-like gating
+// (no Style panel, no legend) and the heatmap -> table fallback.
+//   twoSeriesLineSpec()         — 2 series × 2 periods: heatmap allowed
+//   twoSeriesFourYearLineSpec() — 2 series × 4 periods: allowed (>= 2 each)
+//   fourYearLineSpec()          — 1 series: disallowed
+// ---------------------------------------------------------------------------
+
+describe('ChartView — heatmap form (phase 5, Task 4)', () => {
+  const HEATMAP_REASON = 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.';
+
+  function cell(container: HTMLElement, resultId: string): HTMLElement {
+    const el = container.querySelector<HTMLElement>(`[data-testid="heatmap-grid"] [role="cell"][data-label-for="${resultId}"]`);
+    expect(el, `no heatmap cell for ${resultId}`).not.toBeNull();
+    return el!;
+  }
+  /** The whole-number percentage of --heatmap-high the cell's background is mixed with. */
+  function mixPercent(el: HTMLElement): number {
+    const m = /color-mix\(in oklch, var\(--heatmap-low\), var\(--heatmap-high\) (\d+)%\)/.exec(el.style.backgroundColor);
+    expect(m, `cell background is not a heatmap mix: "${el.style.backgroundColor}"`).not.toBeNull();
+    return Number(m![1]);
+  }
+
+  it('the three phase-5 tabs sit after Tabel in the fixed order Dumbbell, Helling, Warmtekaart', () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    const names = screen.getAllByRole('tab').map((el) => el.textContent);
+    expect(names.slice(-4)).toEqual(['Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
+  });
+
+  it('a 2-series × 2-point spec offers Warmtekaart enabled; selecting it renders a grid of bound cells and no chart', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // Nothing Recharts-shaped is on the card at all, and no plain <table>.
+    expect(container.querySelector('.recharts-wrapper')).toBeNull();
+    expect(container.querySelector('table')).toBeNull();
+
+    const grid = container.querySelector<HTMLElement>('[data-testid="heatmap-grid"]')!;
+    expect(grid).not.toBeNull();
+    expect(grid).toHaveAttribute('role', 'table');
+    expect(grid).toHaveAttribute('aria-label', 'Testreeks (%)');
+    // One column per series plus the row-header column.
+    expect(grid.style.gridTemplateColumns).toBe('max-content repeat(2, minmax(0, 1fr))');
+    expect([...grid.querySelectorAll('[role="columnheader"]')].map((el) => el.textContent)).toEqual(['Periode', 'Nederland', 'Utrecht']);
+    expect([...grid.querySelectorAll('[role="rowheader"]')].map((el) => el.textContent)).toEqual(['2020', '2021']);
+    // Exactly four cells, each its point's OWN formattedValue, bound to its resultId.
+    const cells = [...grid.querySelectorAll<HTMLElement>('[role="cell"]')];
+    expect(cells.map((el) => [el.getAttribute('data-label-for'), el.textContent])).toEqual([
+      ['nl-2020', '100'],
+      ['ut-2020', '50'],
+      ['nl-2021', '110'],
+      ['ut-2021', '55'],
+    ]);
+    // The tabpanel the tablist points at is the grid's own wrapper.
+    expect(grid.parentElement).toHaveAttribute('role', 'tabpanel');
+    expect(grid.parentElement).toHaveAttribute('id', tab.getAttribute('aria-controls'));
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('colour: each cell is mixed by its value\'s place on the ONE grid-wide min..max scale, whole percentages', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    // min 50 (ut-2020), max 110 (nl-2021): 100 -> 50/60 = 83%, 55 -> 5/60 = 8%.
+    expect(mixPercent(cell(container, 'ut-2020'))).toBe(0);
+    expect(mixPercent(cell(container, 'nl-2021'))).toBe(100);
+    expect(mixPercent(cell(container, 'nl-2020'))).toBe(83);
+    expect(mixPercent(cell(container, 'ut-2021'))).toBe(8);
+  });
+
+  it('a 2 × 4 grid is offered too (at least two periods, not exactly two) and scales over all eight cells', () => {
+    const s = twoSeriesFourYearLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(tab).not.toBeDisabled();
+    fireEvent.click(tab);
+    const grid = container.querySelector<HTMLElement>('[data-testid="heatmap-grid"]')!;
+    expect(grid.querySelectorAll('[role="cell"]')).toHaveLength(8);
+    expect([...grid.querySelectorAll('[role="rowheader"]')].map((el) => el.textContent)).toEqual(['2018', '2019', '2020', '2021']);
+    // min 30 (ut-2018), max 110 (nl-2021); nl-2019 = 100 -> 70/80 = 87.5 -> 88%.
+    expect(mixPercent(cell(container, 'ut-2018'))).toBe(0);
+    expect(mixPercent(cell(container, 'nl-2021'))).toBe(100);
+    expect(mixPercent(cell(container, 'nl-2019'))).toBe(88);
+    expect(cell(container, 'nl-2019').textContent).toBe('100');
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('a provisional cell keeps its * suffix — the text is the table\'s own cell text', () => {
+    const s = twoSeriesLineSpec();
+    s.series[0]!.points[1]!.provisional = true;
+    const { container } = render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(cell(container, 'nl-2021').textContent).toBe('110*');
+  });
+
+  it('renders in English: translated header words, the same bound cells', () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Heatmap' }));
+    const grid = container.querySelector<HTMLElement>('[data-testid="heatmap-grid"]')!;
+    expect(grid.querySelector('[role="columnheader"]')!.textContent).toBe('Period');
+    expect(cell(container, 'ut-2021').textContent).toBe('55');
+    scanForUnboundDigits(container, harvestSpecStrings(s));
+  });
+
+  it('is gated exactly like the table: no Style panel trigger, no legend, no Download while the grid is shown', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    // Line form (the default here) has all three.
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="chart-footer-actions"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Nederland' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(container.querySelector('[data-slot="chart-footer-actions"]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Nederland' })).toBeNull();
+
+    // And back: switching to Lijn restores them.
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+  });
+
+  it('a single-series spec disables Warmtekaart with its reason, for pointer (title) and screen reader (aria-describedby)', () => {
+    const { container } = render(<ChartView spec={fourYearLineSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(tab).toBeDisabled();
+    expect(tab).toHaveAttribute('title', HEATMAP_REASON);
+    const describedById = tab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    expect(document.getElementById(describedById!)!.textContent).toBe(HEATMAP_REASON);
+    fireEvent.click(tab);
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('a spec with a null cell disables Warmtekaart (nothing honest to colour there)', () => {
+    const s = twoSeriesLineSpec();
+    s.series[1]!.points[1] = point({
+      resultId: 'ut-2021',
+      periodCode: '2021',
+      periodLabel: '2021',
+      value: null,
+      formattedValue: null,
+      status: 'Ontbreekt',
+    });
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+  });
+
+  it('a spec whose series cover different periods disables Warmtekaart (an intersection with no cell)', () => {
+    const s = twoSeriesLineSpec();
+    s.series[1]!.points = [
+      point({ resultId: 'ut-2019', periodCode: '2019', periodLabel: '2019', value: 45, formattedValue: '45' }),
+      point({ resultId: 'ut-2020', periodCode: '2020', periodLabel: '2020', value: 50, formattedValue: '50' }),
+    ];
+    render(<ChartView spec={s} />);
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    // The table still shows that gap as a gap — the heatmap just is not offered.
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('switching to Warmtekaart then Undo returns to the prior form through the existing setForm history', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+  });
+
+  it('a spec swap from a heatmap-chosen spec to a single-series one falls back to the table it came from', () => {
+    // fallbackForm's own convention (chart-view-state.ts): heatmap -> table.
+    const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+
+    rerender(<ChartView spec={fourYearLineSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+    expect(container.querySelector('.recharts-wrapper')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    // Gated as the table it now renders as — no Style trigger while it does.
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
   });
 });
 
@@ -5848,6 +6174,31 @@ describe('ChartView — initialFormOverride (fix round, Piece 3: embed ?form=)',
     const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
     expect(container.querySelector('.recharts-line')).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms go
+  // through the same guard. `fallbackForm` would never have RENDERED a
+  // forbidden form anyway — the gap was a stray, never-valid history entry.
+  it('applies a phase-5 form (heatmap) on mount when the spec qualifies', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} initialFormOverride="heatmap" />);
+    expect(container.querySelector('[data-testid="heatmap-grid"]')).not.toBeNull();
+    expect(container.querySelector('.recharts-line')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('does NOT override with a phase-5 form the spec does not qualify for, and leaves no stray history entry', () => {
+    for (const form of ['dumbbell', 'slope', 'heatmap'] as const) {
+      // twoSeriesFourYearLineSpec: 2 series × 4 periods — dumbbell/slope need
+      // exactly two points; fourYearLineSpec: 1 series — heatmap needs two.
+      const s = form === 'heatmap' ? fourYearLineSpec() : twoSeriesFourYearLineSpec();
+      const { container, unmount } = render(<ChartView spec={s} initialFormOverride={form} />);
+      expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+      expect(container.querySelector('.recharts-line')).not.toBeNull();
+      expect(container.querySelector('[data-testid="heatmap-grid"]')).toBeNull();
+      // Nothing was dispatched: the undo stack is empty right after mount.
+      expect(screen.getByRole('button', { name: 'Ongedaan maken' })).toBeDisabled();
+      unmount();
+    }
   });
 
   it('does not disturb any of the six existing embedMode gating sites when combined with embedMode', () => {

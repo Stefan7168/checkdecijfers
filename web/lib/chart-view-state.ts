@@ -44,7 +44,11 @@ export function isChartForm(x: unknown): x is ChartForm {
  * satisfy.
  */
 export interface SeriesShape {
-  series: readonly { points: readonly { value: number | null }[] }[];
+  // Phase 5 (Task 4): `periodCode` joined `value` so `heatmapFormAllowed`
+  // can check that every series covers the SAME periods (a grid needs a
+  // point at every row/column intersection). Both ChartPoint and
+  // PlottablePoint already carry it, so no call site changes.
+  series: readonly { points: readonly { value: number | null; periodCode: string }[] }[];
 }
 
 /** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars
@@ -342,9 +346,27 @@ export function slopeFormAllowed(spec: SeriesShape, seriesCount: number): boolea
  * work, §10). Task 3 tightening, same reasoning as dumbbellFormAllowed: a
  * grid cell with no real value has nothing honest to colour, so every point
  * must carry a value.
+ *
+ * Task 4 tightening: every series must cover exactly the SAME set of
+ * periods. The grid is period × series, one cell per intersection — a
+ * series that simply lacks a period (the table form's own "honest gap"
+ * case, chart.test.tsx) would leave a cell with no point at all, which has
+ * nothing to show and nothing to colour. The table still renders that gap
+ * as a gap; the heatmap refuses instead of drawing an empty cell
+ * (principle (c)). So: the union of period codes across all series has at
+ * least two entries, and every series has exactly that many distinct
+ * codes — no missing period, no duplicate.
  */
 export function heatmapFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
-  return seriesCount >= 2 && spec.series.every((s) => s.points.length >= 2 && s.points.every((p) => p.value !== null));
+  if (seriesCount < 2) return false;
+  const codes = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode)));
+  if (codes.size < 2) return false;
+  return spec.series.every(
+    (s) =>
+      s.points.length === codes.size &&
+      new Set(s.points.map((p) => p.periodCode)).size === codes.size &&
+      s.points.every((p) => p.value !== null),
+  );
 }
 
 /**

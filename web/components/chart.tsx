@@ -167,6 +167,7 @@ import {
   // comment in chart-view-state.ts.
   hbarChartHeight,
   hbarFormAllowed,
+  heatmapFormAllowed,
   // Session 110 pass 3 row 11: which specs get a single palette colour for
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
@@ -748,6 +749,156 @@ export function tableModel(spec: ChartSpec, lang: Lang = 'nl'): TableModel {
       }),
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5 (chart-fit scorer, session 116, Task 4): the "Warmtekaart" view —
+// the table's own rows and columns again, each cell shaded by where its
+// value sits between the grid's smallest and largest. NOT a Recharts chart:
+// a plain CSS grid (`HeatmapGrid` below), the cheapest mechanism that draws
+// it. `heatmapModel` is a SIBLING of `tableModel`, not a wrapper over it —
+// the same branching (bar: one column, one row per series; time series: one
+// column per series, one row per period, chronological) and the same
+// header words, but each cell also carries its raw `value`, which the colour
+// needs and which `TableCell` deliberately never had (the table only shows
+// text). `TableCell`/`TableModel`/`tableModel` are untouched.
+//
+// Every cell is one point's OWN formattedValue bound to its resultId (R1),
+// exactly like the table; the colour is a second cue derived from that same
+// point's value, never the only way a value is communicated. A missing
+// intersection cannot occur: `heatmapFormAllowed` (chart-view-state.ts)
+// only offers this form when every series carries a real value at every
+// period, so a cell with no point here is a guard bug — thrown, never
+// papered over as an empty cell.
+// ---------------------------------------------------------------------------
+
+export interface HeatmapCell {
+  text: string;
+  resultId: string;
+  value: number;
+}
+
+export interface HeatmapModel {
+  caption: string;
+  header: string[];
+  rows: { label: string; cells: HeatmapCell[] }[];
+  /** The grid's own extremes, computed ONCE over every cell — the one scale
+   * every cell's colour is read against. Equal when every cell holds the
+   * same value (see `heatmapIntensity`). */
+  min: number;
+  max: number;
+}
+
+function heatmapCell(point: ChartPoint | undefined, where: string): HeatmapCell {
+  if (point === undefined || point.value === null) {
+    throw new Error(`heatmapModel: no real value at ${where} — heatmapFormAllowed should have refused this spec`);
+  }
+  return { text: pointLabelText(point), resultId: point.resultId, value: point.value };
+}
+
+export function heatmapModel(spec: ChartSpec, lang: Lang = 'nl'): HeatmapModel {
+  const caption = `${spec.title} (${spec.unit})`;
+  let header: string[];
+  let rows: HeatmapModel['rows'];
+  if (spec.kind === 'bar') {
+    const periodLabels = new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
+    const periodHeader = periodLabels.size === 1 ? [...periodLabels][0]! : t(lang, 'chart.table.value');
+    header = [t(lang, 'chart.table.region'), periodHeader];
+    rows = spec.series.map((series) => ({
+      label: series.label,
+      cells: [heatmapCell(series.points[0], `series "${series.label}"`)],
+    }));
+  } else {
+    // Same chronological ordering rule as tableModel/buildRows (period codes
+    // sort lexicographically = chronologically within one grain).
+    const codes = [...new Set(spec.series.flatMap((s) => s.points.map((p) => p.periodCode)))].sort((a, b) =>
+      a.localeCompare(b),
+    );
+    const labelByCode = new Map<string, string>();
+    for (const series of spec.series) {
+      for (const point of series.points) {
+        if (!labelByCode.has(point.periodCode)) labelByCode.set(point.periodCode, point.periodLabel);
+      }
+    }
+    header = [t(lang, 'chart.table.period'), ...spec.series.map((s) => s.label)];
+    rows = codes.map((code) => ({
+      label: labelByCode.get(code) ?? code,
+      cells: spec.series.map((series) =>
+        heatmapCell(
+          series.points.find((p) => p.periodCode === code),
+          `period ${code} of series "${series.label}"`,
+        ),
+      ),
+    }));
+  }
+  const values = rows.flatMap((row) => row.cells.map((cell) => cell.value));
+  return { caption, header, rows, min: Math.min(...values), max: Math.max(...values) };
+}
+
+/** Maps `value` linearly onto `min..max` as a 0..1 intensity. Returns 0.5
+ * when min === max (every cell the same value — nothing to contrast, so
+ * every cell gets the same mid tone rather than all-low or all-high). */
+export function heatmapIntensity(value: number, min: number, max: number): number {
+  if (max === min) return 0.5;
+  return (value - min) / (max - min);
+}
+
+/** The cell background for a 0..1 intensity: a mix between the two
+ * `--heatmap-low`/`--heatmap-high` tokens (app/globals.css, light + dark),
+ * whole percentages — the ONE scale every cell of a grid shares. */
+function heatmapCellColor(intensity: number): string {
+  return `color-mix(in oklch, var(--heatmap-low), var(--heatmap-high) ${Math.round(intensity * 100)}%)`;
+}
+
+/** The heatmap canvas: a CSS grid with ARIA table semantics (rows are
+ * `display: contents` so the grid's columns line up across every row while a
+ * screen reader still hears row/column headers). Column headers = the
+ * model's header minus its corner label (same skip the table's own `<th>`
+ * loop makes by indexing `header[i + 1]`), row headers = each row's label.
+ * `pres` does not apply here — like the table, this view has no line
+ * thickness, grid lines or frame to style. */
+function HeatmapGrid({ spec, lang }: { spec: ChartSpec; lang: Lang }) {
+  const model = heatmapModel(spec, lang);
+  const columns = model.header.length - 1;
+  return (
+    <div
+      role="table"
+      aria-label={model.caption}
+      data-testid="heatmap-grid"
+      className="grid w-full text-sm"
+      style={{ gridTemplateColumns: `max-content repeat(${columns}, minmax(0, 1fr))` }}
+    >
+      <div role="row" className="contents">
+        {model.header.map((h, i) => (
+          <div
+            key={h}
+            role="columnheader"
+            className={`border-b border-border px-2 py-1 font-medium text-muted-foreground ${i === 0 ? 'text-left' : 'text-right'}`}
+          >
+            {h}
+          </div>
+        ))}
+      </div>
+      {model.rows.map((row) => (
+        <div key={row.label} role="row" className="contents">
+          <div role="rowheader" className="border-b border-border px-2 py-1 text-left font-normal text-foreground">
+            {row.label}
+          </div>
+          {row.cells.map((cell, i) => (
+            <div
+              key={model.header[i + 1] ?? i}
+              role="cell"
+              data-label-for={cell.resultId}
+              className="border-b border-border px-2 py-1 text-right text-foreground tabular-nums"
+              style={{ backgroundColor: heatmapCellColor(heatmapIntensity(cell.value, model.min, model.max)) }}
+            >
+              {cell.text}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /** WP218 phase 4 (#219, design §4): a verbatim-projection view of `spec` with
@@ -2005,7 +2156,19 @@ export function ChartView({
           ? areaFormAllowed(spec, spec.series.length)
           : initialFormOverride === 'hbar'
             ? hbarFormAllowed(spec)
-            : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+            : initialFormOverride === 'slope'
+              ? slopeFormAllowed(spec, spec.series.length)
+              : initialFormOverride === 'dumbbell'
+                ? dumbbellFormAllowed(spec, spec.series.length)
+                : initialFormOverride === 'heatmap'
+                  ? heatmapFormAllowed(spec, spec.series.length)
+                  : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+    // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms are
+    // guarded here too. `fallbackForm` below re-checks on every render
+    // regardless, so an unguarded override could never render a forbidden
+    // form — but it WOULD leave a never-valid entry at the bottom of the
+    // undo history when an embed URL names one of them on a spec that
+    // doesn't qualify.
     if (allowed) dispatchRaw({ type: 'setForm', form: initialFormOverride });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately once-on-mount only: initialFormOverride is a one-shot prop from the embed route, never expected to change on a live instance, and a later spec swap is this component's own `reset` action's job (below), not this effect re-firing.
   }, []);
@@ -2424,7 +2587,21 @@ export function ChartView({
   // render branch below — a `BarChart layout="vertical"` shell with no
   // `<Bar>`, drawn entirely by `DumbbellOverlay`.
   const canUseDumbbell = dumbbellFormAllowed(spec, spec.series.length);
+  // Phase 5 (Task 4): the heatmap is the table's own rows recoloured (see
+  // `heatmapModel`) — offered only for a real grid: at least two series, all
+  // covering the same two-or-more periods, every cell a real value.
+  const canUseHeatmap = heatmapFormAllowed(spec, spec.series.length);
   const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
+  // Phase 5 (Task 4): the two forms that draw NO chart — the table and the
+  // heatmap (a CSS grid over the table's own model, no <svg>, no frame,
+  // nothing for the Style panel, legend, notes, story or download to act
+  // on). Every "not in table form" gate below reads THIS, so the heatmap
+  // inherits the table's exact treatment, and so a heatmap choice that
+  // `fallbackForm` has just sent back to the table (its own fallback — the
+  // view the grid came from) is gated as the table it now renders as.
+  // Keyed on `activeForm`, not `state.form`: before this phase nothing ever
+  // fell back TO the table, so the two were interchangeable for it.
+  const tabularForm = activeForm === 'table' || activeForm === 'heatmap';
   // Final-review fix wave residual: the difference picker's controls (and
   // the add-overlay controls generally) are only shown for line/area form
   // (I2) — but `onPointClick` below stays wired on every form, so an
@@ -2448,7 +2625,7 @@ export function ChartView({
   // dispatch, Y-axis domain and label-plan kind below, so the honesty rule
   // and the rendered chart can never drift apart (WP12 review lesson).
   const effectiveKind: ChartSpec['kind'] =
-    activeForm === 'table' ? spec.kind : activeForm === 'line' || activeForm === 'area' || activeForm === 'slope' ? 'line' : 'bar';
+    tabularForm ? spec.kind : activeForm === 'line' || activeForm === 'area' || activeForm === 'slope' ? 'line' : 'bar';
   // Final-review fix (defensive snapshot guard, session 92 follow-up):
   // hoisted from just above the small-multiples toggle below — moved here,
   // ABOVE the schemaVersion guard, so `storyAvailable` (right below) can
@@ -2522,7 +2699,7 @@ export function ChartView({
   // frame aspect ratio (ChartFrame sets the height then), no small
   // multiples (its own grid grows), not the table. 0 until measured →
   // the h-64 floor, so SSR/jsdom render exactly as before.
-  const autoHeight = pres.frameAspect === 'auto' && !(smallMultiples && smallMultiplesAvailable) && state.form !== 'table';
+  const autoHeight = pres.frameAspect === 'auto' && !(smallMultiples && smallMultiplesAvailable) && !tabularForm;
   const measuredWidth = useElementWidth(chartContainerRef, autoHeight);
   const widthHeightPx = autoHeight && measuredWidth > 0 ? chartHeightForWidth(measuredWidth) : null;
   // Session 110 pass 3 row 3: the hbar form draws one category (region) row
@@ -2644,8 +2821,7 @@ export function ChartView({
   // including the non-data "overview"/"explore" filler steps) to >= 1
   // (session 94: every Insights finding is real content — a 2-point chart
   // with one genuine finding still deserves to show it).
-  const storyAvailable =
-    state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 1;
+  const storyAvailable = !tabularForm && !(smallMultiples && smallMultiplesAvailable) && storySteps.length >= 1;
   // Final-review fix (defensive snapshot guard): every reachable UI path
   // already closes the story before `storyAvailable` could go false while
   // still open (`selectForm`, `toggleStylePanel`, and the small-multiples
@@ -3052,6 +3228,7 @@ export function ChartView({
     // adds the heatmap spread after slope's.
     ...(canUseDumbbell ? (['dumbbell'] as const) : []),
     ...(canUseSlope ? (['slope'] as const) : []),
+    ...(canUseHeatmap ? (['heatmap'] as const) : []),
   ];
   const formTabRef: Record<ChartForm, typeof lineTabRef> = {
     line: lineTabRef,
@@ -3078,6 +3255,7 @@ export function ChartView({
   const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
   const slopeDisabledReason = t(chartLang, 'chart.slopeDisabledReason');
   const dumbbellDisabledReason = t(chartLang, 'chart.dumbbellDisabledReason');
+  const heatmapDisabledReason = t(chartLang, 'chart.heatmapDisabledReason');
 
   function selectForm(next: ChartForm): void {
     // Review fix (controller decision): a story is only ever meaningful for
@@ -3092,7 +3270,7 @@ export function ChartView({
     // TO it must close the panel itself (not just skip rendering it while on
     // Tabel), or `openPanel` stays stuck on 'style' and the panel silently
     // reappears the moment the user switches back to a chart form.
-    if (next === 'table') setOpenPanel(null);
+    if (next === 'table' || next === 'heatmap') setOpenPanel(null);
     dispatchCommand({ kind: 'setForm', form: next }, 'panel');
     formTabRef[next].current?.focus();
   }
@@ -3224,7 +3402,7 @@ export function ChartView({
    * at either must not look clickable there. */
   function copilotCanOpen(target: ChipOpens): boolean {
     if (target === 'none') return false;
-    if (target === 'style' || target === 'notes') return state.form !== 'table';
+    if (target === 'style' || target === 'notes') return !tabularForm;
     return true;
   }
 
@@ -3572,7 +3750,14 @@ export function ChartView({
   // ordinary React reconciliation (mount here XOR mount there), not a new
   // mechanism (see ChartEditModal's own header comment for why this design
   // beats duplicating the canvas into a second live instance).
-  const canvasNode = state.form === 'table' ? (
+  const canvasNode = activeForm === 'heatmap' ? (
+        // Phase 5 (Task 4): the heatmap sits where the table does — outside
+        // ChartFrame and the export container (no <svg> to export, no frame
+        // to draw), the same `tabpanel` id the tablist points at.
+        <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.form.heatmap')} className="mt-2 overflow-x-auto">
+          <HeatmapGrid spec={displaySpec} lang={chartLang} />
+        </div>
+      ) : activeForm === 'table' ? (
         <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.tabTable')} className="mt-2 overflow-x-auto">
           <table className="w-full text-sm" aria-label={table.caption}>
             <thead>
@@ -4175,7 +4360,7 @@ export function ChartView({
       </ChartFrame>
       );
 
-  const legendNode = state.form !== 'table' && seriesMeta.length > 1 ? (
+  const legendNode = !tabularForm && seriesMeta.length > 1 ? (
         inStage ? (
           <StageLegend seriesMeta={seriesMeta} lang={chartLang} />
         ) : (
@@ -4228,7 +4413,7 @@ export function ChartView({
         />
       ) : null;
 
-  const notesNode = state.form !== 'table' && !embedMode && !inStage ? (
+  const notesNode = !tabularForm && !embedMode && !inStage ? (
         // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
         // focuses (Task 3) — the strip itself has no single control to aim
         // at, the own-data card's own notesRef idiom.
@@ -4281,7 +4466,7 @@ export function ChartView({
 
   // Task 3: era shading — reader-marked period ranges with typed labels.
   // Same gate as notes: not shown in embed/stage/table form.
-  const eraShadingNode = state.form !== 'table' && !embedMode && !inStage ? (
+  const eraShadingNode = !tabularForm && !embedMode && !inStage ? (
     <div tabIndex={-1} className="outline-none">
       <ChartEraShading
         eraShadings={state.eraShadings}
@@ -4457,7 +4642,7 @@ export function ChartView({
               lang={chartLang}
               locked={storyOpen ? { title: storyLockedTitle!, describedBy: storyLockId } : undefined}
             />
-            {storyAvailable || state.form !== 'table' ? (
+            {storyAvailable || !tabularForm ? (
               <div className="flex shrink-0 items-center gap-1" data-slot="chart-card-actions">
                 {/* Story mode (session 92): the colourful trigger is offered
                   * whenever there is a code-built story (storyAvailable,
@@ -4474,9 +4659,9 @@ export function ChartView({
                 {/* Review fix (chart-panel-layout, option A): table form gets NO
                   * frame and NO Style panel (as before the Frame-tab feature) — a
                   * framed table would need its own export path, so the trigger
-                  * stays gated on `state.form !== 'table'` exactly like the
+                  * stays gated on `!tabularForm` exactly like the
                   * ChartConfigPanel mount further down. */}
-                {state.form !== 'table' ? (
+                {!tabularForm ? (
                   <ChartConfigTrigger
                     open={styleOpen}
                     onToggle={toggleStylePanel}
@@ -4558,7 +4743,7 @@ export function ChartView({
         * not in stage mode (ADR 044: the caption IS the sentence).
         * Task 5: skip rendering when headline.value is empty (an honest CBS
         * gap in an overridden point). */}
-      {headline !== null && headline.value !== '' && !inStage && state.form !== 'table' ? (
+      {headline !== null && headline.value !== '' && !inStage && !tabularForm ? (
         <p
           className={
             embedMode
@@ -4585,7 +4770,7 @@ export function ChartView({
       {/* #254: the ACTIVE reading's own trend sentence — it describes the
         * plotted line (and carries its own periods), so the primary's copy
         * must never survive a switch to an alternate reading. */}
-      {!inStage && state.form !== 'table' && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
+      {!inStage && !tabularForm && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
         <p
           data-testid="trend-headline"
           className={
@@ -4724,6 +4909,24 @@ export function ChartView({
             >
               {t(chartLang, 'chart.form.slope')}
             </button>
+            {/* Phase 5 (Task 4): Warmtekaart is LAST — Dumbbell, Helling,
+              * Warmtekaart, matching FORM_ORDER's own array order. */}
+            <button
+              ref={heatmapTabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'heatmap'}
+              aria-controls={panelId}
+              aria-describedby={canUseHeatmap ? undefined : `${domId}-heatmap-reason`}
+              tabIndex={activeForm === 'heatmap' ? 0 : -1}
+              disabled={!canUseHeatmap}
+              title={canUseHeatmap ? undefined : heatmapDisabledReason}
+              onClick={() => selectForm('heatmap')}
+              className={quietTab(activeForm === 'heatmap') + (canUseHeatmap ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.heatmap')}
+            </button>
           </div>
           {/* Reachable via the disabled Lijn tab's aria-describedby above — a
             * plain `title` (kept, for pointer users) is invisible to a screen
@@ -4752,6 +4955,11 @@ export function ChartView({
           {!canUseSlope ? (
             <span id={`${domId}-slope-reason`} className="sr-only">
               {slopeDisabledReason}
+            </span>
+          ) : null}
+          {!canUseHeatmap ? (
+            <span id={`${domId}-heatmap-reason`} className="sr-only">
+              {heatmapDisabledReason}
             </span>
           ) : null}
           {/* #254: the reading toggle — same quiet <select> pattern as the
@@ -5123,8 +5331,8 @@ export function ChartView({
         * remount. */}
       {/* Final-review fix: table form gets no Style panel at all (as before
         * the Frame-tab feature) — a framed table would need its own export
-        * path, so the mount stays gated on `state.form !== 'table'`. */}
-      {!inStage && state.form !== 'table' ? (
+        * path, so the mount stays gated on `!tabularForm`. */}
+      {!inStage && !tabularForm ? (
         <ChartEditModal
           open={styleOpen}
           onClose={() => {
@@ -5309,11 +5517,10 @@ export function ChartView({
           * `setEmbedOpen(true)` call flips `openPanel` straight from
           * 'style' to 'embed' in one update — Style closes and Embed opens
           * atomically, with no separate "close Style" call needed and no
-          * frame where both could be true at once. `state.form !== 'table'`
-          * is already implied here (this whole modal is gated on it above —
-          * TypeScript narrows `state.form` accordingly, so repeating the
-          * check would be a type error), unlike the footer's own copy of
-          * this gate further down, which sits outside that narrowing. */}
+          * frame where both could be true at once. `!tabularForm` is
+          * already implied here (this whole modal is gated on it above),
+          * unlike the footer's own copy of this gate further down, which
+          * sits outside it. */}
         {!(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ChartDownloadMenu
@@ -5360,7 +5567,7 @@ export function ChartView({
         * the series-legend block above (which only renders for >1 series) —
         * a single-series chart can be zoomed too. */}
       {zoomDisclosure ? <p className="mt-1 text-xs text-muted-foreground">{zoomDisclosure.trim()}</p> : null}
-      {state.form !== 'table' && smallMultiplesAvailable && !embedMode && !inStage ? (
+      {!tabularForm && smallMultiplesAvailable && !embedMode && !inStage ? (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -5468,7 +5675,7 @@ export function ChartView({
         <ChartCopilotInput
           lang={chartLang}
           busy={copilotBusy}
-          disabledReasonId={storyOpen ? storyLockId : state.form === 'table' ? `${domId}-copilot-table-reason` : null}
+          disabledReasonId={storyOpen ? storyLockId : tabularForm ? `${domId}-copilot-table-reason` : null}
           examples={cbsExampleChips({ spec, state, zoomAvailable, lang: chartLang })}
           reply={copilotReply === null ? null : { ...copilotReply, canUndo: replyIsUndoable(copilotReply) }}
           error={copilotError}
@@ -5482,7 +5689,7 @@ export function ChartView({
           lockedNote={t(chartLang, 'chart.copilot.cbsLocked')}
         />
       ) : null}
-      {copilotAvailable && state.form === 'table' ? (
+      {copilotAvailable && tabularForm ? (
         <span id={`${domId}-copilot-table-reason`} className="sr-only">
           {t(chartLang, 'chart.copilot.tableLocked')}
         </span>
@@ -5528,7 +5735,7 @@ export function ChartView({
           * two unrelated controls. Grouped into ONE flex group that wraps as
           * a unit; `shrink-0` keeps the pair from being squeezed before the
           * attribution text wraps instead. */}
-        {state.form !== 'table' && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
+        {!tabularForm && !(smallMultiples && smallMultiplesAvailable) && !embedMode && !inStage ? (
           <div className="flex shrink-0 items-center gap-2" data-slot="chart-footer-actions">
             <ChartDownloadMenu
               containerRef={chartContainerRef}

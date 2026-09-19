@@ -75,6 +75,27 @@ describe('dark-theme --muted-foreground is untouched (ADR 042 colour tokens are 
   });
 });
 
+// Phase 5 heatmap (chart.tsx HeatmapGrid): every cell's background is mixed
+// between --heatmap-low and --heatmap-high, and the cell's own number is
+// drawn in --foreground on top of it. Mixing in oklch interpolates
+// lightness monotonically, so if BOTH ends keep >= 4.5:1 against the text
+// every cell in between does too — the number is always readable, the
+// colour is only ever a second cue.
+describe('heatmap scale endpoints keep --foreground text at WCAG AA >= 4.5:1', () => {
+  for (const [name, block] of [
+    ['light', ROOT_BLOCK],
+    ['dark', DARK_BLOCK],
+  ] as const) {
+    it(`${name} theme: --foreground on --heatmap-low and on --heatmap-high`, () => {
+      const foreground = tokenFromBlock(block, 'foreground');
+      const low = tokenFromBlock(block, 'heatmap-low');
+      const high = tokenFromBlock(block, 'heatmap-high');
+      expect(contrastRatioOfOklchGrays(foreground, low)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatioOfOklchGrays(foreground, high)).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+});
+
 describe('relativeLuminanceOfOklchGray', () => {
   it('is L^3 (grayscale OKLab -> linear-sRGB matrix rows sum to 1)', () => {
     expect(relativeLuminanceOfOklchGray(0.5)).toBeCloseTo(0.125, 6);
