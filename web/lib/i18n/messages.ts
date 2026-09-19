@@ -532,6 +532,14 @@ const nl = {
   // Liggend (horizontal bar) — plus their own disabled-tab reasons.
   'chart.form.area': 'Vlak',
   'chart.form.hbar': 'Liggend',
+  // Phase 5 (chart-fit scorer, session 116): the three new Weergave tab
+  // labels — needed from Task 1 on because chart-history-menu.tsx's
+  // `formLabel` is exhaustive over ChartForm. "Dumbbell" is a chart-type
+  // name without an established Dutch translation (same as the plan keeps
+  // it). Their disabled-tab reasons arrive with the tabs (Tasks 2-4).
+  'chart.form.dumbbell': 'Dumbbell',
+  'chart.form.slope': 'Helling',
+  'chart.form.heatmap': 'Warmtekaart',
   'chart.formReason.areaMultiSeries':
     'Een gevuld vlak per reeks zou de reeksen over elkaar leggen en gaten verbergen.',
   'chart.formReason.areaComparison': 'Een vlak past alleen bij een reeks in de tijd.',
@@ -1632,6 +1640,9 @@ const en: Messages = {
   'chart.lineDisabledReason': 'A line between regions would suggest a trend that was never measured.',
   'chart.form.area': 'Area',
   'chart.form.hbar': 'Horizontal bar',
+  'chart.form.dumbbell': 'Dumbbell',
+  'chart.form.slope': 'Slope',
+  'chart.form.heatmap': 'Heatmap',
   'chart.formReason.areaMultiSeries':
     'A filled area per series would stack the series on top of each other and hide gaps.',
   'chart.formReason.areaComparison': 'An area chart only fits a single series over time.',

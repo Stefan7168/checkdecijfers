@@ -1838,6 +1838,14 @@ export function ChartView({
   const barTabRef = useRef<HTMLButtonElement>(null);
   const hbarTabRef = useRef<HTMLButtonElement>(null);
   const tableTabRef = useRef<HTMLButtonElement>(null);
+  // Phase 5 (chart-fit scorer, session 116, Task 1): declared ahead of their
+  // tab buttons so `formTabRef` below stays an exhaustive Record<ChartForm>
+  // over the widened union — the compile-time check that every form has a
+  // tab. Tasks 2 (slope), 3 (dumbbell) and 4 (heatmap) attach each ref to
+  // its button; until then a focus() through it is a harmless no-op.
+  const dumbbellTabRef = useRef<HTMLButtonElement>(null);
+  const slopeTabRef = useRef<HTMLButtonElement>(null);
+  const heatmapTabRef = useRef<HTMLButtonElement>(null);
 
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
@@ -2830,6 +2838,9 @@ export function ChartView({
     bar: barTabRef,
     hbar: hbarTabRef,
     table: tableTabRef,
+    dumbbell: dumbbellTabRef,
+    slope: slopeTabRef,
+    heatmap: heatmapTabRef,
   };
   // WP218 phase 5 (Global Constraints): each disabled tab explains itself —
   // the SAME reason string feeds both the pointer `title` and the

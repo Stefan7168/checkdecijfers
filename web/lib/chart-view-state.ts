@@ -6,17 +6,45 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { PresentationOverrides } from './chart-presentation.ts';
 
-export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table';
+export type ChartForm = 'line' | 'area' | 'bar' | 'hbar' | 'table' | 'dumbbell' | 'slope' | 'heatmap';
 
 /** Fix round (Task 5 review, Piece 3): guards an arbitrary value (e.g. the
  * embed route's own `?form=` query-string param) down to a real ChartForm —
  * same convention as messages.ts's own `isLang`. Confirms only that the
- * string is one of the five real enum members; it says nothing about
+ * string is one of the eight real enum members; it says nothing about
  * whether that form is actually ALLOWED for a given spec — see
- * lineFormAllowed/areaFormAllowed/hbarFormAllowed for that (ChartView's own
- * `initialFormOverride` prop applies both checks, in that order). */
+ * lineFormAllowed/areaFormAllowed/hbarFormAllowed and the phase-5 trio
+ * below for that (ChartView's own `initialFormOverride` prop applies both
+ * checks, in that order). */
 export function isChartForm(x: unknown): x is ChartForm {
-  return x === 'line' || x === 'area' || x === 'bar' || x === 'hbar' || x === 'table';
+  return (
+    x === 'line' ||
+    x === 'area' ||
+    x === 'bar' ||
+    x === 'hbar' ||
+    x === 'table' ||
+    x === 'dumbbell' ||
+    x === 'slope' ||
+    x === 'heatmap'
+  );
+}
+
+/**
+ * Phase 5 (chart-fit scorer, session 116): the structural minimum the three
+ * phase-5 guards read — how many points each series carries, and whether a
+ * point is a real value. A full ChartSpec satisfies it, and so does
+ * chart.tsx's own PlottableSpec: both user-chart.tsx (`fallbackForm(
+ * state.form, plottable, …)`) and chart-capabilities.ts's `cbsCapabilities`
+ * hand these guards a PlottableSpec, never a full spec — a
+ * `Pick<ChartSpec, 'series'>` would reject those two call sites
+ * (PlottableSeries carries no regionCode, PlottablePoint no decimals/
+ * status). Keep every series-reading guard on THIS type, not on ChartSpec,
+ * or those call sites stop compiling. The `kind`-only guards above keep
+ * their existing `Pick<ChartSpec, 'kind'>`, which both spec shapes already
+ * satisfy.
+ */
+export interface SeriesShape {
+  series: readonly { points: readonly { value: number | null }[] }[];
 }
 
 /** Bar charts: one label per bar, or none above BAR_LABEL_MAX bars
@@ -275,15 +303,59 @@ export function hbarFormAllowed(spec: Pick<ChartSpec, 'kind'>): boolean {
 }
 
 /**
+ * Phase 5 (chart-fit scorer, session 116, ADR 039 unchanged for pie/stacked/
+ * scatter — see docs/superpowers/specs/2026-09-17-chart-copilot-design.md
+ * §10): dumbbell and slope share one condition — every series narrowed down
+ * to EXACTLY two points (e.g. a region's value at the start and end of a
+ * period range someone picked), comparing at least two things. Both dots on
+ * both forms are real, already-verified cells; nothing is computed. Shared
+ * here so the two forms can never silently drift apart from each other —
+ * see slopeFormAllowed immediately below.
+ */
+export function dumbbellFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
+  return seriesCount >= 2 && spec.series.every((s) => s.points.length === 2);
+}
+
+/**
+ * Phase 5: identical condition to dumbbellFormAllowed, kept as its own named
+ * export — matching the one-guard-per-form convention every other form in
+ * this file follows — rather than every slope call site reaching for a
+ * function named after a different form.
+ */
+export function slopeFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
+  return dumbbellFormAllowed(spec, seriesCount);
+}
+
+/**
+ * Phase 5: a heat-map grid needs at least two things being compared AND at
+ * least two time points each, or it isn't a grid at all — a single row or a
+ * single column is already better served by the existing hbar/bar/line
+ * forms. Every cell it draws is one series' own real point value; nothing is
+ * combined or summed across cells (unlike the still-deferred pie/stacked
+ * work, §10).
+ */
+export function heatmapFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
+  return seriesCount >= 2 && spec.series.every((s) => s.points.length >= 2);
+}
+
+/**
  * WP218 phase 5 (Global Constraints): "presentation carries over on a type
  * switch ... a form that becomes disallowed after a same-instance spec swap
  * falls back exactly like the existing line->bar guard." One function so
  * both the render (Task 2) and every test share the SAME fallback policy —
  * area falls back to line when line still fits, else bar; hbar falls back
  * to bar; line falls back to bar exactly as before this phase; bar/table are
- * never gated and pass through unchanged.
+ * never gated and pass through unchanged. Phase 5 (chart-fit scorer):
+ * dumbbell and slope fall back to bar (a two-point comparison that no longer
+ * qualifies is still honestly a bar chart); heatmap falls back to table (the
+ * grid IS the table's own rows, recoloured — when the grid no longer reads,
+ * the table is the view it came from).
  */
-export function fallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'>, seriesCount: number): ChartForm {
+export function fallbackForm(
+  form: ChartForm,
+  spec: Pick<ChartSpec, 'kind'> & SeriesShape,
+  seriesCount: number,
+): ChartForm {
   switch (form) {
     case 'area':
       if (areaFormAllowed(spec, seriesCount)) return 'area';
@@ -292,6 +364,12 @@ export function fallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'>, ser
       return hbarFormAllowed(spec) ? 'hbar' : 'bar';
     case 'line':
       return lineFormAllowed(spec, seriesCount) ? 'line' : 'bar';
+    case 'dumbbell':
+      return dumbbellFormAllowed(spec, seriesCount) ? 'dumbbell' : 'bar';
+    case 'slope':
+      return slopeFormAllowed(spec, seriesCount) ? 'slope' : 'bar';
+    case 'heatmap':
+      return heatmapFormAllowed(spec, seriesCount) ? 'heatmap' : 'table';
     case 'bar':
     case 'table':
       return form;

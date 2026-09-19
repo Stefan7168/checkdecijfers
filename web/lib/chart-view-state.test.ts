@@ -7,12 +7,15 @@ import {
   COMPARISON_HBAR_MAX,
   defaultFormFor,
   defaultFormIsTable,
+  dumbbellFormAllowed,
   fallbackForm,
   hbarFormAllowed,
+  heatmapFormAllowed,
   initialViewState,
   isChartForm,
   isComparisonShaped,
   lineFormAllowed,
+  slopeFormAllowed,
   windowSpec,
   type ChartViewState,
 } from './chart-view-state.ts';
@@ -203,6 +206,26 @@ const S2 = { kind: 'line' as const, seriesCount: 2 }; // multi-series time serie
 const S3 = { kind: 'bar' as const, seriesCount: 2 }; // multi-region comparison
 const S4 = { kind: 'bar' as const, seriesCount: 1 }; // single-region comparison
 
+/** Phase 5 (chart-fit scorer): `fallbackForm` now also reads `series` (for
+ * the dumbbell/slope/heatmap cases), so the S1-S4 shapes are materialised
+ * into a real spec — `pointsPerSeries` defaults to 3, a plain multi-point
+ * time series that qualifies for none of the two-point forms, so the
+ * pre-existing area/hbar/line/bar/table expectations are unaffected. */
+function shaped(kind: 'line' | 'bar', seriesCount: number, pointsPerSeries = 3): ChartSpec {
+  return spec(
+    kind,
+    Array.from({ length: seriesCount }, (_, i) =>
+      series(
+        `S${i}`,
+        Array.from({ length: pointsPerSeries }, (_, p) => point(`202${p}`, i + p)),
+      ),
+    ),
+  );
+}
+function specFor(s: { kind: 'line' | 'bar'; seriesCount: number }): ChartSpec {
+  return shaped(s.kind, s.seriesCount);
+}
+
 describe('areaFormAllowed — single-series time series only (fill encodes magnitude)', () => {
   it('S1 (single-series line): allowed', () => {
     expect(areaFormAllowed({ kind: S1.kind }, S1.seriesCount)).toBe(true);
@@ -258,35 +281,109 @@ describe('guards table — S1/S2/S3/S4 x forms (line/area/bar/hbar/table)', () =
   // either, mirroring the existing FORM_ORDER (`['line'?, 'bar', 'table']`).
 });
 
+// Phase 5 (chart-fit scorer, session 116; spec §10): the three new guards
+// read the SERIES shape, not `kind` — a two-point comparison of ≥2 things
+// (dumbbell/slope) or a ≥2 × ≥2 grid (heatmap).
+describe('dumbbellFormAllowed — exactly two points per series, at least two series', () => {
+  it('allowed for a genuine 2-series / 2-point-each spec', () => {
+    expect(dumbbellFormAllowed(shaped('line', 2, 2), 2)).toBe(true);
+    expect(dumbbellFormAllowed(shaped('bar', 3, 2), 3)).toBe(true);
+  });
+  it('refused for a single series, even with exactly two points', () => {
+    expect(dumbbellFormAllowed(shaped('line', 1, 2), 1)).toBe(false);
+  });
+  it('refused when any series carries three (or more) points', () => {
+    expect(dumbbellFormAllowed(shaped('line', 2, 3), 2)).toBe(false);
+    const ragged = spec('line', [series('A', [point('2020', 1), point('2021', 2)]), series('B', [point('2020', 3), point('2021', 4), point('2022', 5)])]);
+    expect(dumbbellFormAllowed(ragged, 2)).toBe(false);
+  });
+  it('refused for a one-point comparison (that is hbar territory)', () => {
+    expect(dumbbellFormAllowed(shaped('bar', 4, 1), 4)).toBe(false);
+  });
+});
+
+describe('slopeFormAllowed — the same condition as dumbbell, by construction', () => {
+  it('agrees with dumbbellFormAllowed on every shape', () => {
+    for (const s of [shaped('line', 2, 2), shaped('bar', 3, 2), shaped('line', 1, 2), shaped('line', 2, 3), shaped('bar', 4, 1)]) {
+      expect(slopeFormAllowed(s, s.series.length)).toBe(dumbbellFormAllowed(s, s.series.length));
+    }
+  });
+  it('allowed for a 2-series / 2-point spec, refused for 1 series or 3 points', () => {
+    expect(slopeFormAllowed(shaped('line', 2, 2), 2)).toBe(true);
+    expect(slopeFormAllowed(shaped('line', 1, 2), 1)).toBe(false);
+    expect(slopeFormAllowed(shaped('line', 2, 3), 2)).toBe(false);
+  });
+});
+
+describe('heatmapFormAllowed — at least two series AND at least two points each', () => {
+  it('allowed for a 2-series / 2-point spec and for a wider grid', () => {
+    expect(heatmapFormAllowed(shaped('line', 2, 2), 2)).toBe(true);
+    expect(heatmapFormAllowed(shaped('line', 5, 10), 5)).toBe(true);
+  });
+  it('refused for a single series (one row is not a grid)', () => {
+    expect(heatmapFormAllowed(shaped('line', 1, 10), 1)).toBe(false);
+  });
+  it('refused when every series has one point (one column is not a grid)', () => {
+    expect(heatmapFormAllowed(shaped('bar', 12, 1), 12)).toBe(false);
+  });
+  it('refused when ANY series is down to a single point', () => {
+    const ragged = spec('line', [series('A', [point('2020', 1), point('2021', 2)]), series('B', [point('2020', 3)])]);
+    expect(heatmapFormAllowed(ragged, 2)).toBe(false);
+  });
+});
+
 describe('fallbackForm', () => {
   it('area stays area when allowed (S1)', () => {
-    expect(fallbackForm('area', { kind: S1.kind }, S1.seriesCount)).toBe('area');
+    expect(fallbackForm('area', specFor(S1), S1.seriesCount)).toBe('area');
   });
   it('area falls back to line when disallowed but line is allowed (S2, S4)', () => {
-    expect(fallbackForm('area', { kind: S2.kind }, S2.seriesCount)).toBe('line');
-    expect(fallbackForm('area', { kind: S4.kind }, S4.seriesCount)).toBe('line');
+    expect(fallbackForm('area', specFor(S2), S2.seriesCount)).toBe('line');
+    expect(fallbackForm('area', specFor(S4), S4.seriesCount)).toBe('line');
   });
   it('area falls back to bar when neither area nor line is allowed (S3)', () => {
-    expect(fallbackForm('area', { kind: S3.kind }, S3.seriesCount)).toBe('bar');
+    expect(fallbackForm('area', specFor(S3), S3.seriesCount)).toBe('bar');
   });
   it('hbar stays hbar when allowed (S3, S4)', () => {
-    expect(fallbackForm('hbar', { kind: S3.kind }, S3.seriesCount)).toBe('hbar');
-    expect(fallbackForm('hbar', { kind: S4.kind }, S4.seriesCount)).toBe('hbar');
+    expect(fallbackForm('hbar', specFor(S3), S3.seriesCount)).toBe('hbar');
+    expect(fallbackForm('hbar', specFor(S4), S4.seriesCount)).toBe('hbar');
   });
   it('hbar falls back to bar when disallowed (S1, S2)', () => {
-    expect(fallbackForm('hbar', { kind: S1.kind }, S1.seriesCount)).toBe('bar');
-    expect(fallbackForm('hbar', { kind: S2.kind }, S2.seriesCount)).toBe('bar');
+    expect(fallbackForm('hbar', specFor(S1), S1.seriesCount)).toBe('bar');
+    expect(fallbackForm('hbar', specFor(S2), S2.seriesCount)).toBe('bar');
   });
   it('line falls back to bar exactly like the existing guard (S3), stays line otherwise', () => {
-    expect(fallbackForm('line', { kind: S3.kind }, S3.seriesCount)).toBe('bar');
-    expect(fallbackForm('line', { kind: S1.kind }, S1.seriesCount)).toBe('line');
-    expect(fallbackForm('line', { kind: S4.kind }, S4.seriesCount)).toBe('line');
+    expect(fallbackForm('line', specFor(S3), S3.seriesCount)).toBe('bar');
+    expect(fallbackForm('line', specFor(S1), S1.seriesCount)).toBe('line');
+    expect(fallbackForm('line', specFor(S4), S4.seriesCount)).toBe('line');
   });
   it('bar and table are always unchanged, on every spec shape', () => {
     for (const s of [S1, S2, S3, S4]) {
-      expect(fallbackForm('bar', { kind: s.kind }, s.seriesCount)).toBe('bar');
-      expect(fallbackForm('table', { kind: s.kind }, s.seriesCount)).toBe('table');
+      expect(fallbackForm('bar', specFor(s), s.seriesCount)).toBe('bar');
+      expect(fallbackForm('table', specFor(s), s.seriesCount)).toBe('table');
     }
+  });
+
+  // Phase 5 (chart-fit scorer): the three new forms — a document state that
+  // still says 'dumbbell' after the reader widened the zoom back out (or a
+  // spec swap on the same instance) must land on an honest form, never stay
+  // on a shape the spec no longer qualifies for.
+  it('dumbbell and slope stay themselves while the spec still has exactly two points per series', () => {
+    expect(fallbackForm('dumbbell', shaped('line', 2, 2), 2)).toBe('dumbbell');
+    expect(fallbackForm('slope', shaped('line', 2, 2), 2)).toBe('slope');
+  });
+  it('dumbbell falls back to bar once the spec no longer qualifies (three points, or one series)', () => {
+    expect(fallbackForm('dumbbell', shaped('line', 2, 3), 2)).toBe('bar');
+    expect(fallbackForm('dumbbell', shaped('line', 1, 2), 1)).toBe('bar');
+  });
+  it('slope falls back to bar once the spec no longer qualifies', () => {
+    expect(fallbackForm('slope', shaped('line', 2, 3), 2)).toBe('bar');
+    expect(fallbackForm('slope', shaped('bar', 1, 2), 1)).toBe('bar');
+  });
+  it('heatmap stays heatmap on a ≥2 × ≥2 grid and falls back to table below it', () => {
+    expect(fallbackForm('heatmap', shaped('line', 2, 2), 2)).toBe('heatmap');
+    expect(fallbackForm('heatmap', shaped('line', 3, 8), 3)).toBe('heatmap');
+    expect(fallbackForm('heatmap', shaped('line', 1, 8), 1)).toBe('table');
+    expect(fallbackForm('heatmap', shaped('bar', 12, 1), 12)).toBe('table');
   });
 });
 
@@ -303,8 +400,8 @@ describe('chartViewReducer — setForm accepts the two new forms (no other chang
 
 // Fix round (Task 5 review, Piece 3): the embed route's own `?form=` guard.
 describe('isChartForm (fix round, Piece 3)', () => {
-  it('accepts every real ChartForm member', () => {
-    for (const form of ['line', 'area', 'bar', 'hbar', 'table']) {
+  it('accepts every real ChartForm member (eight since phase 5)', () => {
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap']) {
       expect(isChartForm(form)).toBe(true);
     }
   });

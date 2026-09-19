@@ -17,13 +17,18 @@ export type { CbsCopilotCapabilities };
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { ChartDocState } from './chart-commands.ts';
 import { columnHeaderLabel, digitFree } from './chart-data-instruction.ts';
+import { allowedForms } from './chart-fit.ts';
 import type { PresentationKey } from './chart-presentation.ts';
 import { areaFormAllowed, hbarFormAllowed, lineFormAllowed, type ChartForm } from './chart-view-state.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 
-/** The card's own `formAllowed`, over the same three predicates — so what
- * the chat is told matches the tabs the reader can actually click. */
+/** The own-data card's own `formAllowed` (user-chart.tsx), over the same
+ * three predicates — so what the chat is told matches the tabs the reader
+ * can actually click. Phase 5 (chart-fit scorer): deliberately still the
+ * original five forms, NOT chart-fit.ts's `allowedForms` — user-chart.tsx has
+ * no render branch for dumbbell/slope/heatmap yet, and the chat must never
+ * offer a shape its own panel cannot draw (plan Global Constraints). */
 function formsFor(spec: PlottableSpec, seriesCount: number): CopilotCapabilities['forms'] {
   const forms: CopilotCapabilities['forms'] = [];
   if (lineFormAllowed(spec, seriesCount)) forms.push('line');
@@ -60,10 +65,14 @@ export function ownDataCapabilities(input: {
 // Co-pilot phase 3 (session 114, Task 2) — the CBS/Eurostat tier's own
 // capability list + example chips; the type is the backend's own.
 
-/** No data-side capability on this tier at all (R1/R6/R11: selection only) —
- * `formsFor` is reused unchanged, over the same three predicates the card's
- * own tabs use, so the chat never offers a form the reader could not also
- * reach by clicking. */
+/** No data-side capability on this tier at all (R1/R6/R11: selection only).
+ * Phase 5 (chart-fit scorer, session 116): the forms list comes from
+ * chart-fit.ts's `allowedForms` — the SAME scorer chart.tsx's own tabs read
+ * — so the chat never offers a form the reader could not also reach by
+ * clicking, including the three phase-5 shapes (dumbbell/slope/heatmap).
+ * Deliberately NOT `formsFor`: that stays the own-data tier's five-form
+ * list until user-chart.tsx grows matching render code (plan Global
+ * Constraints — CBS/Eurostat card only). */
 export function cbsCapabilities(input: {
   spec: PlottableSpec;
   form: ChartForm;
@@ -74,7 +83,7 @@ export function cbsCapabilities(input: {
 }): CbsCopilotCapabilities {
   const { spec, form, applicable, zoomAvailable, lang } = input;
   return {
-    forms: formsFor(spec, spec.series.length),
+    forms: allowedForms(spec, spec.series.length),
     presentationKeys: PRESENTATION_KEYS.filter((key) => applicable.has(key)),
     templates: form === 'table' ? [] : [...TEMPLATE_IDS],
     zoom: zoomAvailable,

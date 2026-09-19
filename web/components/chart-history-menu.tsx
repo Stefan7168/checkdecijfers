@@ -13,9 +13,10 @@ import { t, type MessageKey, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu.tsx';
 
-// `chart.form.<form>` only exists for the two forms the tablist doesn't
-// already label (area, hbar) — for line/bar/table the tablist's own keys
-// (chart.tabLine/tabBar/tabTable) are the form word, per the Task 4 brief.
+// `chart.form.<form>` only exists for the forms the tablist doesn't already
+// label (area, hbar, and the phase-5 trio dumbbell/slope/heatmap) — for
+// line/bar/table the tablist's own keys (chart.tabLine/tabBar/tabTable) are
+// the form word, per the Task 4 brief.
 function formLabel(form: ChartForm, lang: Lang): string {
   switch (form) {
     case 'line':
@@ -28,6 +29,12 @@ function formLabel(form: ChartForm, lang: Lang): string {
       return t(lang, 'chart.form.area');
     case 'hbar':
       return t(lang, 'chart.form.hbar');
+    case 'dumbbell':
+      return t(lang, 'chart.form.dumbbell');
+    case 'slope':
+      return t(lang, 'chart.form.slope');
+    case 'heatmap':
+      return t(lang, 'chart.form.heatmap');
   }
 }
 

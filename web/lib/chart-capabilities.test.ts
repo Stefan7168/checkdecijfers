@@ -199,9 +199,21 @@ function cbsState(overrides: Partial<Pick<ChartDocState, 'title' | 'hiddenKeys'>
 }
 
 describe('cbsCapabilities', () => {
-  it('forms for a 2-series line spec are line/bar/table', () => {
+  it('forms for a 2-series / 2-point line spec are line/bar/table plus the phase-5 trio (chart-fit scorer)', () => {
+    // Phase 5: CBS_TWO_SERIES has exactly two points per series, so it is
+    // precisely the shape dumbbell/slope are for — and a 2 × 2 grid for
+    // heatmap. Before the scorer this pinned ['line', 'bar', 'table'].
     const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' });
-    expect(caps.forms).toEqual(['line', 'bar', 'table']);
+    expect(caps.forms).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap']);
+  });
+
+  it('a normal multi-point time series offers heatmap but never dumbbell/slope', () => {
+    const threePoints = cbsSpec('line', [
+      { label: 'Amsterdam', points: [cbsPoint('2020', 1), cbsPoint('2021', 9), cbsPoint('2022', 5)] },
+      { label: 'Rotterdam', points: [cbsPoint('2020', 4), cbsPoint('2021', 2), cbsPoint('2022', 6)] },
+    ]);
+    const caps = cbsCapabilities({ spec: threePoints, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' });
+    expect(caps.forms).toEqual(['line', 'bar', 'table', 'heatmap']);
   });
 
   it('a bar spec with one series offers line/bar/hbar/table', () => {
@@ -217,6 +229,25 @@ describe('cbsCapabilities', () => {
   it('zoom mirrors the input', () => {
     expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' }).zoom).toBe(true);
     expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' }).zoom).toBe(false);
+  });
+});
+
+// Phase 5 (chart-fit scorer) Global Constraint: CBS/Eurostat card ONLY. The
+// own-data card (user-chart.tsx) has no render branch for the three new
+// shapes yet, so its chat doorway must keep offering exactly the original
+// five — the chat may never offer a shape its own panel cannot draw.
+describe('phase 5 — the three new forms reach the CBS tier only', () => {
+  it('ownDataCapabilities never lists dumbbell/slope/heatmap, even on the exact spec shape they fit', () => {
+    const caps = ownDataCapabilities({ spec: CBS_TWO_SERIES, form: 'line', seriesCount: 2, applicable: ALL_APPLICABLE, lang: 'nl' });
+    expect(caps.forms).toEqual(['line', 'bar', 'table']);
+    expect(caps.forms).not.toContain('dumbbell');
+    expect(caps.forms).not.toContain('slope');
+    expect(caps.forms).not.toContain('heatmap');
+  });
+
+  it('cbsCapabilities does list them for that same spec', () => {
+    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    expect(caps.forms).toEqual(expect.arrayContaining(['dumbbell', 'slope', 'heatmap']));
   });
 });
 

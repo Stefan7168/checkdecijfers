@@ -17,10 +17,13 @@ import type { cbsViewCommandSchema } from './schema.ts';
 
 export { PRESENTATION_KEYS, TEMPLATE_IDS };
 
-export const CBS_COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table'] as const;
+/** Phase 5 (chart-fit scorer, session 116): the three trailing shapes are
+ * THIS tier's only — the own-data tier's COPILOT_FORMS stays at five until
+ * user-chart.tsx can draw them (plan Global Constraints). */
+export const CBS_COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'] as const;
 
 export interface CbsCopilotCapabilities {
-  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table')[];
+  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table' | 'dumbbell' | 'slope' | 'heatmap')[];
   /** ⊆ PRESENTATION_KEYS. */
   presentationKeys: string[];
   /** ⊆ TEMPLATE_IDS. */

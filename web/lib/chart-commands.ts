@@ -428,7 +428,7 @@ const envelope = { id: z.string().min(1).max(64), at: z.string().min(1).max(40),
 // narrowing, so the envelope fields are spread into every member instead of
 // intersected on afterward.
 const commandSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table']), ...envelope }),
+  z.object({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap']), ...envelope }),
   z.object({ kind: z.literal('toggleSeries'), key: z.string(), ...envelope }),
   z.object({ kind: z.literal('setHighlight'), key: z.string().nullable(), ...envelope }),
   z.object({ kind: z.literal('setSeriesView'), hiddenKeys: z.array(z.string()), highlightedKey: z.string().nullable(), ...envelope }),
