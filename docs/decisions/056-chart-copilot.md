@@ -284,6 +284,68 @@ round; the Playwright proof and the final review by the session).
   a reading (`setReading`) command through the chat — the reading select stays panel-only for now (an
   alternate reading is a different measure and deserves the panel's explicit label).
 
+## As built — phase 4, storytelling primitives (session 115, 2026-09-19)
+
+Plan: [superpowers/plans/2026-09-19-chart-copilot-phase4.md](../superpowers/plans/2026-09-19-chart-copilot-phase4.md).
+Built via subagent-driven development (8 tasks across three waves — a foundation wave, five parallel
+UI tasks merged one at a time, a test-coverage task), a final whole-branch review on the most capable
+model, one fix wave, one scoped re-review, and a small set of controller-fixed residuals. Merged to
+`main` `edbf6d30..041d3a49`.
+
+- **The provenance split, in one rule (spec §9):** a primitive shows either the reader's OWN typed
+  words (never checked against data, rendered outside `chartContainerRef` so it can never enter a
+  PNG/SVG export — the same trick chart notes already use) or a NUMBER the product calculated, which
+  must always trace to a real, already-verified cell and is drawn as part of the chart's own image.
+- **Goal line and era shading are a hybrid of both halves.** The reader's typed VALUE/RANGE draws as a
+  native Recharts primitive (`<ReferenceLine>`/`<ReferenceArea>`) with no `label` prop, INSIDE
+  `chartContainerRef` — a structural marker, not a data claim, so it's acceptable for it to appear in
+  a download. The reader's typed LABEL TEXT stays in the existing outside-`chartContainerRef` list,
+  same as notes. (Mid-session finding: the original assumption that the chart's period/zoom controls
+  already exposed a reusable pixel-positioning x-scale was wrong — they're plain `<select>`s. Recharts'
+  own `x1`/`x2`/`segment` props, keyed by period LABEL, replaced any need for manual pixel math.)
+- **Difference arrow and average line are computed on demand, server-side, never precomputed and never
+  in the browser (owner decision, "Option A").** `requestChartDerivation`
+  (`web/app/chart-derivation-actions.ts`) re-runs a registered R5 derivation (`deriveDifference`,
+  a new `deriveMean`) over an already-audited chart's own cells (`specCellsByResultId` flattens the
+  stored `ChartSpec` back into derivation-ready cells) — no new CBS/Eurostat fetch, no new
+  `audit_answers` row. The command log itself never carries the computed number, only the "recipe"
+  (`calcKind` + `resultIds`); the resolved value lives in transient client state
+  (`resolvedOverlays`), resolved via `resolveDerivedOverlays`. **The final review found this action
+  had no ownership/GDPR-redaction check** — unlike its sibling `createEmbedCode`, which has exactly
+  that check for the same client-supplied-id shape — fixed same session (real hole: `resultId` is
+  fully guessable from public CBS vocabulary, so an unscoped read let any signed-in user probe which
+  table/region/period another user's account had asked about).
+- **Dim instead of hide** is a third `shown | dimmed | hidden` series state (`ChartViewState.
+  dimmedKeys`), on both the CBS/Eurostat and own-data cards — the one primitive built for both cards
+  this session.
+- **Reader-chosen headline number** widens `web/lib/chart-headline.ts`'s existing automatic
+  `headlineFigure()` (previously always "the last point of a single-series chart") to accept an
+  override resultId the reader picks via the same click-to-annotate affordance chart notes already
+  use; falls back to the default figure (never blanks the card) when a zoom/alternate-reading makes
+  the override's resultId no longer present on the displayed spec.
+- **CBS/Eurostat card only this session; own-data support deferred** ([#289](../open-questions.md)) for
+  goal line, era shading and the headline override — none has provenance complexity that would make it
+  harder there, it just wasn't built. Difference/average are permanently CBS-only by construction
+  ([#290](../open-questions.md)) — own-data already has full arithmetic freedom via `setInstruction`.
+- **Not chat-reachable yet, for any of the six primitives** — `src/chart/copilot/schema.ts`/`map.ts`
+  (the CBS chat doorway's vocabulary) and the own-data equivalent are untouched by this session. Phase
+  4 shipped the cheapest-mechanism-first panel controls; the chat side is a later, explicitly separate
+  step, not silently dropped scope.
+- **A real process incident, caught and remediated same session:** a subagent, mid-fix-round, operated
+  against the main repo checkout instead of its assigned `git worktree`, producing a real but entirely
+  unreviewed commit on `main`'s HEAD. Found via the controller's own sanity check (not the agent's own
+  report, which had mis-described it as a stalled background command), remediated with a local
+  `git reset --hard` to the last known-good merge (nothing pushed, fully recoverable via reflog) before
+  the properly-reviewed history was built on top. See [lessons-learned.md](../lessons-learned.md)
+  session 115 for the full account and four related lessons (a shared-type widening silently breaking
+  unrelated exhaustive switches three separate times; a "doesn't crash" test masquerading as coverage
+  across two different tasks; a Recharts-specific gotcha — `<ReferenceLine>`/`<ReferenceArea>` must be
+  direct JSX children, not wrapped in a custom component).
+- **Verification:** 2432/2432 web tests, 2977/2977 root tests, both typechecks clean, `next build`
+  succeeds. Live benchmark / real-browser Playwright execution not run — blocked by the same Anthropic
+  workspace usage cap as everything model-backed since 2026-09-14 ([#288](../open-questions.md)).
+- **Residuals, all deliberately deferred, not silently dropped:** [#289](../open-questions.md)–[#294](../open-questions.md).
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.

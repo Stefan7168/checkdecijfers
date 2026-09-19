@@ -18,6 +18,64 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-19, session 115 — owner delegated: "spawn multiple
+agents and get work done autonomously," present in chat throughout; verify against `git log` before
+trusting this).** Session 115 built **chart co-pilot phase 4 — storytelling primitives** (ADR
+[056](decisions/056-chart-copilot.md) "As built — phase 4", plan
+[superpowers/plans/2026-09-19-chart-copilot-phase4.md](superpowers/plans/2026-09-19-chart-copilot-phase4.md))
+via subagent-driven development — 8 tasks in three waves (2 parallel foundation tasks, 5 parallel UI
+tasks merged one at a time, 1 test-coverage task), a final whole-branch review on the most capable
+tier that found and the session fixed 1 Critical (a real authorization hole) + 10 Important
+cross-task findings in one fix wave + one scoped re-review + a handful of controller-direct
+residuals, pushed to `main` `edbf6d30..041d3a49` (42 commits) + docs.
+
+- **What phase 4 is:** six new chart-editing primitives, panel-only (chat-doorway wiring and
+  own-data support both deferred, [#289](open-questions.md)) — goal line and era shading (reader-typed
+  value/range + label, the value/band drawn as a native Recharts marker with no `label` prop so the
+  reader's typed TEXT never enters an export); dim-not-hide (a third shown/dimmed/hidden series state,
+  built for both cards); a reader-chosen headline number (click a point to feature it, falls back to
+  the default rather than blanking on a zoom/reading change); a difference arrow and an average line
+  (computed server-side, on demand, via `requestChartDerivation` re-running a registered R5 derivation
+  over an already-audited chart's own cells — no new CBS fetch, no new audit row, never in the
+  browser).
+- **A real, live authorization hole was found and fixed same session.** `requestChartDerivation` read
+  any user's audited answer by a fully-guessable client-supplied id with no ownership/GDPR-redaction
+  check — unlike its sibling `createEmbedCode`, which already has exactly that check. Fixed to match;
+  8/8 tests pass. Never deployed with the hole open (found and fixed before this branch's first push).
+- **A real process incident, found and remediated same session:** mid-fix-round, a subagent operated
+  against the main repo checkout instead of its assigned `git worktree`, producing a genuinely
+  unreviewed commit on `main`'s HEAD. Caught by the controller's own sanity check (not the agent's own
+  report, which mis-described it as a stalled background command), remediated with a local
+  `git reset --hard` to the last known-good merge before continuing — nothing pushed, nothing lost,
+  fully recoverable via reflog. See [lessons-learned.md](lessons-learned.md) session 115 for the full
+  account and four related lessons.
+- **Owner step BLOCKED, unchanged from session 114:** `npm run attachments:record` /
+  `chart-copilot:record` still hit the Anthropic workspace usage cap (400, "regain access on
+  2026-10-01") — every model-backed path still refuses. Not run/re-checked this session; hand-authored
+  fixtures remain the test basis throughout. Blocks the live benchmark and real-browser Playwright
+  execution for phase 4 too — neither was run this session, for the same reason.
+- **New/changed open rows:** [#289](open-questions.md) (own-data + chat-doorway support deferred for
+  all six primitives — a documented scope boundary, not a gap), [#290](open-questions.md) (derived
+  overlay is permanently CBS-only, decided), [#291](open-questions.md)–[#294](open-questions.md) (small
+  UX/testing residuals from the final review, all deliberately deferred).
+- **THE NEXT BUILD PRIORITY IS PHASE 5 — chart-fit scorer + new honest forms** (stacked, 100% stacked,
+  dumbbell, slope, heatmap, scatter, pie/donut, scorer-gated), then the six house styles + homepage
+  themes row ([#275](open-questions.md)).
+- **Owner steps pending — unchanged from sessions 110/111/114** (registry:apply, DOI backfill, live
+  benchmark, region-set Task 9, audit row 22) **plus the two `:record` runs after 2026-10-01, plus a
+  live benchmark + real-browser Playwright run for phase 4 once the cap lifts.**
+
+**Measured (session 115, at push, HEAD `041d3a49`):** root typecheck + web typecheck clean; root
+204 files / 2,977 tests; web 144 files / 2,432 tests; `next build` clean; final whole-branch review
+(most capable tier) — 1 Critical + 10 Important found and fixed, 0 remaining Critical/Important.
+**Not run this session (Anthropic workspace usage cap, unchanged since 2026-09-14):** live benchmark,
+real-browser Playwright execution, the `/code-review` LOW pass (substituted by the more thorough
+whole-branch review above, which is the stronger check but is not literally that command).
+
+---
+
+**Previous top block (session 114, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 114 — owner present at the start, then
 fully delegated; verify against `git log` / `gh run list` before trusting this).** Session 114 did the
 phase-2 owner steps as far as the world allowed AND built **chart co-pilot phase 3 — the CBS/Eurostat
@@ -26,8 +84,7 @@ chat doorway** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 3"
 via subagent-driven development — 4 tasks in two worktree waves, 1 fix round, a final review on the
 most capable tier (8 minor findings, 4 fixed in a final wave, 4 recorded), pushed to `main`
 `6c7d9c4e..f09945c7` (16 commits) + docs. CI run `35361186023` green incl. deploy; production
-answered 200 on `/api/health` afterwards. Kickoff for the next session:
-[session-briefs/2026-09-18-session-115-kickoff.md](session-briefs/2026-09-18-session-115-kickoff.md).
+answered 200 on `/api/health` afterwards.
 
 - **Owner steps DONE (live):** migrations 034 + 035 applied 11:14 UTC (RUNBOOK checks pass);
   `pricing:apply` upserted `dataset_turn`; `ATTACHMENTS_ENABLED=1` set in Vercel Production and
@@ -45,15 +102,6 @@ answered 200 on `/api/health` afterwards. Kickoff for the next session:
   `audit_answers`. A data request becomes the chip "Stel als vervolgvraag" (the reader's own words
   through the follow-up path); a compatible follow-up card is badged "Grafiek uitgebreid" and mounts in
   the previous card's saved look. Hermetic: 3 fixtures + `web/e2e/cbs-copilot.spec.ts`.
-- **New open rows:** [#285](open-questions.md) (pricing; zero-command edits keep the debit — owner
-  decision wanted), [#286](open-questions.md) (no turn record for CBS chat edits), [#287](open-questions.md)
-  (series merge; remount + colour-index residuals), [#288](open-questions.md) (`:record` blocked).
-- **THE NEXT BUILD PRIORITY IS PHASE 4 — storytelling primitives via both doorways** (spec §5
-  phase 4): goal line, average line (server-derived, traced), difference arrow, dim-not-hide, era
-  shading, headline number — every one a panel control first, chat second; provenance rule per
-  primitive against R1/R6 before building.
-- **Owner steps pending — unchanged from sessions 110/111** (registry:apply, DOI backfill, live
-  benchmark, region-set Task 9, audit row 22) **plus the two `:record` runs after 2026-10-01.**
 
 **Measured (session 114, at push, HEAD `f09945c7`):** root typecheck + web typecheck clean; root
 202 files / 2,970 tests; web 140 files / 2,383 tests; benchmark 14/14 answerable, 6/6
@@ -61,8 +109,6 @@ refusal/clarify, 0 fabricated; Playwright `chart-copilot`, `own-data-copilot`, `
 green; `next build` clean; `/code-review` LOW 0 findings; final review (most capable tier) 0 critical.
 
 ---
-
-**Previous top block (session 113, kept verbatim below for one session):**
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 113 — owner present; verify against
 `git log` / `gh run list` before trusting this).** Session 113 BUILT **chart co-pilot phase 2 — the
