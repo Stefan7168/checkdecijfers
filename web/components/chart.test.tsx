@@ -6208,4 +6208,28 @@ describe('ChartView — Task 3 era shading visual rendering (ReferenceArea)', ()
     const areaChart = areaContainer.querySelector('svg.recharts-surface');
     expect(areaChart).not.toBeNull();
   });
+
+  it('renders a ReferenceArea band in a line chart when an era shading is added through the real UI', async () => {
+    const s = twoSeriesLineSpec();
+    const { container } = render(<ChartView spec={s} />);
+
+    // Click the era shading trigger button (dynamic component loads on click)
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+
+    // Wait for the form to be visible and get the inputs
+    const fromSelect = await screen.findByLabelText('Van');
+    fireEvent.change(fromSelect, { target: { value: '2020' } });
+
+    const toSelect = screen.getByLabelText('Tot');
+    fireEvent.change(toSelect, { target: { value: '2021' } });
+
+    const labelInput = screen.getByLabelText('Label');
+    fireEvent.change(labelInput, { target: { value: 'Testperiode' } });
+
+    // Save (find the button by regex to match 'Opslaan')
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    // Assert the visual band renders
+    expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
 });
