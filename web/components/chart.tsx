@@ -113,6 +113,10 @@ import {
   newCommandId,
   type CommandContext,
 } from '../lib/chart-commands.ts';
+import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
+import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
+import { formatValueNl } from '../backend/answer/compose/format.ts';
+import type { DerivationRecord } from '../../src/query/types.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -1744,6 +1748,21 @@ export function ChartView({
   const [headlineBusy, setHeadlineBusy] = useState(false);
   const [headlineError, setHeadlineError] = useState<string | null>(null);
 
+  // Chart co-pilot phase 4 (Task 7): resolved derived overlays (difference
+  // arrows and average lines). Keyed by overlay id from state.derivedOverlayRequests.
+  // The recipes live in the undoable command history; the resolved values
+  // (the actual numbers) live here, transient per session.
+  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, DerivationRecord>>(new Map());
+  // Server refusals for derivation requests (e.g., different regions, invalid selection).
+  const [derivationRefusals, setDerivationRefusals] = useState<Map<string, string>>(new Map());
+  // Session-local: whether difference picker mode is active.
+  const [differencePickerActive, setDifferencePickerActive] = useState(false);
+  // Session-local: which point was selected first for a two-point difference.
+  // Stores {resultId, regionCode} for the first click; null when no point selected yet.
+  const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; regionCode: string | null } | null>(null);
+  // Error from failed difference request (e.g., different regions).
+  const [differenceError, setDifferenceError] = useState<string | null>(null);
+
   // Lazy fetch-on-mount for the chat context only: the embed page already
   // resolved `headlineText` server-side (undefined means "not yet known"
   // here, never "known absent" — that's `null`), and there's nothing to
@@ -1760,6 +1779,26 @@ export function ChartView({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted chart, keyed by auditId identity below
   }, [embed?.auditId]);
+
+  // Chart co-pilot phase 4 (Task 7): resolve pending derived overlay requests
+  // (difference/mean recipes) to their real numbers via the server action.
+  // Never touches the command history — the recipe stays undoable, the resolved
+  // value lives here transiently.
+  useEffect(() => {
+    // Only resolve if we have a valid audit id
+    if (embed?.auditId === undefined) return;
+    const requester = async (calcKind: 'difference' | 'mean', resultIds: string[]) => {
+      return requestChartDerivation(
+        { kind: 'answer', id: embed.auditId },
+        calcKind,
+        resultIds,
+      );
+    };
+    void resolveDerivedOverlays(state.derivedOverlayRequests, requester).then(({ resolvedMap, refusals }) => {
+      setResolvedOverlays(resolvedMap);
+      setDerivationRefusals(refusals);
+    });
+  }, [state.derivedOverlayRequests, embed?.auditId]);
 
   // Stable per-chart identity, not object identity: a fresh spec object can
   // represent the exact same chart across a re-render. Resets ALL
@@ -1863,7 +1902,57 @@ export function ChartView({
   // Declared here (after `embedOpen`, not up by `pendingPoint` where it used
   // to live) purely because `embedOpen` is derived from `openPanel`, which
   // isn't in scope any earlier in this component.
-  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => setPendingPoint(p);
+  // Task 7 (fix round 3): `PendingPoint` (chart-notes.tsx) carries no
+  // `regionCode` — it was never populated by any of the three point-render
+  // helpers (SeriesDot/SeriesBar/RegionBar), so every prior round's
+  // `p.regionCode` read was `undefined`, making the "same region" check below
+  // compare `undefined !== undefined` (always false) regardless of which
+  // points were actually clicked. That is the reason the client-side
+  // region-mismatch precheck never fired and the corresponding e2e test could
+  // never be written for real. Fixed by looking the region up ourselves from
+  // `displaySpec.series` (each series carries its own `regionCode`, per
+  // src/chart/types.ts) via the clicked point's resultId, rather than
+  // threading a new field through three render-helper signatures.
+  const regionCodeForResultId = (resultId: string): string | null => {
+    const series = displaySpec.series.find((s) => s.points.some((point) => point.resultId === resultId));
+    return series?.regionCode ?? null;
+  };
+  // Task 7: capture points for difference overlays when picker is active.
+  const onPointClick = embedMode || inStage || embedOpen ? undefined : (p: PendingPoint) => {
+    // Handle difference picker if active
+    if (differencePickerActive) {
+      const regionCode = regionCodeForResultId(p.resultId);
+      if (firstDifferencePoint === null) {
+        // First point: store it
+        setFirstDifferencePoint({ resultId: p.resultId, regionCode });
+      } else {
+        // Second point: validate region and create overlay
+        setDifferenceError(null);
+        if (firstDifferencePoint.regionCode !== regionCode) {
+          setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
+          setFirstDifferencePoint(null);
+        } else {
+          // Both points in same region: dispatch command and exit picker mode
+          dispatchCommand(
+            {
+              kind: 'addDerivedOverlay',
+              overlay: {
+                id: newCommandId(),
+                calcKind: 'difference',
+                resultIds: [firstDifferencePoint.resultId, p.resultId],
+              },
+            },
+            'panel',
+          );
+          setDifferencePickerActive(false);
+          setFirstDifferencePoint(null);
+        }
+      }
+      return; // Don't open note UI when in picker mode
+    }
+    // Normal point click: open note UI
+    setPendingPoint(p);
+  };
   // Task 6 (chart frame plan): one Style panel open per page. This chart
   // claims the shared owner slot for as long as ITS panel is open, and
   // releases it the moment that stops being true (panel closed, or this
@@ -3267,6 +3356,41 @@ export function ChartView({
                   strokeDasharray="3 3"
                 />
               ))}
+              {/* Task 7: render derived overlay lines */}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
+                if (record.kind === 'mean') {
+                  return (
+                    <ReferenceLine
+                      key={`mean-${id}`}
+                      y={record.value}
+                      stroke="var(--accent)"
+                      strokeDasharray="2 2"
+                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                if (record.kind === 'difference') {
+                  const allPoints = displaySpec.series.flatMap((s) => s.points);
+                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
+                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
+                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
+                  return (
+                    <ReferenceLine
+                      key={`diff-${id}`}
+                      segment={[
+                        { x: a.periodLabel as string | number, y: a.value as number },
+                        { x: b.periodLabel as string | number, y: b.value as number },
+                      ]}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                return null;
+              })}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -3383,6 +3507,41 @@ export function ChartView({
               {markers.map((m) => (
                 <ReferenceLine key={m.periodLabel} x={m.periodLabel} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               ))}
+              {/* Task 7: render derived overlay lines */}
+              {Array.from(resolvedOverlays.entries()).map(([id, record]) => {
+                if (record.kind === 'mean') {
+                  return (
+                    <ReferenceLine
+                      key={`mean-${id}`}
+                      y={record.value}
+                      stroke="var(--accent)"
+                      strokeDasharray="2 2"
+                      label={{ value: formatValueNl(record.value, 0), position: 'right' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                if (record.kind === 'difference') {
+                  const allPoints = displaySpec.series.flatMap((s) => s.points);
+                  const a = allPoints.find((p) => p.resultId === record.subtrahendResultId);
+                  const b = allPoints.find((p) => p.resultId === record.minuendResultId);
+                  if (!a || !b || a.periodLabel === null || b.periodLabel === null || a.value === null || b.value === null) return null;
+                  return (
+                    <ReferenceLine
+                      key={`diff-${id}`}
+                      segment={[
+                        { x: a.periodLabel as string | number, y: a.value as number },
+                        { x: b.periodLabel as string | number, y: b.value as number },
+                      ]}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      label={{ value: formatValueNl(record.value, 0), position: 'top' }}
+                      data-label-for={record.sourceResultIds.join(',')}
+                    />
+                  );
+                }
+                return null;
+              })}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -4257,6 +4416,83 @@ export function ChartView({
                   </option>
                 ))}
               </select>
+            </div>
+          ) : null}
+          {/* Task 7: derived overlays (difference arrows, average lines) —
+            * small controls for on-demand calculations. Rendered inline with
+            * the main controls but after the tabs/reading/zoom selects.
+            * Fix round 3: `spec.kind` is `'line' | 'bar'` (the chart FORM),
+            * never `'answer'` — that comparison type-errored (TS2367) and was
+            * always false, so this whole control block was dead code in
+            * every prior round despite the report claiming it worked. The
+            * real "is this a CBS/Eurostat answer chart with a saved audit
+            * row" test is the same one the resolution effect above already
+            * uses (`embed?.auditId`) — `ChartView` only ever receives `embed`
+            * for that case (own-data charts render through the separate
+            * UserChartView component; the internal Eurostat explorer passes
+            * no `embed` at all and correctly gets no derived-overlay UI). */}
+          {embed !== undefined ? (
+            <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+              <Button
+                type="button"
+                size="sm"
+                variant={differencePickerActive ? 'default' : 'outline'}
+                data-command-kind="addDerivedOverlay"
+                aria-pressed={differencePickerActive}
+                title={t(chartLang, 'chart.derived.differenceLabel')}
+                onClick={() => {
+                  setDifferencePickerActive((active) => !active);
+                  setFirstDifferencePoint(null);
+                  setDifferenceError(null);
+                }}
+                className="text-xs"
+              >
+                {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-command-kind="addDerivedOverlay"
+                title={t(chartLang, 'chart.derived.meanLabel')}
+                onClick={() => {
+                  const visibleCodes = displaySpec.series[0]?.points
+                    .filter((p) => !state.periodRange || (p.periodCode >= state.periodRange[0] && p.periodCode <= state.periodRange[1]))
+                    .map((p) => p.resultId) ?? [];
+                  if (visibleCodes.length >= 2) {
+                    dispatchCommand(
+                      { kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds: visibleCodes } },
+                      'panel',
+                    );
+                  }
+                }}
+                className="text-xs"
+              >
+                {t(chartLang, 'chart.derived.meanLabel')}
+              </Button>
+              {state.derivedOverlayRequests.map((overlay) => (
+                <Button
+                  key={overlay.id}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  data-command-kind="removeDerivedOverlay"
+                  onClick={() => dispatchCommand({ kind: 'removeDerivedOverlay', overlayId: overlay.id }, 'panel')}
+                  className="text-xs h-6 px-2"
+                >
+                  × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
+                </Button>
+              ))}
+              {differenceError ? (
+                <span className="text-xs text-destructive">{differenceError}</span>
+              ) : null}
+              {derivationRefusals.size > 0 ? (
+                <div className="text-xs text-destructive">
+                  {Array.from(derivationRefusals.entries()).map(([id, reason]) => (
+                    <div key={id}>{t(chartLang, 'chart.derived.errorOtherIssue', { reason })}</div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

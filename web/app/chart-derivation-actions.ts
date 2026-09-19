@@ -42,7 +42,19 @@ export async function requestChartDerivation(
     const cellsByResultId = specCellsByResultId(spec);
     const cells = resultIds.data.map((id) => cellsByResultId.get(id));
     if (cells.some((c) => c === undefined)) return { ok: false, reason: 'one of those points is not on this chart' };
-    const result = calcKind === 'difference' ? deriveDifference(cells as NonNullable<typeof cells[number]>[]) : deriveMean(cells as NonNullable<typeof cells[number]>[]);
+    const orderedCells = (cells as NonNullable<(typeof cells)[number]>[])
+      // Code review finding (fix round 3): `deriveDifference` (src/query/derivations.ts)
+      // documents and relies on its two cells arriving period-ordered —
+      // `cells[0]` is treated as "earlier", `cells[1]` as "later", and the
+      // returned value is `later.value - earlier.value`. This action built
+      // `cells` straight from the CLIENT-supplied resultIds array (chart.tsx
+      // sends [firstClickedResultId, secondClickedResultId]), with no sort —
+      // a reader clicking the later period first would silently get a
+      // sign-flipped difference. Sorting by periodCode here, once, fixes it
+      // for both calcKinds (a no-op for `mean`, which is order-independent).
+      .slice()
+      .sort((a, b) => (a.periodCode < b.periodCode ? -1 : a.periodCode > b.periodCode ? 1 : 0));
+    const result = calcKind === 'difference' ? deriveDifference(orderedCells) : deriveMean(orderedCells);
     return result.ok ? { ok: true, record: result.record } : { ok: false, reason: result.reason };
   } catch (e) {
     await reportError('requestChartDerivation', e, {});

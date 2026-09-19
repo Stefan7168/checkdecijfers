@@ -1176,6 +1176,15 @@ const nl = {
   'lab3d.narrativeStep4': 'Sleep de tijdbalk van {start} naar {end}, of klik op Afspelen om de groei jaar voor jaar te zien.',
   'lab3d.narrativeStep5': 'Alle cijfers op deze kaart zijn verzonnen, uitsluitend om de techniek te laten zien — geen CBS-cijfer.',
 
+  // Chart co-pilot phase 4 (session 115): difference arrow and average line controls.
+  'chart.derived.differenceLabel': 'Verschil aanduiden',
+  'chart.derived.differencePick': 'Kies twee punten voor het verschil',
+  'chart.derived.meanLabel': 'Gemiddelde tonen',
+  'chart.derived.meanPeriodRange': 'Gemiddelde over de zichtbare periode',
+  'chart.derived.remove': 'Verwijder',
+  'chart.derived.errorMissingRegion': 'Dit kan niet: de punten liggen in verschillende regio\'s.',
+  'chart.derived.errorOtherIssue': 'Dit kan niet: {reason}',
+
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
   // by design (D3(a) in the page itself), but the SHARED site footer below
@@ -2066,6 +2075,15 @@ const en: Messages = {
   'lab3d.narrativeStep3': 'The colour of both the area and the column stands for growth since {start}: blue is growth, red-orange is shrinkage, up to about ±{domain}%.',
   'lab3d.narrativeStep4': 'Drag the time bar from {start} to {end}, or click Play to watch the growth year by year.',
   'lab3d.narrativeStep5': 'Every figure on this map is made up, shown purely to demonstrate the technique — not a CBS figure.',
+
+  // Chart co-pilot phase 4: see the `nl` entry's comment.
+  'chart.derived.differenceLabel': 'Show difference',
+  'chart.derived.differencePick': 'Pick two points to show the difference',
+  'chart.derived.meanLabel': 'Show average',
+  'chart.derived.meanPeriodRange': 'Average over the visible period',
+  'chart.derived.remove': 'Remove',
+  'chart.derived.errorMissingRegion': 'This cannot be done: the points are in different regions.',
+  'chart.derived.errorOtherIssue': 'This cannot be done: {reason}',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English
