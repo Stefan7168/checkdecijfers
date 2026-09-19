@@ -170,6 +170,7 @@ import {
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
   lineFormAllowed,
+  slopeFormAllowed,
   windowSpec,
   type ChartForm,
   type ChartViewState,
@@ -2237,6 +2238,12 @@ export function ChartView({
   // whole series), per the note this replaces.
   const canUseArea = areaFormAllowed(spec, spec.series.length);
   const canUseHbar = hbarFormAllowed(spec);
+  // Phase 5 (chart-fit scorer, Task 2): a slope chart IS a line chart
+  // restricted to exactly two time points per series — which is precisely
+  // `slopeFormAllowed`'s condition — so the Helling tab below reuses the
+  // Lijn render branch verbatim (see `effectiveKind` and the render
+  // ternary); this guard only decides whether the tab is offered.
+  const canUseSlope = slopeFormAllowed(spec, spec.series.length);
   const activeForm: ChartForm = fallbackForm(state.form, spec, spec.series.length);
   // Final-review fix wave residual: the difference picker's controls (and
   // the add-overlay controls generally) are only shown for line/area form
@@ -2260,7 +2267,8 @@ export function ChartView({
   // separately). `effectiveKind` is what actually drives the Recharts
   // dispatch, Y-axis domain and label-plan kind below, so the honesty rule
   // and the rendered chart can never drift apart (WP12 review lesson).
-  const effectiveKind: ChartSpec['kind'] = activeForm === 'table' ? spec.kind : activeForm === 'line' || activeForm === 'area' ? 'line' : 'bar';
+  const effectiveKind: ChartSpec['kind'] =
+    activeForm === 'table' ? spec.kind : activeForm === 'line' || activeForm === 'area' || activeForm === 'slope' ? 'line' : 'bar';
   // Final-review fix (defensive snapshot guard, session 92 follow-up):
   // hoisted from just above the small-multiples toggle below — moved here,
   // ABOVE the schemaVersion guard, so `storyAvailable` (right below) can
@@ -2831,6 +2839,10 @@ export function ChartView({
     'bar',
     ...(canUseHbar ? (['hbar'] as const) : []),
     'table',
+    // Phase 5 (chart-fit scorer): the new forms trail Tabel in the scorer's
+    // own fixed order (dumbbell, slope, heatmap — chart-fit.ts). Tasks 3
+    // and 4 add their spreads around this one.
+    ...(canUseSlope ? (['slope'] as const) : []),
   ];
   const formTabRef: Record<ChartForm, typeof lineTabRef> = {
     line: lineTabRef,
@@ -2855,6 +2867,7 @@ export function ChartView({
   const areaDisabledReason =
     spec.kind === 'line' ? t(chartLang, 'chart.formReason.areaMultiSeries') : t(chartLang, 'chart.formReason.areaComparison');
   const hbarDisabledReason = t(chartLang, 'chart.formReason.hbarTimeSeries');
+  const slopeDisabledReason = t(chartLang, 'chart.slopeDisabledReason');
 
   function selectForm(next: ChartForm): void {
     // Review fix (controller decision): a story is only ever meaningful for
@@ -3454,7 +3467,7 @@ export function ChartView({
           />
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
-          {activeForm === 'line' ? (
+          {activeForm === 'line' || activeForm === 'slope' ? (
             <LineChart
               data={rows}
               margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
@@ -4417,6 +4430,22 @@ export function ChartView({
             >
               {t(chartLang, 'chart.tabTable')}
             </button>
+            <button
+              ref={slopeTabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'slope'}
+              aria-controls={panelId}
+              aria-describedby={canUseSlope ? undefined : `${domId}-slope-reason`}
+              tabIndex={activeForm === 'slope' ? 0 : -1}
+              disabled={!canUseSlope}
+              title={canUseSlope ? undefined : slopeDisabledReason}
+              onClick={() => selectForm('slope')}
+              className={quietTab(activeForm === 'slope') + (canUseSlope ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.slope')}
+            </button>
           </div>
           {/* Reachable via the disabled Lijn tab's aria-describedby above — a
             * plain `title` (kept, for pointer users) is invisible to a screen
@@ -4435,6 +4464,11 @@ export function ChartView({
           {!canUseHbar ? (
             <span id={`${domId}-hbar-reason`} className="sr-only">
               {hbarDisabledReason}
+            </span>
+          ) : null}
+          {!canUseSlope ? (
+            <span id={`${domId}-slope-reason`} className="sr-only">
+              {slopeDisabledReason}
             </span>
           ) : null}
           {/* #254: the reading toggle — same quiet <select> pattern as the

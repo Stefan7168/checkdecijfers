@@ -550,6 +550,9 @@ const nl = {
   // count (see the `hbarDisabledReason` comment in chart.tsx: it fires for
   // any line-kind spec, regardless of series count).
   'chart.formReason.hbarTimeSeries': 'Liggende staven tonen één periode; deze grafiek loopt over meerdere periodes.',
+  // Phase 5 (chart-fit scorer, Task 2): the Helling tab's disabled reason —
+  // digit-free on purpose (the whole-card digit scan in chart.test.tsx).
+  'chart.slopeDisabledReason': 'Beschikbaar zodra je precies twee momenten vergelijkt.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -1649,6 +1652,7 @@ const en: Messages = {
   // Session 110 UX audit pass 4, row 7: see the nl entry's comment — the
   // real reason is the time axis, not the region count.
   'chart.formReason.hbarTimeSeries': 'Horizontal bars show one period; this chart spans several.',
+  'chart.slopeDisabledReason': "Available once you're comparing exactly two points in time.",
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',

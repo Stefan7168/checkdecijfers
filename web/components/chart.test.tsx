@@ -3918,10 +3918,13 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
 // ---------------------------------------------------------------------------
 
 describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
-  it('offers all five tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel', () => {
+  it('offers all six tabs, in order Lijn, Vlak, Staaf, Liggend, Tabel, Helling', () => {
+    // Phase 5 (chart-fit scorer, Task 2): Helling (slope) trails Tabel, in
+    // the scorer's own fixed order — always rendered, disabled when the spec
+    // doesn't carry exactly two time points per series.
     render(<ChartView spec={threePointSpec()} />);
     const tabs = screen.getAllByRole('tab').map((el) => el.textContent);
-    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel']);
+    expect(tabs).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling']);
   });
 
   it('S1 (single-series time series): only Liggend is disabled, with a reason', () => {
@@ -3989,7 +3992,10 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     );
   });
 
-  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Lijn)', () => {
+  it('S2: arrow-key order skips the disabled Vlak/Liggend tabs entirely (Lijn -> Staaf -> Tabel -> Helling -> Lijn)', () => {
+    // Phase 5 (Task 2): twoSeriesLineSpec carries exactly two periods per
+    // series, so Helling (slope) is allowed here and joins the order after
+    // Tabel; the disabled Vlak/Liggend are still skipped.
     render(<ChartView spec={twoSeriesLineSpec()} />);
     const lineTab = screen.getByRole('tab', { name: 'Lijn' });
     lineTab.focus();
@@ -3998,6 +4004,8 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Staaf' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveFocus();
     fireEvent.keyDown(screen.getByRole('tab', { name: 'Tabel' }), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Helling' }), { key: 'ArrowRight' });
     expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveFocus();
   });
 
@@ -4041,6 +4049,104 @@ describe('ChartView form switch — WP218 phase 5 (Vlak/Liggend tabs)', () => {
     expect(container.querySelector('.recharts-line')).toBeNull();
     expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Liggend' })).toHaveAttribute('aria-selected', 'false');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 (chart-fit scorer, session 116, Task 2): the Helling (slope) tab.
+// A slope chart IS a line chart restricted to exactly two time points per
+// series — `slopeFormAllowed`'s own condition — so the tab reuses the Lijn
+// render branch verbatim; these tests pin that the rendered canvas really is
+// the same LineChart structure (same curves, same real value labels), not a
+// copy, and that the tab gates + undo wiring follow the existing pattern.
+//   twoSeriesLineSpec()         — 2 series × 2 periods: slope allowed
+//   twoSeriesFourYearLineSpec() — 2 series × 4 periods: slope disallowed
+// ---------------------------------------------------------------------------
+
+describe('ChartView — slope form (phase 5, Task 2)', () => {
+  const SLOPE_REASON = 'Beschikbaar zodra je precies twee momenten vergelijkt.';
+
+  it('a 2-series × 2-point spec offers Helling enabled, and selecting it renders the SAME line-chart canvas Lijn does', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    const slopeTab = screen.getByRole('tab', { name: 'Helling' });
+    expect(slopeTab).not.toBeDisabled();
+    expect(slopeTab).not.toHaveAttribute('title');
+    expect(slopeTab).not.toHaveAttribute('aria-describedby');
+
+    // Snapshot the Lijn canvas' structure first: two curves, no bars, and
+    // the real spec strings as value labels.
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    const lineCurves = container.querySelectorAll('.recharts-line-curve').length;
+    expect(lineCurves).toBe(2);
+    const lineTexts = [...container.querySelectorAll('svg text')].map((el) => el.textContent).sort();
+
+    fireEvent.click(slopeTab);
+    expect(slopeTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // Same subtree: a LineChart with the same two curves and the same text
+    // nodes (axis ticks + value labels), no bar/area elements anywhere.
+    expect(container.querySelectorAll('.recharts-line-curve').length).toBe(lineCurves);
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+    expect(container.querySelector('.recharts-area')).toBeNull();
+    expect([...container.querySelectorAll('svg text')].map((el) => el.textContent).sort()).toEqual(lineTexts);
+    // Every displayed number is a point's own formattedValue (the honesty
+    // contract the Lijn branch already honours — slope inherits it).
+    scanForUnboundDigits(container, harvestSpecStrings(twoSeriesLineSpec()));
+  });
+
+  it('a 2-series × 4-point spec renders Helling disabled, with the reason reachable via aria-describedby (sr-only, exactly once)', () => {
+    render(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    const slopeTab = screen.getByRole('tab', { name: 'Helling' });
+    expect(slopeTab).toBeDisabled();
+    expect(slopeTab).toHaveAttribute('title', SLOPE_REASON);
+    const describedById = slopeTab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const hint = document.getElementById(describedById!);
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveClass('sr-only');
+    expect(hint?.textContent).toBe(SLOPE_REASON);
+    expect(screen.getAllByText(SLOPE_REASON)).toHaveLength(1);
+    // Clicking a disabled tab does nothing: Lijn stays selected.
+    fireEvent.click(slopeTab);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('a single-series spec (S1) also disables Helling — a slope needs at least two series to compare', () => {
+    render(<ChartView spec={threePointSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+  });
+
+  it('switching to Helling then Undo returns to the prior form through the existing setForm history', () => {
+    const { container } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    // Start from Staaf so the undo target is an unambiguous, non-default form.
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Helling' }));
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'false');
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line-curve')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
+  });
+
+  it('a spec swap from a slope-chosen spec to one with more than two periods falls back to bar', () => {
+    // fallbackForm's own convention (chart-view-state.ts): slope -> bar.
+    const { container, rerender } = render(<ChartView spec={twoSeriesLineSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Helling' }));
+    expect(container.querySelectorAll('.recharts-line-curve').length).toBe(2);
+
+    rerender(<ChartView spec={twoSeriesFourYearLineSpec()} />);
+    expect(screen.getByRole('tab', { name: 'Helling' })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('.recharts-bar')).not.toBeNull();
+    expect(container.querySelector('.recharts-line-curve')).toBeNull();
   });
 });
 
