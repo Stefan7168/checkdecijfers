@@ -14,8 +14,9 @@ function output(view: CbsViewCommand[], fields: Partial<CbsCopilotOutput> = {}):
 }
 
 const SUFFIX = 'zz1';
-/** The raw user message, threaded through since co-pilot phase 6 (Task 2)
- * for the goal-line guard a later task adds; no case here depends on it. */
+/** The raw user message, threaded through since co-pilot phase 6 (Task 2).
+ * Only the goal-line guard reads it (Task 5) — those cases pass their own
+ * message below; every other case is indifferent to it. */
 const MESSAGE = 'test message';
 
 function map(out: CbsCopilotOutput, capabilities: CbsCopilotCapabilities = CBS_CAPABILITIES_FIXTURE) {
@@ -351,6 +352,86 @@ describe('addDerivedOverlay — two real points of one series, or every point of
     );
     expect(commands).toEqual([]);
     expect(refused).toEqual([{ request: 'overlay: Amsterdam', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+});
+
+describe('addGoalLine — the value must be one the reader typed, the label is digit-guarded', () => {
+  /** Unlike every other case in this file, these depend on the MESSAGE:
+   * the guard judges the value against the reader's own words. */
+  function mapGoal(view: CbsViewCommand[], message: string) {
+    return mapCbsCopilotOutput(output(view), CHART_SPEC_FIXTURE, message, CBS_CAPABILITIES_FIXTURE, SUFFIX);
+  }
+
+  it('stores a value that appears in the user message — a target is on no chart, and need not be', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 900000, label: 'Doel' }],
+      'Voeg een doellijn toe op 900000',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      { kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: 900000, label: 'Doel' } },
+    ]);
+  });
+
+  it('accepts a locale-formatted spelling of the value in the message', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 900000, label: 'Doel' }],
+      'Voeg een doellijn toe op 900.000',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toHaveLength(1);
+  });
+
+  it('refuses a value the user never typed — nothing is stored, the form control is named', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 12345, label: 'Doel' }],
+      'Voeg een doellijn toe',
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'goal line: 12345', reason: 'not_available', control: 'form' }]);
+  });
+
+  it('refuses an unplotted number in the label even when the value is valid', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 900000, label: 'Doel voor 2030' }],
+      'Voeg een doellijn toe op 900000',
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'Doel voor 2030', reason: 'unplotted_number', control: 'none' }]);
+  });
+
+  it('stores a label quoting a number that IS on the chart', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 900000, label: 'Doel voor 2021' }],
+      'Voeg een doellijn toe op 900000',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      { kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: 900000, label: 'Doel voor 2021' } },
+    ]);
+  });
+
+  it('refuses an empty label — the client would drop that on dispatch', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 900000, label: '   ' }],
+      'Voeg een doellijn toe op 900000',
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: '', reason: 'invalid', control: 'none' }]);
+  });
+
+  it('mints a distinct id per goal line in one reply — the client reducer drops a duplicate id', () => {
+    const { commands, refused } = mapGoal(
+      [
+        { kind: 'addGoalLine', value: 900000, label: 'Ondergrens' },
+        { kind: 'addGoalLine', value: 950000, label: 'Bovengrens' },
+      ],
+      'Doellijnen op 900000 en 950000',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { goalLine: { id: string } }).goalLine.id);
+    expect(new Set(ids).size).toBe(2);
   });
 });
 

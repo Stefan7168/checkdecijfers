@@ -5,10 +5,13 @@
 // name a form, a series LABEL, a period LABEL, a style enum value, a
 // template id, or text the model wrote — and every one of those is either
 // allowlisted here, resolved against the executed spec by copilot/map.ts,
-// or digit-guarded by copilot/text-guard.ts before it is stored. There is
-// no `instruction` field at all: this tier never proposes different data,
-// it only sets `dataRequest` and hands the message back to the follow-up
-// path (respond.ts).
+// or digit-guarded by copilot/text-guard.ts before it is stored. The one
+// bare NUMBER (co-pilot phase 6's addGoalLine.value) is a reader-set
+// target, not a display value, and map.ts stores it only when the
+// reader's own message contains it (text-guard.ts's
+// goalLineValueInMessage). There is no `instruction` field at all: this
+// tier never proposes different data, it only sets `dataRequest` and
+// hands the message back to the follow-up path (respond.ts).
 import { z } from 'zod';
 import { oneOfToAnyOf } from '../../answer/llm/json-schema.ts';
 import { patchSchema } from '../../attachments/copilot/schema.ts';
@@ -74,6 +77,16 @@ export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
     seriesLabel: z.string(),
     fromLabel: z.string().nullable(),
     toLabel: z.string().nullable(),
+  }),
+  // Co-pilot phase 6 (Task 5): the ONE bare NUMBER on this tier. Not a
+  // display value — a goal line is a reader-set target, deliberately not
+  // one of the chart's plotted values — and map.ts stores it only when
+  // text-guard.ts's goalLineValueInMessage finds the same digits in the
+  // reader's own raw message; the label is digit-guarded like a title.
+  z.strictObject({
+    kind: z.literal('addGoalLine'),
+    value: z.number(),
+    label: z.string(),
   }),
 ]);
 

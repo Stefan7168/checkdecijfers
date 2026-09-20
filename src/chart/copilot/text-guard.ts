@@ -66,6 +66,26 @@ export function unplottedDigits(text: string, spec: ChartSpec): string[] {
 }
 
 /**
+ * True when `value` appears as a digit run inside `message` (thousands/
+ * decimal separators ignored on both sides, so "900000" and "900.000"
+ * both match). A goal line's value is the one field on this tier that is
+ * a bare NUMBER, not guarded text — so unlike a title/caption/note
+ * (checked against the CHART's own numbers via unplottedDigits), it is
+ * checked against what the READER actually typed: a legitimate goal line
+ * names a target that is deliberately NOT one of the chart's own plotted
+ * values, so plottedNumbers() is the wrong reference set here. A value
+ * that does not appear in the message is, by construction, one the model
+ * invented — principle (c)'s worst bug — so it is refused, never guessed.
+ */
+export function goalLineValueInMessage(value: number, message: string): boolean {
+  if (!Number.isFinite(value)) return false;
+  const normalize = (run: string): string => run.replace(/[.,]/g, '');
+  const target = normalize(String(value));
+  const runs = message.match(/[0-9][0-9.,]*/g) ?? [];
+  return runs.some((run) => normalize(run.replace(/[.,]+$/, '')) === target);
+}
+
+/**
  * `text` with every digit run replaced by a space (whitespace collapsed,
  * trimmed) — used for the model's own refusal text, which reaches the
  * screen too: there is nothing to refuse, so the number comes out and the

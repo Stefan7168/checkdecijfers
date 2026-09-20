@@ -9,7 +9,7 @@
 // nearest match.
 import type { CopilotCommand, CopilotRefusal } from '../../attachments/types.ts';
 import type { ChartSpec } from '../types.ts';
-import { stripDigits, unplottedDigits } from './text-guard.ts';
+import { goalLineValueInMessage, stripDigits, unplottedDigits } from './text-guard.ts';
 import { TEMPLATE_IDS, type CbsCopilotCapabilities, type CbsCopilotOutput } from './types.ts';
 
 /** Same caps web/lib's chart-commands.ts enforces on dispatch — applied
@@ -18,6 +18,7 @@ const TITLE_MAX = 120;
 const CAPTION_MAX = 280;
 const NOTE_MAX = 280;
 const ERA_LABEL_MAX = 60;
+const GOAL_LINE_LABEL_MAX = 60;
 /** A refused request is a label for the reader, not a transcript. */
 const REQUEST_MAX = 80;
 
@@ -56,11 +57,11 @@ function guardText(
 /**
  * Maps one validated CbsCopilotOutput onto the commands the chart's
  * chat-edit log stores. `message` is the reader's raw request, threaded
- * through since co-pilot phase 6 for the goal-line guard a later task adds
- * — no case below reads it yet. `noteIdSuffix` disambiguates the ids this
- * reply mints — notes (two chat notes on the SAME point would otherwise
- * share the id `chat-${resultId}-0`) and era shadings alike; tests pass a
- * fixed suffix.
+ * through since co-pilot phase 6: only addGoalLine reads it, to check that
+ * the value the model wrote is one the reader actually typed. `noteIdSuffix`
+ * disambiguates the ids this reply mints — notes (two chat notes on the
+ * SAME point would otherwise share the id `chat-${resultId}-0`), era
+ * shadings, overlays and goal lines alike; tests pass a fixed suffix.
  */
 export function mapCbsCopilotOutput(
   output: CbsCopilotOutput,
@@ -72,8 +73,8 @@ export function mapCbsCopilotOutput(
   const out: Mapped = { commands: [], refused: [] };
   let noteCount = 0;
   // One counter for every id-minting command kind co-pilot phase 6 adds
-  // (era shadings, derived overlays) — kept apart from noteCount so
-  // addNote's id scheme stays exactly what it was.
+  // (era shadings, derived overlays, goal lines) — kept apart from
+  // noteCount so addNote's id scheme stays exactly what it was.
   let extraCount = 0;
 
   const seriesIndex = new Map<string, number>();
@@ -262,6 +263,29 @@ export function mapCbsCopilotOutput(
             overlay: { id: `chat-overlay-${extraCount++}${noteIdSuffix}`, calcKind: 'mean', resultIds },
           });
         }
+        break;
+      }
+
+      // The ONE bare number this tier ever stores from the model. A goal
+      // line is a reader-set target, deliberately NOT a plotted value, so
+      // the chart is the wrong reference set: the value is judged against
+      // the reader's own raw MESSAGE instead (text-guard.ts's
+      // goalLineValueInMessage — the same digits, separators ignored). A
+      // value the reader never typed is one the model produced itself:
+      // refused outright, naming the panel control where the reader types
+      // the number personally. The label owes the reader the same digit
+      // guard as a title/caption/note, capped at the client's own limit
+      // (chart-commands.ts's validateCommand would drop a longer or empty
+      // one), and the id is minted here per line: the client reducer keeps
+      // only the FIRST goal line it sees under a given id.
+      case 'addGoalLine': {
+        if (!goalLineValueInMessage(command.value, message)) {
+          out.refused.push({ request: cap(`goal line: ${command.value}`), reason: 'not_available', control: 'form' });
+          break;
+        }
+        const label = guardText(command.label, GOAL_LINE_LABEL_MAX, spec, 'none', out);
+        if (label === null) break;
+        out.commands.push({ kind: 'addGoalLine', goalLine: { id: `chat-goal-${extraCount++}${noteIdSuffix}`, value: command.value, label } });
         break;
       }
 
