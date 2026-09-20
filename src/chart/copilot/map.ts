@@ -54,13 +54,16 @@ function guardText(
 
 /**
  * Maps one validated CbsCopilotOutput onto the commands the chart's
- * chat-edit log stores. `noteIdSuffix` disambiguates the note ids this
- * reply mints (two chat notes on the SAME point would otherwise share the
- * id `chat-${resultId}-0`); tests pass a fixed suffix.
+ * chat-edit log stores. `message` is the reader's raw request, threaded
+ * through since co-pilot phase 6 for the goal-line guard a later task adds
+ * — no case below reads it yet. `noteIdSuffix` disambiguates the note ids
+ * this reply mints (two chat notes on the SAME point would otherwise share
+ * the id `chat-${resultId}-0`); tests pass a fixed suffix.
  */
 export function mapCbsCopilotOutput(
   output: CbsCopilotOutput,
   spec: ChartSpec,
+  message: string,
   capabilities: CbsCopilotCapabilities,
   noteIdSuffix: string = Date.now().toString(36),
 ): Mapped {
@@ -112,6 +115,30 @@ export function mapCbsCopilotOutput(
           kind: 'setSeriesView',
           hiddenKeys: command.hiddenLabels.map((label) => `s${seriesIndex.get(label)!}`),
           highlightedKey: command.highlightedLabel === null ? null : `s${seriesIndex.get(command.highlightedLabel)!}`,
+        });
+        break;
+      }
+
+      // Same label → `s${index}` lookup as setSeriesView, and one unknown
+      // label refuses the WHOLE command for the same reason. A label named
+      // in BOTH lists is refused as well: chart-commands.ts's
+      // validateCommand drops a key that is hidden and dimmed at once, and
+      // a stored command must never be one the client will drop.
+      case 'setDimmed': {
+        const unknown = [...command.hiddenLabels, ...command.dimmedLabels].find((label) => !seriesIndex.has(label));
+        if (unknown !== undefined) {
+          out.refused.push({ request: cap(`series: ${unknown}`), reason: 'not_on_this_chart', control: 'form' });
+          break;
+        }
+        const both = command.hiddenLabels.find((label) => command.dimmedLabels.includes(label));
+        if (both !== undefined) {
+          out.refused.push({ request: cap(`series: ${both}`), reason: 'invalid', control: 'form' });
+          break;
+        }
+        out.commands.push({
+          kind: 'setDimmed',
+          hiddenKeys: command.hiddenLabels.map((label) => `s${seriesIndex.get(label)!}`),
+          dimmedKeys: command.dimmedLabels.map((label) => `s${seriesIndex.get(label)!}`),
         });
         break;
       }
@@ -239,6 +266,41 @@ export function mapCbsCopilotOutput(
             text,
           },
         });
+        break;
+      }
+
+      // Both labels null clears the reader's own headline choice — always
+      // available, nothing to look up. Otherwise the point is found exactly
+      // as addNote finds its anchor, by (series label, period label), and
+      // the command carries that point's own `resultId` — the handle the
+      // point-click editor (chart-notes.tsx) stores when the reader picks a
+      // headline there, so a replay can never move it to another cell. A
+      // point that does not resolve sends the reader to that editor.
+      case 'setHeadlineOverride': {
+        if (command.seriesLabel === null && command.periodLabel === null) {
+          out.commands.push({ kind: 'setHeadlineOverride', resultId: null });
+          break;
+        }
+        if (command.seriesLabel === null || command.periodLabel === null) {
+          out.refused.push({
+            request: cap(`headline: ${command.seriesLabel ?? '?'} @ ${command.periodLabel ?? '?'}`),
+            reason: 'not_on_this_chart',
+            control: 'notes',
+          });
+          break;
+        }
+        const point = spec.series
+          .find((series) => series.label === command.seriesLabel)
+          ?.points.find((p) => p.periodLabel === command.periodLabel);
+        if (point === undefined) {
+          out.refused.push({
+            request: cap(`headline: ${command.seriesLabel} @ ${command.periodLabel}`),
+            reason: 'not_on_this_chart',
+            control: 'notes',
+          });
+          break;
+        }
+        out.commands.push({ kind: 'setHeadlineOverride', resultId: point.resultId });
         break;
       }
     }

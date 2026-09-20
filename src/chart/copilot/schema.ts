@@ -42,6 +42,19 @@ export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('setTitle'), title: z.string().nullable() }),
   z.strictObject({ kind: z.literal('setCaption'), caption: z.string().nullable() }),
   z.strictObject({ kind: z.literal('addNote'), seriesLabel: z.string(), periodLabel: z.string(), text: z.string() }),
+  // Co-pilot phase 6 (Task 2): the two panel commands below carry LABELS
+  // only, resolved by map.ts exactly like setSeriesView / addNote.
+  z.strictObject({
+    kind: z.literal('setDimmed'),
+    hiddenLabels: z.array(z.string()),
+    dimmedLabels: z.array(z.string()),
+  }),
+  z.strictObject({
+    kind: z.literal('setHeadlineOverride'),
+    // Both null clears the override; otherwise both must name a real point.
+    seriesLabel: z.string().nullable(),
+    periodLabel: z.string().nullable(),
+  }),
 ]);
 
 export const cbsCopilotOutputSchema = z.strictObject({

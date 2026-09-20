@@ -19,8 +19,12 @@ import type { CbsCopilotCapabilities } from './types.ts';
  * eight (dumbbell, slope, heatmap) — a prompt-byte change, so the version
  * moves with it. Bumped 2 → 3 in phase 5b (verified-whole, task 5) for the
  * identical reason: the list grew to eleven (pie, stacked, stacked100) —
- * planned as a step this time, not discovered late. */
-export const CBS_COPILOT_PROMPT_VERSION = 3;
+ * planned as a step this time, not discovered late. Bumped 3 → 4 in
+ * co-pilot phase 6 (Task 2 starts it; the later tasks of the same phase add
+ * their bullets under this SAME version — one bump for the whole phase,
+ * as 5b did): the VIEW COMMANDS list grows with the panel-only commands
+ * the chat could not name before, setDimmed and setHeadlineOverride first. */
+export const CBS_COPILOT_PROMPT_VERSION = 4;
 
 const SYSTEM_PROMPT = `You are the chart co-pilot for an OFFICIAL statistics chart whose data cannot be changed here. You receive the CURRENT CHART's title, unit, kind, series labels and period labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: \`view\` (a list of view commands: form, hidden/highlighted series BY LABEL, a period range BY LABEL, style patch, template, title, caption, a note at a point given by series label + period label), \`dataRequest\` (see below), \`refused\` (each request you cannot honour with a reason and the control that can), \`confidence\`, \`reading\`.
 
@@ -37,6 +41,8 @@ VIEW COMMANDS — one object per change, each with its own "kind":
 - resetPresentation: {"kind":"resetPresentation"} — back to the default look.
 - setTitle / setCaption: {"kind":"setTitle","title":"..."|null} — null clears the reader's own title. Numbers only if they are visible on the chart.
 - addNote: {"kind":"addNote","seriesLabel":"...","periodLabel":"...","text":"..."} — both labels must be a real point of the CURRENT CHART; text anchors by seriesLabel + periodLabel.
+- setDimmed: {"kind":"setDimmed","hiddenLabels":["<series label>"],"dimmedLabels":["<series label>"]} — dims a series (fades it, keeps it visible) instead of hiding it. Labels exactly as setSeriesView.
+- setHeadlineOverride: {"kind":"setHeadlineOverride","seriesLabel":"<series label>"|null,"periodLabel":"<period label>"|null} — features one point's value as the chart's headline number. Both null clears it. Both must name a real point or the request is refused.
 
 confidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The reply object's own version field is always 1.
 
