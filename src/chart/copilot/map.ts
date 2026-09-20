@@ -72,8 +72,8 @@ export function mapCbsCopilotOutput(
   const out: Mapped = { commands: [], refused: [] };
   let noteCount = 0;
   // One counter for every id-minting command kind co-pilot phase 6 adds
-  // (era shading first) — kept apart from noteCount so addNote's id scheme
-  // stays exactly what it was.
+  // (era shadings, derived overlays) — kept apart from noteCount so
+  // addNote's id scheme stays exactly what it was.
   let extraCount = 0;
 
   const seriesIndex = new Map<string, number>();
@@ -205,6 +205,56 @@ export function mapCbsCopilotOutput(
           kind: 'addEraShading',
           era: { id: `chat-era-${extraCount++}${noteIdSuffix}`, fromPeriodCode: a, toPeriodCode: b, label },
         });
+        break;
+      }
+
+      // The panel's two derived-overlay controls, reached by NAME instead of
+      // by click: `difference` is its two-point picker (chart.tsx's
+      // onPointClick, which insists both points share a region — one named
+      // series is always one region), `mean` its "average this series"
+      // button. The series is found by label and the points by period label
+      // ON THAT SERIES — not the chart-wide periodCodeByLabel, which could
+      // resolve a period this series lacks to another series' code. The
+      // guards mirror what the client (chart-commands.ts's validateCommand:
+      // exactly 2 ids / at least 2) and the server (src/query/derivations.ts:
+      // two distinct periods) would otherwise refuse after the fact — a
+      // stored command must never be one they drop. Deliberately unlike the
+      // panel's mean button, chat averages EVERY point of the named series
+      // whether hidden or zoomed out of view: naming the series is the
+      // reader's own disambiguation, and this mapping has no view state to
+      // window by. The command carries resultIds only — never a value.
+      case 'addDerivedOverlay': {
+        const seriesPoints = spec.series.find((series) => series.label === command.seriesLabel)?.points;
+        if (seriesPoints === undefined) {
+          out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_on_this_chart', control: 'form' });
+          break;
+        }
+        if (command.calcKind === 'difference') {
+          if (command.fromLabel === null || command.toLabel === null) {
+            out.refused.push({ request: cap('overlay: difference'), reason: 'not_available', control: 'form' });
+            break;
+          }
+          const fromPoint = seriesPoints.find((p) => p.periodLabel === command.fromLabel);
+          const toPoint = seriesPoints.find((p) => p.periodLabel === command.toLabel);
+          if (fromPoint === undefined || toPoint === undefined || fromPoint.resultId === toPoint.resultId) {
+            out.refused.push({ request: cap(`overlay: ${command.fromLabel}–${command.toLabel}`), reason: 'not_on_this_chart', control: 'form' });
+            break;
+          }
+          out.commands.push({
+            kind: 'addDerivedOverlay',
+            overlay: { id: `chat-overlay-${extraCount++}${noteIdSuffix}`, calcKind: 'difference', resultIds: [fromPoint.resultId, toPoint.resultId] },
+          });
+        } else {
+          const resultIds = seriesPoints.map((p) => p.resultId);
+          if (resultIds.length < 2) {
+            out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_on_this_chart', control: 'form' });
+            break;
+          }
+          out.commands.push({
+            kind: 'addDerivedOverlay',
+            overlay: { id: `chat-overlay-${extraCount++}${noteIdSuffix}`, calcKind: 'mean', resultIds },
+          });
+        }
         break;
       }
 

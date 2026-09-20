@@ -258,6 +258,102 @@ describe('addEraShading — period labels resolve to codes, the label is digit-g
   });
 });
 
+describe('addDerivedOverlay — two real points of one series, or every point of one series', () => {
+  it('difference resolves fromLabel/toLabel to the two points of the named series', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2022' }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addDerivedOverlay',
+        overlay: {
+          id: expect.stringMatching(/^chat-overlay-/),
+          calcKind: 'difference',
+          resultIds: ['TESTCBS:M1:GM0363:2020JJ00', 'TESTCBS:M1:GM0363:2022JJ00'],
+        },
+      },
+    ]);
+  });
+
+  it('mean takes every point of the named series, a null-valued point included', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Rotterdam', fromLabel: null, toLabel: null }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addDerivedOverlay',
+        overlay: {
+          id: expect.stringMatching(/^chat-overlay-/),
+          calcKind: 'mean',
+          resultIds: ['TESTCBS:M1:GM0599:2020JJ00', 'TESTCBS:M1:GM0599:2021JJ00', 'TESTCBS:M1:GM0599:2022JJ00'],
+        },
+      },
+    ]);
+  });
+
+  it('mints a distinct id per overlay in one reply — the client reducer drops a duplicate id', () => {
+    const { commands } = map(
+      output([
+        { kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null },
+        { kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2021' },
+      ]),
+    );
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { overlay: { id: string } }).overlay.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('refuses an unknown series, with control form', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Utrecht', fromLabel: null, toLabel: null }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Utrecht', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a difference whose from and to name the same point', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2022', toLabel: '2022' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: 2022–2022', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a difference missing one of its two period labels', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: null }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: difference', reason: 'not_available', control: 'form' }]);
+  });
+
+  it('refuses a difference whose period is not a point of that series', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2019', toLabel: '2022' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: 2019–2022', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a mean over a series with fewer than two points — the client would drop that on dispatch', () => {
+    const onePoint = {
+      ...CHART_SPEC_FIXTURE,
+      series: [{ ...CHART_SPEC_FIXTURE.series[0]!, points: CHART_SPEC_FIXTURE.series[0]!.points.slice(0, 1) }],
+    };
+    const { commands, refused } = mapCbsCopilotOutput(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null }]),
+      onePoint,
+      MESSAGE,
+      CBS_CAPABILITIES_FIXTURE,
+      SUFFIX,
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Amsterdam', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+});
+
 describe('model refusals — rule 8', () => {
   it('an unplotted number in the request text is stripped, not dropped', () => {
     const { refused } = map(output([], { refused: [{ request: 'maak 99% groter', reason: 'not_available', control: 'style' }] }));

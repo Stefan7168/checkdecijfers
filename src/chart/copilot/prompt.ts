@@ -44,6 +44,7 @@ VIEW COMMANDS — one object per change, each with its own "kind":
 - setDimmed: {"kind":"setDimmed","hiddenLabels":["<series label>"],"dimmedLabels":["<series label>"]} — dims a series (fades it, keeps it visible) instead of hiding it. Labels exactly as setSeriesView.
 - setHeadlineOverride: {"kind":"setHeadlineOverride","seriesLabel":"<series label>"|null,"periodLabel":"<period label>"|null} — features one point's value as the chart's headline number. Both null clears it. Both must name a real point or the request is refused.
 - addEraShading: {"kind":"addEraShading","fromLabel":"<period label>","toLabel":"<period label>","label":"..."} — shades a period range with a typed label. Both labels copied LITERALLY from the CURRENT CHART's period labels, like setPeriodRange.
+- addDerivedOverlay: {"kind":"addDerivedOverlay","calcKind":"difference"|"mean","seriesLabel":"<series label>","fromLabel":"<period label>"|null,"toLabel":"<period label>"|null} — a computed overlay drawn on the chart, never a number you state yourself. difference needs fromLabel and toLabel (two different real periods on that series); mean ignores them and averages every point of that series currently on the chart.
 
 confidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The reply object's own version field is always 1.
 

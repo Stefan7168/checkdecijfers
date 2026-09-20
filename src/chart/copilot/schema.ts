@@ -63,6 +63,18 @@ export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
     toLabel: z.string(),
     label: z.string(),
   }),
+  // Co-pilot phase 6 (Task 4): a computed overlay (difference arrow or mean
+  // line) named by series LABEL and period LABELS only — map.ts resolves
+  // them to the points' own resultIds; the number itself is derived
+  // server-side from those cells, never carried here. `difference` needs
+  // both period labels; `mean` ignores them (both null).
+  z.strictObject({
+    kind: z.literal('addDerivedOverlay'),
+    calcKind: z.enum(['difference', 'mean']),
+    seriesLabel: z.string(),
+    fromLabel: z.string().nullable(),
+    toLabel: z.string().nullable(),
+  }),
 ]);
 
 export const cbsCopilotOutputSchema = z.strictObject({
