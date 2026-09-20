@@ -251,6 +251,14 @@ describe('command ↔ control contract (ADR 056 decision 2, phase-1 form)', () =
     render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
     await screen.findByRole('tab', { name: 'Grafiek' });
+    // Co-pilot phase 6 (Tasks 3 and 5): the CBS schema now names
+    // addEraShading and addGoalLine too. Each one's `data-command-kind`
+    // sits on its form's SAVE button, not on the trigger — the same gating
+    // the phase-1 assertion above handles by opening both forms — so they
+    // are opened here as well, rather than exempting the two kinds (which
+    // would hollow out the very contract this test exists to hold).
+    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
 
     const found = kindsInDom(document.body);
     const cbsKinds = cbsViewCommandSchema.options.map((option) => option.shape.kind.value as string);
