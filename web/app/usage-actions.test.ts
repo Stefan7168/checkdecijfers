@@ -24,7 +24,9 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
   // Part B1). 'template_*' joined for chart templates (ADR 043); 'template_warm'
   // and 'template_earth' joined when those two looks were added (chart-visual-
   // embed-pass plan, Task 2). 'stage_open' and 'stage_autoplay' joined for the
-  // full-viewport Story stage (ADR 044, Story-stage plan Task 4).
+  // full-viewport Story stage (ADR 044, Story-stage plan Task 4). The five
+  // 'template_salmon' … 'template_brutalist' joined with the session-120 house
+  // styles (open-questions #275).
   CHART_STYLE_EVENTS: [
     'panel_open',
     'option_changed',
@@ -45,6 +47,11 @@ vi.mock('../backend/chart/user-styles.ts', () => ({
     'template_minimal',
     'template_warm',
     'template_earth',
+    'template_salmon',
+    'template_studio',
+    'template_broadsheet',
+    'template_autumn',
+    'template_brutalist',
     'stage_open',
     'stage_autoplay',
   ],
@@ -88,6 +95,11 @@ describe('countChartStyleEvent', () => {
     'template_minimal',
     'template_warm',
     'template_earth',
+    'template_salmon',
+    'template_studio',
+    'template_broadsheet',
+    'template_autumn',
+    'template_brutalist',
     'stage_open',
     'stage_autoplay',
   ] as const)(

@@ -57,6 +57,12 @@ export const TEMPLATE_IDS = [
   'minimal',
   'warm',
   'earth',
+  // Session 120 (open-questions #275): the five house styles.
+  'salmon',
+  'studio',
+  'broadsheet',
+  'autumn',
+  'brutalist',
 ] as const;
 
 /** The model's own shape: view commands expressed in LABELS (it never sees

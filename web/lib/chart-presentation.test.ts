@@ -657,11 +657,14 @@ describe('frame', () => {
 describe('fonts', () => {
   it('offers the curated list, page font first, and builds a safe stack', () => {
     expect(FONT_OPTIONS[0]).toEqual({ family: 'Roboto', source: 'google', stack: '"Roboto", ui-sans-serif, system-ui, sans-serif' });
-    expect(FONT_OPTIONS.map((f) => f.family)).toEqual(['Roboto', 'Open Sans', 'Lato', 'Merriweather', 'Playfair Display', 'Georgia', 'Arial']);
+    // 'Archivo Black' joined last for the Brutalist Ink house style (session 120, #275).
+    expect(FONT_OPTIONS.map((f) => f.family)).toEqual(['Roboto', 'Open Sans', 'Lato', 'Merriweather', 'Playfair Display', 'Georgia', 'Arial', 'Archivo Black']);
     expect(fontStack(null)).toBeUndefined();
     expect(fontStack('Georgia')).toBe('"Georgia", ui-serif, Georgia, serif');
+    expect(fontStack('Archivo Black')).toBe('"Archivo Black", ui-sans-serif, system-ui, sans-serif');
     expect(fontStack('Nope')).toBe('"Nope", ui-sans-serif, system-ui, sans-serif'); // an unknown (brand) family still gets a stack
     expect(findFont('Lato')?.source).toBe('google');
+    expect(findFont('Archivo Black')?.source).toBe('google');
     expect(findFont('Arial')?.source).toBe('system');
   });
 });

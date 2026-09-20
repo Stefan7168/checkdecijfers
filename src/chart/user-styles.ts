@@ -51,6 +51,15 @@ export const CHART_STYLE_EVENTS = [
   'template_minimal',
   'template_warm',
   'template_earth',
+  // Session 120 (open-questions #275): the five house styles. Same
+  // `template_${id}` shape chart.tsx already emits; the column's own CHECK
+  // (migration 028, `^[a-z_]{1,40}$`) admits every one of them, so no
+  // schema change.
+  'template_salmon',
+  'template_studio',
+  'template_broadsheet',
+  'template_autumn',
+  'template_brutalist',
   // ADR 044: the full-viewport Story stage — once per stage opened, once per
   // auto-play switched on (never per advance; a full play-through of a
   // 6-step story is one event, not six).

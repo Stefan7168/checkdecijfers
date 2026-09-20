@@ -14,7 +14,9 @@ import {
   type PresentationOverrides,
 } from './chart-presentation.ts';
 
-export type ChartTemplateId = 'standard' | 'classic' | 'newsroom' | 'presentation' | 'social' | 'minimal' | 'warm' | 'earth';
+export type ChartTemplateId =
+  | 'standard' | 'classic' | 'newsroom' | 'presentation' | 'social' | 'minimal' | 'warm' | 'earth'
+  | 'salmon' | 'studio' | 'broadsheet' | 'autumn' | 'brutalist';
 
 export interface ChartTemplate {
   id: ChartTemplateId;
@@ -117,6 +119,64 @@ export const CHART_TEMPLATES: readonly ChartTemplate[] = [
     frameCorners: 'veryRounded',
     frameShadow: 'strong',
     frameAspect: '1:1',
+  }),
+  // Salmon Editorial — a warm peach paper with a rose/ochre/sage palette and a serif headline, session 120 (#275).
+  template('salmon', {
+    frameBackground: { kind: 'solid', hex: '#f4d6bf' },
+    frameCorners: 'rounded',
+    frameShadow: 'soft',
+    framePadding: 'medium',
+    grid: 'horizontal',
+    axisLines: 'hidden',
+    fontFamily: 'Playfair Display',
+    seriesColors: { 0: '#a8455a', 1: '#8a5d1c', 2: '#56704b', 3: '#4d6d7d', 4: '#7a3d5f', 5: '#5a4a1a', 6: '#6b3a52', 7: '#3d5c40' },
+  }),
+  // Studio Grey — a quiet warm-grey card with one burnt-orange accent, session 120 (#275).
+  template('studio', {
+    frameBackground: { kind: 'solid', hex: '#eae7e2' },
+    frameCorners: 'square',
+    frameShadow: 'none',
+    framePadding: 'small',
+    grid: 'none',
+    axisLines: 'hidden',
+    lineWidth: 'thin',
+    fontFamily: 'Lato',
+    seriesColors: { 0: '#726f68', 1: '#d3652c', 2: '#6f6a62', 3: '#7c7871', 4: '#a8642e', 5: '#5f6a63', 6: '#8a6a3f', 7: '#4a4844' },
+  }),
+  // Broadsheet — near-white paper, ink-black bars, one masthead-red highlight, Georgia headline, session 120 (#275).
+  template('broadsheet', {
+    frameBackground: { kind: 'solid', hex: '#fafaf8' },
+    frameCorners: 'square',
+    frameShadow: 'none',
+    framePadding: 'small',
+    grid: 'horizontal',
+    axisLines: 'hidden',
+    fontFamily: 'Georgia',
+    seriesColors: { 0: '#3a3a38', 1: '#b3211e', 2: '#5a5a56', 3: '#7a7a74', 4: '#8f2a26', 5: '#2a2a28', 6: '#6b1e1b', 7: '#4a4a46' },
+  }),
+  // Autumn Letter — cream paper in an autumn ramp, softly rounded corners, session 120 (#275).
+  template('autumn', {
+    frameBackground: { kind: 'solid', hex: '#fbeed9' },
+    frameCorners: 'veryRounded',
+    frameShadow: 'soft',
+    framePadding: 'medium',
+    grid: 'horizontal',
+    axisLines: 'hidden',
+    markers: 'ends',
+    fontFamily: 'Open Sans',
+    seriesColors: { 0: '#c1502e', 1: '#9a7a1f', 2: '#8a7d3a', 3: '#a8622f', 4: '#96701f', 5: '#6f6a2e', 6: '#9a4a28', 7: '#7a5a1f' },
+  }),
+  // Brutalist Ink — near-black paper, one acid-green accent, a heavy display headline, session 120 (#275).
+  template('brutalist', {
+    frameBackground: { kind: 'solid', hex: '#121212' },
+    frameCorners: 'square',
+    frameShadow: 'none',
+    framePadding: 'small',
+    grid: 'none',
+    axisLines: 'shown',
+    lineWidth: 'thick',
+    fontFamily: 'Archivo Black',
+    seriesColors: { 0: '#d9d9d9', 1: '#c6ff3d', 2: '#8f8f8f', 3: '#f2f2f2', 4: '#9fe23a', 5: '#bdbdbd', 6: '#e0e0e0', 7: '#7ac82e' },
   }),
 ];
 

@@ -610,6 +610,7 @@ export const FONT_OPTIONS: readonly FontOption[] = [
   { family: 'Playfair Display', source: 'google', stack: `"Playfair Display", ${SERIF}` },
   { family: 'Georgia', source: 'system', stack: `"Georgia", ${SERIF}` },
   { family: 'Arial', source: 'system', stack: `"Arial", ${SANS}` },
+  { family: 'Archivo Black', source: 'google', stack: `"Archivo Black", ${SANS}` },
 ];
 // --- frame (design §C2) -------------------------------------------------------
 export const FRAME_PADDING_PX: Record<FramePadding, number> = { none: 0, small: 16, medium: 32, large: 56 };
