@@ -94,8 +94,12 @@ export function wholeSumTolerance(wholeValue: number, wholeDecimals: number): nu
 
 /** The slice of a ResultCell this check reads — a Pick so a real ResultCell
  * (or a live-embed/spec cell carrying the same fields) passes as-is. `value`
- * is null only with a CBS reason in `valueAttribute` (R11). */
-export type PartCell = Pick<ResultCell, 'value' | 'decimals' | 'valueAttribute'>;
+ * is null only with a CBS reason in `valueAttribute` (R11). `valueAttribute`
+ * is widened to allow null (#305): the whole's row is read straight from the
+ * observations table, where the column can be a real SQL NULL — a ResultCell's
+ * own `string` still fits. Nothing in this module reads the field today; it
+ * is carried for a future consumer, which must handle the null. */
+export type PartCell = Pick<ResultCell, 'value' | 'decimals'> & { valueAttribute: ResultCell['valueAttribute'] | null };
 
 export type VerifyOutcome =
   | { verified: true }

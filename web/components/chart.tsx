@@ -3814,7 +3814,18 @@ export function ChartView({
         // One fresh id per submit — so a Retry is a genuinely new turn
         // rather than a replay of the charged one.
         crypto.randomUUID(),
-        cbsCapabilities({ spec, form: activeForm, applicable: resolved.applicable, zoomAvailable, lang: chartLang }),
+        // #300: the WINDOWED spec plus the active reading's scope (the very
+        // `wholeGuardSpec` the Weergave tabs guard against — not the raw
+        // `spec` prop) and the tabs' live verdict-gated state, so the chat is
+        // told exactly the roster forms the tabs currently allow.
+        cbsCapabilities({
+          spec: wholeGuardSpec,
+          form: activeForm,
+          applicable: resolved.applicable,
+          zoomAvailable,
+          liveWholeForms: { pie: canUsePie, stacked: canUseStacked, stacked100: canUseStacked100 },
+          lang: chartLang,
+        }),
       );
       applyCopilotOutcome(message, outcome);
     } catch {

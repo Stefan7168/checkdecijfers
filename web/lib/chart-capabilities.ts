@@ -22,6 +22,7 @@ import type { PresentationKey } from './chart-presentation.ts';
 import { areaFormAllowed, hbarFormAllowed, isTabularForm, lineFormAllowed, type ChartForm } from './chart-view-state.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
+import type { ChartSpec } from '../backend/chart/types.ts';
 
 /** The own-data card's own `formAllowed` (user-chart.tsx), over the same
  * three predicates — so what the chat is told matches the tabs the reader
@@ -72,18 +73,42 @@ export function ownDataCapabilities(input: {
  * clicking, including the three phase-5 shapes (dumbbell/slope/heatmap).
  * Deliberately NOT `formsFor`: that stays the own-data tier's five-form
  * list until user-chart.tsx grows matching render code (plan Global
- * Constraints — CBS/Eurostat card only). */
+ * Constraints — CBS/Eurostat card only).
+ *
+ * Phase 5b follow-up (#300, #302): `allowedForms` is PURELY STRUCTURAL — it
+ * reads `regionScope`, `kind` and point shape, never the live state of the
+ * three verified-whole forms. chart.tsx's own Weergave tabs layer more on
+ * top of that structural ceiling: a pending or refused server verdict, a
+ * hidden series, an alternate reading, a missing audit row, and the
+ * reader's period window (a multi-period chart windowed down to one period
+ * IS pie-shaped on screen). So the caller passes (1) the WINDOWED spec plus
+ * its `regionScope` — the same `wholeGuardSpec` the tabs read, hence the
+ * `Pick<ChartSpec, 'regionScope'>` in the type — and (2) `liveWholeForms`,
+ * the tabs' own `canUsePie`/`canUseStacked`/`canUseStacked100` verdicts.
+ * The list below is the structural ceiling INTERSECTED with those live
+ * gates: this only ever narrows, never widens — so the chat never offers a
+ * roster form the tab itself has disabled right now, and never withholds
+ * one the tab currently allows. */
 export function cbsCapabilities(input: {
-  spec: PlottableSpec;
+  /** The spec the tabs guard against (windowed series + the active
+   * reading's `regionScope`), NOT the raw unwindowed `spec` prop. */
+  spec: PlottableSpec & Pick<ChartSpec, 'regionScope'>;
   form: ChartForm;
   applicable: ReadonlySet<PresentationKey>;
   /** chart.tsx's own `zoomAvailable` (line kind, more than one period code). */
   zoomAvailable: boolean;
+  /** chart.tsx's `canUsePie` / `canUseStacked` / `canUseStacked100` — the
+   * real gated state of the three verified-whole tabs (structural guard AND
+   * live verdict AND local refusals AND the period window). */
+  liveWholeForms: { pie: boolean; stacked: boolean; stacked100: boolean };
   lang: Lang;
 }): CbsCopilotCapabilities {
-  const { spec, form, applicable, zoomAvailable, lang } = input;
+  const { spec, form, applicable, zoomAvailable, liveWholeForms, lang } = input;
+  const forms = allowedForms(spec, spec.series.length).filter((f) =>
+    f === 'pie' ? liveWholeForms.pie : f === 'stacked' ? liveWholeForms.stacked : f === 'stacked100' ? liveWholeForms.stacked100 : true,
+  );
   return {
-    forms: allowedForms(spec, spec.series.length),
+    forms,
     presentationKeys: PRESENTATION_KEYS.filter((key) => applicable.has(key)),
     // Phase 5 final review (Fix 3): the Style panel — and so the template
     // gallery — is mounted for neither of the two tabular forms (table AND

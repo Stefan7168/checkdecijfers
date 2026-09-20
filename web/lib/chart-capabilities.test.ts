@@ -10,6 +10,7 @@ import { initialDocState, type ChartDocState } from './chart-commands.ts';
 import type { PresentationKey } from './chart-presentation.ts';
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
+import type { ChartSpec } from '../backend/chart/types.ts';
 
 const ALL_APPLICABLE: ReadonlySet<PresentationKey> = new Set(PRESENTATION_KEYS as readonly PresentationKey[]);
 
@@ -198,12 +199,29 @@ function cbsState(overrides: Partial<Pick<ChartDocState, 'title' | 'hiddenKeys'>
   return { title: null, hiddenKeys: new Set(), ...overrides };
 }
 
+/** #300: the tabs' live verdict gates, all permissive. The fixtures above
+ * carry no `regionScope`, so the STRUCTURAL guard already excludes the three
+ * verified-whole forms for them — passing "all allowed" here proves the live
+ * filter is a pure intersection with that ceiling, never an addition. */
+const LIVE_ALL = { pie: true, stacked: true, stacked100: true } as const;
+
+/** A structurally pie/stacked-eligible spec: a complete-roster provenance
+ * (`regionScope`, the same literal chart-commands.test.ts uses), at least
+ * two series, one point each. */
+const CBS_ROSTER_ONE_PERIOD: PlottableSpec & Pick<ChartSpec, 'regionScope'> = {
+  ...cbsSpec('bar', [
+    { label: 'Groningen', points: [cbsPoint('2025', 1)] },
+    { label: 'Friesland', points: [cbsPoint('2025', 2)] },
+  ]),
+  regionScope: { kind: 'all_provincies' },
+};
+
 describe('cbsCapabilities', () => {
   it('forms for a 2-series / 2-point line spec are line/bar/table plus the phase-5 trio (chart-fit scorer)', () => {
     // Phase 5: CBS_TWO_SERIES has exactly two points per series, so it is
     // precisely the shape dumbbell/slope are for — and a 2 × 2 grid for
     // heatmap. Before the scorer this pinned ['line', 'bar', 'table'].
-    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' });
+    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, liveWholeForms: LIVE_ALL, lang: 'nl' });
     expect(caps.forms).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap']);
   });
 
@@ -212,23 +230,86 @@ describe('cbsCapabilities', () => {
       { label: 'Amsterdam', points: [cbsPoint('2020', 1), cbsPoint('2021', 9), cbsPoint('2022', 5)] },
       { label: 'Rotterdam', points: [cbsPoint('2020', 4), cbsPoint('2021', 2), cbsPoint('2022', 6)] },
     ]);
-    const caps = cbsCapabilities({ spec: threePoints, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' });
+    const caps = cbsCapabilities({ spec: threePoints, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: true, liveWholeForms: LIVE_ALL, lang: 'nl' });
     expect(caps.forms).toEqual(['line', 'bar', 'table', 'heatmap']);
   });
 
   it('a bar spec with one series offers line/bar/hbar/table', () => {
-    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
     expect(caps.forms).toEqual(['line', 'bar', 'hbar', 'table']);
   });
 
   it('templates are empty in table form', () => {
-    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'table', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    const caps = cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'table', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
     expect(caps.templates).toEqual([]);
   });
 
   it('zoom mirrors the input', () => {
-    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: true, lang: 'nl' }).zoom).toBe(true);
-    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' }).zoom).toBe(false);
+    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: true, liveWholeForms: LIVE_ALL, lang: 'nl' }).zoom).toBe(true);
+    expect(cbsCapabilities({ spec: CBS_ONE_SERIES, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' }).zoom).toBe(false);
+  });
+});
+
+// Phase 5b follow-up (#300): the three verified-whole forms are gated by
+// MORE than structure on screen — a live server verdict, hidden series, an
+// alternate reading, a missing audit row, the period window. The chat's
+// capability list must mirror the tabs' real state, so `liveWholeForms`
+// (chart.tsx's own canUsePie/canUseStacked/canUseStacked100) intersects
+// the structural ceiling: it only ever narrows, never widens.
+describe('cbsCapabilities — live verified-whole gates (#300)', () => {
+  it('the roster fixture is structurally eligible for all three forms when every live gate is open', () => {
+    const caps = cbsCapabilities({ spec: CBS_ROSTER_ONE_PERIOD, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
+    expect(caps.forms).toEqual(expect.arrayContaining(['pie', 'stacked', 'stacked100']));
+  });
+
+  it('(a) drops pie when the tab has it disabled (pending/refused verdict, hidden series, window), keeping the other two', () => {
+    const caps = cbsCapabilities({
+      spec: CBS_ROSTER_ONE_PERIOD,
+      form: 'bar',
+      applicable: ALL_APPLICABLE,
+      zoomAvailable: false,
+      liveWholeForms: { pie: false, stacked: true, stacked100: true },
+      lang: 'nl',
+    });
+    expect(caps.forms).not.toContain('pie');
+    expect(caps.forms).toEqual(expect.arrayContaining(['stacked', 'stacked100']));
+  });
+
+  it('(b) keeps pie but drops stacked and 100%-stacked when only those tabs are disabled', () => {
+    const caps = cbsCapabilities({
+      spec: CBS_ROSTER_ONE_PERIOD,
+      form: 'bar',
+      applicable: ALL_APPLICABLE,
+      zoomAvailable: false,
+      liveWholeForms: { pie: true, stacked: false, stacked100: false },
+      lang: 'nl',
+    });
+    expect(caps.forms).toContain('pie');
+    expect(caps.forms).not.toContain('stacked');
+    expect(caps.forms).not.toContain('stacked100');
+  });
+
+  it('(c) never ADDS a form the structural guard excludes: no regionScope means no roster form, whatever the live gates say', () => {
+    for (const spec of [CBS_ONE_SERIES, CBS_TWO_SERIES]) {
+      const caps = cbsCapabilities({ spec, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
+      expect(caps.forms).not.toContain('pie');
+      expect(caps.forms).not.toContain('stacked');
+      expect(caps.forms).not.toContain('stacked100');
+    }
+  });
+
+  it('the live filter leaves every non-roster form untouched', () => {
+    const open = cbsCapabilities({ spec: CBS_ROSTER_ONE_PERIOD, form: 'bar', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
+    const closed = cbsCapabilities({
+      spec: CBS_ROSTER_ONE_PERIOD,
+      form: 'bar',
+      applicable: ALL_APPLICABLE,
+      zoomAvailable: false,
+      liveWholeForms: { pie: false, stacked: false, stacked100: false },
+      lang: 'nl',
+    });
+    const roster = new Set(['pie', 'stacked', 'stacked100']);
+    expect(closed.forms).toEqual(open.forms.filter((f) => !roster.has(f)));
   });
 });
 
@@ -246,7 +327,7 @@ describe('phase 5 — the three new forms reach the CBS tier only', () => {
   });
 
   it('cbsCapabilities does list them for that same spec', () => {
-    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: false, lang: 'nl' });
+    const caps = cbsCapabilities({ spec: CBS_TWO_SERIES, form: 'line', applicable: ALL_APPLICABLE, zoomAvailable: false, liveWholeForms: LIVE_ALL, lang: 'nl' });
     expect(caps.forms).toEqual(expect.arrayContaining(['dumbbell', 'slope', 'heatmap']));
   });
 });

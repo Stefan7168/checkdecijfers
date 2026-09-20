@@ -162,7 +162,10 @@ export async function requestWholeVerification(rawKey: unknown, rawPeriodCodes: 
       wholeByPeriod.set(String(row.period_code), {
         value: row.value == null ? null : toNumber(row.value),
         decimals: toNumber(row.decimals),
-        valueAttribute: String(row.value_attribute),
+        // #305: the column can be a real SQL NULL (run.ts's `value_attribute:
+        // string` row typing is looser than the data) — keep it null rather
+        // than coercing it to the string "null" for a future consumer.
+        valueAttribute: row.value_attribute == null ? null : String(row.value_attribute),
       });
     }
 
