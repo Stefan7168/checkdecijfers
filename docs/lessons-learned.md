@@ -32,6 +32,29 @@ on top.
    24-test suite passed before pushing the fix commit, and CI confirmed green on that push. Worth the
    ~2 extra minutes: pushing on the theory alone, without a local repro-then-fix cycle, would have risked a
    second red CI run on a guess.
+3. **A design-time contrast gate that only checks ONE relationship (series colour vs. paper) can still miss
+   a real, owner-visible bug in an adjacent relationship (paper vs. the surrounding app chrome).** ADR 043's
+   contrast gate (`judgeColorAgainst`, pinned in `chart-templates.test.ts`) checks every template's series
+   colours against its own backdrop — it never checked a template's PAPER colour against the app's own
+   theme tokens, because no template before session 120 needed that check (every earlier template either
+   had no solid background, or paired one with enough colour/shadow to read clearly regardless). The two
+   near-white house styles (Broadsheet `#fafaf8`, Autumn Letter `#fbeed9`) exposed the gap: their paper sat
+   at ~1.0-1.1 contrast against the light theme's own `--border` token (`chart-template-thumb.tsx`'s frame
+   stroke), reading as "no edge at all" — the owner's own words were "clearly overflowing", a genuinely
+   surprising way to describe a low-contrast bug on first read, and `systematic-debugging`'s Phase 1
+   ("reproduce consistently") took real back-and-forth (a photo, then a specific "which two cards", then
+   directly measuring `getBoundingClientRect()`/computed styles in the live page) before the actual
+   mechanism — a THEME-relative border token never checked against arbitrary template content — became
+   clear. **Lesson: "the design-time gate passed" proves ONE specific contrast relationship, never every
+   relationship a new template's colour choices touch — when adding a template whose own background could
+   plausibly collide with the app's OWN chrome colours (near-white/near-black papers), check that specific
+   pairing by hand, in both themes, before considering the template done.** Fixed with a fixed, non-theme
+   stroke (`THUMB_FRAME_STROKE`) rather than darkening the paper colours, preserving the intended "near-white
+   newsprint" look — see ADR 043 decision 11 and [open-questions #275](open-questions.md).
+4. **A non-technical owner's bug report ("overflowing") described a low-contrast/invisible-border bug, not
+   a CSS box-model overflow** — worth remembering when triaging a plain-English report: ask what it LOOKS
+   like (a screenshot beat three rounds of guessing) before assuming the reporter's word maps onto the
+   nearest technical term.
 
 ## Session 119 — a real disk-full incident stopped a session cold before any code touched, and a
 ## non-symlinked worktree's `node_modules` copy is a real, budgetable disk cost on this machine

@@ -2,7 +2,8 @@
 
 **Session 120 (2026-09-20, owner present in chat throughout). Closed all three of session 119's "All,
 use subagents" follow-ups — Minors, house styles, and a considered hold on scatter — plus caught and
-fixed a real CI break along the way. `main` @ `db54f91b`, CI green.**
+fixed a real CI break and a real owner-reported bug along the way. `main` @ `aca6a7ad`, CI green
+(`gh run view 35503056717`).**
 
 1. **Minors (#300–#305), built via a Fable-tier subagent, reviewed, pushed `a7054518`.** #300 (the CBS
    chat doorway's capability list now reads the same windowed spec and live verdict/hidden-series/
@@ -22,7 +23,11 @@ fixed a real CI break along the way. `main` @ `db54f91b`, CI green.**
    assumed panel rules/tick length/legend style etc. would be required). Every template's full 8-colour
    `seriesColors` palette was checked against its own solid paper backdrop using the project's real
    contrast-gate formula (`judgeColorAgainst`, `contrastRatio`) BEFORE being written into code — the
-   implementer needed zero trial-and-error colour iteration. Pushed `bf47bfa8`.
+   implementer needed zero trial-and-error colour iteration. Pushed `bf47bfa8`. **The sixth piece — a
+   homepage "themes" gallery row comparing the five looks — was designed in chat (reuse the existing
+   `consumentenvertrouwen` curated chart and the `GalleryCard`/`ChartView` pattern already mounted 3x
+   on the landing page) but the owner asked to hold: "I have to think about better options." Not
+   approved, not built.**
 3. **A real CI catch: the house-styles push also widened `TEMPLATE_IDS` (so the five new looks were
    chat-reachable by name) — broke 4 real-browser Playwright e2e tests in CI, fixed `35513e4f`.**
    `capabilities.templates` is embedded directly in the co-pilot's LLM prompt text, so widening the list
@@ -34,7 +39,20 @@ fixed a real CI break along the way. `main` @ `db54f91b`, CI green.**
    that failed in CI) before repushing — CI confirmed green on that push. See
    [[feedback_llm_prompt_embedded_lists_hash_risk]] (new memory) and
    [docs/lessons-learned.md](lessons-learned.md) session 120.
-4. **Scatter (#296): investigated in depth, then the owner delegated the build-or-hold call ("You
+4. **A real owner-reported bug, found and fixed same session: the Style popup's Templates grid made
+   Broadsheet and Autumn Letter look boundary-less in light theme, fixed `aca6a7ad`.** The owner's own
+   words: "clearly overflowing." Root cause: `TemplateThumb`'s frame stroke used the THEME's own
+   `--border` token — tuned to be subtle against the app's OWN card colour, never checked against an
+   arbitrary template's paper colour — and Broadsheet (`#fafaf8`)/Autumn Letter (`#fbeed9`) sat at
+   ~1.0–1.1 contrast against it in light theme, below this project's own `COLOR_REFUSE_BELOW=1.25` gate
+   (a gate that already existed for series colours, just never checked the PAPER colour against the
+   surrounding app chrome). Reproduced by directly measuring `getBoundingClientRect()`/computed styles
+   in the live page (not guessed from the photo alone) before the mechanism was clear. Fixed with a
+   fixed, non-theme stroke (`THUMB_FRAME_STROKE`), checked against all thirteen templates' papers in
+   both themes — decorative-preview-only, the real applied chart (`chart-frame.tsx`) is untouched. TDD:
+   a failing test first, then the fix, then a visual before/after in the browser. See ADR 043 decision
+   11 and [docs/lessons-learned.md](lessons-learned.md) session 120.
+5. **Scatter (#296): investigated in depth, then the owner delegated the build-or-hold call ("You
    decide as a UX expert") — decision: HOLD, not built.** A dispatched Explore agent surveyed
    `ChartPoint`'s ~25 non-test consumers and ~20 `ChartForm` narrowing sites, and confirmed no existing
    code models two measures per point in either tier. The real finding: the bottleneck is the QUERY
@@ -47,13 +65,14 @@ fixed a real CI break along the way. `main` @ `db54f91b`, CI green.**
    with no measured user demand for scatter specifically, held rather than built speculatively. Recorded
    as a considered hold with a clear revisit trigger (real usage evidence), not a silent drop — see
    [open-questions #296](open-questions.md).
-5. **Disk space: 13Gi free at session end** (was 16Gi at session start; the Playwright Chromium install
-   plus repeated `next build`/test runs ate the difference) — still comfortably positive, no incident,
-   but worth `df -h /` before the next session opens a worktree.
-6. **Delegation:** all mechanical implementation (Minors, house styles) ran on Fable-tier subagents with
+6. **Disk space: 12Gi free at session end** (was 16Gi at session start; the Playwright Chromium install
+   plus repeated `next build`/test runs across the session ate the difference) — still comfortably
+   positive, no incident, but worth `df -h /` before the next session opens a worktree.
+7. **Delegation:** all mechanical implementation (Minors, house styles) ran on Fable-tier subagents with
    fully-specified briefs (exact override objects, pre-computed contrast-safe hex values, exact file/
-   line targets); the session model did the design investigation, brief-writing, diff review, and the
-   CI-failure diagnosis itself, per the project's delegation-cost-tier rule.
+   line targets); the session model did the design investigation, brief-writing, diff review, the
+   CI-failure diagnosis, and the owner-reported bug's own root-cause debugging itself, per the
+   project's delegation-cost-tier rule.
 
 ---
 

@@ -20,25 +20,33 @@
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 120 — owner present in chat; verify against
 `git log`/CI before trusting this).** **All three of session 119's "All, use subagents" follow-ups are
-closed.** Minors ([#300](open-questions.md)–[#305](open-questions.md), mostly built, `a7054518`), house
-styles ([#275](open-questions.md), five of six mockups confirmed and built, `bf47bfa8`), and scatter
-([#296](open-questions.md), investigated in depth then deliberately held, not built) — plus a real CI
-break caught and fixed along the way (`35513e4f`). `main` @ `db54f91b`, CI green.
+closed**, plus a real CI break and a real owner-reported bug, both caught and fixed same session.
+`main` @ `aca6a7ad`, CI green (`gh run view 35503056717`).
 
-- **Minors:** #300/#302/#304/#305 shipped; #303 stays informational by design; **#301 (`pieHole`
-  chat-reachable) was built, verified correct, then reverted before push** — it shifts the co-pilot's
-  LLM request hash, breaking all ten recorded fixtures, blocked on real LLM spend (Anthropic usage cap,
-  lifts 2026-10-01).
-- **House styles:** Salmon Editorial, Studio Grey, Broadsheet, Autumn Letter, Brutalist Ink — all from
-  EXISTING `ChartPresentation` keys, no new presentation key needed. Not built: a homepage "themes"
-  gallery row (separate, undesigned landing-page work).
+- **Minors:** #300/#302/#304/#305 shipped (`a7054518`); #303 stays informational by design; **#301
+  (`pieHole` chat-reachable) was built, verified correct, then reverted before push** — it shifts the
+  co-pilot's LLM request hash, breaking all ten recorded fixtures, blocked on real LLM spend (Anthropic
+  usage cap, lifts 2026-10-01).
+- **House styles:** five confirmed and built — Salmon Editorial, Studio Grey, Broadsheet, Autumn
+  Letter, Brutalist Ink (`bf47bfa8`) — all from EXISTING `ChartPresentation` keys, no new presentation
+  key needed. **The sixth piece (a homepage "themes" gallery row) was designed in chat — reuse the
+  existing `consumentenvertrouwen` curated chart + the existing `GalleryCard`/`ChartView` pattern
+  already used 3× on the landing — but the owner asked to hold: "I have to think about better options."
+  Not approved, not built** — don't assume that sketch stands; re-propose or ask fresh.
 - **A real CI catch:** the house-styles push also widened `TEMPLATE_IDS` (chat-reachability by name for
   the five new looks) — broke 4 real-browser Playwright e2e tests, because `capabilities.templates`
   reaches the co-pilot's LLM prompt and shifts the request hash, same class of bug as #301. No vitest
-  suite caught it; only the real Playwright run did. Reverted, verified locally with the actual e2e
-  suite (24/24), CI confirmed green on the fix push. New standing lesson:
+  suite caught it; only the real Playwright run did. Reverted (`35513e4f`), verified locally with the
+  actual e2e suite (24/24), CI confirmed green. Standing lesson:
   [[feedback_llm_prompt_embedded_lists_hash_risk]] — before widening any list that reaches an LLM
   prompt, grep `prompt.ts`/`schema.ts` first, and verify with real e2e, not just vitest fixtures.
+- **A real owner-reported bug, found and fixed same session:** the Style popup's Templates grid made
+  Broadsheet and Autumn Letter look like they had no boundary at all in light theme (owner: "clearly
+  overflowing"). Root cause: `TemplateThumb`'s frame stroke used the THEME's own `--border` token,
+  never checked against an arbitrary template's paper colour — those two near-white papers sat at
+  ~1.0-1.1 contrast against it (below this project's own `COLOR_REFUSE_BELOW=1.25`). Fixed with a
+  fixed, non-theme stroke (`aca6a7ad`) — decorative-preview-only, the real applied chart is unaffected.
+  See ADR 043 decision 11.
 - **Scatter: held, not built.** The owner delegated the build-or-hold call ("You decide as a UX
   expert"). Investigation found the real bottleneck is the QUERY layer (every query is
   one-measure-by-construction), a materially bigger, multi-session lift than "widen `ChartPoint`" — and
@@ -48,16 +56,19 @@ break caught and fixed along the way (`35513e4f`). `main` @ `db54f91b`, CI green
 - **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118/119** (registry:apply, DOI
   backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
   `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
-- **No mandated next task.** Candidates: build the homepage themes row for the five house styles
-  (needs its own design pass); re-apply #301/TEMPLATE_IDS chat-reachability once the LLM cap lifts and
-  fixtures can be re-recorded; or pick a fresh priority — ask the owner rather than assuming.
+- **No mandated next task.** Candidates: a fresh design for the homepage themes row (the owner wants
+  better options than what was sketched this session); re-apply #301/TEMPLATE_IDS chat-reachability
+  once the LLM cap lifts and fixtures can be re-recorded; or pick a fresh priority — ask the owner
+  rather than assuming. Kickoff:
+  [session-briefs/2026-09-20-session-121-kickoff.md](session-briefs/2026-09-20-session-121-kickoff.md).
 
-**Measured (session 120):** root + web typecheck clean; full web suite 146 files / 2,592 tests green
-(solo run); full root suite 205 files / 3,014 tests green (solo run); benchmark scorer 3 files / 32
-tests green; full Playwright e2e suite 24/24 green (run locally against the fixed code before the fix
-push, and confirmed again by CI); real Turbopack `next build` clean. CI run `35497423653` (the fix push)
-green, all 5 jobs incl. deploy — check `gh run view 35497423653` if trusting this before it's
-re-confirmed. Disk: 13Gi free at session end (was 16Gi at session start).
+**Measured (session 120, final):** root + web typecheck clean; full web suite 146 files / 2,593 tests
+green (solo run); full root suite 205 files / 3,014 tests green (solo run); benchmark scorer 3 files /
+32 tests green; full Playwright e2e suite 24/24 green (run locally, confirmed again by CI); real
+Turbopack `next build` clean. CI run `35503056717` (the final push) green, all 5 jobs incl. deploy —
+one earlier push this session (`bf47bfa8`) went red and was fixed by the next commit (`35513e4f`), not
+ignored. `git status` clean, `git worktree list` shows only `main`. Disk: 12Gi free at session end (was
+16Gi at session start — normal build/test/Playwright-install churn, not an incident).
 
 ---
 
