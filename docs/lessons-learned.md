@@ -6,6 +6,33 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 120 — a capability list embedded in an LLM prompt needs real-browser e2e to prove a
+## widening is fixture-hash-safe; unit/fixture tests passing is not enough
+
+1. **Widening `TEMPLATE_IDS` (the chat co-pilot's chat-reachable template allowlist) looked safe from
+   every vitest suite — root (3014/3014), web (2592/2592), the specific `tests/attachments`/`tests/chart`
+   directories that exercise the LLM-fixture request/response path — but broke 4 real-browser Playwright
+   tests in CI.** The reason: `capabilities.templates` (built from `TEMPLATE_IDS`) is embedded directly in
+   the co-pilot's LLM prompt text (`prompt.ts`), so widening the list changes the prompt, which shifts
+   `requestHash`, which is exactly what the recorded-fixture matching in CI's e2e mock-LLM server keys on
+   — the SAME failure mode session 119's own #301 finding already named for `pieHole`/`PRESENTATION_KEYS`,
+   but this one slipped past because the vitest suites that exercise fixtures apparently don't all replay
+   the SAME hash-matching path the real Playwright dev-server run does (some fixture tests compare a
+   hand-authored expected capabilities object directly, rather than round-tripping through the live
+   request-hash lookup a real browser session hits). **Lesson: before assuming any change to a value that
+   feeds an LLM prompt is fixture-hash-safe, either check every place that value is embedded in a prompt
+   FIRST (`grep` for the field name in `prompt.ts`/`schema.ts`, as should have been done before widening
+   `TEMPLATE_IDS`, not after CI turned red), or run the real Playwright e2e suite locally before pushing —
+   not just the narrower vitest fixture suites, which can pass while the real request-hash path still
+   breaks.** Caught by CI (not by the pre-push verification block, which does not run Playwright locally by
+   default) within minutes, fixed by reverting the one line and softening a pinned test from "equals" to
+   "is a subset of" — see [open-questions #275](open-questions.md).
+2. **The fix was verified by actually running `npx playwright test` locally against the reverted code**
+   (not just re-running vitest and trusting the theory) — all 4 originally-failing specs plus the full
+   24-test suite passed before pushing the fix commit, and CI confirmed green on that push. Worth the
+   ~2 extra minutes: pushing on the theory alone, without a local repro-then-fix cycle, would have risked a
+   second red CI run on a guess.
+
 ## Session 119 — a real disk-full incident stopped a session cold before any code touched, and a
 ## non-symlinked worktree's `node_modules` copy is a real, budgetable disk cost on this machine
 
