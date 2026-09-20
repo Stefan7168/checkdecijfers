@@ -1,5 +1,94 @@
 # STATUS archive — the session log
 
+**Session 118 (2026-09-20, direct continuation of session 117's unfinished build, owner-present /
+fully-delegated session unchanged from session 117 — "You are the expert... work autonomously" still
+stood, no new instructions were needed. Sonnet 5 session model, subagent-driven development resumed in
+the SAME worktree/branch session 117 left in place, implementers on Fable tier, task reviewers on
+sonnet, the final whole-branch review on opus (the most capable available tier) per the skill's own
+model-selection rule.)**
+
+1. **Resumed exactly where session 117 stopped, per its own documented resume instructions.** Read the
+   SDD ledger (`.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md`) first, as directed — did
+   not re-brainstorm or re-plan. A stray, much-earlier completed-task notification (era shading, phase 4)
+   surfaced mid-session from an already-merged, unrelated task; confirmed via `git worktree list`/`git log`
+   that it was stale noise (phase 4's own worktree was long gone) before disregarding it, rather than
+   acting on it.
+2. **Task 4's fix round (round 1 of the SDD process, session 117's one open item).** A fresh implementer
+   (a literal agent-id resume isn't possible across a session boundary) carried the report path and both
+   Important findings verbatim: `buildStack100Rows`'s zero/negative-total omission path had zero test
+   coverage; the "omitted period" copy was reused for a real server refusal AND a verified-but-zero-share
+   period, factually wrong for the second case. Fixed with 10 new tests (incl. a negative-part-with-
+   positive-total case, proven to isolate the sign check from the total check) and a new, honest, split
+   i18n key. Scoped re-review: both findings genuinely resolved, no scope creep, no regressions (commit
+   `ba941c9a`).
+3. **Task 5 — chat-doorway wiring + closing coverage gaps, the plan's last task.** `CBS_COPILOT_PROMPT_VERSION`
+   2→3, `setForm`'s example widened to 11 forms. A genuine, non-duplicate second layer of the provenance-
+   not-codes contract (Task 3's guard-level test stayed put in `chart-fit.test.ts`; this task added a
+   distinct tab-level DOM assertion). The property-test trap the brief warned about (a naive widen of
+   `randomCommand`'s literal would break `validateCommand`'s own invariant, since the shared test context
+   has no real `regionScope`) was correctly avoided — a separate, targeted region-set round-trip test was
+   added instead. e2e reused the harness's existing `!!regionset provincies` question (no province fixture
+   existed, but the question did) and asserted real per-province cell values and computed shares, not just
+   "doesn't crash." Task review (sonnet) independently re-summed the 12 real province cells against the
+   actual seed fixture's national total by hand and confirmed an exact match before approving — zero
+   findings (commit `d6635d3f`). One real instance of a subagent backgrounding a long Playwright run and
+   its own turn ending mid-wait (a known, documented pattern, not a stall) — confirmed the run was
+   genuinely still in progress via `ps`/the harness log, then resumed the same agent via `SendMessage`
+   rather than re-dispatching, per the standing lesson on this exact failure mode.
+4. **The final whole-branch review (opus) — this project's repeated lesson (cross-task defects surface
+   here, not in task-scoped reviews) held again.** Zero Critical. One real Important finding neither of
+   the five task-scoped reviews could have caught, because it lived in the SEAM between this feature and
+   the query layer's own coverage semantics (`RegionSetCoverage.complete`), which never appeared in any
+   task's own diff: an incomplete roster (a member with NO observation row at all, distinct from a
+   withheld/null member, which already refused correctly) was invisible to the sum check, and could pass
+   within tolerance on a `gemeenten_in_provincie` roster (small gemeenten sit under the ~0.5% tolerance;
+   up to 500 members allowed). The reviewer found this by independently tracing the never-fabricate
+   invariant through the full pie path by hand, re-summing 12 real province cells against the actual seed
+   fixture to confirm the feature's own core honesty claim, and re-deriving both of Tasks 1 and 4's
+   disclosed deviations as correct rather than trusting prior verdicts. Several genuine strengths
+   independently reconfirmed too (a complete-set-of-local-refusals proof, security check ordering matching
+   its precedent exactly, no new CBS fetch/audit row verified in the code itself, a clean repo-wide
+   `ChartForm` sweep). Six Minor findings, all deliberately deferred to open-questions rather than
+   expanding the branch, per the reviewer's own explicit recommendation.
+5. **One final, scoped fix round closed the one Important finding plus a cheap bundled Minor, then a
+   clean scoped re-review — the SDD skill's own "final review clean" gate.** The coverage gate was placed
+   correctly (reads `RegionSetCoverage.complete` before any parts lookup or DB query, refuses every
+   requested period), a new honest `incomplete_roster` reason added, and a proving test built specifically
+   for the case the review named (a missing member whose implied value sits INSIDE the tolerance — proven
+   by first asserting the naive check would have wrongly passed it, then asserting the real gate refuses
+   it with no whole ever fetched). The re-reviewer traced further than the fix report itself to confirm a
+   disclosed behavioral side-effect (a withheld member now surfaces as `incomplete_roster` rather than
+   `withheld_member`, since coverage is checked first) was correct and non-regressive — independently
+   verifying `RegionSetCoverage.complete`'s real semantics in `src/query/run.ts` by hand, and tracing two
+   structural facts (a resolve.ts restriction, a build.ts field-derivation) proving the pure check's own
+   `withheld_member` branch, while now largely unreachable from live traffic, is legitimate defence-in-
+   depth rather than dead code — the same structural fact the final review had already surfaced separately
+   as a deferred Minor, not a new problem. Verdict: ready to merge, zero new findings.
+6. **Merged to `main` directly (`90b786f6..c7723c34`), per this project's standing owner-present git
+   authorization** ([#118](open-questions.md)) — no PR, since the owner was present (fully delegated)
+   throughout both this session and session 117. Full verification block re-run directly on the merged
+   result before pushing, not only trusted from the branch's own history: both typechecks clean, full web
+   suite 146 files/2,581 tests green, full root suite 201 files/2,988 tests green, invariants 26/26,
+   hermetic benchmark 14/14 + 6/6 + 0 fabricated (GATE VERDICT: PASS), real Turbopack build clean. CI green
+   on the merge commit. The `/code-review` LOW-effort-before-push convention was judged satisfied by
+   substitution — this branch already carried 7 rounds of subagent review (5 task reviews, 2 scoped
+   re-reviews, 1 opus final whole-branch review) before this push, exceeding what a LOW-effort pass adds —
+   rather than run a redundant 8th pass. Worktree removed, branch deleted (both fully absorbed into
+   `main`).
+7. **Docs brought to measured, merged state in the same session:** STATUS.md's top block rewritten (no
+   longer "wrapped mid-build"); the session-117 archive entry kept exactly as originally written below
+   (it accurately described that session's own real, honestly-incomplete state at the time — not rewritten
+   with hindsight); ADR 056 got a real "as built" phase-5b section (replacing session 117's explicit "not
+   yet built" placeholder); ADR 039's now-stale "never offered: pie/donut, stacked, 100%" line corrected
+   in place (scatter's own line there is still accurate, left alone); 08-build-plan.md's chart co-pilot
+   header and phase-5b entry updated to BUILT/MERGED; six new open-questions rows (#300–#305) record the
+   final review's deferred Minor findings, none a data-integrity risk; #296 and #299 updated from
+   "in progress" to their real resolved state.
+8. **Process note for lessons-learned:** the final review's one real finding lived entirely in a seam
+   between this feature and an upstream type (`RegionSetCoverage`) that no single task's own diff ever
+   touched — worth carrying forward as a general lesson about what a whole-branch review brief should
+   name explicitly.
+
 **Session 117 (2026-09-19/20, owner present throughout — chose "phase 5b" over the house-styles
 alternative when offered a choice, then delegated fully: "You are the expert. Just do whatever you
 think is best, work autonomously"; Sonnet 5 session model, subagent-driven development on a single

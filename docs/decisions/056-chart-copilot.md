@@ -445,20 +445,62 @@ whole-branch review on the most capable model, one fix wave, one scoped re-revie
   finding, and a disclosed process deviation (a worktree-removal `--force` used without the
   human-in-the-loop check the process calls for).
 
-## Phase 5b — the "verified whole" (session 117, 2026-09-19/20) — IN PROGRESS, NOT YET BUILT
+## Phase 5b — the "verified whole" (session 117 design, session 118 build), as built
 
-**Not an "as built" section — this phase is not finished.** Design: spec
-[superpowers/specs/2026-09-17-chart-copilot-design.md](../superpowers/specs/2026-09-17-chart-copilot-design.md)
+Design: spec [superpowers/specs/2026-09-17-chart-copilot-design.md](../superpowers/specs/2026-09-17-chart-copilot-design.md)
 §11. Plan: [superpowers/plans/2026-09-19-verified-whole-phase5b.md](../superpowers/plans/2026-09-19-verified-whole-phase5b.md).
-4 of 5 planned tasks are built on branch `verified-whole-phase5b` (worktree `../cdc-wt-verified-whole-phase5b`,
-both left in place at session end, not merged to `main`) — the pure sum-verification logic, the
-`ChartSpec.regionScope` provenance field, the three new `ChartForm` guards, and the on-demand
-verification server action + Recharts rendering, the last of which has 2 open Important review findings
-pending a fix round. Task 5 (chat-doorway wiring + coverage) and the final whole-branch review are not
-started. Full state, including the exact resume instructions: `docs/STATUS.md`'s top block,
-`docs/status-archive.md` session 117, and the SDD ledger at
-`.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md`. **A future session should update this
-section with a real "As built" once the phase actually merges — do not treat this paragraph as that.**
+Built via subagent-driven development (5 tasks, Fable-tier implementers, sonnet task reviewers, one opus
+final whole-branch review); full history in `.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md`.
+Merged to `main` at `c7723c34` (session 118, 2026-09-20).
+
+- **The core new concept:** `src/query/whole-verification.ts` — `parentCellRef(scope: RegionScope)` maps
+  a region scope to what its "whole" cell should be (the national `NL` total for provinces/landsdelen, a
+  province's own cell for a gemeenten-in-provincie roster), or `null` when the concept doesn't apply
+  (`all_gemeenten` — see [#299](../open-questions.md)); `verifyPartsSumToWhole(parts, whole)` checks the
+  parts sum to the whole within `max(0.5 at the whole's own decimals, 0.5% of its value)`, refusing on a
+  missing whole or any withheld/null part before ever comparing sums.
+- **Provenance, not code-list equality:** `ChartSpec.regionScope: RegionScope | null` (a new optional-v1
+  field, ADR [014](014-chart-spec-v1-and-renderer.md)'s pattern, always explicitly emitted by
+  `buildChartSpec`, never omitted) records HOW a chart's regions were selected. The three new `ChartForm`
+  guards (`pieFormAllowed`/`stackedFormAllowed`/`stacked100FormAllowed`, `ChartForm` now 11 members) check
+  this field, not whether the region codes happen to numerically match a complete roster — a hand-picked
+  or LLM-assembled selection that coincidentally names every province still refuses, proven by a dedicated
+  contract test. Donut is a `pieHole` presentation variant of `pie` (`ChartPresentation`), never a fourth
+  form.
+- **On-demand verification, Option A pattern:** `web/app/chart-whole-verification-actions.ts` re-reads an
+  already-audited chart's own cells (never the client's own idea of them) and fetches exactly one more
+  cell per period (the whole) from our own database — no new CBS fetch, no new `audit_answers` row, same
+  "not a new answer, a view command" pattern as phase 4's difference/mean. **Deliberately built to accept
+  `(auditKey: {kind:'answer', id}, periodCodes)` rather than the plan's literal client-supplied-`ChartSpec`
+  signature** — a client-supplied spec would let a fabricated spec make the server report a false
+  "verified" for numbers never actually checked against any real cell, a direct violation of the never-
+  fabricate principle, not just a privacy gap. Ownership + GDPR-redaction check (mirroring
+  `chart-derivation-actions.ts`) runs before any distinguishing refusal reason can leak. Confirmed by both
+  the task-scoped review and the final whole-branch review, independently re-derived each time.
+- **A completeness gate, added in the final fix round:** a roster member that has NO observation row at
+  all (distinct from a withheld/null member, which already refused correctly) was initially invisible to
+  the sum check — the only thing standing between an incomplete roster and a false "verified" was the
+  tolerance, safe for provinces but not for small gemeenten in a `gemeenten_in_provincie` roster. Closed
+  by reading the audit row's own stored `RegionSetCoverage.complete` before any DB query runs (mirroring
+  the existing `deriveRegionRanking` precedent in `src/query/derivations.ts`, which refuses a ranking over
+  an incomplete set for the identical reason), with a new honest `incomplete_roster` refusal reason.
+- **Rendering:** native Recharts `PieChart`/`Pie` (pie) and `BarChart` with `stackId` (stacked/100%-
+  stacked) in `web/components/chart.tsx` — not a custom SVG overlay, this app's first native-library chart
+  forms alongside its custom `EndLabelsOverlay`/`DumbbellOverlay` pattern from phase 5. 100%-stacked's
+  percentage denominator is the verified parts' own sum (not the CBS whole's raw value), so bars are
+  exactly full — differs from the true total by at most the tolerance (~0.5%), still pure arithmetic over
+  already-verified reals. Three local refusals — no audit row, an alternate reading, a hidden series — are
+  a complete set (confirmed by the final review); a public embed structurally falls back to the table.
+- **Chat vocabulary:** `CBS_COPILOT_PROMPT_VERSION` 2→3, `setForm`'s hand-listed forms widened to all 11.
+- **Scope, unchanged from the design:** region hierarchies only (never a category breakdown); CBS/Eurostat
+  card only — `web/components/user-chart.tsx` deliberately untouched (mirrors [#289](../open-questions.md)'s
+  precedent); scatter stays out of scope, still needing its own two-measure-per-point chart-spec shape
+  ([#296](../open-questions.md)).
+- **Deferred, not silently dropped** (all Minor, none a data-integrity risk — see
+  [#300](../open-questions.md)–[#305](../open-questions.md)): a chat-capability-list vs. real-tab-state
+  edge case; donut unreachable from chat; a latent `cbsCapabilities` typing gap; the multi-period
+  stacked/100%-stacked path being structurally unreachable from the real pipeline today (correct code,
+  untested by a real end-to-end run); a `value_attribute` null-coercion nit.
 
 ## Revisit triggers
 

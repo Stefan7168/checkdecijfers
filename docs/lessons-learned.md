@@ -6,6 +6,47 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 118 — a whole-branch review's one real finding lived in a seam no single task's diff ever
+## touched, and a fully-delegated session can complete a multi-day build without a new instruction
+
+1. **A cross-task defect hid in the seam between a feature and an UPSTREAM type none of its five tasks'
+   diffs ever contained.** Phase 5b's final whole-branch review (the sixth review pass over this branch,
+   after five individually-clean task reviews and one scoped re-review) found the one real gap: an
+   incomplete region roster was invisible to the "verified whole" sum check, because nothing consulted
+   `RegionSetCoverage.complete` — a type/field that already existed in `src/query/types.ts` before this
+   phase started, was never modified by any of the five tasks, and so never appeared in any task-scoped
+   reviewer's diff to check. Every task brief scoped its reviewer to that task's own diff — correctly, per
+   the SDD process — but that also means a task-scoped review structurally cannot catch a defect whose
+   cause is an UNCHANGED file the new feature merely failed to consult. This is exactly why this project's
+   process mandates a whole-branch review after individually-clean task reviews, and this session is
+   concrete evidence the mandate earns its cost: five clean task reviews plus one clean fix-round
+   re-review still missed a real, product-relevant gap that a from-scratch pass over the whole diff (with
+   the upstream spec/plan/ledger for context, not just the diff) caught. Applying forward: when writing a
+   final-review dispatch brief for a feature that reads an existing type/field it doesn't modify, name
+   that type explicitly as something to verify was actually consulted — don't rely on the diff alone to
+   surface it.
+2. **A fully-delegated, owner-present session can carry a multi-day build to completion without a single
+   new instruction, when the resume state is honestly documented.** Session 117 was asked to wrap up
+   mid-build (Task 4 open, Task 5 and the final review not started) and, per CLAUDE.md's own ritual, wrote
+   an explicit resumable state (SDD ledger, STATUS top block, a dedicated kickoff brief) rather than a
+   generic "more work remains" note. This session picked that state up, resumed the SDD plan exactly where
+   it stopped (fix round → Task 5 → final review → one more fix round → merge), and reached a clean merge
+   to `main` without the owner needing to say anything beyond the original session-117 delegation ("You
+   are the expert... work autonomously") still standing. The concrete lesson: the value of a careful
+   mid-build wrap-up is not diligence for its own sake — it is what makes a later session's full autonomy
+   possible at all. A vague "left off partway through" note would have forced either a from-scratch
+   re-read of the whole branch or a check-in question; the exact resume instructions made neither
+   necessary.
+3. **A stray, much-later-arriving completed-task notification for an already-merged, unrelated feature
+   needs the same "verify before acting" discipline as any other tool result.** A background-agent
+   completion notification for phase 4's "era shading" task surfaced mid-session — phase 4 had already
+   been reviewed, merged, and its worktree deleted in an earlier, now-compacted part of this same session.
+   Rather than acting on it (or ignoring it silently), a quick `git worktree list`/`git log` check
+   confirmed the worktree it would have referenced no longer existed, which was enough to safely disregard
+   it as stale noise from a long-running subagent rather than new, actionable work. Cheap, and worth doing
+   every time a notification's context doesn't obviously match the session's current state — the check
+   costs one tool call; acting on stale state costs much more.
+
 ## Session 117 (partial — wrapped mid-build) — a plan's own reading of a type was one variant short, and
 ## a security question got a stronger answer than the one it was asked with
 

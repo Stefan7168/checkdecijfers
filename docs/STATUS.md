@@ -18,63 +18,66 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-19/20, session 117 — owner present throughout, chose
-"phase 5b" over the house-styles alternative when offered a choice, then delegated fully: "You are the
-expert. Just do whatever you think is best, work autonomously"; **wrapped mid-build on the owner's
-signal — nothing from this session is merged to `main`**; verify against `git log`/the SDD ledger
-before trusting this).** Session 117 designed and PARTIALLY built **chart co-pilot phase 5b — the
-"verified whole"** (spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)
-§11, plan [superpowers/plans/2026-09-19-verified-whole-phase5b.md](superpowers/plans/2026-09-19-verified-whole-phase5b.md))
-via subagent-driven development on Fable-tier implementers — **4 of 5 tasks built, on branch
-`verified-whole-phase5b` (worktree `../cdc-wt-verified-whole-phase5b`, both left in place, not
-deleted).** Task 4 was reviewed with 2 open Important findings still pending a fix round when the
-session was asked to wrap up; Task 5, the final whole-branch review, and the merge to `main` were not
-started. `main` itself is UNCHANGED this session (still at the phase 5b **plan** commit, `a02b148a`,
-docs only — no code from phase 5b has reached `main`). Kickoff for the next session:
-[session-briefs/2026-09-19-session-118-kickoff.md](session-briefs/2026-09-19-session-118-kickoff.md) —
-**read it first, this session resumes an unfinished build, it does not start fresh.**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 118 — direct continuation of session 117's
+unfinished build, same owner-present/fully-delegated session; verify against `git log`/CI before
+trusting this).** **Chart co-pilot phase 5b — the "verified whole" — is COMPLETE and MERGED to `main`**
+(spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)
+§11, plan [superpowers/plans/2026-09-19-verified-whole-phase5b.md](superpowers/plans/2026-09-19-verified-whole-phase5b.md),
+full history [.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md](../.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md)).
+Merge commit `c7723c34` (`90b786f6..c7723c34` pushed to `main`), CI green. The branch and worktree
+(`verified-whole-phase5b` / `../cdc-wt-verified-whole-phase5b`) are deleted — fully absorbed into `main`.
 
-- **What phase 5b is (in progress):** pie, stacked, and 100%-stacked chart forms become honestly
-  offered on a CBS/Eurostat chart when its regions are a complete, CBS-known roster (all provinces of
-  NL, all landsdelen, all gemeenten of one named province) — verified on demand, server-side, that the
-  visible parts genuinely sum to the real published total, reusing this product's existing region-roster
-  logic and needing no new CBS fetch. Donut is a presentation variant of pie, not a fourth chart form.
-  Scatter (the other capability split out of phase 5, [#296](open-questions.md)) stays explicitly
-  deferred, not part of this phase.
-- **A plan-drafting gap found and correctly handled by the first task that touched the real type:** the
-  plan assumed `RegionScope` has three variants (read off a `switch` statement, not the type's own
-  declaration); the real type has a fourth, `all_gemeenten`. The implementer also found a real reason it
-  has no verified-whole concept — CBS's own municipality grouping for "all gemeenten" excludes one real
-  code (`GM0997`/`OVERIG`), so that roster doesn't actually partition the national total on at least one
-  real table — and correctly refused to guess a parent for it rather than assuming a fourth case would
-  just slot in cleanly.
-- **A security design stronger than the plan's own literal spec.** The plan's brief had the new
-  on-demand verification server action accept a client-supplied chart spec directly; the implementer
-  built it to take an authenticated audit-record id instead (the same ownership/redaction-check pattern
-  a past session found missing from a sibling action). The task-scoped review then independently
-  re-derived an even stronger justification: a client-supplied spec would let a fabricated spec make the
-  server report a false "verified" for numbers never actually checked against any real cell — a direct
-  fabrication risk, not just a privacy gap.
-- **Task 4's 2 open Important findings (not yet fixed, next action on resume):** (1) the 100%-stacked
-  form's negative/zero-total omission path has zero test coverage; (2) the "omitted period" reason text
-  is reused for two different situations and is factually imprecise for one of them (a verified period
-  with an undefined share, not a failed verification). Both are real but narrow and low-probability —
-  see the SDD ledger for the exact resume instructions (resume the SAME implementer agent for a fix
-  round, per the skill's own process, before Task 5).
-- **THE NEXT ACTION is resuming this SDD plan, not starting new work:** read
-  `.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md` first — it has the exact task/round
-  state. Do not re-brainstorm or re-plan; the design and plan are sound and already reviewed clean
-  through Task 3.
-- **Owner steps pending — unchanged from sessions 110/111/114/115/116** (registry:apply, DOI backfill,
-  live benchmark, region-set Task 9, audit row 22, the two `:record` runs + `benchmark:run:live` once
-  the Anthropic workspace usage cap lifts, 2026-10-01).
+- **What shipped:** pie, stacked, and 100%-stacked chart forms are now honestly offered on a CBS/Eurostat
+  chart when its regions are a complete, CBS-known roster (all provinces of NL, all landsdelen, all
+  gemeenten of one named province) — verified on demand, server-side, that the visible parts genuinely
+  sum to the real published total (tolerance = larger of half a unit at the whole's own precision or
+  0.5% of its value), reusing this product's existing region-roster logic and needing no new CBS fetch,
+  no new audit row. Donut is a presentation variant of pie (`pieHole`), not a fourth chart form. Scatter
+  (the other capability split out of phase 5, [#296](open-questions.md)) stays explicitly deferred, not
+  part of this phase — still not started.
+- **Resuming session 117's open item:** Task 4's 2 open Important findings from that session (missing
+  test coverage on the 100%-stacked omission boundary; imprecise reused refusal copy) were fixed in one
+  round and re-reviewed clean (commit `ba941c9a`) — see the ledger for detail.
+- **Task 5 (chat-doorway wiring + contract/property/e2e coverage) built and reviewed clean, 0 findings**
+  (commit `d6635d3f`) — `CBS_COPILOT_PROMPT_VERSION` 2→3, `ChartForm` vocabulary now 11 forms end to end.
+- **The final whole-branch review (opus) found one real, narrow gap, now closed:** an INCOMPLETE region
+  roster (a member with no observation row at all — distinct from a withheld/null member, which already
+  refused correctly) was invisible to the sum check and could pass within tolerance on a
+  gemeenten-in-provincie roster (small gemeenten can sit under the ~0.5% tolerance). Fixed with a
+  coverage gate (`RegionSetCoverage.complete`, mirroring the existing `deriveRegionRanking` precedent)
+  before any DB query runs, a new honest `incomplete_roster` refusal reason, and a proving test — plus a
+  bundled fix for an unhandled promise rejection that could leave a chart stuck on "checking" forever.
+  Fix commit `4e861b78`, scoped re-review clean, 0 new findings. **Ready to merge** was the reviewer's
+  own verdict; several Minor findings (chat-vs-tab capability-list edge cases, donut unreachable from
+  chat, a latent typing gap, an untested-by-real-pipeline multi-period code path, a stale ADR line, a
+  null-coercion nit) were deliberately deferred, not silently dropped — see
+  [open-questions #300](open-questions.md) through **#305**.
+- **Two plan-drafting gaps found and correctly handled during the build (from session 117, unchanged):**
+  `RegionScope` has a 4th variant (`all_gemeenten`) the plan's brief missed, correctly refused (no
+  verified-whole concept — CBS's own municipality grouping excludes `GM0997`/`OVERIG`, so that roster
+  doesn't provably partition the national total); the on-demand verification server action was built to
+  take an authenticated audit-record id rather than the plan's literal client-supplied-spec signature — a
+  real, independently re-derived security improvement (closes a fabrication risk, not just a privacy
+  gap), re-confirmed by the final review too.
+- **No new owner step from this session** — the feature is server-side, opt-in-by-data-shape, and needs
+  no migration, no env flag, no manual apply.
+- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117** (registry:apply, DOI
+  backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
+  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
+- **What's next is an open product choice, not a mandated task:** scatter (phase 5b's other deferred
+  capability, needs a new two-measure-per-point chart-spec shape first, [#296](open-questions.md)); the
+  six house styles / homepage themes row ([#275](open-questions.md)); or the Minor findings above if the
+  owner wants them closed rather than tracked. No single "next session starts here" task is dictated —
+  ask, or pick whichever has the clearest owner signal. Kickoff brief:
+  [session-briefs/2026-09-20-session-119-kickoff.md](session-briefs/2026-09-20-session-119-kickoff.md).
 
-**Measured (session 117, on the unmerged branch, HEAD `5eed921a`):** root typecheck + web typecheck
-clean at every task; full web suite 2,565/2,565 (Task 4's own head); root `tests/query` 225/225; real
-Turbopack `next build` clean (worktree had real `node_modules` installs from the start this time, no
-symlink gap to fix mid-session). Tasks 1-3 individually reviewed clean (0 Critical/Important). Task 4
-reviewed with 0 Critical, 2 Important (open). **Not run this session:** Task 5, the final whole-branch
-review, any CI run (nothing pushed to a shared branch), the live benchmark, the two `:record` scripts.
+**Measured (session 118, merged `main` @ `c7723c34`):** root typecheck + web typecheck clean; full web
+suite 146 files / 2,581 tests green (solo run); full root suite 201 files / 2,988 tests green (solo
+run); invariants 26/26; hermetic benchmark scorer — answerable 14/14 (gate ≥12), refusal/clarify 6/6
+(gate 6/6), fabricated numbers 0 (gate 0), **GATE VERDICT: PASS**; real Turbopack `next build` clean —
+all re-run directly on the merged result, not only trusted from the branch's own CI. CI run
+`35478491548` on the merge commit — check `gh run view 35478491548` for final status if trusting this
+before it's confirmed green.
 
 ---
 
