@@ -2,7 +2,7 @@ import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { CHART_TEMPLATES, templateById } from '../lib/chart-templates.ts';
 import { DEFAULT_PALETTE, RECHARTS_PALETTE } from '../lib/chart-presentation.ts';
-import { TemplateThumb } from './chart-template-thumb.tsx';
+import { TemplateThumb, THUMB_FRAME_STROKE } from './chart-template-thumb.tsx';
 
 describe('TemplateThumb — a digit-free thumbnail derived from the template', () => {
   it('renders one aria-hidden svg per template with no text nodes at all', () => {
@@ -39,5 +39,28 @@ describe('TemplateThumb — a digit-free thumbnail derived from the template', (
     const social = render(<TemplateThumb template={templateById('social')} />).container;
     expect(social.querySelector('linearGradient')).not.toBeNull();
     expect(social.querySelector('[data-thumb="card"]')).not.toBeNull();
+  });
+  // Session 120 bug (owner-reported, screenshot): Broadsheet's and Autumn
+  // Letter's thumbnails read as having no visible edge at all in light
+  // theme — their solid paper (#fafaf8, #fbeed9) sits almost exactly on
+  // `var(--border)`'s own light-theme value (contrast ratio ~1.0-1.1,
+  // BELOW this project's own COLOR_REFUSE_BELOW=1.25), so the frame
+  // stroke that's supposed to draw the thumbnail's edge is nearly
+  // invisible — the card reads as bleeding into the page rather than
+  // being contained by a border, which the owner described as
+  // "overflowing". Root cause: `var(--border)` is a THEME-relative token
+  // (light-theme value chosen to be subtle against the app's OWN white
+  // card, never checked against an arbitrary TEMPLATE's own paper
+  // colour). The fix is a fixed, non-theme stroke tuned to stay legible
+  // against every template's paper in both themes (see
+  // THUMB_FRAME_STROKE's own comment) — this pins that every template's
+  // thumbnail actually uses it, not the theme token.
+  it('every thumbnail frame uses the fixed, theme-independent stroke — never the theme border token (#300-adjacent bug)', () => {
+    for (const t of CHART_TEMPLATES) {
+      const { container } = render(<TemplateThumb template={t} />);
+      const frame = container.querySelector('[data-thumb="frame"]')!;
+      expect(frame.getAttribute('stroke'), t.id).toBe(THUMB_FRAME_STROKE);
+      expect(frame.getAttribute('stroke'), t.id).not.toBe('var(--border)');
+    }
   });
 });

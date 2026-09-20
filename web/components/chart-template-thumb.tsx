@@ -13,6 +13,21 @@ import type { ChartTemplate } from '../lib/chart-templates.ts';
 
 const W = 64;
 const H = 40;
+/** Session 120 bug fix (owner-reported): the thumbnail's own frame outline
+ * used to be `var(--border)` — a THEME token tuned to be a subtle line
+ * against THIS APP's own white/near-black card, never checked against an
+ * arbitrary template's own paper colour. Broadsheet (#fafaf8) and Autumn
+ * Letter (#fbeed9) sit close enough to the light theme's `--border` value
+ * that the "edge" all but disappeared — measured contrast ~1.0-1.1,
+ * below this project's own COLOR_REFUSE_BELOW=1.25 gate (`judgeColorAgainst`
+ * in chart-presentation.ts) — reading as the card having no boundary at
+ * all ("overflowing" the way the owner described it). A fixed,
+ * non-theme mid-tone reads clearly against every template's paper in
+ * both app themes (checked against all thirteen v1 papers and both
+ * light/dark card colours: every ratio ≥2.0, most ≥2.5) — this is a
+ * decorative preview stroke, not a WCAG-governed UI element, so "clearly
+ * visible" is the bar, not the app's own judgeColorAgainst threshold. */
+export const THUMB_FRAME_STROKE = '#9c9890';
 // One fixed, plausible polyline — five points, a rise, a dip, a rise.
 const POINTS: [number, number][] = [
   [8, 30],
@@ -55,7 +70,7 @@ export function TemplateThumb({ template }: { template: ChartTemplate }): ReactN
         height={H}
         rx={corner}
         fill={bg === 'none' || bg.kind === 'image' ? 'var(--card)' : bg.kind === 'solid' ? bg.hex : `url(#${gradientId})`}
-        stroke="var(--border)"
+        stroke={THUMB_FRAME_STROKE}
         data-thumb="frame"
       />
       {inset ? <rect x={4} y={4} width={W - 8} height={H - 8} rx={corner} fill="var(--card)" data-thumb="card" /> : null}
