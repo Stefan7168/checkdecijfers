@@ -27,6 +27,46 @@ export interface CbsCopilotCase {
   output: CbsCopilotOutput;
 }
 
+/** `capabilities.templates` as the browser sends it for every non-tabular
+ * form: all of TEMPLATE_IDS, in TEMPLATE_IDS order (chart-capabilities.ts
+ * `cbsCapabilities` spreads the list as is) — thirteen since the five house
+ * styles (#275) became chat-nameable in co-pilot phase 6 Task 1. Written
+ * out by hand, not imported: a fixture may not import from src/ or web/. */
+const ALL_TEMPLATES: string[] = [
+  'standard',
+  'classic',
+  'newsroom',
+  'presentation',
+  'social',
+  'minimal',
+  'warm',
+  'earth',
+  'salmon',
+  'studio',
+  'broadsheet',
+  'autumn',
+  'brutalist',
+];
+
+/** Every style key the patch schema demands, all null — the model must send
+ * the whole shape, so a case that changes one key spells out the rest (the
+ * own-data cases' own NO_PATCH). */
+const NO_PATCH: Extract<CbsCopilotOutput['view'][number], { kind: 'setPresentation' }>['patch'] = {
+  lineWidth: null,
+  markers: null,
+  grid: null,
+  xLabels: null,
+  axisLines: null,
+  zeroBaseline: null,
+  areaFill: null,
+  pieHole: null,
+  fontFamily: null,
+  seriesColors: [],
+  framePadding: null,
+  frameCorners: null,
+  frameShadow: null,
+};
+
 /** Captured verbatim (see header) — a real ChartSpec, not a hand-built one. */
 export const REGION_SERIES_SPEC: ChartSpec = {
   "schemaVersion": 1,
@@ -194,7 +234,8 @@ export const REGION_SERIES_SPEC: ChartSpec = {
  * This list must stay byte-equal to what chart.tsx sends, or the llm-stub's
  * exact match misses and its 60-character PREFIX fallback silently replays
  * whichever fixture with this title/unit sorts first (Task 5 finding) —
- * presentation = everything but areaFill, all templates, lang nl. */
+ * presentation = everything but areaFill (area only) and pieHole (pie
+ * only), all templates, lang nl. */
 export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
   forms: ['line', 'bar', 'table', 'heatmap'],
   presentationKeys: [
@@ -210,7 +251,7 @@ export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
     'frameCorners',
     'frameShadow',
   ],
-  templates: ['standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal', 'warm', 'earth'],
+  templates: ALL_TEMPLATES,
   zoom: true,
   lang: 'nl',
 };
@@ -526,19 +567,42 @@ export const PROVINCIES_SPEC: ChartSpec = {
  *    dumbbell/slope/heatmap (one period), and the three phase-5b forms;
  *  - style keys: PRESENTATION_KEYS ∩ resolvePresentation('hbar').applicable
  *    — the bar branch drops lineWidth/markers/zeroBaseline, hbar also drops
- *    xLabels, areaFill is area-only, pieHole is pie-only and not in
- *    PRESENTATION_KEYS at all;
+ *    xLabels, areaFill is area-only and pieHole is pie-only (in
+ *    PRESENTATION_KEYS since phase 6 Task 1, offered in pie form alone);
  *  - all templates (hbar is not a tabular form), zoom false (bar kind). */
 export const PROVINCIES_CAPABILITIES: CbsCopilotCapabilities = {
   forms: ['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100'],
   presentationKeys: ['grid', 'axisLines', 'seriesColors', 'fontFamily', 'framePadding', 'frameCorners', 'frameShadow'],
-  templates: ['standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal', 'warm', 'earth'],
+  templates: ALL_TEMPLATES,
   zoom: false,
   lang: 'nl',
 };
 
+/** The same provinces chart in the PIE form the phase-5b tab switches it to
+ * — the one form in which `pieHole` is on offer at all. What chart.tsx sends
+ * from there (co-pilot phase 6, Task 1; byte-equal for the same reason as
+ * above):
+ *  - forms: unchanged — `allowedForms` reads the spec, not the current form,
+ *    and once the whole has verified all three roster forms are live-allowed
+ *    (`canUsePie`/`canUseStacked`/`canUseStacked100`, #300);
+ *  - style keys: PRESENTATION_KEYS ∩ resolvePresentation('pie').applicable —
+ *    the pie branch drops every axis/line key (AXIS_KEYS: lineWidth, markers,
+ *    grid, xLabels, axisLines, zeroBaseline), areaFill stays area-only, and
+ *    pieHole, seriesColors, fontFamily and the frame keys remain, in
+ *    PRESENTATION_KEYS order;
+ *  - all templates (pie is not tabular), zoom false (bar kind). */
+export const PROVINCIES_PIE_CAPABILITIES: CbsCopilotCapabilities = {
+  ...PROVINCIES_CAPABILITIES,
+  presentationKeys: ['pieHole', 'seriesColors', 'fontFamily', 'framePadding', 'frameCorners', 'frameShadow'],
+};
+
 /** The phase-5b e2e message, verbatim (chart-copilot.spec.ts). */
 export const PIE_MESSAGE = 'toon dit als een taartdiagram';
+
+/** The phase-6 Task 1 e2e messages, verbatim (chart-copilot.spec.ts): the
+ * donut (#301) and one of the five house styles by name (#275). */
+export const DONUT_MESSAGE = 'maak er een donut van';
+export const BROADSHEET_MESSAGE = 'gebruik de Broadsheet-stijl';
 
 export const CASES: CbsCopilotCase[] = [
   // Phase 5b (Task 5): a pie over the one chart that can honestly draw one
@@ -648,6 +712,42 @@ export const CASES: CbsCopilotCase[] = [
       refused: [],
       confidence: 0.9,
       reading: 'Utrecht is not on this chart -- a data request, not a view change.',
+    },
+  },
+  // Co-pilot phase 6, Task 1 (#301): the donut is a PIE presentation toggle
+  // (`pieHole`, spec §11) — on the Style panel since phase 5b, and now that
+  // PRESENTATION_KEYS carries it, on the chat too: over the one chart that
+  // can draw a pie, in the pie form (the only form that offers the key).
+  {
+    label: 'cbs-copilot/donut-provincies',
+    spec: PROVINCIES_SPEC,
+    capabilities: PROVINCIES_PIE_CAPABILITIES,
+    message: DONUT_MESSAGE,
+    output: {
+      version: 1,
+      view: [{ kind: 'setPresentation', patch: { ...NO_PATCH, pieHole: 'donut' } }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'A donut is the pie with a hole in the middle; pieHole is among the style keys on offer, so applied.',
+    },
+  },
+  // ...and one of the five house styles (#275) by name over the two-city
+  // line chart: an applyTemplate whose id is copied from
+  // CAPABILITIES.templates, which lists all thirteen looks since
+  // TEMPLATE_IDS was widened.
+  {
+    label: 'cbs-copilot/broadsheet-two-cities',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: BROADSHEET_MESSAGE,
+    output: {
+      version: 1,
+      view: [{ kind: 'applyTemplate', templateId: 'broadsheet' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Broadsheet is among the templates on offer: applied.',
     },
   },
 ];

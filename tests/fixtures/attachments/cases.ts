@@ -65,10 +65,13 @@ const LINE_PER_GEMEENTE: ClientChartInstruction = {
  *   forms — a `kind: 'line'` spec with 2 series: line yes, area no
  *     (single-series only), bar always, hbar no (bar-kind only), table always.
  *   presentationKeys — PRESENTATION_KEYS ∩ `resolvePresentation(...).applicable`
- *     for the line form, i.e. everything but `areaFill`, in PRESENTATION_KEYS
- *     order.
+ *     for the line form, i.e. everything but `areaFill` (area only) and
+ *     `pieHole` (pie only — a form this card cannot draw at all), in
+ *     PRESENTATION_KEYS order.
  *   templates — all of TEMPLATE_IDS (the gallery is mounted in every
- *     non-table form).
+ *     non-table form), thirteen since the five house styles (#275) became
+ *     chat-nameable in co-pilot phase 6 Task 1 — in TEMPLATE_IDS order, the
+ *     order the browser sends.
  *   lang — the harness pins the UI to Dutch via the `lang` cookie.
  */
 const LINE_CAPABILITIES: CopilotCapabilities = {
@@ -86,7 +89,21 @@ const LINE_CAPABILITIES: CopilotCapabilities = {
     'frameCorners',
     'frameShadow',
   ],
-  templates: ['standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal', 'warm', 'earth'],
+  templates: [
+    'standard',
+    'classic',
+    'newsroom',
+    'presentation',
+    'social',
+    'minimal',
+    'warm',
+    'earth',
+    'salmon',
+    'studio',
+    'broadsheet',
+    'autumn',
+    'brutalist',
+  ],
   lang: 'nl',
 };
 
@@ -100,6 +117,7 @@ const NO_PATCH: Extract<CopilotOutput['view'][number], { kind: 'setPresentation'
   axisLines: null,
   zeroBaseline: null,
   areaFill: null,
+  pieHole: null,
   fontFamily: null,
   seriesColors: [],
   framePadding: null,
@@ -193,6 +211,51 @@ export const CASES: AttachmentCase[] = [
       refused: [{ request: 'add a profit column', reason: 'not_available', control: 'data' }],
       confidence: 0.9,
       reading: 'A new column is not something this tier can add.',
+    },
+  },
+  // Co-pilot phase 6, Task 1 (#275): one of the five house styles by name —
+  // an applyTemplate whose id is copied from CAPABILITIES.templates, which
+  // lists all thirteen looks since TEMPLATE_IDS was widened.
+  {
+    label: 'copilot/broadsheet-look',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'gebruik de Broadsheet-stijl',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'applyTemplate', templateId: 'broadsheet' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Broadsheet is among the templates on offer: applied, the data stays as it is.',
+    },
+  },
+  // Co-pilot phase 6, Task 1 (#301): the own-data card has NO pie form
+  // (COPILOT_FORMS; user-chart.tsx draws none), so `pieHole` — pie-only in
+  // resolvePresentation — is never among the style keys it offers, and the
+  // same "donut" a CBS pie takes (tests/fixtures/chart-copilot/cases.ts) is
+  // refused here by the prompt's own rule: not under CAPABILITIES →
+  // not_available. control: form — a donut is a chart shape to the reader,
+  // and the form tabs are the control that decides shapes. The capabilities
+  // are the real ones the browser sends for this chart, not a hand-built
+  // list with pieHole in it, so a later `attachments:record` checks the
+  // model against an input the product actually produces.
+  {
+    label: 'copilot/refuse-donut',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'maak er een donut van',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [],
+      refused: [{ request: 'donut', reason: 'not_available', control: 'form' }],
+      confidence: 0.9,
+      reading: 'No pie form and no pieHole on this chart: a donut is not something this card offers.',
     },
   },
 ];

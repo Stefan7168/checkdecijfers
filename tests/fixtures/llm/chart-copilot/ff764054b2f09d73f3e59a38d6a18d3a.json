@@ -1,14 +1,14 @@
 {
-  "requestHash": "9cf81e1021a12b1599aa585ea7c4e89e",
-  "question": "cbs-copilot/dumbbell-single-series",
-  "label": "cbs-copilot/dumbbell-single-series",
-  "recordedAt": "2026-09-19T23:38:35.980Z",
+  "requestHash": "ff764054b2f09d73f3e59a38d6a18d3a",
+  "question": "cbs-copilot/donut-provincies",
+  "label": "cbs-copilot/donut-provincies",
+  "recordedAt": "2026-09-20T11:15:10.256Z",
   "request": {
     "model": "claude-haiku-4-5",
     "maxTokens": 1024,
     "temperature": 0,
     "system": "You are the chart co-pilot for an OFFICIAL statistics chart whose data cannot be changed here. You receive the CURRENT CHART's title, unit, kind, series labels and period labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: `view` (a list of view commands: form, hidden/highlighted series BY LABEL, a period range BY LABEL, style patch, template, title, caption, a note at a point given by series label + period label), `dataRequest` (see below), `refused` (each request you cannot honour with a reason and the control that can), `confidence`, `reading`.\n\nSet dataRequest to true — and leave view empty — when the message asks for different DATA: another region, country, period or measure, a total, average, difference, growth rate, or any comparison with data not on this chart. Never try to express a data change as a view command; a data request is dataRequest:true, never a refusal.\n\nYou never compute or invent a number: deterministic code computes every value. A title, caption or note may only contain numbers that are visible on the chart. Use only the forms, style keys and templates listed under CAPABILITIES; anything else goes in refused with reason not_available. Requests that need a click on the chart (placing a note on a point you cannot identify) go in refused with reason needs_click and control notes. Write title/caption text in the language given by CAPABILITIES.lang.\n\nVIEW COMMANDS — one object per change, each with its own \"kind\":\n- setForm: {\"kind\":\"setForm\",\"form\":\"line\"|\"area\"|\"bar\"|\"hbar\"|\"table\"|\"dumbbell\"|\"slope\"|\"heatmap\"|\"pie\"|\"stacked\"|\"stacked100\"} — only a form listed under CAPABILITIES.forms.\n- setSeriesView: {\"kind\":\"setSeriesView\",\"hiddenLabels\":[\"<series label>\"],\"highlightedLabel\":\"<series label>\"|null} — series are named by their LABEL, exactly as the CURRENT CHART lists them. A label that is not on the chart is refused, so copy them literally.\n- setPeriodRange: {\"kind\":\"setPeriodRange\",\"fromLabel\":\"<period label>\"|null,\"toLabel\":\"<period label>\"|null} — only when CAPABILITIES.zoom is true; otherwise refuse with reason not_available and control form. Both labels copied LITERALLY from the CURRENT CHART's period labels. Both null clears an existing zoom.\n- setPresentation: {\"kind\":\"setPresentation\",\"patch\":{...}} — every style key must be present; use null for every key you are not changing. seriesColors is a list of {\"seriesLabel\",\"hex\"} pairs, hex as \"#rrggbb\".\n- applyTemplate: {\"kind\":\"applyTemplate\",\"templateId\":\"<one of CAPABILITIES.templates>\"}.\n- resetPresentation: {\"kind\":\"resetPresentation\"} — back to the default look.\n- setTitle / setCaption: {\"kind\":\"setTitle\",\"title\":\"...\"|null} — null clears the reader's own title. Numbers only if they are visible on the chart.\n- addNote: {\"kind\":\"addNote\",\"seriesLabel\":\"...\",\"periodLabel\":\"...\",\"text\":\"...\"} — both labels must be a real point of the CURRENT CHART; text anchors by seriesLabel + periodLabel.\n\nconfidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The reply object's own version field is always 1.\n\nAnswer with JSON only, matching the given schema.",
-    "question": "Chart: title=\"Bevolking op 1 januari\" | unit=\"aantal\" | kind=line\n- series labels: [Amsterdam]\n- period labels: [2020 | 2021 | 2022 | 2023 | 2024]\n\nCapabilities:\n- forms=[line, area, bar, table]\n- style keys=[lineWidth, markers, grid, xLabels, axisLines, zeroBaseline, seriesColors, fontFamily, framePadding, frameCorners, frameShadow]\n- templates=[standard, classic, newsroom, presentation, social, minimal, warm, earth]\n- zoom=true\n- lang=nl\n\nUser's message: \"toon dit als een dumbbell\"",
+    "question": "Chart: title=\"Bevolking op 1 januari\" | unit=\"aantal\" | kind=bar\n- series labels: [Zuid-Holland (PV) | Noord-Holland (PV) | Noord-Brabant (PV) | Gelderland (PV) | Utrecht (PV) | Overijssel (PV) | Limburg (PV) | Fryslân (PV) | Groningen (PV) | Drenthe (PV) | Flevoland (PV) | Zeeland (PV)]\n- period labels: [2025]\n\nCapabilities:\n- forms=[bar, hbar, table, pie, stacked, stacked100]\n- style keys=[pieHole, seriesColors, fontFamily, framePadding, frameCorners, frameShadow]\n- templates=[standard, classic, newsroom, presentation, social, minimal, warm, earth, salmon, studio, broadsheet, autumn, brutalist]\n- zoom=false\n- lang=nl\n\nUser's message: \"maak er een donut van\"",
     "jsonSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -229,6 +229,20 @@
                           }
                         ]
                       },
+                      "pieHole": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "donut"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "fontFamily": {
                         "anyOf": [
                           {
@@ -313,6 +327,7 @@
                       "axisLines",
                       "zeroBaseline",
                       "areaFill",
+                      "pieHole",
                       "fontFamily",
                       "seriesColors",
                       "framePadding",
@@ -490,7 +505,7 @@
     }
   },
   "response": {
-    "outputText": "{\"version\":1,\"view\":[],\"dataRequest\":false,\"refused\":[{\"request\":\"dumbbell\",\"reason\":\"not_available\",\"control\":\"form\"}],\"confidence\":0.9,\"reading\":\"One series over five years: dumbbell is not among the forms this chart offers.\"}",
+    "outputText": "{\"version\":1,\"view\":[{\"kind\":\"setPresentation\",\"patch\":{\"lineWidth\":null,\"markers\":null,\"grid\":null,\"xLabels\":null,\"axisLines\":null,\"zeroBaseline\":null,\"areaFill\":null,\"pieHole\":\"donut\",\"fontFamily\":null,\"seriesColors\":[],\"framePadding\":null,\"frameCorners\":null,\"frameShadow\":null}}],\"dataRequest\":false,\"refused\":[],\"confidence\":0.95,\"reading\":\"A donut is the pie with a hole in the middle; pieHole is among the style keys on offer, so applied.\"}",
     "model": "claude-haiku-4-5",
     "stopReason": "end_turn",
     "usage": {

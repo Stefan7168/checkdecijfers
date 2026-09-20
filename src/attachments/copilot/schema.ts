@@ -32,6 +32,7 @@ export const patchSchema = z.strictObject({
   axisLines: z.enum(['shown', 'hidden']).nullable(),
   zeroBaseline: z.enum(['auto', 'zero']).nullable(),
   areaFill: z.enum(['gradient', 'flat']).nullable(),
+  pieHole: z.enum(['none', 'donut']).nullable(),
   fontFamily: z.string().nullable(),
   seriesColors: z.array(z.strictObject({ seriesLabel: z.string(), hex: z.string() })),
   framePadding: z.enum(['none', 'small', 'medium', 'large']).nullable(),

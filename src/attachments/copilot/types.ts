@@ -32,7 +32,8 @@ export const COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table'] as const;
  * `frameAspect` are deliberately absent (they are either honesty-locked
  * per form, set by the language switch, or need a colour/ratio choice a
  * chat turn cannot make safely). Adding one here also means adding it to
- * copilot/schema.ts's patchSchema — the cross-check test fails otherwise. */
+ * copilot/schema.ts's patchSchema — the cross-check test fails otherwise —
+ * and regenerating both LLM fixture sets (the note under TEMPLATE_IDS). */
 export const PRESENTATION_KEYS = [
   'lineWidth',
   'markers',
@@ -41,6 +42,9 @@ export const PRESENTATION_KEYS = [
   'axisLines',
   'zeroBaseline',
   'areaFill',
+  // Phase 5b's donut — pie form only (resolvePresentation offers it nowhere
+  // else); chat-reachable since co-pilot phase 6 Task 1 (#301).
+  'pieHole',
   'seriesColors',
   'fontFamily',
   'framePadding',
@@ -48,15 +52,18 @@ export const PRESENTATION_KEYS = [
   'frameShadow',
 ] as const;
 
-// Session 120 (open-questions #275): the five house styles built into
-// web/lib/chart-templates.ts (CHART_TEMPLATES) are deliberately NOT added
-// here yet. `capabilities.templates` (this list, filtered) is embedded
-// directly in the co-pilot's LLM prompt text (see prompt.ts) — widening it
-// shifts every recorded fixture's request hash for any non-table-form
-// request, breaking real-browser e2e (the CI mock-fixture server can no
-// longer match the request) exactly like #301's `pieHole` did. Re-add the
-// five once fixtures can be re-recorded (real LLM spend, blocked by the
-// Anthropic workspace usage cap until 2026-10-01) — see #275.
+// BOTH lists above and below reach the model: `capabilities.presentationKeys`
+// and `capabilities.templates` (these lists, filtered per chart) are embedded
+// in the co-pilot prompt text (prompt.ts), and PRESENTATION_KEYS also shapes
+// patchSchema, part of the structured-output JSON schema. So widening EITHER
+// shifts the request hash every recorded LLM fixture is keyed on
+// (tests/fixtures/llm/**) and the real-browser e2e stops matching. That
+// needs NO model spend: `npm run chart-copilot:fixtures` and
+// `npm run attachments:fixtures` rebuild every fixture offline from the
+// hand-authored cases — whose own capabilities lists must first be updated
+// to what the browser now sends (the llm-stub matches byte for byte).
+// Session 120's two reverts (#301 pieHole, #275 the house styles) assumed a
+// live re-record was needed; it was not (co-pilot phase 6, Task 1).
 export const TEMPLATE_IDS = [
   'standard',
   'classic',
@@ -66,6 +73,13 @@ export const TEMPLATE_IDS = [
   'minimal',
   'warm',
   'earth',
+  // Session 120 (#275): the five house styles, in CHART_TEMPLATES order;
+  // chat-reachable by name since co-pilot phase 6 Task 1.
+  'salmon',
+  'studio',
+  'broadsheet',
+  'autumn',
+  'brutalist',
 ] as const;
 
 /** The model's own shape: view commands expressed in LABELS (it never sees
