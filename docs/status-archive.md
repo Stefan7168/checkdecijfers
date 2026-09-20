@@ -1,5 +1,53 @@
 # STATUS archive — the session log
 
+**Session 119 (2026-09-20, owner present in chat throughout). No code changed. Owner picked the next
+work from the three candidates session 118's kickoff brief offered ("All, use subagents"), then the
+session hit a real local-disk-full incident before any implementation could start.**
+
+1. **Owner decision:** asked which of scatter ([#296](open-questions.md)), house styles/homepage themes
+   ([#275](open-questions.md)), or closing phase 5b's deferred Minors
+   ([#300](open-questions.md)–[#305](open-questions.md)) to build next; the owner answered **"All, use
+   subagents"** — all three, not a pick-one. This is the standing instruction carried into session 120,
+   not something to re-ask.
+2. **Disk-full incident.** Setting up an isolated worktree for the Minors work (`git worktree add` +
+   copying the REAL, non-symlinked `node_modules` per
+   [[feedback_worktree_isolation_mechanics]]) hit `ENOSPC` partway through the copy — the machine's disk
+   had reached 0 bytes free. Severe enough that Bash's own tool-output file could not be written for
+   several consecutive calls, including a `df -h` meant to check the damage. Correctly stopped rather
+   than retrying blindly or guessing at cleanup with no visibility; told the owner plainly what was known
+   (a worktree existed, a partial `node_modules` copy might or might not have been removed, `main` itself
+   was untouched) and asked them to free space on their end.
+3. **Owner freed space externally** (their own machine maintenance, not a session action) and returned
+   with "Ok i will testt my pc" followed, next turn, by a wrap-up request. Verified recovery directly
+   rather than trusting the gap in the conversation: `df -h /` showed 3.9Gi free (real headroom, not
+   zero); `git worktree list` still showed the half-made `cdc-wt-phase5b-minors` worktree
+   (branch `phase5b-minors-cleanup`, HEAD == `main`, zero commits) with a 12G leftover partial
+   `node_modules` still on disk. Removed the `node_modules` (freed 12G, disk now 16Gi free / 43% used),
+   then `git worktree remove` + `git branch -d` on the empty branch — safe to delete outright since it
+   never held any commits (the `finishing-a-development-branch` skill's cleanup step, applied to a
+   worktree that was never actually used).
+4. **Confirmed `main` itself was never at risk.** `git status` clean throughout, `git log` unchanged at
+   `ff359c24`, CI unchanged from session 118's own verification (`gh run list` — still just the merge
+   commit's green run `35478491548` and the older session-116/117 docs run, no new run triggered by
+   anything this session did, since nothing was pushed).
+5. **Lesson captured for next session:** this machine's `node_modules` is ~15G (root) + ~833M (`web/`) —
+   roughly 16G per real worktree copy. The owner's "all three, use subagents" plan implies at least three
+   such worktrees if run in parallel (scatter, house styles, Minors); at 16Gi currently free, that does
+   not fit. `df -h /` before every `git worktree add` that will copy `node_modules`, and prefer running
+   the three efforts sequentially unless free space is confirmed well above ~50G. See
+   [docs/lessons-learned.md](lessons-learned.md) for the standalone lesson entry.
+6. **STATUS.md doc-freshness trim, done in the same pass:** removed the session-116 and session-113
+   "previous top block" copies that had accumulated in [STATUS.md](STATUS.md) — both had already been
+   kept well past the session-41 "one session" convention (session 117's mid-build, non-wrap stop meant
+   neither got trimmed on schedule). Nothing lost: session 116's and 113's own detail already lives in
+   this archive file and in [08-build-plan.md](08-build-plan.md). Same class of trim as session 103's.
+
+**Measured (session 119):** nothing rebuilt or retested — no code changed this session. `git status`
+clean on `main` @ `ff359c24`; `git worktree list` shows only `main`; CI unchanged since session 118
+(`gh run list` — `35478491548` still the most recent run, green, all 5 jobs incl. deploy).
+
+---
+
 **Session 118 (2026-09-20, direct continuation of session 117's unfinished build, owner-present /
 fully-delegated session unchanged from session 117 — "You are the expert... work autonomously" still
 stood, no new instructions were needed. Sonnet 5 session model, subagent-driven development resumed in

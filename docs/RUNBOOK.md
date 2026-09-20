@@ -1613,6 +1613,17 @@ per-machine cache:
     --force` are still separately gated by the auto-mode permission classifier** — a session can assemble every
     piece of evidence for why an irreversible op is safe and still correctly get blocked; that block is not a
     bug to route around (no raw `rm -rf` on the directory either), it means get the owner's explicit go instead.
+14. **Check `df -h /` before creating a worktree with a real, non-symlinked `node_modules` copy — this
+    machine has hit a genuine 0-bytes-free `ENOSPC` mid-copy (session 119, 2026-09-20).** `node_modules`
+    is ~15G at the repo root plus ~833M in `web/` — roughly 16G per worktree copy. When the disk is
+    already tight, that copy can exhaust it entirely, badly enough that even a tool's own output file
+    fails to write (so `df -h` itself can fail right when you need it most — if that happens, stop
+    issuing commands and tell the owner directly rather than retrying blind). Running several work
+    packages "in parallel" via subagents implies one such worktree per package — multiply 16G by however
+    many are planned and compare against `df -h /`'s free column before creating any of them; prefer
+    running them one at a time on a tight disk. A partial copy left behind by an aborted worktree is safe
+    to `rm -rf` (it is a fresh, uncommitted install, never source) — do that before anything else if space
+    is the blocker.
 
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 

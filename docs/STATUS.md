@@ -18,6 +18,51 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
+**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 119 — owner present in chat; verify against
+`git log`/`df -h`/CI before trusting this).** **No code changed this session — it was consumed entirely
+by a real local-disk-full incident.** The owner was asked which of phase 5b's three open follow-ups to
+build next and answered **"All, use subagents"**: scatter ([#296](open-questions.md)), the six house
+styles + homepage themes row ([#275](open-questions.md)), and the six deferred Minor findings from
+phase 5b's final review ([#300](open-questions.md)–[#305](open-questions.md)). Before any of that work
+could start, a `git worktree add` + `node_modules` copy (needed for an isolated build worktree, per
+[feedback_worktree_isolation_mechanics] — a worktree needs its own REAL, non-symlinked `node_modules`)
+hit `ENOSPC`: the machine's disk had reached 0 bytes free, severely enough that even Bash's own tool
+output could not be written for several calls. Session paused; the owner freed space externally. This
+session then verified the disk had recovered (3.9Gi free, later confirmed 16Gi after this session's own
+cleanup), removed the half-copied `node_modules` (12G reclaimed) and the empty scratch worktree/branch
+(`cdc-wt-phase5b-minors` / `phase5b-minors-cleanup` — zero commits, safe to delete), and confirmed `main`
+itself was never touched (still at `ff359c24`, clean, CI unchanged from session 118's own verification).
+
+- **Nothing was built.** The owner's "All, use subagents" answer is the standing instruction for the
+  next session — not a re-ask. Two of the three need real design work first (scatter needs a new
+  two-measure-per-point chart-spec shape; house styles needs new presentation keys and, since it's
+  visual/naming, ideally a quick look from the owner) before any SDD plan gets written; the Minor
+  findings ([#300](open-questions.md)–[#305](open-questions.md)) are small and bounded enough to start
+  directly. See the kickoff brief for a concrete first move.
+- **Disk-space lesson for next session:** this machine's `node_modules` is ~15G (root) + ~833M (`web/`)
+  — roughly 16G per real, non-symlinked worktree copy. Running scatter + house styles + Minors as three
+  *parallel* worktrees, each with its own real `node_modules`, will not fit in the space this session
+  recovered (16Gi free right now). Check `df -h /` before creating each worktree, and prefer running
+  the three efforts sequentially (one worktree at a time, removed after merge) over three in parallel,
+  unless free space is confirmed comfortably above ~50G.
+- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118** (registry:apply, DOI
+  backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
+  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
+- **Kickoff for the next session:**
+  [session-briefs/2026-09-20-session-120-kickoff.md](session-briefs/2026-09-20-session-120-kickoff.md) —
+  a suggested build order (Minors first, no design gate; house styles second; scatter last, the biggest
+  schema change) and the disk-space math for sequencing worktrees safely on this machine.
+
+**Measured (session 119):** nothing rebuilt or retested — no code changed. `git status` clean on `main`
+@ `ff359c24`; `git worktree list` shows only `main` (the scratch worktree from this session's aborted
+start was removed); CI unchanged since session 118 (`gh run list` still shows `35478491548` as the most
+recent run, green, all 5 jobs incl. deploy — the session-118 docs-only push correctly triggered no new
+run, re-confirmed).
+
+---
+
+**Previous top block (session 118, kept verbatim below for one session):**
+
 **▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 118 — direct continuation of session 117's
 unfinished build, same owner-present/fully-delegated session; verify against `git log`/CI before
 trusting this).** **Chart co-pilot phase 5b — the "verified whole" — is COMPLETE and MERGED to `main`**
@@ -81,87 +126,14 @@ before it's confirmed green.
 
 ---
 
-**Previous top block (session 116, kept verbatim below for one session):**
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-19, session 116 — owner present in chat throughout,
-gave "Split" and "use Fable subagents" as live steers; verify against `git log`/`gh run list` before
-trusting this).** Session 116 built **chart co-pilot phase 5 — chart-fit scorer + dumbbell/slope/
-heatmap** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 5", plan
-[superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md](superpowers/plans/2026-09-19-chart-fit-scorer-phase5.md))
-via subagent-driven development — 5 sequential tasks, implementers on the Fable tier, a final
-whole-branch review on the most capable tier that found and the session fixed 2 Important cross-task
-bugs in one fix wave + one scoped re-review, pushed to `main` `dfdaee18..8abd187c` (11 commits). CI
-run `35451048437` green including deploy.
-
-- **What phase 5 is:** three new honest chart shapes, CBS/Eurostat card only
-  ([#295](open-questions.md)) — slope (reuses the line chart verbatim), dumbbell (a new render using
-  an existing-in-file Recharts hook technique), heatmap (a CSS grid, discovered mid-build to need the
-  table form's ~17 surrounding-UI gates). All three gated by a rule-based scorer, no LLM.
-- **Scope split before any code was written (owner: "Split").** Pie/donut/stacked/100%-stacked and
-  scatter need real new capabilities that don't exist yet — split into phase 5b, not built this
-  session. [ADR 039](decisions/039-chart-presentation-panel.md)'s refusal of all four stayed unchanged
-  through this session.
-- **The final whole-branch review found 2 real cross-task bugs, both fixed same session:** a guard
-  reading the wrong spec (the prop, not the alternate-reading/zoom-windowed spec actually drawn), and
-  a public-embed-route allowlist gap reopening a previously-closed hole for heatmap.
-- **A real bug found in an EARLIER task's own work, by the LAST task's test-writing:** an existing e2e
-  fixture had gone stale, masked by the LLM stub's own prefix-match fallback. Fixed, fixtures re-hashed.
-- **A real, disclosed process deviation:** a worktree `--force` removal without first showing the owner
-  what was at stake, per `finishing-a-development-branch`'s own process. Safe, but the wrong sequence.
-  See [lessons-learned.md](lessons-learned.md) session 116.
-- **New open rows:** [#295](open-questions.md)-[#298](open-questions.md).
-
-**Measured (session 116, at push, HEAD `8abd187c`):** root typecheck + web typecheck clean; root
-204 files / 2,981 tests; web 145 files / 2,505 tests; real Turbopack `next build` clean; full
-Playwright e2e suite 21/21 including a genuine CSS-grid layout assertion for the heatmap; final
-whole-branch review — 2 Important found and fixed, 0 remaining; CI run `35451048437` green (all 5 jobs
-incl. deploy). **Not run this session:** the live benchmark and the two `:record` scripts.
+**[Doc-freshness trim, 2026-09-20, session 119: the session-116 and session-113 "previous top block"
+copies that used to sit here were removed — each had already been kept well past the session-41
+convention's "one session" window (both survived session 117's mid-build, non-wrap stop). Nothing they
+recorded was lost: session 116's own detail lives in
+[status-archive.md](status-archive.md) and [08-build-plan.md](08-build-plan.md); session 113's likewise.
+Same class of trim as session 103's, see the note near the top of this file.]**
 
 ---
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-18, session 113 — owner present; verify against
-`git log` / `gh run list` before trusting this).** Session 113 BUILT **chart co-pilot phase 2 — the
-own-data co-pilot** (ADR [056](decisions/056-chart-copilot.md) "As built — phase 2", ADR
-[037](decisions/037-user-data-attachments.md) addendum) via subagent-driven development — 9 tasks,
-~30 subagents, 5 tasks needed one fix round, one final whole-branch review + one fix wave — merged
-fast-forward to `main` `f5bb6cd..caa23a7` (25 commits). CI run `35325857423` green incl. deploy; production answered 200 on `/` and `/api/health` afterwards. Kickoff for the next session:
-[session-briefs/2026-09-18-session-114-kickoff.md](session-briefs/2026-09-18-session-114-kickoff.md).
-
-- **What is built (dormant behind `ATTACHMENTS_ENABLED`, unset everywhere):** on a chart from the
-  reader's own file — a fixed aggregate/derived set computed by the executor with traceable rowRefs
-  (schema v2), the shared card shell (one undo history, style panel, notes, title/caption,
-  per-turn persistence), a deterministic Data panel, and the "Pas deze grafiek aan" chat doorway
-  (one cheap-tier call; label→key mapping + allowlists + digit guard server-side, `validateCommand`
-  client-side; recipe chips, per-reply Undo/Retry/👍👎, three example chips). Hermetic proof:
-  four hand-authored LLM fixtures + `web/e2e/own-data-copilot.spec.ts` (upload → chart → chat →
-  bars + chips → ⌘Z → reload → restored), green in a real browser with zero model calls.
-- **⚠ OWNER STEPS (RUNBOOK):** (1) `npm run db:migrate` applies 034 + 035 together (`chart_edits`
-  + its own-data key; until then chart edits are silently not saved); (2) `npm run attachments:record`
-  once — four real cheap-tier calls, read the printed diff; (3) flip `ATTACHMENTS_ENABLED=1` + the
-  WP202 smoke test. Order matters: 1 → 2 → 3.
-- **Found on the way:** the own-data tier had NEVER run in a real browser — its first run crashed on
-  a pg `Date` reaching the card (fixed at the row mapper, `b6ea88b`); four more real defects caught
-  by the review loops (`oneOf` schema, hydrate ordering, retention leg pre-035, refused-text digit
-  guard) — see [lessons-learned.md](lessons-learned.md).
-- **New open rows:** [#280](open-questions.md)–[#284](open-questions.md) (chip click opens the
-  panel not the row; `count` semantics; the Data panel's English problem line; reply lives in the
-  card; the fixture/record scripts). Stale "phase 1 not yet merged" wording in architecture/scope
-  docs corrected.
-- **THE NEXT BUILD PRIORITY IS PHASE 3 — the CBS/Eurostat chat doorway** (spec §3.3, §5 phase 3):
-  the same `ChartCopilotInput` on `ChartView`, a selection-only schema generated from the live
-  chart's `capabilities`, compatible follow-ups shown as "Grafiek uitgebreid"; numbers never through
-  the model (R1/R6/R11). Also worth the owner's eye first: apply 034 + 035 and flip the flag so
-  phase 2 gets real use before phase 3 lands on the CBS card.
-- **Owner steps pending — unchanged from sessions 110/111** (registry:apply, DOI backfill, live
-  benchmark, region-set Task 9, audit row 22) **plus the three above.**
-
-**Measured (session 113, at merge, HEAD `caa23a7`):** root typecheck + web typecheck clean; root
-196 files / 2,908 tests; web 139 files / 2,346 tests; benchmark 14/14 answerable, 6/6
-refusal/clarify, 0 fabricated; Playwright `chart-copilot.spec.ts` + `own-data-copilot.spec.ts`
-2/2 green; `next build` clean; `/code-review` LOW 0 findings.
-
----
-
 
 ## Phase 0 checklist
 

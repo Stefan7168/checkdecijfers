@@ -6,6 +6,31 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 119 — a real disk-full incident stopped a session cold before any code touched, and a
+## non-symlinked worktree's `node_modules` copy is a real, budgetable disk cost on this machine
+
+1. **A local machine running out of disk space is a genuine stop-and-tell-the-owner event, not something
+   to route around.** Creating an isolated worktree for the next work package (`git worktree add` +
+   copying the real `node_modules`, per [[feedback_worktree_isolation_mechanics]] — a worktree needs its
+   own non-symlinked copy, a symlink would let two worktrees corrupt each other's installed packages) hit
+   `ENOSPC` partway through: the machine's disk had reached 0 bytes free. It got bad enough that Bash's
+   own tool-output file — nothing to do with the repo — could not be written, so even a `df -h` to assess
+   the damage failed. Correctly stopped rather than retrying the same failing command in a loop or
+   guessing at a cleanup with no visibility into what had or hadn't actually happened; told the owner
+   plainly what state was known and asked them to free space on their end. This is a case where "work
+   autonomously" correctly does NOT mean "route around a machine-level resource exhaustion silently" —
+   freeing disk space on someone's personal Mac is their call (Trash, Downloads, old Xcode caches — things
+   only they know are safe to delete), not a guess to make on their behalf.
+2. **`node_modules` size is a real, budgetable disk cost per worktree on THIS machine — ~15G root +
+   ~833M `web/` ≈ 16G per worktree.** Worth checking `df -h /` before every `git worktree add` that will
+   copy real `node_modules` into it, not just before the first one of a session. This project's owner had
+   just asked for three work packages to run "all, use subagents" in the same session (scatter, house
+   styles, the deferred Minors) — if that means three parallel worktrees, each with its own real
+   `node_modules` copy, that alone is ~48G, which will not fit in a disk that was at 0 free minutes
+   earlier and recovered to only 16Gi. Sequencing the three efforts one worktree at a time (remove after
+   merge, then create the next) is the safer default on this machine unless free space is confirmed well
+   above that.
+
 ## Session 118 — a whole-branch review's one real finding lived in a seam no single task's diff ever
 ## touched, and a fully-delegated session can complete a multi-day build without a new instruction
 
