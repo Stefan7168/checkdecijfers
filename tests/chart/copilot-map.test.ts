@@ -215,6 +215,49 @@ describe('setHeadlineOverride — the point resolves to its own resultId', () =>
   });
 });
 
+describe('addEraShading — period labels resolve to codes, the label is digit-guarded', () => {
+  it('resolves both labels, swapping reversed labels into ascending order', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addEraShading', fromLabel: '2022', toLabel: '2020', label: 'Herstel' }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addEraShading',
+        era: { id: expect.stringMatching(/^chat-era-/), fromPeriodCode: '2020JJ00', toPeriodCode: '2022JJ00', label: 'Herstel' },
+      },
+    ]);
+  });
+
+  it('mints a distinct id per era in one reply — the client reducer drops a duplicate id', () => {
+    const { commands } = map(
+      output([
+        { kind: 'addEraShading', fromLabel: '2020', toLabel: '2021', label: 'Eerst' },
+        { kind: 'addEraShading', fromLabel: '2021', toLabel: '2022', label: 'Daarna' },
+      ]),
+    );
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { era: { id: string } }).era.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('refuses a label naming an unplotted number', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addEraShading', fromLabel: '2020', toLabel: '2022', label: 'Groei van 99 procent' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'Groei van 99 procent', reason: 'unplotted_number', control: 'none' }]);
+  });
+
+  it('refuses an unknown period label', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addEraShading', fromLabel: '2019', toLabel: '2022', label: 'Herstel' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'era: 2019–2022', reason: 'not_available', control: 'form' }]);
+  });
+});
+
 describe('model refusals — rule 8', () => {
   it('an unplotted number in the request text is stripped, not dropped', () => {
     const { refused } = map(output([], { refused: [{ request: 'maak 99% groter', reason: 'not_available', control: 'style' }] }));

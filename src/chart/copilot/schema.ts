@@ -55,6 +55,14 @@ export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
     seriesLabel: z.string().nullable(),
     periodLabel: z.string().nullable(),
   }),
+  // Co-pilot phase 6 (Task 3): period LABELS resolved to codes by map.ts
+  // exactly like setPeriodRange; the label text is digit-guarded there.
+  z.strictObject({
+    kind: z.literal('addEraShading'),
+    fromLabel: z.string(),
+    toLabel: z.string(),
+    label: z.string(),
+  }),
 ]);
 
 export const cbsCopilotOutputSchema = z.strictObject({

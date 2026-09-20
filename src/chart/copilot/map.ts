@@ -17,6 +17,7 @@ import { TEMPLATE_IDS, type CbsCopilotCapabilities, type CbsCopilotOutput } from
 const TITLE_MAX = 120;
 const CAPTION_MAX = 280;
 const NOTE_MAX = 280;
+const ERA_LABEL_MAX = 60;
 /** A refused request is a label for the reader, not a transcript. */
 const REQUEST_MAX = 80;
 
@@ -56,9 +57,10 @@ function guardText(
  * Maps one validated CbsCopilotOutput onto the commands the chart's
  * chat-edit log stores. `message` is the reader's raw request, threaded
  * through since co-pilot phase 6 for the goal-line guard a later task adds
- * — no case below reads it yet. `noteIdSuffix` disambiguates the note ids
- * this reply mints (two chat notes on the SAME point would otherwise share
- * the id `chat-${resultId}-0`); tests pass a fixed suffix.
+ * — no case below reads it yet. `noteIdSuffix` disambiguates the ids this
+ * reply mints — notes (two chat notes on the SAME point would otherwise
+ * share the id `chat-${resultId}-0`) and era shadings alike; tests pass a
+ * fixed suffix.
  */
 export function mapCbsCopilotOutput(
   output: CbsCopilotOutput,
@@ -69,6 +71,10 @@ export function mapCbsCopilotOutput(
 ): Mapped {
   const out: Mapped = { commands: [], refused: [] };
   let noteCount = 0;
+  // One counter for every id-minting command kind co-pilot phase 6 adds
+  // (era shading first) — kept apart from noteCount so addNote's id scheme
+  // stays exactly what it was.
+  let extraCount = 0;
 
   const seriesIndex = new Map<string, number>();
   spec.series.forEach((series, index) => {
@@ -174,6 +180,31 @@ export function mapCbsCopilotOutput(
         }
         const [a, b] = fromCode.localeCompare(toCode) <= 0 ? [fromCode, toCode] : [toCode, fromCode];
         out.commands.push({ kind: 'setPeriodRange', range: [a, b] });
+        break;
+      }
+
+      // Both labels must resolve to a real period (the same label→code
+      // lookup setPeriodRange uses) and the resolved codes are swapped into
+      // ascending order the same way — chart-commands.ts's validateCommand
+      // drops an era whose codes are reversed, and a stored command must
+      // never be one the client will drop. The typed label owes the reader
+      // the same digit guard as a title/caption/note. The id is minted
+      // here, per era: the client reducer keeps only the FIRST era it sees
+      // under a given id.
+      case 'addEraShading': {
+        const fromCode = periodCodeByLabel.get(command.fromLabel);
+        const toCode = periodCodeByLabel.get(command.toLabel);
+        if (fromCode === undefined || toCode === undefined) {
+          out.refused.push({ request: cap(`era: ${command.fromLabel}–${command.toLabel}`), reason: 'not_available', control: 'form' });
+          break;
+        }
+        const label = guardText(command.label, ERA_LABEL_MAX, spec, 'none', out);
+        if (label === null) break;
+        const [a, b] = fromCode.localeCompare(toCode) <= 0 ? [fromCode, toCode] : [toCode, fromCode];
+        out.commands.push({
+          kind: 'addEraShading',
+          era: { id: `chat-era-${extraCount++}${noteIdSuffix}`, fromPeriodCode: a, toPeriodCode: b, label },
+        });
         break;
       }
 

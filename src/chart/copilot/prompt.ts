@@ -43,6 +43,7 @@ VIEW COMMANDS — one object per change, each with its own "kind":
 - addNote: {"kind":"addNote","seriesLabel":"...","periodLabel":"...","text":"..."} — both labels must be a real point of the CURRENT CHART; text anchors by seriesLabel + periodLabel.
 - setDimmed: {"kind":"setDimmed","hiddenLabels":["<series label>"],"dimmedLabels":["<series label>"]} — dims a series (fades it, keeps it visible) instead of hiding it. Labels exactly as setSeriesView.
 - setHeadlineOverride: {"kind":"setHeadlineOverride","seriesLabel":"<series label>"|null,"periodLabel":"<period label>"|null} — features one point's value as the chart's headline number. Both null clears it. Both must name a real point or the request is refused.
+- addEraShading: {"kind":"addEraShading","fromLabel":"<period label>","toLabel":"<period label>","label":"..."} — shades a period range with a typed label. Both labels copied LITERALLY from the CURRENT CHART's period labels, like setPeriodRange.
 
 confidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The reply object's own version field is always 1.
 
