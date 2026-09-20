@@ -313,12 +313,12 @@ describe('addDerivedOverlay — two real points of one series, or every point of
     expect(refused).toEqual([{ request: 'overlay: Utrecht', reason: 'not_on_this_chart', control: 'form' }]);
   });
 
-  it('refuses a difference whose from and to name the same point', () => {
+  it('refuses a difference whose from and to name the same point as invalid — both resolve, the combination is degenerate', () => {
     const { commands, refused } = map(
       output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2022', toLabel: '2022' }]),
     );
     expect(commands).toEqual([]);
-    expect(refused).toEqual([{ request: 'overlay: 2022–2022', reason: 'not_on_this_chart', control: 'form' }]);
+    expect(refused).toEqual([{ request: 'overlay: 2022–2022', reason: 'invalid', control: 'form' }]);
   });
 
   it('refuses a difference missing one of its two period labels', () => {

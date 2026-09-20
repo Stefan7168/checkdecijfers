@@ -236,8 +236,15 @@ export function mapCbsCopilotOutput(
           }
           const fromPoint = seriesPoints.find((p) => p.periodLabel === command.fromLabel);
           const toPoint = seriesPoints.find((p) => p.periodLabel === command.toLabel);
-          if (fromPoint === undefined || toPoint === undefined || fromPoint.resultId === toPoint.resultId) {
+          if (fromPoint === undefined || toPoint === undefined) {
             out.refused.push({ request: cap(`overlay: ${command.fromLabel}–${command.toLabel}`), reason: 'not_on_this_chart', control: 'form' });
+            break;
+          }
+          // Both points resolve but are the same one: a degenerate
+          // combination, not a missing point — `invalid`, exactly as
+          // setDimmed refuses a label named as both hidden and dimmed.
+          if (fromPoint.resultId === toPoint.resultId) {
+            out.refused.push({ request: cap(`overlay: ${command.fromLabel}–${command.toLabel}`), reason: 'invalid', control: 'form' });
             break;
           }
           out.commands.push({
