@@ -1756,6 +1756,8 @@ function wholeRefusalKey(reason: Extract<WholeClientOutcome, { verified: false }
       return 'chart.whole.refused.withheld_member';
     case 'sum_mismatch':
       return 'chart.whole.refused.sum_mismatch';
+    case 'incomplete_roster':
+      return 'chart.whole.refused.incomplete_roster';
     case 'unavailable':
       return 'chart.whole.refused.unavailable';
   }
@@ -2973,16 +2975,29 @@ export function ChartView({
       .filter((p) => !wholeOutcomes.has(`${wholeAuditId}:${p}`) && !wholeInFlight.current.has(`${wholeAuditId}:${p}`));
     if (missing.length === 0) return;
     for (const p of missing) wholeInFlight.current.add(`${wholeAuditId}:${p}`);
-    void requestWholeVerification({ kind: 'answer', id: wholeAuditId }, missing).then((res) => {
-      for (const p of missing) wholeInFlight.current.delete(`${wholeAuditId}:${p}`);
-      setWholeOutcomes((prev) => {
-        const next = new Map(prev);
-        for (const p of missing) {
-          next.set(`${wholeAuditId}:${p}`, res.ok ? (res.periods[p] ?? { verified: false, reason: 'unavailable' }) : { verified: false, reason: 'unavailable' });
-        }
-        return next;
+    void requestWholeVerification({ kind: 'answer', id: wholeAuditId }, missing)
+      .then((res) => {
+        for (const p of missing) wholeInFlight.current.delete(`${wholeAuditId}:${p}`);
+        setWholeOutcomes((prev) => {
+          const next = new Map(prev);
+          for (const p of missing) {
+            next.set(`${wholeAuditId}:${p}`, res.ok ? (res.periods[p] ?? { verified: false, reason: 'unavailable' }) : { verified: false, reason: 'unavailable' });
+          }
+          return next;
+        });
+      })
+      // Final-review fix (M2): a REJECTED round trip (transport failure, as
+      // opposed to a normal `ok: false` answer) must land in the same place
+      // as `ok: false` — otherwise the period stays in flight forever, no
+      // verdict is ever stored, and the card shows "checking…" for good.
+      .catch(() => {
+        for (const p of missing) wholeInFlight.current.delete(`${wholeAuditId}:${p}`);
+        setWholeOutcomes((prev) => {
+          const next = new Map(prev);
+          for (const p of missing) next.set(`${wholeAuditId}:${p}`, { verified: false, reason: 'unavailable' });
+          return next;
+        });
       });
-    });
   }, [wholeFormWanted, wholeAuditId, wholeLocalRefusal, shownPeriodKey, wholeOutcomes]);
   // Phase 5 (Task 4): the two forms that draw NO chart — the table and the
   // heatmap (a CSS grid over the table's own model, no <svg>, no frame,

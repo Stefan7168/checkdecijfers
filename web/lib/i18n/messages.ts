@@ -1290,6 +1290,11 @@ const nl = {
     'Het CBS geeft voor deze periode niet elk deel vrij, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
   'chart.whole.refused.sum_mismatch':
     'De delen tellen voor deze periode niet op tot het CBS-totaal, dus deze vorm wordt niet getekend. Kies een andere periode.',
+  // Final-review fix (I1): a roster member with no cell in our data at all.
+  // Not period-specific (the roster is one roster whichever period is
+  // shown), so no "kies een andere periode" here.
+  'chart.whole.refused.incomplete_roster':
+    'Niet elke regio in deze set heeft een cijfer in onze data, dus het geheel kan niet worden gecontroleerd.',
   'chart.whole.refused.unavailable': 'De controle tegen het CBS-totaal is nu niet mogelijk. Probeer het later opnieuw.',
   'chart.whole.refused.noAudit': 'Beschikbaar bij een bewaard antwoord, waar de delen tegen het CBS-totaal kunnen worden gecontroleerd.',
   'chart.whole.refused.alternateReading': 'Bij een andere lezing kan het geheel niet worden gecontroleerd. Kies de eerste lezing.',
@@ -2234,6 +2239,8 @@ const en: Messages = {
     'CBS withholds at least one part for this period, so the whole cannot be checked. Choose another period.',
   'chart.whole.refused.sum_mismatch':
     'The parts do not add up to the CBS total for this period, so this form is not drawn. Choose another period.',
+  'chart.whole.refused.incomplete_roster':
+    'Not every region in this set has a figure in our data, so the whole cannot be checked.',
   'chart.whole.refused.unavailable': 'The check against the CBS total is not possible right now. Try again later.',
   'chart.whole.refused.noAudit': 'Available on a saved answer, where the parts can be checked against the CBS total.',
   'chart.whole.refused.alternateReading': 'The whole cannot be checked for an alternate reading. Choose the first reading.',

@@ -25,6 +25,7 @@ vi.mock('../../src/answer/audit/index.ts', () => ({ loadAuditRecord, isRedacted 
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
 
+import { verifyPartsSumToWhole, wholeSumTolerance } from '../../src/query/whole-verification.ts';
 import { requestWholeVerification } from './chart-whole-verification-actions.ts';
 
 const TABLE = '03759ned';
@@ -130,11 +131,30 @@ function fakeDb(opts: FakeDbOptions = {}) {
   return { db: { query }, calls };
 }
 
-function stubRecord(fx: ReturnType<typeof fixture>, userId = 'u1') {
+/** The audit row's stored roster coverage (#253, `ValidatedResult.regionSet`)
+ * — complete by default, the way run.ts records a roster every member of
+ * which has a row. The final-review fix (I1) refuses BEFORE any arithmetic
+ * unless this says complete, so every verifying test below carries it. */
+function coverage(over: Partial<{ scope: unknown; rosterSize: number; withheld: string[]; missing: string[]; complete: boolean }> = {}) {
+  return { scope: { kind: 'all_provincies' }, rosterSize: 3, notApplicable: [], withheld: [], missing: [], complete: true, ...over };
+}
+
+/** `regionSet` is present-only (docs/13): this sentinel means the key is
+ * absent altogether, as on a pre-#253 row (an explicit `undefined` argument
+ * would only fall through to the parameter default). */
+const NO_REGION_SET = Symbol('no regionSet key');
+
+function stubRecord(fx: ReturnType<typeof fixture>, userId = 'u1', regionSet: unknown = coverage()) {
   loadAuditRecord.mockResolvedValue({
     id: 5,
     userId,
-    response: { kind: 'answer', chart: fx.spec, result: { cells: fx.cells }, cells: fx.cells, derivations: [] },
+    response: {
+      kind: 'answer',
+      chart: fx.spec,
+      result: { cells: fx.cells, ...(regionSet === NO_REGION_SET ? {} : { regionSet }) },
+      cells: fx.cells,
+      derivations: [],
+    },
   });
 }
 
@@ -205,6 +225,10 @@ describe('requestWholeVerification', () => {
 
   it('a withheld PART refuses that period with withheld_member — unknown is never zero', async () => {
     const fx = fixture({ withheld: true });
+    // A real audit row with a withheld member records `complete: false` and
+    // is refused earlier as incomplete_roster (the test below); stubbing it
+    // complete here exercises the pure check's OWN null guard as a second,
+    // independent line of defence.
     stubRecord(fx);
     // 2020's two known parts sum to 300; a total of 300 would "match" if
     // the withheld member were silently treated as zero.
@@ -228,6 +252,91 @@ describe('requestWholeVerification', () => {
     expect(wholeFetch.params[3]).toBe('PV26');
     expect(calls.some((c) => c.sql.includes('from dimension_labels'))).toBe(false);
     expect(calls.some((c) => c.sql.includes('from cbs_tables'))).toBe(false);
+  });
+
+  // Final-review fix (I1): the incomplete-roster gap. A member with NO
+  // observation row is not a null-valued part — it is no part at all, so
+  // the sum check cannot see it. The only thing between an incomplete
+  // roster and a false "verified" is then the rounding tolerance, which a
+  // small gemeente sits inside. These tests pin the case the review found
+  // nobody had tested: the missing member's true value is INSIDE tolerance.
+  describe('incomplete roster (I1)', () => {
+    /** A three-gemeente roster of PV26 where the smallest gemeente (GM0088,
+     * 400 of a 100 000 province total — 0.4%, inside the 0.5% tolerance)
+     * has no row at all: only two members reach the chart. */
+    function incompleteGemeentenFixture() {
+      const cells = [cell('GM0080', '2020', 60_000), cell('GM0085', '2020', 39_600)];
+      const spec = {
+        schemaVersion: 1,
+        kind: 'bar',
+        unit: 'aantal',
+        regionScope: { kind: 'gemeenten_in_provincie', parent: 'PV26' },
+        series: cells.map((c) => ({
+          label: c.regionCode,
+          regionCode: c.regionCode,
+          points: [
+            {
+              resultId: c.resultId,
+              periodCode: c.periodCode,
+              periodLabel: c.periodLabel,
+              value: c.value,
+              formattedValue: String(c.value),
+              decimals: 0,
+              status: 'Definitief',
+              provisional: false,
+              valueAttribute: c.valueAttribute,
+            },
+          ],
+        })),
+      };
+      return { spec, cells };
+    }
+    const PROVINCE_TOTAL = 100_000;
+
+    it('the naive sum check alone WOULD pass this roster — the gap is real', () => {
+      const fx = incompleteGemeentenFixture();
+      const presentSum = fx.cells.reduce((t, c) => t + (c.value as number), 0);
+      expect(PROVINCE_TOTAL - presentSum).toBe(400);
+      expect(400).toBeLessThanOrEqual(wholeSumTolerance(PROVINCE_TOTAL, 0));
+      expect(verifyPartsSumToWhole(fx.cells, { value: PROVINCE_TOTAL, decimals: 0, valueAttribute: 'None' })).toEqual({ verified: true });
+    });
+
+    it('a roster whose stored coverage says a member is missing is refused as incomplete_roster, never verified, and no whole is fetched', async () => {
+      const fx = incompleteGemeentenFixture();
+      stubRecord(
+        fx,
+        'u1',
+        coverage({ scope: { kind: 'gemeenten_in_provincie', parent: 'PV26' }, rosterSize: 3, missing: ['GM0088'], complete: false }),
+      );
+      const { db } = fakeDb({ wholes: { '2020': { value: PROVINCE_TOTAL } } });
+      getDb.mockReturnValue(db);
+      const result = await requestWholeVerification({ kind: 'answer', id: 5 }, ['2020']);
+      expect(result).toEqual({ ok: true, periods: { '2020': { verified: false, reason: 'incomplete_roster' } } });
+      expect(db.query).not.toHaveBeenCalled();
+    });
+
+    it('a withheld member also makes the stored coverage incomplete: refused before any arithmetic, for EVERY requested period', async () => {
+      const fx = fixture({ withheld: true });
+      stubRecord(fx, 'u1', coverage({ withheld: ['PV22'], complete: false }));
+      const { db } = fakeDb({ wholes: { '2020': { value: 300 }, '2021': { value: 630 } } });
+      getDb.mockReturnValue(db);
+      const result = await requestWholeVerification({ kind: 'answer', id: 5 }, ['2020', '2021']);
+      expect(result).toEqual({
+        ok: true,
+        periods: { '2020': { verified: false, reason: 'incomplete_roster' }, '2021': { verified: false, reason: 'incomplete_roster' } },
+      });
+      expect(db.query).not.toHaveBeenCalled();
+    });
+
+    it('a row with no regionSet key at all is never assumed complete: incomplete_roster, no database touched', async () => {
+      const fx = fixture();
+      stubRecord(fx, 'u1', NO_REGION_SET);
+      const { db } = fakeDb({ wholes: { '2020': { value: 600 } } });
+      getDb.mockReturnValue(db);
+      const result = await requestWholeVerification({ kind: 'answer', id: 5 }, ['2020']);
+      expect(result).toEqual({ ok: true, periods: { '2020': { verified: false, reason: 'incomplete_roster' } } });
+      expect(db.query).not.toHaveBeenCalled();
+    });
   });
 
   it('refuses the whole request when the stored spec carries no region scope (a hand-picked list is never a whole)', async () => {

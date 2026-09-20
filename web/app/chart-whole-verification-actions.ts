@@ -35,12 +35,15 @@ const requestSchema = z.object({
  * handful of periods, never sixty; the cap only bounds a malformed request. */
 const periodCodesSchema = z.array(z.string().min(1)).min(1).max(60);
 
-/** One period's verdict. The three `verified: false` reasons are the pure
- * check's own (`VerifyOutcome`, src/query/whole-verification.ts) — the
- * client maps each to its own digit-free message key. */
+/** One period's verdict. Three of the `verified: false` reasons are the pure
+ * check's own (`VerifyOutcome`, src/query/whole-verification.ts); the
+ * fourth, `incomplete_roster`, is this action's own and is decided BEFORE
+ * any arithmetic, from the audit row's stored roster coverage (final-review
+ * fix, I1 — see the check below). The client maps each to its own
+ * digit-free message key. */
 export type WholePeriodOutcome =
   | { verified: true }
-  | { verified: false; reason: 'withheld_member' | 'sum_mismatch' | 'missing_whole' };
+  | { verified: false; reason: 'withheld_member' | 'sum_mismatch' | 'missing_whole' | 'incomplete_roster' };
 
 export type WholeVerificationOutcome =
   | { ok: true; periods: Record<string, WholePeriodOutcome> }
@@ -79,6 +82,30 @@ export async function requestWholeVerification(rawKey: unknown, rawPeriodCodes: 
     if (scope === null) return { ok: false, reason: 'this chart was not built from a complete set of regions' };
     const parentRef = parentCellRef(scope);
     if (parentRef === null) return { ok: false, reason: 'this set of regions has no published total to check against' };
+
+    // Final-review fix (I1): the roster must be COMPLETE before its parts can
+    // be claimed to be the whole. A member with no observation row at all
+    // (as opposed to a withheld one, which survives as a null-valued part
+    // and trips `withheld_member` below) contributes no cell and no series —
+    // it is simply absent, so the sum check cannot see it, and the only
+    // thing between an incomplete roster and a false "verified" would be
+    // the rounding tolerance. That is safe for provinces (the smallest is
+    // ~2% of the national total) but NOT for gemeenten-in-provincie, where
+    // a small municipality sits well inside max(0.5, 0.5%). The answer's
+    // own prose already discloses such a gap ("Van 1 gemeente hebben wij
+    // geen cijfer", src/answer/compose/format.ts); the chart card must not
+    // contradict it with "Gecontroleerd". Same rule as deriveRegionRanking
+    // (src/query/derivations.ts): a claim over an incomplete set is a claim
+    // the data cannot support. The coverage is the audit row's OWN
+    // `regionSet` (#253, src/query/run.ts), computed when the answer was
+    // built and stored with it — present only on region-set answers, so a
+    // missing key is read as "no coverage recorded" and refused too, never
+    // assumed complete (principle (c)). Every requested period is refused:
+    // the roster is one roster, whichever period is shown.
+    const coverage = record.response.result.regionSet ?? null;
+    if (coverage === null || !coverage.complete) {
+      return { ok: true, periods: Object.fromEntries(periodCodes.data.map((p) => [p, { verified: false, reason: 'incomplete_roster' } as const])) };
+    }
 
     // The parts: the chart's own already-verified cells at each requested
     // period — looked up in the audit row's OWN ResultCells by resultId (R1),
