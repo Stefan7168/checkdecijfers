@@ -1,5 +1,92 @@
 # STATUS archive — the session log
 
+**Session 121 (2026-09-20, owner present in chat throughout). Owner pushed back that sessions 118-120's
+output read as polish, not architecture — surveyed real gaps, picked "wire the chat co-pilot to features
+that already exist but are chat-blind," built it end to end via subagent-driven-development on a
+worktree branch, final whole-branch review says "ready to merge, with fixes." `main` UNCHANGED at
+`c5c8dbee` — nothing merged this session; the branch is pushed to `origin`, not `main`.**
+
+1. **The push-back and the survey ([#306](open-questions.md)).** Owner: "Isn't there something more
+   architectural that we can do? ... If I compare the state of my app now with Graphy, we have so many
+   more things to do." Rather than defend or guess, the session re-read the real code and docs and
+   presented four verified, real candidates (finish chat-wiring the co-pilot; build two-measure charts,
+   the biggest genuine rebuild, needs the query layer itself; make Eurostat answerable in chat; bring
+   "chat with your own data" to parity) — not a vague menu, each grounded in what was actually built vs.
+   not. Owner chose the chat-wiring option, then asked explicitly for autonomous execution. The session
+   flagged one process risk before proceeding: running parallel agents across all four candidates (or
+   even across five chat-wiring subtasks) risks the exact fixture-hash collision problem #301/#275 had
+   just hit twice that same day — so execution stayed to one worktree, sequential tasks, one implementer
+   at a time, matching session 116's own established lesson for this codebase's fragile shared files.
+2. **The build: `superpowers:subagent-driven-development`, 6 sequential tasks, plan
+   [superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md](superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md),
+   branch `worktree-chart-copilot-phase6`, every dispatch/review/fix-round/ruling in the branch's own SDD
+   ledger (git-ignored, on-disk only).**
+   - **Task 1 — re-applied #301 (`pieHole` donut via chat) and #275 (five house styles via chat).**
+     Both were built correctly earlier and reverted twice (sessions 119, 120) on the assumption the
+     fixture-hash break needed live, currently-capped LLM spend. It didn't: `npm run
+     chart-copilot:fixtures`/`attachments:fixtures` (offline, free, no network) regenerates every
+     EXISTING case's fixture under its new hash from that case's own unchanged hand-authored answer —
+     only the two genuinely new capabilities need real-model confirmation, which stays a `:record` owner
+     step for after the spend cap lifts. Commit `7c08d914`; task review (sonnet): approved, 0
+     Critical/Important, all 4 self-flagged judgment calls independently re-verified against source.
+   - **Tasks 2-5 — five new chat command kinds**, making all six of phase 4's storytelling primitives
+     ([#289](open-questions.md)) chat-reachable for the first time: `setDimmed` (dim-not-hide,
+     `5a39b788`), `setHeadlineOverride` (headline number, same commit), `addEraShading` (`29b1d490`),
+     `addDerivedOverlay` (difference + mean overlay, covers two of the six primitives in one command
+     kind, `d154cc06` + a fix-round commit `2f24b1ff` closing a real prompt/instruction conflict a task
+     reviewer caught — the pre-existing `dataRequest` paragraph told the model "average"/"difference"
+     meant a totally different code path, verified via `respond.ts` to produce an actively-wrong reply
+     for the new command's own most natural phrasing), and `addGoalLine` (`7fa95858` + fix-round
+     `88a83a4e`). All four task reviews (sonnet, one opus for the goal line) came back with real findings
+     that went through the proper fix-and-scoped-re-review loop, not silently accepted or silently
+     dismissed — see lessons-learned session 121 for the two most notable: the offline-fixture-regen
+     insight, and a later reviewer correctly overturning an earlier reviewer's stated mechanism while
+     keeping the real underlying finding.
+   - **The goal-line guard (Task 5) is the one place in this whole branch the model writes a bare
+     number, and it got the most scrutiny of anything this session.** First version compared digit
+     STRINGS (separators stripped) rather than actual numbers — self-caught by the Fable-tier
+     implementer, confirmed real by an opus-tier reviewer that constructed a concrete failure table and
+     traced it through to the chart's own PNG/SVG export path ("Zet een doellijn op 25" would have
+     accepted a model value of 2.5, a 10x error). Fixed to require numeric equality under either locale
+     reading with correct sign handling; the SAME opus reviewer then independently EXECUTED the real
+     pre-fix and post-fix code on every row of its own failure table (not just re-read it) and confirmed
+     every row flipped correctly with zero regressions, catching two more failure modes along the way.
+   - **Task 6 — proof.** Five new hand-authored fixture cases, offline regeneration, one new real
+     Playwright e2e test, full local suite: root typecheck 0, web typecheck 0, root vitest 3080/3080,
+     web vitest 2593/2593, the fixture-drift-guard tests deliberately left red through Tasks 2-5 now
+     GREEN at 29/29 (measured, not assumed), full Playwright e2e 27/27. Also found and fixed (own commit
+     `66b5e194`, task-reviewer-confirmed genuine, not a workaround) a real latent gap in an unrelated
+     pre-existing test that Tasks 3/5 couldn't have caught under the plan's own root-suite-only
+     verification scope for those tasks. Commit `58db5097`.
+3. **Final whole-branch review (opus, the first pass to see all five new command kinds together):
+   "Ready to merge, WITH FIXES."** Two real Important findings, both confirmed with independent
+   verification (re-running tests, tracing render code, checking git history to confirm which task
+   introduced what), both with a written fix the reviewer confirmed needs NO fixture regeneration
+   ([#310](open-questions.md): `addDerivedOverlay` has no form gate and reopens a bug session 116's own
+   final review already fixed once for the on-screen panel; an inconsistent confirmation-chip destination
+   for `setHeadlineOverride`'s own success vs. refusal paths). The review also caught that an EARLIER
+   task review's stated MECHANISM for a related finding (a claim that opening the Style panel "unmounts"
+   the era-shading UI) was wrong when independently re-checked — but the real, narrower defect
+   underneath was still there and still worth fixing. Several Minors triaged individually rather than
+   bundled: some folded into the same small fix wave (free/cheap), others deliberately left as documented
+   gaps rather than fixed ([#307](open-questions.md) mean-ignores-zoom, [#308](open-questions.md)
+   e2e-covers-1-of-5, [#309](open-questions.md) setDimmed's silent un-hide) — each with the reviewer's own
+   reasoning for why fixing now wasn't worth it (mainly: any `SYSTEM_PROMPT` byte change re-hashes all 14
+   fixtures and forces a full Playwright re-run).
+4. **Deliberately stopped here, not pushed to `main`, no PR opened.** The owner signaled the session was
+   ending while the final review's findings were still open. Rather than rush a fix-and-merge cycle in
+   the closing minutes, the branch was pushed to `origin` for safekeeping (not `main` — nothing merged),
+   the worktree kept (not removed), and the exact fix wave — already fully written out by the final
+   reviewer — carried into the next session's kickoff doc and STATUS.md's top block. This matches this
+   project's own git-workflow rule: a red-with-known-fixes final review is not a "done" signal, and
+   pushing to `main` requires the full verification block to actually be clean, not "clean after a fix
+   that hasn't happened yet."
+5. **Verified (this session, on the branch): root + web typecheck clean; root vitest 3080/3080; web
+   vitest 2593/2593; fixture-drift-guard 29/29 (was deliberately 9-red through the middle tasks); full
+   real Playwright e2e 27/27 (`chart-copilot.spec.ts` 18/18). `git status` clean on `main` and the
+   branch; `git worktree list` shows `main` + the phase-6 worktree, kept intentionally. `main` itself: no
+   commits, no pushes, `c5c8dbee` unchanged from session 120's own close.**
+
 **Session 120 (2026-09-20, owner present in chat throughout). Closed all three of session 119's "All,
 use subagents" follow-ups — Minors, house styles, and a considered hold on scatter — plus caught and
 fixed a real CI break and a real owner-reported bug along the way. `main` @ `aca6a7ad`, CI green

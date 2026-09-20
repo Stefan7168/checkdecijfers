@@ -18,57 +18,75 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 120 — owner present in chat; verify against
-`git log`/CI before trusting this).** **All three of session 119's "All, use subagents" follow-ups are
-closed**, plus a real CI break and a real owner-reported bug, both caught and fixed same session.
-`main` @ `aca6a7ad`, CI green (`gh run view 35503056717`).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 121 — owner present in chat; verify against
+`git log`/the branch before trusting this).** **`main` is UNCHANGED at `c5c8dbee`** (session 120's own
+final state) — this session did all its work on a separate branch that is NOT YET MERGED. Resume from
+the branch, not from a fresh plan: [session-briefs/2026-09-20-session-122-kickoff.md](session-briefs/2026-09-20-session-122-kickoff.md)
+has the exact next step.
 
-- **Minors:** #300/#302/#304/#305 shipped (`a7054518`); #303 stays informational by design; **#301
-  (`pieHole` chat-reachable) was built, verified correct, then reverted before push** — it shifts the
-  co-pilot's LLM request hash, breaking all ten recorded fixtures, blocked on real LLM spend (Anthropic
-  usage cap, lifts 2026-10-01).
-- **House styles:** five confirmed and built — Salmon Editorial, Studio Grey, Broadsheet, Autumn
-  Letter, Brutalist Ink (`bf47bfa8`) — all from EXISTING `ChartPresentation` keys, no new presentation
-  key needed. **The sixth piece (a homepage "themes" gallery row) was designed in chat — reuse the
-  existing `consumentenvertrouwen` curated chart + the existing `GalleryCard`/`ChartView` pattern
-  already used 3× on the landing — but the owner asked to hold: "I have to think about better options."
-  Not approved, not built** — don't assume that sketch stands; re-propose or ask fresh.
-- **A real CI catch:** the house-styles push also widened `TEMPLATE_IDS` (chat-reachability by name for
-  the five new looks) — broke 4 real-browser Playwright e2e tests, because `capabilities.templates`
-  reaches the co-pilot's LLM prompt and shifts the request hash, same class of bug as #301. No vitest
-  suite caught it; only the real Playwright run did. Reverted (`35513e4f`), verified locally with the
-  actual e2e suite (24/24), CI confirmed green. Standing lesson:
-  [[feedback_llm_prompt_embedded_lists_hash_risk]] — before widening any list that reaches an LLM
-  prompt, grep `prompt.ts`/`schema.ts` first, and verify with real e2e, not just vitest fixtures.
-- **A real owner-reported bug, found and fixed same session:** the Style popup's Templates grid made
-  Broadsheet and Autumn Letter look like they had no boundary at all in light theme (owner: "clearly
-  overflowing"). Root cause: `TemplateThumb`'s frame stroke used the THEME's own `--border` token,
-  never checked against an arbitrary template's paper colour — those two near-white papers sat at
-  ~1.0-1.1 contrast against it (below this project's own `COLOR_REFUSE_BELOW=1.25`). Fixed with a
-  fixed, non-theme stroke (`aca6a7ad`) — decorative-preview-only, the real applied chart is unaffected.
-  See ADR 043 decision 11.
-- **Scatter: held, not built.** The owner delegated the build-or-hold call ("You decide as a UX
-  expert"). Investigation found the real bottleneck is the QUERY layer (every query is
-  one-measure-by-construction), a materially bigger, multi-session lift than "widen `ChartPoint`" — and
-  a cheaper "two-period" variant would be redundant with the already-shipped slope chart. Held per the
-  project's cheapest-mechanism-first/escalate-on-evidence rule, with a clear revisit trigger (real usage
-  evidence) recorded in [open-questions #296](open-questions.md).
-- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118/119** (registry:apply, DOI
-  backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
-  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
-- **No mandated next task.** Candidates: a fresh design for the homepage themes row (the owner wants
-  better options than what was sketched this session); re-apply #301/TEMPLATE_IDS chat-reachability
-  once the LLM cap lifts and fixtures can be re-recorded; or pick a fresh priority — ask the owner
-  rather than assuming. Kickoff:
-  [session-briefs/2026-09-20-session-121-kickoff.md](session-briefs/2026-09-20-session-121-kickoff.md).
+- **Owner asked for genuinely architectural work, not more polish**, after reviewing session 118-120's
+  output (small fixes/templates) — see [open-questions #306](open-questions.md) for the full options
+  survey. Chose: finish wiring the chart co-pilot's chat vocabulary to features that already existed on
+  the on-screen panel but were chat-blind, plus unblock #301/#275 from session 120 (below).
+- **Branch `worktree-chart-copilot-phase6`, pushed to `origin` (NOT `main`) at `58db5097`.** Built via
+  `superpowers:subagent-driven-development`, 6 sequential tasks, one worktree, one implementer at a
+  time (per session 116's own lesson on shared-file fragility) — plan:
+  [superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md](superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md),
+  full ledger (every dispatch, every review, every fix round, every ruling) at
+  `.claude/worktrees/chart-copilot-phase6/.superpowers/sdd/2026-09-20-chart-copilot-phase6-chat-wiring/progress.md`
+  (git-ignored, only exists on disk on this machine — read it before resuming, don't re-derive from
+  memory).
+  - **Task 1:** re-applied #301 (`pieHole` donut via chat) and #275 (five house styles via chat) —
+    BOTH were built correctly and then reverted in session 120 on the assumption the fix needed live
+    LLM spend. It didn't: regenerating fixtures OFFLINE (`chart-copilot:fixtures`/`attachments:fixtures`,
+    free, no network) fixes the hash shift for every existing case; only the two genuinely new cases are
+    still owed real-model confirmation via `:record` once the spend cap lifts. See
+    [[feedback_llm_prompt_embedded_lists_hash_risk]] (updated this session) and
+    [open-questions #301](open-questions.md)/[#275](open-questions.md).
+  - **Tasks 2-5:** five brand-new chat command kinds, making ALL SIX of phase 4's "storytelling
+    primitives" ([open-questions #289](open-questions.md)) chat-reachable for the first time: dim-instead-
+    of-hide (`setDimmed`), pick-the-headline-number (`setHeadlineOverride`), shade a period
+    (`addEraShading`), a computed difference-or-average overlay (`addDerivedOverlay`, covers BOTH the
+    difference-arrow and average-line primitives), and a goal line (`addGoalLine`). CBS/Eurostat card
+    only, own-data tier explicitly out of scope (disclosed, not silently dropped).
+  - **Task 5's goal line went through an unusually careful two-round safety review** (this tier's ONE
+    field where the model writes a bare number, not a label) — the FIRST version's guard compared digit
+    STRINGS not actual numbers and would have accepted a value 10x/1000x off or sign-flipped from what
+    the reader typed; caught by the implementer itself, confirmed by an opus-tier reviewer that
+    EXECUTED the guard function on constructed adversarial inputs (not just read it), fixed, then
+    re-verified by execution again. See lessons-learned session 121 point 2.
+  - **Task 6:** proved it all works — full local suite green, INCLUDING the fixture-drift-guard tests
+    deliberately left red through tasks 2-5 (29/29) and the full real Playwright e2e suite (27/27).
+  - **Final whole-branch review (opus): "Ready to merge, WITH FIXES."** Two real Important findings,
+    both small, both prompt-byte-free (no fixture regen needed): (I1) the new difference/average overlay
+    command has no form gate, so asking for it on a bar/pie/stacked chart stores a command that renders
+    nothing and can't be removed — this is the EXACT defect session 116's own final review closed for
+    the on-screen panel, reopened through the new chat doorway; (I2) the new commands' confirmation-chip
+    destination is inconsistent (one command's own success path and its own refusal path point at two
+    different panels). The reviewer wrote the complete fix (new `overlays` capability field + a handful
+    of one-line corrections) and explicitly verified it needs NO fixture regeneration. **NOT applied yet
+    — this is the mandated next step**, full plan in the session-122 kickoff doc. The reviewer also
+    caught that an EARLIER task review's stated mechanism for a related finding (iconFor() "unmounting"
+    the era-shading UI) was wrong when independently re-checked — the underlying issue was still real,
+    just not for the claimed reason; see lessons-learned session 121 point 3.
+  - **Deliberately documented, not fixed** (low-risk, or expensive to fix — a `SYSTEM_PROMPT` byte
+    change re-hashes all 14 co-pilot fixtures and forces a full Playwright re-run): the chat's "average"
+    ignores an active zoom window despite the prompt claiming otherwise
+    ([open-questions #307](open-questions.md)); the new e2e test proves 1 of 5 new kinds render for real
+    in a browser, not all 5 ([#308](open-questions.md)); `setDimmed` silently un-hides a series the
+    reader had separately hidden ([#309](open-questions.md)).
+- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118/119/120** (registry:apply,
+  DOI backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
+  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01 — now also covers
+  confirming the two phase-6 cases this session added).
 
-**Measured (session 120, final):** root + web typecheck clean; full web suite 146 files / 2,593 tests
-green (solo run); full root suite 205 files / 3,014 tests green (solo run); benchmark scorer 3 files /
-32 tests green; full Playwright e2e suite 24/24 green (run locally, confirmed again by CI); real
-Turbopack `next build` clean. CI run `35503056717` (the final push) green, all 5 jobs incl. deploy —
-one earlier push this session (`bf47bfa8`) went red and was fixed by the next commit (`35513e4f`), not
-ignored. `git status` clean, `git worktree list` shows only `main`. Disk: 12Gi free at session end (was
-16Gi at session start — normal build/test/Playwright-install churn, not an incident).
+**Measured (session 121, on the branch, NOT main):** root + web typecheck clean; root vitest 205 files
+/ 3,080 tests green; web vitest 146 files / 2,593 tests green; fixture-drift-guard 29/29 green (was
+deliberately 9-red through tasks 2-5); full real Playwright e2e 27/27 green (`chart-copilot.spec.ts`
+18/18). Final whole-branch review: **"Ready to merge: With fixes"** — not merged, not pushed to `main`,
+no PR opened (the fix wave above is the session-122 owner-present session's mandated first step, not a
+merge-blocking design question). `git status` clean on both `main` and the branch; `git worktree list`
+shows `main` + the phase-6 worktree (kept, not removed — the branch/worktree must survive to resume).
 
 ---
 

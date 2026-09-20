@@ -6,6 +6,59 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 121 — a prompt-embedded capability's fixture-hash break doesn't need a revert or live
+## spend; it needs an offline regeneration, and a wrong reviewer claim can still sit beside a real finding
+
+1. **Sessions 119 and 120 both reverted a chat-vocabulary widening (`pieHole`, `TEMPLATE_IDS`) because it
+   shifted the co-pilot's LLM request hash and broke recorded fixtures — both times on the assumption that
+   the fix needed real, currently-capped LLM spend. That assumption was only half right.** `npm run
+   chart-copilot:fixtures` / `attachments:fixtures` (no `--record`, no network) rebuild every EXISTING
+   case's fixture file under its new hash from that case's own already-correct hand-authored expected
+   output — the widening doesn't change what an unrelated existing case's answer should be, so regenerating
+   it offline is safe and free. The only piece that genuinely has no offline substitute is confirming the
+   REAL model behaves as hoped on the NEW capability specifically — that still needs `:record` (real,
+   owner-supervised spend) or, short of that, a hand-authored case exercised through the real local
+   Playwright e2e suite (which itself runs against the same offline mock-fixture server, no live API).
+   Re-applied both #301 (`pieHole`) and #275 (`TEMPLATE_IDS`) this session with exactly this method —
+   4 new hand-authored cases, offline regeneration, full local suite incl. 26/26 Playwright e2e, zero
+   spend, zero revert. **Lesson: when a capability-list widening breaks fixture-hash tests, regenerate
+   offline FIRST — that fixes every existing case — before concluding the change needs live spend or a
+   revert. Live/`:record` verification is still owed for the NEW case specifically, but it is a follow-up,
+   not a blocker.** See [open-questions #301](open-questions.md)/[#275](open-questions.md).
+2. **A safety-critical guard's first-draft design (mine, in the plan, not the implementer's execution) had
+   a real gap that only showed up once an independent reviewer EXECUTED the code on constructed adversarial
+   inputs instead of reading it.** The chat co-pilot's new goal-line command needed a guard proving a
+   reader-typed number, never a model-invented one, reaches the chart — the plan's specified guard compared
+   digit STRINGS (separators stripped) rather than actual numbers, so it silently accepted values 10x/1000x
+   off or sign-flipped from what the reader actually typed (e.g. reader "25" → model `2.5` passed). The
+   *implementer* caught and flagged this themselves before it ever reached review. The *opus-tier reviewer*
+   then didn't just read the fix and agree — it ran the real pre-fix and post-fix guard function against a
+   constructed failure table (Node one-liners, not code reading) and confirmed every row flipped correctly
+   with zero regressions, catching two MORE failure modes the table hadn't listed. **Lesson: for a guard
+   whose whole job is "does this specific input pass or fail," dispatch a reviewer that can and will execute
+   the function on adversarial inputs, not just read it — and budget the top model tier for exactly this
+   kind of review, not the default implementer tier.**
+3. **A later, broader review correctly overturned an earlier review's STATED MECHANISM while preserving the
+   real finding underneath — this is the process working, not failing.** An earlier task review found
+   `iconFor()` had no arm for a new chat command and claimed clicking the resulting chip "opens the Style
+   panel, which actively UNMOUNTS the era-shading UI" — plausible, and never independently re-checked at the
+   time. The final whole-branch review actually traced the render tree and ran the relevant test (12/12) and
+   found the controls are RELOCATED into a modal pane, not hidden — the specific claim was wrong. But the
+   underlying defect (no icon arm at all, and two of the five new commands pointing at genuinely
+   inconsistent or wrong UI targets — one command's own success-chip destination contradicted its own
+   refusal-path destination) was still real and still worth fixing. **Lesson: record a finding's claimed
+   MECHANISM, not just its conclusion, in the ledger — it gives a later reviewer something concrete to
+   verify or correct, rather than a bare "known issue" that either gets blindly trusted or blindly
+   re-litigated from scratch.**
+4. **Five new, tightly-coupled command kinds sharing three files (`schema.ts`/`map.ts`/`prompt.ts`) built as
+   five STRICTLY SEQUENTIAL subagent-driven-development tasks, one worktree, one implementer at a time, had
+   zero merge conflicts and zero cross-task rework** — each task's shared conventions (a `message` parameter
+   threaded through in task 2, an `extraCount` id counter introduced in task 3, reused unmodified through
+   tasks 4-5) simply existed by the time the next task needed them. This confirms session 116's own earlier
+   lesson (parallel agents on one fragile shared file caused real problems) generalizes past `chart.tsx` to
+   any small set of files five features all touch — sequential-in-one-worktree is the right default for this
+   shape of work in this codebase, not a fallback.
+
 ## Session 120 — a capability list embedded in an LLM prompt needs real-browser e2e to prove a
 ## widening is fixture-hash-safe; unit/fixture tests passing is not enough
 
