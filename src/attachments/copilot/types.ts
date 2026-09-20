@@ -48,6 +48,15 @@ export const PRESENTATION_KEYS = [
   'frameShadow',
 ] as const;
 
+// Session 120 (open-questions #275): the five house styles built into
+// web/lib/chart-templates.ts (CHART_TEMPLATES) are deliberately NOT added
+// here yet. `capabilities.templates` (this list, filtered) is embedded
+// directly in the co-pilot's LLM prompt text (see prompt.ts) — widening it
+// shifts every recorded fixture's request hash for any non-table-form
+// request, breaking real-browser e2e (the CI mock-fixture server can no
+// longer match the request) exactly like #301's `pieHole` did. Re-add the
+// five once fixtures can be re-recorded (real LLM spend, blocked by the
+// Anthropic workspace usage cap until 2026-10-01) — see #275.
 export const TEMPLATE_IDS = [
   'standard',
   'classic',
@@ -57,12 +66,6 @@ export const TEMPLATE_IDS = [
   'minimal',
   'warm',
   'earth',
-  // Session 120 (open-questions #275): the five house styles.
-  'salmon',
-  'studio',
-  'broadsheet',
-  'autumn',
-  'brutalist',
 ] as const;
 
 /** The model's own shape: view commands expressed in LABELS (it never sees
