@@ -18,120 +18,46 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 119 — owner present in chat; verify against
-`git log`/`df -h`/CI before trusting this).** **No code changed this session — it was consumed entirely
-by a real local-disk-full incident.** The owner was asked which of phase 5b's three open follow-ups to
-build next and answered **"All, use subagents"**: scatter ([#296](open-questions.md)), the six house
-styles + homepage themes row ([#275](open-questions.md)), and the six deferred Minor findings from
-phase 5b's final review ([#300](open-questions.md)–[#305](open-questions.md)). Before any of that work
-could start, a `git worktree add` + `node_modules` copy (needed for an isolated build worktree, per
-[feedback_worktree_isolation_mechanics] — a worktree needs its own REAL, non-symlinked `node_modules`)
-hit `ENOSPC`: the machine's disk had reached 0 bytes free, severely enough that even Bash's own tool
-output could not be written for several calls. Session paused; the owner freed space externally. This
-session then verified the disk had recovered (3.9Gi free, later confirmed 16Gi after this session's own
-cleanup), removed the half-copied `node_modules` (12G reclaimed) and the empty scratch worktree/branch
-(`cdc-wt-phase5b-minors` / `phase5b-minors-cleanup` — zero commits, safe to delete), and confirmed `main`
-itself was never touched (still at `ff359c24`, clean, CI unchanged from session 118's own verification).
+**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 120 — owner present in chat; verify against
+`git log`/CI before trusting this).** **All three of session 119's "All, use subagents" follow-ups are
+closed.** Minors ([#300](open-questions.md)–[#305](open-questions.md), mostly built, `a7054518`), house
+styles ([#275](open-questions.md), five of six mockups confirmed and built, `bf47bfa8`), and scatter
+([#296](open-questions.md), investigated in depth then deliberately held, not built) — plus a real CI
+break caught and fixed along the way (`35513e4f`). `main` @ `db54f91b`, CI green.
 
-- **Nothing was built.** The owner's "All, use subagents" answer is the standing instruction for the
-  next session — not a re-ask. Two of the three need real design work first (scatter needs a new
-  two-measure-per-point chart-spec shape; house styles needs new presentation keys and, since it's
-  visual/naming, ideally a quick look from the owner) before any SDD plan gets written; the Minor
-  findings ([#300](open-questions.md)–[#305](open-questions.md)) are small and bounded enough to start
-  directly. See the kickoff brief for a concrete first move.
-- **Disk-space lesson for next session:** this machine's `node_modules` is ~15G (root) + ~833M (`web/`)
-  — roughly 16G per real, non-symlinked worktree copy. Running scatter + house styles + Minors as three
-  *parallel* worktrees, each with its own real `node_modules`, will not fit in the space this session
-  recovered (16Gi free right now). Check `df -h /` before creating each worktree, and prefer running
-  the three efforts sequentially (one worktree at a time, removed after merge) over three in parallel,
-  unless free space is confirmed comfortably above ~50G.
-- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118** (registry:apply, DOI
+- **Minors:** #300/#302/#304/#305 shipped; #303 stays informational by design; **#301 (`pieHole`
+  chat-reachable) was built, verified correct, then reverted before push** — it shifts the co-pilot's
+  LLM request hash, breaking all ten recorded fixtures, blocked on real LLM spend (Anthropic usage cap,
+  lifts 2026-10-01).
+- **House styles:** Salmon Editorial, Studio Grey, Broadsheet, Autumn Letter, Brutalist Ink — all from
+  EXISTING `ChartPresentation` keys, no new presentation key needed. Not built: a homepage "themes"
+  gallery row (separate, undesigned landing-page work).
+- **A real CI catch:** the house-styles push also widened `TEMPLATE_IDS` (chat-reachability by name for
+  the five new looks) — broke 4 real-browser Playwright e2e tests, because `capabilities.templates`
+  reaches the co-pilot's LLM prompt and shifts the request hash, same class of bug as #301. No vitest
+  suite caught it; only the real Playwright run did. Reverted, verified locally with the actual e2e
+  suite (24/24), CI confirmed green on the fix push. New standing lesson:
+  [[feedback_llm_prompt_embedded_lists_hash_risk]] — before widening any list that reaches an LLM
+  prompt, grep `prompt.ts`/`schema.ts` first, and verify with real e2e, not just vitest fixtures.
+- **Scatter: held, not built.** The owner delegated the build-or-hold call ("You decide as a UX
+  expert"). Investigation found the real bottleneck is the QUERY layer (every query is
+  one-measure-by-construction), a materially bigger, multi-session lift than "widen `ChartPoint`" — and
+  a cheaper "two-period" variant would be redundant with the already-shipped slope chart. Held per the
+  project's cheapest-mechanism-first/escalate-on-evidence rule, with a clear revisit trigger (real usage
+  evidence) recorded in [open-questions #296](open-questions.md).
+- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118/119** (registry:apply, DOI
   backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
   `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
-- **Kickoff for the next session:**
-  [session-briefs/2026-09-20-session-120-kickoff.md](session-briefs/2026-09-20-session-120-kickoff.md) —
-  a suggested build order (Minors first, no design gate; house styles second; scatter last, the biggest
-  schema change) and the disk-space math for sequencing worktrees safely on this machine.
+- **No mandated next task.** Candidates: build the homepage themes row for the five house styles
+  (needs its own design pass); re-apply #301/TEMPLATE_IDS chat-reachability once the LLM cap lifts and
+  fixtures can be re-recorded; or pick a fresh priority — ask the owner rather than assuming.
 
-**Measured (session 119):** nothing rebuilt or retested — no code changed. `git status` clean on `main`
-@ `ff359c24`; `git worktree list` shows only `main` (the scratch worktree from this session's aborted
-start was removed); CI unchanged since session 118 (`gh run list` still shows `35478491548` as the most
-recent run, green, all 5 jobs incl. deploy — the session-118 docs-only push correctly triggered no new
-run, re-confirmed).
-
----
-
-**Previous top block (session 118, kept verbatim below for one session):**
-
-**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 118 — direct continuation of session 117's
-unfinished build, same owner-present/fully-delegated session; verify against `git log`/CI before
-trusting this).** **Chart co-pilot phase 5b — the "verified whole" — is COMPLETE and MERGED to `main`**
-(spec [superpowers/specs/2026-09-17-chart-copilot-design.md](superpowers/specs/2026-09-17-chart-copilot-design.md)
-§11, plan [superpowers/plans/2026-09-19-verified-whole-phase5b.md](superpowers/plans/2026-09-19-verified-whole-phase5b.md),
-full history [.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md](../.superpowers/sdd/2026-09-19-verified-whole-phase5b/progress.md)).
-Merge commit `c7723c34` (`90b786f6..c7723c34` pushed to `main`), CI green. The branch and worktree
-(`verified-whole-phase5b` / `../cdc-wt-verified-whole-phase5b`) are deleted — fully absorbed into `main`.
-
-- **What shipped:** pie, stacked, and 100%-stacked chart forms are now honestly offered on a CBS/Eurostat
-  chart when its regions are a complete, CBS-known roster (all provinces of NL, all landsdelen, all
-  gemeenten of one named province) — verified on demand, server-side, that the visible parts genuinely
-  sum to the real published total (tolerance = larger of half a unit at the whole's own precision or
-  0.5% of its value), reusing this product's existing region-roster logic and needing no new CBS fetch,
-  no new audit row. Donut is a presentation variant of pie (`pieHole`), not a fourth chart form. Scatter
-  (the other capability split out of phase 5, [#296](open-questions.md)) stays explicitly deferred, not
-  part of this phase — still not started.
-- **Resuming session 117's open item:** Task 4's 2 open Important findings from that session (missing
-  test coverage on the 100%-stacked omission boundary; imprecise reused refusal copy) were fixed in one
-  round and re-reviewed clean (commit `ba941c9a`) — see the ledger for detail.
-- **Task 5 (chat-doorway wiring + contract/property/e2e coverage) built and reviewed clean, 0 findings**
-  (commit `d6635d3f`) — `CBS_COPILOT_PROMPT_VERSION` 2→3, `ChartForm` vocabulary now 11 forms end to end.
-- **The final whole-branch review (opus) found one real, narrow gap, now closed:** an INCOMPLETE region
-  roster (a member with no observation row at all — distinct from a withheld/null member, which already
-  refused correctly) was invisible to the sum check and could pass within tolerance on a
-  gemeenten-in-provincie roster (small gemeenten can sit under the ~0.5% tolerance). Fixed with a
-  coverage gate (`RegionSetCoverage.complete`, mirroring the existing `deriveRegionRanking` precedent)
-  before any DB query runs, a new honest `incomplete_roster` refusal reason, and a proving test — plus a
-  bundled fix for an unhandled promise rejection that could leave a chart stuck on "checking" forever.
-  Fix commit `4e861b78`, scoped re-review clean, 0 new findings. **Ready to merge** was the reviewer's
-  own verdict; several Minor findings (chat-vs-tab capability-list edge cases, donut unreachable from
-  chat, a latent typing gap, an untested-by-real-pipeline multi-period code path, a stale ADR line, a
-  null-coercion nit) were deliberately deferred, not silently dropped — see
-  [open-questions #300](open-questions.md) through **#305**.
-- **Two plan-drafting gaps found and correctly handled during the build (from session 117, unchanged):**
-  `RegionScope` has a 4th variant (`all_gemeenten`) the plan's brief missed, correctly refused (no
-  verified-whole concept — CBS's own municipality grouping excludes `GM0997`/`OVERIG`, so that roster
-  doesn't provably partition the national total); the on-demand verification server action was built to
-  take an authenticated audit-record id rather than the plan's literal client-supplied-spec signature — a
-  real, independently re-derived security improvement (closes a fabrication risk, not just a privacy
-  gap), re-confirmed by the final review too.
-- **No new owner step from this session** — the feature is server-side, opt-in-by-data-shape, and needs
-  no migration, no env flag, no manual apply.
-- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117** (registry:apply, DOI
-  backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
-  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01).
-- **What's next is an open product choice, not a mandated task:** scatter (phase 5b's other deferred
-  capability, needs a new two-measure-per-point chart-spec shape first, [#296](open-questions.md)); the
-  six house styles / homepage themes row ([#275](open-questions.md)); or the Minor findings above if the
-  owner wants them closed rather than tracked. No single "next session starts here" task is dictated —
-  ask, or pick whichever has the clearest owner signal. Kickoff brief:
-  [session-briefs/2026-09-20-session-119-kickoff.md](session-briefs/2026-09-20-session-119-kickoff.md).
-
-**Measured (session 118, merged `main` @ `c7723c34`):** root typecheck + web typecheck clean; full web
-suite 146 files / 2,581 tests green (solo run); full root suite 201 files / 2,988 tests green (solo
-run); invariants 26/26; hermetic benchmark scorer — answerable 14/14 (gate ≥12), refusal/clarify 6/6
-(gate 6/6), fabricated numbers 0 (gate 0), **GATE VERDICT: PASS**; real Turbopack `next build` clean —
-all re-run directly on the merged result, not only trusted from the branch's own CI. CI run
-`35478491548` on the merge commit — check `gh run view 35478491548` for final status if trusting this
-before it's confirmed green.
-
----
-
-**[Doc-freshness trim, 2026-09-20, session 119: the session-116 and session-113 "previous top block"
-copies that used to sit here were removed — each had already been kept well past the session-41
-convention's "one session" window (both survived session 117's mid-build, non-wrap stop). Nothing they
-recorded was lost: session 116's own detail lives in
-[status-archive.md](status-archive.md) and [08-build-plan.md](08-build-plan.md); session 113's likewise.
-Same class of trim as session 103's, see the note near the top of this file.]**
+**Measured (session 120):** root + web typecheck clean; full web suite 146 files / 2,592 tests green
+(solo run); full root suite 205 files / 3,014 tests green (solo run); benchmark scorer 3 files / 32
+tests green; full Playwright e2e suite 24/24 green (run locally against the fixed code before the fix
+push, and confirmed again by CI); real Turbopack `next build` clean. CI run `35497423653` (the fix push)
+green, all 5 jobs incl. deploy — check `gh run view 35497423653` if trusting this before it's
+re-confirmed. Disk: 13Gi free at session end (was 16Gi at session start).
 
 ---
 

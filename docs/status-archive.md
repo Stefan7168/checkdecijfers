@@ -1,5 +1,62 @@
 # STATUS archive — the session log
 
+**Session 120 (2026-09-20, owner present in chat throughout). Closed all three of session 119's "All,
+use subagents" follow-ups — Minors, house styles, and a considered hold on scatter — plus caught and
+fixed a real CI break along the way. `main` @ `db54f91b`, CI green.**
+
+1. **Minors (#300–#305), built via a Fable-tier subagent, reviewed, pushed `a7054518`.** #300 (the CBS
+   chat doorway's capability list now reads the same windowed spec and live verdict/hidden-series/
+   alternate-reading/no-audit gates the Weergave tabs do, not just the structural spec), #302 (typed
+   `cbsCapabilities`'s spec param honestly as carrying `regionScope`), #305 (`requestWholeVerification`
+   no longer coerces a real SQL NULL `value_attribute` to the string `"null"`), #304 (stale docs
+   corrected: `docs/04-architecture.md`'s phase-5 row and the historical WP218 phase-5 plan) all
+   shipped. #303 stayed informational, by design (no code fix). **#301 (`pieHole` chat-reachable) was
+   built and verified correct in isolation, then REVERTED before push** — it changes the co-pilot's
+   structured-output JSON schema hash, which breaks all ten recorded LLM fixtures; re-recording needs
+   real LLM spend still blocked by the Anthropic workspace usage cap (lifts 2026-10-01). Left as an
+   open-questions row, ready to re-apply verbatim once fixtures can be re-recorded.
+2. **House styles (#275): designed via a real mockup (an Artifact with six chart-card mockups, one per
+   candidate look), owner confirmed five and dropped "Op Art" — Salmon Editorial, Studio Grey,
+   Broadsheet, Autumn Letter, Brutalist Ink.** Built entirely from EXISTING `ChartPresentation` keys —
+   no new presentation key was needed after all, contrary to the original open-questions framing (which
+   assumed panel rules/tick length/legend style etc. would be required). Every template's full 8-colour
+   `seriesColors` palette was checked against its own solid paper backdrop using the project's real
+   contrast-gate formula (`judgeColorAgainst`, `contrastRatio`) BEFORE being written into code — the
+   implementer needed zero trial-and-error colour iteration. Pushed `bf47bfa8`.
+3. **A real CI catch: the house-styles push also widened `TEMPLATE_IDS` (so the five new looks were
+   chat-reachable by name) — broke 4 real-browser Playwright e2e tests in CI, fixed `35513e4f`.**
+   `capabilities.templates` is embedded directly in the co-pilot's LLM prompt text, so widening the list
+   shifted the request hash CI's mock-fixture server matches against — the SAME class of bug as #301's
+   `pieHole`, just not caught by any vitest suite (root 3014, web 2592, the specific
+   `tests/attachments`/`tests/chart` directories) because none of them happen to replay the same
+   request-hash-matching path a real browser session hits. Diagnosed from the CI log, reverted, then
+   verified the fix with the ACTUAL `npx playwright test` suite locally (24/24 pass, including the 4
+   that failed in CI) before repushing — CI confirmed green on that push. See
+   [[feedback_llm_prompt_embedded_lists_hash_risk]] (new memory) and
+   [docs/lessons-learned.md](lessons-learned.md) session 120.
+4. **Scatter (#296): investigated in depth, then the owner delegated the build-or-hold call ("You
+   decide as a UX expert") — decision: HOLD, not built.** A dispatched Explore agent surveyed
+   `ChartPoint`'s ~25 non-test consumers and ~20 `ChartForm` narrowing sites, and confirmed no existing
+   code models two measures per point in either tier. The real finding: the bottleneck is the QUERY
+   layer, not just the chart-spec point shape — every query is one-measure-by-construction (ADR 011's
+   one-varying-axis rule), so a genuine two-measure scatter (e.g. unemployment vs. income by province)
+   needs the intent parser and topic registry to support a second measure too, a materially bigger,
+   multi-session lift than the original "widen `ChartPoint`" framing suggested. A cheaper "two-period"
+   variant needs no new querying but would be redundant with the already-shipped slope chart (a 2-point
+   line IS a slope chart). Per the project's own cheapest-mechanism-first/escalate-on-evidence rule,
+   with no measured user demand for scatter specifically, held rather than built speculatively. Recorded
+   as a considered hold with a clear revisit trigger (real usage evidence), not a silent drop — see
+   [open-questions #296](open-questions.md).
+5. **Disk space: 13Gi free at session end** (was 16Gi at session start; the Playwright Chromium install
+   plus repeated `next build`/test runs ate the difference) — still comfortably positive, no incident,
+   but worth `df -h /` before the next session opens a worktree.
+6. **Delegation:** all mechanical implementation (Minors, house styles) ran on Fable-tier subagents with
+   fully-specified briefs (exact override objects, pre-computed contrast-safe hex values, exact file/
+   line targets); the session model did the design investigation, brief-writing, diff review, and the
+   CI-failure diagnosis itself, per the project's delegation-cost-tier rule.
+
+---
+
 **Session 119 (2026-09-20, owner present in chat throughout). No code changed. Owner picked the next
 work from the three candidates session 118's kickoff brief offered ("All, use subagents"), then the
 session hit a real local-disk-full incident before any implementation could start.**
