@@ -954,6 +954,75 @@ test.describe.serial('chart co-pilot phase 6 — the donut and a house style thr
   });
 });
 
+// Co-pilot phase 6, Tasks 2–6 (session 121): the five panel-only commands
+// (setDimmed, setHeadlineOverride, addEraShading, addDerivedOverlay,
+// addGoalLine) became chat-nameable under ONE prompt-version bump, and their
+// fixtures were regenerated ONCE, together (Task 6). All five cases share
+// this chart's spec and capabilities and differ only in the message, so one
+// real round-trip is the proof for the whole regeneration: only an `exact`
+// llm-stub hit replays the era-shading command below — a hash drift on the
+// shared system prompt or capabilities bytes would fall through to the
+// 60-character prefix fallback and replay another two-city fixture, and the
+// chip assertion would fail on the wrong command. Era shading is the richest
+// of the five to watch: map.ts resolves the two period LABELS to CBS period
+// codes and mints the era's id, the client re-validates those codes against
+// the spec it draws, and the band renders as real SVG. One hand-authored
+// fixture (tests/fixtures/chart-copilot/cases.ts, `ERA_SHADING_MESSAGE`) —
+// zero model calls.
+const ERA_SHADING_MESSAGE = 'Arceer 2021 tot 2023 als herstelperiode';
+
+test.describe.serial('chart co-pilot phase 6 — a panel-only command through the chat', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signInAsHarnessUser(context, baseURL!);
+  });
+
+  test(`"${ERA_SHADING_MESSAGE}" through the chat shades the band the panel form would, and Undo lifts it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // The era list's entries (chart-era-shading.tsx), each carrying its own
+    // delete button — scoped this way rather than by label text: the reply
+    // strip echoes the reader's message, which contains "herstelperiode",
+    // and `getByText` matches case-insensitively.
+    const eraEntries = page.locator('li', { has: page.locator('button[data-command-kind="removeEraShading"]') });
+    const band = page.locator('.recharts-reference-area-rect');
+    await expect(band).toHaveCount(0);
+    await expect(eraEntries).toHaveCount(0);
+
+    // The chat: one `addEraShading` chip (describeCommand's own name for it),
+    // the cost line, and the band drawn on the chart — the same
+    // ReferenceArea rect the panel's own e2e test above asserts.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(ERA_SHADING_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Schaduw toegevoegd' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+    await expect(band).toBeVisible();
+
+    // The list entry shows the CODES map.ts resolved from the labels the
+    // model copied ("2021" → 2021JJ00, "2023" → 2023JJ00 — the harness's real
+    // CBS period codes, the same ones the panel test reads back from its
+    // selects) and the typed label, outside the chart's export container.
+    await expect(eraEntries).toHaveCount(1);
+    await expect(eraEntries).toContainText('2021JJ00 – 2023JJ00: Herstelperiode');
+    await expect(page.getByRole('button', { name: 'Verwijder de markering 2021JJ00–2023JJ00' })).toBeVisible();
+    const chartContainer = page.locator('[data-testid="chart-container"]');
+    await expect(chartContainer.locator(':has-text("Herstelperiode")')).not.toBeVisible();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+
+    // A chat edit is an edit like any other: the card's own Undo lifts the
+    // band and empties the list (`exact`: the reply strip's own undo would
+    // match too).
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(band).toHaveCount(0);
+    await expect(eraEntries).toHaveCount(0);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+  });
+});
+
 /** Type a question and send it (copied from answer.spec.ts — same harness,
  * same composer). */
 async function ask(page: import('./harness.ts').Page, question: string): Promise<void> {

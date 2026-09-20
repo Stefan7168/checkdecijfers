@@ -604,6 +604,10 @@ export const PIE_MESSAGE = 'toon dit als een taartdiagram';
 export const DONUT_MESSAGE = 'maak er een donut van';
 export const BROADSHEET_MESSAGE = 'gebruik de Broadsheet-stijl';
 
+/** The phase-6 Task 6 e2e message, verbatim (chart-copilot.spec.ts): the one
+ * of the five panel-only commands (Tasks 2–5) the browser proof replays. */
+export const ERA_SHADING_MESSAGE = 'Arceer 2021 tot 2023 als herstelperiode';
+
 export const CASES: CbsCopilotCase[] = [
   // Phase 5b (Task 5): a pie over the one chart that can honestly draw one
   // — a complete region class with a CBS-published total to check against...
@@ -748,6 +752,97 @@ export const CASES: CbsCopilotCase[] = [
       refused: [],
       confidence: 0.95,
       reading: 'Broadsheet is among the templates on offer: applied.',
+    },
+  },
+  // Co-pilot phase 6, Tasks 2–5: the five commands the panel could do and
+  // the chat could not name — one case per kind, all over the two-city line
+  // chart (its capabilities unchanged: none of these commands is gated by
+  // the CAPABILITIES bag, only by the labels resolving against the spec).
+  // The prompt's VIEW COMMANDS list grew by these five under ONE version
+  // bump (prompt.ts, 3 → 4), which is why every case above moved to a new
+  // hash in the same regeneration as these were added.
+  //
+  // Dim (Task 2, setDimmed): the legend's own "Dim" button by name — the
+  // series stays visible at reduced emphasis, hidden stays empty.
+  {
+    label: 'cbs-copilot/chat-dim-series',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: 'Dim Rotterdam in plaats van hem te verbergen',
+    output: {
+      version: 1,
+      view: [{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Rotterdam'] }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Rotterdam dimmed rather than hidden; Amsterdam untouched.',
+    },
+  },
+  // Headline (Task 2, setHeadlineOverride): one real point of the chart,
+  // named by series label + period label, becomes the headline figure.
+  {
+    label: 'cbs-copilot/chat-headline-override',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: 'Maak van Amsterdam in 2022 het hoofdcijfer',
+    output: {
+      version: 1,
+      view: [{ kind: 'setHeadlineOverride', seriesLabel: 'Amsterdam', periodLabel: '2022' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Amsterdam at 2022 is a real point of this chart: made the headline.',
+    },
+  },
+  // Era shading (Task 3, addEraShading): two period labels copied from the
+  // chart, plus a typed, digit-free label — the e2e case.
+  {
+    label: 'cbs-copilot/chat-era-shading',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: ERA_SHADING_MESSAGE,
+    output: {
+      version: 1,
+      view: [{ kind: 'addEraShading', fromLabel: '2021', toLabel: '2023', label: 'Herstelperiode' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Both periods are on the chart; shaded 2021 to 2023 with the typed label.',
+    },
+  },
+  // Derived difference (Task 4, addDerivedOverlay): a calculation over two
+  // points that ARE on the chart is a view command, never dataRequest —
+  // the number itself is derived server-side from those two cells.
+  {
+    label: 'cbs-copilot/chat-derived-difference',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: 'Laat het verschil zien tussen Amsterdam in 2020 en 2024',
+    output: {
+      version: 1,
+      view: [{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2024' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'Both points are on this chart: a difference overlay, not a data request.',
+    },
+  },
+  // Goal line (Task 5, addGoalLine): the ONE bare number this tier stores —
+  // copied from the reader's own message, which map.ts checks it against
+  // (goalLineValueInMessage); the label kept free of numbers, as the
+  // prompt asks.
+  {
+    label: 'cbs-copilot/chat-goal-line',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: 'Voeg een doellijn toe op 900000',
+    output: {
+      version: 1,
+      view: [{ kind: 'addGoalLine', value: 900000, label: 'Doel' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'The value is the one the message contains; the label carries no number.',
     },
   },
 ];
