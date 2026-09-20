@@ -30,8 +30,11 @@ describe('CBS chart co-pilot LLM fixtures', () => {
   // Phase 5 (Task 5): five — the three phase-3 cases over the captured spec,
   // plus the dumbbell pair over two shapes DERIVED from that same capture
   // (cases.ts `TWO_PERIOD_SPEC`/`SINGLE_SERIES_SPEC`), still one table.
-  it('has five cases over one captured ChartSpec and its two derived shapes', () => {
-    expect(CASES).toHaveLength(5);
+  // Phase 5b (Task 5): seven — the pie pair joins, over a SECOND captured
+  // spec (`PROVINCIES_SPEC`, the harness's one region-set answer) and the
+  // original two-city capture; still one table.
+  it('has seven cases over two captured ChartSpecs and two derived shapes', () => {
+    expect(CASES).toHaveLength(7);
     expect(new Set(CASES.map((c) => c.spec.attribution.tableId))).toEqual(new Set(['03759ned']));
   });
 

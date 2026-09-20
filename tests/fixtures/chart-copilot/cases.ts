@@ -261,7 +261,319 @@ export const SINGLE_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
 /** The phase-5 e2e message, verbatim (chart-copilot.spec.ts). */
 export const DUMBBELL_MESSAGE = 'toon dit als een dumbbell';
 
+/** Phase 5b (verified-whole, session 117, Task 5): the ONE region-set chart
+ * the harness can draw — `!!regionset provincies` (src/answer/respond/
+ * harness-intent.ts: population on 1 January, ALL 12 provinces, 2025), the
+ * same question web/e2e/answer.spec.ts (d) asks. Captured the same way
+ * REGION_SERIES_SPEC was (runQuery → buildChartSpec against the hermetic
+ * fixture snapshot, pasted verbatim) — NOT derived from that capture: a
+ * region-set answer is its own shape (twelve value-SORTED series of one
+ * point each, `kind: 'bar'`, and — the whole point of phase 5b — a real
+ * `regionScope`, which only `resolveRegionSet` ever stamps). `syncedAt` is
+ * whatever the capture's snapshot carried; it is not part of the request
+ * bytes (parse.ts `chartLabels`: title/unit/kind/series labels/period
+ * labels only). */
+export const PROVINCIES_SPEC: ChartSpec = {
+  "schemaVersion": 1,
+  "kind": "bar",
+  "title": "Bevolking op 1 januari",
+  "dims": {
+    "Geslacht": "T001038",
+    "Leeftijd": "10000",
+    "BurgerlijkeStaat": "T001019"
+  },
+  "dimLabels": {
+    "Geslacht": "Totaal mannen en vrouwen",
+    "Leeftijd": "Totaal",
+    "BurgerlijkeStaat": "Totaal burgerlijke staat"
+  },
+  "unit": "aantal",
+  "series": [
+    {
+      "label": "Zuid-Holland (PV)",
+      "regionCode": "PV28",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV28:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 3863397,
+          "formattedValue": "3.863.397",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Noord-Holland (PV)",
+      "regionCode": "PV27",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV27:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 2992016,
+          "formattedValue": "2.992.016",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Noord-Brabant (PV)",
+      "regionCode": "PV30",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV30:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 2664047,
+          "formattedValue": "2.664.047",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Gelderland (PV)",
+      "regionCode": "PV25",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV25:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 2161358,
+          "formattedValue": "2.161.358",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Utrecht (PV)",
+      "regionCode": "PV26",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV26:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 1409144,
+          "formattedValue": "1.409.144",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Overijssel (PV)",
+      "regionCode": "PV23",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV23:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 1195789,
+          "formattedValue": "1.195.789",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Limburg (PV)",
+      "regionCode": "PV31",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV31:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 1135328,
+          "formattedValue": "1.135.328",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Fryslân (PV)",
+      "regionCode": "PV21",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV21:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 664222,
+          "formattedValue": "664.222",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Groningen (PV)",
+      "regionCode": "PV20",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV20:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 602833,
+          "formattedValue": "602.833",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Drenthe (PV)",
+      "regionCode": "PV22",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV22:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 506529,
+          "formattedValue": "506.529",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Flevoland (PV)",
+      "regionCode": "PV24",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV24:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 456395,
+          "formattedValue": "456.395",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    },
+    {
+      "label": "Zeeland (PV)",
+      "regionCode": "PV29",
+      "points": [
+        {
+          "resultId": "03759ned:M000352:PV29:2025JJ00:BurgerlijkeStaat=T001019;Geslacht=T001038;Leeftijd=10000",
+          "periodCode": "2025JJ00",
+          "periodLabel": "2025",
+          "value": 392969,
+          "formattedValue": "392.969",
+          "decimals": 0,
+          "status": "Definitief",
+          "provisional": false,
+          "valueAttribute": "None"
+        }
+      ]
+    }
+  ],
+  "provisionalNote": null,
+  "nullNotes": [],
+  "definitionLine": "Definitie: bevolking op 1 januari.",
+  "attributionLine": "Bron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-19. Periode: 2025. Licentie: CC BY 4.0.",
+  "attribution": {
+    "tableId": "03759ned",
+    "tableTitle": "Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio",
+    "tableVersion": 1,
+    "syncedAt": "2026-09-19T17:07:35.189Z",
+    "coveredPeriods": {
+      "from": "2025JJ00",
+      "to": "2025JJ00"
+    },
+    "license": "CC BY 4.0"
+  },
+  "regionScope": {
+    "kind": "all_provincies"
+  }
+};
+
+/** What the browser tells the co-pilot the provinces chart can do, in the
+ * form it OPENS in — a comparison-shaped spec opens on horizontal bars
+ * (chart.tsx `defaultFormFor`; answer.spec.ts (d) pins the twelve bars), so
+ * the request is built with `form: 'hbar'` and must stay byte-equal to what
+ * chart.tsx sends from that form (the llm-stub's 60-character prefix
+ * fallback would otherwise silently replay another fixture with this same
+ * title/unit/kind — the Task 5 finding phase 5 recorded above):
+ *  - forms: chart-fit.ts `allowedForms` over a bar-kind, 12 × 1-point spec
+ *    WITH a real regionScope — no line/area (bar kind, many series), no
+ *    dumbbell/slope/heatmap (one period), and the three phase-5b forms;
+ *  - style keys: PRESENTATION_KEYS ∩ resolvePresentation('hbar').applicable
+ *    — the bar branch drops lineWidth/markers/zeroBaseline, hbar also drops
+ *    xLabels, areaFill is area-only, pieHole is pie-only and not in
+ *    PRESENTATION_KEYS at all;
+ *  - all templates (hbar is not a tabular form), zoom false (bar kind). */
+export const PROVINCIES_CAPABILITIES: CbsCopilotCapabilities = {
+  forms: ['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100'],
+  presentationKeys: ['grid', 'axisLines', 'seriesColors', 'fontFamily', 'framePadding', 'frameCorners', 'frameShadow'],
+  templates: ['standard', 'classic', 'newsroom', 'presentation', 'social', 'minimal', 'warm', 'earth'],
+  zoom: false,
+  lang: 'nl',
+};
+
+/** The phase-5b e2e message, verbatim (chart-copilot.spec.ts). */
+export const PIE_MESSAGE = 'toon dit als een taartdiagram';
+
 export const CASES: CbsCopilotCase[] = [
+  // Phase 5b (Task 5): a pie over the one chart that can honestly draw one
+  // — a complete region class with a CBS-published total to check against...
+  {
+    label: 'cbs-copilot/pie-provincies',
+    spec: PROVINCIES_SPEC,
+    capabilities: PROVINCIES_CAPABILITIES,
+    message: PIE_MESSAGE,
+    output: {
+      version: 1,
+      view: [{ kind: 'setForm', form: 'pie' }],
+      dataRequest: false,
+      refused: [],
+      confidence: 0.95,
+      reading: 'All twelve provinces at one moment and pie is among the forms on offer: switched.',
+    },
+  },
+  // ...and the same request over a hand-picked pair of cities, which is no
+  // whole at all — the prompt's own rule: a form not under CAPABILITIES
+  // goes in `refused` with reason not_available, control form.
+  {
+    label: 'cbs-copilot/pie-two-cities',
+    spec: REGION_SERIES_SPEC,
+    capabilities: REGION_SERIES_CAPABILITIES,
+    message: PIE_MESSAGE,
+    output: {
+      version: 1,
+      view: [],
+      dataRequest: false,
+      refused: [{ request: 'taartdiagram', reason: 'not_available', control: 'form' }],
+      confidence: 0.9,
+      reading: 'Two cities over five years: pie is not among the forms this chart offers.',
+    },
+  },
   // Phase 5 (Task 5): the same message over a chart that offers the form...
   {
     label: 'cbs-copilot/dumbbell-two-periods',

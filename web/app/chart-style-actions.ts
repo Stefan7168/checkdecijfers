@@ -73,6 +73,7 @@ const overridesSchema = z.object({
   valueLabels: z.enum(['shown', 'hidden']).optional(),
   zeroBaseline: z.enum(['auto', 'zero']).optional(),
   areaFill: z.enum(['gradient', 'flat']).optional(),
+  pieHole: z.enum(['none', 'donut']).optional(),
   seriesColors: z.record(z.string(), z.unknown()).optional(),
   fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
   language: z.enum(['nl', 'en']).nullable().optional(),

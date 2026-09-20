@@ -88,6 +88,7 @@ describe('the designed default (ADR 042) and the classic session-87 look, both p
       valueLabels: 'shown',
       zeroBaseline: 'auto',
       areaFill: 'gradient',
+      pieHole: 'none',
       seriesColors: {},
       fontFamily: null,
       language: null,
@@ -109,6 +110,7 @@ describe('the designed default (ADR 042) and the classic session-87 look, both p
       valueLabels: 'shown',
       zeroBaseline: 'auto',
       areaFill: 'flat',
+      pieHole: 'none',
       seriesColors: {},
       fontFamily: null,
       language: null,
@@ -333,6 +335,58 @@ describe('resolvePresentation', () => {
     expect(resolvePresentation({ ...lineCtx, kind: 'bar', form: 'bar' }, {}).applicable.has('areaFill')).toBe(false);
     expect(resolvePresentation({ ...lineCtx, kind: 'bar', form: 'hbar' }, {}).applicable.has('areaFill')).toBe(false);
     expect(resolvePresentation({ ...lineCtx, form: 'table' }, {}).applicable.has('areaFill')).toBe(false);
+  });
+  // Phase 5b (the verified whole, session 117, spec §11 "donut is styling,
+  // not a form"): `pieHole` is the pie form's own key, exactly as `areaFill`
+  // is the area form's.
+  it('pieHole is applicable in pie form only — never offered on line, area, bar, hbar, stacked, stacked100 or table', () => {
+    expect(resolvePresentation({ ...barCtx, form: 'pie' }, {}).applicable.has('pieHole')).toBe(true);
+    for (const form of ['line', 'area', 'bar', 'hbar', 'dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100', 'table'] as const) {
+      expect(resolvePresentation({ ...barCtx, form }, {}).applicable.has('pieHole'), form).toBe(false);
+    }
+  });
+  it('a pieHole override passes through in pie form, defaults to none, and is sanitised like any enum', () => {
+    expect(resolvePresentation({ ...barCtx, form: 'pie' }, {}).values.pieHole).toBe('none');
+    expect(resolvePresentation({ ...barCtx, form: 'pie' }, { pieHole: 'donut' }).values.pieHole).toBe('donut');
+    expect(sanitizeOverrides({ pieHole: 'donut' })).toEqual({ pieHole: 'donut' });
+    expect(sanitizeOverrides({ pieHole: 'ring' })).toEqual({});
+    expect(sanitizeOverrides({ pieHole: 0 })).toEqual({});
+  });
+  it('pie form: no axis or line key is applicable (a pie has none), value labels are forced shown with the pie\'s own digit-free reason, colours/font/frame stay on offer', () => {
+    const r = resolvePresentation({ ...barCtx, form: 'pie' }, { valueLabels: 'hidden', lineWidth: 'thick' });
+    for (const key of ['lineWidth', 'markers', 'grid', 'xLabels', 'axisLines', 'zeroBaseline'] as const) {
+      expect(r.applicable.has(key), key).toBe(false);
+    }
+    expect(r.values.valueLabels).toBe('shown');
+    expect(r.locks.valueLabels).toBe(LOCK_REASONS.valueLabelsPie);
+    expect(r.locks.valueLabels).toMatch(/taartdiagram/);
+    expect(r.locks.valueLabels).not.toMatch(/\d/);
+    expect(LOCK_REASONS.valueLabelsPie).not.toBe(LOCK_REASONS.valueLabelsBar);
+    // zeroBaseline is not applicable AND not locked — there is no baseline to lock.
+    expect(r.locks.zeroBaseline).toBeUndefined();
+    expect([...r.applicable].sort()).toEqual(
+      ['fontFamily', 'frameAspect', 'frameBackground', 'frameCorners', 'frameInset', 'framePadding', 'frameShadow', 'language', 'pieHole', 'seriesColors', 'valueLabels'].sort(),
+    );
+  });
+  it('stacked and stacked100 behave exactly like bar (value labels + zero baseline locked with the SAME bar reasons, lineWidth/markers not applicable, xLabels applicable)', () => {
+    for (const form of ['stacked', 'stacked100'] as const) {
+      const r = resolvePresentation({ ...barCtx, form }, { valueLabels: 'hidden', zeroBaseline: 'auto' });
+      expect(r.values.valueLabels, form).toBe('shown');
+      expect(r.values.zeroBaseline, form).toBe('zero');
+      expect(r.locks.valueLabels, form).toBe(LOCK_REASONS.valueLabelsBar);
+      expect(r.locks.zeroBaseline, form).toBe(LOCK_REASONS.zeroBaselineBar);
+      expect(r.applicable.has('lineWidth'), form).toBe(false);
+      expect(r.applicable.has('markers'), form).toBe(false);
+      expect(r.applicable.has('zeroBaseline'), form).toBe(false);
+      expect(r.applicable.has('xLabels'), form).toBe(true);
+      expect(r.applicable.has('grid'), form).toBe(true);
+      expect(r.applicable.has('seriesColors'), form).toBe(true);
+      expect(r.applicable.has('pieHole'), form).toBe(false);
+      // Byte-identical to the plain bar resolution, by construction.
+      const bar = resolvePresentation(barCtx, { valueLabels: 'hidden', zeroBaseline: 'auto' });
+      expect([...r.applicable].sort(), form).toEqual([...bar.applicable].sort());
+      expect(r.locks, form).toEqual(bar.locks);
+    }
   });
   it('an areaFill override passes through in area form and is sanitised like any enum', () => {
     expect(resolvePresentation({ ...lineCtx, form: 'area' }, { areaFill: 'flat' }).values.areaFill).toBe('flat');

@@ -121,6 +121,9 @@ describe('saveMyChartStyle', () => {
       { frameBackground: { kind: 'image', extra: 'nope' } },
       { framePadding: 'huge' },
       { frameAspect: '4:5' },
+      // Phase 5b (verified-whole): the donut key, valid and off-enum.
+      { pieHole: 'donut' },
+      { pieHole: 'ring' },
     ];
     for (const raw of fixtures) {
       store.saveUserChartStyle.mockClear();

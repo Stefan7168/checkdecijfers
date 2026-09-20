@@ -14,7 +14,10 @@ import {
   hbarFormAllowed,
   heatmapFormAllowed,
   lineFormAllowed,
+  pieFormAllowed,
   slopeFormAllowed,
+  stacked100FormAllowed,
+  stackedFormAllowed,
   type ChartForm,
   type SeriesShape,
 } from './chart-view-state.ts';
@@ -23,11 +26,15 @@ import {
  * Every shape currently honestly offered for `spec`, in the app's fixed
  * display order. `bar` and `table` are never gated (pre-existing
  * convention). The three phase-5 shapes trail the original five so the
- * five keep their familiar, already-shipped tab order and positions.
- * `spec` is typed on the structural minimum (chart-view-state.ts's
- * `SeriesShape`) so a full ChartSpec and chart.tsx's PlottableSpec both fit.
+ * five keep their familiar, already-shipped tab order and positions; the
+ * three phase-5b verified-whole shapes (pie, stacked, stacked100 — session
+ * 117, spec §11) trail those in turn, in that fixed order. `spec` is typed
+ * on the structural minimum (chart-view-state.ts's `SeriesShape`, plus the
+ * OPTIONAL `regionScope` provenance the phase-5b guards read) so a full
+ * ChartSpec and chart.tsx's PlottableSpec both fit — a PlottableSpec simply
+ * carries no scope and gets none of the three.
  */
-export function allowedForms(spec: Pick<ChartSpec, 'kind'> & SeriesShape, seriesCount: number): ChartForm[] {
+export function allowedForms(spec: Pick<ChartSpec, 'kind' | 'regionScope'> & SeriesShape, seriesCount: number): ChartForm[] {
   const forms: ChartForm[] = [];
   if (lineFormAllowed(spec, seriesCount)) forms.push('line');
   if (areaFormAllowed(spec, seriesCount)) forms.push('area');
@@ -37,5 +44,8 @@ export function allowedForms(spec: Pick<ChartSpec, 'kind'> & SeriesShape, series
   if (dumbbellFormAllowed(spec, seriesCount)) forms.push('dumbbell');
   if (slopeFormAllowed(spec, seriesCount)) forms.push('slope');
   if (heatmapFormAllowed(spec, seriesCount)) forms.push('heatmap');
+  if (pieFormAllowed(spec, seriesCount)) forms.push('pie');
+  if (stackedFormAllowed(spec, seriesCount)) forms.push('stacked');
+  if (stacked100FormAllowed(spec, seriesCount)) forms.push('stacked100');
   return forms;
 }

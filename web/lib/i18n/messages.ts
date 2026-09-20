@@ -564,6 +564,26 @@ const nl = {
   // own. Digit-free (the whole-card digit scan).
   'chart.dumbbellDisabledReason': 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.',
   'chart.heatmapDisabledReason': 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.',
+  // Phase 5b (verified-whole, session 117, spec §11): the three roster-only
+  // Weergave tabs — offered only when the chart's regions are a complete
+  // CBS-known set (alle provincies, alle landsdelen, de gemeenten van één
+  // provincie), whose real total is then checked on demand. Donut is a
+  // styling toggle on the pie (chart.panel.pieHole below), not a tab. The
+  // disabled reasons are digit-free (the whole-card digit scan) and name
+  // the roster condition, never a series count. The stacked100 LABEL is
+  // digit-free too, on purpose — the plan wrote "100% gestapeld", but a tab
+  // is rendered (disabled) on every chart card, and chart.test.tsx's
+  // whole-card scan flags any numeric token not found in the spec's own
+  // strings; "100" would fail it on nearly every chart. '%' is not a digit.
+  'chart.form.pie': 'Taartdiagram',
+  'chart.form.stacked': 'Gestapeld',
+  'chart.form.stacked100': 'Gestapeld (%)',
+  'chart.pieDisabledReason':
+    'Beschikbaar zodra de grafiek één moment toont voor een volledige set regio’s die het CBS zelf als geheel kent, zoals alle provincies.',
+  'chart.stackedDisabledReason':
+    'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zoals alle provincies.',
+  'chart.stacked100DisabledReason':
+    'Beschikbaar zodra de grafiek een volledige set regio’s toont die het CBS zelf als geheel kent, zodat elk aandeel tegen een echt totaal wordt gezet.',
   'chart.from': 'Vanaf',
   'chart.to': 'Tot',
   // #254: the alternate-reading toggle. Only the CONTROL's own chrome lives
@@ -826,6 +846,8 @@ const nl = {
   'chart.panel.valueLabels': 'Waarden',
   'chart.panel.zeroBaseline': 'Y-as vanaf nul',
   'chart.panel.areaFill': 'Verloop in het vlak',
+  // Phase 5b: the donut toggle — pie form only (resolvePresentation).
+  'chart.panel.pieHole': 'Gat in het midden (donut)',
   'chart.panel.showGroup': 'Tonen',
   // Audit pass 2, row 12 (2026-09-17): the whole accessible name of this
   // control used to be just "Standaard" — sitting directly above "Bewaar
@@ -885,12 +907,17 @@ const nl = {
   'chart.panel.languageNl': 'Nederlands',
   'chart.panel.languageEn': 'English',
   // WP218 phase 5 (chart-types plan, Task 3): the Grafiek tab's collapsed
-  // note explaining why pie/donut, stacked, scatter and sorted-by-value
-  // charts are never offered as a form — digit-free per the resolver's own
-  // honesty invariant ('één'/'twee' are words, not numerals).
+  // note explaining when pie/stacked are offered and why scatter and
+  // sorted-by-value charts never are — digit-free per the resolver's own
+  // honesty invariant ('één'/'twee' are words, not numerals). Phase 5b
+  // (verified-whole, Task 4) rewrote the first sentences: pie/stacked are no
+  // longer refused outright — they are offered exactly when the parts are a
+  // complete CBS-known roster AND the parts have been checked against the
+  // published CBS total (chart-whole-verification-actions.ts). The scatter
+  // sentence is unchanged (ADR 039: still never offered).
   'chart.panel.whyNotTitle': 'Waarom geen taart- of gestapelde grafiek?',
   'chart.panel.whyNotBody':
-    'Een taart- of gestapelde grafiek tekent een totaal of een aandeel dat in geen enkele CBS-cel staat. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
+    'Een taart- of gestapelde grafiek tekent een geheel waar de delen bij optellen. Die wordt alleen aangeboden als de delen een volledige set regio’s zijn die het CBS zelf als geheel kent, zoals alle provincies, en nadat is gecontroleerd dat ze optellen tot het gepubliceerde CBS-totaal; in elk ander geval staat dat totaal in geen enkele CBS-cel. Een spreidingsgrafiek heeft twee meetwaarden per punt nodig, en deze grafiek heeft er één. Sorteren op waarde is een rangorde die niet gemeten is.',
   'chart.panel.tabFrame': 'Kader',
   // ADR 043: chart templates v1 — the catalogue keys for the six named
   // looks plus the brand template shown alongside them.
@@ -1233,6 +1260,45 @@ const nl = {
   'chart.derived.errorPointNotOnChart': 'Een van de gekozen punten staat niet in deze grafiek.',
   'chart.derived.errorSamePeriod': 'Kies twee verschillende periodes voor een verschil.',
   'chart.derived.errorGeneric': 'Dit kan niet met deze punten.',
+
+  // Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand check
+  // that a pie/stacked/100%-stacked chart's parts add up to the CBS-published
+  // total (app/chart-whole-verification-actions.ts). Every string here is
+  // digit-free — the chart card's whole-DOM digit scan must find no numeral
+  // it cannot bind to a spec string. The `refused.*` keys map one-to-one to
+  // the check's own reason codes (src/query/whole-verification.ts) plus the
+  // three client-side cases that never reach the server (no saved answer,
+  // an alternate reading, a hidden series); `{periods}` is a list of the
+  // spec's own period labels, verbatim.
+  'chart.whole.checking': 'De delen worden gecontroleerd tegen het CBS-totaal…',
+  'chart.whole.verifiedNote': 'Gecontroleerd: de delen tellen op tot het CBS-totaal.',
+  // `{periods}` sits mid-sentence, followed by a space, and the list is
+  // joined with ' · ' — never a trailing '.' or a ', ' between labels: the
+  // card's digit scan tokenises `\d[\d.,]*`, so "2021." or "2020," would
+  // be a token no spec string contains.
+  'chart.whole.omittedPeriods': 'Niet getekend voor {periods} — het CBS-totaal ontbreekt daar of klopt niet.',
+  // Task 4 fix round 1: the 100%-stacked form's OWN omission (a period the
+  // check DID verify, whose parts add up to zero or include a negative
+  // value, so no percentage share exists) — a different fact from the
+  // server refusal above, so it gets its own honest sentence. Same
+  // `{periods}` rules as `omittedPeriods`.
+  'chart.whole.omittedNoShare':
+    'Niet getekend voor {periods} — de delen tellen daar op tot nul of bevatten een negatief getal, dus een aandeel in procenten is niet te bepalen.',
+  'chart.whole.refused.missing_whole':
+    'Het CBS heeft voor deze periode geen totaal gepubliceerd, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
+  'chart.whole.refused.withheld_member':
+    'Het CBS geeft voor deze periode niet elk deel vrij, dus het geheel kan niet worden gecontroleerd. Kies een andere periode.',
+  'chart.whole.refused.sum_mismatch':
+    'De delen tellen voor deze periode niet op tot het CBS-totaal, dus deze vorm wordt niet getekend. Kies een andere periode.',
+  // Final-review fix (I1): a roster member with no cell in our data at all.
+  // Not period-specific (the roster is one roster whichever period is
+  // shown), so no "kies een andere periode" here.
+  'chart.whole.refused.incomplete_roster':
+    'Niet elke regio in deze set heeft een cijfer in onze data, dus het geheel kan niet worden gecontroleerd.',
+  'chart.whole.refused.unavailable': 'De controle tegen het CBS-totaal is nu niet mogelijk. Probeer het later opnieuw.',
+  'chart.whole.refused.noAudit': 'Beschikbaar bij een bewaard antwoord, waar de delen tegen het CBS-totaal kunnen worden gecontroleerd.',
+  'chart.whole.refused.alternateReading': 'Bij een andere lezing kan het geheel niet worden gecontroleerd. Kies de eerste lezing.',
+  'chart.whole.refused.hiddenSeries': 'Een taart- of gestapelde grafiek toont alle delen van het geheel. Maak eerst elke reeks weer zichtbaar.',
 
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
@@ -1666,6 +1732,15 @@ const en: Messages = {
   'chart.slopeDisabledReason': "Available once you're comparing exactly two points in time.",
   'chart.dumbbellDisabledReason': 'Available once at least two series each have exactly a start and an end value.',
   'chart.heatmapDisabledReason': "Available once you're comparing at least two series across at least two points in time.",
+  'chart.form.pie': 'Pie chart',
+  'chart.form.stacked': 'Stacked',
+  'chart.form.stacked100': 'Stacked (%)',
+  'chart.pieDisabledReason':
+    'Available once the chart shows a single moment for a complete set of regions that CBS itself defines as a whole, such as all provinces.',
+  'chart.stackedDisabledReason':
+    'Available once the chart shows a complete set of regions that CBS itself defines as a whole, such as all provinces.',
+  'chart.stacked100DisabledReason':
+    'Available once the chart shows a complete set of regions that CBS itself defines as a whole, so every share is set against a real total.',
   'chart.from': 'From',
   'chart.to': 'To',
   'chart.reading.label': 'Reading',
@@ -1842,6 +1917,7 @@ const en: Messages = {
   'chart.panel.valueLabels': 'Values',
   'chart.panel.zeroBaseline': 'Y-axis from zero',
   'chart.panel.areaFill': 'Gradient fill',
+  'chart.panel.pieHole': 'Hole in the middle (donut)',
   'chart.panel.showGroup': 'Show',
   // Audit pass 2, row 12 (2026-09-17): see the `nl` entry above.
   'chart.panel.reset': 'Reset to default',
@@ -1891,7 +1967,7 @@ const en: Messages = {
   'chart.panel.languageEn': 'English',
   'chart.panel.whyNotTitle': 'Why no pie or stacked chart?',
   'chart.panel.whyNotBody':
-    'A pie or a stacked chart draws a total or a share that no CBS cell contains. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
+    'A pie or a stacked chart draws a whole that its parts add up to. It is offered only when the parts are a complete set of regions that CBS itself defines as a whole, such as all provinces, and after a check that they add up to the published CBS total; in every other case that total sits in no CBS cell. A scatter plot needs two measures per point, and this chart has one. Sorting by value asserts a ranking that was never measured.',
   'chart.panel.tabFrame': 'Frame',
   'chart.panel.tabTemplates': 'Templates',
   'chart.template.standard': 'Standard',
@@ -2150,6 +2226,25 @@ const en: Messages = {
   'chart.derived.errorPointNotOnChart': 'One of the chosen points is not on this chart.',
   'chart.derived.errorSamePeriod': 'Pick two different periods for a difference.',
   'chart.derived.errorGeneric': 'This cannot be done with these points.',
+
+  // Chart co-pilot phase 5b (verified-whole, Task 4) — see the `nl` block.
+  'chart.whole.checking': 'Checking that the parts add up to the CBS total…',
+  'chart.whole.verifiedNote': 'Checked: the parts add up to the CBS total.',
+  'chart.whole.omittedPeriods': 'Not drawn for {periods} — the CBS total is missing or does not match there.',
+  'chart.whole.omittedNoShare':
+    'Not drawn for {periods} — the parts there add up to zero or include a negative value, so a percentage share cannot be shown.',
+  'chart.whole.refused.missing_whole':
+    'CBS has not published a total for this period, so the whole cannot be checked. Choose another period.',
+  'chart.whole.refused.withheld_member':
+    'CBS withholds at least one part for this period, so the whole cannot be checked. Choose another period.',
+  'chart.whole.refused.sum_mismatch':
+    'The parts do not add up to the CBS total for this period, so this form is not drawn. Choose another period.',
+  'chart.whole.refused.incomplete_roster':
+    'Not every region in this set has a figure in our data, so the whole cannot be checked.',
+  'chart.whole.refused.unavailable': 'The check against the CBS total is not possible right now. Try again later.',
+  'chart.whole.refused.noAudit': 'Available on a saved answer, where the parts can be checked against the CBS total.',
+  'chart.whole.refused.alternateReading': 'The whole cannot be checked for an alternate reading. Choose the first reading.',
+  'chart.whole.refused.hiddenSeries': 'A pie or stacked chart shows every part of the whole. Show every series again first.',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English

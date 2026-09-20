@@ -29,7 +29,8 @@
 // `reconstruct.ts` itself carries a small number of NAMED, field-scoped
 // tolerances for one specific additive optional field at a time (the WP30a
 // `attribution.source` A1 fallback; the #197 `trendHeadline` ADR-014
-// optional-v1-field exception — see ADR 014's as-built notes). These are NOT
+// optional-v1-field exception; the chart co-pilot phase 5b `regionScope`
+// exception, same shape — see ADR 014's as-built notes). These are NOT
 // entries in this register (they are not per-row, and not tied to a rule
 // change) — each narrows tolerance for exactly one named field's
 // presence-vs-absence, never for a whole row or an unbounded set of

@@ -7,6 +7,8 @@
 // forever in audit records (R8, WP10) and on future published pages, so the
 // schema is versioned from the very first emitted spec (ADR 007) and may only
 // grow via new versions, never by silently changing v1.
+import type { RegionScope } from '../query/index.ts';
+
 export const CHART_SPEC_VERSION = 1 as const;
 
 /** One plotted value — a projection of exactly one ResultCell. `value` is the
@@ -125,4 +127,27 @@ export interface ChartSpec {
    * byte-identical to before this field existed, and old stored specs
    * without the key keep validating against `chartSpecSchema` unchanged. */
   annotations?: ChartAnnotation[];
+  /** Chart co-pilot phase 5b (the verified whole — pie / stacked /
+   * 100%-stacked, ADR 014 optional-v1-field rule): PROVENANCE of the chart's
+   * regions — the region CLASS (`ValidatedResult.regionSet.scope`, #253) whose
+   * CBS-defined roster produced this chart's series, or `null` for every chart
+   * built from anything else (a named region, a hand-picked list, a national
+   * series). A factual record of which scope built the chart, whatever it
+   * was — never a filtered "only the verifiable ones" list: `all_gemeenten`
+   * is recorded here too even though it has no verified-whole concept
+   * (src/query/whole-verification.ts's `parentCellRef` is null for it).
+   * The verified-whole guards read this field to decide whether a
+   * parts-of-a-whole form may even be offered; they never derive a scope from
+   * the series themselves (principle (a) — a chart never re-decides which
+   * roster it was built from).
+   *
+   * `buildChartSpec` ALWAYS sets this key (explicit `null`, never omitted) on
+   * every spec it builds from here on. It is nevertheless OPTIONAL in this
+   * type and in `chartSpecSchema`, like `annotations` and `trendHeadline`,
+   * because every spec stored before this field existed (R8: those rows live
+   * forever) carries no key at all — a reader of a STORED spec uses
+   * `?? null` (docs/13's present-only discipline), and
+   * `src/answer/audit/reconstruct.ts` carries the matching strip-if-absent /
+   * compare-if-present tolerance. No schemaVersion bump (ADR 014). */
+  regionScope?: RegionScope | null;
 }

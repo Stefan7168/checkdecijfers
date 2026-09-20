@@ -32,9 +32,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   DefaultZIndexes,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -47,6 +50,7 @@ import {
   YAxis,
   ZIndexLayer,
 } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 import type { ChartPoint, ChartSpec } from '../backend/chart/types.ts';
 import {
   areaFillOpacityFor,
@@ -116,9 +120,19 @@ import {
 } from '../lib/chart-commands.ts';
 import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
 import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
+// Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand check that
+// a pie/stacked/100%-stacked chart's parts add up to the CBS-published total
+// — its own tiny-import-graph file, the same reasoning as every Server
+// Action import above. Read by the `wholeOutcomes` effect below.
+import { requestWholeVerification, type WholePeriodOutcome } from '../app/chart-whole-verification-actions.ts';
 // Final-review fix I1: the same value+unit formatters the answer body's own
 // derivation rendering uses (answer-proof.ts) — see formatOverlayValue below.
 import { displayDifferenceUnit, displayValueUnit } from '../backend/answer/compose/template.ts';
+// Phase 5b: the 100%-stacked share label is the ONE computed number this
+// file ever draws (spec §11: pure arithmetic over already-verified parts,
+// done only AFTER the whole check passed) — formatted by the same Dutch
+// number formatter every `formattedValue` on the chart came from.
+import { formatValueNl } from '../backend/answer/compose/format.ts';
 import type { DerivationRecord } from '../../src/query/types.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
@@ -173,7 +187,13 @@ import {
   // every series — see the `colorFor` comment below.
   isComparisonShaped,
   lineFormAllowed,
+  // Phase 5b (verified-whole, session 117): the three roster-only guards,
+  // read here by the `initialFormOverride` effect only until Task 4 wires
+  // the tabs and render branches.
+  pieFormAllowed,
   slopeFormAllowed,
+  stacked100FormAllowed,
+  stackedFormAllowed,
   windowSpec,
   type ChartForm,
   type ChartViewState,
@@ -1719,6 +1739,184 @@ function SeriesBar(
   };
 }
 
+/** Chart co-pilot phase 5b (verified-whole, Task 4): one period's verdict as
+ * ChartView holds it — the server's own `WholePeriodOutcome` plus the one
+ * client-side reason ('unavailable': the action answered `ok: false` or
+ * threw), so a failed round trip is an explained refusal, never a spinner. */
+type WholeClientOutcome = WholePeriodOutcome | { verified: false; reason: 'unavailable' };
+
+/** Phase 5b: the digit-free message key for a refused verdict — one key per
+ * reason code, never the server's raw string (the same rule
+ * `derivationRefusalMessage` follows for phase 4's overlays). */
+function wholeRefusalKey(reason: Extract<WholeClientOutcome, { verified: false }>['reason']): MessageKey {
+  switch (reason) {
+    case 'missing_whole':
+      return 'chart.whole.refused.missing_whole';
+    case 'withheld_member':
+      return 'chart.whole.refused.withheld_member';
+    case 'sum_mismatch':
+      return 'chart.whole.refused.sum_mismatch';
+    case 'incomplete_roster':
+      return 'chart.whole.refused.incomplete_roster';
+    case 'unavailable':
+      return 'chart.whole.refused.unavailable';
+  }
+}
+
+/** Chart co-pilot phase 5b (verified-whole, Task 4): the smallest segment
+ * a stacked bar still labels — below this height (px) the 12 px label text
+ * would overrun its own segment and collide with its neighbours' labels. A
+ * geometry gate ONLY (which segments get a label, the same class of rule
+ * `valueLabelPlan`'s >BAR_LABEL_MAX thinning is); the tooltip still shows
+ * every segment's own value. */
+const STACK_LABEL_MIN_HEIGHT_PX = 14;
+
+/** Phase 5b: one slice of a verified-whole pie — the pie draws
+ * `regionChartRowsAll` (one row per region, the same rows the horizontal
+ * bar draws), so this is the SAME row shape and the same `value_display`/
+ * `value_resultId` binding `RegionBar` and `RegionTooltip` already read. */
+type PieRow = RegionChartRow;
+
+/** Phase 5b: the pie's own slice label — Recharts' `label` render prop gets
+ * the sector entry spread in (`payload` = the row it was built from, plus
+ * the label anchor `x`/`y`/`textAnchor` it computed at `outerRadius` plus
+ * its offset). Draws ONLY the row's own `value_display` (never Recharts'
+ * own `percent`, never the raw `value`), the same ' *' provisional suffix as
+ * every other label on the card, bound to its source cell via
+ * `data-label-for` (R1). A row with no display string draws nothing. */
+function PieSliceLabel(props: PieLabelRenderProps) {
+  const row = (props.payload ?? null) as PieRow | null;
+  if (row === null || row.value_display == null || props.x == null || props.y == null) return null;
+  return (
+    <text
+      x={props.x}
+      y={props.y}
+      {...VALUE_LABEL_PROPS}
+      fill="var(--foreground)"
+      textAnchor={props.textAnchor}
+      dominantBaseline="central"
+      data-role="pie-label"
+      data-label-for={row.value_resultId ?? undefined}
+    >
+      {row.value_display}
+      {row.value_provisional ? '*' : ''}
+    </text>
+  );
+}
+
+/** Phase 5b: one segment of a stacked / 100%-stacked bar. The SAME
+ * shape-factory convention as SeriesBar above (one instance per series,
+ * called once per period), reading the period row's own per-series fields:
+ * `valueKey` is what Recharts stacked (`<key>` for stacked — the real
+ * value; `<key>_share` for 100%-stacked — the computed percentage), and
+ * `labelKey` is the display string drawn INSIDE the segment (`<key>_display`
+ * — the point's own formattedValue; or `<key>_share_label` — the percentage
+ * text `buildStack100Rows` formatted). Both are bound to the point's own
+ * resultId via `data-label-for` (R1). Provisional points keep the hatch
+ * pattern (R11). A segment shorter than STACK_LABEL_MIN_HEIGHT_PX draws no
+ * label (geometry only — the tooltip still shows it). */
+function StackSegment(
+  seriesKey: string,
+  valueKey: string,
+  labelKey: string,
+  color: string,
+  patternId: string,
+  opacity = 1,
+) {
+  return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
+    const { x, y, width, height, payload } = props;
+    if (x == null || y == null || width == null || height == null || !payload) return null;
+    const value = payload[valueKey];
+    if (value == null) return null;
+    const provisional = Boolean(payload[`${seriesKey}_provisional`]);
+    const resultId = payload[`${seriesKey}_resultId`];
+    const label = payload[labelKey];
+    const showLabel = label != null && height >= STACK_LABEL_MIN_HEIGHT_PX;
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={provisional ? `url(#${patternId})` : color}
+          fillOpacity={opacity}
+          stroke={provisional ? color : 'var(--card)'}
+          strokeOpacity={provisional ? opacity : 1}
+          strokeWidth={1}
+          data-point="value"
+          data-series-dimmed={opacity < 1 ? 'true' : undefined}
+          data-result-id={resultId == null ? undefined : String(resultId)}
+        />
+        {showLabel ? (
+          <ZIndexLayer zIndex={DefaultZIndexes.label}>
+            <text
+              x={x + width / 2}
+              y={y + height / 2}
+              {...VALUE_LABEL_PROPS}
+              fill="var(--foreground)"
+              textAnchor="middle"
+              dominantBaseline="central"
+              data-role="stack-label"
+              data-label-for={resultId == null ? undefined : String(resultId)}
+            >
+              {String(label)}
+              {provisional ? '*' : ''}
+            </text>
+          </ZIndexLayer>
+        ) : null}
+      </g>
+    );
+  };
+}
+
+/** Phase 5b: the 100%-stacked row model — `rows` (period × series, from
+ * buildRows) for the VERIFIED periods only, each series' value replaced by
+ * its share of that period's own verified total, as a percentage. Pure
+ * arithmetic over already-verified reals (spec §11), run only after the
+ * on-demand whole check passed for that period — a caller must never hand
+ * this an unverified period. The denominator is the sum of the period's own
+ * parts (the very sum the check just confirmed matches CBS's published
+ * total within tolerance), so the shares add up to exactly one full bar.
+ * Per series `k` the row gains `k_share` (the number Recharts stacks),
+ * `k_share_label` (the percentage text drawn in the segment) and
+ * `k_share_display` (the tooltip line: the real formattedValue with the
+ * share in brackets — ChartTooltip reads `<dataKey>_display`), plus
+ * `k_share_provisional`/`k_share_resultId` copied so the same tooltip binds
+ * each line to its cell. A period whose parts are not all non-negative
+ * reals with a positive total has no honest share and is DROPPED (returned
+ * in `omitted`) — a stack of signed values is not a whole of parts. */
+export function buildStack100Rows(
+  rows: Row[],
+  seriesKeys: string[],
+  verifiedPeriodCodes: ReadonlySet<string>,
+): { rows: Row[]; omitted: string[] } {
+  const out: Row[] = [];
+  const omitted: string[] = [];
+  for (const row of rows) {
+    const periodCode = String(row.periodCode);
+    if (!verifiedPeriodCodes.has(periodCode)) continue;
+    const values = seriesKeys.map((k) => row[k]);
+    const total = values.reduce<number>((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+    if (values.some((v) => typeof v !== 'number' || v < 0) || total <= 0) {
+      omitted.push(periodCode);
+      continue;
+    }
+    const next: Row = { ...row };
+    for (const k of seriesKeys) {
+      const share = ((row[k] as number) / total) * 100;
+      const shareLabel = `${formatValueNl(share, 1)}%`;
+      next[`${k}_share`] = share;
+      next[`${k}_share_label`] = shareLabel;
+      next[`${k}_share_display`] = `${String(row[`${k}_display`] ?? '')} (${shareLabel})`;
+      next[`${k}_share_provisional`] = row[`${k}_provisional`] ?? false;
+      next[`${k}_share_resultId`] = row[`${k}_resultId`] ?? null;
+    }
+    out.push(next);
+  }
+  return { rows: out, omitted };
+}
+
 /** Horizontal-bar shape: one row IS one region (RegionChartRow, built in
  * ChartView from buildRegionRows), so unlike SeriesBar — one shape instance
  * per SERIES, called once per period — this shape is mounted ONCE (one
@@ -2165,7 +2363,13 @@ export function ChartView({
                 ? dumbbellFormAllowed(spec, spec.series.length)
                 : initialFormOverride === 'heatmap'
                   ? heatmapFormAllowed(spec, spec.series.length)
-                  : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+                  : initialFormOverride === 'pie'
+                    ? pieFormAllowed(spec, spec.series.length)
+                    : initialFormOverride === 'stacked'
+                      ? stackedFormAllowed(spec, spec.series.length)
+                      : initialFormOverride === 'stacked100'
+                        ? stacked100FormAllowed(spec, spec.series.length)
+                        : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
     // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms are
     // guarded here too. `fallbackForm` below re-checks on every render
     // regardless, so an unguarded override could never render a forbidden
@@ -2188,6 +2392,12 @@ export function ChartView({
   const dumbbellTabRef = useRef<HTMLButtonElement>(null);
   const slopeTabRef = useRef<HTMLButtonElement>(null);
   const heatmapTabRef = useRef<HTMLButtonElement>(null);
+  // Phase 5b (verified-whole, session 117, Task 3): same convention — the
+  // three roster-only forms' refs are declared with the type widening so
+  // `formTabRef` stays exhaustive; Task 4 attaches each to its tab button.
+  const pieTabRef = useRef<HTMLButtonElement>(null);
+  const stackedTabRef = useRef<HTMLButtonElement>(null);
+  const stacked100TabRef = useRef<HTMLButtonElement>(null);
 
   const [smallMultiples, setSmallMultiples] = useState(false);
   const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
@@ -2238,6 +2448,18 @@ export function ChartView({
   const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; regionCode: string | null } | null>(null);
   // Error from failed difference request (e.g., different regions).
   const [differenceError, setDifferenceError] = useState<string | null>(null);
+
+  // Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand verdicts
+  // of `requestWholeVerification`, keyed `${auditId}:${periodCode}` — the
+  // same "recipe in the history, resolved fact here, transient per session"
+  // split as `resolvedOverlays` above. A period is requested at most once
+  // per mounted chart (`wholeInFlight` de-duplicates the async round trip
+  // without a render in between); an `ok: false` reply lands as the
+  // client-only 'unavailable' reason so the tab explains itself rather than
+  // spinning forever. Nothing here is ever a number: a verdict decides
+  // WHETHER a period's real cells are drawn as a whole, never what they say.
+  const [wholeOutcomes, setWholeOutcomes] = useState<Map<string, WholeClientOutcome>>(new Map());
+  const wholeInFlight = useRef<Set<string>>(new Set());
 
   // Lazy fetch-on-mount for the chat context only: the embed page already
   // resolved `headlineText` server-side (undefined means "not yet known"
@@ -2523,6 +2745,10 @@ export function ChartView({
     setStageOpen(false);
     storySnapshot.current = null;
     setFrameImage(null);
+    // Phase 5b: a different chart's whole verdicts are about different
+    // cells — cleared with everything else, so the new chart re-checks.
+    setWholeOutcomes(new Map());
+    wholeInFlight.current.clear();
   }
 
   // Task 3: a real three-way Lijn/Staaf/Tabel switch. Computed here, ABOVE
@@ -2648,7 +2874,131 @@ export function ChartView({
   // `heatmapModel`) — offered only for a real grid: at least two series, all
   // covering the same two-or-more periods, every cell a real value.
   const canUseHeatmap = heatmapFormAllowed(guardSpec, spec.series.length);
-  const activeForm: ChartForm = fallbackForm(state.form, guardSpec, spec.series.length);
+  // Chart co-pilot phase 5b (verified-whole, Task 4): the three roster-only
+  // forms. Their STRUCTURAL guards (chart-view-state.ts) read `regionScope`
+  // — the provenance buildChartSpec recorded (Task 2) — on top of the point
+  // shape, so they get `guardSpec` widened with the ACTIVE reading's own
+  // scope (an alternate reading is built by the same builder and carries
+  // its own; a pre-5b stored spec has no key, which reads as "refuse").
+  // The structural guards say whether a form may be OFFERED; whether it is
+  // DRAWN is decided per period by the on-demand server check below (spec
+  // §11's "Option A": structural checks are free, numeric checks run only
+  // when the reader picks the form).
+  const wholeGuardSpec = { ...guardSpec, regionScope: activeSpec.regionScope ?? null };
+  const pieStructural = pieFormAllowed(wholeGuardSpec, spec.series.length);
+  const stackedStructural = stackedFormAllowed(wholeGuardSpec, spec.series.length);
+  const stacked100Structural = stacked100FormAllowed(wholeGuardSpec, spec.series.length);
+  // The periods the current view shows (window applied; translation never
+  // touches a period code), in chronological code order — the periods a
+  // verdict is needed for. `viewSpec`, not `displaySpec`: this must sit
+  // above the schemaVersion guard (Rules of Hooks, the effect below).
+  const shownPeriodCodes = Array.from(new Set(viewSpec.series.flatMap((s) => s.points.map((p) => p.periodCode)))).sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const shownPeriodKey = shownPeriodCodes.join(',');
+  const wholeAuditId = embed?.auditId;
+  // The three refusals that never reach the server: no saved answer to
+  // verify against (the check re-reads the audit row's own cells); an
+  // alternate reading (its parts are not the audit row's primary cells, and
+  // the check only ever verifies those — refusing beats verifying the wrong
+  // parts); a hidden series (a whole with a part hidden is no longer a
+  // whole — hiding a slice must not silently redraw the circle over the
+  // rest). Each is its own digit-free message key.
+  const wholeLocalRefusal: MessageKey | null =
+    wholeAuditId === undefined
+      ? 'chart.whole.refused.noAudit'
+      : state.selectedReading !== null
+        ? 'chart.whole.refused.alternateReading'
+        : state.hiddenKeys.size > 0
+          ? 'chart.whole.refused.hiddenSeries'
+          : null;
+  const wholeOutcomeFor = (periodCode: string): WholeClientOutcome | undefined =>
+    wholeAuditId === undefined ? undefined : wholeOutcomes.get(`${wholeAuditId}:${periodCode}`);
+  // Pie: exactly one period on screen (the structural guard already needs
+  // one point per series; two series at two DIFFERENT single periods is not
+  // one moment either). Its one verdict decides the whole form: pending
+  // (undefined) draws the checking state, verified draws, refused sends the
+  // form back to the table with the verdict's own reason on the tab.
+  const pieOnePeriod = shownPeriodCodes.length === 1;
+  const pieOutcome = pieOnePeriod ? wholeOutcomeFor(shownPeriodCodes[0]!) : undefined;
+  const pieRefusal: MessageKey | null = !pieStructural
+    ? null
+    : (wholeLocalRefusal ??
+      (!pieOnePeriod ? 'chart.pieDisabledReason' : pieOutcome !== undefined && !pieOutcome.verified ? wholeRefusalKey(pieOutcome.reason) : null));
+  const canUsePie = pieStructural && pieRefusal === null;
+  // Stacked / 100%-stacked: one verdict per shown period, checked
+  // independently (spec §11) — a refused period's stack is OMITTED and the
+  // rest still draw; only when EVERY shown period is refused (or a local
+  // refusal applies) does the form fall back to the table.
+  const stackVerdicts = shownPeriodCodes.map((p) => wholeOutcomeFor(p));
+  const stackPending = wholeLocalRefusal === null && stackVerdicts.some((v) => v === undefined);
+  const stackVerifiedPeriods = new Set(shownPeriodCodes.filter((p) => wholeOutcomeFor(p)?.verified === true));
+  const stackRefusedPeriods = shownPeriodCodes.filter((p) => wholeOutcomeFor(p)?.verified === false);
+  const firstStackRefusal = stackVerdicts.find((v): v is Extract<WholeClientOutcome, { verified: false }> => v !== undefined && !v.verified);
+  const stackedRefusal: MessageKey | null = !stackedStructural
+    ? null
+    : (wholeLocalRefusal ??
+      (!stackPending && stackVerifiedPeriods.size === 0 && firstStackRefusal !== undefined ? wholeRefusalKey(firstStackRefusal.reason) : null));
+  const canUseStacked = stackedStructural && stackedRefusal === null;
+  const canUseStacked100 = stacked100Structural && stackedRefusal === null;
+  // `fallbackForm` applies the STRUCTURAL policy (a roster form on a spec
+  // that lost its provenance → table); the verdict-driven fallback is
+  // layered on top here, in the one place `activeForm` is decided, so a
+  // refused whole renders as the table it fell back to while `state.form`
+  // (and the tab's own disabled reason) keeps saying what the reader chose
+  // — the same "tab disabled + Tabel selected" shape the heatmap's own
+  // null-cell fallback already has.
+  const structuralForm: ChartForm = fallbackForm(state.form, wholeGuardSpec, spec.series.length);
+  const activeForm: ChartForm =
+    (structuralForm === 'pie' && !canUsePie) || ((structuralForm === 'stacked' || structuralForm === 'stacked100') && !canUseStacked)
+      ? 'table'
+      : structuralForm;
+  /** A form that draws a verified whole is on screen (or wanted and
+   * pending) — drives the check below, the per-series palette and the
+   * checking/verified/omitted notes. */
+  const wholeFormWanted = structuralForm === 'pie' || structuralForm === 'stacked' || structuralForm === 'stacked100';
+  const wholeForm = activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100';
+  /** True while the form on screen still waits for at least one verdict —
+   * the canvas shows the checking state instead of an unverified chart. */
+  const wholePending = wholeForm && (activeForm === 'pie' ? pieOutcome === undefined : stackPending);
+  // The on-demand check itself — mirrors the derived-overlay effect above:
+  // fire the Server Action for exactly the shown periods that have no
+  // verdict yet, store what comes back, never touch the command history.
+  // Keyed on the joined period string (a new array every render would
+  // re-fire it) and on `wholeOutcomes` so a fresh verdict re-runs the scan
+  // and finds nothing left to ask.
+  useEffect(() => {
+    if (!wholeFormWanted || wholeAuditId === undefined || wholeLocalRefusal !== null) return;
+    const missing = shownPeriodKey
+      .split(',')
+      .filter((p) => p !== '')
+      .filter((p) => !wholeOutcomes.has(`${wholeAuditId}:${p}`) && !wholeInFlight.current.has(`${wholeAuditId}:${p}`));
+    if (missing.length === 0) return;
+    for (const p of missing) wholeInFlight.current.add(`${wholeAuditId}:${p}`);
+    void requestWholeVerification({ kind: 'answer', id: wholeAuditId }, missing)
+      .then((res) => {
+        for (const p of missing) wholeInFlight.current.delete(`${wholeAuditId}:${p}`);
+        setWholeOutcomes((prev) => {
+          const next = new Map(prev);
+          for (const p of missing) {
+            next.set(`${wholeAuditId}:${p}`, res.ok ? (res.periods[p] ?? { verified: false, reason: 'unavailable' }) : { verified: false, reason: 'unavailable' });
+          }
+          return next;
+        });
+      })
+      // Final-review fix (M2): a REJECTED round trip (transport failure, as
+      // opposed to a normal `ok: false` answer) must land in the same place
+      // as `ok: false` — otherwise the period stays in flight forever, no
+      // verdict is ever stored, and the card shows "checking…" for good.
+      .catch(() => {
+        for (const p of missing) wholeInFlight.current.delete(`${wholeAuditId}:${p}`);
+        setWholeOutcomes((prev) => {
+          const next = new Map(prev);
+          for (const p of missing) next.set(`${wholeAuditId}:${p}`, { verified: false, reason: 'unavailable' });
+          return next;
+        });
+      });
+  }, [wholeFormWanted, wholeAuditId, wholeLocalRefusal, shownPeriodKey, wholeOutcomes]);
   // Phase 5 (Task 4): the two forms that draw NO chart — the table and the
   // heatmap (a CSS grid over the table's own model, no <svg>, no frame,
   // nothing for the Style panel, legend, notes, story or download to act
@@ -2982,9 +3332,38 @@ export function ChartView({
   // `i`, never on `paletteIndex` (see its own comment). A genuine time
   // series (any line/area, or a multi-point `kind: 'bar'`) is never
   // comparison-shaped and keeps the unchanged per-series cycling palette.
-  const comparisonPalette = isComparisonShaped(displaySpec);
+  // Phase 5b: a pie's slices and a stack's segments ARE distinguished by
+  // colour (the region is no longer on an axis of its own), so the three
+  // verified-whole forms keep the per-series cycling palette even for a
+  // comparison-shaped spec.
+  const comparisonPalette = isComparisonShaped(displaySpec) && !wholeForm;
   const colorFor = (i: number) => seriesColor(pres, i, comparisonPalette ? 0 : i);
   const { rows, seriesMeta } = buildRows(displaySpec, colorFor);
+  // Phase 5b: the stacked forms draw `rows` (period × series) for the
+  // VERIFIED periods only; 100%-stacked additionally replaces each value by
+  // its share of that period's own verified total (`buildStack100Rows` —
+  // pure arithmetic AFTER the check, never before). Periods the check
+  // refused, and (for 100%-stacked) periods with no honest share, are the
+  // OMITTED ones the note under the chart names by their own labels.
+  const stackedRows = rows.filter((r) => stackVerifiedPeriods.has(String(r.periodCode)));
+  const stack100 = buildStack100Rows(
+    rows,
+    seriesMeta.map((s) => s.key),
+    stackVerifiedPeriods,
+  );
+  // Two DISJOINT omission sets, each with its own honest sentence under
+  // the chart (Task 4 fix round 1): a period the server REFUSED (the CBS
+  // total is missing / mismatched / a part withheld) versus a period the
+  // check VERIFIED whose parts add up to zero or include a negative value,
+  // so the 100%-stacked form has no honest share for it. `stack100.omitted`
+  // only ever holds verified periods (`buildStack100Rows` skips unverified
+  // ones before looking at their values), so the two never overlap.
+  const periodLabelFor = (code: string) => {
+    const row = rows.find((r) => String(r.periodCode) === code);
+    return row ? String(row.periodLabel) : code;
+  };
+  const stackRefusedLabels = stackRefusedPeriods.map(periodLabelFor);
+  const stackNoShareLabels = activeForm === 'stacked100' ? stack100.omitted.map(periodLabelFor) : [];
   // Final-review fix I8: the series actually shown right now — used to gate
   // the "Gemiddelde tonen" control to exactly one visible series (below),
   // the same visibility test every chart-form branch's own `.filter(...)`
@@ -3282,6 +3661,12 @@ export function ChartView({
     ...(canUseDumbbell ? (['dumbbell'] as const) : []),
     ...(canUseSlope ? (['slope'] as const) : []),
     ...(canUseHeatmap ? (['heatmap'] as const) : []),
+    // Phase 5b (verified-whole): the three roster-only forms trail the
+    // heatmap, again in the scorer's own fixed order (pie, stacked,
+    // stacked100 — chart-fit.ts's `allowedForms`).
+    ...(canUsePie ? (['pie'] as const) : []),
+    ...(canUseStacked ? (['stacked'] as const) : []),
+    ...(canUseStacked100 ? (['stacked100'] as const) : []),
   ];
   const formTabRef: Record<ChartForm, typeof lineTabRef> = {
     line: lineTabRef,
@@ -3292,6 +3677,9 @@ export function ChartView({
     dumbbell: dumbbellTabRef,
     slope: slopeTabRef,
     heatmap: heatmapTabRef,
+    pie: pieTabRef,
+    stacked: stackedTabRef,
+    stacked100: stacked100TabRef,
   };
   // WP218 phase 5 (Global Constraints): each disabled tab explains itself —
   // the SAME reason string feeds both the pointer `title` and the
@@ -3309,6 +3697,14 @@ export function ChartView({
   const slopeDisabledReason = t(chartLang, 'chart.slopeDisabledReason');
   const dumbbellDisabledReason = t(chartLang, 'chart.dumbbellDisabledReason');
   const heatmapDisabledReason = t(chartLang, 'chart.heatmapDisabledReason');
+  // Phase 5b: a roster form's tab explains itself in TWO tiers — the
+  // structural reason (not a complete CBS-known roster / not one moment)
+  // when the guard refuses, else the verdict-driven reason (`pieRefusal` /
+  // `stackedRefusal`: no saved answer, an alternate reading, a hidden
+  // series, or the server's own per-period verdict) when the check did.
+  const pieDisabledReason = t(chartLang, pieRefusal ?? 'chart.pieDisabledReason');
+  const stackedDisabledReason = t(chartLang, stackedRefusal ?? 'chart.stackedDisabledReason');
+  const stacked100DisabledReason = t(chartLang, stackedRefusal ?? 'chart.stacked100DisabledReason');
 
   function selectForm(next: ChartForm): void {
     // Review fix (controller decision): a story is only ever meaningful for
@@ -3913,9 +4309,153 @@ export function ChartView({
             presentation={pres}
             lang={chartLang}
           />
+        ) : wholePending ? (
+          // Phase 5b: a verified-whole form whose verdict has not come back
+          // yet draws NOTHING chart-shaped — never an unverified circle or
+          // stack that a later refusal would have to take away again. A
+          // plain status line, outside ResponsiveContainer (which expects a
+          // chart child).
+          <p role="status" aria-live="polite" className="flex h-full min-h-32 items-center justify-center text-sm text-muted-foreground" data-testid="whole-checking">
+            {t(chartLang, 'chart.whole.checking')}
+          </p>
         ) : (
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
-          {activeForm === 'line' || activeForm === 'slope' ? (
+          {activeForm === 'pie' ? (
+            // Phase 5b (verified-whole, Task 4): the pie — one slice per
+            // region, drawn ONLY once this period's parts verified against
+            // the CBS-published total (`pieOutcome.verified`, see
+            // `activeForm`). `regionChartRowsAll` is the horizontal bar's own
+            // one-row-per-region model (every row, since a hidden series
+            // already refused the form), so each slice's `value` is the
+            // point's own real value (geometry only), each label its own
+            // `value_display` via PieSliceLabel, each tooltip line
+            // RegionTooltip's — no Recharts percentage, no invented number.
+            // `innerRadius` is the ONE thing the donut presentation key
+            // changes (spec §11: styling, not a form).
+            <PieChart desc={t(chartLang, 'chart.keyboardHint')} aria-label={accessibleName} margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
+              <defs>
+                {seriesMeta.map((s) => (
+                  <pattern
+                    key={s.key}
+                    id={`hatch-${domId}-${s.key}`}
+                    patternUnits="userSpaceOnUse"
+                    width={6}
+                    height={6}
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width={6} height={6} fill="var(--card)" />
+                    <line x1={0} y1={0} x2={0} y2={6} stroke={s.color} strokeWidth={2} />
+                  </pattern>
+                ))}
+              </defs>
+              <Tooltip trigger={tooltipTrigger} content={<RegionTooltip periodLabel={regionPeriodLabel} />} />
+              <Pie
+                data={regionChartRowsAll.filter((r) => r.value !== null)}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                innerRadius={pres.pieHole === 'donut' ? '50%' : 0}
+                outerRadius="80%"
+                isAnimationActive={false}
+                stroke="var(--card)"
+                strokeWidth={1}
+                label={PieSliceLabel}
+                labelLine={{ stroke: AXIS_COLOR, strokeWidth: 1 }}
+              >
+                {regionChartRowsAll
+                  .filter((r) => r.value !== null)
+                  .map((r) => (
+                    <Cell
+                      key={r.key}
+                      fill={r.value_provisional ? `url(#${r.patternId})` : r.color}
+                      fillOpacity={seriesOpacity(r.key)}
+                      stroke={r.value_provisional ? r.color : 'var(--card)'}
+                      data-point="value"
+                      data-series-key={r.key}
+                      data-series-dimmed={seriesOpacity(r.key) < 1 ? 'true' : undefined}
+                      data-result-id={r.value_resultId ?? undefined}
+                    />
+                  ))}
+              </Pie>
+            </PieChart>
+          ) : activeForm === 'stacked' || activeForm === 'stacked100' ? (
+            // Phase 5b (verified-whole, Task 4): stacked / 100%-stacked —
+            // the SAME period × series `rows` the vertical bar draws, one
+            // `<Bar stackId="whole">` per series (Recharts' own native
+            // stacking), restricted to the VERIFIED periods: a refused
+            // period's stack is simply absent from `data` (a gap in the
+            // period axis, the line/bar forms' own missing-point
+            // convention), named in the note under the chart. 100%-stacked
+            // stacks each series' `<key>_share` from `buildStack100Rows`
+            // against a fixed hundred-percent axis; the segment label is the
+            // formatted share and the tooltip pairs it with the real value.
+            // Ticks stay off (no invented axis numbers) on both.
+            <BarChart
+              data={activeForm === 'stacked100' ? stack100.rows : stackedRows}
+              margin={{ top: 16, right: 8, left: leftMargin, bottom: 8 }}
+              desc={t(chartLang, 'chart.keyboardHint')}
+              aria-label={accessibleName}
+            >
+              <defs>
+                {seriesMeta.map((s) => (
+                  <pattern
+                    key={s.key}
+                    id={`hatch-${domId}-${s.key}`}
+                    patternUnits="userSpaceOnUse"
+                    width={6}
+                    height={6}
+                    patternTransform="rotate(45)"
+                  >
+                    <rect width={6} height={6} fill="var(--card)" />
+                    <line x1={0} y1={0} x2={0} y2={6} stroke={s.color} strokeWidth={2} />
+                  </pattern>
+                ))}
+              </defs>
+              {pres.grid !== 'none' ? <CartesianGrid {...GRID_LINE_PROPS} horizontal vertical={pres.grid === 'both'} /> : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={baselineAxisLine(pres)}
+                tickLine={pres.axisLines === 'shown'}
+                angle={pres.xLabels === 'tilted' ? -45 : 0}
+                textAnchor={pres.xLabels === 'tilted' ? 'end' : 'middle'}
+                {...(xAxisHeightPx !== undefined ? { height: xAxisHeightPx } : {})}
+              />
+              <YAxis
+                tick={false}
+                width={16}
+                domain={activeForm === 'stacked100' ? [0, 100] : [0, 'auto']}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <Tooltip
+                trigger={tooltipTrigger}
+                content={<ChartTooltip seriesMeta={seriesMeta} />}
+                cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }}
+              />
+              {seriesMeta.map((s) => {
+                const opacity = seriesOpacity(s.key);
+                const valueKey = activeForm === 'stacked100' ? `${s.key}_share` : s.key;
+                const labelKey = activeForm === 'stacked100' ? `${s.key}_share_label` : `${s.key}_display`;
+                return (
+                  <Bar
+                    key={s.key}
+                    dataKey={valueKey}
+                    name={s.label}
+                    stackId="whole"
+                    fill={s.color}
+                    fillOpacity={opacity}
+                    data-series-dimmed={opacity < 1 ? 'true' : undefined}
+                    isAnimationActive={false}
+                    shape={StackSegment(s.key, valueKey, labelKey, s.color, `hatch-${domId}-${s.key}`, opacity)}
+                  />
+                );
+              })}
+            </BarChart>
+          ) : activeForm === 'line' || activeForm === 'slope' ? (
             <LineChart
               data={rows}
               margin={{ top: 8, right: rightMargin, left: leftMargin, bottom: 8 }}
@@ -4413,7 +4953,12 @@ export function ChartView({
       </ChartFrame>
       );
 
-  const legendNode = !tabularForm && seriesMeta.length > 1 ? (
+  // Phase 5b: the legend also stays up while a verified-whole form sits on
+  // the table ONLY because a series is hidden (`wholeLocalRefusal` ===
+  // hiddenSeries) — the legend's own "show again" button is the way back to
+  // the pie/stack, and the table would otherwise have swallowed it.
+  const legendVisible = !tabularForm || (wholeFormWanted && state.hiddenKeys.size > 0);
+  const legendNode = legendVisible && seriesMeta.length > 1 ? (
         inStage ? (
           <StageLegend seriesMeta={seriesMeta} lang={chartLang} />
         ) : (
@@ -4980,6 +5525,58 @@ export function ChartView({
             >
               {t(chartLang, 'chart.form.heatmap')}
             </button>
+            {/* Phase 5b (verified-whole, Task 4): Taartdiagram, Gestapeld,
+              * Gestapeld (%) trail Warmtekaart, matching FORM_ORDER's own
+              * array order (chart-fit.ts's `allowedForms`). Disabled for a
+              * structural reason OR a verdict (see pieDisabledReason). */}
+            <button
+              ref={pieTabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'pie'}
+              aria-controls={panelId}
+              aria-describedby={canUsePie ? undefined : `${domId}-pie-reason`}
+              tabIndex={activeForm === 'pie' ? 0 : -1}
+              disabled={!canUsePie}
+              title={canUsePie ? undefined : pieDisabledReason}
+              onClick={() => selectForm('pie')}
+              className={quietTab(activeForm === 'pie') + (canUsePie ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.pie')}
+            </button>
+            <button
+              ref={stackedTabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'stacked'}
+              aria-controls={panelId}
+              aria-describedby={canUseStacked ? undefined : `${domId}-stacked-reason`}
+              tabIndex={activeForm === 'stacked' ? 0 : -1}
+              disabled={!canUseStacked}
+              title={canUseStacked ? undefined : stackedDisabledReason}
+              onClick={() => selectForm('stacked')}
+              className={quietTab(activeForm === 'stacked') + (canUseStacked ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.stacked')}
+            </button>
+            <button
+              ref={stacked100TabRef}
+              type="button"
+              role="tab"
+              data-command-kind="setForm"
+              aria-selected={activeForm === 'stacked100'}
+              aria-controls={panelId}
+              aria-describedby={canUseStacked100 ? undefined : `${domId}-stacked100-reason`}
+              tabIndex={activeForm === 'stacked100' ? 0 : -1}
+              disabled={!canUseStacked100}
+              title={canUseStacked100 ? undefined : stacked100DisabledReason}
+              onClick={() => selectForm('stacked100')}
+              className={quietTab(activeForm === 'stacked100') + (canUseStacked100 ? '' : ' cursor-not-allowed opacity-40')}
+            >
+              {t(chartLang, 'chart.form.stacked100')}
+            </button>
           </div>
           {/* Reachable via the disabled Lijn tab's aria-describedby above — a
             * plain `title` (kept, for pointer users) is invisible to a screen
@@ -5013,6 +5610,21 @@ export function ChartView({
           {!canUseHeatmap ? (
             <span id={`${domId}-heatmap-reason`} className="sr-only">
               {heatmapDisabledReason}
+            </span>
+          ) : null}
+          {!canUsePie ? (
+            <span id={`${domId}-pie-reason`} className="sr-only">
+              {pieDisabledReason}
+            </span>
+          ) : null}
+          {!canUseStacked ? (
+            <span id={`${domId}-stacked-reason`} className="sr-only">
+              {stackedDisabledReason}
+            </span>
+          ) : null}
+          {!canUseStacked100 ? (
+            <span id={`${domId}-stacked100-reason`} className="sr-only">
+              {stacked100DisabledReason}
             </span>
           ) : null}
           {/* #254: the reading toggle — same quiet <select> pattern as the
@@ -5676,6 +6288,22 @@ export function ChartView({
         * the source credit, which stays smallest/lightest (photo-credit
         * style). Content untouched: same strings from the same one builder
         * (R4); only presentation changes here. */}
+      {/* Phase 5b (verified-whole): the whole's own honesty line, alongside
+        * the provisional/null notes below and, like them, OUTSIDE the export
+        * container. Once a verified-whole form is drawn it says so; a
+        * stacked form that had to omit a period names it, by the spec's own
+        * period label (a digit token the whole-card scan can bind). */}
+      {wholeForm && !wholePending ? (
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="whole-note">
+          {t(chartLang, 'chart.whole.verifiedNote')}
+          {stackRefusedLabels.length > 0 && activeForm !== 'pie'
+            ? ` ${t(chartLang, 'chart.whole.omittedPeriods', { periods: stackRefusedLabels.join(' · ') })}`
+            : ''}
+          {stackNoShareLabels.length > 0
+            ? ` ${t(chartLang, 'chart.whole.omittedNoShare', { periods: stackNoShareLabels.join(' · ') })}`
+            : ''}
+        </p>
+      ) : null}
       {activeSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{activeSpec.provisionalNote}</p> : null}
       {activeSpec.nullNotes.map((note) => (
         <p key={note} className="text-sm text-warning">

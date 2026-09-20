@@ -15,11 +15,15 @@ import {
   isChartForm,
   isComparisonShaped,
   lineFormAllowed,
+  pieFormAllowed,
   slopeFormAllowed,
+  stacked100FormAllowed,
+  stackedFormAllowed,
   windowSpec,
   type ChartViewState,
 } from './chart-view-state.ts';
 import type { ChartPoint, ChartSeries, ChartSpec } from '../backend/chart/types.ts';
+import type { RegionScope } from '../backend/query/index.ts';
 
 function point(periodCode: string, value: number): ChartPoint {
   return {
@@ -424,6 +428,157 @@ describe('fallbackForm', () => {
     expect(fallbackForm('heatmap', shaped('line', 1, 8), 1)).toBe('table');
     expect(fallbackForm('heatmap', shaped('bar', 12, 1), 12)).toBe('table');
   });
+
+  // Phase 5b (verified-whole): the three roster-only forms fall back to
+  // table — like the heatmap, "a different way of looking at the same rows".
+  it('pie stays pie on a single-moment roster and falls back to table once the window spans several periods or the scope is gone', () => {
+    expect(fallbackForm('pie', rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toBe('pie');
+    expect(fallbackForm('pie', rosterSpec(ALL_PROVINCIES, 12, 3), 12)).toBe('table');
+    expect(fallbackForm('pie', { ...shaped('bar', 12, 1), regionScope: null }, 12)).toBe('table');
+  });
+  it('stacked and stacked100 stay themselves on any roster (one moment or several) and fall back to table without a scope', () => {
+    expect(fallbackForm('stacked', rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toBe('stacked');
+    expect(fallbackForm('stacked', rosterSpec(ALL_PROVINCIES, 12, 3), 12)).toBe('stacked');
+    expect(fallbackForm('stacked100', rosterSpec(ALL_PROVINCIES, 12, 3), 12)).toBe('stacked100');
+    expect(fallbackForm('stacked', { ...shaped('bar', 12, 3), regionScope: null }, 12)).toBe('table');
+    expect(fallbackForm('stacked100', { ...shaped('bar', 12, 3), regionScope: null }, 12)).toBe('table');
+    // A spec with NO regionScope key at all (a PlottableSpec, a pre-phase-5b
+    // stored spec) reads the same as null.
+    expect(fallbackForm('stacked', shaped('bar', 12, 3), 12)).toBe('table');
+    expect(fallbackForm('pie', shaped('bar', 12, 1), 12)).toBe('table');
+  });
+});
+
+// Phase 5b (the verified whole, session 117, spec §11): the three guards
+// read PROVENANCE — `spec.regionScope`, written by buildChartSpec only for a
+// region-class answer (all provincies, all landsdelen, the gemeenten of one
+// provincie, …) — plus the series shape. They never look at the region
+// codes themselves and never verify the sum (that runs on demand, server
+// side, in Task 4).
+const ALL_PROVINCIES: RegionScope = { kind: 'all_provincies' };
+const ALL_LANDSDELEN: RegionScope = { kind: 'all_landsdelen' };
+const GEMEENTEN_IN_UTRECHT: RegionScope = { kind: 'gemeenten_in_provincie', parent: 'PV26' };
+const ALL_GEMEENTEN: RegionScope = { kind: 'all_gemeenten' };
+
+/** The twelve real CBS province codes — exactly the roster `all_provincies`
+ * resolves to. Used by the provenance test below to build a chart whose
+ * codes MATCH a complete roster while its `regionScope` is null. */
+const PROVINCE_CODES = ['PV20', 'PV21', 'PV22', 'PV23', 'PV24', 'PV25', 'PV26', 'PV27', 'PV28', 'PV29', 'PV30', 'PV31'] as const;
+
+/** A `shaped` spec stamped with a real roster provenance. */
+function rosterSpec(scope: RegionScope, seriesCount: number, pointsPerSeries: number): ChartSpec {
+  return { ...shaped('bar', seriesCount, pointsPerSeries), regionScope: scope };
+}
+
+/** A hand-picked comparison over the SAME twelve province codes, built the
+ * way a `comparison`/`regions: [...]` answer would be: explicit null scope. */
+function handPickedProvinces(pointsPerSeries: number): ChartSpec {
+  return {
+    ...spec(
+      'bar',
+      PROVINCE_CODES.map((code, i) =>
+        series(
+          code,
+          Array.from({ length: pointsPerSeries }, (_, p) => point(`202${p}`, i + p)),
+        ),
+      ),
+    ),
+    regionScope: null,
+  };
+}
+
+describe('pieFormAllowed — a complete CBS roster, one moment, at least two slices', () => {
+  it('allowed for a single-moment roster of every verifiable scope kind', () => {
+    expect(pieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toBe(true);
+    expect(pieFormAllowed(rosterSpec(ALL_LANDSDELEN, 4, 1), 4)).toBe(true);
+    expect(pieFormAllowed(rosterSpec(GEMEENTEN_IN_UTRECHT, 26, 1), 26)).toBe(true);
+  });
+  it('is purely structural: all_gemeenten (no verified-whole parent) still passes the guard — the on-demand check, not this guard, refuses it', () => {
+    // The field is provenance, not a pre-filtered "verifiable" list (Task 2's
+    // own note); `parentCellRef` returning null for this scope is Task 1/4's
+    // concern. The guard reads "is there a scope", nothing more.
+    expect(pieFormAllowed(rosterSpec(ALL_GEMEENTEN, 342, 1), 342)).toBe(true);
+  });
+  it('refused once any series carries more than one point — a pie shows ONE moment', () => {
+    expect(pieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 2), 12)).toBe(false);
+    expect(pieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 3), 12)).toBe(false);
+    const ragged: ChartSpec = {
+      ...spec('bar', [series('A', [point('2020', 1)]), series('B', [point('2020', 2), point('2021', 3)])]),
+      regionScope: ALL_LANDSDELEN,
+    };
+    expect(pieFormAllowed(ragged, 2)).toBe(false);
+  });
+  it('refused for a single series, even with a real scope (one slice is not a breakdown)', () => {
+    expect(pieFormAllowed(rosterSpec(ALL_PROVINCIES, 1, 1), 1)).toBe(false);
+  });
+  it('refused for a null scope (a named region, a hand-picked list, a national series) — whatever the shape', () => {
+    expect(pieFormAllowed({ ...shaped('bar', 12, 1), regionScope: null }, 12)).toBe(false);
+    expect(pieFormAllowed({ ...shaped('bar', 2, 1), regionScope: null }, 2)).toBe(false);
+  });
+  it('refused when the regionScope key is absent altogether (a PlottableSpec, a spec stored before the field existed)', () => {
+    expect(pieFormAllowed(shaped('bar', 12, 1), 12)).toBe(false);
+  });
+});
+
+describe('stackedFormAllowed / stacked100FormAllowed — a complete CBS roster, any number of moments, at least two series', () => {
+  it('allowed for a roster at one moment AND across several periods (one stack per period)', () => {
+    expect(stackedFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toBe(true);
+    expect(stackedFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 5), 12)).toBe(true);
+    expect(stackedFormAllowed(rosterSpec(ALL_LANDSDELEN, 4, 3), 4)).toBe(true);
+    expect(stackedFormAllowed(rosterSpec(GEMEENTEN_IN_UTRECHT, 26, 2), 26)).toBe(true);
+  });
+  it('stacked100 agrees with stacked on every shape, by construction', () => {
+    for (const s of [
+      rosterSpec(ALL_PROVINCIES, 12, 1),
+      rosterSpec(ALL_PROVINCIES, 12, 5),
+      rosterSpec(ALL_LANDSDELEN, 1, 3),
+      { ...shaped('bar', 12, 3), regionScope: null },
+      shaped('bar', 12, 3),
+    ]) {
+      expect(stacked100FormAllowed(s, s.series.length)).toBe(stackedFormAllowed(s, s.series.length));
+    }
+  });
+  it('refused for a single series, even with a real scope (nothing to stack)', () => {
+    expect(stackedFormAllowed(rosterSpec(ALL_PROVINCIES, 1, 3), 1)).toBe(false);
+    expect(stacked100FormAllowed(rosterSpec(ALL_PROVINCIES, 1, 3), 1)).toBe(false);
+  });
+  it('refused for a null or absent scope, whatever the shape', () => {
+    expect(stackedFormAllowed({ ...shaped('bar', 12, 3), regionScope: null }, 12)).toBe(false);
+    expect(stackedFormAllowed(shaped('bar', 12, 3), 12)).toBe(false);
+    expect(stacked100FormAllowed({ ...shaped('line', 4, 3), regionScope: null }, 4)).toBe(false);
+  });
+});
+
+// The contract test spec §11 calls for ("provenance, not code-list
+// equality"): a chart whose region CODES are exactly the twelve provinces,
+// but which was built from a hand-picked list (`regionScope: null`) rather
+// than through `resolveRegionSet`, must still refuse all three forms. CBS
+// never vouched that those twelve are complete for THIS table/period; only
+// the roster path records that. The identical shape WITH the scope is
+// allowed — proving it is the provenance field alone, not the codes, that
+// the guards read.
+describe('provenance, not codes (spec §11 contract): a hand-picked subset matching a complete roster still refuses', () => {
+  it('the twelve province codes with a null scope refuse pie, stacked and stacked100', () => {
+    const oneMoment = handPickedProvinces(1);
+    expect(oneMoment.series.map((s) => s.regionCode)).toEqual([...PROVINCE_CODES]);
+    expect(oneMoment.regionScope).toBeNull();
+    expect(pieFormAllowed(oneMoment, 12)).toBe(false);
+    expect(stackedFormAllowed(oneMoment, 12)).toBe(false);
+    expect(stacked100FormAllowed(oneMoment, 12)).toBe(false);
+    const severalMoments = handPickedProvinces(3);
+    expect(stackedFormAllowed(severalMoments, 12)).toBe(false);
+    expect(stacked100FormAllowed(severalMoments, 12)).toBe(false);
+    // And fallbackForm sends every one of them to the table.
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(fallbackForm(form, oneMoment, 12), form).toBe('table');
+    }
+  });
+  it('the SAME twelve codes and shape, built through the roster path (a real scope), are allowed — only the provenance differs', () => {
+    const viaRoster: ChartSpec = { ...handPickedProvinces(1), regionScope: ALL_PROVINCIES };
+    expect(pieFormAllowed(viaRoster, 12)).toBe(true);
+    expect(stackedFormAllowed(viaRoster, 12)).toBe(true);
+    expect(stacked100FormAllowed(viaRoster, 12)).toBe(true);
+  });
 });
 
 describe('chartViewReducer — setForm accepts the two new forms (no other change)', () => {
@@ -439,15 +594,18 @@ describe('chartViewReducer — setForm accepts the two new forms (no other chang
 
 // Fix round (Task 5 review, Piece 3): the embed route's own `?form=` guard.
 describe('isChartForm (fix round, Piece 3)', () => {
-  it('accepts every real ChartForm member (eight since phase 5)', () => {
-    for (const form of ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap']) {
+  it('accepts every real ChartForm member (eleven since phase 5b)', () => {
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100']) {
       expect(isChartForm(form)).toBe(true);
     }
   });
 
   it('rejects anything else, including near-misses and non-strings', () => {
     expect(isChartForm('Line')).toBe(false);
-    expect(isChartForm('pie')).toBe(false);
+    // Phase 5b made 'pie' real; 'donut' is styling (a pieHole presentation
+    // key), never a form, and 'scatter' stays refused (ADR 039).
+    expect(isChartForm('donut')).toBe(false);
+    expect(isChartForm('scatter')).toBe(false);
     expect(isChartForm('')).toBe(false);
     expect(isChartForm(undefined)).toBe(false);
     expect(isChartForm(null)).toBe(false);

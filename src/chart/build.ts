@@ -206,5 +206,11 @@ export function buildChartSpec(result: ValidatedResult): ChartSpec | null {
       license: result.attribution.license,
       ...(trendHeadline !== undefined ? { trendHeadline } : {}),
     },
+    // Phase 5b provenance: the region CLASS this chart's series came from, or
+    // an explicit null for every chart built from anything else. `?? null`
+    // (docs/13): `regionSet` is present-only on a region_set result. Always
+    // emitted (never omitted) — the verified-whole guards read it directly;
+    // reconstruct.ts tolerates its ABSENCE on specs stored before it existed.
+    regionScope: result.regionSet?.scope ?? null,
   };
 }

@@ -71,8 +71,12 @@ export type RegionSetOutcome =
   | { ok: false; reason: 'empty_roster' | 'outside_slice'; detail: string };
 
 /** Reads the codes of one or more CBS dimension groups, in CBS's own order
- * (`sort_index`, then code for rows CBS left unindexed). */
-async function codesInGroups(
+ * (`sort_index`, then code for rows CBS left unindexed). Exported since
+ * phase 5b (verified-whole, session 117): the on-demand whole check
+ * (web/app/chart-whole-verification-actions.ts) resolves a roster's parent
+ * GROUP (`parentCellRef`'s `{ kind: 'group' }`, e.g. 'NL') to its one code
+ * per table through this SAME query, never a second hand-rolled lookup. */
+export async function codesInGroups(
   db: Db,
   tableId: string,
   dimension: string,

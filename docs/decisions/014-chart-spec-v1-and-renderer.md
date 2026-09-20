@@ -157,6 +157,20 @@ only, which is the safe direction.
   requires ≥3 source points — a 2-point series is trivially monotonic (one interval), the same hazard
   class #100 tracks for the LLM prompt's reading of `monotonic`, reopened here for this separate
   deterministic template and closed the same way.
+- **`regionScope` (chart co-pilot phase 5b, the verified whole — 2026-09-19) is the SECOND
+  builder-emitted optional-v1 field, and follows the `trendHeadline` shape above exactly.** It records
+  the region CLASS (`ValidatedResult.regionSet.scope`, #253 — all four variants, `all_gemeenten`
+  included, as a faithful provenance record, not a pre-filtered "verifiable" list) whose CBS-defined
+  roster produced a chart's series; `buildChartSpec` sets it on EVERY spec it builds — the real scope
+  on a `region_set` chart, an explicit `null` on every other chart — so the parts-of-a-whole guards
+  (pie / stacked / 100%-stacked) can read provenance instead of re-deriving a roster from the series.
+  Optional in the type and in `chartSpecSchema` (`regionScopeSchema`, a strict discriminated union),
+  no schemaVersion bump: every spec stored before it existed carries no key at all. Because the
+  builder now emits it on every chart, EVERY chart-bearing historical row (not only region-set rows)
+  meets the same named strip-if-absent / compare-if-present tolerance in `reconstruct.ts` — stored key
+  absent → stripped from the rebuilt spec; stored key present (null or a scope) → compared verbatim, so
+  a tampered scope, or a `null` stored on a genuine region-set row, still fails loudly
+  (tests/audit/region-set-r8.test.ts pins all three cases on real fixture rows).
 - **Ideas 6 (hide/show a series) and 8 (small multiples) also stayed web-renderer-only (session 79,
   2026-09-05, [#197](../open-questions.md)) — no new `ChartSpec` field, no schema bump.** Both are pure
   client-side interaction/presentation state inside `ChartView` (`hiddenKeys`, `smallMultiples`,

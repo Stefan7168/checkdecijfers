@@ -22,7 +22,7 @@ export const CBS_COPILOT_SCHEMA_VERSION = 1;
 export const cbsPatchSchema = patchSchema;
 
 export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap']) }),
+  z.strictObject({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100']) }),
   z.strictObject({
     kind: z.literal('setSeriesView'),
     hiddenLabels: z.array(z.string()),

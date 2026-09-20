@@ -46,6 +46,23 @@ const chartAnnotationSchema = z.strictObject({
   label: z.string().min(1),
 });
 
+// Phase 5b (the verified whole): a faithful, minimal zod mirror of the
+// `RegionScope` union in src/query/types.ts — all FOUR variants, including
+// `all_gemeenten` (which has no verified-whole concept but is still a real
+// scope a chart can be built from; this field records provenance, it does not
+// pre-filter to the verifiable ones). strictObject per variant, so a `parent`
+// on a scope that has none, or a missing `parent` on the one that needs it,
+// is rejected exactly as the TypeScript union would reject it. Kept OPTIONAL
+// on the spec (below) for the same reason `annotations`/`trendHeadline` are:
+// every spec stored before this field existed still parses unchanged; a
+// present key must be either a valid scope or an explicit `null`.
+const regionScopeSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('all_provincies') }),
+  z.strictObject({ kind: z.literal('all_landsdelen') }),
+  z.strictObject({ kind: z.literal('all_gemeenten') }),
+  z.strictObject({ kind: z.literal('gemeenten_in_provincie'), parent: z.string().min(1) }),
+]);
+
 export const chartSpecSchema = z
   .strictObject({
     schemaVersion: z.literal(1),
@@ -61,6 +78,7 @@ export const chartSpecSchema = z
     attributionLine: z.string().min(1),
     attribution: chartAttributionSchema,
     annotations: z.array(chartAnnotationSchema).optional(),
+    regionScope: regionScopeSchema.nullable().optional(),
   })
   // A point's display string and its value must be null together — a value
   // without display text (or text without a value) is a malformed spec.

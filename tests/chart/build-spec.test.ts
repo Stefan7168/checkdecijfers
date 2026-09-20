@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { buildChartSpec, chartSpecSchema, PROVISIONAL_NOTE } from '../../src/chart/index.ts';
 import { buildAttributionLine, formatValueNl } from '../../src/answer/compose/format.ts';
 import { DERIVED_DATA_MARKING } from '../../src/query/index.ts';
-import type { DerivationRecord } from '../../src/query/index.ts';
+import type { DerivationRecord, ValidatedResult } from '../../src/query/index.ts';
 import { deepFreeze, makeCell, makeResult } from './helpers.ts';
 
 const seriesCells = [
@@ -313,5 +313,98 @@ describe('trendHeadline (#197 idea 4)', () => {
   it('a spec without trendHeadline (every pre-existing stored spec) still validates unchanged', () => {
     const spec = buildChartSpec(makeResult('series', [makeCell({ periodCode: '2023JJ00' }), makeCell({ periodCode: '2024JJ00' })]))!;
     expect(() => chartSpecSchema.parse(spec)).not.toThrow();
+  });
+});
+
+// Chart co-pilot phase 5b (the verified whole): `regionScope` records WHICH
+// region class (ValidatedResult.regionSet.scope, #253) produced a chart's
+// series — provenance the pie/stacked guards read, never derive. Explicit
+// null on every other chart; OPTIONAL in the schema (ADR 014 optional-v1-field
+// rule) so every spec stored before the field existed still parses.
+describe('regionScope (phase 5b task 2 — region-class provenance)', () => {
+  const regionSetCells = [
+    makeCell({ regionCode: 'PV20', periodCode: '2025JJ00', value: 600000, unit: 'aantal', decimals: 0 }),
+    makeCell({ regionCode: 'PV21', periodCode: '2025JJ00', value: 500000, unit: 'aantal', decimals: 0 }),
+  ];
+
+  /** A region_set result carrying a coverage record — the shape runQuery
+   * produces for a region-class intent (tests/chart/region-set.test.ts proves
+   * the same against REAL results; this is the hand-built unit mirror). */
+  function regionSetResult(scope: NonNullable<ValidatedResult['regionSet']>['scope']): ValidatedResult {
+    return {
+      ...makeResult('region_set', regionSetCells, { tableId: 'TESTNED' }),
+      regionSet: { scope, rosterSize: 2, notApplicable: [], withheld: [], missing: [], complete: true },
+    };
+  }
+
+  it('a region_set-built spec carries the real scope, for every one of the FOUR RegionScope variants', () => {
+    const scopes: NonNullable<ValidatedResult['regionSet']>['scope'][] = [
+      { kind: 'all_provincies' },
+      { kind: 'all_landsdelen' },
+      { kind: 'all_gemeenten' },
+      { kind: 'gemeenten_in_provincie', parent: 'PV26' },
+    ];
+    for (const scope of scopes) {
+      const spec = buildChartSpec(regionSetResult(scope))!;
+      expect(spec.regionScope, scope.kind).toEqual(scope);
+      // And the schema round-trips it — including `all_gemeenten`, which has
+      // no verified-whole concept but IS a scope a chart can be built from
+      // (the field is provenance, not a pre-filtered "verifiable" list).
+      expect(() => chartSpecSchema.parse(spec), scope.kind).not.toThrow();
+      expect(chartSpecSchema.parse(spec).regionScope).toEqual(scope);
+    }
+  });
+
+  it('every non-region_set spec carries an explicit null (the key is PRESENT, not omitted)', () => {
+    const specs = {
+      series: buildChartSpec(makeResult('series', seriesCells))!,
+      comparison: buildChartSpec(
+        makeResult('comparison', [
+          makeCell({ regionCode: 'GM0363', value: 5, unit: 'aantal', decimals: 0 }),
+          makeCell({ regionCode: 'GM0599', value: 3, unit: 'aantal', decimals: 0 }),
+        ]),
+      )!,
+      multiRegionSeries: buildChartSpec(
+        makeResult('series', [
+          makeCell({ regionCode: 'GM0363', periodCode: '2023JJ00', value: 1 }),
+          makeCell({ regionCode: 'GM0599', periodCode: '2023JJ00', value: 2 }),
+          makeCell({ regionCode: 'GM0363', periodCode: '2024JJ00', value: 3 }),
+          makeCell({ regionCode: 'GM0599', periodCode: '2024JJ00', value: 4 }),
+        ]),
+      )!,
+    };
+    for (const [name, spec] of Object.entries(specs)) {
+      expect('regionScope' in spec, name).toBe(true);
+      expect(spec.regionScope, name).toBeNull();
+      expect(() => chartSpecSchema.parse(spec), name).not.toThrow();
+    }
+  });
+
+  it('a region_set result WITHOUT a coverage record (never produced by runQuery, but a present-only key) still yields null, never a throw', () => {
+    const spec = buildChartSpec(makeResult('region_set', regionSetCells))!;
+    expect(spec.regionScope).toBeNull();
+  });
+
+  it('an already-stored spec fixture predating this field (no key at all) still parses unchanged — the optional-field rule holds', () => {
+    const spec = buildChartSpec(regionSetResult({ kind: 'all_provincies' }))!;
+    const stored = JSON.parse(JSON.stringify(spec)) as Record<string, unknown>;
+    delete stored.regionScope;
+    expect('regionScope' in stored).toBe(false);
+    const parsed = chartSpecSchema.parse(stored);
+    // Parsing neither invents the key nor changes anything else.
+    expect('regionScope' in parsed).toBe(false);
+    expect(JSON.parse(JSON.stringify(parsed))).toEqual(stored);
+  });
+
+  it('the schema rejects a malformed scope (unknown kind, missing parent, parent where none belongs, non-object)', () => {
+    const spec = buildChartSpec(makeResult('series', seriesCells))!;
+    expect(() => chartSpecSchema.parse({ ...spec, regionScope: { kind: 'all_countries' } })).toThrow();
+    expect(() => chartSpecSchema.parse({ ...spec, regionScope: { kind: 'gemeenten_in_provincie' } })).toThrow();
+    expect(() =>
+      chartSpecSchema.parse({ ...spec, regionScope: { kind: 'gemeenten_in_provincie', parent: '' } }),
+    ).toThrow();
+    expect(() => chartSpecSchema.parse({ ...spec, regionScope: { kind: 'all_provincies', parent: 'PV26' } })).toThrow();
+    expect(() => chartSpecSchema.parse({ ...spec, regionScope: 'all_provincies' })).toThrow();
+    expect(() => chartSpecSchema.parse({ ...spec, regionScope: undefined })).not.toThrow();
   });
 });

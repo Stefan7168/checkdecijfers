@@ -73,7 +73,10 @@ describe('acceptReply', () => {
   });
 
   it('drops a command whose stored SHAPE is wrong, without throwing', () => {
-    const { applied, dropped } = acceptReply([{ kind: 'setForm', form: 'pie' }, { kind: 'nonsense' }], ctx(), 'nl');
+    // 'scatter' is the never-a-form example now: phase 5b (verified-whole)
+    // made 'pie' a real ChartForm (refused for THIS chart by validateCommand,
+    // but that is the "does not validate" case above, not a wrong shape).
+    const { applied, dropped } = acceptReply([{ kind: 'setForm', form: 'scatter' }, { kind: 'nonsense' }], ctx(), 'nl');
     expect(applied).toEqual([]);
     expect(dropped).toBe(2);
   });

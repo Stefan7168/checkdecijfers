@@ -19,11 +19,14 @@ export { PRESENTATION_KEYS, TEMPLATE_IDS };
 
 /** Phase 5 (chart-fit scorer, session 116): the three trailing shapes are
  * THIS tier's only — the own-data tier's COPILOT_FORMS stays at five until
- * user-chart.tsx can draw them (plan Global Constraints). */
-export const CBS_COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'] as const;
+ * user-chart.tsx can draw them (plan Global Constraints). Phase 5b
+ * (verified-whole, session 117): pie/stacked/stacked100 join, also this
+ * tier's only — they need a CBS-verified region roster, which an own-data
+ * chart never has. */
+export const CBS_COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100'] as const;
 
 export interface CbsCopilotCapabilities {
-  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table' | 'dumbbell' | 'slope' | 'heatmap')[];
+  forms: (typeof CBS_COPILOT_FORMS)[number][];
   /** ⊆ PRESENTATION_KEYS. */
   presentationKeys: string[];
   /** ⊆ TEMPLATE_IDS. */
