@@ -270,10 +270,12 @@ export function mapCbsCopilotOutput(
       // line is a reader-set target, deliberately NOT a plotted value, so
       // the chart is the wrong reference set: the value is judged against
       // the reader's own raw MESSAGE instead (text-guard.ts's
-      // goalLineValueInMessage — the same digits, separators ignored). A
-      // value the reader never typed is one the model produced itself:
-      // refused outright, naming the panel control where the reader types
-      // the number personally. The label owes the reader the same digit
+      // goalLineValueInMessage — it must EQUAL a number the reader
+      // spelled, under the Dutch or the English reading of the
+      // separators; the same digits with a moved decimal or a different
+      // sign do not count). A value the reader never typed is one the
+      // model produced itself: refused outright, naming the panel control
+      // where the reader types the number personally. The label owes the reader the same digit
       // guard as a title/caption/note, capped at the client's own limit
       // (chart-commands.ts's validateCommand would drop a longer or empty
       // one), and the id is minted here per line: the client reducer keeps

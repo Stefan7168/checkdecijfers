@@ -65,24 +65,79 @@ export function unplottedDigits(text: string, spec: ChartSpec): string[] {
   return offenders;
 }
 
+/** A maximal digit run with an optional ASCII minus directly before its
+ * first digit. Whether that minus is a SIGN is decided by the caller from
+ * the character before it: "-5" after a space is negative five, while the
+ * "-" in "2020-2022" follows a digit and is a range dash. */
+const SIGNED_DIGIT_RUN = /(-?)([0-9][0-9.,]*)/g;
+
+/** The integer part of a spelled number under one reading, as bare
+ * digits: plain digits, or a first group of one to three digits (not
+ * starting with 0) followed by `grouping`-separated groups of exactly
+ * three — so "1,5" has no point-decimal reading and "900,000" has one. */
+function readInteger(text: string, grouping: '.' | ','): string | null {
+  if (/^[0-9]+$/.test(text)) return text;
+  const grouped = grouping === '.' ? /^[1-9][0-9]{0,2}(?:\.[0-9]{3})+$/ : /^[1-9][0-9]{0,2}(?:,[0-9]{3})+$/;
+  if (!grouped.test(text)) return null;
+  return text.replace(grouping === '.' ? /\./g : /,/g, '');
+}
+
 /**
- * True when `value` appears as a digit run inside `message` (thousands/
- * decimal separators ignored on both sides, so "900000" and "900.000"
- * both match). A goal line's value is the one field on this tier that is
- * a bare NUMBER, not guarded text — so unlike a title/caption/note
- * (checked against the CHART's own numbers via unplottedDigits), it is
- * checked against what the READER actually typed: a legitimate goal line
- * names a target that is deliberately NOT one of the chart's own plotted
- * values, so plottedNumbers() is the wrong reference set here. A value
- * that does not appear in the message is, by construction, one the model
- * invented — principle (c)'s worst bug — so it is refused, never guessed.
+ * `run` read with `decimal` as its decimal mark and the other separator
+ * as its thousands mark — null when the spelling is not well-formed under
+ * that reading. Both readings exist because the reader's locale is not
+ * known here: "1.234,5" is the Dutch spelling and "1,234.5" the English
+ * one, and each is well-formed under exactly one of the two.
+ */
+function readRun(run: string, decimal: '.' | ','): number | null {
+  const parts = run.split(decimal);
+  if (parts.length > 2) return null;
+  const integer = readInteger(parts[0] ?? '', decimal === '.' ? ',' : '.');
+  if (integer === null) return null;
+  const fraction = parts[1];
+  if (fraction !== undefined && !/^[0-9]+$/.test(fraction)) return null;
+  return Number(fraction === undefined ? integer : `${integer}.${fraction}`);
+}
+
+/**
+ * True when `value` EQUALS, numerically, a number the reader spelled in
+ * `message`. A goal line's value is the one field on this tier that is a
+ * bare NUMBER, not guarded text — so unlike a title/caption/note (checked
+ * against the CHART's own numbers via unplottedDigits), it is checked
+ * against what the READER actually typed: a legitimate goal line names a
+ * target that is deliberately NOT one of the chart's own plotted values,
+ * so plottedNumbers() is the wrong reference set here.
+ *
+ * Each maximal digit run in the message — with an ASCII minus directly
+ * before it as its sign, unless that minus itself follows a digit or a
+ * separator and is a range dash — is read both ways a Dutch or an English
+ * reader could have written it ('.' as decimal with ',' grouping, and ','
+ * as decimal with '.' grouping; a grouping mark must be followed by
+ * exactly three digits), and the value must equal one reading exactly.
+ * Reusing the reader's digits with a moved decimal or a different sign
+ * ("25" for 2.5, "1,5" for 15, "-5" for 5) is therefore refused: the
+ * first version of this guard compared separator-stripped digit STRINGS
+ * and let exactly those through (Task 5 review finding). A spelling that
+ * is well-formed under both readings ("900,000": 900000 in English, 900
+ * in Dutch) is accepted under either, because the reader's locale is not
+ * known here. A value that equals no reading is, by construction, one
+ * the model invented — principle (c)'s worst bug — so it is refused,
+ * never guessed.
  */
 export function goalLineValueInMessage(value: number, message: string): boolean {
   if (!Number.isFinite(value)) return false;
-  const normalize = (run: string): string => run.replace(/[.,]/g, '');
-  const target = normalize(String(value));
-  const runs = message.match(/[0-9][0-9.,]*/g) ?? [];
-  return runs.some((run) => normalize(run.replace(/[.,]+$/, '')) === target);
+  for (const match of message.matchAll(SIGNED_DIGIT_RUN)) {
+    const run = trimTrailing(match[2] ?? '');
+    if (run.length === 0) continue;
+    const index = match.index ?? 0;
+    const before = index > 0 ? message.charAt(index - 1) : '';
+    const negative = match[1] === '-' && !/[0-9.,]/.test(before);
+    for (const decimal of ['.', ','] as const) {
+      const reading = readRun(run, decimal);
+      if (reading !== null && (negative ? -reading : reading) === value) return true;
+    }
+  }
+  return false;
 }
 
 /**

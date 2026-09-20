@@ -49,9 +49,12 @@ describe('stripDigits', () => {
 // Co-pilot phase 6 (Task 5): a goal line's value is the one bare NUMBER
 // the model writes on this tier. Its reference set is NOT the chart (a
 // target is deliberately not a plotted value) but the reader's own raw
-// message: the value must appear there as a digit run, separators
-// ignored on both sides. Anything else is, by construction, a number the
-// model produced itself — refused, never guessed.
+// message: the value must EQUAL, numerically, a number the reader
+// spelled there — each digit run read both ways a Dutch or English
+// reader could have written it. Reusing the reader's digits with a moved
+// decimal or a different sign is not the reader's number (Task 5 review
+// finding); anything else is, by construction, a number the model
+// produced itself — refused, never guessed.
 describe('goalLineValueInMessage', () => {
   it('accepts a value typed digit-for-digit, even though it is on no chart', () => {
     expect(goalLineValueInMessage(900000, 'Voeg een doellijn toe op 900000')).toBe(true);
@@ -101,11 +104,51 @@ describe('goalLineValueInMessage', () => {
     expect(goalLineValueInMessage(Number.POSITIVE_INFINITY, 'doellijn op Infinity')).toBe(false);
   });
 
-  it('refuses a value JS would print in exponent form — no digit run can spell it', () => {
-    expect(goalLineValueInMessage(1e21, 'doellijn op 1000000000000000000000')).toBe(false);
+  it('compares numbers, not spellings — a value JS prints in exponent form still equals the digits the reader typed', () => {
+    expect(goalLineValueInMessage(1e21, 'doellijn op 1000000000000000000000')).toBe(true);
   });
 
-  it('refuses a negative value — a digit run never carries a sign, so the refusal is conservative', () => {
-    expect(goalLineValueInMessage(-5, 'doellijn op -5')).toBe(false);
+  it('reads a trailing-zero decimal and a leading zero for the number they spell', () => {
+    expect(goalLineValueInMessage(900000.5, 'doellijn op 900.000,50')).toBe(true);
+    expect(goalLineValueInMessage(5, 'doellijn op 05')).toBe(true);
+  });
+
+  // Task 5 review finding: the first guard compared digit STRINGS with the
+  // separators stripped, so the reader's digits with a moved decimal point
+  // passed. A shifted value is not the reader's number.
+  it('refuses the reader\'s digits with a shifted decimal — "25" does not vouch for 2.5', () => {
+    expect(goalLineValueInMessage(2.5, 'Zet een doellijn op 25')).toBe(false);
+    expect(goalLineValueInMessage(15, 'doellijn op 1,5 procent')).toBe(false);
+    expect(goalLineValueInMessage(12.5, 'doellijn op 125')).toBe(false);
+    expect(goalLineValueInMessage(25, 'doellijn op 2,5')).toBe(false);
+  });
+
+  // Same finding, the sign half: a minus directly before the digits is the
+  // reader's sign, so a correctly negative target is accepted and the same
+  // digits with the sign dropped or added are not.
+  it('accepts a negative target the reader typed with its sign', () => {
+    expect(goalLineValueInMessage(-5, 'doellijn op -5')).toBe(true);
+    expect(goalLineValueInMessage(-900000, 'doellijn op -900.000')).toBe(true);
+  });
+
+  it('refuses the reader\'s digits with the sign dropped or added', () => {
+    expect(goalLineValueInMessage(5, 'doellijn op -5')).toBe(false);
+    expect(goalLineValueInMessage(-5, 'doellijn op 5')).toBe(false);
+  });
+
+  it('takes a dash between two numbers as a range, not as a sign', () => {
+    expect(goalLineValueInMessage(2022, 'doellijn tussen 2020-2022')).toBe(true);
+    expect(goalLineValueInMessage(-2022, 'doellijn tussen 2020-2022')).toBe(false);
+  });
+
+  it('reads a spelling that is well-formed both ways under either reading — the locale is not known here', () => {
+    expect(goalLineValueInMessage(900000, 'doel van 900,000 euro')).toBe(true);
+    expect(goalLineValueInMessage(900, 'doel van 900,000 euro')).toBe(true);
+  });
+
+  it('refuses a spelling that is well-formed under neither reading', () => {
+    expect(goalLineValueInMessage(1234.5, 'doellijn op 1,234,5')).toBe(false);
+    expect(goalLineValueInMessage(12345, 'doellijn op 1,234,5')).toBe(false);
+    expect(goalLineValueInMessage(123, 'doellijn op 1.2.3')).toBe(false);
   });
 });

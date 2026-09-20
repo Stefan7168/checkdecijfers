@@ -391,6 +391,26 @@ describe('addGoalLine — the value must be one the reader typed, the label is d
     expect(refused).toEqual([{ request: 'goal line: 12345', reason: 'not_available', control: 'form' }]);
   });
 
+  it('refuses the reader\'s digits with a shifted decimal before anything is stored (Task 5 review finding)', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: 2.5, label: 'Doel' }],
+      'Zet een doellijn op 25',
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'goal line: 2.5', reason: 'not_available', control: 'form' }]);
+  });
+
+  it('stores a negative target the reader typed with its sign', () => {
+    const { commands, refused } = mapGoal(
+      [{ kind: 'addGoalLine', value: -5, label: 'Doel' }],
+      'Zet een doellijn op -5',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      { kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: -5, label: 'Doel' } },
+    ]);
+  });
+
   it('refuses an unplotted number in the label even when the value is valid', () => {
     const { commands, refused } = mapGoal(
       [{ kind: 'addGoalLine', value: 900000, label: 'Doel voor 2030' }],
