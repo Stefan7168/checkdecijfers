@@ -1,5 +1,147 @@
 # STATUS archive — the session log
 
+**Session 122 (2026-09-22, owner present in chat throughout, spanning several continuations across one
+calendar day — `git log` confirms every commit below dated `2026-09-22`). Started from session 121's own
+unmerged branch (`worktree-chart-copilot-phase6`, "ready to merge, with fixes") and this session's own
+harness-assigned designated branch (`claude/chart-copilot-phase6-fixes-wpim88`). Ended with `main` at
+`2c9456c` (code) / this wrap-up's own docs commits on top — six code pieces merged, ALL SIX CI-confirmed
+green end to end including `deploy`, the last one (`b64ffe7`) confirmed at wrap-up time via a direct
+`gh`-equivalent check, not the scheduled callback (see point 6). `git status` clean, no stray worktrees,
+on `main`.**
+
+1. **The mandated fix wave, applied and merged (`0f7c7f1` → `ce43e92`).** Session 121's final
+   whole-branch review had left two required fixes unapplied on its own branch: `#310` (`addDerivedOverlay`
+   had no form gate — asking for an overlay on a bar/pie/stacked chart stored a command that rendered
+   nothing and could not be removed, reopening a bug session 116 already closed once for the panel) and a
+   confirmation-chip destination inconsistency for the five new phase-6 commands. Both fixed with a new
+   `overlays: boolean` capability field (zero `SYSTEM_PROMPT` bytes changed, proven — not assumed — by the
+   full real Playwright suite matching every fixture `exact`, never the risky prefix fallback) plus five
+   `iconFor()` arms and two stale doc-comment fixes. Merged `origin/worktree-chart-copilot-phase6` into the
+   designated branch first (clean, zero conflicts), built the fix wave on top, verified in full (root
+   typecheck clean, root 205f/3095t, web 146f/2594t, real Playwright `chart-copilot.spec.ts` 18/18, hermetic
+   benchmark 14/14+6/6+0, `/code-review` LOW clean, real `next build` clean), pushed to the designated
+   branch.
+2. **"push to main" — the owner's explicit authorization, honored as a genuine fast-forward, not a
+   force-push (`ce43e92`).** `git push origin ce43e92:main`, one command, zero conflicts — `origin/main`
+   was freshly fetched and confirmed an ancestor of `HEAD` immediately before pushing. CI run `35690440761`
+   measured green end to end, `gate` AND `deploy` (job `106626835581`), confirmed via a scheduled check-in,
+   not assumed (`baa5c36`, `a0b173c`).
+3. **Clean-up (owner: "Clean up").** Removed the now-redundant designated-branch worktree and the two
+   other agent worktrees from the own-data-parity build (point 4 below) once their work had merged.
+   `git worktree remove --force` used once, deliberately, on a worktree with one piece of untracked content
+   (a `node_modules` symlink one subagent had created) — verified via `git status --short` first that this
+   was the ONLY untracked content before forcing, not a blind force.
+4. **Own-data co-pilot parity — three of the six phase-4/6 storytelling primitives brought to the "eigen
+   data" card, both doorways (`e9f3cae`, plus a same-day correction, see point 6).** Owner: "You are the
+   expert, continue" — full delegation to pick and execute the best next step. Chose to close the
+   longstanding "own-data wiring deferred" thread ([#289](open-questions.md), open since phase 4, session
+   115). Built as three genuinely parallel, file-disjoint `Agent` dispatches with `isolation: "worktree"`
+   (the `superpowers` plugin was confirmed unavailable in this environment by trying it, not assumed — the
+   session substituted direct worktree dispatch for the packaged subagent-driven-development skill, while
+   personally retaining the scoping/briefing/synthesis/final-review role CLAUDE.md's delegation-cost-tier
+   rule reserves for the session's own model): **B1** mounted the goal line + era shading UI on the
+   own-data card (`33d9b5e`); **A** built the own-data derived-overlay pure computation + server action
+   (`ce81bf4`); **C** wired all three primitives into the own-data chat schema/map/prompt (`0d2e70f`). The
+   integration pass — done directly, not delegated — found and fixed a real interface mismatch between A
+   and C that neither agent's own green tests caught: A's `derive-overlay.ts` matched points by LABEL
+   (`seriesLabel`/`pointLabels`), but the shared `DerivedOverlayRequest` type both the CBS tier and C's own
+   chat-mapping code already used carries opaque `resultIds: string[]`, never labels — own-data has no
+   CBS-style audit-row trail, so its provenance is `execute.ts`'s own rowRef convention, and a post-hoc
+   "add an overlay" command must resolve by rowRef. Redesigned `derive-overlay.ts` to resolve by rowRef
+   directly (new `allResolvedPoints`/`ResolvedOverlay` — the latter narrower than `execute.ts`'s
+   `ComputedValue`, enforcing "never null on success" as a type, not a convention every caller had to
+   trust) and `dataset-derivation-actions.ts`'s schema to match. Also independently re-verified, not
+   trusted from self-report: export-boundary placement (a resolved, server-computed overlay value
+   legitimately renders WITH a `label` prop inside the export container, unlike a reader-typed goal-line/
+   era-shading label, which must stay outside it — R6-analog), SQL-level ownership scoping
+   (`getDataset(db, userId, datasetId)`), and capability-gate ordering (`capabilities.overlays` checked
+   FIRST in `map.ts`, before any label lookup). Verified: root 206f/3159t, web 146f/2606t (+12: 4 from B1,
+   7 from B2, 1 from C's own pin), one real-browser Playwright case (the chat-driven difference overlay,
+   confirmed via the real server log: an `exact` llm-stub hit and a real
+   `requestDatasetDerivation(2, {...}, "difference", ["r1:c2","r3:c2"])` call resolving to the correct
+   value — an initially-guessed wrong assertion, `-2,0`, was caught by reading the actual fixture CSV
+   before the test ran, not after), hermetic benchmark 14/14+6/6+0, `/code-review` LOW clean, real build
+   clean. Merged same session via `git push origin e9f3cae:main` (fresh fast-forward). CI run `35696279101`
+   confirmed green end to end incl. `deploy` (job `106645022872`) via a scheduled check-in.
+   - **A real git mistake, caught and fixed without data loss (no force-push, no history rewrite).** After
+     this merge, a later `git checkout main` for a STATUS.md confirmation commit silently carried an
+     uncommitted edit onto a STALE local `main` ref (last updated after the FIRST merge, 8 commits behind
+     — a SHA-push updates only the remote ref, never a local tracking branch, and git raised no error since
+     there was no conflict). The resulting commit (`6effca1`) was a child of the wrong base; the follow-up
+     `git push origin main` was correctly REJECTED by git itself as non-fast-forward. Recovered via a
+     safety branch ref (`git branch rescue-6effca1`), confirmed `git status --short` clean (the real edit
+     was safely captured, nothing at risk), `git reset --hard origin/main` (justified specifically because
+     the target was the verified CI-green remote tip, not an arbitrary discard), `git cherry-pick
+     6effca1` (clean, no conflicts) to replay just the real diff onto the correct base, re-verified
+     fast-forward safety, pushed as `092013b`, deleted the safety ref. Reported transparently to the owner
+     in the very next status message.
+5. **A genuine credential limit found, checked twice, then handed to the owner rather than retried a
+   third time.** Asked to delete the two now-fully-merged stale branches (`claude/chart-copilot-phase6-
+   fixes-wpim88`, `worktree-chart-copilot-phase6`) — "if you think we can." First `git push origin
+   --delete` attempt blocked by the harness's own destructive-action classifier ("[Git Destructive]");
+   a second attempt got PAST that classifier and still failed, this time with a raw `HTTP 403` straight
+   from the git remote itself — a different, lower-level failure than the first, meaning the credential
+   genuinely lacks delete rights, not just a re-approvable permission prompt. Checked twice for a GitHub
+   MCP alternative (`ToolSearch` for a delete-branch tool, none exists). Did NOT attempt a third retry —
+   told the owner plainly this is a hard limit, not a soft gate, and handed it to GitHub's own UI (~10
+   seconds). Owner accepted with "Let's remember and move on"; both branches are still on `origin`, fully
+   merged, zero data risk either way (`efa0c8f`).
+6. **Fully autonomous continuation (owner: "Work continuously autonomously") — triaged STATUS/open-
+   questions for the next legitimate, non-owner-gated work rather than idling, and found three real,
+   previously-undocumented gaps by reading source directly instead of trusting prior claims.**
+   - **[#307](open-questions.md) — both tiers' `addDerivedOverlay` prompt overpromised zoom-awareness.**
+     The mean-overlay bullet claimed it averages "every point of that series currently on the chart" —
+     read as zoom-windowed, which it deliberately never was (each tier's own `map.ts` comment already
+     defended the whole-series behavior as correct: naming the series is the reader's own
+     disambiguation). The own-data tier's prompt had inherited the identical false wording when it was
+     COPIED from the CBS tier's structure, not written fresh — a second, silent instance of the same bug
+     the original session-121 review only found in one place. Fixed the CLAIM to match the always-correct
+     BEHAVIOR in both files (`CBS_COPILOT_PROMPT_VERSION` 4→5, `COPILOT_PROMPT_VERSION` 2→3), fixtures
+     regenerated offline for both tiers (`14bc8ba`).
+   - **[#308](open-questions.md) — real-browser render proof for the CBS tier's other four chat command
+     kinds** (`setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`, `addGoalLine` — only `addEraShading`
+     had one). Added one test per kind, reusing each kind's exact fixture message and its own panel-driven
+     e2e test's rendering assertions. First-run finding, fixed before commit: the headline-override test
+     wrongly assumed the panel's "clear override" button reflects shared state globally, by analogy with
+     the dim test's `aria-pressed` check — it doesn't; `chart.tsx`'s own comment explains that control is
+     scoped to the pending-point popover, not global state. Replaced with a genuinely doorway-independent
+     assertion (`data-label-for` proving the CORRECT point was featured). All 22 cases green (18 existing +
+     4 new), confirmed via `exact` llm-stub hits (`7cf6035`). CI run `35703474846` confirmed green end to
+     end incl. `deploy` (job `106668252243`) via a scheduled check-in.
+   - **A self-correction: [#311](open-questions.md)'s own claim that `setDimmed`/`setHeadlineOverride`
+     "needed no work, already own-data-wired" was wrong — found by re-reading source, not by trusting a
+     claim this SAME session had written a few hours earlier.** True of the PANEL doorway only (both
+     dispatch generically through the shared `chart-commands.ts` reducer); the CHAT doorway had never been
+     given either kind — neither was in `src/attachments/copilot/{schema,map,prompt}.ts` at all, only the
+     CBS tier's. Ported both from the CBS tier, adapted to own-data's `xLabel`/`rowRef` naming
+     (`COPILOT_PROMPT_VERSION` 3→4, fixtures regenerated offline, two new hand-authored cases, unit tests
+     mirroring the CBS tier's own describe blocks, two new real-browser e2e tests). The headline-override
+     e2e test needed real source-reading rather than CBS-tier-parity assumption: this card has no
+     "headline figure" block at all (a CBS/Eurostat-only journalist feature) — verified instead via the
+     shared `ChartNotes` component's own popover toggle, located by its real `aria-label` read from
+     `messages.ts` rather than a guessed `rowRef` format; both new e2e tests passed on the first real run.
+     Verified: root 206f/3171t, web 146f/2606t, real Playwright `own-data-copilot.spec.ts` 4/4 and
+     `chart-copilot.spec.ts` 22/22 (CBS-tier regression, unaffected), hermetic benchmark 14/14+6/6+0,
+     `/code-review` LOW clean, real build clean (`b64ffe7`). CI run `35706081745` confirmed green end to
+     end incl. `deploy` (job `106676511114`, incl. its own post-deploy smoke check) — checked directly at
+     wrap-up time rather than waiting for the scheduled callback, since the owner asked to wrap up while
+     it was still in flight. **The correction itself was applied everywhere the original claim had been
+     written this session — STATUS.md, ADR 056, `08-build-plan.md`, open-questions #311 — not just the
+     newest doc (`2c9456c`).**
+   - **Nine total process lessons this session** (see [lessons-learned.md](lessons-learned.md), newest on
+     top): a session-assigned branch constraint can outrank CLAUDE.md's default git workflow; a sandboxed
+     Playwright's browser revision can drift from what's actually installed (fixed via `CHROMIUM_PATH`);
+     the llm-stub's own `exact` vs. prefix-fallback log line is a free, already-running proof that a
+     fixture regeneration produced the right bytes; the `superpowers` plugin was confirmed unavailable by
+     trying it, not assumed; parallel subagents can each be internally correct while still not sharing a
+     type correctly; a tool description's "use X not Y" gets misread under time pressure even after
+     correcting once (`ScheduleWakeup` misused twice for general waiting, both times self-caught); this
+     session's git credentials can push but cannot delete a remote branch, a hard limit not worth a third
+     retry; a shared command vocabulary doesn't mean every panel control reflects shared state — some are
+     scoped to a click-triggered UI moment; a claim written earlier in this same session still needs
+     re-verification before being carried forward.
+
+
 **Session 121 (2026-09-20, owner present in chat throughout). Owner pushed back that sessions 118-120's
 output read as polish, not architecture — surveyed real gaps, picked "wire the chat co-pilot to features
 that already exist but are chat-blind," built it end to end via subagent-driven-development on a

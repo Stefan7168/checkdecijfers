@@ -26,9 +26,12 @@ PANEL doorway only (both dispatch generically through the shared reducer), never
 CHAT doorway's own schema.ts, which had neither kind at all. Found while triaging the next piece of
 autonomous work (owner: "Work continuously autonomously") rather than assuming the prior claim was
 correct — exactly the check CLAUDE.md's Doc-freshness rule calls for. Ported both from the CBS tier
-(`xLabel`/`rowRef` naming), `COPILOT_PROMPT_VERSION` 3→4, fixtures regenerated offline. **Push not yet
-CI-confirmed as of this write — verify before trusting "green" for `b64ffe7` specifically.** **Locally
-measured, all green before push:** root+web typecheck clean; root vitest 206f/3171t (was 3159 — 8 new
+(`xLabel`/`rowRef` naming), `COPILOT_PROMPT_VERSION` 3→4, fixtures regenerated offline. **LIVE, CONFIRMED
+not just pushed:** CI run [35706081745](https://github.com/Stefan7168/checkdecijfers/actions/runs/35706081745)
+measured green end to end — all 3 `backend` shards, `web` (typecheck, unit tests, real Playwright e2e),
+and `deploy` (build → Vercel deploy → post-deploy smoke check, job
+[106676511114](https://github.com/Stefan7168/checkdecijfers/actions/runs/35706081745/job/106676511114))
+every job and every step `success`. **Locally measured, all green before push:** root+web typecheck clean; root vitest 206f/3171t (was 3159 — 8 new
 unit tests mirroring the CBS tier's own, +2 fixture-drift cases); web vitest 146f/2606t unchanged; real
 Playwright `own-data-copilot.spec.ts` 4/4 (2 new, both passed first try — no wrong-assumption round this
 time) and `chart-copilot.spec.ts` 22/22 (CBS-tier regression, unaffected); hermetic benchmark
