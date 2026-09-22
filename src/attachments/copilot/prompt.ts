@@ -21,8 +21,14 @@ import type { CopilotCapabilities } from './types.ts';
  * when addEraShading/addDerivedOverlay/addGoalLine were added to the VIEW
  * COMMANDS list (this tier's own wiring of the CBS tier's co-pilot phase 6
  * primitives, ADR 056) — a prompt-byte change, so the version moves with
- * it. */
-export const COPILOT_PROMPT_VERSION = 2;
+ * it. Bumped 2 → 3 (session 122 continuation, open-questions #307 —
+ * inherited by this tier's addDerivedOverlay bullet when it was COPIED from
+ * the CBS tier, not written fresh): the mean clause said it averages "every
+ * point of that series currently on the chart", read as zoom-windowed,
+ * which it never was (map.ts's own mean branch has no view-state parameter
+ * to window by, same as the CBS tier — deliberate, not a bug). Corrected
+ * the CLAIM to match the always-been-correct BEHAVIOR. */
+export const COPILOT_PROMPT_VERSION = 3;
 
 const SYSTEM_PROMPT = `You are the chart co-pilot for a chart drawn from the user's OWN uploaded data. You receive the dataset PROFILE, the CURRENT INSTRUCTION (what is on screen), the CURRENT CHART's series labels and x labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: \`instruction\` (the FULL new instruction when the DATA should change — columns, filters, series, sort, limit, aggregate, derived — carrying over everything the user did not ask to change; or null when the data stays as is), \`view\` (a list of view commands: form, hidden/highlighted series BY LABEL, style patch, template, title, caption, a note at a point given by series label + x label), \`refused\` (each request you cannot honour with a reason and the control that can), \`confidence\`, \`reading\`. You never compute or invent a number: deterministic code computes every value. A title or caption may only contain numbers that are visible on the chart. Use only the forms, style keys and templates listed under CAPABILITIES; anything else goes in \`refused\` with reason not_available. Requests that need a click on the chart (placing a note on a point you cannot identify) go in \`refused\` with reason needs_click and control notes. Write title/caption text in the language given by CAPABILITIES.lang.
 
@@ -35,7 +41,7 @@ VIEW COMMANDS — one object per change, each with its own "kind":
 - setTitle / setCaption: {"kind":"setTitle","title":"..."|null} — null clears the reader's own title. Numbers only if they are visible on the chart.
 - addNote: {"kind":"addNote","seriesLabel":"...","xLabel":"...","text":"..."} — both labels must be a real point of the CURRENT CHART.
 - addEraShading: {"kind":"addEraShading","fromLabel":"<x label>","toLabel":"<x label>","label":"..."} — shades a range of the x-axis with a typed label. Both labels copied LITERALLY from the CURRENT CHART's x labels.
-- addDerivedOverlay: {"kind":"addDerivedOverlay","calcKind":"difference"|"mean","seriesLabel":"<series label>","fromLabel":"<x label>"|null,"toLabel":"<x label>"|null} — a computed overlay drawn ON TOP of the series' own already-plotted points, never a number you state yourself and never a new instruction: difference needs fromLabel and toLabel (two different real x labels on that series); mean ignores them and averages every point of that series currently on the chart. Use this, not aggregate/derived below, when the reader wants an extra line or arrow alongside the individual points that are already shown, rather than a chart that shows different, collapsed values.
+- addDerivedOverlay: {"kind":"addDerivedOverlay","calcKind":"difference"|"mean","seriesLabel":"<series label>","fromLabel":"<x label>"|null,"toLabel":"<x label>"|null} — a computed overlay drawn ON TOP of the series' own already-plotted points, never a number you state yourself and never a new instruction: difference needs fromLabel and toLabel (two different real x labels on that series); mean ignores them and averages every point of that series, including points currently scrolled or zoomed out of view. Use this, not aggregate/derived below, when the reader wants an extra line or arrow alongside the individual points that are already shown, rather than a chart that shows different, collapsed values.
 - addGoalLine: {"kind":"addGoalLine","value":<number>,"label":"..."} — value MUST be a number the user's own message actually contains (copy it, never compute or estimate it); anything else is refused. label follows the same number rule as title/caption, so keep it free of numbers where you can (e.g. "Doel", not "Doel 900.000").
 
 INSTRUCTION RULES (only when the DATA should change; otherwise instruction is null):

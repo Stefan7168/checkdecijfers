@@ -80,8 +80,8 @@ describe('buildCopilotSystemPrompt', () => {
     expect(prompt).not.toContain('overlays');
   });
 
-  it('is version 2', () => {
-    expect(COPILOT_PROMPT_VERSION).toBe(2);
+  it('is version 3', () => {
+    expect(COPILOT_PROMPT_VERSION).toBe(3);
   });
 });
 
