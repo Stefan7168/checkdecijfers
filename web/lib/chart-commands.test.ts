@@ -221,6 +221,45 @@ describe('applyCommand / invertCommand', () => {
     expect(validateCommand({ kind: 'setForm', form: 'stacked100' }, rosterSeriesOverTime)).toBe(true);
   });
 
+  // Own-data parity (plan 2026-09-22, Task 3): an own-data context — the one
+  // kind that carries a dataset profile (ADR 037 D11) — validates the three
+  // whole forms on SHAPE alone (`ownDataFallbackForm`), never on
+  // `regionScope`, which an own-data spec never has. The SAME spec without
+  // the profile is the CBS policy and refuses. So a stored own-data
+  // `setForm: 'pie'` survives replay, and a chat-borne one is accepted,
+  // exactly like the tab that dispatched it without validating.
+  it('own-data (a context with a profile) validates pie/stacked/stacked100 on shape alone — no regionScope — where the CBS context refuses; apply+invert round-trips', () => {
+    const oneMoment = { ...spec(), series: [series('Amsterdam', ['2025']), series('Rotterdam', ['2025'])] };
+    const own: CommandContext = { spec: oneMoment, alternatesCount: 0, profile };
+    const cbs: CommandContext = { spec: oneMoment, alternatesCount: 0 };
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, own), form).toBe(true);
+      expect(validateCommand({ kind: 'setForm', form }, cbs), `${form} on a CBS context`).toBe(false);
+      const start = initialDocState('bar', {});
+      const cmd = { kind: 'setForm', form } as const;
+      const after = applyCommand(start, cmd);
+      expect(after.form).toBe(form);
+      expect(plain(applyCommand(after, invertCommand(start, cmd))), form).toEqual(plain(start));
+    }
+    // Shape still gates: several moments refuse the pie but not the stacks;
+    // a single series refuses all three.
+    const overTimeSeries = [series('Amsterdam', ['2023', '2024']), series('Rotterdam', ['2023', '2024'])];
+    const overTime: CommandContext = { spec: { ...spec(), series: overTimeSeries }, alternatesCount: 0, profile };
+    expect(validateCommand({ kind: 'setForm', form: 'pie' }, overTime)).toBe(false);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked' }, overTime)).toBe(true);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked100' }, overTime)).toBe(true);
+    const single: CommandContext = { spec: { ...spec(), series: [series('Amsterdam', ['2025'])] }, alternatesCount: 0, profile };
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, single), form).toBe(false);
+    }
+    // Every non-whole form validates exactly as it does without the profile
+    // — the own-data policy delegates to the shared one for those.
+    const overTimeCbs: CommandContext = { spec: overTime.spec, alternatesCount: 0 };
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, overTime), form).toBe(validateCommand({ kind: 'setForm', form }, overTimeCbs));
+    }
+  });
+
   it('undoing a note removal puts the note back at its original position', () => {
     let s = initialDocState('line');
     const a = { id: 'a', resultId: 'r-2020', periodLabel: '2020', seriesLabel: 'Nederland', text: 'a' };

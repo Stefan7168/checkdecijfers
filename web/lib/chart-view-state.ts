@@ -459,6 +459,53 @@ export function stacked100FormAllowed(spec: Pick<ChartSpec, 'regionScope'> & Ser
 }
 
 /**
+ * Own-data chart-fit + verified-whole parity (plan 2026-09-22, Task 3): the
+ * own-data card's OWN pie guard. Unlike `pieFormAllowed` above this NEVER
+ * checks provenance — the `hasVerifiableRegionScope` clause is simply
+ * omitted, and the parameter type is the bare `SeriesShape`, so this
+ * function cannot even read `regionScope`. An own-data chart has no
+ * registry to check a whole against (there is no CBS-published total for a
+ * reader's own file), so the form is offered on shape alone — the SAME two
+ * shape conditions `pieFormAllowed` ANDs with its roster check: one moment
+ * (every series exactly one point) and at least two slices — and the
+ * honesty work happens entirely in the note the card renders under the
+ * chart (user-chart.tsx, Tasks 3/4: "not checked against a total" until the
+ * reader designates one), never in a gate. Kept as its own, separately
+ * named function — never a shared guard with a "verified" flag — so
+ * "verified" (CBS) and "unconditional" (own-data) can never be confused by
+ * a later edit. Every slice is one point's own real value; nothing here
+ * computes the whole.
+ */
+export function ownDataPieFormAllowed(spec: SeriesShape, seriesCount: number): boolean {
+  return seriesCount >= 2 && spec.series.every((s) => s.points.length === 1);
+}
+
+/**
+ * Own-data parity (Task 3): the own-data stacked guard — `stackedFormAllowed`
+ * minus its provenance clause, for the reason `ownDataPieFormAllowed` gives.
+ * At least two series, or there is nothing to stack; any number of moments
+ * (one stack per period). `spec` stays in the signature for symmetry with
+ * every other series-reading guard in this file (and their call sites),
+ * even though the one remaining condition reads only the count.
+ */
+export function ownDataStackedFormAllowed(_spec: SeriesShape, seriesCount: number): boolean {
+  return seriesCount >= 2;
+}
+
+/**
+ * Own-data parity (Task 3): identical condition to `ownDataStackedFormAllowed`,
+ * kept as its own named export — the one-guard-per-form convention every
+ * other form in this file follows (see `slopeFormAllowed`,
+ * `stacked100FormAllowed`). The share each segment draws is pure arithmetic
+ * over the parts CURRENTLY on screen for that period (user-chart.tsx), with
+ * no verification step gating it — there was never an independent total to
+ * wait on — and never here.
+ */
+export function ownDataStacked100FormAllowed(spec: SeriesShape, seriesCount: number): boolean {
+  return ownDataStackedFormAllowed(spec, seriesCount);
+}
+
+/**
  * WP218 phase 5 (Global Constraints): "presentation carries over on a type
  * switch ... a form that becomes disallowed after a same-instance spec swap
  * falls back exactly like the existing line->bar guard." One function so
@@ -507,6 +554,35 @@ export function fallbackForm(
     case 'bar':
     case 'table':
       return form;
+  }
+}
+
+/**
+ * Own-data parity (Task 3): the own-data card's fallback policy —
+ * `fallbackForm` with the three whole forms routed through the own-data
+ * guards above instead of the CBS ones. `fallbackForm`'s own pie/stacked/
+ * stacked100 cases read `pieFormAllowed`/`stackedFormAllowed`/
+ * `stacked100FormAllowed`, which are `false` for every own-data spec by
+ * construction (no `regionScope`), so an own-data card that used
+ * `fallbackForm` directly could never show a whole form at all: its
+ * `activeForm` would collapse to 'table' before the render branch was
+ * reached, and chart-commands.ts's `validateCommand` would drop a stored
+ * `setForm: 'pie'` on replay. Every OTHER form delegates to `fallbackForm`
+ * unchanged, so the two policies can only ever differ on the three forms
+ * that differ by design. Same fallback target as CBS (table): a whole form
+ * whose shape no longer fits — a pie whose series gained a second point —
+ * has nothing honest to draw as a whole.
+ */
+export function ownDataFallbackForm(form: ChartForm, spec: Pick<ChartSpec, 'kind'> & SeriesShape, seriesCount: number): ChartForm {
+  switch (form) {
+    case 'pie':
+      return ownDataPieFormAllowed(spec, seriesCount) ? 'pie' : 'table';
+    case 'stacked':
+      return ownDataStackedFormAllowed(spec, seriesCount) ? 'stacked' : 'table';
+    case 'stacked100':
+      return ownDataStacked100FormAllowed(spec, seriesCount) ? 'stacked100' : 'table';
+    default:
+      return fallbackForm(form, spec, seriesCount);
   }
 }
 

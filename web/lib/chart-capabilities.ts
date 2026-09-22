@@ -19,32 +19,61 @@ import type { ChartDocState } from './chart-commands.ts';
 import { columnHeaderLabel, digitFree } from './chart-data-instruction.ts';
 import { allowedForms } from './chart-fit.ts';
 import type { PresentationKey } from './chart-presentation.ts';
-import { isTabularForm, type ChartForm } from './chart-view-state.ts';
+import {
+  isTabularForm,
+  ownDataPieFormAllowed,
+  ownDataStacked100FormAllowed,
+  ownDataStackedFormAllowed,
+  type ChartForm,
+} from './chart-view-state.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 import type { ChartSpec } from '../backend/chart/types.ts';
 
-/** Own-data chart-fit parity (plan 2026-09-22, Task 1): the forms
+/** Own-data chart-fit parity (plan 2026-09-22, Task 1): the SCORER-FED forms
  * user-chart.tsx has a RENDER BRANCH for. The shared scorer can say
  * "dumbbell" for a two-point spec, but the chat must never offer a shape
  * its own panel cannot draw (plan Global Constraints) — so the scorer's
- * verdict is capped to this list, which grows as the plan's tasks add
- * branches: dumbbell (Task 2, done), pie/stacked/stacked100 (Task 3 — those
- * three come from own-data's OWN shape-only guards, never from
- * `allowedForms`, whose pie/stacked guards read the CBS roster provenance
- * `regionScope` that an own-data spec never carries, so they are `false`
- * for every own-data spec by construction). */
+ * verdict is capped to this list: dumbbell joined in Task 2. Pie, stacked
+ * and stacked100 are deliberately NOT here although user-chart.tsx renders
+ * all three since Task 3: for own-data they never come from `allowedForms`
+ * at all (its pie/stacked guards read the CBS roster provenance
+ * `regionScope`, which an own-data spec never carries, so they are `false`
+ * for every own-data spec by construction) — they come from own-data's OWN
+ * shape-only guards, appended by `ownDataWholeForms` below. Keeping them
+ * off this cap is also what makes the scorer's roster verdict irrelevant
+ * here even for a spec that DID carry a scope (the tripwire test): the
+ * three appear exactly once, from the own-data guards, never twice. */
 const OWN_DATA_RENDERABLE_FORMS: readonly ChartForm[] = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'];
+
+/** Own-data parity (Task 3): the three whole forms, on SHAPE alone — the
+ * own-data guards (chart-view-state.ts), which never read provenance: an
+ * own-data chart has no registry-known roster and no published total, so
+ * the forms are unconditional and the honesty lives in the note the card
+ * renders under them. Same fixed order as the scorer's own tail
+ * (chart-fit.ts: pie, stacked, stacked100), so the combined list below
+ * keeps chart.tsx's tab order. */
+function ownDataWholeForms(spec: PlottableSpec, seriesCount: number): ChartForm[] {
+  const forms: ChartForm[] = [];
+  if (ownDataPieFormAllowed(spec, seriesCount)) forms.push('pie');
+  if (ownDataStackedFormAllowed(spec, seriesCount)) forms.push('stacked');
+  if (ownDataStacked100FormAllowed(spec, seriesCount)) forms.push('stacked100');
+  return forms;
+}
 
 /** Every form the own-data card can honestly show for `spec` right now, in
  * the scorer's own fixed order: chart-fit.ts's `allowedForms` — the SAME
  * scorer chart.tsx's tabs and `cbsCapabilities` below read, replacing the
  * hand-written five-guard copy this tier used to keep in step by hand —
- * capped to what user-chart.tsx actually renders. Exported so the cap is
+ * capped to what user-chart.tsx actually renders, then the three whole
+ * forms from own-data's own guards, last (Task 3). Exported so the cap is
  * testable on its own, apart from the wire cap `ownDataCapabilities`
  * applies on top. */
 export function ownDataRenderableForms(spec: PlottableSpec, seriesCount: number): ChartForm[] {
-  return allowedForms(spec, seriesCount).filter((form) => OWN_DATA_RENDERABLE_FORMS.includes(form));
+  return [
+    ...allowedForms(spec, seriesCount).filter((form) => OWN_DATA_RENDERABLE_FORMS.includes(form)),
+    ...ownDataWholeForms(spec, seriesCount),
+  ];
 }
 
 /** The own-data co-pilot's SERVER allowlist (src/attachments/copilot/types.ts
@@ -75,10 +104,10 @@ export function ownDataCapabilities(input: {
   const { spec, form, seriesCount, applicable, lang } = input;
   return {
     // Three separate steps, on purpose (Task 1): what the scorer offers,
-    // capped to what this card renders (`ownDataRenderableForms`), then
-    // capped to what the server will accept on the wire (`isCopilotForm`).
-    // Task 3 adds the own-data whole forms to the renderable step; Task 5
-    // widens the wire step. Neither touches the other.
+    // capped to what this card renders (`ownDataRenderableForms` — since
+    // Task 3 with the own-data whole forms appended), then capped to what
+    // the server will accept on the wire (`isCopilotForm`). Task 5 widens
+    // the wire step. Neither touches the other.
     forms: ownDataRenderableForms(spec, seriesCount).filter(isCopilotForm),
     // Intersection, not either list alone: `applicable` can name a key the
     // chat has no vocabulary for (`valueLabels`, locked per form), and

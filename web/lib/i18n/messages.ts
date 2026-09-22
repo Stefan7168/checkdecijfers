@@ -1310,6 +1310,27 @@ const nl = {
   'chart.whole.refused.alternateReading': 'Bij een andere lezing kan het geheel niet worden gecontroleerd. Kies de eerste lezing.',
   'chart.whole.refused.hiddenSeries': 'Een taart- of gestapelde grafiek toont alle delen van het geheel. Maak eerst elke reeks weer zichtbaar.',
 
+  // Own-data chart-fit + verified-whole parity (plan 2026-09-22, Task 3): the
+  // own-data card's OWN whole-form strings (user-chart.tsx) — never the
+  // `chart.whole.*` keys above, which name "het CBS-totaal", something an
+  // own-data chart never has. The two disabled reasons name the SHAPE
+  // condition only: on this tier the three forms are unconditional on
+  // shape (no roster, no published total — plan Global Constraints), so a
+  // roster wording would be false here. `notChecked` is the note's ONE
+  // default state (nothing designated, nothing checked); Task 4 adds
+  // `checked`, `mismatch` and `cannotCheck` to this same block once a
+  // reader can designate a total. `omittedNoShare` is the 100%-stacked
+  // form's own omission on this tier — a period where a displayed part is
+  // missing or negative, or the parts add up to zero, has no honest share
+  // (the same `{periods}` rules as `chart.whole.omittedPeriods` above:
+  // mid-sentence, joined ' · ', the spec's own labels verbatim). Every
+  // string is digit-free (the card's whole-DOM digit scan).
+  'chart.ownWhole.pieDisabledReason': 'Beschikbaar zodra de grafiek één moment toont voor minstens twee reeksen.',
+  'chart.ownWhole.stackedDisabledReason': 'Beschikbaar zodra de grafiek minstens twee reeksen toont.',
+  'chart.ownWhole.notChecked': 'Niet gecontroleerd tegen een totaal — klik op een punt om te controleren of deze delen optellen.',
+  'chart.ownWhole.omittedNoShare':
+    'Niet getekend voor {periods} — daar ontbreekt een deel, is een deel negatief of tellen de delen op tot nul, dus een aandeel in procenten is niet te bepalen.',
+
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
   // by design (D3(a) in the page itself), but the SHARED site footer below
@@ -2265,6 +2286,13 @@ const en: Messages = {
   'chart.whole.refused.noAudit': 'Available on a saved answer, where the parts can be checked against the CBS total.',
   'chart.whole.refused.alternateReading': 'The whole cannot be checked for an alternate reading. Choose the first reading.',
   'chart.whole.refused.hiddenSeries': 'A pie or stacked chart shows every part of the whole. Show every series again first.',
+
+  // Own-data whole-form strings (plan 2026-09-22, Task 3) — see the `nl` block.
+  'chart.ownWhole.pieDisabledReason': 'Available once the chart shows one moment for at least two series.',
+  'chart.ownWhole.stackedDisabledReason': 'Available once the chart shows at least two series.',
+  'chart.ownWhole.notChecked': 'Not checked against a total — click a point to verify these parts add up.',
+  'chart.ownWhole.omittedNoShare':
+    'Not drawn for {periods} — a part is missing or negative there, or the parts add up to zero, so a percentage share cannot be shown.',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English

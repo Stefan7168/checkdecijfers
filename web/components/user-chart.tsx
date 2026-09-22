@@ -43,10 +43,13 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   DefaultZIndexes,
   LabelList,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -57,6 +60,7 @@ import {
   YAxis,
   ZIndexLayer,
 } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { requestDatasetDerivation } from '../app/dataset-derivation-actions.ts';
@@ -95,11 +99,14 @@ import {
   areaFormAllowed,
   defaultFormFor,
   dumbbellFormAllowed,
-  fallbackForm,
   hbarFormAllowed,
   heatmapFormAllowed,
   isTabularForm,
   lineFormAllowed,
+  ownDataFallbackForm,
+  ownDataPieFormAllowed,
+  ownDataStacked100FormAllowed,
+  ownDataStackedFormAllowed,
   slopeFormAllowed,
   type ChartForm,
 } from '../lib/chart-view-state.ts';
@@ -108,19 +115,23 @@ import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import {
   AxisTick,
   buildDumbbellRows,
+  buildRegionRows,
   buildRows,
+  buildStack100Rows,
   AXIS_COLOR,
   baselineAxisLine,
   ChartTooltip,
   GRID_LINE_PROPS,
   heatmapIntensity,
   labelWidthPx,
+  RegionTooltip,
   valueLabelPlan,
   yAxisDomain,
   type DumbbellEnd,
   type DumbbellRow,
   type PlottablePoint,
   type PlottableSpec,
+  type RegionRow,
   type Row,
   type SeriesMeta,
 } from './chart.tsx';
@@ -262,6 +273,13 @@ const FORM_TABS: readonly { form: ChartForm; label: MessageKey }[] = [
   { form: 'dumbbell', label: 'chart.form.dumbbell' },
   { form: 'slope', label: 'chart.form.slope' },
   { form: 'heatmap', label: 'chart.form.heatmap' },
+  // Own-data verified-whole parity (Task 3): the three whole forms trail
+  // Warmtekaart, in the scorer's fixed order — the same tier-neutral tab
+  // words chart.tsx uses. UNCONDITIONAL on this tier (see the own-data
+  // whole-forms block below): offered on shape alone, always with the note.
+  { form: 'pie', label: 'chart.form.pie' },
+  { form: 'stacked', label: 'chart.form.stacked' },
+  { form: 'stacked100', label: 'chart.form.stacked100' },
 ];
 
 /** ADR 042's value-label look, copied from chart.tsx (where it is
@@ -668,6 +686,157 @@ function UserDumbbellOverlay({ rows }: { rows: UserDumbbellRow[] }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Own-data chart-fit + verified-whole parity (plan 2026-09-22, Task 3): the
+// Taartdiagram / Gestapeld / Gestapeld (%) forms, UNCONDITIONAL on this
+// tier. chart.tsx offers these three only once a chart's regions are a
+// complete, registry-known roster whose parts are checked on demand against
+// a CBS-published total (phase 5b). An own-data chart has no registry and
+// no independent total to check against, so — the owner's decision, plan
+// 2026-09-22 — the three forms are offered on shape alone (chart-view-
+// state.ts's `ownData*FormAllowed`, which never read provenance) and ALWAYS
+// carry a visible note under the chart saying what has and has not been
+// checked (`chart.ownWhole.*`, at the same prominence chart.tsx gives its
+// own verified note). This task builds the forms and the ONE default note
+// state (nothing designated, nothing checked); Task 4 lets the reader click
+// a point to designate it as the total, runs the real arithmetic check, and
+// swaps in the other three states — extend `OWN_WHOLE_NOTE` below, keep the
+// one <p>.
+//
+// Reused from chart.tsx rather than copied: `buildRegionRows` (the pie's
+// one-row-per-series model), `buildStack100Rows` (the 100%-stacked share
+// arithmetic — pure arithmetic over the values on screen; here the
+// denominator is simply the sum of the CURRENTLY-DISPLAYED parts for that
+// period, with no verification step gating it, because there was never an
+// independent total to wait on), `RegionTooltip` and `ChartTooltip`.
+// Copied, with the same simplification precedent as UserSeriesDot /
+// UserDumbbellOverlay (no provisional cells on this tier, ADR 037 D7, so no
+// hatch pattern and no ' *' suffix): chart.tsx's module-private
+// `PieSliceLabel` → UserPieSliceLabel, `StackSegment` → UserStackSegment,
+// and STACK_LABEL_MIN_HEIGHT_PX. No click affordance on a slice or segment
+// yet — chart.tsx's own pie/stack have none either; Task 4's designation
+// gesture adds it (role="button" + Enter/Space, like UserSeriesDot).
+// ---------------------------------------------------------------------------
+
+/** chart.tsx's `STACK_LABEL_MIN_HEIGHT_PX`, copied (module-private there):
+ * the smallest segment a stacked bar still labels — below this height the
+ * 12 px label text would overrun its own segment and collide with its
+ * neighbours'. A geometry gate ONLY; the tooltip still shows every value. */
+const STACK_LABEL_MIN_HEIGHT_PX = 14;
+
+/** One slice of the own-data pie: chart.tsx's exported `RegionRow` (its
+ * `buildRegionRows` — one row per series from that series' FIRST point,
+ * which `ownDataPieFormAllowed` makes its ONLY point) joined to `seriesMeta`
+ * for the key and colour and to this card's `opacityFor`/`dimmedFor`. The
+ * same `value_display`/`value_resultId` field names chart.tsx's own pie rows
+ * carry, so `RegionTooltip` reads it unchanged. */
+interface UserPieRow extends RegionRow {
+  key: string;
+  color: string;
+  opacity: number;
+  dimmed: boolean;
+}
+
+/** The pie's slice label — chart.tsx's `PieSliceLabel`, copied (module-
+ * private there). Recharts' `label` render prop gets the sector entry
+ * spread in (`payload` = the row it was built from, plus the anchor
+ * `x`/`y`/`textAnchor` it computed at `outerRadius` plus its offset). Draws
+ * ONLY the row's own `value_display` — never Recharts' own `percent`, never
+ * the raw `value` — bound to its source rowRef via `data-label-for`, like
+ * every other value label on this card. A row with no display string draws
+ * nothing. */
+function UserPieSliceLabel(props: PieLabelRenderProps) {
+  const row = (props.payload ?? null) as UserPieRow | null;
+  if (row === null || row.value_display == null || props.x == null || props.y == null) return null;
+  return (
+    <text
+      x={props.x}
+      y={props.y}
+      {...VALUE_LABEL_PROPS}
+      fill="var(--foreground)"
+      textAnchor={props.textAnchor}
+      dominantBaseline="central"
+      data-role="pie-label"
+      data-label-for={row.value_resultId ?? undefined}
+    >
+      {row.value_display}
+    </text>
+  );
+}
+
+/** One segment of the stacked / 100%-stacked bar — chart.tsx's
+ * `StackSegment`, copied (module-private there), minus the provisional
+ * hatch this tier has nothing to draw with. The SAME shape-factory
+ * convention as chart.tsx (one instance per series, called once per
+ * period), reading the period row's own per-series fields: `valueKey` is
+ * what Recharts stacked (`<key>` for stacked — the real value; `<key>_share`
+ * for 100%-stacked — the computed share), `labelKey` the text drawn INSIDE
+ * the segment (`<key>_display` — the point's own formattedValue; or
+ * `<key>_share_label` — the share `buildStack100Rows` formatted). Both are
+ * bound to the point's own rowRef via `data-label-for`. A segment shorter
+ * than STACK_LABEL_MIN_HEIGHT_PX draws no label (geometry only — the
+ * tooltip still shows it). */
+function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string, color: string, opacity: number) {
+  return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
+    const { x, y, width, height, payload } = props;
+    if (x == null || y == null || width == null || height == null || !payload) return null;
+    const value = payload[valueKey];
+    if (value == null) return null;
+    const resultId = payload[`${seriesKey}_resultId`];
+    const label = payload[labelKey];
+    const showLabel = label != null && height >= STACK_LABEL_MIN_HEIGHT_PX;
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={color}
+          fillOpacity={opacity}
+          stroke="var(--card)"
+          strokeWidth={1}
+          data-point="value"
+          data-series-key={seriesKey}
+          data-series-dimmed={opacity < 1 ? 'true' : undefined}
+          data-result-id={resultId == null ? undefined : String(resultId)}
+        />
+        {showLabel ? (
+          <ZIndexLayer zIndex={DefaultZIndexes.label}>
+            <text
+              x={x + width / 2}
+              y={y + height / 2}
+              {...VALUE_LABEL_PROPS}
+              fill="var(--foreground)"
+              textAnchor="middle"
+              dominantBaseline="central"
+              data-role="stack-label"
+              data-label-for={resultId == null ? undefined : String(resultId)}
+            >
+              {String(label)}
+            </text>
+          </ZIndexLayer>
+        ) : null}
+      </g>
+    );
+  };
+}
+
+/** The own-data whole note's states → the message key and tone each one
+ * renders with. Task 3 builds only `not_checked` — the default, shown
+ * whenever a whole form is on screen and nothing has been designated. Task
+ * 4 adds `checked` (a confirmed tone), `mismatch` and `cannot_check` (a
+ * warning tone) HERE, each carrying the designated row's label as
+ * `{label}`, and the card picks the state from the designated reference
+ * plus the check's outcome. The <p> under the chart (data-testid
+ * "own-whole-note", data-state = the key of this map) is the ONE mount
+ * point; the 100%-stacked no-share omission is appended to whatever state
+ * is current, exactly as chart.tsx appends its own omissions. */
+const OWN_WHOLE_NOTE = {
+  not_checked: { key: 'chart.ownWhole.notChecked', className: 'text-muted-foreground' },
+} as const satisfies Record<string, { key: MessageKey; className: string }>;
+type OwnWholeNoteState = keyof typeof OWN_WHOLE_NOTE;
+
 /**
  * The card. A thin wrapper around `UserChartCard` whose only job is the
  * spec-swap reset: the visual dock and the chat both hand the SAME mounted
@@ -719,7 +888,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
 
   const plottable = toPlottableSpec(activeSpec);
   const seriesCount = plottable.series.length;
-  const activeForm = fallbackForm(state.form, plottable, seriesCount);
+  // Own-data parity (Task 3): `ownDataFallbackForm`, not `fallbackForm` —
+  // the shared policy routes pie/stacked/stacked100 through the CBS roster
+  // guards, which are false for every own-data spec, so the three forms
+  // could never become `activeForm` here. Every other form is the shared
+  // policy unchanged (it delegates).
+  const activeForm = ownDataFallbackForm(state.form, plottable, seriesCount);
   // Own-data chart-fit parity (Task 1): the ONE definition of "draws no
   // chart" — the table and the heatmap — shared with chart.tsx and
   // chart-capabilities.ts through chart-view-state.ts's `isTabularForm`, so
@@ -991,6 +1165,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     if (form === 'dumbbell') return dumbbellFormAllowed(plottable, seriesCount);
     if (form === 'slope') return slopeFormAllowed(plottable, seriesCount);
     if (form === 'heatmap') return heatmapFormAllowed(plottable, seriesCount);
+    // Own-data verified-whole parity (Task 3): the three whole forms on
+    // SHAPE alone — own-data's own guards, never chart.tsx's roster-gated
+    // pieFormAllowed/stackedFormAllowed/stacked100FormAllowed, which would
+    // disable all three on every own-data spec (see chart-view-state.ts).
+    if (form === 'pie') return ownDataPieFormAllowed(plottable, seriesCount);
+    if (form === 'stacked') return ownDataStackedFormAllowed(plottable, seriesCount);
+    if (form === 'stacked100') return ownDataStacked100FormAllowed(plottable, seriesCount);
     return true;
   }
   function formReason(form: ChartForm): string | undefined {
@@ -1003,6 +1184,10 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     if (form === 'dumbbell') return t(chartLang, 'chart.dumbbellDisabledReason');
     if (form === 'slope') return t(chartLang, 'chart.slopeDisabledReason');
     if (form === 'heatmap') return t(chartLang, 'chart.heatmapDisabledReason');
+    // Own-data's OWN reasons (shape only) — chart.tsx's name the CBS roster
+    // condition, which is never what is missing on this tier.
+    if (form === 'pie') return t(chartLang, 'chart.ownWhole.pieDisabledReason');
+    if (form === 'stacked' || form === 'stacked100') return t(chartLang, 'chart.ownWhole.stackedDisabledReason');
     return undefined;
   }
   function selectForm(next: ChartForm): void {
@@ -1195,6 +1380,49 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     return longest;
   }, '');
   const dumbbellLabelPadPx = longestDumbbellValue ? labelWidthPx(longestDumbbellValue) : 8;
+  // Own-data verified-whole parity (Task 3): the whole forms' row models.
+  // The pie: one row per series from chart.tsx's exported `buildRegionRows`
+  // over the SAME `plottable` (each series' first point — its only one, per
+  // ownDataPieFormAllowed), joined to `seriesMeta` on index (both iterate
+  // `plottable.series` in spec order, R6) for key and colour and to this
+  // card's opacityFor/dimmedFor. Hidden series are DROPPED (this card's
+  // legend rule); a null value has no angle and is dropped too. The tooltip
+  // names the ONE period every drawn slice shares, else the generic value
+  // header — chart.tsx's own `regionPeriodLabel` fallback.
+  const wholeForm = activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100';
+  const pieRows: UserPieRow[] = buildRegionRows(plottable, (i) => seriesColor(pres, i)).rows.flatMap((row, i): UserPieRow[] => {
+    const meta = seriesMeta[i];
+    if (meta === undefined || row.value === null || state.hiddenKeys.has(meta.key)) return [];
+    return [{ ...row, key: meta.key, color: meta.color, opacity: opacityFor(meta), dimmed: dimmedFor(meta) }];
+  });
+  const piePeriodLabels = new Set(plottable.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
+  const pieSharedPeriodLabel = piePeriodLabels.size === 1 ? [...piePeriodLabels][0]! : t(chartLang, 'chart.table.value');
+  // The stacks: the SAME period × series `rows` the vertical bar draws, one
+  // `<Bar stackId="whole">` per VISIBLE series — every period, since no
+  // verification gates a period on this tier. 100%-stacked: chart.tsx's
+  // exported `buildStack100Rows` over the VISIBLE series' keys only, so each
+  // share's denominator is the sum of the parts actually on screen for that
+  // period (a hidden series is not a part of what is displayed) — and every
+  // period counts as "verified", by construction: nothing to wait on. A
+  // period where a displayed part is missing (a null cell) or negative, or
+  // whose parts add up to zero, has no honest share: `buildStack100Rows`
+  // omits it and the note under the chart names it by its own label
+  // (chart.tsx's omittedNoShare convention). Built only in that form — the
+  // arithmetic is cheap, but nothing else reads it.
+  const stack100 =
+    activeForm === 'stacked100'
+      ? buildStack100Rows(
+          rows,
+          visibleSeries.map((s) => s.key),
+          new Set(rows.map((r) => String(r.periodCode))),
+        )
+      : { rows: [] as Row[], omitted: [] as string[] };
+  const stackNoShareLabels = stack100.omitted.map((code) => {
+    const row = rows.find((r) => String(r.periodCode) === code);
+    return row ? String(row.periodLabel) : code;
+  });
+  // The note's state (Task 3: only the default exists — see OWN_WHOLE_NOTE).
+  const ownWholeNoteState: OwnWholeNoteState = 'not_checked';
   const xLabelProps = {
     angle: pres.xLabels === 'tilted' ? -45 : 0,
     textAnchor: pres.xLabels === 'tilted' ? ('end' as const) : ('middle' as const),
@@ -1478,6 +1706,99 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 tickLine={pres.axisLines === 'shown'}
               />
               <UserDumbbellOverlay rows={visibleDumbbellRows} />
+            </BarChart>
+          ) : activeForm === 'pie' ? (
+            // Own-data verified-whole parity (Task 3): the pie — chart.tsx's
+            // phase-5b branch, mirrored, WITHOUT its verification gate: one
+            // slice per visible series (`pieRows`), each slice's `value` the
+            // point's own real value (geometry only), each label its own
+            // `value_display` via UserPieSliceLabel, each tooltip line
+            // RegionTooltip's — no Recharts percentage, no invented number,
+            // no total drawn or implied; the note under the chart says so.
+            // `innerRadius` is the ONE thing the donut presentation key
+            // changes (a styling toggle, not a form — chart.tsx's rule).
+            <PieChart desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName} margin={{ top: 24, right: 24, bottom: 24, left: 24 }}>
+              <Tooltip content={<RegionTooltip periodLabel={pieSharedPeriodLabel} />} />
+              <Pie
+                data={pieRows}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                innerRadius={pres.pieHole === 'donut' ? '50%' : 0}
+                outerRadius="80%"
+                isAnimationActive={false}
+                stroke="var(--card)"
+                strokeWidth={1}
+                label={UserPieSliceLabel}
+                labelLine={{ stroke: AXIS_COLOR, strokeWidth: 1 }}
+              >
+                {pieRows.map((r) => (
+                  <Cell
+                    key={r.key}
+                    fill={r.color}
+                    fillOpacity={r.opacity}
+                    stroke="var(--card)"
+                    data-point="value"
+                    data-series-key={r.key}
+                    data-series-dimmed={r.dimmed ? 'true' : undefined}
+                    data-result-id={r.value_resultId ?? undefined}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          ) : activeForm === 'stacked' || activeForm === 'stacked100' ? (
+            // Own-data verified-whole parity (Task 3): stacked / 100%-stacked
+            // — chart.tsx's phase-5b branch, mirrored, WITHOUT its per-period
+            // verification: the SAME period × series `rows` the vertical bar
+            // draws, one `<Bar stackId="whole">` per visible series
+            // (Recharts' own native stacking), EVERY period drawn. 100%-
+            // stacked stacks each series' `<key>_share` from `stack100`
+            // against a fixed hundred-percent axis; the segment label is the
+            // formatted share and the tooltip pairs it with the real value.
+            // Ticks stay off (no invented axis numbers) on both, and the
+            // baseline is zero — the resolver forces both for these forms.
+            <BarChart
+              data={activeForm === 'stacked100' ? stack100.rows : rows}
+              margin={{ top: 16, right: 8, left: 8, bottom: 8 }}
+              desc={t(chartLang, 'userChart.keyboardHint')}
+              aria-label={accessibleName}
+            >
+              {pres.grid !== 'none' ? <CartesianGrid {...GRID_LINE_PROPS} horizontal vertical={pres.grid === 'both'} /> : null}
+              <XAxis
+                dataKey="periodLabel"
+                stroke={AXIS_COLOR}
+                tick={{ fill: AXIS_COLOR }}
+                axisLine={baselineAxisLine(pres)}
+                tickLine={pres.axisLines === 'shown'}
+                {...xLabelProps}
+              />
+              <YAxis
+                tick={false}
+                width={16}
+                domain={activeForm === 'stacked100' ? [0, 100] : [0, 'auto']}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <Tooltip content={<ChartTooltip seriesMeta={seriesMeta} />} cursor={{ fill: 'var(--muted)', fillOpacity: 0.6 }} />
+              {visibleSeries.map((s) => {
+                const valueKey = activeForm === 'stacked100' ? `${s.key}_share` : s.key;
+                const labelKey = activeForm === 'stacked100' ? `${s.key}_share_label` : `${s.key}_display`;
+                return (
+                  <Bar
+                    key={s.key}
+                    dataKey={valueKey}
+                    name={s.label}
+                    stackId="whole"
+                    fill={s.color}
+                    fillOpacity={opacityFor(s)}
+                    data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
+                    isAnimationActive={false}
+                    shape={UserStackSegment(s.key, valueKey, labelKey, s.color, opacityFor(s))}
+                  />
+                );
+              })}
             </BarChart>
           ) : (
             <BarChart data={rows} margin={{ top: 16, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
@@ -1898,6 +2219,23 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           // arrive through `onChange` like every other panel change.
           brand={signedIn ? { lookup: (website) => lookupBrand(website), available: brandLookupAvailable } : undefined}
         />
+      ) : null}
+      {/* Own-data verified-whole parity (Task 3): the whole's own honesty
+        * line — chart.tsx's `whole-note` mount point mirrored: the caveat
+        * block under the chart, after the Style panel and directly above the
+        * provenance/disclaimer footer (the same `text-xs text-muted-
+        * foreground` prominence, never smaller), OUTSIDE the export
+        * container like everything that is not a plotted value. Present
+        * whenever one of the three whole forms is on screen; absent
+        * otherwise. Its own test id (`own-whole-note`, not chart.tsx's
+        * `whole-note`): a CBS card and an own-data card can share one page
+        * (ADR 037 H2). The 100%-stacked no-share omission is appended by
+        * the spec's own period labels (digit tokens the card's scan binds). */}
+      {wholeForm ? (
+        <p className={`mt-2 text-xs ${OWN_WHOLE_NOTE[ownWholeNoteState].className}`} data-testid="own-whole-note" data-state={ownWholeNoteState}>
+          {t(chartLang, OWN_WHOLE_NOTE[ownWholeNoteState].key)}
+          {stackNoShareLabels.length > 0 ? ` ${t(chartLang, 'chart.ownWhole.omittedNoShare', { periods: stackNoShareLabels.join(' · ') })}` : ''}
+        </p>
       ) : null}
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">

@@ -154,6 +154,21 @@ function twoSeriesThreeYearSpec(): UserChartSpec {
   });
 }
 
+/** Two series × ONE moment — pie-shaped (every series exactly one point, at
+ * least two slices), the way a bar-kind `seriesBy` instruction over one x
+ * value renders; also stacked-shaped (one stack). Amsterdam 40, Rotterdam 20
+ * — a 2:1 split, so every share below is an exact-looking number. */
+function twoSeriesOneMomentSpec(): UserChartSpec {
+  return spec({
+    kind: 'bar',
+    yHeaders: ['Revenue'],
+    series: [
+      { label: 'Amsterdam', points: [point({ rowRef: 'r1:c1', xKey: '2024', xLabel: '2024', value: 40, formattedValue: '40,0', sourceText: '40,0' })] },
+      { label: 'Rotterdam', points: [point({ rowRef: 'r1:c2', xKey: '2024', xLabel: '2024', value: 20, formattedValue: '20,0', sourceText: '20,0' })] },
+    ],
+  });
+}
+
 function lineCurves(): number {
   return document.querySelectorAll('.recharts-line-curve').length;
 }
@@ -162,9 +177,14 @@ function lineCurves(): number {
  * to one of the spec's OWN strings (a formattedValue, an xLabel, the capture
  * date) — the card itself never composes a figure. The plotted-point count is
  * structural (how many points are drawn), not a value, so it is allowed
- * explicitly. Shared by the line-form scan below and the heatmap scan. */
-function expectDigitsTraceToSpec(container: HTMLElement, s: UserChartSpec): void {
+ * explicitly. Shared by the line-form scan below and the heatmap scan.
+ * `extraAllowed` (Task 3) is the ONE other permitted source: the 100%-stacked
+ * form's shares — pure arithmetic over displayed values, formatted by the
+ * app's own formatter — which the caller computes through that same
+ * formatter, exactly as chart.test.tsx's stacked100 scan does. */
+function expectDigitsTraceToSpec(container: HTMLElement, s: UserChartSpec, extraAllowed: readonly string[] = []): void {
   const allowed = [
+    ...extraAllowed,
     s.provenance.capturedAt.slice(0, 10),
     s.provenance.displayName,
     String(s.series[0]!.points.length),
@@ -282,7 +302,7 @@ describe('UserChartView — the form switch (co-pilot phase 2)', () => {
   // an on-screen control, and the control SAYS which kind it is.
   it('marks every form tab with data-command-kind="setForm"', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
-    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']) {
+    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']) {
       expect(screen.getByRole('tab', { name, hidden: true })).toHaveAttribute('data-command-kind', 'setForm');
     }
   });
@@ -698,9 +718,11 @@ describe('UserChartView — slope + heatmap (own-data chart-fit parity, Task 1)'
     expect(document.getElementById(describedById!)!.textContent).toBe(reason);
   }
 
-  it('the phase-5 trio trails Tabel in the scorer\'s own fixed order: Dumbbell (Task 2), Helling, Warmtekaart', () => {
+  it('the phase-5 trio trails Tabel in the scorer\'s own fixed order: Dumbbell (Task 2), Helling, Warmtekaart — then the three whole forms (Task 3)', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
-    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
+    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual([
+      'Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)',
+    ]);
   });
 
   it('a 2-series × 2-point spec offers Helling enabled; selecting it draws the line branch at exactly two moments', () => {
@@ -1315,6 +1337,433 @@ describe('UserChartView — dumbbell (own-data chart-fit parity, Task 2)', () =>
       </LangProvider>,
     );
     expectDisabledWithReason(screen.getByRole('tab', { name: 'Dumbbell' }), 'Available once at least two series each have exactly a start and an end value.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Own-data chart-fit + verified-whole parity (plan 2026-09-22, Task 3): the
+// Taartdiagram / Gestapeld / Gestapeld (%) tabs, UNCONDITIONAL on this tier.
+// chart.tsx offers these three only for a registry-known roster whose parts
+// it checks on demand against a CBS-published total (chart.test.tsx's
+// 'ChartView — verified-whole forms (phase 5b, Task 4)' block, mirrored
+// here); an own-data chart has no registry and no such total, so the forms
+// are offered on SHAPE alone and ALWAYS carry the honesty note under the
+// chart. This task builds the forms and the note's one DEFAULT state (nothing
+// designated, nothing checked); Task 4 adds the designation click and the
+// other three states. These tests pin the REAL rendered content — bound
+// slices/segments, each label its point's own formattedValue (or, for the
+// percent stack, a share the app's own formatter produced over the values on
+// screen), stacked geometry, the exact note text and its placement — never
+// just "it rendered".
+//   twoSeriesOneMomentSpec() — 2 series × 1 moment (40 / 20): pie AND stacks
+//   twoSeriesSpec()          — 2 series × 2 years: stacks, never a pie
+//   spec()                   — 1 series × 1 point: none of the three
+// ---------------------------------------------------------------------------
+describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whole parity, Task 3)', () => {
+  const NOT_CHECKED = 'Niet gecontroleerd tegen een totaal — klik op een punt om te controleren of deze delen optellen.';
+  const NOT_CHECKED_EN = 'Not checked against a total — click a point to verify these parts add up.';
+  const PIE_REASON = 'Beschikbaar zodra de grafiek één moment toont voor minstens twee reeksen.';
+  const STACKED_REASON = 'Beschikbaar zodra de grafiek minstens twee reeksen toont.';
+  const OMITTED_2024 =
+    'Niet getekend voor 2024 — daar ontbreekt een deel, is een deel negatief of tellen de delen op tot nul, dus een aandeel in procenten is niet te bepalen.';
+  // Scoped to this card's own export container (ADR 037 H2: a CBS card and an
+  // own-data card can share a page and use the same data-roles).
+  const IN = '[data-testid="user-chart-container"]';
+  const SECTOR = `${IN} .recharts-pie-sector`;
+  const SEGMENT = `${IN} svg rect[data-point="value"]`;
+
+  /** twoSeriesSpec with Rotterdam's 2024 cell empty in the file. */
+  function nullCellSpec(): UserChartSpec {
+    const s = twoSeriesSpec();
+    s.series[1]!.points[1] = point({ rowRef: 'r2:c2', xKey: '2024', xLabel: '2024', value: null, formattedValue: null, sourceText: '', reason: 'leeg in bron' });
+    return s;
+  }
+  function labelsByRole(container: HTMLElement, role: string): [string | null, string | null][] {
+    return [...container.querySelectorAll<HTMLElement>(`${IN} [data-role="${role}"]`)].map((el) => [el.getAttribute('data-label-for'), el.textContent]);
+  }
+  function segment(container: HTMLElement, rowRef: string): SVGRectElement {
+    const el = container.querySelector<SVGRectElement>(`${SEGMENT}[data-result-id="${rowRef}"]`);
+    expect(el, `no stack segment for ${rowRef}`).not.toBeNull();
+    return el!;
+  }
+  function segmentIds(container: HTMLElement): string[] {
+    return [...container.querySelectorAll(SEGMENT)].map((el) => el.getAttribute('data-result-id') ?? '').sort();
+  }
+  const num = (el: Element, attr: string): number => Number(el.getAttribute(attr));
+  function note(): HTMLElement {
+    return screen.getByTestId('own-whole-note');
+  }
+  function expectDisabledWithReason(tab: HTMLElement, reason: string): void {
+    expect(tab).toBeDisabled();
+    expect(tab).toHaveAttribute('title', reason);
+    const describedById = tab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const hint = document.getElementById(describedById!);
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveClass('sr-only');
+    expect(hint!.textContent).toBe(reason);
+  }
+
+  it('the three whole tabs trail Warmtekaart, in the fixed order Taartdiagram, Gestapeld, Gestapeld (%) — all eleven tabs on the card', () => {
+    render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
+    const names = screen.getAllByRole('tab').map((el) => el.textContent);
+    expect(names).toHaveLength(11);
+    expect(names.slice(-4)).toEqual(['Warmtekaart', 'Taartdiagram', 'Gestapeld', 'Gestapeld (%)']);
+  });
+
+  it('pie: a one-moment 2-series spec offers Taartdiagram enabled — no roster, no check, no server call; selecting it draws one bound slice per series, labelled with its own formattedValue, with the default note under the chart, and stays a chart form', () => {
+    const s = twoSeriesOneMomentSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Taartdiagram' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+    // Not a whole form yet (this spec opens on Liggend): no note anywhere.
+    expect(screen.queryByTestId('own-whole-note')).toBeNull();
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('tabindex', '0');
+    // Two slices, each bound to its series' own cell, in spec order — drawn
+    // at once: nothing to wait for on this tier.
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    const sectors = [...container.querySelectorAll<HTMLElement>(`${SECTOR} [data-point="value"]`)];
+    expect(sectors.map((el) => el.getAttribute('data-result-id'))).toEqual(['r1:c1', 'r1:c2']);
+    expect(sectors.map((el) => el.getAttribute('data-series-key'))).toEqual(['s0', 's1']);
+    // Each label is the point's OWN formattedValue — never a Recharts percentage.
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+    ]);
+    expect([...container.querySelectorAll('[data-role="pie-label"]')].some((el) => /%/.test(el.textContent ?? ''))).toBe(false);
+    // A plain pie: every sector path reaches the centre (one arc, no inner arc).
+    for (const path of container.querySelectorAll<SVGPathElement>(`${SECTOR} path`)) {
+      expect((path.getAttribute('d') ?? '').match(/A/g)?.length ?? 0).toBe(1);
+    }
+    // Slices are told apart by colour (the per-series palette).
+    expect(new Set(sectors.map((el) => el.getAttribute('fill'))).size).toBe(2);
+    // Nothing bar- or line-shaped; still a chart form with its export
+    // container, Style trigger and legend.
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+    expect(container.querySelector('.recharts-line-curve')).toBeNull();
+    expect(container.querySelector('table')).toBeNull();
+    expect(container.querySelector(IN)).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+
+    // The note: the exact default wording, in its default state, at the
+    // same prominence chart.tsx gives its own whole note — and OUTSIDE the
+    // export container, like everything that is not a plotted value.
+    const n = note();
+    expect(n.textContent).toBe(NOT_CHECKED);
+    expect(n).toHaveAttribute('data-state', 'not_checked');
+    expect(n).toHaveClass('text-xs');
+    expect(n).toHaveClass('text-muted-foreground');
+    expect(container.querySelector(`${IN} [data-testid="own-whole-note"]`)).toBeNull();
+    // Directly above the provenance/disclaimer footer.
+    expect(n.nextElementSibling?.textContent).toContain('verkoop-2024.csv');
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('pie: disabled with its SHAPE reason (pointer + sr-only, exactly once) on a two-moment spec and on a single series — never the CBS roster wording; a click does nothing', () => {
+    const first = render(<UserChartView spec={twoSeriesSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Taartdiagram' });
+    expectDisabledWithReason(tab, PIE_REASON);
+    expect(screen.getAllByText(PIE_REASON)).toHaveLength(1);
+    // chart.tsx's own three reasons all name "een volledige set regio’s die
+    // het CBS zelf als geheel kent" — a roster condition that is never what
+    // is missing on this tier, so that wording must not appear here.
+    expect(screen.queryByText(/volledige set regio/)).toBeNull();
+    fireEvent.click(tab);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('own-whole-note')).toBeNull();
+    first.unmount();
+
+    render(<UserChartView spec={spec()} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Taartdiagram' }), PIE_REASON);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Gestapeld' }), STACKED_REASON);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Gestapeld (%)' }), STACKED_REASON);
+  });
+
+  it('donut: the pieHole presentation key only changes the hole — an inner arc on every sector, the same slices and labels', () => {
+    const { container } = render(
+      <ChartStyleProvider initial={{ pieHole: 'donut' }}>
+        <UserChartView spec={twoSeriesOneMomentSpec()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    for (const path of container.querySelectorAll<SVGPathElement>(`${SECTOR} path`)) {
+      expect((path.getAttribute('d') ?? '').match(/A/g)?.length ?? 0).toBe(2);
+    }
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+    ]);
+  });
+
+  it('pie: hiding a series via the legend drops its slice — the parts on screen are the parts drawn — with the disclosure, the note staying; ⌘Z brings the slice back', () => {
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(1);
+    expect(labelsByRole(container, 'pie-label')).toEqual([['r1:c1', '40,0']]);
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+    expect(note().textContent).toBe(NOT_CHECKED);
+
+    fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true });
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+  });
+
+  it('stacked: a two-moment 2-series spec offers Gestapeld enabled; selecting it draws one stack per period of bound segments labelled with the REAL values (no percentage anywhere), each period\'s segments stacked end to end, with the default note', () => {
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    // Two moments: never a pie, but both stacks.
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Taartdiagram' }), PIE_REASON);
+    const tab = screen.getByRole('tab', { name: 'Gestapeld' });
+    expect(tab).not.toBeDisabled();
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    // One <Bar> per series, four segments in all, each bound to its cell.
+    expect(container.querySelectorAll(`${IN} .recharts-bar`)).toHaveLength(2);
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
+    expect(labelsByRole(container, 'stack-label').sort()).toEqual(
+      [
+        ['r1:c1', '40,0'],
+        ['r1:c2', '20,0'],
+        ['r2:c1', '42,0'],
+        ['r2:c2', '24,0'],
+      ].sort(),
+    );
+    expect([...container.querySelectorAll('[data-role="stack-label"]')].some((el) => /%/.test(el.textContent ?? ''))).toBe(false);
+
+    // Geometry: within a period both segments share one x; Rotterdam's
+    // (the second series) sits directly on top of Amsterdam's — its bottom
+    // edge IS Amsterdam's top edge (`stackId="whole"`, native stacking) —
+    // and the heights are linear in the values from a zero baseline (40:20
+    // is exactly 2:1; 42:24 exactly 1.75:1).
+    for (const [period, [bottom, top], ratio] of [
+      ['2023', ['r1:c1', 'r1:c2'], 2],
+      ['2024', ['r2:c1', 'r2:c2'], 42 / 24],
+    ] as const) {
+      const a = segment(container, bottom);
+      const b = segment(container, top);
+      expect(num(a, 'x'), period).toBeCloseTo(num(b, 'x'), 6);
+      expect(num(b, 'y') + num(b, 'height'), period).toBeCloseTo(num(a, 'y'), 6);
+      expect(num(a, 'height') / num(b, 'height'), period).toBeCloseTo(ratio, 6);
+    }
+    // Amsterdam's 2023 segment (40) is taller than Rotterdam's 2024 one (24)
+    // on the one shared scale.
+    expect(num(segment(container, 'r1:c1'), 'height')).toBeGreaterThan(num(segment(container, 'r2:c2'), 'height'));
+
+    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).not.toContain('Niet getekend');
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('100%-stacked: each segment is its share of the parts ON SCREEN for that period — computed by the app\'s own formatter, never a gate in between — both stacks the same full height, with the default note', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld (%)' }));
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
+    // 2023: 40 + 20 = 60; 2024: 42 + 24 = 66 — shares through the SAME
+    // formatter the assertion uses, never a hand-typed string.
+    const share = (v: number, total: number) => `${formatValueNl((v / total) * 100, 1)}%`;
+    const expected = [
+      ['r1:c1', share(40, 60)],
+      ['r1:c2', share(20, 60)],
+      ['r2:c1', share(42, 66)],
+      ['r2:c2', share(24, 66)],
+    ];
+    expect(labelsByRole(container, 'stack-label').sort()).toEqual(expected.slice().sort());
+    expect(expected.map(([, text]) => text)).toEqual(['66,7%', '33,3%', '63,6%', '36,4%']);
+    // Every stack fills the same hundred-percent axis: the two segments of
+    // 2023 add up to exactly the height the two of 2024 do, and the larger
+    // part is the taller segment in each.
+    const total2023 = num(segment(container, 'r1:c1'), 'height') + num(segment(container, 'r1:c2'), 'height');
+    const total2024 = num(segment(container, 'r2:c1'), 'height') + num(segment(container, 'r2:c2'), 'height');
+    expect(total2023).toBeGreaterThan(0);
+    expect(total2023).toBeCloseTo(total2024, 6);
+    expect(num(segment(container, 'r1:c1'), 'height') / num(segment(container, 'r1:c2'), 'height')).toBeCloseTo(2, 6);
+    expect(note().textContent).toBe(NOT_CHECKED);
+    // The computed shares are the ONE allowed extra source of digits.
+    expectDigitsTraceToSpec(container, s, expected.map(([, text]) => text!));
+  });
+
+  it('100%-stacked: hiding a series changes the denominator — the remaining series is the whole of what is displayed, its own full share — and Undo restores both parts and the original shares', async () => {
+    const { formatValueNl } = await import('../backend/answer/compose/format.ts');
+    const full = `${formatValueNl(100, 1)}%`;
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld (%)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r2:c1']);
+    expect(labelsByRole(container, 'stack-label').sort()).toEqual([
+      ['r1:c1', full],
+      ['r2:c1', full],
+    ]);
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+    expect(note().textContent).toBe(NOT_CHECKED);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
+    expect(labelsByRole(container, 'stack-label').map(([, text]) => text).sort()).toEqual(['33,3%', '36,4%', '63,6%', '66,7%']);
+  });
+
+  it('100%-stacked: a period where a displayed part is missing is omitted from the percent stack and named in the note by its own label; the plain stacked form still draws that period\'s remaining part, without the sentence', () => {
+    const s = nullCellSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    // Both stacked tabs stay enabled: the guards read counts, and the table
+    // shows the gap as a gap. Rotterdam has no 2024 value, so 2024 has no
+    // honest share.
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld (%)' }));
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2']);
+    expect(note().textContent).toBe(`${NOT_CHECKED} ${OMITTED_2024}`);
+    expectDigitsTraceToSpec(container, s, ['66,7%', '33,3%']);
+
+    // Plain stacked: 2024 is drawn with Amsterdam's part alone, nothing
+    // omitted, nothing claimed.
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1']);
+    expect(note().textContent).toBe(NOT_CHECKED);
+  });
+
+  it('the note is present in each of the three whole forms and in no other form', () => {
+    const first = render(<UserChartView spec={twoSeriesSpec()} />);
+    for (const [name, present] of [
+      ['Lijn', false],
+      ['Gestapeld', true],
+      ['Staaf', false],
+      ['Gestapeld (%)', true],
+      ['Dumbbell', false],
+      ['Helling', false],
+      ['Tabel', false],
+      ['Warmtekaart', false],
+    ] as const) {
+      fireEvent.click(screen.getByRole('tab', { name }));
+      expect(screen.queryByTestId('own-whole-note') !== null, name).toBe(present);
+    }
+    first.unmount();
+    render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
+    for (const [name, present] of [
+      ['Liggend', false],
+      ['Taartdiagram', true],
+      ['Staaf', false],
+    ] as const) {
+      fireEvent.click(screen.getByRole('tab', { name }));
+      expect(screen.queryByTestId('own-whole-note') !== null, name).toBe(present);
+    }
+  });
+
+  it('renders the English tab words, note and disabled reasons under LangProvider lang="en"', () => {
+    const first = render(
+      <LangProvider lang="en">
+        <UserChartView spec={twoSeriesOneMomentSpec()} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: 'Stacked' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Stacked (%)' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Pie chart' }));
+    expect(note().textContent).toBe(NOT_CHECKED_EN);
+    first.unmount();
+
+    const second = render(
+      <LangProvider lang="en">
+        <UserChartView spec={twoSeriesSpec()} />
+      </LangProvider>,
+    );
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Pie chart' }), 'Available once the chart shows one moment for at least two series.');
+    second.unmount();
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={spec()} />
+      </LangProvider>,
+    );
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Stacked' }), 'Available once the chart shows at least two series.');
+  });
+
+  it('switching to Taartdiagram then Undo returns to the prior form through the existing setForm history; Redo brings the pie back', () => {
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector(SECTOR)).toBeNull();
+    expect(screen.queryByTestId('own-whole-note')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(note().textContent).toBe(NOT_CHECKED);
+  });
+
+  it('offers no difference/average overlay controls in a whole form (they only ever draw on line/area), even with an edit context; the Style trigger stays', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    expect(screen.getByRole('button', { name: 'Verschil aanduiden' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+  });
+
+  // This card's own version of chart.test.tsx's alternate-reading fallback
+  // (the same shape as the Warmtekaart and Dumbbell tests above): a data
+  // command can hand the card a spec the pie cannot honestly draw as one
+  // moment. `activeForm` runs `ownDataFallbackForm` over that very spec, so
+  // the choice falls back (pie -> table) with the tab disabled and explained
+  // and the note gone with the form — and Undo (a cache hit, one server call
+  // in total) brings the pie and its note straight back.
+  it('a data edit that gives every series a second point falls back from the pie to the table — tab disabled with its reason, note gone — and Undo brings the pie and its note back', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: twoSeriesSpec() });
+    const { container } = render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(note().textContent).toBe(NOT_CHECKED);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+    fireEvent.change(screen.getByLabelText('Samenvatten'), { target: { value: 'sum' } });
+
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(container.querySelector(SECTOR)).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Taartdiagram' }), PIE_REASON);
+    expect(screen.queryByTestId('own-whole-note')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(container.querySelectorAll(SECTOR)).toHaveLength(2));
+    expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true');
+    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
+  });
+
+  // The persistence proof of the validator change (chart-commands.ts): a
+  // stored own-data `setForm: 'pie'` must survive replay. `validateCommand`
+  // sees a context WITH a dataset profile and applies the own-data policy —
+  // the CBS policy would have dropped the command for want of a
+  // `regionScope`, leaving the reader's saved choice silently lost.
+  it('persistence: a stored own-data setForm: pie is replayed onto the card — the pie and its note are back after a reload', async () => {
+    chartEditsActions.fetchChartEdits.mockResolvedValue({
+      ok: true,
+      log: [{ kind: 'setForm', form: 'pie', id: 'c1', at: '2026-09-22T00:00:00.000Z', source: 'panel' }],
+    });
+    const { container } = render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true'));
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(note().textContent).toBe(NOT_CHECKED);
   });
 });
 

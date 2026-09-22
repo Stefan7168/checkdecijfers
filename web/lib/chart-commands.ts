@@ -12,6 +12,7 @@ import {
   fallbackForm,
   initialViewState,
   isChartForm,
+  ownDataFallbackForm,
   type ChartForm,
   type ChartViewState,
 } from './chart-view-state.ts';
@@ -329,8 +330,18 @@ function presentationValid(patch: PresentationOverrides): boolean {
 export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): boolean {
   const keys = seriesKeys(ctx.spec);
   switch (cmd.kind) {
-    case 'setForm':
-      return isChartForm(cmd.form) && fallbackForm(cmd.form, ctx.spec, ctx.spec.series.length) === cmd.form;
+    case 'setForm': {
+      // Own-data parity (plan 2026-09-22, Task 3): an own-data context — the
+      // one kind that carries a dataset profile (ADR 037 D11; the SAME
+      // discriminator the setPeriodRange case below reads) — validates the
+      // three whole forms through its own shape-only guards
+      // (`ownDataFallbackForm`); a CBS context keeps the roster-provenance
+      // policy (`fallbackForm`). Without this an own-data `setForm: 'pie'`
+      // stored by the tab (which dispatches without validating) would be
+      // dropped on replay and refused from the chat, while the tab worked.
+      const policy = ctx.profile !== undefined ? ownDataFallbackForm : fallbackForm;
+      return isChartForm(cmd.form) && policy(cmd.form, ctx.spec, ctx.spec.series.length) === cmd.form;
+    }
     case 'toggleSeries':
       return keys.has(cmd.key);
     case 'setHighlight':
