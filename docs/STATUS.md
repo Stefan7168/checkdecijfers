@@ -37,7 +37,7 @@ before trusting this).**
     conflict — CI re-running at close; confirm green before merging.
   - **PR #40** — the "× remove" chip for an overlay stays visible on bar charts; era list shows "2008 – 2009",
     not "2008JJ00"; era band follows the theme colour; dead `toggleDim` removed
-    ([#291](open-questions.md)/[#293](open-questions.md)). Confirm CI green before merging.
+    ([#291](open-questions.md)/[#293](open-questions.md)). CI green at close.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can

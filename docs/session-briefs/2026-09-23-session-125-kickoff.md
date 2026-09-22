@@ -31,7 +31,7 @@ run. Check `gh pr view <n> --json mergeable` after each merge.
    is refused at all three gates; eras ordered by axis position; two drift-guard tests. It was rebased after a
    conflict at close, so **confirm its CI is green first.**
 4. **PR #40** `chart-phase4-ux-residuals` (#291/#293): remove chip visible on every form; era labels instead of
-   raw codes; theme colour; dead code removed. **Confirm CI green first.**
+   raw codes; theme colour; dead code removed. CI green at close.
 
 If the owner is present and approves, merge them (owner-present sessions merge directly per the #118
 revision), then confirm `main`'s CI and flip the docs (#312/#314/#291–#298 rows, STATUS) from "PR" to "LIVE".
