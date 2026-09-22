@@ -265,8 +265,21 @@ honesty work happens entirely in the rendered note (Task 3/4), not in a gate.
 - [ ] **Step 3: `FORM_TABS` + capabilities**
 
 Add `pie`, `stacked`, `stacked100` to `user-chart.tsx`'s `FORM_TABS` and `formAllowed()`, using the new
-guards. Add them to `ownDataCapabilities()`'s forms list the same way (Task 1's filter comment should now
-mention these too).
+guards.
+
+**Updated after Task 1 (ratified ruling, see ledger): use the real pipeline Task 1 already built**, do not
+route these through `allowedForms()`. `web/lib/chart-capabilities.ts` now computes
+`ownDataCapabilities().forms` via `ownDataRenderableForms(spec, seriesCount)`, a three-step pipeline: (1)
+the shared scorer `allowedForms()`, (2) filtered to `OWN_DATA_RENDERABLE_FORMS` (what `user-chart.tsx` has
+a branch for — Task 1 seeded this with `['line','area','bar','hbar','table','slope','heatmap']`, Task 2
+added `'dumbbell'`), (3) filtered again through `COPILOT_FORMS` (the chat wire — still 5 members until Task
+5). Since `pieFormAllowed`/`stackedFormAllowed`/`stacked100FormAllowed` require `regionScope`, which
+own-data specs never carry, they can never come from step (1) — append the three new own-data guards'
+results directly inside `ownDataRenderableForms`, after the `allowedForms()` filter, e.g. `return
+[...allowedForms(spec, seriesCount).filter(renderable), ...ownDataWholeForms(spec, seriesCount)]` (name at
+your discretion) — keep pie/stacked/stacked100 last in the returned order, matching the scorer's own fixed
+ordering convention. Step (3) (the `COPILOT_FORMS` filter) still applies on top and will continue
+suppressing all three until Task 5 — do not widen `COPILOT_FORMS` in this task.
 
 - [ ] **Step 4: Rendering**
 
@@ -395,9 +408,23 @@ total verification for own-data pie/stacked/stacked100`.
 **Depends on:** Tasks 1-4 (needs the finished, mergeable state of everything).
 
 **Files:**
-- Modify: `src/attachments/copilot/types.ts` (`COPILOT_FORMS` 5→11), `src/attachments/copilot/schema.ts`
-  (if it separately enumerates forms), `src/attachments/copilot/prompt.ts` (hand-listed form example +
-  `COPILOT_PROMPT_VERSION` bump)
+- Modify: `src/attachments/copilot/types.ts` (`COPILOT_FORMS` 5→11, and `CopilotCapabilities['forms']`'s
+  own separately-declared literal union — confirmed by Task 1 to be a SECOND five-member type at line ~27,
+  distinct from `COPILOT_FORMS` at line ~46; both need widening), `src/attachments/copilot/schema.ts`
+  (`setForm`'s zod enum, confirmed five members at line ~48), `src/attachments/copilot/prompt.ts`
+  (hand-listed form example at line ~42, AND `capabilities.forms` is embedded in the prompt at line ~119 —
+  both are prompt bytes, `COPILOT_PROMPT_VERSION` bump required)
+- Modify: `web/lib/chart-capabilities.ts` — **no code change needed** once `COPILOT_FORMS` is widened
+  (Task 1 built `ownDataCapabilities()`'s forms as `ownDataRenderableForms(spec, seriesCount).filter(isCopilotForm)`,
+  where `isCopilotForm` reads `COPILOT_FORMS` directly — confirm this still holds, it should just start
+  passing more forms through with zero edits here)
+- Modify: `web/lib/chart-capabilities.test.ts` — flip the Task-1-authored tripwire test
+  (`expect([...COPILOT_FORMS]).not.toContain('slope')`, comment says exactly this) to assert the opposite
+  once all six are in `COPILOT_FORMS`
+- Modify: `tests/fixtures/attachments/cases.ts` — `LINE_CAPABILITIES.forms` (or wherever the fixture
+  scaffolding hand-lists the expected capabilities forms for the verkoop.csv-shaped test chart) must be
+  updated to include the newly-qualifying forms in the browser's own computed order — the llm-stub matches
+  exact prompt bytes, so a stale hardcoded list here breaks silently rather than loudly
 - Modify: `web/components/chart-commands-contract.test.tsx`, `web/lib/chart-commands.test.ts`
 - Modify: `web/e2e/own-data-copilot.spec.ts`
 - Fixture regen: `npm run attachments:fixtures` (free, offline, no live spend — required after the
@@ -413,15 +440,23 @@ total verification for own-data pie/stacked/stacked100`.
 
 - [ ] **Step 1: The own-data co-pilot prompt**
 
-Widen `COPILOT_FORMS` 5→11 (all: line, area, bar, hbar, table, dumbbell, slope, heatmap, pie, stacked,
-stacked100). Update `prompt.ts`'s hand-listed form example to match. Bump `COPILOT_PROMPT_VERSION` by 1
-(one combined bump for all six new forms, not one per form and not one per task — avoids a wasted double
-fixture regen). Check for and update any test pinning the version number.
+Widen BOTH `COPILOT_FORMS` and `CopilotCapabilities['forms']` (two separate five-member types, per Task
+1's report — read `src/attachments/copilot/types.ts` in full before editing, do not assume they're the same
+declaration) 5→11 (all: line, area, bar, hbar, table, dumbbell, slope, heatmap, pie, stacked, stacked100).
+Update `schema.ts`'s `setForm` zod enum and `prompt.ts`'s hand-listed form example to match. Bump
+`COPILOT_PROMPT_VERSION` by 1 (one combined bump for all six new forms, not one per form and not one per
+task — avoids a wasted double fixture regen). Check for and update any test pinning the version number, AND
+the tripwire test named above.
 
 - [ ] **Step 2: Regenerate fixtures**
 
-`npm run attachments:fixtures` — free, offline, no live spend. Confirm the diff only touches
-`tests/fixtures/llm/attachments/*.json` request hashes as expected, not response content.
+`npm run attachments:fixtures` — free, offline, no live spend. Before running it, update
+`tests/fixtures/attachments/cases.ts`'s hand-listed expected-capabilities forms list(s) for any case built
+on a slope/heatmap/dumbbell/pie/stacked/stacked100-qualifying shape (the verkoop.csv 2×2 case at minimum
+now qualifies for slope + heatmap per Task 1's own tests) — the regen script reflects real capability
+output, but a fixture TEST asserting the old five-form list would still pass against stale expectations
+without a matching update. Confirm the diff only touches `tests/fixtures/llm/attachments/*.json` request
+hashes as expected, not response content.
 
 - [ ] **Step 3: Contract test**
 
@@ -437,6 +472,18 @@ exactly two points; pie needs exactly one; stacked/stacked100 need ≥2 series).
 test on a purpose-shaped context if the shared one can't realistically cover all six.
 
 - [ ] **Step 5: e2e — Playwright, hermetic**
+
+**Heatmap and slope layout proof — handoff from Task 1 (its own jsdom coverage cannot prove real layout;
+this is that missing proof, not new scope):** port `web/e2e/chart-copilot.spec.ts` lines 513–559 (the
+heatmap click + bounding-box/computed-display block, and the slope segment/point-count assertions) into
+`own-data-copilot.spec.ts`, substituting: locator `[data-testid="user-heatmap-grid"]` (own-data's own test
+id, confirm it still matches what Task 1 actually named it); the verkoop.csv fixture chart (2 series × 2
+years) qualifies for both tabs; expected column headers `['Jaar'/'Year', 'Amsterdam', 'Rotterdam']`, row
+headers `['2020', '2021']`, four bound cells each with its own `data-label-for` rowRef; assert no
+`[data-testid="user-chart-container"]` while the grid is shown. For slope: one path segment per curve (`d`
+split on `L`), 4 `circle[data-point="value"]`, x-tick labels `['2020','2021']`. Re-verify these exact
+values against Task 1's own test file (`web/components/user-chart.test.tsx`) before writing the e2e case —
+the plan text here is Task 1's own handoff note, not independently re-derived.
 
 In `web/e2e/own-data-copilot.spec.ts`: an own-data dataset shaped for the chart-fit trio shows all three
 new tabs enabled and each renders real content when clicked (one render-level proof per genuinely new
