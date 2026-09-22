@@ -15,6 +15,10 @@ import {
   isChartForm,
   isComparisonShaped,
   lineFormAllowed,
+  ownDataFallbackForm,
+  ownDataPieFormAllowed,
+  ownDataStacked100FormAllowed,
+  ownDataStackedFormAllowed,
   pieFormAllowed,
   slopeFormAllowed,
   stacked100FormAllowed,
@@ -578,6 +582,96 @@ describe('provenance, not codes (spec §11 contract): a hand-picked subset match
     expect(pieFormAllowed(viaRoster, 12)).toBe(true);
     expect(stackedFormAllowed(viaRoster, 12)).toBe(true);
     expect(stacked100FormAllowed(viaRoster, 12)).toBe(true);
+  });
+});
+
+// Own-data chart-fit + verified-whole parity (plan 2026-09-22, Task 3): the
+// own-data card's OWN whole-form guards — the SAME shape conditions the three
+// CBS guards above AND with their roster check, MINUS that check entirely.
+// They are typed on the bare `SeriesShape`, so they cannot even read
+// `regionScope`: an own-data chart has no registry to check a whole against,
+// the forms are unconditional on shape, and the honesty lives in the note the
+// card renders under them (user-chart.tsx), never in a gate. Separately named
+// on purpose — never one shared guard with a "verified" flag.
+describe('ownDataPieFormAllowed / ownDataStackedFormAllowed / ownDataStacked100FormAllowed — shape only, never provenance (own-data parity, Task 3)', () => {
+  it('pie: one moment, at least two series — allowed with no regionScope key at all (a PlottableSpec), an explicit null AND a real roster alike: provenance makes no difference', () => {
+    expect(ownDataPieFormAllowed(shaped('bar', 2, 1), 2)).toBe(true);
+    expect(ownDataPieFormAllowed(shaped('bar', 12, 1), 12)).toBe(true);
+    // Through a typed const, not an inline literal: the guard's parameter is
+    // the bare `SeriesShape`, so TypeScript's excess-property check rejects
+    // a fresh literal that names `regionScope` at all — the compile-time
+    // proof that the guard cannot even see provenance.
+    const explicitNull: ChartSpec = { ...shaped('bar', 2, 1), regionScope: null };
+    expect(ownDataPieFormAllowed(explicitNull, 2)).toBe(true);
+    expect(ownDataPieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 1), 12)).toBe(true);
+    // The guard reads point shape, never `kind`: a line-kind spec whose
+    // series each hold one point is pie-shaped too.
+    expect(ownDataPieFormAllowed(shaped('line', 3, 1), 3)).toBe(true);
+  });
+  it('pie: refused once any series carries more than one point (a pie shows ONE moment), and for a single series (one slice is not a breakdown)', () => {
+    expect(ownDataPieFormAllowed(shaped('bar', 2, 2), 2)).toBe(false);
+    expect(ownDataPieFormAllowed(shaped('bar', 12, 3), 12)).toBe(false);
+    const ragged = spec('bar', [series('A', [point('2020', 1)]), series('B', [point('2020', 2), point('2021', 3)])]);
+    expect(ownDataPieFormAllowed(ragged, 2)).toBe(false);
+    expect(ownDataPieFormAllowed(shaped('bar', 1, 1), 1)).toBe(false);
+  });
+  it('stacked / stacked100: at least two series, any number of moments — with no scope, a null scope or a real one alike; a single series has nothing to stack', () => {
+    for (const s of [shaped('bar', 2, 1), shaped('bar', 12, 5), shaped('line', 2, 3), { ...shaped('bar', 12, 3), regionScope: null }, rosterSpec(ALL_PROVINCIES, 12, 3)]) {
+      expect(ownDataStackedFormAllowed(s, s.series.length)).toBe(true);
+      expect(ownDataStacked100FormAllowed(s, s.series.length)).toBe(true);
+    }
+    expect(ownDataStackedFormAllowed(shaped('bar', 1, 3), 1)).toBe(false);
+    expect(ownDataStacked100FormAllowed(shaped('bar', 1, 3), 1)).toBe(false);
+  });
+  it('stacked100 agrees with stacked on every shape, by construction', () => {
+    for (const s of [shaped('bar', 2, 1), shaped('bar', 1, 3), shaped('line', 4, 2), rosterSpec(ALL_LANDSDELEN, 1, 3)]) {
+      expect(ownDataStacked100FormAllowed(s, s.series.length)).toBe(ownDataStackedFormAllowed(s, s.series.length));
+    }
+  });
+  it('differs from the CBS guards by provenance ALONE: on the shapes the CBS guards refuse for want of a roster, the own-data guards allow; where the CBS guards refuse on SHAPE, so do these', () => {
+    // No roster: CBS refuses, own-data allows — the whole point of the pair.
+    const oneMoment = handPickedProvinces(1);
+    expect(pieFormAllowed(oneMoment, 12)).toBe(false);
+    expect(ownDataPieFormAllowed(oneMoment, 12)).toBe(true);
+    expect(stackedFormAllowed(oneMoment, 12)).toBe(false);
+    expect(ownDataStackedFormAllowed(oneMoment, 12)).toBe(true);
+    expect(stacked100FormAllowed(oneMoment, 12)).toBe(false);
+    expect(ownDataStacked100FormAllowed(oneMoment, 12)).toBe(true);
+    // Shape failures are shared: a multi-moment pie, a single series.
+    expect(pieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 2), 12)).toBe(false);
+    expect(ownDataPieFormAllowed(rosterSpec(ALL_PROVINCIES, 12, 2), 12)).toBe(false);
+    expect(stackedFormAllowed(rosterSpec(ALL_PROVINCIES, 1, 3), 1)).toBe(false);
+    expect(ownDataStackedFormAllowed(rosterSpec(ALL_PROVINCIES, 1, 3), 1)).toBe(false);
+  });
+});
+
+// The own-data card's fallback policy: `fallbackForm` would send every
+// own-data pie/stacked/stacked100 to the table (its cases read the CBS
+// guards, false without a roster), so the card could never show one.
+describe('ownDataFallbackForm — fallbackForm with the whole forms routed through the own-data guards (Task 3)', () => {
+  it('pie/stacked/stacked100 stay when the shape fits — with no regionScope at all — and fall back to table when it does not', () => {
+    expect(ownDataFallbackForm('pie', shaped('bar', 2, 1), 2)).toBe('pie');
+    expect(ownDataFallbackForm('stacked', shaped('bar', 2, 3), 2)).toBe('stacked');
+    expect(ownDataFallbackForm('stacked100', shaped('line', 2, 3), 2)).toBe('stacked100');
+    expect(ownDataFallbackForm('pie', shaped('bar', 2, 2), 2)).toBe('table');
+    expect(ownDataFallbackForm('pie', shaped('bar', 1, 1), 1)).toBe('table');
+    expect(ownDataFallbackForm('stacked', shaped('bar', 1, 3), 1)).toBe('table');
+    expect(ownDataFallbackForm('stacked100', shaped('bar', 1, 3), 1)).toBe('table');
+  });
+  it('the shared policy sends those SAME shapes to the table for want of a roster — the two policies differ on exactly these three forms', () => {
+    expect(fallbackForm('pie', shaped('bar', 2, 1), 2)).toBe('table');
+    expect(fallbackForm('stacked', shaped('bar', 2, 3), 2)).toBe('table');
+    expect(fallbackForm('stacked100', shaped('line', 2, 3), 2)).toBe('table');
+  });
+  it('every other form delegates to fallbackForm unchanged, over every shape', () => {
+    const shapes = [shaped('line', 1, 3), shaped('line', 2, 2), shaped('line', 3, 4), shaped('bar', 1, 1), shaped('bar', 2, 1), shaped('bar', 12, 1), shaped('bar', 2, 3)];
+    const others = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'] as const;
+    for (const s of shapes) {
+      for (const form of others) {
+        const label = `${form} on ${s.kind} × ${s.series.length} series × ${s.series[0]!.points.length} points`;
+        expect(ownDataFallbackForm(form, s, s.series.length), label).toBe(fallbackForm(form, s, s.series.length));
+      }
+    }
   });
 });
 

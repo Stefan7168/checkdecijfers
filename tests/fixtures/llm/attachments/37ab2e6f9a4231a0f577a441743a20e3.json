@@ -1,0 +1,881 @@
+{
+  "requestHash": "37ab2e6f9a4231a0f577a441743a20e3",
+  "question": "copilot/thicker-line-spotlight-amsterdam",
+  "label": "copilot/thicker-line-spotlight-amsterdam",
+  "recordedAt": "2026-09-22T16:06:05.232Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1536,
+    "temperature": 0,
+    "system": "You are the chart co-pilot for a chart drawn from the user's OWN uploaded data. You receive the dataset PROFILE, the CURRENT INSTRUCTION (what is on screen), the CURRENT CHART's series labels and x labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: `instruction` (the FULL new instruction when the DATA should change — columns, filters, series, sort, limit, aggregate, derived — carrying over everything the user did not ask to change; or null when the data stays as is), `view` (a list of view commands: form, hidden/highlighted series BY LABEL, style patch, template, title, caption, a note at a point given by series label + x label), `refused` (each request you cannot honour with a reason and the control that can), `confidence`, `reading`. You never compute or invent a number: deterministic code computes every value. A title or caption may only contain numbers that are visible on the chart. Use only the forms, style keys and templates listed under CAPABILITIES; anything else goes in `refused` with reason not_available. Requests that need a click on the chart (placing a note on a point you cannot identify) go in `refused` with reason needs_click and control notes. Write title/caption text in the language given by CAPABILITIES.lang.\n\nVIEW COMMANDS — one object per change, each with its own \"kind\":\n- setForm: {\"kind\":\"setForm\",\"form\":\"line\"|\"area\"|\"bar\"|\"hbar\"|\"table\"|\"dumbbell\"|\"slope\"|\"heatmap\"|\"pie\"|\"stacked\"|\"stacked100\"} — only a form listed under CAPABILITIES.forms.\n- setSeriesView: {\"kind\":\"setSeriesView\",\"hiddenLabels\":[\"<series label>\"],\"highlightedLabel\":\"<series label>\"|null} — series are named by their LABEL, exactly as the CURRENT CHART lists them. A label that is not on the chart is refused, so copy them literally.\n- setPresentation: {\"kind\":\"setPresentation\",\"patch\":{...}} — every style key must be present; use null for every key you are not changing. seriesColors is a list of {\"seriesLabel\",\"hex\"} pairs, hex as \"#rrggbb\".\n- applyTemplate: {\"kind\":\"applyTemplate\",\"templateId\":\"<one of CAPABILITIES.templates>\"}.\n- resetPresentation: {\"kind\":\"resetPresentation\"} — back to the default look.\n- setTitle / setCaption: {\"kind\":\"setTitle\",\"title\":\"...\"|null} — null clears the reader's own title. Numbers only if they are visible on the chart.\n- addNote: {\"kind\":\"addNote\",\"seriesLabel\":\"...\",\"xLabel\":\"...\",\"text\":\"...\"} — both labels must be a real point of the CURRENT CHART.\n- setDimmed: {\"kind\":\"setDimmed\",\"hiddenLabels\":[\"<series label>\"],\"dimmedLabels\":[\"<series label>\"]} — dims a series (fades it, keeps it visible) instead of hiding it. Labels exactly as setSeriesView.\n- setHeadlineOverride: {\"kind\":\"setHeadlineOverride\",\"seriesLabel\":\"<series label>\"|null,\"xLabel\":\"<x label>\"|null} — features one point's value as the chart's headline number. Both null clears it. Both must name a real point or the request is refused.\n- addEraShading: {\"kind\":\"addEraShading\",\"fromLabel\":\"<x label>\",\"toLabel\":\"<x label>\",\"label\":\"...\"} — shades a range of the x-axis with a typed label. Both labels copied LITERALLY from the CURRENT CHART's x labels.\n- addDerivedOverlay: {\"kind\":\"addDerivedOverlay\",\"calcKind\":\"difference\"|\"mean\",\"seriesLabel\":\"<series label>\",\"fromLabel\":\"<x label>\"|null,\"toLabel\":\"<x label>\"|null} — a computed overlay drawn ON TOP of the series' own already-plotted points, never a number you state yourself and never a new instruction: difference needs fromLabel and toLabel (two different real x labels on that series); mean ignores them and averages every point of that series, including points currently scrolled or zoomed out of view. Use this, not aggregate/derived below, when the reader wants an extra line or arrow alongside the individual points that are already shown, rather than a chart that shows different, collapsed values.\n- addGoalLine: {\"kind\":\"addGoalLine\",\"value\":<number>,\"label\":\"...\"} — value MUST be a number the user's own message actually contains (copy it, never compute or estimate it); anything else is refused. label follows the same number rule as title/caption, so keep it free of numbers where you can (e.g. \"Doel\", not \"Doel 900.000\").\n\nINSTRUCTION RULES (only when the DATA should change; otherwise instruction is null):\n- x, and every id in y, seriesBy, filters[].column, and sort.by (when set) MUST be copied LITERALLY from the profile's own column ids (c0, c1, ...). Never invent a column id, and never use a header's text as if it were an id.\n- y is 1 to 4 columns of type 'number' or 'year' — the values to plot.\n- seriesBy, when set, must be a column that carries a list of real values in the profile (a text/year/date column) — one series is drawn per real value. Leave it null when the user didn't ask to split into series.\n- A filter with op \"in\" may only use values that are LITERALLY present in that column's own listed real values. A filter with op \"between\" may only use a numeric range that falls INSIDE that column's own min/max in the profile.\n- A column marked \"format not yet resolved\" cannot be used in y, as a \"between\" filter target, or as a line chart's x — its number format is still ambiguous and the system will reject any use of it.\n- kind is \"line\" for a trend over an ordered axis, or \"bar\" for a comparison across categories. A line chart's x must be a year/date/number column.\n- sort only matters for a bar chart (\"x\", \"value\", or another column id, with \"asc\"/\"desc\"); leave it null otherwise.\n- limit is an optional top-N cap (1 to 50) — set it only when the user explicitly asks to narrow the result.\n- aggregate: when the user asks for a total, average, minimum, maximum or a count PER category, set aggregate to {\"fn\": \"sum\"|\"mean\"|\"min\"|\"max\"|\"count\"}; the system groups rows by x (and by seriesBy when set) and computes fn over y[0] — you never compute anything yourself. Leave it null otherwise.\n- derived: when the user asks for the difference between two columns, a ratio of two columns, each value's share of the series total, or the change versus the previous point, set derived to {\"op\": \"difference\"|\"ratio\", \"b\": \"<the second column's id>\"} or {\"op\": \"share_of_total\"|\"percent_change\", \"b\": null}. y must then be exactly one column (the first operand, a). Leave it null otherwise. (If the reader instead wants this shown as an extra line ON TOP of the points already on the chart, without collapsing them, use the addDerivedOverlay view command above instead of derived here.)\n- An aggregate of {\"fn\": \"count\"} cannot be combined with a derived \"difference\" or \"ratio\": both operands would be the same row count. Use one or the other.\n- derived \"percent_change\" needs an ordered x axis, so x must be a year/date/number column — never a text column.\n- sort.by may also be \"value\" — the plotted value — which is the ONLY sort allowed together with aggregate or derived.\n- Set unsupported ONLY for a comparison against official CBS data (\"compare_with_cbs\") or something that isn't chartable at all (\"not_chartable\"/\"other\").\n- the instruction object's own version field is always 2, and its reading/confidence fields are for this system's internal record only.\n\nconfidence is a number between 0 and 1 and must be honest: if the message does not clearly map onto one set of changes, give a LOW confidence (below 0.8) rather than guessing. reading is one short sentence for this system's own internal record only — it is never shown to the user. The top-level reply object's own version field is always 1 (not to be confused with the instruction object's version, which is always 2).\n\nAnswer with JSON only, matching the given schema.",
+    "question": "Dataset profile (4 rows):\n- id=c0 | header=\"Jaar\" | type=year | range=[2020, 2021] | values=[2020, 2021]\n- id=c1 | header=\"Gemeente\" | type=text | values=[Amsterdam, Rotterdam]\n- id=c2 | header=\"Omzet\" | type=number | numberFormat=nl | range=[50, 150] | sample=[100, 50, 150]\n- id=c3 | header=\"Kosten\" | type=number | numberFormat=nl | range=[10, 90] | sample=[60, 20, 90]\n\nCurrent instruction: {\"version\":2,\"kind\":\"line\",\"x\":\"c0\",\"y\":[\"c2\"],\"seriesBy\":\"c1\",\"filters\":[],\"sort\":null,\"limit\":null,\"aggregate\":null,\"derived\":null,\"unsupported\":null}\n\nCurrent chart:\n- series labels: [Amsterdam | Rotterdam]\n- x labels: [2020 | 2021]\n\nCapabilities:\n- forms=[line, bar, table, dumbbell, slope, heatmap, stacked, stacked100]\n- style keys=[lineWidth, markers, grid, xLabels, axisLines, zeroBaseline, seriesColors, fontFamily, framePadding, frameCorners, frameShadow]\n- templates=[standard, classic, newsroom, presentation, social, minimal, warm, earth, salmon, studio, broadsheet, autumn, brutalist]\n- lang=nl\n\nUser's message: \"dikkere lijn en zet Amsterdam in de schijnwerper\"",
+    "jsonSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "instruction": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "number",
+                  "const": 2
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "line",
+                    "bar"
+                  ]
+                },
+                "x": {
+                  "type": "string"
+                },
+                "y": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "seriesBy": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "filters": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "column": {
+                            "type": "string"
+                          },
+                          "op": {
+                            "type": "string",
+                            "const": "in"
+                          },
+                          "values": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "column",
+                          "op",
+                          "values"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "column": {
+                            "type": "string"
+                          },
+                          "op": {
+                            "type": "string",
+                            "const": "between"
+                          },
+                          "from": {
+                            "type": "number"
+                          },
+                          "to": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "column",
+                          "op",
+                          "from",
+                          "to"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "sort": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "by": {
+                          "type": "string"
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "asc",
+                            "desc"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "by",
+                        "direction"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "limit": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "aggregate": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "fn": {
+                          "type": "string",
+                          "enum": [
+                            "sum",
+                            "mean",
+                            "min",
+                            "max",
+                            "count"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "fn"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "derived": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "difference",
+                            "share_of_total",
+                            "percent_change",
+                            "ratio"
+                          ]
+                        },
+                        "b": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "op",
+                        "b"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "confidence": {
+                  "type": "number"
+                },
+                "reading": {
+                  "type": "string"
+                },
+                "unsupported": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "compare_with_cbs",
+                            "not_chartable",
+                            "other"
+                          ]
+                        },
+                        "detail": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "reason",
+                        "detail"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "version",
+                "kind",
+                "x",
+                "y",
+                "seriesBy",
+                "filters",
+                "sort",
+                "limit",
+                "aggregate",
+                "derived",
+                "confidence",
+                "reading",
+                "unsupported"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "view": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setForm"
+                  },
+                  "form": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "area",
+                      "bar",
+                      "hbar",
+                      "table",
+                      "dumbbell",
+                      "slope",
+                      "heatmap",
+                      "pie",
+                      "stacked",
+                      "stacked100"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "form"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setSeriesView"
+                  },
+                  "hiddenLabels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "highlightedLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "hiddenLabels",
+                  "highlightedLabel"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setPresentation"
+                  },
+                  "patch": {
+                    "type": "object",
+                    "properties": {
+                      "lineWidth": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "thin",
+                              "normal",
+                              "thick",
+                              "extraThick"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "markers": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "all",
+                              "ends",
+                              "provisionalOnly"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "grid": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "both",
+                              "horizontal",
+                              "none"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "xLabels": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "flat",
+                              "tilted"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "axisLines": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "shown",
+                              "hidden"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "zeroBaseline": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "auto",
+                              "zero"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "areaFill": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "gradient",
+                              "flat"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "pieHole": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "donut"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fontFamily": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "seriesColors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "seriesLabel": {
+                              "type": "string"
+                            },
+                            "hex": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "seriesLabel",
+                            "hex"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "framePadding": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "small",
+                              "medium",
+                              "large"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "frameCorners": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "square",
+                              "rounded",
+                              "veryRounded"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "frameShadow": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "soft",
+                              "strong"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "lineWidth",
+                      "markers",
+                      "grid",
+                      "xLabels",
+                      "axisLines",
+                      "zeroBaseline",
+                      "areaFill",
+                      "pieHole",
+                      "fontFamily",
+                      "seriesColors",
+                      "framePadding",
+                      "frameCorners",
+                      "frameShadow"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "patch"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "applyTemplate"
+                  },
+                  "templateId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "templateId"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "resetPresentation"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setTitle"
+                  },
+                  "title": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "title"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setCaption"
+                  },
+                  "caption": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "caption"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "addNote"
+                  },
+                  "seriesLabel": {
+                    "type": "string"
+                  },
+                  "xLabel": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "seriesLabel",
+                  "xLabel",
+                  "text"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setDimmed"
+                  },
+                  "hiddenLabels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dimmedLabels": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "hiddenLabels",
+                  "dimmedLabels"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "setHeadlineOverride"
+                  },
+                  "seriesLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "xLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "seriesLabel",
+                  "xLabel"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "addEraShading"
+                  },
+                  "fromLabel": {
+                    "type": "string"
+                  },
+                  "toLabel": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "fromLabel",
+                  "toLabel",
+                  "label"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "addDerivedOverlay"
+                  },
+                  "calcKind": {
+                    "type": "string",
+                    "enum": [
+                      "difference",
+                      "mean"
+                    ]
+                  },
+                  "seriesLabel": {
+                    "type": "string"
+                  },
+                  "fromLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "toLabel": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "calcKind",
+                  "seriesLabel",
+                  "fromLabel",
+                  "toLabel"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "addGoalLine"
+                  },
+                  "value": {
+                    "type": "number"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "refused": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "request": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "not_available",
+                  "not_on_this_chart",
+                  "needs_click"
+                ]
+              },
+              "control": {
+                "type": "string",
+                "enum": [
+                  "notes",
+                  "style",
+                  "data",
+                  "form",
+                  "none"
+                ]
+              }
+            },
+            "required": [
+              "request",
+              "reason",
+              "control"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "reading": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "instruction",
+        "view",
+        "refused",
+        "confidence",
+        "reading"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"version\":1,\"instruction\":null,\"view\":[{\"kind\":\"setPresentation\",\"patch\":{\"lineWidth\":\"thick\",\"markers\":null,\"grid\":null,\"xLabels\":null,\"axisLines\":null,\"zeroBaseline\":null,\"areaFill\":null,\"pieHole\":null,\"fontFamily\":null,\"seriesColors\":[],\"framePadding\":null,\"frameCorners\":null,\"frameShadow\":null}},{\"kind\":\"setSeriesView\",\"hiddenLabels\":[],\"highlightedLabel\":\"Amsterdam\"}],\"refused\":[],\"confidence\":0.95,\"reading\":\"A style change and a spotlight — the data stays as it is.\"}",
+    "model": "claude-haiku-4-5",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 0,
+      "outputTokens": 0
+    }
+  }
+}

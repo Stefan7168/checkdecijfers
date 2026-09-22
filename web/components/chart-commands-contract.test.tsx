@@ -67,11 +67,23 @@ const chartWholeActions = vi.hoisted(() => ({
   requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
 }));
 vi.mock('../app/chart-whole-verification-actions.ts', () => chartWholeActions);
+// Own-data verified-whole parity (Task 4): the own-data card's OWN on-demand
+// whole check — same jsdom-import guard as every Server Action mock above.
+// (requestDatasetDerivation, the own-data card's OTHER direct Server Action
+// import, is already exercised unmocked elsewhere in this file's own-data
+// tests below — its effect only ever fires when derivedOverlayRequests is
+// non-empty, which no test here produces, so it is never actually called.)
+const datasetWholeActions = vi.hoisted(() => ({
+  requestDatasetWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/dataset-whole-verification-actions.ts', () => datasetWholeActions);
 
 import { ChartView } from './chart.tsx';
 import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';
-import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
+import { viewCommandSchema as ownDataViewCommandSchema } from '../backend/attachments/copilot/schema.ts';
+import { UserChartView, type UserChartEditContext, toPlottableSpec } from './user-chart.tsx';
 import { allowedForms } from '../lib/chart-fit.ts';
+import { ownDataRenderableForms } from '../lib/chart-capabilities.ts';
 import type { ChartForm } from '../lib/chart-view-state.ts';
 import { t } from '../lib/i18n/messages.ts';
 
@@ -161,7 +173,17 @@ const PANEL_KINDS: ChartCommandKind[] = ['setPresentation', 'replacePresentation
 /** Kinds whose control only exists once a point has been clicked, or once a
  * note/goal-line/era-shading/derived-overlay already exists to remove.
  * `setHeadlineOverride` (phase 4, Task 5) lives in the SAME pendingPoint UI
- * as addNote/removeNote — same gating, same reasoning. */
+ * as addNote/removeNote — same gating, same reasoning.
+ *
+ * Own-data verified-whole parity (Task 4): `setWholeReference` too — its
+ * control (a pie slice / stack segment) only exists once the reader has
+ * switched to one of the three whole-form tabs, which `twoSeriesUserSpec`
+ * below never does (the own-data contract test opens the Style/Data panels
+ * only, never a form tab). A dedicated compensating test below (mirroring
+ * the setHeadlineOverride/removeGoalLine/removeEraShading/
+ * removeDerivedOverlay ones this file already has, per the I10/I11 finding
+ * that a bare exemption with no test of its own is the gap to avoid)
+ * switches to Taartdiagram and proves the marker is really there. */
 const NOTE_KINDS: ChartCommandKind[] = [
   'addNote',
   'removeNote',
@@ -169,14 +191,23 @@ const NOTE_KINDS: ChartCommandKind[] = [
   'removeGoalLine',
   'removeEraShading',
   'removeDerivedOverlay',
+  'setWholeReference',
 ];
 /** Co-pilot phase 2 (session 113), Task 4: kinds whose control lives on the
  * OWN-DATA card, not this CBS one. `setInstruction` names dataset columns, so
  * a CBS chart has no control for it and — by the ADR 037 D11 type guard —
  * could not validate one anyway. Its own-data control is covered by that
  * card's suite (Task 5/6), which scans the same `data-command-kind`
- * attribute. */
-const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction'];
+ * attribute.
+ *
+ * Own-data verified-whole parity (plan 2026-09-22, Task 4): `setWholeReference`
+ * joins it — the reader-designated-total gesture is a pie slice / stack
+ * segment click that exists ONLY on the own-data card (CBS's own phase 5b
+ * verified-whole check is fully automatic, server-computed against a
+ * registry total; it has no reader-designation gesture and never dispatches
+ * this command). Its own-data control is covered below (NOTE_KINDS — the
+ * SAME "gated behind a precondition" reasoning, plus a compensating test). */
+const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction', 'setWholeReference'];
 /** Phase 4, Task 7 (ADR 056): a derived overlay (difference/average) is
  * computed via `requestChartDerivation`, which only accepts an audited CBS
  * answer (`{ kind: 'answer', id }`) — own-data charts have no audit row to
@@ -581,6 +612,20 @@ describe('own-data card — the same command ↔ control contract (Task 6)', () 
     expect(found.has('setInstruction')).toBe(true);
   });
 
+  // Own-data verified-whole parity (Task 4) — the SAME "compensating test"
+  // discipline the I10/I11 finding above established for every NOTE_KINDS
+  // exemption: setWholeReference's control (a pie slice / stack segment) is
+  // gated behind a whole-form tab, which the generic scan above never
+  // switches to. `twoSeriesUserSpec` qualifies for Gestapeld (seriesCount
+  // >= 2) though not for Taartdiagram (two periods per series, not one), so
+  // this switches to the stack and proves the marker genuinely reaches a
+  // real, clickable element there.
+  it('setWholeReference control exists on a stack segment once a whole-form tab is showing', () => {
+    render(<UserChartView spec={twoSeriesUserSpec()} edit={userEdit()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    expect(kindsInDom(document.body).has('setWholeReference')).toBe(true);
+  });
+
   it('validateCommand refuses the two CBS-only kinds on an own-data context', () => {
     const ctx: CommandContext = {
       spec: {
@@ -614,5 +659,94 @@ describe('own-data card — the same command ↔ control contract (Task 6)', () 
     expect(validateCommand({ kind: 'setPeriodRange', range: null }, ctx)).toBe(true);
     // …and the same non-null range still validates on a CBS context.
     expect(validateCommand({ kind: 'setPeriodRange', range: ['2023', '2024'] }, { ...ctx, profile: undefined })).toBe(true);
+  });
+
+  // Own-data chart-fit/verified-whole parity, Task 5 (plan 2026-09-22): the
+  // SAME §6 contract one level down, at the VALUE of `setForm`, mirroring
+  // the CBS test above exactly — now that COPILOT_FORMS carries all eleven
+  // forms, not just the original five. The kind-level scan further up only
+  // proves "some setForm control exists"; this pins that every form the
+  // own-data schema can emit is its own real tab on this card, that the tabs
+  // enabled right now are exactly `ownDataRenderableForms` (the SAME list
+  // `ownDataCapabilities` filters through COPILOT_FORMS for the chat — so
+  // the chat is never told about a shape the reader could not click), and
+  // that every disabled tab explains itself. Read straight off the schema,
+  // never a hand-copied form list.
+  it('every form the own-data co-pilot schema can emit is a real tab, enabled exactly when ownDataRenderableForms offers it', () => {
+    const setFormOption = ownDataViewCommandSchema.options.find((option) => option.shape.kind.value === 'setForm');
+    expect(setFormOption).toBeDefined();
+    // The union member's `form` enum — read through the shape, since the
+    // union type does not expose the one member's own field.
+    const formSchema = (setFormOption!.shape as { form?: { options: readonly string[] } }).form;
+    expect(formSchema).toBeDefined();
+    const chatForms = [...formSchema!.options] as ChartForm[];
+    // The tab labels, per form, from the same message keys chart.tsx's own
+    // CBS test above reads — Task 1 confirmed no i18n change was needed: the
+    // shared history menu already labels both cards' tabs identically.
+    const tabLabel: Record<ChartForm, string> = {
+      line: t('nl', 'chart.tabLine'),
+      bar: t('nl', 'chart.tabBar'),
+      table: t('nl', 'chart.tabTable'),
+      area: t('nl', 'chart.form.area'),
+      hbar: t('nl', 'chart.form.hbar'),
+      dumbbell: t('nl', 'chart.form.dumbbell'),
+      slope: t('nl', 'chart.form.slope'),
+      heatmap: t('nl', 'chart.form.heatmap'),
+      pie: t('nl', 'chart.form.pie'),
+      stacked: t('nl', 'chart.form.stacked'),
+      stacked100: t('nl', 'chart.form.stacked100'),
+    };
+    // The chat vocabulary IS the panel vocabulary: no form the schema can
+    // emit without a tab, and no tab the schema cannot name.
+    expect([...chatForms].sort()).toEqual((Object.keys(tabLabel) as ChartForm[]).sort());
+
+    // Three shapes: `twoSeriesUserSpec` (2 series x 2 shared moments, every
+    // value real) qualifies for the chart-fit trio and the two
+    // series-count-only whole forms (stacked/stacked100) but not pie (needs
+    // exactly one moment per series); its first series ALONE qualifies for
+    // none of the six; narrowing every series down to its first point ONLY
+    // (same series, same labels, one moment) additionally qualifies for pie
+    // — own-data's whole forms read shape alone, never a roster, so no
+    // provinciesRosterSpec-style fixture is needed here, unlike the CBS test
+    // above.
+    const qualifying = twoSeriesUserSpec();
+    const single: UserChartSpec = { ...qualifying, series: [qualifying.series[0]!] };
+    const oneMoment: UserChartSpec = { ...qualifying, series: qualifying.series.map((s) => ({ ...s, points: [s.points[0]!] })) };
+    for (const spec of [qualifying, single, oneMoment]) {
+      const { container, unmount } = render(<UserChartView spec={spec} edit={userEdit()} />);
+      const tabs = [...container.querySelectorAll<HTMLButtonElement>('[role="tab"][data-command-kind="setForm"]')];
+      const byForm = new Map<ChartForm, HTMLButtonElement>();
+      for (const form of chatForms) {
+        const tab = tabs.find((el) => el.textContent === tabLabel[form]);
+        expect(tab, `no setForm tab for "${form}" (label "${tabLabel[form]}")`).toBeDefined();
+        byForm.set(form, tab!);
+      }
+      const enabled = chatForms.filter((form) => !byForm.get(form)!.disabled).sort();
+      const plottable = toPlottableSpec(spec);
+      expect(enabled).toEqual([...ownDataRenderableForms(plottable, plottable.series.length)].sort());
+      // A disabled tab's reason is reachable: `title` for the pointer and a
+      // non-empty `aria-describedby` target for a screen reader.
+      for (const form of chatForms) {
+        const tab = byForm.get(form)!;
+        if (!tab.disabled) continue;
+        expect(tab.getAttribute('title'), `${form} title`).toBeTruthy();
+        const reason = container.querySelector(`#${CSS.escape(tab.getAttribute('aria-describedby') ?? '')}`);
+        expect(reason?.textContent, `${form} aria-describedby`).toBe(tab.getAttribute('title'));
+      }
+      unmount();
+    }
+    // The six new forms, named: on the qualifying (two-moment) shape the
+    // chart-fit trio plus the two series-count whole forms are offered,
+    // never pie; on the one-moment shape all six are offered; on the
+    // single-series shape none of the six is.
+    for (const form of ['dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100'] as const) {
+      expect(ownDataRenderableForms(toPlottableSpec(qualifying), 2), form).toContain(form);
+      expect(ownDataRenderableForms(toPlottableSpec(single), 1), form).not.toContain(form);
+    }
+    expect(ownDataRenderableForms(toPlottableSpec(qualifying), 2)).not.toContain('pie');
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(ownDataRenderableForms(toPlottableSpec(oneMoment), 2), form).toContain(form);
+      expect(ownDataRenderableForms(toPlottableSpec(single), 1), form).not.toContain(form);
+    }
   });
 });

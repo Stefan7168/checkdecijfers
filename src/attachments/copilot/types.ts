@@ -24,7 +24,19 @@ import type { z } from 'zod';
 import type { ChartInstruction } from '../types.ts';
 
 export interface CopilotCapabilities {
-  forms: ('line' | 'area' | 'bar' | 'hbar' | 'table')[];
+  forms: (
+    | 'line'
+    | 'area'
+    | 'bar'
+    | 'hbar'
+    | 'table'
+    | 'dumbbell'
+    | 'slope'
+    | 'heatmap'
+    | 'pie'
+    | 'stacked'
+    | 'stacked100'
+  )[];
   /** ⊆ PRESENTATION_KEYS. */
   presentationKeys: string[];
   /** ⊆ TEMPLATE_IDS. */
@@ -43,7 +55,29 @@ export interface CopilotCapabilities {
   lang: 'nl' | 'en';
 }
 
-export const COPILOT_FORMS = ['line', 'area', 'bar', 'hbar', 'table'] as const;
+// Widened 5 -> 11 (Task 5, plan 2026-09-22): the six chart-fit/verified-whole
+// forms Tasks 1-4 already made the own-data PANEL render (dumbbell, slope,
+// heatmap, pie, stacked, stacked100) now reach the chat too. Same order as
+// the CBS tier's own CBS_COPILOT_FORMS (src/chart/copilot/types.ts) and the
+// scorer's own fixed order (chart-fit.ts). Widening this list is a
+// prompt-byte change on two counts (this array is embedded in the prompt via
+// `capabilities.forms`, AND `setForm`'s schema enum in schema.ts must match)
+// — COPILOT_PROMPT_VERSION was bumped alongside this, and
+// `npm run attachments:fixtures` was re-run (offline, no spend) so every
+// recorded fixture's request hash matches what the widened prompt now sends.
+export const COPILOT_FORMS = [
+  'line',
+  'area',
+  'bar',
+  'hbar',
+  'table',
+  'dumbbell',
+  'slope',
+  'heatmap',
+  'pie',
+  'stacked',
+  'stacked100',
+] as const;
 
 /** The style keys the chat may patch — a SUBSET of ChartPresentation's own
  * keys: `valueLabels`, `language`, `frameBackground`, `frameInset` and

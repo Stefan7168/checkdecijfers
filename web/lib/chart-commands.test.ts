@@ -126,6 +126,7 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
     case 'setHeadlineOverride': return { kind, resultId: pick(r, ['r-2020', 'r-2021', null]) };
     case 'addDerivedOverlay': return { kind, overlay: { id: `d${n}`, calcKind: pick(r, ['difference', 'mean'] as const), resultIds: ['r-2020', 'r-2021'] } };
     case 'removeDerivedOverlay': return state.derivedOverlayRequests.length > 0 ? { kind, overlayId: pick(r, state.derivedOverlayRequests).id } : { kind: 'setCaption', caption: null };
+    case 'setWholeReference': return { kind, rowRef: pick(r, ['r-2020', 'r-2021', null]) };
   }
 }
 /** Sets are compared as sorted arrays so deep equality is meaningful. */
@@ -219,6 +220,45 @@ describe('applyCommand / invertCommand', () => {
     expect(validateCommand({ kind: 'setForm', form: 'pie' }, rosterSeriesOverTime)).toBe(false);
     expect(validateCommand({ kind: 'setForm', form: 'stacked' }, rosterSeriesOverTime)).toBe(true);
     expect(validateCommand({ kind: 'setForm', form: 'stacked100' }, rosterSeriesOverTime)).toBe(true);
+  });
+
+  // Own-data parity (plan 2026-09-22, Task 3): an own-data context — the one
+  // kind that carries a dataset profile (ADR 037 D11) — validates the three
+  // whole forms on SHAPE alone (`ownDataFallbackForm`), never on
+  // `regionScope`, which an own-data spec never has. The SAME spec without
+  // the profile is the CBS policy and refuses. So a stored own-data
+  // `setForm: 'pie'` survives replay, and a chat-borne one is accepted,
+  // exactly like the tab that dispatched it without validating.
+  it('own-data (a context with a profile) validates pie/stacked/stacked100 on shape alone — no regionScope — where the CBS context refuses; apply+invert round-trips', () => {
+    const oneMoment = { ...spec(), series: [series('Amsterdam', ['2025']), series('Rotterdam', ['2025'])] };
+    const own: CommandContext = { spec: oneMoment, alternatesCount: 0, profile };
+    const cbs: CommandContext = { spec: oneMoment, alternatesCount: 0 };
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, own), form).toBe(true);
+      expect(validateCommand({ kind: 'setForm', form }, cbs), `${form} on a CBS context`).toBe(false);
+      const start = initialDocState('bar', {});
+      const cmd = { kind: 'setForm', form } as const;
+      const after = applyCommand(start, cmd);
+      expect(after.form).toBe(form);
+      expect(plain(applyCommand(after, invertCommand(start, cmd))), form).toEqual(plain(start));
+    }
+    // Shape still gates: several moments refuse the pie but not the stacks;
+    // a single series refuses all three.
+    const overTimeSeries = [series('Amsterdam', ['2023', '2024']), series('Rotterdam', ['2023', '2024'])];
+    const overTime: CommandContext = { spec: { ...spec(), series: overTimeSeries }, alternatesCount: 0, profile };
+    expect(validateCommand({ kind: 'setForm', form: 'pie' }, overTime)).toBe(false);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked' }, overTime)).toBe(true);
+    expect(validateCommand({ kind: 'setForm', form: 'stacked100' }, overTime)).toBe(true);
+    const single: CommandContext = { spec: { ...spec(), series: [series('Amsterdam', ['2025'])] }, alternatesCount: 0, profile };
+    for (const form of ['pie', 'stacked', 'stacked100'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, single), form).toBe(false);
+    }
+    // Every non-whole form validates exactly as it does without the profile
+    // — the own-data policy delegates to the shared one for those.
+    const overTimeCbs: CommandContext = { spec: overTime.spec, alternatesCount: 0 };
+    for (const form of ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'] as const) {
+      expect(validateCommand({ kind: 'setForm', form }, overTime), form).toBe(validateCommand({ kind: 'setForm', form }, overTimeCbs));
+    }
   });
 
   it('undoing a note removal puts the note back at its original position', () => {
@@ -373,6 +413,36 @@ describe('new command kinds (phase 4)', () => {
     let state = initialDocState('line');
     state = applyCommand(state, { kind: 'addDerivedOverlay', overlay });
     expect(state.derivedOverlayRequests).toEqual([overlay]);
+  });
+
+  // Own-data verified-whole parity (Task 4): the reader-designated total,
+  // mirroring setHeadlineOverride's own "pick one point, or clear it" shape
+  // and tests exactly (see the setHeadlineOverride test just above).
+  it('validateCommand refuses setWholeReference pointing at an unknown rowRef', () => {
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: 'nope' }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: 'r1' }, ctx)).toBe(true);
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: null }, ctx)).toBe(true);
+  });
+
+  it('setWholeReference round-trips through apply+invert, including clearing back to null', () => {
+    let state = initialDocState('line');
+    const stateBefore = state;
+    state = applyCommand(state, { kind: 'setWholeReference', rowRef: 'r1' });
+    expect(state.wholeReferenceRowRef).toBe('r1');
+    const inverse = invertCommand(stateBefore, { kind: 'setWholeReference', rowRef: 'r1' });
+    state = applyCommand(state, inverse);
+    expect(state.wholeReferenceRowRef).toBeNull();
+    // Clearing an already-set reference inverts back to the PREVIOUS one, not
+    // always to null — the same "before" semantics setHeadlineOverride uses.
+    const withReference = applyCommand(initialDocState('line'), { kind: 'setWholeReference', rowRef: 'r1' });
+    const clearInverse = invertCommand(withReference, { kind: 'setWholeReference', rowRef: null });
+    expect(applyCommand(withReference, { kind: 'setWholeReference', rowRef: null }).wholeReferenceRowRef).toBeNull();
+    expect(applyCommand(applyCommand(withReference, { kind: 'setWholeReference', rowRef: null }), clearInverse).wholeReferenceRowRef).toBe('r1');
+  });
+
+  it('parseCommandLog round-trips setWholeReference, including a null clear', () => {
+    const log = [makeCommand({ kind: 'setWholeReference', rowRef: 'r1' }, 'panel'), makeCommand({ kind: 'setWholeReference', rowRef: null }, 'panel')];
+    expect(parseCommandLog(JSON.parse(JSON.stringify(log)))).toEqual(log);
   });
 
   it('parseCommandLog accepts a log containing every new kind', () => {

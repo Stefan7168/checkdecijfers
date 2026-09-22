@@ -162,6 +162,8 @@ export function describeCommand(cmd: ChartCommand, lang: Lang): string {
       return t(lang, 'chart.command.addDerivedOverlay');
     case 'removeDerivedOverlay':
       return t(lang, 'chart.command.removeDerivedOverlay');
+    case 'setWholeReference':
+      return cmd.rowRef !== null ? t(lang, 'chart.command.setWholeReference') : t(lang, 'chart.command.clearWholeReference');
   }
 }
 

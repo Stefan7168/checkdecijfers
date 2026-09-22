@@ -33,13 +33,22 @@ import type { CopilotCapabilities } from './types.ts';
  * primitives the original own-data-parity pass skipped on the assumption
  * that the PANEL already dispatching them generically meant the chat could
  * reach them too. It could not: neither was ever in this tier's own
- * schema/map/prompt, only the CBS tier's. */
-export const COPILOT_PROMPT_VERSION = 4;
+ * schema/map/prompt, only the CBS tier's. Bumped 4 -> 5 (Task 5, plan
+ * 2026-09-22, own-data chart-fit/verified-whole parity): the setForm bullet
+ * (line 42-ish) now lists all eleven forms instead of five — dumbbell, slope
+ * and heatmap (the chart-fit trio, Tasks 1-2) and pie, stacked and
+ * stacked100 (the unconditional verified-whole trio, Task 3) were already
+ * rendering on the own-data PANEL; this bump is what lets the CHAT name them
+ * too, mirroring the CBS tier's own CBS_COPILOT_PROMPT_VERSION history for
+ * the identical six forms. A prompt-byte change, so
+ * `npm run attachments:fixtures` was re-run (offline, no spend) after this
+ * bump. */
+export const COPILOT_PROMPT_VERSION = 5;
 
 const SYSTEM_PROMPT = `You are the chart co-pilot for a chart drawn from the user's OWN uploaded data. You receive the dataset PROFILE, the CURRENT INSTRUCTION (what is on screen), the CURRENT CHART's series labels and x labels, the CAPABILITIES this chart offers right now, and the user's MESSAGE. You answer with ONE JSON object: \`instruction\` (the FULL new instruction when the DATA should change — columns, filters, series, sort, limit, aggregate, derived — carrying over everything the user did not ask to change; or null when the data stays as is), \`view\` (a list of view commands: form, hidden/highlighted series BY LABEL, style patch, template, title, caption, a note at a point given by series label + x label), \`refused\` (each request you cannot honour with a reason and the control that can), \`confidence\`, \`reading\`. You never compute or invent a number: deterministic code computes every value. A title or caption may only contain numbers that are visible on the chart. Use only the forms, style keys and templates listed under CAPABILITIES; anything else goes in \`refused\` with reason not_available. Requests that need a click on the chart (placing a note on a point you cannot identify) go in \`refused\` with reason needs_click and control notes. Write title/caption text in the language given by CAPABILITIES.lang.
 
 VIEW COMMANDS — one object per change, each with its own "kind":
-- setForm: {"kind":"setForm","form":"line"|"area"|"bar"|"hbar"|"table"} — only a form listed under CAPABILITIES.forms.
+- setForm: {"kind":"setForm","form":"line"|"area"|"bar"|"hbar"|"table"|"dumbbell"|"slope"|"heatmap"|"pie"|"stacked"|"stacked100"} — only a form listed under CAPABILITIES.forms.
 - setSeriesView: {"kind":"setSeriesView","hiddenLabels":["<series label>"],"highlightedLabel":"<series label>"|null} — series are named by their LABEL, exactly as the CURRENT CHART lists them. A label that is not on the chart is refused, so copy them literally.
 - setPresentation: {"kind":"setPresentation","patch":{...}} — every style key must be present; use null for every key you are not changing. seriesColors is a list of {"seriesLabel","hex"} pairs, hex as "#rrggbb".
 - applyTemplate: {"kind":"applyTemplate","templateId":"<one of CAPABILITIES.templates>"}.
