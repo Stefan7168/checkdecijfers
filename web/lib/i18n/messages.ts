@@ -681,6 +681,8 @@ const nl = {
   'chart.command.setDimmed': 'Serie verzwakt',
   'chart.command.addDerivedOverlay': 'Overlay toegevoegd',
   'chart.command.removeDerivedOverlay': 'Overlay verwijderd',
+  'chart.command.setWholeReference': 'Totaal aangewezen',
+  'chart.command.clearWholeReference': 'Totaal gewist',
   'chart.noteAriaLabel': 'Voeg notitie toe bij {series}, {period}',
   'chart.schemaRefusal':
     'Deze grafiek is gemaakt in een nieuwere versie dan deze pagina kan tonen. De cijfers staan in het antwoord zelf.',
@@ -1330,6 +1332,24 @@ const nl = {
   'chart.ownWhole.notChecked': 'Niet gecontroleerd tegen een totaal — klik op een punt om te controleren of deze delen optellen.',
   'chart.ownWhole.omittedNoShare':
     'Niet getekend voor {periods} — daar ontbreekt een deel, is een deel negatief of tellen de delen op tot nul, dus een aandeel in procenten is niet te bepalen.',
+  // Task 4: the three states the note takes on once a reader has designated
+  // a cell as "this is my total" (`{label}` = that row's own series/period
+  // label, e.g. "Nederland" or "2024" — real, already-on-screen text, never
+  // invented). Each is honest about WHOSE number was checked — "de rij die
+  // je koos" ("the row you selected"), never phrased so a reader could
+  // mistake it for CBS-style independent verification. `mismatch` is
+  // informational, not a refusal: unlike `chart.whole.refused.sum_mismatch`
+  // above, the chart still renders in full — own-data never hides the
+  // reader's own chart on a mismatch, since it plausibly just means the
+  // reader filtered a row on purpose, entirely their call.
+  'chart.ownWhole.checked': 'Gecontroleerd tegen de rij die je koos: {label}.',
+  'chart.ownWhole.mismatch': 'Deze delen tellen niet op tot {label} — controleer je selectie.',
+  'chart.ownWhole.cannotCheck': 'Kan niet worden gecontroleerd: {label} heeft geen waarde, of een van de delen ontbreekt.',
+  // The designation gesture's own aria-label (a pie slice / stack segment
+  // click) — distinct from `chart.noteAriaLabel` ("Voeg notitie toe…"),
+  // which names a DIFFERENT action (line/bar points open the notes draft;
+  // a whole-form point instead designates/clears the reader's total).
+  'chart.ownWhole.designateAriaLabel': 'Wijs {series}, {period} aan als totaal',
 
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
@@ -1848,6 +1868,8 @@ const en: Messages = {
   'chart.command.setDimmed': 'Series dimmed',
   'chart.command.addDerivedOverlay': 'Overlay added',
   'chart.command.removeDerivedOverlay': 'Overlay removed',
+  'chart.command.setWholeReference': 'Total designated',
+  'chart.command.clearWholeReference': 'Total cleared',
   'chart.noteAriaLabel': 'Add a note at {series}, {period}',
   'chart.schemaRefusal':
     'This chart was made in a newer version than this page can show. The figures are in the answer itself.',
@@ -2293,6 +2315,11 @@ const en: Messages = {
   'chart.ownWhole.notChecked': 'Not checked against a total — click a point to verify these parts add up.',
   'chart.ownWhole.omittedNoShare':
     'Not drawn for {periods} — a part is missing or negative there, or the parts add up to zero, so a percentage share cannot be shown.',
+  // Task 4 — see the `nl` entries' comment for the honesty rule these follow.
+  'chart.ownWhole.checked': 'Checked against the row you selected: {label}.',
+  'chart.ownWhole.mismatch': "These parts don't add up to {label} — check your selection.",
+  'chart.ownWhole.cannotCheck': "Can't be checked: {label} has no value, or one of the parts is missing one.",
+  'chart.ownWhole.designateAriaLabel': 'Designate {series}, {period} as the total',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English

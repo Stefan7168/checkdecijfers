@@ -80,7 +80,15 @@ export class OverlaySelectionError extends Error {
   }
 }
 
-interface ResolvedPoint {
+/** Exported for verify-whole.ts (Task 4, plan 2026-09-22): the own-data
+ * "verified whole" check needs the SAME rowRef -> real-value resolution this
+ * file already built for the difference/mean overlay — re-deriving it a
+ * second time would risk the two copies silently drifting (e.g. if the
+ * format rule in resolvePoint below ever changes). Kept in this file rather
+ * than execute.ts (this file's own header comment already explains why: it
+ * mirrors chart.ts's buildPoint precedent of a small local resolution
+ * rather than growing execute.ts's surface for one more caller). */
+export interface ResolvedPoint {
   value: number | null;
   decimals: number;
   ref: string;
@@ -114,7 +122,7 @@ function resolvePoint(point: RawPoint, yColumn: ColumnProfile): ResolvedPoint {
  * to parse a raw point's value under): `instruction.seriesBy` set means one
  * shared y column for every series (chart.ts's own `singleY` rule);
  * unset means each point's own seriesKey names its column directly. */
-function allResolvedPoints(dataset: UserDataset, instruction: ChartInstruction): Map<string, ResolvedPoint> {
+export function allResolvedPoints(dataset: UserDataset, instruction: ChartInstruction): Map<string, ResolvedPoint> {
   const profile = dataset.profile;
   const singleY = instruction.seriesBy !== null ? columnById(profile, instruction.y[0]!) : null;
   const byRef = new Map<string, ResolvedPoint>();

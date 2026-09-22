@@ -67,6 +67,16 @@ const chartWholeActions = vi.hoisted(() => ({
   requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
 }));
 vi.mock('../app/chart-whole-verification-actions.ts', () => chartWholeActions);
+// Own-data verified-whole parity (Task 4): the own-data card's OWN on-demand
+// whole check — same jsdom-import guard as every Server Action mock above.
+// (requestDatasetDerivation, the own-data card's OTHER direct Server Action
+// import, is already exercised unmocked elsewhere in this file's own-data
+// tests below — its effect only ever fires when derivedOverlayRequests is
+// non-empty, which no test here produces, so it is never actually called.)
+const datasetWholeActions = vi.hoisted(() => ({
+  requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+}));
+vi.mock('../app/dataset-whole-verification-actions.ts', () => datasetWholeActions);
 
 import { ChartView } from './chart.tsx';
 import { cbsViewCommandSchema } from '../backend/chart/copilot/schema.ts';
@@ -161,7 +171,17 @@ const PANEL_KINDS: ChartCommandKind[] = ['setPresentation', 'replacePresentation
 /** Kinds whose control only exists once a point has been clicked, or once a
  * note/goal-line/era-shading/derived-overlay already exists to remove.
  * `setHeadlineOverride` (phase 4, Task 5) lives in the SAME pendingPoint UI
- * as addNote/removeNote — same gating, same reasoning. */
+ * as addNote/removeNote — same gating, same reasoning.
+ *
+ * Own-data verified-whole parity (Task 4): `setWholeReference` too — its
+ * control (a pie slice / stack segment) only exists once the reader has
+ * switched to one of the three whole-form tabs, which `twoSeriesUserSpec`
+ * below never does (the own-data contract test opens the Style/Data panels
+ * only, never a form tab). A dedicated compensating test below (mirroring
+ * the setHeadlineOverride/removeGoalLine/removeEraShading/
+ * removeDerivedOverlay ones this file already has, per the I10/I11 finding
+ * that a bare exemption with no test of its own is the gap to avoid)
+ * switches to Taartdiagram and proves the marker is really there. */
 const NOTE_KINDS: ChartCommandKind[] = [
   'addNote',
   'removeNote',
@@ -169,14 +189,23 @@ const NOTE_KINDS: ChartCommandKind[] = [
   'removeGoalLine',
   'removeEraShading',
   'removeDerivedOverlay',
+  'setWholeReference',
 ];
 /** Co-pilot phase 2 (session 113), Task 4: kinds whose control lives on the
  * OWN-DATA card, not this CBS one. `setInstruction` names dataset columns, so
  * a CBS chart has no control for it and — by the ADR 037 D11 type guard —
  * could not validate one anyway. Its own-data control is covered by that
  * card's suite (Task 5/6), which scans the same `data-command-kind`
- * attribute. */
-const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction'];
+ * attribute.
+ *
+ * Own-data verified-whole parity (plan 2026-09-22, Task 4): `setWholeReference`
+ * joins it — the reader-designated-total gesture is a pie slice / stack
+ * segment click that exists ONLY on the own-data card (CBS's own phase 5b
+ * verified-whole check is fully automatic, server-computed against a
+ * registry total; it has no reader-designation gesture and never dispatches
+ * this command). Its own-data control is covered below (NOTE_KINDS — the
+ * SAME "gated behind a precondition" reasoning, plus a compensating test). */
+const OWN_DATA_KINDS: ChartCommandKind[] = ['setInstruction', 'setWholeReference'];
 /** Phase 4, Task 7 (ADR 056): a derived overlay (difference/average) is
  * computed via `requestChartDerivation`, which only accepts an audited CBS
  * answer (`{ kind: 'answer', id }`) — own-data charts have no audit row to
@@ -579,6 +608,20 @@ describe('own-data card — the same command ↔ control contract (Task 6)', () 
     expect(missing, `command kinds with no control: ${missing.join(', ')}`).toEqual([]);
     // The one kind the CBS card cannot offer at all.
     expect(found.has('setInstruction')).toBe(true);
+  });
+
+  // Own-data verified-whole parity (Task 4) — the SAME "compensating test"
+  // discipline the I10/I11 finding above established for every NOTE_KINDS
+  // exemption: setWholeReference's control (a pie slice / stack segment) is
+  // gated behind a whole-form tab, which the generic scan above never
+  // switches to. `twoSeriesUserSpec` qualifies for Gestapeld (seriesCount
+  // >= 2) though not for Taartdiagram (two periods per series, not one), so
+  // this switches to the stack and proves the marker genuinely reaches a
+  // real, clickable element there.
+  it('setWholeReference control exists on a stack segment once a whole-form tab is showing', () => {
+    render(<UserChartView spec={twoSeriesUserSpec()} edit={userEdit()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    expect(kindsInDom(document.body).has('setWholeReference')).toBe(true);
   });
 
   it('validateCommand refuses the two CBS-only kinds on an own-data context', () => {

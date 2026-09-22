@@ -77,7 +77,15 @@ export type ChartCommandParams =
   | { kind: 'setDimmed'; hiddenKeys: string[]; dimmedKeys: string[] }
   | { kind: 'setHeadlineOverride'; resultId: string | null }
   | { kind: 'addDerivedOverlay'; overlay: DerivedOverlayRequest }
-  | { kind: 'removeDerivedOverlay'; overlayId: string };
+  | { kind: 'removeDerivedOverlay'; overlayId: string }
+  /** Own-data verified-whole parity (plan 2026-09-22, Task 4): the reader
+   * designates ONE currently-displayed pie/stack cell as "this is my total"
+   * (or clears the designation with `rowRef: null`) — mirrors
+   * `setHeadlineOverride`'s exact "pick one point, or clear it" shape rather
+   * than inventing a new convention. Never a value: `rowRef` only: the real
+   * arithmetic check (requestWholeVerification) re-resolves it server-side,
+   * exactly like `addDerivedOverlay`'s resultIds. */
+  | { kind: 'setWholeReference'; rowRef: string | null };
 
 export type ChartCommandKind = ChartCommandParams['kind'];
 export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
@@ -104,6 +112,7 @@ export const CHART_COMMAND_KINDS: readonly ChartCommandKind[] = [
   'setHeadlineOverride',
   'addDerivedOverlay',
   'removeDerivedOverlay',
+  'setWholeReference',
 ];
 
 export type ChartCommand = ChartCommandParams & { id: string; at: string; source: ChartCommandSource };
@@ -120,6 +129,11 @@ export interface ChartDocState extends ChartViewState {
   eraShadings: EraShading[];
   headlineOverrideResultId: string | null;
   derivedOverlayRequests: DerivedOverlayRequest[];
+  /** Own-data verified-whole parity (Task 4): the reader-designated "this is
+   * my total" cell for the current pie/stacked/stacked100 view, or null when
+   * nothing is designated (Task 3's default, unverified note). Never a data
+   * value — a rowRef the server re-resolves and re-checks on every read. */
+  wholeReferenceRowRef: string | null;
 }
 
 export const CHART_TITLE_MAX_LENGTH = 120;
@@ -132,7 +146,18 @@ export function initialDocState(
   initialPresentation: PresentationOverrides = {},
   instruction: ClientChartInstruction | null = null,
 ): ChartDocState {
-  return { ...initialViewState(initialForm, initialPresentation), notes: [], title: null, caption: null, instruction, goalLines: [], eraShadings: [], headlineOverrideResultId: null, derivedOverlayRequests: [] };
+  return {
+    ...initialViewState(initialForm, initialPresentation),
+    notes: [],
+    title: null,
+    caption: null,
+    instruction,
+    goalLines: [],
+    eraShadings: [],
+    headlineOverrideResultId: null,
+    derivedOverlayRequests: [],
+    wholeReferenceRowRef: null,
+  };
 }
 
 export function newCommandId(): string {
@@ -213,6 +238,8 @@ export function applyCommand(state: ChartDocState, cmd: ChartCommandParams): Cha
     }
     case 'removeDerivedOverlay':
       return { ...state, derivedOverlayRequests: state.derivedOverlayRequests.filter((o) => o.id !== cmd.overlayId) };
+    case 'setWholeReference':
+      return { ...state, wholeReferenceRowRef: cmd.rowRef };
   }
 }
 
@@ -285,6 +312,8 @@ export function invertCommand(before: ChartDocState, cmd: ChartCommandParams): C
       const found = before.derivedOverlayRequests.find((o) => o.id === cmd.overlayId);
       return found === undefined ? { kind: 'removeDerivedOverlay', overlayId: cmd.overlayId } : { kind: 'addDerivedOverlay', overlay: found };
     }
+    case 'setWholeReference':
+      return { kind: 'setWholeReference', rowRef: before.wholeReferenceRowRef };
   }
 }
 
@@ -427,6 +456,8 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
       );
     case 'removeDerivedOverlay':
       return typeof cmd.overlayId === 'string' && cmd.overlayId.length > 0;
+    case 'setWholeReference':
+      return cmd.rowRef === null || resultIds(ctx.spec).has(cmd.rowRef);
   }
 }
 
@@ -476,6 +507,7 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('setHeadlineOverride'), resultId: z.string().nullable(), ...envelope }),
   z.object({ kind: z.literal('addDerivedOverlay'), overlay: z.object({ id: z.string(), calcKind: z.enum(['difference', 'mean']), resultIds: z.array(z.string()) }), ...envelope }),
   z.object({ kind: z.literal('removeDerivedOverlay'), overlayId: z.string(), ...envelope }),
+  z.object({ kind: z.literal('setWholeReference'), rowRef: z.string().nullable(), ...envelope }),
 ]);
 // The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
 export const commandLogSchema = z.array(commandSchema).max(200);

@@ -31,6 +31,10 @@ const derivationActions = vi.hoisted(() => ({
   requestDatasetDerivation: vi.fn(),
 }));
 vi.mock('../app/dataset-derivation-actions.ts', () => derivationActions);
+const wholeVerificationActions = vi.hoisted(() => ({
+  requestWholeVerification: vi.fn(),
+}));
+vi.mock('../app/dataset-whole-verification-actions.ts', () => wholeVerificationActions);
 
 import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
 import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
@@ -42,6 +46,7 @@ afterEach(() => {
   chartEditsActions.saveChartEdits.mockResolvedValue({ ok: true });
   datasetActions.renderDatasetInstruction.mockReset();
   derivationActions.requestDatasetDerivation.mockReset();
+  wholeVerificationActions.requestWholeVerification.mockReset();
 });
 
 function point(overrides: Partial<UserChartSpec['series'][0]['points'][0]> = {}) {
@@ -1764,6 +1769,196 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true'));
     expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
     expect(note().textContent).toBe(NOT_CHECKED);
+  });
+
+  // ---------------------------------------------------------------------
+  // Task 4: the reader-designated total — clicking a slice/segment marks it
+  // as "this is my total", requestWholeVerification (mocked) runs the real
+  // check against the CURRENTLY-DISPLAYED other parts, and the note swaps
+  // to one of `checked`/`mismatch`/`cannotCheck`. Reuses every helper above
+  // (`note`, `SECTOR`, `SEGMENT`, `segment`, `IN`, `NOT_CHECKED`,
+  // `NOT_CHECKED_EN`, `editContext`, `LAST_INSTRUCTION`) rather than
+  // redefining them.
+  // ---------------------------------------------------------------------
+  const CHECKED_AMSTERDAM = 'Gecontroleerd tegen de rij die je koos: Amsterdam.';
+  const MISMATCH_AMSTERDAM = 'Deze delen tellen niet op tot Amsterdam — controleer je selectie.';
+  const CANNOT_CHECK_AMSTERDAM = 'Kan niet worden gecontroleerd: Amsterdam heeft geen waarde, of een van de delen ontbreekt.';
+
+  it('Task 4: designating a pie slice dispatches setWholeReference and calls requestWholeVerification with the OTHER visible slice only; a genuine match renders the checked note, chart untouched', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    const amsterdam = container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
+    expect(amsterdam).toHaveAttribute('role', 'button');
+    expect(amsterdam).toHaveAttribute('tabindex', '0');
+    fireEvent.click(amsterdam);
+    // Amsterdam (r1:c1) designated as the whole; the ONLY other visible
+    // slice, Rotterdam (r1:c2), is the sole part — never Amsterdam itself.
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(note().textContent).toBe(CHECKED_AMSTERDAM);
+    expect(note()).toHaveClass('text-success');
+    // The chart is exactly as before: both slices, same labels.
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+    ]);
+  });
+
+  it('Task 4: clicking the ALREADY-designated slice again clears it — reverts to the exact Task 3 default note instantly, client-side, no second network call', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    const amsterdam = () => container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
+    fireEvent.click(amsterdam());
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(amsterdam());
+    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+    expect(note()).toHaveClass('text-muted-foreground');
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+  });
+
+  it('Task 4: a genuine mismatch renders the chart IN FULL and the mismatch note together — own-data never hides the chart on a mismatch, unlike CBS', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'mismatch'));
+    expect(note().textContent).toBe(MISMATCH_AMSTERDAM);
+    expect(note()).toHaveClass('text-warning');
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+    ]);
+  });
+
+  it('Task 4: missing_whole AND withheld_member both map to the SAME cannotCheck note, chart still drawn in full', async () => {
+    for (const reason of ['missing_whole', 'withheld_member'] as const) {
+      wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason } });
+      const { container, unmount } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+      fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+      fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+      await waitFor(() => expect(note(), reason).toHaveAttribute('data-state', 'cannot_check'));
+      expect(note().textContent, reason).toBe(CANNOT_CHECK_AMSTERDAM);
+      expect(note(), reason).toHaveClass('text-warning');
+      expect(container.querySelectorAll(SECTOR), reason).toHaveLength(2);
+      unmount();
+    }
+  });
+
+  it('Task 4: a bare server refusal (ok:false — e.g. a stale designation) falls back to not_checked, never a fabricated verdict', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: false, reason: 'this dataset is not available' });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    await waitFor(() => expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1));
+    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+  });
+
+  it('Task 4: designating a STACK segment scopes the parts to the SAME PERIOD only, never a sum across unrelated periods, and the label names series + period', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    fireEvent.click(segment(container, 'r2:c1')); // Amsterdam, 2024 (42) — NOT 2023's r1:c1/r1:c2.
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r2:c1', ['r2:c2']);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(note().textContent).toBe('Gecontroleerd tegen de rij die je koos: Amsterdam · 2024.');
+    // Both bars, four segments, all still drawn.
+    expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
+  });
+
+  it('Task 4: a stack segment carries the SAME designation affordance (role, tabindex, Enter activates it)', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    const el = segment(container, 'r2:c1');
+    expect(el).toHaveAttribute('role', 'button');
+    expect(el).toHaveAttribute('tabindex', '0');
+    fireEvent.keyDown(el, { key: 'Enter' });
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+  });
+
+  it('Task 4: renders the English designation note under LangProvider lang="en"', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
+    const { container } = render(
+      <LangProvider lang="en">
+        <UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Pie chart' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    await waitFor(() => expect(note().textContent).toBe("These parts don't add up to Amsterdam — check your selection."));
+  });
+
+  it('Task 4: history menu names the designation and its clearing distinctly, and Undo/Redo round-trip through it', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Geschiedenis van bewerkingen' }));
+    expect(screen.getAllByRole('menuitem')[0]).toHaveTextContent('Totaal aangewezen');
+    fireEvent.click(document.body); // close the menu
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(note().textContent).toBe(NOT_CHECKED);
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+  });
+
+  it('persistence: a stored setWholeReference is replayed onto the card and re-verified against the real dataset', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    chartEditsActions.fetchChartEdits.mockResolvedValue({
+      ok: true,
+      log: [
+        { kind: 'setForm', form: 'pie', id: 'c1', at: '2026-09-22T00:00:00.000Z', source: 'panel' },
+        { kind: 'setWholeReference', rowRef: 'r1:c1', id: 'c2', at: '2026-09-22T00:00:01.000Z', source: 'panel' },
+      ],
+    });
+    render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true'));
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(note().textContent).toBe(CHECKED_AMSTERDAM);
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
+  });
+
+  it('Task 4: with no edit context, designating a slice updates the note state locally but never calls the server (no datasetId to call with)', () => {
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    expect(wholeVerificationActions.requestWholeVerification).not.toHaveBeenCalled();
+    // Nothing resolves it, so the note stays on the honest default rather
+    // than fabricating a verdict.
+    expect(note().textContent).toBe(NOT_CHECKED);
+  });
+
+  it('Task 4: switching away from the whole form after designating never fires a pointless server call for a note nothing renders; switching back re-verifies', async () => {
+    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    expect(screen.queryByTestId('own-whole-note')).toBeNull();
+    // Still exactly one call — switching to a non-whole form issues no more.
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(2);
   });
 });
 

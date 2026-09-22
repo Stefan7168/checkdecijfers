@@ -53,6 +53,7 @@ import {
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
+  Sector,
   Tooltip,
   useXAxisScale,
   useYAxisScale,
@@ -60,13 +61,15 @@ import {
   YAxis,
   ZIndexLayer,
 } from 'recharts';
-import type { PieLabelRenderProps } from 'recharts';
+import type { PieLabelRenderProps, PieSectorShapeProps } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { requestDatasetDerivation } from '../app/dataset-derivation-actions.ts';
+import { requestWholeVerification } from '../app/dataset-whole-verification-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import type { ResolvedOverlay } from '../backend/attachments/derive-overlay.ts';
+import type { VerifyOutcome } from '../backend/query/whole-verification.ts';
 import type { DerivedOverlayRequest } from '../lib/chart-commands.ts';
 import {
   LINE_WIDTH_PX,
@@ -775,8 +778,24 @@ function UserPieSliceLabel(props: PieLabelRenderProps) {
  * `<key>_share_label` — the share `buildStack100Rows` formatted). Both are
  * bound to the point's own rowRef via `data-label-for`. A segment shorter
  * than STACK_LABEL_MIN_HEIGHT_PX draws no label (geometry only — the
- * tooltip still shows it). */
-function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string, color: string, opacity: number) {
+ * tooltip still shows it).
+ *
+ * Task 4 adds the designation gesture: `seriesLabel`/`onPointClick`/`lang`
+ * mirror `UserSeriesDot`'s own three extra parameters exactly (role="button"
+ * + tabIndex + Enter/Space, since a synthetic role on an SVG element gets no
+ * native keyboard activation) — `<rect>` is a raw element this function
+ * fully controls, so unlike the pie (see UserPieSlice below) there is no
+ * Recharts prop-merging to work around. */
+function UserStackSegment(
+  seriesKey: string,
+  valueKey: string,
+  labelKey: string,
+  color: string,
+  opacity: number,
+  seriesLabel: string,
+  onPointClick: ((point: PendingPoint) => void) | undefined,
+  lang: Lang,
+) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
     if (x == null || y == null || width == null || height == null || !payload) return null;
@@ -785,6 +804,11 @@ function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string,
     const resultId = payload[`${seriesKey}_resultId`];
     const label = payload[labelKey];
     const showLabel = label != null && height >= STACK_LABEL_MIN_HEIGHT_PX;
+    const periodLabel = payload.periodLabel;
+    const activate = (): void => {
+      if (resultId == null || !onPointClick) return;
+      onPointClick({ resultId: String(resultId), periodLabel: String(periodLabel), seriesLabel });
+    };
     return (
       <g>
         <rect
@@ -800,6 +824,22 @@ function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string,
           data-series-key={seriesKey}
           data-series-dimmed={opacity < 1 ? 'true' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
+          data-command-kind={onPointClick ? 'setWholeReference' : undefined}
+          role={onPointClick ? 'button' : undefined}
+          tabIndex={onPointClick ? 0 : undefined}
+          aria-label={onPointClick ? t(lang, 'chart.ownWhole.designateAriaLabel', { series: seriesLabel, period: String(periodLabel) }) : undefined}
+          style={onPointClick ? { cursor: 'pointer' } : undefined}
+          onClick={onPointClick ? activate : undefined}
+          onKeyDown={
+            onPointClick
+              ? (event: KeyboardEvent<SVGRectElement>) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  activate();
+                }
+              : undefined
+          }
         />
         {showLabel ? (
           <ZIndexLayer zIndex={DefaultZIndexes.label}>
@@ -822,6 +862,54 @@ function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string,
   };
 }
 
+/** The pie's designation gesture (Task 4): a custom `shape` for `<Pie>`.
+ * Recharts merges each `<Cell>`'s OWN props (fill, the data-* attributes
+ * Task 3 added) into the sector object BEFORE calling this — confirmed by
+ * reading node_modules/recharts's own Pie.js — but it ALSO unconditionally
+ * hardcodes `tabIndex: -1` on that same object afterward, so a `<Cell
+ * tabIndex>` would be silently overwritten and never reach the DOM. A
+ * custom `shape` sidesteps this: it receives the SAME Cell-merged props
+ * (spread first, so fill/data-* survive unchanged) and renders them through
+ * Recharts' own exported `<Sector>` (byte-identical to Recharts' internal
+ * default — `defaultPieSectorShape` IS `Sector`) with the interactivity
+ * props applied AFTER the spread, so they win. `props.value_resultId`/
+ * `.label` are UserPieRow's own fields, carried through the same merge. */
+function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) => void) | undefined, lang: Lang) {
+  // Only the two UserPieRow fields this shape actually reads — NOT
+  // `Partial<UserPieRow>`, whose own `key: string` field (the series key,
+  // e.g. 's0') collides with React's OWN reserved `key` prop already on
+  // PieSectorShapeProps (`Key | null | undefined`) and fails to intersect.
+  return function Shape(props: PieSectorShapeProps & { value_resultId?: string | null; label?: string }) {
+    const resultId = props.value_resultId ?? null;
+    const seriesLabel = props.label ?? '';
+    const activate = (): void => {
+      if (resultId === null || !onPointClick) return;
+      onPointClick({ resultId, periodLabel, seriesLabel });
+    };
+    return (
+      <Sector
+        {...props}
+        data-command-kind={onPointClick ? 'setWholeReference' : undefined}
+        role={onPointClick ? 'button' : undefined}
+        tabIndex={onPointClick ? 0 : undefined}
+        aria-label={onPointClick ? t(lang, 'chart.ownWhole.designateAriaLabel', { series: seriesLabel, period: periodLabel }) : undefined}
+        style={onPointClick ? { cursor: 'pointer' } : undefined}
+        onClick={onPointClick ? activate : undefined}
+        onKeyDown={
+          onPointClick
+            ? (event: KeyboardEvent<SVGPathElement>) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                activate();
+              }
+            : undefined
+        }
+      />
+    );
+  };
+}
+
 /** The own-data whole note's states → the message key and tone each one
  * renders with. Task 3 builds only `not_checked` — the default, shown
  * whenever a whole form is on screen and nothing has been designated. Task
@@ -834,8 +922,80 @@ function UserStackSegment(seriesKey: string, valueKey: string, labelKey: string,
  * is current, exactly as chart.tsx appends its own omissions. */
 const OWN_WHOLE_NOTE = {
   not_checked: { key: 'chart.ownWhole.notChecked', className: 'text-muted-foreground' },
+  // Task 4: the three states once a reader has designated a cell as "this
+  // is my total". `text-success`/`text-warning` are this app's own existing
+  // semantic tone tokens (globals.css) — chart.tsx's CBS whole-note never
+  // needed more than one tone because a mismatch there REFUSES the form
+  // outright (never rendered); own-data's note instead has to visually
+  // distinguish a confirmed match from a mismatch/can't-check, since all
+  // three render the chart in full (the deliberate CBS-vs-own-data
+  // difference this task's brief calls out).
+  checked: { key: 'chart.ownWhole.checked', className: 'text-success' },
+  mismatch: { key: 'chart.ownWhole.mismatch', className: 'text-warning' },
+  cannot_check: { key: 'chart.ownWhole.cannotCheck', className: 'text-warning' },
 } as const satisfies Record<string, { key: MessageKey; className: string }>;
 type OwnWholeNoteState = keyof typeof OWN_WHOLE_NOTE;
+
+/** Task 4: which currently-displayed rowRefs count as "parts" for the
+ * designated whole — exactly the set Task 3 already renders (visible
+ * series only, per the plan's ratified ruling), MINUS the designated cell
+ * itself (summing a "total" as one of its own parts would be nonsensical
+ * arithmetic, not a policy choice — verifyPartsSumToWhole is never handed
+ * the whole a second time as one of its own parts). Pie has one period by
+ * construction, so every OTHER visible slice counts; a stack spans several
+ * periods, so only the OTHER visible series AT THE SAME PERIOD as the
+ * designated cell count — a stacked bar's "whole" is one full bar (one
+ * period), never a sum across unrelated periods, the same "one moment"
+ * scoping a pie's whole circle already has. */
+function wholePartRowRefsFor(
+  activeForm: ChartForm,
+  wholeRowRef: string | null,
+  pieRows: readonly UserPieRow[],
+  rows: readonly Row[],
+  visibleSeries: readonly SeriesMeta[],
+): string[] {
+  if (wholeRowRef === null) return [];
+  if (activeForm === 'pie') {
+    return pieRows.filter((r) => r.value_resultId !== null && r.value_resultId !== wholeRowRef).map((r) => r.value_resultId as string);
+  }
+  if (activeForm === 'stacked' || activeForm === 'stacked100') {
+    const row = rows.find((r) => visibleSeries.some((s) => r[`${s.key}_resultId`] === wholeRowRef));
+    if (row === undefined) return [];
+    return visibleSeries
+      .map((s) => row[`${s.key}_resultId`])
+      .filter((ref): ref is string => typeof ref === 'string' && ref !== wholeRowRef);
+  }
+  return [];
+}
+
+/** Task 4: the designated cell's own human-readable label for the note's
+ * `{label}` — the series alone for a pie (one shared period, so naming it
+ * again would be redundant), series + period for a stack (a cell is a
+ * (series, period) pair, and the SAME series can be designated at more than
+ * one period). Mirrors chart-notes.tsx's own "{seriesLabel} · {periodLabel}"
+ * join exactly (chart-notes.tsx:122). Falls back to the raw rowRef itself
+ * when the designated cell is not among the currently-displayed rows at all
+ * (e.g. its series was hidden after designation, or a data edit dropped it)
+ * — defensive, not expected on a fresh designation (a reader can only click
+ * an already-rendered point), but never blank: the note always names
+ * SOMETHING traceable rather than showing nothing. */
+function wholeReferenceLabel(
+  activeForm: ChartForm,
+  wholeRowRef: string,
+  pieRows: readonly UserPieRow[],
+  rows: readonly Row[],
+  visibleSeries: readonly SeriesMeta[],
+): string {
+  if (activeForm === 'pie') {
+    const row = pieRows.find((r) => r.value_resultId === wholeRowRef);
+    return row?.label ?? wholeRowRef;
+  }
+  for (const row of rows) {
+    const series = visibleSeries.find((s) => row[`${s.key}_resultId`] === wholeRowRef);
+    if (series !== undefined) return `${series.label} · ${String(row.periodLabel)}`;
+  }
+  return wholeRowRef;
+}
 
 /**
  * The card. A thin wrapper around `UserChartCard` whose only job is the
@@ -1040,6 +1200,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const [differencePickerActive, setDifferencePickerActive] = useState(false);
   const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; seriesLabel: string } | null>(null);
   const [differenceError, setDifferenceError] = useState<string | null>(null);
+  // Task 4 (verified-whole): the SAME "recipe in the undoable log, resolved
+  // value transient" split as the derived overlays above —
+  // `state.wholeReferenceRowRef` is the undoable designation; this is the
+  // check's own OUTCOME, re-run whenever the designation or the currently-
+  // displayed parts change (the effect is declared below, once pieRows/rows
+  // are available). Null = nothing designated yet, OR the request is still
+  // in flight — both correctly fall back to Task 3's `not_checked` note.
+  const [wholeVerification, setWholeVerification] = useState<VerifyOutcome | null>(null);
 
   useEffect(() => {
     if (datasetId === undefined || state.instruction === null) return;
@@ -1069,8 +1237,27 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // the CBS card compares regionCode — own-data's equivalent "these two
   // points must be comparable" constraint: a difference is between two
   // points of the SAME series, never across series.
+  //
+  // Task 4 adds a THIRD mode, checked FIRST: a pie slice / stack segment
+  // click always means "designate/clear the whole reference" — never the
+  // note draft or the difference picker. This cannot collide with the other
+  // two modes because it is gated on `activeForm` itself, and pie/stack are
+  // the ONLY forms whose render branches ever call `onPointClick` with a
+  // whole form active — line/bar/dumbbell dots (the note draft's and the
+  // difference picker's own entry points) only render when `activeForm` is
+  // none of the three whole forms, and the difference-picker toggle button
+  // is itself only mounted for line/area (see the `activeForm === 'line' ||
+  // activeForm === 'area'` gate further down) — so `differencePickerActive`
+  // can never be true while a whole form is showing either. A second click
+  // on the ALREADY-designated cell clears it (`setHeadlineOverride`'s own
+  // "pick one point, or clear it" toggle convention).
   const onPointClick = useCallback(
     (point: PendingPoint) => {
+      if (activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100') {
+        const next = state.wholeReferenceRowRef === point.resultId ? null : point.resultId;
+        dispatch({ kind: 'setWholeReference', rowRef: next }, 'panel');
+        return;
+      }
       if (differencePickerActive) {
         if (firstDifferencePoint === null) {
           setFirstDifferencePoint({ resultId: point.resultId, seriesLabel: point.seriesLabel });
@@ -1095,7 +1282,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       }
       setPendingPoint(point);
     },
-    [differencePickerActive, firstDifferencePoint, chartLang, dispatch],
+    [activeForm, state.wholeReferenceRowRef, differencePickerActive, firstDifferencePoint, chartLang, dispatch],
   );
 
   // --- the style panel -----------------------------------------------------
@@ -1421,8 +1608,56 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     const row = rows.find((r) => String(r.periodCode) === code);
     return row ? String(row.periodLabel) : code;
   });
-  // The note's state (Task 3: only the default exists — see OWN_WHOLE_NOTE).
-  const ownWholeNoteState: OwnWholeNoteState = 'not_checked';
+  // Task 4: re-run the check whenever the designation or the currently-
+  // displayed parts change. Depends on `activeSpec`/`state.hiddenKeys`
+  // (real state, stable across an unrelated re-render) rather than
+  // `pieRows`/`rows`/`visibleSeries` directly (fresh array references every
+  // render, which would re-fetch on every unrelated re-render too): the
+  // effect only re-executes when one of the DEPENDENCIES below actually
+  // changes, and when it does, it reads the CURRENT render's freshly-
+  // computed pieRows/rows/visibleSeries via closure — the same "recomputed
+  // together" guarantee Task 3's own render already relies on. Clearing the
+  // designation (rowRef: null) reverts to Task 3's exact default note
+  // instantly, with no network round trip. Also bails while NOT viewing a
+  // whole form (a designation survives a tab switch away, but the note —
+  // and any reason to re-verify — only exists while wholeForm is true;
+  // without this a switch to Lijn/Staaf/etc. would still fire a pointless
+  // network call for a note nothing renders).
+  useEffect(() => {
+    const wholeForm = activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100';
+    if (!wholeForm || state.wholeReferenceRowRef === null || datasetId === undefined || state.instruction === null) {
+      setWholeVerification(null);
+      return;
+    }
+    const wholeRowRef = state.wholeReferenceRowRef;
+    const partRowRefs = wholePartRowRefsFor(activeForm, wholeRowRef, pieRows, rows, visibleSeries);
+    let cancelled = false;
+    void requestWholeVerification(datasetId, state.instruction, wholeRowRef, partRowRefs).then((response) => {
+      if (cancelled) return;
+      setWholeVerification(response.ok ? response.outcome : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pieRows/rows/visibleSeries recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh arrays avoids re-fetching on every unrelated re-render.
+  }, [activeSpec, state.hiddenKeys, activeForm, state.wholeReferenceRowRef, state.instruction, datasetId]);
+  // The note's state: Task 3's default unless a reference is designated, in
+  // which case the check's own outcome decides — still resolving (or a bare
+  // `ok:false` refusal, e.g. a stale designation after a data edit) reads
+  // as the SAME `not_checked` default until a real verdict lands, never a
+  // fabricated state. `ownWholeNoteLabel` is computed unconditionally (an
+  // unused '' for `not_checked`) so the mount point never has to branch on
+  // which state needs the `{label}` param.
+  const ownWholeNoteState: OwnWholeNoteState =
+    state.wholeReferenceRowRef === null || wholeVerification === null
+      ? 'not_checked'
+      : wholeVerification.verified
+        ? 'checked'
+        : wholeVerification.reason === 'sum_mismatch'
+          ? 'mismatch'
+          : 'cannot_check';
+  const ownWholeNoteLabel =
+    state.wholeReferenceRowRef === null ? '' : wholeReferenceLabel(activeForm, state.wholeReferenceRowRef, pieRows, rows, visibleSeries);
   const xLabelProps = {
     angle: pres.xLabels === 'tilted' ? -45 : 0,
     textAnchor: pres.xLabels === 'tilted' ? ('end' as const) : ('middle' as const),
@@ -1732,6 +1967,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 strokeWidth={1}
                 label={UserPieSliceLabel}
                 labelLine={{ stroke: AXIS_COLOR, strokeWidth: 1 }}
+                shape={UserPieSlice(pieSharedPeriodLabel, onPointClick, chartLang)}
               >
                 {pieRows.map((r) => (
                   <Cell
@@ -1795,7 +2031,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                     fillOpacity={opacityFor(s)}
                     data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                     isAnimationActive={false}
-                    shape={UserStackSegment(s.key, valueKey, labelKey, s.color, opacityFor(s))}
+                    shape={UserStackSegment(s.key, valueKey, labelKey, s.color, opacityFor(s), s.label, onPointClick, chartLang)}
                   />
                 );
               })}
@@ -2233,7 +2469,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         * the spec's own period labels (digit tokens the card's scan binds). */}
       {wholeForm ? (
         <p className={`mt-2 text-xs ${OWN_WHOLE_NOTE[ownWholeNoteState].className}`} data-testid="own-whole-note" data-state={ownWholeNoteState}>
-          {t(chartLang, OWN_WHOLE_NOTE[ownWholeNoteState].key)}
+          {t(chartLang, OWN_WHOLE_NOTE[ownWholeNoteState].key, { label: ownWholeNoteLabel })}
           {stackNoShareLabels.length > 0 ? ` ${t(chartLang, 'chart.ownWhole.omittedNoShare', { periods: stackNoShareLabels.join(' · ') })}` : ''}
         </p>
       ) : null}

@@ -126,6 +126,7 @@ function randomCommand(r: () => number, state: ChartDocState, n: number, allowIn
     case 'setHeadlineOverride': return { kind, resultId: pick(r, ['r-2020', 'r-2021', null]) };
     case 'addDerivedOverlay': return { kind, overlay: { id: `d${n}`, calcKind: pick(r, ['difference', 'mean'] as const), resultIds: ['r-2020', 'r-2021'] } };
     case 'removeDerivedOverlay': return state.derivedOverlayRequests.length > 0 ? { kind, overlayId: pick(r, state.derivedOverlayRequests).id } : { kind: 'setCaption', caption: null };
+    case 'setWholeReference': return { kind, rowRef: pick(r, ['r-2020', 'r-2021', null]) };
   }
 }
 /** Sets are compared as sorted arrays so deep equality is meaningful. */
@@ -412,6 +413,36 @@ describe('new command kinds (phase 4)', () => {
     let state = initialDocState('line');
     state = applyCommand(state, { kind: 'addDerivedOverlay', overlay });
     expect(state.derivedOverlayRequests).toEqual([overlay]);
+  });
+
+  // Own-data verified-whole parity (Task 4): the reader-designated total,
+  // mirroring setHeadlineOverride's own "pick one point, or clear it" shape
+  // and tests exactly (see the setHeadlineOverride test just above).
+  it('validateCommand refuses setWholeReference pointing at an unknown rowRef', () => {
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: 'nope' }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: 'r1' }, ctx)).toBe(true);
+    expect(validateCommand({ kind: 'setWholeReference', rowRef: null }, ctx)).toBe(true);
+  });
+
+  it('setWholeReference round-trips through apply+invert, including clearing back to null', () => {
+    let state = initialDocState('line');
+    const stateBefore = state;
+    state = applyCommand(state, { kind: 'setWholeReference', rowRef: 'r1' });
+    expect(state.wholeReferenceRowRef).toBe('r1');
+    const inverse = invertCommand(stateBefore, { kind: 'setWholeReference', rowRef: 'r1' });
+    state = applyCommand(state, inverse);
+    expect(state.wholeReferenceRowRef).toBeNull();
+    // Clearing an already-set reference inverts back to the PREVIOUS one, not
+    // always to null — the same "before" semantics setHeadlineOverride uses.
+    const withReference = applyCommand(initialDocState('line'), { kind: 'setWholeReference', rowRef: 'r1' });
+    const clearInverse = invertCommand(withReference, { kind: 'setWholeReference', rowRef: null });
+    expect(applyCommand(withReference, { kind: 'setWholeReference', rowRef: null }).wholeReferenceRowRef).toBeNull();
+    expect(applyCommand(applyCommand(withReference, { kind: 'setWholeReference', rowRef: null }), clearInverse).wholeReferenceRowRef).toBe('r1');
+  });
+
+  it('parseCommandLog round-trips setWholeReference, including a null clear', () => {
+    const log = [makeCommand({ kind: 'setWholeReference', rowRef: 'r1' }, 'panel'), makeCommand({ kind: 'setWholeReference', rowRef: null }, 'panel')];
+    expect(parseCommandLog(JSON.parse(JSON.stringify(log)))).toEqual(log);
   });
 
   it('parseCommandLog accepts a log containing every new kind', () => {

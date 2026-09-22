@@ -66,7 +66,20 @@ describe('ChartHistoryMenu', () => {
       makeCommand({ kind: 'setPeriodRange', range: ['2020JJ00', '2024JJ00'] }, 'panel'),
       makeCommand({ kind: 'setPresentation', patch: { lineWidth: 'thick', seriesColors: { 0: '#112233' } } }, 'panel'),
       makeCommand({ kind: 'setReading', index: 2 }, 'panel'),
+      makeCommand({ kind: 'setWholeReference', rowRef: 'r1:c2' }, 'panel'),
+      makeCommand({ kind: 'setWholeReference', rowRef: null }, 'panel'),
     ];
     for (const c of cmds) expect(describeCommand(c, 'nl')).not.toMatch(/\d/);
+  });
+
+  // Own-data verified-whole parity (Task 4): mirrors the setHeadlineOverride
+  // set-vs-clear pattern this file already has no dedicated test for beyond
+  // the digit scan above — one targeted assertion that the two messages
+  // actually differ, in both languages.
+  it('setWholeReference names set vs. clear distinctly', () => {
+    const set = makeCommand({ kind: 'setWholeReference', rowRef: 'r1:c2' }, 'panel');
+    const clear = makeCommand({ kind: 'setWholeReference', rowRef: null }, 'panel');
+    expect(describeCommand(set, 'nl')).not.toBe(describeCommand(clear, 'nl'));
+    expect(describeCommand(set, 'en')).not.toBe(describeCommand(clear, 'en'));
   });
 });
