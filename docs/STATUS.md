@@ -18,8 +18,109 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 further continuation — verify against
-`git log`/CI before trusting this).** **`main` is NOW AT `b64ffe7`** — closed the residual [#311](open-questions.md)
+**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 123, spanning 2026-09-22→23, owner present in
+chat throughout — verify against `git log`/the branch before trusting this).** **`main` is UNCHANGED at
+`c14aaf61`** (session 122's own final state, this wrap-up's own docs commit on top) — this session did all
+its code work on a separate branch, worktree kept in place at `.claude/worktrees/own-data-chart-parity`,
+NOT merged. Resume from the branch: [session-briefs/2026-09-23-session-124-kickoff.md](session-briefs/2026-09-23-session-124-kickoff.md)
+has the exact next step.
+
+- **Owner picked "own-data phase 5/5b parity"** from three real architectural candidates surveyed in
+  [#306](open-questions.md) (the other two — two-measure charts, Eurostat-in-chat — remain open,
+  unscheduled). The design itself went through two rounds of owner pushback before approval: a first
+  design (port CBS's mechanism directly) was rejected ("I'm sure you can do better"); a stronger version
+  (own-data's pie/stacked/100%-stacked unconditionally available, always with an honest note) was also
+  sent back ("I want you to be proud of your decision") until the session committed to a single, considered
+  design — a reader-click-to-designate-a-total mechanism that runs REAL arithmetic verification (reusing
+  CBS's own already-trusted tolerance function) against a cell the reader themselves points at, rather than
+  either a static disclaimer or a fragile text-matching heuristic. Full narrative, including why the two
+  earlier designs were correctly rejected: [status-archive.md](status-archive.md)'s own "Session 123" entry.
+- **Branch `worktree-own-data-chart-parity`, NOT pushed to `origin` (local-only), HEAD `d925a911`.** Built
+  via `superpowers:subagent-driven-development`, 5 sequential tasks (one implementer at a time, per this
+  card's own acknowledged shared-render-tree fragility) — plan:
+  [superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md](superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md),
+  full ledger (every dispatch, every review, every ruling, every fix round) at
+  `.claude/worktrees/own-data-chart-parity/.superpowers/sdd/2026-09-22-own-data-chart-fit-verified-whole-parity/progress.md`
+  (git-ignored, on-disk only — read it before resuming, don't re-derive from memory).
+  - **Tasks 1-2:** dumbbell/slope/heatmap ("chart-fit trio") ported to own-data — already-generic,
+    already-reviewed CBS-tier guards and render patterns, reused directly. Both approved clean on first
+    review; one real, independently-verified extraction-vs-mirroring judgment call in Task 2 (mirrored, not
+    extracted — chart.tsx stayed read-only and byte-identical throughout the whole branch).
+  - **Task 3:** pie/stacked/100%-stacked made UNCONDITIONALLY available for own-data (own-data has no CBS
+    registry to verify a "whole" against, so these are deliberately NOT gated the way CBS's own version is)
+    with a mandatory, always-visible honesty note. Approved after the reviewer independently traced the
+    full render-dispatch chain and confirmed the note can never be silently absent, and confirmed the three
+    new own-data-only guard functions are structurally and behaviorally blind to `regionScope` (the
+    property this whole design depends on).
+  - **Task 4:** the reader-designated-total mechanism (click a point, real arithmetic check, ownership-
+    checked server action, 3 more note states). **The ORIGINAL review (opus, adversarial-execution
+    mandate) found 1 Critical + 2 Important real defects via actual execution, not reading** — a pie-path
+    bug silently dropping an unresolvable cell instead of an honest refusal; a stale-verdict bug where a
+    rejected request left a false-positive "Checked" on screen forever; an empty-parts-list bug that could
+    show a false verdict. **All three fixed in one round, independently re-verified** (hand-traced the
+    exact adversarial scenario end-to-end, re-ran the reused arithmetic's own pre-existing test to close
+    the loop). 2 minors parked for the final review's own triage.
+  - **Task 5:** chat-vocabulary widening (all 6 new forms) + fixture regen + e2e coverage + the FULL
+    project verification block (first task in this plan to run it). The fixture regen was mechanically
+    verified clean across all 10 renamed pairs (grepped for response-object fields in every diff hunk: zero
+    matches — proof the regen only ever shifted prompt-embedded request bytes, the exact failure class that
+    has broken this codebase's CI twice before). Also found and fixed a genuine, previously-undetected React
+    19 bug in Task 4's own pie-slice code (a `key`-prop spread onto `<Sector>`), caught only because this
+    was the first real-browser exercise of own-data's pie — verified via revert-and-reproduce.
+  - **Final whole-branch review (opus): "Ready to merge, WITH FIXES."** No Critical. Four Important
+    findings, all on the PRESENTATION side of an already-correct computation (see lessons-learned session
+    123 point 1 for why no task-scoped review could have caught these): (I1) the displayed verdict is
+    cleared inside an effect, not derived at render from what it verified — a re-designation can paint a
+    stale "Checked" claim for one frame before its own verification lands, and the branch's own tests never
+    covered the A→B re-designation transition, only the clear-to-null path; (I2) the designated cell is
+    still drawn as one of the parts of the total it's claimed to sum to, with no visual/ARIA marker — the
+    branch's own e2e pins this exact confusing state (two 60-value slices, one designated, note says
+    "Checked", pie still visually sums to 120); (I3) the note's `{label}` degrades to an ambiguous
+    shared string for a derived/aggregate own-data chart (a pre-existing, chart-wide label collision this
+    branch made load-bearing for a trust claim for the first time); (I4) the designation click is a dead,
+    still-clickable affordance when there's no edit context — the exact "silently-broken doorway" class this
+    same file already guards against 180 lines away for a different control. **NOT applied yet — this is
+    the mandated next step**, full fix-wave plan in the session-124 kickoff doc (the reviewer gave concrete,
+    small fixes for all four). Per the reviewer's own note: none of the suggested fixes touch prompt bytes,
+    so no fixture regen is needed for the fix wave — just the web suite + `own-data-copilot.spec.ts` re-run.
+  - **Deliberately not fixed, triaged by the final review as correctly deferred:** all carry-forward minors
+    from Tasks 1-3 (a duplicated colour-formula function; an unreachable fallback-behavior difference from
+    CBS; an extra DOM attribute) plus 2 new Minors from the final pass itself (8, not 3, hand-maintained
+    copies of the 11-form list with no cross-check test — 2 of the 8 could be deleted rather than tested;
+    `user-chart.tsx`'s growth to 2574 lines/one 1530-line function, organized but worth a future extraction).
+- **Owner steps pending — unchanged from every session back to 110/111** (registry:apply, DOI backfill,
+  live benchmark, region-set Task 9, audit row 22, all `:record` real-model fixture confirmations — all
+  blocked on the Anthropic workspace usage cap, which the session-123 kickoff doc's own steer said lifts
+  2026-10-01; not re-verified this session since nothing here required touching them).
+
+**Measured (session 123, on the branch, NOT main):** root+web typecheck clean; root vitest 207f/3186t; web
+vitest 147f/2698t; real Playwright `own-data-copilot.spec.ts` 8/8 (4 new); `chart-copilot.spec.ts` 22/22
+unchanged (CBS-tier regression, confirmed no CBS-facing file anywhere in the branch's diff); hermetic
+benchmark 14/14+6/6+0 fabricated, GATE PASS; real `next build` clean. Final whole-branch review: **"Ready
+to merge: With fixes"** — not merged, not pushed to `origin`, no PR opened (the fix wave is the
+session-124 owner-present session's mandated first step, matching session 121→122's own precedent of not
+rushing a fix-and-merge cycle in a session's closing minutes). `git status` clean on both `main` and the
+branch; `git worktree list` shows `main` + the own-data-chart-parity worktree (kept, not removed — must
+survive to resume) + one PRE-EXISTING, now-stale worktree (`chart-copilot-phase6` @ `58db5097`) confirmed
+this session to be fully merged into `main` already (`git merge-base --is-ancestor` true) — left in place,
+not this session's to clean up unilaterally; flagged for the owner.
+
+---
+
+**Doc-hygiene observation (not fixed this session, flagged rather than silently left — see
+[[project_session123_state]]): the "superseded, kept as history" chain below has drifted from this file's
+own session-41 convention** ("PREPEND the full entry to status-archive.md, keep only the lean top block
+here"). Session 122's several same-day continuations each demoted the previous top block into one more
+inline "superseded" paragraph without a final trim, and this chain (session 122's four stages, still
+extending below) was never moved out. Status-archive.md's own session-122 entry appears complete
+independently, so nothing here looks lost — but verifying that fully, and doing the actual trim, is more
+surface area than this session's own scope covers; left in place rather than risk cutting something
+unverified. A future session should confirm status-archive.md's coverage line-for-line before deleting
+this chain.
+
+---
+
+**Superseded by the above, kept as history:** the prior top block (`main` at `b64ffe7`, closing [#311](open-questions.md)) — closed the residual
 gap: `setDimmed`/`setHeadlineOverride` were never actually chat-reachable for own-data, despite this
 STATUS file's own prior top block (below, now superseded) claiming otherwise — that claim was true of the
 PANEL doorway only (both dispatch generically through the shared reducer), never checked against the

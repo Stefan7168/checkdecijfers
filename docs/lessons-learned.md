@@ -6,6 +6,65 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 123 — a task-scoped review structurally cannot see where "is the computation
+## right" and "does the screen say what the computation found" diverge; that seam is what
+## a final whole-branch review exists to catch
+
+1. **The four Important findings the final whole-branch review made were ALL on the
+   presentation side of an already-correct computation, and none of the four task-level
+   reviews (including one opus-tier adversarial-execution pass) could have caught them,
+   structurally, not by oversight.** Task 4's own review executed real adversarial inputs
+   against the ownership check and the arithmetic and found three genuine defects there —
+   and was right to call the underlying computation sound afterward. But the final review
+   found: a verdict cleared in an effect (not tied to the render that displays it), so a
+   one-frame stale "Checked" claim can be painted for a re-designated cell before its own
+   verification lands; a designated cell still drawn as one of the parts of the total it
+   is claimed to be checked against, with nothing on screen distinguishing it; and a
+   `{label}` that degrades to an ambiguous shared string for a derived/aggregate chart,
+   so the trust sentence doesn't say whose number it checked. Each of these requires
+   looking at rendering, timing, and copy TOGETHER, across the whole feature — a single
+   task's diff never shows enough of the picture, and even instructing a reviewer to
+   "trace the whole render tree" (which Task 3's own review did, successfully, for a
+   narrower question) doesn't generalize to timing races across renders. **Lesson: budget
+   the final whole-branch review as a distinct KIND of check, not a bigger task review —
+   its job is specifically the seam between "the number is right" and "the screen honestly
+   reports it," and no amount of rigor at the task level substitutes for it.**
+2. **A controller's own mid-build ruling can under-specify a distinction it didn't know it
+   was making, and the resulting bug won't look like the ruling's fault.** Task 3 built
+   two different row-model concerns — `pieRows` (non-null values only, for rendering) — and
+   handed Task 4 a ruling saying "the verification check runs over exactly this
+   currently-displayed set." That ruling was correct about WHICH series count as
+   "currently displayed" (visible, not hidden) but silently conflated it with "which rows
+   should reach the verification arithmetic at all" — a null-valued but genuinely present
+   region should reach the check as an honest `withheld_member`, not vanish from the sum
+   the way an absent-from-rendering row correctly does. The bug (Critical, later fixed)
+   was real and shipped-in-draft because the ruling read as more precise than it was.
+   **Lesson: when ratifying "reuse the exact model tasks in this plan use" as a
+   controller-level ruling, check whether that model was built for a DIFFERENT purpose
+   (rendering) than the one the next task will use it for (verification) — the same
+   filter that's correct for one is not automatically correct for the other, and the
+   controller is the one position in the process positioned to notice this before an
+   implementer builds on the assumption.**
+3. **A green e2e test can encode a confusing UX as "passing" rather than catching it** — the
+   branch's own new e2e assertions for the pie form pinned exactly the ambiguous-label
+   state the final review flagged (two slices both named "Omzet − Kosten", asserted as the
+   expected string) and the still-drawn-as-a-part state (both slices asserted present at
+   their original values right next to a "Checked" note). The test was correctly written
+   against the code as it existed; it just wasn't asked "should this be confusing to a
+   reader," because that was never the test-writing task's question to ask. **Lesson: an
+   e2e assertion proves the code does what it currently does, never that what it currently
+   does is right — a real production-readiness pass has to read the asserted strings/states
+   as a reader would, not just confirm they match.**
+4. **The stale-verdict bug (an effect clearing async state instead of the render deriving
+   it from its own inputs) is now a two-time repeat of the identical bug class in this
+   exact codebase** (the CBS tier's own documented "Final-review fix (M2)" was the first).
+   Both times a review caught it after the fact; neither time did writing the fix prevent
+   a later, different feature from making the same mistake. **Lesson, going into WP-4:
+   whenever a feature computes something async and displays a claim about it, key the
+   displayed state to what produced it (e.g. `{ inputKey, outcome }`, gated at render — not
+   `useState(outcome)` cleared inside `useEffect`) as a house pattern from the start, not
+   as a fix found on review.**
+
 ## Session 122 — a session's own branch constraint can outrank CLAUDE.md's default git workflow, a
 ## sandboxed Playwright's browser revision can drift from the one actually installed, and parallel
 ## subagents can each be internally correct while still not fitting together at a shared type

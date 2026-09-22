@@ -772,6 +772,116 @@ primitives (`addEraShading`, mean-overlay, goal-line still lack a dedicated own-
 difference-overlay, `setDimmed` and `setHeadlineOverride` now have one) — a natural, cheap follow-up if a
 future session is already touching `web/e2e/own-data-copilot.spec.ts`, not scheduled.
 
+## As built — own-data chart-fit + verified-whole parity (session 123, 2026-09-22/23; built, NOT yet merged)
+
+Plan: [superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md](../superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md).
+Full build ledger (every ruling, every task review, the one fix round):
+`.claude/worktrees/own-data-chart-parity/.superpowers/sdd/2026-09-22-own-data-chart-fit-verified-whole-parity/progress.md`
+(git-ignored, on-disk only). Branch `worktree-own-data-chart-parity` @ `d925a911`, worktree kept, not
+pushed to `origin`, not merged to `main`.
+
+- **Picked from [#306](../open-questions.md)'s three open architectural candidates** (own-data phase 5/5b
+  parity, over two-measure charts and Eurostat-in-chat) via explicit owner choice in an owner-present
+  session, not an autonomous default.
+- **The two halves of "phase 5/5b for own-data" are genuinely different, confirmed by investigation before
+  any code was written.** The chart-fit trio (dumbbell/slope/heatmap, phase 5) is a straight port: its
+  guards in `web/lib/chart-view-state.ts` were already generic over series/points shape, not CBS-specific
+  — own-data's render component simply never had matching branches. Verified-whole (pie/stacked/100%-
+  stacked, phase 5b) is NOT a port: CBS's own version (`src/query/whole-verification.ts`) works only
+  because CBS's own ingested dimension metadata independently supplies a roster-completeness signal and a
+  real published total — own-data has zero analogous mechanism, confirmed to not even have a weak one (the
+  closest lookalike, `share_of_total`, computes a percentage assuming completeness, never verifies it).
+- **The Part B design (verified-whole) was presented once and sent back twice before approval** — a first
+  design (CBS's trio unconditionally available on own-data, labelled unverified) was rejected outright; a
+  stronger version (the same availability, but the reader can click a point to designate their own total,
+  running real verification) was ALSO sent back, reading as a signal to stop presenting incremental
+  variants and commit to a genuinely considered answer. The approved design: own-data's pie/stacked/100%-
+  stacked are unconditionally available (no gate — own-data has nothing to gate on), always carrying a
+  visible, honest note about what has/hasn't been checked; the reader can click one point to designate it
+  "the total," running `src/query/whole-verification.ts`'s `verifyPartsSumToWhole` UNCHANGED against that
+  reader-declared cell instead of an independently-audited one. A mismatch is reported, never hidden —
+  deliberately different from CBS, which refuses/hides on an unverifiable whole, because a mismatch here
+  plausibly just means the reader filtered a row on purpose. Full narrative:
+  [status-archive.md](../status-archive.md)'s session-123 entry.
+- **Built via `superpowers:subagent-driven-development`, 5 sequential tasks + 1 fix round, one worktree,
+  one implementer at a time** (this card's own tab-strip/render-tree fragility, the same class of risk
+  session 116 documented for its CBS sibling `chart.tsx`). Model tiers: Fable for Tasks 1-3 (mechanical
+  ports with bounded judgment), Sonnet stepped up for Task 4 (a new ownership-sensitive server action) and
+  Task 5 (the fixture-regen-risk chat wiring); Sonnet for four task reviews, **Opus for Task 4's review and
+  the final whole-branch review** — the two places with real security/arithmetic/architectural stakes.
+- **Task 1 (slope/heatmap) correctly deferred widening the chat-facing forms list** to Task 5 rather than
+  following its brief literally — widening it then would have shifted a prompt-embedded list
+  (`CopilotCapabilities['forms']`) out of sequence with Task 5's own planned single combined fixture regen,
+  the exact class of risk `docs/lessons-learned.md`'s `[[feedback_llm_prompt_embedded_lists_hash_risk]]`
+  documents. The controller ratified this and amended the plan document itself so Tasks 3/5 inherited the
+  corrected three-step pipeline (shared scorer → own-data render cap → chat wire cap).
+- **Task 2 (dumbbell)**: mirrored, not extracted, from `chart.tsx`'s own `DumbbellOverlay` — every
+  extraction path would have required editing the deliberately read-only `chart.tsx`, plus a real
+  prop-contract difference (this card's two-level opacity vs. CBS's boolean `dimmed`; no provisional-cell
+  concept on this tier). Independently re-verified geometry-byte-for-byte-identical to the CBS original by
+  its reviewer, not accepted from the report.
+- **Task 3 (unconditional pie/stacked/100%-stacked)**: three new own-data-only guard functions
+  (`ownDataPieFormAllowed`/`ownDataStackedFormAllowed`/`ownDataStacked100FormAllowed`), deliberately never
+  sharing a function with CBS's registry-gated ones, so "verified" and "unconditional" can never be
+  confused by a future edit. Needed two necessary out-of-brief additions, both ratified: a
+  `chart-commands.ts` validator fix (without it, a persisted `setForm: 'pie'` silently vanished on reload)
+  and a fourth guard-layer function, `ownDataFallbackForm` (the shared `fallbackForm` calls CBS's gated
+  guards internally, which would always collapse own-data's selection back to `table`). This task's own
+  review was the strongest of the build: independently traced the full render-dispatch chain and confirmed
+  the honesty note is architecturally unable to be silently absent while a whole form renders, and
+  confirmed — by type, by grep, and by behavioral test — that the three guards are completely blind to
+  `regionScope`.
+- **Task 4 (reader-designated total)** — `src/attachments/verify-whole.ts` (resolves a rowRef's real value
+  via the same `allResolvedPoints` resolution `derive-overlay.ts` already trusts, then calls
+  `verifyPartsSumToWhole` unchanged), `web/app/dataset-whole-verification-actions.ts` (the ownership-checked
+  server action, mirroring `dataset-derivation-actions.ts`'s pattern exactly), `setWholeReference` in the
+  shared `chart-commands.ts` reducer, a custom `<Sector>`-wrapping shape for the pie slice (Recharts
+  silently clobbers a `<Cell>`'s own `tabIndex`, confirmed against the installed library source). **The
+  original review (opus, adversarial-execution mandate) found 1 Critical + 2 Important real defects by
+  executing probes against the actual code, not reading it**: the pie's parts list was built from a
+  rendering-only row model (`pieRows`, non-null values only) that silently dropped a genuinely null visible
+  region instead of letting it reach the check as an honest `withheld_member` — proven end-to-end with a
+  real 3-region spec, turning what should have been a refusal into a false `verified: true`; a stale
+  verdict that could survive a rejected network request forever; an empty-parts-list case that could show a
+  false verdict. All three fixed in one round — a separate `pieVerificationRows` (same source, filtered by
+  hidden-series only, never by null-ness) restores the render/verify separation — and independently
+  re-verified, including hand-tracing the exact adversarial scenario through the post-fix code and
+  re-running the reused arithmetic's own pre-existing test to close the loop.
+- **Task 5 (chat wiring + fixture regen + e2e)** ran this plan's first full project verification block and
+  treated the fixture regeneration — this codebase's own two-time-repeat failure class — with matching
+  rigor: mechanically checked all 10 renamed pairs and grepped every diff hunk for response-object field
+  names (zero matches, proof the regen only ever shifted prompt-embedded request bytes). Also found and
+  fixed a genuine, previously-undetected React 19 bug in Task 4's own pie-slice code (spreading a
+  `key`-bearing props object onto `<Sector>`), caught only because this task's e2e run was the first
+  real-browser exercise of own-data's pie ever — verified via revert-and-reproduce.
+- **Final whole-branch review (opus): "Ready to merge, WITH FIXES."** No Critical. Four Important
+  findings, all on the presentation side of an already-correct computation — the property no single task
+  review could see, since it requires tracing rendering, timing and copy together across the whole feature:
+  (I1) the displayed verdict is cleared inside a `useEffect`, not derived at render from what produced it,
+  so a re-designation can paint a stale "Checked" claim for one frame before its own verification lands (no
+  existing test covers the A→B re-designation transition); (I2) the designated cell is still drawn as one
+  of the parts of the very total it is claimed to sum to, with no visual or ARIA marker — the branch's own
+  e2e pins this exact confusing state as expected (two 60-value slices, one designated, "Checked" note, pie
+  still visually totals 120); (I3) the note's `{label}` degrades to an ambiguous shared string on a
+  derived/aggregate own-data chart (a pre-existing, chart-wide label collision this branch made
+  load-bearing for a trust claim for the first time); (I4) the designation click remains a dead-but-
+  clickable affordance with no edit context, the exact "silently-broken doorway" class this same file
+  already guards against 180 lines away for a different control (`#310`'s own precedent). The reviewer
+  wrote concrete, small fixes for all four; none touch prompt bytes.
+- **Verification (measured, on the branch, all green):** root+web typecheck clean; root vitest 207f/3186t;
+  web vitest 147f/2698t; real Playwright `own-data-copilot.spec.ts` 8/8 (4 new) and `chart-copilot.spec.ts`
+  22/22 unchanged (CBS regression, confirmed no CBS-facing file anywhere in the branch's diff); hermetic
+  benchmark 14/14+6/6+0 fabricated, GATE PASS; real `next build` clean.
+- **Not merged, deliberately** — per session 121→122's own precedent, the fix wave was scoped but not
+  applied when the owner's session-wrap-up signal arrived right as the final review landed; rushing a
+  fix-and-merge cycle in a session's closing minutes is exactly the risk that precedent exists to avoid.
+- **Deferred, correctly triaged as non-blocking by the final review, not silently dropped:** 2 minors from
+  Task 4 (a shape-factory re-creation loses keyboard focus after a designation click; an aggregate `sum`
+  part can mask a missing source cell, pre-existing); carry-forward minors from Tasks 1-3; 2 new from the
+  final pass (8, not 3, hand-maintained copies of the 11-form list with no cross-check test — 2 of the 8
+  could be deleted rather than tested; `user-chart.tsx`'s growth to 2574 lines, organized but a future
+  extraction candidate).
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
