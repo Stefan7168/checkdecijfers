@@ -43,8 +43,10 @@ session to "continue working autonomously, for hours and hours" — verify again
   cell (pre-existing); 8 hand-maintained copies of the 11-form list with no cross-check test.
 - **Open architectural candidates ([#306](open-questions.md)):** (b) two-measure charts — HELD per
   [#296](open-questions.md) until usage evidence; (c) Eurostat answerable in chat (ADR
-  [048](decisions/048-eurostat-data-source.md) phase E2) — not yet designed, needs an owner-signed design
-  round (it touches live money-path code and public claims). (d) own-data parity is now done.
+  [048](decisions/048-eurostat-data-source.md) phase E2) — **session 124 drafted a design PROPOSAL for its
+  first slice, "E2a: country-level answers"** ([spec](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md),
+  [#313](open-questions.md)): six owner decisions pending, nothing built; its step 0 needs live parse
+  recording (after the API cap lifts 2026-10-01). (d) own-data parity is now done.
 - **Owner steps pending — unchanged since session 110/111** (registry:apply, DOI backfill, live benchmark,
   region-set Task 9, audit row 22, all `:record` real-model fixture confirmations) — blocked on the
   Anthropic workspace usage cap, which lifts 2026-10-01.
