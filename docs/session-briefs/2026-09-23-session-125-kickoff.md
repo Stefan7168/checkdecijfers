@@ -6,7 +6,7 @@ this file is a snapshot written 2026-09-23, session 124, not a live source.
 
 ## The short version
 
-`main` is at `a996d3fa` plus session 124's own wrap-up docs commit. **Own-data chart-fit + verified-whole
+`main` is at `a996d3fa` plus session 124's wrap-up docs commits (docs only). **Own-data chart-fit + verified-whole
 parity is LIVE** (`7694cf5c`, CI run 35766585479 green incl. deploy). Session 124 then worked autonomously
 (owner: "Continue working autonomously, for hours and hours") and left **four PRs for the owner's review**,
 plus a **design proposal** for Eurostat in chat. Nothing is half-built on a local branch: all four PR
