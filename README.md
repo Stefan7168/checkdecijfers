@@ -10,9 +10,13 @@ never guesses. CBS is the primary source; Eurostat is a second data source built
 flag-gated adapter (`EUROSTAT_EXPLORER_ENABLED`, [ADR 048](docs/decisions/048-eurostat-data-source.md)) —
 not yet reachable from the public chat. The interface itself is bilingual (a Dutch/English switch
 in the header). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
-CBS/Eurostat chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when
-comparing multiple regions across multiple periods, each offered only when it stays honest for the
-data on screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5). A chart can also be read as its
+chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when comparing
+multiple series across multiple periods, each offered only when it stays honest for the data on
+screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5; on CBS/Eurostat charts and, since
+2026-09-23, on the reader's own uploaded data too). Pie/stacked/100%-stacked are offered on a CBS
+chart only when the parts are verified to add up to a published total (phase 5b); on own data they are
+always available with an honest note, and the reader can click a slice to name it as the total and
+have the app check the arithmetic. A chart can also be read as its
 alternate definition or as period-over-period %-change instead of the level, restyled with
 templates — per chart or as an account default — captioned with a journalist headline and free-text
 notes, paired with plain-language insights or built into a multi-chart story, downloaded as PNG,

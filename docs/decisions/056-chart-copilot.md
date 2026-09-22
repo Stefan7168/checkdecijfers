@@ -772,13 +772,14 @@ primitives (`addEraShading`, mean-overlay, goal-line still lack a dedicated own-
 difference-overlay, `setDimmed` and `setHeadlineOverride` now have one) — a natural, cheap follow-up if a
 future session is already touching `web/e2e/own-data-copilot.spec.ts`, not scheduled.
 
-## As built — own-data chart-fit + verified-whole parity (session 123, 2026-09-22/23; built, NOT yet merged)
+## As built — own-data chart-fit + verified-whole parity (session 123 build, 2026-09-22/23; session 124 fix wave + merge, 2026-09-23)
 
 Plan: [superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md](../superpowers/plans/2026-09-22-own-data-chart-fit-verified-whole-parity.md).
 Full build ledger (every ruling, every task review, the one fix round):
 `.claude/worktrees/own-data-chart-parity/.superpowers/sdd/2026-09-22-own-data-chart-fit-verified-whole-parity/progress.md`
-(git-ignored, on-disk only). Branch `worktree-own-data-chart-parity` @ `d925a911`, worktree kept, not
-pushed to `origin`, not merged to `main`.
+(git-ignored, on-disk only). Branch `worktree-own-data-chart-parity` (`d925a911` + the session-124 fix
+wave `133176aa`), **merged to `main` as `7694cf5c` (session 124, 2026-09-23) — LIVE**, CI run
+[35766585479](https://github.com/Stefan7168/checkdecijfers/actions/runs/35766585479) measured green end to end — all 3 `backend` shards, `web` (typecheck, unit tests, real Playwright e2e) and `deploy` (build → Vercel deploy → post-deploy smoke check, job [106879678084](https://github.com/Stefan7168/checkdecijfers/actions/runs/35766585479/job/106879678084)), every job `success`.
 
 - **Picked from [#306](../open-questions.md)'s three open architectural candidates** (own-data phase 5/5b
   parity, over two-measure charts and Eurostat-in-chat) via explicit owner choice in an owner-present
@@ -868,13 +869,34 @@ pushed to `origin`, not merged to `main`.
   clickable affordance with no edit context, the exact "silently-broken doorway" class this same file
   already guards against 180 lines away for a different control (`#310`'s own precedent). The reviewer
   wrote concrete, small fixes for all four; none touch prompt bytes.
-- **Verification (measured, on the branch, all green):** root+web typecheck clean; root vitest 207f/3186t;
+- **Verification (measured after the session-124 fix wave, all green before the merge push):** root+web
+  typecheck clean; root vitest 207f/3186t; web vitest 147f/2703t (+5); real Playwright `own-data-copilot.spec.ts`
+  8/8 and `chart-copilot.spec.ts` 22/22 (30/30); hermetic benchmark 14/14+6/6+0 fabricated, GATE PASS; real
+  `next build` clean. The merged tree's code is byte-identical to the verified branch (`main`'s only extra
+  commit was docs). **Session-123 verification (on the branch, before the fix wave):** root vitest 207f/3186t;
   web vitest 147f/2698t; real Playwright `own-data-copilot.spec.ts` 8/8 (4 new) and `chart-copilot.spec.ts`
   22/22 unchanged (CBS regression, confirmed no CBS-facing file anywhere in the branch's diff); hermetic
   benchmark 14/14+6/6+0 fabricated, GATE PASS; real `next build` clean.
-- **Not merged, deliberately** — per session 121→122's own precedent, the fix wave was scoped but not
-  applied when the owner's session-wrap-up signal arrived right as the final review landed; rushing a
-  fix-and-merge cycle in a session's closing minutes is exactly the risk that precedent exists to avoid.
+- **Not merged in session 123, deliberately** — per session 121→122's own precedent, the fix wave was
+  scoped but not applied when the owner's session-wrap-up signal arrived right as the final review landed.
+- **Session 124 fix wave (`133176aa`) — all four Important findings closed, then merged (`7694cf5c`).**
+  (I1) `wholeVerification` now stores `{ key, outcome }`, the key being instruction + designated rowRef +
+  the exact parts list; the render reads a verdict only when its key equals the CURRENT inputs, so no frame
+  can claim a check that was not run — the regression test records every committed note text via a
+  `MutationObserver` during an A→B re-designation and was verified to FAIL with the key gate reverted. The
+  effect's own clears stay as belt-and-braces. The key also covers a data edit with unchanged rowRefs, a
+  case the review did not name. (I2) A shared `wholeReferenceMarkProps` gives the designated slice/segment a
+  foreground outline (`stroke: var(--foreground)`, width 3, `data-whole-reference`), makes every clickable
+  slice/segment an `aria-pressed` toggle, and gives the designated one its own accessible name ("…
+  designated as the total — click to clear"). Presentation only — no value, size or label changes. (I3)
+  Resolved by the I2 mark, not the label pipeline (kept out of scope as the kickoff instructed): the
+  real-browser e2e now pins exactly one marked slice on the "Omzet − Kosten" fixture where both slices share
+  one label. (I4) `wholeDesignationClick` passes the click to the pie/stack shapes only when `datasetId` and
+  the instruction exist (the same reason as the difference/average controls' `edit !== undefined` gate,
+  #310's class); without it the shapes carry no role/tabIndex/label, and — beyond the reviewer's own fix —
+  the note gets a new `not_checked_read_only` state that drops "click a point to verify", since that
+  invitation would otherwise promise the very action I4 removed. No prompt bytes touched, no fixture regen.
+  `/code-review` LOW on the fix-wave diff: no findings.
 - **Deferred, correctly triaged as non-blocking by the final review, not silently dropped:** 2 minors from
   Task 4 (a shape-factory re-creation loses keyboard focus after a designation click; an aggregate `sum`
   part can mask a missing source cell, pre-existing); carry-forward minors from Tasks 1-3; 2 new from the
