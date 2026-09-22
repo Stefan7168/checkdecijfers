@@ -19,8 +19,30 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 further continuation — verify against
-`git log`/CI before trusting this).** **`main` is NOW AT `e9f3cae`** — own-data co-pilot parity (goal
-line, era shading, difference/mean overlay brought to the "eigen data" card; `setDimmed`/
+`git log`/CI before trusting this).** **`main` is NOW AT `7cf6035`** (on top of `14bc8ba`) — closed the
+two Minor findings the phase-6 final review deliberately left open, [#307](open-questions.md) (the
+mean-overlay prompt claim, wrong in BOTH tiers — the own-data prompt inherited it when copied from the
+CBS tier's structure) and [#308](open-questions.md) (real-browser render proof for the other four chat
+command kinds: `setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`, `addGoalLine`). Picked up fully
+autonomously (owner: "Work continuously autonomously") by triaging STATUS/open-questions for the next
+legitimate, non-owner-gated work rather than idling. **PUSHED, CI TRIGGERED, NOT YET CONFIRMED** — run
+[35703474846](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846) was `in_progress` as
+of this write; a scheduled check-in will confirm `gate` AND `deploy` and this block will be updated with
+the measured result, not assumed. **Locally measured, all green before push:** root+web typecheck clean;
+root vitest 206f/3159t (one hardcoded prompt-version-pin test updated to match the intentional bump); web
+vitest 146f/2606t unchanged; real Playwright `chart-copilot.spec.ts` 22/22 (18 existing + 4 new) and
+`own-data-copilot.spec.ts` 2/2, both confirmed via an `exact` llm-stub hit; hermetic benchmark
+14/14+6/6+0 fabricated, GATE PASS; `/code-review` LOW: no findings; real `next build`: clean. First-run
+finding caught and fixed before commit (wrong test assumption, not a product bug — see
+[lessons-learned.md](lessons-learned.md) session 122 point 8). Full account: ADR 056's new "As built —
+prompt-accuracy fix + full e2e render coverage" section. **Residual, not part of this fix:** the own-data
+tier's equivalent of #308 (only its difference overlay has a dedicated e2e case) remains open, tracked in
+ADR 056's own-data-parity note, not scheduled.
+
+---
+
+**Superseded by the above, kept as history:** `main` was previously at `e9f3cae` — own-data co-pilot
+parity (goal line, era shading, difference/mean overlay brought to the "eigen data" card; `setDimmed`/
 `setHeadlineOverride` were already own-data-wired) is LIVE, CONFIRMED not just pushed: CI run
 [35696279101](https://github.com/Stefan7168/checkdecijfers/actions/runs/35696279101) measured green end
 to end — `web` (typecheck, unit tests, real Playwright e2e incl. the new chat-driven difference-overlay
@@ -33,8 +55,7 @@ available this session, confirmed by trying it — used direct `Agent` worktrees
 integration pass that found and fixed a real interface mismatch between two of the three pieces (a shared
 `resultIds: string[]` command shape vs. a label-based server-action signature — see ADR 056's "As built —
 own-data co-pilot parity" section for the full account). Full detail: [open-questions #311](open-questions.md).
-**Nothing pending from this line of work — fully shipped.** Own-data equivalents of phase 5/5b (extra
-chart forms, verified-whole) remain unbuilt and unscheduled, not investigated this session.
+Own-data equivalents of phase 5/5b (extra chart forms, verified-whole) remain unbuilt and unscheduled.
 
 ---
 

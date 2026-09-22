@@ -103,6 +103,26 @@ on top.
    already demonstrated it cannot succeed. The two branches above are still sitting on `origin`, fully
    merged into `main`, zero data risk either way, waiting on the owner's own 10 seconds whenever convenient.**
 
+8. **"The chat and the panel share one command vocabulary and one history" does not mean every PANEL
+   CONTROL reflects that shared state — some controls are scoped to a click-triggered UI moment, not to
+   the state itself.** Writing the first real-browser proof that a chat-driven `setHeadlineOverride`
+   renders correctly (further continuation, closing [#308](open-questions.md)), the test asserted the
+   panel's own "Toon standaard hoofdcijfer" (clear override) button appears after the chat command
+   applies — reasoning by analogy from the dim test just above it, where the panel's Dim button's
+   `aria-pressed` genuinely does read live off shared reducer state regardless of doorway. It failed: a
+   real `next build`-backed Playwright run (not a guess) showed the button never renders. Reading
+   `chart.tsx`'s own `onSetHeadline` comment explained why — that control lives INSIDE the pending-point
+   POPOVER for whichever point was just clicked, gated on a popover being open, not on
+   `headlineOverrideResultId` being set. A chat command never opens that popover, so the button correctly
+   never appears — not a bug, a wrong test assumption. **Fixed by reading the component's actual render
+   condition instead of assuming parity from a sibling test, and replacing the assertion with a stronger,
+   genuinely doorway-independent one: the headline figure's own text and `data-label-for` prove the
+   CORRECT point was featured, which every doorway does share.** General lesson: when a new doorway's e2e
+   test wants to reuse an existing doorway's assertion for "the same state changed," check what that
+   assertion is actually conditioned on (shared state vs. a local interaction artifact) before reusing it
+   — the CLAUDE.md Golden Rule ("verify every fact against reality") applies exactly as much to a test's
+   own assumptions as to a doc's.
+
 ## Session 121 — a prompt-embedded capability's fixture-hash break doesn't need a revert or live
 ## spend; it needs an offline regeneration, and a wrong reviewer claim can still sit beside a real finding
 

@@ -673,6 +673,58 @@ by unit tests + the shared-mechanism proof above, same accepted gap class as
 [#308](../open-questions.md)); a homepage/gallery surface for any of this (out of scope, same as every
 other co-pilot phase).
 
+## As built — prompt-accuracy fix + full e2e render coverage (session 122, further continuation, 2026-09-22)
+
+Closed the two Minor findings the phase-6 final whole-branch review left deliberately unfixed
+([#307](../open-questions.md), [#308](../open-questions.md)) — picked up autonomously (owner: "Work
+continuously autonomously"), no new architecture, both self-contained.
+
+**#307 — the mean-overlay prompt claim.** Both tiers' `addDerivedOverlay` bullet told the model the
+`mean` variant averages "every point of that series currently on the chart" — read as zoom-windowed. It
+never was: `map.ts`'s mean branch (both tiers) has no view-state parameter to window by, a deliberate
+choice each file's own comment already defended (naming the series is the reader's own disambiguation).
+The own-data tier's prompt is a COPY of this tier's structure (its own header comment says so), so it
+inherited the identical false wording verbatim, not something built fresh — a second, silent instance of
+the same bug the review only found in one place. Fixed the CLAIM to match the always-correct BEHAVIOR,
+in both files, rather than adding windowing logic neither file's own design wanted. `CBS_COPILOT_PROMPT_
+VERSION` 4→5, `COPILOT_PROMPT_VERSION` 2→3 — both prompt-byte changes, both fixture sets regenerated
+offline (`chart-copilot:fixtures` / `attachments:fixtures`, free, no live spend, same mechanism sessions
+121/122 already proved for #301/#275).
+
+**#308 — render proof for the other four chat command kinds.** `chart-copilot.spec.ts` proved
+`addEraShading` renders in a real browser; `setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`,
+`addGoalLine` had only the shared-request-bytes fixture proof plus unit coverage. Added one test per
+kind, each reusing its exact fixture message from `tests/fixtures/chart-copilot/cases.ts` and the same
+rendering assertions its own PANEL-driven e2e test elsewhere in the same file already proves — the chat
+doorway and the panel doorway dispatch through the identical reducer, so a proof already trusted for one
+doorway is a legitimate proof for the other, provided the assertion is actually state-based rather than
+interaction-artifact-based (see the next paragraph for exactly where that distinction bit).
+
+**First-run finding, fixed before commit:** the `setHeadlineOverride` test initially asserted the panel's
+"Toon standaard hoofdcijfer" (clear override) button appears after the chat command applies, reasoning by
+analogy from the dim test's `aria-pressed` check just above it. It failed a real run — `chart.tsx`'s own
+`onSetHeadline` comment explains that control renders only inside the pending-point POPOVER for whichever
+point was just clicked, not off `headlineOverrideResultId` globally, so a chat-driven override (no
+popover ever opened) correctly never shows it. Not a product bug — a wrong test assumption, corrected by
+reading the actual render condition and asserting something genuinely doorway-independent instead (the
+headline figure's own text + `data-label-for`, proving the CORRECT point was featured). See
+[lessons-learned.md](../lessons-learned.md), session 122 point 8, for the general form of this lesson.
+
+**Verification (measured, all green):** root + web typecheck clean; root vitest 206 files / 3,159 tests
+(one pre-existing hardcoded version-pin test, `tests/attachments/copilot-prompt.test.ts`, updated to
+match the intentional bump — the only test in either suite that names a literal prompt version); web
+vitest 146 files / 2,606 tests (unchanged — this work touched no `web/` source, only its `e2e/` spec);
+real Playwright `chart-copilot.spec.ts` 22/22 (18 existing + 4 new) and `own-data-copilot.spec.ts` 2/2,
+both confirmed via the request log's own `exact` llm-stub hit (never the 60-character prefix fallback —
+the standing proof that a fixture regeneration produced byte-identical bytes to what the browser actually
+sends); hermetic benchmark 14/14 answerable + 6/6 refusal + 0 fabricated, GATE PASS; `/code-review` LOW on
+the diff: no findings; real `next build`: clean. Pushed directly to `main` (two commits, `14bc8ba` +
+`7cf6035`), per this session's own established owner-present direct-push precedent.
+
+**Not built:** the own-data tier's equivalent of #308 (only its difference overlay has a dedicated e2e
+case; `setDimmed`/`setHeadlineOverride`/`addEraShading`/mean-overlay/goal-line lack one there) — out of
+scope for this row, tracked as an open gap in the own-data-parity as-built note above, not this one.
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
