@@ -53,8 +53,23 @@ export const viewCommandSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('setTitle'), title: z.string().nullable() }),
   z.strictObject({ kind: z.literal('setCaption'), caption: z.string().nullable() }),
   z.strictObject({ kind: z.literal('addNote'), seriesLabel: z.string(), xLabel: z.string(), text: z.string() }),
-  // Own-data wiring of the CBS tier's co-pilot phase 6 primitives: x-axis
-  // LABELS resolved to x KEYS by map.ts exactly like addNote resolves
+  // Own-data wiring of the CBS tier's co-pilot phase 6 primitives (session
+  // 122, further continuation — closing the gap #311 left open: these two
+  // were never given to this tier's schema, even though the PANEL already
+  // dispatches both generically via the shared reducer). Labels resolved by
+  // map.ts exactly like setSeriesView / addNote.
+  z.strictObject({
+    kind: z.literal('setDimmed'),
+    hiddenLabels: z.array(z.string()),
+    dimmedLabels: z.array(z.string()),
+  }),
+  z.strictObject({
+    kind: z.literal('setHeadlineOverride'),
+    // Both null clears the override; otherwise both must name a real point.
+    seriesLabel: z.string().nullable(),
+    xLabel: z.string().nullable(),
+  }),
+  // x-axis LABELS resolved to x KEYS by map.ts exactly like addNote resolves
   // xLabel; the label text is digit-guarded there.
   z.strictObject({ kind: z.literal('addEraShading'), fromLabel: z.string(), toLabel: z.string(), label: z.string() }),
   // A computed overlay (difference arrow or mean line) named by series

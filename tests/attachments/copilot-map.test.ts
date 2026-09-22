@@ -280,11 +280,73 @@ describe('rule 7 — addNote resolves a point by series + x label', () => {
 });
 
 // Own-data wiring of the CBS tier's co-pilot phase 6 primitives (mirrors
-// tests/chart/copilot-map.test.ts's own describe blocks for these three
+// tests/chart/copilot-map.test.ts's own describe blocks for these five
 // kinds, adapted to CHART_FIXTURE's shape: Amsterdam has points at '2020'
 // and '2021' only; Rotterdam has '2020' (real), '2021' (null) and '2022'
 // (negative) — so a label may resolve chart-wide (via Rotterdam) while
 // still not being a point of Amsterdam's own series).
+//
+// setDimmed and setHeadlineOverride specifically (session 122, further
+// continuation, open-questions #311): added later than the other three —
+// the original own-data-parity pass skipped them on the wrong assumption
+// that the panel already dispatching both generically meant the chat could
+// name them too. It could not; this closes that gap.
+describe('setDimmed — labels resolve to s${index} keys, hidden and dimmed alike', () => {
+  it('maps a dimmed label, leaving hidden empty', () => {
+    const { commands, refused } = map(output([{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Rotterdam'] }]));
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: [], dimmedKeys: ['s1'] }]);
+  });
+
+  it('maps hidden and dimmed labels together', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'setDimmed', hiddenLabels: ['Amsterdam'], dimmedLabels: ['Rotterdam'] }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: ['s0'], dimmedKeys: ['s1'] }]);
+  });
+
+  it('refuses the whole command on an unknown label, with control form', () => {
+    const { commands, refused } = map(output([{ kind: 'setDimmed', hiddenLabels: ['Utrecht'], dimmedLabels: [] }]));
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'series: Utrecht', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a label named as both hidden and dimmed — the client would drop that on dispatch', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'setDimmed', hiddenLabels: ['Rotterdam'], dimmedLabels: ['Rotterdam'] }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'series: Rotterdam', reason: 'invalid', control: 'form' }]);
+  });
+});
+
+describe('setHeadlineOverride — the point resolves to its own rowRef', () => {
+  it('resolves a real point by (seriesLabel, xLabel)', () => {
+    const { commands, refused } = map(output([{ kind: 'setHeadlineOverride', seriesLabel: 'Amsterdam', xLabel: '2021' }]));
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'setHeadlineOverride', resultId: 'r2:c2' }]);
+  });
+
+  it('both labels null clears the override', () => {
+    const { commands, refused } = map(output([{ kind: 'setHeadlineOverride', seriesLabel: null, xLabel: null }]));
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'setHeadlineOverride', resultId: null }]);
+  });
+
+  it('refuses one label without the other, pointing at the notes editor', () => {
+    const { commands, refused } = map(output([{ kind: 'setHeadlineOverride', seriesLabel: 'Amsterdam', xLabel: null }]));
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'headline: Amsterdam @ ?', reason: 'not_on_this_chart', control: 'notes' }]);
+  });
+
+  it('refuses a point that does not exist', () => {
+    const { commands, refused } = map(output([{ kind: 'setHeadlineOverride', seriesLabel: 'Amsterdam', xLabel: '2099' }]));
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'headline: Amsterdam @ 2099', reason: 'not_on_this_chart', control: 'notes' }]);
+  });
+});
+
 describe('addEraShading — labels resolve to x keys, the label is digit-guarded', () => {
   it('resolves both labels, swapping reversed labels into ascending order', () => {
     const { commands, refused } = map(output([{ kind: 'addEraShading', fromLabel: '2022', toLabel: '2020', label: 'Herstel' }]));

@@ -265,8 +265,72 @@ export function mapCopilotOutput(
         break;
       }
 
-      // Own-data wiring of the CBS tier's co-pilot phase 6 primitives.
-      //
+      // Own-data wiring of the CBS tier's co-pilot phase 6 primitives
+      // (session 122, further continuation): the two below were left out
+      // of the original own-data-parity pass on the wrong assumption that
+      // "the panel already dispatches these generically" meant the CHAT
+      // doorway could reach them too — it could not, since neither had ever
+      // been added to THIS tier's own schema/map/prompt (open-questions
+      // #311's own residual note, closed here). Same label→key lookup as
+      // setSeriesView, and one unknown label refuses the WHOLE command for
+      // the same reason. A label named in BOTH lists is refused as well:
+      // chart-commands.ts's validateCommand drops a key that is hidden and
+      // dimmed at once, and a stored command must never be one the client
+      // will drop.
+      case 'setDimmed': {
+        const unknown = [...command.hiddenLabels, ...command.dimmedLabels].find((label) => !seriesIndex.has(label));
+        if (unknown !== undefined) {
+          out.refused.push({ request: cap(`series: ${unknown}`), reason: 'not_on_this_chart', control: 'form' });
+          break;
+        }
+        const both = command.hiddenLabels.find((label) => command.dimmedLabels.includes(label));
+        if (both !== undefined) {
+          out.refused.push({ request: cap(`series: ${both}`), reason: 'invalid', control: 'form' });
+          break;
+        }
+        out.commands.push({
+          kind: 'setDimmed',
+          hiddenKeys: command.hiddenLabels.map((label) => `s${seriesIndex.get(label)!}`),
+          dimmedKeys: command.dimmedLabels.map((label) => `s${seriesIndex.get(label)!}`),
+        });
+        break;
+      }
+
+      // Both labels null clears the reader's own headline choice — always
+      // available, nothing to look up. Otherwise the point is found exactly
+      // as addNote finds its anchor, by (series label, x label), and the
+      // command carries that point's own rowRef — the same handle addNote's
+      // anchor uses, so a replay can never move it to another cell. A point
+      // that does not resolve sends the reader to the notes editor, mirroring
+      // the CBS tier's own treatment of this case.
+      case 'setHeadlineOverride': {
+        if (command.seriesLabel === null && command.xLabel === null) {
+          out.commands.push({ kind: 'setHeadlineOverride', resultId: null });
+          break;
+        }
+        if (command.seriesLabel === null || command.xLabel === null) {
+          out.refused.push({
+            request: cap(`headline: ${command.seriesLabel ?? '?'} @ ${command.xLabel ?? '?'}`),
+            reason: 'not_on_this_chart',
+            control: 'notes',
+          });
+          break;
+        }
+        const headlinePoint = chart.series
+          .find((series) => series.label === command.seriesLabel)
+          ?.points.find((p) => p.xLabel === command.xLabel);
+        if (headlinePoint === undefined) {
+          out.refused.push({
+            request: cap(`headline: ${command.seriesLabel} @ ${command.xLabel}`),
+            reason: 'not_on_this_chart',
+            control: 'notes',
+          });
+          break;
+        }
+        out.commands.push({ kind: 'setHeadlineOverride', resultId: headlinePoint.rowRef });
+        break;
+      }
+
       // Both labels must resolve to a real x value, CHART-WIDE (the
       // xKeyByLabel lookup built above — an era shades the whole chart, not
       // one series, unlike addDerivedOverlay's per-series lookup below), and

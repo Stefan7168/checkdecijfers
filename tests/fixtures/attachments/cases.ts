@@ -266,6 +266,45 @@ export const CASES: AttachmentCase[] = [
   // tests/fixtures/chart-copilot/cases.ts's own era-shading/derived-overlay/
   // goal-line cases, adapted to this dataset's two years and two cities).
   //
+  // Dim and headline-override (session 122, further continuation,
+  // open-questions #311): added later than the other three below — the
+  // original own-data-parity pass skipped them on the wrong assumption that
+  // the panel already dispatching both generically meant the chat could
+  // name them too. Mirrors tests/fixtures/chart-copilot/cases.ts's own
+  // chat-dim-series/chat-headline-override cases, adapted to this dataset
+  // (2021 stands in for that fixture's 2022 — this CSV has only two years).
+  {
+    label: 'copilot/chat-dim-series',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'Dim Rotterdam in plaats van hem te verbergen',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Rotterdam'] }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Rotterdam dimmed rather than hidden; Amsterdam untouched.',
+    },
+  },
+  {
+    label: 'copilot/chat-headline-override',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'Maak van Amsterdam in 2021 het hoofdcijfer',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'setHeadlineOverride', seriesLabel: 'Amsterdam', xLabel: '2021' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Amsterdam at 2021 is a real point of this chart: made the headline.',
+    },
+  },
   // Era shading: both x labels copied from the chart, plus a typed,
   // digit-free label.
   {

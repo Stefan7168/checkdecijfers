@@ -36,10 +36,14 @@ describe('own-data LLM fixtures', () => {
   // Nine since this tier's own wiring of the CBS co-pilot phase 6
   // primitives: era shading, derived overlay and goal line join the six a
   // house style by name (#275) and the donut this tier has no pie form for
-  // (#301) had already brought the original four to.
-  it('has nine cases over one CSV', () => {
-    expect(CASES).toHaveLength(9);
-    expect(CASES.map((c) => c.kind)).toEqual(['instruct', ...Array(8).fill('copilot')]);
+  // (#301) had already brought the original four to. Eleven since dim and
+  // headline-override (session 122, further continuation, #311) closed the
+  // gap the original wiring pass left — those two were skipped on the wrong
+  // assumption that the panel already dispatching them generically meant
+  // the chat could name them too.
+  it('has eleven cases over one CSV', () => {
+    expect(CASES).toHaveLength(11);
+    expect(CASES.map((c) => c.kind)).toEqual(['instruct', ...Array(10).fill('copilot')]);
     expect(new Set(CASES.map((c) => c.csv))).toEqual(new Set(['verkoop.csv']));
   });
 

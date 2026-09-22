@@ -130,6 +130,19 @@ test.describe.serial('the own-data chart co-pilot', () => {
   // path most worth proving against a REAL server action, not a mock.
   const DIFFERENCE_MESSAGE = 'Laat het verschil zien tussen Amsterdam in 2020 en 2021';
 
+  // setDimmed / setHeadlineOverride (session 122, further continuation,
+  // open-questions #311's own residual note): the two phase-6 primitives
+  // the original parity pass skipped on the wrong assumption that the
+  // PANEL already dispatching them generically (via the shared reducer)
+  // meant the CHAT could name them too — it could not, until this. Both
+  // reuse `chart-series-legend.tsx`/`chart-notes.tsx`, the literal SAME
+  // components chart-copilot.spec.ts's own dim/headline tests exercise —
+  // so the same locators and i18n text apply here, confirmed by reading
+  // the source (aria-label 'Voeg notitie toe bij {series}, {period}'
+  // rather than guessed), not assumed from CBS-tier parity alone.
+  const DIM_MESSAGE = 'Dim Rotterdam in plaats van hem te verbergen';
+  const HEADLINE_MESSAGE = 'Maak van Amsterdam in 2021 het hoofdcijfer';
+
   test(`"${DIFFERENCE_MESSAGE}" through the chat draws a real, server-computed overlay`, async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
@@ -156,5 +169,61 @@ test.describe.serial('the own-data chart co-pilot', () => {
     // +50 (later minus earlier), 0 decimals (both source cells are whole
     // numbers, per decimalsOf's own rule).
     await expect(chartContainer).toContainText('+50');
+  });
+
+  test(`"${DIM_MESSAGE}" through the chat dims the series the panel's own Dim button would`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    const dimButton = page.getByRole('button', { name: /Dim Rotterdam/ });
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'false');
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DIM_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+
+    // The chip proves the chat->schema->map->command chain; the reduced
+    // opacity (dimmed, not hidden — both curves still render) and the
+    // panel's OWN Dim button now reading pressed prove the shared reducer
+    // state genuinely changed, not just that a chip rendered.
+    await expect(copilot.getByRole('button', { name: 'Serie verzwakt' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(page.locator('path[stroke-opacity="0.35"]')).toHaveCount(1, { timeout: 5_000 });
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test(`"${HEADLINE_MESSAGE}" through the chat features the point the panel's own click would`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(HEADLINE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByRole('button', { name: 'Hoofdcijfer aangepast' })).toBeVisible({ timeout: 60_000 });
+
+    // This card has no journalist-style "headline figure" block (that is a
+    // CBS/Eurostat-only feature) — the ONE place `headlineOverrideResultId`
+    // is observable here is the SAME point's own notes popover, which
+    // ChartNotes (shared with the CBS tier) renders differently once an
+    // override is set. Reopening Amsterdam's 2021 point — found by its own
+    // aria-label, read from the source rather than guessed — proves the
+    // state the chat command wrote is the real one the panel would read.
+    await page.getByRole('button', { name: 'Voeg notitie toe bij Amsterdam, 2021' }).click();
+    await expect(page.getByRole('button', { name: 'Toon standaard hoofdcijfer' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('button', { name: 'Maak dit het hoofdcijfer' })).toHaveCount(0);
   });
 });
