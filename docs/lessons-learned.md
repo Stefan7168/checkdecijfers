@@ -6,6 +6,42 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 124 — probe the real DOM before trusting a reviewer's root cause; additive spec fields
+## break byte-for-byte audit reconstruction of OLD rows
+
+1. **A reviewer's stated root cause can be wrong even when the symptom is right.** Session 123's review
+   parked "keyboard focus lost after a designation click" as *shape-factory re-creation* (a fresh `shape`
+   function per render). A real-browser probe that tagged the focused DOM node and its ancestors before
+   pressing Enter showed the slice's wrapper `Layer` was replaced while the `Pie` survived, and reading
+   Recharts 3.10's source found the real cause: `AnimatedItems` keys its children on `useAnimationId`,
+   which changes whenever the component receives a fresh props object (every re-render). Memoising the
+   shape functions, the reviewer's implied fix, would have changed nothing. **Do next time:** before
+   fixing a remount/focus bug, tag the node identity (`isConnected` on saved references) at each ancestor
+   level in a real browser. It takes minutes and names the layer that actually remounts.
+2. **A one-frame stale render is invisible to a post-`act()` DOM read, and a `MutationObserver` makes it
+   testable.** The I1 fix (a verdict shown for a designation it didn't check) was only reproducible as a
+   committed-then-replaced frame. Recording every text the note held (characterData old values plus
+   removed nodes) during the click turned it into a normal failing assertion. It was verified to fail with
+   the fix reverted.
+3. **Adding a field to an audit-reconstructed spec breaks reconstruction of every row stored before
+   it.** Own-data turns are verified by rebuilding the chart and comparing it byte for byte
+   (`src/attachments/reconstruct.ts`). The new `incomplete` point flag (#314) would have made every old row
+   with a gappy aggregate "fail". Caught by grepping for every `buildUserChartSpec` call site before
+   pushing, not by a test. **Do next time:** any change to a stored or reconstructed shape gets a
+   legacy-row test (stored without the field → still reconstructs; tampered value → still fails).
+4. **Keep backup and restore on one path variable.** A revert-and-reproduce check backed up to `$TMPDIR`
+   but restored from the scratchpad path. The restore silently failed and left the fix reverted in the
+   working tree. It was caught by the next `grep`, not by luck. **Do next time:** `cp f "$B"; …; cp "$B" f`
+   with one variable, then grep for the fixed line.
+5. **Don't mutate sources for a mutation check while a long suite runs in the same worktree.** A
+   30-second "drop one form from a list" check ran while the root suite was running in the background on
+   that checkout. It passed this time, but it could have produced a spurious failure. Run mutation checks
+   before or after the long suite, never during it.
+6. **A PR branch should not edit STATUS.md's top block if `main` will edit it too.** PR #37's STATUS
+   paragraph conflicted with a later docs push to `main` about the same PRs and needed a rebase with a
+   manual resolution. Keep STATUS updates on `main` (docs-only pushes are allowed), and let PR branches
+   touch only the rows or sections their own change owns.
+
 ## Session 123 — a task-scoped review structurally cannot see where "is the computation
 ## right" and "does the screen say what the computation found" diverge; that seam is what
 ## a final whole-branch review exists to catch
