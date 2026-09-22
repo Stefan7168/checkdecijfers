@@ -123,6 +123,21 @@ on top.
    — the CLAUDE.md Golden Rule ("verify every fact against reality") applies exactly as much to a test's
    own assumptions as to a doc's.
 
+9. **A claim written into the docs EARLIER IN THIS SAME SESSION still needs re-verification before being
+   carried forward — "I wrote it a few hours ago" is not "I checked it."** The own-data-parity work
+   (earlier this session) recorded "`setDimmed`/`setHeadlineOverride` needed no work, already
+   own-data-wired" in four places (STATUS.md, ADR 056, 08-build-plan.md, open-questions #311). It was
+   half right: true of the PANEL doorway (both dispatch generically through the shared
+   `chart-commands.ts` reducer, wired since an earlier phase), silently wrong about the CHAT doorway,
+   which never had either kind in `src/attachments/copilot/{schema,map,prompt}.ts` at all — only the CBS
+   tier's. This surfaced not from a review or a failing test, but from deliberately re-reading the actual
+   schema.ts file while scoping the next autonomous task, rather than trusting the summary a few messages
+   back said. **The fix touched all four original locations, not just the newest one** — CLAUDE.md's
+   "grep the repo for the OLD framing" instruction applies even when the "old" framing is only hours old
+   and was written by this same session. A session's own recent output is not exempt from the Golden
+   Rule; if anything it is the output most likely to be trusted without re-checking, which is exactly
+   what makes it worth re-checking.
+
 ## Session 121 — a prompt-embedded capability's fixture-hash break doesn't need a revert or live
 ## spend; it needs an offline regeneration, and a wrong reviewer claim can still sit beside a real finding
 

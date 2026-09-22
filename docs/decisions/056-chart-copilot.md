@@ -601,7 +601,9 @@ Brings goal line, era shading, and the derived overlay (difference/mean) — the
 primitives phase 4's own as-built section and phase 6's own as-built section both left "own-data support
 deferred"/"a separate, unscheduled step" — to the "eigen data" (own-data/attachments) chart card, matching
 what the CBS/Eurostat card already had. `setDimmed`/`setHeadlineOverride` needed no work; they were
-already wired for own-data.
+already wired for own-data. **Correction (session 122, further continuation, same day): that last claim
+was true of the PANEL doorway only — the CHAT doorway had never been given either kind at all. See "As
+built — setDimmed/setHeadlineOverride own-data wiring" below, which closes the gap this claim missed.**
 
 Built as three parallel, file-disjoint pieces (three isolated `Agent` worktrees, no `superpowers` plugin
 available in this session's environment so this ran as direct subagent dispatch rather than the packaged
@@ -724,6 +726,51 @@ the diff: no findings; real `next build`: clean. Pushed directly to `main` (two 
 **Not built:** the own-data tier's equivalent of #308 (only its difference overlay has a dedicated e2e
 case; `setDimmed`/`setHeadlineOverride`/`addEraShading`/mean-overlay/goal-line lack one there) — out of
 scope for this row, tracked as an open gap in the own-data-parity as-built note above, not this one.
+
+## As built — setDimmed/setHeadlineOverride own-data wiring (session 122, further continuation, 2026-09-22)
+
+Closes the gap the own-data-parity as-built note above got wrong: `setDimmed`/`setHeadlineOverride`
+"needed no work" was true only of the PANEL doorway (both dispatch generically through the shared
+`chart-commands.ts` reducer, wired since an earlier phase) — the CHAT doorway had never been given either
+kind at all, since neither was ever added to `src/attachments/copilot/{schema,map,prompt}.ts`, only the
+CBS tier's equivalents. Found by directly reading own-data's schema.ts (zero matches for either kind)
+while scoping the next piece of autonomous work, not assumed from the own-data-parity note's own claim —
+exactly the check CLAUDE.md's Doc-freshness rule asks for before repeating a prior session's wording.
+
+Ported from the CBS tier's own `setDimmed`/`setHeadlineOverride` case handlers (co-pilot phase 6, Task 2),
+adapted to own-data's naming (`xLabel` instead of `periodLabel`, `rowRef` instead of `resultId` as the
+point identifier that flows into the shared, loosely-typed `CopilotCommand`): two new schema.ts view-
+command entries, two new map.ts case handlers (the `setDimmed` one reuses the `seriesIndex` map.ts already
+built for `setSeriesView`; the `setHeadlineOverride` one reuses `addNote`'s exact point-lookup pattern),
+two new prompt.ts bullets, `COPILOT_PROMPT_VERSION` 3→4 (a prompt-byte change, fixtures regenerated
+offline, free, no live spend — the same mechanism proven repeatedly this session).
+
+**The headline-override e2e test needed a real finding, not an assumption carried over from the CBS
+tier's own test** (which this session had just fixed for the identical reason, see the section above):
+this card has no "headline figure" big-number block at all — that is a CBS/Eurostat-only journalist
+feature (`chart.tsx`'s own "Journalist chart-headline (Task 6)" comment), never built for own-data.
+`headlineOverrideResultId` is read exactly once in `user-chart.tsx`, passed down into the shared
+`ChartNotes` component purely for that component's own popover-toggle purposes — there is no other
+observable effect. The e2e test verifies the real thing this tier actually has: reopening the SAME
+point's popover (found via its own `aria-label`, `'Voeg notitie toe bij {series}, {period}'`, read from
+`web/lib/i18n/messages.ts` rather than guessed) and asserting it now shows "Toon standaard hoofdcijfer"
+(clear override) instead of "Maak dit het hoofdcijfer" (set override) — `ChartNotes` is the literal same
+component file both tiers import, so this is genuine, not an assumed parity.
+
+**Verification (measured, all green):** root + web typecheck clean; root vitest 206 files / 3,171 tests
+(was 3,159 — the 8 new setDimmed/setHeadlineOverride unit tests mirroring the CBS tier's own describe
+blocks, plus the 2 new fixture-drift-guard cases and the updated case-count pin); web vitest 146 files /
+2,606 tests, unchanged (this work touched no `web/` source, only its `e2e/` spec); real Playwright
+`own-data-copilot.spec.ts` 4/4 (2 new, both passed on the first real run — no wrong-assumption round this
+time, unlike the CBS-tier #308 work) and `chart-copilot.spec.ts` 22/22 (CBS-tier regression check,
+confirms this work touched nothing shared); hermetic benchmark 14/14+6/6+0 fabricated, GATE PASS;
+`/code-review` LOW on the diff: no findings; real `next build`: clean. Pushed directly to `main`
+(`b64ffe7`), per this session's own established owner-present direct-push precedent.
+
+**Not built:** the own-data equivalent of the CBS tier's #308 work remains open for the other three
+primitives (`addEraShading`, mean-overlay, goal-line still lack a dedicated own-data e2e case — only
+difference-overlay, `setDimmed` and `setHeadlineOverride` now have one) — a natural, cheap follow-up if a
+future session is already touching `web/e2e/own-data-copilot.spec.ts`, not scheduled.
 
 ## Revisit triggers
 

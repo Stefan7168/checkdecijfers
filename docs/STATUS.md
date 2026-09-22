@@ -19,33 +19,58 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 further continuation — verify against
-`git log`/CI before trusting this).** **`main` is NOW AT `7cf6035`** (on top of `14bc8ba`) — closed the
-two Minor findings the phase-6 final review deliberately left open, [#307](open-questions.md) (the
-mean-overlay prompt claim, wrong in BOTH tiers — the own-data prompt inherited it when copied from the
-CBS tier's structure) and [#308](open-questions.md) (real-browser render proof for the other four chat
-command kinds: `setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`, `addGoalLine`). Picked up fully
-autonomously (owner: "Work continuously autonomously") by triaging STATUS/open-questions for the next
-legitimate, non-owner-gated work rather than idling. **LIVE, CONFIRMED not just pushed:** CI run
+`git log`/CI before trusting this).** **`main` is NOW AT `b64ffe7`** — closed the residual [#311](open-questions.md)
+gap: `setDimmed`/`setHeadlineOverride` were never actually chat-reachable for own-data, despite this
+STATUS file's own prior top block (below, now superseded) claiming otherwise — that claim was true of the
+PANEL doorway only (both dispatch generically through the shared reducer), never checked against the
+CHAT doorway's own schema.ts, which had neither kind at all. Found while triaging the next piece of
+autonomous work (owner: "Work continuously autonomously") rather than assuming the prior claim was
+correct — exactly the check CLAUDE.md's Doc-freshness rule calls for. Ported both from the CBS tier
+(`xLabel`/`rowRef` naming), `COPILOT_PROMPT_VERSION` 3→4, fixtures regenerated offline. **Push not yet
+CI-confirmed as of this write — verify before trusting "green" for `b64ffe7` specifically.** **Locally
+measured, all green before push:** root+web typecheck clean; root vitest 206f/3171t (was 3159 — 8 new
+unit tests mirroring the CBS tier's own, +2 fixture-drift cases); web vitest 146f/2606t unchanged; real
+Playwright `own-data-copilot.spec.ts` 4/4 (2 new, both passed first try — no wrong-assumption round this
+time) and `chart-copilot.spec.ts` 22/22 (CBS-tier regression, unaffected); hermetic benchmark
+14/14+6/6+0 fabricated, GATE PASS; `/code-review` LOW: no findings; real `next build`: clean. The
+headline-override e2e test needed real source-reading, not CBS-tier-parity assumption: this card has no
+"headline figure" block at all (CBS/Eurostat-only journalist feature) — verified via the shared
+`ChartNotes` popover's own toggle instead, found by reading `user-chart.tsx` directly. Full account: ADR
+056's new "As built — setDimmed/setHeadlineOverride own-data wiring" section.
+**Residual, not part of this fix:** the own-data equivalents of the CBS tier's #308 work (`addEraShading`,
+mean-overlay, goal-line still lack a dedicated own-data e2e case) remain open, not scheduled.
+
+---
+
+**Superseded by the above, kept as history:** `main` was previously at `7cf6035` (on top of `14bc8ba`) —
+closed the two Minor findings the phase-6 final review deliberately left open, [#307](open-questions.md)
+(the mean-overlay prompt claim, wrong in BOTH tiers — the own-data prompt inherited it when copied from
+the CBS tier's structure) and [#308](open-questions.md) (real-browser render proof for the other four
+chat command kinds: `setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`, `addGoalLine`). Picked up
+fully autonomously (owner: "Work continuously autonomously") by triaging STATUS/open-questions for the
+next legitimate, non-owner-gated work rather than idling. LIVE, CONFIRMED not just pushed: CI run
 [35703474846](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846) measured green end
 to end via a scheduled check-in — all 3 `backend` shards, `web` (typecheck, unit tests, real Playwright
 e2e incl. the new command-kind cases), and `deploy` (build → Vercel deploy → post-deploy smoke check, job
 [106668252243](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846/job/106668252243))
-every job and every step `success`. **Locally measured, all green before push:** root+web typecheck clean;
+every job and every step `success`. Locally measured, all green before push: root+web typecheck clean;
 root vitest 206f/3159t (one hardcoded prompt-version-pin test updated to match the intentional bump); web
 vitest 146f/2606t unchanged; real Playwright `chart-copilot.spec.ts` 22/22 (18 existing + 4 new) and
 `own-data-copilot.spec.ts` 2/2, both confirmed via an `exact` llm-stub hit; hermetic benchmark
 14/14+6/6+0 fabricated, GATE PASS; `/code-review` LOW: no findings; real `next build`: clean. First-run
 finding caught and fixed before commit (wrong test assumption, not a product bug — see
-[lessons-learned.md](lessons-learned.md) session 122 point 8). Full account: ADR 056's new "As built —
-prompt-accuracy fix + full e2e render coverage" section. **Residual, not part of this fix:** the own-data
-tier's equivalent of #308 (only its difference overlay has a dedicated e2e case) remains open, tracked in
-ADR 056's own-data-parity note, not scheduled.
+lessons-learned.md session 122 point 8). Full account: ADR 056's "As built — prompt-accuracy fix + full
+e2e render coverage" section. Its "residual" note (the own-data equivalent of #308) is superseded by the
+block above, which covers setDimmed/setHeadlineOverride specifically — the other three own-data kinds
+(era shading, mean-overlay, goal-line) remain the actual open residual.
 
 ---
 
 **Superseded by the above, kept as history:** `main` was previously at `e9f3cae` — own-data co-pilot
 parity (goal line, era shading, difference/mean overlay brought to the "eigen data" card; `setDimmed`/
-`setHeadlineOverride` were already own-data-wired) is LIVE, CONFIRMED not just pushed: CI run
+`setHeadlineOverride` were BELIEVED already own-data-wired — **wrong, corrected same day: true of the
+panel only, the chat doorway had neither; closed in a follow-up, `b64ffe7`, see the current top block**)
+is LIVE, CONFIRMED not just pushed: CI run
 [35696279101](https://github.com/Stefan7168/checkdecijfers/actions/runs/35696279101) measured green end
 to end — `web` (typecheck, unit tests, real Playwright e2e incl. the new chat-driven difference-overlay
 case) and all 3 `backend` shards (incl. hermetic benchmark 14/14+6/6+0 fabricated) passed, and `deploy`
