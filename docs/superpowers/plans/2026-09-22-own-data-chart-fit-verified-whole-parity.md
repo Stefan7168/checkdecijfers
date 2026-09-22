@@ -343,6 +343,28 @@ pie/stacked/stacked100 for own-data, default unverified state`.
   `WholeVerificationOutcome` = `VerifyOutcome` from the reused function (`verified: true` /
   `missing_whole` / `withheld_member` / `sum_mismatch`), each mapped to its own own-data-specific note copy.
 
+**Updated after Task 3 (ratified rulings, see ledger) — read before Step 1:**
+- Task 3 already built the guards (`ownDataPieFormAllowed`/`ownDataStackedFormAllowed`/
+  `ownDataStacked100FormAllowed`, `ownDataFallbackForm`, all in `web/lib/chart-view-state.ts`), the
+  render branches, the row models (`pieRows`, `rows`/`visibleSeries` for the stacks, `stack100.rows`), and
+  the default note (`OWN_WHOLE_NOTE` state map + the single `<p data-testid="own-whole-note"
+  data-state="not_checked">` mount, directly above the provenance footer). Read Task 3's own report
+  (`.superpowers/sdd/2026-09-22-own-data-chart-fit-verified-whole-parity/task-3-report.md`) section "Task 4
+  handoff" FIRST — it documents exactly how to extend the note (add `checked`/`mismatch`/`cannot_check`
+  entries to `OWN_WHOLE_NOTE`, compute `ownWholeNoteState` from your new command + verification outcome
+  instead of the hardcoded `'not_checked'`, thread `{label}` params through) rather than rewriting it.
+- **Ratified ruling: the verification check runs over exactly the same "currently-displayed" set Task 3
+  already established for rendering** (`visibleSeries`' `pieRows` for pie, `rows`/`visibleSeries` for the
+  stacks) — NOT the full series list including hidden ones. This is consistency with what Task 3 already
+  draws (hidden series are already dropped from the pie and the 100%-stacked denominator), not a new
+  semantic choice: the check should verify exactly what the reader is looking at.
+- `web/lib/chart-commands.ts`'s `validateCommand` already has the own-data/CBS split pattern you need
+  (`ctx.profile !== undefined ? ownData... : ...`, added by Task 3 for `setForm`) — your new
+  `setWholeReference` command's validator case follows the same pattern, don't invent a new one.
+- Slices/segments already carry `data-result-id` (the rowRef) and `data-series-key` on the DOM element —
+  Task 3 added these specifically so your designation click can read the rowRef directly off the clicked
+  element without a new lookup mechanism.
+
 - [ ] **Step 1: Read the precedent and the real click-to-pick mechanism in full**
 
 Read `web/app/dataset-derivation-actions.ts`'s `requestDatasetDerivation` completely: its request/response
