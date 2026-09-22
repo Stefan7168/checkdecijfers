@@ -790,7 +790,15 @@ function UserPieSliceLabel(props: PieLabelRenderProps) {
  * + tabIndex + Enter/Space, since a synthetic role on an SVG element gets no
  * native keyboard activation) — `<rect>` is a raw element this function
  * fully controls, so unlike the pie (see UserPieSlice below) there is no
- * Recharts prop-merging to work around. */
+ * Recharts prop-merging to work around.
+ *
+ * Fix wave (session 124, final-review I2): `designatedRowRef` marks the
+ * segment the reader designated as the total — it is still drawn as one of
+ * the bar's segments (the reader's own data, never hidden), so without a
+ * marker nothing on the chart said WHICH segment the note's "checked
+ * against" refers to (and on a derived/aggregate chart, where every series
+ * shares one label, the note's `{label}` alone cannot say it either — I3).
+ * See `wholeReferenceMarkProps` for the shared marker. */
 function UserStackSegment(
   seriesKey: string,
   valueKey: string,
@@ -800,6 +808,7 @@ function UserStackSegment(
   seriesLabel: string,
   onPointClick: ((point: PendingPoint) => void) | undefined,
   lang: Lang,
+  designatedRowRef: string | null,
 ) {
   return function Shape(props: { x?: number; y?: number; width?: number; height?: number; payload?: Row }) {
     const { x, y, width, height, payload } = props;
@@ -810,6 +819,7 @@ function UserStackSegment(
     const label = payload[labelKey];
     const showLabel = label != null && height >= STACK_LABEL_MIN_HEIGHT_PX;
     const periodLabel = payload.periodLabel;
+    const designated = resultId != null && String(resultId) === designatedRowRef;
     const activate = (): void => {
       if (resultId == null || !onPointClick) return;
       onPointClick({ resultId: String(resultId), periodLabel: String(periodLabel), seriesLabel });
@@ -829,10 +839,7 @@ function UserStackSegment(
           data-series-key={seriesKey}
           data-series-dimmed={opacity < 1 ? 'true' : undefined}
           data-result-id={resultId == null ? undefined : String(resultId)}
-          data-command-kind={onPointClick ? 'setWholeReference' : undefined}
-          role={onPointClick ? 'button' : undefined}
-          tabIndex={onPointClick ? 0 : undefined}
-          aria-label={onPointClick ? t(lang, 'chart.ownWhole.designateAriaLabel', { series: seriesLabel, period: String(periodLabel) }) : undefined}
+          {...wholeReferenceMarkProps(designated, onPointClick !== undefined, lang, seriesLabel, String(periodLabel))}
           style={onPointClick ? { cursor: 'pointer' } : undefined}
           onClick={onPointClick ? activate : undefined}
           onKeyDown={
@@ -867,6 +874,33 @@ function UserStackSegment(
   };
 }
 
+/** Fix wave (session 124, final-review I2/I3): the designation affordance
+ * and the designated-total marker, shared by `UserPieSlice` and
+ * `UserStackSegment` so the two shapes cannot drift. `clickable` false (no
+ * edit context — I4) emits nothing interactive at all: no role, no
+ * tabIndex, no label offering an action that cannot happen. When
+ * clickable, every slice/segment is a toggle button (`aria-pressed`: a
+ * second click on the designated one clears it), and the designated one
+ * gets a heavy foreground outline — the visible counterpart of the note's
+ * "checked against the row you selected", so a reader can see WHICH drawn
+ * slice/segment is the total even when its label is shared with another
+ * series (a derived/aggregate own-data chart). The outline is presentation
+ * only: no value, size, or label changes. These props are spread AFTER
+ * the Cell/segment defaults, so the outline wins over the card-colour
+ * separator stroke. */
+function wholeReferenceMarkProps(designated: boolean, clickable: boolean, lang: Lang, series: string, period: string) {
+  return {
+    ...(designated ? { stroke: 'var(--foreground)', strokeWidth: 3, 'data-whole-reference': 'true' } : {}),
+    'data-command-kind': clickable ? 'setWholeReference' : undefined,
+    role: clickable ? 'button' : undefined,
+    tabIndex: clickable ? 0 : undefined,
+    'aria-pressed': clickable ? designated : undefined,
+    'aria-label': clickable
+      ? t(lang, designated ? 'chart.ownWhole.designatedAriaLabel' : 'chart.ownWhole.designateAriaLabel', { series, period })
+      : undefined,
+  };
+}
+
 /** The pie's designation gesture (Task 4): a custom `shape` for `<Pie>`.
  * Recharts merges each `<Cell>`'s OWN props (fill, the data-* attributes
  * Task 3 added) into the sector object BEFORE calling this — confirmed by
@@ -879,7 +913,12 @@ function UserStackSegment(
  * default — `defaultPieSectorShape` IS `Sector`) with the interactivity
  * props applied AFTER the spread, so they win. `props.value_resultId`/
  * `.label` are UserPieRow's own fields, carried through the same merge. */
-function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) => void) | undefined, lang: Lang) {
+function UserPieSlice(
+  periodLabel: string,
+  onPointClick: ((point: PendingPoint) => void) | undefined,
+  lang: Lang,
+  designatedRowRef: string | null,
+) {
   // Only the two UserPieRow fields this shape actually reads — NOT
   // `Partial<UserPieRow>`, whose own `key: string` field (the series key,
   // e.g. 's0') collides with React's OWN reserved `key` prop already on
@@ -897,6 +936,7 @@ function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) 
     const { key: _key, ...sectorProps } = props;
     const resultId = props.value_resultId ?? null;
     const seriesLabel = props.label ?? '';
+    const designated = resultId !== null && resultId === designatedRowRef;
     const activate = (): void => {
       if (resultId === null || !onPointClick) return;
       onPointClick({ resultId, periodLabel, seriesLabel });
@@ -904,10 +944,7 @@ function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) 
     return (
       <Sector
         {...sectorProps}
-        data-command-kind={onPointClick ? 'setWholeReference' : undefined}
-        role={onPointClick ? 'button' : undefined}
-        tabIndex={onPointClick ? 0 : undefined}
-        aria-label={onPointClick ? t(lang, 'chart.ownWhole.designateAriaLabel', { series: seriesLabel, period: periodLabel }) : undefined}
+        {...wholeReferenceMarkProps(designated, onPointClick !== undefined, lang, seriesLabel, periodLabel)}
         style={onPointClick ? { cursor: 'pointer' } : undefined}
         onClick={onPointClick ? activate : undefined}
         onKeyDown={
@@ -937,6 +974,10 @@ function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) 
  * is current, exactly as chart.tsx appends its own omissions. */
 const OWN_WHOLE_NOTE = {
   not_checked: { key: 'chart.ownWhole.notChecked', className: 'text-muted-foreground' },
+  // Fix wave (session 124, final-review I4): the same default without the
+  // "click a point" invitation, for a card with no edit context — there the
+  // slices/segments are not clickable at all (see `wholeDesignationClick`).
+  not_checked_read_only: { key: 'chart.ownWhole.notCheckedReadOnly', className: 'text-muted-foreground' },
   // Task 4: the three states once a reader has designated a cell as "this
   // is my total". `text-success`/`text-warning` are this app's own existing
   // semantic tone tokens (globals.css) — chart.tsx's CBS whole-note never
@@ -1239,7 +1280,18 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // without that explicit clear, a designation whose PARTS changed while a
   // PREVIOUS verdict was already showing would keep rendering the old,
   // now-stale verdict while the new one was still in flight.
-  const [wholeVerification, setWholeVerification] = useState<VerifyOutcome | null>(null);
+  //
+  // Fix wave (session 124, final-review I1): the effect's clear alone left
+  // a gap — an effect runs AFTER the render that changed the designation is
+  // committed, so a re-designation (A → B) committed one frame showing A's
+  // "Checked" verdict under B's label before the clear landed. The outcome
+  // is therefore stored WITH the exact inputs it verified (`key` =
+  // instruction + designated rowRef + parts), and the render only ever
+  // reads it when that key equals the CURRENT inputs (see
+  // `currentWholeVerification` below) — a verdict can no longer be shown
+  // for anything it did not check, whatever the effect's timing. The
+  // effect's own clears stay as belt-and-braces.
+  const [wholeVerification, setWholeVerification] = useState<{ key: string; outcome: VerifyOutcome } | null>(null);
 
   useEffect(() => {
     if (datasetId === undefined || state.instruction === null) return;
@@ -1316,6 +1368,16 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     },
     [activeForm, state.wholeReferenceRowRef, differencePickerActive, firstDifferencePoint, chartLang, dispatch],
   );
+  // Fix wave (session 124, final-review I4): the pie/stack designation
+  // click is only offered when a check can actually run — it needs a real
+  // server round trip (requestDatasetWholeVerification needs `datasetId`
+  // and the instruction the chart was rendered from), exactly like the
+  // difference/average controls' `edit !== undefined` gate further down
+  // (the silently-broken-doorway class #310 closed). Without it, a slice
+  // was clickable, announced itself as a button, and did nothing. The
+  // line/bar note-draft clicks keep the plain `onPointClick` — they need no
+  // server.
+  const wholeDesignationClick = datasetId !== undefined && state.instruction !== null ? onPointClick : undefined;
 
   // --- the style panel -----------------------------------------------------
   const [styleOpen, setStyleOpen] = useState(false);
@@ -1676,14 +1738,25 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // a tab switch away, but the note — and any reason to re-verify — only
   // exists while wholeForm is true; without this a switch to Lijn/Staaf/etc.
   // would still fire a pointless network call for a note nothing renders).
+  // Fix wave (I1): the parts list and the verdict's identity key are
+  // computed ONCE per render and shared by the effect (which requests a
+  // check for exactly this key) and the note (which only shows a verdict
+  // whose key matches) — so the two can never disagree about what was
+  // checked.
+  const wholePartRowRefs =
+    wholeForm && state.wholeReferenceRowRef !== null
+      ? wholePartRowRefsFor(activeForm, state.wholeReferenceRowRef, pieVerificationRows, rows, visibleSeries)
+      : [];
+  const wholeVerificationKey = JSON.stringify([instructionKey(state.instruction), state.wholeReferenceRowRef, wholePartRowRefs]);
+  const currentWholeVerification = wholeVerification !== null && wholeVerification.key === wholeVerificationKey ? wholeVerification.outcome : null;
   useEffect(() => {
-    const wholeForm = activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100';
     if (!wholeForm || state.wholeReferenceRowRef === null || datasetId === undefined || state.instruction === null) {
       setWholeVerification(null);
       return;
     }
     const wholeRowRef = state.wholeReferenceRowRef;
-    const partRowRefs = wholePartRowRefsFor(activeForm, wholeRowRef, pieVerificationRows, rows, visibleSeries);
+    const partRowRefs = wholePartRowRefs;
+    const verificationKey = wholeVerificationKey;
     // Task 4 fix (I2, adversarial review): an EMPTY parts list (every other
     // visible series hidden, or — for a stack — the designated series
     // itself now hidden, so its own period can no longer be located among
@@ -1710,7 +1783,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     void requestDatasetWholeVerification(datasetId, state.instruction, wholeRowRef, partRowRefs)
       .then((response) => {
         if (cancelled) return;
-        setWholeVerification(response.ok ? response.outcome : null);
+        setWholeVerification(response.ok ? { key: verificationKey, outcome: response.outcome } : null);
       })
       // Task 4 fix (I1): a REJECTED round trip (network failure, a Server
       // Action throw — as opposed to a normal `ok: false` answer, already
@@ -1723,7 +1796,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pieVerificationRows/rows/visibleSeries recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh arrays avoids re-fetching on every unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- wholePartRowRefs/wholeVerificationKey (and the pieVerificationRows/rows/visibleSeries they derive from) recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh values avoids re-fetching on every unrelated re-render.
   }, [activeSpec, state.hiddenKeys, activeForm, state.wholeReferenceRowRef, state.instruction, datasetId]);
   // The note's state: Task 3's default unless a reference is designated, in
   // which case the check's own outcome decides — still resolving (or a bare
@@ -1733,11 +1806,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // unused '' for `not_checked`) so the mount point never has to branch on
   // which state needs the `{label}` param.
   const ownWholeNoteState: OwnWholeNoteState =
-    state.wholeReferenceRowRef === null || wholeVerification === null
-      ? 'not_checked'
-      : wholeVerification.verified
+    state.wholeReferenceRowRef === null || currentWholeVerification === null
+      ? wholeDesignationClick === undefined
+        ? 'not_checked_read_only'
+        : 'not_checked'
+      : currentWholeVerification.verified
         ? 'checked'
-        : wholeVerification.reason === 'sum_mismatch'
+        : currentWholeVerification.reason === 'sum_mismatch'
           ? 'mismatch'
           : 'cannot_check';
   const ownWholeNoteLabel =
@@ -2051,7 +2126,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 strokeWidth={1}
                 label={UserPieSliceLabel}
                 labelLine={{ stroke: AXIS_COLOR, strokeWidth: 1 }}
-                shape={UserPieSlice(pieSharedPeriodLabel, onPointClick, chartLang)}
+                shape={UserPieSlice(pieSharedPeriodLabel, wholeDesignationClick, chartLang, state.wholeReferenceRowRef)}
               >
                 {pieRows.map((r) => (
                   <Cell
@@ -2115,7 +2190,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                     fillOpacity={opacityFor(s)}
                     data-series-dimmed={dimmedFor(s) ? 'true' : undefined}
                     isAnimationActive={false}
-                    shape={UserStackSegment(s.key, valueKey, labelKey, s.color, opacityFor(s), s.label, onPointClick, chartLang)}
+                    shape={UserStackSegment(s.key, valueKey, labelKey, s.color, opacityFor(s), s.label, wholeDesignationClick, chartLang, state.wholeReferenceRowRef)}
                   />
                 );
               })}

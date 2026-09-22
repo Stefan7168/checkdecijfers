@@ -444,6 +444,14 @@ test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole
     await amsterdam.click();
     await expect(note).toHaveAttribute('data-state', 'checked', { timeout: 15_000 });
     await expect(note).toHaveText('Gecontroleerd tegen de rij die je koos: Omzet − Kosten.');
+    // Fix wave (session 124, final-review I2/I3): both slices share the
+    // label "Omzet − Kosten" (a derived chart), so the note's label alone
+    // cannot say WHICH slice is the total — the mark on the chart does.
+    await expect(amsterdam).toHaveAttribute('aria-pressed', 'true');
+    await expect(amsterdam).toHaveAttribute('data-whole-reference', 'true');
+    await expect(rotterdam).toHaveAttribute('aria-pressed', 'false');
+    await expect(rotterdam).not.toHaveAttribute('data-whole-reference');
+    await expect(page.locator('[data-whole-reference="true"]')).toHaveCount(1);
     // A match still renders the chart in full.
     await expect(slices).toHaveCount(2);
     expect(await pieLabels.allTextContents()).toEqual(['60', '60']);
@@ -452,6 +460,8 @@ test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole
     // to Task 3's exact default note — no fabricated verdict lingers.
     await amsterdam.click();
     await expect(note).toHaveAttribute('data-state', 'not_checked');
+    await expect(amsterdam).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('[data-whole-reference="true"]')).toHaveCount(0);
   });
 
   // The mismatch twin of the test above: the SAME one-moment shape, one

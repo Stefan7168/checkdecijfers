@@ -1350,6 +1350,16 @@ const nl = {
   // which names a DIFFERENT action (line/bar points open the notes draft;
   // a whole-form point instead designates/clears the reader's total).
   'chart.ownWhole.designateAriaLabel': 'Wijs {series}, {period} aan als totaal',
+  // Fix wave (session 124, final-review I2): the SAME slice/segment once it
+  // IS the designated total — a toggle button (`aria-pressed`), so its name
+  // says what it currently is and what a second click does (clears it),
+  // rather than repeating the "designate" offer it no longer makes.
+  'chart.ownWhole.designatedAriaLabel': '{series}, {period} is aangewezen als totaal — klik om op te heffen',
+  // Fix wave (session 124, final-review I4): the default note when the card
+  // has no edit context (no dataset to check against, so a slice click
+  // does nothing) — drops `notChecked`'s "klik op een punt" invitation
+  // rather than promise an action that cannot happen.
+  'chart.ownWhole.notCheckedReadOnly': 'Niet gecontroleerd tegen een totaal.',
 
   // Session 110 UX audit pass 3, row 9: /eurostat-explorer's own chrome
   // (labels, buttons, the empty-state paragraph) is internal-tool English
@@ -2320,6 +2330,8 @@ const en: Messages = {
   'chart.ownWhole.mismatch': "These parts don't add up to {label} — check your selection.",
   'chart.ownWhole.cannotCheck': "Can't be checked: {label} has no value, or one of the parts is missing one.",
   'chart.ownWhole.designateAriaLabel': 'Designate {series}, {period} as the total',
+  'chart.ownWhole.designatedAriaLabel': '{series}, {period} is designated as the total — click to clear',
+  'chart.ownWhole.notCheckedReadOnly': 'Not checked against a total.',
 
   // Session 110 UX audit pass 3, row 9 — see the `nl` entry's comment. The
   // reader this row actually reports on is the nl-cookie one; this English

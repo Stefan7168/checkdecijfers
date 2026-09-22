@@ -1406,6 +1406,11 @@ describe('UserChartView — dumbbell (own-data chart-fit parity, Task 2)', () =>
 describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whole parity, Task 3)', () => {
   const NOT_CHECKED = 'Niet gecontroleerd tegen een totaal — klik op een punt om te controleren of deze delen optellen.';
   const NOT_CHECKED_EN = 'Not checked against a total — click a point to verify these parts add up.';
+  // Fix wave (session 124, final-review I4): the SAME default without the
+  // "click a point" invitation — what a card with no edit context shows,
+  // since there a slice/segment is not clickable at all.
+  const NOT_CHECKED_READ_ONLY = 'Niet gecontroleerd tegen een totaal.';
+  const NOT_CHECKED_READ_ONLY_EN = 'Not checked against a total.';
   const PIE_REASON = 'Beschikbaar zodra de grafiek één moment toont voor minstens twee reeksen.';
   const STACKED_REASON = 'Beschikbaar zodra de grafiek minstens twee reeksen toont.';
   const OMITTED_2024 =
@@ -1499,8 +1504,8 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     // same prominence chart.tsx gives its own whole note — and OUTSIDE the
     // export container, like everything that is not a plotted value.
     const n = note();
-    expect(n.textContent).toBe(NOT_CHECKED);
-    expect(n).toHaveAttribute('data-state', 'not_checked');
+    expect(n.textContent).toBe(NOT_CHECKED_READ_ONLY);
+    expect(n).toHaveAttribute('data-state', 'not_checked_read_only');
     expect(n).toHaveClass('text-xs');
     expect(n).toHaveClass('text-muted-foreground');
     expect(container.querySelector(`${IN} [data-testid="own-whole-note"]`)).toBeNull();
@@ -1553,7 +1558,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expect(container.querySelectorAll(SECTOR)).toHaveLength(1);
     expect(labelsByRole(container, 'pie-label')).toEqual([['r1:c1', '40,0']]);
     expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
 
     fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true });
     expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
@@ -1600,7 +1605,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     // on the one shared scale.
     expect(num(segment(container, 'r1:c1'), 'height')).toBeGreaterThan(num(segment(container, 'r2:c2'), 'height'));
 
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
     expect(note().textContent).not.toContain('Niet getekend');
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
@@ -1632,7 +1637,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expect(total2023).toBeGreaterThan(0);
     expect(total2023).toBeCloseTo(total2024, 6);
     expect(num(segment(container, 'r1:c1'), 'height') / num(segment(container, 'r1:c2'), 'height')).toBeCloseTo(2, 6);
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
     // The computed shares are the ONE allowed extra source of digits.
     expectDigitsTraceToSpec(container, s, expected.map(([, text]) => text!));
   });
@@ -1649,7 +1654,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
       ['r2:c1', full],
     ]);
     expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
 
     fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
     expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
@@ -1664,14 +1669,14 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     // honest share.
     fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld (%)' }));
     expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2']);
-    expect(note().textContent).toBe(`${NOT_CHECKED} ${OMITTED_2024}`);
+    expect(note().textContent).toBe(`${NOT_CHECKED_READ_ONLY} ${OMITTED_2024}`);
     expectDigitsTraceToSpec(container, s, ['66,7%', '33,3%']);
 
     // Plain stacked: 2024 is drawn with Amsterdam's part alone, nothing
     // omitted, nothing claimed.
     fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
     expect(segmentIds(container)).toEqual(['r1:c1', 'r1:c2', 'r2:c1']);
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
   });
 
   it('the note is present in each of the three whole forms and in no other form', () => {
@@ -1710,7 +1715,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expect(screen.getByRole('tab', { name: 'Stacked' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Stacked (%)' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Pie chart' }));
-    expect(note().textContent).toBe(NOT_CHECKED_EN);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY_EN);
     first.unmount();
 
     const second = render(
@@ -1744,7 +1749,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
     expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true');
     expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note().textContent).toBe(NOT_CHECKED_READ_ONLY);
   });
 
   it('offers no difference/average overlay controls in a whole form (they only ever draw on line/area), even with an edit context; the Style trigger stays', () => {
@@ -1972,14 +1977,32 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
   });
 
-  it('Task 4: with no edit context, designating a slice updates the note state locally but never calls the server (no datasetId to call with)', () => {
+  it('fix wave (I4): with no edit context, a slice is NOT offered as a click at all — no role/tabindex, clicking does nothing, and the note drops its "click a point" invitation', () => {
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
-    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
+    const amsterdam = container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
+    expect(amsterdam).not.toHaveAttribute('role');
+    expect(amsterdam).not.toHaveAttribute('tabindex');
+    expect(amsterdam).not.toHaveAttribute('aria-pressed');
+    expect(amsterdam).not.toHaveAttribute('data-command-kind');
+    fireEvent.click(amsterdam);
     expect(wholeVerificationActions.requestDatasetWholeVerification).not.toHaveBeenCalled();
-    // Nothing resolves it, so the note stays on the honest default rather
-    // than fabricating a verdict.
-    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(amsterdam).not.toHaveAttribute('data-whole-reference');
+    expect(note()).toHaveAttribute('data-state', 'not_checked_read_only');
+    expect(note().textContent).toBe('Niet gecontroleerd tegen een totaal.');
+    expect(note()).toHaveClass('text-muted-foreground');
+  });
+
+  it('fix wave (I4): the same holds for a stack segment with no edit context', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    const el = segment(container, 'r2:c1');
+    expect(el).not.toHaveAttribute('role');
+    expect(el).not.toHaveAttribute('tabindex');
+    fireEvent.click(el);
+    fireEvent.keyDown(el, { key: 'Enter' });
+    expect(wholeVerificationActions.requestDatasetWholeVerification).not.toHaveBeenCalled();
+    expect(note()).toHaveAttribute('data-state', 'not_checked_read_only');
   });
 
   it('Task 4: switching away from the whole form after designating never fires a pointless server call for a note nothing renders; switching back re-verifies', async () => {
@@ -2081,6 +2104,111 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     // whatever the (mocked, always-true) server said, a false "Checked ✓"
     // for a comparison against zero parts.
     expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // Fix wave (session 124, final whole-branch review): I1 (a verdict is
+  // only ever shown for exactly what it verified) and I2/I3 (the designated
+  // slice/segment is marked on the chart itself).
+  // -----------------------------------------------------------------------
+
+  /** Every text the note ever held between the start of recording and now
+   * — including frames that were committed and replaced within one act(),
+   * which a plain post-act DOM read cannot see. */
+  function recordNoteTexts(): () => string[] {
+    const el = note();
+    const seen: string[] = [el.textContent ?? ''];
+    const observer = new MutationObserver(() => {});
+    observer.observe(el, { subtree: true, childList: true, characterData: true, characterDataOldValue: true });
+    return () => {
+      for (const record of observer.takeRecords()) {
+        if (record.type === 'characterData' && record.oldValue !== null) seen.push(record.oldValue);
+        for (const removed of record.removedNodes) seen.push(removed.textContent ?? '');
+      }
+      observer.disconnect();
+      seen.push(el.textContent ?? '');
+      return seen;
+    };
+  }
+
+  it('fix wave (I1): re-designating A → B never commits a single frame claiming B was checked while only A was — B shows not_checked until its OWN verdict lands', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValueOnce({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={threeRegionOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!); // designate Noord (A)
+    await waitFor(() => expect(note().textContent).toBe('Gecontroleerd tegen de rij die je koos: Noord.'));
+
+    // B's own check hangs, so anything "Checked" about Zuid could only be
+    // A's leftover verdict wearing B's label.
+    wholeVerificationActions.requestDatasetWholeVerification.mockImplementation(() => new Promise(() => {}));
+    const stop = recordNoteTexts();
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c2"]`)!); // re-designate Zuid (B)
+    const texts = stop();
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenLastCalledWith(3, LAST_INSTRUCTION, 'r1:c2', ['r1:c1', 'r1:c3']);
+    expect(texts).not.toContain('Gecontroleerd tegen de rij die je koos: Zuid.');
+    expect([...new Set(texts.filter((text) => text.startsWith('Gecontroleerd')))]).toEqual(['Gecontroleerd tegen de rij die je koos: Noord.']);
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+  });
+
+  // A pin, not a regression test: the effect's own `cancelled` flag already
+  // drops A's late answer (verified: this passes with the render-time key
+  // gate reverted); the key gate is a second, independent guard for it.
+  it('fix wave (I1, pin): a verdict that lands for a designation the reader has since moved away from is never shown for the new one', async () => {
+    let resolveA: (value: unknown) => void = () => {};
+    wholeVerificationActions.requestDatasetWholeVerification.mockImplementationOnce(() => new Promise((resolve) => (resolveA = resolve)));
+    const { container } = render(<UserChartView spec={threeRegionOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!); // A, still in flight
+    wholeVerificationActions.requestDatasetWholeVerification.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c2"]`)!); // B, hangs
+    await act(async () => {
+      resolveA({ ok: true, outcome: { verified: true } }); // A's late answer
+    });
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+  });
+
+  it('fix wave (I2): the designated pie slice is marked on the chart (outline + aria-pressed + its own name); the others are unpressed; clearing removes the mark', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    const slice = (rowRef: string) => container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="${rowRef}"]`)!;
+    expect(slice('r1:c1')).toHaveAttribute('aria-pressed', 'false');
+    expect(slice('r1:c1')).not.toHaveAttribute('data-whole-reference');
+
+    fireEvent.click(slice('r1:c1'));
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(slice('r1:c1')).toHaveAttribute('aria-pressed', 'true');
+    expect(slice('r1:c1')).toHaveAttribute('data-whole-reference', 'true');
+    expect(slice('r1:c1')).toHaveAttribute('stroke', 'var(--foreground)');
+    expect(slice('r1:c1')).toHaveAttribute('aria-label', 'Amsterdam, 2024 is aangewezen als totaal — klik om op te heffen');
+    expect(slice('r1:c2')).toHaveAttribute('aria-pressed', 'false');
+    expect(slice('r1:c2')).not.toHaveAttribute('data-whole-reference');
+    expect(slice('r1:c2')).toHaveAttribute('aria-label', 'Wijs Rotterdam, 2024 aan als totaal');
+    // Presentation only: both slices still drawn, same labels.
+    expect(labelsByRole(container, 'pie-label')).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+    ]);
+
+    fireEvent.click(slice('r1:c1'));
+    expect(slice('r1:c1')).toHaveAttribute('aria-pressed', 'false');
+    expect(slice('r1:c1')).not.toHaveAttribute('data-whole-reference');
+  });
+
+  it('fix wave (I2/I3): two series sharing ONE label (a derived chart) — the mark, not the label, says which segment is the total', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const shared = twoSeriesSpec();
+    shared.series[0]!.label = 'Omzet − Kosten';
+    shared.series[1]!.label = 'Omzet − Kosten';
+    const { container } = render(<UserChartView spec={shared} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    fireEvent.click(segment(container, 'r2:c1'));
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    const marked = [...container.querySelectorAll(`${SEGMENT}[data-whole-reference="true"]`)].map((el) => el.getAttribute('data-result-id'));
+    expect(marked).toEqual(['r2:c1']);
+    expect(segment(container, 'r2:c1')).toHaveAttribute('aria-pressed', 'true');
+    expect(segment(container, 'r2:c2')).toHaveAttribute('aria-pressed', 'false');
+    expect(segment(container, 'r2:c1')).toHaveAttribute('stroke', 'var(--foreground)');
   });
 });
 
