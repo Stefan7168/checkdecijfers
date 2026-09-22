@@ -115,4 +115,46 @@ test.describe.serial('the own-data chart co-pilot', () => {
     await expect(aggregateAfterReload).toHaveValue('sum');
     await expect(aggregateAfterReload.locator('option:checked')).toHaveText('Som');
   });
+
+  // Own-data co-pilot parity (own-data session continuation): the CBS
+  // tier's phase-6 storytelling primitives (goal line, era shading,
+  // derived overlay) ported to this card. One real round trip is the proof
+  // for the shared mechanism — same reasoning chart-copilot.spec.ts's own
+  // era-shading test documents: all three cases share this chart's request
+  // shape and differ only in message, so an `exact` llm-stub hit on this
+  // one proves the prompt/capabilities bytes are unchanged for the other
+  // two as well. Difference is chosen over the other two because it is
+  // the one with genuinely NEW server-side computation behind it
+  // (requestDatasetDerivation -> deriveChartOverlay) — unlike a goal line
+  // or era shading, which are pure client-side annotations, this is the
+  // path most worth proving against a REAL server action, not a mock.
+  const DIFFERENCE_MESSAGE = 'Laat het verschil zien tussen Amsterdam in 2020 en 2021';
+
+  test(`"${DIFFERENCE_MESSAGE}" through the chat draws a real, server-computed overlay`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DIFFERENCE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+
+    // The chip proves the chat->schema->map->command chain; the drawn
+    // ReferenceLine (with a real, server-computed label, per this session's
+    // own R6-analog distinction from a reader-typed goal line/era label)
+    // proves requestDatasetDerivation really ran, for real, not mocked.
+    await expect(copilot.getByRole('button', { name: 'Overlay toegevoegd' })).toBeVisible({ timeout: 60_000 });
+    const chartContainer = page.locator('[data-testid="user-chart-container"]');
+    await expect(chartContainer.locator('.recharts-reference-line')).toHaveCount(1, { timeout: 15_000 });
+    // Amsterdam: 100 (2020) -> 150 (2021) per verkoop.csv — a difference of
+    // +50 (later minus earlier), 0 decimals (both source cells are whole
+    // numbers, per decimalsOf's own rule).
+    await expect(chartContainer).toContainText('+50');
+  });
 });

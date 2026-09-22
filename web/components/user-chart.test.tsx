@@ -27,6 +27,10 @@ const chartEditsActions = vi.hoisted(() => ({
   saveChartEdits: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock('../app/chart-edits-actions.ts', () => chartEditsActions);
+const derivationActions = vi.hoisted(() => ({
+  requestDatasetDerivation: vi.fn(),
+}));
+vi.mock('../app/dataset-derivation-actions.ts', () => derivationActions);
 
 import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
 import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
@@ -37,6 +41,7 @@ afterEach(() => {
   chartEditsActions.fetchChartEdits.mockResolvedValue({ ok: true, log: null });
   chartEditsActions.saveChartEdits.mockResolvedValue({ ok: true });
   datasetActions.renderDatasetInstruction.mockReset();
+  derivationActions.requestDatasetDerivation.mockReset();
 });
 
 function point(overrides: Partial<UserChartSpec['series'][0]['points'][0]> = {}) {
@@ -551,6 +556,72 @@ describe('UserChartView — goal lines and era shading (co-pilot phase 4 parity)
     expect(screen.getByText('Testperiode label')).toBeInTheDocument();
     // The band itself, unlike the label, genuinely is inside the export.
     expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+});
+
+describe('UserChartView — difference/mean overlays (co-pilot phase 4 parity, Task 7)', () => {
+  it('offers no overlay controls at all without an edit context — resolving one needs a real datasetId', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  it('offers no overlay controls on a bar-form chart, even with an edit context', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  it('offers no average button with two series visible — an average across different series is not well-defined', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+  });
+
+  it('toggles the difference picker\'s pressed state', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    const pickerButton = screen.getByRole('button', { name: 'Verschil aanduiden' });
+    expect(pickerButton).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(pickerButton);
+    expect(pickerButton).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(pickerButton);
+    expect(pickerButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('a resolved average renders a labelled ReferenceLine INSIDE the export container — unlike a goal line, this value is server-computed and verified, not reader-typed', async () => {
+    derivationActions.requestDatasetDerivation.mockResolvedValueOnce({ ok: true, result: { value: 41, decimals: 1, rowRef: 'agg:mean:r1:c1+r2:c1' } });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    // Hide Rotterdam: Amsterdam becomes the sole visible series (its own two
+    // points), matching chart.tsx's own I8 gate ("exactly one visible series").
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+
+    expect(derivationActions.requestDatasetDerivation).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'mean', ['r1:c1', 'r2:c1']);
+    await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0));
+    const exportContainer = container.querySelector('[data-testid="user-chart-container"]');
+    expect(exportContainer?.textContent).toContain('41,0');
+  });
+
+  it('a server refusal shows the reason text and draws nothing', async () => {
+    derivationActions.requestDatasetDerivation.mockResolvedValueOnce({ ok: false, reason: 'no value available to compute an average' });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    const before = container.querySelectorAll('.recharts-reference-line').length;
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+
+    expect(await screen.findByText('no value available to compute an average')).toBeInTheDocument();
+    expect(container.querySelectorAll('.recharts-reference-line').length).toBe(before);
+  });
+
+  it('the remove chip drops the stored recipe and its resolved line disappears', async () => {
+    derivationActions.requestDatasetDerivation.mockResolvedValueOnce({ ok: true, result: { value: 41, decimals: 1, rowRef: 'agg:mean:r1:c1+r2:c1' } });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0));
+
+    fireEvent.click(screen.getByRole('button', { name: /× Gemiddelde tonen/ }));
+    await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBe(0));
   });
 });
 

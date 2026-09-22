@@ -40,7 +40,11 @@ import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, ty
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
+import { requestDatasetDerivation } from '../app/dataset-derivation-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
+import { formatValueNl } from '../backend/answer/compose/format.ts';
+import type { ResolvedOverlay } from '../backend/attachments/derive-overlay.ts';
+import type { DerivedOverlayRequest } from '../lib/chart-commands.ts';
 import {
   LINE_WIDTH_PX,
   areaFillOpacityFor,
@@ -80,6 +84,7 @@ import {
   GRID_LINE_PROPS,
   valueLabelPlan,
   yAxisDomain,
+  type PlottablePoint,
   type PlottableSpec,
   type Row,
   type SeriesMeta,
@@ -295,6 +300,61 @@ function UserSeriesDot(
   };
 }
 
+/** Draws a resolved derived-overlay value (Task 7 parity) — mirrors
+ * chart.tsx's own `derivedOverlayElements` exactly, including WHY it's a
+ * plain function returning an array rather than a `<Layer>`-style
+ * component: Recharts only recognises known element types (ReferenceLine,
+ * ReferenceArea, …) among a chart container's own DIRECT children, so a
+ * wrapping component's own ReferenceLines never reach the DOM. Unlike goal
+ * lines/era shadings, this label IS server-computed, verified prose (never
+ * reader-typed free text), so — same as any other plotted value label on
+ * this chart — it gets a `label` prop and DOES enter a PNG/SVG export; R6's
+ * digit-guard only ever exempted READER-typed text, never a value this
+ * product itself computed and is standing behind. `requests` is
+ * state.derivedOverlayRequests (the id -> calcKind/resultIds recipe);
+ * `resolvedOverlays` is this render's own resolved-value map — a request
+ * with no resolved entry yet (still in flight, or refused) draws nothing. */
+function derivedOverlayElements(
+  resolvedOverlays: Map<string, ResolvedOverlay>,
+  requests: DerivedOverlayRequest[],
+  allPoints: PlottablePoint[],
+): ReactNode[] {
+  return Array.from(resolvedOverlays.entries()).map(([id, result]) => {
+    const request = requests.find((r) => r.id === id);
+    if (request === undefined) return null;
+    const display = formatValueNl(result.value, result.decimals);
+    if (request.calcKind === 'mean') {
+      return (
+        <ReferenceLine
+          key={`mean-${id}`}
+          y={result.value}
+          stroke="var(--accent)"
+          strokeDasharray="2 2"
+          label={{ value: display, position: 'right' }}
+          data-label-for={request.resultIds.join(',')}
+        />
+      );
+    }
+    const [refA, refB] = request.resultIds;
+    const a = allPoints.find((p) => p.resultId === refA);
+    const b = allPoints.find((p) => p.resultId === refB);
+    if (a === undefined || b === undefined || a.value === null || b.value === null) return null;
+    return (
+      <ReferenceLine
+        key={`diff-${id}`}
+        segment={[
+          { x: a.periodLabel, y: a.value },
+          { x: b.periodLabel, y: b.value },
+        ]}
+        stroke="var(--accent)"
+        strokeWidth={2}
+        label={{ value: result.value >= 0 ? `+${display}` : display, position: 'top' }}
+        data-label-for={request.resultIds.join(',')}
+      />
+    );
+  });
+}
+
 /**
  * The card. A thin wrapper around `UserChartCard` whose only job is the
  * spec-swap reset: the visual dock and the chat both hand the SAME mounted
@@ -460,16 +520,88 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     plottable.series.flatMap((s) => s.points.map((p): [string, string] => [p.periodCode, p.periodLabel])),
   );
   const periodOptions = plottable.series[0]?.points.map((p) => ({ code: p.periodCode, label: p.periodLabel })) ?? [];
+  // Derived overlays (Task 7 parity): every point across every series, the
+  // same "flatten once, look up by resultId/rowRef" set derivedOverlayElements
+  // needs to draw a resolved difference's two endpoints.
+  const allPlottablePoints = plottable.series.flatMap((s) => s.points);
 
   // --- notes ---------------------------------------------------------------
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
-  const onPointClick = useCallback((point: PendingPoint) => setPendingPoint(point), []);
   // A note anchored to a cell the CURRENT chart no longer plots is filtered
   // here rather than deleted: `setInstruction`'s inverse can only be one
   // command (chart-commands.ts), so an undone data change must bring the
   // note back with its data.
   const plottedRowRefs = new Set(activeSpec.series.flatMap((s) => s.points.map((p) => p.rowRef)));
   const visibleNotes = state.notes.filter((note) => plottedRowRefs.has(note.resultId));
+
+  // --- derived overlays (difference / mean) ---------------------------------
+  // Mirrors chart.tsx's own Task 7 split exactly: the RECIPE (which points,
+  // which calcKind) lives in the undoable command log
+  // (state.derivedOverlayRequests); the resolved NUMBER is transient,
+  // session-local state here, re-fetched from the server whenever the
+  // recipe list changes — never stored in the command log itself.
+  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, ResolvedOverlay>>(new Map());
+  const [derivationRefusals, setDerivationRefusals] = useState<Map<string, string>>(new Map());
+  const [differencePickerActive, setDifferencePickerActive] = useState(false);
+  const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; seriesLabel: string } | null>(null);
+  const [differenceError, setDifferenceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (datasetId === undefined || state.instruction === null) return;
+    let cancelled = false;
+    const requests = state.derivedOverlayRequests;
+    void Promise.all(
+      requests.map(async (r) => [r.id, await requestDatasetDerivation(datasetId, state.instruction, r.calcKind, r.resultIds)] as const),
+    ).then((settled) => {
+      if (cancelled) return;
+      const resolved = new Map<string, ResolvedOverlay>();
+      const refusals = new Map<string, string>();
+      for (const [id, response] of settled) {
+        if (response.ok) resolved.set(id, response.result);
+        else refusals.set(id, response.reason ?? t(chartLang, 'chart.derived.errorGeneric'));
+      }
+      setResolvedOverlays(resolved);
+      setDerivationRefusals(refusals);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.derivedOverlayRequests, state.instruction, datasetId, chartLang]);
+
+  // Task 7 parity: capture points for a difference overlay when the picker
+  // is active; otherwise a click opens the note UI, same as before this
+  // task. Mirrors chart.tsx's onPointClick exactly, using seriesLabel where
+  // the CBS card compares regionCode — own-data's equivalent "these two
+  // points must be comparable" constraint: a difference is between two
+  // points of the SAME series, never across series.
+  const onPointClick = useCallback(
+    (point: PendingPoint) => {
+      if (differencePickerActive) {
+        if (firstDifferencePoint === null) {
+          setFirstDifferencePoint({ resultId: point.resultId, seriesLabel: point.seriesLabel });
+          return;
+        }
+        setDifferenceError(null);
+        if (firstDifferencePoint.seriesLabel !== point.seriesLabel) {
+          setDifferenceError(t(chartLang, 'chart.derived.errorMissingRegion'));
+          setFirstDifferencePoint(null);
+          return;
+        }
+        dispatch(
+          {
+            kind: 'addDerivedOverlay',
+            overlay: { id: newCommandId(), calcKind: 'difference', resultIds: [firstDifferencePoint.resultId, point.resultId] },
+          },
+          'panel',
+        );
+        setDifferencePickerActive(false);
+        setFirstDifferencePoint(null);
+        return;
+      }
+      setPendingPoint(point);
+    },
+    [differencePickerActive, firstDifferencePoint, chartLang, dispatch],
+  );
 
   // --- the style panel -----------------------------------------------------
   const [styleOpen, setStyleOpen] = useState(false);
@@ -841,6 +973,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               {state.goalLines.map((line) => (
                 <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
               ))}
+              {derivedOverlayElements(resolvedOverlays, state.derivedOverlayRequests, allPlottablePoints)}
             </LineChart>
           ) : activeForm === 'area' ? (
             <AreaChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
@@ -898,6 +1031,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               {state.goalLines.map((line) => (
                 <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
               ))}
+              {derivedOverlayElements(resolvedOverlays, state.derivedOverlayRequests, allPlottablePoints)}
             </AreaChart>
           ) : activeForm === 'hbar' ? (
             // The transposed bar: the x categories move to the category axis,
@@ -1166,6 +1300,78 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             }}
             onRemove={(id) => dispatch({ kind: 'removeEraShading', eraShadingId: id }, 'canvas')}
           />
+        </div>
+      ) : null}
+      {/* Difference / average overlay controls (Task 7 parity) — gated to
+        * line/area only, same as chart.tsx's own I2 fix: derivedOverlayElements
+        * only ever draws inside the LineChart/AreaChart branches above, so
+        * offering these controls on a bar/table chart would let a reader add
+        * an overlay whose own remove chip appears while nothing renders.
+        * ALSO gated on `edit !== undefined` — mirrors chart.tsx's identical
+        * `embed !== undefined` gate exactly: resolving a value needs a real
+        * server round trip (requestDatasetDerivation needs `datasetId`), so
+        * without an edit context the button would add a command that can
+        * never resolve, the same silently-broken-doorway class of bug #310
+        * closed for the CBS tier's own capability gate. */}
+      {edit !== undefined && (activeForm === 'line' || activeForm === 'area') ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            data-command-kind="addDerivedOverlay"
+            aria-pressed={differencePickerActive}
+            title={t(chartLang, 'chart.derived.differenceLabel')}
+            onClick={() => {
+              setDifferencePickerActive((active) => !active);
+              setFirstDifferencePoint(null);
+              setDifferenceError(null);
+            }}
+            className={
+              'min-h-6 rounded-md border px-2 py-0.5 text-xs ' +
+              (differencePickerActive
+                ? 'border-accent bg-accent text-accent-foreground'
+                : 'border-border text-foreground hover:bg-muted')
+            }
+          >
+            {differencePickerActive ? `${t(chartLang, 'chart.derived.differencePick')}…` : t(chartLang, 'chart.derived.differenceLabel')}
+          </button>
+          {visibleSeries.length === 1 ? (
+            <button
+              type="button"
+              data-command-kind="addDerivedOverlay"
+              title={t(chartLang, 'chart.derived.meanLabel')}
+              onClick={() => {
+                // seriesMeta/visibleSeries keys are positional ('s0', 's1',
+                // ... — buildRows, shared with chart.tsx), so the one
+                // visible series' index is its key with the 's' prefix
+                // stripped — same lookup chart.tsx's own mean button uses.
+                const visibleIndex = Number(visibleSeries[0]!.key.slice(1));
+                const resultIds = (plottable.series[visibleIndex]?.points ?? []).map((p) => p.resultId);
+                if (resultIds.length >= 2) {
+                  dispatch({ kind: 'addDerivedOverlay', overlay: { id: newCommandId(), calcKind: 'mean', resultIds } }, 'panel');
+                }
+              }}
+              className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+            >
+              {t(chartLang, 'chart.derived.meanLabel')}
+            </button>
+          ) : null}
+          {state.derivedOverlayRequests.map((overlay) => (
+            <button
+              key={overlay.id}
+              type="button"
+              data-command-kind="removeDerivedOverlay"
+              onClick={() => dispatch({ kind: 'removeDerivedOverlay', overlayId: overlay.id }, 'panel')}
+              className="min-h-6 rounded-md border border-border px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+            >
+              × {overlay.calcKind === 'difference' ? t(chartLang, 'chart.derived.differenceLabel') : t(chartLang, 'chart.derived.meanLabel')}
+            </button>
+          ))}
+          {differenceError !== null ? <span className="text-xs text-destructive">{differenceError}</span> : null}
+          {Array.from(derivationRefusals.values()).map((reason, i) => (
+            <span key={i} className="text-xs text-destructive">
+              {reason}
+            </span>
+          ))}
         </div>
       ) : null}
       <ChartEditableText

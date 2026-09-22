@@ -19,10 +19,10 @@
 // AND "belongs to someone else", indistinguishable on purpose.
 import { z } from 'zod';
 
-import { deriveChartOverlay, OverlaySelectionError, type OverlaySelection } from '../backend/attachments/derive-overlay.ts';
-import { NoRowsError, TooManyPointsError, type ComputedValue } from '../backend/attachments/execute.ts';
+import { deriveChartOverlay, OverlaySelectionError, type OverlaySelection, type ResolvedOverlay } from '../backend/attachments/derive-overlay.ts';
+import { NoRowsError, TooManyPointsError } from '../backend/attachments/execute.ts';
 import { InstructionValidationError, validateInstructionObject } from '../backend/attachments/instruct/schema.ts';
-import { MAX_CELL_CHARS } from '../backend/attachments/limits.ts';
+import { MAX_CHART_POINTS } from '../backend/attachments/limits.ts';
 import { getDataset } from '../backend/attachments/store.ts';
 import { upgradeInstruction } from '../backend/attachments/types.ts';
 import { currentUserId } from '../lib/current-user.ts';
@@ -42,12 +42,15 @@ function guardPositiveInteger(value: unknown, name: string): number {
   return value;
 }
 
-const labelSchema = z.string().min(1).max(MAX_CELL_CHARS);
-
-const selectionSchema = z.union([
-  z.strictObject({ calcKind: z.literal('mean'), seriesLabel: labelSchema }),
-  z.strictObject({ calcKind: z.literal('difference'), seriesLabel: labelSchema, pointLabels: z.tuple([labelSchema, labelSchema]) }),
-]);
+const calcKindSchema = z.union([z.literal('mean'), z.literal('difference')]);
+// Bounded by MAX_CHART_POINTS (not chart-derivation-actions.ts's own
+// `.max(12)`, a CBS-only bound that suits an audited answer's typically-few
+// periods) — an own-data mean can legitimately span a chart's full point
+// count, per execute.ts's own limit. Which exact length a given calcKind
+// requires (exactly 2 for `difference`) is deriveChartOverlay's own check,
+// not the schema's: it needs `calcKind` already parsed to know which rule
+// applies, and the two Server Action arguments arrive separately.
+const resultIdsSchema = z.array(z.string().min(1)).min(2).max(MAX_CHART_POINTS);
 
 /** Mirrors src/attachments/render.ts's own private toServerShape — not
  * exported there, and render.ts is out of this change's touched-files
@@ -70,7 +73,7 @@ function toValidatableInstruction(raw: unknown): unknown {
   };
 }
 
-export type RequestDatasetDerivationResponse = { ok: true; result: ComputedValue } | { ok: false; reason?: string };
+export type RequestDatasetDerivationResponse = { ok: true; result: ResolvedOverlay } | { ok: false; reason?: string };
 
 /**
  * One on-demand chart overlay (difference arrow / average line) over an
@@ -82,15 +85,18 @@ export type RequestDatasetDerivationResponse = { ok: true; result: ComputedValue
 export async function requestDatasetDerivation(
   datasetId: number,
   rawInstruction: unknown,
-  rawSelection: unknown,
+  rawCalcKind: unknown,
+  rawResultIds: unknown,
 ): Promise<RequestDatasetDerivationResponse> {
   guardPositiveInteger(datasetId, 'datasetId');
 
   const userId = await currentUserId();
   if (userId === null) return { ok: false };
 
-  const selection = selectionSchema.safeParse(rawSelection);
-  if (!selection.success) return { ok: false, reason: 'invalid selection' };
+  const calcKind = calcKindSchema.safeParse(rawCalcKind);
+  if (!calcKind.success) return { ok: false, reason: 'invalid selection' };
+  const resultIds = resultIdsSchema.safeParse(rawResultIds);
+  if (!resultIds.success) return { ok: false, reason: 'invalid selection' };
 
   const dataset = await getDataset(getDb(), userId, datasetId);
   if (dataset === null || dataset.status !== 'ready') {
@@ -108,7 +114,8 @@ export async function requestDatasetDerivation(
   }
 
   try {
-    const result = deriveChartOverlay(dataset, instruction, selection.data as OverlaySelection);
+    const selection: OverlaySelection = { calcKind: calcKind.data, resultIds: resultIds.data };
+    const result = deriveChartOverlay(dataset, instruction, selection);
     return { ok: true, result };
   } catch (error) {
     // OverlaySelectionError (derive-overlay.ts) and NoRowsError/
