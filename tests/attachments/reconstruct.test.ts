@@ -266,7 +266,7 @@ describe('reconstructDatasetTurn — the #314 incomplete flag', () => {
       // writer always would), but drop it from the incomplete point: the
       // rebuild disagrees and the legacy allowance must not apply.
       const tampered = JSON.parse(JSON.stringify(record)) as typeof record;
-      const chart = (tampered.envelope as { chart: { series: { points: Record<string, unknown>[] }[] } }).chart;
+      const chart = (tampered.envelope as unknown as { chart: { series: { points: Record<string, unknown>[] }[] } }).chart;
       delete chart.series[0]!.points[1]!['incomplete'];
       chart.series[0]!.points[0]!['incomplete'] = true;
       const report = reconstructDatasetTurn(tampered, currentDataset);
