@@ -11,7 +11,7 @@
 // `exampleChips` is the cheapest-mechanism half of the doorway (CLAUDE.md's
 // standing rule): three deterministic, digit-free suggestions computed from
 // the chart already on screen. No prompt, no spend, no new way to misfire.
-import { PRESENTATION_KEYS, TEMPLATE_IDS, type CopilotCapabilities } from '../backend/attachments/copilot/types.ts';
+import { COPILOT_FORMS, PRESENTATION_KEYS, TEMPLATE_IDS, type CopilotCapabilities } from '../backend/attachments/copilot/types.ts';
 import type { CbsCopilotCapabilities } from '../backend/chart/copilot/types.ts';
 export type { CbsCopilotCapabilities };
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
@@ -19,25 +19,48 @@ import type { ChartDocState } from './chart-commands.ts';
 import { columnHeaderLabel, digitFree } from './chart-data-instruction.ts';
 import { allowedForms } from './chart-fit.ts';
 import type { PresentationKey } from './chart-presentation.ts';
-import { areaFormAllowed, hbarFormAllowed, isTabularForm, lineFormAllowed, type ChartForm } from './chart-view-state.ts';
+import { isTabularForm, type ChartForm } from './chart-view-state.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 import type { ChartSpec } from '../backend/chart/types.ts';
 
-/** The own-data card's own `formAllowed` (user-chart.tsx), over the same
- * three predicates — so what the chat is told matches the tabs the reader
- * can actually click. Phase 5 (chart-fit scorer): deliberately still the
- * original five forms, NOT chart-fit.ts's `allowedForms` — user-chart.tsx has
- * no render branch for dumbbell/slope/heatmap yet, and the chat must never
- * offer a shape its own panel cannot draw (plan Global Constraints). */
-function formsFor(spec: PlottableSpec, seriesCount: number): CopilotCapabilities['forms'] {
-  const forms: CopilotCapabilities['forms'] = [];
-  if (lineFormAllowed(spec, seriesCount)) forms.push('line');
-  if (areaFormAllowed(spec, seriesCount)) forms.push('area');
-  forms.push('bar');
-  if (hbarFormAllowed(spec)) forms.push('hbar');
-  forms.push('table');
-  return forms;
+/** Own-data chart-fit parity (plan 2026-09-22, Task 1): the forms
+ * user-chart.tsx has a RENDER BRANCH for. The shared scorer can say
+ * "dumbbell" for a two-point spec, but the chat must never offer a shape
+ * its own panel cannot draw (plan Global Constraints) — so the scorer's
+ * verdict is capped to this list, which grows as the plan's later tasks
+ * add branches: dumbbell (Task 2), pie/stacked/stacked100 (Task 3 — those
+ * three come from own-data's OWN shape-only guards, never from
+ * `allowedForms`, whose pie/stacked guards read the CBS roster provenance
+ * `regionScope` that an own-data spec never carries, so they are `false`
+ * for every own-data spec by construction). */
+const OWN_DATA_RENDERABLE_FORMS: readonly ChartForm[] = ['line', 'area', 'bar', 'hbar', 'table', 'slope', 'heatmap'];
+
+/** Every form the own-data card can honestly show for `spec` right now, in
+ * the scorer's own fixed order: chart-fit.ts's `allowedForms` — the SAME
+ * scorer chart.tsx's tabs and `cbsCapabilities` below read, replacing the
+ * hand-written five-guard copy this tier used to keep in step by hand —
+ * capped to what user-chart.tsx actually renders. Exported so the cap is
+ * testable on its own, apart from the wire cap `ownDataCapabilities`
+ * applies on top. */
+export function ownDataRenderableForms(spec: PlottableSpec, seriesCount: number): ChartForm[] {
+  return allowedForms(spec, seriesCount).filter((form) => OWN_DATA_RENDERABLE_FORMS.includes(form));
+}
+
+/** The own-data co-pilot's SERVER allowlist (src/attachments/copilot/types.ts
+ * `COPILOT_FORMS`): `sanitizeCapabilities` silently drops any form off it
+ * before the prompt is built, and the model's own `setForm` schema is the
+ * same list. Until Task 5 widens that list — together with the prompt's
+ * hand-listed forms, the `COPILOT_PROMPT_VERSION` bump and the offline
+ * fixture regen, ONE combined change — a form the panel can already draw
+ * is still one the chat cannot be told about: claiming it here would only
+ * send a value the server discards, while widening the list from here would
+ * change the prompt bytes of every own-data co-pilot request whose chart is
+ * slope/heatmap-shaped (the e2e fixture's own 2 × 2 chart is one) and
+ * orphan the recorded fixtures. Task 5's widening of `COPILOT_FORMS` lets
+ * the new forms through this filter with no edit here. */
+function isCopilotForm(form: ChartForm): form is CopilotCapabilities['forms'][number] {
+  return (COPILOT_FORMS as readonly string[]).includes(form);
 }
 
 export function ownDataCapabilities(input: {
@@ -51,14 +74,22 @@ export function ownDataCapabilities(input: {
 }): CopilotCapabilities {
   const { spec, form, seriesCount, applicable, lang } = input;
   return {
-    forms: formsFor(spec, seriesCount),
+    // Three separate steps, on purpose (Task 1): what the scorer offers,
+    // capped to what this card renders (`ownDataRenderableForms`), then
+    // capped to what the server will accept on the wire (`isCopilotForm`).
+    // Task 3 adds the own-data whole forms to the renderable step; Task 5
+    // widens the wire step. Neither touches the other.
+    forms: ownDataRenderableForms(spec, seriesCount).filter(isCopilotForm),
     // Intersection, not either list alone: `applicable` can name a key the
     // chat has no vocabulary for (`valueLabels`, locked per form), and
     // PRESENTATION_KEYS names keys a given form does not offer.
     presentationKeys: PRESENTATION_KEYS.filter((key) => applicable.has(key)),
-    // The gallery is the Style panel's own first tab, and that panel is not
-    // mounted at all in table form — so neither is a template.
-    templates: form === 'table' ? [] : [...TEMPLATE_IDS],
+    // The gallery is the Style panel's own first tab, and user-chart.tsx
+    // mounts that panel for neither tabular form (table AND heatmap, the
+    // shared `isTabularForm` — Task 1) — so neither offers a template. The
+    // same predicate `cbsCapabilities` below reads, never a second
+    // `=== 'table'` spelling.
+    templates: isTabularForm(form) ? [] : [...TEMPLATE_IDS],
     // Own-data wiring of the CBS tier's co-pilot phase 6 addDerivedOverlay
     // (open-questions #289/#295's own precedent): the SAME `form === 'line'
     // || form === 'area'` test `cbsCapabilities` below uses for its own
@@ -79,9 +110,10 @@ export function ownDataCapabilities(input: {
  * chart-fit.ts's `allowedForms` — the SAME scorer chart.tsx's own tabs read
  * — so the chat never offers a form the reader could not also reach by
  * clicking, including the three phase-5 shapes (dumbbell/slope/heatmap).
- * Deliberately NOT `formsFor`: that stays the own-data tier's five-form
- * list until user-chart.tsx grows matching render code (plan Global
- * Constraints — CBS/Eurostat card only).
+ * The own-data tier reads the same scorer since Task 1 of the 2026-09-22
+ * parity plan (`ownDataRenderableForms` above), capped to the forms
+ * user-chart.tsx can draw — this tier's cap is chart.tsx's own tab set,
+ * which already draws all eleven.
  *
  * Phase 5b follow-up (#300, #302): `allowedForms` is PURELY STRUCTURAL — it
  * reads `regionScope`, `kind` and point shape, never the live state of the

@@ -72,7 +72,17 @@ import {
   type ChartDocState,
   type CommandContext,
 } from '../lib/chart-commands.ts';
-import { areaFormAllowed, defaultFormFor, fallbackForm, hbarFormAllowed, lineFormAllowed, type ChartForm } from '../lib/chart-view-state.ts';
+import {
+  areaFormAllowed,
+  defaultFormFor,
+  fallbackForm,
+  hbarFormAllowed,
+  heatmapFormAllowed,
+  isTabularForm,
+  lineFormAllowed,
+  slopeFormAllowed,
+  type ChartForm,
+} from '../lib/chart-view-state.ts';
 import { useLang } from '../lib/i18n/lang-provider.tsx';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import {
@@ -82,6 +92,7 @@ import {
   baselineAxisLine,
   ChartTooltip,
   GRID_LINE_PROPS,
+  heatmapIntensity,
   valueLabelPlan,
   yAxisDomain,
   type PlottablePoint,
@@ -217,6 +228,15 @@ const FORM_TABS: readonly { form: ChartForm; label: MessageKey }[] = [
   { form: 'bar', label: 'chart.tabBar' },
   { form: 'hbar', label: 'chart.form.hbar' },
   { form: 'table', label: 'chart.tabTable' },
+  // Own-data chart-fit parity (plan 2026-09-22, Task 1): the phase-5 trio
+  // trails Tabel in the scorer's own fixed order — dumbbell, slope, heatmap
+  // (chart-fit.ts's `allowedForms`; chart.tsx's tabs use the same order).
+  // Dumbbell's slot, between Tabel and Helling, is Task 2's (it needs a
+  // render decision of its own, not just wiring); Helling and Warmtekaart
+  // are wired here. The list the chat is told about (chart-capabilities.ts's
+  // `ownDataRenderableForms`) must never name a form this list lacks.
+  { form: 'slope', label: 'chart.form.slope' },
+  { form: 'heatmap', label: 'chart.form.heatmap' },
 ];
 
 /** ADR 042's value-label look, copied from chart.tsx (where it is
@@ -355,6 +375,139 @@ function derivedOverlayElements(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Own-data chart-fit parity (plan 2026-09-22, Task 1): the "Warmtekaart" —
+// this card's OWN table rows recoloured. A sibling of chart.tsx's
+// `heatmapModel`/`HeatmapGrid` (the same CSS grid with ARIA table
+// semantics, the same colour scale, the same "throw on a missing cell"
+// stance), rebuilt over the `rows`/`seriesMeta` model `tableNode` below
+// renders rather than over a ChartSpec — a UserChartSpec cannot be one
+// (ADR 037 H2), so chart.tsx's grid, which takes a ChartSpec, cannot be
+// mounted here. Deliberately WITHOUT chart.tsx's bar-kind transposition:
+// this card's table never transposes on kind, so neither does its grid.
+// ---------------------------------------------------------------------------
+
+/** chart.tsx's `heatmapCellColor`, copied (module-private there, like
+ * VALUE_LABEL_PROPS above): the same two `--heatmap-low`/`--heatmap-high`
+ * tokens (app/globals.css, light + dark), the same whole-percentage oklch
+ * mix — so both cards' grids share one scale and one look. */
+function heatmapCellColor(intensity: number): string {
+  return `color-mix(in oklch, var(--heatmap-low), var(--heatmap-high) ${Math.round(intensity * 100)}%)`;
+}
+
+export interface UserHeatmapCell {
+  text: string;
+  resultId: string;
+  value: number;
+}
+
+export interface UserHeatmapModel {
+  /** The file's own xHeader, then the series labels — the table's header words. */
+  header: string[];
+  rows: { key: string; label: string; cells: UserHeatmapCell[] }[];
+  /** The grid's own extremes, computed ONCE over every cell — the one scale
+   * every cell's colour is read against (equal when every cell holds the
+   * same value; `heatmapIntensity` then yields the mid tone for all). */
+  min: number;
+  max: number;
+}
+
+/**
+ * One row per x category (the SAME `rows` the table shows, chronological by
+ * xKey), one column per series. Every cell is one point's own
+ * `formattedValue` (`_display`, carried into the row by `buildRows`) bound
+ * to its rowRef (`_resultId`); the colour is a second cue read off that
+ * same point's raw value, never the only way a value is shown. A missing
+ * intersection cannot occur — `activeForm` is `fallbackForm`'s verdict over
+ * this very spec, and `heatmapFormAllowed` only passes when every series
+ * carries a real value at every x — so a cell without one is a guard bug:
+ * thrown, exactly as chart.tsx's `heatmapModel` does, never painted as an
+ * empty or default-coloured cell.
+ */
+export function userHeatmapModel(xHeader: string, rows: readonly Row[], seriesMeta: readonly SeriesMeta[]): UserHeatmapModel {
+  const modelRows = rows.map((row) => ({
+    key: String(row.periodCode),
+    label: String(row.periodLabel),
+    cells: seriesMeta.map((s): UserHeatmapCell => {
+      const value = row[s.key];
+      const resultId = row[`${s.key}_resultId`];
+      if (typeof value !== 'number' || resultId == null) {
+        throw new Error(
+          `userHeatmapModel: no real value for series "${s.label}" at ${String(row.periodLabel)} — heatmapFormAllowed should have refused this spec`,
+        );
+      }
+      const display = row[`${s.key}_display`];
+      return { text: display == null ? '' : String(display), resultId: String(resultId), value };
+    }),
+  }));
+  const values = modelRows.flatMap((row) => row.cells.map((cell) => cell.value));
+  return { header: [xHeader, ...seriesMeta.map((s) => s.label)], rows: modelRows, min: Math.min(...values), max: Math.max(...values) };
+}
+
+/** The heatmap canvas — chart.tsx's `HeatmapGrid` shape exactly: a CSS grid
+ * with ARIA table semantics, rows `display: contents` so the grid lays every
+ * row's cells out in shared columns while a screen reader still hears row
+ * and column headers. The model is built HERE, inside the component, so it
+ * only ever runs while this form is on screen (it throws on a spec the guard
+ * would have refused). Its own test id, `user-heatmap-grid`, next to this
+ * file's `user-chart-container`/`user-chart-title`: a CBS card and an
+ * own-data card can share one page, and a locator must never confuse the
+ * two (ADR 037 H2). `pres` does not apply — like the table, no line, grid
+ * line or frame to style. */
+function UserHeatmapGrid({
+  xHeader,
+  rows,
+  seriesMeta,
+  label,
+}: {
+  xHeader: string;
+  rows: readonly Row[];
+  seriesMeta: readonly SeriesMeta[];
+  label: string;
+}) {
+  const model = userHeatmapModel(xHeader, rows, seriesMeta);
+  const columns = model.header.length - 1;
+  return (
+    <div
+      role="table"
+      aria-label={label}
+      data-testid="user-heatmap-grid"
+      className="grid w-full text-sm"
+      style={{ gridTemplateColumns: `max-content repeat(${columns}, minmax(0, 1fr))` }}
+    >
+      <div role="row" className="contents">
+        {model.header.map((h, i) => (
+          <div
+            key={i}
+            role="columnheader"
+            className={`border-b border-border px-2 py-1 font-medium text-muted-foreground ${i === 0 ? 'text-left' : 'text-right'}`}
+          >
+            {h}
+          </div>
+        ))}
+      </div>
+      {model.rows.map((row) => (
+        <div key={row.key} role="row" className="contents">
+          <div role="rowheader" className="border-b border-border px-2 py-1 text-left font-normal text-foreground">
+            {row.label}
+          </div>
+          {row.cells.map((cell, i) => (
+            <div
+              key={i}
+              role="cell"
+              data-label-for={cell.resultId}
+              className="border-b border-border px-2 py-1 text-right text-foreground tabular-nums"
+              style={{ backgroundColor: heatmapCellColor(heatmapIntensity(cell.value, model.min, model.max)) }}
+            >
+              {cell.text}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * The card. A thin wrapper around `UserChartCard` whose only job is the
  * spec-swap reset: the visual dock and the chat both hand the SAME mounted
@@ -407,6 +560,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const plottable = toPlottableSpec(activeSpec);
   const seriesCount = plottable.series.length;
   const activeForm = fallbackForm(state.form, plottable, seriesCount);
+  // Own-data chart-fit parity (Task 1): the ONE definition of "draws no
+  // chart" — the table and the heatmap — shared with chart.tsx and
+  // chart-capabilities.ts through chart-view-state.ts's `isTabularForm`, so
+  // the three can never disagree about which forms mount no Style panel,
+  // legend, notes strip, goal line, era shading, or chat-openable style/
+  // notes target. Every former `activeForm !== 'table'` gate below reads
+  // THIS, so the heatmap inherits the table's exact treatment.
+  const tabularForm = isTabularForm(activeForm);
 
   // The data command, end to end: an instruction the reader (or a doorway)
   // set becomes a spec. Cache hit → instant, which is what makes Undo/Redo
@@ -659,6 +820,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     if (form === 'line') return lineFormAllowed(plottable, seriesCount);
     if (form === 'area') return areaFormAllowed(plottable, seriesCount);
     if (form === 'hbar') return hbarFormAllowed(plottable);
+    // Own-data chart-fit parity (Task 1): the SAME shape guards chart.tsx's
+    // canUseSlope/canUseHeatmap read, over `plottable` — the spec that is
+    // actually drawn. This card has no zoom window and no alternate reading,
+    // so unlike chart.tsx there is no separate view spec to guard against:
+    // `activeForm` above already runs `fallbackForm` over this same
+    // `plottable`, which is what keeps `userHeatmapModel`'s throw unreachable.
+    if (form === 'slope') return slopeFormAllowed(plottable, seriesCount);
+    if (form === 'heatmap') return heatmapFormAllowed(plottable, seriesCount);
     return true;
   }
   function formReason(form: ChartForm): string | undefined {
@@ -668,12 +837,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         ? t(chartLang, 'chart.formReason.areaMultiSeries')
         : t(chartLang, 'chart.formReason.areaComparison');
     if (form === 'hbar') return t(chartLang, 'chart.formReason.hbarTimeSeries');
+    if (form === 'slope') return t(chartLang, 'chart.slopeDisabledReason');
+    if (form === 'heatmap') return t(chartLang, 'chart.heatmapDisabledReason');
     return undefined;
   }
   function selectForm(next: ChartForm): void {
-    // Tabel has no frame and no Style panel at all, so switching to it closes
-    // the panel rather than leaving `styleOpen` stuck on a hidden region.
-    if (next === 'table') setStyleOpen(false);
+    // Neither tabular form (Tabel, Warmtekaart) has a frame or a Style panel
+    // at all, so switching to one closes the panel rather than leaving
+    // `styleOpen` stuck on a hidden region.
+    if (isTabularForm(next)) setStyleOpen(false);
     dispatch({ kind: 'setForm', form: next }, 'panel');
     tabRefs.current[next]?.focus();
   }
@@ -808,12 +980,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     setCopilotReply((reply) => (reply === null ? null : { ...reply, undone: true }));
   }
 
-  /** Which doorway a reply chip can actually open right now. Tabel form
-   * mounts neither the Style panel nor the notes strip, so a chip pointing
-   * at either must not look clickable there. */
+  /** Which doorway a reply chip can actually open right now. A tabular form
+   * (Tabel, Warmtekaart) mounts neither the Style panel nor the notes strip,
+   * so a chip pointing at either must not look clickable there. */
   function copilotCanOpen(target: ChipOpens): boolean {
     if (target === 'none') return false;
-    if (target === 'style' || target === 'notes') return activeForm !== 'table';
+    if (target === 'style' || target === 'notes') return !tabularForm;
     return true;
   }
 
@@ -936,7 +1108,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         style={fontStack(pres.fontFamily) ? { fontFamily: fontStack(pres.fontFamily) } : undefined}
       >
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 256 }}>
-          {activeForm === 'line' ? (
+          {/* Own-data chart-fit parity (Task 1): a slope chart IS a line
+            * chart restricted to exactly two x values per series —
+            * `slopeFormAllowed`'s own condition — so Helling reuses this
+            * Lijn branch verbatim, exactly as chart.tsx's own Helling tab
+            * reuses its Lijn branch. Nothing new is drawn. */}
+          {activeForm === 'line' || activeForm === 'slope' ? (
             <LineChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
               {verticalAxes}
               {visibleSeries.map((s) => (
@@ -1157,7 +1334,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <ChartHistoryActions undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} history={history} lang={chartLang} />
-          {activeForm !== 'table' ? (
+          {!tabularForm ? (
             <ChartConfigTrigger
               open={styleOpen}
               onToggle={() => setStyleOpen((open) => !open)}
@@ -1227,8 +1404,21 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           {t(chartLang, renderFailure)}
         </p>
       ) : null}
-      {activeForm === 'table' ? tableNode : plotNode}
-      {activeForm !== 'table' && seriesMeta.length > 1 ? (
+      {activeForm === 'heatmap' ? (
+        // Own-data chart-fit parity (Task 1): the heatmap sits where the
+        // table does — a sibling of `tableNode`, outside ChartFrame and the
+        // export container (no <svg> to export, no frame to draw), the same
+        // `tabpanel` id the tablist points at. Mirrors chart.tsx's own
+        // canvas dispatch. Mounted (and its model built) only in this form.
+        <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.form.heatmap')} className="mt-2 overflow-x-auto">
+          <UserHeatmapGrid xHeader={activeSpec.xHeader} rows={rows} seriesMeta={seriesMeta} label={heading} />
+        </div>
+      ) : activeForm === 'table' ? (
+        tableNode
+      ) : (
+        plotNode
+      )}
+      {!tabularForm && seriesMeta.length > 1 ? (
         <>
           <SeriesLegend
             seriesMeta={seriesMeta}
@@ -1249,7 +1439,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           ) : null}
         </>
       ) : null}
-      {activeForm !== 'table' ? (
+      {!tabularForm ? (
         // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
         // focuses (Task 8) — the strip itself has no single control to aim at.
         <div ref={notesRef} tabIndex={-1} className="outline-none">
@@ -1288,7 +1478,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           />
         </div>
       ) : null}
-      {activeForm !== 'table' ? (
+      {!tabularForm ? (
         <div tabIndex={-1} className="outline-none">
           <ChartEraShading
             eraShadings={state.eraShadings}
@@ -1433,7 +1623,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           onChange={(instruction, summary) => dispatch({ kind: 'setInstruction', instruction, summary }, 'panel')}
         />
       ) : null}
-      {activeForm !== 'table' ? (
+      {!tabularForm ? (
         <ChartConfigPanel
           resolved={resolved}
           seriesMeta={seriesMeta}

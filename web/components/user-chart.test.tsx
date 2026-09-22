@@ -128,8 +128,60 @@ function editContext(overrides: Partial<UserChartEditContext> = {}): UserChartEd
   return { datasetId: 3, threadId: 42, turnId: 7, profile: PROFILE, lastInstruction: LAST_INSTRUCTION, ...overrides };
 }
 
+/** Two series × three years — heatmap-shaped (a 2 × 3 grid, every cell a real
+ * value) but NOT slope-shaped (three x values per series, not exactly two). */
+function twoSeriesThreeYearSpec(): UserChartSpec {
+  return spec({
+    yHeaders: ['Revenue'],
+    series: [
+      {
+        label: 'Amsterdam',
+        points: [
+          point({ rowRef: 'r1:c1', xKey: '2022', xLabel: '2022', value: 30, formattedValue: '30,0', sourceText: '30,0' }),
+          point({ rowRef: 'r2:c1', xKey: '2023', xLabel: '2023', value: 40, formattedValue: '40,0', sourceText: '40,0' }),
+          point({ rowRef: 'r3:c1', xKey: '2024', xLabel: '2024', value: 42, formattedValue: '42,0', sourceText: '42,0' }),
+        ],
+      },
+      {
+        label: 'Rotterdam',
+        points: [
+          point({ rowRef: 'r1:c2', xKey: '2022', xLabel: '2022', value: 10, formattedValue: '10,0', sourceText: '10,0' }),
+          point({ rowRef: 'r2:c2', xKey: '2023', xLabel: '2023', value: 20, formattedValue: '20,0', sourceText: '20,0' }),
+          point({ rowRef: 'r3:c2', xKey: '2024', xLabel: '2024', value: 24, formattedValue: '24,0', sourceText: '24,0' }),
+        ],
+      },
+    ],
+  });
+}
+
 function lineCurves(): number {
   return document.querySelectorAll('.recharts-line-curve').length;
+}
+
+/** (g) The whole-card digit scan: every numeric token a reader can see traces
+ * to one of the spec's OWN strings (a formattedValue, an xLabel, the capture
+ * date) — the card itself never composes a figure. The plotted-point count is
+ * structural (how many points are drawn), not a value, so it is allowed
+ * explicitly. Shared by the line-form scan below and the heatmap scan. */
+function expectDigitsTraceToSpec(container: HTMLElement, s: UserChartSpec): void {
+  const allowed = [
+    s.provenance.capturedAt.slice(0, 10),
+    s.provenance.displayName,
+    String(s.series[0]!.points.length),
+    ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.xLabel])]),
+  ].filter(Boolean);
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      allowed.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
+    ).toBe(true);
+  }
 }
 
 describe('UserChartView — H2 structural distinction from ChartView', () => {
@@ -186,32 +238,11 @@ describe('UserChartView — honesty contract (mirrors chart.test.tsx)', () => {
     expect(() => render(<UserChartView spec={spec({ kind: 'bar' })} />)).not.toThrow();
   });
 
-  // (g) The whole-card digit scan: every numeric token a reader can see
-  // traces to one of the spec's OWN strings (a formattedValue, an xLabel, the
-  // capture date) — the card itself never composes a figure. The plotted-
-  // point count is structural (how many points are drawn), not a value, so it
-  // is allowed explicitly.
+  // (g) The whole-card digit scan — see `expectDigitsTraceToSpec` above.
   it('the whole-card digit scan is clean: every rendered digit traces to a spec string', () => {
     const s = twoSeriesSpec();
     const { container } = render(<UserChartView spec={s} />);
-    const allowed = [
-      s.provenance.capturedAt.slice(0, 10),
-      s.provenance.displayName,
-      String(s.series[0]!.points.length),
-      ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.xLabel])]),
-    ].filter(Boolean);
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-    const tokens: string[] = [];
-    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-      tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
-    }
-    expect(tokens.length).toBeGreaterThan(0);
-    for (const tok of tokens) {
-      expect(
-        allowed.some((str) => str.includes(tok)),
-        `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings`,
-      ).toBe(true);
-    }
+    expectDigitsTraceToSpec(container, s);
   });
 });
 
@@ -251,7 +282,7 @@ describe('UserChartView — the form switch (co-pilot phase 2)', () => {
   // an on-screen control, and the control SAYS which kind it is.
   it('marks every form tab with data-command-kind="setForm"', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
-    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel']) {
+    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling', 'Warmtekaart']) {
       expect(screen.getByRole('tab', { name, hidden: true })).toHaveAttribute('data-command-kind', 'setForm');
     }
   });
@@ -622,6 +653,335 @@ describe('UserChartView — difference/mean overlays (co-pilot phase 4 parity, T
 
     fireEvent.click(screen.getByRole('button', { name: /× Gemiddelde tonen/ }));
     await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBe(0));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Own-data chart-fit parity (plan 2026-09-22, Task 1): the Helling (slope)
+// and Warmtekaart (heatmap) tabs. Slope is the existing line branch at
+// exactly two x values (nothing new drawn); the heatmap is this card's OWN
+// table rows as a CSS grid over `userHeatmapModel` — each cell its point's
+// own formattedValue bound via data-label-for, shaded by that same point's
+// value on the grid's one shared min..max scale. Mirrors chart.test.tsx's
+// 'ChartView — heatmap form (phase 5, Task 4)' block over this card's own
+// fixtures and its own test id (`user-heatmap-grid`).
+//   twoSeriesSpec()          — 2 series × 2 years: slope AND heatmap allowed
+//   twoSeriesThreeYearSpec() — 2 series × 3 years: heatmap yes, slope no
+//   spec()                   — 1 series × 1 point: neither
+// ---------------------------------------------------------------------------
+describe('UserChartView — slope + heatmap (own-data chart-fit parity, Task 1)', () => {
+  const SLOPE_REASON = 'Beschikbaar zodra je precies twee momenten vergelijkt.';
+  const HEATMAP_REASON = 'Beschikbaar zodra je minstens twee reeksen en twee momenten vergelijkt.';
+
+  function grid(container: HTMLElement): HTMLElement {
+    const el = container.querySelector<HTMLElement>('[data-testid="user-heatmap-grid"]');
+    expect(el, 'no own-data heatmap grid on the card').not.toBeNull();
+    return el!;
+  }
+  function cell(container: HTMLElement, resultId: string): HTMLElement {
+    const el = container.querySelector<HTMLElement>(`[data-testid="user-heatmap-grid"] [role="cell"][data-label-for="${resultId}"]`);
+    expect(el, `no heatmap cell for ${resultId}`).not.toBeNull();
+    return el!;
+  }
+  /** The whole-number percentage of --heatmap-high the cell's background is
+   * mixed with — the SAME color-mix string chart.tsx's grid writes. */
+  function mixPercent(el: HTMLElement): number {
+    const m = /color-mix\(in oklch, var\(--heatmap-low\), var\(--heatmap-high\) (\d+)%\)/.exec(el.style.backgroundColor);
+    expect(m, `cell background is not a heatmap mix: "${el.style.backgroundColor}"`).not.toBeNull();
+    return Number(m![1]);
+  }
+  function expectDisabledWithReason(tab: HTMLElement, reason: string): void {
+    expect(tab).toBeDisabled();
+    expect(tab).toHaveAttribute('title', reason);
+    const describedById = tab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    expect(document.getElementById(describedById!)!.textContent).toBe(reason);
+  }
+
+  it('the two new tabs trail Tabel in the scorer\'s own fixed order: Helling, Warmtekaart', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling', 'Warmtekaart']);
+  });
+
+  it('a 2-series × 2-point spec offers Helling enabled; selecting it draws the line branch at exactly two moments', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Helling' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // The line render, unchanged: two curves, each ONE straight segment
+    // (`type="linear"`, so the path is `M … L …`), four value dots in all —
+    // the same structure the CBS card's Helling tab proves in its e2e.
+    const curves = [...container.querySelectorAll('.recharts-line-curve')];
+    expect(curves).toHaveLength(2);
+    for (const path of curves) expect(((path.getAttribute('d') ?? '').match(/L/g) ?? []).length).toBe(1);
+    expect(container.querySelectorAll('circle[data-point="value"]')).toHaveLength(4);
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+    // Still a chart form: the export container, the Style trigger and the
+    // legend are all there.
+    expect(container.querySelector('[data-testid="user-chart-container"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+  });
+
+  it('Helling is disabled, with its reason for pointer and screen reader, for three x values per series and for a single series', () => {
+    const { unmount } = render(<UserChartView spec={twoSeriesThreeYearSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Helling' });
+    expectDisabledWithReason(tab, SLOPE_REASON);
+    fireEvent.click(tab);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    unmount();
+
+    // One series with exactly two points: a slope compares at least two things.
+    const single = spec({ series: [twoSeriesSpec().series[0]!] });
+    render(<UserChartView spec={single} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Helling' }), SLOPE_REASON);
+  });
+
+  it('a 2-series × 2-point spec offers Warmtekaart enabled; selecting it renders a grid of the table\'s own bound cells and no chart', () => {
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // Nothing Recharts-shaped on the card, no plain <table>, no export container.
+    expect(container.querySelector('.recharts-wrapper')).toBeNull();
+    expect(container.querySelector('table')).toBeNull();
+    expect(container.querySelector('[data-testid="user-chart-container"]')).toBeNull();
+
+    const g = grid(container);
+    expect(g).toHaveAttribute('role', 'table');
+    // The same accessible name the table carries: the card's own heading.
+    expect(g).toHaveAttribute('aria-label', 'Revenue per Year');
+    // One column per series plus the row-header column.
+    expect(g.style.gridTemplateColumns).toBe('max-content repeat(2, minmax(0, 1fr))');
+    // The table's own header words: the file's xHeader, then the series labels (U9, verbatim).
+    expect([...g.querySelectorAll('[role="columnheader"]')].map((el) => el.textContent)).toEqual(['Year', 'Amsterdam', 'Rotterdam']);
+    expect([...g.querySelectorAll('[role="rowheader"]')].map((el) => el.textContent)).toEqual(['2023', '2024']);
+    // Exactly four cells, each its point's OWN formattedValue, bound to its rowRef.
+    const cells = [...g.querySelectorAll<HTMLElement>('[role="cell"]')];
+    expect(cells.map((el) => [el.getAttribute('data-label-for'), el.textContent])).toEqual([
+      ['r1:c1', '40,0'],
+      ['r1:c2', '20,0'],
+      ['r2:c1', '42,0'],
+      ['r2:c2', '24,0'],
+    ]);
+    // The tabpanel the tablist points at is the grid's own wrapper.
+    expect(g.parentElement).toHaveAttribute('role', 'tabpanel');
+    expect(g.parentElement).toHaveAttribute('id', tab.getAttribute('aria-controls'));
+    expect(g.parentElement).toHaveAttribute('aria-label', 'Warmtekaart');
+  });
+
+  it('colour: each cell is mixed by its value\'s place on the ONE grid-wide min..max scale, whole percentages', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    // min 20 (r1:c2), max 42 (r2:c1): 40 -> 20/22 = 90.9 -> 91%, 24 -> 4/22 = 18.2 -> 18%.
+    expect(mixPercent(cell(container, 'r1:c2'))).toBe(0);
+    expect(mixPercent(cell(container, 'r2:c1'))).toBe(100);
+    expect(mixPercent(cell(container, 'r1:c1'))).toBe(91);
+    expect(mixPercent(cell(container, 'r2:c2'))).toBe(18);
+  });
+
+  it('a 2 × 3 grid is offered too (at least two x values, not exactly two) and scales over all six cells', () => {
+    const s = twoSeriesThreeYearSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expect(tab).not.toBeDisabled();
+    fireEvent.click(tab);
+    const g = grid(container);
+    expect(g.querySelectorAll('[role="cell"]')).toHaveLength(6);
+    expect([...g.querySelectorAll('[role="rowheader"]')].map((el) => el.textContent)).toEqual(['2022', '2023', '2024']);
+    // min 10 (r1:c2), max 42 (r3:c1); r2:c1 = 40 -> 30/32 = 93.75 -> 94%; r2:c2 = 20 -> 10/32 = 31.25 -> 31%.
+    expect(mixPercent(cell(container, 'r1:c2'))).toBe(0);
+    expect(mixPercent(cell(container, 'r3:c1'))).toBe(100);
+    expect(mixPercent(cell(container, 'r2:c1'))).toBe(94);
+    expect(mixPercent(cell(container, 'r2:c2'))).toBe(31);
+    expect(cell(container, 'r2:c1').textContent).toBe('40,0');
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('the whole-card digit scan is clean in Warmtekaart form — the mix percentages live in style attributes, never in text', () => {
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('is gated exactly like the table: no Style trigger, no legend, no notes strip, no era shading while the grid is shown — and Lijn restores them', async () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    // Line form (the default here) has all four.
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Doellijn toevoegen' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Periode markeren' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Reeksen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Doellijn toevoegen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Periode markeren' })).toBeNull();
+
+    // And back: switching to Lijn restores them and drops the grid.
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Doellijn toevoegen' })).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).toBeNull();
+  });
+
+  it('a single-series spec, a null cell and ragged x values each disable Warmtekaart with its reason — the table stays', () => {
+    // One series: not a grid at all.
+    const { container, unmount } = render(<UserChartView spec={spec()} />);
+    const tab = screen.getByRole('tab', { name: 'Warmtekaart' });
+    expectDisabledWithReason(tab, HEATMAP_REASON);
+    fireEvent.click(tab);
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    unmount();
+
+    // A null cell: nothing honest to colour there.
+    const nulled = twoSeriesSpec();
+    nulled.series[1]!.points[1] = point({ rowRef: 'r2:c2', xKey: '2024', xLabel: '2024', value: null, formattedValue: null, sourceText: '', reason: 'leeg in bron' });
+    const second = render(<UserChartView spec={nulled} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Warmtekaart' }), HEATMAP_REASON);
+    second.unmount();
+
+    // Ragged x values: an intersection with no cell. The table still shows
+    // that gap as a gap — the heatmap just is not offered.
+    const ragged = twoSeriesSpec();
+    ragged.series[1]!.points = [
+      point({ rowRef: 'r0:c2', xKey: '2022', xLabel: '2022', value: 18, formattedValue: '18,0', sourceText: '18,0' }),
+      point({ rowRef: 'r1:c2', xKey: '2023', xLabel: '2023', value: 20, formattedValue: '20,0', sourceText: '20,0' }),
+    ];
+    render(<UserChartView spec={ragged} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Warmtekaart' }), HEATMAP_REASON);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('switching to Warmtekaart then Undo returns to the prior form through the existing setForm history', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).not.toBeNull();
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).toBeNull();
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).not.toBeNull();
+  });
+
+  // This card's own version of chart.test.tsx's alternate-reading fallback:
+  // the ONE way a mounted own-data card swaps its spec in place is a DATA
+  // command (`renderDatasetInstruction`), and the spec that comes back can
+  // be one the grid cannot honestly draw. `activeForm` runs `fallbackForm`
+  // over that very spec, so the choice falls back (heatmap -> table) and
+  // `userHeatmapModel`'s throw is never reached; Undo, a cache hit, brings
+  // the grid straight back because the reader's own choice was never
+  // discarded.
+  it('a data edit that leaves the grid unreadable falls back to the table — never a thrown render — and Undo brings the grid back', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: spec() });
+    const { container } = render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).not.toBeNull();
+
+    // The Data panel stays available in a tabular form (WHICH data is drawn
+    // is orthogonal to how it is shown) — the same doorway the Data-panel
+    // test above uses.
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+    fireEvent.change(screen.getByLabelText('Samenvatten'), { target: { value: 'sum' } });
+
+    await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument());
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Tabel' })).toHaveAttribute('aria-selected', 'true');
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Warmtekaart' }), HEATMAP_REASON);
+    // Gated as the table it now renders as.
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(container.querySelector('[data-testid="user-heatmap-grid"]')).not.toBeNull());
+    expect(screen.getByRole('tab', { name: 'Warmtekaart' })).toHaveAttribute('aria-selected', 'true');
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
+  });
+
+  it('the same fallback for Helling: a data edit to three x values falls back to a bar (fallbackForm\'s slope -> bar)', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: twoSeriesThreeYearSpec() });
+    const { container } = render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Helling' }));
+    expect(screen.getByRole('tab', { name: 'Helling' })).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+    fireEvent.change(screen.getByLabelText('Samenvatten'), { target: { value: 'sum' } });
+
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true'));
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Helling' }), SLOPE_REASON);
+  });
+
+  it('renders the English tab names; the grid keeps the file\'s own header words (never translated, U9)', () => {
+    const { container } = render(
+      <LangProvider lang="en">
+        <UserChartView spec={twoSeriesSpec()} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: 'Slope' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Heatmap' }));
+    const g = grid(container);
+    expect(g.parentElement).toHaveAttribute('aria-label', 'Heatmap');
+    expect([...g.querySelectorAll('[role="columnheader"]')].map((el) => el.textContent)).toEqual(['Year', 'Amsterdam', 'Rotterdam']);
+    expect(cell(container, 'r2:c2').textContent).toBe('24,0');
+  });
+
+  // The layout contract, as far as jsdom can see it. jsdom has no layout
+  // engine and loads no Tailwind, so `getComputedStyle(...).display` and
+  // bounding boxes say nothing here — the real proof that `display:
+  // contents` rows vanish from the box tree and the cells line up in shared
+  // columns is chart-copilot.spec.ts's heatmap block (bounding boxes +
+  // computed display) and belongs in Task 5's own-data e2e over THIS test
+  // id. What jsdom CAN pin is the structure that proof depends on: the
+  // `grid` class and inline column template on the table, `contents` on
+  // every row, one column per series.
+  it('carries the structure the real-browser layout proof (Task 5 e2e) asserts: grid on the table, contents on every row', () => {
+    const { container } = render(<UserChartView spec={twoSeriesThreeYearSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Warmtekaart' }));
+    const g = grid(container);
+    expect(g.classList.contains('grid')).toBe(true);
+    expect(g.style.gridTemplateColumns).toBe('max-content repeat(2, minmax(0, 1fr))');
+    const rows = [...g.querySelectorAll('[role="row"]')];
+    // Header row + one row per x value.
+    expect(rows).toHaveLength(4);
+    for (const row of rows) expect(row.classList.contains('contents')).toBe(true);
+    // Every row has exactly one cell per series column (header: one columnheader per column).
+    expect(rows[0]!.querySelectorAll('[role="columnheader"]')).toHaveLength(3);
+    for (const row of rows.slice(1)) {
+      expect(row.querySelectorAll('[role="rowheader"]')).toHaveLength(1);
+      expect(row.querySelectorAll('[role="cell"]')).toHaveLength(2);
+    }
   });
 });
 
