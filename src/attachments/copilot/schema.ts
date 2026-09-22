@@ -9,7 +9,11 @@
 // neither per-request enums nor optional fields in practice (the
 // rerank-schema.ts note instruct/schema.ts inherits), so every field is
 // PRESENT AND NULLABLE and code — never the JSON schema — enforces the
-// allowlists that depend on THIS chart.
+// allowlists that depend on THIS chart. The one bare NUMBER
+// (addGoalLine.value, mirroring the CBS tier's co-pilot phase 6) is a
+// reader-set target, not a display value — map.ts stores it only when it
+// EQUALS, numerically, a number the reader's own message spells out
+// (text-guard.ts's goalLineValueInMessage).
 import { z } from 'zod';
 import { oneOfToAnyOf } from '../../answer/llm/json-schema.ts';
 import { InstructionValidationError, chartInstructionSchema, validateInstructionObject } from '../instruct/schema.ts';
@@ -49,6 +53,30 @@ export const viewCommandSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('setTitle'), title: z.string().nullable() }),
   z.strictObject({ kind: z.literal('setCaption'), caption: z.string().nullable() }),
   z.strictObject({ kind: z.literal('addNote'), seriesLabel: z.string(), xLabel: z.string(), text: z.string() }),
+  // Own-data wiring of the CBS tier's co-pilot phase 6 primitives: x-axis
+  // LABELS resolved to x KEYS by map.ts exactly like addNote resolves
+  // xLabel; the label text is digit-guarded there.
+  z.strictObject({ kind: z.literal('addEraShading'), fromLabel: z.string(), toLabel: z.string(), label: z.string() }),
+  // A computed overlay (difference arrow or mean line) named by series
+  // LABEL and x LABELS only — map.ts resolves them to the points' own
+  // rowRefs; the number itself is derived by the client's own renderer from
+  // those cells, never carried here. `difference` needs both x labels;
+  // `mean` ignores them (both null).
+  z.strictObject({
+    kind: z.literal('addDerivedOverlay'),
+    calcKind: z.enum(['difference', 'mean']),
+    seriesLabel: z.string(),
+    fromLabel: z.string().nullable(),
+    toLabel: z.string().nullable(),
+  }),
+  // The ONE bare NUMBER on this tier. Not a display value — a goal line is
+  // a reader-set target, deliberately not one of the chart's plotted
+  // values — and map.ts stores it only when text-guard.ts's
+  // goalLineValueInMessage finds a number in the reader's own raw message
+  // that EQUALS it, read the Dutch and the English way (the same digits
+  // with a moved decimal or a different sign do not count); the label is
+  // digit-guarded like a title.
+  z.strictObject({ kind: z.literal('addGoalLine'), value: z.number(), label: z.string() }),
 ]);
 
 export const copilotOutputSchema = z.strictObject({

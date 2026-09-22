@@ -4,6 +4,7 @@
 // SAME two-series chart, the way a mapping rule and its digit guard are
 // judged against one chart in production.
 import { USER_DATA_DISCLAIMER, type ClientChartInstruction, type UserChartSpec } from '../../src/attachments/types.ts';
+import type { CopilotCapabilities } from '../../src/attachments/copilot/types.ts';
 
 export const CHART_FIXTURE: UserChartSpec = {
   schemaVersion: 1,
@@ -55,4 +56,16 @@ export const CURRENT_FIXTURE: ClientChartInstruction = {
   aggregate: null,
   derived: null,
   unsupported: null,
+};
+
+/** What the browser tells the co-pilot CHART_FIXTURE can do — mirrors what
+ * web/lib/chart-capabilities.ts's `ownDataCapabilities` would compute for a
+ * two-series line chart, the own-data sibling of
+ * tests/fixtures/chart-copilot/cases.ts's CBS_CAPABILITIES_FIXTURE. */
+export const CAPABILITIES_FIXTURE: CopilotCapabilities = {
+  forms: ['line', 'bar', 'table'],
+  presentationKeys: ['lineWidth', 'grid', 'markers'],
+  templates: ['standard', 'newsroom'],
+  overlays: true,
+  lang: 'nl',
 };

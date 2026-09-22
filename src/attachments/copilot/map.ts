@@ -8,14 +8,16 @@
 // does not resolve becomes a refusal naming the control that CAN do it,
 // never a guess at the nearest match.
 import { toClientInstruction, type ClientChartInstruction, type CopilotCommand, type CopilotRefusal, type UserChartSpec } from '../types.ts';
-import { stripDigits, unplottedDigits } from './text-guard.ts';
-import { TEMPLATE_IDS, type CopilotOutput } from './types.ts';
+import { goalLineValueInMessage, stripDigits, unplottedDigits } from './text-guard.ts';
+import { TEMPLATE_IDS, type CopilotCapabilities, type CopilotOutput } from './types.ts';
 
 /** The same caps web/lib's chart-commands.ts enforces on dispatch — applied
  * here too so a stored command is never one the client will drop. */
 const TITLE_MAX = 120;
 const CAPTION_MAX = 280;
 const NOTE_MAX = 280;
+const ERA_LABEL_MAX = 60;
+const GOAL_LINE_LABEL_MAX = 60;
 /** A refused request is a label for the reader, not a transcript. */
 const REQUEST_MAX = 80;
 
@@ -80,22 +82,50 @@ function guardText(
  * Maps one validated CopilotOutput onto the commands the chat turn stores.
  * `summary` is the plain-language description of the new instruction
  * (Task 6's summarizeInstruction, injected by respond.ts) shown on the
- * data chip — deterministic text, never the model's own prose.
+ * data chip — deterministic text, never the model's own prose. `message` is
+ * the reader's raw request, threaded through since this tier's own wiring
+ * of the CBS co-pilot phase 6 primitives: only addGoalLine reads it, to
+ * check that the value the model wrote is one the reader actually typed
+ * (text-guard.ts's goalLineValueInMessage) — every other command kind
+ * ignores it. `capabilities` gates addDerivedOverlay: the SAME
+ * `form === 'line' || form === 'area'` test web/lib/chart-capabilities.ts's
+ * `ownDataCapabilities` computes, checked FIRST, before any series/x-label
+ * lookup, so a bar/table chart's chat is refused outright instead of
+ * silently storing a command that renders nothing.
  *
  * `noteIdSuffix` disambiguates the note ids this reply mints (final review,
  * session 113): two chat notes on the SAME point used to share the id
  * `chat-${rowRef}`, and the second was silently deduped by `applyCommand`
- * while its chip claimed "applied". Tests pass a fixed suffix.
+ * while its chip claimed "applied". Tests pass a fixed suffix. The SAME
+ * suffix now disambiguates era shadings, derived overlays and goal lines
+ * too, via one shared `extraCount` counter kept apart from `noteCount` so
+ * addNote's own id scheme stays exactly what it was.
  */
 export function mapCopilotOutput(
   output: CopilotOutput,
   chart: UserChartSpec,
   current: ClientChartInstruction,
   summary: string,
+  message: string,
+  capabilities: CopilotCapabilities,
   noteIdSuffix: string = Date.now().toString(36),
 ): Mapped {
   const out: Mapped = { commands: [], refused: [] };
   let noteCount = 0;
+  // One counter for every id-minting command kind this tier's own co-pilot
+  // phase 6 wiring adds (era shadings, derived overlays, goal lines) — kept
+  // apart from noteCount so addNote's id scheme stays exactly what it was.
+  let extraCount = 0;
+
+  // Every x label, first-seen wins — a label→key lookup over EVERY point of
+  // EVERY series (a label may be missing from one series but present on
+  // another), mirroring the CBS tier's own periodCodeByLabel.
+  const xKeyByLabel = new Map<string, string>();
+  for (const series of chart.series) {
+    for (const point of series.points) {
+      if (!xKeyByLabel.has(point.xLabel)) xKeyByLabel.set(point.xLabel, point.xKey);
+    }
+  }
 
   // Rule 1: the data change comes FIRST — every view command below is
   // expressed against the chart that instruction produces.
@@ -232,6 +262,130 @@ export function mapCopilotOutput(
             text,
           },
         });
+        break;
+      }
+
+      // Own-data wiring of the CBS tier's co-pilot phase 6 primitives.
+      //
+      // Both labels must resolve to a real x value, CHART-WIDE (the
+      // xKeyByLabel lookup built above — an era shades the whole chart, not
+      // one series, unlike addDerivedOverlay's per-series lookup below), and
+      // the resolved keys are swapped into ascending order —
+      // chart-commands.ts's validateCommand drops an era whose codes are
+      // reversed, and a stored command must never be one the client will
+      // drop. The typed label owes the reader the same digit guard as a
+      // title/caption/note. The id is minted here, per era: the client
+      // reducer keeps only the FIRST era it sees under a given id.
+      case 'addEraShading': {
+        const fromKey = xKeyByLabel.get(command.fromLabel);
+        const toKey = xKeyByLabel.get(command.toLabel);
+        if (fromKey === undefined || toKey === undefined) {
+          // Mirrors the CBS tier's own fix (final review, #310-adjacent):
+          // the era-shading control lives beside Notes, not Form — matches
+          // the applied chip's own icon/opens (web/lib/chart-copilot-reply.ts).
+          out.refused.push({ request: cap(`era: ${command.fromLabel}–${command.toLabel}`), reason: 'not_available', control: 'notes' });
+          break;
+        }
+        const label = guardText(command.label, ERA_LABEL_MAX, chart, 'none', out);
+        if (label === null) break;
+        const [a, b] = fromKey.localeCompare(toKey) <= 0 ? [fromKey, toKey] : [toKey, fromKey];
+        out.commands.push({
+          kind: 'addEraShading',
+          era: { id: `chat-era-${extraCount++}${noteIdSuffix}`, fromPeriodCode: a, toPeriodCode: b, label },
+        });
+        break;
+      }
+
+      // The panel's difference/mean overlay, reached by NAME instead of by
+      // click: `difference` needs two named x values on the SAME series,
+      // `mean` averages every point of the named series. The series is
+      // found by label and the points by x label ON THAT SERIES — not the
+      // chart-wide xKeyByLabel, which could resolve an x value this series
+      // lacks to another series' key. The guards mirror what the client
+      // (chart-commands.ts's validateCommand: exactly 2 ids / at least 2)
+      // would otherwise refuse after the fact — a stored command must never
+      // be one it drops. Like the CBS tier, chat averages EVERY point of
+      // the named series: naming the series is the reader's own
+      // disambiguation, and this mapping has no view state (hidden/dimmed
+      // keys) to window by. The command carries rowRefs only — never a
+      // value.
+      case 'addDerivedOverlay': {
+        // The SAME gate the CBS tier's own difference/mean controls use
+        // (form === 'line' || form === 'area') — without it, asking for an
+        // overlay on a bar/table chart would store a command that renders
+        // nothing and cannot be removed. Checked first, before the
+        // series/x-label lookups below.
+        if (!capabilities.overlays) {
+          out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_available', control: 'form' });
+          break;
+        }
+        const seriesPoints = chart.series.find((series) => series.label === command.seriesLabel)?.points;
+        if (seriesPoints === undefined) {
+          out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_on_this_chart', control: 'form' });
+          break;
+        }
+        if (command.calcKind === 'difference') {
+          if (command.fromLabel === null || command.toLabel === null) {
+            out.refused.push({ request: cap('overlay: difference'), reason: 'not_available', control: 'form' });
+            break;
+          }
+          const fromPoint = seriesPoints.find((p) => p.xLabel === command.fromLabel);
+          const toPoint = seriesPoints.find((p) => p.xLabel === command.toLabel);
+          if (fromPoint === undefined || toPoint === undefined) {
+            out.refused.push({ request: cap(`overlay: ${command.fromLabel}–${command.toLabel}`), reason: 'not_on_this_chart', control: 'form' });
+            break;
+          }
+          // Both points resolve but are the same one: a degenerate
+          // combination, not a missing point — `invalid`, mirroring the
+          // CBS tier's own treatment of this case.
+          if (fromPoint.rowRef === toPoint.rowRef) {
+            out.refused.push({ request: cap(`overlay: ${command.fromLabel}–${command.toLabel}`), reason: 'invalid', control: 'form' });
+            break;
+          }
+          out.commands.push({
+            kind: 'addDerivedOverlay',
+            overlay: { id: `chat-overlay-${extraCount++}${noteIdSuffix}`, calcKind: 'difference', resultIds: [fromPoint.rowRef, toPoint.rowRef] },
+          });
+        } else {
+          const resultIds = seriesPoints.map((p) => p.rowRef);
+          if (resultIds.length < 2) {
+            out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_on_this_chart', control: 'form' });
+            break;
+          }
+          out.commands.push({
+            kind: 'addDerivedOverlay',
+            overlay: { id: `chat-overlay-${extraCount++}${noteIdSuffix}`, calcKind: 'mean', resultIds },
+          });
+        }
+        break;
+      }
+
+      // The ONE bare number this tier ever stores from the model. A goal
+      // line is a reader-set target, deliberately NOT a plotted value, so
+      // the chart is the wrong reference set: the value is judged against
+      // the reader's own raw MESSAGE instead (text-guard.ts's
+      // goalLineValueInMessage — it must EQUAL a number the reader
+      // spelled, under the Dutch or the English reading of the
+      // separators; the same digits with a moved decimal or a different
+      // sign do not count). A value the reader never typed is one the
+      // model produced itself: refused outright, naming the panel control
+      // where the reader types the number personally. The label owes the
+      // reader the same digit guard as a title/caption/note, capped at the
+      // client's own limit (chart-commands.ts's validateCommand would drop
+      // a longer or empty one), and the id is minted here per line: the
+      // client reducer keeps only the FIRST goal line it sees under a
+      // given id.
+      case 'addGoalLine': {
+        if (!goalLineValueInMessage(command.value, message)) {
+          // Mirrors the CBS tier's own fix: the goal-line control lives
+          // beside Notes, not Form — matches the applied chip's own
+          // icon/opens (web/lib/chart-copilot-reply.ts).
+          out.refused.push({ request: cap(`goal line: ${command.value}`), reason: 'not_available', control: 'notes' });
+          break;
+        }
+        const label = guardText(command.label, GOAL_LINE_LABEL_MAX, chart, 'none', out);
+        if (label === null) break;
+        out.commands.push({ kind: 'addGoalLine', goalLine: { id: `chat-goal-${extraCount++}${noteIdSuffix}`, value: command.value, label } });
         break;
       }
     }

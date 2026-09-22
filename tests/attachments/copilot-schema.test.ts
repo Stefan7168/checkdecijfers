@@ -12,7 +12,7 @@ import {
   patchSchema,
   validateCopilotOutput,
 } from '../../src/attachments/copilot/schema.ts';
-import { PRESENTATION_KEYS, TEMPLATE_IDS } from '../../src/attachments/copilot/types.ts';
+import { PRESENTATION_KEYS, TEMPLATE_IDS, sanitizeCapabilities } from '../../src/attachments/copilot/types.ts';
 import { InstructionValidationError } from '../../src/attachments/instruct/schema.ts';
 import { buildDatasetProfile } from '../../src/attachments/ingest/profile.ts';
 import { FONT_OPTIONS, sanitizeOverrides } from '../../web/lib/chart-presentation.ts';
@@ -87,13 +87,16 @@ describe('validateCopilotOutput', () => {
           { kind: 'setTitle', title: 'Omzet' },
           { kind: 'setCaption', caption: null },
           { kind: 'addNote', seriesLabel: 'Amsterdam', xLabel: '2021', text: 'piek' },
+          { kind: 'addEraShading', fromLabel: '2020', toLabel: '2021', label: 'Herstel' },
+          { kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2021' },
+          { kind: 'addGoalLine', value: 900000, label: 'Doel' },
         ],
         refused: [{ request: 'make it 3D', reason: 'not_available', control: 'none' }],
       }),
       PROFILE,
     );
     expect(output.version).toBe(COPILOT_SCHEMA_VERSION);
-    expect(output.view).toHaveLength(8);
+    expect(output.view).toHaveLength(11);
     expect(output.instruction?.aggregate).toEqual({ fn: 'sum' });
   });
 
@@ -195,5 +198,31 @@ describe('the vocabulary can never drift from the panel (no chat-only capability
   it('every TEMPLATE_IDS entry names a template web/lib actually ships (never wider)', () => {
     const shipped = new Set(CHART_TEMPLATES.map((t) => t.id));
     for (const id of TEMPLATE_IDS) expect(shipped.has(id), id).toBe(true);
+  });
+});
+
+describe('sanitizeCapabilities', () => {
+  it('drops unknown forms/keys/templates, coerces overlays and lang, keeps known values', () => {
+    expect(
+      sanitizeCapabilities({
+        forms: ['line', 'scatter'],
+        presentationKeys: ['grid', 'bogus'],
+        templates: ['newsroom', 'neon'],
+        overlays: 'yes',
+        lang: 'fr',
+      }),
+    ).toEqual({
+      forms: ['line'],
+      presentationKeys: ['grid'],
+      templates: ['newsroom'],
+      overlays: false,
+      lang: 'nl',
+    });
+  });
+
+  it('coerces overlays to true only for the literal boolean true', () => {
+    expect(sanitizeCapabilities({ overlays: true }).overlays).toBe(true);
+    expect(sanitizeCapabilities({ overlays: 1 }).overlays).toBe(false);
+    expect(sanitizeCapabilities({}).overlays).toBe(false);
   });
 });

@@ -59,6 +59,14 @@ export function ownDataCapabilities(input: {
     // The gallery is the Style panel's own first tab, and that panel is not
     // mounted at all in table form — so neither is a template.
     templates: form === 'table' ? [] : [...TEMPLATE_IDS],
+    // Own-data wiring of the CBS tier's co-pilot phase 6 addDerivedOverlay
+    // (open-questions #289/#295's own precedent): the SAME `form === 'line'
+    // || form === 'area'` test `cbsCapabilities` below uses for its own
+    // `overlays` field — an overlay only ever draws on a line/area
+    // rendering. NOT mentioned in the prompt text (a byte change there
+    // would re-hash every fixture): enforced only at
+    // src/attachments/copilot/map.ts's addDerivedOverlay case.
+    overlays: form === 'line' || form === 'area',
     lang,
   };
 }

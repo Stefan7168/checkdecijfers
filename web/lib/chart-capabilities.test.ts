@@ -62,6 +62,16 @@ describe('ownDataCapabilities', () => {
   it("carries the chart's own language", () => {
     expect(ownDataCapabilities({ spec: plottable('line', 1), form: 'line', seriesCount: 1, applicable: ALL_APPLICABLE, lang: 'en' }).lang).toBe('en');
   });
+
+  // Own-data wiring of the CBS tier's co-pilot phase 6 addDerivedOverlay
+  // (pitfall #1's gate): the SAME form-only predicate cbsCapabilities below
+  // uses for its own `overlays` field.
+  it('offers overlays only in line/area form, whatever the spec kind or series count', () => {
+    expect(ownDataCapabilities({ spec: plottable('line', 1), form: 'line', seriesCount: 1, applicable: ALL_APPLICABLE, lang: 'nl' }).overlays).toBe(true);
+    expect(ownDataCapabilities({ spec: plottable('line', 1), form: 'area', seriesCount: 1, applicable: ALL_APPLICABLE, lang: 'nl' }).overlays).toBe(true);
+    expect(ownDataCapabilities({ spec: plottable('bar', 2), form: 'bar', seriesCount: 2, applicable: ALL_APPLICABLE, lang: 'nl' }).overlays).toBe(false);
+    expect(ownDataCapabilities({ spec: plottable('line', 1), form: 'table', seriesCount: 1, applicable: ALL_APPLICABLE, lang: 'nl' }).overlays).toBe(false);
+  });
 });
 
 const PROFILE: DatasetProfile = {
