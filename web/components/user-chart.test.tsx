@@ -718,6 +718,17 @@ describe('UserChartView — difference/mean overlays (co-pilot phase 4 parity, T
     fireEvent.click(screen.getByRole('button', { name: /× Gemiddelde tonen/ }));
     await waitFor(() => expect(container.querySelectorAll('.recharts-reference-line').length).toBe(0));
   });
+  it('#293: switching to a bar chart keeps the remove chip reachable (the add buttons go, the chip stays)', async () => {
+    derivationActions.requestDatasetDerivation.mockResolvedValueOnce({ ok: true, result: { value: 41, decimals: 1, rowRef: 'agg:mean:r1:c1+r2:c1' } });
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /× Gemiddelde tonen/ }));
+    expect(screen.queryByRole('button', { name: /× Gemiddelde tonen/ })).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

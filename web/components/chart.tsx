@@ -4589,7 +4589,7 @@ export function ChartView({
                     key={era.id}
                     x1={fromLabel}
                     x2={toLabel}
-                    fill="#4f46e5"
+                    fill="var(--accent)"
                     fillOpacity={0.1}
                   />
                 );
@@ -5797,9 +5797,16 @@ export function ChartView({
             * see its own remove chip appear, and watch nothing render —
             * the control implied a capability the bar/hbar forms don't
             * have. Mirrors the `activeForm === 'line' || activeForm ===
-            * 'area'` test `effectiveKind` already uses above. */}
-          {embed !== undefined && (activeForm === 'line' || activeForm === 'area') ? (
+            * 'area'` test `effectiveKind` already uses above.
+            * #293 (session 124): only the ADD controls are form-gated. While
+            * an overlay exists (or a refusal is showing), its remove chip and
+            * message stay visible on every form — switching to a bar chart
+            * must never hide the control that removes what the reader added. */}
+          {embed !== undefined &&
+          (activeForm === 'line' || activeForm === 'area' || state.derivedOverlayRequests.length > 0 || derivationRefusals.size > 0) ? (
             <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+              {activeForm === 'line' || activeForm === 'area' ? (
+              <>
               <Button
                 type="button"
                 size="sm"
@@ -5854,6 +5861,8 @@ export function ChartView({
                 >
                   {t(chartLang, 'chart.derived.meanLabel')}
                 </Button>
+              ) : null}
+              </>
               ) : null}
               {state.derivedOverlayRequests.map((overlay) => (
                 <Button

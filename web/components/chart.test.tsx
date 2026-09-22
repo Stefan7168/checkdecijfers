@@ -2869,6 +2869,20 @@ describe('ChartView — derived overlays (Task 7) final-review fixes', () => {
     expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
   });
 
+  // #293 (session 124): I2 gates the ADD controls only. An overlay the reader
+  // already added keeps its remove chip on a bar form, so switching forms
+  // never hides the one control that takes it away.
+  it('#293: on a bar form an existing overlay keeps its remove chip, while the add controls stay hidden', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} embed={{ auditId: 1 }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Utrecht' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Gemiddelde tonen' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /× Gemiddelde tonen/ }));
+    expect(screen.queryByRole('button', { name: /× Gemiddelde tonen/ })).toBeNull();
+  });
+
   // Final-review fix wave residual (found by the scoped re-review, not the
   // original review): I2's form-gate hides the picker's own button on a
   // form switch, but an ACTIVE picker left nothing resetting its state —

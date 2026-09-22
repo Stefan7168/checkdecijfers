@@ -15,4 +15,21 @@ describe('ChartEraShading', () => {
     fireEvent.click(screen.getByText('Opslaan'));
     expect(onAdd).toHaveBeenCalledWith('2020', '2021', 'Crisis');
   });
+
+  it('#291(b): the saved list names each end by its axis label, never the raw period code', () => {
+    const cbsOptions = [{ code: '2008JJ00', label: '2008' }, { code: '2009JJ00', label: '2009' }];
+    render(
+      <ChartEraShading
+        eraShadings={[{ id: 'e1', fromPeriodCode: '2008JJ00', toPeriodCode: '2009JJ00', label: 'Kredietcrisis' }]}
+        periodOptions={cbsOptions}
+        onAdd={vi.fn()}
+        onRemove={vi.fn()}
+        lang="nl"
+        idPrefix="t2"
+      />,
+    );
+    const item = screen.getByText('Kredietcrisis').closest('li')!;
+    expect(item.textContent).toContain('2008 – 2009');
+    expect(item.textContent).not.toContain('JJ00');
+  });
 });

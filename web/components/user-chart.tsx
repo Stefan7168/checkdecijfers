@@ -1952,7 +1952,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
                 const toLabel = periodLabelByCode.get(era.toPeriodCode);
                 if (!fromLabel || !toLabel) return null;
-                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="#4f46e5" fillOpacity={0.1} />;
+                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="var(--accent)" fillOpacity={0.1} />;
               })}
               {/* No `label` prop: the reader's typed text stays only in
                 * ChartGoalLine's own list, outside `containerRef` below — see
@@ -2014,7 +2014,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
                 const toLabel = periodLabelByCode.get(era.toPeriodCode);
                 if (!fromLabel || !toLabel) return null;
-                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="#4f46e5" fillOpacity={0.1} />;
+                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="var(--accent)" fillOpacity={0.1} />;
               })}
               {state.goalLines.map((line) => (
                 <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
@@ -2447,8 +2447,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         * without an edit context the button would add a command that can
         * never resolve, the same silently-broken-doorway class of bug #310
         * closed for the CBS tier's own capability gate. */}
-      {edit !== undefined && (activeForm === 'line' || activeForm === 'area') ? (
+      {edit !== undefined &&
+      (activeForm === 'line' || activeForm === 'area' || state.derivedOverlayRequests.length > 0 || derivationRefusals.size > 0) ? (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* #293: only the ADD controls are form-gated; a remove chip and
+            * any refusal stay visible on every form while an overlay exists. */}
+          {activeForm === 'line' || activeForm === 'area' ? (
+          <>
           <button
             type="button"
             data-command-kind="addDerivedOverlay"
@@ -2488,6 +2493,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             >
               {t(chartLang, 'chart.derived.meanLabel')}
             </button>
+          ) : null}
+          </>
           ) : null}
           {state.derivedOverlayRequests.map((overlay) => (
             <button
