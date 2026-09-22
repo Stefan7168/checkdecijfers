@@ -37,6 +37,11 @@ on top.
    30-second "drop one form from a list" check ran while the root suite was running in the background on
    that checkout. It passed this time, but it could have produced a spurious failure. Run mutation checks
    before or after the long suite, never during it.
+7. **Docs-only pushes skip CI, but `tests/docs/` still polices docs.** A STATUS.md update that
+   linked to two pull requests (`[PR #37](…/pull/37)`) broke `doc-conventions.test.ts` (#132 rule (i):
+   PR references are plain text). Nothing caught it on `main`, because docs-only pushes skip CI; the
+   failure only surfaced in the NEXT code branch's full root suite. **Do next time:** run
+   `npx vitest run tests/docs` before every docs-only push.
 6. **A PR branch should not edit STATUS.md's top block if `main` will edit it too.** PR #37's STATUS
    paragraph conflicted with a later docs push to `main` about the same PRs and needed a rebase with a
    manual resolution. Keep STATUS updates on `main` (docs-only pushes are allowed), and let PR branches

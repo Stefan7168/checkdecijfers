@@ -39,10 +39,10 @@ session to "continue working autonomously, for hours and hours" — verify again
   hermetic benchmark 14/14+6/6+0 fabricated, GATE PASS; real `next build` clean; `/code-review` LOW: no
   findings.
 - **Two autonomous follow-up PRs await owner review (#118(b)), both CI/locally green:**
-  [PR #37](https://github.com/Stefan7168/checkdecijfers/pull/37) — keyboard focus stays on a pie slice /
+  PR #37 — keyboard focus stays on a pie slice /
   stack segment after Enter designates it (it fell to the page body: a Recharts remount), plus a test
   pinning every hand-written copy of the chart-form list equal (#312 M2 + the "8 copies" minor).
-  [PR #38](https://github.com/Stefan7168/checkdecijfers/pull/38) — own-data group totals that skipped
+  PR #38 — own-data group totals that skipped
   empty cells are now named under the chart instead of passing for complete, and the "is this the total?"
   check refuses on them ([#314](open-questions.md), closes #312 M3). Values unchanged. Owner veto point:
   disclose (the PR) vs. refuse such totals outright.
