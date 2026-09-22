@@ -486,6 +486,74 @@ describe('UserChartView — a data command from the Data panel (co-pilot phase 2
   });
 });
 
+// Co-pilot phase 4 parity: ChartGoalLine and ChartEraShading, already mounted
+// on ChartView (chart.tsx), mounted here too — same command kinds
+// (addGoalLine/removeGoalLine/addEraShading/removeEraShading), same
+// export-boundary contract. Mirrors chart.test.tsx's 'ChartView
+// click-to-annotate' goal-line tests and its 'ChartView — Task 3 era shading
+// visual rendering (ReferenceArea)' describe block, over this card's own
+// export-container hook (`[data-testid="user-chart-container"]`, this file's
+// existing selector, rather than the CBS card's `[role="tabpanel"]
+// [aria-label="Grafiek"]`) — there is no separate zoom control on this card
+// (see this file's own header comment), so unlike chart.test.tsx's era-
+// shading tests, the "Tot" select needs no extra scoping to disambiguate it
+// from a zoom-range "Tot".
+describe('UserChartView — goal lines and era shading (co-pilot phase 4 parity)', () => {
+  it('a saved goal line is never rendered inside the chart export container', async () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    const exportContainer = container.querySelector('[data-testid="user-chart-container"]');
+    expect(exportContainer?.textContent).not.toContain('Test Doel');
+    expect(screen.getByText('Test Doel')).toBeInTheDocument();
+  });
+
+  it('a saved goal line renders a real ReferenceLine on the chart', async () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    const before = container.querySelectorAll('.recharts-reference-line').length;
+    fireEvent.click(await screen.findByRole('button', { name: 'Doellijn toevoegen' }));
+    fireEvent.change(screen.getByLabelText('Waarde'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Test Doel' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(before);
+  });
+
+  it('renders a ReferenceArea band in a line chart when an era shading is added through the real UI', async () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+
+    const fromSelect = await screen.findByLabelText('Van');
+    fireEvent.change(fromSelect, { target: { value: '2023' } });
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2024' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Testperiode' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+
+  it('a saved era shading LABEL is never rendered inside the chart export container (the band still is)', async () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Periode markeren' }));
+
+    const fromSelect = await screen.findByLabelText('Van');
+    fireEvent.change(fromSelect, { target: { value: '2023' } });
+    fireEvent.change(screen.getByLabelText('Tot'), { target: { value: '2024' } });
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Testperiode label' } });
+    fireEvent.click(screen.getByRole('button', { name: /opslaan/i }));
+
+    const exportContainer = container.querySelector('[data-testid="user-chart-container"]');
+    expect(exportContainer?.textContent).not.toContain('Testperiode label');
+    // The label text IS still shown to the reader, just outside the export.
+    expect(screen.getByText('Testperiode label')).toBeInTheDocument();
+    // The band itself, unlike the label, genuinely is inside the export.
+    expect(container.querySelector('.recharts-reference-area-rect')).not.toBeNull();
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface (the
 // heading/provenance line the component itself composes; disclaimerLine is
 // backend data and stays as given regardless of language).

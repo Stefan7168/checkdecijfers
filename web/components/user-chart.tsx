@@ -37,7 +37,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
@@ -106,6 +106,18 @@ const ChartConfigPanel = dynamic(() => import('./chart-config-panel.tsx').then((
   loading: () => <Skeleton className="mt-2 h-32 w-full rounded-lg" />,
 });
 const ChartNotes = dynamic(() => import('./chart-notes.tsx').then((m) => m.ChartNotes), {
+  ssr: false,
+  loading: () => null,
+});
+// Co-pilot phase 4 parity (goal lines / era shading): same two components
+// chart.tsx mounts, same lazy-load treatment — both are tier-agnostic
+// (chart-goal-line.tsx / chart-era-shading.tsx carry no CBS-specific data in
+// their prop contracts) and neither shows anything while closed.
+const ChartGoalLine = dynamic(() => import('./chart-goal-line.tsx').then((m) => m.ChartGoalLine), {
+  ssr: false,
+  loading: () => null,
+});
+const ChartEraShading = dynamic(() => import('./chart-era-shading.tsx').then((m) => m.ChartEraShading), {
   ssr: false,
   loading: () => null,
 });
@@ -440,6 +452,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const { rows, seriesMeta } = buildRows(plottable, (i) => seriesColor(pres, i));
   const plan = valueLabelPlan(plottable);
   const tickByValue = new Map(plan.axisTicks.map((tick) => [tick.value, tick]));
+  // Goal lines / era shading (mirrors chart.tsx): a stored command names a
+  // periodCode, but the x-axis plots `periodLabel` (buildRows keys rows by
+  // it) — this maps one to the other. `periodOptions` is the era-shading
+  // form's own Van/Tot list, the first series' points only, same as chart.tsx.
+  const periodLabelByCode = new Map(
+    plottable.series.flatMap((s) => s.points.map((p): [string, string] => [p.periodCode, p.periodLabel])),
+  );
+  const periodOptions = plottable.series[0]?.points.map((p) => ({ code: p.periodCode, label: p.periodLabel })) ?? [];
 
   // --- notes ---------------------------------------------------------------
   const [pendingPoint, setPendingPoint] = useState<PendingPoint | null>(null);
@@ -805,6 +825,22 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   {showValueLabels ? valueLabels(s.key, 'top') : null}
                 </Line>
               ))}
+              {/* Era shading bands, positioned by period label — same
+                * ReferenceArea placement chart.tsx uses (Recharts resolves
+                * the category position; no manual x-scale math needed). */}
+              {state.eraShadings.map((era) => {
+                const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
+                const toLabel = periodLabelByCode.get(era.toPeriodCode);
+                if (!fromLabel || !toLabel) return null;
+                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="#4f46e5" fillOpacity={0.1} />;
+              })}
+              {/* No `label` prop: the reader's typed text stays only in
+                * ChartGoalLine's own list, outside `containerRef` below — see
+                * that component's header comment and chart.tsx's identical
+                * block (Final-review fix C2). */}
+              {state.goalLines.map((line) => (
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
+              ))}
             </LineChart>
           ) : activeForm === 'area' ? (
             <AreaChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
@@ -852,6 +888,16 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                 </Area>
               );
               })}
+              {/* Same as the Line branch above. */}
+              {state.eraShadings.map((era) => {
+                const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
+                const toLabel = periodLabelByCode.get(era.toPeriodCode);
+                if (!fromLabel || !toLabel) return null;
+                return <ReferenceArea key={era.id} x1={fromLabel} x2={toLabel} fill="#4f46e5" fillOpacity={0.1} />;
+              })}
+              {state.goalLines.map((line) => (
+                <ReferenceLine key={line.id} y={line.value} stroke="var(--accent)" strokeDasharray="6 3" ifOverflow="extendDomain" />
+              ))}
             </AreaChart>
           ) : activeForm === 'hbar' ? (
             // The transposed bar: the x categories move to the category axis,
@@ -1095,6 +1141,30 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               dispatch({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
               setPendingPoint(null);
             }}
+          />
+          {/* Outside `containerRef`, like the notes above — see
+            * chart-goal-line.tsx's own header comment for the export-boundary
+            * invariant this mirrors from chart.tsx. */}
+          <ChartGoalLine
+            goalLines={state.goalLines}
+            lang={chartLang}
+            idPrefix={domId}
+            onAdd={(value, label) => dispatch({ kind: 'addGoalLine', goalLine: { id: newCommandId(), value, label } }, 'panel')}
+            onRemove={(id) => dispatch({ kind: 'removeGoalLine', goalLineId: id }, 'panel')}
+          />
+        </div>
+      ) : null}
+      {activeForm !== 'table' ? (
+        <div tabIndex={-1} className="outline-none">
+          <ChartEraShading
+            eraShadings={state.eraShadings}
+            periodOptions={periodOptions}
+            lang={chartLang}
+            idPrefix={domId}
+            onAdd={(fromPeriodCode, toPeriodCode, label) => {
+              dispatch({ kind: 'addEraShading', era: { id: newCommandId(), fromPeriodCode, toPeriodCode, label } }, 'canvas');
+            }}
+            onRemove={(id) => dispatch({ kind: 'removeEraShading', eraShadingId: id }, 'canvas')}
           />
         </div>
       ) : null}
