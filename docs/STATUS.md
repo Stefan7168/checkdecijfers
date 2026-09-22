@@ -19,13 +19,17 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 continuation — verify against `git log`/CI
-before trusting this).** **`main` is NOW AT `ce43e92`** — the owner explicitly said "push to main" and the
-session fast-forward-pushed it directly (`git push origin ce43e92:main`; `origin/main` was freshly fetched
-and confirmed an ancestor of `HEAD` immediately before pushing, so this was a genuine zero-conflict
-fast-forward, not a force-push). **Chart co-pilot phase 6 + the full session-122 fix wave are now LIVE on
-`main`.** CI run [35690440761](https://github.com/Stefan7168/checkdecijfers/actions/runs/35690440761) was
-triggered by the push — verify its conclusion at that URL (or `git log`/a fresh CI check) before trusting
-any "deployed" claim; this doc was written while that run was still in progress. The session's designated
+before trusting this).** **`main` is NOW AT `baa5c36`** (code `ce43e92` + a same-session docs-sync commit
+on top) — the owner explicitly said "push to main" and the session fast-forward-pushed the code directly
+(`git push origin ce43e92:main`; `origin/main` was freshly fetched and confirmed an ancestor of `HEAD`
+immediately before pushing, so this was a genuine zero-conflict fast-forward, not a force-push). **Chart
+co-pilot phase 6 + the full session-122 fix wave are now LIVE on `main`, CONFIRMED, not just pushed:** CI
+run [35690440761](https://github.com/Stefan7168/checkdecijfers/actions/runs/35690440761) on `ce43e92`
+measured green end to end — root+web typecheck, all 3 backend test shards, web unit tests, hermetic
+benchmark (14/14+6/6+0 fabricated), and the real Playwright e2e suite all passed (`gate`), and `deploy`
+(build → Vercel deploy → post-deploy smoke check) also completed `success` (job
+[106626835581](https://github.com/Stefan7168/checkdecijfers/actions/runs/35690440761/job/106626835581),
+confirmed via a scheduled check-in 3 minutes after the push, not assumed). The session's designated
 branch, `claude/chart-copilot-phase6-fixes-wpim88`, is now fully subsumed by `main` (kept on `origin`, not
 deleted — not asked for — but no longer the active target for new work).
 
