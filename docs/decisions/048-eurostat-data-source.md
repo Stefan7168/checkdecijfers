@@ -798,3 +798,15 @@ of `footer.attribution`. Every other route keeps rendering the plain CBS line by
 **Not touched:** D3's public-facing posture itself (Eurostat is still `chatSelectable: false` and invisible to
 real chat users); this only fixes copy on an internal, flag-gated, noindexed page. `chatSelectable`/
 `currentCatalogStatuses` and Amendment 11's open owner sign-off are unaffected.
+
+## Design-round note — E2's first slice proposed (session 124, 2026-09-23)
+
+The E2 design round this ADR requires has started, as a PROPOSAL only:
+[superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md](../superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md)
+([open-questions #313](../open-questions.md)). It cuts E2 into slices, the first being "E2a: country-level answers":
+reviewed Eurostat "siblings" of existing CBS measures, offered through a dry-run-verified clarification chip
+when CBS has no reading for a named country (D5a / Amendment 5, never an automatic switch), one source per
+answer, countries only (the adapter already drops every NUTS 1–3 row), and Dutch country names via a
+maintained word list (the ADR 040 precedent). D2's taxonomy widening (sub-national NUTS) is deferred to a later
+slice, not dropped. Nothing in this ADR's decisions changes; the proposal awaits six owner decisions (its §7).
+

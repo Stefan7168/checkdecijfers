@@ -1,5 +1,60 @@
 # STATUS archive — the session log
 
+**Session 124 (2026-09-23, owner present at the start, then "Continue working autonomously, for hours and
+hours"). Opened on session 123's handoff: own-data chart-fit + verified-whole parity built on branch
+`worktree-own-data-chart-parity` @ `d925a911`, final review "ready to merge, with fixes". Closed with that
+feature LIVE on `main` (`7694cf5c`), four autonomous follow-up PRs (#37–#40) awaiting owner review, and an
+E2a design proposal for Eurostat in chat.**
+
+1. **The fix wave (owner-present part), all four Important findings, commit `133176aa`.** (I1) the "Checked"
+   verdict is stored keyed to instruction + designated rowRef + parts and read at render only when the key
+   matches (regression test records every committed note text with a `MutationObserver` during an A→B
+   re-designation; verified to fail with the gate reverted). (I2/I3) the designated slice/segment carries a
+   foreground outline, `aria-pressed` and its own accessible name; the real-browser e2e pins one marked slice on
+   the shared-label "Omzet − Kosten" fixture. (I4) with no edit context the shapes aren't clickable and a new
+   `not_checked_read_only` note drops the "click a point" invitation (beyond the reviewer's own fix: the old
+   copy would otherwise have promised the action I4 removed). Verified: root 207f/3186t, web 147f/2703t,
+   Playwright 30/30, benchmark 14/14+6/6+0 fabricated, real build; merged `--no-ff` as `7694cf5c` (code
+   byte-identical to the verified branch; `main`'s only extra commit was docs); CI run 35766585479 green end
+   to end incl. deploy (job 106879678084); prod 200.
+2. **Docs flipped to LIVE** (`3b0d5ae9`): STATUS, ADR 056, open-questions #311/#312, 08-build-plan,
+   04-architecture, README. STATUS's session 121–123 inline "superseded" chain (flagged, not trimmed, by
+   session 123) moved verbatim into this file's "Superseded handoff blocks" section rather than deleted.
+3. **Autonomous follow-ups, each as its own PR per #118(b), each with the full verification block locally:**
+   - **PR #37** (`own-data-whole-focus-restore`): Task 4 minor M2. A real-browser probe showed focus falling to
+     `<body>` after Enter on a slice/segment. The root cause was NOT the reviewer's "shape-factory
+     re-creation": it was Recharts 3.10's `AnimatedItems`, keyed on `useAnimationId`, which changes whenever
+     the component receives a fresh props object (every render). Fix: the card remembers the focused
+     designation control and re-focuses it on a chart DOM mutation while focus is on `<body>`; a genuine focus
+     move clears that memory. Plus `web/lib/chart-form-lists.test.ts`, which pins all hand-written copies of the
+     11-form list equal (mutation-checked).
+   - **PR #38** (`own-data-incomplete-aggregate-note`, [#314](open-questions.md)): own-data
+     sum/mean/min/max silently skipped blank cells, and a partial group total passed for a complete one. Values
+     are unchanged; an `incomplete` flag propagates through share/difference/%-change; a digit-free note under
+     the chart names the points; `verify-whole` refuses on incomplete parts/wholes (#312 M3); `reconstruct.ts`
+     tolerates only pre-flag rows (found by grepping every `buildUserChartSpec` call site: the audit
+     reconstruction would otherwise have "failed" every old gappy row). ADR 037 addendum.
+   - **PR #39** (`derived-overlay-distinct-ids`): #292(b), duplicate resultIds refused at the client validator
+     and both server actions (worse than the row said: a repeated point skewed a MEAN); #292(a), eras ordered
+     by axis position; #294 and #298 drift-guard tests (mutation-checked).
+   - **PR #40** (`chart-phase4-ux-residuals`): #293, the remove chip stays on every form; #291(a–c), theme
+     colour for the era band, axis labels in the era list (two e2e assertions that pinned the old raw codes
+     updated), dead `toggleDim` removed.
+4. **Eurostat E2a design proposal** ([spec](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md),
+   [#313](open-questions.md)), grounded in two read-only code surveys: country-level Eurostat "siblings" of
+   existing CBS measures offered via a dry-run-verified clarification chip (ADR 048 D5a/Amendment 5: never an
+   automatic switch), one source per answer, Dutch country names via a maintained word list, siblings as a code
+   map (no migration). Likely no intent-prompt change, but that has to be measured first (step 0, after
+   2026-10-01). Six owner decisions pending.
+5. **Docs hygiene:** roadmap's Eurostat E1 line corrected (`1720b7b1`); stale open-questions rows #295, #297,
+   #300, #302, #304, #305 closed after verifying each fix on `main` (`4a9090a9`, `a996d3fa`).
+6. **A self-inflicted docs-test break, caught and fixed:** a STATUS edit linked two PRs, violating #132 rule
+   (i). Docs-only pushes skip CI, so it only surfaced in the next code branch's full root suite (and turned
+   PR #37's first CI run red). Fixed on `main` (`be7a6e33`) and PR #37 rebased. Lesson recorded.
+7. **A session-level note:** the wrap-up hook fired once on a background task notification, not on an
+   owner message. The session treated it as a false trigger, kept working, and ran the full ritual at its
+   own natural stopping point.
+
 **Session 123 (2026-09-22→23, owner present in chat throughout — the session crossed midnight; `git log`
 on the branch shows every commit dated 2026-09-22, this wrap-up's own docs commit is dated 2026-09-23).
 Opened by fast-forwarding a 32-commit-stale local `main` to `origin/main` (session 122 had already run

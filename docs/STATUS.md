@@ -18,47 +18,44 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 124, owner present at the start, then asked the
-session to "continue working autonomously, for hours and hours" — verify against `git log` before trusting this).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 124 close — owner present at the start, then asked
+the session to "continue working autonomously, for hours and hours"; verify against `git log` / `gh pr list`
+before trusting this).**
 
-- **Own-data chart-fit + verified-whole parity is LIVE on `main` @ `7694cf5c`** (merge of branch
-  `worktree-own-data-chart-parity`: session 123's build `d925a911` + this session's fix wave `133176aa`).
-  CI run [35766585479](https://github.com/Stefan7168/checkdecijfers/actions/runs/35766585479) measured green end to end — all 3 `backend` shards, `web` (typecheck, unit tests, real Playwright e2e) and `deploy` (build → Vercel deploy → post-deploy smoke check, job [106879678084](https://github.com/Stefan7168/checkdecijfers/actions/runs/35766585479/job/106879678084)), every job `success`.
-  What it is: the "eigen data" card gains dumbbell/slope/heatmap, plus pie/stacked/100%-stacked that are
-  always available with an honest note; the reader can click a slice/segment to say "this is my total" and
-  the app runs a real arithmetic check against the other parts on screen. Full account: ADR
-  [056](decisions/056-chart-copilot.md) "As built — own-data chart-fit + verified-whole parity",
-  [open-questions #312](open-questions.md).
-- **The session-124 fix wave closed all four of the final review's Important findings:** a "Checked"
-  verdict is now shown only for the exact total + parts + data it checked (I1 — regression test fails with
-  the fix reverted); the designated slice/segment is outlined and announced as the total (I2, which also
-  settles I3's shared-label ambiguity, pinned in the real-browser e2e); without an edit context nothing is
-  clickable and the note no longer invites a click (I4).
-- **Measured before the merge push (session 124):** root+web typecheck clean; root vitest 207f/3186t; web
-  vitest 147f/2703t; real Playwright `own-data-copilot.spec.ts` 8/8 + `chart-copilot.spec.ts` 22/22;
-  hermetic benchmark 14/14+6/6+0 fabricated, GATE PASS; real `next build` clean; `/code-review` LOW: no
-  findings.
-- **Two autonomous follow-up PRs await owner review (#118(b)), both CI/locally green:**
-  PR #37 — keyboard focus stays on a pie slice /
-  stack segment after Enter designates it (it fell to the page body: a Recharts remount), plus a test
-  pinning every hand-written copy of the chart-form list equal (#312 M2 + the "8 copies" minor).
-  PR #38 — own-data group totals that skipped
-  empty cells are now named under the chart instead of passing for complete, and the "is this the total?"
-  check refuses on them ([#314](open-questions.md), closes #312 M3). Values unchanged. Owner veto point:
-  disclose (the PR) vs. refuse such totals outright.
-- **Open architectural candidates ([#306](open-questions.md)):** (b) two-measure charts — HELD per
-  [#296](open-questions.md) until usage evidence; (c) Eurostat answerable in chat (ADR
-  [048](decisions/048-eurostat-data-source.md) phase E2) — **session 124 drafted a design PROPOSAL for its
-  first slice, "E2a: country-level answers"** ([spec](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md),
-  [#313](open-questions.md)): six owner decisions pending, nothing built; its step 0 needs live parse
-  recording (after the API cap lifts 2026-10-01). (d) own-data parity is now done.
+- **FIRST: four autonomous PRs await the owner's review (#118(b)) — all four locally fully verified, all
+  mergeable against `main` @ `a996d3fa`.** They each touch different rows of `docs/open-questions.md`, so
+  whichever merges second or later may need a quick rebase. In suggested merge order:
+  - **PR #37** — own-data pie/stack: keyboard focus stays on a slice after Enter designates it as the total
+    (it fell to the page body: Recharts remounts every slice on each render), plus a test pinning every
+    hand-written copy of the chart-form list equal. CI green.
+  - **PR #38** — own-data group totals that skipped empty cells are named under the chart instead of passing
+    for complete; the "is this the total?" check refuses on them ([#314](open-questions.md), closes #312 M3).
+    Values unchanged. **Owner veto point:** disclose (the PR) vs. refuse such totals outright. CI green.
+  - **PR #39** — a difference/average overlay naming the same point twice is refused at all three gates (a
+    repeated point skewed an AVERAGE, not only a zero difference); era order by axis position; two drift-guard
+    tests ([#292](open-questions.md)/[#294](open-questions.md)/[#298](open-questions.md)). Rebased after a
+    conflict — CI re-running at close; confirm green before merging.
+  - **PR #40** — the "× remove" chip for an overlay stays visible on bar charts; era list shows "2008 – 2009",
+    not "2008JJ00"; era band follows the theme colour; dead `toggleDim` removed
+    ([#291](open-questions.md)/[#293](open-questions.md)). Confirm CI green before merging.
+- **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
+  fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
+  dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
+  click a slice to name it the total and the app checks the arithmetic. ADR [056](decisions/056-chart-copilot.md),
+  [#312](open-questions.md).
+- **Eurostat in chat — design PROPOSAL, nothing built:** first slice "E2a: country-level answers"
+  ([spec](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md), [#313](open-questions.md)).
+  Six owner decisions pending (spec §7); its step 0 needs live AI-parse recording after the API cap lifts
+  2026-10-01. This is the main architectural candidate left from [#306](open-questions.md) ((b) two-measure
+  charts stays HELD per [#296](open-questions.md)).
+- **Docs hygiene done this session:** stale open-questions rows closed after verification (#295, #297, #300,
+  #302, #304, #305); roadmap's Eurostat E1 line corrected (it is merged and live, flag-gated); the long
+  session 121–123 inline history moved verbatim to [status-archive.md](status-archive.md).
 - **Owner steps pending — unchanged since session 110/111** (registry:apply, DOI backfill, live benchmark,
-  region-set Task 9, audit row 22, all `:record` real-model fixture confirmations) — blocked on the
-  Anthropic workspace usage cap, which lifts 2026-10-01.
+  region-set Task 9, audit row 22, all `:record` real-model fixture confirmations) — blocked on the Anthropic
+  workspace usage cap, which lifts 2026-10-01. Also open, not this session's: Dependabot PRs #35/#36.
 - **Housekeeping:** the stale, already-merged worktree `chart-copilot-phase6` @ `58db5097` is still present
-  (confirmed fully contained in `main`); left for the owner to remove. The `own-data-chart-parity` worktree
-  is kept until this session closes. The long inline history that used to follow this block now lives in
-  [status-archive.md](status-archive.md) ("Superseded handoff blocks").
+  (fully contained in `main`); left for the owner to remove.
 
 ---
 

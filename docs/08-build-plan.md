@@ -129,6 +129,8 @@ The "new data sources beyond CBS" architecture, designed source-NEUTRALLY (owner
 
 ## WP30c — Eurostat as the second source, phase E1: adapter + internal explorer (owner decision 2026-09-14, [open-questions #248](open-questions.md); design + pre-build adversarial review: ADR [048](decisions/048-eurostat-data-source.md))
 
+**▶ Phase E2 (Eurostat answerable in chat) — design round STARTED session 124 (2026-09-23), PROPOSAL only, not scheduled, no WP number:** first slice "E2a: country-level answers" — [superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md), [open-questions #313](open-questions.md). Six owner decisions pending; its step 0 needs live AI-parse recording after the API cap lifts (2026-10-01). Steps 1–4 are buildable dark (zero spend, zero production change) once the owner approves.
+
 **✅ BUILT (session 101 continuation, autonomous overnight, 2026-09-14/15) — branch `wp30c-e1-eurostat-adapter`
 (PR #23), ✅ MERGED to `main` session 107 (2026-09-16/17) — see below for that merge's own account.** Frozen executor brief
 ([session-briefs/2026-09-14-wp30c-e1-executor-brief.md](session-briefs/2026-09-14-wp30c-e1-executor-brief.md))

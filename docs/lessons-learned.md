@@ -37,15 +37,20 @@ on top.
    30-second "drop one form from a list" check ran while the root suite was running in the background on
    that checkout. It passed this time, but it could have produced a spurious failure. Run mutation checks
    before or after the long suite, never during it.
+6. **A PR branch should not edit STATUS.md's top block if `main` will edit it too.** PR #37's STATUS
+   paragraph conflicted with a later docs push to `main` about the same PRs and needed a rebase with a
+   manual resolution. Keep STATUS updates on `main` (docs-only pushes are allowed), and let PR branches
+   touch only the rows or sections their own change owns.
 7. **Docs-only pushes skip CI, but `tests/docs/` still polices docs.** A STATUS.md update that
    linked to two pull requests (`[PR #37](…/pull/37)`) broke `doc-conventions.test.ts` (#132 rule (i):
    PR references are plain text). Nothing caught it on `main`, because docs-only pushes skip CI; the
    failure only surfaced in the NEXT code branch's full root suite. **Do next time:** run
    `npx vitest run tests/docs` before every docs-only push.
-6. **A PR branch should not edit STATUS.md's top block if `main` will edit it too.** PR #37's STATUS
-   paragraph conflicted with a later docs push to `main` about the same PRs and needed a rebase with a
-   manual resolution. Keep STATUS updates on `main` (docs-only pushes are allowed), and let PR branches
-   touch only the rows or sections their own change owns.
+8. **A PR that conflicts with `main` gets NO CI run at all — and nothing says so loudly.** PR #39 sat at
+   "no checks reported" because a later docs push to `main` had edited the row next to one of its own
+   open-questions edits (`mergeable: CONFLICTING`). **Do next time:** after opening a PR, and again after any
+   push to `main` while PRs are open, check `gh pr view <n> --json mergeable`. Keep PR branches' doc edits to
+   the rows they own, and expect adjacent-row edits to conflict.
 
 ## Session 123 — a task-scoped review structurally cannot see where "is the computation
 ## right" and "does the screen say what the computation found" diverge; that seam is what
