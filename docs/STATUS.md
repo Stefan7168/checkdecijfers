@@ -25,10 +25,12 @@ mean-overlay prompt claim, wrong in BOTH tiers — the own-data prompt inherited
 CBS tier's structure) and [#308](open-questions.md) (real-browser render proof for the other four chat
 command kinds: `setDimmed`, `setHeadlineOverride`, `addDerivedOverlay`, `addGoalLine`). Picked up fully
 autonomously (owner: "Work continuously autonomously") by triaging STATUS/open-questions for the next
-legitimate, non-owner-gated work rather than idling. **PUSHED, CI TRIGGERED, NOT YET CONFIRMED** — run
-[35703474846](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846) was `in_progress` as
-of this write; a scheduled check-in will confirm `gate` AND `deploy` and this block will be updated with
-the measured result, not assumed. **Locally measured, all green before push:** root+web typecheck clean;
+legitimate, non-owner-gated work rather than idling. **LIVE, CONFIRMED not just pushed:** CI run
+[35703474846](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846) measured green end
+to end via a scheduled check-in — all 3 `backend` shards, `web` (typecheck, unit tests, real Playwright
+e2e incl. the new command-kind cases), and `deploy` (build → Vercel deploy → post-deploy smoke check, job
+[106668252243](https://github.com/Stefan7168/checkdecijfers/actions/runs/35703474846/job/106668252243))
+every job and every step `success`. **Locally measured, all green before push:** root+web typecheck clean;
 root vitest 206f/3159t (one hardcoded prompt-version-pin test updated to match the intentional bump); web
 vitest 146f/2606t unchanged; real Playwright `chart-copilot.spec.ts` 22/22 (18 existing + 4 new) and
 `own-data-copilot.spec.ts` 2/2, both confirmed via an `exact` llm-stub hit; hermetic benchmark
