@@ -5,10 +5,14 @@
 // name a form, a series LABEL, a period LABEL, a style enum value, a
 // template id, or text the model wrote — and every one of those is either
 // allowlisted here, resolved against the executed spec by copilot/map.ts,
-// or digit-guarded by copilot/text-guard.ts before it is stored. There is
-// no `instruction` field at all: this tier never proposes different data,
-// it only sets `dataRequest` and hands the message back to the follow-up
-// path (respond.ts).
+// or digit-guarded by copilot/text-guard.ts before it is stored. The one
+// bare NUMBER (co-pilot phase 6's addGoalLine.value) is a reader-set
+// target, not a display value, and map.ts stores it only when it EQUALS,
+// numerically, a number the reader's own message spells out
+// (text-guard.ts's goalLineValueInMessage — not merely the same digits).
+// There is no `instruction` field at all: this tier never proposes
+// different data, it only sets `dataRequest` and hands the message back
+// to the follow-up path (respond.ts).
 import { z } from 'zod';
 import { oneOfToAnyOf } from '../../answer/llm/json-schema.ts';
 import { patchSchema } from '../../attachments/copilot/schema.ts';
@@ -42,6 +46,51 @@ export const cbsViewCommandSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('setTitle'), title: z.string().nullable() }),
   z.strictObject({ kind: z.literal('setCaption'), caption: z.string().nullable() }),
   z.strictObject({ kind: z.literal('addNote'), seriesLabel: z.string(), periodLabel: z.string(), text: z.string() }),
+  // Co-pilot phase 6 (Task 2): the two panel commands below carry LABELS
+  // only, resolved by map.ts exactly like setSeriesView / addNote.
+  z.strictObject({
+    kind: z.literal('setDimmed'),
+    hiddenLabels: z.array(z.string()),
+    dimmedLabels: z.array(z.string()),
+  }),
+  z.strictObject({
+    kind: z.literal('setHeadlineOverride'),
+    // Both null clears the override; otherwise both must name a real point.
+    seriesLabel: z.string().nullable(),
+    periodLabel: z.string().nullable(),
+  }),
+  // Co-pilot phase 6 (Task 3): period LABELS resolved to codes by map.ts
+  // exactly like setPeriodRange; the label text is digit-guarded there.
+  z.strictObject({
+    kind: z.literal('addEraShading'),
+    fromLabel: z.string(),
+    toLabel: z.string(),
+    label: z.string(),
+  }),
+  // Co-pilot phase 6 (Task 4): a computed overlay (difference arrow or mean
+  // line) named by series LABEL and period LABELS only — map.ts resolves
+  // them to the points' own resultIds; the number itself is derived
+  // server-side from those cells, never carried here. `difference` needs
+  // both period labels; `mean` ignores them (both null).
+  z.strictObject({
+    kind: z.literal('addDerivedOverlay'),
+    calcKind: z.enum(['difference', 'mean']),
+    seriesLabel: z.string(),
+    fromLabel: z.string().nullable(),
+    toLabel: z.string().nullable(),
+  }),
+  // Co-pilot phase 6 (Task 5): the ONE bare NUMBER on this tier. Not a
+  // display value — a goal line is a reader-set target, deliberately not
+  // one of the chart's plotted values — and map.ts stores it only when
+  // text-guard.ts's goalLineValueInMessage finds a number in the reader's
+  // own raw message that EQUALS it, read the Dutch and the English way
+  // (the same digits with a moved decimal or a different sign do not
+  // count); the label is digit-guarded like a title.
+  z.strictObject({
+    kind: z.literal('addGoalLine'),
+    value: z.number(),
+    label: z.string(),
+  }),
 ]);
 
 export const cbsCopilotOutputSchema = z.strictObject({

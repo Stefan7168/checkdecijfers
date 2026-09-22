@@ -65,6 +65,7 @@ const FULL_PATCH = {
   axisLines: 'hidden',
   zeroBaseline: 'zero',
   areaFill: 'gradient',
+  pieHole: 'donut',
   fontFamily: 'Georgia',
   seriesColors: [{ seriesLabel: 'Amsterdam', hex: '#0072b2' }],
   framePadding: 'small',
@@ -183,13 +184,14 @@ describe('the vocabulary can never drift from the panel (no chat-only capability
     }
   });
 
-  // Session 120: TEMPLATE_IDS intentionally LAGS CHART_TEMPLATES for the
-  // five house styles (#275) — widening it shifts the co-pilot's LLM
-  // request hash (capabilities.templates is embedded in the prompt),
-  // breaking recorded e2e fixtures until they can be re-recorded (real
-  // LLM spend, blocked by the usage cap until 2026-10-01). The invariant
-  // that still holds unconditionally: the chat is never offered a
-  // template that doesn't exist in web/lib.
+  // Session 120 softened this from "equals CHART_TEMPLATES" to "subset of":
+  // TEMPLATE_IDS reaches the co-pilot's LLM prompt (capabilities.templates),
+  // so widening it shifts every recorded fixture's request hash, and a lag
+  // between the two lists is legitimate until the fixtures are regenerated
+  // (offline — `npm run chart-copilot:fixtures` + `attachments:fixtures`,
+  // see copilot/types.ts). Since co-pilot phase 6 Task 1 the two lists are
+  // equal again; the invariant pinned here stays the unconditional one: the
+  // chat is never offered a template web/lib does not ship.
   it('every TEMPLATE_IDS entry names a template web/lib actually ships (never wider)', () => {
     const shipped = new Set(CHART_TEMPLATES.map((t) => t.id));
     for (const id of TEMPLATE_IDS) expect(shipped.has(id), id).toBe(true);

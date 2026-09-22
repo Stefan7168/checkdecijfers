@@ -33,9 +33,11 @@ function readFixture(hash: string): RecordedFixture {
 }
 
 describe('own-data LLM fixtures', () => {
-  it('has four cases over one CSV', () => {
-    expect(CASES).toHaveLength(4);
-    expect(CASES.map((c) => c.kind)).toEqual(['instruct', 'copilot', 'copilot', 'copilot']);
+  // Six since co-pilot phase 6 Task 1: a house style by name (#275) and the
+  // donut this tier has no pie form for (#301) join the original four.
+  it('has six cases over one CSV', () => {
+    expect(CASES).toHaveLength(6);
+    expect(CASES.map((c) => c.kind)).toEqual(['instruct', 'copilot', 'copilot', 'copilot', 'copilot', 'copilot']);
     expect(new Set(CASES.map((c) => c.csv))).toEqual(new Set(['verkoop.csv']));
   });
 

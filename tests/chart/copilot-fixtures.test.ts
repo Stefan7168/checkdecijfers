@@ -33,8 +33,15 @@ describe('CBS chart co-pilot LLM fixtures', () => {
   // Phase 5b (Task 5): seven — the pie pair joins, over a SECOND captured
   // spec (`PROVINCIES_SPEC`, the harness's one region-set answer) and the
   // original two-city capture; still one table.
-  it('has seven cases over two captured ChartSpecs and two derived shapes', () => {
-    expect(CASES).toHaveLength(7);
+  // Phase 6 (Task 1): nine — a donut over the provinces pie (`pieHole`,
+  // #301) and a house style by name over the two-city line chart (#275),
+  // the two capabilities that widened the prompt-embedded lists.
+  // Phase 6 (Task 6): fourteen — one case per panel-only command Tasks 2–5
+  // made chat-nameable (setDimmed, setHeadlineOverride, addEraShading,
+  // addDerivedOverlay, addGoalLine), all over the two-city line chart;
+  // regenerated ONCE for the whole phase's prompt-version bump.
+  it('has fourteen cases over two captured ChartSpecs and two derived shapes', () => {
+    expect(CASES).toHaveLength(14);
     expect(new Set(CASES.map((c) => c.spec.attribution.tableId))).toEqual(new Set(['03759ned']));
   });
 

@@ -853,6 +853,176 @@ test.describe.serial('chart co-pilot phase 5b — pie, stacked, 100%-stacked ove
   });
 });
 
+// Co-pilot phase 6, Task 1 (session 121): the two capabilities session 120
+// built and then reverted — the donut (`pieHole`, #301) and the five house
+// styles by name (#275) — reachable through the chat in a REAL browser. Both
+// reverts happened because widening a list that reaches the LLM prompt
+// shifts the request hash the llm-stub matches on; the fix was regenerating
+// the fixtures offline, and this block is the proof that the regenerated
+// bytes are what the browser actually sends: only an `exact` stub hit
+// replays the right command (the 60-character prefix fallback would replay
+// another fixture for the same chart, and the assertions below would fail on
+// the wrong chip). Two hand-authored fixtures (tests/fixtures/chart-copilot/
+// cases.ts, `DONUT_MESSAGE` / `BROADSHEET_MESSAGE`) — zero model calls.
+const DONUT_MESSAGE = 'maak er een donut van';
+const BROADSHEET_MESSAGE = 'gebruik de Broadsheet-stijl';
+/** Broadsheet's paper (chart-templates.ts: solid #fafaf8), as the browser
+ * computes it — the one part of the look the frame element itself carries. */
+const BROADSHEET_PAPER = 'rgb(250, 250, 248)';
+
+test.describe.serial('chart co-pilot phase 6 — the donut and a house style through the chat', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signInAsHarnessUser(context, baseURL!);
+  });
+
+  test(`"${DONUT_MESSAGE}" through the chat hollows the verified pie, and Undo fills it again`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, PROVINCIES_QUESTION);
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(12, { timeout: 60_000 });
+
+    // Into the pie form first: `pieHole` is offered in that form alone
+    // (resolvePresentation), and the chat's capabilities are built from the
+    // CURRENT form — the fixture was authored for it (cases.ts
+    // PROVINCIES_PIE_CAPABILITIES). The verdict has to be in before the pie
+    // draws at all (phase 5b).
+    const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
+    const note = page.locator('[data-testid="whole-note"]');
+    const slices = page.locator('path.recharts-sector[data-point="value"]');
+    await pieTab.click();
+    await expect(note).toHaveText(VERIFIED_NOTE, { timeout: 15_000 });
+    await expect(slices).toHaveCount(12);
+
+    // Real geometry, read from the SVG (the way the phase-5 slope test counts
+    // a curve's `L` segments): Recharts draws a full pie's sector as one
+    // outer arc closed through the centre — `M … A … L cx,cy Z`, ONE `A` —
+    // and a donut's sector with the inner arc added — `… L … A … Z`, TWO.
+    const arcsPerSlice = () =>
+      slices.evaluateAll((paths) => paths.map((path) => ((path.getAttribute('d') ?? '').match(/A/g) ?? []).length));
+    await expect.poll(arcsPerSlice).toEqual(Array(12).fill(1));
+
+    // The chat: one `setPresentation` chip naming the Style-panel row it sets
+    // (describeCommand), the pie still verified, every slice hollowed.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DONUT_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Opmaak: Gat in het midden (donut)' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+    await expect(pieTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveText(VERIFIED_NOTE);
+    await expect(slices).toHaveCount(12);
+    await expect.poll(arcsPerSlice).toEqual(Array(12).fill(2));
+
+    // A chat edit is an edit like any other: the card's own Undo fills the
+    // pie again (`exact`: the reply strip's own undo would match too).
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(slices).toHaveCount(12);
+    await expect.poll(arcsPerSlice).toEqual(Array(12).fill(1));
+  });
+
+  test(`"${BROADSHEET_MESSAGE}" through the chat applies the house style the gallery offers, and Undo takes it off`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // The frame (chart-frame.tsx): pristine, it is a bare wrapper with no
+    // inline style at all, so no paper colour; Broadsheet paints its paper
+    // on it.
+    const frame = page.locator('[data-slot="chart-frame"]');
+    const paper = () => frame.evaluate((el) => getComputedStyle(el).backgroundColor);
+    await expect(frame).toBeVisible();
+    await expect.poll(paper).not.toBe(BROADSHEET_PAPER);
+
+    // The chat: one `applyTemplate` chip carrying the gallery's own name for
+    // the look (describeCommand: "Krantenpapier", never the id), the paper
+    // on the frame, both lines still there.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(BROADSHEET_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Sjabloon: Krantenpapier' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+    await expect.poll(paper).toBe(BROADSHEET_PAPER);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+
+    // Undo takes the look off again.
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect.poll(paper).not.toBe(BROADSHEET_PAPER);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+  });
+});
+
+// Co-pilot phase 6, Tasks 2–6 (session 121): the five panel-only commands
+// (setDimmed, setHeadlineOverride, addEraShading, addDerivedOverlay,
+// addGoalLine) became chat-nameable under ONE prompt-version bump, and their
+// fixtures were regenerated ONCE, together (Task 6). All five cases share
+// this chart's spec and capabilities and differ only in the message, so one
+// real round-trip is the proof for the whole regeneration: only an `exact`
+// llm-stub hit replays the era-shading command below — a hash drift on the
+// shared system prompt or capabilities bytes would fall through to the
+// 60-character prefix fallback and replay another two-city fixture, and the
+// chip assertion would fail on the wrong command. Era shading is the richest
+// of the five to watch: map.ts resolves the two period LABELS to CBS period
+// codes and mints the era's id, the client re-validates those codes against
+// the spec it draws, and the band renders as real SVG. One hand-authored
+// fixture (tests/fixtures/chart-copilot/cases.ts, `ERA_SHADING_MESSAGE`) —
+// zero model calls.
+const ERA_SHADING_MESSAGE = 'Arceer 2021 tot 2023 als herstelperiode';
+
+test.describe.serial('chart co-pilot phase 6 — a panel-only command through the chat', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signInAsHarnessUser(context, baseURL!);
+  });
+
+  test(`"${ERA_SHADING_MESSAGE}" through the chat shades the band the panel form would, and Undo lifts it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // The era list's entries (chart-era-shading.tsx), each carrying its own
+    // delete button — scoped this way rather than by label text: the reply
+    // strip echoes the reader's message, which contains "herstelperiode",
+    // and `getByText` matches case-insensitively.
+    const eraEntries = page.locator('li', { has: page.locator('button[data-command-kind="removeEraShading"]') });
+    const band = page.locator('.recharts-reference-area-rect');
+    await expect(band).toHaveCount(0);
+    await expect(eraEntries).toHaveCount(0);
+
+    // The chat: one `addEraShading` chip (describeCommand's own name for it),
+    // the cost line, and the band drawn on the chart — the same
+    // ReferenceArea rect the panel's own e2e test above asserts.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(ERA_SHADING_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Schaduw toegevoegd' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+    await expect(band).toBeVisible();
+
+    // The list entry shows the CODES map.ts resolved from the labels the
+    // model copied ("2021" → 2021JJ00, "2023" → 2023JJ00 — the harness's real
+    // CBS period codes, the same ones the panel test reads back from its
+    // selects) and the typed label, outside the chart's export container.
+    await expect(eraEntries).toHaveCount(1);
+    await expect(eraEntries).toContainText('2021JJ00 – 2023JJ00: Herstelperiode');
+    await expect(page.getByRole('button', { name: 'Verwijder de markering 2021JJ00–2023JJ00' })).toBeVisible();
+    const chartContainer = page.locator('[data-testid="chart-container"]');
+    await expect(chartContainer.locator(':has-text("Herstelperiode")')).not.toBeVisible();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+
+    // A chat edit is an edit like any other: the card's own Undo lifts the
+    // band and empties the list (`exact`: the reply strip's own undo would
+    // match too).
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(band).toHaveCount(0);
+    await expect(eraEntries).toHaveCount(0);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+  });
+});
+
 /** Type a question and send it (copied from answer.spec.ts — same harness,
  * same composer). */
 async function ask(page: import('./harness.ts').Page, question: string): Promise<void> {

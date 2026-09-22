@@ -1,10 +1,13 @@
 // The CBS/Eurostat chart co-pilot (session 114, co-pilot phase 3, ADR 056) —
 // the tier's pure-leaf vocabulary. Mirrors src/attachments/copilot/types.ts,
 // with the data-change field removed entirely: this tier is
-// SELECTION-ONLY (R1/R6/R11 — no field carries a number, and the model
-// never proposes a different table/region/period/measure). A request for
-// OTHER data sets `dataRequest: true` instead, and is handed to the
-// existing follow-up-question path — never expressed as a view command.
+// SELECTION-ONLY (R1/R6/R11 — no field carries a data value, and the model
+// never proposes a different table/region/period/measure; the one bare
+// number, co-pilot phase 6's addGoalLine.value, is a reader-set target
+// that map.ts stores only when it equals, numerically, a number the
+// reader's own message spells out). A request for OTHER data sets
+// `dataRequest: true` instead, and is handed to the existing
+// follow-up-question path — never expressed as a view command.
 //
 // PRESENTATION_KEYS/TEMPLATE_IDS are RE-EXPORTED, not redeclared: "no
 // chat-only capability" means this tier can never offer a style key or

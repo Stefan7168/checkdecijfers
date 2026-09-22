@@ -117,6 +117,7 @@ describe('rule 4 — setPresentation strips nulls and maps series colours', () =
         axisLines: null,
         zeroBaseline: null,
         areaFill: null,
+        pieHole: null,
         fontFamily: null,
         seriesColors: [],
         framePadding: null,
