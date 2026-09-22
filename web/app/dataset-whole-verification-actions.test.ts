@@ -30,7 +30,7 @@ vi.mock('../lib/error-report.ts', () => ({ reportError }));
 const store = vi.hoisted(() => ({ getDataset: vi.fn() }));
 vi.mock('../backend/attachments/store.ts', () => store);
 
-import { requestWholeVerification } from './dataset-whole-verification-actions.ts';
+import { requestDatasetWholeVerification } from './dataset-whole-verification-actions.ts';
 
 const fakeDb = {} as Db;
 
@@ -89,22 +89,22 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('requestWholeVerification', () => {
+describe('requestDatasetWholeVerification', () => {
   it('returns ok:false with no dataset lookup when signed out', async () => {
     currentUserId.mockResolvedValue(null);
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: false });
     expect(store.getDataset).not.toHaveBeenCalled();
   });
 
   it('throws on a malformed datasetId — a shape the real UI can never produce', async () => {
-    await expect(requestWholeVerification(-1, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('input rejected');
-    await expect(requestWholeVerification(1.5, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('input rejected');
+    await expect(requestDatasetWholeVerification(-1, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('input rejected');
+    await expect(requestDatasetWholeVerification(1.5, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('input rejected');
   });
 
   it('rejects a foreign or nonexistent dataset with the SAME opaque reason — no probing', async () => {
     store.getDataset.mockResolvedValue(null);
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: false, reason: 'this dataset is not available' });
     // getDataset is itself userId-bound (store.ts's own doc comment) — the
     // action passes the CALLER's OWN userId, never a client-supplied one.
@@ -113,33 +113,33 @@ describe('requestWholeVerification', () => {
 
   it('refuses a dataset that is not ready', async () => {
     store.getDataset.mockResolvedValue(fakeDataset({ status: 'needs_decision' }));
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: false, reason: 'this dataset is not available' });
   });
 
   it('refuses a malformed wholeRowRef or partRowRefs without touching instruction validation', async () => {
-    expect(await requestWholeVerification(1, instruction(), '', ['r1:c2'])).toEqual({ ok: false, reason: 'invalid selection' });
-    expect(await requestWholeVerification(1, instruction(), 'r4:c2', 'not-an-array')).toEqual({ ok: false, reason: 'invalid selection' });
-    expect(await requestWholeVerification(1, instruction(), 'r4:c2', [123])).toEqual({ ok: false, reason: 'invalid selection' });
+    expect(await requestDatasetWholeVerification(1, instruction(), '', ['r1:c2'])).toEqual({ ok: false, reason: 'invalid selection' });
+    expect(await requestDatasetWholeVerification(1, instruction(), 'r4:c2', 'not-an-array')).toEqual({ ok: false, reason: 'invalid selection' });
+    expect(await requestDatasetWholeVerification(1, instruction(), 'r4:c2', [123])).toEqual({ ok: false, reason: 'invalid selection' });
   });
 
   it('accepts an empty partRowRefs list (every other series hidden) — a graceful outcome, never a refusal', async () => {
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', []);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', []);
     expect(result).toEqual({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
   });
 
   it('refuses an instruction that fails revalidation against the CURRENT profile', async () => {
-    const result = await requestWholeVerification(1, instruction({ x: 'nope' }), 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction({ x: 'nope' }), 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: false, reason: 'this chart could not be validated' });
   });
 
   it('verifies a genuine match end to end (real instruction validation + real arithmetic)', async () => {
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2', 'r2:c2', 'r3:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2', 'r2:c2', 'r3:c2']);
     expect(result).toEqual({ ok: true, outcome: { verified: true } });
   });
 
   it('reports a genuine mismatch as ok:true — informational, never a refusal', async () => {
-    const result = await requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
   });
 
@@ -155,12 +155,12 @@ describe('requestWholeVerification', () => {
         { column: 'c1', op: 'in', values: ['Zuid'] },
       ],
     });
-    const result = await requestWholeVerification(1, noMatch, 'r4:c2', ['r1:c2']);
+    const result = await requestDatasetWholeVerification(1, noMatch, 'r4:c2', ['r1:c2']);
     expect(result).toEqual({ ok: false, reason: 'this chart no longer has any matching rows' });
   });
 
   it('a genuinely unexpected error is reported and answered with a bare refusal, never a verdict', async () => {
     store.getDataset.mockRejectedValue(new Error('boom'));
-    await expect(requestWholeVerification(1, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('boom');
+    await expect(requestDatasetWholeVerification(1, instruction(), 'r4:c2', ['r1:c2'])).rejects.toThrow('boom');
   });
 });

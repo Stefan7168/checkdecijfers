@@ -83,8 +83,8 @@ export type ChartCommandParams =
    * (or clears the designation with `rowRef: null`) — mirrors
    * `setHeadlineOverride`'s exact "pick one point, or clear it" shape rather
    * than inventing a new convention. Never a value: `rowRef` only: the real
-   * arithmetic check (requestWholeVerification) re-resolves it server-side,
-   * exactly like `addDerivedOverlay`'s resultIds. */
+   * arithmetic check (requestDatasetWholeVerification) re-resolves it
+   * server-side, exactly like `addDerivedOverlay`'s resultIds. */
   | { kind: 'setWholeReference'; rowRef: string | null };
 
 export type ChartCommandKind = ChartCommandParams['kind'];

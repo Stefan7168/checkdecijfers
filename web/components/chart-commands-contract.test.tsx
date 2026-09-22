@@ -74,7 +74,7 @@ vi.mock('../app/chart-whole-verification-actions.ts', () => chartWholeActions);
 // tests below — its effect only ever fires when derivedOverlayRequests is
 // non-empty, which no test here produces, so it is never actually called.)
 const datasetWholeActions = vi.hoisted(() => ({
-  requestWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
+  requestDatasetWholeVerification: vi.fn().mockResolvedValue({ ok: false, reason: 'not resolved in this test' }),
 }));
 vi.mock('../app/dataset-whole-verification-actions.ts', () => datasetWholeActions);
 

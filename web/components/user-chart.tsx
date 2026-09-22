@@ -65,7 +65,7 @@ import type { PieLabelRenderProps, PieSectorShapeProps } from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { requestDatasetDerivation } from '../app/dataset-derivation-actions.ts';
-import { requestWholeVerification } from '../app/dataset-whole-verification-actions.ts';
+import { requestDatasetWholeVerification } from '../app/dataset-whole-verification-actions.ts';
 import { forgetMyChartStyle, lookupBrand, saveMyChartStyle } from '../app/chart-style-actions.ts';
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import type { ResolvedOverlay } from '../backend/attachments/derive-overlay.ts';
@@ -946,17 +946,26 @@ type OwnWholeNoteState = keyof typeof OWN_WHOLE_NOTE;
  * periods, so only the OTHER visible series AT THE SAME PERIOD as the
  * designated cell count — a stacked bar's "whole" is one full bar (one
  * period), never a sum across unrelated periods, the same "one moment"
- * scoping a pie's whole circle already has. */
+ * scoping a pie's whole circle already has.
+ *
+ * `pieVerificationRows` (Task 4 fix, C1) is deliberately NOT the same array
+ * `<Pie>` draws from (`pieRows`, which drops a null-valued row since it
+ * cannot be rendered as a slice) — a visible-but-null part must still
+ * reach `verifyPartsSumToWhole` as `withheld_member`, never silently
+ * vanish from the sum the way it would if this used the rendering-filtered
+ * set. See `pieVerificationRows`'s own definition where it is built. */
 function wholePartRowRefsFor(
   activeForm: ChartForm,
   wholeRowRef: string | null,
-  pieRows: readonly UserPieRow[],
+  pieVerificationRows: readonly UserPieRow[],
   rows: readonly Row[],
   visibleSeries: readonly SeriesMeta[],
 ): string[] {
   if (wholeRowRef === null) return [];
   if (activeForm === 'pie') {
-    return pieRows.filter((r) => r.value_resultId !== null && r.value_resultId !== wholeRowRef).map((r) => r.value_resultId as string);
+    return pieVerificationRows
+      .filter((r) => r.value_resultId !== null && r.value_resultId !== wholeRowRef)
+      .map((r) => r.value_resultId as string);
   }
   if (activeForm === 'stacked' || activeForm === 'stacked100') {
     const row = rows.find((r) => visibleSeries.some((s) => r[`${s.key}_resultId`] === wholeRowRef));
@@ -1204,9 +1213,17 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // value transient" split as the derived overlays above —
   // `state.wholeReferenceRowRef` is the undoable designation; this is the
   // check's own OUTCOME, re-run whenever the designation or the currently-
-  // displayed parts change (the effect is declared below, once pieRows/rows
-  // are available). Null = nothing designated yet, OR the request is still
-  // in flight — both correctly fall back to Task 3's `not_checked` note.
+  // displayed parts change (the effect is declared below, once
+  // pieVerificationRows/rows are available). Null = nothing designated yet,
+  // the request is in flight, it failed/rejected, or its parts list was
+  // empty (nothing to check) — every one of those correctly falls back to
+  // Task 3's `not_checked` note, never a stale or fabricated verdict. This
+  // is a GUARANTEE the effect enforces explicitly (it clears this to null
+  // the moment a new request starts and on a rejected round trip too — the
+  // I1 fix, adversarial review), not merely an initial-render coincidence:
+  // without that explicit clear, a designation whose PARTS changed while a
+  // PREVIOUS verdict was already showing would keep rendering the old,
+  // now-stale verdict while the new one was still in flight.
   const [wholeVerification, setWholeVerification] = useState<VerifyOutcome | null>(null);
 
   useEffect(() => {
@@ -1582,6 +1599,27 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     if (meta === undefined || row.value === null || state.hiddenKeys.has(meta.key)) return [];
     return [{ ...row, key: meta.key, color: meta.color, opacity: opacityFor(meta), dimmed: dimmedFor(meta) }];
   });
+  // Task 4 fix (C1, adversarial review): a SEPARATE resolution of the SAME
+  // underlying rows for VERIFICATION. `pieRows` above is correct for
+  // RENDERING (a null value has no angle, so Task 3 drops it — you cannot
+  // draw a slice for "unknown"), but reusing it for the "parts" a
+  // designated whole is checked against silently drops a genuinely
+  // withheld/blank member from the sum instead of counting it as unknown —
+  // arithmetically identical to treating it as zero, exactly the
+  // fabrication class verifyPartsSumToWhole exists to catch (it already has
+  // a 'withheld_member' refusal for precisely this case). Filtered by
+  // `hiddenKeys` ONLY, never by value-nullness, so a visible-but-null row's
+  // own `value_resultId` survives through to `wholePartRowRefsFor`'s pie
+  // branch — `buildRegionRows` itself always carries a point's resultId
+  // regardless of whether its value is null (only a MISSING point at all
+  // — no series entry — has a null resultId), the same reason the stack
+  // path (built from `buildRows`, never filtered by null-ness at all) never
+  // had this bug in the first place.
+  const pieVerificationRows: UserPieRow[] = buildRegionRows(plottable, (i) => seriesColor(pres, i)).rows.flatMap((row, i): UserPieRow[] => {
+    const meta = seriesMeta[i];
+    if (meta === undefined || state.hiddenKeys.has(meta.key)) return [];
+    return [{ ...row, key: meta.key, color: meta.color, opacity: opacityFor(meta), dimmed: dimmedFor(meta) }];
+  });
   const piePeriodLabels = new Set(plottable.series.flatMap((s) => s.points.map((p) => p.periodLabel)));
   const pieSharedPeriodLabel = piePeriodLabels.size === 1 ? [...piePeriodLabels][0]! : t(chartLang, 'chart.table.value');
   // The stacks: the SAME period × series `rows` the vertical bar draws, one
@@ -1611,18 +1649,18 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // Task 4: re-run the check whenever the designation or the currently-
   // displayed parts change. Depends on `activeSpec`/`state.hiddenKeys`
   // (real state, stable across an unrelated re-render) rather than
-  // `pieRows`/`rows`/`visibleSeries` directly (fresh array references every
-  // render, which would re-fetch on every unrelated re-render too): the
-  // effect only re-executes when one of the DEPENDENCIES below actually
-  // changes, and when it does, it reads the CURRENT render's freshly-
-  // computed pieRows/rows/visibleSeries via closure — the same "recomputed
-  // together" guarantee Task 3's own render already relies on. Clearing the
-  // designation (rowRef: null) reverts to Task 3's exact default note
-  // instantly, with no network round trip. Also bails while NOT viewing a
-  // whole form (a designation survives a tab switch away, but the note —
-  // and any reason to re-verify — only exists while wholeForm is true;
-  // without this a switch to Lijn/Staaf/etc. would still fire a pointless
-  // network call for a note nothing renders).
+  // `pieVerificationRows`/`rows`/`visibleSeries` directly (fresh array
+  // references every render, which would re-fetch on every unrelated
+  // re-render too): the effect only re-executes when one of the
+  // DEPENDENCIES below actually changes, and when it does, it reads the
+  // CURRENT render's freshly-computed pieVerificationRows/rows/visibleSeries
+  // via closure — the same "recomputed together" guarantee Task 3's own
+  // render already relies on. Clearing the designation (rowRef: null)
+  // reverts to Task 3's exact default note instantly, with no network round
+  // trip. Also bails while NOT viewing a whole form (a designation survives
+  // a tab switch away, but the note — and any reason to re-verify — only
+  // exists while wholeForm is true; without this a switch to Lijn/Staaf/etc.
+  // would still fire a pointless network call for a note nothing renders).
   useEffect(() => {
     const wholeForm = activeForm === 'pie' || activeForm === 'stacked' || activeForm === 'stacked100';
     if (!wholeForm || state.wholeReferenceRowRef === null || datasetId === undefined || state.instruction === null) {
@@ -1630,16 +1668,47 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       return;
     }
     const wholeRowRef = state.wholeReferenceRowRef;
-    const partRowRefs = wholePartRowRefsFor(activeForm, wholeRowRef, pieRows, rows, visibleSeries);
+    const partRowRefs = wholePartRowRefsFor(activeForm, wholeRowRef, pieVerificationRows, rows, visibleSeries);
+    // Task 4 fix (I2, adversarial review): an EMPTY parts list (every other
+    // visible series hidden, or — for a stack — the designated series
+    // itself now hidden, so its own period can no longer be located among
+    // the visible rows) has nothing real to check. Skipping it here matters:
+    // the server would still resolve the designated cell's real value (a
+    // hidden series doesn't remove it from the dataset) against a sum of
+    // ZERO parts, which reads as a false "Checked ✓" for a whole within
+    // 0.5 of zero, or a guaranteed mismatch with a raw-rowRef label
+    // otherwise — neither is an honest verdict for "there is currently
+    // nothing to check this against". Falls back to the same not_checked
+    // default a fresh, undesignated chart shows.
+    if (partRowRefs.length === 0) {
+      setWholeVerification(null);
+      return;
+    }
     let cancelled = false;
-    void requestWholeVerification(datasetId, state.instruction, wholeRowRef, partRowRefs).then((response) => {
-      if (cancelled) return;
-      setWholeVerification(response.ok ? response.outcome : null);
-    });
+    // Task 4 fix (I1, adversarial review): clear the PREVIOUS verdict
+    // before firing a new request — a designation whose parts changed (a
+    // series hidden/shown, a data edit) must not keep showing a stale
+    // "Checked ✓" while the new check is still in flight. Mirrors
+    // chart.tsx's own CBS-tier fix for this exact bug class (its "Final-
+    // review fix (M2)" comment on its own whole-verification effect).
+    setWholeVerification(null);
+    void requestDatasetWholeVerification(datasetId, state.instruction, wholeRowRef, partRowRefs)
+      .then((response) => {
+        if (cancelled) return;
+        setWholeVerification(response.ok ? response.outcome : null);
+      })
+      // Task 4 fix (I1): a REJECTED round trip (network failure, a Server
+      // Action throw — as opposed to a normal `ok: false` answer, already
+      // handled above) must not leave the PREVIOUS verdict on screen
+      // forever. Same CBS-tier precedent as the comment above.
+      .catch(() => {
+        if (cancelled) return;
+        setWholeVerification(null);
+      });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- pieRows/rows/visibleSeries recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh arrays avoids re-fetching on every unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pieVerificationRows/rows/visibleSeries recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh arrays avoids re-fetching on every unrelated re-render.
   }, [activeSpec, state.hiddenKeys, activeForm, state.wholeReferenceRowRef, state.instruction, datasetId]);
   // The note's state: Task 3's default unless a reference is designated, in
   // which case the check's own outcome decides — still resolving (or a bare

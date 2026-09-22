@@ -1,7 +1,11 @@
 'use server';
 // Own-data analog of web/app/chart-whole-verification-actions.ts's
 // requestWholeVerification (chart co-pilot phase 5b) — own-data's "verified
-// whole" doorway (plan 2026-09-22, Task 4). CBS's version fetches an
+// whole" doorway (plan 2026-09-22, Task 4). Exported here as
+// requestDatasetWholeVerification (M1, adversarial review, this task): the
+// two files' own functions used to share one name, which collided badly
+// enough to already need explanatory comments in the contract test's mocks
+// to keep the two straight. CBS's version fetches an
 // independently-PUBLISHED parent total from OUR database; own-data has no
 // such registry, so this re-reads the reader's OWN currently-displayed chart
 // instruction (never trusted as-is — resent and revalidated through the
@@ -82,7 +86,7 @@ export type RequestWholeVerificationResponse = { ok: true; outcome: VerifyOutcom
  * deterministic validate -> execute -> check pipeline over already-stored
  * cells (the D12 CSV-ingest precedent).
  */
-export async function requestWholeVerification(
+export async function requestDatasetWholeVerification(
   datasetId: number,
   rawInstruction: unknown,
   rawWholeRowRef: unknown,
@@ -108,8 +112,8 @@ export async function requestWholeVerification(
     instruction = validateInstructionObject(toValidatableInstruction(upgradeInstruction(rawInstruction)), dataset.profile);
   } catch (error) {
     if (error instanceof InstructionValidationError) return { ok: false, reason: 'this chart could not be validated' };
-    console.error('requestWholeVerification failed:', error);
-    await reportError('requestWholeVerification', error, { userId });
+    console.error('requestDatasetWholeVerification failed:', error);
+    await reportError('requestDatasetWholeVerification', error, { userId });
     return { ok: false };
   }
 
@@ -125,8 +129,8 @@ export async function requestWholeVerification(
     // was first drawn. Never reported; only a genuinely unexpected error below is.
     if (error instanceof NoRowsError) return { ok: false, reason: 'this chart no longer has any matching rows' };
     if (error instanceof TooManyPointsError) return { ok: false, reason: 'this chart has too many points' };
-    console.error('requestWholeVerification failed:', error);
-    await reportError('requestWholeVerification', error, { userId });
+    console.error('requestDatasetWholeVerification failed:', error);
+    await reportError('requestDatasetWholeVerification', error, { userId });
     return { ok: false };
   }
 }

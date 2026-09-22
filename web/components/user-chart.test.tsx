@@ -32,7 +32,7 @@ const derivationActions = vi.hoisted(() => ({
 }));
 vi.mock('../app/dataset-derivation-actions.ts', () => derivationActions);
 const wholeVerificationActions = vi.hoisted(() => ({
-  requestWholeVerification: vi.fn(),
+  requestDatasetWholeVerification: vi.fn(),
 }));
 vi.mock('../app/dataset-whole-verification-actions.ts', () => wholeVerificationActions);
 
@@ -46,7 +46,7 @@ afterEach(() => {
   chartEditsActions.saveChartEdits.mockResolvedValue({ ok: true });
   datasetActions.renderDatasetInstruction.mockReset();
   derivationActions.requestDatasetDerivation.mockReset();
-  wholeVerificationActions.requestWholeVerification.mockReset();
+  wholeVerificationActions.requestDatasetWholeVerification.mockReset();
 });
 
 function point(overrides: Partial<UserChartSpec['series'][0]['points'][0]> = {}) {
@@ -170,6 +170,45 @@ function twoSeriesOneMomentSpec(): UserChartSpec {
     series: [
       { label: 'Amsterdam', points: [point({ rowRef: 'r1:c1', xKey: '2024', xLabel: '2024', value: 40, formattedValue: '40,0', sourceText: '40,0' })] },
       { label: 'Rotterdam', points: [point({ rowRef: 'r1:c2', xKey: '2024', xLabel: '2024', value: 20, formattedValue: '20,0', sourceText: '20,0' })] },
+    ],
+  });
+}
+
+/** Three regions, one moment, ALL real values (600/600/300) — Task 4 fix
+ * regression fixtures (adversarial review): a third series lets a legend
+ * toggle change WHICH parts are sent without emptying the parts list
+ * entirely, distinct from `threeRegionOneMomentSpecWithNull` below (C1,
+ * a genuinely null part) and the two-series specs above (hiding either
+ * series there always empties the parts list — I2's own scenario). */
+function threeRegionOneMomentSpec(): UserChartSpec {
+  return spec({
+    kind: 'bar',
+    yHeaders: ['Revenue'],
+    series: [
+      { label: 'Noord', points: [point({ rowRef: 'r1:c1', xKey: '2024', xLabel: '2024', value: 600, formattedValue: '600,0', sourceText: '600,0' })] },
+      { label: 'Zuid', points: [point({ rowRef: 'r1:c2', xKey: '2024', xLabel: '2024', value: 600, formattedValue: '600,0', sourceText: '600,0' })] },
+      { label: 'Oost', points: [point({ rowRef: 'r1:c3', xKey: '2024', xLabel: '2024', value: 300, formattedValue: '300,0', sourceText: '300,0' })] },
+    ],
+  });
+}
+
+/** The reviewer's own C1 regression scenario, verbatim: three regions, one
+ * moment, Noord=600 / Zuid=600 / Oost genuinely blank in the source file
+ * ("leeg in bron" — the SAME reason nullCellSpec above uses). Oost's null
+ * value has no angle and is correctly dropped from RENDERING (Task 3's own
+ * rule — only two slices are drawn), but a visible, real region whose value
+ * is unknown must still reach the verification check as a withheld part,
+ * never silently vanish from the sum (arithmetically identical to
+ * defaulting it to zero, the exact fabrication class this feature exists
+ * to prevent). */
+function threeRegionOneMomentSpecWithNull(): UserChartSpec {
+  return spec({
+    kind: 'bar',
+    yHeaders: ['Revenue'],
+    series: [
+      { label: 'Noord', points: [point({ rowRef: 'r1:c1', xKey: '2024', xLabel: '2024', value: 600, formattedValue: '600,0', sourceText: '600,0' })] },
+      { label: 'Zuid', points: [point({ rowRef: 'r1:c2', xKey: '2024', xLabel: '2024', value: 600, formattedValue: '600,0', sourceText: '600,0' })] },
+      { label: 'Oost', points: [point({ rowRef: 'r1:c3', xKey: '2024', xLabel: '2024', value: null, formattedValue: null, sourceText: '', reason: 'leeg in bron' })] },
     ],
   });
 }
@@ -1773,7 +1812,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
 
   // ---------------------------------------------------------------------
   // Task 4: the reader-designated total — clicking a slice/segment marks it
-  // as "this is my total", requestWholeVerification (mocked) runs the real
+  // as "this is my total", requestDatasetWholeVerification (mocked) runs the real
   // check against the CURRENTLY-DISPLAYED other parts, and the note swaps
   // to one of `checked`/`mismatch`/`cannotCheck`. Reuses every helper above
   // (`note`, `SECTOR`, `SEGMENT`, `segment`, `IN`, `NOT_CHECKED`,
@@ -1784,8 +1823,8 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   const MISMATCH_AMSTERDAM = 'Deze delen tellen niet op tot Amsterdam — controleer je selectie.';
   const CANNOT_CHECK_AMSTERDAM = 'Kan niet worden gecontroleerd: Amsterdam heeft geen waarde, of een van de delen ontbreekt.';
 
-  it('Task 4: designating a pie slice dispatches setWholeReference and calls requestWholeVerification with the OTHER visible slice only; a genuine match renders the checked note, chart untouched', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+  it('Task 4: designating a pie slice dispatches setWholeReference and calls requestDatasetWholeVerification with the OTHER visible slice only; a genuine match renders the checked note, chart untouched', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     const amsterdam = container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
@@ -1794,7 +1833,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     fireEvent.click(amsterdam);
     // Amsterdam (r1:c1) designated as the whole; the ONLY other visible
     // slice, Rotterdam (r1:c2), is the sole part — never Amsterdam itself.
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
     expect(note().textContent).toBe(CHECKED_AMSTERDAM);
     expect(note()).toHaveClass('text-success');
@@ -1807,23 +1846,23 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('Task 4: clicking the ALREADY-designated slice again clears it — reverts to the exact Task 3 default note instantly, client-side, no second network call', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     const amsterdam = () => container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
     fireEvent.click(amsterdam());
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
 
     fireEvent.click(amsterdam());
     expect(note().textContent).toBe(NOT_CHECKED);
     expect(note()).toHaveAttribute('data-state', 'not_checked');
     expect(note()).toHaveClass('text-muted-foreground');
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
   });
 
   it('Task 4: a genuine mismatch renders the chart IN FULL and the mismatch note together — own-data never hides the chart on a mismatch, unlike CBS', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
@@ -1839,7 +1878,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
 
   it('Task 4: missing_whole AND withheld_member both map to the SAME cannotCheck note, chart still drawn in full', async () => {
     for (const reason of ['missing_whole', 'withheld_member'] as const) {
-      wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason } });
+      wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason } });
       const { container, unmount } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
       fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
       fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
@@ -1852,21 +1891,21 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('Task 4: a bare server refusal (ok:false — e.g. a stale designation) falls back to not_checked, never a fabricated verdict', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: false, reason: 'this dataset is not available' });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: false, reason: 'this dataset is not available' });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
-    await waitFor(() => expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1));
     expect(note().textContent).toBe(NOT_CHECKED);
     expect(note()).toHaveAttribute('data-state', 'not_checked');
   });
 
   it('Task 4: designating a STACK segment scopes the parts to the SAME PERIOD only, never a sum across unrelated periods, and the label names series + period', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
     fireEvent.click(segment(container, 'r2:c1')); // Amsterdam, 2024 (42) — NOT 2023's r1:c1/r1:c2.
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r2:c1', ['r2:c2']);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r2:c1', ['r2:c2']);
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
     expect(note().textContent).toBe('Gecontroleerd tegen de rij die je koos: Amsterdam · 2024.');
     // Both bars, four segments, all still drawn.
@@ -1874,7 +1913,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('Task 4: a stack segment carries the SAME designation affordance (role, tabindex, Enter activates it)', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
     const el = segment(container, 'r2:c1');
@@ -1885,7 +1924,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('Task 4: renders the English designation note under LangProvider lang="en"', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'sum_mismatch' } });
     const { container } = render(
       <LangProvider lang="en">
         <UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />
@@ -1897,7 +1936,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('Task 4: history menu names the designation and its clearing distinctly, and Undo/Redo round-trip through it', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
@@ -1914,7 +1953,7 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 
   it('persistence: a stored setWholeReference is replayed onto the card and re-verified against the real dataset', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     chartEditsActions.fetchChartEdits.mockResolvedValue({
       ok: true,
       log: [
@@ -1930,35 +1969,118 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Taartdiagram' })).toHaveAttribute('aria-selected', 'true'));
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
     expect(note().textContent).toBe(CHECKED_AMSTERDAM);
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2']);
   });
 
   it('Task 4: with no edit context, designating a slice updates the note state locally but never calls the server (no datasetId to call with)', () => {
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
-    expect(wholeVerificationActions.requestWholeVerification).not.toHaveBeenCalled();
+    expect(wholeVerificationActions.requestDatasetWholeVerification).not.toHaveBeenCalled();
     // Nothing resolves it, so the note stays on the honest default rather
     // than fabricating a verdict.
     expect(note().textContent).toBe(NOT_CHECKED);
   });
 
   it('Task 4: switching away from the whole form after designating never fires a pointless server call for a note nothing renders; switching back re-verifies', async () => {
-    wholeVerificationActions.requestWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!);
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
     expect(screen.queryByTestId('own-whole-note')).toBeNull();
     // Still exactly one call — switching to a non-whole form issues no more.
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(1);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
     await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
-    expect(wholeVerificationActions.requestWholeVerification).toHaveBeenCalledTimes(2);
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(2);
+  });
+
+  // -----------------------------------------------------------------------
+  // Fix round (adversarial review, opus tier, real probes against the
+  // shipped code): 1 Critical + 2 Important defects, fixed below. Each test
+  // mirrors the reviewer's own reachable scenario.
+  // -----------------------------------------------------------------------
+
+  it('Task 4 fix (C1, Critical): a genuinely null VISIBLE region is sent as a withheld part, never silently dropped from the sum', async () => {
+    // The server (mocked) is told to answer withheld_member — this test's
+    // own job is proving the CLIENT sends Oost's rowRef at all; the real
+    // arithmetic (a null part -> withheld_member) is already proven,
+    // unmocked, by tests/attachments/verify-whole.test.ts.
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: false, reason: 'withheld_member' } });
+    const { container } = render(<UserChartView spec={threeRegionOneMomentSpecWithNull()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    // Oost's null value has no angle — Task 3's own rendering rule — so
+    // only Noord and Zuid are drawn as slices.
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!); // designate Noord
+    // The regression itself: Oost (r1:c3, visible but null) MUST be in the
+    // parts list sent to the server — before the fix this called with
+    // ['r1:c2'] only, silently excluding Oost from the sum entirely.
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledWith(3, LAST_INSTRUCTION, 'r1:c1', ['r1:c2', 'r1:c3']);
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'cannot_check'));
+    expect(note().textContent).toBe('Kan niet worden gecontroleerd: Noord heeft geen waarde, of een van de delen ontbreekt.');
+    // Still both slices — a withheld member is informational, not a refusal.
+    expect(container.querySelectorAll(SECTOR)).toHaveLength(2);
+  });
+
+  it('Task 4 fix (I1, Important): changing the parts (hiding a series) clears a stale "Checked" verdict immediately, never lets it linger while the new check is in flight', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={threeRegionOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!); // designate Noord
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+
+    // The NEXT call (fired when Oost is hidden, changing the parts) hangs
+    // forever within this test, so the assertion right after the click
+    // proves what the note shows WHILE the new check is in flight, not
+    // after it eventually settles.
+    wholeVerificationActions.requestDatasetWholeVerification.mockImplementation(() => new Promise(() => {}));
+    fireEvent.click(screen.getByRole('button', { name: 'Oost' })); // hides Oost — Zuid remains, parts still non-empty
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+    expect(note().textContent).toBe(NOT_CHECKED);
+  });
+
+  it('Task 4 fix (I1, Important): a REJECTED verification request resets to not_checked, never leaves a stale verdict on screen forever', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValueOnce({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={threeRegionOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    fireEvent.click(container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!); // designate Noord
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+
+    // Hiding Oost fires a SECOND request (parts change, still non-empty —
+    // Zuid remains); this one rejects outright (a transport failure, not a
+    // normal ok:false answer). Before the fix there was no .catch at all,
+    // so the rejection would go unhandled and the stale "Checked" verdict
+    // above would never be corrected.
+    wholeVerificationActions.requestDatasetWholeVerification.mockRejectedValueOnce(new Error('network failure'));
+    fireEvent.click(screen.getByRole('button', { name: 'Oost' }));
+    await waitFor(() => expect(note().textContent).toBe(NOT_CHECKED));
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+  });
+
+  it('Task 4 fix (I2, Important): hiding the designated segment\'s OWN series leaves nothing to check — skips the server call entirely, never a false match or a mismatch with a raw rowRef label', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Gestapeld' }));
+    fireEvent.click(segment(container, 'r2:c1')); // designate Amsterdam's 2024 segment
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
+
+    // Hide Amsterdam itself — the DESIGNATED series — so its own 2024 row
+    // can no longer be located among the currently-visible rows at all.
+    fireEvent.click(screen.getByRole('button', { name: 'Amsterdam' }));
+    expect(note().textContent).toBe(NOT_CHECKED);
+    expect(note()).toHaveAttribute('data-state', 'not_checked');
+    // No second network call for a check with nothing real in it — before
+    // the fix this would have called with partRowRefs: [] and rendered
+    // whatever the (mocked, always-true) server said, a false "Checked ✓"
+    // for a comparison against zero parts.
+    expect(wholeVerificationActions.requestDatasetWholeVerification).toHaveBeenCalledTimes(1);
   });
 });
 
