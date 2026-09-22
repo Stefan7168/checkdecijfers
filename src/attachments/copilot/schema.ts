@@ -45,7 +45,18 @@ export const patchSchema = z.strictObject({
 });
 
 export const viewCommandSchema = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('setForm'), form: z.enum(['line', 'area', 'bar', 'hbar', 'table']) }),
+  // Widened 5 -> 11 (Task 5, plan 2026-09-22), matching copilot/types.ts's
+  // COPILOT_FORMS and the CBS tier's own identically-widened enum
+  // (src/chart/copilot/schema.ts) — kept in step by hand, the same as
+  // PRESENTATION_KEYS/patchSchema above, but with no automated cross-check
+  // test today (unlike that pair): a form named here that COPILOT_FORMS
+  // does not list would let the model choose it, then have
+  // sanitizeCapabilities/the setForm case just never OFFER it in
+  // capabilities.forms — no crash, just a dead enum member.
+  z.strictObject({
+    kind: z.literal('setForm'),
+    form: z.enum(['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap', 'pie', 'stacked', 'stacked100']),
+  }),
   z.strictObject({ kind: z.literal('setSeriesView'), hiddenLabels: z.array(z.string()), highlightedLabel: z.string().nullable() }),
   z.strictObject({ kind: z.literal('setPresentation'), patch: patchSchema }),
   z.strictObject({ kind: z.literal('applyTemplate'), templateId: z.string() }),

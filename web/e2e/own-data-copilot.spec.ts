@@ -19,6 +19,7 @@
 // `tests/attachments/fixtures.test.ts` first, in the unit suite, rather than
 // silently replaying a stale answer here.
 import { resolve } from 'node:path';
+import type { Locator } from '@playwright/test';
 import { expect, signInAsHarnessUser, test } from './harness.ts';
 
 /** `tests/fixtures/attachments/verkoop.csv` — Jaar;Gemeente;Omzet;Kosten, two
@@ -28,6 +29,15 @@ const CSV = resolve(__dirname, '..', '..', 'tests', 'fixtures', 'attachments', '
 /** The two case questions, verbatim — anything else 400s at the llm-stub. */
 const QUESTION = 'Omzet per jaar per gemeente';
 const EDIT = 'totaal per gemeente, hoogste eerst, en maak er staven van';
+
+/** `instruct/omzet-min-kosten-2021` / `-2020` (tests/fixtures/attachments/
+ * cases.ts, Task 5): the same verkoop.csv, `derived: {op:'difference',
+ * b:'c3'}` (Omzet minus Kosten) joined to `seriesBy:'c1'` and a single-year
+ * filter — a one-moment, two-gemeente shape reached straight from upload,
+ * `ownDataPieFormAllowed`'s own qualifying shape. Verbatim question text;
+ * anything else 400s at the llm-stub. */
+const DIFF_2021_QUESTION = 'Verschil tussen omzet en kosten per gemeente in 2021';
+const DIFF_2020_QUESTION = 'Verschil tussen omzet en kosten per gemeente in 2020';
 
 const UNDO = process.platform === 'darwin' ? 'Meta+z' : 'Control+z';
 const REDO = process.platform === 'darwin' ? 'Shift+Meta+z' : 'Control+y';
@@ -225,5 +235,303 @@ test.describe.serial('the own-data chart co-pilot', () => {
     await page.getByRole('button', { name: 'Voeg notitie toe bij Amsterdam, 2021' }).click();
     await expect(page.getByRole('button', { name: 'Toon standaard hoofdcijfer' })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole('button', { name: 'Maak dit het hoofdcijfer' })).toHaveCount(0);
+  });
+});
+
+// Own-data chart-fit + verified-whole parity, Task 5's own e2e coverage
+// (plan 2026-09-22): the six forms Tasks 1-4 already put on the PANEL
+// (dumbbell/slope/heatmap, then pie/stacked/stacked100 with the
+// reader-designated-total mechanism), now also reachable from the CHAT
+// (COPILOT_FORMS widened, one combined fixture regen). jsdom cannot prove
+// real CSS-grid layout, real Recharts path geometry, or a real Server
+// Action round trip against a real (harness) dataset — this file is that
+// missing proof, mirroring chart-copilot.spec.ts's own phase-5/5b blocks
+// with own-data's own data-roles and test ids (confirmed by reading
+// web/components/user-chart.tsx directly, not assumed from CBS parity).
+test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole parity (Task 5)', () => {
+  test.beforeEach(async ({ context, baseURL }) => {
+    await signInAsHarnessUser(context, baseURL!);
+  });
+
+  // Two moments (2020/2021), two gemeenten (Amsterdam/Rotterdam), every
+  // Omzet cell real — exactly `dumbbellFormAllowed`/`slopeFormAllowed`/
+  // `heatmapFormAllowed`'s qualifying shape, and Task 1's own recorded
+  // values (100/50/150/70). Reuses the SAME `QUESTION` fixture the phase-1
+  // test above already uploads with, so no new dataset is needed here.
+  test('a two-moment, two-gemeente chart offers dumbbell/slope/heatmap; each renders its own real structure', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    const dumbbellTab = page.getByRole('tab', { name: 'Dumbbell' });
+    const slopeTab = page.getByRole('tab', { name: 'Helling' });
+    const heatmapTab = page.getByRole('tab', { name: 'Warmtekaart' });
+    await expect(dumbbellTab).toBeEnabled();
+    await expect(slopeTab).toBeEnabled();
+    await expect(heatmapTab).toBeEnabled();
+
+    // Dumbbell: one row per gemeente, two dots per row joined by a
+    // connector, each end labelled with its own real cell value and
+    // carrying that cell's own rowRef (Task 1/2's own recorded values:
+    // Amsterdam 100 -> 150, Rotterdam 50 -> 70).
+    await dumbbellTab.click();
+    await expect(dumbbellTab).toHaveAttribute('aria-selected', 'true');
+    const canvas = page.locator('[data-role="dumbbell-canvas"]');
+    await expect(canvas).toBeVisible();
+    await expect(canvas.locator('[data-role="dumbbell-row"]')).toHaveCount(2);
+    await expect(canvas.locator('[data-role="dumbbell-connector"]')).toHaveCount(2);
+    await expect(canvas.locator('[data-role="dumbbell-dot"]')).toHaveCount(4);
+    await expect(canvas.locator('[data-role="dumbbell-dot"][data-result-id="r1:c2"]')).toHaveCount(1);
+    await expect(canvas.locator('[data-role="dumbbell-dot"][data-result-id="r3:c2"]')).toHaveCount(1);
+    await expect(canvas.locator('[data-role="dumbbell-dot"][data-result-id="r2:c2"]')).toHaveCount(1);
+    await expect(canvas.locator('[data-role="dumbbell-dot"][data-result-id="r4:c2"]')).toHaveCount(1);
+    // Exact-text comparison, not `hasText` substring filtering — verkoop's
+    // own 50/150 pair would otherwise let "50" match "150" too.
+    const dumbbellLabelTexts = await canvas.locator('[data-role="dumbbell-label"]').allTextContents();
+    expect(dumbbellLabelTexts.sort()).toEqual(['100', '150', '50', '70'].sort());
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(0);
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(0);
+
+    // Slope: the line render at exactly two moments — two curves, each ONE
+    // straight segment (`d` split on `L`), four value dots, an x-axis of
+    // exactly the two period labels. Ported from chart-copilot.spec.ts's own
+    // phase-5 block (its slope assertions apply unchanged, per Task 1's
+    // handoff — only the surrounding locators are own-data's).
+    await slopeTab.click();
+    await expect(slopeTab).toHaveAttribute('aria-selected', 'true');
+    await expect(canvas).toHaveCount(0);
+    const curves = page.locator('.recharts-line-curve');
+    await expect(curves).toHaveCount(2);
+    const segmentsPerCurve = await curves.evaluateAll((paths) => paths.map((path) => (path.getAttribute('d') ?? '').split('L').length - 1));
+    expect(segmentsPerCurve).toEqual([1, 1]);
+    await expect(page.locator('circle[data-point="value"]')).toHaveCount(4);
+    await expect(page.locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['2020', '2021']);
+
+    // Heatmap: the table's own rows (period x gemeente) as a CSS grid with
+    // ARIA table semantics, every cell the real formatted value bound to its
+    // own rowRef, outside the recharts SVG render. `xHeader` is verkoop.csv's
+    // own column header text verbatim ("Jaar" — never translated, it is user
+    // data), confirmed by reading chart.ts's `xHeader: xColumn.header`.
+    await heatmapTab.click();
+    await expect(heatmapTab).toHaveAttribute('aria-selected', 'true');
+    const grid = page.locator('[data-testid="user-heatmap-grid"]');
+    await expect(grid).toBeVisible();
+    await expect(grid.getByRole('columnheader')).toHaveText(['Jaar', 'Amsterdam', 'Rotterdam']);
+    await expect(grid.getByRole('rowheader')).toHaveText(['2020', '2021']);
+    const cells = grid.getByRole('cell');
+    await expect(cells).toHaveText(['100', '50', '150', '70']);
+    await expect(page.locator('[data-label-for="r1:c2"]')).toHaveText('100');
+    await expect(page.locator('[data-label-for="r2:c2"]')).toHaveText('50');
+    await expect(page.locator('[data-label-for="r3:c2"]')).toHaveText('150');
+    await expect(page.locator('[data-label-for="r4:c2"]')).toHaveText('70');
+    // This card has no separate export-container id (unlike the CBS card's
+    // `[data-testid="chart-container"]`) — the equivalent absence proof is
+    // that no recharts SVG element is present while the grid is shown.
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(0);
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(0);
+
+    // The real-layout proof (ported from chart-copilot.spec.ts lines
+    // 528-559, Task 1's own explicit handoff — jsdom cannot see any of
+    // this): cells of one period share a top edge with that period's row
+    // header, cells of one gemeente share a left edge with each other and
+    // with that column's header, Rotterdam's column starts where
+    // Amsterdam's ends, and the grid/row `display` values are real.
+    const box = async (locator: Locator) => {
+      const b = await locator.boundingBox();
+      expect(b, 'element has a box').not.toBeNull();
+      return b!;
+    };
+    const near = (a: number, b: number) => Math.abs(a - b) <= 1;
+    const rowHeaders = grid.getByRole('rowheader');
+    const columnHeaders = grid.getByRole('columnheader');
+    const [r2020, r2021] = [await box(rowHeaders.nth(0)), await box(rowHeaders.nth(1))];
+    const [c0, c1, c2, c3] = [await box(cells.nth(0)), await box(cells.nth(1)), await box(cells.nth(2)), await box(cells.nth(3))];
+    const [hAms, hRot] = [await box(columnHeaders.nth(1)), await box(columnHeaders.nth(2))];
+    expect(near(c0.y, r2020.y) && near(c1.y, r2020.y), 'row 2020 aligned').toBe(true);
+    expect(near(c2.y, r2021.y) && near(c3.y, r2021.y), 'row 2021 aligned').toBe(true);
+    expect(r2021.y).toBeGreaterThanOrEqual(r2020.y + r2020.height - 1);
+    expect(near(c0.x, c2.x) && near(c0.x, hAms.x), 'Amsterdam column aligned').toBe(true);
+    expect(near(c1.x, c3.x) && near(c1.x, hRot.x), 'Rotterdam column aligned').toBe(true);
+    expect(c1.x).toBeGreaterThanOrEqual(c0.x + c0.width - 1);
+    const display = await grid.evaluate((el) => ({
+      grid: getComputedStyle(el).display,
+      row: getComputedStyle(el.querySelector('[role="row"]')!).display,
+    }));
+    expect(display).toEqual({ grid: 'grid', row: 'contents' });
+  });
+
+  // A ONE-moment, two-gemeente shape — `ownDataPieFormAllowed`'s own
+  // qualifying shape (own-data offers pie/stacked/stacked100 on shape
+  // alone, no roster) — reached straight from upload via a NEW instruct
+  // fixture (`derived: {op:'difference', b:'c3'}` joined to `seriesBy:'c1'`
+  // and a single-year filter): Amsterdam and Rotterdam's Omzet-minus-Kosten
+  // for 2021 alone are BOTH 60 (verified by directly running
+  // buildUserChartSpec against this exact instruction, not guessed) — a
+  // genuine match once one is designated as the total.
+  test('a one-moment, two-gemeente chart offers pie/stacked/stacked100 unconditionally, each rendering real content; designating a matching slice renders the checked note', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(DIFF_2021_QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(2, { timeout: 60_000 });
+
+    // No special "complete roster" property needed, unlike the CBS
+    // equivalent — own-data's whole guards read shape (series count / point
+    // count) alone.
+    const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
+    const stackedTab = page.getByRole('tab', { name: 'Gestapeld', exact: true });
+    const stacked100Tab = page.getByRole('tab', { name: 'Gestapeld (%)', exact: true });
+    await expect(pieTab).toBeEnabled();
+    await expect(stackedTab).toBeEnabled();
+    await expect(stacked100Tab).toBeEnabled();
+
+    const note = page.locator('[data-testid="own-whole-note"]');
+    const amsterdam = page.locator('path.recharts-sector[data-point="value"][data-result-id="der:difference:r3:c2|r3:c3"]');
+    const rotterdam = page.locator('path.recharts-sector[data-point="value"][data-result-id="der:difference:r4:c2|r4:c3"]');
+
+    // Pie: the default, un-designated note (no server call yet), two
+    // slices, each bound to its own real derived cell, each labelled with
+    // its own real formatted value — no invented number, no percentage.
+    await pieTab.click();
+    await expect(pieTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveAttribute('data-state', 'not_checked');
+    await expect(note).toHaveText('Niet gecontroleerd tegen een totaal — klik op een punt om te controleren of deze delen optellen.');
+    const slices = page.locator('path.recharts-sector[data-point="value"]');
+    await expect(slices).toHaveCount(2);
+    await expect(amsterdam).toHaveCount(1);
+    await expect(rotterdam).toHaveCount(1);
+    const pieLabels = page.locator('[data-role="pie-label"]');
+    expect(await pieLabels.allTextContents()).toEqual(['60', '60']);
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(0);
+
+    // Stacked: one stack (one moment), two segments, Recharts' own native
+    // stacking, each bound to its own real cell, real values, no invented
+    // total.
+    await stackedTab.click();
+    await expect(stackedTab).toHaveAttribute('aria-selected', 'true');
+    await expect(note).toHaveAttribute('data-state', 'not_checked');
+    const segments = page.locator('rect[data-point="value"]');
+    await expect(segments).toHaveCount(2);
+    const stackLabels = page.locator('[data-role="stack-label"]');
+    expect(await stackLabels.allTextContents()).toEqual(['60', '60']);
+    await expect(page.locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value')).toHaveText(['2021']);
+    await expect(slices).toHaveCount(0);
+
+    // 100%-stacked: the same two segments, each an equal half of the
+    // (equal) whole — pure arithmetic over the two real values on screen.
+    await stacked100Tab.click();
+    await expect(stacked100Tab).toHaveAttribute('aria-selected', 'true');
+    await expect(segments).toHaveCount(2);
+    expect(await stackLabels.allTextContents()).toEqual(['50,0%', '50,0%']);
+
+    // Designate Amsterdam's slice as the total: the sole OTHER visible part
+    // (Rotterdam, the same value) matches it exactly — a REAL server round
+    // trip (requestDatasetWholeVerification), never mocked, against the
+    // real (harness) dataset.
+    await pieTab.click();
+    await amsterdam.click();
+    await expect(note).toHaveAttribute('data-state', 'checked', { timeout: 15_000 });
+    await expect(note).toHaveText('Gecontroleerd tegen de rij die je koos: Omzet − Kosten.');
+    // A match still renders the chart in full.
+    await expect(slices).toHaveCount(2);
+    expect(await pieLabels.allTextContents()).toEqual(['60', '60']);
+
+    // Clicking the SAME slice again clears the designation instantly, back
+    // to Task 3's exact default note — no fabricated verdict lingers.
+    await amsterdam.click();
+    await expect(note).toHaveAttribute('data-state', 'not_checked');
+  });
+
+  // The mismatch twin of the test above: the SAME one-moment shape, one
+  // year earlier (2020), where the two gemeenten's Omzet-minus-Kosten
+  // genuinely differ (40 vs 30) — designating either one against the
+  // other's real value cannot match.
+  test('designating a slice whose only other visible part does not match it renders the mismatch note, and the chart still renders in full', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(DIFF_2020_QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(2, { timeout: 60_000 });
+
+    const pieTab = page.getByRole('tab', { name: 'Taartdiagram', exact: true });
+    await expect(pieTab).toBeEnabled();
+    await pieTab.click();
+    const note = page.locator('[data-testid="own-whole-note"]');
+    await expect(note).toHaveAttribute('data-state', 'not_checked');
+
+    const slices = page.locator('path.recharts-sector[data-point="value"]');
+    const pieLabels = page.locator('[data-role="pie-label"]');
+    await expect(slices).toHaveCount(2);
+    expect(await pieLabels.allTextContents()).toEqual(['40', '30']);
+
+    const amsterdam = page.locator('path.recharts-sector[data-point="value"][data-result-id="der:difference:r1:c2|r1:c3"]');
+    await amsterdam.click();
+    await expect(note).toHaveAttribute('data-state', 'mismatch', { timeout: 15_000 });
+    await expect(note).toHaveText('Deze delen tellen niet op tot Omzet − Kosten — controleer je selectie.');
+    // A mismatch still renders the chart in full — never hidden, never
+    // refused.
+    await expect(slices).toHaveCount(2);
+    expect(await pieLabels.allTextContents()).toEqual(['40', '30']);
+  });
+
+  const HEATMAP_MESSAGE = 'maak er een warmtekaart van';
+
+  test(`"${HEATMAP_MESSAGE}" through the chat draws the same heatmap the tab does, and Undo walks it back`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // First the tab, directly: record what it draws.
+    const heatmapTab = page.getByRole('tab', { name: 'Warmtekaart' });
+    const lineTab = page.getByRole('tab', { name: 'Lijn' });
+    const grid = page.locator('[data-testid="user-heatmap-grid"]');
+    await heatmapTab.click();
+    await expect(grid).toBeVisible();
+    const cellsByTab = await grid.getByRole('cell').allTextContents();
+    expect(cellsByTab).toEqual(['100', '50', '150', '70']);
+    await lineTab.click();
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(grid).toHaveCount(0);
+
+    // Then the chat: one `setForm` chip, the heatmap tab selected, the
+    // identical grid — same cells, same order.
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(HEATMAP_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByRole('button', { name: 'Weergave: Warmtekaart' })).toBeVisible({ timeout: 60_000 });
+    await expect(heatmapTab).toHaveAttribute('aria-selected', 'true');
+    await expect(grid).toBeVisible();
+    expect(await grid.getByRole('cell').allTextContents()).toEqual(cellsByTab);
+
+    // A chat edit is an edit like any other: the card's own Undo restores
+    // Lijn. `exact`: the reply strip's own undo would otherwise also match.
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(lineTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+    await expect(grid).toHaveCount(0);
   });
 });

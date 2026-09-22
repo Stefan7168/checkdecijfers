@@ -62,12 +62,23 @@ const LINE_PER_GEMEENTE: ClientChartInstruction = {
  * What the browser tells the co-pilot the case-1 chart can do — the SAME
  * values `ownDataCapabilities` (web/lib/chart-capabilities.ts) computes for
  * it, written out by hand because a fixture may not import from web/:
- *   forms — a `kind: 'line'` spec with 2 series: line yes, area no
- *     (single-series only), bar always, hbar no (bar-kind only), table always.
+ *   forms — a `kind: 'line'` spec with 2 series x 2 real-valued moments each
+ *     (Amsterdam/Rotterdam, 2020/2021): line yes, area no (single-series
+ *     only), bar always, hbar no (bar-kind only), table always, then (own-
+ *     data chart-fit/verified-whole parity, plan 2026-09-22) dumbbell/slope/
+ *     heatmap — this shape is exactly two moments per series, chart-fit's
+ *     own qualifying shape — and stacked/stacked100 (own-data offers those
+ *     two on series count alone, no roster needed); NOT pie, which needs
+ *     exactly ONE moment per series and this chart has two. Task 5 is what
+ *     lets these six reach the chat's wire at all (`COPILOT_FORMS`); the
+ *     render cap (Tasks 1-3) already put them on the panel's tabs before
+ *     that. In the scorer's own fixed order, the same order the browser
+ *     sends (`ownDataRenderableForms`, chart-capabilities.ts).
  *   presentationKeys — PRESENTATION_KEYS ∩ `resolvePresentation(...).applicable`
  *     for the line form, i.e. everything but `areaFill` (area only) and
- *     `pieHole` (pie only — a form this card cannot draw at all), in
- *     PRESENTATION_KEYS order.
+ *     `pieHole` (pie only — a form THIS chart's shape does not qualify for
+ *     right now, not a form the card can never draw), in PRESENTATION_KEYS
+ *     order.
  *   templates — all of TEMPLATE_IDS (the gallery is mounted in every
  *     non-table form), thirteen since the five house styles (#275) became
  *     chat-nameable in co-pilot phase 6 Task 1 — in TEMPLATE_IDS order, the
@@ -75,7 +86,7 @@ const LINE_PER_GEMEENTE: ClientChartInstruction = {
  *   lang — the harness pins the UI to Dutch via the `lang` cookie.
  */
 const LINE_CAPABILITIES: CopilotCapabilities = {
-  forms: ['line', 'bar', 'table'],
+  forms: ['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100'],
   presentationKeys: [
     'lineWidth',
     'markers',
@@ -236,16 +247,21 @@ export const CASES: AttachmentCase[] = [
       reading: 'Broadsheet is among the templates on offer: applied, the data stays as it is.',
     },
   },
-  // Co-pilot phase 6, Task 1 (#301): the own-data card has NO pie form
-  // (COPILOT_FORMS; user-chart.tsx draws none), so `pieHole` — pie-only in
-  // resolvePresentation — is never among the style keys it offers, and the
-  // same "donut" a CBS pie takes (tests/fixtures/chart-copilot/cases.ts) is
-  // refused here by the prompt's own rule: not under CAPABILITIES →
-  // not_available. control: form — a donut is a chart shape to the reader,
-  // and the form tabs are the control that decides shapes. The capabilities
-  // are the real ones the browser sends for this chart, not a hand-built
-  // list with pieHole in it, so a later `attachments:record` checks the
-  // model against an input the product actually produces.
+  // Co-pilot phase 6, Task 1 (#301): at the time this case was written, the
+  // own-data card had no pie form at all. Own-data chart-fit/verified-whole
+  // parity (plan 2026-09-22) changed that — Task 3 gave the panel a pie tab
+  // and Task 5 put it on COPILOT_FORMS — but THIS chart (2 series x 2
+  // moments each) still does not qualify: `ownDataPieFormAllowed` needs
+  // exactly one moment per series, on shape alone, same as it always would
+  // have. So `pieHole` — pie-only in resolvePresentation — is still never
+  // among the style keys LINE_CAPABILITIES offers, and the same "donut" a
+  // CBS pie takes (tests/fixtures/chart-copilot/cases.ts) is still refused
+  // here by the prompt's own rule: not under CAPABILITIES → not_available.
+  // control: form — a donut is a chart shape to the reader, and the form
+  // tabs are the control that decides shapes. The capabilities are the real
+  // ones the browser sends for THIS chart's shape, not a hand-built list
+  // with pieHole in it, so a later `attachments:record` checks the model
+  // against an input the product actually produces.
   {
     label: 'copilot/refuse-donut',
     kind: 'copilot',
@@ -359,6 +375,89 @@ export const CASES: AttachmentCase[] = [
       refused: [],
       confidence: 0.95,
       reading: 'The value is the one the message contains; the label carries no number.',
+    },
+  },
+  // Own-data chart-fit/verified-whole parity, Task 5 (plan 2026-09-22): a
+  // chat-driven form change reaching one of the six forms Task 5 puts on
+  // COPILOT_FORMS — mirrors 'copilot/total-per-gemeente-as-bars' above
+  // exactly (a bare `setForm`, no data change), naming heatmap instead of
+  // bar. LINE_PER_GEMEENTE/LINE_CAPABILITIES already qualify (2 series x 2
+  // real-valued moments — the chart-fit trio's own shape), so no new dataset
+  // is needed for this one.
+  {
+    label: 'copilot/chat-heatmap',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'maak er een warmtekaart van',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'setForm', form: 'heatmap' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Heatmap is among the forms this chart currently offers.',
+    },
+  },
+  // Own-data verified-whole parity, Task 5's own e2e coverage (plan
+  // 2026-09-22): two INSTRUCT cases (not copilot — no view command, just a
+  // data-changing question) that put a genuinely ONE-MOMENT, two-series
+  // shape on screen straight from upload — `ownDataPieFormAllowed`'s own
+  // qualifying shape, which LINE_PER_GEMEENTE's two-moment chart above is
+  // NOT. `derived: {op: 'difference', b: 'c3'}` (Omzet minus Kosten) joined
+  // to `seriesBy: 'c1'` (one series per gemeente) and a single-year filter
+  // reuses verkoop.csv's own real cells with no new CSV file: confirmed by
+  // directly running buildUserChartSpec against this exact instruction
+  // (not guessed) that 2021 gives Amsterdam=60 and Rotterdam=60 (a genuine
+  // MATCH — designating either one's slice finds the other's value equal)
+  // while 2020 gives Amsterdam=40 and Rotterdam=30 (a genuine MISMATCH).
+  // Both series share one label ("Omzet − Kosten": a derived instruction's
+  // label is the computation's own description, not the seriesBy value —
+  // confirmed the same way), which is why the e2e spec selects a slice by
+  // its own resultId rather than by an (ambiguous, shared) accessible name.
+  {
+    label: 'instruct/omzet-min-kosten-2021',
+    kind: 'instruct',
+    csv: 'verkoop.csv',
+    previous: null,
+    question: 'Verschil tussen omzet en kosten per gemeente in 2021',
+    output: {
+      version: 2,
+      kind: 'bar',
+      x: 'c0',
+      y: ['c2'],
+      seriesBy: 'c1',
+      filters: [{ column: 'c0', op: 'in', values: ['2021'] }],
+      sort: null,
+      limit: null,
+      aggregate: null,
+      derived: { op: 'difference', b: 'c3' },
+      confidence: 0.95,
+      reading: 'Omzet minus Kosten per gemeente, 2021 only — one point per gemeente.',
+      unsupported: null,
+    },
+  },
+  {
+    label: 'instruct/omzet-min-kosten-2020',
+    kind: 'instruct',
+    csv: 'verkoop.csv',
+    previous: null,
+    question: 'Verschil tussen omzet en kosten per gemeente in 2020',
+    output: {
+      version: 2,
+      kind: 'bar',
+      x: 'c0',
+      y: ['c2'],
+      seriesBy: 'c1',
+      filters: [{ column: 'c0', op: 'in', values: ['2020'] }],
+      sort: null,
+      limit: null,
+      aggregate: null,
+      derived: { op: 'difference', b: 'c3' },
+      confidence: 0.95,
+      reading: 'Omzet minus Kosten per gemeente, 2020 only — one point per gemeente.',
+      unsupported: null,
     },
   },
 ];

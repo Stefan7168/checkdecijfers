@@ -418,29 +418,38 @@ describe('own-data chart-fit parity (Task 1) — the scorer, capped to what the 
     expect(ownDataRenderableForms(rostered, 2)).toEqual(ownDataRenderableForms(TWO_BARS_ONE_MOMENT, 2));
   });
 
-  it('a whole form on screen (Task 3): templates offered (not a tabular form), overlays off, and the three whole forms reach the render list but not yet the chat\'s wire', () => {
+  it('a whole form on screen (Task 3, wire widened in Task 5): templates offered (not a tabular form), overlays off, and the three whole forms now reach the chat\'s wire too', () => {
     const caps = ownDataCapabilities({ spec: TWO_BARS_ONE_MOMENT, form: 'pie', seriesCount: 2, applicable: ALL_APPLICABLE, lang: 'nl' });
     expect(caps.templates).toEqual([...TEMPLATE_IDS]);
     expect(caps.overlays).toBe(false);
-    expect(caps.forms).toEqual(['bar', 'hbar', 'table']);
+    expect(caps.forms).toEqual(['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100']);
   });
 
-  it('ownDataCapabilities forwards that list through the server\'s own COPILOT_FORMS allowlist — today slope/heatmap/the whole forms reach the TABS but not yet the chat (tripwire: flips in Task 5)', () => {
-    // When this guard fails because COPILOT_FORMS now names 'slope', Task 5
-    // has landed: change the expectation below to ['line', 'bar', 'table',
-    // 'dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100'] and delete
-    // the guard.
-    expect([...COPILOT_FORMS]).not.toContain('slope');
-    expect([...COPILOT_FORMS]).not.toContain('heatmap');
-    expect([...COPILOT_FORMS]).not.toContain('pie');
-    expect([...COPILOT_FORMS]).not.toContain('stacked');
+  it('ownDataCapabilities forwards that list through the server\'s own COPILOT_FORMS allowlist — since Task 5, slope/heatmap/the whole forms reach the chat too, not just the tabs', () => {
+    // Task 5 (plan 2026-09-22): COPILOT_FORMS was widened 5 -> 11 (all of
+    // COPILOT_FORMS, i.e. every ChartForm) alongside the schema enum, the
+    // prompt's hand-listed example and COPILOT_PROMPT_VERSION — so the wire
+    // cap below is no longer narrower than what the scorer + render cap
+    // already offered; it merely still EXISTS as a real filter (proven by
+    // the loop below, which would silently pass even if `isCopilotForm`
+    // were deleted outright — kept as a guard against exactly that).
+    expect([...COPILOT_FORMS]).toContain('slope');
+    expect([...COPILOT_FORMS]).toContain('heatmap');
+    expect([...COPILOT_FORMS]).toContain('pie');
+    expect([...COPILOT_FORMS]).toContain('stacked');
+    expect([...COPILOT_FORMS]).toContain('stacked100');
+    expect([...COPILOT_FORMS]).toContain('dumbbell');
     const caps = ownDataCapabilities({ spec: CBS_TWO_SERIES, form: 'line', seriesCount: 2, applicable: ALL_APPLICABLE, lang: 'nl' });
-    expect(caps.forms).toEqual(['line', 'bar', 'table']);
-    // …and the wire cap is exactly that allowlist, nothing narrower.
+    expect(caps.forms).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap', 'stacked', 'stacked100']);
+    // …and the wire cap is exactly that allowlist, nothing narrower — today
+    // that allowlist is every ChartForm, so this reduces to "capabilities
+    // forwards the render list verbatim", but the filter step itself stays
+    // (Task 1's three-step pipeline: scorer -> render cap -> wire cap).
     const wire = new Set<string>(COPILOT_FORMS);
     for (const [spec, seriesCount] of SHAPES) {
       const c = ownDataCapabilities({ spec, form: 'line', seriesCount, applicable: ALL_APPLICABLE, lang: 'nl' });
       expect(c.forms).toEqual(ownDataRenderableForms(spec, seriesCount).filter((f) => wire.has(f)));
+      expect(c.forms).toEqual(ownDataRenderableForms(spec, seriesCount));
     }
   });
 

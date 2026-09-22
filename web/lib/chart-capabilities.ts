@@ -79,15 +79,18 @@ export function ownDataRenderableForms(spec: PlottableSpec, seriesCount: number)
 /** The own-data co-pilot's SERVER allowlist (src/attachments/copilot/types.ts
  * `COPILOT_FORMS`): `sanitizeCapabilities` silently drops any form off it
  * before the prompt is built, and the model's own `setForm` schema is the
- * same list. Until Task 5 widens that list — together with the prompt's
- * hand-listed forms, the `COPILOT_PROMPT_VERSION` bump and the offline
- * fixture regen, ONE combined change — a form the panel can already draw
- * is still one the chat cannot be told about: claiming it here would only
- * send a value the server discards, while widening the list from here would
- * change the prompt bytes of every own-data co-pilot request whose chart is
+ * same list. Before Task 5 (plan 2026-09-22) that list stayed at the
+ * original five forms — a form the panel could already draw (slope, heatmap,
+ * dumbbell, pie, stacked, stacked100) was still one the chat could not be
+ * told about, since claiming it here would only have sent a value the server
+ * discarded, while widening the list from here (rather than at the source,
+ * together with the prompt's hand-listed forms, the `COPILOT_PROMPT_VERSION`
+ * bump and the offline fixture regen, one combined change) would have
+ * changed the prompt bytes of every own-data co-pilot request whose chart is
  * slope/heatmap-shaped (the e2e fixture's own 2 × 2 chart is one) and
- * orphan the recorded fixtures. Task 5's widening of `COPILOT_FORMS` lets
- * the new forms through this filter with no edit here. */
+ * orphaned the recorded fixtures. Task 5 widened `COPILOT_FORMS` to all
+ * eleven forms, which is what lets every one of them through this filter —
+ * still with no edit needed here. */
 function isCopilotForm(form: ChartForm): form is CopilotCapabilities['forms'][number] {
   return (COPILOT_FORMS as readonly string[]).includes(form);
 }
@@ -106,8 +109,8 @@ export function ownDataCapabilities(input: {
     // Three separate steps, on purpose (Task 1): what the scorer offers,
     // capped to what this card renders (`ownDataRenderableForms` — since
     // Task 3 with the own-data whole forms appended), then capped to what
-    // the server will accept on the wire (`isCopilotForm`). Task 5 widens
-    // the wire step. Neither touches the other.
+    // the server will accept on the wire (`isCopilotForm`). Task 5 widened
+    // the wire step (COPILOT_FORMS 5 -> 11). Neither step touches the other.
     forms: ownDataRenderableForms(spec, seriesCount).filter(isCopilotForm),
     // Intersection, not either list alone: `applicable` can name a key the
     // chat has no vocabulary for (`valueLabels`, locked per form), and

@@ -82,8 +82,14 @@ describe('buildCopilotSystemPrompt', () => {
     expect(prompt).not.toContain('overlays');
   });
 
-  it('is version 4', () => {
-    expect(COPILOT_PROMPT_VERSION).toBe(4);
+  it('is version 5', () => {
+    expect(COPILOT_PROMPT_VERSION).toBe(5);
+  });
+
+  // Task 5 (plan 2026-09-22): the setForm bullet now names all eleven forms,
+  // not just the original five.
+  it('names all eleven setForm choices, not just the original five', () => {
+    expect(prompt).toContain('"line"|"area"|"bar"|"hbar"|"table"|"dumbbell"|"slope"|"heatmap"|"pie"|"stacked"|"stacked100"');
   });
 });
 

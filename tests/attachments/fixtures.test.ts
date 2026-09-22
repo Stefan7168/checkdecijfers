@@ -40,10 +40,16 @@ describe('own-data LLM fixtures', () => {
   // headline-override (session 122, further continuation, #311) closed the
   // gap the original wiring pass left — those two were skipped on the wrong
   // assumption that the panel already dispatching them generically meant
-  // the chat could name them too.
-  it('has eleven cases over one CSV', () => {
-    expect(CASES).toHaveLength(11);
-    expect(CASES.map((c) => c.kind)).toEqual(['instruct', ...Array(10).fill('copilot')]);
+  // the chat could name them too. Fourteen since own-data chart-fit/
+  // verified-whole parity, Task 5 (plan 2026-09-22): one more copilot case
+  // (a chat-driven `setForm` reaching one of the six forms COPILOT_FORMS
+  // just widened to) plus two new instruct cases (a one-moment,
+  // `derived: {op:'difference'}` shape — `ownDataPieFormAllowed`'s own
+  // qualifying shape, which no existing case had) for the real e2e's
+  // designated-total match/mismatch coverage.
+  it('has fourteen cases over one CSV', () => {
+    expect(CASES).toHaveLength(14);
+    expect(CASES.map((c) => c.kind)).toEqual(['instruct', ...Array(11).fill('copilot'), 'instruct', 'instruct']);
     expect(new Set(CASES.map((c) => c.csv))).toEqual(new Set(['verkoop.csv']));
   });
 

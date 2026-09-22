@@ -198,8 +198,13 @@ export interface UserChartEditContext {
  * no computation), only the field NAMES are adapted. `provisional: false`
  * throughout — this tier has no CBS publication-status concept (D7: v1
  * performs no arithmetic and carries no provisional/definitief distinction
- * at all), so nothing here is ever marked provisional. */
-function toPlottableSpec(spec: UserChartSpec): PlottableSpec {
+ * at all), so nothing here is ever marked provisional. Exported (Task 5,
+ * plan 2026-09-22) so chart-commands-contract.test.tsx's own-data form ↔ tab
+ * contract test can hand `ownDataRenderableForms` the SAME adapted shape
+ * this card itself renders from, rather than a second, drift-prone copy of
+ * this mapping — the same reuse-over-duplicate call Task 4 made exporting
+ * derive-overlay.ts's `allResolvedPoints`. */
+export function toPlottableSpec(spec: UserChartSpec): PlottableSpec {
   return {
     kind: spec.kind,
     series: spec.series.map((series) => ({
@@ -880,6 +885,16 @@ function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) 
   // e.g. 's0') collides with React's OWN reserved `key` prop already on
   // PieSectorShapeProps (`Key | null | undefined`) and fails to intersect.
   return function Shape(props: PieSectorShapeProps & { value_resultId?: string | null; label?: string }) {
+    // Task 5 fix (found by this task's own e2e run, a real browser: React
+    // 19 logs a console error — which this app's e2e harness treats as a
+    // hard failure — when a props object carrying a `key` field (Recharts'
+    // own merge puts the `<Cell key={r.key}>` React key here too, per the
+    // doc comment above) is spread onto JSX. `key` was never read by this
+    // component and a `key` on `<Sector>` here would be inert anyway (it is
+    // the sole element `Shape` returns, not one of a `.map()`'d list), so it
+    // is destructured out and never re-attached, exactly as React's own
+    // warning text prescribes.
+    const { key: _key, ...sectorProps } = props;
     const resultId = props.value_resultId ?? null;
     const seriesLabel = props.label ?? '';
     const activate = (): void => {
@@ -888,7 +903,7 @@ function UserPieSlice(periodLabel: string, onPointClick: ((point: PendingPoint) 
     };
     return (
       <Sector
-        {...props}
+        {...sectorProps}
         data-command-kind={onPointClick ? 'setWholeReference' : undefined}
         role={onPointClick ? 'button' : undefined}
         tabIndex={onPointClick ? 0 : undefined}
