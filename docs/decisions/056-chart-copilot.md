@@ -595,6 +595,84 @@ ledger:
   benchmark 14/14 answerable + 6/6 refusal + 0 fabricated, GATE PASS; `/code-review` LOW on the diff: no
   findings; real `next build`: clean.
 
+## As built — own-data co-pilot parity (session 122 continuation, 2026-09-22)
+
+Brings goal line, era shading, and the derived overlay (difference/mean) — the three phase-4/6
+primitives phase 4's own as-built section and phase 6's own as-built section both left "own-data support
+deferred"/"a separate, unscheduled step" — to the "eigen data" (own-data/attachments) chart card, matching
+what the CBS/Eurostat card already had. `setDimmed`/`setHeadlineOverride` needed no work; they were
+already wired for own-data.
+
+Built as three parallel, file-disjoint pieces (three isolated `Agent` worktrees, no `superpowers` plugin
+available in this session's environment so this ran as direct subagent dispatch rather than the packaged
+subagent-driven-development skill sessions 112–121 used) plus one integration pass done directly by the
+orchestrating session, not delegated:
+
+- **A — `src/attachments/derive-overlay.ts` + `web/app/dataset-derivation-actions.ts`.** Own-data's answer
+  to `requestChartDerivation`: no audit-row trail to re-read (own-data has none), so it re-runs
+  `executeInstruction(dataset, instruction)` over the reader's own already-ingested dataset instead —
+  cheap and pure, with none of principle (b)'s live-fetch restriction to work around. Ownership enforced
+  in SQL itself (`getDataset(db, userId, datasetId)`'s own `where id=$1 and user_id=$2`, verified by
+  reading `store.ts` directly, not assumed), copied from `renderDatasetInstruction`'s own pattern rather
+  than `requestChartDerivation`'s (whose sibling `createEmbedCode` needed a review-caught ownership fix
+  during phase 4 — the safer precedent to copy was the same-tier one that had no such history).
+- **B1 — `web/components/user-chart.tsx`.** Mounted the already tier-agnostic `ChartGoalLine`/
+  `ChartEraShading` components (no CBS-specific data in their prop contracts), wired to the
+  `addGoalLine`/`addEraShading` command kinds already in `chart-commands.ts`'s shared vocabulary. Verified
+  directly (not just the subagent's own report): the `ReferenceLine`/`ReferenceArea` markers sit inside
+  `containerRef`, the label-bearing components sit well outside it, exactly mirroring `chart.tsx`.
+- **C — `src/attachments/copilot/*`.** Chat wiring for all three, mirroring the CBS tier's finished phase-6
+  implementation including its three hard lessons: the `overlays` capability gate checked FIRST in
+  `map.ts` (own-data's own #310, closed from the start); `goalLineValueInMessage` ported verbatim from the
+  CBS tier's fixed numeric-comparison guard (21 adversarial cases executed, not just read, against
+  shifted-decimal/10x/1000x-off/sign-flipped inputs); confirmation-chip destinations verified consistent
+  by inspection of `chart-copilot-reply.ts` — no change needed there, since it already keys on the SHARED
+  `ChartCommandParams['kind']` and both cards call the same `acceptReply`. `COPILOT_PROMPT_VERSION` 1→2
+  (three new bullets), fixtures regenerated offline (`npm run attachments:fixtures`, free, no spend).
+
+**One real integration gap found and fixed, not by any single task in isolation:** the shared stored-command
+shape, `DerivedOverlayRequest { calcKind, resultIds: string[] }` (`chart-commands.ts`), is the SAME field
+CBS's `requestChartDerivation` already takes. Task C correctly populated `resultIds` with own-data rowRefs
+(matching the shared shape exactly), but task A's server action — built in an isolated worktree with no
+sight of C's work — took `seriesLabel`/`pointLabels` instead, a reasonable design in isolation that simply
+didn't fit what the other task actually produced. Found during the integration pass (task B2, done
+directly rather than delegated, exactly the "final review/judgment of delegated results" CLAUDE.md
+reserves for the session's own model) by tracing what `DerivedOverlayRequest` and CBS's own
+`requestChartDerivation` signature actually looked like, not by trusting either task's own self-report.
+Fixed by redesigning `derive-overlay.ts` to resolve by rowRef (dropping the now-unneeded label/series-
+grouping machinery) and `dataset-derivation-actions.ts`'s schema to match `resultIdsSchema`'s own CBS
+precedent (bounded by `MAX_CHART_POINTS`, not CBS's own `.max(12)` — a CBS-only bound that suits an
+audited answer's typically-few periods, wrong for an own-data mean that can legitimately span a whole
+chart). Also introduced `ResolvedOverlay`, a return type narrower than `execute.ts`'s `ComputedValue`
+(`value: number`, never `null`) — the guarantee `deriveChartOverlay`'s own doc comment already claimed,
+now enforced by the type rather than left as a convention every caller had to trust and re-check.
+
+**Resolved (server-computed) overlay values render WITH a label, unlike a goal line or era-shading
+label** — a real, deliberate distinction from B1's own export-safety pattern: R6's reader-typed-text
+exemption never applied to a value this product itself computed and stands behind, so it is drawn inside
+the export container with a `label` prop, the same as any other plotted value on the chart.
+
+The derived-overlay controls are gated on `edit !== undefined`, in addition to the line/area form gate —
+mirrors `chart.tsx`'s own `embed !== undefined` gate exactly: resolving a value needs a real `datasetId`
+round trip, so without an edit context the button would add a command that can never resolve, the same
+silently-broken-doorway class of bug #310 closed for the CBS tier.
+
+**Verification (measured, all green):** root typecheck clean; web typecheck clean; root vitest 206 files /
+3,159 tests, all pass (this work's own share, individually re-verified: `derive-overlay.test.ts` 11/11,
+the `tests/attachments/` suite 403/403); web vitest 146 files / 2,606 tests (was 2,594, +12: 4 from B1, 7
+from B2, 1 from C's `chart-capabilities.test.ts` pin); one real-browser Playwright case
+(`web/e2e/own-data-copilot.spec.ts`, the chat-driven difference overlay — chosen over goal-line/era-shading
+as the one primitive with genuinely new server-side computation behind it, mirroring
+`chart-copilot.spec.ts`'s own "one shared proof" reasoning) 2/2, confirmed via the real request log: an
+`exact` llm-stub hit and a real `requestDatasetDerivation(2, {...}, "difference", ["r1:c2","r3:c2"])` call
+resolving to the correct value; hermetic benchmark 14/14 answerable + 6/6 refusal + 0 fabricated, GATE
+PASS; `/code-review` LOW on the diff: no findings; real `next build`: clean.
+
+**Not built:** a dedicated e2e case for the chat-driven goal-line/era-shading paths specifically (covered
+by unit tests + the shared-mechanism proof above, same accepted gap class as
+[#308](../open-questions.md)); a homepage/gallery surface for any of this (out of scope, same as every
+other co-pilot phase).
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.

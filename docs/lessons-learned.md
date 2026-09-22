@@ -6,8 +6,9 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 122 — a session's own branch constraint can outrank CLAUDE.md's default git workflow, and a
-## sandboxed Playwright's browser revision can drift from the one actually installed
+## Session 122 — a session's own branch constraint can outrank CLAUDE.md's default git workflow, a
+## sandboxed Playwright's browser revision can drift from the one actually installed, and parallel
+## subagents can each be internally correct while still not fitting together at a shared type
 
 1. **This session's own harness assigned a designated branch (`claude/chart-copilot-phase6-fixes-wpim88`)
    with an explicit "never push to a different branch without explicit permission" instruction — a
@@ -48,6 +49,43 @@ on top.
    don't stop at reading the serializer — run the real e2e suite and read its own stub-match log line
    (`exact` vs. prefix-fallback) as the actual proof, the same signal session 116's own #298 finding was
    about.**
+4. **The `superpowers` skill plugin (`subagent-driven-development`, `brainstorming` — the mechanism every
+   chart-copilot phase from 112 through 121 used) was NOT available in this session's environment**,
+   despite CLAUDE.md and every phase's own as-built section referring to it as the established build
+   pattern. Confirmed by trying `Skill({skill: 'superpowers:brainstorming'})` directly and getting `Unknown
+   skill` rather than assuming from the skill list. **Lesson: a repo's own documented "how we build this
+   class of feature" convention can be a per-machine/per-session plugin availability fact, not a permanent
+   guarantee — check by trying the skill, don't skip a multi-task build because the packaged tooling isn't
+   there. The generic `Agent` tool with `isolation: "worktree"` reproduces the same safety property (no
+   filesystem contention between parallel tasks) without the packaged skill's own bookkeeping; the session
+   still has to do the scoping, the briefs, and the final review itself instead of the skill doing it.**
+5. **Three independently-briefed, file-disjoint subagents can each write internally-correct code that
+   still doesn't fit together — the seam is the shared TYPE, not the shared FILE.** Building own-data
+   parity for the derived-overlay primitive as three parallel `Agent` dispatches (a server-side computation
+   function, a panel-UI mount, a chat-schema mapper) avoided any file conflict by construction, but the chat
+   mapper correctly populated the ALREADY-EXISTING shared command shape
+   (`DerivedOverlayRequest.resultIds: string[]`, `web/lib/chart-commands.ts` — the same field CBS's own
+   `requestChartDerivation` takes) while the server-action task, briefed slightly more loosely and with no
+   sight of the other task's work, designed its own label-based selection shape instead — reasonable in
+   isolation, incompatible with what the other task actually produced. Neither task's own unit tests caught
+   this (each tested its own piece against its own assumed interface, correctly). Found only when the
+   integration step traced the ACTUAL shared type CBS's own precedent uses, not by trusting either task's
+   green tests or its own self-report. **Lesson: when briefing parallel subagents around a PRE-EXISTING
+   shared type (not one they're inventing together), quote that type's own definition and its established
+   caller (here: `DerivedOverlayRequest` and `requestChartDerivation`'s signature) directly in each brief
+   that touches it, rather than describing the shape in prose and trusting each task to independently
+   arrive at the same one. The integration step is not just "merge the diffs" — it is where a design
+   mismatch between parallel pieces is actually caught, and it needs to check against the real, established
+   interface, not just that each piece's own tests pass.**
+6. **A tool description that says "use this for X, not Y" gets misread under time pressure even after
+   getting it right once earlier in the SAME session.** `ScheduleWakeup` was called a second time this
+   session to "wait" for a background test run — the exact misuse already caught and corrected earlier in
+   this same conversation (it is scoped to `/loop` dynamic-mode pacing; harness-tracked background work
+   already delivers its own completion notification). Caught immediately this time by the tool's own
+   error-adjacent self-check, not by a fresh mistake pattern. **Lesson: a corrected-once mistake is not
+   guaranteed to stay corrected across a long session — when reaching for a tool whose description carries
+   a scope caveat, re-read the caveat rather than pattern-matching "I want to wait" to whichever wait-like
+   tool is nearest at hand.**
 
 ## Session 121 — a prompt-embedded capability's fixture-hash break doesn't need a revert or live
 ## spend; it needs an offline regeneration, and a wrong reviewer claim can still sit beside a real finding
