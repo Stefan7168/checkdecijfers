@@ -18,9 +18,29 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 continuation — verify against `git log`/CI
-before trusting this).** **`main` is NOW AT `baa5c36`** (code `ce43e92` + a same-session docs-sync commit
-on top) — the owner explicitly said "push to main" and the session fast-forward-pushed the code directly
+**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 further continuation — verify against
+`git log`/CI before trusting this).** **`main` is NOW AT `e9f3cae`** — own-data co-pilot parity (goal
+line, era shading, difference/mean overlay brought to the "eigen data" card; `setDimmed`/
+`setHeadlineOverride` were already own-data-wired) is LIVE, CONFIRMED not just pushed: CI run
+[35696279101](https://github.com/Stefan7168/checkdecijfers/actions/runs/35696279101) measured green end
+to end — `web` (typecheck, unit tests, real Playwright e2e incl. the new chat-driven difference-overlay
+case) and all 3 `backend` shards (incl. hermetic benchmark 14/14+6/6+0 fabricated) passed, and `deploy`
+(build → Vercel deploy → post-deploy smoke check, job
+[106645022872](https://github.com/Stefan7168/checkdecijfers/actions/runs/35696279101/job/106645022872))
+also completed `success` — confirmed via two scheduled check-ins, not assumed. Built on owner delegation
+("You are the expert, continue") as three file-disjoint subagent dispatches (`superpowers` plugin not
+available this session, confirmed by trying it — used direct `Agent` worktrees instead) plus a direct
+integration pass that found and fixed a real interface mismatch between two of the three pieces (a shared
+`resultIds: string[]` command shape vs. a label-based server-action signature — see ADR 056's "As built —
+own-data co-pilot parity" section for the full account). Full detail: [open-questions #311](open-questions.md).
+**Nothing pending from this line of work — fully shipped.** Own-data equivalents of phase 5/5b (extra
+chart forms, verified-whole) remain unbuilt and unscheduled, not investigated this session.
+
+---
+
+**Superseded by the above, kept as history:** `main` was previously at `baa5c36` (code `ce43e92` + a
+same-session docs-sync commit on top) — the owner explicitly said "push to main" and the session
+fast-forward-pushed the code directly
 (`git push origin ce43e92:main`; `origin/main` was freshly fetched and confirmed an ancestor of `HEAD`
 immediately before pushing, so this was a genuine zero-conflict fast-forward, not a force-push). **Chart
 co-pilot phase 6 + the full session-122 fix wave are now LIVE on `main`, CONFIRMED, not just pushed:** CI
