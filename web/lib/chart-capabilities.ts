@@ -116,6 +116,13 @@ export function cbsCapabilities(input: {
     // template. Shared predicate, never a second `=== 'table'` spelling.
     templates: isTabularForm(form) ? [] : [...TEMPLATE_IDS],
     zoom: zoomAvailable,
+    // Phase 6 final review (fix wave, #310): mirrors chart.tsx's own gate
+    // on the difference/mean overlay buttons (`embed !== undefined &&
+    // (activeForm === 'line' || activeForm === 'area')`) — the embed check
+    // has no bearing here (this bag only ever describes a card the chat
+    // doorway is open on), so the form half of that same test is what this
+    // tier can see.
+    overlays: form === 'line' || form === 'area',
     lang,
   };
 }

@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { requestHash, type RecordedFixture } from '../../src/answer/llm/client.ts';
+import { mapCbsCopilotOutput } from '../../src/chart/copilot/map.ts';
 import { validateCbsCopilotOutput } from '../../src/chart/copilot/schema.ts';
 import { buildCaseRequest, FIXTURES_DIR } from '../../scripts/chart-copilot-fixtures.ts';
 import { CASES } from '../fixtures/chart-copilot/cases.ts';
@@ -65,6 +66,19 @@ describe('CBS chart co-pilot LLM fixtures', () => {
       // real model answer.
       const outputText = JSON.stringify(kase.output);
       expect(validateCbsCopilotOutput(outputText)).toEqual(kase.output);
+    });
+
+    // Final review (fix wave): a case whose output silently mapped to
+    // nothing — zero applied commands AND zero refusals — used to still
+    // pass every check above (both only look at the OUTPUT, never what
+    // map.ts does with it). A dataRequest case is the one legitimate
+    // exception: respond.ts never calls mapCbsCopilotOutput at all when
+    // dataRequest is true (it returns before reaching that call), so there
+    // is nothing to map.
+    it(`${kase.label}: maps to at least one applied command or refusal (unless it is a data request)`, () => {
+      if (kase.output.dataRequest) return;
+      const { commands, refused } = mapCbsCopilotOutput(kase.output, kase.spec, kase.message, kase.capabilities);
+      expect(commands.length + refused.length).toBeGreaterThan(0);
     });
   }
 });

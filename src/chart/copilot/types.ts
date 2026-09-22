@@ -39,6 +39,16 @@ export interface CbsCopilotCapabilities {
    * bag: it narrows what the model is TOLD this chart offers, never what
    * copilot/map.ts is willing to apply. */
   zoom: boolean;
+  /** Co-pilot phase 6 final review (fix wave, #310): true only when the
+   * card's own difference/mean overlay buttons are mounted right now —
+   * `form === 'line' || form === 'area'` (web/lib/chart-capabilities.ts's
+   * `cbsCapabilities`), the SAME test chart.tsx's own button row gates on.
+   * Unlike `zoom`, this is NOT mentioned in the prompt text (a byte change
+   * there re-hashes every fixture): it is enforced ONLY at copilot/map.ts's
+   * addDerivedOverlay case, so a bar/pie/stacked chart's chat can still be
+   * ASKED for an overlay, it just comes back refused instead of silently
+   * storing a command that renders nothing. */
+  overlays: boolean;
   lang: 'nl' | 'en';
 }
 
@@ -50,10 +60,17 @@ export type CbsViewCommand = z.infer<typeof cbsViewCommandSchema>;
 export interface CbsCopilotOutput {
   version: 1;
   view: CbsViewCommand[];
-  /** true when the message asks for different DATA (another region,
-   * country, period or measure, a total, average, difference, growth rate,
-   * or any comparison with data not on this chart) — never expressed as a
-   * view command. When true, `view` is empty. */
+  /** true when the message asks for different DATA — another region,
+   * country, period or measure, or a total, average, difference, growth
+   * rate or comparison that needs data NOT on this chart — never expressed
+   * as a view command. A calculation over points that ARE already on this
+   * chart is NOT a data request: the average of one plotted series, or the
+   * difference between two of that series' own periods, is an
+   * addDerivedOverlay view command instead (prompt.ts's SYSTEM_PROMPT;
+   * fixed alongside this comment, co-pilot phase 6 final review — this
+   * comment used to describe the OLDER prompt wording, from before that
+   * fix, which routed an on-chart average/difference to dataRequest too).
+   * When true, `view` is empty. */
   dataRequest: boolean;
   refused: {
     request: string;
@@ -104,6 +121,7 @@ export function sanitizeCbsCapabilities(raw: unknown): CbsCopilotCapabilities {
     presentationKeys: pick(o.presentationKeys, PRESENTATION_KEYS),
     templates: pick(o.templates, TEMPLATE_IDS),
     zoom: o.zoom === true,
+    overlays: o.overlays === true,
     lang: o.lang === 'en' ? 'en' : 'nl',
   };
 }

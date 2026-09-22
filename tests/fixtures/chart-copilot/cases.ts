@@ -253,6 +253,11 @@ export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
   ],
   templates: ALL_TEMPLATES,
   zoom: true,
+  // A `line`-kind chart opens in line form, where the difference/mean
+  // overlay buttons are mounted (chart-capabilities.ts `cbsCapabilities`,
+  // co-pilot phase 6 final review, #310) — real for every case below that
+  // reuses this fixture, including the two-city addDerivedOverlay case.
+  overlays: true,
   lang: 'nl',
 };
 
@@ -575,6 +580,9 @@ export const PROVINCIES_CAPABILITIES: CbsCopilotCapabilities = {
   presentationKeys: ['grid', 'axisLines', 'seriesColors', 'fontFamily', 'framePadding', 'frameCorners', 'frameShadow'],
   templates: ALL_TEMPLATES,
   zoom: false,
+  // Opens in hbar form (see the comment above) — neither line nor area, so
+  // the overlay buttons are not mounted (#310).
+  overlays: false,
   lang: 'nl',
 };
 

@@ -115,5 +115,6 @@ export const CBS_CAPABILITIES_FIXTURE: CbsCopilotCapabilities = {
   presentationKeys: ['lineWidth', 'grid', 'markers'],
   templates: ['standard', 'newsroom'],
   zoom: true,
+  overlays: true,
   lang: 'nl',
 };

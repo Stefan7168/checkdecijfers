@@ -61,7 +61,7 @@ export async function respondToCbsChartEdit(input: RespondToCbsChartEditInput): 
     return { kind: 'edit', text: DATA_REQUEST_TEXT, commands: [], refused: [], dataRequest: true, llmCalls: [llmCall] };
   }
 
-  const { commands, refused } = mapCbsCopilotOutput(output, spec, message, caps);
+  const { commands, refused } = mapCbsCopilotOutput(output, spec, trimmed, caps);
   const text =
     commands.length === 0
       ? 'Nothing could be applied.'

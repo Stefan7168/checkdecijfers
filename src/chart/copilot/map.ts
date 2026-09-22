@@ -196,7 +196,9 @@ export function mapCbsCopilotOutput(
         const fromCode = periodCodeByLabel.get(command.fromLabel);
         const toCode = periodCodeByLabel.get(command.toLabel);
         if (fromCode === undefined || toCode === undefined) {
-          out.refused.push({ request: cap(`era: ${command.fromLabel}–${command.toLabel}`), reason: 'not_available', control: 'form' });
+          // Final review (fix wave): the era-shading control lives beside
+          // Notes, not Form — matches the applied chip's own icon/opens.
+          out.refused.push({ request: cap(`era: ${command.fromLabel}–${command.toLabel}`), reason: 'not_available', control: 'notes' });
           break;
         }
         const label = guardText(command.label, ERA_LABEL_MAX, spec, 'none', out);
@@ -225,6 +227,16 @@ export function mapCbsCopilotOutput(
       // reader's own disambiguation, and this mapping has no view state to
       // window by. The command carries resultIds only — never a value.
       case 'addDerivedOverlay': {
+        // Final review (fix wave, #310): the SAME gate chart.tsx puts on its
+        // own difference/mean buttons (line/area only) — without it, asking
+        // for an overlay on a bar/pie/stacked chart stored a command that
+        // rendered nothing and could not be removed. Checked first, before
+        // the series/period lookups below: a form that cannot draw an
+        // overlay at all refuses the whole request outright.
+        if (!capabilities.overlays) {
+          out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_available', control: 'form' });
+          break;
+        }
         const seriesPoints = spec.series.find((series) => series.label === command.seriesLabel)?.points;
         if (seriesPoints === undefined) {
           out.refused.push({ request: cap(`overlay: ${command.seriesLabel}`), reason: 'not_on_this_chart', control: 'form' });
@@ -282,7 +294,9 @@ export function mapCbsCopilotOutput(
       // only the FIRST goal line it sees under a given id.
       case 'addGoalLine': {
         if (!goalLineValueInMessage(command.value, message)) {
-          out.refused.push({ request: cap(`goal line: ${command.value}`), reason: 'not_available', control: 'form' });
+          // Final review (fix wave): the goal-line control lives beside
+          // Notes, not Form — matches the applied chip's own icon/opens.
+          out.refused.push({ request: cap(`goal line: ${command.value}`), reason: 'not_available', control: 'notes' });
           break;
         }
         const label = guardText(command.label, GOAL_LINE_LABEL_MAX, spec, 'none', out);

@@ -105,6 +105,44 @@ describe('acceptReply', () => {
     expect(applied.map((a) => a.icon)).toEqual(['series', 'style', 'style', 'title', 'caption', 'note']);
     expect(applied.map((a) => a.opens)).toEqual(['none', 'style', 'style', 'none', 'none', 'notes']);
   });
+
+  // Co-pilot phase 6 final review (fix wave): these five fell through to the
+  // 'style' default before this fix — untested, so the wrong chip icon/
+  // doorway shipped unnoticed. A two-point context is needed here (unlike
+  // the one-point `ctx()` above) because addDerivedOverlay's `mean` requires
+  // at least two resultIds.
+  it('maps the five co-pilot-phase-6 kinds to their panel icon and doorway', () => {
+    const twoPointCtx = ctx({
+      spec: {
+        kind: 'bar',
+        series: [
+          {
+            label: 'Omzet',
+            regionCode: null,
+            points: [
+              { resultId: 'r1', periodCode: 'a', periodLabel: 'a', value: 1, formattedValue: '1', decimals: 0, status: '', provisional: false, valueAttribute: '' },
+              { resultId: 'r2', periodCode: 'b', periodLabel: 'b', value: 2, formattedValue: '2', decimals: 0, status: '', provisional: false, valueAttribute: '' },
+            ],
+          },
+        ],
+      },
+    });
+    const commands: CopilotCommand[] = [
+      { kind: 'setDimmed', hiddenKeys: [], dimmedKeys: ['s0'] },
+      { kind: 'setHeadlineOverride', resultId: 'r1' },
+      { kind: 'addEraShading', era: { id: 'chat-era-0', fromPeriodCode: 'a', toPeriodCode: 'b', label: 'Periode' } },
+      { kind: 'addDerivedOverlay', overlay: { id: 'chat-overlay-0', calcKind: 'mean', resultIds: ['r1', 'r2'] } },
+      { kind: 'addGoalLine', goalLine: { id: 'chat-goal-0', value: 5, label: 'Doel' } },
+    ];
+    const { applied, dropped } = acceptReply(commands, twoPointCtx, 'nl');
+    expect(dropped).toBe(0);
+    // setDimmed reads as a series-panel change (matches setSeriesView);
+    // setHeadlineOverride/addGoalLine/addEraShading all open the same
+    // Notes-adjacent panel their own refusal points at (map.ts); the two
+    // derived-overlay buttons sit in the form-tab row, not Style.
+    expect(applied.map((a) => a.icon)).toEqual(['series', 'note', 'note', 'form', 'note']);
+    expect(applied.map((a) => a.opens)).toEqual(['none', 'notes', 'notes', 'form', 'notes']);
+  });
 });
 
 describe('refusalLine', () => {

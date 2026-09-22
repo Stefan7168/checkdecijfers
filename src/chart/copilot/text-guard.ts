@@ -123,6 +123,15 @@ function readRun(run: string, decimal: '.' | ','): number | null {
  * known here. A value that equals no reading is, by construction, one
  * the model invented — principle (c)'s worst bug — so it is refused,
  * never guessed.
+ *
+ * Deliberate, accepted false-accept (co-pilot phase 6 final review): this
+ * guard checks only whether `value` appears SOMEWHERE in the message, not
+ * that it names the goal — so a bare year mentioned for another reason
+ * ("tussen 2020 en 2024", asking for a goal line elsewhere) makes 2024
+ * pass. Narrowing this to "the number nearest the word for goal/target"
+ * would need real-model confirmation this tier has not spent yet; the
+ * guard's actual job — refusing a value the reader never typed at all —
+ * still holds.
  */
 export function goalLineValueInMessage(value: number, message: string): boolean {
   if (!Number.isFinite(value)) return false;

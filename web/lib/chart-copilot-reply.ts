@@ -62,6 +62,9 @@ function iconFor(kind: ChartCommandParams['kind']): ChipIcon {
     case 'toggleSeries':
     case 'setHighlight':
     case 'setSeriesView':
+    // Co-pilot phase 6 final review (fix wave): dims a series exactly like
+    // setSeriesView hides one — same row, same icon.
+    case 'setDimmed':
       return 'series';
     case 'applyTemplate':
       return 'template';
@@ -71,7 +74,22 @@ function iconFor(kind: ChartCommandParams['kind']): ChipIcon {
       return 'caption';
     case 'addNote':
     case 'removeNote':
+    // Co-pilot phase 6 final review (fix wave): these three share the
+    // Notes-adjacent panel as their real control — map.ts's own refusal
+    // for each already points `control: 'notes'` there (setHeadlineOverride
+    // always did; addGoalLine/addEraShading's refusals were themselves
+    // fixed from 'form' to 'notes' in this same review round), so the
+    // applied chip must open the SAME place its refusal names, never a
+    // different one (the inconsistency the final review's I2 flagged).
+    case 'setHeadlineOverride':
+    case 'addGoalLine':
+    case 'addEraShading':
       return 'note';
+    // Co-pilot phase 6 final review (fix wave): its two on-screen buttons
+    // sit in the same control row as the form tabs (chart.tsx, the
+    // `data-slot="chart-controls"` row), never the Style panel.
+    case 'addDerivedOverlay':
+      return 'form';
     // setPresentation/replacePresentation/resetPresentation, plus setReading
     // (which no chat tier emits) — all of them are Style-panel business.
     default:

@@ -255,11 +255,23 @@ describe('addEraShading — period labels resolve to codes, the label is digit-g
       output([{ kind: 'addEraShading', fromLabel: '2019', toLabel: '2022', label: 'Herstel' }]),
     );
     expect(commands).toEqual([]);
-    expect(refused).toEqual([{ request: 'era: 2019–2022', reason: 'not_available', control: 'form' }]);
+    expect(refused).toEqual([{ request: 'era: 2019–2022', reason: 'not_available', control: 'notes' }]);
   });
 });
 
 describe('addDerivedOverlay — two real points of one series, or every point of one series', () => {
+  // Final review (fix wave, #310): the same gate chart.tsx puts on its own
+  // difference/mean buttons (line/area only) — without it, a bar/pie/stacked
+  // chart stored a command that rendered nothing and could not be removed.
+  it('refuses outright when capabilities.overlays is false, before any series/period lookup', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null }]),
+      { ...CBS_CAPABILITIES_FIXTURE, overlays: false },
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Amsterdam', reason: 'not_available', control: 'form' }]);
+  });
+
   it('difference resolves fromLabel/toLabel to the two points of the named series', () => {
     const { commands, refused } = map(
       output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2022' }]),
@@ -388,7 +400,7 @@ describe('addGoalLine — the value must be one the reader typed, the label is d
       'Voeg een doellijn toe',
     );
     expect(commands).toEqual([]);
-    expect(refused).toEqual([{ request: 'goal line: 12345', reason: 'not_available', control: 'form' }]);
+    expect(refused).toEqual([{ request: 'goal line: 12345', reason: 'not_available', control: 'notes' }]);
   });
 
   it('refuses the reader\'s digits with a shifted decimal before anything is stored (Task 5 review finding)', () => {
@@ -397,7 +409,7 @@ describe('addGoalLine — the value must be one the reader typed, the label is d
       'Zet een doellijn op 25',
     );
     expect(commands).toEqual([]);
-    expect(refused).toEqual([{ request: 'goal line: 2.5', reason: 'not_available', control: 'form' }]);
+    expect(refused).toEqual([{ request: 'goal line: 2.5', reason: 'not_available', control: 'notes' }]);
   });
 
   it('stores a negative target the reader typed with its sign', () => {

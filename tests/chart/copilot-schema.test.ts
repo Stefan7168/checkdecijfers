@@ -130,6 +130,7 @@ describe('sanitizeCbsCapabilities', () => {
       presentationKeys: ['grid'],
       templates: ['newsroom'],
       zoom: false,
+      overlays: false,
       lang: 'nl',
     });
   });
