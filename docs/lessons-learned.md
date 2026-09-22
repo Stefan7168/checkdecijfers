@@ -6,6 +6,49 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 122 — a session's own branch constraint can outrank CLAUDE.md's default git workflow, and a
+## sandboxed Playwright's browser revision can drift from the one actually installed
+
+1. **This session's own harness assigned a designated branch (`claude/chart-copilot-phase6-fixes-wpim88`)
+   with an explicit "never push to a different branch without explicit permission" instruction — a
+   platform-level constraint distinct from CLAUDE.md's own "owner-present sessions push straight to
+   `main`" convention.** The two are not actually in conflict once read carefully: CLAUDE.md's own
+   git-workflow rule already anticipates a session-type split (owner-present vs. autonomous/spawned), and
+   a session launched against a pre-assigned, randomly-suffixed branch name is exactly the "spawned task"
+   shape that rule's own (b) clause already covers with branch + PR + review. Resolution used this
+   session: do the actual verified work regardless of target branch (identical either way), merge the
+   real unmerged work (`worktree-chart-copilot-phase6`) into the designated branch first since that is
+   where the actual code lived, then push ONLY to the designated branch and say so plainly in STATUS.md
+   rather than silently picking the more aggressive reading (pushing to `main` myself) or blocking all
+   work on a clarifying question first. **Lesson: when a session's own harness names a specific branch
+   and forbids pushing elsewhere, treat that as authoritative for THIS session even when a repo's own
+   CLAUDE.md describes a different default — do the verified work, land it on the branch the harness
+   allows, and state the resulting "ready to merge, not yet merged" gap explicitly rather than resolve it
+   by guessing which instruction wins.**
+2. **A pre-installed Chromium and an installed `@playwright/test` package can disagree on which browser
+   revision to expect, even when both are genuinely present on disk** — this environment ships Chromium
+   at `/opt/pw-browsers/chromium-1194`, but the repo's own `@playwright/test` version asked for revision
+   `1243`'s `chrome-headless-shell` specifically, which does not exist here, and failed immediately with
+   `browserType.launch: Executable doesn't exist`. This is an infrastructure mismatch, not a real product
+   or test bug — the fix is the `CHROMIUM_PATH` environment variable `playwright.config.ts` already wires
+   up for exactly this (`launchOptions.executablePath`), pointed at the REAL full Chrome binary
+   (`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`), not the missing headless-shell variant. **Lesson:
+   when a fresh sandboxed session's first real-Playwright run fails with "Executable doesn't exist," check
+   for a config-level escape hatch (this repo already has one) before assuming the test or the code broke
+   — and prefer the full `chrome` binary over a specific `chromium_headless_shell-<rev>` path, since the
+   full binary supports headless mode too and isn't pinned to one exact revision number.**
+3. **The llm-stub's own `[llm-stub] exact ...` vs. a prefix-match log line is a free, already-running proof
+   that a capability-field addition changed zero request bytes — cheaper than reasoning about it from the
+   serializer's source alone.** The final review's claim that a new `overlays` capability field would leave
+   every fixture hash untouched (because `serializeCbsCopilotRequest` interpolates named fields, not an
+   object dump) was structurally sound by inspection, but the REAL proof was watching the Playwright run's
+   own webServer log: every one of the 18 cases printed `exact chart-copilot/<hash>.json`, never the risky
+   60-character prefix fallback, and the log even showed the live `overlays:true`/`overlays:false` values
+   flowing correctly per chart form. **Lesson: when a change claims "the request bytes/hash are unaffected,"
+   don't stop at reading the serializer — run the real e2e suite and read its own stub-match log line
+   (`exact` vs. prefix-fallback) as the actual proof, the same signal session 116's own #298 finding was
+   about.**
+
 ## Session 121 — a prompt-embedded capability's fixture-hash break doesn't need a revert or live
 ## spend; it needs an offline regeneration, and a wrong reviewer claim can still sit beside a real finding
 

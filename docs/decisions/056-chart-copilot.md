@@ -502,6 +502,97 @@ Merged to `main` at `c7723c34` (session 118, 2026-09-20).
   stacked/100%-stacked path being structurally unreachable from the real pipeline today (correct code,
   untested by a real end-to-end run); a `value_attribute` null-coercion nit.
 
+## As built — phase 6, chat wiring for the six storytelling primitives (session 121 design/build, session 122 fix wave)
+
+Plan: [superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md](../superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md).
+Built via subagent-driven development (6 sequential tasks, one worktree, one implementer at a time —
+session 116's own lesson on shared-file fragility), a final whole-branch review (opus), then a session-122
+fix wave applying that review's findings. **As of this writing: fully built and verified, on branch
+`claude/chart-copilot-phase6-fixes-wpim88` (`0f7c7f18`, built on top of `worktree-chart-copilot-phase6`
+@ `58db5097`), pushed to `origin` — NOT YET merged to `main`** (a session-assigned branch constraint, not
+a design or review blocker — see [STATUS.md](../STATUS.md)'s top block). Full ledger:
+`.claude/worktrees/chart-copilot-phase6/.superpowers/sdd/2026-09-20-chart-copilot-phase6-chat-wiring/progress.md`
+(git-ignored, machine-local).
+
+- **All six of phase 4's "storytelling primitives" ([#289](../open-questions.md)) are now chat-reachable**,
+  making phase 4's own "panel-only, chat-second" gap current no longer: `setDimmed` (dim instead of hide),
+  `setHeadlineOverride` (feature one point as the headline), `addEraShading` (shade a period range with a
+  typed label), `addDerivedOverlay` (one command covering BOTH the difference-arrow and average-line
+  primitives via `calcKind: 'difference' | 'mean'`), and `addGoalLine` (a reader-set target line). Plus
+  Task 1 re-applied two already-designed-but-reverted capabilities: the `pieHole` donut toggle
+  ([#301](../open-questions.md)) and the five house styles ([#275](../open-questions.md)) by name.
+  CBS/Eurostat card only, by construction — own-data wiring for all six remains a separate, unscheduled
+  step (mirrors [#289](../open-questions.md)/[#295](../open-questions.md)'s own precedent).
+- **`goalLine.value` is this tier's one genuine exception to "the model never carries a number"** — a
+  reader-set target is deliberately not a plotted value, so `text-guard.ts`'s `goalLineValueInMessage`
+  checks it against the READER's own raw message instead of the chart's own digits: the value must equal,
+  numerically, a number the reader actually typed (read both the Dutch and the English way — a moved
+  decimal or a flipped sign never counts as a match). The first version of this guard compared
+  separator-stripped digit STRINGS, not numbers, and would have accepted a value 10x/1000x off or
+  sign-flipped from what the reader typed; caught by the implementer itself, then independently confirmed
+  by an opus-tier reviewer that EXECUTED the guard on constructed adversarial inputs rather than just
+  reading it. **Deliberate, accepted limitation, documented in the guard's own TSDoc (session 122):** the
+  guard only checks that the value appears somewhere in the message, not that it names the goal, so a bare
+  year mentioned for another reason ("tussen 2020 en 2024") also passes — narrowing this would need
+  real-model confirmation this tier has not spent yet, and the guard's actual job (refusing a value the
+  reader never typed at all) still holds.
+- **Two already-designed capabilities were re-applied, not newly built:** the offline-fixture-regeneration
+  method (`npm run chart-copilot:fixtures`/`attachments:fixtures`, free, no network) unblocks a
+  prompt-embedded-list widening's fixture-hash shift without needing live model spend — see
+  [[feedback_llm_prompt_embedded_lists_hash_risk]] for the corrected mechanism (an earlier belief that this
+  needed real spend was itself a bug, fixed this same session). Real-model confirmation of the two newly
+  hand-authored fixture cases is still owed via `:record` once the Anthropic workspace usage cap lifts
+  (2026-10-01).
+- **Final whole-branch review found two real Important findings, both fixed in the session-122 fix wave:**
+  1. **No form gate on `addDerivedOverlay` ([#310](../open-questions.md), the more serious of the two).**
+     `map.ts` only checked that the named series/points were real, never that the current chart FORM can
+     draw an overlay at all — so asking for one on a bar/pie/stacked chart silently stored a command that
+     rendered nothing and could not be explained or removed. This is the exact defect class session 116's
+     own final review closed for the on-screen panel (`chart.tsx`'s difference/mean buttons are gated
+     `activeForm === 'line' || activeForm === 'area'`), reopened through the new chat doorway. **Fix:** a
+     new `overlays: boolean` field on `CbsCopilotCapabilities` (`src/chart/copilot/types.ts`), computed in
+     `cbsCapabilities` (`web/lib/chart-capabilities.ts`) from the same `form === 'line' || form === 'area'`
+     test as the panel's own gate, defaulted `false` in `sanitizeCbsCapabilities`, and checked FIRST in
+     `map.ts`'s `addDerivedOverlay` case (refuses `not_available`/`form` before any series/period lookup).
+     Deliberately NOT mentioned in `SYSTEM_PROMPT` — a prompt-byte change would re-hash all 14 co-pilot
+     fixtures and force a full Playwright re-run for a gate that is just as effective enforced purely at
+     the deterministic mapping layer. Proven, not just claimed: the real Playwright suite's 18/18 passing
+     cases all matched their fixture "exact" (never the risky prefix-match fallback), and the suite's own
+     request log shows `overlays:false` for the hbar-form province cases and `overlays:true` for the
+     line-form city cases.
+  2. **Inconsistent confirmation-chip destination (I2).** The five new commands' applied-chip icon
+     (`web/lib/chart-copilot-reply.ts`'s `iconFor`) all fell through to the generic `'style'` default
+     (untested, so this shipped unnoticed), while their own refusals in `map.ts` pointed at different
+     controls — one command's success path and its own refusal path opened two different panels. **Fix:**
+     explicit `iconFor` arms for all five (`setDimmed`→series, matching its sibling `setSeriesView`;
+     `setHeadlineOverride`/`addGoalLine`/`addEraShading`→note; `addDerivedOverlay`→form, verified against
+     `chart.tsx` that its two buttons genuinely sit in the same control row as the form tabs), plus
+     `map.ts`'s `addGoalLine`/`addEraShading` `not_available` refusals changed from `control: 'form'` to
+     `control: 'notes'` so the refusal names the SAME panel the applied chip now opens.
+  3. The reviewer also caught that an EARLIER task review's stated mechanism for a related finding
+     (`iconFor()` "unmounting" the era-shading UI) was wrong when independently re-checked — the underlying
+     issue was still real, just not for the originally claimed reason (see
+     [lessons-learned.md](../lessons-learned.md) session 121).
+- **Two stale doc comments corrected in the same fix wave** (session 122): `CbsCopilotOutput.dataRequest`'s
+  TSDoc used to paraphrase the OLDER prompt wording, from before this same phase's own
+  `addDerivedOverlay` carve-out (an on-chart average/difference used to route to `dataRequest` too) — now
+  matches the current `SYSTEM_PROMPT` paragraph. `text-guard.ts`'s bare-year false-accept (above) is now
+  documented instead of silent.
+- **Deliberately documented, not fixed** (low-risk, or expensive — a `SYSTEM_PROMPT` byte change re-hashes
+  every co-pilot fixture): the chat's "average" ignores an active zoom window despite the prompt's own
+  wording ([#307](../open-questions.md)); the real e2e suite proves 1 of the 5 new command kinds
+  (`addEraShading`) renders correctly through an actual browser, the other four only through the
+  fixture-hash + unit-level mapping proof ([#308](../open-questions.md)); `setDimmed` replaces the whole
+  hidden-set wholesale, same as the pre-existing `setSeriesView`, so it silently un-hides a series the
+  reader had separately hidden by clicking ([#309](../open-questions.md)).
+- **Verification (session 122, measured, all green):** root + web typecheck clean; root vitest 205 files /
+  3,095 tests (was 3,080 before the fix wave's own +15 new assertions); web vitest 146 files / 2,594 tests
+  (was 2,593); real Playwright `chart-copilot.spec.ts` 18/18 (real Chromium; this environment's installed
+  `@playwright/test` package version did not match the pre-installed browser revision, worked around with
+  `CHROMIUM_PATH` pointed at the real installed binary — an environment quirk, not a code issue); hermetic
+  benchmark 14/14 answerable + 6/6 refusal + 0 fabricated, GATE PASS; `/code-review` LOW on the diff: no
+  findings; real `next build`: clean.
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.

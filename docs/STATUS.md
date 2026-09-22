@@ -18,11 +18,59 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-20, session 121 — owner present in chat; verify against
-`git log`/the branch before trusting this).** **`main` is UNCHANGED at `c5c8dbee`** (session 120's own
-final state) — this session did all its work on a separate branch that is NOT YET MERGED. Resume from
-the branch, not from a fresh plan: [session-briefs/2026-09-20-session-122-kickoff.md](session-briefs/2026-09-20-session-122-kickoff.md)
-has the exact next step.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 — verify against `git log`/the branch
+before trusting this).** **`main` is STILL UNCHANGED at `41fe3ab5`** (session 120/121's own docs-only
+close) — the fix wave below landed on a THIRD branch, not on `main` and not on `worktree-chart-copilot-
+phase6` either. Read on before assuming anything needs rework.
+
+- **Why a third branch:** this session's own harness assigned a designated branch,
+  `claude/chart-copilot-phase6-fixes-wpim88`, with an explicit "never push to a different branch
+  without explicit permission" constraint — a platform-level rule for this particular session, distinct
+  from CLAUDE.md's own owner-present-pushes-to-`main` convention. The session merged
+  `origin/worktree-chart-copilot-phase6` (`58db5097`, session 121's own unmerged phase-6 work) into the
+  designated branch first (clean merge, zero conflicts — `main` had only one docs-only commit,
+  `41fe3ab5`, that the phase-6 branch lacked), then built the fix wave on top. **The designated branch
+  now contains `main` + all of phase 6 + the fix wave — a trivial, zero-conflict fast-forward onto `main`
+  whenever authorized.** This session did NOT push to `main` or to `worktree-chart-copilot-phase6`
+  itself, per that constraint — say the word ("push to main" / "merge it") and a session can do it in
+  one command; otherwise it is a normal GitHub merge away.
+- **Session 122: the mandated fix wave (session 121's final review) is APPLIED and FULLY VERIFIED**, on
+  branch `claude/chart-copilot-phase6-fixes-wpim88` @ `0f7c7f18`, pushed to `origin`:
+  - `iconFor()` (`web/lib/chart-copilot-reply.ts`) gained explicit arms for all five phase-6 command
+    kinds instead of falling through to the 'style' default: `setDimmed`→series, `setHeadlineOverride`/
+    `addGoalLine`/`addEraShading`→note, `addDerivedOverlay`→form.
+  - `map.ts`'s `addGoalLine`/`addEraShading` `not_available` refusals now say `control: 'notes'` (were
+    `'form'`) — matches the applied chip's own destination (final review's I2).
+  - `respond.ts` passes the `trimmed` message into `mapCbsCopilotOutput`, not the raw one.
+  - **New `overlays: boolean` capability** (`types.ts`, `chart-capabilities.ts`, `map.ts`'s
+    `addDerivedOverlay` case) — false on any form but line/area now refuses the command outright
+    instead of silently storing one that renders nothing (**#310, closed** — the more serious of the two
+    required pre-merge fixes). **No `SYSTEM_PROMPT` byte changed and the real Playwright suite proves
+    it: every one of the 18 real-browser cases matched its fixture "exact" (never the risky prefix
+    fallback), and the request log shows `overlays:false` for the hbar-form province charts and
+    `overlays:true` for the line-form city charts — the field flows correctly end to end with zero
+    fixture regeneration.**
+  - Two stale doc comments fixed (`dataRequest`'s paraphrase of the current prompt wording;
+    `goalLineValueInMessage`'s now-documented bare-year false-accept), plus test coverage for all of the
+    above (new `copilot-fixtures.test.ts` assertion: every `CASES` entry maps to a command or a refusal).
+  - **Full verification, all measured this session:** root+web typecheck clean; root vitest 205 files /
+    3095 tests green (was 3080 — +15 new assertions); web vitest 146 files / 2594 tests green (was
+    2593); real Playwright `chart-copilot.spec.ts` 18/18 green (real Chromium, `CHROMIUM_PATH` pointed
+    at the pre-installed `/opt/pw-browsers/chromium-1194` binary — this environment's Playwright package
+    version didn't match the pre-installed browser revision, a environment quirk, not a code issue);
+    hermetic benchmark **14/14 answerable, 6/6 refusal, 0 fabricated, GATE PASS**; `/code-review` LOW on
+    the diff: no findings; real `next build`: clean.
+  - **Not done this session** (deliberately, per the kickoff's own framing — these were scoped to land
+    "after the fix wave merges," and the merge to `main` has not happened yet): ADR 056's phase-6
+    as-built section IS added this session (below) since it documents code that is now fully built and
+    verified regardless of which branch it sits on, but `docs/04-architecture.md`'s capability rows and
+    closing out #289/#301/#275 as "shipped" (rather than "built, verified, not yet on `main`") still wait
+    for the actual merge.
+- **Owner steps pending — unchanged from sessions 110 through 121** (registry:apply, DOI backfill, live
+  benchmark, region-set Task 9, audit row 22, the two `:record` runs + `benchmark:run:live` once the
+  Anthropic workspace usage cap lifts, 2026-10-01 — still also covers confirming the two phase-6 cases
+  session 121 added). **Plus, new this session: merging `claude/chart-copilot-phase6-fixes-wpim88` to
+  `main`** (a fast-forward, zero conflicts, fully verified — see above).
 
 - **Owner asked for genuinely architectural work, not more polish**, after reviewing session 118-120's
   output (small fixes/templates) — see [open-questions #306](open-questions.md) for the full options
@@ -64,8 +112,8 @@ has the exact next step.
     the on-screen panel, reopened through the new chat doorway; (I2) the new commands' confirmation-chip
     destination is inconsistent (one command's own success path and its own refusal path point at two
     different panels). The reviewer wrote the complete fix (new `overlays` capability field + a handful
-    of one-line corrections) and explicitly verified it needs NO fixture regeneration. **NOT applied yet
-    — this is the mandated next step**, full plan in the session-122 kickoff doc. The reviewer also
+    of one-line corrections) and explicitly verified it needs NO fixture regeneration. **APPLIED AND
+    VERIFIED session 122 — see the top of this block**, not this stale paragraph. The reviewer also
     caught that an EARLIER task review's stated mechanism for a related finding (iconFor() "unmounting"
     the era-shading UI) was wrong when independently re-checked — the underlying issue was still real,
     just not for the claimed reason; see lessons-learned session 121 point 3.
@@ -75,12 +123,10 @@ has the exact next step.
     ([open-questions #307](open-questions.md)); the new e2e test proves 1 of 5 new kinds render for real
     in a browser, not all 5 ([#308](open-questions.md)); `setDimmed` silently un-hides a series the
     reader had separately hidden ([#309](open-questions.md)).
-- **Owner steps pending — unchanged from sessions 110/111/114/115/116/117/118/119/120** (registry:apply,
-  DOI backfill, live benchmark, region-set Task 9, audit row 22, the two `:record` runs +
-  `benchmark:run:live` once the Anthropic workspace usage cap lifts, 2026-10-01 — now also covers
-  confirming the two phase-6 cases this session added).
 
-**Measured (session 121, on the branch, NOT main):** root + web typecheck clean; root vitest 205 files
+**Measured (session 121, on the branch, NOT main — historical; session 122's own fix-wave verification
+at the top of this block supersedes the "not applied"/"not merged" framing below, though `main` itself
+is still unmoved):** root + web typecheck clean; root vitest 205 files
 / 3,080 tests green; web vitest 146 files / 2,593 tests green; fixture-drift-guard 29/29 green (was
 deliberately 9-red through tasks 2-5); full real Playwright e2e 27/27 green (`chart-copilot.spec.ts`
 18/18). Final whole-branch review: **"Ready to merge: With fixes"** — not merged, not pushed to `main`,
