@@ -507,10 +507,12 @@ Merged to `main` at `c7723c34` (session 118, 2026-09-20).
 Plan: [superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md](../superpowers/plans/2026-09-20-chart-copilot-phase6-chat-wiring.md).
 Built via subagent-driven development (6 sequential tasks, one worktree, one implementer at a time —
 session 116's own lesson on shared-file fragility), a final whole-branch review (opus), then a session-122
-fix wave applying that review's findings. **As of this writing: fully built and verified, on branch
+fix wave applying that review's findings. Fully built and verified on branch
 `claude/chart-copilot-phase6-fixes-wpim88` (`0f7c7f18`, built on top of `worktree-chart-copilot-phase6`
-@ `58db5097`), pushed to `origin` — NOT YET merged to `main`** (a session-assigned branch constraint, not
-a design or review blocker — see [STATUS.md](../STATUS.md)'s top block). Full ledger:
+@ `58db5097`), pushed to `origin`. **Session 122 continuation (2026-09-22): the owner explicitly said
+"push to main"; the branch tip (`ce43e92`) was fast-forward-pushed straight onto `main` (zero conflicts,
+verified ancestor immediately before pushing) — phase 6 and the fix wave are now LIVE on `main`.** Full
+ledger:
 `.claude/worktrees/chart-copilot-phase6/.superpowers/sdd/2026-09-20-chart-copilot-phase6-chat-wiring/progress.md`
 (git-ignored, machine-local).
 

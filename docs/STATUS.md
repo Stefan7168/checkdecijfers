@@ -18,10 +18,16 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 — verify against `git log`/the branch
-before trusting this).** **`main` is STILL UNCHANGED at `41fe3ab5`** (session 120/121's own docs-only
-close) — the fix wave below landed on a THIRD branch, not on `main` and not on `worktree-chart-copilot-
-phase6` either. Read on before assuming anything needs rework.
+**▶ NEXT SESSION STARTS HERE (written 2026-09-22, session 122 continuation — verify against `git log`/CI
+before trusting this).** **`main` is NOW AT `ce43e92`** — the owner explicitly said "push to main" and the
+session fast-forward-pushed it directly (`git push origin ce43e92:main`; `origin/main` was freshly fetched
+and confirmed an ancestor of `HEAD` immediately before pushing, so this was a genuine zero-conflict
+fast-forward, not a force-push). **Chart co-pilot phase 6 + the full session-122 fix wave are now LIVE on
+`main`.** CI run [35690440761](https://github.com/Stefan7168/checkdecijfers/actions/runs/35690440761) was
+triggered by the push — verify its conclusion at that URL (or `git log`/a fresh CI check) before trusting
+any "deployed" claim; this doc was written while that run was still in progress. The session's designated
+branch, `claude/chart-copilot-phase6-fixes-wpim88`, is now fully subsumed by `main` (kept on `origin`, not
+deleted — not asked for — but no longer the active target for new work).
 
 - **Why a third branch:** this session's own harness assigned a designated branch,
   `claude/chart-copilot-phase6-fixes-wpim88`, with an explicit "never push to a different branch
@@ -29,11 +35,9 @@ phase6` either. Read on before assuming anything needs rework.
   from CLAUDE.md's own owner-present-pushes-to-`main` convention. The session merged
   `origin/worktree-chart-copilot-phase6` (`58db5097`, session 121's own unmerged phase-6 work) into the
   designated branch first (clean merge, zero conflicts — `main` had only one docs-only commit,
-  `41fe3ab5`, that the phase-6 branch lacked), then built the fix wave on top. **The designated branch
-  now contains `main` + all of phase 6 + the fix wave — a trivial, zero-conflict fast-forward onto `main`
-  whenever authorized.** This session did NOT push to `main` or to `worktree-chart-copilot-phase6`
-  itself, per that constraint — say the word ("push to main" / "merge it") and a session can do it in
-  one command; otherwise it is a normal GitHub merge away.
+  `41fe3ab5`, that the phase-6 branch lacked), then built the fix wave on top. **RESOLVED same session
+  (continuation): the owner explicitly said "push to main"; the designated branch's tip (`ce43e92`) was
+  fast-forward-pushed straight onto `main`, one command, zero conflicts, exactly as predicted above.**
 - **Session 122: the mandated fix wave (session 121's final review) is APPLIED and FULLY VERIFIED**, on
   branch `claude/chart-copilot-phase6-fixes-wpim88` @ `0f7c7f18`, pushed to `origin`:
   - `iconFor()` (`web/lib/chart-copilot-reply.ts`) gained explicit arms for all five phase-6 command
@@ -60,17 +64,14 @@ phase6` either. Read on before assuming anything needs rework.
     version didn't match the pre-installed browser revision, a environment quirk, not a code issue);
     hermetic benchmark **14/14 answerable, 6/6 refusal, 0 fabricated, GATE PASS**; `/code-review` LOW on
     the diff: no findings; real `next build`: clean.
-  - **Not done this session** (deliberately, per the kickoff's own framing — these were scoped to land
-    "after the fix wave merges," and the merge to `main` has not happened yet): ADR 056's phase-6
-    as-built section IS added this session (below) since it documents code that is now fully built and
-    verified regardless of which branch it sits on, but `docs/04-architecture.md`'s capability rows and
-    closing out #289/#301/#275 as "shipped" (rather than "built, verified, not yet on `main`") still wait
-    for the actual merge.
+  - **The merge landed this same session (continuation, owner said "push to main"):** `docs/04-
+  architecture.md`'s capability rows and open-questions #289/#301/#310 are now updated to say "shipped
+  on `main`" rather than "built, verified, not yet on `main`" — see those files directly, not this
+  paragraph, for the current wording.
 - **Owner steps pending — unchanged from sessions 110 through 121** (registry:apply, DOI backfill, live
   benchmark, region-set Task 9, audit row 22, the two `:record` runs + `benchmark:run:live` once the
   Anthropic workspace usage cap lifts, 2026-10-01 — still also covers confirming the two phase-6 cases
-  session 121 added). **Plus, new this session: merging `claude/chart-copilot-phase6-fixes-wpim88` to
-  `main`** (a fast-forward, zero conflicts, fully verified — see above).
+  session 121 added). The merge-to-`main` item is done, no longer pending.
 
 - **Owner asked for genuinely architectural work, not more polish**, after reviewing session 118-120's
   output (small fixes/templates) — see [open-questions #306](open-questions.md) for the full options
