@@ -5,9 +5,9 @@
 // refusal with the control that can do it — never a guess.
 import { describe, expect, it } from 'vitest';
 import { mapCopilotOutput } from '../../src/attachments/copilot/map.ts';
-import type { CopilotOutput, CopilotViewCommand } from '../../src/attachments/copilot/types.ts';
+import type { CopilotCapabilities, CopilotOutput, CopilotViewCommand } from '../../src/attachments/copilot/types.ts';
 import type { ChartInstruction } from '../../src/attachments/types.ts';
-import { CHART_FIXTURE, CURRENT_FIXTURE } from './copilot-fixtures.ts';
+import { CAPABILITIES_FIXTURE, CHART_FIXTURE, CURRENT_FIXTURE } from './copilot-fixtures.ts';
 
 function output(view: CopilotViewCommand[], fields: Partial<CopilotOutput> = {}): CopilotOutput {
   return { version: 1, instruction: null, view, refused: [], confidence: 0.95, reading: 'test', ...fields };
@@ -18,9 +18,13 @@ const SUMMARY = 'Sum of Revenue per Year';
 /** A fixed note-id suffix — in production it is derived from Date.now(), so
  * the tests pin it to keep the ids assertable (final review, session 113). */
 const SUFFIX = 'zz1';
+/** The raw user message, threaded through since this tier's own wiring of
+ * the CBS co-pilot phase 6 primitives. Only the goal-line guard reads it —
+ * every other case below is indifferent to it. */
+const MESSAGE = 'test message';
 
-function map(out: CopilotOutput) {
-  return mapCopilotOutput(out, CHART_FIXTURE, CURRENT_FIXTURE, SUMMARY, SUFFIX);
+function map(out: CopilotOutput, capabilities: CopilotCapabilities = CAPABILITIES_FIXTURE, message: string = MESSAGE) {
+  return mapCopilotOutput(out, CHART_FIXTURE, CURRENT_FIXTURE, SUMMARY, message, capabilities, SUFFIX);
 }
 
 const NEW_INSTRUCTION: ChartInstruction = {
@@ -272,6 +276,223 @@ describe('rule 7 — addNote resolves a point by series + x label', () => {
       output([{ kind: 'addNote', seriesLabel: 'Amsterdam', xLabel: '2021', text: 'plus 12 procent' }]),
     );
     expect(refused).toEqual([{ request: 'plus 12 procent', reason: 'unplotted_number', control: 'none' }]);
+  });
+});
+
+// Own-data wiring of the CBS tier's co-pilot phase 6 primitives (mirrors
+// tests/chart/copilot-map.test.ts's own describe blocks for these three
+// kinds, adapted to CHART_FIXTURE's shape: Amsterdam has points at '2020'
+// and '2021' only; Rotterdam has '2020' (real), '2021' (null) and '2022'
+// (negative) — so a label may resolve chart-wide (via Rotterdam) while
+// still not being a point of Amsterdam's own series).
+describe('addEraShading — labels resolve to x keys, the label is digit-guarded', () => {
+  it('resolves both labels, swapping reversed labels into ascending order', () => {
+    const { commands, refused } = map(output([{ kind: 'addEraShading', fromLabel: '2022', toLabel: '2020', label: 'Herstel' }]));
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addEraShading',
+        era: { id: expect.stringMatching(/^chat-era-/), fromPeriodCode: '2020', toPeriodCode: '2022', label: 'Herstel' },
+      },
+    ]);
+  });
+
+  it('mints a distinct id per era in one reply — the client reducer drops a duplicate id', () => {
+    const { commands } = map(
+      output([
+        { kind: 'addEraShading', fromLabel: '2020', toLabel: '2021', label: 'Eerst' },
+        { kind: 'addEraShading', fromLabel: '2021', toLabel: '2022', label: 'Daarna' },
+      ]),
+    );
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { era: { id: string } }).era.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('refuses a label naming an unplotted number', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addEraShading', fromLabel: '2020', toLabel: '2021', label: 'Groei van 99 procent' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'Groei van 99 procent', reason: 'unplotted_number', control: 'none' }]);
+  });
+
+  it('refuses an unknown x label, pointing at the notes editor', () => {
+    const { commands, refused } = map(output([{ kind: 'addEraShading', fromLabel: '2019', toLabel: '2021', label: 'Herstel' }]));
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'era: 2019–2021', reason: 'not_available', control: 'notes' }]);
+  });
+});
+
+describe('addDerivedOverlay — two real points of one series, or every point of one series', () => {
+  // Mirrors the CBS tier's own fix (#310): the same gate its panel puts on
+  // its own difference/mean buttons (line/area only) — without it, a
+  // bar/table chart's chat stored a command that rendered nothing and could
+  // not be removed.
+  it('refuses outright when capabilities.overlays is false, before any series/x-label lookup', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null }]),
+      { ...CAPABILITIES_FIXTURE, overlays: false },
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Amsterdam', reason: 'not_available', control: 'form' }]);
+  });
+
+  it('difference resolves fromLabel/toLabel to the two points of the named series', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2021' }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addDerivedOverlay',
+        overlay: { id: expect.stringMatching(/^chat-overlay-/), calcKind: 'difference', resultIds: ['r1:c2', 'r2:c2'] },
+      },
+    ]);
+  });
+
+  it('mean takes every point of the named series, a null-valued point included', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Rotterdam', fromLabel: null, toLabel: null }]),
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      {
+        kind: 'addDerivedOverlay',
+        overlay: { id: expect.stringMatching(/^chat-overlay-/), calcKind: 'mean', resultIds: ['r3:c2', 'r4:c2', 'r5:c2'] },
+      },
+    ]);
+  });
+
+  it('mints a distinct id per overlay in one reply — the client reducer drops a duplicate id', () => {
+    const { commands } = map(
+      output([
+        { kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null },
+        { kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2021' },
+      ]),
+    );
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { overlay: { id: string } }).overlay.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('refuses an unknown series, with control form', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Utrecht', fromLabel: null, toLabel: null }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Utrecht', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a difference whose from and to name the same point as invalid — both resolve, the combination is degenerate', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2021', toLabel: '2021' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: 2021–2021', reason: 'invalid', control: 'form' }]);
+  });
+
+  it('refuses a difference missing one of its two x labels', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: null }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: difference', reason: 'not_available', control: 'form' }]);
+  });
+
+  it('refuses a difference whose x label is not a point of THAT series, even though it resolves chart-wide via another series', () => {
+    const { commands, refused } = map(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2022', toLabel: '2021' }]),
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: 2022–2021', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+
+  it('refuses a mean over a series with fewer than two points — the client would drop that on dispatch', () => {
+    const onePoint = { ...CHART_FIXTURE, series: [{ ...CHART_FIXTURE.series[0]!, points: CHART_FIXTURE.series[0]!.points.slice(0, 1) }] };
+    const { commands, refused } = mapCopilotOutput(
+      output([{ kind: 'addDerivedOverlay', calcKind: 'mean', seriesLabel: 'Amsterdam', fromLabel: null, toLabel: null }]),
+      onePoint,
+      CURRENT_FIXTURE,
+      SUMMARY,
+      MESSAGE,
+      CAPABILITIES_FIXTURE,
+      SUFFIX,
+    );
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'overlay: Amsterdam', reason: 'not_on_this_chart', control: 'form' }]);
+  });
+});
+
+describe('addGoalLine — the value must be one the reader typed, the label is digit-guarded', () => {
+  /** Unlike every other case in this file, these depend on the MESSAGE: the
+   * guard judges the value against the reader's own words. */
+  function mapGoal(view: CopilotViewCommand[], message: string) {
+    return mapCopilotOutput(output(view), CHART_FIXTURE, CURRENT_FIXTURE, SUMMARY, message, CAPABILITIES_FIXTURE, SUFFIX);
+  }
+
+  it('stores a value that appears in the user message — a target is on no chart, and need not be', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 120, label: 'Doel' }], 'Voeg een doellijn toe op 120');
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: 120, label: 'Doel' } }]);
+  });
+
+  it('accepts a locale-formatted spelling of the value in the message', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 900000, label: 'Doel' }], 'Voeg een doellijn toe op 900.000');
+    expect(refused).toEqual([]);
+    expect(commands).toHaveLength(1);
+  });
+
+  it('refuses a value the user never typed — nothing is stored, the form control is named', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 12345, label: 'Doel' }], 'Voeg een doellijn toe');
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'goal line: 12345', reason: 'not_available', control: 'notes' }]);
+  });
+
+  it("refuses the reader's digits with a shifted decimal before anything is stored", () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 2.5, label: 'Doel' }], 'Zet een doellijn op 25');
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'goal line: 2.5', reason: 'not_available', control: 'notes' }]);
+  });
+
+  it('stores a negative target the reader typed with its sign', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: -5, label: 'Doel' }], 'Zet een doellijn op -5');
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([{ kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: -5, label: 'Doel' } }]);
+  });
+
+  it('refuses an unplotted number in the label even when the value is valid', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 120, label: 'Doel voor 2030' }], 'Voeg een doellijn toe op 120');
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: 'Doel voor 2030', reason: 'unplotted_number', control: 'none' }]);
+  });
+
+  it('stores a label quoting a number that IS on the chart', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 120, label: 'Doel voor 2021' }], 'Voeg een doellijn toe op 120');
+    expect(refused).toEqual([]);
+    expect(commands).toEqual([
+      { kind: 'addGoalLine', goalLine: { id: expect.stringMatching(/^chat-goal-/), value: 120, label: 'Doel voor 2021' } },
+    ]);
+  });
+
+  it('refuses an empty label — the client would drop that on dispatch', () => {
+    const { commands, refused } = mapGoal([{ kind: 'addGoalLine', value: 120, label: '   ' }], 'Voeg een doellijn toe op 120');
+    expect(commands).toEqual([]);
+    expect(refused).toEqual([{ request: '', reason: 'invalid', control: 'none' }]);
+  });
+
+  it('mints a distinct id per goal line in one reply — the client reducer drops a duplicate id', () => {
+    const { commands, refused } = mapGoal(
+      [
+        { kind: 'addGoalLine', value: 100, label: 'Ondergrens' },
+        { kind: 'addGoalLine', value: 150, label: 'Bovengrens' },
+      ],
+      'Doellijnen op 100 en 150',
+    );
+    expect(refused).toEqual([]);
+    expect(commands).toHaveLength(2);
+    const ids = commands.map((command) => (command as unknown as { goalLine: { id: string } }).goalLine.id);
+    expect(new Set(ids).size).toBe(2);
   });
 });
 

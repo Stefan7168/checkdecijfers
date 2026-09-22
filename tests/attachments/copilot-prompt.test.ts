@@ -22,6 +22,7 @@ const CAPABILITIES: CopilotCapabilities = {
   forms: ['line', 'bar', 'table'],
   presentationKeys: ['lineWidth', 'grid'],
   templates: ['standard', 'newsroom'],
+  overlays: true,
   lang: 'nl',
 };
 
@@ -51,6 +52,9 @@ describe('buildCopilotSystemPrompt', () => {
       'setTitle',
       'setCaption',
       'addNote',
+      'addEraShading',
+      'addDerivedOverlay',
+      'addGoalLine',
     ]) {
       expect(prompt, `${kind} is not described in the system prompt`).toContain(kind);
     }
@@ -62,8 +66,22 @@ describe('buildCopilotSystemPrompt', () => {
     expect(prompt).toContain('derived');
   });
 
-  it('is version 1', () => {
-    expect(COPILOT_PROMPT_VERSION).toBe(1);
+  // addDerivedOverlay must be distinguishable from an aggregate/derived
+  // instruction (which COLLAPSES the data into new points) — the model
+  // needs a rule to pick between them, in both directions.
+  it('distinguishes addDerivedOverlay (drawn on top) from a derived instruction (collapses the data)', () => {
+    expect(prompt).toContain('addDerivedOverlay view command above instead of derived');
+  });
+
+  // Deliberately NOT asserted here: CAPABILITIES.overlays never appears in
+  // the prompt text (pitfall #1's whole point — a byte change there would
+  // re-hash every fixture). It is enforced only in map.ts.
+  it('never mentions overlays as a capability key', () => {
+    expect(prompt).not.toContain('overlays');
+  });
+
+  it('is version 2', () => {
+    expect(COPILOT_PROMPT_VERSION).toBe(2);
   });
 });
 

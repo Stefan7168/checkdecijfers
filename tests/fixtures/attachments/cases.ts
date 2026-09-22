@@ -104,6 +104,10 @@ const LINE_CAPABILITIES: CopilotCapabilities = {
     'autumn',
     'brutalist',
   ],
+  // A `kind: 'line'` chart drawn in line form: the same `form === 'line' ||
+  // form === 'area'` test `ownDataCapabilities` (web/lib/chart-capabilities.ts)
+  // uses for its own `overlays` field.
+  overlays: true,
   lang: 'nl',
 };
 
@@ -256,6 +260,66 @@ export const CASES: AttachmentCase[] = [
       refused: [{ request: 'donut', reason: 'not_available', control: 'form' }],
       confidence: 0.9,
       reading: 'No pie form and no pieHole on this chart: a donut is not something this card offers.',
+    },
+  },
+  // Own-data wiring of the CBS tier's co-pilot phase 6 primitives (mirrors
+  // tests/fixtures/chart-copilot/cases.ts's own era-shading/derived-overlay/
+  // goal-line cases, adapted to this dataset's two years and two cities).
+  //
+  // Era shading: both x labels copied from the chart, plus a typed,
+  // digit-free label.
+  {
+    label: 'copilot/era-shading-both-years',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'Arceer 2020 tot 2021 als groeiperiode',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'addEraShading', fromLabel: '2020', toLabel: '2021', label: 'Groeiperiode' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Both years are on the chart; shaded 2020 to 2021 with the typed label.',
+    },
+  },
+  // Derived difference: a calculation over two points that ARE on this
+  // chart is a view command, never a new instruction — the number itself
+  // is derived by the client's own renderer from those two cells.
+  {
+    label: 'copilot/derived-difference-amsterdam',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'Laat het verschil zien tussen Amsterdam in 2020 en 2021',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'addDerivedOverlay', calcKind: 'difference', seriesLabel: 'Amsterdam', fromLabel: '2020', toLabel: '2021' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'Both points are on this chart: a difference overlay, not a new instruction.',
+    },
+  },
+  // Goal line: the ONE bare number this tier stores — copied from the
+  // reader's own message, which map.ts checks it against
+  // (goalLineValueInMessage); the label kept free of numbers.
+  {
+    label: 'copilot/goal-line-on-omzet',
+    kind: 'copilot',
+    csv: 'verkoop.csv',
+    current: LINE_PER_GEMEENTE,
+    capabilities: LINE_CAPABILITIES,
+    message: 'Voeg een doellijn toe op 120',
+    output: {
+      version: 1,
+      instruction: null,
+      view: [{ kind: 'addGoalLine', value: 120, label: 'Doel' }],
+      refused: [],
+      confidence: 0.95,
+      reading: 'The value is the one the message contains; the label carries no number.',
     },
   },
 ];

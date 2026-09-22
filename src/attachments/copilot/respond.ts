@@ -275,7 +275,7 @@ async function produceOutcome(input: RespondToChartEditInput): Promise<Outcome> 
 
   // Step 8 — labels → keys, against the chart just executed.
   const nextClient = toClientInstruction(next);
-  const { commands, refused } = mapCopilotOutput(output, chart, toClientInstruction(validated), summarize(nextClient));
+  const { commands, refused } = mapCopilotOutput(output, chart, toClientInstruction(validated), summarize(nextClient), trimmed, caps);
 
   // Step 9 — one chart envelope carrying the reader's own edit record.
   return {

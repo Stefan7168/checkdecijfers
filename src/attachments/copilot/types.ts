@@ -12,6 +12,13 @@
 // web/lib/chart-templates.ts's `CHART_TEMPLATES` accept: the chat is a
 // SECOND doorway onto the same command vocabulary, not a wider one
 // ("no chat-only capability"), pinned by tests/attachments/copilot-schema.test.ts.
+//
+// Own-data wiring of the CBS tier's co-pilot phase 6 primitives
+// (ADR 056/src/chart/copilot/): `addGoalLine.value` is this tier's one
+// deliberate exception to "the model never carries a value" — a reader-set
+// target is not a plotted value, so map.ts stores it only when it equals,
+// numerically, a number the reader's own message spells out
+// (text-guard.ts's goalLineValueInMessage — not merely the same digits).
 import type { viewCommandSchema } from './schema.ts';
 import type { z } from 'zod';
 import type { ChartInstruction } from '../types.ts';
@@ -22,6 +29,17 @@ export interface CopilotCapabilities {
   presentationKeys: string[];
   /** ⊆ TEMPLATE_IDS. */
   templates: string[];
+  /** True only when this chart's current FORM can draw an overlay at all —
+   * `form === 'line' || form === 'area'` (web/lib/chart-capabilities.ts's
+   * `ownDataCapabilities`), the same predicate the CBS tier's own `overlays`
+   * field uses (src/chart/copilot/types.ts's CbsCopilotCapabilities).
+   * Unlike the rest of this bag, it is NOT mentioned in the prompt text (a
+   * byte change there would re-hash every fixture): it is enforced ONLY at
+   * copilot/map.ts's addDerivedOverlay case, checked FIRST, before any
+   * series/x-label lookup — so a bar/table chart's chat can still be ASKED
+   * for an overlay, it just comes back refused instead of silently storing
+   * a command that renders nothing and cannot be removed. */
+  overlays: boolean;
   lang: 'nl' | 'en';
 }
 
@@ -116,6 +134,7 @@ export function sanitizeCapabilities(raw: unknown): CopilotCapabilities {
     forms: pick(o.forms, COPILOT_FORMS) as CopilotCapabilities['forms'],
     presentationKeys: pick(o.presentationKeys, PRESENTATION_KEYS),
     templates: pick(o.templates, TEMPLATE_IDS),
+    overlays: o.overlays === true,
     lang: o.lang === 'en' ? 'en' : 'nl',
   };
 }

@@ -33,11 +33,13 @@ function readFixture(hash: string): RecordedFixture {
 }
 
 describe('own-data LLM fixtures', () => {
-  // Six since co-pilot phase 6 Task 1: a house style by name (#275) and the
-  // donut this tier has no pie form for (#301) join the original four.
-  it('has six cases over one CSV', () => {
-    expect(CASES).toHaveLength(6);
-    expect(CASES.map((c) => c.kind)).toEqual(['instruct', 'copilot', 'copilot', 'copilot', 'copilot', 'copilot']);
+  // Nine since this tier's own wiring of the CBS co-pilot phase 6
+  // primitives: era shading, derived overlay and goal line join the six a
+  // house style by name (#275) and the donut this tier has no pie form for
+  // (#301) had already brought the original four to.
+  it('has nine cases over one CSV', () => {
+    expect(CASES).toHaveLength(9);
+    expect(CASES.map((c) => c.kind)).toEqual(['instruct', ...Array(8).fill('copilot')]);
     expect(new Set(CASES.map((c) => c.csv))).toEqual(new Set(['verkoop.csv']));
   });
 
