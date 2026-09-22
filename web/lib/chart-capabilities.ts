@@ -28,13 +28,13 @@ import type { ChartSpec } from '../backend/chart/types.ts';
  * user-chart.tsx has a RENDER BRANCH for. The shared scorer can say
  * "dumbbell" for a two-point spec, but the chat must never offer a shape
  * its own panel cannot draw (plan Global Constraints) — so the scorer's
- * verdict is capped to this list, which grows as the plan's later tasks
- * add branches: dumbbell (Task 2), pie/stacked/stacked100 (Task 3 — those
+ * verdict is capped to this list, which grows as the plan's tasks add
+ * branches: dumbbell (Task 2, done), pie/stacked/stacked100 (Task 3 — those
  * three come from own-data's OWN shape-only guards, never from
  * `allowedForms`, whose pie/stacked guards read the CBS roster provenance
  * `regionScope` that an own-data spec never carries, so they are `false`
  * for every own-data spec by construction). */
-const OWN_DATA_RENDERABLE_FORMS: readonly ChartForm[] = ['line', 'area', 'bar', 'hbar', 'table', 'slope', 'heatmap'];
+const OWN_DATA_RENDERABLE_FORMS: readonly ChartForm[] = ['line', 'area', 'bar', 'hbar', 'table', 'dumbbell', 'slope', 'heatmap'];
 
 /** Every form the own-data card can honestly show for `spec` right now, in
  * the scorer's own fixed order: chart-fit.ts's `allowedForms` — the SAME

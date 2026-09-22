@@ -5,6 +5,7 @@
 // the whole-card digit scan clean while they are on screen.
 import { describe, expect, it } from 'vitest';
 import { cbsCapabilities, cbsExampleChips, exampleChips, ownDataCapabilities, ownDataRenderableForms } from './chart-capabilities.ts';
+import type { RegionScope } from '../backend/query/types.ts';
 import { allowedForms } from './chart-fit.ts';
 import { COPILOT_FORMS, PRESENTATION_KEYS, TEMPLATE_IDS } from '../backend/attachments/copilot/types.ts';
 import { initialDocState, type ChartDocState } from './chart-commands.ts';
@@ -358,8 +359,8 @@ describe('own-data chart-fit parity (Task 1) — the scorer, capped to what the 
     [RAGGED, 2],
   ];
 
-  it('a 2-series × 2-point spec (slope- AND heatmap-shaped) surfaces slope and heatmap — never dumbbell, which has no render branch until Task 2', () => {
-    expect(ownDataRenderableForms(CBS_TWO_SERIES, 2)).toEqual(['line', 'bar', 'table', 'slope', 'heatmap']);
+  it('a 2-series × 2-point spec (dumbbell-, slope- AND heatmap-shaped) surfaces all three, in the scorer\'s order — dumbbell since Task 2 gave it a render branch', () => {
+    expect(ownDataRenderableForms(CBS_TWO_SERIES, 2)).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope', 'heatmap']);
   });
 
   it('a multi-point time series surfaces heatmap but not slope (a slope needs exactly two moments)', () => {
@@ -371,31 +372,43 @@ describe('own-data chart-fit parity (Task 1) — the scorer, capped to what the 
     expect(ownDataRenderableForms(TWO_BARS_ONE_MOMENT, 2)).toEqual(['bar', 'hbar', 'table']);
   });
 
-  it('a null cell withholds both; ragged periods withhold only the heatmap (a slope needs two real points per series, not shared ones) — the table stays', () => {
+  it('a null cell withholds all three; ragged periods withhold only the heatmap (dumbbell and slope need two real points per series, not shared ones) — the table stays', () => {
     expect(ownDataRenderableForms(NULL_CELL, 2)).toEqual(['line', 'bar', 'table']);
-    // Two real points per series is slopeFormAllowed's whole condition —
-    // the SAME verdict chart.tsx's canUseSlope reaches for a ragged CBS
-    // pair; each line then spans its own two moments over a three-moment
-    // axis, every drawn point a real value. The grid, which needs a cell
-    // at every intersection, is withheld.
-    expect(ownDataRenderableForms(RAGGED, 2)).toEqual(['line', 'bar', 'table', 'slope']);
+    // Two real points per series is dumbbellFormAllowed's (and so
+    // slopeFormAllowed's) whole condition — the SAME verdict chart.tsx's
+    // canUseDumbbell/canUseSlope reach for a ragged CBS pair; each line
+    // then spans its own two moments over a three-moment axis, each
+    // dumbbell row its own two values, every drawn point a real value. The
+    // grid, which needs a cell at every intersection, is withheld.
+    expect(ownDataRenderableForms(RAGGED, 2)).toEqual(['line', 'bar', 'table', 'dumbbell', 'slope']);
   });
 
-  it('is the shared scorer\'s own verdict minus the forms this card cannot draw yet, in the scorer\'s order — never a form the scorer withheld', () => {
+  it('is the shared scorer\'s own verdict, in the scorer\'s order — since Task 2 every chart-fit form has a render branch, so the cap removes nothing for an own-data spec and never adds a form the scorer withheld', () => {
     for (const [spec, seriesCount] of SHAPES) {
       const scorer = allowedForms(spec, seriesCount);
       // No own-data spec carries `regionScope`, so the scorer never offers
-      // the three roster forms here — dumbbell is the only form the cap
-      // actually removes today.
+      // the three roster forms here; the cap (which still excludes them —
+      // the tripwire below) is therefore an identity on these shapes.
       expect(scorer).not.toEqual(expect.arrayContaining(['pie']));
-      expect(ownDataRenderableForms(spec, seriesCount)).toEqual(scorer.filter((f) => f !== 'dumbbell'));
+      expect(ownDataRenderableForms(spec, seriesCount)).toEqual(scorer);
     }
+  });
+
+  it('tripwire: the render cap is what keeps the CBS roster forms off own-data — a spec that DID carry a roster (never a real own-data spec, but the cap must not lean on that) still surfaces no pie/stacked/stacked100 here while the scorer itself offers them', () => {
+    // Task 3 gives own-data its pie/stacked/stacked100 through its OWN
+    // shape-only guards (the plan's Global Constraints), appended to the
+    // renderable list — never by letting `allowedForms`' roster verdict
+    // through. If this expectation has to change in Task 3, change it
+    // deliberately: it means the cap itself was widened.
+    const rostered: PlottableSpec & { regionScope: RegionScope } = { ...TWO_BARS_ONE_MOMENT, regionScope: { kind: 'all_provincies' } };
+    expect(allowedForms(rostered, 2)).toEqual(['bar', 'hbar', 'table', 'pie', 'stacked', 'stacked100']);
+    expect(ownDataRenderableForms(rostered, 2)).toEqual(['bar', 'hbar', 'table']);
   });
 
   it('ownDataCapabilities forwards that list through the server\'s own COPILOT_FORMS allowlist — today slope/heatmap reach the TABS but not yet the chat (tripwire: flips in Task 5)', () => {
     // When this guard fails because COPILOT_FORMS now names 'slope', Task 5
     // has landed: change the expectation below to ['line', 'bar', 'table',
-    // 'slope', 'heatmap'] and delete the guard.
+    // 'dumbbell', 'slope', 'heatmap'] and delete the guard.
     expect([...COPILOT_FORMS]).not.toContain('slope');
     expect([...COPILOT_FORMS]).not.toContain('heatmap');
     const caps = ownDataCapabilities({ spec: CBS_TWO_SERIES, form: 'line', seriesCount: 2, applicable: ALL_APPLICABLE, lang: 'nl' });

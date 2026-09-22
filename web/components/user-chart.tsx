@@ -37,7 +37,26 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  DefaultZIndexes,
+  LabelList,
+  Line,
+  LineChart,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  useXAxisScale,
+  useYAxisScale,
+  XAxis,
+  YAxis,
+  ZIndexLayer,
+} from 'recharts';
 import { renderDatasetInstruction, type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { adjustDatasetChart, submitCopilotFeedback, type AdjustDatasetChartOutcome } from '../app/dataset-copilot-actions.ts';
 import { requestDatasetDerivation } from '../app/dataset-derivation-actions.ts';
@@ -75,6 +94,7 @@ import {
 import {
   areaFormAllowed,
   defaultFormFor,
+  dumbbellFormAllowed,
   fallbackForm,
   hbarFormAllowed,
   heatmapFormAllowed,
@@ -87,14 +107,18 @@ import { useLang } from '../lib/i18n/lang-provider.tsx';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
 import {
   AxisTick,
+  buildDumbbellRows,
   buildRows,
   AXIS_COLOR,
   baselineAxisLine,
   ChartTooltip,
   GRID_LINE_PROPS,
   heatmapIntensity,
+  labelWidthPx,
   valueLabelPlan,
   yAxisDomain,
+  type DumbbellEnd,
+  type DumbbellRow,
   type PlottablePoint,
   type PlottableSpec,
   type Row,
@@ -228,13 +252,14 @@ const FORM_TABS: readonly { form: ChartForm; label: MessageKey }[] = [
   { form: 'bar', label: 'chart.tabBar' },
   { form: 'hbar', label: 'chart.form.hbar' },
   { form: 'table', label: 'chart.tabTable' },
-  // Own-data chart-fit parity (plan 2026-09-22, Task 1): the phase-5 trio
+  // Own-data chart-fit parity (plan 2026-09-22, Tasks 1-2): the phase-5 trio
   // trails Tabel in the scorer's own fixed order — dumbbell, slope, heatmap
   // (chart-fit.ts's `allowedForms`; chart.tsx's tabs use the same order).
-  // Dumbbell's slot, between Tabel and Helling, is Task 2's (it needs a
-  // render decision of its own, not just wiring); Helling and Warmtekaart
-  // are wired here. The list the chat is told about (chart-capabilities.ts's
-  // `ownDataRenderableForms`) must never name a form this list lacks.
+  // Helling and Warmtekaart were wired in Task 1; the Dumbbell — its own
+  // render branch, `UserDumbbellOverlay` below — in Task 2. The list the
+  // chat is told about (chart-capabilities.ts's `ownDataRenderableForms`)
+  // must never name a form this list lacks.
+  { form: 'dumbbell', label: 'chart.form.dumbbell' },
   { form: 'slope', label: 'chart.form.slope' },
   { form: 'heatmap', label: 'chart.form.heatmap' },
 ];
@@ -505,6 +530,141 @@ function UserHeatmapGrid({
         </div>
       ))}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Own-data chart-fit parity (plan 2026-09-22, Task 2): the "Dumbbell" —
+// chart.tsx's `DumbbellOverlay`, MIRRORED here rather than shared. Its prop
+// contract is entirely primitive (no ChartSpec: a row is a key, a label,
+// two `DumbbellEnd`s and a `[min, max]` pair), so on that test alone it
+// would be extractable — but every way of sharing it edits chart.tsx (an
+// `export` on the function and its row type, or moving it plus its two
+// module-private constants out and importing them back), and chart.tsx is
+// off-limits to this task; and this card's contract genuinely differs in
+// two small ways a shared component would have had to grow for: (1) the
+// dimming is this card's two-level `opacityFor` (reader-dimmed 0.35,
+// highlight-dimmed 0.25 — what every other branch here honours) where
+// chart.tsx's overlay knows only a boolean at 0.25; (2) this tier has no
+// provisional cells (`toPlottableSpec` sets `provisional: false`
+// throughout, ADR 037 D7), so chart.tsx's ' *' label suffix has nothing to
+// draw and is left out — the same simplification `UserSeriesDot` above
+// makes of `SeriesDot`. What IS reused rather than copied: chart.tsx's
+// exported `buildDumbbellRows` (the row model, over this card's own
+// `plottable`), its `DumbbellRow`/`DumbbellEnd` types, `labelWidthPx`, and
+// chart-view-state.ts's `dumbbellFormAllowed`/`fallbackForm`. The drawing
+// itself is the CBS mechanism unchanged: a plain descendant of the
+// `<BarChart layout="vertical">` shell reading Recharts' own settled scales
+// (`useXAxisScale`/`useYAxisScale`) and painting ordinary SVG inside the
+// shared `label` z-index layer; the shell carries NO `<Bar>`.
+// ---------------------------------------------------------------------------
+
+/** chart.tsx's `DUMBBELL_DOT_R`/`DUMBBELL_LABEL_GAP_PX`, copied (module-
+ * private there, like VALUE_LABEL_PROPS above): the dot radius, and the gap
+ * between a dot's edge and its label. */
+const DUMBBELL_DOT_R = 5;
+const DUMBBELL_LABEL_GAP_PX = 4;
+
+/** A dumbbell row as this card draws it: chart.tsx's pure `DumbbellRow`
+ * (its exported `buildDumbbellRows`) plus the SAME resolved colour every
+ * other form derives from `seriesMeta`, and this card's own `opacityFor`/
+ * `dimmedFor` verdicts, joined in the card on the shared `s${i}` key. */
+interface UserDumbbellRow extends DumbbellRow {
+  color: string;
+  opacity: number;
+  dimmed: boolean;
+}
+
+/** The category (series) axis tick — chart.tsx's `RegionAxisTick`, copied
+ * (module-private there). Recharts' own default axis <Text> measures glyphs
+ * and renders NOTHING in jsdom (chart.tsx's own note on that component), so
+ * the tick is drawn by this small component instead — which is also what
+ * lets a test pin each dot's `cy` against the tick Recharts placed for its
+ * row. The payload IS the row's `label` verbatim (a spec string), never
+ * invented text — so no `data-label-for` (that contract is for numbers). */
+function UserCategoryAxisTick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+  const value = props.payload?.value;
+  if (typeof value !== 'string' || props.x == null || props.y == null) return null;
+  return (
+    <text x={props.x} y={props.y} dy={4} fontSize={11} fill={AXIS_COLOR} textAnchor="end" data-role="category-axis-tick">
+      {value}
+    </text>
+  );
+}
+
+/** The dumbbell's whole drawing. Per row: a `<line>` from
+ * `xScale(from.value)` to `xScale(to.value)` at the row's own category
+ * position — `yScale(label, { position: 'middle' })`, the band CENTRE,
+ * exactly where Recharts places that row's own axis tick — and a
+ * `<circle>` at each end. Every drawn number is that endpoint's own
+ * `formattedValue`, rendered as `<text>` beside its dot with
+ * `data-label-for="<rowRef>"`, like every other value label on this card.
+ * The leftmost dot's label sits to its left and the rightmost dot's to its
+ * right (a pixel question settled from the scale's own output, never from
+ * comparing the values again), so the two never cross the connector or
+ * each other; the shell's x-axis `padding` (sized in the card from the
+ * widest label) keeps a label at the domain's edge from running into the
+ * series-name column or off the right edge — layout only, the domain
+ * itself is never touched. A row whose position the scale cannot resolve
+ * is skipped, never approximated. */
+function UserDumbbellOverlay({ rows }: { rows: UserDumbbellRow[] }) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  if (!xScale || !yScale || rows.length === 0) return null;
+  const positioned = rows
+    .map((row) => ({
+      row,
+      cy: Number(yScale(row.label, { position: 'middle' })),
+      xFrom: Number(xScale(row.from.value)),
+      xTo: Number(xScale(row.to.value)),
+    }))
+    .filter((p) => Number.isFinite(p.cy) && Number.isFinite(p.xFrom) && Number.isFinite(p.xTo));
+  return (
+    <ZIndexLayer zIndex={DefaultZIndexes.label}>
+      <g data-role="dumbbell-canvas">
+        {positioned.map(({ row, cy, xFrom, xTo }) => {
+          const fromIsLeft = xFrom <= xTo;
+          const ends: Array<{ end: DumbbellEnd; x: number; side: 'from' | 'to'; leftOf: boolean }> = [
+            { end: row.from, x: xFrom, side: 'from', leftOf: fromIsLeft },
+            { end: row.to, x: xTo, side: 'to', leftOf: !fromIsLeft },
+          ];
+          return (
+            <g key={row.key} data-role="dumbbell-row" data-series-key={row.key} data-series-dimmed={row.dimmed ? 'true' : undefined}>
+              <line x1={xFrom} y1={cy} x2={xTo} y2={cy} stroke={row.color} strokeWidth={2} strokeOpacity={row.opacity} data-role="dumbbell-connector" />
+              {ends.map(({ end, x, side, leftOf }) => (
+                <g key={side}>
+                  <circle
+                    cx={x}
+                    cy={cy}
+                    r={DUMBBELL_DOT_R}
+                    fill={row.color}
+                    fillOpacity={row.opacity}
+                    stroke="var(--card)"
+                    strokeWidth={1.5}
+                    data-role="dumbbell-dot"
+                    data-point={side}
+                    data-result-id={end.resultId}
+                  />
+                  <text
+                    x={leftOf ? x - DUMBBELL_DOT_R - DUMBBELL_LABEL_GAP_PX : x + DUMBBELL_DOT_R + DUMBBELL_LABEL_GAP_PX}
+                    y={cy + 4}
+                    {...VALUE_LABEL_PROPS}
+                    fill="var(--foreground)"
+                    fillOpacity={row.opacity}
+                    textAnchor={leftOf ? 'end' : 'start'}
+                    data-role="dumbbell-label"
+                    data-point={side}
+                    data-label-for={end.resultId}
+                  >
+                    {end.formattedValue}
+                  </text>
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </g>
+    </ZIndexLayer>
   );
 }
 
@@ -820,12 +980,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     if (form === 'line') return lineFormAllowed(plottable, seriesCount);
     if (form === 'area') return areaFormAllowed(plottable, seriesCount);
     if (form === 'hbar') return hbarFormAllowed(plottable);
-    // Own-data chart-fit parity (Task 1): the SAME shape guards chart.tsx's
-    // canUseSlope/canUseHeatmap read, over `plottable` — the spec that is
-    // actually drawn. This card has no zoom window and no alternate reading,
-    // so unlike chart.tsx there is no separate view spec to guard against:
-    // `activeForm` above already runs `fallbackForm` over this same
-    // `plottable`, which is what keeps `userHeatmapModel`'s throw unreachable.
+    // Own-data chart-fit parity (Tasks 1-2): the SAME shape guards
+    // chart.tsx's canUseDumbbell/canUseSlope/canUseHeatmap read, over
+    // `plottable` — the spec that is actually drawn. This card has no zoom
+    // window and no alternate reading, so unlike chart.tsx there is no
+    // separate view spec to guard against: `activeForm` above already runs
+    // `fallbackForm` over this same `plottable`, which is what keeps
+    // `userHeatmapModel`'s throw unreachable and `buildDumbbellRows` from
+    // ever drawing a half-empty dumbbell.
+    if (form === 'dumbbell') return dumbbellFormAllowed(plottable, seriesCount);
     if (form === 'slope') return slopeFormAllowed(plottable, seriesCount);
     if (form === 'heatmap') return heatmapFormAllowed(plottable, seriesCount);
     return true;
@@ -837,6 +1000,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         ? t(chartLang, 'chart.formReason.areaMultiSeries')
         : t(chartLang, 'chart.formReason.areaComparison');
     if (form === 'hbar') return t(chartLang, 'chart.formReason.hbarTimeSeries');
+    if (form === 'dumbbell') return t(chartLang, 'chart.dumbbellDisabledReason');
     if (form === 'slope') return t(chartLang, 'chart.slopeDisabledReason');
     if (form === 'heatmap') return t(chartLang, 'chart.heatmapDisabledReason');
     return undefined;
@@ -1006,6 +1170,31 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     return dimmedByUser ? 0.35 : dimmedByHighlight ? 0.25 : 1;
   };
   const dimmedFor = (s: SeriesMeta): boolean => state.dimmedKeys.has(s.key) || (state.highlightedKey !== null && state.highlightedKey !== s.key);
+  // Own-data chart-fit parity (Task 2): the dumbbell's OWN row model — one
+  // row per series from chart.tsx's exported `buildDumbbellRows` over the
+  // SAME `plottable` every other form here reads (so `activeForm`'s guard
+  // and the rows it draws can never disagree), joined to `seriesMeta` on the
+  // shared `s${i}` key for colour and to this card's `opacityFor`/`dimmedFor`
+  // exactly like the line and bar branches. Hidden rows are DROPPED, order
+  // kept (`visibleSeries`' own rule). The category-axis width and the
+  // x-axis padding are sized over ALL rows — chart.tsx's `hbarYAxisWidth`/
+  // `dumbbellLabelPadPx` rule, through the same exported `labelWidthPx`
+  // estimate — so hiding a series never shifts the rows that stay.
+  const seriesMetaByKey = new Map(seriesMeta.map((s) => [s.key, s]));
+  const dumbbellRowsAll = buildDumbbellRows(plottable).flatMap((row): UserDumbbellRow[] => {
+    const meta = seriesMetaByKey.get(row.key);
+    return meta === undefined ? [] : [{ ...row, color: meta.color, opacity: opacityFor(meta), dimmed: dimmedFor(meta) }];
+  });
+  const visibleDumbbellRows = dumbbellRowsAll.filter((row) => !state.hiddenKeys.has(row.key));
+  const longestDumbbellRowLabel = dumbbellRowsAll.reduce((longest, row) => (row.label.length > longest.length ? row.label : longest), '');
+  const dumbbellYAxisWidth = Math.min(160, Math.max(48, labelWidthPx(longestDumbbellRowLabel)));
+  const longestDumbbellValue = dumbbellRowsAll.reduce((longest, row) => {
+    for (const end of [row.from, row.to]) {
+      if (end.formattedValue.length > longest.length) longest = end.formattedValue;
+    }
+    return longest;
+  }, '');
+  const dumbbellLabelPadPx = longestDumbbellValue ? labelWidthPx(longestDumbbellValue) : 8;
   const xLabelProps = {
     angle: pres.xLabels === 'tilted' ? -45 : 0,
     textAnchor: pres.xLabels === 'tilted' ? ('end' as const) : ('middle' as const),
@@ -1250,6 +1439,45 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
                   {showValueLabels ? valueLabels(s.key, 'right') : null}
                 </Bar>
               ))}
+            </BarChart>
+          ) : activeForm === 'dumbbell' ? (
+            // Own-data chart-fit parity (Task 2): the dumbbell form —
+            // chart.tsx's own branch, mirrored (see UserDumbbellOverlay). The
+            // SAME category-vs-number shell as the hbar branch above (the
+            // series on the category axis, the number axis from zero with
+            // no invented ticks, the same grid semantics) but with NO `<Bar>`
+            // at all: nothing on a dumbbell is a bar. The axes and grid exist
+            // only to settle the coordinate system; the overlay reads those
+            // settled scales and draws every row itself. No <Tooltip>:
+            // Recharts builds a tooltip's payload from the chart's graphical
+            // items, of which this branch has none — and every value is
+            // already permanently labelled beside its dot. `dataKey="range"`
+            // is the row's own [min, max] value pair, used ONLY to size the
+            // domain (chart.tsx's DumbbellRow); the x-axis `padding` reserves
+            // label room inside the plot without touching that domain.
+            <BarChart layout="vertical" data={visibleDumbbellRows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
+              {pres.grid !== 'none' ? <CartesianGrid {...GRID_LINE_PROPS} vertical horizontal={pres.grid === 'both'} /> : null}
+              <XAxis
+                type="number"
+                dataKey="range"
+                domain={[0, 'auto']}
+                padding={{ left: dumbbellLabelPadPx, right: dumbbellLabelPadPx }}
+                tick={false}
+                stroke={AXIS_COLOR}
+                axisLine={pres.axisLines === 'shown'}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={dumbbellYAxisWidth}
+                interval={0}
+                tick={UserCategoryAxisTick}
+                stroke={AXIS_COLOR}
+                axisLine={baselineAxisLine(pres)}
+                tickLine={pres.axisLines === 'shown'}
+              />
+              <UserDumbbellOverlay rows={visibleDumbbellRows} />
             </BarChart>
           ) : (
             <BarChart data={rows} margin={{ top: 16, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>

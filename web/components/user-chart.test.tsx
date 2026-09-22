@@ -282,7 +282,7 @@ describe('UserChartView — the form switch (co-pilot phase 2)', () => {
   // an on-screen control, and the control SAYS which kind it is.
   it('marks every form tab with data-command-kind="setForm"', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
-    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling', 'Warmtekaart']) {
+    for (const name of ['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']) {
       expect(screen.getByRole('tab', { name, hidden: true })).toHaveAttribute('data-command-kind', 'setForm');
     }
   });
@@ -698,9 +698,9 @@ describe('UserChartView — slope + heatmap (own-data chart-fit parity, Task 1)'
     expect(document.getElementById(describedById!)!.textContent).toBe(reason);
   }
 
-  it('the two new tabs trail Tabel in the scorer\'s own fixed order: Helling, Warmtekaart', () => {
+  it('the phase-5 trio trails Tabel in the scorer\'s own fixed order: Dumbbell (Task 2), Helling, Warmtekaart', () => {
     render(<UserChartView spec={twoSeriesSpec()} />);
-    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Helling', 'Warmtekaart']);
+    expect(screen.getAllByRole('tab').map((el) => el.textContent)).toEqual(['Lijn', 'Vlak', 'Staaf', 'Liggend', 'Tabel', 'Dumbbell', 'Helling', 'Warmtekaart']);
   });
 
   it('a 2-series × 2-point spec offers Helling enabled; selecting it draws the line branch at exactly two moments', () => {
@@ -982,6 +982,339 @@ describe('UserChartView — slope + heatmap (own-data chart-fit parity, Task 1)'
       expect(row.querySelectorAll('[role="rowheader"]')).toHaveLength(1);
       expect(row.querySelectorAll('[role="cell"]')).toHaveLength(2);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Own-data chart-fit parity (plan 2026-09-22, Task 2): the Dumbbell tab.
+// Unlike Helling this is genuinely NEW drawing on this card: a
+// `BarChart layout="vertical"` shell with no <Bar>, and `UserDumbbellOverlay`
+// (chart.tsx's DumbbellOverlay, mirrored — its header comment says why it is
+// a copy and not a shared import) reading Recharts' own settled scales and
+// drawing each row's connector, two dots and two labels itself. Mirrors
+// chart.test.tsx's 'ChartView — dumbbell form (phase 5, Task 3)' block over
+// this card's own fixtures: these tests pin the REAL rendered geometry — dot
+// positions linear in the values and aligned with Recharts' own axis ticks
+// — plus the honesty bindings (each label is its point's own formattedValue,
+// bound via data-label-for), never just "it rendered".
+//   twoSeriesSpec()          — 2 series × 2 years (40→42, 20→24): allowed
+//   twoSeriesThreeYearSpec() — 2 series × 3 years: disallowed
+//   spec()                   — 1 series × 1 point: disallowed
+// ---------------------------------------------------------------------------
+describe('UserChartView — dumbbell (own-data chart-fit parity, Task 2)', () => {
+  const DUMBBELL_REASON = 'Beschikbaar zodra minstens twee reeksen elk precies een begin- en een eindwaarde hebben.';
+  const SLOPE_REASON = 'Beschikbaar zodra je precies twee momenten vergelijkt.';
+  // Scoped to this card's own export container: a CBS card and an own-data
+  // card can share a page, and the dumbbell's data-roles are the same on
+  // both (ADR 037 H2 — a locator must never confuse the two).
+  const DOT = '[data-testid="user-chart-container"] svg [data-role="dumbbell-dot"]';
+  const LABEL = '[data-testid="user-chart-container"] svg [data-role="dumbbell-label"]';
+  const CONNECTOR = '[data-testid="user-chart-container"] svg [data-role="dumbbell-connector"]';
+
+  /** twoSeriesSpec with Amsterdam FALLING (80 -> 60); Rotterdam still rises. */
+  function fallingSpec(): UserChartSpec {
+    const s = twoSeriesSpec();
+    s.series[0]!.points = [
+      point({ rowRef: 'r1:c1', xKey: '2023', xLabel: '2023', value: 80, formattedValue: '80,0', sourceText: '80,0' }),
+      point({ rowRef: 'r2:c1', xKey: '2024', xLabel: '2024', value: 60, formattedValue: '60,0', sourceText: '60,0' }),
+    ];
+    return s;
+  }
+  /** twoSeriesSpec with Rotterdam's 2024 cell empty in the file. */
+  function nullCellSpec(): UserChartSpec {
+    const s = twoSeriesSpec();
+    s.series[1]!.points[1] = point({ rowRef: 'r2:c2', xKey: '2024', xLabel: '2024', value: null, formattedValue: null, sourceText: '', reason: 'leeg in bron' });
+    return s;
+  }
+  function dot(container: HTMLElement, rowRef: string): SVGCircleElement {
+    const el = container.querySelector<SVGCircleElement>(`${DOT}[data-result-id="${rowRef}"]`);
+    expect(el, `no dumbbell dot for ${rowRef}`).not.toBeNull();
+    return el!;
+  }
+  function label(container: HTMLElement, rowRef: string): SVGTextElement {
+    const el = container.querySelector<SVGTextElement>(`${LABEL}[data-label-for="${rowRef}"]`);
+    expect(el, `no dumbbell label for ${rowRef}`).not.toBeNull();
+    return el!;
+  }
+  function row(container: HTMLElement, key: string): Element {
+    const el = container.querySelector(`[data-testid="user-chart-container"] svg [data-role="dumbbell-row"][data-series-key="${key}"]`);
+    expect(el, `no dumbbell row for ${key}`).not.toBeNull();
+    return el!;
+  }
+  function tick(container: HTMLElement, name: string): Element {
+    const el = [...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="category-axis-tick"]')].find((t) => t.textContent === name);
+    expect(el, `no category-axis tick for ${name}`).toBeDefined();
+    return el!;
+  }
+  const num = (el: Element, attr: string): number => Number(el.getAttribute(attr));
+  function expectDisabledWithReason(tab: HTMLElement, reason: string): void {
+    expect(tab).toBeDisabled();
+    expect(tab).toHaveAttribute('title', reason);
+    const describedById = tab.getAttribute('aria-describedby');
+    expect(describedById).toBeTruthy();
+    const hint = document.getElementById(describedById!);
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveClass('sr-only');
+    expect(hint!.textContent).toBe(reason);
+  }
+
+  it('a 2-series × 2-point spec offers Dumbbell enabled; selecting it draws two bound dots per row and no bar, line or tooltip — still a chart form, with its export container, Style trigger and legend', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Dumbbell' });
+    expect(tab).not.toBeDisabled();
+    expect(tab).not.toHaveAttribute('title');
+    expect(tab).not.toHaveAttribute('aria-describedby');
+    // The line form mounts a tooltip; the dumbbell deliberately does not.
+    expect(container.querySelector('.recharts-tooltip-wrapper')).not.toBeNull();
+
+    fireEvent.click(tab);
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'false');
+    // The shell carries no graphical item at all — nothing on a dumbbell is
+    // a bar, and no line is drawn through Recharts either — and no tooltip,
+    // which would have nothing to build its payload from.
+    expect(container.querySelector('.recharts-bar')).toBeNull();
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+    expect(container.querySelector('.recharts-line-curve')).toBeNull();
+    expect(container.querySelector('.recharts-area')).toBeNull();
+    expect(container.querySelector('.recharts-tooltip-wrapper')).toBeNull();
+
+    // Exactly four dots, one per real point, each bound to its rowRef;
+    // exactly one connector per row, keyed like every other form's series.
+    const dots = [...container.querySelectorAll(DOT)];
+    expect(dots.map((d) => d.getAttribute('data-result-id')).sort()).toEqual(['r1:c1', 'r1:c2', 'r2:c1', 'r2:c2']);
+    const rows = [...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="dumbbell-row"]')];
+    expect(rows.map((r) => r.getAttribute('data-series-key'))).toEqual(['s0', 's1']);
+    expect(container.querySelectorAll(CONNECTOR)).toHaveLength(2);
+    // A chart form: the frame's export container holds the drawing (a
+    // PNG/SVG download gets the dots), and the chart-only chrome is there.
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reeksen' })).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="user-heatmap-grid"]')).toBeNull();
+    expect(container.querySelector('table')).toBeNull();
+  });
+
+  it('every label is its point\'s OWN formattedValue, bound via data-label-for; the category axis carries the series labels verbatim (U9); the whole card passes the digit scan', () => {
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(label(container, 'r1:c1').textContent).toBe('40,0');
+    expect(label(container, 'r2:c1').textContent).toBe('42,0');
+    expect(label(container, 'r1:c2').textContent).toBe('20,0');
+    expect(label(container, 'r2:c2').textContent).toBe('24,0');
+    expect(container.querySelectorAll(LABEL)).toHaveLength(4);
+    expect([...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="category-axis-tick"]')].map((el) => el.textContent)).toEqual([
+      'Amsterdam',
+      'Rotterdam',
+    ]);
+    // The number axis draws no ticks of its own (`tick={false}`): every
+    // visible digit on the card is a dot label or the footer, and each
+    // traces to a spec string.
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('geometry: dot x-positions are linear in the values from a zero-anchored domain, both ends of a row sit on that row\'s own axis tick, and the connector joins the two dots', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    const am23 = dot(container, 'r1:c1'); // 40
+    const am24 = dot(container, 'r2:c1'); // 42
+    const rt23 = dot(container, 'r1:c2'); // 20
+    const rt24 = dot(container, 'r2:c2'); // 24
+
+    // Ordered left-to-right exactly as the values order (20 < 24 < 40 < 42).
+    expect(num(rt23, 'cx')).toBeLessThan(num(rt24, 'cx'));
+    expect(num(rt24, 'cx')).toBeLessThan(num(am23, 'cx'));
+    expect(num(am23, 'cx')).toBeLessThan(num(am24, 'cx'));
+    // Linear: Rotterdam's 4 value-units span exactly twice the pixels
+    // Amsterdam's 2 do, and the 20 units between the two 2023 dots span
+    // five times Rotterdam's 4.
+    const pxPer2 = num(am24, 'cx') - num(am23, 'cx');
+    const pxPer4 = num(rt24, 'cx') - num(rt23, 'cx');
+    expect(pxPer2).toBeGreaterThan(0);
+    expect(pxPer4 / pxPer2).toBeCloseTo(2, 6);
+    expect((num(am23, 'cx') - num(rt23, 'cx')) / pxPer4).toBeCloseTo(5, 6);
+    // A zero-anchored domain (hbar's own [0, 'auto']): value 0 sits to the
+    // LEFT of every dot yet inside the plot — never past the leftmost dot.
+    const xAtZero = num(rt23, 'cx') - 20 * (pxPer4 / 4);
+    expect(xAtZero).toBeLessThan(num(rt23, 'cx'));
+    expect(xAtZero).toBeGreaterThan(0);
+
+    // Both dots of a row share one y — the band CENTRE, which is exactly
+    // where Recharts placed that row's own category tick
+    // (UserCategoryAxisTick renders at the tick's y, +4 dy for baseline
+    // alignment).
+    expect(num(am23, 'cy')).toBe(num(am24, 'cy'));
+    expect(num(rt23, 'cy')).toBe(num(rt24, 'cy'));
+    expect(num(am23, 'cy')).not.toBe(num(rt23, 'cy'));
+    expect(num(am23, 'cy')).toBeCloseTo(num(tick(container, 'Amsterdam'), 'y'), 6);
+    expect(num(rt23, 'cy')).toBeCloseTo(num(tick(container, 'Rotterdam'), 'y'), 6);
+
+    // The connector runs between the two dots of its row, at their y.
+    const line = row(container, 's0').querySelector('[data-role="dumbbell-connector"]')!;
+    expect(num(line, 'x1')).toBe(num(am23, 'cx'));
+    expect(num(line, 'x2')).toBe(num(am24, 'cx'));
+    expect(num(line, 'y1')).toBe(num(am23, 'cy'));
+    expect(num(line, 'y2')).toBe(num(am23, 'cy'));
+
+    // Labels: the leftmost dot's label sits to its left (end-anchored), the
+    // rightmost dot's to its right (start-anchored) — on the dot's own y.
+    const l23 = label(container, 'r1:c1');
+    const l24 = label(container, 'r2:c1');
+    expect(l23.getAttribute('text-anchor')).toBe('end');
+    expect(num(l23, 'x')).toBeLessThan(num(am23, 'cx'));
+    expect(l24.getAttribute('text-anchor')).toBe('start');
+    expect(num(l24, 'x')).toBeGreaterThan(num(am24, 'cx'));
+    expect(num(l23, 'y')).toBe(num(am23, 'cy') + 4);
+  });
+
+  it('a row whose value FELL draws its start dot on the right (label side follows the pixel order); no label ever carries a provisional suffix on this tier', () => {
+    const s = fallingSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    const from = dot(container, 'r1:c1'); // 80
+    const to = dot(container, 'r2:c1'); // 60
+    expect(num(to, 'cx')).toBeLessThan(num(from, 'cx'));
+    expect(label(container, 'r2:c1').getAttribute('text-anchor')).toBe('end');
+    expect(label(container, 'r1:c1').getAttribute('text-anchor')).toBe('start');
+    expect(label(container, 'r1:c1').textContent).toBe('80,0');
+    expect(label(container, 'r2:c1').textContent).toBe('60,0');
+    // Rotterdam rose (20 -> 24): its start dot is the left one.
+    expect(num(dot(container, 'r1:c2'), 'cx')).toBeLessThan(num(dot(container, 'r2:c2'), 'cx'));
+    // No provisional/definitief concept on this tier (ADR 037 D7): every
+    // label is the bare formattedValue, never with chart.tsx's ' *' suffix.
+    for (const el of container.querySelectorAll(LABEL)) expect(el.textContent).not.toMatch(/\*/);
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('hiding a series via the legend drops its row entirely (no dots, no connector), order kept; ⌘Z brings it back', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(container.querySelector(`${DOT}[data-result-id="r1:c2"]`)).toBeNull();
+    expect(container.querySelector(`${DOT}[data-result-id="r2:c2"]`)).toBeNull();
+    expect(container.querySelectorAll(DOT)).toHaveLength(2);
+    expect(container.querySelectorAll(CONNECTOR)).toHaveLength(1);
+    expect(row(container, 's0')).toBeInTheDocument();
+    expect(screen.getByText('1 van 2 reeksen verborgen')).toBeInTheDocument();
+
+    fireEvent.keyDown(container.firstElementChild!, { key: 'z', metaKey: true });
+    expect(container.querySelectorAll(DOT)).toHaveLength(4);
+    expect([...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="dumbbell-row"]')].map((r) => r.getAttribute('data-series-key'))).toEqual(['s0', 's1']);
+  });
+
+  it('highlighting a series dims the other row to 0.25 (dots, connector and labels), and the legend\'s own Dim keeps a row at 0.35 — this card\'s two levels, never chart.tsx\'s single one', () => {
+    const first = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Markeer Amsterdam' }));
+    const dimmed = row(first.container, 's1');
+    expect(dimmed).toHaveAttribute('data-series-dimmed', 'true');
+    expect(dimmed.querySelector('[data-role="dumbbell-connector"]')).toHaveAttribute('stroke-opacity', '0.25');
+    for (const d of dimmed.querySelectorAll('[data-role="dumbbell-dot"]')) expect(d).toHaveAttribute('fill-opacity', '0.25');
+    for (const l of dimmed.querySelectorAll('[data-role="dumbbell-label"]')) expect(l).toHaveAttribute('fill-opacity', '0.25');
+    const kept = row(first.container, 's0');
+    expect(kept).not.toHaveAttribute('data-series-dimmed');
+    expect(kept.querySelector('[data-role="dumbbell-connector"]')).toHaveAttribute('stroke-opacity', '1');
+    // Dimmed is not hidden: still four dots.
+    expect(first.container.querySelectorAll(DOT)).toHaveLength(4);
+    first.unmount();
+
+    const second = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    fireEvent.click(screen.getByRole('button', { name: /Dim Amsterdam/ }));
+    const readerDimmed = row(second.container, 's0');
+    expect(readerDimmed).toHaveAttribute('data-series-dimmed', 'true');
+    expect(readerDimmed.querySelector('[data-role="dumbbell-connector"]')).toHaveAttribute('stroke-opacity', '0.35');
+    for (const d of readerDimmed.querySelectorAll('[data-role="dumbbell-dot"]')) expect(d).toHaveAttribute('fill-opacity', '0.35');
+    expect(row(second.container, 's1').querySelector('[data-role="dumbbell-connector"]')).toHaveAttribute('stroke-opacity', '1');
+  });
+
+  it('a null cell disables Dumbbell with its reason for pointer and screen reader (sr-only, exactly once); a click does nothing; Helling shares the rule with its own wording; the table still shows the gap', () => {
+    render(<UserChartView spec={nullCellSpec()} />);
+    const tab = screen.getByRole('tab', { name: 'Dumbbell' });
+    expectDisabledWithReason(tab, DUMBBELL_REASON);
+    expect(screen.getAllByText(DUMBBELL_REASON)).toHaveLength(1);
+    fireEvent.click(tab);
+    expect(screen.getByRole('tab', { name: 'Lijn' })).toHaveAttribute('aria-selected', 'true');
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Helling' }), SLOPE_REASON);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('three x values per series and a single series both disable Dumbbell with the same reason', () => {
+    const { unmount } = render(<UserChartView spec={twoSeriesThreeYearSpec()} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Dumbbell' }), DUMBBELL_REASON);
+    unmount();
+    render(<UserChartView spec={spec({ series: [twoSeriesSpec().series[0]!] })} />);
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Dumbbell' }), DUMBBELL_REASON);
+  });
+
+  it('offers no difference/average overlay controls in Dumbbell form (they only ever draw on line/area), even with an edit context', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    expect(screen.getByRole('button', { name: 'Verschil aanduiden' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(screen.queryByRole('button', { name: 'Verschil aanduiden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Gemiddelde tonen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
+  });
+
+  it('switching to Dumbbell then Undo returns to the prior form through the existing setForm history', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll(DOT)).toHaveLength(4);
+    expect(container.querySelector('.recharts-bar-rectangle')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    expect(container.querySelector(DOT)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opnieuw' }));
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll(DOT)).toHaveLength(4);
+  });
+
+  // This card's own version of chart.test.tsx's alternate-reading fallback
+  // (the same shape as the Warmtekaart test above): a data command can hand
+  // the card a spec the dumbbell cannot honestly draw. `activeForm` runs
+  // `fallbackForm` over that very spec, so the choice falls back (dumbbell
+  // -> bar) with the tab disabled and explained — never an empty axes-only
+  // shell — and Undo (a cache hit, one server call in total) brings the
+  // dumbbell straight back because the reader's own choice was never
+  // discarded.
+  it('a data edit to three x values falls back to a bar — never an empty axes-only shell — and Undo brings the dumbbell back', async () => {
+    datasetActions.renderDatasetInstruction.mockResolvedValue({ kind: 'ok', chart: twoSeriesThreeYearSpec() });
+    const { container } = render(
+      <ChartStyleProvider initial={null}>
+        <UserChartView spec={twoSeriesSpec()} edit={editContext()} />
+      </ChartStyleProvider>,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Dumbbell' }));
+    expect(container.querySelectorAll(DOT)).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data' }));
+    fireEvent.change(screen.getByLabelText('Samenvatten'), { target: { value: 'sum' } });
+
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Staaf' })).toHaveAttribute('aria-selected', 'true'));
+    expect(container.querySelector('.recharts-bar-rectangle')).not.toBeNull();
+    expect(container.querySelector(DOT)).toBeNull();
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Dumbbell' }), DUMBBELL_REASON);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ongedaan maken' }));
+    await waitFor(() => expect(container.querySelectorAll(DOT)).toHaveLength(4));
+    expect(screen.getByRole('tab', { name: 'Dumbbell' })).toHaveAttribute('aria-selected', 'true');
+    expect(datasetActions.renderDatasetInstruction).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the English disabled reason; the tab word itself is the same in both languages', () => {
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={nullCellSpec()} />
+      </LangProvider>,
+    );
+    expectDisabledWithReason(screen.getByRole('tab', { name: 'Dumbbell' }), 'Available once at least two series each have exactly a start and an end value.');
   });
 });
 
