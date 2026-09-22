@@ -1798,6 +1798,58 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- wholePartRowRefs/wholeVerificationKey (and the pieVerificationRows/rows/visibleSeries they derive from) recompute together with activeSpec/state.hiddenKeys every render (see the comment above); depending on those two instead of the fresh values avoids re-fetching on every unrelated re-render.
   }, [activeSpec, state.hiddenKeys, activeForm, state.wholeReferenceRowRef, state.instruction, datasetId]);
+  // Keyboard focus survives a designation (session 124; Task 4 minor M2,
+  // confirmed in a real browser: after Enter on a slice/segment, focus fell
+  // to <body>). The cause is inside Recharts, not this card: Pie/Bar key
+  // their drawn items on an "animation id" that changes whenever the
+  // component receives a fresh props object — i.e. on EVERY re-render — so
+  // each render replaces every slice/segment element, and a removed element
+  // takes focus with it. Designating always re-renders (the mark changes),
+  // and so does the verdict landing, so memoising the shape functions
+  // cannot prevent it. Instead: remember which designation control had
+  // focus, and when the chart's DOM changes while focus has fallen to
+  // <body>, put it back on the control with the same rowRef. A real focus
+  // move (Tab away, a click elsewhere) clears the memory first, so this
+  // never steals focus the reader moved on purpose.
+  const focusedWholeRowRef = useRef<string | null>(null);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!wholeForm || container === null) return;
+    const isDesignation = (target: EventTarget | null): target is Element =>
+      target instanceof Element && target.getAttribute('data-command-kind') === 'setWholeReference';
+    const onFocusIn = (event: FocusEvent): void => {
+      focusedWholeRowRef.current = isDesignation(event.target) ? event.target.getAttribute('data-result-id') : null;
+    };
+    // A focusout from an element Recharts is REMOVING must not count as the
+    // reader moving on — only one from an element still in the page does.
+    const onFocusOut = (event: FocusEvent): void => {
+      if (isDesignation(event.target) && event.target.isConnected && event.relatedTarget !== null) focusedWholeRowRef.current = null;
+    };
+    const onPointerDown = (event: PointerEvent): void => {
+      if (!isDesignation(event.target)) focusedWholeRowRef.current = null;
+    };
+    const observer = new MutationObserver(() => {
+      const rowRef = focusedWholeRowRef.current;
+      if (rowRef === null) return;
+      const active = document.activeElement;
+      if (active !== null && active !== document.body && active.isConnected) return;
+      const target = [...container.querySelectorAll<SVGElement>('[data-command-kind="setWholeReference"]')].find(
+        (el) => el.getAttribute('data-result-id') === rowRef,
+      );
+      target?.focus({ preventScroll: true });
+    });
+    container.addEventListener('focusin', onFocusIn);
+    container.addEventListener('focusout', onFocusOut);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    observer.observe(container, { childList: true, subtree: true });
+    return () => {
+      container.removeEventListener('focusin', onFocusIn);
+      container.removeEventListener('focusout', onFocusOut);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      observer.disconnect();
+      focusedWholeRowRef.current = null;
+    };
+  }, [wholeForm]);
   // The note's state: Task 3's default unless a reference is designated, in
   // which case the check's own outcome decides — still resolving (or a bare
   // `ok:false` refusal, e.g. a stale designation after a data edit) reads

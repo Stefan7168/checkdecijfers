@@ -502,6 +502,45 @@ test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole
     expect(await pieLabels.allTextContents()).toEqual(['40', '30']);
   });
 
+  // Keyboard focus through a designation (session 124, Task 4 minor M2).
+  // Recharts replaces every drawn slice/segment element on each re-render
+  // (its items are keyed on a per-render animation id), so without the
+  // card's focus restore, Enter on a slice dropped focus to <body> — found
+  // by exactly this probe in a real browser before the fix.
+  test('keyboard: Enter designates a pie slice / stack segment and focus stays on it through the verdict; Enter again clears it', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await expect(page.getByRole('button', { name: 'Bestand uploaden' })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles(CSV);
+    const composer = page.getByPlaceholder('Stel een vraag over je data…');
+    await expect(composer).toBeVisible({ timeout: 60_000 });
+    await composer.fill(DIFF_2020_QUESTION);
+    await page.getByRole('button', { name: 'Verstuur' }).click();
+    await expect(page.locator('.recharts-bar-rectangle')).toHaveCount(2, { timeout: 60_000 });
+    const note = page.locator('[data-testid="own-whole-note"]');
+    const focused = () =>
+      page.evaluate(() => {
+        const el = document.activeElement;
+        return { rowRef: el?.getAttribute('data-result-id') ?? null, pressed: el?.getAttribute('aria-pressed') ?? null };
+      });
+    const AMSTERDAM = 'der:difference:r1:c2|r1:c3';
+
+    await page.getByRole('tab', { name: 'Taartdiagram', exact: true }).click();
+    await page.locator(`path.recharts-sector[data-point="value"][data-result-id="${AMSTERDAM}"]`).focus();
+    await page.keyboard.press('Enter');
+    await expect(note).toHaveAttribute('data-state', 'mismatch', { timeout: 15_000 });
+    expect(await focused()).toEqual({ rowRef: AMSTERDAM, pressed: 'true' });
+    await page.keyboard.press('Enter');
+    await expect(note).toHaveAttribute('data-state', 'not_checked');
+    expect(await focused()).toEqual({ rowRef: AMSTERDAM, pressed: 'false' });
+
+    await page.getByRole('tab', { name: 'Gestapeld', exact: true }).click();
+    await page.locator(`rect[data-point="value"][data-result-id="${AMSTERDAM}"]`).focus();
+    await page.keyboard.press('Enter');
+    await expect(note).toHaveAttribute('data-state', 'mismatch', { timeout: 15_000 });
+    expect(await focused()).toEqual({ rowRef: AMSTERDAM, pressed: 'true' });
+  });
+
   const HEATMAP_MESSAGE = 'maak er een warmtekaart van';
 
   test(`"${HEATMAP_MESSAGE}" through the chat draws the same heatmap the tab does, and Undo walks it back`, async ({ page }) => {
