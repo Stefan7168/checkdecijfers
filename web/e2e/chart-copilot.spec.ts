@@ -958,20 +958,35 @@ test.describe.serial('chart co-pilot phase 6 — the donut and a house style thr
 // (setDimmed, setHeadlineOverride, addEraShading, addDerivedOverlay,
 // addGoalLine) became chat-nameable under ONE prompt-version bump, and their
 // fixtures were regenerated ONCE, together (Task 6). All five cases share
-// this chart's spec and capabilities and differ only in the message, so one
-// real round-trip is the proof for the whole regeneration: only an `exact`
-// llm-stub hit replays the era-shading command below — a hash drift on the
-// shared system prompt or capabilities bytes would fall through to the
-// 60-character prefix fallback and replay another two-city fixture, and the
-// chip assertion would fail on the wrong command. Era shading is the richest
-// of the five to watch: map.ts resolves the two period LABELS to CBS period
-// codes and mints the era's id, the client re-validates those codes against
-// the spec it draws, and the band renders as real SVG. One hand-authored
-// fixture (tests/fixtures/chart-copilot/cases.ts, `ERA_SHADING_MESSAGE`) —
-// zero model calls.
+// this chart's spec and capabilities and differ only in the message, so a
+// single real round-trip was originally treated as proof for the whole
+// regeneration: only an `exact` llm-stub hit replays the intended command — a
+// hash drift on the shared system prompt or capabilities bytes would fall
+// through to the 60-character prefix fallback and replay another two-city
+// fixture, and the chip assertion would fail on the wrong command. Era
+// shading was chosen as that one case because it is the richest to watch:
+// map.ts resolves the two period LABELS to CBS period codes and mints the
+// era's id, the client re-validates those codes against the spec it draws,
+// and the band renders as real SVG.
+//
+// #308 (found in the same final whole-branch review that chose era shading):
+// the shared-mechanism argument proves the REQUEST bytes are right for all
+// five, but not that each one's own RENDERING is real — a broken reducer arm
+// or a missing chart-side wire for just one kind would still pass. Closed
+// session 122 (further continuation): the remaining four below, one test
+// each, reusing the exact fixture messages from tests/fixtures/chart-copilot/
+// cases.ts and the same rendering assertions their own PANEL-driven e2e
+// tests above already prove — the only new thing each test proves is that
+// the SAME state change also reaches the chart when triggered from the chat
+// doorway instead of a click, per ADR 056's one-history-two-doorways design.
+// Zero model calls, zero new fixtures (all five cases already existed).
 const ERA_SHADING_MESSAGE = 'Arceer 2021 tot 2023 als herstelperiode';
+const DIM_MESSAGE = 'Dim Rotterdam in plaats van hem te verbergen';
+const HEADLINE_MESSAGE = 'Maak van Amsterdam in 2022 het hoofdcijfer';
+const DERIVED_DIFFERENCE_MESSAGE = 'Laat het verschil zien tussen Amsterdam in 2020 en 2024';
+const GOAL_LINE_MESSAGE = 'Voeg een doellijn toe op 900000';
 
-test.describe.serial('chart co-pilot phase 6 — a panel-only command through the chat', () => {
+test.describe.serial('chart co-pilot phase 6 — the five panel-only commands through the chat', () => {
   test.beforeEach(async ({ context, baseURL }) => {
     await signInAsHarnessUser(context, baseURL!);
   });
@@ -1020,6 +1035,137 @@ test.describe.serial('chart co-pilot phase 6 — a panel-only command through th
     await expect(band).toHaveCount(0);
     await expect(eraEntries).toHaveCount(0);
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
+  });
+
+  test(`"${DIM_MESSAGE}" through the chat dims the series the panel's own Dim button would, and Undo restores it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // The panel's own Dim button (same one the phase-1 "dim a series via the
+    // legend" test above drives by click) reflects the SAME reducer state
+    // regardless of doorway — its `aria-pressed` is the cross-doorway proof.
+    const dimButton = page.getByRole('button', { name: /Dim Rotterdam/ });
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'false');
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DIM_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Serie verzwakt' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+
+    // Dimmed, not hidden: both curves still render, one at reduced opacity
+    // (same assertions the panel-driven test above makes).
+    await expect(page.locator('path[class*="recharts-curve"]')).toHaveCount(2);
+    await expect(page.locator('path[stroke-opacity="0.35"]')).toHaveCount(1);
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'true');
+
+    // A chat edit is an edit like any other (`exact`: the reply strip's own
+    // undo would match too).
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(dimButton).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('path[stroke-opacity="0.35"]')).toHaveCount(0);
+  });
+
+  test(`"${HEADLINE_MESSAGE}" through the chat features the point the panel's own click would, and Undo reverts it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // No default headline for this two-region chart (same premise the
+    // phase-1 "click a point to make it the headline" test above documents).
+    const headlineFigure = page.locator('[data-testid="headline-figure"]');
+    await expect(headlineFigure).not.toBeVisible();
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(HEADLINE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Hoofdcijfer aangepast' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+
+    // The headline now shows the reader-named point specifically — Amsterdam
+    // 2022, 882.633 (REGION_SERIES_SPEC) — not just "some override exists".
+    // First-run finding: the panel's own "Toon standaard hoofdcijfer" toggle
+    // is NOT a state-reflecting control (worth asserting here, wrongly
+    // assumed at first) — chart.tsx's onSetHeadline comment says it renders
+    // only inside the pending-point POPOVER for the point just clicked, so a
+    // chat-driven override (no popover ever opened) correctly never shows
+    // it; data-label-for is the real, doorway-independent proof instead.
+    await expect(headlineFigure).toBeVisible({ timeout: 5000 });
+    await expect(headlineFigure).toContainText('882.633');
+    await expect(headlineFigure.locator('[data-label-for*="GM0363:2022JJ00"]')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Toon standaard hoofdcijfer' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(headlineFigure).not.toBeVisible();
+  });
+
+  test(`"${DERIVED_DIFFERENCE_MESSAGE}" through the chat draws the same computed overlay the panel's picker would, and Undo removes it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(DERIVED_DIFFERENCE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Overlay toegevoegd' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+
+    // The panel's own remove chip appears (shared state, same as the
+    // picker-driven "add a difference arrow" test above) and the ACTUAL
+    // server-computed value reaches the SVG label — 931.298 - 872.757 =
+    // 58.541, the same real cells and the same formatting that test proves,
+    // now reached from the chat instead of two clicks.
+    await expect(page.getByRole('button', { name: /^×/ })).toBeVisible();
+    await expect(page.getByText('58.541')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.recharts-reference-line line[data-label-for]')).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^×/ })).not.toBeVisible();
+    await expect(page.getByText('58.541')).not.toBeVisible();
+  });
+
+  test(`"${GOAL_LINE_MESSAGE}" through the chat draws the same goal line the panel's own form would, and Undo removes it`, async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nieuwe chat' }).first().click();
+    await ask(page, `!!intent ${REGION_SERIES_INTENT}`);
+    await expect(page.locator('.recharts-line-curve')).toHaveCount(2, { timeout: 60_000 });
+
+    // Scoped by the delete button's own `data-command-kind`, same pattern
+    // the era-shading test above uses for its list (chart-goal-line.tsx
+    // renders `{line.value}: {line.label}` verbatim — no thousands
+    // separator, confirmed by reading the component, not assumed).
+    const goalLineEntries = page.locator('li', { has: page.locator('button[data-command-kind="removeGoalLine"]') });
+    const goalLine = page.locator('.recharts-reference-line');
+    await expect(goalLineEntries).toHaveCount(0);
+
+    const copilot = page.getByRole('group', { name: 'Deze grafiek aanpassen via de chat' });
+    await copilot.getByPlaceholder('Pas deze grafiek aan').fill(GOAL_LINE_MESSAGE);
+    await copilot.getByRole('button', { name: 'Versturen' }).click();
+    await expect(copilot.getByText('Applied one change.')).toBeVisible({ timeout: 60_000 });
+    await expect(copilot.getByRole('button', { name: 'Doellijn toegevoegd' })).toBeVisible();
+    await expect(copilot.getByText('Kostte 10 credits')).toBeVisible();
+
+    // The value is the one the message itself contains (900000, copied
+    // verbatim per goalLineValueInMessage — never computed), the label is
+    // the model's own free-of-digits text, and the visual line renders on
+    // the chart (same assertion the panel-driven goal-line test above
+    // makes) — outside the export container, the label text stays excluded.
+    await expect(goalLineEntries).toHaveCount(1);
+    await expect(goalLineEntries).toContainText('900000: Doel');
+    await expect(goalLine).toHaveCount(1, { timeout: 5_000 });
+    const chartContainer = page.locator('[data-testid="chart-container"]');
+    await expect(chartContainer.locator(':has-text("Doel")')).not.toBeVisible();
+
+    await page.getByRole('button', { name: 'Ongedaan maken', exact: true }).click();
+    await expect(goalLineEntries).toHaveCount(0);
+    await expect(goalLine).toHaveCount(0);
   });
 });
 
