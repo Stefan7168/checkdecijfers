@@ -1379,7 +1379,7 @@ function formatOverlayValue(
  * or a unit list, which cannot be pre-translated word-for-word without
  * guessing at their content — those (and anything else unrecognised) fall
  * back to one generic Dutch/English sentence via `errorGeneric`. */
-const KNOWN_DERIVATION_REFUSAL_KEYS: Record<string, MessageKey> = {
+export const KNOWN_DERIVATION_REFUSAL_KEYS: Record<string, MessageKey> = {
   'only a CBS/Eurostat chart can be re-derived this way': 'chart.derived.errorUnavailableChart',
   'this answer is not available': 'chart.derived.errorAnswerUnavailable',
   'this answer has no chart to derive from': 'chart.derived.errorNoChart',
