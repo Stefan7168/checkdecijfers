@@ -18,7 +18,7 @@ import {
   zeroRowsClarificationText,
 } from './templates.ts';
 import { DATASET_TURN_ENVELOPE_VERSION, redactedDatasetEnvelope, REDACTED_DATASET_TEXT, toClientInstruction } from './types.ts';
-import type { DatasetTurnRecord, UserDataset } from './types.ts';
+import type { DatasetTurnRecord, UserChartSpec, UserDataset } from './types.ts';
 
 /** JSON.stringify with recursively sorted object keys — the same shape as
  * src/answer/llm/client.ts's stableStringify, duplicated here rather than
@@ -81,6 +81,27 @@ function checkEnvelopeIntegrity(record: DatasetTurnRecord, problems: string[]): 
   }
 }
 
+/** #314 (session 124) added one field to a chart point, `incomplete: true`
+ * — a DISCLOSURE flag (the value was computed over fewer cells than its
+ * group has), never a value. A turn stored before that change has no such
+ * key anywhere, yet its rebuild now carries it wherever it applies, so the
+ * byte-for-byte check above would report every such pre-#314 row as a
+ * mismatch. This accepts exactly that case and nothing wider: the STORED
+ * chart contains no `incomplete` key at all, and the rebuild matches it
+ * byte for byte once that one key is removed from its points. Every value,
+ * label, rowRef and formatted string is still compared exactly. */
+function isPreIncompleteFlagMatch(rebuilt: UserChartSpec, stored: unknown): boolean {
+  if (stableStringify(stored).includes('"incomplete":')) return false;
+  const stripped: UserChartSpec = {
+    ...rebuilt,
+    series: rebuilt.series.map((series) => ({
+      ...series,
+      points: series.points.map(({ incomplete: _incomplete, ...point }) => point),
+    })),
+  };
+  return stableStringify(stripped) === stableStringify(stored);
+}
+
 function checkChartReconstruction(record: DatasetTurnRecord, dataset: UserDataset, problems: string[]): void {
   const envelope = record.envelope as Extract<DatasetTurnRecord['envelope'], { kind: 'chart' }>;
 
@@ -101,7 +122,10 @@ function checkChartReconstruction(record: DatasetTurnRecord, dataset: UserDatase
   // stored chart, byte for byte — H1/H2's whole point made mechanical.
   try {
     const rebuilt = buildUserChartSpec(dataset, envelope.instruction);
-    if (stableStringify(rebuilt) !== stableStringify(envelope.chart)) {
+    if (
+      stableStringify(rebuilt) !== stableStringify(envelope.chart) &&
+      !isPreIncompleteFlagMatch(rebuilt, envelope.chart)
+    ) {
       problems.push('chart spec does not re-derive from the current dataset + stored instruction');
     }
   } catch (error) {

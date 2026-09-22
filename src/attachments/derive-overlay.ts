@@ -93,6 +93,8 @@ export interface ResolvedPoint {
   decimals: number;
   ref: string;
   xSortKey: RawPoint['xSortKey'];
+  /** Carried from execute.ts's ComputedValue.incomplete (#314). */
+  incomplete?: true;
 }
 
 /** Mirrors chart.ts's buildPoint: a point executeInstruction already
@@ -103,7 +105,13 @@ export interface ResolvedPoint {
  * have been built from one, per instruct/schema.ts's own upstream check). */
 function resolvePoint(point: RawPoint, yColumn: ColumnProfile): ResolvedPoint {
   if (point.computed) {
-    return { value: point.computed.value, decimals: point.computed.decimals, ref: point.computed.rowRef, xSortKey: point.xSortKey };
+    return {
+      value: point.computed.value,
+      decimals: point.computed.decimals,
+      ref: point.computed.rowRef,
+      xSortKey: point.xSortKey,
+      ...(point.computed.incomplete ? { incomplete: true as const } : {}),
+    };
   }
   const format = yColumn.type === 'year' ? 'en' : (yColumn.numberFormat ?? 'nl');
   const value = parseNumber(point.yRaw, format);

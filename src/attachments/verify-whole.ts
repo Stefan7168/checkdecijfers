@@ -37,6 +37,14 @@ import { verifyPartsSumToWhole, type PartCell, type VerifyOutcome } from '../que
  * PartCell type explicitly allows this; nothing in verifyPartsSumToWhole
  * reads the field, it exists only for a future consumer). */
 function toPartCell(point: ResolvedPoint | undefined): PartCell {
+  // #314 (session 124; the #312 M3 finding): a point computed over FEWER
+  // cells than its group has (an aggregate that skipped an empty/non-
+  // numeric cell, or anything derived from one) is not a value this check
+  // may add up as if it were complete — it is treated exactly like a
+  // missing one, so verifyPartsSumToWhole's own trusted refusals apply
+  // (`withheld_member` for a part, `missing_whole` for the whole) and the
+  // note reads "can't be checked", never a "Checked" built on a partial sum.
+  if (point?.incomplete) return { value: null, decimals: point.decimals, valueAttribute: null };
   return { value: point?.value ?? null, decimals: point?.decimals ?? 0, valueAttribute: null };
 }
 

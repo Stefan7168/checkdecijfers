@@ -1627,6 +1627,26 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     }),
   );
   const visibleSeries = seriesMeta.filter((s) => !state.hiddenKeys.has(s.key));
+  // #314 (session 124): the points on screen whose value is real arithmetic
+  // over FEWER cells than their group has (execute.ts's `incomplete` — a
+  // sum/mean/min/max that skipped an empty or non-numeric cell, or a share/
+  // difference/%-change built on one). The number itself stays as computed
+  // (spreadsheet semantics); the card names these points under the chart so
+  // a partial total never passes for a complete one (principle c). Labels
+  // are the spec's own strings — the note adds no digit of its own, keeping
+  // the card's whole-DOM digit scan intact.
+  const INCOMPLETE_NOTE_MAX = 3;
+  const incompletePointLabels = activeSpec.series.flatMap((series, i) => {
+    const key = seriesMeta[i]?.key;
+    if (key === undefined || state.hiddenKeys.has(key)) return [];
+    return series.points
+      .filter((p) => p.incomplete === true && p.value !== null)
+      .map((p) => (activeSpec.series.length > 1 ? `${series.label} · ${p.xLabel}` : p.xLabel));
+  });
+  const incompleteNoteLabels =
+    incompletePointLabels.length > INCOMPLETE_NOTE_MAX
+      ? `${incompletePointLabels.slice(0, INCOMPLETE_NOTE_MAX).join('; ')}; …`
+      : incompletePointLabels.join('; ');
   // Returns the opacity value for a series: 0.35 for user-dimmed, 0.25 for
   // highlight-dimmed, 1 otherwise. Replaces the old boolean dimmedFor that only
   // checked highlight state.
@@ -2630,6 +2650,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         <p className={`mt-2 text-xs ${OWN_WHOLE_NOTE[ownWholeNoteState].className}`} data-testid="own-whole-note" data-state={ownWholeNoteState}>
           {t(chartLang, OWN_WHOLE_NOTE[ownWholeNoteState].key, { label: ownWholeNoteLabel })}
           {stackNoShareLabels.length > 0 ? ` ${t(chartLang, 'chart.ownWhole.omittedNoShare', { periods: stackNoShareLabels.join(' · ') })}` : ''}
+        </p>
+      ) : null}
+      {/* #314: the incomplete-values note — same caveat-block placement and
+        * prominence as the whole note above, outside the export container,
+        * present in every form (table included) whenever a visible point is
+        * incomplete. */}
+      {incompletePointLabels.length > 0 ? (
+        <p className="mt-2 text-xs text-warning" data-testid="own-incomplete-note">
+          {t(chartLang, 'chart.ownIncomplete.note', { points: incompleteNoteLabels })}
         </p>
       ) : null}
       <div className="mt-2 flex items-center justify-between gap-2">

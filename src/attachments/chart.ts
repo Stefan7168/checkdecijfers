@@ -42,7 +42,7 @@ function buildPoint(raw: RawPoint, yColumnId: string, yColumn: ColumnProfile): U
   const xLabel = raw.xRaw.trim();
 
   if (raw.computed) {
-    const { value, decimals, rowRef, reason } = raw.computed;
+    const { value, decimals, rowRef, reason, incomplete } = raw.computed;
     return {
       rowRef,
       xKey: xLabel,
@@ -54,6 +54,7 @@ function buildPoint(raw: RawPoint, yColumnId: string, yColumn: ColumnProfile): U
       // no longer corresponds to one cell at all.
       sourceText: rowRef.startsWith('der:') ? raw.yRaw : '',
       ...(reason ? { reason } : {}),
+      ...(incomplete ? { incomplete } : {}),
     };
   }
 

@@ -1350,6 +1350,11 @@ const nl = {
   // which names a DIFFERENT action (line/bar points open the notes draft;
   // a whole-form point instead designates/clears the reader's total).
   'chart.ownWhole.designateAriaLabel': 'Wijs {series}, {period} aan als totaal',
+  // #314 (session 124): names the plotted points computed over fewer cells
+  // than their group has (an empty or non-numeric cell skipped by a sum/
+  // mean/min/max, or a share/difference built on one). `{points}` = the
+  // spec's own labels joined '; ' (a trailing '…' past three). Digit-free.
+  'chart.ownIncomplete.note': 'Let op: niet alle waarden telden mee voor {points} — lege of niet-numerieke cellen worden overgeslagen.',
   // Fix wave (session 124, final-review I2): the SAME slice/segment once it
   // IS the designated total — a toggle button (`aria-pressed`), so its name
   // says what it currently is and what a second click does (clears it),
@@ -2330,6 +2335,7 @@ const en: Messages = {
   'chart.ownWhole.mismatch': "These parts don't add up to {label} — check your selection.",
   'chart.ownWhole.cannotCheck': "Can't be checked: {label} has no value, or one of the parts is missing one.",
   'chart.ownWhole.designateAriaLabel': 'Designate {series}, {period} as the total',
+  'chart.ownIncomplete.note': 'Note: not every value counted towards {points} — empty or non-numeric cells are skipped.',
   'chart.ownWhole.designatedAriaLabel': '{series}, {period} is designated as the total — click to clear',
   'chart.ownWhole.notCheckedReadOnly': 'Not checked against a total.',
 
