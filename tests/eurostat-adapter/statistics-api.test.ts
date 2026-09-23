@@ -218,6 +218,30 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     expect(fetchFn.mock.calls[0]![0]).toBe(fetchFn.mock.calls[1]![0]);
   });
 
+  it('the loadDataset cache key is canonical — the same multi-key slice with keys in a DIFFERENT order still hits the cache (independent review fix)', async () => {
+    // [Important] finding, fixed: loadDataset's cache key used plain
+    // JSON.stringify(slice), which is key-order-sensitive. registerTables
+    // passes a slice exactly as authored in code, but syncTable passes it
+    // back after a round trip through the `cbs_tables.slice` JSONB column,
+    // which does not preserve key order — two calls that are semantically
+    // the SAME slice could serialize differently and miss the cache.
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const sliceKeysInOrderA: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
+    // Same entries, different key insertion order — plain JSON.stringify
+    // would produce a DIFFERENT string for this than for sliceKeysInOrderA.
+    const sliceKeysInOrderB: CbsSlice = { dimensionEquals: { unit: 'PC_ACT', sex: 'T', age: 'Y15-74', s_adj: 'SA' } };
+
+    for await (const _page of source.fetchObservations('eurostat:une_rt_q', sliceKeysInOrderA)) {
+      // draining
+    }
+    for await (const _page of source.fetchObservations('eurostat:une_rt_q', sliceKeysInOrderB)) {
+      // draining
+    }
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
   it('a dimensionEquals pinning "geo" is REFUSED — it would silently coexist with the structural geo sweep', async () => {
     // code-review finding (LOW effort, this branch): dimensionEquals.geo
     // would otherwise sit alongside the ~34-code structural sweep rather

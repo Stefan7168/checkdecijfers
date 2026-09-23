@@ -121,13 +121,23 @@ describe('registerTables/syncTable thread the registered slice into schema + cod
   // note), so this needs no giant arrays.
   const OVER_CAP_DATASET = { id: ['unit', 'geo', 'time'], size: [1, 1000, 1000], dimension: {}, value: {} };
 
+  // Real une_rt_q shape (spec doc): a multi-key dimensionEquals
+  // (`s_adj`/`age`/`sex`/`unit`) — deliberately NOT a single-key slice,
+  // because a single-key object's JSON.stringify is order-invariant by
+  // construction and would never have exercised the cache-key-ordering
+  // bug the independent review found (loadDataset's key used plain
+  // JSON.stringify(slice), which the `cbs_tables.slice` JSONB round-trip
+  // between registerTables and syncTable is not guaranteed to preserve).
   const FILTERED_DATASET = {
     version: '2.0',
     class: 'dataset',
     label: 'Unemployment by sex and age - quarterly data',
-    id: ['unit', 'geo', 'time'],
-    size: [1, 1, 1],
+    id: ['s_adj', 'age', 'sex', 'unit', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1],
     dimension: {
+      s_adj: { category: { index: { SA: 0 }, label: { SA: 'Seasonally adjusted data' } } },
+      age: { category: { index: { 'Y15-74': 0 }, label: { 'Y15-74': 'From 15 to 74 years' } } },
+      sex: { category: { index: { T: 0 }, label: { T: 'Total' } } },
       unit: { category: { index: { PC_ACT: 0 }, label: { PC_ACT: 'Percentage of population in the labour force' } } },
       geo: { category: { index: { NL: 0 }, label: { NL: 'Netherlands' } } },
       time: { category: { index: { '2024-Q1': 0 }, label: { '2024-Q1': '2024-Q1' } } },
@@ -163,12 +173,12 @@ describe('registerTables/syncTable thread the registered slice into schema + cod
     }
   });
 
-  it('WITH a registered slice — registration succeeds, and schema + code lists + observations all come from ONE filtered fetch', async () => {
+  it('WITH a registered MULTI-KEY slice — registration succeeds, and schema + code lists + observations all come from ONE filtered fetch, even after the slice round-trips through the real cbs_tables.slice JSONB column (independent review: the cache-key-ordering fix)', async () => {
     const { db, close } = await createTestDb();
     try {
       const fetchFn = slicedFetchStub();
       const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
-      const slice: CbsSlice = { dimensionEquals: { unit: 'PC_ACT' } };
+      const slice: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
 
       const registered = await registerTables(
         db,
@@ -199,6 +209,9 @@ describe('registerTables/syncTable thread the registered slice into schema + cod
       expect(fetchFn).toHaveBeenCalledTimes(1);
       const calledUrl = fetchFn.mock.calls[0]![0] as string;
       expect(calledUrl).toContain('unit=PC_ACT');
+      expect(calledUrl).toContain('s_adj=SA');
+      expect(calledUrl).toContain('age=Y15-74');
+      expect(calledUrl).toContain('sex=T');
       expect(calledUrl).toContain('geo=');
     } finally {
       await close();

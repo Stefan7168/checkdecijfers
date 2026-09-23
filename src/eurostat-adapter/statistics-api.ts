@@ -49,6 +49,29 @@ function nativeIdFrom(tableId: string): string {
 }
 
 /**
+ * A `JSON.stringify` that recursively sorts object keys (arrays keep their
+ * own order — never resorted) so two objects that are DEEPLY equal but were
+ * built/serialized with keys in a different order produce the IDENTICAL
+ * string. Used only for `loadDataset`'s cache key (see its own comment for
+ * why plain `JSON.stringify` is unsafe there: Postgres jsonb does not
+ * preserve key order across a round trip).
+ */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => canonicalJson(v)).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function canonicalSliceKey(slice: CbsSlice): string {
+  return canonicalJson(slice);
+}
+
+/**
  * Converts a CBS-format `periodFloor` (e.g. '2015JJ00', '2015KW01',
  * '2015MM01' — `src/ingestion/periods.ts`'s grammar, the same one
  * `CbsSlice.periodFloor` is always expressed in) into Eurostat's OWN
@@ -57,9 +80,25 @@ function nativeIdFrom(tableId: string): string {
  * NOT the same target string shape: Eurostat's `sinceTimePeriod` query
  * parameter takes plain 'YYYY' / 'YYYY-Qn' / 'YYYY-MM' — no 'M' prefix on the
  * month, unlike the JSON-stat response's own 'time' category codes (which DO
- * read '2024-M01'; see MONTH_RE in jsonstat.ts). Verified against the brief's
- * exact values (docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md).
+ * read '2024-M01'; see MONTH_RE in jsonstat.ts). The brief's own research
+ * (docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md)
+ * only tested the plain-year (annual) shape live; the quarterly and monthly
+ * shapes below are now ALSO verified live (independent review, 2026-09-23,
+ * against the real public Statistics API — no AI spend, GET only):
+ * - `une_rt_q?...&geo=NL&s_adj=SA&age=Y15-74&sex=T&unit=PC_ACT&sinceTimePeriod=2024-Q2`
+ *   → 9 periods returned, first `2024-Q2`, last `2026-Q2` (confirms the
+ *   quarterly `YYYY-Qn` shape, and that the floor is INCLUSIVE).
+ * - `prc_hicp_manr?...&geo=NL&coicop=CP00&unit=RCH_A&sinceTimePeriod=2025-03`
+ *   → 10 periods returned, first `2025-03`, last `2025-12` (confirms the
+ *   monthly `YYYY-MM` shape — no `M` prefix, as this comment already said —
+ *   and again an inclusive floor).
+ * - `une_rt_q?...&sinceTimePeriod=2024` (plain year, on a QUARTERLY dataset)
+ *   → first period `2024-Q1` (confirms Eurostat accepts the coarser annual
+ *   shape as a floor even on a finer-grained dataset, rounding down to that
+ *   year's first period — not something this adapter currently exploits,
+ *   since `sinceTimePeriodFor` always emits the floor's OWN grain).
  *
+
  * Throws — never silently drops the floor — for anything `parsePeriodCode`
  * doesn't recognise as a valid CBS period code (principle (c): an
  * unconvertible floor must refuse loudly, not quietly fetch unfiloored data).
@@ -199,7 +238,23 @@ export class StatisticsApiSource implements CbsSource {
     // CLIENT-SIDE (see fetchAndParse's own note) so two different slices are
     // two different parsed results even though they hit the same URL —
     // keying on tableId alone would silently reuse an unrelated slice.
-    const key = `${tableId} ${slice ? JSON.stringify(slice) : ''}`;
+    //
+    // [Important] fix (independent review, 2026-09-23, this branch):
+    // `JSON.stringify(slice)` is key-order-sensitive. `registerTables`
+    // passes `table.slice` exactly as authored in code, but `syncTable`
+    // passes `registry.slice`, read back from the `cbs_tables.slice` JSONB
+    // column — and Postgres jsonb does NOT preserve key order. For any
+    // multi-key slice (every real E2a sibling's `dimensionEquals`, e.g.
+    // `{s_adj, age, sex, unit}`), a register-then-sync flow in one process
+    // (`src/ingestion/cli.ts`) could re-serialize the SAME slice with keys
+    // in a different order, MISS this cache, and fetch twice — silently
+    // contradicting the "one underlying fetch" design this cache exists
+    // for. `canonicalSliceKey` below recursively sorts object keys (arrays
+    // keep their order — a `dimensionPrefixes` list is meaningfully
+    // ordered) so two slices that are semantically identical always
+    // produce the identical cache key, regardless of how either one was
+    // constructed or round-tripped through jsonb.
+    const key = `${tableId} ${slice ? canonicalSliceKey(slice) : ''}`;
     let cached = this.cache.get(key);
     if (!cached) {
       cached = this.fetchAndParse(tableId, slice);
