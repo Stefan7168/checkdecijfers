@@ -18,37 +18,28 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 124 close — owner present at the start, then asked
-the session to "continue working autonomously, for hours and hours"; verify against `git log` / `gh pr list`
-before trusting this).**
+**▶ NEXT SESSION STARTS HERE (session 125 in progress, 2026-09-23 — owner present, then "continue working
+autonomously"; verify against `git log` / `gh pr list` before trusting this).**
 
-- **FIRST: four autonomous PRs await the owner's review (#118(b)) — all four locally fully verified, all
-  mergeable against `main` @ `a996d3fa`.** They each touch different rows of `docs/open-questions.md`, so
-  whichever merges second or later may need a quick rebase. In suggested merge order:
-  - **PR #37** — own-data pie/stack: keyboard focus stays on a slice after Enter designates it as the total
-    (it fell to the page body: Recharts remounts every slice on each render), plus a test pinning every
-    hand-written copy of the chart-form list equal. CI green.
-  - **PR #38** — own-data group totals that skipped empty cells are named under the chart instead of passing
-    for complete; the "is this the total?" check refuses on them ([#314](open-questions.md), closes #312 M3).
-    Values unchanged. **Owner veto point:** disclose (the PR) vs. refuse such totals outright. CI green.
-  - **PR #39** — a difference/average overlay naming the same point twice is refused at all three gates (a
-    repeated point skewed an AVERAGE, not only a zero difference); era order by axis position; two drift-guard
-    tests ([#292](open-questions.md)/[#294](open-questions.md)/[#298](open-questions.md)). Rebased after a
-    conflict — CI re-running at close; confirm green before merging.
-  - **PR #40** — the "× remove" chip for an overlay stays visible on bar charts; era list shows "2008 – 2009",
-    not "2008JJ00"; era band follows the theme colour; dead `toggleDim` removed
-    ([#291](open-questions.md)/[#293](open-questions.md)). CI green at close.
+- **LIVE on `main` (session 125): PRs #37–#40 merged** after the owner's approval — keyboard focus kept on a pie
+  slice after designating it the total; own-data group totals that skipped empty cells are named under the chart
+  (owner chose "disclose", not "refuse", [#314](open-questions.md)); a difference/average overlay naming the same
+  point twice is refused; era labels, theme colour and an always-visible remove chip on overlays
+  ([#291](open-questions.md)–[#294](open-questions.md), [#298](open-questions.md)). Merged locally as one batch,
+  full verification block green (backend 3202/3202, web 2727/2727, benchmark gate PASS, real build), main CI run
+  35809403268 green incl. deploy.
+- **Eurostat in chat, slice E2a — APPROVED by the owner, BUILDING:** all six spec §7 decisions taken; the confirm
+  chip now names the source it uses ("Voor dit antwoord gebruiken we Eurostat: …") instead of "CBS heeft geen
+  cijfer" (owner steer). Steps 1–4 (zero spend, dark: the sibling map ships empty) are being built on branch
+  `eurostat-e2a` per [the plan](superpowers/plans/2026-09-23-eurostat-e2a-steps-1-4.md), for a PR. Step 0 (live
+  parse recording) and step 5 (register the unemployment/inflation/GDP-growth sibling tables) wait for the API
+  cap to lift 2026-10-01; step 6 is the owner-signed flip. [#313](open-questions.md).
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
   click a slice to name it the total and the app checks the arithmetic. ADR [056](decisions/056-chart-copilot.md),
   [#312](open-questions.md).
-- **Eurostat in chat — design PROPOSAL, nothing built:** first slice "E2a: country-level answers"
-  ([spec](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md), [#313](open-questions.md)).
-  Six owner decisions pending (spec §7); its step 0 needs live AI-parse recording after the API cap lifts
-  2026-10-01. This is the main architectural candidate left from [#306](open-questions.md) ((b) two-measure
-  charts stays HELD per [#296](open-questions.md)).
-- **Docs hygiene done this session:** stale open-questions rows closed after verification (#295, #297, #300,
+- **Docs hygiene done session 124:** stale open-questions rows closed after verification (#295, #297, #300,
   #302, #304, #305); roadmap's Eurostat E1 line corrected (it is merged and live, flag-gated); the long
   session 121–123 inline history moved verbatim to [status-archive.md](status-archive.md).
 - **Owner steps pending — unchanged since session 110/111** (registry:apply, DOI backfill, live benchmark,

@@ -201,7 +201,7 @@ numeric cells: an empty or non-numeric cell is skipped (spreadsheet semantics �
 group total was built from, say, 2 of its 3 rows — and the session-123 reader-designated-total check could
 "verify" a whole against such a partial sum (the #312 M3 finding).
 
-**Decision (built on branch `own-data-incomplete-aggregate-note`, PR for owner review).** Values are
+**Decision (built session 124; merged to `main` and live session 125, 2026-09-23 — the owner chose disclosure over outright refusal).** Values are
 unchanged; honesty is added around them. (1) `execute.ts` marks a computed value `incomplete: true` when
 its group had at least one number AND at least one cell without one (`count` counts rows and is never
 partial); the flag propagates to `share_of_total` (a total that left out a point — or was built from a

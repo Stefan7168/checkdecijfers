@@ -897,7 +897,7 @@ wave `133176aa`), **merged to `main` as `7694cf5c` (session 124, 2026-09-23) —
   the note gets a new `not_checked_read_only` state that drops "click a point to verify", since that
   invitation would otherwise promise the very action I4 removed. No prompt bytes touched, no fixture regen.
   `/code-review` LOW on the fix-wave diff: no findings.
-- **Session 124 follow-up (branch `own-data-whole-focus-restore`, PR for owner review):** Task 4's M2
+- **Session 124 follow-up (merged to `main` and live session 125, 2026-09-23):** Task 4's M2
   (keyboard focus lost after a designation) confirmed in a real browser and fixed. Root cause is in
   Recharts 3.10, not the card: `Pie`/`Bar` pass a freshly spread props object to `AnimatedItems` as its
   `animationInput`, `useAnimationId` compares it by reference, and the resulting id is the items' React
