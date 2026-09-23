@@ -1,6 +1,9 @@
 # Eurostat in chat, first slice (E2a): country-level answers — design proposal
 
-**Status: PROPOSAL, awaiting the owner's decisions below. No code written.** Drafted session 124
+**Status: APPROVED by the owner 2026-09-23 (session 125): D1, D2, D4, D5, D6 as recommended; D3 approved
+with a wording change (see §4.4 — the chip states the source instead of saying "CBS has no figure").
+Build steps 1–4 dark on a branch + PR (D6); steps 0/5/6 wait for live spend after the API cap lifts
+2026-10-01.** Drafted session 124
 (2026-09-23), autonomously, on the owner's "continue working autonomously" steer. This is the design
 round ADR [048](../../decisions/048-eurostat-data-source.md) requires before any E2 code ("Not scheduled,
 no work-package number, no code"; D2's "own design round"). It is ADR 048's phase E2, cut into a first
@@ -24,7 +27,8 @@ line and "every number traceable to a cell" guarantee as a CBS answer.
 same steps as today. Only one thing is new. When the question names a country that CBS doesn't cover (like
 Duitsland), the app checks whether we've registered a matching Eurostat figure for the same topic, and
 whether that Eurostat table actually contains every place the reader named. If it does, the app **asks**:
-*"CBS heeft geen cijfer voor Duitsland. Eurostat wel (geharmoniseerde werkloosheid). Wil je dat cijfer?"*,
+*"Voor dit antwoord gebruiken we Eurostat: geharmoniseerde werkloosheid. … [Toon de Eurostat-cijfers]"*
+(copy revised by the owner, §4.4),
 with a button. It never switches source silently, because ADR 048 already forbids that. Clicking the
 button answers from Eurostat. A question only about the Netherlands keeps getting the CBS answer, exactly
 as today.
@@ -93,8 +97,8 @@ question ──► intent parse (UNCHANGED: LLM writes "Duitsland" as written)
                    └─► is there a reviewed Eurostat SIBLING for this measure key,
                        and does ITS table resolve EVERY named place (Dutch names → codes)?
                          no  ──► today's region_unknown clarification (UNCHANGED)
-                         yes ──► NEW clarification: "CBS heeft geen cijfer voor Duitsland.
-                                  Eurostat wel (<definition>). Wil je dat cijfer?"  [Ja, Eurostat]
+                         yes ──► NEW clarification: "Voor dit antwoord gebruiken we
+                                  Eurostat: <definition>. …"  [Toon de Eurostat-cijfers]
                                   (the chip is dry-run verified, like every clarification chip, ADR 024)
                                     click ──► same question, measure pinned to the Eurostat sibling
                                               ──► Eurostat answer, Eurostat attribution + proof
@@ -175,9 +179,20 @@ proven servable by the real query layer at offer time** (`src/answer/intent/type
 type), so the chip simply carries the Eurostat-table version of the reader's question. Copy (owner
 sign-off, §7 D3):
 
-> CBS heeft geen cijfer voor **Duitsland**. Eurostat wel: *{sibling definitionLabel}*. Let op: dat is
-> Eurostats eigen definitie, die kan afwijken van die van CBS.
-> [ Ja, gebruik het Eurostat-cijfer ]
+> Voor dit antwoord gebruiken we Eurostat: *{sibling definitionLabel}*. Eurostat hanteert één definitie
+> voor alle landen; die kan afwijken van de CBS-definitie.
+> [ Toon de Eurostat-cijfers ]
+
+English interface:
+
+> For this answer we use Eurostat: *{sibling definitionLabel}*. Eurostat uses one definition for every
+> country, which can differ from CBS's definition.
+> [ Show the Eurostat figures ]
+
+**Owner wording steer (2026-09-23, session 125):** the product is a tool that draws on several sources, so
+the chip must not be framed as "CBS doesn't have this figure" (as if the reader had asked CBS). It names
+the source the answer will use and keeps the one caveat that matters (definitions can differ). The first
+draft ("CBS heeft geen cijfer voor **Duitsland**. Eurostat wel: …") is superseded.
 
 The copy is deterministic template text, not an AI prompt. Changing it costs nothing to re-record.
 
@@ -261,7 +276,7 @@ slice never goes through the finder; siblings are pre-registered.
   Nederland figure. *Recommend yes.* The alternative (CBS for NL, Eurostat for DE in one chart) compares
   two different definitions without saying so, which is exactly the "guess" principle (c) forbids.
   "Here are both readings" is E3.
-- **D3: The confirm-chip wording (§4.4).** *Recommend as drafted.* It names both sources and warns that the
+- **D3: The confirm-chip wording (§4.4).** **Owner, 2026-09-23: approved with a change — state the source, not "CBS has no figure"; §4.4 now holds the revised copy.** *Original recommendation: as drafted.* It names both sources and warns that the
   definitions may differ. Dutch and English copy are needed, and you sign both off.
 - **D4: Which topics to pair first?** *Recommend 3:* unemployment (harmonised rate), inflation (HICP annual
   rate), and GDP growth. They're the most-asked cross-country comparisons, and each has an obvious Eurostat
