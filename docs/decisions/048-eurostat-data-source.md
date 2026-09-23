@@ -175,7 +175,25 @@ obligations:**
   500k-cell threshold by construction of the WP16 150k-cell slice cap; the async submit-and-poll API is not
   implemented (a dataset that would need it fails the fit gate honestly). Eurostat fetches serialise (one at a
   time) in the CLI and the cron job — the fair-use policy is an ingestion-scheduling concern only, since no
-  request-path call exists (principle (b)).
+  request-path call exists (principle (b)). **⚠ AS-BUILT NOTE (E2a step-5 prerequisite, session 125,
+  2026-09-23):** "server-side filtered per `CbsSlice`" above was aspirational, not as-built, from E1 (session
+  101/107) until this fix — `fetchAndParse` (`src/eurostat-adapter/statistics-api.ts`) built the request URL as
+  `<base>/<code>?format=JSON&lang=EN` with NO filter params at all, applying the full `CbsSlice` (incl. the
+  structural geo restriction) only client-side, AFTER the `SYNC_CELL_THRESHOLD` check had already run on the
+  unfiltered declared cell count. Verified live (research doc
+  `docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md`): all three E2a sibling datasets
+  are 675,108 / several million / 8,191,372 cells unfiltered (over the 500k cap) but 2,112–4,488 cells once
+  filtered — so the gap was not cosmetic, it made every one of them un-registerable. Now genuinely true:
+  `dimensionEquals` entries become `<dim>=<code>` params, the structural geo restriction
+  (`EU_EFTA_STAND_IN_GEO_CODES`) becomes repeated `geo=<code>` params whenever a slice is present, and
+  `periodFloor` becomes `sinceTimePeriod=<Eurostat format>`. **Caveat the phrase above doesn't spell out:**
+  `dimensionPrefixes` has NO Eurostat server-side equivalent and stays client-side only (geo is the one
+  exception, already covered structurally, not via a per-slice `dimensionPrefixes.geo`) — the client-side
+  filter (`matchesSlice`, jsonstat.ts) still runs unconditionally afterwards regardless (defence in depth,
+  unchanged). A call with no slice (e.g. `fetchTableSchema`/`fetchCodeList`, which `src/ingestion/pipeline.ts`
+  never passes a slice to) is byte-identical to the pre-fix URL — those calls still fetch the dataset
+  unfiltered and are NOT fixed by this change; see open-questions [#313](../open-questions.md) for that
+  residual gap. Tests: `tests/eurostat-adapter/statistics-api.test.ts`.
 
 **D7 — Proof and citation carry over on the existing "Bewijs dit cijfer" panel with two additive fields.**
 `web/lib/answer-proof.ts` builds the panel once from the stored envelope (no arithmetic, every digit a shared

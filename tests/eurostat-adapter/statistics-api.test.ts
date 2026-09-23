@@ -4,7 +4,9 @@
 // class's own plumbing (URL construction, caching, error handling) against
 // a hand-built synthetic response — never a network call.
 import { describe, expect, it, vi } from 'vitest';
+import type { CbsSlice } from '../../src/cbs-adapter/types.ts';
 import { StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
+import { EU_EFTA_STAND_IN_GEO_CODES } from '../../src/eurostat-adapter/jsonstat.ts';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
   return {
@@ -105,4 +107,150 @@ describe('StatisticsApiSource — dependency-injected fetch only, never a live U
     const [, init] = fetchFn.mock.calls[0]!;
     expect((init?.headers as Record<string, string> | undefined)?.Accept).toBeUndefined();
   });
+});
+
+// E2a step-5 prerequisite: server-side slice filtering (ADR 048 D6's
+// "server-side filtered per CbsSlice", not actually built until now — see
+// docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md).
+describe('StatisticsApiSource — server-side CbsSlice filtering in the request URL', () => {
+  const SORTED_GEO_CODES = [...EU_EFTA_STAND_IN_GEO_CODES].sort();
+
+  it('no slice — the request URL is BYTE-IDENTICAL to the pre-fix shape (tipsbd30, the one registered table)', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+
+    // tipsbd30 is registered with NO slice (tests/ingestion/ingestion.test.ts,
+    // e.g. `{ id: 'eurostat:tipsbd30', updateCadence: 'twice daily',
+    // servesTasks: [] }` — no `.slice` field at all), so this is exactly the
+    // real call shape that must not change.
+    for await (const _page of source.fetchObservations('eurostat:tipsbd30')) {
+      // draining the iterable
+    }
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    const calledUrl = fetchFn.mock.calls[0]![0] as string;
+    expect(calledUrl).toBe(
+      'https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/tipsbd30?format=JSON&lang=EN',
+    );
+  });
+
+  it('dimensionEquals entries each become one <dim>=<code> query param', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const slice: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
+
+    for await (const _page of source.fetchObservations('eurostat:une_rt_q', slice)) {
+      // draining
+    }
+
+    const calledUrl = fetchFn.mock.calls[0]![0] as string;
+    expect(calledUrl).toContain('s_adj=SA');
+    expect(calledUrl).toContain('age=Y15-74');
+    expect(calledUrl).toContain('sex=T');
+    expect(calledUrl).toContain('unit=PC_ACT');
+  });
+
+  it('the D6 structural geo restriction is ALWAYS present (as repeated geo=<code> params) whenever a slice is given', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    // A slice with no dimensionEquals/periodFloor at all — geo restriction
+    // must still show up, because it's structural, not slice-derived.
+    const slice: CbsSlice = { dimensionPrefixes: { irrelevant: ['x'] } };
+
+    for await (const _page of source.fetchObservations('eurostat:demo_pjan', slice)) {
+      // draining
+    }
+
+    const calledUrl = fetchFn.mock.calls[0]![0] as string;
+    const geoParams = [...calledUrl.matchAll(/geo=([^&]+)/g)].map((m) => m[1]);
+    expect(geoParams).toEqual(SORTED_GEO_CODES); // sorted, deterministic order
+    expect(geoParams.length).toBe(EU_EFTA_STAND_IN_GEO_CODES.size);
+    // dimensionPrefixes itself never appears — no server equivalent (client-side only).
+    expect(calledUrl).not.toContain('irrelevant');
+  });
+
+  it('periodFloor converts annual/quarterly/monthly CBS codes to Eurostat sinceTimePeriod format', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+
+    const cases: Array<[string, string]> = [
+      ['2015JJ00', 'sinceTimePeriod=2015'],
+      ['2015KW01', 'sinceTimePeriod=2015-Q1'],
+      ['2015MM01', 'sinceTimePeriod=2015-01'],
+    ];
+    for (const [periodFloor, expectedParam] of cases) {
+      fetchFn.mockClear();
+      const slice: CbsSlice = { periodFloor };
+      for await (const _page of source.fetchObservations(`eurostat:demo_${periodFloor}`, slice)) {
+        // draining
+      }
+      const calledUrl = fetchFn.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain(expectedParam);
+    }
+  });
+
+  it('an unconvertible periodFloor throws (refusal, never a silent drop)', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const slice: CbsSlice = { periodFloor: 'not-a-real-period' };
+
+    await expect(async () => {
+      for await (const _page of source.fetchObservations('eurostat:demo_pjan', slice)) {
+        // should never get here
+      }
+    }).rejects.toThrow(/not a valid CBS period code/);
+    expect(fetchFn).not.toHaveBeenCalled(); // refused before ever hitting the wire
+  });
+
+  it('param order is deterministic (sorted) — same slice, same URL, every time', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source1 = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const source2 = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const slice: CbsSlice = { dimensionEquals: { sex: 'T', age: 'Y15-74' }, periodFloor: '2015JJ00' };
+
+    for await (const _page of source1.fetchObservations('eurostat:demo_pjan', slice)) {
+      // draining
+    }
+    for await (const _page of source2.fetchObservations('eurostat:demo_pjan', slice)) {
+      // draining
+    }
+
+    expect(fetchFn.mock.calls[0]![0]).toBe(fetchFn.mock.calls[1]![0]);
+  });
+
+  it('a stubbed unfiltered ("no slice") request over the cap throws, but the SAME table with a slice — whose URL the ' +
+    'server would filter on — resolves to a small response: the threshold now judges the (server-)filtered size',
+    async () => {
+      // Cheap stand-in for a real "over cap" response: only `size`'s product
+      // matters for AsyncApiRequiredError (jsonstat.ts throws on `total`
+      // BEFORE examining `dimension`/`value` at all), so this needs no giant
+      // arrays.
+      const OVER_CAP_DATASET = { id: ['unit', 'geo', 'time'], size: [1, 1000, 1000], dimension: {}, value: {} };
+
+      const fetchFn = vi.fn(async (url: string, _init?: RequestInit) => {
+        // A real Eurostat server would shrink `size` once the request
+        // carries filter params (verified live — see the sibling-datasets
+        // research doc); the stub simulates exactly that server behaviour so
+        // this test proves the ADAPTER's URL now carries those params, not
+        // that this project's fetch stub can filter real data.
+        return url.includes('geo=') ? jsonResponse(SAMPLE_DATASET) : jsonResponse(OVER_CAP_DATASET);
+      });
+      const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+
+      // No slice -> unfiltered URL -> the stubbed "still huge" response -> refused.
+      await expect(async () => {
+        for await (const _page of source.fetchObservations('eurostat:demo_pjan')) {
+          // should never get here
+        }
+      }).rejects.toThrow(/500000-cell synchronous/);
+
+      // A slice -> filtered URL (contains geo=) -> the stubbed "now small" response -> succeeds.
+      const slice: CbsSlice = { dimensionEquals: { unit: 'NR' } };
+      const rows: number[] = [];
+      for await (const page of source.fetchObservations('eurostat:demo_pjan_sliced', slice)) {
+        rows.push(page.length);
+      }
+      expect(rows).toEqual([1]);
+    },
+  );
 });
