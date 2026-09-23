@@ -37,9 +37,14 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   fixed a LIVE latent gap, now live: on a national-only measure a foreign place tagged `land` silently got the
   Dutch figure; it now clarifies ([#315](open-questions.md)). Verification block green (backend 3271/3271, web
   2727/2727, benchmark gate PASS, real build), `/code-review` LOW clean.
-  Next: step 0 (live parse recording) and step 5 (register the unemployment/inflation/GDP-growth
-  sibling tables — in `EUROSTAT_SIBLING_MEASURES`, never `defaults.ts`) once the API cap lifts 2026-10-01; step 6
-  is the owner-signed flip ([#316](open-questions.md), the chart-editor break guard it needed, is MERGED — PR #42, main CI 35833108175 green). [#313](open-questions.md), spec §6 as-built note.
+  **Step-5 groundwork also MERGED (session 125):** PR #42 — the chart editor's difference refuses a Eurostat
+  methodology break ([#316](open-questions.md), main CI 35833108175 green); PR #43 — the Eurostat downloader now
+  asks Eurostat for only the registered slice (it fetched whole datasets, so all three step-5 datasets — up to
+  8.2M cells — would have hit the 500k cap; filtered they are 2–4.5k), main CI 35837694364 green incl. deploy.
+  Verified dataset choices + settings: [research note](superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md).
+  Next: step 0 (live parse recording, ~10 questions, small AI spend) and step 5 (add the three pairs to
+  `EUROSTAT_SIBLINGS` + `EUROSTAT_SIBLING_MEASURES` — never `defaults.ts` — then `registry:apply` + a narrow sync)
+  once the API cap lifts 2026-10-01; step 6 is the owner-signed flip. [#313](open-questions.md), spec §6.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
