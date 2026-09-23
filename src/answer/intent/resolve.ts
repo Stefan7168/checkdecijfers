@@ -13,6 +13,8 @@
 import type { Db } from '../../db/types.ts';
 import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
+import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
 import type {
   PeriodSpec,
   RankedCandidate,
@@ -193,13 +195,35 @@ async function resolveRegions(
     label: (r.label as string).replace(/\s+/g, ' ').trim(),
   }));
 
+  // §4.3: on a non-CBS (Eurostat) table, "land" means "a country or EU/EFTA
+  // aggregate code" instead of the CBS `NL` prefix, and a Dutch country name
+  // (which a Eurostat table's own English dimension_labels would never
+  // contain) is tried BEFORE English-label matching. CBS tables take the
+  // untouched `else` branch below — byte-identical behaviour, pinned by
+  // tests/answer/intent-resolve.test.ts staying green unchanged.
+  const isEurostatTable = sourceKeyForTableId(canonical.tableId) !== CBS_SOURCE_KEY;
+
   const codes: string[] = [];
   for (const term of terms) {
     const wanted = normalizeRegionName(term.name);
-    let matches = all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
-    if (term.kind !== 'onbekend') {
-      const prefix = KIND_CODE_PREFIX[term.kind];
-      matches = matches.filter((m) => m.code.startsWith(prefix));
+    let matches: RegionMatch[];
+    if (isEurostatTable) {
+      const geoCode = eurostatGeoCodeForDutchName(term.name);
+      matches =
+        geoCode !== null && all.some((m) => m.code === geoCode)
+          ? all.filter((m) => m.code === geoCode)
+          : all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
+      if (term.kind !== 'onbekend') {
+        // Only "land" carries meaning on a Eurostat table today (countries
+        // only, §4.6) — gemeente/provincie/landsdeel can never match.
+        matches = term.kind === 'land' ? matches.filter((m) => isEurostatCountryOrAggregateCode(m.code)) : [];
+      }
+    } else {
+      matches = all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
+      if (term.kind !== 'onbekend') {
+        const prefix = KIND_CODE_PREFIX[term.kind];
+        matches = matches.filter((m) => m.code.startsWith(prefix));
+      }
     }
     if (matches.length === 0) {
       return {

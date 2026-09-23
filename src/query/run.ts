@@ -6,7 +6,14 @@
 // no rendering path can drop it (R4). No LLM anywhere (WP5).
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
-import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
+import {
+  CBS_SOURCE_KEY,
+  EUROSTAT_SOURCE_KEY,
+  isProvisionalStatus,
+  resolveSourceForTable,
+  sourceKeyForTableId,
+} from '../sources/registry.ts';
+import { dutchDisplayNameForGeo } from '../sources/eurostat-geo-names.ts';
 import {
   deriveDifference,
   deriveDirection,
@@ -621,7 +628,15 @@ export async function runQuery(
         measure: q.measure,
         measureTitle: q.measureTitle,
         regionCode: q.geoDimension ? regionCode : null,
-        regionLabel: q.geoDimension ? (q.regionLabels[regionCode] ?? null) : null,
+        // §4.2: a Eurostat table's own dimension_labels are English
+        // ("Germany") — display always uses the reviewed Dutch name instead
+        // (falling back to the table's own label only if a code somehow has
+        // none, which should not happen for a code the adapter emitted).
+        regionLabel: q.geoDimension
+          ? sourceKeyForTableId(q.tableId) === EUROSTAT_SOURCE_KEY
+            ? (dutchDisplayNameForGeo(regionCode) ?? q.regionLabels[regionCode] ?? null)
+            : (q.regionLabels[regionCode] ?? null)
+          : null,
         periodCode,
         periodLabel: periodLabelByCode.get(periodCode) ?? periodCode,
         grain: parsed.grain,
