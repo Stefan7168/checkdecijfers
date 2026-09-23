@@ -36,10 +36,10 @@ const EUROSTAT_WINDOW_BREAK_REASON = 'a Eurostat break in series lies between th
 // Fail-closed (#316 requirement 2): the window lookup needs the query's
 // measure, which a chart spec does not itself carry (unlike tableId/dims) —
 // it is read back from the audited result's own cells by resultId. When it
-// (or a real region code) cannot be found for a Eurostat spec, this refuses
-// rather than silently skip the break check; not mapped in
-// KNOWN_DERIVATION_REFUSAL_KEYS, so a reader sees the generic fallback
-// message — this should not happen for a well-formed audit row.
+// cannot be found for a Eurostat spec, this refuses rather than silently
+// skip the break check; not mapped in KNOWN_DERIVATION_REFUSAL_KEYS, so a
+// reader sees the generic fallback message — this should not happen for a
+// well-formed audit row.
 const EUROSTAT_MEASURE_UNDETERMINED_REASON =
   'cannot determine the Eurostat measure for this pair of points — refusing rather than skip the break check';
 
@@ -104,12 +104,18 @@ export async function requestChartDerivation(
         earlier.regionCode === later.regionCode &&
         sourceKeyForTableId(earlier.tableId) === EUROSTAT_SOURCE_KEY
       ) {
-        const regionCode = earlier.regionCode;
+        // Fix round 1 (#316): `null` here means "table with no geo dimension"
+        // (run.ts: `regionCode: q.geoDimension ? regionCode : null`), NOT
+        // "undetermined" — resolve.ts's own default/sentinel for such a
+        // table's regionCodes is `['']` (used verbatim as the stored
+        // `observations.region_code`), so this mirrors that convention
+        // instead of refusing every geo-less Eurostat difference outright.
+        const regionCode = earlier.regionCode ?? '';
         const resultCells = record.response.kind === 'answer' ? record.response.result.cells : [];
         const measure =
           resultCells.find((c) => c.resultId === earlier.resultId)?.measure ??
           resultCells.find((c) => c.resultId === later.resultId)?.measure;
-        if (regionCode === null || measure === undefined) {
+        if (measure === undefined) {
           return { ok: false, reason: EUROSTAT_MEASURE_UNDETERMINED_REASON };
         }
         const windowBreaks = await findEurostatWindowBreaks(db, {

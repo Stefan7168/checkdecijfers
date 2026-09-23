@@ -126,19 +126,22 @@ describe('requestChartDerivation — Eurostat break-in-series guard (#316)', () 
     return { resultId, tableId: EUROSTAT_TABLE, measure, measureTitle: 'A measure', regionCode, regionLabel: regionCode, periodCode, periodLabel: periodCode, grain: 'year', dims: DIMS, dimLabels: {}, value: 1, unit: 'aantal', decimals: 0, status: 'Published', provisional: false, valueAttribute: 'None', batchId: 1 };
   }
 
-  function eurostatSpec(points: ReturnType<typeof eurostatPoint>[], regionCode = 'DE') {
-    return { unit: 'aantal', dims: DIMS, series: [{ label: regionCode, regionCode, points }], attribution: { tableId: EUROSTAT_TABLE } };
+  function eurostatSpec(points: ReturnType<typeof eurostatPoint>[], regionCode: string | null = 'DE') {
+    return { unit: 'aantal', dims: DIMS, series: [{ label: regionCode ?? 'NL', regionCode, points }], attribution: { tableId: EUROSTAT_TABLE } };
   }
 
   /** A fake db that answers only the window-break SQL, returning `windowRows`
-   * verbatim and asserting the coordinate it was queried with. */
-  function fakeWindowDb(windowRows: { region_code: string; period_code: string; status: string }[]) {
+   * verbatim and asserting the coordinate it was queried with — including
+   * the region codes, so a fix-round regression (passing the wrong sentinel
+   * for a geo-less table) fails loudly rather than silently. */
+  function fakeWindowDb(windowRows: { region_code: string; period_code: string; status: string }[], expectedRegionCodes = ['DE']) {
     const query = vi.fn(async (sql: string, params: unknown[]) => {
       if (sql.includes('from observations')) {
-        const [tableId, measure, dims] = params as [string, string, string];
+        const [tableId, measure, dims, regionCodes] = params as [string, string, string, string[]];
         expect(tableId).toBe(EUROSTAT_TABLE);
         expect(measure).toBe(MEASURE);
         expect(dims).toBe(JSON.stringify(DIMS));
+        expect(regionCodes).toEqual(expectedRegionCodes);
         return { rows: windowRows };
       }
       throw new Error(`unexpected SQL in test: ${sql}`);
@@ -146,7 +149,7 @@ describe('requestChartDerivation — Eurostat break-in-series guard (#316)', () 
     return { query };
   }
 
-  function stubRecord(points: ReturnType<typeof eurostatPoint>[], cells: ReturnType<typeof resultCell>[], regionCode = 'DE') {
+  function stubRecord(points: ReturnType<typeof eurostatPoint>[], cells: ReturnType<typeof resultCell>[], regionCode: string | null = 'DE') {
     loadAuditRecord.mockResolvedValue({
       id: 5,
       userId: 'u1',
@@ -209,6 +212,30 @@ describe('requestChartDerivation — Eurostat break-in-series guard (#316)', () 
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
     expect(result).toEqual({ ok: false, reason: 'cannot determine the Eurostat measure for this pair of points — refusing rather than skip the break check' });
     expect(query).not.toHaveBeenCalled();
+  });
+
+  // Fix round 1 (#316): a table with no geo dimension displays `regionCode:
+  // null` on its ResultCells/ChartSeries (src/query/run.ts), but
+  // resolve.ts's own `regionCodes` default/sentinel for such a table is `['']`
+  // — the value actually stored as `observations.region_code`. The action
+  // must query with that sentinel, not refuse just because the display value
+  // is null.
+  it('(f) a geo-less Eurostat spec (regionCode null) with no break in the window computes normally, querying the "" sentinel region', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2022JJ00', 30)];
+    const cells = [resultCell('r1', 'NL', '2020JJ00'), resultCell('r2', 'NL', '2022JJ00')];
+    stubRecord(points, cells, null);
+    getDb.mockReturnValue(fakeWindowDb([], ['']));
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 20 }) });
+  });
+
+  it('(g) a geo-less Eurostat spec with a "b" in the window (region "") still refuses with the stable break reason', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2022JJ00', 30)];
+    const cells = [resultCell('r1', 'NL', '2020JJ00'), resultCell('r2', 'NL', '2022JJ00')];
+    stubRecord(points, cells, null);
+    getDb.mockReturnValue(fakeWindowDb([{ region_code: '', period_code: '2021JJ00', status: 'b' }], ['']));
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: false, reason: 'a Eurostat break in series lies between these points' });
   });
 
   it('mean stays unguarded (ruling R6: a mean is not a cross-period comparison) — no window query even across a break', async () => {
