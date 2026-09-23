@@ -22,8 +22,15 @@
 //    gate, the click trust boundary) falls back to —
 //    `eurostatSiblingTargetKeys()` — never a second copy of "which pairs are
 //    reviewed."
+//  - E2a step-5 fix round 2 (a real LIVE bug, confirmed on the deployed
+//    `/llms.txt`): `sourceDisplayName`/`nativeId` are resolved HERE, from
+//    the registry (`src/sources/registry.ts`), so a renderer can never
+//    hardcode "CBS" for a table from a different source — exactly what
+//    `web/lib/llms-txt.ts` used to do, mislabelling `eurostat:tipsbd30` as
+//    "CBS eurostat:tipsbd30" in production.
 import type { Db } from '../db/types.ts';
 import { EUROSTAT_SIBLINGS_REVIEWED, eurostatSiblingTargetKeys } from '../sources/eurostat-siblings.ts';
+import { nativeIdFrom, resolveSourceForTable } from '../sources/registry.ts';
 
 export interface CoverageMeasure {
   key: string;
@@ -39,6 +46,18 @@ export interface CoverageTable {
   /** ISO timestamp of our last successful sync, or null if never synced. */
   lastSyncAt: string | null;
   measures: CoverageMeasure[];
+  /** E2a step-5 fix round 2 (a real bug, confirmed live on `/llms.txt`): the
+   * table's REAL source name (`resolveSourceForTable(id).displayName`) — a
+   * renderer must never hardcode "CBS" for every row, or a non-CBS table
+   * (the first: `eurostat:tipsbd30`) renders under the wrong source. */
+  sourceDisplayName: string;
+  /** The bare id without any '<sourceKey>:' identity prefix
+   * (`src/sources/registry.ts`'s `nativeIdFrom`) — CBS ids carry no such
+   * prefix (identity function, byte-identical to `id`); a non-CBS id always
+   * does (ADR 030 D4), and printing it alongside the resolved source name
+   * would otherwise redundantly repeat the source twice ("Eurostat
+   * eurostat:une_rt_q"). */
+  nativeId: string;
 }
 
 export interface CoverageReport {
@@ -101,12 +120,17 @@ export async function buildCoverageReport(db: Db): Promise<CoverageReport> {
   return {
     tables: tables.rows
       .filter((row) => !darkTableIds.has(row.id as string))
-      .map((row) => ({
-        id: row.id as string,
-        title: row.title as string,
-        status: row.status as 'active' | 'needs_review',
-        lastSyncAt: isoOrNull(row.last_sync_at),
-        measures: measuresByTable.get(row.id as string) ?? [],
-      })),
+      .map((row) => {
+        const id = row.id as string;
+        return {
+          id,
+          title: row.title as string,
+          status: row.status as 'active' | 'needs_review',
+          lastSyncAt: isoOrNull(row.last_sync_at),
+          measures: measuresByTable.get(id) ?? [],
+          sourceDisplayName: resolveSourceForTable(id).displayName,
+          nativeId: nativeIdFrom(id),
+        };
+      }),
   };
 }

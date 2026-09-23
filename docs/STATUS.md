@@ -53,7 +53,12 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   proven RED then fixed, real fixture round-trip test); `buildCoverageReport`/`/llms.txt` would have publicly
   listed the three tables + their not-owner-signed labels as soon as `registry:apply` ran, regardless of the
   runtime flag — now gated the same way as the resolver (ADR 048 as-built addendum); the registration script's
-  own tests made live DataCite calls, now stubbed. Owner steps per docs/RUNBOOK.md "E2a step 5": run the
+  own tests made live DataCite calls, now stubbed. **Fix round 2 (2 items):** a REAL LIVE bug found + fixed —
+  `/llms.txt` on prod was hardcoding "CBS" for every table, mislabelling the already-live `eurostat:tipsbd30`
+  ([#249](open-questions.md)) as "CBS eurostat:tipsbd30"; `buildCoverageReport` now resolves each table's real
+  source name + bare native id from the registry (`sourceDisplayName`/`nativeId`, [#170](open-questions.md));
+  `registry:apply`'s early-return path (CBS tables missing) no longer hardcodes `siblingMeasuresSkipped: []`.
+  Owner steps per docs/RUNBOOK.md "E2a step 5": run the
   script `--apply`, then `registry:apply`, then verify — all still blocked on the Anthropic API cap only
   insofar as step 0 (live parse recording) is; step 5's registration itself needs no AI spend. Next: step 0
   (live parse recording, ~10 questions, small AI spend, after the API

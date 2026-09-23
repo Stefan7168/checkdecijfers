@@ -82,8 +82,16 @@ export const EUROSTAT_SOURCE_KEY = 'eurostat' as const;
  * recover the native id Eurostat's own data-browser expects. Deliberately
  * generic over the first colon rather than hardcoding 'eurostat:' — matches
  * sourceKeyForTableId's own derivation below, so a deep link never drifts
- * from the id-parsing rule the rest of the registry already enforces. */
-function nativeIdFrom(tableId: string): string {
+ * from the id-parsing rule the rest of the registry already enforces.
+ *
+ * Exported (E2a step-5 fix round 2) so any OTHER surface that displays a
+ * table id alongside its resolved source name — the coverage report behind
+ * `/llms.txt` and the coverage disclosure, src/registry/coverage.ts — can
+ * show the bare native id instead of the doubly-redundant "eurostat
+ * eurostat:une_rt_q" a raw `tableId` would otherwise print. CBS ids carry no
+ * colon, so this is the identity function for every CBS table — byte-
+ * identical output there. */
+export function nativeIdFrom(tableId: string): string {
   const colon = tableId.indexOf(':');
   return colon >= 0 ? tableId.slice(colon + 1) : tableId;
 }

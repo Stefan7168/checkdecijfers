@@ -35,6 +35,16 @@ describe('buildCoverageReport', () => {
     }
   });
 
+  // Fix round 2 (a real live bug, confirmed on the deployed /llms.txt): every
+  // CBS table must resolve `sourceDisplayName: 'CBS'` and a `nativeId`
+  // byte-identical to its own `id` (CBS ids carry no source prefix to strip).
+  it('resolves the REAL source for every table — CBS here, byte-identical native id', () => {
+    for (const table of report.tables) {
+      expect(table.sourceDisplayName, table.id).toBe('CBS');
+      expect(table.nativeId, table.id).toBe(table.id);
+    }
+  });
+
   it('carries the MEASURED last_sync_at of the fixture sync as an ISO timestamp', () => {
     for (const table of report.tables) {
       // createIngestedDb syncs every seed table, so a null here would mean
@@ -113,6 +123,11 @@ describe('buildCoverageReport hides a reviewed Eurostat sibling measure/table un
       const table = after.tables.find((t) => t.id === EUROSTAT_TEST_TABLE_ID);
       expect(table).toBeDefined();
       expect(table!.measures.map((m) => m.key)).toContain(REVIEWED_SIBLING_KEY);
+      // Fix round 2 (the live /llms.txt bug): a Eurostat table must resolve
+      // its REAL source name and its bare native id (no redundant
+      // '<sourceKey>:' prefix), never a hardcoded "CBS".
+      expect(table!.sourceDisplayName).toBe('Eurostat');
+      expect(table!.nativeId).toBe('e2a_test_unemp');
     } finally {
       await db.query('delete from observations where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
       await db.query('delete from ingestion_batches where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);

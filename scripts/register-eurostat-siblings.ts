@@ -29,15 +29,12 @@ import type { CbsSource } from '../src/cbs-adapter/types.ts';
 import { registerTables, syncTable } from '../src/ingestion/pipeline.ts';
 import { buildRequestUrl } from '../src/eurostat-adapter/statistics-api.ts';
 import { EUROSTAT_SIBLING_REGISTRATIONS } from '../src/sources/eurostat-siblings.ts';
-
-/** D4's own first-colon rule (statistics-api.ts's `nativeIdFrom`), copied
- * locally rather than imported — the same "a local copy of the same
- * first-colon rule every other module in this source's family implements
- * independently" pattern that function's own doc comment describes. */
-function nativeCodeFor(tableId: string): string {
-  const colon = tableId.indexOf(':');
-  return colon >= 0 ? tableId.slice(colon + 1) : tableId;
-}
+// E2a step-5 fix round 2: `src/sources/registry.ts`'s own `nativeIdFrom` was
+// exported that same round for the coverage-report fix — reused here instead
+// of the local copy this file used to keep (a code-review finding: a THIRD
+// private copy of the identical first-colon rule, alongside the adapter's
+// own, was needless duplication once a public, pure-leaf export existed).
+import { nativeIdFrom as nativeCodeFor } from '../src/sources/registry.ts';
 
 export interface RegisterEurostatSiblingsResult {
   applied: boolean;

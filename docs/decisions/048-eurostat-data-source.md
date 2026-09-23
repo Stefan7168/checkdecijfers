@@ -868,3 +868,17 @@ the click trust boundary already agree on, never a second copy of "which pairs a
 `tests/registry/coverage.test.ts`'s new describe block (flag off → both absent; flag on → both present,
 using the real reviewed key `eu_unemployment_rate_harmonised`).
 
+**A second, independent bug found in the SAME code path — confirmed LIVE on production, unrelated to E2a
+itself (fix round 2, same session):** `web/lib/llms-txt.ts`'s renderer hardcoded `- CBS ${table.id}` for
+every row. Harmless while every registered table really was CBS, but E1 already registered a non-CBS table
+(`eurostat:tipsbd30`, [#249](../open-questions.md)) — the deployed `/llms.txt` was verified to read
+`- CBS eurostat:tipsbd30 — Tier-1 capital ratio banking sector (...)`, naming the wrong source AND printing
+a redundantly double-prefixed id. Fixed at the source: `buildCoverageReport` now resolves each table's real
+`sourceDisplayName` (`resolveSourceForTable(id).displayName`) and bare `nativeId` (`nativeIdFrom`, newly
+exported from `src/sources/registry.ts` for this) from the registry itself, and the renderer prints those —
+never a second, hand-maintained assumption about which source a row belongs to. CBS lines are byte-identical
+(no prefix to strip); a Eurostat line now reads `- Eurostat tipsbd30 — ...`. This was a display bug only —
+D3's "never announced before it answers" rule was never at stake, since `tipsbd30` was already a publicly
+visible coverage row before this fix (E1's own D3 posture never hid a registered table from `/llms.txt`,
+only from chat and the finder).
+

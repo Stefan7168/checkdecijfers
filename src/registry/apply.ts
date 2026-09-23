@@ -49,7 +49,16 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
   const existingIds = new Set(existing.rows.map((r) => r.id as string));
   const tablesMissing = referencedTableIds.filter((id) => !existingIds.has(id));
   if (tablesMissing.length > 0) {
-    return { tablesUpdated: [], tablesMissing, canonicalMeasuresUpserted: [], siblingMeasuresSkipped: [] };
+    // Fix round 2 (minor): the CBS write is aborted here, but `existingIds`
+    // already carries every sibling table's real registration state (the
+    // lookup query above checks it in the same statement) — so the result
+    // can and should still report which sibling measures are NOT yet
+    // applicable, instead of a hardcoded `[]` that would misleadingly read
+    // as "everything's fine on the sibling side" while the CBS side fails.
+    const siblingMeasuresSkipped = EUROSTAT_SIBLING_MEASURES_REVIEWED.filter(
+      (cm) => !existingIds.has(cm.tableId),
+    ).map((cm) => cm.key);
+    return { tablesUpdated: [], tablesMissing, canonicalMeasuresUpserted: [], siblingMeasuresSkipped };
   }
 
   const tablesUpdated: string[] = [];

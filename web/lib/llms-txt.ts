@@ -74,7 +74,14 @@ export function renderLlmsTxt(report: CoverageReport, generatedAt: string): stri
   for (const table of served) {
     const synced = dateOnly(table.lastSyncAt);
     const suffix = synced === null ? '' : ` (gesynchroniseerd ${synced})`;
-    lines.push(`- CBS ${table.id} — ${table.title}${suffix}`);
+    // E2a step-5 fix round 2 (a real bug, confirmed live on `/llms.txt`):
+    // this used to hardcode "CBS" for every row, mislabelling a non-CBS
+    // table (`eurostat:tipsbd30`) — the source name and the bare native id
+    // (no redundant '<sourceKey>:' prefix) now come from the coverage
+    // report itself (src/registry/coverage.ts), resolved from the registry,
+    // never guessed here. CBS ids carry no such prefix, so this line is
+    // byte-identical to before for every CBS table.
+    lines.push(`- ${table.sourceDisplayName} ${table.nativeId} — ${table.title}${suffix}`);
     if (table.measures.length > 0) {
       lines.push(`  - begrippen: ${table.measures.map((m) => m.label).join('; ')}`);
     }

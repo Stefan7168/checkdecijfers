@@ -63,6 +63,14 @@ describe('registry defaults (ADR 010)', () => {
     expect(result.tablesMissing.length).toBe(SEED_TABLES.length);
     expect(result.tablesUpdated).toEqual([]);
     expect(result.canonicalMeasuresUpserted).toEqual([]);
+    // Fix round 2 (minor): the early return used to hardcode
+    // `siblingMeasuresSkipped: []`, misleadingly reading as "every sibling
+    // measure is fine" even though NOTHING was applied. On a genuinely empty
+    // db every reviewed sibling measure is unregistered too, so it must be
+    // reported here, same as when the CBS write actually goes through.
+    expect(result.siblingMeasuresSkipped.sort()).toEqual(
+      EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => m.key).sort(),
+    );
     const cm = await db.query('select count(*) c from canonical_measures');
     expect(Number(cm.rows[0]!.c)).toBe(0);
   });
@@ -224,6 +232,36 @@ describe('E2a step 5: Eurostat sibling measures never regress the CBS apply', ()
     expect(row.rows).toHaveLength(1);
     expect(row.rows[0]!.table_id).toBe('eurostat:une_rt_q');
     expect(row.rows[0]!.measure).toBe('une_rt_q|PC_ACT');
+  });
+
+  // Fix round 2 (minor): the early-return path (CBS tables still missing)
+  // used to always report `siblingMeasuresSkipped: []`, even when a sibling
+  // table genuinely WAS registered — misleadingly implying nothing was
+  // outstanding on the sibling side while the CBS apply had failed outright.
+  it('early return (CBS tables missing): still reports which sibling measures are skipped, distinguishing a registered sibling table from an unregistered one', async () => {
+    const db = sharedDb;
+    // Deliberately NO registerFixtures(db) — every CBS seed table is
+    // missing, so applyRegistryDefaults must take the early-return path.
+    const uneRtQ = EUROSTAT_SIBLING_REGISTRATIONS.find((r) => r.tableId === 'eurostat:une_rt_q')!;
+    const fetchFn = async () =>
+      new Response(JSON.stringify(FILTERED_UNE_RT_Q), { status: 200, headers: { 'content-type': 'application/json' } });
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    await registerTables(
+      db,
+      source,
+      [{ id: uneRtQ.tableId, updateCadence: uneRtQ.updateCadence, servesTasks: [], slice: uneRtQ.slice }],
+      { fetchImpl: fakeDataciteFetch },
+    );
+    await syncTable(db, source, uneRtQ.tableId);
+
+    const result = await applyRegistryDefaults(db);
+    // The early-return path fired (CBS tables are missing) — nothing written.
+    expect(result.tablesMissing.length).toBe(SEED_TABLES.length);
+    expect(result.tablesUpdated).toEqual([]);
+    expect(result.canonicalMeasuresUpserted).toEqual([]);
+    // But the sibling picture is still accurate: une_rt_q IS registered, so
+    // its measure is NOT reported as skipped; the other two genuinely are.
+    expect(result.siblingMeasuresSkipped.sort()).toEqual(['eu_gdp_growth_yoy_volume', 'eu_hicp_annual_rate']);
   });
 
   it('is idempotent for sibling measures too: applying twice after the table is registered yields the same row, no duplicates', async () => {
