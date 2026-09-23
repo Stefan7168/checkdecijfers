@@ -109,9 +109,15 @@ function nativeIdFrom(tableId: string): string {
 export class EurostatFixtureSource implements CbsSource {
   private readonly tables: Record<string, unknown>;
   private readonly catalogFixture: EurostatCatalogFixture | null;
-  /** Unsliced parse only — schema/codeLists never depend on a slice; a
-   * sliced fetchObservations call re-parses with the slice applied rather
-   * than filtering an already-cached row list a second time. */
+  /** Caches only the UNSLICED parse (`this.parsed(tableId)`, no second arg) —
+   * a call with a slice (schema, code list, OR observations; E2a step-5 fix,
+   * 2026-09-23: schema/codeLists genuinely DO depend on the slice now, same
+   * as the live adapter — D6's measures are one per `unit` code actually
+   * PRESENT after slicing) always re-parses via `parsed(tableId, slice)`
+   * rather than filtering an already-cached row list a second time; cheap
+   * for a fixture-sized document, unlike the live adapter's own per-
+   * (tableId, slice) `loadDataset` cache, which exists to avoid a second
+   * real HTTP call. */
   private readonly cache = new Map<string, ParsedEurostatDataset>();
 
   constructor(tables: Record<string, unknown>, catalogFixture?: EurostatCatalogFixture | null) {
@@ -143,12 +149,18 @@ export class EurostatFixtureSource implements CbsSource {
     return parseJsonStatDataset(this.rawFor(tableId), tableId, slice);
   }
 
-  async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
-    return this.parsed(tableId).schema;
+  // E2a step-5 fix (2026-09-23): `slice`, mirroring StatisticsApiSource's own
+  // fix — a captured fixture never hits the sync-cell cap, but the schema's
+  // measure set (D6: one measure per `unit` code ACTUALLY PRESENT after
+  // slicing) and the code lists should still reflect the registered slice,
+  // not the whole unfiltered fixture, so a slice-registering caller
+  // (registerTables) sees the same shape a live sliced fetch would produce.
+  async fetchTableSchema(tableId: string, slice?: CbsSlice): Promise<CbsTableSchema> {
+    return this.parsed(tableId, slice).schema;
   }
 
-  async fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]> {
-    const codeLists = this.parsed(tableId).codeLists;
+  async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
+    const codeLists = this.parsed(tableId, slice).codeLists;
     const codes = codeLists[dimension];
     if (!codes) {
       throw new Error(

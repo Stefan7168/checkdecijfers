@@ -119,9 +119,24 @@ export interface CbsObservationRow {
 }
 
 export interface CbsSource {
-  fetchTableSchema(tableId: string): Promise<CbsTableSchema>;
-  /** Code list for one dimension, e.g. fetchCodeList('03759ned', 'RegioS'). */
-  fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]>;
+  /**
+   * Optional `slice`, added for the Eurostat E2a step-5 fix (2026-09-23):
+   * a Eurostat dataset's own JSON-stat document carries schema AND
+   * observations together, so a schema fetch on an unfiltered request can
+   * hit the same 500k-cell synchronous cap `fetchObservations` does — the
+   * caller (registration/sync, `src/ingestion/pipeline.ts`) passes the
+   * table's OWN registered slice through here so the schema/code-list read
+   * uses the SAME server-side-filtered request `fetchObservations` does
+   * (one underlying fetch for all three, where an adapter caches per
+   * (tableId, slice) — see `StatisticsApiSource.loadDataset`). CBS's own
+   * adapter implementations (four genuinely separate, slice-independent
+   * endpoints) simply ignore this parameter — passing it changes nothing
+   * for CBS, so its registration/sync stays byte-identical.
+   */
+  fetchTableSchema(tableId: string, slice?: CbsSlice): Promise<CbsTableSchema>;
+  /** Code list for one dimension, e.g. fetchCodeList('03759ned', 'RegioS').
+   * `slice` — see `fetchTableSchema`'s doc comment above; same rationale. */
+  fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]>;
   /** Observations page by page, server-side filtered to the slice when given.
    * #156 (session-47 ingestion hunt): `dimensionNames` lets a caller that has
    * ALREADY fetched + validated the schema (the ingestion pipeline) hand the

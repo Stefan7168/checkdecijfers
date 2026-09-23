@@ -1,7 +1,7 @@
 // registerTables + syncTable — the core ingestion pipeline (docs/05-data-rules.md,
 // "Data access strategy" + "Validation pipeline"; docs/07-phase0-table-set.md,
 // slices and catalog quirks).
-import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow, CbsSource } from '../cbs-adapter/types.ts';
+import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow, CbsSlice, CbsSource } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { eurostatDoiFor, verifyEurostatDoi } from '../eurostat-adapter/doi.ts';
 import { computeFingerprint } from './fingerprint.ts';
@@ -29,10 +29,16 @@ async function fetchAllCodeLists(
   source: CbsSource,
   tableId: string,
   dimensions: CbsDimension[],
+  // E2a step-5 fix (2026-09-23): threaded through to `fetchCodeList` so a
+  // Eurostat table's registered slice narrows this fetch the SAME way it
+  // narrows `fetchTableSchema`/`fetchObservations` — see CbsSource's own
+  // doc comment (src/cbs-adapter/types.ts). `undefined` for CBS callers is
+  // the pre-existing behaviour, unchanged.
+  slice?: CbsSlice,
 ): Promise<Record<string, CbsCode[]>> {
   const result: Record<string, CbsCode[]> = {};
   for (const dim of dimensions) {
-    result[dim.name] = await source.fetchCodeList(tableId, dim.name);
+    result[dim.name] = await source.fetchCodeList(tableId, dim.name, slice);
   }
   return result;
 }
@@ -82,8 +88,18 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
   for (const table of tables) {
     if (existingIds.has(table.id)) continue;
 
-    const schema = await source.fetchTableSchema(table.id);
-    const codeLists = await fetchAllCodeLists(source, table.id, schema.dimensions);
+    // E2a step-5 fix (2026-09-23): `table.slice` — already stored verbatim
+    // into `cbs_tables.slice` further down and already threaded into
+    // `fetchObservations` at sync time — now ALSO reaches the schema/
+    // code-list read here. Was the real registerTables gap: a Eurostat
+    // dataset whose wanted slice is small but whose FULL dataset exceeds the
+    // 500k-cell synchronous cap could never even register, because this
+    // schema fetch requested the unfiltered dataset regardless of the slice
+    // the table would otherwise be registered with (see ADR 048 D6's
+    // as-built note). For CBS, `table.slice` is passed through identically,
+    // but CBS's own adapters ignore the parameter — byte-identical.
+    const schema = await source.fetchTableSchema(table.id, table.slice);
+    const codeLists = await fetchAllCodeLists(source, table.id, schema.dimensions, table.slice);
 
     const expectedDimensions = [...schema.dimensions]
       .map((d) => ({ name: d.name, kind: d.kind }))
@@ -377,12 +393,21 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   let codeLists: Record<string, CbsCode[]>;
   let observationRows: CbsObservationRow[];
   try {
-    schema = await source.fetchTableSchema(tableId);
-    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+    // E2a step-5 fix (2026-09-23): the SAME `registry.slice` already used
+    // for `fetchAllObservations` below now also reaches the schema/
+    // code-list read — every ordinary sync (not just the one-time
+    // registration above) re-fetches schema/code-lists, so leaving this
+    // call unsliced would still hit the cap on every later sync of a
+    // registered Eurostat table, even after registerTables itself was
+    // fixed. CBS callers pass the exact same value they always registered
+    // with; CBS's own adapters ignore it — byte-identical.
+    const sliceForFetch = registry.slice ?? undefined;
+    schema = await source.fetchTableSchema(tableId, sliceForFetch);
+    codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions, sliceForFetch);
     observationRows = await fetchAllObservations(
       source,
       tableId,
-      registry.slice ?? undefined,
+      sliceForFetch,
       schema.dimensions.map((d) => d.name),
     );
   } catch (err) {

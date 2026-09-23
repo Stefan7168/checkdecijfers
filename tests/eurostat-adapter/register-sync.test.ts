@@ -22,10 +22,12 @@
 // adapter that would break the harness fails loudly here first, in seconds,
 // rather than only being discoverable by starting `next dev`.
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { CbsSlice } from '../../src/cbs-adapter/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { EurostatFixtureSource, loadEurostatFixtureTree } from '../../src/eurostat-adapter/fixture-source.ts';
+import { StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
 import { EUROSTAT_SOURCE_KEY } from '../../src/sources/registry.ts';
 import { listMeasuresForTable, listRegisteredEurostatTables } from '../../web/lib/eurostat-explorer.ts';
 
@@ -95,6 +97,122 @@ describe('registerTables + syncTable against a real EurostatFixtureSource (dev-h
       // region_code is the bare Eurostat geo code.
       const de2021 = obs.find((r) => r.region_code === 'DE' && r.period_code === '2021JJ00');
       expect(Number(de2021?.value)).toBe(83155031);
+    } finally {
+      await close();
+    }
+  });
+});
+
+// E2a step-5 fix round 2 (2026-09-23): registerTables/syncTable's OWN
+// schema/code-list reads never passed the table's registered slice through
+// (only fetchObservations did) — so a Eurostat sibling whose FULL dataset
+// exceeds the 500k-cell synchronous cap could never even REGISTER, even
+// after fetchAndParse's own request-URL fix. This is that fix, proven
+// against a live-style StatisticsApiSource + injected fetch stub (never the
+// real network) rather than EurostatFixtureSource, because the "over cap
+// unfiltered vs under cap filtered" distinction is inherently about what
+// URL the (simulated) server receives.
+describe('registerTables/syncTable thread the registered slice into schema + code-list reads too (E2a step-5 fix round 2)', () => {
+  const TABLE_ID = 'eurostat:une_rt_q';
+
+  // Cheap stand-in for a real "over cap" dataset: only `size`'s product
+  // matters for AsyncApiRequiredError (jsonstat.ts throws on `total` BEFORE
+  // examining `dimension`/`value` at all — see statistics-api.test.ts's own
+  // note), so this needs no giant arrays.
+  const OVER_CAP_DATASET = { id: ['unit', 'geo', 'time'], size: [1, 1000, 1000], dimension: {}, value: {} };
+
+  // Real une_rt_q shape (spec doc): a multi-key dimensionEquals
+  // (`s_adj`/`age`/`sex`/`unit`) — deliberately NOT a single-key slice,
+  // because a single-key object's JSON.stringify is order-invariant by
+  // construction and would never have exercised the cache-key-ordering
+  // bug the independent review found (loadDataset's key used plain
+  // JSON.stringify(slice), which the `cbs_tables.slice` JSONB round-trip
+  // between registerTables and syncTable is not guaranteed to preserve).
+  const FILTERED_DATASET = {
+    version: '2.0',
+    class: 'dataset',
+    label: 'Unemployment by sex and age - quarterly data',
+    id: ['s_adj', 'age', 'sex', 'unit', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1],
+    dimension: {
+      s_adj: { category: { index: { SA: 0 }, label: { SA: 'Seasonally adjusted data' } } },
+      age: { category: { index: { 'Y15-74': 0 }, label: { 'Y15-74': 'From 15 to 74 years' } } },
+      sex: { category: { index: { T: 0 }, label: { T: 'Total' } } },
+      unit: { category: { index: { PC_ACT: 0 }, label: { PC_ACT: 'Percentage of population in the labour force' } } },
+      geo: { category: { index: { NL: 0 }, label: { NL: 'Netherlands' } } },
+      time: { category: { index: { '2024-Q1': 0 }, label: { '2024-Q1': '2024-Q1' } } },
+    },
+    value: [3.5],
+  };
+
+  /** A real Eurostat server would shrink `size` once the request carries
+   * filter params (verified live — see the E2a sibling-datasets research
+   * doc); this stub simulates exactly that so the test proves the ADAPTER's
+   * request URL now carries those params for schema/code-list reads too,
+   * not just observations. */
+  function slicedFetchStub() {
+    return vi.fn(async (url: string) => {
+      const body = url.includes('geo=') ? FILTERED_DATASET : OVER_CAP_DATASET;
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    });
+  }
+
+  it('NO registered slice — an over-cap dataset still throws AsyncApiRequiredError on registration (unchanged)', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const fetchFn = slicedFetchStub();
+      const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+
+      await expect(
+        registerTables(db, source, [{ id: TABLE_ID, updateCadence: 'quarterly', servesTasks: [] }], {
+          fetchImpl: fakeDataciteFetch,
+        }),
+      ).rejects.toThrow(/500000-cell synchronous/);
+    } finally {
+      await close();
+    }
+  });
+
+  it('WITH a registered MULTI-KEY slice — registration succeeds, and schema + code lists + observations all come from ONE filtered fetch, even after the slice round-trips through the real cbs_tables.slice JSONB column (independent review: the cache-key-ordering fix)', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const fetchFn = slicedFetchStub();
+      const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+      const slice: CbsSlice = { dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' } };
+
+      const registered = await registerTables(
+        db,
+        source,
+        [{ id: TABLE_ID, updateCadence: 'quarterly', servesTasks: [], slice }],
+        { fetchImpl: fakeDataciteFetch },
+      );
+      expect(registered).toEqual([TABLE_ID]);
+
+      const { rows } = await db.query('select source, slice, status from cbs_tables where id = $1', [TABLE_ID]);
+      expect(rows[0]!.source).toBe(EUROSTAT_SOURCE_KEY);
+      expect(rows[0]!.status).toBe('active');
+
+      const result = await syncTable(db, source, TABLE_ID);
+      expect(result.outcome).toBe('succeeded');
+      expect(result.rowCount).toBe(1);
+
+      const measures = await listMeasuresForTable(db, TABLE_ID);
+      expect(measures).toEqual([
+        { code: 'une_rt_q|PC_ACT', title: 'Unemployment by sex and age - quarterly data — Percentage of population in the labour force' },
+      ]);
+
+      // registerTables (fetchTableSchema + fetchCodeList x N dims) AND the
+      // separate syncTable call (fetchTableSchema + fetchCodeList x N dims +
+      // fetchObservations) all key `loadDataset` on the SAME (tableId,
+      // slice) pair, on the SAME source instance — one underlying fetch for
+      // the whole registration + sync of this table, not one per method.
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      const calledUrl = fetchFn.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('unit=PC_ACT');
+      expect(calledUrl).toContain('s_adj=SA');
+      expect(calledUrl).toContain('age=Y15-74');
+      expect(calledUrl).toContain('sex=T');
+      expect(calledUrl).toContain('geo=');
     } finally {
       await close();
     }

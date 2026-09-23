@@ -21,7 +21,13 @@ import type {
   CbsSource,
   CbsTableSchema,
 } from '../cbs-adapter/types.ts';
-import { parseJsonStatCatalog, parseJsonStatDataset, type ParsedEurostatDataset } from './jsonstat.ts';
+import { parsePeriodCode } from '../ingestion/periods.ts';
+import {
+  EU_EFTA_STAND_IN_GEO_CODES,
+  parseJsonStatCatalog,
+  parseJsonStatDataset,
+  type ParsedEurostatDataset,
+} from './jsonstat.ts';
 
 /** VERIFIED live (session 107, 2026-09-16) — Eurostat's real Statistics API
  * dissemination endpoint. */
@@ -40,6 +46,144 @@ const RETRY_BACKOFF_MS = 1500;
 function nativeIdFrom(tableId: string): string {
   const colon = tableId.indexOf(':');
   return colon >= 0 ? tableId.slice(colon + 1) : tableId;
+}
+
+/**
+ * A `JSON.stringify` that recursively sorts object keys (arrays keep their
+ * own order — never resorted) so two objects that are DEEPLY equal but were
+ * built/serialized with keys in a different order produce the IDENTICAL
+ * string. Used only for `loadDataset`'s cache key (see its own comment for
+ * why plain `JSON.stringify` is unsafe there: Postgres jsonb does not
+ * preserve key order across a round trip).
+ */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => canonicalJson(v)).join(',')}]`;
+  }
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function canonicalSliceKey(slice: CbsSlice): string {
+  return canonicalJson(slice);
+}
+
+/**
+ * Converts a CBS-format `periodFloor` (e.g. '2015JJ00', '2015KW01',
+ * '2015MM01' — `src/ingestion/periods.ts`'s grammar, the same one
+ * `CbsSlice.periodFloor` is always expressed in) into Eurostat's OWN
+ * `sinceTimePeriod` filter grammar. This is the exact inverse of
+ * `mapEurostatPeriod` (jsonstat.ts) in terms of WHICH grain it accepts, but
+ * NOT the same target string shape: Eurostat's `sinceTimePeriod` query
+ * parameter takes plain 'YYYY' / 'YYYY-Qn' / 'YYYY-MM' — no 'M' prefix on the
+ * month, unlike the JSON-stat response's own 'time' category codes (which DO
+ * read '2024-M01'; see MONTH_RE in jsonstat.ts). The brief's own research
+ * (docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md)
+ * only tested the plain-year (annual) shape live; the quarterly and monthly
+ * shapes below are now ALSO verified live (independent review, 2026-09-23,
+ * against the real public Statistics API — no AI spend, GET only):
+ * - `une_rt_q?...&geo=NL&s_adj=SA&age=Y15-74&sex=T&unit=PC_ACT&sinceTimePeriod=2024-Q2`
+ *   → 9 periods returned, first `2024-Q2`, last `2026-Q2` (confirms the
+ *   quarterly `YYYY-Qn` shape, and that the floor is INCLUSIVE).
+ * - `prc_hicp_manr?...&geo=NL&coicop=CP00&unit=RCH_A&sinceTimePeriod=2025-03`
+ *   → 10 periods returned, first `2025-03`, last `2025-12` (confirms the
+ *   monthly `YYYY-MM` shape — no `M` prefix, as this comment already said —
+ *   and again an inclusive floor).
+ * - `une_rt_q?...&sinceTimePeriod=2024` (plain year, on a QUARTERLY dataset)
+ *   → first period `2024-Q1` (confirms Eurostat accepts the coarser annual
+ *   shape as a floor even on a finer-grained dataset, rounding down to that
+ *   year's first period — not something this adapter currently exploits,
+ *   since `sinceTimePeriodFor` always emits the floor's OWN grain).
+ *
+
+ * Throws — never silently drops the floor — for anything `parsePeriodCode`
+ * doesn't recognise as a valid CBS period code (principle (c): an
+ * unconvertible floor must refuse loudly, not quietly fetch unfiloored data).
+ */
+function sinceTimePeriodFor(periodFloor: string): string {
+  const parsed = parsePeriodCode(periodFloor);
+  if (!parsed) {
+    throw new Error(
+      `Eurostat adapter: periodFloor '${periodFloor}' is not a valid CBS period code (expected ` +
+        `'YYYYJJ00' / 'YYYYKWnn' / 'YYYYMMnn') — refusing rather than silently dropping the floor.`,
+    );
+  }
+  switch (parsed.grain) {
+    case 'JJ':
+      return String(parsed.year);
+    case 'KW':
+      return `${parsed.year}-Q${parsed.index}`;
+    case 'MM':
+      return `${parsed.year}-${String(parsed.index).padStart(2, '0')}`;
+  }
+}
+
+/**
+ * Builds the Statistics API request URL for `nativeCode`, applying the
+ * `CbsSlice` SERVER-SIDE (ADR 048 D6's "Fetch shape: ... server-side
+ * filtered per CbsSlice", which the code did not actually implement until
+ * this fix — see the ADR's as-built note).
+ *
+ * - No `slice` at all → BYTE-IDENTICAL to the pre-fix URL (requirement: a
+ *   call with no slice, e.g. the schema/code-list reads in
+ *   `src/ingestion/pipeline.ts`, must not change).
+ * - `slice.dimensionEquals` → one `<dim>=<code>` param per entry.
+ * - The D6 structural geo restriction (`EU_EFTA_STAND_IN_GEO_CODES`) → a
+ *   repeated `geo=<code>` param per allowed code, added WHENEVER a slice is
+ *   present — these are the only geo codes the adapter ever keeps
+ *   (`matchesGeoRestriction`), so narrowing the server request to exactly
+ *   this list can never drop a row the client-side filter would have kept.
+ * - `slice.periodFloor` → one `sinceTimePeriod=<...>` param (see
+ *   `sinceTimePeriodFor`).
+ * - `slice.dimensionPrefixes` has no Eurostat server-side equivalent (geo is
+ *   already covered above via the structural restriction, not via any
+ *   `dimensionPrefixes.geo` the caller might also pass) — stays client-side
+ *   only, exactly as before (`matchesSlice` in jsonstat.ts).
+ * - `slice.dimensionEquals.geo` — REFUSED (throws): `geo` is handled
+ *   exclusively via the structural sweep above, never as a per-slice pin, so
+ *   this can never silently coexist with (and corrupt) that sweep.
+ *
+ * Params are sorted (key, then value) for a deterministic, stable URL/cache
+ * key; `format`/`lang` stay first, matching the unsliced shape exactly.
+ */
+function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined): string {
+  const base = `${STATISTICS_BASE}/${nativeCode}?format=JSON&lang=EN`;
+  if (!slice) return base;
+
+  // LOW-effort code-review finding, fixed: `geo` is handled EXCLUSIVELY via
+  // the structural EU/EFTA sweep below, never as a per-slice pin — a
+  // `dimensionEquals.geo` entry would otherwise silently coexist with (not
+  // replace) that ~34-code sweep, producing a request with both the
+  // caller's single `geo=<code>` AND every structural geo code, which is not
+  // what a caller pinning one country would want. Refuse loudly (principle
+  // c) rather than silently building a broken/ambiguous request.
+  if (slice.dimensionEquals && 'geo' in slice.dimensionEquals) {
+    throw new Error(
+      "Eurostat adapter: CbsSlice.dimensionEquals must never pin 'geo' — the D6 structural " +
+        'EU/EFTA restriction (EU_EFTA_STAND_IN_GEO_CODES) is the only geo filter this adapter applies.',
+    );
+  }
+
+  const params: Array<[string, string]> = [];
+  if (slice.dimensionEquals) {
+    for (const [dim, code] of Object.entries(slice.dimensionEquals)) {
+      params.push([dim, code]);
+    }
+  }
+  for (const code of EU_EFTA_STAND_IN_GEO_CODES) {
+    params.push(['geo', code]);
+  }
+  if (slice.periodFloor) {
+    params.push(['sinceTimePeriod', sinceTimePeriodFor(slice.periodFloor)]);
+  }
+
+  params.sort(([keyA, valA], [keyB, valB]) => (keyA === keyB ? valA.localeCompare(valB) : keyA.localeCompare(keyB)));
+
+  const query = params.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+  return `${base}&${query}`;
 }
 
 export type FetchFn = typeof fetch;
@@ -94,7 +238,23 @@ export class StatisticsApiSource implements CbsSource {
     // CLIENT-SIDE (see fetchAndParse's own note) so two different slices are
     // two different parsed results even though they hit the same URL —
     // keying on tableId alone would silently reuse an unrelated slice.
-    const key = `${tableId} ${slice ? JSON.stringify(slice) : ''}`;
+    //
+    // [Important] fix (independent review, 2026-09-23, this branch):
+    // `JSON.stringify(slice)` is key-order-sensitive. `registerTables`
+    // passes `table.slice` exactly as authored in code, but `syncTable`
+    // passes `registry.slice`, read back from the `cbs_tables.slice` JSONB
+    // column — and Postgres jsonb does NOT preserve key order. For any
+    // multi-key slice (every real E2a sibling's `dimensionEquals`, e.g.
+    // `{s_adj, age, sex, unit}`), a register-then-sync flow in one process
+    // (`src/ingestion/cli.ts`) could re-serialize the SAME slice with keys
+    // in a different order, MISS this cache, and fetch twice — silently
+    // contradicting the "one underlying fetch" design this cache exists
+    // for. `canonicalSliceKey` below recursively sorts object keys (arrays
+    // keep their order — a `dimensionPrefixes` list is meaningfully
+    // ordered) so two slices that are semantically identical always
+    // produce the identical cache key, regardless of how either one was
+    // constructed or round-tripped through jsonb.
+    const key = `${tableId} ${slice ? canonicalSliceKey(slice) : ''}`;
     let cached = this.cache.get(key);
     if (!cached) {
       cached = this.fetchAndParse(tableId, slice);
@@ -105,25 +265,30 @@ export class StatisticsApiSource implements CbsSource {
 
   private async fetchAndParse(tableId: string, slice?: CbsSlice): Promise<ParsedEurostatDataset> {
     const nativeCode = nativeIdFrom(tableId);
-    // E1 does not attempt server-side dimensionEquals/dimensionPrefixes
-    // filtering in the URL — parseJsonStatDataset applies the FULL slice
-    // (incl. the structural D6 geo restriction) client-side, the same
-    // pattern CBS's own FixtureSource already uses for its slice. A missing
-    // server-side filter degrades to "fetches more than strictly needed",
-    // never to a correctness bug — and E1 never registers a dataset near
-    // the sync threshold in the first place (Constraint 0: nothing is
-    // registered yet).
-    const url = `${STATISTICS_BASE}/${nativeCode}?format=JSON&lang=EN`;
+    // E2a step-5 fix (was: E1's own comment here said the URL never applied
+    // the slice server-side — see `buildRequestUrl`'s doc comment for the
+    // as-built shape, and ADR 048 D6's as-built note). `parseJsonStatDataset`
+    // STILL applies the full slice client-side afterwards (defence in depth —
+    // the server filter narrows, the client filter still decides; unchanged).
+    const url = buildRequestUrl(nativeCode, slice);
     const raw = await this.fetchJson(url);
     return parseJsonStatDataset(raw, tableId, slice);
   }
 
-  async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
-    return (await this.loadDataset(tableId)).schema;
+  // E2a step-5 fix (2026-09-23): `slice`, routed through the SAME
+  // `loadDataset` (and its per-(tableId, slice) cache) `fetchObservations`
+  // uses below — a registered table's schema/code-list read now hits the
+  // exact server-filtered request its observations do, instead of always
+  // requesting the whole (potentially over-cap) dataset. When the caller
+  // (registerTables/syncTable, src/ingestion/pipeline.ts) passes the SAME
+  // slice for schema, code lists AND observations, all three come from ONE
+  // underlying fetch (the cache key is identical). No slice ⇒ unchanged.
+  async fetchTableSchema(tableId: string, slice?: CbsSlice): Promise<CbsTableSchema> {
+    return (await this.loadDataset(tableId, slice)).schema;
   }
 
-  async fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]> {
-    const parsed = await this.loadDataset(tableId);
+  async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
+    const parsed = await this.loadDataset(tableId, slice);
     const codes = parsed.codeLists[dimension];
     if (!codes) {
       throw new Error(

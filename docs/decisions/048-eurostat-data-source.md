@@ -175,7 +175,39 @@ obligations:**
   500k-cell threshold by construction of the WP16 150k-cell slice cap; the async submit-and-poll API is not
   implemented (a dataset that would need it fails the fit gate honestly). Eurostat fetches serialise (one at a
   time) in the CLI and the cron job — the fair-use policy is an ingestion-scheduling concern only, since no
-  request-path call exists (principle (b)).
+  request-path call exists (principle (b)). **⚠ AS-BUILT NOTE (E2a step-5 prerequisite, session 125,
+  2026-09-23):** "server-side filtered per `CbsSlice`" above was aspirational, not as-built, from E1 (session
+  101/107) until this fix — `fetchAndParse` (`src/eurostat-adapter/statistics-api.ts`) built the request URL as
+  `<base>/<code>?format=JSON&lang=EN` with NO filter params at all, applying the full `CbsSlice` (incl. the
+  structural geo restriction) only client-side, AFTER the `SYNC_CELL_THRESHOLD` check had already run on the
+  unfiltered declared cell count. Verified live (research doc
+  `docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md`): all three E2a sibling datasets
+  are 675,108 / several million / 8,191,372 cells unfiltered (over the 500k cap) but 2,112–4,488 cells once
+  filtered — so the gap was not cosmetic, it made every one of them un-registerable. Now genuinely true:
+  `dimensionEquals` entries become `<dim>=<code>` params, the structural geo restriction
+  (`EU_EFTA_STAND_IN_GEO_CODES`) becomes repeated `geo=<code>` params whenever a slice is present, and
+  `periodFloor` becomes `sinceTimePeriod=<Eurostat format>`. **Caveat the phrase above doesn't spell out:**
+  `dimensionPrefixes` has NO Eurostat server-side equivalent and stays client-side only (geo is the one
+  exception, already covered structurally, not via a per-slice `dimensionPrefixes.geo`) — the client-side
+  filter (`matchesSlice`, jsonstat.ts) still runs unconditionally afterwards regardless (defence in depth,
+  unchanged). A call with truly no slice at all (e.g. registering a table with no `Phase0Table.slice`, like
+  `tipsbd30`, the one real registered Eurostat table) is byte-identical to the pre-fix URL. Tests:
+  `tests/eurostat-adapter/statistics-api.test.ts`.
+
+  **Fix round 2 (same session, 2026-09-23):** the fix above covered `fetchAndParse`/`fetchObservations` only —
+  `registerTables` and `syncTable` (`src/ingestion/pipeline.ts`) independently call `fetchTableSchema` and
+  `fetchCodeList` to read a table's schema/dimension metadata, and BOTH did so with no slice at all, so
+  registering (or ever re-syncing) one of the three E2a siblings would still have fetched the unfiltered
+  dataset for its schema and hit `AsyncApiRequiredError`, even with round 1's fix in place. Fixed by adding an
+  optional `slice?: CbsSlice` parameter to `CbsSource.fetchTableSchema`/`fetchCodeList` (`src/cbs-adapter/
+  types.ts`) — CBS's own adapters ignore it, so CBS registration/sync stays byte-identical — and threading
+  `table.slice` (`registerTables`) / `registry.slice` (`syncTable`) through both calls. `StatisticsApiSource`
+  and `EurostatFixtureSource` now route `fetchTableSchema`/`fetchCodeList` through the SAME per-(tableId,
+  slice) cache (`loadDataset`/`parsed`) `fetchObservations` already used, so a registration + its first sync
+  of one sliced table share ONE underlying fetch, not three. Tests:
+  `tests/eurostat-adapter/register-sync.test.ts` (a stubbed over-cap-unfiltered/under-cap-filtered pair,
+  proving registration throws `AsyncApiRequiredError` without a slice and succeeds — from exactly one fetch —
+  with one).
 
 **D7 — Proof and citation carry over on the existing "Bewijs dit cijfer" panel with two additive fields.**
 `web/lib/answer-proof.ts` builds the panel once from the stored envelope (no arithmetic, every digit a shared
