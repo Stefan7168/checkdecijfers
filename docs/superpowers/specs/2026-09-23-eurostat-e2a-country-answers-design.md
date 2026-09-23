@@ -276,7 +276,10 @@ count), fell back to the original CBS clarification when no chip can be offered 
 gebruiken we Eurostat" text), and fixed answer attribution that always said CBS. It also closed a live latent
 gap: on a national-only CBS measure, a foreign place the parser tagged `land` got the Dutch national figure
 silently; it now clarifies. The English chip copy in §4.4 is recorded but not built: backend reader text is
-Dutch-only by the project convention.
+Dutch-only by the project convention. One deliberate CBS-side change: with click options enabled, a CBS
+chip that the click trust boundary would reject (e.g. for an on-demand-added table) is no longer OFFERED —
+before, it was offered and then silently stripped on click, ending in the same reply. Safe direction, same
+outcome for the reader, but the stored clarification differs.
 6. **The flip (owner-signed, one change):** the public wording sweep ("official sources", `/llms.txt`, the
    coverage disclosure, `/systeemoverzicht`, CLAUDE.md's public-claim line), plus a live owner-supervised smoke
    test, plus the benchmark with the new tasks. Until this step no reader can reach any of it: the
