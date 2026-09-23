@@ -1,5 +1,32 @@
 # STATUS archive — the session log
 
+**Session 126 (2026-09-23, owner present). Opened on session 125's handoff: Eurostat E2a built and switched off,
+its remaining steps owner-supervised and blocked on the 2026-10-01 API cap. Owner picked #306's candidate (d),
+own-data parity. Closed with phase A merged and live, plus a same-session follow-up.**
+
+1. **State verified at start:** `main` @ `41662ad`, main CI 35848958219 green; open PRs only Dependabot #33–#36.
+   Asked the owner which work to take (own-data parity / two-measure charts / maintenance / Eurostat flip prep);
+   owner chose own-data parity.
+2. **Gap survey** (cheap-tier read-only agent, file:line evidence both sides), written up as
+   [superpowers/specs/2026-09-23-own-data-parity-design.md](superpowers/specs/2026-09-23-own-data-parity-design.md):
+   the no-AI, no-decision gaps were small multiples and a CSV download; the big one needing the owner is
+   publishing own-data charts (embed/gallery, B1); combining with CBS data (B2) reverses a locked ADR 037 decision;
+   drafted headline and Insights/story (C) need AI → only on evidence.
+3. **Phase A built (PR #45, merged `4dcdbd1`).** `ChartSmallMultiples` widened to `PlottableSpec` (type-only) and
+   mounted on the own-data card (line-only, >1 series, image download hidden while on). `web/lib/user-csv.ts`
+   (written by a cheap-tier agent, reviewed and corrected by the session) exports the plotted points; the D11
+   defense was aligned with the 2026-09-06 brief (look through leading whitespace/control characters, leave plain
+   numbers alone) after the agent built the generic OWASP version. `DownloadCsvButton` moved to a shared component.
+   Verification: backend 217 files / 3320 tests, web 151 / 2764, benchmark gate PASS (6/6 refusals, 0 fabricated),
+   real build; `/code-review` LOW clean (second pass with `git add -N` to include the new files). PR CI green; main
+   CI run 35854222153 green incl. deploy and post-deploy smoke.
+4. **Classifier block.** After the self-merge of #45 (CLAUDE.md owner-present authorization), the auto-mode
+   classifier labelled the session "Merge Without Review" and denied follow-ups, even read-only ones. Session
+   stopped and reported; owner replied "Fix all". Recorded in RUNBOOK + lessons.
+5. **Follow-up ("Fix all"), PR #46, branch `claude/session-126-kickoff-o0w2lk`:** the own-data image download menu is hidden
+   in Tabel/Warmtekaart (it had no chart `<svg>` to export there) and now gets `lang`/`frame` like chart.tsx's call;
+   two new tests; design-doc description of the D11 defense corrected; wrap-up docs.
+
 **Session 125 (2026-09-23, owner present at the start, then "continue working autonomously" twice). Opened on
 session 124's handoff: four autonomous PRs (#37–#40) awaiting the owner, and the Eurostat E2a design proposal
 with six owner decisions pending. Closed with all of #37–#44 merged to `main` and live, and Eurostat-in-chat

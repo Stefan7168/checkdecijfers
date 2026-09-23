@@ -348,6 +348,32 @@ describe('UserChartView — CSV download (#318 own-data parity)', () => {
   });
 });
 
+// Session 126 follow-up: the image download menu is offered only where
+// there is one chart <svg> to export, and it follows the chart's language.
+describe('UserChartView — image download menu (session 126 follow-up)', () => {
+  it('offers no image download in Tabel or Warmtekaart form — only the CSV', () => {
+    render(<UserChartView spec={twoSeriesThreeYearSpec()} />);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    for (const form of ['Tabel', 'Warmtekaart']) {
+      fireEvent.click(screen.getByRole('tab', { name: form }));
+      expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: CSV_BUTTON })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('tab', { name: 'Lijn' }));
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
+
+  it('labels the menu in the chart\'s own language', () => {
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={twoSeriesSpec()} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    expect(screen.getByRole('menu', { name: 'Download format' })).toBeInTheDocument();
+  });
+});
+
 // #318 (session 126, own-data parity): small multiples — the CBS card's
 // one-mini-chart-per-series view, same line-only gate, same toggle labels.
 describe('UserChartView — small multiples (#318 own-data parity)', () => {

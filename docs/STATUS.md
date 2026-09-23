@@ -18,36 +18,33 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 125 close — owner present at the start, then "continue
-working autonomously"; verify against `git log` / `gh pr list` / `gh run list` before trusting this).
-Kickoff: [session-briefs/2026-09-23-session-126-kickoff.md](session-briefs/2026-09-23-session-126-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 126 close — owner present; verify against `git log` /
+the GitHub PR list / Actions runs before trusting this). Kickoff:
+[session-briefs/2026-09-23-session-127-kickoff.md](session-briefs/2026-09-23-session-127-kickoff.md).**
 
-- **Eurostat in chat (slice E2a) is BUILT, STAGED and SWITCHED OFF — all on `main`, nothing reader-visible.**
-  The confirm chip ("Voor dit antwoord gebruiken we Eurostat: … [Toon de Eurostat-cijfers]" — owner steer: name
-  the source, never "CBS heeft geen cijfer"), Dutch country names, source-aware wording, break-in-series refusals
-  in answers and in the chart editor, server-side filtered Eurostat downloads, and the three owner-approved pairs
-  (unemployment `une_rt_q`, inflation `prc_hicp_manr`, GDP growth `namq_10_gdp`) behind env
-  `EUROSTAT_SIBLINGS_ENABLED`. Merged as PRs #41–#44 (main CI runs 35820809111, 35833108175, 35837694364,
-  35848958219). Spec: [E2a design](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md) §6
-  as-built; [research note](superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md); [#313](open-questions.md).
-- **What remains is owner-supervised:** step 0 (record ~10 real country-question parses — small AI spend, after
-  the API cap lifts 2026-10-01; also yields the new Eurostat benchmark tasks); step 5 (`npm run eurostat:siblings`
-  → `-- --apply` → `npm run registry:apply`, RUNBOOK "E2a step 5" — live DB writes); step 6, the flip (public
-  wording sweep, owner sign-off on the three Dutch topic descriptions — marked **Assumption** in #313, benchmark,
-  then `EUROSTAT_SIBLINGS_ENABLED=1` in Vercel + redeploy; never in the local `.env`).
-- **Also LIVE from session 125:** PRs #37–#40 (focus kept on a designated slice; own-data totals over empty cells
-  disclosed — owner chose "disclose" ([#314](open-questions.md)); a repeated overlay point refused; chart UX
-  residuals); a live bug fixed where a foreign place tagged `land` on a national-only measure got the Dutch figure
-  ([#315](open-questions.md)); `/llms.txt` no longer lists the Eurostat table as "CBS eurostat:tipsbd30".
-- **Owner statement recorded (CLAUDE.md git workflow): "I do not review code."** Owner present → the session merges
-  verified, green PRs itself; autonomous → branch + PR waiting for a GO on a plain-English summary.
-- **Owner steps pending since session 110/111** (registry:apply — now safe: unregistered sibling tables are skipped,
-  DOI backfill, live benchmark, region-set Task 9, audit row 22, all `:record` fixture confirmations) — blocked on
-  the Anthropic usage cap until 2026-10-01. Tracked: [#317](open-questions.md) (conformance check unfiltered,
-  dormant); Dependabot PRs #33–#36; the stale fully-merged worktree `chart-copilot-phase6` @ `58db5097` (owner's
-  call to remove).
-- **LIVE since session 123/124: own-data chart-fit + verified-whole parity** (`7694cf5c`; ADR
-  [056](decisions/056-chart-copilot.md), [#312](open-questions.md)).
+- **Own-data parity (#306 candidate (d), owner pick session 126) — phase A MERGED + LIVE.** The own-data chart card
+  now has small multiples and a CSV download of its plotted points, with ADR 037 D11's formula-injection defense
+  (PR #45, `4dcdbd1`, main CI 35854222153 green incl. deploy + post-deploy smoke). Same-session follow-up PR #46 (branch
+  `claude/session-126-kickoff-o0w2lk`): the own-data image download menu is hidden in Tabel/Warmtekaart (no chart to
+  export) and gets the chart's language and frame. Spec:
+  [own-data parity design](superpowers/specs/2026-09-23-own-data-parity-design.md); [#318](open-questions.md).
+- **Owner decisions waiting (#318):** B1 — may a user publish an own-data chart (embed link / gallery)?
+  Recommendation: yes, opt-in per chart, plotted points only, link dies on file delete / retention purge.
+  B2 — own data + CBS in one chart (reverses ADR 037's "never for v1"); recommendation: wait for evidence.
+- **Merging:** a self-merge via the GitHub tool tripped the auto-mode classifier ("Merge Without Review") after it
+  succeeded (RUNBOOK). Get an explicit in-chat "merge it" from the owner before the merge call.
+- **Eurostat in chat (E2a) — BUILT, STAGED, SWITCHED OFF, unchanged since session 125.** Remaining steps are
+  owner-supervised: step 0 (record ~10 real country-question parses after the API cap lifts 2026-10-01), step 5
+  (`npm run eurostat:siblings` → `-- --apply` → `npm run registry:apply`, RUNBOOK "E2a step 5"), step 6 (public
+  wording sweep, owner sign-off on three Dutch topic descriptions, benchmark, `EUROSTAT_SIBLINGS_ENABLED=1` in
+  Vercel + redeploy). Spec: [E2a design](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md); [#313](open-questions.md).
+- **Owner statement recorded (CLAUDE.md git workflow): "I do not review code."** The owner gives a GO on a
+  plain-English summary; the session's own review loop, the verification block, `/code-review` LOW and green CI
+  are the real review.
+- **Owner steps pending since session 110/111** (registry:apply, DOI backfill, live benchmark, region-set Task 9,
+  audit row 22, all `:record` fixture confirmations) — blocked on the Anthropic usage cap until 2026-10-01.
+  Tracked: [#317](open-questions.md) (dormant); Dependabot PRs #33–#36; the stale fully-merged worktree
+  `chart-copilot-phase6` @ `58db5097` (owner's call to remove).
 
 ---
 
