@@ -16,6 +16,11 @@ import type { EchoServability, StructuredIntent } from '../../query/index.ts';
 // cycle; it renders period codes for clarification prose, which is exactly
 // what the echo fallback below builds (WP15/#56).
 import { periodCodeToNl } from '../respond/period-nl.ts';
+// The click trust boundary's own predicate (validate-pending.ts imports only
+// zod, the intent schema/types, the query types and the sources leaf modules
+// — nothing that imports this file back), so the offer side can refuse to
+// mint a chip the take side would strip.
+import { isClickTakeableIntent, type ClickValidationOptions } from '../respond/validate-pending.ts';
 import { stableStringify } from './client.ts';
 import { isResolutionFailure, type CandidateResolution } from './resolve.ts';
 import type {
@@ -111,10 +116,18 @@ function failureQuestion(failure: ResolutionFailure): string {
 async function buildClickOptions(
   servability: ServabilityCheck,
   entries: { label: string; intent: StructuredIntent | null; impliedRecency: boolean }[],
+  clickValidation: ClickValidationOptions,
 ): Promise<ClickOption[]> {
   const offered: ClickOption[] = [];
   for (const [index, entry] of entries.slice(0, MAX_CLICK_OPTIONS).entries()) {
     if (entry.intent === null) continue;
+    // E2a final-review fix wave (C1, defence in depth — the #197 rule
+    // suggestions.ts already follows): a chip whose intent the click trust
+    // boundary (validate-pending.ts, applied in web/app/actions.ts before the
+    // take) would DROP is worse than no chip — its click would fall into the
+    // paid LLM merge instead of the take-path. Checked BEFORE the dry-run, so
+    // an untakeable option costs no query either.
+    if (!isClickTakeableIntent(entry.intent, clickValidation)) continue;
     const verdict = await servability(entry.intent);
     if (!verdict.servable) continue;
     offered.push({
@@ -143,6 +156,7 @@ async function clarificationFromFailure(
   failure: ResolutionFailure,
   servability: ServabilityCheck,
   clickOptionsEnabled: boolean,
+  clickValidation: ClickValidationOptions,
 ): Promise<ParseOutcome> {
   const outcome = {
     kind: 'clarification',
@@ -155,15 +169,32 @@ async function clarificationFromFailure(
   // The resolver attaches per-option intents only where the options ARE the
   // competing readings (region_ambiguous: "Utrecht (gemeente)" vs the
   // province). Everywhere else there is nothing takeable to offer.
-  if (!clickOptionsEnabled || failure.optionIntents === undefined) return outcome;
-  const clickOptions = await buildClickOptions(
-    servability,
-    failure.options.map((label, i) => ({
-      label,
-      intent: failure.optionIntents?.[i] ?? null,
-      impliedRecency: failure.optionImpliedRecency ?? false,
-    })),
-  );
+  const clickOptions =
+    !clickOptionsEnabled || failure.optionIntents === undefined
+      ? []
+      : await buildClickOptions(
+          servability,
+          failure.options.map((label, i) => ({
+            label,
+            intent: failure.optionIntents?.[i] ?? null,
+            impliedRecency: failure.optionImpliedRecency ?? false,
+          })),
+          clickValidation,
+        );
+  // E2a final-review fix wave (I6): the Eurostat switch is ONLY takeable by
+  // its chip — its question promises an answer ("Voor dit antwoord gebruiken
+  // we Eurostat: …") that a typed reply cannot reach (the reply merge
+  // re-resolves to the CBS key and ends in a still-ambiguous refusal: the
+  // paid dead end ADR 024 exists to remove). So when no chip survives — click
+  // options off (the documented rollback state), the offer-time dry-run
+  // refusing, or the trust-boundary gate above — the reader gets EXACTLY the
+  // CBS clarification they would have had without a sibling pair: the
+  // original region_unknown / region_on_national_measure failure the resolver
+  // kept on `fallback`. Recursing re-applies every rule to that failure (it
+  // carries no option intents, so it renders as plain text, as before E2a).
+  if (failure.reason === 'other_source_available' && clickOptions.length === 0 && failure.fallback !== undefined) {
+    return clarificationFromFailure(context, failure.fallback, servability, clickOptionsEnabled, clickValidation);
+  }
   return withClickOptions(outcome, clickOptions);
 }
 
@@ -440,6 +471,12 @@ export async function decide(
    * production until the owner flips it) → not one dry-run runs here and every
    * clarification is byte-identical to the pre-WP26 one. */
   clickOptionsEnabled = false,
+  /** Eurostat E2a (final-review fix wave C1): the test seam of the click
+   * trust boundary's sibling allowlist, same shape as `resolveCandidate`'s
+   * `eurostatSiblings` option — a test that injects a sibling pair at
+   * resolution injects the same map here, so the offer-side gate agrees with
+   * the resolver. Absent (every production caller) ⇒ the production map. */
+  clickValidation: ClickValidationOptions = {},
 ): Promise<ParseOutcome> {
   if (resolutions.length === 0) return resolveUnmatched(context, finder);
 
@@ -448,7 +485,7 @@ export async function decide(
 
   // Rule 2: never fall through past a failed top reading.
   if (isResolutionFailure(top)) {
-    return clarificationFromFailure(context, top, servability, clickOptionsEnabled);
+    return clarificationFromFailure(context, top, servability, clickOptionsEnabled, clickValidation);
   }
 
   // Rule 2.5 (#64): an explicit enumeration of named absolute periods merges
@@ -466,7 +503,7 @@ export async function decide(
     // unmatched exit — the finder is irrelevant there, so it is not threaded.
     // The click flag IS threaded: the recursion can still exit via rule 3.
     if (enumerated) {
-      return decide(context, [enumerated], config, servability, undefined, clickOptionsEnabled);
+      return decide(context, [enumerated], config, servability, undefined, clickOptionsEnabled, clickValidation);
     }
   }
 

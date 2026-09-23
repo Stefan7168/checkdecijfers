@@ -185,6 +185,13 @@ describe('Eurostat sibling check (other_source_available)', () => {
       return result;
     }
 
+    // The CBS clarification the sibling check replaced — what the reader
+    // gets whenever the Eurostat chip cannot be offered (fix wave I6).
+    // unemployment_rate_seasonally_adjusted is national-only, so a foreign
+    // place fails as region_on_national_measure (R3).
+    const CBS_FALLBACK_QUESTION =
+      'Die cijfers heb ik alleen voor heel Nederland, niet per gemeente of buurt — wil je het landelijke cijfer?';
+
     it('servable: question names the source + the one caveat, exactly one chip labelled "Toon de Eurostat-cijfers"', async () => {
       const failure = await siblingFailure();
       const outcome = await decide(
@@ -194,6 +201,10 @@ describe('Eurostat sibling check (other_source_available)', () => {
         servable,
         undefined,
         true,
+        // The same injected pair the resolver got, for the offer-side click
+        // trust-boundary gate (fix wave C1) — without it the production map
+        // (empty) would make the chip untakeable, and it is not offered.
+        { eurostatSiblings: UNEMPLOYMENT_SIBLING },
       );
       expect(outcome.kind).toBe('clarification');
       if (outcome.kind !== 'clarification') throw new Error('unreachable');
@@ -207,19 +218,48 @@ describe('Eurostat sibling check (other_source_available)', () => {
       expect(outcome.clickOptions?.[0]?.intent.regions).toEqual(['DE']);
     });
 
-    it('not servable: no chip is offered', async () => {
-      const failure = await siblingFailure();
-      const outcome = await decide(
-        context('Hoe hoog is de werkloosheid in Duitsland?', failure),
-        [failure],
-        config,
-        notServable,
-        undefined,
-        true,
-      );
+    // Fix wave I6: a Eurostat question with no chip is a dead end (a typed
+    // reply merges back to the CBS key and ends still-ambiguous), so every
+    // no-chip case renders the ORIGINAL CBS clarification instead — byte-
+    // identical to what the reader would have got with no sibling pair.
+    async function expectCbsFallback(outcomePromise: ReturnType<typeof decide>): Promise<void> {
+      const outcome = await outcomePromise;
       expect(outcome.kind).toBe('clarification');
       if (outcome.kind !== 'clarification') throw new Error('unreachable');
       expect(outcome.clickOptions).toBeUndefined();
+      expect(outcome.question_nl).toBe(CBS_FALLBACK_QUESTION);
+      expect(outcome.question_nl).not.toContain('Eurostat');
+      expect(outcome.options).not.toContain('Toon de Eurostat-cijfers');
+      expect(outcome.axes).toEqual(['region']);
+    }
+
+    it('not servable (offer-time dry-run refuses): no chip, and the original CBS clarification instead of dead Eurostat text', async () => {
+      const failure = await siblingFailure();
+      expect(failure.fallback?.reason).toBe('region_on_national_measure');
+      await expectCbsFallback(
+        decide(context('Hoe hoog is de werkloosheid in Duitsland?', failure), [failure], config, notServable, undefined, true, {
+          eurostatSiblings: UNEMPLOYMENT_SIBLING,
+        }),
+      );
+    });
+
+    it('click options disabled (the rollback state): the original CBS clarification', async () => {
+      const failure = await siblingFailure();
+      await expectCbsFallback(
+        decide(context('Hoe hoog is de werkloosheid in Duitsland?', failure), [failure], config, servable, undefined, false, {
+          eurostatSiblings: UNEMPLOYMENT_SIBLING,
+        }),
+      );
+    });
+
+    it('chip not click-takeable (trust-boundary gate: sibling key unknown to the click validator): no chip, the original CBS clarification', async () => {
+      const failure = await siblingFailure();
+      // No clickValidation passed → the production sibling map (empty), under
+      // which the click trust boundary would strip this chip — so it is never
+      // offered (C1 defence in depth), and I6 falls back.
+      await expectCbsFallback(
+        decide(context('Hoe hoog is de werkloosheid in Duitsland?', failure), [failure], config, servable, undefined, true),
+      );
     });
   });
 });

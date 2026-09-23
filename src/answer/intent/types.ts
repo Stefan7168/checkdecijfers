@@ -235,6 +235,12 @@ export interface ResolutionFailure {
    * `definitionLabel`, shown on the confirm chip so the reader sees the
    * definition BEFORE clicking (§4.4 — never assumed identical to CBS's). */
   siblingDefinitionLabel?: string;
+  /** `other_source_available` only (E2a final-review fix wave, I6): the
+   * ORIGINAL CBS failure (`region_unknown` / `region_on_national_measure`)
+   * the sibling check replaced. policy.ts renders it instead whenever the
+   * Eurostat chip cannot be offered, so a reader never gets a Eurostat
+   * question they have no way to take — exactly today's CBS clarification. */
+  fallback?: ResolutionFailure;
   /** WP26 mechanism A: per-option resolved intents, index-aligned with
    * `options` (null = this option carries no takeable reading). Populated only
    * where the resolver can honestly build one — today the `region_ambiguous`

@@ -13,7 +13,8 @@
 import type { Db } from '../../db/types.ts';
 import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
-import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
 import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
 import { EUROSTAT_SIBLINGS } from '../../sources/eurostat-siblings.ts';
 import type {
@@ -34,12 +35,6 @@ export const STAND_START_OF_YEAR_KEYS = new Set([
   'housing_stock_start_of_year',
 ]);
 
-/** Everyday-name → official CBS base name. CBS labels Den Haag as
- * 's-Gravenhage (docs/07 quirk); users overwhelmingly say Den Haag. */
-const REGION_NAME_ALIASES: Record<string, string> = {
-  'den haag': "'s-gravenhage",
-};
-
 const KIND_CODE_PREFIX: Record<Exclude<RegionKind, 'onbekend'>, string> = {
   land: 'NL',
   landsdeel: 'LD',
@@ -59,25 +54,12 @@ export function regionKindForCode(code: string): Exclude<RegionKind, 'onbekend'>
   return KIND_BY_PREFIX.find(([prefix]) => code.startsWith(prefix))?.[1] ?? null;
 }
 
-/** Matching normalization: lowercase, straight apostrophes, no diacritics,
- * collapsed whitespace. Display strings always use the original CBS label. */
-export function normalizeRegionName(name: string): string {
-  const flattened = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[‘’ʼ]/g, "'")
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-  return REGION_NAME_ALIASES[flattened] ?? flattened;
-}
-
-/** CBS disambiguates colliding names with a trailing parenthetical:
- * "Utrecht (gemeente)", "Utrecht (PV)". The base name is what users say.
- * Exported for the WP15 context builder (code→name round-trip, ADR 021). */
-export function baseLabel(label: string): string {
-  return label.replace(/\s*\([^)]*\)\s*$/, '');
-}
+/** `normalizeRegionName` (matching normalisation + the Den Haag alias) and
+ * `baseLabel` (strip CBS's trailing disambiguating parenthetical) live in the
+ * leaf module src/sources/region-names.ts since the E2a fix wave (M1), so
+ * src/query and the Eurostat adapter can share them without depending on
+ * src/answer. Re-exported here so every existing caller is unchanged. */
+export { normalizeRegionName, baseLabel };
 
 interface CanonicalRow {
   key: string;
@@ -215,7 +197,10 @@ async function resolveRegions(
   // contain) is tried BEFORE English-label matching. CBS tables take the
   // untouched `else` branch below — byte-identical behaviour, pinned by
   // tests/answer/intent-resolve.test.ts staying green unchanged.
-  const isEurostatTable = sourceKeyForTableId(canonical.tableId) !== CBS_SOURCE_KEY;
+  // Gated on `=== EUROSTAT` (not `!== CBS`, E2a fix wave T1): this branch
+  // applies EUROSTAT's own geo-name list and code predicate, so only a
+  // Eurostat table may take it — a future third source must not inherit it.
+  const isEurostatTable = sourceKeyForTableId(canonical.tableId) === EUROSTAT_SOURCE_KEY;
 
   const codes: string[] = [];
   for (const term of terms) {
@@ -1171,6 +1156,10 @@ async function trySiblingResolution(
   candidate: RawCandidate,
   canonical: CanonicalRow,
   failure: RegionFailureDetail,
+  /** The CBS failure exactly as `resolveCandidate` would return it without a
+   * sibling — carried on the result as `fallback` (fix wave I6) so policy.ts
+   * can render it when the Eurostat chip cannot be offered. */
+  fallback: ResolutionFailure,
   referenceDateIso: string,
   options: ResolveCandidateOptions,
 ): Promise<ResolutionFailure | undefined> {
@@ -1208,6 +1197,7 @@ async function trySiblingResolution(
     optionIntents: [siblingResolution.intent],
     optionImpliedRecency: siblingResolution.impliedRecency,
     siblingDefinitionLabel: siblingCanonical.definitionLabel,
+    fallback,
     confidence: clamp01(candidate.confidence),
     reading: candidate.reading,
   };
@@ -1239,13 +1229,18 @@ export async function resolveCandidate(
   const geo = await fetchTableGeo(db, canonical.tableId);
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
   if (!regionResolution.ok) {
+    const { optionCodes, ...failure } = regionResolution.failure;
     // Eurostat E2a (§3/§4.3): before falling back to today's region failure,
     // check whether a reviewed Eurostat sibling resolves every named place.
+    // The two eligible reasons never carry `optionCodes` (only
+    // region_ambiguous does), so `fail(failure)` IS the exact failure this
+    // function would otherwise return for them — kept as the fallback.
     const siblingFailure = await trySiblingResolution(
       db,
       candidate,
       canonical,
       regionResolution.failure,
+      fail(failure),
       referenceDateIso,
       options,
     );
@@ -1258,7 +1253,6 @@ export async function resolveCandidate(
     // the ask becomes clickable. Any hiccup here (an unresolvable period, a
     // max-comparison that needs several regions) simply yields no intents:
     // the clarification then renders exactly as it does today.
-    const { optionCodes, ...failure } = regionResolution.failure;
     // #176: and ONLY when the flag that consumes them is on. policy.ts reads
     // optionIntents behind `clickOptionsEnabled` (policy.ts:149) and nothing
     // else reads them at all, so building them flag-off spent a resolvePeriod

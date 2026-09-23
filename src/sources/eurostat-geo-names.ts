@@ -9,7 +9,7 @@
 // Closed and pinned by test: every code `EU_EFTA_STAND_IN_GEO_CODES` can
 // emit has exactly one entry here, and no alias is shared by two codes.
 import { EU_EFTA_STAND_IN_GEO_CODES } from '../eurostat-adapter/jsonstat.ts';
-import { normalizeRegionName } from '../answer/intent/resolve.ts';
+import { normalizeRegionName } from './region-names.ts';
 
 export interface EurostatGeoNameEntry {
   /** The Dutch name shown to a reader (answers, charts, citations). */
@@ -28,7 +28,7 @@ export interface EurostatGeoNameEntry {
  * NOT, so normalizeRegionName('eurozone') resolves to exactly one code
  * (R2: aliases must stay unique AFTER normalizeRegionName, and
  * normalizeRegionName does NOT strip a trailing "(...)" the way
- * resolve.ts's `baseLabel` does for CBS labels — this list's matching never
+ * `baseLabel` (./region-names.ts) does for CBS labels — this list's matching never
  * calls `baseLabel`, precisely so "de eurozone (19 landen)" and "de eurozone
  * (20 landen)" stay distinct strings instead of collapsing together).
  */
@@ -75,10 +75,11 @@ export const EUROSTAT_GEO_NAMES_NL: Readonly<Record<string, EurostatGeoNameEntry
   EFTA: { display: 'de EFTA-landen', aliases: ['EFTA'] },
 };
 
-/** Lazily built the first time it's needed — never at module load, so this
- * module's circular relationship with resolve.ts (which imports THIS
- * module's lookup functions, while this module imports resolve.ts's
- * `normalizeRegionName`) can never race a not-yet-initialized binding. */
+/** Lazily built the first time it's needed. (It used to have to be lazy:
+ * this module imported `normalizeRegionName` from resolve.ts, which imports
+ * this module back — a cycle. Since the E2a fix wave (M1) that function
+ * lives in the leaf module ./region-names.ts and there is no cycle; the lazy
+ * build is kept simply because nothing needs the map at load time.) */
 let normalizedLookup: Map<string, string> | null = null;
 
 function buildLookup(): Map<string, string> {
