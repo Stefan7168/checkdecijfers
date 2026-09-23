@@ -1,5 +1,49 @@
 # STATUS archive — the session log
 
+**Session 125 (2026-09-23, owner present at the start, then "continue working autonomously" twice). Opened on
+session 124's handoff: four autonomous PRs (#37–#40) awaiting the owner, and the Eurostat E2a design proposal
+with six owner decisions pending. Closed with all of #37–#44 merged to `main` and live, and Eurostat-in-chat
+built and staged end to end but switched OFF (E2a steps 1–4 dark, step 5 mechanical, step 6 = the owner's flag).**
+
+1. **PRs #37–#40 merged as one locally-verified batch.** Owner approved all four and chose "disclose with a note"
+   for own-data totals that skipped empty cells (#314). The four PR branches edited adjacent open-questions rows;
+   merged locally in order (one row-level conflict, each side's rows kept), one full verification block (backend
+   3202/3202, web 2727/2727, benchmark PASS, build) + `/code-review` LOW clean, fast-forwarded `main` (`1f977b29`);
+   main CI run 35809403268 green incl. deploy. GitHub marked the four PRs MERGED automatically.
+2. **E2a decisions.** Owner approved D1–D6; D3 with a wording steer: the product is a multi-source tool, so the
+   confirm chip must not say "CBS heeft geen cijfer". Final copy: "Voor dit antwoord gebruiken we Eurostat:
+   {definitionLabel}. Eurostat hanteert één definitie voor alle landen; die kan afwijken van de CBS-definitie."
+   + [Toon de Eurostat-cijfers]. English copy recorded, not built (backend reader text is Dutch-only).
+3. **E2a steps 1–4 (PR #41), built dark via subagent-driven development** (4 tasks on mid-tier implementers, a
+   review per task, a final whole-branch review on the top tier, one fix wave, a scoped re-review). The final
+   review found a Critical (the chip could never be clicked: the click trust boundary is CBS-shaped) and four
+   Important (R11 wanted "voorlopig" for every Eurostat flag; the break check was blind to years between the
+   compared ones; combined flags like `bp`; a dead chip text when no chip could be offered) — all fixed; the fix
+   wave's e2e test also found Eurostat answers attributed to CBS. Siblings live in a sibling-only list, never
+   `defaults.ts` (which is the parser vocabulary). Also fixed a LIVE latent gap: on a national-only measure a
+   foreign place tagged `land` got the Dutch figure silently (#315). Owner said "I do not review code"; the
+   session merged #41 itself (main CI 35820809111 green incl. deploy) and recorded that in CLAUDE.md.
+4. **PR #42 — chart editor break guard (#316).** The chart co-pilot's on-demand difference refuses a Eurostat
+   methodology break on the later point or anywhere between (shared helper `src/query/window-breaks.ts`), with a
+   translated message. Review found geo-less Eurostat series were always refused; fixed. Main CI 35833108175.
+5. **PR #43 — Eurostat server-side filtering.** A research agent (live public API, no AI spend) found the adapter
+   fetched WHOLE datasets: the three step-5 datasets are 675k / millions / 8.2M cells unfiltered (over the 500k
+   cap) vs 2–4.5k filtered — and ADR 048 D6 claimed filtering that was never built. Built for fetch, register and
+   sync; review found quarterly/monthly `sinceTimePeriod` unverified (the session verified both live) and a
+   key-order-sensitive cache (jsonb round-trip → double fetch; fixed). Conformance check left unsliced (#317).
+   Main CI 35837694364 green incl. deploy.
+6. **PR #44 — step 5 staged, switched off.** The three reviewed pairs + measures behind `EUROSTAT_SIBLINGS_ENABLED`
+   (one gate function), `npm run eurostat:siblings` (dry-run default, `--apply`, recovers an interrupted sync),
+   `registry:apply` skips unregistered sibling tables instead of writing nothing, the coverage report hides dark
+   siblings. Top-tier review found every sibling measure missing Eurostat's `freq` dimension (registered but never
+   resolvable — silent), live DataCite calls in tests, `/llms.txt` exposure, no sync recovery — all fixed; a
+   round-trip test now registers a realistic dataset and answers "werkloosheid in Duitsland" from it. Also fixed a
+   LIVE mislabel: `/llms.txt` listed `CBS eurostat:tipsbd30`. Verification block green (backend 3320/3320, web
+   2737/2737, benchmark PASS, build), `/code-review` LOW clean.
+7. **Process:** lessons 1–9 in lessons-learned (batch-merge locally; e2e through the real take path; where a new
+   entity is registered decides who can reach it; round-trip every registry entry; "dark" must be checked against
+   every reader; ADR prose can describe unbuilt design; subagent stalls + blocked report files).
+
 **Session 124 (2026-09-23, owner present at the start, then "Continue working autonomously, for hours and
 hours"). Opened on session 123's handoff: own-data chart-fit + verified-whole parity built on branch
 `worktree-own-data-chart-parity` @ `d925a911`, final review "ready to merge, with fixes". Closed with that

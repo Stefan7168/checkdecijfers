@@ -7,7 +7,7 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 on top.
 
 ## Session 125 — merge a PR batch locally in one verified pass; a "dark" feature needs an end-to-end
-## test through the REAL take path, or its dead parts stay invisible
+## test through the REAL take path (and a round-trip test for every new registry entry)
 
 1. **Four adjacent-row docs conflicts: merge the batch locally, not PR by PR.** PRs #37–#40 each edited
    neighbouring rows of `docs/open-questions.md`; merging one by one on GitHub would have made each later PR
@@ -36,6 +36,27 @@ on top.
    questions (merge the PRs? disclose-or-refuse? approve the six E2a decisions as one bundle? the chip wording)
    got everything needed for hours of autonomous work; the owner's free-text answer on the wording ("it is a
    tool with several sources, don't say CBS lacks it") was the one real design input.
+
+6. **A registry entry drafted from reading code, not from running it, is a guess — gate it on a round-trip
+   test.** The step-5 sibling measures were drafted by a research agent from API responses + a reading of the
+   adapter; the draft `dims` omitted `freq`, which every real Eurostat dataset carries and the pipeline stores.
+   Every unit test passed (their fixtures omitted `freq` too); only a top-tier review tracing the query path
+   found that all three siblings would have been registered yet unresolvable — a silent dead feature. Any new
+   registry/measure entry needs one test that registers a REALISTIC fixture through the real pipeline and
+   resolves + queries it end to end.
+7. **"Invisible until the flag" must be checked against every reader of the data, not just the feature path.**
+   Step 5 was documented as reader-invisible, but the coverage report (`/llms.txt`, the coverage disclosure)
+   publishes every `canonical_measures` label — it would have published three not-yet-signed Dutch labels.
+   When claiming "dark", grep every consumer of the table/rows you write.
+8. **ADR prose can describe an intended design that was never built.** ADR 048 D6 said Eurostat fetches were
+   "server-side filtered per CbsSlice"; the code fetched whole datasets. It only surfaced because a research
+   agent checked real cell counts against the 500k cap. Treat an ADR's "fetch shape"/"how it works" line as a
+   claim to verify in code before building on it.
+9. **Subagents: the "wait on a background command" stall recurs; so does report-file blocking.** Three
+   implementers backgrounded a test/wait and sat idle (resumed each via SendMessage); several could not write
+   their report file (tooling refused) and returned the report inline instead — plan for inline reports.
+   Two implementers running vitest at once is still a risk on this 8 GB machine: dispatch the second only
+   after telling it to wait for `pgrep -f "node.*vitest"` to be empty.
 
 ## Session 124 — probe the real DOM before trusting a reviewer's root cause; additive spec fields
 ## break byte-for-byte audit reconstruction of OLD rows

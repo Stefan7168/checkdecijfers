@@ -1380,7 +1380,7 @@ and needs a one-off backfill.
   `tests/ingestion/ingestion.test.ts`'s "`registerTables` populates `cbs_tables.doi`" describe block, which
   exercises the same `src/eurostat-adapter/doi.ts` functions the backfill script calls.
 
-### E2a step 5 — register the Eurostat sibling tables (owner step; added session 125 continuation, 2026-09-23, branch `e2a-step5-staging`)
+### E2a step 5 — register the Eurostat sibling tables (owner step; added session 125, 2026-09-23 — merged to `main` as PR #44)
 
 Design: `docs/superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md` §4.1/§6 step 5; research:
 `docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md`. Three reviewed CBS↔Eurostat

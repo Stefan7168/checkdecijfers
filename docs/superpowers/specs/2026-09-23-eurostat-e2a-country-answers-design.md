@@ -274,7 +274,7 @@ slice never goes through the finder; siblings are pre-registered.
    hold — not `defaults.ts`, see §4.1 — then `registry:apply`, like E1's `tipsbd30`; docs/RUNBOOK.md "E2a step
    5" has the exact commands).
 
-**As built, session 125 continuation (2026-09-23), branch `e2a-step5-staging`:** step 5 is now a MECHANICAL
+**As built, session 125 (2026-09-23), merged to `main` as PR #44:** step 5 is now a MECHANICAL
 owner step, still fully dark. `src/sources/eurostat-siblings.ts` gained `EUROSTAT_SIBLINGS_REVIEWED` (the
 three §7 D4 pairs) and `EUROSTAT_SIBLING_MEASURES_REVIEWED` (their `CanonicalMeasure` entries, from the
 sibling-datasets research doc's §4 drafts) — reviewed in the sense that a person picked the dataset/filter/

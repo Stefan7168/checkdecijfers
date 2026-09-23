@@ -18,65 +18,36 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (session 125 in progress, 2026-09-23 — owner present, then "continue working
-autonomously"; verify against `git log` / `gh pr list` before trusting this).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-23, session 125 close — owner present at the start, then "continue
+working autonomously"; verify against `git log` / `gh pr list` / `gh run list` before trusting this).
+Kickoff: [session-briefs/2026-09-23-session-126-kickoff.md](session-briefs/2026-09-23-session-126-kickoff.md).**
 
-- **LIVE on `main` (session 125): PRs #37–#40 merged** after the owner's approval — keyboard focus kept on a pie
-  slice after designating it the total; own-data group totals that skipped empty cells are named under the chart
-  (owner chose "disclose", not "refuse", [#314](open-questions.md)); a difference/average overlay naming the same
-  point twice is refused; era labels, theme colour and an always-visible remove chip on overlays
-  ([#291](open-questions.md)–[#294](open-questions.md), [#298](open-questions.md)). Merged locally as one batch,
-  full verification block green (backend 3202/3202, web 2727/2727, benchmark gate PASS, real build), main CI run
-  35809403268 green incl. deploy.
-- **MERGED to `main` (session 125): Eurostat in chat, slice E2a, steps 1–4 — DARK (nothing reader-visible).**
-  Merged by the session on the owner's word ("I do not review code" — see CLAUDE.md git workflow); main CI run
-  35820809111 green incl. deploy. All six spec §7 decisions were taken by the owner; the confirm chip names the
-  source it uses ("Voor dit antwoord gebruiken we Eurostat: …"), never "CBS heeft geen cijfer" (owner steer). Both
-  sibling lists ship empty. Built via subagent-driven development (4 tasks, per-task reviews, a final review on the
-  top tier that found a Critical — the chip was not clickable — plus 4 Important, all fixed and re-reviewed). Also
-  fixed a LIVE latent gap, now live: on a national-only measure a foreign place tagged `land` silently got the
-  Dutch figure; it now clarifies ([#315](open-questions.md)). Verification block green (backend 3271/3271, web
-  2727/2727, benchmark gate PASS, real build), `/code-review` LOW clean.
-  **Step-5 groundwork also MERGED (session 125):** PR #42 — the chart editor's difference refuses a Eurostat
-  methodology break ([#316](open-questions.md), main CI 35833108175 green); PR #43 — the Eurostat downloader now
-  asks Eurostat for only the registered slice (it fetched whole datasets, so all three step-5 datasets — up to
-  8.2M cells — would have hit the 500k cap; filtered they are 2–4.5k), main CI 35837694364 green incl. deploy.
-  Verified dataset choices + settings: [research note](superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md).
-  **Step 5 is now MECHANICAL, still fully dark (branch `e2a-step5-staging`):** `EUROSTAT_SIBLINGS_REVIEWED` +
-  `EUROSTAT_SIBLING_MEASURES_REVIEWED` hold the three reviewed pairs (Dutch wording NOT yet owner-signed); the
-  runtime-active map (`activeEurostatSiblings()`, the one function the resolver/offer-gate/click-boundary all
-  fall back to) stays empty unless env `EUROSTAT_SIBLINGS_ENABLED='1'`; `registry:apply` now skips (never
-  aborts on) an unregistered sibling table (`siblingMeasuresSkipped`); a committed script, `npm run
-  eurostat:siblings` (dry run) / `-- --apply`, registers + syncs the three tables (recovers a registered-but-
-  never-synced table on re-run instead of skipping it). **Fix round 1 (independent review, same session):**
-  the `freq` dimension was missing from every reviewed measure (would have made all three unresolvable —
-  proven RED then fixed, real fixture round-trip test); `buildCoverageReport`/`/llms.txt` would have publicly
-  listed the three tables + their not-owner-signed labels as soon as `registry:apply` ran, regardless of the
-  runtime flag — now gated the same way as the resolver (ADR 048 as-built addendum); the registration script's
-  own tests made live DataCite calls, now stubbed. **Fix round 2 (2 items):** a REAL LIVE bug found + fixed —
-  `/llms.txt` on prod was hardcoding "CBS" for every table, mislabelling the already-live `eurostat:tipsbd30`
-  ([#249](open-questions.md)) as "CBS eurostat:tipsbd30"; `buildCoverageReport` now resolves each table's real
-  source name + bare native id from the registry (`sourceDisplayName`/`nativeId`, [#170](open-questions.md));
-  `registry:apply`'s early-return path (CBS tables missing) no longer hardcodes `siblingMeasuresSkipped: []`.
-  Owner steps per docs/RUNBOOK.md "E2a step 5": run the
-  script `--apply`, then `registry:apply`, then verify — all still blocked on the Anthropic API cap only
-  insofar as step 0 (live parse recording) is; step 5's registration itself needs no AI spend. Next: step 0
-  (live parse recording, ~10 questions, small AI spend, after the API
-  cap lifts 2026-10-01) and step 6, the owner-signed flip (wording sweep + `EUROSTAT_SIBLINGS_ENABLED=1`).
-  [#313](open-questions.md), spec §6.
-- **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
-  fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
-  dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
-  click a slice to name it the total and the app checks the arithmetic. ADR [056](decisions/056-chart-copilot.md),
-  [#312](open-questions.md).
-- **Docs hygiene done session 124:** stale open-questions rows closed after verification (#295, #297, #300,
-  #302, #304, #305); roadmap's Eurostat E1 line corrected (it is merged and live, flag-gated); the long
-  session 121–123 inline history moved verbatim to [status-archive.md](status-archive.md).
-- **Owner steps pending — unchanged since session 110/111** (registry:apply, DOI backfill, live benchmark,
-  region-set Task 9, audit row 22, all `:record` real-model fixture confirmations) — blocked on the Anthropic
-  workspace usage cap, which lifts 2026-10-01. Also open, not this session's: Dependabot PRs #35/#36.
-- **Housekeeping:** the stale, already-merged worktree `chart-copilot-phase6` @ `58db5097` is still present
-  (fully contained in `main`); left for the owner to remove.
+- **Eurostat in chat (slice E2a) is BUILT, STAGED and SWITCHED OFF — all on `main`, nothing reader-visible.**
+  The confirm chip ("Voor dit antwoord gebruiken we Eurostat: … [Toon de Eurostat-cijfers]" — owner steer: name
+  the source, never "CBS heeft geen cijfer"), Dutch country names, source-aware wording, break-in-series refusals
+  in answers and in the chart editor, server-side filtered Eurostat downloads, and the three owner-approved pairs
+  (unemployment `une_rt_q`, inflation `prc_hicp_manr`, GDP growth `namq_10_gdp`) behind env
+  `EUROSTAT_SIBLINGS_ENABLED`. Merged as PRs #41–#44 (main CI runs 35820809111, 35833108175, 35837694364,
+  35848958219). Spec: [E2a design](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md) §6
+  as-built; [research note](superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md); [#313](open-questions.md).
+- **What remains is owner-supervised:** step 0 (record ~10 real country-question parses — small AI spend, after
+  the API cap lifts 2026-10-01; also yields the new Eurostat benchmark tasks); step 5 (`npm run eurostat:siblings`
+  → `-- --apply` → `npm run registry:apply`, RUNBOOK "E2a step 5" — live DB writes); step 6, the flip (public
+  wording sweep, owner sign-off on the three Dutch topic descriptions — marked **Assumption** in #313, benchmark,
+  then `EUROSTAT_SIBLINGS_ENABLED=1` in Vercel + redeploy; never in the local `.env`).
+- **Also LIVE from session 125:** PRs #37–#40 (focus kept on a designated slice; own-data totals over empty cells
+  disclosed — owner chose "disclose" ([#314](open-questions.md)); a repeated overlay point refused; chart UX
+  residuals); a live bug fixed where a foreign place tagged `land` on a national-only measure got the Dutch figure
+  ([#315](open-questions.md)); `/llms.txt` no longer lists the Eurostat table as "CBS eurostat:tipsbd30".
+- **Owner statement recorded (CLAUDE.md git workflow): "I do not review code."** Owner present → the session merges
+  verified, green PRs itself; autonomous → branch + PR waiting for a GO on a plain-English summary.
+- **Owner steps pending since session 110/111** (registry:apply — now safe: unregistered sibling tables are skipped,
+  DOI backfill, live benchmark, region-set Task 9, audit row 22, all `:record` fixture confirmations) — blocked on
+  the Anthropic usage cap until 2026-10-01. Tracked: [#317](open-questions.md) (conformance check unfiltered,
+  dormant); Dependabot PRs #33–#36; the stale fully-merged worktree `chart-copilot-phase6` @ `58db5097` (owner's
+  call to remove).
+- **LIVE since session 123/124: own-data chart-fit + verified-whole parity** (`7694cf5c`; ADR
+  [056](decisions/056-chart-copilot.md), [#312](open-questions.md)).
 
 ---
 
