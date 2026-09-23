@@ -1389,6 +1389,10 @@ export const KNOWN_DERIVATION_REFUSAL_KEYS: Record<string, MessageKey> = {
   // its own `errorMissingRegion` message (chart.tsx's `onPointClick`) — this
   // covers the server reaching the same refusal by a different path.
   'difference compares periods at one place — regions differ': 'chart.derived.errorMissingRegion',
+  // #316: a Eurostat break-in-series flag lies between the two compared
+  // periods (found by the server's whole-window lookup, not visible in the
+  // two clicked cells alone) — ADR 048 D5b / ruling R8.
+  'a Eurostat break in series lies between these points': 'chart.derived.errorSeriesBreak',
 };
 
 function derivationRefusalMessage(lang: Lang, reason: string): string {

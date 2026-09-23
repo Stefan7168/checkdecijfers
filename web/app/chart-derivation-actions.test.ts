@@ -105,3 +105,120 @@ describe('requestChartDerivation', () => {
     }
   });
 });
+
+// #316 — the break-in-series guard for a Eurostat chart's on-demand
+// difference. Not reader-reachable today (no Eurostat answer can be charted
+// until E2a step 6), but must be closed before that flip. Mirrors
+// chart-whole-verification-actions.test.ts's fake-db-keyed-on-SQL-text
+// pattern: the fake only answers the one `from observations` window query
+// findEurostatWindowBreaks issues, and asserts the exact table/measure/dims
+// it was called with.
+describe('requestChartDerivation — Eurostat break-in-series guard (#316)', () => {
+  const EUROSTAT_TABLE = 'eurostat:ei_bsin_q_r2';
+  const MEASURE = 'obsValue';
+  const DIMS = {};
+
+  function eurostatPoint(resultId: string, periodCode: string, value: number, status = 'Published') {
+    return { resultId, periodCode, periodLabel: periodCode, value, formattedValue: String(value), decimals: 0, status, provisional: status !== 'Published', valueAttribute: 'None' };
+  }
+
+  function resultCell(resultId: string, regionCode: string, periodCode: string, measure: string | undefined = MEASURE) {
+    return { resultId, tableId: EUROSTAT_TABLE, measure, measureTitle: 'A measure', regionCode, regionLabel: regionCode, periodCode, periodLabel: periodCode, grain: 'year', dims: DIMS, dimLabels: {}, value: 1, unit: 'aantal', decimals: 0, status: 'Published', provisional: false, valueAttribute: 'None', batchId: 1 };
+  }
+
+  function eurostatSpec(points: ReturnType<typeof eurostatPoint>[], regionCode = 'DE') {
+    return { unit: 'aantal', dims: DIMS, series: [{ label: regionCode, regionCode, points }], attribution: { tableId: EUROSTAT_TABLE } };
+  }
+
+  /** A fake db that answers only the window-break SQL, returning `windowRows`
+   * verbatim and asserting the coordinate it was queried with. */
+  function fakeWindowDb(windowRows: { region_code: string; period_code: string; status: string }[]) {
+    const query = vi.fn(async (sql: string, params: unknown[]) => {
+      if (sql.includes('from observations')) {
+        const [tableId, measure, dims] = params as [string, string, string];
+        expect(tableId).toBe(EUROSTAT_TABLE);
+        expect(measure).toBe(MEASURE);
+        expect(dims).toBe(JSON.stringify(DIMS));
+        return { rows: windowRows };
+      }
+      throw new Error(`unexpected SQL in test: ${sql}`);
+    });
+    return { query };
+  }
+
+  function stubRecord(points: ReturnType<typeof eurostatPoint>[], cells: ReturnType<typeof resultCell>[], regionCode = 'DE') {
+    loadAuditRecord.mockResolvedValue({
+      id: 5,
+      userId: 'u1',
+      response: { kind: 'answer', chart: eurostatSpec(points, regionCode), result: { cells }, cells: [], derivations: [] },
+    });
+  }
+
+  it('(a) a break flagged on the LATER compared period refuses with the stable, translatable reason', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2021JJ00', 20, 'b')];
+    const cells = [resultCell('r1', 'DE', '2020JJ00'), resultCell('r2', 'DE', '2021JJ00')];
+    stubRecord(points, cells);
+    // The later period's own observation row carries the break flag — found
+    // by the window query same as it would in the real database (the query
+    // window is period > first, <= last, so it covers the last endpoint too).
+    getDb.mockReturnValue(fakeWindowDb([{ region_code: 'DE', period_code: '2021JJ00', status: 'b' }]));
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: false, reason: 'a Eurostat break in series lies between these points' });
+  });
+
+  it('(b) a combined "bp" flag on a period BETWEEN the two chosen chart points (not itself on the chart) refuses', async () => {
+    // Only 2020 and 2022 are plotted; 2021 is not a chart point at all — the
+    // break can only be found by querying the whole window from `observations`.
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2022JJ00', 30)];
+    const cells = [resultCell('r1', 'DE', '2020JJ00'), resultCell('r2', 'DE', '2022JJ00')];
+    stubRecord(points, cells);
+    getDb.mockReturnValue(fakeWindowDb([{ region_code: 'DE', period_code: '2021JJ00', status: 'bp' }]));
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: false, reason: 'a Eurostat break in series lies between these points' });
+  });
+
+  it('(c) no break anywhere in the window: the difference computes normally', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2022JJ00', 30)];
+    const cells = [resultCell('r1', 'DE', '2020JJ00'), resultCell('r2', 'DE', '2022JJ00')];
+    stubRecord(points, cells);
+    getDb.mockReturnValue(fakeWindowDb([]));
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 20 }) });
+  });
+
+  it('(d) a CBS spec whose status string happens to be "b" is unaffected — no window query, byte-identical result', async () => {
+    const spec = { unit: 'aantal', series: [{ label: 'x', regionCode: 'GM0599', points: [
+      { resultId: 'r1', periodCode: '2019', periodLabel: '2019', value: 10, formattedValue: '10', decimals: 0, status: 'Definitief', provisional: false, valueAttribute: 'None' },
+      { resultId: 'r2', periodCode: '2020', periodLabel: '2020', value: 20, formattedValue: '20', decimals: 0, status: 'b', provisional: false, valueAttribute: 'None' },
+    ] }], attribution: { tableId: '85984NED' } };
+    const query = vi.fn(async () => { throw new Error('CBS derivation must never query the database'); });
+    getDb.mockReturnValue({ query });
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, result: { cells: [] }, cells: [], derivations: [] } });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('(e) a Eurostat spec whose measure cannot be determined from the stored result refuses, fail closed', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2022JJ00', 30)];
+    // No matching cells at all in the stored result — the audited row cannot
+    // say what measure this comparison is over.
+    stubRecord(points, []);
+    const query = vi.fn(async () => { throw new Error('must refuse before ever querying the window'); });
+    getDb.mockReturnValue({ query });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r2']);
+    expect(result).toEqual({ ok: false, reason: 'cannot determine the Eurostat measure for this pair of points — refusing rather than skip the break check' });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('mean stays unguarded (ruling R6: a mean is not a cross-period comparison) — no window query even across a break', async () => {
+    const points = [eurostatPoint('r1', '2020JJ00', 10), eurostatPoint('r2', '2021JJ00', 20, 'b'), eurostatPoint('r3', '2022JJ00', 30)];
+    const cells = [resultCell('r1', 'DE', '2020JJ00'), resultCell('r2', 'DE', '2021JJ00'), resultCell('r3', 'DE', '2022JJ00')];
+    stubRecord(points, cells);
+    const query = vi.fn(async () => { throw new Error('mean must never query the window'); });
+    getDb.mockReturnValue({ query });
+    const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'mean', ['r1', 'r2', 'r3']);
+    expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'mean', value: 20 }) });
+    expect(query).not.toHaveBeenCalled();
+  });
+});

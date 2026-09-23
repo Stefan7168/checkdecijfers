@@ -1271,6 +1271,7 @@ const nl = {
   'chart.derived.errorNoChart': 'Bij dit antwoord hoort geen grafiek om uit af te leiden.',
   'chart.derived.errorPointNotOnChart': 'Een van de gekozen punten staat niet in deze grafiek.',
   'chart.derived.errorSamePeriod': 'Kies twee verschillende periodes voor een verschil.',
+  'chart.derived.errorSeriesBreak': 'Dit verschil kan niet worden berekend: Eurostat meldt een methodebreuk tussen deze perioden.',
   'chart.derived.errorGeneric': 'Dit kan niet met deze punten.',
 
   // Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand check
@@ -2303,6 +2304,7 @@ const en: Messages = {
   'chart.derived.errorNoChart': 'This answer has no chart to derive from.',
   'chart.derived.errorPointNotOnChart': 'One of the chosen points is not on this chart.',
   'chart.derived.errorSamePeriod': 'Pick two different periods for a difference.',
+  'chart.derived.errorSeriesBreak': 'This difference can\'t be computed: Eurostat reports a break in methodology between these periods.',
   'chart.derived.errorGeneric': 'This cannot be done with these points.',
 
   // Chart co-pilot phase 5b (verified-whole, Task 4) — see the `nl` block.
