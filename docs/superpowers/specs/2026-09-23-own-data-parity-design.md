@@ -42,10 +42,15 @@ audit/reconstruction (R8 analog); aggregate/derived arithmetic; incomplete-group
   CBS CSV (`;`, decimal comma, BOM, CRLF). Preamble = the disclaimer line verbatim, the source file and upload date,
   and a "made by" line. One row per plotted point: x, series, exact value (never rounded), the shown value, the cell
   reference (`rowRef` — the traceability handle), and a note (missing-value reason, or the #314 incomplete-group
-  note). **The D11 defense:** every field whose text comes from the user's file (headers, series labels, x labels,
-  file name) is prefixed with `'` when it starts with `=`, `+`, `-`, `@`, TAB or CR
-  ([OWASP CSV injection](https://owasp.org/www-community/attacks/CSV_Injection)); the numbers we serialize
-  ourselves are not prefixed, so a negative number stays a number.
+  note). **The D11 defense** (content-level, as the 2026-09-06 brief's D11 fix specifies,
+  [OWASP CSV injection](https://owasp.org/www-community/attacks/CSV_Injection)): every field whose text comes from
+  the user's file (headers, series labels, x labels, file name) is left alone when it is a plain number (`-5,2`);
+  otherwise leading whitespace/control characters are looked through, and a field whose text then starts with `=`,
+  `+`, `-` or `@` (or that opens with TAB/CR) gets a leading `'`. The numbers we serialize ourselves are never
+  prefixed, so a negative number stays a number.
+- **Follow-up (same session, owner "fix all"):** the own-data card's image download menu is now offered only where
+  there is one chart `<svg>` to export (not in Tabel, Warmtekaart or small multiples, same as the CBS card), and it
+  now gets the chart's language and frame, as chart.tsx's call does.
 
 ## 4. Phase B — needs the owner
 

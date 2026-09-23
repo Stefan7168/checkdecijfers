@@ -6,6 +6,30 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 126 — quote the repo's own earlier spec in a delegation brief; a self-merge can trip the
+## auto-mode classifier after it succeeds
+
+1. **A delegated implementer built the generic version of a mechanism the repo had already specified.** The
+   own-data CSV needed ADR 037 D11's formula-injection defense. The brief handed to a cheap-tier agent listed the
+   OWASP lead characters, and the agent built exactly that. The 2026-09-06 design brief had already specified a
+   stricter, better rule (look through leading whitespace/control characters; leave plain numbers like `-5,2`
+   alone so a negative x label isn't mangled). The session caught it only while grepping for stale docs. Lesson:
+   before writing a delegation brief for a mechanism an ADR names, `grep -rn` the ADR's decision id (here "D11")
+   across `docs/` and quote the earlier spec in the brief.
+2. **Self-merging PR #45 (owner present, CLAUDE.md standing authorization) tripped the auto-mode classifier
+   AFTER the merge succeeded.** It labelled the session "Merge Without Review" and then denied follow-ups, even
+   read-only ones (reading a CI log, `curl` to prod). The standing authorization in CLAUDE.md does not reach the
+   harness classifier. The session stopped, told the owner, and asked for an explicit go-ahead; the owner's next
+   message ("Fix all") unblocked reads. Recorded in the RUNBOOK. Next time: get an explicit in-chat "merge it"
+   before the merge call, not after.
+3. **`/code-review` reviews `git diff`, so brand-new untracked files are silently skipped.** The first LOW pass
+   said "no bugs" but had not seen `user-csv.ts` or `download-csv-button.tsx`. `git add -N <new files>` (intent to
+   add) puts them in the diff; the second pass covered them. Do this before every review that includes new files.
+4. **Cloud-container facts:** the prod URL is blocked by the container's egress policy (`connect_rejected`), so
+   the deploy job's own "Post-deploy smoke check" step is the prod evidence from a cloud session. `npx eslint` in
+   `web/` crashes on a typescript-estree load error (`reading 'Cjs'`) in this container; CI does not run ESLint,
+   so it is not a gate, but don't read its crash as a lint failure.
+
 ## Session 125 — merge a PR batch locally in one verified pass; a "dark" feature needs an end-to-end
 ## test through the REAL take path (and a round-trip test for every new registry entry)
 

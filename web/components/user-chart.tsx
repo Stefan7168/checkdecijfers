@@ -2789,11 +2789,22 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             * reader's own file (ADR 037 D11). All series, hidden ones
             * included, exactly like the Tabel view. */}
           <DownloadCsvButton csv={buildUserChartCsv(activeSpec, chartLang)} />
-          {!smallMultiplesOn ? (
+          {/* The image export needs the one chart <svg> inside
+            * `containerRef`: the table and heatmap draw none (they sit
+            * outside the export container) and small multiples draw
+            * several — so, as on the CBS card, the menu is offered only
+            * where there is a picture to export. `lang`/`frame` match
+            * chart.tsx's call so the export carries the chart's language
+            * and the same ChartFrame the reader sees (this card has no
+            * frame image, hence `null`). */}
+          {!tabularForm && !smallMultiplesOn ? (
             <ChartDownloadMenu
               containerRef={containerRef}
               attributionText={`${activeSpec.disclaimerLine} · checkdecijfers.nl`}
               filenameBase={`checkdecijfers-your-data-${activeSpec.provenance.datasetId}`}
+              lang={chartLang}
+              frame={pres}
+              frameImage={null}
               syncedAt={activeSpec.provenance.capturedAt}
             />
           ) : null}

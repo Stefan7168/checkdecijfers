@@ -1165,3 +1165,11 @@ capability needs **no** further parser work to become reachable — it already i
 
 **Done-definition per phase:** the spec's §6 tests (apply/invert property test; chat-chip ↔ panel-control contract test; Playwright type→chips→panel→⌘Z; own-data executor fixture), benchmark 14/14 + 6/6 + 0 fabricated unchanged, no audit rows written by chart edits, `/code-review` LOW clean.
 
+## Own-data parity (#306 candidate (d), owner pick session 126, 2026-09-23; [#318](open-questions.md), spec [superpowers/specs/2026-09-23-own-data-parity-design.md](superpowers/specs/2026-09-23-own-data-parity-design.md))
+
+**Phase A ✅ MERGED + LIVE** (PR #45, `4dcdbd1`, main CI run 35854222153 green incl. deploy): small multiples and a
+CSV download (with ADR 037 D11's formula-injection defense) on the own-data chart card. No AI call, no schema change.
+Same-session follow-up: the own-data image download menu is hidden where there is no chart `<svg>` to export
+(Tabel, Warmtekaart) and now gets the chart's language and frame. **Next, owner decisions:** B1 publish an own-data
+chart (embed link / gallery; recommendation in the spec §4), B2 own data + CBS in one chart (reverses ADR 037's
+"never for v1"). Phase C (drafted headline, Insights/story on own data) only on usage evidence.

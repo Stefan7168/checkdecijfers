@@ -26,7 +26,9 @@ SVG, PDF, or a transparent chart-only PNG, and embedded on another site, frozen 
 a backlink by default (a **Live** embed that keeps itself current is the paid tier's pitch — the
 real subscription mechanism behind it is built and merged, still flag-gated off pending its go-live
 steps, see [docs/STATUS.md](docs/STATUS.md)). A public gallery (`/galerij`) shows real, sourced
-stories on the same chart engine.
+stories on the same chart engine. A chart over the reader's own uploaded data also offers small multiples and
+a CSV download of its plotted points, with spreadsheet-formula text neutralised (since 2026-09-23,
+[#318](docs/open-questions.md)).
 
 ## Why
 
