@@ -218,10 +218,29 @@ export interface ResolutionFailure {
     | 'max_on_national_measure'
     | 'grain_unavailable'
     | 'period_invalid'
-    | 'period_missing';
+    | 'period_missing'
+    /** Eurostat E2a (docs/superpowers/specs/2026-09-23-eurostat-e2a-country-
+     * answers-design.md §4.3/§4.4): a CBS table failed to resolve one or more
+     * named regions (`region_unknown` or `region_on_national_measure`), but a
+     * reviewed Eurostat sibling measure (`src/sources/eurostat-siblings.ts`)
+     * resolves EVERY named place. Never an answer (principle c) — the reader
+     * must click to switch source, because the two definitions can differ. */
+    | 'other_source_available';
   message: string;
-  /** Concrete, loaded-data options for the clarification (docs/05). */
+  /** Concrete, loaded-data options for the clarification (docs/05). For
+   * `other_source_available` this is always the single chip label
+   * `['Toon de Eurostat-cijfers']`. */
   options: string[];
+  /** `other_source_available` only: the Eurostat sibling canonical measure's
+   * `definitionLabel`, shown on the confirm chip so the reader sees the
+   * definition BEFORE clicking (§4.4 — never assumed identical to CBS's). */
+  siblingDefinitionLabel?: string;
+  /** `other_source_available` only (E2a final-review fix wave, I6): the
+   * ORIGINAL CBS failure (`region_unknown` / `region_on_national_measure`)
+   * the sibling check replaced. policy.ts renders it instead whenever the
+   * Eurostat chip cannot be offered, so a reader never gets a Eurostat
+   * question they have no way to take — exactly today's CBS clarification. */
+  fallback?: ResolutionFailure;
   /** WP26 mechanism A: per-option resolved intents, index-aligned with
    * `options` (null = this option carries no takeable reading). Populated only
    * where the resolver can honestly build one — today the `region_ambiguous`

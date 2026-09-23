@@ -129,9 +129,15 @@ export const EUROSTAT_SIBLINGS: Readonly<Record<string, string>> = {
 };
 ```
 
-The Eurostat side is an ordinary `CanonicalMeasure` row (`tableId: 'eurostat:…'`) added to
-`src/registry/defaults.ts` and applied with the existing `registry:apply` (an owner step, like every
-registry change). **Cheapest mechanism first:** a code map instead of a new `canonical_measures` column
+The Eurostat side is a `CanonicalMeasure` (`tableId: 'eurostat:…'`) kept in a **sibling-only list**,
+`EUROSTAT_SIBLING_MEASURES` in `src/sources/eurostat-siblings.ts` — **never** in `src/registry/defaults.ts`
+(**corrected session 125**, after the final whole-branch review: a sibling in `CANONICAL_MEASURES` would enter
+the intent parser's vocabulary and schema enum, so the parser could answer "werkloosheid in Duitsland" — or
+even "…in Nederland" — from Eurostat WITHOUT the reader's click, breaking principle (c), and it would change
+the prompt bytes and force a re-record of every fixture). The click trust boundary
+(`src/answer/respond/validate-pending.ts`) accepts CBS canonical keys plus sibling keys, validating a
+sibling's region codes against the Eurostat country list. The list is applied with `registry:apply` (an owner
+step, like every registry change). **Cheapest mechanism first:** a code map instead of a new `canonical_measures` column
 means no migration and no live DDL. Promote it to a column only if pairs ever need to be edited without a
 deploy.
 
@@ -256,8 +262,24 @@ slice never goes through the finder; siblings are pre-registered.
    new benchmark tasks recorded in step 0's session).
 3. Wiring point 3 (`resolveSource(undefined)` → real source) + the CBS-constant guards in §4.5.
 4. `b`-flag refusal precondition in `src/query/derivations.ts`.
-5. Register the first sibling tables (owner step: `registry:apply` + a narrow sync, like E1's
-   `tipsbd30`).
+5. Register the first sibling tables (owner step: add the reviewed pairs to `EUROSTAT_SIBLINGS` and their
+   measures to `EUROSTAT_SIBLING_MEASURES` — not `defaults.ts`, see §4.1 — then `registry:apply` + a narrow
+   sync, like E1's `tipsbd30`).
+
+**As built, session 125 (2026-09-23), branch `eurostat-e2a`:** steps 1–4 done dark (both maps ship empty),
+built via subagent-driven development with a review per task and a final whole-branch review. The final
+review and its fix wave also: made the chip clickable end to end (it was silently rejected by the click trust
+boundary's CBS-shaped code check), made the R11 provisional-marking check source-aware ("(schatting)" etc. for
+Eurostat flags), widened the break-in-series refusal to difference and period-change series and to the whole
+compared window (a `b` on a year between the two compared years also refuses; combined flags such as `bp`
+count), fell back to the original CBS clarification when no chip can be offered (no dead "Voor dit antwoord
+gebruiken we Eurostat" text), and fixed answer attribution that always said CBS. It also closed a live latent
+gap: on a national-only CBS measure, a foreign place the parser tagged `land` got the Dutch national figure
+silently; it now clarifies. The English chip copy in §4.4 is recorded but not built: backend reader text is
+Dutch-only by the project convention. One deliberate CBS-side change: with click options enabled, a CBS
+chip that the click trust boundary would reject (e.g. for an on-demand-added table) is no longer OFFERED —
+before, it was offered and then silently stripped on click, ending in the same reply. Safe direction, same
+outcome for the reader, but the stored clarification differs.
 6. **The flip (owner-signed, one change):** the public wording sweep ("official sources", `/llms.txt`, the
    coverage disclosure, `/systeemoverzicht`, CLAUDE.md's public-claim line), plus a live owner-supervised smoke
    test, plus the benchmark with the new tasks. Until this step no reader can reach any of it: the

@@ -23,6 +23,21 @@ import {
   unitMaskPhrases,
 } from './format.ts';
 import type { AnswerValidationReport } from './types.ts';
+import { CBS_SOURCE_KEY, resolveSource, sourceKeyForTableId } from '../../sources/registry.ts';
+
+/** R11's required marking for one provisional cell: `null` means the word
+ * 'voorlopig' (every CBS cell — byte-identical to the pre-E2a check — and
+ * any other-source flag with no registered marking, whose template rendering
+ * is the generic ' (voorlopig cijfer)'); otherwise the source's own marking
+ * text for the cell's flag, as the template renders it minus the brackets
+ * (' (schatting)' → 'schatting'). */
+function provisionalMarkerFor(cell: ResultCell): string | null {
+  const sourceKey = sourceKeyForTableId(cell.tableId);
+  if (sourceKey === CBS_SOURCE_KEY) return null;
+  const display = resolveSource(sourceKey).provisionalDisplay[cell.status];
+  const marker = display?.trim().replace(/^\((.*)\)$/, '$1').trim();
+  return marker !== undefined && marker.length > 0 ? marker : null;
+}
 
 /** Re-exported from format.ts, where it now lives beside the other builders
  * that need it (#253's buildRegionSetLine names excluded class members the
@@ -1242,18 +1257,37 @@ export function validateAnswerBody(rawBody: string, result: ValidatedResult): An
   // — a stray 'voorlopig' elsewhere in the body marks nothing (adversarial-
   // review finding, 2026-07-03). Derivations computed from provisional source
   // cells count as provisional themselves.
+  //
+  // E2a final-review fix wave (I2): the marking is SOURCE-AWARE. A CBS cell
+  // needs 'voorlopig' exactly as before (byte-identical check and message).
+  // A flagged cell from another source needs THAT source's own registered
+  // marking for its flag — the same `provisionalDisplay` text the template
+  // renders (template.ts provisionalSuffix): a Eurostat 'e' cell is marked
+  // "schatting", a 'b' cell "methodebreuk"; the word 'voorlopig' would
+  // mislabel an estimate as a provisional figure. A flag with no registered
+  // marking (e.g. a combined 'bp') falls back to 'voorlopig', matching the
+  // template's own generic ' (voorlopig cijfer)' fallback.
   const cellsById = new Map(result.cells.map((c) => [c.resultId, c]));
   for (const token of tokens) {
-    const provisional =
+    const provisionalCells =
       token.kind === 'cell'
-        ? token.cells.some((c) => c.provisional)
+        ? token.cells.filter((c) => c.provisional)
         : token.kind === 'derivation' && token.derivation !== null
-          ? derivationSourceCells(token.derivation, cellsById).some((c) => c.provisional)
-          : false;
-    if (!provisional) continue;
-    const sentence = sentenceOf(sentences, token.index);
-    if (!/voorlopig/i.test(sentence?.text ?? body)) {
-      problems.push(`R11: voorlopige waarde '${token.token}' zonder de markering 'voorlopig cijfer' in dezelfde zin`);
+          ? derivationSourceCells(token.derivation, cellsById).filter((c) => c.provisional)
+          : [];
+    if (provisionalCells.length === 0) continue;
+    const sentenceText = (sentenceOf(sentences, token.index)?.text ?? body).toLowerCase();
+    // Every provisional cell behind the token must have its marking in the
+    // sentence (fail closed: a token that could be two differently-flagged
+    // cells needs both markings).
+    for (const marker of new Set(provisionalCells.map(provisionalMarkerFor))) {
+      if (marker === null) {
+        if (!/voorlopig/i.test(sentenceText)) {
+          problems.push(`R11: voorlopige waarde '${token.token}' zonder de markering 'voorlopig cijfer' in dezelfde zin`);
+        }
+      } else if (!sentenceText.includes(marker.toLowerCase())) {
+        problems.push(`R11: gemarkeerde waarde '${token.token}' zonder de markering '${marker}' in dezelfde zin`);
+      }
     }
   }
 

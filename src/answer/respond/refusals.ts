@@ -6,7 +6,7 @@
 // and QueryRefusal, neither of which carries a cell value, so a fabricated
 // number is structurally impossible here, not just avoided by convention.
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
-import { resolveSource } from '../../sources/registry.ts';
+import { resolveSource, sourceKeyForTableId } from '../../sources/registry.ts';
 import {
   freshestForCanonical,
   REGION_SERIES_MAX_REGIONS,
@@ -105,12 +105,26 @@ function cardinalNl(n: number): string {
  * (Definitief). Exported: respond.ts's staleness recency-refusal offers a
  * period the same way and must mark it the same way (adversarial-review
  * finding, 2026-07-03: that offer omitted the marker). */
-export function statusSuffixNl(status: string): string {
-  return resolveSource(undefined).provisionalDisplay[status] ?? '';
+export function statusSuffixNl(status: string, sourceKey?: string): string {
+  return resolveSource(sourceKey).provisionalDisplay[status] ?? '';
 }
 
-function periodWithStatusNl(period: { periodCode: string; status: string }): string {
-  return `${periodCodeToNl(period.periodCode)}${statusSuffixNl(period.status)}`;
+/** `sourceKey` threads through from a caller that has a table id in scope
+ * (E2a, spec §4.5); a caller with no target table in scope (e.g. the
+ * forecast/causal refusals, which only have a nearest-canonical-key GUESS)
+ * omits it and keeps the pre-E2a CBS-default wording, unchanged. */
+function periodWithStatusNl(period: { periodCode: string; status: string }, sourceKey?: string): string {
+  return `${periodCodeToNl(period.periodCode)}${statusSuffixNl(period.status, sourceKey)}`;
+}
+
+/** E2a: resolves the table id a query-level refusal's own intent target
+ * names — `explicit` carries it directly, `canonical` requires the same
+ * registry lookup `definitionLabelForRefusal` already does below. Returns
+ * null (⇒ statusSuffixNl's CBS default) only for a target this registry does
+ * not recognise at all — never a guess. */
+function tableIdForTarget(target: StructuredIntent['target']): string | null {
+  if (target.kind === 'explicit') return target.tableId;
+  return CANONICAL_MEASURES.find((m) => m.key === target.key)?.tableId ?? null;
 }
 
 /** Refusal text never ends in '?' (docs/05: refusals never create pending
@@ -422,6 +436,11 @@ function definitionLabelForRefusal(refusal: QueryRefusal): string | null {
 function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
   const freshness = refusal.refusal.freshness ?? null;
   const definitionLabel = definitionLabelForRefusal(refusal);
+  // E2a (spec §4.5): the refusal's own intent NAMES a target table, so the
+  // status suffix on the offered period must resolve THAT table's real
+  // source, not assume CBS.
+  const targetTableId = tableIdForTarget(refusal.intent.target);
+  const resolvedSourceKey = targetTableId ? sourceKeyForTableId(targetTableId) : undefined;
 
   const available = freshness?.freshestAvailable ?? null;
   const definitief = freshness?.freshestDefinitief ?? null;
@@ -431,12 +450,12 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
   let offer: string | null;
   if (available) {
     body = definitionLabel
-      ? `Zo recent heb ik de cijfers over ${definitionLabel} nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available)}.`
-      : `Zo recente cijfers heb ik nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available)}.`;
+      ? `Zo recent heb ik de cijfers over ${definitionLabel} nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available, resolvedSourceKey)}.`
+      : `Zo recente cijfers heb ik nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available, resolvedSourceKey)}.`;
     // A statement, never a bare question (refusals never end in '?'): the
     // offer states what we CAN serve; the user asking again for that period
     // is how they take us up on it.
-    offer = `Ik kan het cijfer voor ${periodWithStatusNl(available)} direct geven, vraag daar gerust naar.`;
+    offer = `Ik kan het cijfer voor ${periodWithStatusNl(available, resolvedSourceKey)} direct geven, vraag daar gerust naar.`;
     if (differs) {
       offer += ` (Het laatste definitieve cijfer is er voor ${periodCodeToNl(definitief!.periodCode)}.)`;
       // OQ-193 (measured 2026-08-07): CBS revised 1,103 figures already

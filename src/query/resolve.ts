@@ -21,6 +21,7 @@ import type {
 } from './types.ts';
 import { INTENT_SCHEMA_VERSION, REGION_SERIES_MAX_CELLS, REGION_SERIES_MAX_REGIONS } from './types.ts';
 import { resolveRegionSet } from './region-set.ts';
+import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 
 /** WP26 mechanism B (ADR 024, safelist entry 1): the CBS code for the national
  * total. Not a heuristic pick among places — a specific, existing row, which is
@@ -666,8 +667,13 @@ export async function resolveIntent(
         // above already refuses a max with fewer than two named regions, so a
         // comparison set is never defaulted. Verified, not assumed — pinned in
         // tests/answer/answer-first-region.test.ts.
+        // E2a (spec §4.5): NATIONAL_REGION_CODE ('NL01') is a CBS-shaped
+        // constant — it must never be tried against a non-CBS table (a
+        // Eurostat table uses bare 'NL', and even a coincidental 'NL01' row
+        // there would not be CBS's national total). Gated on the table's own
+        // source, not on whether the code happens to exist in that table.
         const nationalRow =
-          options.answerFirstEnabled === true
+          options.answerFirstEnabled === true && sourceKeyForTableId(tableId) === CBS_SOURCE_KEY
             ? await tx.query(
                 `select 1 from observations
                  where table_id = $1 and measure = $2 and dims = $3::jsonb and region_code = $4

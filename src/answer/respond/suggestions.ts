@@ -64,6 +64,7 @@ import type { ClarifyAxis, ClickOption, RegionTerm } from '../intent/types.ts';
 import { baseLabel, stepPeriodCode } from '../intent/resolve.ts';
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import type { CanonicalMeasure } from '../../registry/types.ts';
+import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import { periodCodeToNl } from './period-nl.ts';
 import { isClickTakeableIntent } from './validate-pending.ts';
 
@@ -182,6 +183,12 @@ const ID_PREFIX: Record<GeneratorKind, string> = {
  * labels are imperatives written only for the take-path and are not marked. */
 const QUESTION_SHAPED: ReadonlySet<GeneratorKind> = new Set<GeneratorKind>(['adjacent', 'trend', 'region', 'topic']);
 
+// E2a (spec §4.5): CBS-shaped — 'NL01' is the CBS national-total code, but a
+// bare Eurostat country code for the Netherlands is 'NL' itself, which ALSO
+// starts with 'NL' and would false-positive here. Never called for a
+// non-CBS table (regionVariant/compareRegion gate on the table's source
+// before consulting this) — the check itself stays a plain CBS-shaped prefix
+// test rather than growing a source parameter it would then have to thread.
 const isNationalCode = (code: string): boolean => code.startsWith('NL');
 
 /** A comparison candidate is dry-run ONLY if the click-time validator would
@@ -351,6 +358,11 @@ async function regionVariant(ctx: SuggestionContext): Promise<ChipCandidate | nu
   // #197 step 3: a side-by-side comparison chip already carries the national
   // (or G4) figure — a second chip asking for it alone would be redundant.
   if (ctx.comparedRegions) return null;
+  // E2a (spec §4.5): this generator's "national figure" branch is built on
+  // isNationalCode + NATIONAL_REGION_CODE, both CBS-shaped — skip it entirely
+  // for a non-CBS table rather than offer a chip that names NL01 against
+  // data that was never resolved from CBS.
+  if (sourceKeyForTableId(ctx.result.attribution.tableId) !== CBS_SOURCE_KEY) return null;
   const answeredNational = ctx.regions.every(isNationalCode);
   const period: StructuredIntent['period'] = { kind: 'codes', codes: [ctx.lastPeriod] };
   if (answeredNational) {
@@ -434,6 +446,10 @@ async function sameTopic(ctx: SuggestionContext): Promise<ChipCandidate | null> 
  * as every chip. */
 async function compareRegion(ctx: SuggestionContext): Promise<ChipCandidate | null> {
   if (ctx.intent.target.kind !== 'canonical') return null;
+  // E2a (spec §4.5): same CBS-shaped constants as regionVariant above
+  // (isNationalCode, NATIONAL_REGION_CODE) — never offer a national-row
+  // comparison built against a non-CBS table.
+  if (sourceKeyForTableId(ctx.result.attribution.tableId) !== CBS_SOURCE_KEY) return null;
   const answered = answeredRegions(ctx);
   if (answered.length === 0) return null;
   if (ctx.firstPeriod !== ctx.lastPeriod) return null;

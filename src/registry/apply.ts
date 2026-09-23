@@ -6,6 +6,15 @@
 // exist (run `ingest register --all` first).
 import type { Db } from '../db/types.ts';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from './defaults.ts';
+import { EUROSTAT_SIBLING_MEASURES } from '../sources/eurostat-siblings.ts';
+
+/** Every canonical measure this script writes: the parser vocabulary
+ * (`CANONICAL_MEASURES`) plus the Eurostat sibling-only measures (E2a ruling
+ * R7 — seeded into `canonical_measures` so a chip's sibling key resolves, but
+ * kept OUT of `CANONICAL_MEASURES` so the parser can never pick one directly;
+ * see src/sources/eurostat-siblings.ts). The sibling list ships empty, so
+ * today this is exactly `CANONICAL_MEASURES`. */
+const APPLIED_CANONICAL_MEASURES = [...CANONICAL_MEASURES, ...EUROSTAT_SIBLING_MEASURES];
 
 export interface ApplyResult {
   tablesUpdated: string[];
@@ -23,7 +32,7 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
   const referencedTableIds = [
     ...new Set([
       ...TABLE_REGISTRY_DEFAULTS.map((t) => t.tableId),
-      ...CANONICAL_MEASURES.map((c) => c.tableId),
+      ...APPLIED_CANONICAL_MEASURES.map((c) => c.tableId),
     ]),
   ];
   const existing = await db.query('select id from cbs_tables where id = any($1)', [referencedTableIds]);
@@ -45,7 +54,7 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
   }
 
   const canonicalMeasuresUpserted: string[] = [];
-  for (const cm of CANONICAL_MEASURES) {
+  for (const cm of APPLIED_CANONICAL_MEASURES) {
     await db.query(
       `insert into canonical_measures
          (key, table_id, measure, measure_title, dims, definition_label, everyday_terms, alternates, notes, updated_at)

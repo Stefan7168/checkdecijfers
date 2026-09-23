@@ -14,6 +14,7 @@
 //   (R9) — added automatically by run.ts, never on demand by the LLM.
 import { DERIVED_DATA_MARKING, type DerivationRecord, type RegionSetCoverage, type ResultCell } from './types.ts';
 import { contiguousPeriodCodes } from './resolve.ts';
+import { EUROSTAT_SOURCE_KEY, SOURCES, sourceKeyForTableId } from '../sources/registry.ts';
 
 export type DerivationResult =
   | { ok: true; record: DerivationRecord }
@@ -60,21 +61,88 @@ function checkSingleRegion(cells: ResultCell[]): string | null {
   return null;
 }
 
+/** ADR 048 D5b: a Eurostat observation's `status` (and `valueAttribute`)
+ * carries its JSON-stat flag VERBATIM (src/eurostat-adapter/jsonstat.ts
+ * ~l.470-495) — `b` means the series breaks in methodology between that
+ * period and the previous one, so a value from before the break is not
+ * comparable to one from after it. A trend (`deriveDirection`) or endpoint
+ * pair (`deriveFirstLast`) that spans such a break would compare two
+ * different measurement methods as if they were one continuous series,
+ * exactly the kind of unsupported claim principle (c) exists to block.
+ *
+ * Only the EARLIEST cell is exempt: a break flagged there marks the
+ * boundary with the period BEFORE it, which lies outside the range this
+ * derivation is comparing (nothing earlier is part of these `cells`) — so it
+ * does not affect trustworthiness of a trend across the given cells.
+ *
+ * Gated on the SOURCE KEY, not the literal flag character: CBS never emits
+ * JSON-stat flags, so a CBS cell whose `status` string happens to be `'b'`
+ * (a coincidence, not a break marker) must be unaffected — checked via
+ * `sourceKeyForTableId`, the same table-id-prefix convention every other
+ * source-aware guard on the answer path uses (ADR 030 D4).
+ *
+ * Cells are read in the order the caller passes them (period-ascending) —
+ * this function does not itself sort, matching every other guard in this
+ * file (`checkComputable`, `checkSingleRegion`, `derivePeriodChangeSeries`),
+ * all of which trust the caller's existing period ordering. */
+/** `tableId`/`status` are optional only for deriveDifference's second caller,
+ * the chart co-pilot's on-demand re-derive (web/app/chart-derivation-
+ * actions.ts), whose chart-spec cells carry neither — such a cell cannot be
+ * judged here and is skipped (that path's break guard is an open item, see
+ * the E2a fix-wave report). Every run.ts caller passes full ResultCells. */
+type BreakCheckCell = Pick<ResultCell, 'resultId' | 'periodCode'> & Partial<Pick<ResultCell, 'tableId' | 'status'>>;
+
+function checkNoSeriesBreak(cells: BreakCheckCell[]): string | null {
+  for (let i = 1; i < cells.length; i++) {
+    const current = cells[i] as BreakCheckCell;
+    if (current.tableId === undefined || current.status === undefined) continue;
+    if (sourceKeyForTableId(current.tableId) !== EUROSTAT_SOURCE_KEY) continue;
+    if (isEurostatBreakFlag(current.status)) {
+      return `Eurostat cell ${current.resultId} (period ${current.periodCode}) marks a break in series — a trend cannot be compared across it`;
+    }
+  }
+  return null;
+}
+
+/** E2a final-review fix wave (I3, ruling R8): does a Eurostat observation's
+ * verbatim `status` carry the break-in-series flag? Eurostat can attach
+ * SEVERAL flag letters to one observation ('bp' = break + provisional, 'be',
+ * …) and the adapter stores the string verbatim, so an exact `=== 'b'` test
+ * would read 'bp' as "no break". A flag string is lowercase letters (and the
+ * ':' not-available marker); the definitive status 'Published' — which itself
+ * contains a 'b' — is excluded first, by the registry's own definitive list
+ * (the literal the registry pins equal to the adapter's
+ * EUROSTAT_DEFINITIVE_STATUS by test; not imported from the adapter so this
+ * module, which chart code bundles, never pulls the adapter graph in).
+ * Callers gate on the table's source first: a CBS status is never read as a
+ * Eurostat flag. */
+export function isEurostatBreakFlag(status: string): boolean {
+  if (SOURCES[EUROSTAT_SOURCE_KEY]!.definitiveStatuses.includes(status)) return false;
+  return /^[a-z:]+$/.test(status) && status.includes('b');
+}
+
 /** B13-style growth: later period minus earlier period, one coordinate.
  * Requires exactly two cells at the same region/dims, different periods;
  * cells arrive period-ordered from run.ts. */
-export function deriveDifference(cells: Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>[]): DerivationResult {
+type DifferenceCell = Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'> &
+  Partial<Pick<ResultCell, 'tableId' | 'status'>>;
+
+export function deriveDifference(cells: DifferenceCell[]): DerivationResult {
   if (cells.length !== 2) {
     return refuse(`difference needs exactly 2 source cells, got ${cells.length}`);
   }
-  const [earlier, later] = cells as [Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>, Pick<ResultCell, 'resultId' | 'periodCode' | 'regionCode' | 'unit' | 'value' | 'valueAttribute'>];
+  const [earlier, later] = cells as [DifferenceCell, DifferenceCell];
   if (earlier.periodCode === later.periodCode) {
     return refuse('difference needs two distinct periods');
   }
   if (earlier.regionCode !== later.regionCode) {
     return refuse('difference compares periods at one place — regions differ');
   }
-  const problem = checkComputable(cells as ResultCell[]);
+  // Ruling R6: a difference compares two periods exactly like first_last
+  // does, so a Eurostat break flagged on the later endpoint refuses it. (A
+  // break on a period BETWEEN the endpoints is not in these two cells —
+  // run.ts's window lookup covers that, ruling R8.)
+  const problem = checkComputable(cells as ResultCell[]) ?? checkNoSeriesBreak(cells);
   if (problem) return refuse(problem);
   return {
     ok: true,
@@ -196,7 +264,7 @@ export function deriveDirection(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`direction needs at least 2 source cells, got ${cells.length}`);
   }
-  const problem = checkComputable(cells) ?? checkSingleRegion(cells);
+  const problem = checkComputable(cells) ?? checkSingleRegion(cells) ?? checkNoSeriesBreak(cells);
   if (problem) return refuse(problem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
@@ -300,8 +368,8 @@ export function deriveFirstLast(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`first_last needs at least 2 source cells, got ${cells.length}`);
   }
-  const regionProblem = checkSingleRegion(cells);
-  if (regionProblem) return refuse(regionProblem);
+  const problem = checkSingleRegion(cells) ?? checkNoSeriesBreak(cells);
+  if (problem) return refuse(problem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
   return {
@@ -357,6 +425,11 @@ export function derivePeriodChangeSeries(cells: ResultCell[]): PeriodChangeSerie
   if (regionProblem) return refuse(regionProblem);
   const computableProblem = checkComputable(cells);
   if (computableProblem) return refuse(computableProblem);
+  // Ruling R6: every consecutive pair is a cross-period comparison; the
+  // contiguity check below guarantees every period of the window is one of
+  // these cells, so this cell-level check covers the whole window.
+  const breakProblem = checkNoSeriesBreak(cells);
+  if (breakProblem) return refuse(breakProblem);
   const periods = cells.map((c) => c.periodCode);
   if (!contiguousPeriodCodes(periods)) {
     return refuse(

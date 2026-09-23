@@ -12,7 +12,7 @@
 // src/cbs-adapter/fixture-source.ts, not a shared import — each adapter owns
 // its own copy of a ~15-line pure function, the same way each adapter will
 // own its own id-prefix stripping (D4: "never the caller's job").
-import { baseLabel } from '../answer/intent/resolve.ts';
+import { baseLabel } from '../sources/region-names.ts';
 import type {
   CbsCatalogEntry,
   CbsCode,
@@ -321,7 +321,8 @@ function logEurostatParseMismatch(kind: string, context: string, detail: Record<
 
 /**
  * Amendment 7 (WP30c/E1 brief): `parseFactorUnit` (src/query/derivations.ts)
- * and `baseLabel` (src/answer/intent/resolve.ts) are two of ADR 030's own
+ * and `baseLabel` (src/sources/region-names.ts, re-exported by
+ * src/answer/intent/resolve.ts) are two of ADR 030's own
  * documented "known fail-open niceties" (docs/how-to-add-a-source.md, Step
  * 2) — tuned on CBS's own factor/label spellings, and already safe for a
  * brand-new source because BOTH fail open by design (a non-match returns

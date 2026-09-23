@@ -23,6 +23,8 @@
 // pre-WP26 behavior, never an error the user has to see.
 import { z } from 'zod';
 import { CANONICAL_KEYS } from '../intent/schema.ts';
+import { isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
+import { eurostatSiblingTargetKeys } from '../../sources/eurostat-siblings.ts';
 import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
 import { MAX_CLICK_OPTIONS } from '../intent/types.ts';
 import type { ClickOption } from '../intent/types.ts';
@@ -57,17 +59,65 @@ const clickIntentSchema = z.strictObject({
   derivation: z.enum(['none', 'difference', 'max', 'series']),
 });
 
-const clickOptionSchema = z.strictObject({
-  id: z.string().min(1).max(32),
-  label: z.string().min(1).max(500),
-  intent: clickIntentSchema,
-  impliedRecency: z.boolean(),
-  // #73 v2: present-only, literal `true` — a client-supplied `false` (a
-  // shape the producer never writes) fails the option like any other
-  // malformation. The bit only decides whether the label may replay as a
-  // plain chip on a resumed thread; it never widens what a take can do.
-  questionShaped: z.literal(true).optional(),
-});
+/** The option envelope, for a given intent schema — shared by the CBS
+ * vocabulary path and the Eurostat-sibling path below, so the two can only
+ * ever differ in what an INTENT may carry. */
+function optionSchemaFor(intent: z.ZodType) {
+  return z.strictObject({
+    id: z.string().min(1).max(32),
+    label: z.string().min(1).max(500),
+    intent,
+    impliedRecency: z.boolean(),
+    // #73 v2: present-only, literal `true` — a client-supplied `false` (a
+    // shape the producer never writes) fails the option like any other
+    // malformation. The bit only decides whether the label may replay as a
+    // plain chip on a resumed thread; it never widens what a take can do.
+    questionShaped: z.literal(true).optional(),
+  });
+}
+
+const clickOptionSchema = optionSchemaFor(clickIntentSchema);
+
+/** Eurostat E2a (ruling R7, final-review fix wave C1): the ONE other target a
+ * chip may name — a Eurostat sibling measure's canonical key, which by design
+ * is NOT in CANONICAL_KEYS (that list is the parser vocabulary; a sibling key
+ * there would let the parser switch source with no click). Accepted only by
+ * membership in the reviewed sibling map's values (default: the production
+ * `EUROSTAT_SIBLINGS`, which ships EMPTY — so in production today this path
+ * accepts nothing and the boundary is byte-identical to before), minus any
+ * key that is also a CBS vocabulary key (those take the CBS path above,
+ * unchanged, with CBS region-code validation).
+ *
+ * Region codes on this path are checked against Eurostat's own geo code set
+ * (`isEurostatCountryOrAggregateCode`: DE, NL, EU27_2020, EA20, …) — the CBS
+ * ≥4-character shape would reject every one of them. Membership, not a
+ * widened regex: nothing outside the ~40 reviewed codes can pass. Regions are
+ * REQUIRED here (a sibling chip always names the places that made CBS fail;
+ * an Eurostat intent without regions has no national default to fall to). */
+function siblingIntentSchema(siblingKeys: ReadonlySet<string>) {
+  return z.strictObject({
+    schemaVersion: z.literal(INTENT_SCHEMA_VERSION),
+    target: z.strictObject({
+      kind: z.literal('canonical'),
+      key: z.string().refine((key) => siblingKeys.has(key)),
+    }),
+    regions: z.array(z.string().refine(isEurostatCountryOrAggregateCode)).min(1).max(8),
+    period: clickIntentSchema.shape.period,
+    derivation: clickIntentSchema.shape.derivation,
+  });
+}
+
+/** Test seam, same shape as `resolveCandidate`'s `eurostatSiblings` option:
+ * the sibling map whose VALUES are the accepted sibling target keys. Absent
+ * ⇒ the production `EUROSTAT_SIBLINGS` (ships empty). */
+export interface ClickValidationOptions {
+  eurostatSiblings?: Readonly<Record<string, string>>;
+}
+
+function siblingKeysFor(options: ClickValidationOptions): ReadonlySet<string> {
+  const cbsKeys = new Set<string>(CANONICAL_KEYS);
+  return new Set([...eurostatSiblingTargetKeys(options.eurostatSiblings)].filter((key) => !cbsKeys.has(key)));
+}
 
 /** #197 step 3: whether an intent CAN come back through this boundary intact —
  * the producer-side twin of the schema below, for the chip generators
@@ -84,8 +134,10 @@ const clickOptionSchema = z.strictObject({
  * comparison that is not takeable is not offered at all (its label was never
  * written for a parse), while a question-shaped candidate that is not takeable
  * is still offered as the plain fill-the-input label it always was. */
-export function isClickTakeableIntent(intent: StructuredIntent): boolean {
-  return clickIntentSchema.safeParse(intent).success;
+export function isClickTakeableIntent(intent: StructuredIntent, options: ClickValidationOptions = {}): boolean {
+  if (clickIntentSchema.safeParse(intent).success) return true;
+  const siblingKeys = siblingKeysFor(options);
+  return siblingKeys.size > 0 && siblingIntentSchema(siblingKeys).safeParse(intent).success;
 }
 
 /** Validates the client-returned click options of a pending clarification.
@@ -97,12 +149,21 @@ export function isClickTakeableIntent(intent: StructuredIntent): boolean {
  * so an option naming one is dropped here and the reply falls through to the
  * LLM merge that does know about it. Losing a chip is a cosmetic degradation;
  * widening the allowlist to client-supplied keys would not be. */
-export function validateClickOptions(raw: unknown): ClickOption[] {
+export function validateClickOptions(raw: unknown, options: ClickValidationOptions = {}): ClickOption[] {
   if (!Array.isArray(raw)) return [];
+  const siblingKeys = siblingKeysFor(options);
+  const siblingOptionSchema = siblingKeys.size > 0 ? optionSchemaFor(siblingIntentSchema(siblingKeys)) : null;
   const valid: ClickOption[] = [];
   for (const entry of raw.slice(0, MAX_CLICK_OPTIONS)) {
+    // The CBS path first, byte-identical to before; the sibling path only
+    // for what the CBS path rejects, and only when a sibling pair exists.
     const parsed = clickOptionSchema.safeParse(entry);
-    if (parsed.success) valid.push(parsed.data as ClickOption);
+    if (parsed.success) {
+      valid.push(parsed.data as ClickOption);
+      continue;
+    }
+    const sibling = siblingOptionSchema?.safeParse(entry);
+    if (sibling?.success) valid.push(sibling.data as ClickOption);
   }
   return valid;
 }
@@ -131,8 +192,11 @@ export function validateClickOptions(raw: unknown): ClickOption[] {
  * `PendingClarification`, it must be added here too; the test in
  * tests/answer/wp26-trust-boundary.test.ts pins the full key set for exactly
  * that reason. */
-export function withValidatedClickOptions(pending: PendingClarification): PendingClarification {
-  const clickOptions = validateClickOptions(pending.clickOptions);
+export function withValidatedClickOptions(
+  pending: PendingClarification,
+  validation: ClickValidationOptions = {},
+): PendingClarification {
+  const clickOptions = validateClickOptions(pending.clickOptions, validation);
   // #73 v2 review (PR #122, 2026-09-03): on a chip CARRIER (`rescueOnly`) the
   // `options` ARE the chips' labels, index for index — the shape
   // isRescuePending grants the fresh-question routing on. Dropping one option

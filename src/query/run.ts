@@ -6,10 +6,18 @@
 // no rendering path can drop it (R4). No LLM anywhere (WP5).
 import type { Db } from '../db/types.ts';
 import { parsePeriodCode } from '../ingestion/periods.ts';
-import { CBS_SOURCE_KEY, isProvisionalStatus, resolveSourceForTable } from '../sources/registry.ts';
+import {
+  EUROSTAT_SOURCE_KEY,
+  isProvisionalStatus,
+  resolveSource,
+  resolveSourceForTable,
+  sourceKeyForTableId,
+} from '../sources/registry.ts';
+import { dutchDisplayNameForGeo } from '../sources/eurostat-geo-names.ts';
 import {
   deriveDifference,
   deriveDirection,
+  isEurostatBreakFlag,
   deriveFirstLast,
   deriveMax,
   deriveRegionRanking,
@@ -45,6 +53,63 @@ function refuse(
   extra?: Partial<QueryRefusal['refusal']>,
 ): QueryRefusal {
   return { ok: false, refusal: { kind, message, ...extra }, intent };
+}
+
+/** E2a final-review fix wave (I2 → ruling R8): ADR 048 D5b makes "a
+ * comparability break inside a requested window" a refusal precondition for
+ * any cross-period comparison. The derivations only see the cells in the
+ * RESULT, but a non-contiguous selection (an explicit year list, now_vs_ago —
+ * the #64 shape pre-registration keeps unconditional) leaves the periods in
+ * between out of `cells`: a 'b' flagged on an unsampled year would pass, and
+ * "gestegen van A naar B" across a methodology break would bind. So for a
+ * Eurostat table this reads the WHOLE window straight from `observations` —
+ * the same table/measure/dims/regions/grain, period strictly after the first
+ * compared period up to and including the last (a break flagged ON the first
+ * period marks its boundary with the period BEFORE the window, the same
+ * exemption checkNoSeriesBreak makes) — and returns, per region, the refusal
+ * reason for the first break found. Empty map for every other source and for
+ * a single-period result: CBS pays no query and is untouched. */
+async function eurostatWindowBreaks(
+  db: Db,
+  q: { tableId: string; measure: string; dims: Record<string, string>; regionCodes: string[]; periodCodes: string[] },
+): Promise<Map<string, string>> {
+  const breaks = new Map<string, string>();
+  if (sourceKeyForTableId(q.tableId) !== EUROSTAT_SOURCE_KEY || q.periodCodes.length < 2) return breaks;
+  const first = q.periodCodes[0]!;
+  const last = q.periodCodes[q.periodCodes.length - 1]!;
+  const grain = parsePeriodCode(first)?.grain;
+  if (grain === undefined) return breaks;
+  // Period codes of one grain are fixed-width (2021JJ00, 2021KW03,
+  // 2021MM11), so text order IS period order within the grain.
+  const { rows } = await db.query(
+    `select region_code, period_code, status
+       from observations
+      where table_id = $1 and measure = $2 and dims = $3::jsonb
+        and region_code = any($4::text[]) and period_grain = $5
+        and period_code > $6 and period_code <= $7
+        and status <> all($8::text[])
+      order by region_code, period_code`,
+    [
+      q.tableId,
+      q.measure,
+      JSON.stringify(q.dims),
+      q.regionCodes,
+      grain,
+      first,
+      last,
+      [...resolveSource(EUROSTAT_SOURCE_KEY).definitiveStatuses],
+    ],
+  );
+  for (const row of rows) {
+    const regionCode = row.region_code as string;
+    const status = row.status as string;
+    if (breaks.has(regionCode) || !isEurostatBreakFlag(status)) continue;
+    breaks.set(
+      regionCode,
+      `Eurostat observation for region ${regionCode} at period ${row.period_code as string} (inside the compared window ${first}–${last}) marks a break in series — a trend cannot be compared across it`,
+    );
+  }
+  return breaks;
 }
 
 /** Deterministic coordinate id — the R1 traceability handle. Stable across
@@ -621,7 +686,15 @@ export async function runQuery(
         measure: q.measure,
         measureTitle: q.measureTitle,
         regionCode: q.geoDimension ? regionCode : null,
-        regionLabel: q.geoDimension ? (q.regionLabels[regionCode] ?? null) : null,
+        // §4.2: a Eurostat table's own dimension_labels are English
+        // ("Germany") — display always uses the reviewed Dutch name instead
+        // (falling back to the table's own label only if a code somehow has
+        // none, which should not happen for a code the adapter emitted).
+        regionLabel: q.geoDimension
+          ? sourceKeyForTableId(q.tableId) === EUROSTAT_SOURCE_KEY
+            ? (dutchDisplayNameForGeo(regionCode) ?? q.regionLabels[regionCode] ?? null)
+            : (q.regionLabels[regionCode] ?? null)
+          : null,
         periodCode,
         periodLabel: periodLabelByCode.get(periodCode) ?? periodCode,
         grain: parsed.grain,
@@ -651,6 +724,10 @@ export async function runQuery(
   }
 
   // --- Derivations: registered functions only (R5) ----------------------------
+  // Ruling R8: a Eurostat break anywhere inside the compared window refuses
+  // every cross-period comparison below (difference, direction, first_last)
+  // for that region — the cell-level check inside the derivations stays too.
+  const windowBreaks = await eurostatWindowBreaks(db, q);
   const derivations: DerivationRecord[] = [];
   if (regionSetScope !== null) {
     // #253 / RS1: a region set NEVER routes through deriveMax — that function
@@ -664,6 +741,10 @@ export async function runQuery(
     const ranking = deriveRegionRanking(cells, coverage!, q.derivation === 'max');
     if (ranking.ok) derivations.push(ranking.record);
   } else if (q.derivation === 'difference') {
+    // A difference is one coordinate (deriveDifference refuses two regions),
+    // so any in-window break is a break on the compared series.
+    const windowBreak = windowBreaks.values().next().value;
+    if (windowBreak !== undefined) return refuse(intent, 'derivation_failed', windowBreak, { axis: 'derivation' });
     const derived = deriveDifference(cells);
     if (!derived.ok) return refuse(intent, 'derivation_failed', derived.reason, { axis: 'derivation' });
     derivations.push(derived.record);
@@ -703,12 +784,13 @@ export async function runQuery(
       const slice = cells.filter((c) => c.regionCode === regionCode);
       if (slice.length !== q.periodCodes.length) continue;
       if (!slice.every((c) => c.value !== null)) continue;
+      if (windowBreaks.has(regionCode)) continue;
       const direction = deriveDirection(slice);
       if (direction.ok) derivations.push(direction.record);
       const firstLast = deriveFirstLast(slice);
       if (firstLast.ok) derivations.push(firstLast.record);
     }
-  } else if (q.periodCodes.length > 1 && allValuesPresent) {
+  } else if (q.periodCodes.length > 1 && allValuesPresent && windowBreaks.size === 0) {
     const direction = deriveDirection(cells);
     if (direction.ok) derivations.push(direction.record);
     const firstLast = deriveFirstLast(cells);
@@ -769,9 +851,13 @@ export async function runQuery(
     tableId: q.tableId,
     tableTitle: q.table.title,
     tableVersion: q.table.version,
-    // WP30a: everything registered today IS CBS; adapters for source #2
-    // will carry their key through registration (ADR 030 D4/D5, WP30c).
-    source: CBS_SOURCE_KEY,
+    // The table id owns its source identity (ADR 030 D4): 'cbs' for every
+    // bare CBS id — byte-identical to the old hard-coded CBS_SOURCE_KEY — and
+    // 'eurostat' for an 'eurostat:' table, so a Eurostat answer's attribution
+    // line renders ADR 048 D7(a)'s Eurostat sentence instead of naming CBS
+    // StatLine as the source of a Eurostat figure (R4; found by the E2a fix
+    // wave's click-to-answer end-to-end test).
+    source: sourceKeyForTableId(q.tableId),
     syncedAt: effectiveSyncedAt,
     coveredPeriods: { from: q.periodCodes[0]!, to: q.periodCodes[q.periodCodes.length - 1]! },
     license: 'CC BY 4.0',

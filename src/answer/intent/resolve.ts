@@ -13,6 +13,10 @@
 import type { Db } from '../../db/types.ts';
 import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
+import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
+import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
+import { EUROSTAT_SIBLINGS } from '../../sources/eurostat-siblings.ts';
 import type {
   PeriodSpec,
   RankedCandidate,
@@ -30,12 +34,6 @@ export const STAND_START_OF_YEAR_KEYS = new Set([
   'population_on_1_january',
   'housing_stock_start_of_year',
 ]);
-
-/** Everyday-name → official CBS base name. CBS labels Den Haag as
- * 's-Gravenhage (docs/07 quirk); users overwhelmingly say Den Haag. */
-const REGION_NAME_ALIASES: Record<string, string> = {
-  'den haag': "'s-gravenhage",
-};
 
 const KIND_CODE_PREFIX: Record<Exclude<RegionKind, 'onbekend'>, string> = {
   land: 'NL',
@@ -56,25 +54,12 @@ export function regionKindForCode(code: string): Exclude<RegionKind, 'onbekend'>
   return KIND_BY_PREFIX.find(([prefix]) => code.startsWith(prefix))?.[1] ?? null;
 }
 
-/** Matching normalization: lowercase, straight apostrophes, no diacritics,
- * collapsed whitespace. Display strings always use the original CBS label. */
-export function normalizeRegionName(name: string): string {
-  const flattened = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[‘’ʼ]/g, "'")
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-  return REGION_NAME_ALIASES[flattened] ?? flattened;
-}
-
-/** CBS disambiguates colliding names with a trailing parenthetical:
- * "Utrecht (gemeente)", "Utrecht (PV)". The base name is what users say.
- * Exported for the WP15 context builder (code→name round-trip, ADR 021). */
-export function baseLabel(label: string): string {
-  return label.replace(/\s*\([^)]*\)\s*$/, '');
-}
+/** `normalizeRegionName` (matching normalisation + the Den Haag alias) and
+ * `baseLabel` (strip CBS's trailing disambiguating parenthetical) live in the
+ * leaf module src/sources/region-names.ts since the E2a fix wave (M1), so
+ * src/query and the Eurostat adapter can share them without depending on
+ * src/answer. Re-exported here so every existing caller is unchanged. */
+export { normalizeRegionName, baseLabel };
 
 interface CanonicalRow {
   key: string;
@@ -156,6 +141,11 @@ type RegionResolution =
       };
     };
 
+/** The failure half of `RegionResolution` — the shape `trySiblingResolution`
+ * (§4.3) inspects to decide whether a CBS region failure is eligible for the
+ * Eurostat-sibling check. */
+type RegionFailureDetail = Extract<RegionResolution, { ok: false }>['failure'];
+
 async function resolveRegions(
   db: Db,
   candidate: RawCandidate,
@@ -167,11 +157,19 @@ async function resolveRegions(
 
   if (!geo.geoDimension) {
     // "Nederland" on a national-only measure IS the national figure — only a
-    // sub-national place is a real mismatch (B16), never the country itself
-    // ("Hoeveel woningen telde Nederland?" = B6, a plain national lookup).
-    const subNational = terms.filter(
-      (t) => t.kind !== 'land' && !/^(heel )?nederland$/.test(normalizeRegionName(t.name)),
-    );
+    // sub-national OR foreign place is a real mismatch (B16), never the
+    // country itself ("Hoeveel woningen telde Nederland?" = B6, a plain
+    // national lookup). Judged purely on the NAME, never the kind (fix round
+    // 1, R3/reviewer finding, 2026-09-23): kind alone used to let a 'land'
+    // term skip this check entirely, which held only pre-Eurostat, when
+    // 'land' could mean nothing but Nederland. Now that a foreign country can
+    // legitimately be tagged 'land' too (prompt.ts's guidance notwithstanding
+    // — a model tagging a country as 'land' is plausible and must not be
+    // trusted blindly, principle c), "Duitsland" tagged 'land' is exactly as
+    // much a mismatch as "Duitsland" tagged 'onbekend': both fall through to
+    // `region_on_national_measure` below, which is what makes the Eurostat
+    // sibling check (§4.3) reachable for either tagging.
+    const subNational = terms.filter((t) => !/^(heel )?nederland$/.test(normalizeRegionName(t.name)));
     if (subNational.length === 0) return { ok: true, codes: [] };
     return {
       ok: false,
@@ -193,13 +191,38 @@ async function resolveRegions(
     label: (r.label as string).replace(/\s+/g, ' ').trim(),
   }));
 
+  // §4.3: on a non-CBS (Eurostat) table, "land" means "a country or EU/EFTA
+  // aggregate code" instead of the CBS `NL` prefix, and a Dutch country name
+  // (which a Eurostat table's own English dimension_labels would never
+  // contain) is tried BEFORE English-label matching. CBS tables take the
+  // untouched `else` branch below — byte-identical behaviour, pinned by
+  // tests/answer/intent-resolve.test.ts staying green unchanged.
+  // Gated on `=== EUROSTAT` (not `!== CBS`, E2a fix wave T1): this branch
+  // applies EUROSTAT's own geo-name list and code predicate, so only a
+  // Eurostat table may take it — a future third source must not inherit it.
+  const isEurostatTable = sourceKeyForTableId(canonical.tableId) === EUROSTAT_SOURCE_KEY;
+
   const codes: string[] = [];
   for (const term of terms) {
     const wanted = normalizeRegionName(term.name);
-    let matches = all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
-    if (term.kind !== 'onbekend') {
-      const prefix = KIND_CODE_PREFIX[term.kind];
-      matches = matches.filter((m) => m.code.startsWith(prefix));
+    let matches: RegionMatch[];
+    if (isEurostatTable) {
+      const geoCode = eurostatGeoCodeForDutchName(term.name);
+      matches =
+        geoCode !== null && all.some((m) => m.code === geoCode)
+          ? all.filter((m) => m.code === geoCode)
+          : all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
+      if (term.kind !== 'onbekend') {
+        // Only "land" carries meaning on a Eurostat table today (countries
+        // only, §4.6) — gemeente/provincie/landsdeel can never match.
+        matches = term.kind === 'land' ? matches.filter((m) => isEurostatCountryOrAggregateCode(m.code)) : [];
+      }
+    } else {
+      matches = all.filter((m) => normalizeRegionName(baseLabel(m.label)) === wanted);
+      if (term.kind !== 'onbekend') {
+        const prefix = KIND_CODE_PREFIX[term.kind];
+        matches = matches.filter((m) => m.code.startsWith(prefix));
+      }
     }
     if (matches.length === 0) {
       return {
@@ -910,6 +933,21 @@ async function openEndedRangeOptions(
 
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 
+/** Shared by `resolveCandidate` and `buildResolvedIntent` (fix round 1,
+ * reviewer finding): both need the same clamped confidence and the same
+ * "wrap a partial failure with this candidate's confidence/reading" closure
+ * — hoisted here once instead of defining it twice. */
+function candidateFailure(candidate: RawCandidate): {
+  confidence: number;
+  fail: (partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>) => ResolutionFailure;
+} {
+  const confidence = clamp01(candidate.confidence);
+  return {
+    confidence,
+    fail: (partial) => ({ ...partial, confidence, reading: candidate.reading }),
+  };
+}
+
 /** WP26 mechanism A (ADR 024): one complete intent per ambiguous region option
  * — the candidate's measure/period/derivation with the region pinned to each
  * competing code in turn. Returns undefined (offer nothing) rather than
@@ -955,65 +993,33 @@ export function isResolutionFailure(value: CandidateResolution): value is Resolu
   return !('intent' in value);
 }
 
-export async function resolveCandidate(
+type ResolveCandidateOptions = {
+  answerFirstEnabled?: boolean;
+  clickOptionsEnabled?: boolean;
+  /** Eurostat E2a (§4.1): CBS canonical key -> Eurostat sibling canonical
+   * key, injectable so tests can pin a pair without touching the reviewed
+   * production map. Defaults to `EUROSTAT_SIBLINGS` (ships EMPTY — dark in
+   * production until a person reviews and adds a pair, step 5). */
+  eurostatSiblings?: Readonly<Record<string, string>>;
+};
+
+/** The region-resolved tail of `resolveCandidate`: max/period/derivation
+ * resolution and the final StructuredIntent assembly, generalized over WHICH
+ * canonical measure and geo it runs against. Extracted (§4.3) so the Eurostat
+ * sibling check can build a fully resolved sibling intent through the exact
+ * same code path a normal resolution uses — never a hand-assembled,
+ * divergent shape (principle a: only this one code path turns a candidate
+ * into a StructuredIntent). */
+async function buildResolvedIntent(
   db: Db,
   candidate: RawCandidate,
+  canonical: CanonicalRow,
+  geo: TableGeo,
+  regionCodes: string[],
   referenceDateIso: string,
-  /** WP26 (ADR 024): the two rollout flags — `ANSWER_FIRST_ENABLED` (mechanism
-   * B's defaults) and `CLARIFY_CLICK_ENABLED` (mechanism A's clickable
-   * options). Absent ⇒ pre-WP26 behavior, and #176: absent also means the
-   * per-option intents nobody would read are not built. */
-  options: { answerFirstEnabled?: boolean; clickOptionsEnabled?: boolean } = {},
+  options: ResolveCandidateOptions,
 ): Promise<CandidateResolution> {
-  const confidence = clamp01(candidate.confidence);
-  const fail = (
-    partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>,
-  ): ResolutionFailure => ({ ...partial, confidence, reading: candidate.reading });
-
-  const canonical = await fetchCanonical(db, candidate.canonicalKey);
-  if (!canonical) {
-    return fail({
-      axis: 'measure',
-      reason: 'unknown_canonical_key',
-      message: `canonical key "${candidate.canonicalKey}" is not in the registry`,
-      options: [],
-    });
-  }
-
-  const geo = await fetchTableGeo(db, canonical.tableId);
-  const regionResolution = await resolveRegions(db, candidate, canonical, geo);
-  if (!regionResolution.ok) {
-    // WP26 mechanism A (ADR 024): an ambiguous REGION is the one failure whose
-    // options are complete competing readings — everything else about the
-    // question (measure, period, derivation) is already determined. Resolve
-    // that remainder once and hand policy.ts one full intent per option, so
-    // the ask becomes clickable. Any hiccup here (an unresolvable period, a
-    // max-comparison that needs several regions) simply yields no intents:
-    // the clarification then renders exactly as it does today.
-    const { optionCodes, ...failure } = regionResolution.failure;
-    // #176: and ONLY when the flag that consumes them is on. policy.ts reads
-    // optionIntents behind `clickOptionsEnabled` (policy.ts:149) and nothing
-    // else reads them at all, so building them flag-off spent a resolvePeriod
-    // query per region-ambiguous question on a result that was then discarded
-    // — measurable pressure on the 15-session pooler ceiling (#173) for zero
-    // effect. Gated here rather than in policy.ts because this is the module
-    // that owns the db; policy.ts stays DB-free by design (see ServabilityCheck).
-    // Named `optionResolution`, not `options`: the parameter is called `options`
-    // and a shadow here would put the flag out of reach.
-    const optionResolution =
-      optionCodes === undefined || options.clickOptionsEnabled !== true
-        ? undefined
-        : await regionOptionIntents(db, candidate, canonical, referenceDateIso, optionCodes);
-    return {
-      ...fail(failure),
-      ...(optionResolution === undefined
-        ? {}
-        : {
-            optionIntents: optionResolution.intents,
-            optionImpliedRecency: optionResolution.impliedRecency,
-          }),
-    };
-  }
+  const { confidence, fail } = candidateFailure(candidate);
 
   // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
   // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown
@@ -1045,7 +1051,7 @@ export async function resolveCandidate(
         });
 
   let derivation = normalizeDerivation(candidate);
-  if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
+  if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
 
   const reference = parseReferenceDate(referenceDateIso);
   const periodResolution = await resolvePeriod(
@@ -1057,11 +1063,7 @@ export async function resolveCandidate(
     // The coordinates the answer will really run at: the named regions, or —
     // on a geo table with none named — the national row B-region will default
     // to, so the two defaults agree on one servable window.
-    regionResolution.codes.length > 0
-      ? regionResolution.codes
-      : geo.geoDimension !== null
-        ? [NATIONAL_REGION_CODE]
-        : [],
+    regionCodes.length > 0 ? regionCodes : geo.geoDimension !== null ? [NATIONAL_REGION_CODE] : [],
   );
   if (!periodResolution.ok) return fail(periodResolution.failure);
   // WP26 mechanism B-period: a defaulted trend window IS a series — the same
@@ -1093,7 +1095,7 @@ export async function resolveCandidate(
     // question without its comparison regions keeps the specific resolver
     // clarification instead of the query layer's generic invalid_intent
     // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
-    if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
+    if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
   }
 
   // A multi-period derivation over a structurally single-period selection can
@@ -1117,7 +1119,7 @@ export async function resolveCandidate(
   const intent: StructuredIntent = {
     schemaVersion: INTENT_SCHEMA_VERSION,
     target: { kind: 'canonical', key: canonical.key },
-    ...(regionResolution.codes.length > 0 ? { regions: regionResolution.codes } : {}),
+    ...(regionCodes.length > 0 ? { regions: regionCodes } : {}),
     period: periodResolution.period,
     derivation,
   };
@@ -1129,3 +1131,152 @@ export async function resolveCandidate(
     ...(periodResolution.periodDefaulted === true ? { periodDefaulted: true } : {}),
   };
 }
+
+/** Eurostat E2a (§3/§4.3): when a CBS table fails to resolve one or more
+ * named regions, check whether a reviewed Eurostat sibling measure resolves
+ * EVERY named place — and if so, build the full sibling StructuredIntent
+ * through `buildResolvedIntent` (the SAME tail a normal resolution runs) and
+ * return the `other_source_available` failure instead. Returns undefined
+ * (the original CBS failure stands, byte-identical) whenever:
+ *  - the CBS failure isn't one of the two region-resolution shapes a named
+ *    place can cause (`region_unknown`, `region_on_national_measure` — R3:
+ *    a national-only CBS measure fails this way, not `region_unknown`);
+ *  - the failing table isn't a CBS table (no Eurostat-of-Eurostat siblings);
+ *  - `eurostatSiblings` (default EUROSTAT_SIBLINGS, ships EMPTY) has no
+ *    entry for this canonical key — dark in production by construction;
+ *  - the sibling key isn't in `canonical_measures` (not yet registered —
+ *    never crash, just behave as if there were no sibling);
+ *  - any named place fails to resolve against the sibling's table (one
+ *    source per answer: a partially-resolvable list never answers the
+ *    resolvable half from one source and the rest from another);
+ *  - the sibling build itself fails for any other reason (an unresolvable
+ *    period, say) — never offer a chip that cannot actually be taken. */
+async function trySiblingResolution(
+  db: Db,
+  candidate: RawCandidate,
+  canonical: CanonicalRow,
+  failure: RegionFailureDetail,
+  /** The CBS failure exactly as `resolveCandidate` would return it without a
+   * sibling — carried on the result as `fallback` (fix wave I6) so policy.ts
+   * can render it when the Eurostat chip cannot be offered. */
+  fallback: ResolutionFailure,
+  referenceDateIso: string,
+  options: ResolveCandidateOptions,
+): Promise<ResolutionFailure | undefined> {
+  if (failure.reason !== 'region_unknown' && failure.reason !== 'region_on_national_measure') return undefined;
+  if (sourceKeyForTableId(canonical.tableId) !== CBS_SOURCE_KEY) return undefined;
+
+  const siblings = options.eurostatSiblings ?? EUROSTAT_SIBLINGS;
+  const siblingKey = siblings[candidate.canonicalKey];
+  if (siblingKey === undefined) return undefined;
+
+  const siblingCanonical = await fetchCanonical(db, siblingKey);
+  if (!siblingCanonical) return undefined;
+
+  const siblingGeo = await fetchTableGeo(db, siblingCanonical.tableId);
+  const siblingRegions = await resolveRegions(db, candidate, siblingCanonical, siblingGeo);
+  if (!siblingRegions.ok) return undefined;
+
+  const siblingResolution = await buildResolvedIntent(
+    db,
+    candidate,
+    siblingCanonical,
+    siblingGeo,
+    siblingRegions.codes,
+    referenceDateIso,
+    options,
+  );
+  if (isResolutionFailure(siblingResolution)) return undefined;
+
+  const namedPlaces = (candidate.regions ?? []).map((t) => `"${t.name}"`).join(', ');
+  return {
+    axis: 'region',
+    reason: 'other_source_available',
+    message: `"${canonical.definitionLabel}" cannot resolve ${namedPlaces} on the CBS table, but Eurostat sibling "${siblingCanonical.key}" resolves every named place`,
+    options: ['Toon de Eurostat-cijfers'],
+    optionIntents: [siblingResolution.intent],
+    optionImpliedRecency: siblingResolution.impliedRecency,
+    siblingDefinitionLabel: siblingCanonical.definitionLabel,
+    fallback,
+    confidence: clamp01(candidate.confidence),
+    reading: candidate.reading,
+  };
+}
+
+export async function resolveCandidate(
+  db: Db,
+  candidate: RawCandidate,
+  referenceDateIso: string,
+  /** WP26 (ADR 024): the two rollout flags — `ANSWER_FIRST_ENABLED` (mechanism
+   * B's defaults) and `CLARIFY_CLICK_ENABLED` (mechanism A's clickable
+   * options). Absent ⇒ pre-WP26 behavior, and #176: absent also means the
+   * per-option intents nobody would read are not built. Eurostat E2a adds
+   * `eurostatSiblings` (§4.1), independent of both rollout flags. */
+  options: ResolveCandidateOptions = {},
+): Promise<CandidateResolution> {
+  const { fail } = candidateFailure(candidate);
+
+  const canonical = await fetchCanonical(db, candidate.canonicalKey);
+  if (!canonical) {
+    return fail({
+      axis: 'measure',
+      reason: 'unknown_canonical_key',
+      message: `canonical key "${candidate.canonicalKey}" is not in the registry`,
+      options: [],
+    });
+  }
+
+  const geo = await fetchTableGeo(db, canonical.tableId);
+  const regionResolution = await resolveRegions(db, candidate, canonical, geo);
+  if (!regionResolution.ok) {
+    const { optionCodes, ...failure } = regionResolution.failure;
+    // Eurostat E2a (§3/§4.3): before falling back to today's region failure,
+    // check whether a reviewed Eurostat sibling resolves every named place.
+    // The two eligible reasons never carry `optionCodes` (only
+    // region_ambiguous does), so `fail(failure)` IS the exact failure this
+    // function would otherwise return for them — kept as the fallback.
+    const siblingFailure = await trySiblingResolution(
+      db,
+      candidate,
+      canonical,
+      regionResolution.failure,
+      fail(failure),
+      referenceDateIso,
+      options,
+    );
+    if (siblingFailure) return siblingFailure;
+
+    // WP26 mechanism A (ADR 024): an ambiguous REGION is the one failure whose
+    // options are complete competing readings — everything else about the
+    // question (measure, period, derivation) is already determined. Resolve
+    // that remainder once and hand policy.ts one full intent per option, so
+    // the ask becomes clickable. Any hiccup here (an unresolvable period, a
+    // max-comparison that needs several regions) simply yields no intents:
+    // the clarification then renders exactly as it does today.
+    // #176: and ONLY when the flag that consumes them is on. policy.ts reads
+    // optionIntents behind `clickOptionsEnabled` (policy.ts:149) and nothing
+    // else reads them at all, so building them flag-off spent a resolvePeriod
+    // query per region-ambiguous question on a result that was then discarded
+    // — measurable pressure on the 15-session pooler ceiling (#173) for zero
+    // effect. Gated here rather than in policy.ts because this is the module
+    // that owns the db; policy.ts stays DB-free by design (see ServabilityCheck).
+    // Named `optionResolution`, not `options`: the parameter is called `options`
+    // and a shadow here would put the flag out of reach.
+    const optionResolution =
+      optionCodes === undefined || options.clickOptionsEnabled !== true
+        ? undefined
+        : await regionOptionIntents(db, candidate, canonical, referenceDateIso, optionCodes);
+    return {
+      ...fail(failure),
+      ...(optionResolution === undefined
+        ? {}
+        : {
+            optionIntents: optionResolution.intents,
+            optionImpliedRecency: optionResolution.impliedRecency,
+          }),
+    };
+  }
+
+  return await buildResolvedIntent(db, candidate, canonical, geo, regionResolution.codes, referenceDateIso, options);
+}
+

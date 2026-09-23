@@ -27,6 +27,7 @@ import type { RegionScope, ResultCell } from './types.ts';
 /** The CBS dimension group holding the national total — same convention as
  * PROVINCE_GROUP ('PV') / LANDSDEEL_GROUP ('LD') in region-set.ts, verified
  * against both geo fixtures there. */
+// E2a: CBS-only by design (spec §4.5)
 const NATIONAL_TOTAL_GROUP = 'NL';
 
 /** Where the roster's whole lives: a dimension GROUP the caller resolves to
