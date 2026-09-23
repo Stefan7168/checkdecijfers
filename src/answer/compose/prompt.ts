@@ -13,6 +13,7 @@ import type { LlmRequest } from '../llm/client.ts';
 import { formatValueNl } from './format.ts';
 import { nullReasonText } from './template.ts';
 import { baseRegionLabel } from './validate.ts';
+import { sourceKeyForTableId } from '../../sources/registry.ts';
 
 /** Small/fast-tier model for phrasing per ADR 004 ("model per task"); concrete
  * ID is an implementation-time choice (ADR 013), revisited via ADR 004's own
@@ -101,7 +102,9 @@ export function buildPhrasingPayload(result: ValidatedResult): PhrasingPayload {
       periodLabel: cell.periodLabel,
       regionLabel: cell.regionLabel === null ? null : baseRegionLabel(cell.regionLabel),
       value: cell.value === null ? null : formatValueNl(cell.value, cell.decimals),
-      ...(cell.value === null ? { nullReason: nullReasonText(cell.valueAttribute) } : {}),
+      ...(cell.value === null
+        ? { nullReason: nullReasonText(cell.valueAttribute, sourceKeyForTableId(cell.tableId)) }
+        : {}),
       unit: cell.unit,
       provisional: cell.provisional,
     })),

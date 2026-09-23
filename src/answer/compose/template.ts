@@ -6,28 +6,32 @@
 // wrong. docs/02 reports the template-fallback count.
 import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/index.ts';
 import { formatValueNl, regionSetBodyNoun } from './format.ts';
-import { resolveSource } from '../../sources/registry.ts';
+import { resolveSource, resolveSourceForTable, sourceKeyForTableId } from '../../sources/registry.ts';
 import { baseRegionLabel } from './validate.ts';
 
 /** ValueAttribute → owner-approved Dutch reason (R11: a null cell states its
  * reason, never renders as a bare gap) — the wording lives in the SOURCE
  * REGISTRY (WP30a, ADR 030 D3/A2); unknown attributes fall back to naming
- * the raw marker rather than guessing a meaning. These two helpers receive a
- * CELL, which carries no source key, so they resolve the default ('cbs')
- * entry — byte-identical today; per-cell source routing arrives with the
- * first real adapter (WP30c), when cells can differ in source at all. */
-export function nullReasonText(valueAttribute: string): string {
-  const info = resolveSource(undefined);
+ * the raw marker rather than guessing a meaning. `sourceKey` defaults to CBS
+ * ('cbs') so every pre-E2a caller (none of which had a second source to
+ * distinguish) stays byte-identical; a caller with a cell/table id in scope
+ * passes `sourceKeyForTableId(cell.tableId)` (E2a, spec §4.5) so a Eurostat
+ * cell's null reason resolves Eurostat's own wording, not CBS's. */
+export function nullReasonText(valueAttribute: string, sourceKey?: string): string {
+  const info = resolveSource(sourceKey);
   return info.nullReasonLabels[valueAttribute] ?? `door ${info.displayName} gemarkeerd als '${valueAttribute}'`;
 }
 
 /** Exported since #162: the slot filler appends the SAME registry-worded
- * marking to a provisional slot's rendering (R11 filler-owned on that path). */
+ * marking to a provisional slot's rendering (R11 filler-owned on that path).
+ * Unlike nullReasonText/statusSuffixNl this takes the whole CELL, which
+ * already carries `tableId` — so it resolves the cell's REAL source directly
+ * (E2a, spec §4.5's wiring point 3) rather than needing a second parameter. */
 export function provisionalSuffix(cell: ResultCell): string {
   if (!cell.provisional) return '';
-  // A2: the two-tier CBS wording comes from the registry map; a provisional
+  // A2: the two-tier wording comes from the registry map; a provisional
   // status outside the map keeps the generic suffix (pre-WP30a behavior).
-  return resolveSource(undefined).provisionalDisplay[cell.status] ?? ' (voorlopig cijfer)';
+  return resolveSourceForTable(cell.tableId).provisionalDisplay[cell.status] ?? ' (voorlopig cijfer)';
 }
 
 /** Value + unit, R10-safe: '%' attaches, 'aantal' renders bare, factor units
@@ -93,7 +97,7 @@ function regionPhrase(cell: ResultCell): string {
 
 function cellLine(cell: ResultCell): string {
   if (cell.value === null) {
-    return `${cell.periodLabel}${regionPhrase(cell)}: geen waarde — ${nullReasonText(cell.valueAttribute)}`;
+    return `${cell.periodLabel}${regionPhrase(cell)}: geen waarde — ${nullReasonText(cell.valueAttribute, sourceKeyForTableId(cell.tableId))}`;
   }
   return `${cell.periodLabel}${regionPhrase(cell)}: ${displayValueUnit(cell.value, cell.decimals, cell.unit)}${provisionalSuffix(cell)}`;
 }
@@ -101,7 +105,7 @@ function cellLine(cell: ResultCell): string {
 function renderSingle(result: ValidatedResult): string {
   const cell = result.cells[0]!;
   if (cell.value === null) {
-    return `Voor ${cell.periodLabel}${regionPhrase(cell)} is er geen waarde voor ${subject(result)}: ${nullReasonText(cell.valueAttribute)}.`;
+    return `Voor ${cell.periodLabel}${regionPhrase(cell)} is er geen waarde voor ${subject(result)}: ${nullReasonText(cell.valueAttribute, sourceKeyForTableId(cell.tableId))}.`;
   }
   return `${subjectSentenceStart(result)}${regionPhrase(cell)} was in ${cell.periodLabel} ${displayValueUnit(cell.value, cell.decimals, cell.unit)}${provisionalSuffix(cell)}.`;
 }

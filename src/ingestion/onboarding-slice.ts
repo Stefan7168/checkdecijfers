@@ -25,6 +25,7 @@ export const ONBOARDING_SLICE_YEARS = 10;
 /** The CBS national total region code. CBS uses 'NL' (and 'NL01' for the
  * country in some tables); a prefix pin on 'NL' covers both, and drops the
  * province/municipality rows that blow up a geo table's size. */
+// E2a: CBS-only by design (spec §4.5)
 const NATIONAL_REGION_PREFIX = 'NL';
 
 export interface SliceEstimate {

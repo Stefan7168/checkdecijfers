@@ -108,13 +108,22 @@ export async function insertEurostatTestTable(db: Db, options: EurostatTestTable
 
   for (const code of Object.keys(EUROSTAT_TEST_REGION_LABELS)) {
     for (const [i, year] of EUROSTAT_TEST_YEARS.entries()) {
-      const status = statusOverrides[`${code}|${year}`] ?? EUROSTAT_DEFINITIVE_STATUS;
+      // Mirrors src/eurostat-adapter/jsonstat.ts (~l.470-495): a flagged
+      // observation carries the SAME verbatim flag in both `status` and
+      // `value_attribute` (they differ only in their UNFLAGGED default,
+      // which never applies here — every row in this helper has a real
+      // value). Previously this always wrote 'None' to value_attribute even
+      // when a statusOverride was set, so an override never matched what a
+      // real ingest would have written.
+      const override = statusOverrides[`${code}|${year}`];
+      const status = override ?? EUROSTAT_DEFINITIVE_STATUS;
+      const valueAttribute = override ?? 'None';
       const value = BASE_VALUE[code]! + i * 0.1;
       await db.query(
         `insert into observations
            (table_id, measure, region_code, period_code, period_grain, period_year, dims, value, unit, decimals, status, value_attribute, batch_id)
-         values ($1, $2, $3, $4, 'JJ', $5, '{}'::jsonb, $6, 'Percentage', 1, $7, 'None', $8)`,
-        [EUROSTAT_TEST_TABLE_ID, EUROSTAT_TEST_MEASURE, code, `${year}JJ00`, year, value, status, batchId],
+         values ($1, $2, $3, $4, 'JJ', $5, '{}'::jsonb, $6, 'Percentage', 1, $7, $8, $9)`,
+        [EUROSTAT_TEST_TABLE_ID, EUROSTAT_TEST_MEASURE, code, `${year}JJ00`, year, value, status, valueAttribute, batchId],
       );
     }
   }

@@ -46,7 +46,7 @@ import {
   toInternalRefusal,
   toRefusalResponse,
 } from './refusals.ts';
-import { CBS_SOURCE_KEY } from '../../sources/registry.ts';
+import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
@@ -528,7 +528,7 @@ export async function respondToIntent(
     // uses (adversarial-review finding, 2026-07-03).
     const lastCell = result.cells[result.cells.length - 1];
     const freshestPeriodLabel = lastCell
-      ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status)}`
+      ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
       : '';
     const body =
       `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
