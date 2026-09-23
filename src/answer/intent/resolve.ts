@@ -175,11 +175,19 @@ async function resolveRegions(
 
   if (!geo.geoDimension) {
     // "Nederland" on a national-only measure IS the national figure — only a
-    // sub-national place is a real mismatch (B16), never the country itself
-    // ("Hoeveel woningen telde Nederland?" = B6, a plain national lookup).
-    const subNational = terms.filter(
-      (t) => t.kind !== 'land' && !/^(heel )?nederland$/.test(normalizeRegionName(t.name)),
-    );
+    // sub-national OR foreign place is a real mismatch (B16), never the
+    // country itself ("Hoeveel woningen telde Nederland?" = B6, a plain
+    // national lookup). Judged purely on the NAME, never the kind (fix round
+    // 1, R3/reviewer finding, 2026-09-23): kind alone used to let a 'land'
+    // term skip this check entirely, which held only pre-Eurostat, when
+    // 'land' could mean nothing but Nederland. Now that a foreign country can
+    // legitimately be tagged 'land' too (prompt.ts's guidance notwithstanding
+    // — a model tagging a country as 'land' is plausible and must not be
+    // trusted blindly, principle c), "Duitsland" tagged 'land' is exactly as
+    // much a mismatch as "Duitsland" tagged 'onbekend': both fall through to
+    // `region_on_national_measure` below, which is what makes the Eurostat
+    // sibling check (§4.3) reachable for either tagging.
+    const subNational = terms.filter((t) => !/^(heel )?nederland$/.test(normalizeRegionName(t.name)));
     if (subNational.length === 0) return { ok: true, codes: [] };
     return {
       ok: false,
@@ -940,6 +948,21 @@ async function openEndedRangeOptions(
 
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0);
 
+/** Shared by `resolveCandidate` and `buildResolvedIntent` (fix round 1,
+ * reviewer finding): both need the same clamped confidence and the same
+ * "wrap a partial failure with this candidate's confidence/reading" closure
+ * — hoisted here once instead of defining it twice. */
+function candidateFailure(candidate: RawCandidate): {
+  confidence: number;
+  fail: (partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>) => ResolutionFailure;
+} {
+  const confidence = clamp01(candidate.confidence);
+  return {
+    confidence,
+    fail: (partial) => ({ ...partial, confidence, reading: candidate.reading }),
+  };
+}
+
 /** WP26 mechanism A (ADR 024): one complete intent per ambiguous region option
  * — the candidate's measure/period/derivation with the region pinned to each
  * competing code in turn. Returns undefined (offer nothing) rather than
@@ -1011,10 +1034,7 @@ async function buildResolvedIntent(
   referenceDateIso: string,
   options: ResolveCandidateOptions,
 ): Promise<CandidateResolution> {
-  const confidence = clamp01(candidate.confidence);
-  const fail = (
-    partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>,
-  ): ResolutionFailure => ({ ...partial, confidence, reading: candidate.reading });
+  const { confidence, fail } = candidateFailure(candidate);
 
   // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
   // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown
@@ -1204,10 +1224,7 @@ export async function resolveCandidate(
    * `eurostatSiblings` (§4.1), independent of both rollout flags. */
   options: ResolveCandidateOptions = {},
 ): Promise<CandidateResolution> {
-  const confidence = clamp01(candidate.confidence);
-  const fail = (
-    partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>,
-  ): ResolutionFailure => ({ ...partial, confidence, reading: candidate.reading });
+  const { fail } = candidateFailure(candidate);
 
   const canonical = await fetchCanonical(db, candidate.canonicalKey);
   if (!canonical) {

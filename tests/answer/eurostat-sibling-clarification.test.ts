@@ -223,3 +223,53 @@ describe('Eurostat sibling check (other_source_available)', () => {
     });
   });
 });
+
+// Fix round 1 (reviewer finding #2, controller ruling R5, 2026-09-23): the
+// `!geo.geoDimension` branch in resolveRegions used to let a `kind: 'land'`
+// term skip the sub-national mismatch check UNCONDITIONALLY, regardless of
+// its name — so "Duitsland" tagged 'land' on a national-only CBS measure
+// silently resolved as the Dutch national figure instead of failing
+// honestly. The model tagging a foreign country as 'land' is plausible
+// (prompt.ts's "'land' for Nederland" guidance is not something this code
+// can enforce upstream), so this was a live principle-(c) risk once Eurostat
+// awareness exists. Fixed to judge purely on the NAME (the pre-existing
+// Nederland regex), never the kind.
+describe('kind:\'land\' on a national-only measure judges the NAME, not the kind (fix round 1)', () => {
+  it('(a) Duitsland tagged "land", no sibling: region_on_national_measure (was: silent national answer)', async () => {
+    const candidate = raw(UNEMPLOYMENT_KEY, YEAR_2021, [{ name: 'Duitsland', kind: 'land' }]);
+    const result = await resolveCandidate(db, candidate, '2021-06-15');
+    expect(isResolutionFailure(result)).toBe(true);
+    if (!isResolutionFailure(result)) throw new Error('unreachable');
+    expect(result.reason).toBe('region_on_national_measure');
+  });
+
+  it('(b) Duitsland tagged "land", sibling registered: other_source_available', async () => {
+    const candidate = raw(UNEMPLOYMENT_KEY, YEAR_2021, [{ name: 'Duitsland', kind: 'land' }]);
+    const result = await resolveCandidate(db, candidate, '2021-06-15', { eurostatSiblings: UNEMPLOYMENT_SIBLING });
+    expect(isResolutionFailure(result)).toBe(true);
+    if (!isResolutionFailure(result)) throw new Error('unreachable');
+    expect(result.reason).toBe('other_source_available');
+    expect(result.optionIntents?.[0]?.regions).toEqual(['DE']);
+  });
+
+  // unemployment_rate_seasonally_adjusted publishes no yearly grain (its JJ
+  // cells are CBS reason "Impossible" — see src/registry/defaults.ts's note
+  // on this key), so these two use {kind:'latest'} rather than YEAR_2021 —
+  // the region axis is what's under test, not the period axis.
+  const LATEST: PeriodSpec = { kind: 'latest' };
+
+  it('(c) Nederland tagged "land" still resolves nationally, byte-identical', async () => {
+    const candidate = raw(UNEMPLOYMENT_KEY, LATEST, [{ name: 'Nederland', kind: 'land' }]);
+    const result = await resolveCandidate(db, candidate, '2021-06-15', { eurostatSiblings: UNEMPLOYMENT_SIBLING });
+    expect(isResolutionFailure(result)).toBe(false);
+    if (isResolutionFailure(result)) throw new Error('unreachable');
+    expect(result.intent.target).toEqual({ kind: 'canonical', key: UNEMPLOYMENT_KEY });
+    expect(result.intent.regions).toBeUndefined();
+  });
+
+  it('(c\') "heel Nederland" tagged "land" also still resolves nationally', async () => {
+    const candidate = raw(UNEMPLOYMENT_KEY, LATEST, [{ name: 'heel Nederland', kind: 'land' }]);
+    const result = await resolveCandidate(db, candidate, '2021-06-15');
+    expect(isResolutionFailure(result)).toBe(false);
+  });
+});
