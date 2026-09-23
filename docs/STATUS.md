@@ -39,7 +39,7 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   2727/2727, benchmark gate PASS, real build), `/code-review` LOW clean.
   Next: step 0 (live parse recording) and step 5 (register the unemployment/inflation/GDP-growth
   sibling tables — in `EUROSTAT_SIBLING_MEASURES`, never `defaults.ts`) once the API cap lifts 2026-10-01; step 6
-  is the owner-signed flip, preceded by [#316](open-questions.md). [#313](open-questions.md), spec §6 as-built note.
+  is the owner-signed flip ([#316](open-questions.md), the chart-editor break guard it needed, is MERGED — PR #42, main CI 35833108175 green). [#313](open-questions.md), spec §6 as-built note.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
