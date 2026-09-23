@@ -14,6 +14,7 @@
 //   (R9) — added automatically by run.ts, never on demand by the LLM.
 import { DERIVED_DATA_MARKING, type DerivationRecord, type RegionSetCoverage, type ResultCell } from './types.ts';
 import { contiguousPeriodCodes } from './resolve.ts';
+import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
 
 export type DerivationResult =
   | { ok: true; record: DerivationRecord }
@@ -56,6 +57,41 @@ function checkSingleRegion(cells: ResultCell[]): string | null {
   const regions = new Set(cells.map((c) => c.regionCode));
   if (regions.size > 1) {
     return `source cells span ${regions.size} different regions — a first-vs-last comparison across regions is not a trend`;
+  }
+  return null;
+}
+
+/** ADR 048 D5b: a Eurostat observation's `status` (and `valueAttribute`)
+ * carries its JSON-stat flag VERBATIM (src/eurostat-adapter/jsonstat.ts
+ * ~l.470-495) — `b` means the series breaks in methodology between that
+ * period and the previous one, so a value from before the break is not
+ * comparable to one from after it. A trend (`deriveDirection`) or endpoint
+ * pair (`deriveFirstLast`) that spans such a break would compare two
+ * different measurement methods as if they were one continuous series,
+ * exactly the kind of unsupported claim principle (c) exists to block.
+ *
+ * Only the EARLIEST cell is exempt: a break flagged there marks the
+ * boundary with the period BEFORE it, which lies outside the range this
+ * derivation is comparing (nothing earlier is part of these `cells`) — so it
+ * does not affect trustworthiness of a trend across the given cells.
+ *
+ * Gated on the SOURCE KEY, not the literal flag character: CBS never emits
+ * JSON-stat flags, so a CBS cell whose `status` string happens to be `'b'`
+ * (a coincidence, not a break marker) must be unaffected — checked via
+ * `sourceKeyForTableId`, the same table-id-prefix convention every other
+ * source-aware guard on the answer path uses (ADR 030 D4).
+ *
+ * Cells are read in the order the caller passes them (period-ascending) —
+ * this function does not itself sort, matching every other guard in this
+ * file (`checkComputable`, `checkSingleRegion`, `derivePeriodChangeSeries`),
+ * all of which trust the caller's existing period ordering. */
+function checkNoSeriesBreak(cells: ResultCell[]): string | null {
+  for (let i = 1; i < cells.length; i++) {
+    const current = cells[i] as ResultCell;
+    if (sourceKeyForTableId(current.tableId) !== EUROSTAT_SOURCE_KEY) continue;
+    if (current.status === 'b') {
+      return `Eurostat cell ${current.resultId} (period ${current.periodCode}) marks a break in series — a trend cannot be compared across it`;
+    }
   }
   return null;
 }
@@ -196,7 +232,7 @@ export function deriveDirection(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`direction needs at least 2 source cells, got ${cells.length}`);
   }
-  const problem = checkComputable(cells) ?? checkSingleRegion(cells);
+  const problem = checkComputable(cells) ?? checkSingleRegion(cells) ?? checkNoSeriesBreak(cells);
   if (problem) return refuse(problem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
@@ -300,8 +336,8 @@ export function deriveFirstLast(cells: ResultCell[]): DerivationResult {
   if (cells.length < 2) {
     return refuse(`first_last needs at least 2 source cells, got ${cells.length}`);
   }
-  const regionProblem = checkSingleRegion(cells);
-  if (regionProblem) return refuse(regionProblem);
+  const problem = checkSingleRegion(cells) ?? checkNoSeriesBreak(cells);
+  if (problem) return refuse(problem);
   const first = cells[0] as ResultCell;
   const last = cells[cells.length - 1] as ResultCell;
   return {
