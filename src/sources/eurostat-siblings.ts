@@ -64,7 +64,16 @@ export const EUROSTAT_SIBLING_MEASURES_REVIEWED: readonly CanonicalMeasure[] = [
     tableId: 'eurostat:une_rt_q',
     measure: 'une_rt_q|PC_ACT',
     measureTitle: 'Unemployment by sex and age - quarterly data',
-    dims: { s_adj: 'SA', age: 'Y15-74', sex: 'T' },
+    // `freq` (fix round 1, independent review finding #1): every REAL
+    // Eurostat dataset carries a `freq` dimension (research doc's own
+    // `"id":["freq","s_adj",...]`), classified a plain `Dimension` by the
+    // adapter (src/eurostat-adapter/jsonstat.ts) exactly like `s_adj`/`age`/
+    // `sex`. There is no `TABLE_REGISTRY_DEFAULTS` entry for this table (that
+    // list is CBS-only), so `cbs_tables.default_coordinates` stays NULL —
+    // this `dims` entry is the ONLY place `freq` gets pinned. Without it,
+    // `src/query/resolve.ts` refuses every query against this table with
+    // "dimension(s) freq carry no coordinate", silently, right after step 6.
+    dims: { freq: 'Q', s_adj: 'SA', age: 'Y15-74', sex: 'T' },
     // **Assumption:** owner may reword before step 6 (see #313).
     definitionLabel: 'geharmoniseerd werkloosheidspercentage (Eurostat, seizoengecorrigeerd, 15-74 jaar)',
     everydayTerms: [], // sibling-only: never enters the parser vocabulary (§4.1)
@@ -82,7 +91,9 @@ export const EUROSTAT_SIBLING_MEASURES_REVIEWED: readonly CanonicalMeasure[] = [
     tableId: 'eurostat:prc_hicp_manr',
     measure: 'prc_hicp_manr|RCH_A',
     measureTitle: 'HICP - monthly data (annual rate of change)',
-    dims: { coicop: 'CP00' },
+    // `freq` (fix round 1) — see the unemployment sibling's comment above for
+    // the full account; this dataset is monthly ('M'), not quarterly.
+    dims: { freq: 'M', coicop: 'CP00' },
     // **Assumption:** owner may reword before step 6 (see #313).
     definitionLabel: 'geharmoniseerde inflatie (Eurostat HICP, jaarmutatie, alle bestedingen)',
     everydayTerms: [],
@@ -99,7 +110,9 @@ export const EUROSTAT_SIBLING_MEASURES_REVIEWED: readonly CanonicalMeasure[] = [
     tableId: 'eurostat:namq_10_gdp',
     measure: 'namq_10_gdp|CLV_PCH_SM',
     measureTitle: 'Gross domestic product (GDP) and main components (output, expenditure and income) - quarterly data',
-    dims: { na_item: 'B1GQ', s_adj: 'SCA' },
+    // `freq` (fix round 1) — see the unemployment sibling's comment above;
+    // quarterly ('Q'), like une_rt_q.
+    dims: { freq: 'Q', na_item: 'B1GQ', s_adj: 'SCA' },
     // **Assumption:** owner may reword before step 6 (see #313).
     definitionLabel: 'bbp-volumegroei t.o.v. een jaar eerder (Eurostat, kwartaalcijfers)',
     everydayTerms: [],
@@ -136,7 +149,13 @@ export const EUROSTAT_SIBLING_REGISTRATIONS: readonly EurostatSiblingRegistratio
   {
     tableId: 'eurostat:une_rt_q',
     slice: {
-      dimensionEquals: { s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' },
+      // `freq: 'Q'` (fix round 1) — matches the measure's own `dims.freq`
+      // above; harmless for the request (this dataset's native code is
+      // already quarterly-only) but keeps the registered slice and the
+      // measure's coordinate pin in obvious agreement, and is genuinely
+      // load-bearing for any Eurostat dataset that ever DOES publish more
+      // than one frequency under one native code.
+      dimensionEquals: { freq: 'Q', s_adj: 'SA', age: 'Y15-74', sex: 'T', unit: 'PC_ACT' },
       periodFloor: '2010KW01', // since 2010 Q1 (research doc §1.4)
     },
     updateCadence: 'quarterly',
@@ -144,7 +163,7 @@ export const EUROSTAT_SIBLING_REGISTRATIONS: readonly EurostatSiblingRegistratio
   {
     tableId: 'eurostat:prc_hicp_manr',
     slice: {
-      dimensionEquals: { coicop: 'CP00', unit: 'RCH_A' },
+      dimensionEquals: { freq: 'M', coicop: 'CP00', unit: 'RCH_A' },
       periodFloor: '2015MM01', // since 2015-01 (research doc §2.4)
     },
     updateCadence: 'monthly',
@@ -152,7 +171,7 @@ export const EUROSTAT_SIBLING_REGISTRATIONS: readonly EurostatSiblingRegistratio
   {
     tableId: 'eurostat:namq_10_gdp',
     slice: {
-      dimensionEquals: { na_item: 'B1GQ', unit: 'CLV_PCH_SM', s_adj: 'SCA' },
+      dimensionEquals: { freq: 'Q', na_item: 'B1GQ', unit: 'CLV_PCH_SM', s_adj: 'SCA' },
       periodFloor: '2010KW01', // since 2010 Q1 (research doc §3.4)
     },
     updateCadence: 'quarterly',

@@ -269,9 +269,10 @@ slice never goes through the finder; siblings are pre-registered.
    new benchmark tasks recorded in step 0's session).
 3. Wiring point 3 (`resolveSource(undefined)` → real source) + the CBS-constant guards in §4.5.
 4. `b`-flag refusal precondition in `src/query/derivations.ts`.
-5. Register the first sibling tables (owner step: add the reviewed pairs to `EUROSTAT_SIBLINGS` and their
-   measures to `EUROSTAT_SIBLING_MEASURES` — not `defaults.ts`, see §4.1 — then `registry:apply` + a narrow
-   sync, like E1's `tipsbd30`).
+5. Register the first sibling tables (owner step, now mechanical: `npm run eurostat:siblings -- --apply` to
+   register + sync the three tables `EUROSTAT_SIBLINGS_REVIEWED`/`EUROSTAT_SIBLING_MEASURES_REVIEWED` already
+   hold — not `defaults.ts`, see §4.1 — then `registry:apply`, like E1's `tipsbd30`; docs/RUNBOOK.md "E2a step
+   5" has the exact commands).
 
 **As built, session 125 continuation (2026-09-23), branch `e2a-step5-staging`:** step 5 is now a MECHANICAL
 owner step, still fully dark. `src/sources/eurostat-siblings.ts` gained `EUROSTAT_SIBLINGS_REVIEWED` (the

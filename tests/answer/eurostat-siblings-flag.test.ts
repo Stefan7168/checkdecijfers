@@ -64,6 +64,7 @@ function candidate(): RawCandidate {
 
 describe('resolveCandidate default (no eurostatSiblings override) follows EUROSTAT_SIBLINGS_ENABLED', () => {
   it('flag unset: dark — region_on_national_measure, exactly as before step 5', async () => {
+    vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '');
     const result = await resolveCandidate(db, candidate(), '2021-06-15');
     expect(isResolutionFailure(result)).toBe(true);
     if (!isResolutionFailure(result)) throw new Error('unreachable');
@@ -116,6 +117,7 @@ describe('the offer-side gate (decide()) and the click trust boundary agree with
   }
 
   it('flag unset: decide() offers no Eurostat chip (falls back to the plain CBS clarification)', async () => {
+    vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '');
     const failure = await resolveCandidate(db, candidate(), '2021-06-15');
     if (!isResolutionFailure(failure)) throw new Error('expected a failure');
     expect(failure.reason).toBe('region_on_national_measure'); // no sibling offered at all
@@ -152,6 +154,7 @@ describe('the offer-side gate (decide()) and the click trust boundary agree with
   });
 
   it('flag unset again (rollback): the click trust boundary reverts to rejecting the sibling key, byte-identical to before step 5', async () => {
+    vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '');
     // Build the intent shape a stale client-held chip from a flag-on turn
     // would replay after the owner rolls the flag back off.
     const staleIntent = {

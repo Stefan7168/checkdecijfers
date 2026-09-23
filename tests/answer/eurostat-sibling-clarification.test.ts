@@ -25,7 +25,7 @@
 // this task). `population_on_1_january` (has a real GM/PV/LD/NL geo
 // dimension) is used for the `region_unknown` variants, mirroring the
 // existing "Atlantis" pin in intent-resolve.test.ts.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { decide, isResolutionFailure, resolveCandidate } from '../../src/answer/intent/index.ts';
 import type {
   OutcomeContext,
@@ -58,6 +58,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await close();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 function raw(
@@ -131,11 +135,11 @@ describe('Eurostat sibling check (other_source_available)', () => {
   });
 
   it('6. A measure with no sibling entry + Duitsland: region_unknown (default activeEurostatSiblings() is empty)', async () => {
+    vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '');
     const candidate = raw(POPULATION_KEY, YEAR_2024, [{ name: 'Duitsland', kind: 'onbekend' }]);
     // No eurostatSiblings passed: defaults to activeEurostatSiblings(), which
-    // is empty in this test environment (EUROSTAT_SIBLINGS_ENABLED unset) —
-    // population_on_1_january has no entry there either way (it's not one of
-    // the three reviewed pairs).
+    // is empty with the flag explicitly unset — population_on_1_january has
+    // no entry there either way (it's not one of the three reviewed pairs).
     const result = await resolveCandidate(db, candidate, '2024-06-15');
     expect(isResolutionFailure(result)).toBe(true);
     if (!isResolutionFailure(result)) throw new Error('unreachable');

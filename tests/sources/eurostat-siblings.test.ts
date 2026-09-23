@@ -104,6 +104,21 @@ describe('the reviewed constants (requirement 1: pairs + measures)', () => {
     }
   });
 
+  it('fix round 1: every reviewed measure pins `freq` in dims (une_rt_q/namq_10_gdp quarterly, prc_hicp_manr monthly) — there is no TABLE_REGISTRY_DEFAULTS entry for a Eurostat sibling table, so this is the ONLY place freq gets a coordinate', () => {
+    const byKey = Object.fromEntries(EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => [m.key, m]));
+    expect(byKey.eu_unemployment_rate_harmonised!.dims.freq).toBe('Q');
+    expect(byKey.eu_hicp_annual_rate!.dims.freq).toBe('M');
+    expect(byKey.eu_gdp_growth_yoy_volume!.dims.freq).toBe('Q');
+  });
+
+  it('fix round 1: every registration slice also pins `freq`, matching its measure\'s dims.freq', () => {
+    const byTableId = Object.fromEntries(EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => [m.tableId, m]));
+    for (const reg of EUROSTAT_SIBLING_REGISTRATIONS) {
+      const measure = byTableId[reg.tableId]!;
+      expect(reg.slice.dimensionEquals?.freq, reg.tableId).toBe(measure.dims.freq);
+    }
+  });
+
   it('every reviewed measure key is the target of exactly one reviewed pair, and vice versa', () => {
     const measureKeys = new Set(EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => m.key));
     const pairTargets = new Set(Object.values(EUROSTAT_SIBLINGS_REVIEWED));

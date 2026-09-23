@@ -47,10 +47,16 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   runtime-active map (`activeEurostatSiblings()`, the one function the resolver/offer-gate/click-boundary all
   fall back to) stays empty unless env `EUROSTAT_SIBLINGS_ENABLED='1'`; `registry:apply` now skips (never
   aborts on) an unregistered sibling table (`siblingMeasuresSkipped`); a committed script, `npm run
-  eurostat:siblings` (dry run) / `-- --apply`, registers + syncs the three tables. Owner steps per
-  docs/RUNBOOK.md "E2a step 5": run the script `--apply`, then `registry:apply`, then verify — all still
-  blocked on the Anthropic API cap only insofar as step 0 (live parse recording) is; step 5's registration
-  itself needs no AI spend. Next: step 0 (live parse recording, ~10 questions, small AI spend, after the API
+  eurostat:siblings` (dry run) / `-- --apply`, registers + syncs the three tables (recovers a registered-but-
+  never-synced table on re-run instead of skipping it). **Fix round 1 (independent review, same session):**
+  the `freq` dimension was missing from every reviewed measure (would have made all three unresolvable —
+  proven RED then fixed, real fixture round-trip test); `buildCoverageReport`/`/llms.txt` would have publicly
+  listed the three tables + their not-owner-signed labels as soon as `registry:apply` ran, regardless of the
+  runtime flag — now gated the same way as the resolver (ADR 048 as-built addendum); the registration script's
+  own tests made live DataCite calls, now stubbed. Owner steps per docs/RUNBOOK.md "E2a step 5": run the
+  script `--apply`, then `registry:apply`, then verify — all still blocked on the Anthropic API cap only
+  insofar as step 0 (live parse recording) is; step 5's registration itself needs no AI spend. Next: step 0
+  (live parse recording, ~10 questions, small AI spend, after the API
   cap lifts 2026-10-01) and step 6, the owner-signed flip (wording sweep + `EUROSTAT_SIBLINGS_ENABLED=1`).
   [#313](open-questions.md), spec §6.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124

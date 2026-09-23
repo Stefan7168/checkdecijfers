@@ -8,21 +8,34 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { registerEurostatSiblings } from '../../scripts/register-eurostat-siblings.ts';
-import { registerTables } from '../../src/ingestion/pipeline.ts';
+import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
 import { EUROSTAT_SIBLING_REGISTRATIONS } from '../../src/sources/eurostat-siblings.ts';
+
+// E2a step-5 fix round 1 (independent review finding #2): `registerTables`'s
+// out-of-band DataCite DOI-verification call (ADR 048 D7(a)) falls back to
+// the REAL global `fetch` unless `fetchImpl` is threaded through — every
+// `--apply` call below now passes the stub explicitly, so this suite makes
+// ZERO real network calls (the same discipline register-sync.test.ts's own
+// `fakeDataciteFetch` already follows).
 
 /** One minimal, valid JSON-stat dataset per reviewed table — small enough to
  * register + sync in one cell, shaped after each table's real dimensions
  * (research doc §1-3) so `registerTables`/`syncTable`'s five checks pass. */
 const DATASETS: Readonly<Record<string, unknown>> = {
+  // `freq` included in every dataset below (fix round 1, independent review
+  // finding #1) — every REAL Eurostat dataset carries it, and it is now
+  // pinned in EUROSTAT_SIBLING_MEASURES_REVIEWED's `dims` + this table's own
+  // registration slice, so a fixture without it would silently misrepresent
+  // what registerTables actually stores in `expected_dimensions`.
   une_rt_q: {
     version: '2.0',
     class: 'dataset',
     label: 'Unemployment by sex and age - quarterly data',
-    id: ['s_adj', 'age', 'sex', 'unit', 'geo', 'time'],
-    size: [1, 1, 1, 1, 1, 1],
+    id: ['freq', 's_adj', 'age', 'sex', 'unit', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1, 1],
     dimension: {
+      freq: { category: { index: { Q: 0 }, label: { Q: 'Quarterly' } } },
       s_adj: { category: { index: { SA: 0 }, label: { SA: 'Seasonally adjusted data' } } },
       age: { category: { index: { 'Y15-74': 0 }, label: { 'Y15-74': 'From 15 to 74 years' } } },
       sex: { category: { index: { T: 0 }, label: { T: 'Total' } } },
@@ -36,9 +49,10 @@ const DATASETS: Readonly<Record<string, unknown>> = {
     version: '2.0',
     class: 'dataset',
     label: 'HICP - monthly data (annual rate of change)',
-    id: ['unit', 'coicop', 'geo', 'time'],
-    size: [1, 1, 1, 1],
+    id: ['freq', 'unit', 'coicop', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1],
     dimension: {
+      freq: { category: { index: { M: 0 }, label: { M: 'Monthly' } } },
       unit: { category: { index: { RCH_A: 0 }, label: { RCH_A: 'Annual rate of change' } } },
       coicop: { category: { index: { CP00: 0 }, label: { CP00: 'All-items HICP' } } },
       geo: { category: { index: { NL: 0 }, label: { NL: 'Netherlands' } } },
@@ -53,9 +67,10 @@ const DATASETS: Readonly<Record<string, unknown>> = {
     version: '2.0',
     class: 'dataset',
     label: 'Gross domestic product (GDP) and main components - quarterly data',
-    id: ['unit', 's_adj', 'na_item', 'geo', 'time'],
-    size: [1, 1, 1, 1, 1],
+    id: ['freq', 'unit', 's_adj', 'na_item', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1],
     dimension: {
+      freq: { category: { index: { Q: 0 }, label: { Q: 'Quarterly' } } },
       unit: { category: { index: { CLV_PCH_SM: 0 }, label: { CLV_PCH_SM: 'Chain linked volumes, % change on same period' } } },
       s_adj: { category: { index: { SCA: 0 }, label: { SCA: 'Seasonally and calendar adjusted data' } } },
       na_item: { category: { index: { B1GQ: 0 }, label: { B1GQ: 'Gross domestic product at market prices' } } },
@@ -117,19 +132,24 @@ describe('registerEurostatSiblings — dry run (default)', () => {
     }
   });
 
-  it('reports an already-registered table as skipped, not re-fetched, even in dry run', async () => {
+  it('reports an already-registered AND already-synced table as skipped, not re-fetched, even in dry run', async () => {
     const { db, close } = await createTestDb();
     try {
       const { fetchFn, source } = stubSource();
       const uneRtQ = EUROSTAT_SIBLING_REGISTRATIONS.find((r) => r.tableId === 'eurostat:une_rt_q')!;
-      // Register just une_rt_q for real first, out of band (never through
+      // Register AND sync une_rt_q for real first, out of band (never through
       // registerEurostatSiblings itself, which would register all three).
+      // Both steps matter: "registered" and "synced at least once" are
+      // different facts (fix round 1, finding #4) — a registered-but-
+      // unsynced table is NOT what this test is about (see the dedicated
+      // "recovers" test below).
       await registerTables(
         db,
         source,
         [{ id: uneRtQ.tableId, updateCadence: uneRtQ.updateCadence, servesTasks: [], slice: uneRtQ.slice }],
         { fetchImpl: fakeDataciteFetch },
       );
+      await syncTable(db, source, uneRtQ.tableId);
       fetchFn.mockClear();
 
       const result = await registerEurostatSiblings(db, source);
@@ -146,17 +166,18 @@ describe('registerEurostatSiblings — --apply', () => {
     const { db, close } = await createTestDb();
     try {
       const { source } = stubSource();
-      const result = await registerEurostatSiblings(db, source, { apply: true });
+      const result = await registerEurostatSiblings(db, source, { apply: true, fetchImpl: fakeDataciteFetch });
 
       expect(result.applied).toBe(true);
       expect(result.newlyRegistered.sort()).toEqual(EUROSTAT_SIBLING_REGISTRATIONS.map((r) => r.tableId).sort());
       expect(result.synced.every((s) => s.outcome === 'succeeded')).toBe(true);
 
-      const { rows } = await db.query('select id, pinned, source from cbs_tables order by id');
+      const { rows } = await db.query('select id, pinned, source, last_sync_at from cbs_tables order by id');
       expect(rows).toHaveLength(3);
       for (const row of rows) {
         expect(row.pinned, row.id as string).toBe(true);
         expect(row.source).toBe('eurostat');
+        expect(row.last_sync_at, row.id as string).not.toBeNull();
       }
     } finally {
       await close();
@@ -167,14 +188,56 @@ describe('registerEurostatSiblings — --apply', () => {
     const { db, close } = await createTestDb();
     try {
       const { source } = stubSource();
-      await registerEurostatSiblings(db, source, { apply: true });
-      const second = await registerEurostatSiblings(db, source, { apply: true });
+      await registerEurostatSiblings(db, source, { apply: true, fetchImpl: fakeDataciteFetch });
+      const second = await registerEurostatSiblings(db, source, { apply: true, fetchImpl: fakeDataciteFetch });
 
       expect(second.newlyRegistered).toEqual([]);
       expect(second.alreadyRegistered.sort()).toEqual(EUROSTAT_SIBLING_REGISTRATIONS.map((r) => r.tableId).sort());
 
       const { rows } = await db.query('select count(*) c from cbs_tables');
       expect(Number(rows[0]!.c)).toBe(3);
+    } finally {
+      await close();
+    }
+  });
+
+  // Fix round 1, finding #4: an interrupted/failed sync must be recoverable
+  // by simply re-running --apply, not require deleting the row by hand.
+  it('recovers a registered-but-never-synced table (an interrupted prior run) by syncing it, not skipping it', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      const { fetchFn, source } = stubSource();
+      const uneRtQ = EUROSTAT_SIBLING_REGISTRATIONS.find((r) => r.tableId === 'eurostat:une_rt_q')!;
+      // Simulate an interrupted first run: registerTables succeeded, syncTable
+      // never ran (process killed, crashed, whatever) — last_sync_at is NULL.
+      await registerTables(
+        db,
+        source,
+        [{ id: uneRtQ.tableId, updateCadence: uneRtQ.updateCadence, servesTasks: [], slice: uneRtQ.slice }],
+        { fetchImpl: fakeDataciteFetch },
+      );
+      const before = await db.query('select last_sync_at from cbs_tables where id = $1', [uneRtQ.tableId]);
+      expect(before.rows[0]!.last_sync_at).toBeNull();
+      fetchFn.mockClear();
+
+      const result = await registerEurostatSiblings(db, source, { apply: true, fetchImpl: fakeDataciteFetch });
+
+      // Not "newly registered" (the row already existed) but genuinely
+      // synced — and NOT silently reported as "already registered" either.
+      expect(result.newlyRegistered).not.toContain(uneRtQ.tableId);
+      expect(result.alreadyRegistered).not.toContain(uneRtQ.tableId);
+      expect(result.synced.map((s) => s.tableId)).toContain(uneRtQ.tableId);
+      expect(result.synced.find((s) => s.tableId === uneRtQ.tableId)?.outcome).toBe('succeeded');
+      // The other two tables were never registered at all — this run also
+      // does its normal job for them.
+      expect(result.newlyRegistered.sort()).toEqual(
+        EUROSTAT_SIBLING_REGISTRATIONS.map((r) => r.tableId)
+          .filter((id) => id !== uneRtQ.tableId)
+          .sort(),
+      );
+
+      const after = await db.query('select last_sync_at from cbs_tables where id = $1', [uneRtQ.tableId]);
+      expect(after.rows[0]!.last_sync_at).not.toBeNull();
     } finally {
       await close();
     }

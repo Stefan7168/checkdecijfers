@@ -3,12 +3,13 @@
 // reads, so "the list is generated from reality" is a tested claim, not a
 // slogan. Invariant at stake: the public coverage list must never over-claim
 // (a quarantined table is excluded by the renderer via its status).
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildCoverageReport, type CoverageReport } from '../../src/registry/coverage.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { insertEurostatTestTable, EUROSTAT_TEST_TABLE_ID } from '../helpers/eurostat-test-table.ts';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -67,5 +68,57 @@ describe('buildCoverageReport', () => {
 
   it('is stable: two renders of unchanged state are deep-equal (ordered by id/key)', async () => {
     expect(await buildCoverageReport(db)).toEqual(report);
+  });
+});
+
+// E2a step-5 fix round 1 (independent review finding #3): a reviewed
+// Eurostat sibling measure/table must stay OUT of the public coverage
+// surface (llms.txt, coverage-disclosure) until EUROSTAT_SIBLINGS_ENABLED
+// is exactly '1' — regardless of whether registry:apply has already upserted
+// its canonical_measures row. Uses a REAL reviewed sibling key
+// (`eu_unemployment_rate_harmonised`), registered onto the existing
+// synthetic Eurostat test table, so this exercises the actual production
+// gate (`eurostatSiblingTargetKeys`/`EUROSTAT_SIBLINGS_REVIEWED`), not a
+// made-up key.
+describe('buildCoverageReport hides a reviewed Eurostat sibling measure/table until EUROSTAT_SIBLINGS_ENABLED=1', () => {
+  const REVIEWED_SIBLING_KEY = 'eu_unemployment_rate_harmonised';
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('flag unset: the sibling table and its measure are BOTH absent from the report', async () => {
+    await insertEurostatTestTable(db, { canonicalKey: REVIEWED_SIBLING_KEY });
+    try {
+      const after = await buildCoverageReport(db);
+      expect(after.tables.find((t) => t.id === EUROSTAT_TEST_TABLE_ID)).toBeUndefined();
+      const allKeys = after.tables.flatMap((t) => t.measures.map((m) => m.key));
+      expect(allKeys).not.toContain(REVIEWED_SIBLING_KEY);
+      // Every CBS table/measure is completely unaffected.
+      expect(after.tables.length).toBe(report.tables.length);
+    } finally {
+      await db.query('delete from observations where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from ingestion_batches where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from canonical_measures where key = $1', [REVIEWED_SIBLING_KEY]);
+      await db.query('delete from dimension_labels where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from cbs_tables where id = $1', [EUROSTAT_TEST_TABLE_ID]);
+    }
+  });
+
+  it('flag = "1": the sibling table and its (not-yet-owner-signed) label appear', async () => {
+    await insertEurostatTestTable(db, { canonicalKey: REVIEWED_SIBLING_KEY });
+    try {
+      vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '1');
+      const after = await buildCoverageReport(db);
+      const table = after.tables.find((t) => t.id === EUROSTAT_TEST_TABLE_ID);
+      expect(table).toBeDefined();
+      expect(table!.measures.map((m) => m.key)).toContain(REVIEWED_SIBLING_KEY);
+    } finally {
+      await db.query('delete from observations where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from ingestion_batches where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from canonical_measures where key = $1', [REVIEWED_SIBLING_KEY]);
+      await db.query('delete from dimension_labels where table_id = $1', [EUROSTAT_TEST_TABLE_ID]);
+      await db.query('delete from cbs_tables where id = $1', [EUROSTAT_TEST_TABLE_ID]);
+    }
   });
 });
