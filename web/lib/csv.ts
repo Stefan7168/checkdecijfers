@@ -44,16 +44,19 @@ export interface AnswerCsv {
   content: string;
 }
 
+// CRLF/BOM/csvRow are exported so web/lib/user-csv.ts (the own-data
+// counterpart, #318) reuses the same dialect and quoting instead of a second,
+// driftable copy. No behaviour change.
 const SEPARATOR = ';';
-const CRLF = '\r\n';
-const BOM = '\ufeff';
+export const CRLF = '\r\n';
+export const BOM = '\ufeff';
 
 /** RFC 4180 quoting for the ';' dialect: quote only fields that need it. */
 function csvField(raw: string): string {
   return /[";\r\n]/.test(raw) ? `"${raw.replaceAll('"', '""')}"` : raw;
 }
 
-function csvRow(fields: string[]): string {
+export function csvRow(fields: string[]): string {
   return fields.map(csvField).join(SEPARATOR);
 }
 

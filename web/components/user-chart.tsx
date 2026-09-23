@@ -13,10 +13,11 @@
 // `useChartEdits` (the command log and its per-account persistence),
 // `ChartHistoryActions`, `ChartEditableText`, `ChartConfigPanel`,
 // `ChartNotes`, `SeriesLegend` — plus the form tabs and a table view. What
-// is deliberately NOT here: small multiples, the Insights story/stage, the
-// zoom window, embed/stage modes, CSV export (D11 names the CSV-injection
-// defense a "Download als CSV" of user data would need), and the reading
-// toggle (an own-data chart has no registry alternates).
+// is deliberately NOT here: the Insights story/stage, the zoom window,
+// embed/stage modes, and the reading toggle (an own-data chart has no
+// registry alternates). Small multiples and a CSV download (with the
+// formula-injection defense D11 asked for, `web/lib/user-csv.ts`) joined in
+// session 126 (#318).
 //
 // The one thing this card has that the CBS card cannot: a DATA command.
 // `state.instruction` says which columns/aggregate/derived reading is drawn,
@@ -115,6 +116,7 @@ import {
 } from '../lib/chart-view-state.ts';
 import { useLang } from '../lib/i18n/lang-provider.tsx';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
+import { buildUserChartCsv } from '../lib/user-csv.ts';
 import {
   AxisTick,
   buildDumbbellRows,
@@ -142,6 +144,8 @@ import { ChartConfigTrigger } from './chart-config-trigger.tsx';
 import { ChartCopilotInput, type CopilotReply } from './chart-copilot-input.tsx';
 import { ChartDataPanel, ChartDataTrigger } from './chart-data-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
+import { ChartSmallMultiples } from './chart-small-multiples.tsx';
+import { DownloadCsvButton } from './download-csv-button.tsx';
 import { ChartEditableText } from './chart-editable-text.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -190,6 +194,15 @@ export interface UserChartEditContext {
   turnId: number;
   profile: DatasetProfile;
   lastInstruction: ClientChartInstruction;
+}
+
+/** #318: chart.tsx's `tabClass` pill styling for the small-multiples toggle
+ * row — the same classes, so the two cards' toggles look identical. */
+function pillClass(active: boolean): string {
+  return (
+    'min-h-11 sm:min-h-6 rounded-full border px-2.5 py-1 text-xs ' +
+    (active ? 'border-transparent bg-secondary text-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')
+  );
 }
 
 /** The ONE place a UserChartSpec is narrowed to the minimal shape
@@ -1381,6 +1394,18 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
 
   // --- the style panel -----------------------------------------------------
   const [styleOpen, setStyleOpen] = useState(false);
+
+  // --- small multiples (#318, session 126) ----------------------------------
+  // CBS parity: one mini line chart per series, same line-only rule and the
+  // same gate as chart.tsx (`activeForm === 'line'` and more than one
+  // series). View-only local state, like chart.tsx's — not a stored command,
+  // so it neither enters the history nor the saved edit log. `smallMultiplesOn`
+  // is the ONE compound every branch below reads, so switching to another
+  // form while it is on can never leave a half-applied view behind (the
+  // chart.tsx final-review lesson).
+  const [smallMultiples, setSmallMultiples] = useState(false);
+  const [axisMode, setAxisMode] = useState<'shared' | 'own'>('shared');
+  const smallMultiplesOn = smallMultiples && activeForm === 'line' && seriesMeta.length > 1;
   const styleTriggerId = `${domId}-style-trigger`;
   const styleControlsId = `${domId}-style`;
   const panelId = `${domId}-panel`;
@@ -1938,8 +1963,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const tableNode = (
     <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.tabTable')} className="mt-2 overflow-x-auto">
       {/* Spec strings only (U6): the header is the spec's own xHeader and
-        * series labels, every cell its own `formattedValue`. No CSV export —
-        * D11's CSV-injection defense is not built for this tier. */}
+        * series labels, every cell its own `formattedValue`. The CSV
+        * download in the footer (#318) carries the same points. */}
       <table className="w-full text-sm" aria-label={heading}>
         <thead>
           <tr>
@@ -2431,6 +2456,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         </div>
       ) : activeForm === 'table' ? (
         tableNode
+      ) : smallMultiplesOn ? (
+        // Outside ChartFrame and the export container, like the table: the
+        // grid is several small <svg>s, not one chart an image export can
+        // capture — so the image download below is hidden while it is on,
+        // exactly as on the CBS card.
+        <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.smallMultiplesGroupLabel')} className="mt-2">
+          <ChartSmallMultiples spec={plottable} hiddenKeys={state.hiddenKeys} axisMode={axisMode} presentation={pres} lang={chartLang} />
+        </div>
       ) : (
         plotNode
       )}
@@ -2454,6 +2487,30 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             </p>
           ) : null}
         </>
+      ) : null}
+      {activeForm === 'line' && seriesMeta.length > 1 ? (
+        // #318: the same toggle row as chart.tsx's (same labels, same
+        // pill styling), minus the story lock this card has no story for.
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            aria-pressed={smallMultiples}
+            onClick={() => setSmallMultiples((v) => !v)}
+            className={pillClass(smallMultiples)}
+          >
+            {t(chartLang, 'chart.smallMultiplesToggle')}
+          </button>
+          {smallMultiples ? (
+            <div role="group" aria-label={t(chartLang, 'chart.axisGroupLabel')} className="flex gap-2">
+              <button type="button" aria-pressed={axisMode === 'shared'} onClick={() => setAxisMode('shared')} className={pillClass(axisMode === 'shared')}>
+                {t(chartLang, 'chart.sharedAxes')}
+              </button>
+              <button type="button" aria-pressed={axisMode === 'own'} onClick={() => setAxisMode('own')} className={pillClass(axisMode === 'own')}>
+                {t(chartLang, 'chart.ownAxes')}
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : null}
       {!tabularForm ? (
         // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
@@ -2725,12 +2782,22 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           <p>{provenanceLine}</p>
           <p>{activeSpec.disclaimerLine}</p>
         </div>
-        <ChartDownloadMenu
-          containerRef={containerRef}
-          attributionText={`${activeSpec.disclaimerLine} · checkdecijfers.nl`}
-          filenameBase={`checkdecijfers-your-data-${activeSpec.provenance.datasetId}`}
-          syncedAt={activeSpec.provenance.capturedAt}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          {/* #318: the plotted values as a CSV, in every form (it is data,
+            * not a picture of the chart) — built from the spec alone by
+            * user-csv.ts, which neutralises formula-shaped text from the
+            * reader's own file (ADR 037 D11). All series, hidden ones
+            * included, exactly like the Tabel view. */}
+          <DownloadCsvButton csv={buildUserChartCsv(activeSpec, chartLang)} />
+          {!smallMultiplesOn ? (
+            <ChartDownloadMenu
+              containerRef={containerRef}
+              attributionText={`${activeSpec.disclaimerLine} · checkdecijfers.nl`}
+              filenameBase={`checkdecijfers-your-data-${activeSpec.provenance.datasetId}`}
+              syncedAt={activeSpec.provenance.capturedAt}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );

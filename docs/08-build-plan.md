@@ -548,7 +548,8 @@ dashed chrome, provenance+disclaimer footer, and the ABSENCE of anything CBS-sha
 no table view, no per-point/bar value labels (those render via chart.tsx-internal
 `SeriesDot`/`SeriesBar`, not in the design doc's reuse list), no trend headline, **no CSV export**
 (D11's CSV-injection defense for a "Download as CSV" of user data is not built — tracked as a
-follow-up alongside the table view). Two real dead-code findings caught by `/code-review` LOW and
+follow-up alongside the table view; **both since built:** the table view in co-pilot phase 2,
+and small multiples + a CSV download with the D11 defense in session 126, [#318](open-questions.md)). Two real dead-code findings caught by `/code-review` LOW and
 fixed before commit: an unused `useId()`/`domId` left over from adapting `ChartView`'s pattern,
 and an unused direct `seriesStyle` import (it's genuinely reused, just indirectly via
 `buildRows`). Full backend suite green (2073/2073), full web suite green (653/653, post-fix), both

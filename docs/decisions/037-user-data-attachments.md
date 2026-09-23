@@ -221,3 +221,18 @@ number and says what it is.
 
 **Not done (residuals).** The note sits outside the export container (like every caveat), so a PNG/PDF
 export of such a chart does not carry it; tooltips do not repeat it.
+
+## As-built addendum — own-data parity phase A: small multiples + CSV download (session 126, 2026-09-23, [#318](../open-questions.md))
+
+The owner picked #306's candidate (d). A verified survey of CBS-card vs own-data-card capabilities is in
+[superpowers/specs/2026-09-23-own-data-parity-design.md](../superpowers/specs/2026-09-23-own-data-parity-design.md).
+Phase A closes two gaps with no AI call and no schema change. (1) **Small multiples:** `ChartSmallMultiples`
+now takes `PlottableSpec` (the D11 adapter interface chart.tsx's helpers already take), so H2 holds: the own-data
+card still never builds or passes a `ChartSpec`. Same line-only, more-than-one-series gate as the CBS card; the
+image download is hidden while it is on. (2) **CSV download:** the D11 CSV-injection defense this ADR's brief
+(§D11 fix, 2026-09-06) required is now built in `web/lib/user-csv.ts` `neutralizeFormula`, content-level as the
+brief specified: a plain number is left alone; otherwise leading whitespace/control characters are looked
+through and a field starting with `=`, `+`, `-` or `@` (or opening with TAB/CR) gets a leading `'`. Applied to
+every user-sourced field (x header, series labels, x labels, file name); the numbers the tier serializes itself
+are never prefixed. The file keeps the tier's honesty: the disclaimer line opens it, every point carries its
+`rowRef`, values are exact (never rounded), and a missing value or #314 incomplete group states why.
