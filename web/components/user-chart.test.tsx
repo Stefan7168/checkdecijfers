@@ -2195,6 +2195,39 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expect(slice('r1:c1')).not.toHaveAttribute('data-whole-reference');
   });
 
+  it('keyboard: Enter on a slice designates it and focus stays on that slice through the re-render AND the verdict landing; Enter again clears it, focus still there', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    const slice = () => container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="r1:c1"]`)!;
+    act(() => slice().focus());
+    expect(document.activeElement).toBe(slice());
+    fireEvent.keyDown(slice(), { key: 'Enter' });
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    await waitFor(() => expect(document.activeElement?.getAttribute('data-result-id')).toBe('r1:c1'));
+    expect(document.activeElement).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(document.activeElement!, { key: 'Enter' });
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('aria-pressed', 'false'));
+    expect(document.activeElement?.getAttribute('data-result-id')).toBe('r1:c1');
+  });
+
+  it('keyboard focus restore never steals focus the reader moved elsewhere on purpose', async () => {
+    wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
+    const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} edit={editContext()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Taartdiagram' }));
+    const slice = (rowRef: string) => container.querySelector<HTMLElement>(`${SECTOR} [data-result-id="${rowRef}"]`)!;
+    act(() => slice('r1:c1').focus());
+    // A pointer press on something that is not a designation control (the
+    // tab strip) is the reader moving on — the chart re-rendering afterwards
+    // must leave focus where the reader put it.
+    const tab = screen.getByRole('tab', { name: 'Taartdiagram' });
+    fireEvent.pointerDown(tab);
+    act(() => tab.focus());
+    fireEvent.keyDown(slice('r1:c2'), { key: 'Enter' }); // re-renders the chart
+    await waitFor(() => expect(note()).toHaveAttribute('data-state', 'checked'));
+    expect(document.activeElement).toBe(tab);
+  });
+
   it('fix wave (I2/I3): two series sharing ONE label (a derived chart) — the mark, not the label, says which segment is the total', async () => {
     wholeVerificationActions.requestDatasetWholeVerification.mockResolvedValue({ ok: true, outcome: { verified: true } });
     const shared = twoSeriesSpec();

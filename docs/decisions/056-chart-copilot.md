@@ -897,6 +897,16 @@ wave `133176aa`), **merged to `main` as `7694cf5c` (session 124, 2026-09-23) —
   the note gets a new `not_checked_read_only` state that drops "click a point to verify", since that
   invitation would otherwise promise the very action I4 removed. No prompt bytes touched, no fixture regen.
   `/code-review` LOW on the fix-wave diff: no findings.
+- **Session 124 follow-up (branch `own-data-whole-focus-restore`, PR for owner review):** Task 4's M2
+  (keyboard focus lost after a designation) confirmed in a real browser and fixed. Root cause is in
+  Recharts 3.10, not the card: `Pie`/`Bar` pass a freshly spread props object to `AnimatedItems` as its
+  `animationInput`, `useAnimationId` compares it by reference, and the resulting id is the items' React
+  `key` — so EVERY re-render remounts every slice/segment, whatever the card memoises. The card therefore
+  remembers the focused designation control (by rowRef) and, on a chart DOM mutation while focus has
+  fallen to `<body>`, re-focuses the control with the same rowRef; a genuine focus move (Tab away, a
+  pointer press elsewhere) clears that memory first. The "8 hand-maintained copies of the form list" minor
+  is closed by a cross-check test (`web/lib/chart-form-lists.test.ts`) rather than by deduplication, since
+  two of the copies are prompt bytes.
 - **Deferred, correctly triaged as non-blocking by the final review, not silently dropped:** 2 minors from
   Task 4 (a shape-factory re-creation loses keyboard focus after a designation click; an aggregate `sum`
   part can mask a missing source cell, pre-existing); carry-forward minors from Tasks 1-3; 2 new from the
