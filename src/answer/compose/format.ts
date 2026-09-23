@@ -9,11 +9,20 @@
 import type { PeriodGrain, RegionScope, ValidatedResult } from '../../query/index.ts';
 import { EUROSTAT_SOURCE_KEY, resolveSource } from '../../sources/registry.ts';
 
+const KEPT_REGION_QUALIFIER = /\((\d+ landen|wisselende samenstelling)\)\s*$/;
+
 /** Region label as prose uses it: "Utrecht (gemeente)" → "Utrecht". Lives
  * here (not in validate.ts, which re-exports it) so the structural line
  * builders below can name a region exactly as the body does, without the
  * builders importing the validator that in turn imports this file. */
 export function baseRegionLabel(label: string): string {
+  // E2a final-review fix wave (M2): a Eurostat aggregate's Dutch display name
+  // (src/sources/eurostat-geo-names.ts) carries its composition in the
+  // trailing parenthetical — "de eurozone (19 landen)" vs "de eurozone (20
+  // landen)", "het eurogebied (wisselende samenstelling)". That is not a CBS
+  // disambiguator but the only thing telling EA19/EA20/EA apart, so it is
+  // kept. CBS region labels never end in either form (Dutch places only).
+  if (KEPT_REGION_QUALIFIER.test(label)) return label.trim();
   return label.replace(/\s*\(.*\)\s*$/, '').trim();
 }
 

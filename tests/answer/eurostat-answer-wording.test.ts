@@ -27,6 +27,8 @@ import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
 import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
 import { SOURCES } from '../../src/sources/registry.ts';
+import { baseRegionLabel, validateAnswerBody } from '../../src/answer/compose/validate.ts';
+import { dutchDisplayNameForGeo } from '../../src/sources/eurostat-geo-names.ts';
 
 /** D5c pattern: never actually invoked — templateOnly makes composeAnswer's
  * LLM rung unreachable, so a real call here is a bug, not a fallback. */
@@ -166,6 +168,8 @@ describe('end-to-end answer over a hand-inserted Eurostat table (real source, re
       // the generic ' (voorlopig cijfer)' — the wrong wording this proves
       // is gone.
       expect(response.answer.body).not.toContain(' (voorlopig cijfer)');
+      // Fix wave I2: the right wording must also pass R11 (it used to fail it).
+      expect(response.answer.validation.ok).toBe(true);
       expect(response.answer.model).toBeNull(); // real templateOnly floor, zero LLM spend
     } finally {
       await close();
@@ -237,6 +241,132 @@ describe('national-comparison suggestion chips are CBS-only (E2a spec §4.5)', (
 
       expect(chips.some((c) => c.includes('Nederland'))).toBe(false);
       expect(chips.some((c) => c.toLowerCase().includes('vergelijk'))).toBe(false);
+    } finally {
+      await close();
+    }
+  });
+});
+
+// E2a final-review fix wave (I2): R11's provisional-marking check is
+// source-aware. Before the fix it demanded the word 'voorlopig' for every
+// flagged cell, while the template (Task 3) correctly renders Eurostat's own
+// marking — so every templated Eurostat answer with an 'e'/'b'/… cell failed
+// its own validator (served under #121 serve+alert, audit:verify red).
+describe('R11 validator accepts each source its own marking (fix wave I2)', () => {
+  // One flag per region, one table: p (voorlopig), e (schatting), b
+  // (methodebreuk), and a COMBINED 'bp' — no registered marking, so the
+  // template renders the generic ' (voorlopig cijfer)' and R11 wants
+  // 'voorlopig', matching it.
+  const FLAGS: Record<string, string> = { DE: 'p', BE: 'e', NL: 'b', EU27_2020: 'bp' };
+  const EXPECTED_MARKING: Record<string, string> = {
+    DE: ' (voorlopig cijfer)',
+    BE: ' (schatting)',
+    NL: ' (methodebreuk)',
+    EU27_2020: ' (voorlopig cijfer)',
+  };
+
+  async function answerFor(db: Db, region: string) {
+    const intent: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: { kind: 'canonical', key: EUROSTAT_TEST_CANONICAL_KEY },
+      regions: [region],
+      period: { kind: 'codes', codes: ['2020JJ00'] },
+      derivation: 'none',
+    };
+    const question = `[test] R11 marking for ${region}`;
+    const response = await respondToIntent(db, question, buildParseOutcome(question, intent), {
+      answerClient: new NeverCallAnswerClient(),
+      referenceDate: '2026-09-23',
+      templateOnly: true,
+    });
+    if (response.kind !== 'answer') throw new Error(`expected an answer for ${region}, got ${response.kind}`);
+    return response;
+  }
+
+  it('a templated answer passes validation for p, e, b and a combined bp flag, each carrying its own marking', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertEurostatTestTable(db, {
+        statusOverrides: Object.fromEntries(Object.entries(FLAGS).map(([region, flag]) => [`${region}|2020`, flag])),
+      });
+      for (const region of Object.keys(FLAGS)) {
+        const response = await answerFor(db, region);
+        expect(response.result.cells[0]!.status).toBe(FLAGS[region]);
+        expect(response.result.cells[0]!.provisional).toBe(true);
+        expect(response.answer.body).toContain(EXPECTED_MARKING[region]);
+        expect(response.answer.validation).toEqual({ ok: true, problems: [] });
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("rejects the wrong or a missing marking: 'voorlopig' on an estimate, nothing on a p cell, nothing on a combined flag", async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertEurostatTestTable(db, {
+        statusOverrides: Object.fromEntries(Object.entries(FLAGS).map(([region, flag]) => [`${region}|2020`, flag])),
+      });
+      const estimate = await answerFor(db, 'BE');
+      const mislabelled = estimate.answer.body.replace(' (schatting)', ' (voorlopig cijfer)');
+      const estimateReport = validateAnswerBody(mislabelled, estimate.result);
+      expect(estimateReport.ok).toBe(false);
+      expect(estimateReport.problems.some((p) => p.startsWith('R11') && p.includes("'schatting'"))).toBe(true);
+
+      const breakCell = await answerFor(db, 'NL');
+      const unmarkedBreak = validateAnswerBody(breakCell.answer.body.replace(' (methodebreuk)', ''), breakCell.result);
+      expect(unmarkedBreak.problems.some((p) => p.startsWith('R11') && p.includes("'methodebreuk'"))).toBe(true);
+
+      const provisional = await answerFor(db, 'DE');
+      const unmarked = validateAnswerBody(provisional.answer.body.replace(' (voorlopig cijfer)', ''), provisional.result);
+      expect(unmarked.problems.some((p) => p.startsWith('R11') && p.includes("'voorlopig cijfer'"))).toBe(true);
+
+      const combined = await answerFor(db, 'EU27_2020');
+      const unmarkedCombined = validateAnswerBody(combined.answer.body.replace(' (voorlopig cijfer)', ''), combined.result);
+      expect(unmarkedCombined.ok).toBe(false);
+      expect(unmarkedCombined.problems.some((p) => p.startsWith('R11'))).toBe(true);
+    } finally {
+      await close();
+    }
+  });
+});
+
+// E2a final-review fix wave (M2): the answer text keeps a Eurostat
+// aggregate's composition — "de EU (27 landen)", and EA19/EA20/EA stay
+// distinguishable — instead of baseRegionLabel stripping it like a CBS
+// "(gemeente)" disambiguator. CBS labels are unaffected.
+describe('Eurostat aggregate labels keep their composition in answer text (fix wave M2)', () => {
+  it('EA19, EA20 and EA render as three distinct prose labels; a CBS "(gemeente)" suffix is still stripped', () => {
+    const labels = ['EA19', 'EA20', 'EA'].map((code) => baseRegionLabel(dutchDisplayNameForGeo(code)!));
+    expect(labels).toEqual([
+      'de eurozone (19 landen)',
+      'de eurozone (20 landen)',
+      'het eurogebied (wisselende samenstelling)',
+    ]);
+    expect(baseRegionLabel('Utrecht (gemeente)')).toBe('Utrecht');
+    expect(baseRegionLabel('Utrecht (PV)')).toBe('Utrecht');
+  });
+
+  it('a templated EU27_2020 answer names "de EU (27 landen)" and still validates (the 27 is bound to the region label)', async () => {
+    const { db, close } = await createTestDb();
+    try {
+      await insertEurostatTestTable(db);
+      const intent: StructuredIntent = {
+        schemaVersion: INTENT_SCHEMA_VERSION,
+        target: { kind: 'canonical', key: EUROSTAT_TEST_CANONICAL_KEY },
+        regions: ['EU27_2020'],
+        period: { kind: 'codes', codes: ['2020JJ00'] },
+        derivation: 'none',
+      };
+      const question = '[test] EU27 label';
+      const response = await respondToIntent(db, question, buildParseOutcome(question, intent), {
+        answerClient: new NeverCallAnswerClient(),
+        referenceDate: '2026-09-23',
+        templateOnly: true,
+      });
+      if (response.kind !== 'answer') throw new Error(`expected an answer, got ${response.kind}`);
+      expect(response.answer.body).toContain('de EU (27 landen)');
+      expect(response.answer.validation).toEqual({ ok: true, problems: [] });
     } finally {
       await close();
     }
