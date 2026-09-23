@@ -15,6 +15,7 @@ import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.t
 import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
+import { EUROSTAT_SIBLINGS } from '../../sources/eurostat-siblings.ts';
 import type {
   PeriodSpec,
   RankedCandidate,
@@ -157,6 +158,11 @@ type RegionResolution =
         optionCodes?: string[];
       };
     };
+
+/** The failure half of `RegionResolution` — the shape `trySiblingResolution`
+ * (§4.3) inspects to decide whether a CBS region failure is eligible for the
+ * Eurostat-sibling check. */
+type RegionFailureDetail = Extract<RegionResolution, { ok: false }>['failure'];
 
 async function resolveRegions(
   db: Db,
@@ -979,6 +985,214 @@ export function isResolutionFailure(value: CandidateResolution): value is Resolu
   return !('intent' in value);
 }
 
+type ResolveCandidateOptions = {
+  answerFirstEnabled?: boolean;
+  clickOptionsEnabled?: boolean;
+  /** Eurostat E2a (§4.1): CBS canonical key -> Eurostat sibling canonical
+   * key, injectable so tests can pin a pair without touching the reviewed
+   * production map. Defaults to `EUROSTAT_SIBLINGS` (ships EMPTY — dark in
+   * production until a person reviews and adds a pair, step 5). */
+  eurostatSiblings?: Readonly<Record<string, string>>;
+};
+
+/** The region-resolved tail of `resolveCandidate`: max/period/derivation
+ * resolution and the final StructuredIntent assembly, generalized over WHICH
+ * canonical measure and geo it runs against. Extracted (§4.3) so the Eurostat
+ * sibling check can build a fully resolved sibling intent through the exact
+ * same code path a normal resolution uses — never a hand-assembled,
+ * divergent shape (principle a: only this one code path turns a candidate
+ * into a StructuredIntent). */
+async function buildResolvedIntent(
+  db: Db,
+  candidate: RawCandidate,
+  canonical: CanonicalRow,
+  geo: TableGeo,
+  regionCodes: string[],
+  referenceDateIso: string,
+  options: ResolveCandidateOptions,
+): Promise<CandidateResolution> {
+  const confidence = clamp01(candidate.confidence);
+  const fail = (
+    partial: Pick<ResolutionFailure, 'axis' | 'reason' | 'message' | 'options'>,
+  ): ResolutionFailure => ({ ...partial, confidence, reading: candidate.reading });
+
+  // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
+  // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown
+  // (that reason's template — "welke gemeente of provincie bedoel je" —
+  // belongs to genuinely unknown place names and stays byte-identical):
+  // a geo table is missing its comparison set; a national-only measure can
+  // never compare regions at all, and max-over-PERIODS ("welke maand steeg
+  // het meest") is not built (open-questions #97b) — say so, never mislead.
+  const maxNeedsRegions = async (): Promise<ResolutionFailure> =>
+    geo.geoDimension === null
+      ? fail({
+          axis: 'derivation',
+          reason: 'max_on_national_measure',
+          message:
+            `a "meeste/hoogste" comparison compares regions, but "${canonical.definitionLabel}" is national-only; ` +
+            'max-over-periods is a separate unbuilt capability (open-questions #97b)',
+          // A CHECKED, servable range option (adversarial-review catch: the
+          // first draft hardcoded "per maand of per jaar" — grains 4 of the
+          // 7 national-only measures don't have, the #56 unservable-
+          // suggestion sin). Same gap-free-window builder as the degenerate-
+          // range guard; empty when no clean window exists.
+          options: await openEndedRangeOptions(db, canonical, null),
+        })
+      : fail({
+          axis: 'region',
+          reason: 'max_needs_regions',
+          message: 'a "meeste/hoogste" comparison needs at least two regions named in the question',
+          options: [],
+        });
+
+  let derivation = normalizeDerivation(candidate);
+  if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
+
+  const reference = parseReferenceDate(referenceDateIso);
+  const periodResolution = await resolvePeriod(
+    db,
+    candidate.period,
+    canonical,
+    reference,
+    options.answerFirstEnabled === true,
+    // The coordinates the answer will really run at: the named regions, or —
+    // on a geo table with none named — the national row B-region will default
+    // to, so the two defaults agree on one servable window.
+    regionCodes.length > 0 ? regionCodes : geo.geoDimension !== null ? [NATIONAL_REGION_CODE] : [],
+  );
+  if (!periodResolution.ok) return fail(periodResolution.failure);
+  // WP26 mechanism B-period: a defaulted trend window IS a series — the same
+  // forcing 'since'/'last_n' already get in normalizeDerivation, applied here
+  // because the shape is only known after resolution. Without it the multi-
+  // period selection would carry the model's 'none' hint and lose the
+  // pre-registered direction derivation honest trend prose binds to (R9).
+  if (periodResolution.periodDefaulted === true && periodResolution.period.kind === 'range') {
+    derivation = 'series';
+  }
+
+  // A date_range spanning several months was force-normalized to 'series' —
+  // but on a measure whose finest exact grain is coarser, the whole span can
+  // collapse to ONE period code ("1 januari t/m 31 december 2022" on a
+  // yearly-only measure = the single 2022 cell). The forcing was moot at that
+  // grain: fall back to the model's own hint so a plain lookup ANSWERS
+  // instead of dead-ending in the degenerate-range guard (review finding,
+  // 2026-07-05, executed live on solar_electricity_production). An explicit
+  // series/difference hint ("maak een grafiek") keeps its guard exit — one
+  // point is still not a series.
+  if (
+    candidate.period.kind === 'date_range' &&
+    derivation !== candidate.derivation &&
+    isSinglePeriodSelection(periodResolution.period)
+  ) {
+    derivation = candidate.derivation;
+    // The max guard above saw the FORCED value and let a demoted 'max' slip
+    // through — re-run it on the final derivation so a "meeste/hoogste"
+    // question without its comparison regions keeps the specific resolver
+    // clarification instead of the query layer's generic invalid_intent
+    // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
+    if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
+  }
+
+  // A multi-period derivation over a structurally single-period selection can
+  // never execute — the query layer rejects it as invalid_intent, which
+  // surfaces as the catch-all internal refusal (validation pass 2026-07-04,
+  // V01/V28 "sinds 2015/2010"). The shape is reachable because the raw schema
+  // cannot express an open-ended range and the prompt is deliberately
+  // date-free, so the model emits fromYear == toYear. Which end year the user
+  // means is genuinely unresolved: exit to a period clarification with an
+  // option that resolves in the loaded data — ask, never guess (R7,
+  // principle c).
+  if ((derivation === 'series' || derivation === 'difference') && isSinglePeriodSelection(periodResolution.period)) {
+    return fail({
+      axis: 'period',
+      reason: 'period_missing',
+      message: `derivation "${derivation}" needs more than one period, but the question resolves to a single one`,
+      options: await openEndedRangeOptions(db, canonical, periodResolution.period),
+    });
+  }
+
+  const intent: StructuredIntent = {
+    schemaVersion: INTENT_SCHEMA_VERSION,
+    target: { kind: 'canonical', key: canonical.key },
+    ...(regionCodes.length > 0 ? { regions: regionCodes } : {}),
+    period: periodResolution.period,
+    derivation,
+  };
+  return {
+    intent,
+    confidence,
+    reading: candidate.reading,
+    impliedRecency: periodResolution.impliedRecency,
+    ...(periodResolution.periodDefaulted === true ? { periodDefaulted: true } : {}),
+  };
+}
+
+/** Eurostat E2a (§3/§4.3): when a CBS table fails to resolve one or more
+ * named regions, check whether a reviewed Eurostat sibling measure resolves
+ * EVERY named place — and if so, build the full sibling StructuredIntent
+ * through `buildResolvedIntent` (the SAME tail a normal resolution runs) and
+ * return the `other_source_available` failure instead. Returns undefined
+ * (the original CBS failure stands, byte-identical) whenever:
+ *  - the CBS failure isn't one of the two region-resolution shapes a named
+ *    place can cause (`region_unknown`, `region_on_national_measure` — R3:
+ *    a national-only CBS measure fails this way, not `region_unknown`);
+ *  - the failing table isn't a CBS table (no Eurostat-of-Eurostat siblings);
+ *  - `eurostatSiblings` (default EUROSTAT_SIBLINGS, ships EMPTY) has no
+ *    entry for this canonical key — dark in production by construction;
+ *  - the sibling key isn't in `canonical_measures` (not yet registered —
+ *    never crash, just behave as if there were no sibling);
+ *  - any named place fails to resolve against the sibling's table (one
+ *    source per answer: a partially-resolvable list never answers the
+ *    resolvable half from one source and the rest from another);
+ *  - the sibling build itself fails for any other reason (an unresolvable
+ *    period, say) — never offer a chip that cannot actually be taken. */
+async function trySiblingResolution(
+  db: Db,
+  candidate: RawCandidate,
+  canonical: CanonicalRow,
+  failure: RegionFailureDetail,
+  referenceDateIso: string,
+  options: ResolveCandidateOptions,
+): Promise<ResolutionFailure | undefined> {
+  if (failure.reason !== 'region_unknown' && failure.reason !== 'region_on_national_measure') return undefined;
+  if (sourceKeyForTableId(canonical.tableId) !== CBS_SOURCE_KEY) return undefined;
+
+  const siblings = options.eurostatSiblings ?? EUROSTAT_SIBLINGS;
+  const siblingKey = siblings[candidate.canonicalKey];
+  if (siblingKey === undefined) return undefined;
+
+  const siblingCanonical = await fetchCanonical(db, siblingKey);
+  if (!siblingCanonical) return undefined;
+
+  const siblingGeo = await fetchTableGeo(db, siblingCanonical.tableId);
+  const siblingRegions = await resolveRegions(db, candidate, siblingCanonical, siblingGeo);
+  if (!siblingRegions.ok) return undefined;
+
+  const siblingResolution = await buildResolvedIntent(
+    db,
+    candidate,
+    siblingCanonical,
+    siblingGeo,
+    siblingRegions.codes,
+    referenceDateIso,
+    options,
+  );
+  if (isResolutionFailure(siblingResolution)) return undefined;
+
+  const namedPlaces = (candidate.regions ?? []).map((t) => `"${t.name}"`).join(', ');
+  return {
+    axis: 'region',
+    reason: 'other_source_available',
+    message: `"${canonical.definitionLabel}" cannot resolve ${namedPlaces} on the CBS table, but Eurostat sibling "${siblingCanonical.key}" resolves every named place`,
+    options: ['Toon de Eurostat-cijfers'],
+    optionIntents: [siblingResolution.intent],
+    optionImpliedRecency: siblingResolution.impliedRecency,
+    siblingDefinitionLabel: siblingCanonical.definitionLabel,
+    confidence: clamp01(candidate.confidence),
+    reading: candidate.reading,
+  };
+}
+
 export async function resolveCandidate(
   db: Db,
   candidate: RawCandidate,
@@ -986,8 +1200,9 @@ export async function resolveCandidate(
   /** WP26 (ADR 024): the two rollout flags — `ANSWER_FIRST_ENABLED` (mechanism
    * B's defaults) and `CLARIFY_CLICK_ENABLED` (mechanism A's clickable
    * options). Absent ⇒ pre-WP26 behavior, and #176: absent also means the
-   * per-option intents nobody would read are not built. */
-  options: { answerFirstEnabled?: boolean; clickOptionsEnabled?: boolean } = {},
+   * per-option intents nobody would read are not built. Eurostat E2a adds
+   * `eurostatSiblings` (§4.1), independent of both rollout flags. */
+  options: ResolveCandidateOptions = {},
 ): Promise<CandidateResolution> {
   const confidence = clamp01(candidate.confidence);
   const fail = (
@@ -1007,6 +1222,18 @@ export async function resolveCandidate(
   const geo = await fetchTableGeo(db, canonical.tableId);
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
   if (!regionResolution.ok) {
+    // Eurostat E2a (§3/§4.3): before falling back to today's region failure,
+    // check whether a reviewed Eurostat sibling resolves every named place.
+    const siblingFailure = await trySiblingResolution(
+      db,
+      candidate,
+      canonical,
+      regionResolution.failure,
+      referenceDateIso,
+      options,
+    );
+    if (siblingFailure) return siblingFailure;
+
     // WP26 mechanism A (ADR 024): an ambiguous REGION is the one failure whose
     // options are complete competing readings — everything else about the
     // question (measure, period, derivation) is already determined. Resolve
@@ -1039,117 +1266,6 @@ export async function resolveCandidate(
     };
   }
 
-  // WP22 (#97a, live-observed 2026-07-05): a 'max' without ≥2 regions must
-  // name the REAL gap. Two distinct shapes, deliberately NOT region_unknown
-  // (that reason's template — "welke gemeente of provincie bedoel je" —
-  // belongs to genuinely unknown place names and stays byte-identical):
-  // a geo table is missing its comparison set; a national-only measure can
-  // never compare regions at all, and max-over-PERIODS ("welke maand steeg
-  // het meest") is not built (open-questions #97b) — say so, never mislead.
-  const maxNeedsRegions = async (): Promise<ResolutionFailure> =>
-    geo.geoDimension === null
-      ? fail({
-          axis: 'derivation',
-          reason: 'max_on_national_measure',
-          message:
-            `a "meeste/hoogste" comparison compares regions, but "${canonical.definitionLabel}" is national-only; ` +
-            'max-over-periods is a separate unbuilt capability (open-questions #97b)',
-          // A CHECKED, servable range option (adversarial-review catch: the
-          // first draft hardcoded "per maand of per jaar" — grains 4 of the
-          // 7 national-only measures don't have, the #56 unservable-
-          // suggestion sin). Same gap-free-window builder as the degenerate-
-          // range guard; empty when no clean window exists.
-          options: await openEndedRangeOptions(db, canonical, null),
-        })
-      : fail({
-          axis: 'region',
-          reason: 'max_needs_regions',
-          message: 'a "meeste/hoogste" comparison needs at least two regions named in the question',
-          options: [],
-        });
-
-  let derivation = normalizeDerivation(candidate);
-  if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
-
-  const reference = parseReferenceDate(referenceDateIso);
-  const periodResolution = await resolvePeriod(
-    db,
-    candidate.period,
-    canonical,
-    reference,
-    options.answerFirstEnabled === true,
-    // The coordinates the answer will really run at: the named regions, or —
-    // on a geo table with none named — the national row B-region will default
-    // to, so the two defaults agree on one servable window.
-    regionResolution.codes.length > 0
-      ? regionResolution.codes
-      : geo.geoDimension !== null
-        ? [NATIONAL_REGION_CODE]
-        : [],
-  );
-  if (!periodResolution.ok) return fail(periodResolution.failure);
-  // WP26 mechanism B-period: a defaulted trend window IS a series — the same
-  // forcing 'since'/'last_n' already get in normalizeDerivation, applied here
-  // because the shape is only known after resolution. Without it the multi-
-  // period selection would carry the model's 'none' hint and lose the
-  // pre-registered direction derivation honest trend prose binds to (R9).
-  if (periodResolution.periodDefaulted === true && periodResolution.period.kind === 'range') {
-    derivation = 'series';
-  }
-
-  // A date_range spanning several months was force-normalized to 'series' —
-  // but on a measure whose finest exact grain is coarser, the whole span can
-  // collapse to ONE period code ("1 januari t/m 31 december 2022" on a
-  // yearly-only measure = the single 2022 cell). The forcing was moot at that
-  // grain: fall back to the model's own hint so a plain lookup ANSWERS
-  // instead of dead-ending in the degenerate-range guard (review finding,
-  // 2026-07-05, executed live on solar_electricity_production). An explicit
-  // series/difference hint ("maak een grafiek") keeps its guard exit — one
-  // point is still not a series.
-  if (
-    candidate.period.kind === 'date_range' &&
-    derivation !== candidate.derivation &&
-    isSinglePeriodSelection(periodResolution.period)
-  ) {
-    derivation = candidate.derivation;
-    // The max guard above saw the FORCED value and let a demoted 'max' slip
-    // through — re-run it on the final derivation so a "meeste/hoogste"
-    // question without its comparison regions keeps the specific resolver
-    // clarification instead of the query layer's generic invalid_intent
-    // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
-    if (derivation === 'max' && regionResolution.codes.length < 2) return await maxNeedsRegions();
-  }
-
-  // A multi-period derivation over a structurally single-period selection can
-  // never execute — the query layer rejects it as invalid_intent, which
-  // surfaces as the catch-all internal refusal (validation pass 2026-07-04,
-  // V01/V28 "sinds 2015/2010"). The shape is reachable because the raw schema
-  // cannot express an open-ended range and the prompt is deliberately
-  // date-free, so the model emits fromYear == toYear. Which end year the user
-  // means is genuinely unresolved: exit to a period clarification with an
-  // option that resolves in the loaded data — ask, never guess (R7,
-  // principle c).
-  if ((derivation === 'series' || derivation === 'difference') && isSinglePeriodSelection(periodResolution.period)) {
-    return fail({
-      axis: 'period',
-      reason: 'period_missing',
-      message: `derivation "${derivation}" needs more than one period, but the question resolves to a single one`,
-      options: await openEndedRangeOptions(db, canonical, periodResolution.period),
-    });
-  }
-
-  const intent: StructuredIntent = {
-    schemaVersion: INTENT_SCHEMA_VERSION,
-    target: { kind: 'canonical', key: canonical.key },
-    ...(regionResolution.codes.length > 0 ? { regions: regionResolution.codes } : {}),
-    period: periodResolution.period,
-    derivation,
-  };
-  return {
-    intent,
-    confidence,
-    reading: candidate.reading,
-    impliedRecency: periodResolution.impliedRecency,
-    ...(periodResolution.periodDefaulted === true ? { periodDefaulted: true } : {}),
-  };
+  return await buildResolvedIntent(db, candidate, canonical, geo, regionResolution.codes, referenceDateIso, options);
 }
+

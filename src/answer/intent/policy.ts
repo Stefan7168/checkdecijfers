@@ -86,6 +86,15 @@ function failureQuestion(failure: ResolutionFailure): string {
       return 'Welke periode bedoel je precies?';
     case 'unknown_canonical_key':
       return 'Welk onderwerp uit de officiële CBS-cijfers bedoel je precies?';
+    // Eurostat E2a (§4.4, owner-approved copy, session 125): names the
+    // SOURCE the answer will use — never framed as "CBS heeft geen cijfer"
+    // (the product draws on several sources, not just CBS asked-and-refused)
+    // — and keeps the one caveat that matters: the definitions can differ.
+    case 'other_source_available':
+      return (
+        `Voor dit antwoord gebruiken we Eurostat: ${failure.siblingDefinitionLabel ?? ''}. ` +
+        'Eurostat hanteert één definitie voor alle landen; die kan afwijken van de CBS-definitie.'
+      );
   }
 }
 
