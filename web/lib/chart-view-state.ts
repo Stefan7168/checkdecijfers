@@ -219,7 +219,6 @@ export type ChartViewAction =
    * deliberately not part of this: the story never touches them. */
   { type: 'setView'; view: Pick<ChartViewState, 'hiddenKeys' | 'dimmedKeys' | 'highlightedKey' | 'periodRange'> }
   | { type: 'setDimmed'; hiddenKeys: string[]; dimmedKeys: string[] }
-  | { type: 'toggleDim'; key: string }
   | /** #237/ADR 046: `initialPresentation` is the gallery's `initialPresentation`
      * prop (ChartView), so a spec-swap reset (a fresh chart mounted on the
      * SAME instance) lands back on the STORY's look, not a bare stock chart —
@@ -287,14 +286,6 @@ export function chartViewReducer(state: ChartViewState, action: ChartViewAction)
       };
     case 'setDimmed':
       return { ...state, hiddenKeys: new Set(action.hiddenKeys), dimmedKeys: new Set(action.dimmedKeys) };
-    case 'toggleDim': {
-      const dimmed = new Set(state.dimmedKeys);
-      const hidden = new Set(state.hiddenKeys);
-      hidden.delete(action.key);
-      if (dimmed.has(action.key)) dimmed.delete(action.key);
-      else dimmed.add(action.key);
-      return { ...state, hiddenKeys: hidden, dimmedKeys: dimmed };
-    }
     case 'setReading':
       return { ...state, selectedReading: action.index };
     case 'reset':

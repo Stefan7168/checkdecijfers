@@ -46,6 +46,8 @@ export function ChartEraShading({
   idPrefix: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const labelByCode = new Map(periodOptions.map((opt) => [opt.code, opt.label]));
+  const labelFor = (code: string): string => labelByCode.get(code) ?? code;
   const [fromPeriod, setFromPeriod] = useState(periodOptions[0]?.code ?? '');
   const [toPeriod, setToPeriod] = useState(periodOptions[0]?.code ?? '');
   const [label, setLabel] = useState('');
@@ -90,12 +92,16 @@ export function ChartEraShading({
       </div>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{t(lang, 'chart.eraShading.sessionOnly')}</p>
       {eraShadings.length > 0 ? (
+        // #291(b): the list names each end by the label the reader sees on
+        // the axis and in the pickers (e.g. "2008"), never the raw period
+        // code ("2008JJ00"); a code with no option (not expected) falls back
+        // to itself rather than disappearing.
         <ul className="mt-2 flex flex-col gap-1.5">
           {eraShadings.map((era) => (
             <li key={era.id} className="flex items-start justify-between gap-2 text-sm">
               <span>
                 <span className="text-xs text-muted-foreground">
-                  {era.fromPeriodCode} – {era.toPeriodCode}:{' '}
+                  {labelFor(era.fromPeriodCode)} – {labelFor(era.toPeriodCode)}:{' '}
                 </span>
                 {era.label}
               </span>
@@ -103,7 +109,7 @@ export function ChartEraShading({
                 type="button"
                 data-command-kind="removeEraShading"
                 onClick={() => onRemove(era.id)}
-                aria-label={t(lang, 'chart.eraShading.deleteAriaLabel', { period: `${era.fromPeriodCode}–${era.toPeriodCode}` })}
+                aria-label={t(lang, 'chart.eraShading.deleteAriaLabel', { period: `${labelFor(era.fromPeriodCode)}–${labelFor(era.toPeriodCode)}` })}
                 className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
                 {t(lang, 'chart.eraShading.delete')}

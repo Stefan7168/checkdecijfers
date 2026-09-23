@@ -171,20 +171,6 @@ describe('chartViewReducer', () => {
     expect(next.hiddenKeys).toEqual(new Set());
     expect(next.dimmedKeys).toEqual(new Set(['s1']));
   });
-
-  it('toggleDim on a shown series marks it dimmed and clears any hide', () => {
-    const state = { ...initialViewState('line'), hiddenKeys: new Set(['s0']) };
-    const next = chartViewReducer(state, { type: 'toggleDim', key: 's0' });
-    expect(next.hiddenKeys.has('s0')).toBe(false);
-    expect(next.dimmedKeys.has('s0')).toBe(true);
-  });
-
-  it('toggleDim on an already-dimmed series un-dims it back to shown', () => {
-    const state = { ...initialViewState('line'), dimmedKeys: new Set(['s0']) };
-    const next = chartViewReducer(state, { type: 'toggleDim', key: 's0' });
-    expect(next.dimmedKeys.has('s0')).toBe(false);
-    expect(next.hiddenKeys.has('s0')).toBe(false);
-  });
 });
 
 describe('lineFormAllowed', () => {

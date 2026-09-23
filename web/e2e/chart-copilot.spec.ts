@@ -236,17 +236,18 @@ test.describe.serial('chart co-pilot phase 1', () => {
     // addressable — use those directly instead of label text.
     //
     // REGION_SERIES_INTENT's real period codes are CBS-shaped
-    // ("2020JJ00" etc, not plain "2020"), and the list below renders the
-    // raw CODE, not the display label — select by OPTION INDEX (the first
-    // and third available periods) and read back whatever codes actually
-    // landed, rather than hardcoding a code format this test has no
-    // business assuming.
+    // ("2020JJ00" etc, not plain "2020"); since #291(b) (session 124) the
+    // list below renders each end's DISPLAY LABEL, not the raw code —
+    // select by OPTION INDEX (the first and third available periods) and
+    // read back whatever labels actually landed, rather than hardcoding a
+    // format this test has no business assuming.
     const fromSelect = page.locator('select[id*="-era-from"]');
     const toSelect = page.locator('select[id*="-era-to"]');
     await fromSelect.selectOption({ index: 0 });
     await toSelect.selectOption({ index: 2 });
-    const fromCode = await fromSelect.inputValue();
-    const toCode = await toSelect.inputValue();
+    const fromLabel = (await fromSelect.locator('option:checked').textContent())!.trim();
+    const toLabel = (await toSelect.locator('option:checked').textContent())!.trim();
+    expect(fromLabel).not.toMatch(/JJ00/);
     await page.getByLabel('Label').fill('Testperiode');
 
     // Submit the form
@@ -259,7 +260,7 @@ test.describe.serial('chart co-pilot phase 1', () => {
 
     // Important #2: Verify the label appears in the list (outside the chart export container)
     await expect(page.getByText('Testperiode')).toBeVisible();
-    await expect(page.getByText(`${fromCode} – ${toCode}`)).toBeVisible();
+    await expect(page.getByText(`${fromLabel} – ${toLabel}`)).toBeVisible();
 
     // Important #2b: Verify export exclusion — the label text is NOT inside the chart container
     // (the chart export container is identified as having data-testid="chart-container")
@@ -1022,8 +1023,10 @@ test.describe.serial('chart co-pilot phase 6 — the five panel-only commands th
     // CBS period codes, the same ones the panel test reads back from its
     // selects) and the typed label, outside the chart's export container.
     await expect(eraEntries).toHaveCount(1);
-    await expect(eraEntries).toContainText('2021JJ00 – 2023JJ00: Herstelperiode');
-    await expect(page.getByRole('button', { name: 'Verwijder de markering 2021JJ00–2023JJ00' })).toBeVisible();
+    // #291(b): the list names the ends by their axis labels, never the
+    // raw period codes (2021JJ00/2023JJ00).
+    await expect(eraEntries).toContainText('2021 – 2023: Herstelperiode');
+    await expect(page.getByRole('button', { name: 'Verwijder de markering 2021–2023' })).toBeVisible();
     const chartContainer = page.locator('[data-testid="chart-container"]');
     await expect(chartContainer.locator(':has-text("Herstelperiode")')).not.toBeVisible();
     await expect(page.locator('.recharts-line-curve')).toHaveCount(2);
