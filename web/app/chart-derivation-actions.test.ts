@@ -51,6 +51,12 @@ describe('requestChartDerivation', () => {
     expect(result).toEqual({ ok: true, record: expect.objectContaining({ kind: 'difference', value: 10 }) });
   });
 
+  it('#292(b): refuses the same point named twice, rather than computing an automatic zero', async () => {
+    loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
+    expect((await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'r1'])).ok).toBe(false);
+    expect((await requestChartDerivation({ kind: 'answer', id: 5 }, 'mean', ['r1', 'r2', 'r1'])).ok).toBe(false);
+  });
+
   it('refuses a resultId not present on that chart, rather than guessing', async () => {
     loadAuditRecord.mockResolvedValue({ id: 5, userId: 'u1', response: { kind: 'answer', chart: spec, cells: [], derivations: [] } });
     const result = await requestChartDerivation({ kind: 'answer', id: 5 }, 'difference', ['r1', 'not-real']);

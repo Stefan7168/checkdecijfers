@@ -20,7 +20,9 @@ const requestSchema = z.object({
   kind: z.literal('answer'),
   id: z.number().int().positive(),
 });
-const resultIdsSchema = z.array(z.string().min(1)).min(2).max(12);
+// #292(b): distinct ids only — a repeated point would make a difference an
+// automatic 0 and weigh a point twice in a mean; refused, never computed.
+const resultIdsSchema = z.array(z.string().min(1)).min(2).max(12).refine((ids) => new Set(ids).size === ids.length);
 
 export type RequestChartDerivationResponse = { ok: true; record: DerivationRecord } | { ok: false; reason?: string };
 

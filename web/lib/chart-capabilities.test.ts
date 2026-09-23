@@ -14,6 +14,8 @@ import type { PresentationKey } from './chart-presentation.ts';
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 import type { PlottableSpec } from '../components/chart.tsx';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import { REGION_SERIES_CAPABILITIES, REGION_SERIES_SPEC } from '../../tests/fixtures/chart-copilot/cases.ts';
+import { resolvePresentation } from './chart-presentation.ts';
 
 const ALL_APPLICABLE: ReadonlySet<PresentationKey> = new Set(PRESENTATION_KEYS as readonly PresentationKey[]);
 
@@ -497,5 +499,32 @@ describe('cbsExampleChips', () => {
     expect(withZoom.map((c) => c.label)).toContain('Alleen de laatste jaren');
     const withoutZoom = cbsExampleChips({ spec: CBS_TWO_SERIES, state: cbsState({ title: 'x' }), zoomAvailable: false, lang: 'nl' });
     expect(withoutZoom.map((c) => c.label)).not.toContain('Alleen de laatste jaren');
+  });
+});
+
+
+// #298 (session 124): the committed REGION_SERIES_CAPABILITIES fixture must be
+// exactly what cbsCapabilities produces for REGION_SERIES_SPEC in its
+// opening line form — otherwise a capability change silently desyncs the
+// recorded chat fixtures, masked by the LLM stub's 60-character prefix
+// fallback (the session-116 bug class). Inputs mirror chart.tsx's own call.
+describe('REGION_SERIES_CAPABILITIES drift guard (#298)', () => {
+  it('equals cbsCapabilities for REGION_SERIES_SPEC in line form', () => {
+    const hasProvisional = REGION_SERIES_SPEC.series.some((s) => s.points.some((p) => p.provisional));
+    const resolved = resolvePresentation(
+      { kind: REGION_SERIES_SPEC.kind, form: 'line', seriesCount: REGION_SERIES_SPEC.series.length, hasProvisional },
+      {},
+    );
+    const periodCodes = new Set(REGION_SERIES_SPEC.series.flatMap((s) => s.points.map((p) => p.periodCode)));
+    expect(
+      cbsCapabilities({
+        spec: { kind: REGION_SERIES_SPEC.kind, series: REGION_SERIES_SPEC.series, regionScope: REGION_SERIES_SPEC.regionScope ?? null },
+        form: 'line',
+        applicable: resolved.applicable,
+        zoomAvailable: REGION_SERIES_SPEC.kind === 'line' && periodCodes.size > 1,
+        liveWholeForms: { pie: false, stacked: false, stacked100: false },
+        lang: 'nl',
+      }),
+    ).toEqual(REGION_SERIES_CAPABILITIES);
   });
 });

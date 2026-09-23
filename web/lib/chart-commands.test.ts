@@ -400,6 +400,27 @@ describe('new command kinds (phase 4)', () => {
     expect(validateCommand({ kind: 'addEraShading', era }, ctx)).toBe(true);
   });
 
+  it('#292(a): an era is ordered by where its ends sit on the axis, not by comparing code strings', () => {
+    // An own-data axis of month names: drawn order jan, feb, mrt — string
+    // order would be feb < jan < mrt.
+    const months: CommandContext = {
+      spec: {
+        kind: 'line',
+        series: [{ points: ['jan', 'feb', 'mrt'].map((m, i) => ({ resultId: `m${i}`, periodCode: m, value: i })) }],
+      } as any,
+      alternatesCount: 0,
+    };
+    expect(validateCommand({ kind: 'addEraShading', era: { id: 'e1', fromPeriodCode: 'jan', toPeriodCode: 'feb', label: 'x' } }, months)).toBe(true);
+    expect(validateCommand({ kind: 'addEraShading', era: { id: 'e2', fromPeriodCode: 'feb', toPeriodCode: 'jan', label: 'x' } }, months)).toBe(false);
+    expect(validateCommand({ kind: 'addEraShading', era: { id: 'e3', fromPeriodCode: 'jan', toPeriodCode: 'jan', label: 'x' } }, months)).toBe(true);
+  });
+
+  it('#292(b): a derived overlay naming the same point twice is refused (difference and mean)', () => {
+    expect(validateCommand({ kind: 'addDerivedOverlay', overlay: { id: 'd1', calcKind: 'difference', resultIds: ['r1', 'r1'] } }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'addDerivedOverlay', overlay: { id: 'd2', calcKind: 'mean', resultIds: ['r1', 'r2', 'r1'] } }, ctx)).toBe(false);
+    expect(validateCommand({ kind: 'addDerivedOverlay', overlay: { id: 'd3', calcKind: 'mean', resultIds: ['r1', 'r2'] } }, ctx)).toBe(true);
+  });
+
   it('validateCommand refuses setHeadlineOverride pointing at an unknown resultId', () => {
     expect(validateCommand({ kind: 'setHeadlineOverride', resultId: 'nope' }, ctx)).toBe(false);
     expect(validateCommand({ kind: 'setHeadlineOverride', resultId: 'r1' }, ctx)).toBe(true);

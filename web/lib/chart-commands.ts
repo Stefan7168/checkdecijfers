@@ -341,6 +341,16 @@ function periodCodes(spec: CommandContext['spec']): Set<string> {
   for (const s of spec.series) for (const p of s.points) out.add(p.periodCode);
   return out;
 }
+/** Each period code's position along the chart's own x axis (first
+ * appearance across the series, in drawn order) — #292(a): an era's
+ * from/to are ordered by where they sit on the axis, never by comparing the
+ * code strings (right for CBS's single-grain codes by coincidence, wrong for
+ * e.g. an own-data axis of month names). */
+function periodPositions(spec: CommandContext['spec']): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const s of spec.series) for (const p of s.points) if (!out.has(p.periodCode)) out.set(p.periodCode, out.size);
+  return out;
+}
 function resultIds(spec: CommandContext['spec']): Set<string> {
   const out = new Set<string>();
   for (const s of spec.series) for (const p of s.points) out.add(p.resultId);
@@ -430,11 +440,13 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
     case 'removeGoalLine':
       return typeof cmd.goalLineId === 'string' && cmd.goalLineId.length > 0;
     case 'addEraShading': {
-      const codes = periodCodes(ctx.spec);
+      const positions = periodPositions(ctx.spec);
+      const from = positions.get(cmd.era.fromPeriodCode);
+      const to = positions.get(cmd.era.toPeriodCode);
       return (
-        codes.has(cmd.era.fromPeriodCode) &&
-        codes.has(cmd.era.toPeriodCode) &&
-        cmd.era.fromPeriodCode <= cmd.era.toPeriodCode &&
+        from !== undefined &&
+        to !== undefined &&
+        from <= to &&
         cmd.era.label.trim().length > 0 &&
         cmd.era.label.length <= CHART_ERA_SHADING_LABEL_MAX_LENGTH
       );
@@ -452,6 +464,9 @@ export function validateCommand(cmd: ChartCommandParams, ctx: CommandContext): b
     case 'addDerivedOverlay':
       return (
         (cmd.overlay.calcKind === 'difference' ? cmd.overlay.resultIds.length === 2 : cmd.overlay.resultIds.length >= 2) &&
+        // #292(b): every point at most once — a repeated id would make a
+        // difference an automatic 0 and count a point twice in a mean.
+        new Set(cmd.overlay.resultIds).size === cmd.overlay.resultIds.length &&
         cmd.overlay.resultIds.every((id) => resultIds(ctx.spec).has(id))
       );
     case 'removeDerivedOverlay':

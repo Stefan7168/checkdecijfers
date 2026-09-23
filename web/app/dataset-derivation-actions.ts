@@ -50,7 +50,9 @@ const calcKindSchema = z.union([z.literal('mean'), z.literal('difference')]);
 // requires (exactly 2 for `difference`) is deriveChartOverlay's own check,
 // not the schema's: it needs `calcKind` already parsed to know which rule
 // applies, and the two Server Action arguments arrive separately.
-const resultIdsSchema = z.array(z.string().min(1)).min(2).max(MAX_CHART_POINTS);
+// #292(b): distinct ids only — a repeated point would make a difference an
+// automatic 0 and weigh a point twice in a mean; refused, never computed.
+const resultIdsSchema = z.array(z.string().min(1)).min(2).max(MAX_CHART_POINTS).refine((ids) => new Set(ids).size === ids.length);
 
 /** Mirrors src/attachments/render.ts's own private toServerShape — not
  * exported there, and render.ts is out of this change's touched-files
