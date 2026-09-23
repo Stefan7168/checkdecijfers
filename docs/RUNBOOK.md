@@ -87,6 +87,7 @@ A fresh machine needs to know which login owns each provider to rotate a secret 
 | `GDPR_PURGE_APPLY` | Vercel env store only (**✅ SET `1`, Production, 2026-09-05, session 78, owner-directed** — `printf '1' \| vercel env add GDPR_PURGE_APPLY production` + empty-commit redeploy `490362f`) | Not secret — the literal value `1`. **The only thing separating "reports what it would delete" from "redacts and deletes".** `/api/gdpr-purge-cron` runs monthly (`0 4 1 * *`) and now actually redacts/deletes. **Flip verified 2026-09-05:** triggered one real run via `vercel crons run /api/gdpr-purge-cron` (Vercel's CLI invokes it pre-authenticated — no need to retrieve `CRON_SECRET`, which is a Sensitive-type var and cannot be read back via `vercel env pull` by design, only used by Vercel's own cron dispatch); `vercel logs` showed `Applied — redacted 0 audit_answers ... 0 trial_questions ... 0 error_log`, matching the `npm run gdpr:purge` dry-run baseline (0 everywhere) exactly. Unsetting it is a COMPLETE rollback — nothing else in that route writes. Do NOT flip it in a deploy burst ([#173](open-questions.md)) — this flip followed a ~5-hour gap after the prior deploy burst, not during one. |
 | `CLARIFY_CLICK_ENABLED` | Vercel env store only (**✅ SET `1`, Production, 2026-09-02, session 69, owner present**) | Not secret — the literal value `1`. WP26 mechanism A: clarification chips carry a pre-verified intent, a byte-equal reply is taken without an LLM; #197 comparison chips under answers ride the same take-path, and since #73 v2 (session 72; PR #122 merged + live 2026-09-03, session 75, `4fd6ea5`) so does every follow-up chip under an answer. Smoke-tested 2026-09-03 (audit rows 261/262, 263/264). Rollback: remove + redeploy — but read the ROLLBACK ORDER in the WP26 section first (this flag goes off FIRST, `ANSWER_FIRST_ENABLED` a day later). |
 | `ANSWER_FIRST_ENABLED` | Vercel env store only (**✅ SET `1`, Production, 2026-09-03 05:40Z, session 71, owner go in chat** — `printf '1' \| vercel env add ANSWER_FIRST_ENABLED production --sensitive`, the CLI reads the value from stdin) | Not secret — the literal value `1`. WP26 mechanism B: a question with no place (on a measure with a national row) answers nationally, a question with no period answers with the recent trend, both disclosed in-sentence; since #175 (same day) the anonymous trial reads it too. Rollback: remove + redeploy, only AFTER the click flag has been off for a day (WP26 section). |
+| `EUROSTAT_SIBLINGS_ENABLED` | Nowhere yet (**NOT SET — E2a step 6, the owner-signed flip; step 5's registration groundwork built session 125 continuation, 2026-09-23, branch `e2a-step5-staging`, still fully dark**) | Not secret — the literal value `1`. The E2a step-6 master switch: while unset, `activeEurostatSiblings()` (`src/sources/eurostat-siblings.ts`) returns `{}` and the resolver/offer-side clarification gate/click trust boundary all agree there is nothing to offer — byte-identical to before step 5, even once step 5's `registry:apply` has upserted the three reviewed sibling measures into `canonical_measures` (those rows sit there unreachable). Setting it to exactly `'1'` makes the three reviewed pairs (unemployment, inflation, GDP growth) reachable via a dry-run-verified clarification chip — do this only after the step-6 wording sweep (docs/RUNBOOK.md, "E2a step 5" section) and the benchmark's new Eurostat tasks. **Removing it is the instant kill-switch** — no code change, no redeploy delay beyond the env change itself. |
 | `RESEND_API_KEY` | Vercel env store only (**✅ SET 2026-07-06, Production, marked Sensitive — WP16 go-live, session 28; key "checkdecijfers-data-retrieved", Sending scope, separate from the Supabase SMTP key**) | Real secret. Resend dashboard → API Keys → create a key with **Sending access** scope → paste into Vercel (mark Sensitive) → redeploy. This is a SECOND key, separate from the one pasted into Supabase's SMTP settings (that one sends magic-link emails; this one lets the app itself send "je tabel is klaar" onboarding notifications). Without it the app still works — notification emails are skipped with a log line; the dashboard stays the source of truth |
 | `ONBOARDING_ENABLED` | Vercel env store only (**✅ SET `1` 2026-07-06, Production — the WP16 master switch, WP16 go-live session 28**) | Not secret — the literal value `1`, now LIVE. While set, on-demand fetch is active. **Removing it is the instant kill-switch** — the deployed app then never constructs the table finder and behaves exactly as before WP16 sub-part 2 (the honest clarification), no rerank spend, no touch of the migration-012 tables, no code change needed. (Owner marked it Sensitive at set time — harmless; the value `1` is just hidden in the UI.) |
 | `ANTHROPIC_TRIAL_API_KEY` | Vercel env store only (**✅ SET 2026-07-17 by the owner, Production, Sensitive — #53 go-live, session 52; key lives in its own Anthropic workspace with its own hard spend cap**) | Real secret, and deliberately a SEPARATE key from `ANTHROPIC_API_KEY`: Anthropic console → create a key **with its own hard spend cap** (the trial's outer belt — abuse can never touch the main budget) → paste into Vercel (mark Sensitive) → redeploy. Rotation: same as `ANTHROPIC_API_KEY` but only the Vercel store. Removing it (or `TRIAL_ENABLED`) is the trial's kill-switch — the homepage section disappears, nothing else changes |
@@ -1378,6 +1379,63 @@ and needs a one-off backfill.
 - Script: `scripts/backfill-eurostat-doi.ts`. Test coverage (hermetic, no real network) lives in
   `tests/ingestion/ingestion.test.ts`'s "`registerTables` populates `cbs_tables.doi`" describe block, which
   exercises the same `src/eurostat-adapter/doi.ts` functions the backfill script calls.
+
+### E2a step 5 — register the Eurostat sibling tables (owner step; added session 125 continuation, 2026-09-23, branch `e2a-step5-staging`)
+
+Design: `docs/superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md` §4.1/§6 step 5; research:
+`docs/superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md`. Three reviewed CBS↔Eurostat
+sibling pairs (unemployment, inflation, GDP growth — §7 D4) are ready in
+`src/sources/eurostat-siblings.ts`'s `EUROSTAT_SIBLINGS_REVIEWED`/`EUROSTAT_SIBLING_MEASURES_REVIEWED`, but
+**stay fully dark** until step 6: the RUNTIME map every caller (the resolver, the offer-side clarification
+gate, the click trust boundary) actually falls back to is `activeEurostatSiblings()`, which returns `{}`
+unless env `EUROSTAT_SIBLINGS_ENABLED` is exactly `'1'`. Doing step 5 below changes NOTHING a reader can
+reach — it only registers the tables + upserts their `canonical_measures` rows, ready for the step-6 flip.
+
+**⚠ Assumption, not yet owner-signed:** the three Dutch `definitionLabel`s in `EUROSTAT_SIBLING_MEASURES_
+REVIEWED` are the research draft's own wording, carried over verbatim — the owner may reword any of them
+before step 6 (mirrored in [#313](open-questions.md)). Editing a `definitionLabel` before running
+`registry:apply` needs no code change beyond that file.
+
+1. **Dry run** — prints each table's slice and the EXACT request URL the adapter would send (from the
+   adapter's own `buildRequestUrl` — never a hand-built guess), writes nothing:
+   ```
+   npm run eurostat:siblings
+   ```
+2. **Register + sync for real**, once the printed URLs look right:
+   ```
+   npm run eurostat:siblings -- --apply
+   ```
+   This registers the three tables PINNED (eviction-exempt, like the curated Phase-0 seed set — these are
+   reviewed, permanent pairs, not an on-demand-onboarding TTL cache entry) through the same
+   `registerTables`/`syncTable` + `adapterFor('eurostat')` pipeline `eurostat:tipsbd30` used (E1 above), and
+   syncs each one. Idempotent: a table already registered is reported, not re-registered — safe to re-run.
+3. **`registry:apply`** — upserts `EUROSTAT_SIBLING_MEASURES_REVIEWED`'s three measures into
+   `canonical_measures`, one per table that step 2 registered:
+   ```
+   npm run registry:apply
+   ```
+   A sibling measure whose table isn't registered yet (you haven't run step 2, or only ran it for some of the
+   three) is SKIPPED, never a reason for the CBS defaults to fail — the console output names which sibling
+   measures were skipped (`Skipped N Eurostat sibling measure(s) ...`). Safe to run this before, between, or
+   after any of the three tables are registered, in any order, as many times as you like — this is the same
+   `registry:apply` the owner already runs after every CBS registry change.
+4. **Verify** — one query against the real database confirms all three landed:
+   ```sql
+   select key, table_id, measure from canonical_measures
+   where key in ('eu_unemployment_rate_harmonised', 'eu_hicp_annual_rate', 'eu_gdp_growth_yoy_volume');
+   ```
+   Expect three rows once steps 2–3 have run for all three tables. (Or use the internal Eurostat explorer,
+   `/eurostat-explorer`, if `EUROSTAT_EXPLORER_ENABLED` is on for you — same read, in the browser.)
+5. **Step 6 — the flip (separate, owner-signed, NOT part of step 5):** after the wording sweep (public claim,
+   `/llms.txt`, coverage disclosure, `/systeemoverzicht`) and the benchmark with the new Eurostat tasks (spec
+   §6 step 6), set env `EUROSTAT_SIBLINGS_ENABLED=1` in Vercel (Production) and redeploy. **Rollback: unset
+   the variable and redeploy** — the resolver/offer-gate/click-boundary all revert to `{}` instantly, byte-
+   identical to before step 5 (the `canonical_measures` rows stay in the database, harmlessly unreachable,
+   exactly as they are right now before step 6 has ever happened).
+
+Nothing above needs any AI/LLM spend — this is DB writes + free, read-only Eurostat API calls only (the
+Statistics API `sinceTimePeriod`/`geo=`/dimension-pin filters keep each table's fetch to 2,112–4,488 cells,
+comfortably under the 500k synchronous cap — research doc §1–3).
 
 ## Running the web app locally WITH the real database (added 2026-09-09, session 90)
 

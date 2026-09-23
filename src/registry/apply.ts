@@ -6,20 +6,20 @@
 // exist (run `ingest register --all` first).
 import type { Db } from '../db/types.ts';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from './defaults.ts';
-import { EUROSTAT_SIBLING_MEASURES } from '../sources/eurostat-siblings.ts';
-
-/** Every canonical measure this script writes: the parser vocabulary
- * (`CANONICAL_MEASURES`) plus the Eurostat sibling-only measures (E2a ruling
- * R7 — seeded into `canonical_measures` so a chip's sibling key resolves, but
- * kept OUT of `CANONICAL_MEASURES` so the parser can never pick one directly;
- * see src/sources/eurostat-siblings.ts). The sibling list ships empty, so
- * today this is exactly `CANONICAL_MEASURES`. */
-const APPLIED_CANONICAL_MEASURES = [...CANONICAL_MEASURES, ...EUROSTAT_SIBLING_MEASURES];
+import { EUROSTAT_SIBLING_MEASURES_REVIEWED } from '../sources/eurostat-siblings.ts';
 
 export interface ApplyResult {
   tablesUpdated: string[];
   tablesMissing: string[];
   canonicalMeasuresUpserted: string[];
+  /** E2a step 5 (docs/RUNBOOK.md "E2a step 5"): a reviewed Eurostat sibling
+   * measure (`EUROSTAT_SIBLING_MEASURES_REVIEWED`) whose Eurostat table isn't
+   * registered yet — `scripts/register-eurostat-siblings.ts --apply` hasn't
+   * been run for it. SKIPPED, never a reason to abort the CBS apply: the
+   * owner's regular `registry:apply` must keep writing the CBS defaults
+   * exactly as before regardless of sibling-table registration state. Empty
+   * once all three reviewed sibling tables are registered. */
+  siblingMeasuresSkipped: string[];
 }
 
 export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
@@ -28,18 +28,28 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
   // UPDATE's "did it match" can't be read off the result, and canonical_measures
   // has a foreign key to cbs_tables — a mid-loop insert against a missing table
   // would throw and abort with some rows already written. Check first, apply
-  // only if everything referenced exists, so this is all-or-nothing.
+  // only if everything referenced exists, so this is all-or-nothing —
+  // CBS-only, unchanged (E2a step 5): a missing Eurostat sibling table is
+  // deliberately NOT part of this list (handled separately below), so it can
+  // never abort the CBS write the owner's unrelated `registry:apply` depends
+  // on.
   const referencedTableIds = [
     ...new Set([
       ...TABLE_REGISTRY_DEFAULTS.map((t) => t.tableId),
-      ...APPLIED_CANONICAL_MEASURES.map((c) => c.tableId),
+      ...CANONICAL_MEASURES.map((c) => c.tableId),
     ]),
   ];
-  const existing = await db.query('select id from cbs_tables where id = any($1)', [referencedTableIds]);
+  // The lookup query also checks the sibling tables' existence (one query,
+  // both purposes) — but `tablesMissing` below is filtered to the CBS-only
+  // list above, so a missing sibling table never surfaces there.
+  const lookupIds = [
+    ...new Set([...referencedTableIds, ...EUROSTAT_SIBLING_MEASURES_REVIEWED.map((c) => c.tableId)]),
+  ];
+  const existing = await db.query('select id from cbs_tables where id = any($1)', [lookupIds]);
   const existingIds = new Set(existing.rows.map((r) => r.id as string));
   const tablesMissing = referencedTableIds.filter((id) => !existingIds.has(id));
   if (tablesMissing.length > 0) {
-    return { tablesUpdated: [], tablesMissing, canonicalMeasuresUpserted: [] };
+    return { tablesUpdated: [], tablesMissing, canonicalMeasuresUpserted: [], siblingMeasuresSkipped: [] };
   }
 
   const tablesUpdated: string[] = [];
@@ -53,8 +63,20 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
     tablesUpdated.push(entry.tableId);
   }
 
+  // E2a step 5: a reviewed sibling measure is upserted only once its table is
+  // registered — skipped (reported, not aborted) otherwise, so `registry:apply`
+  // is mechanical: run it any time after step 5's registration script, in
+  // any order relative to which of the three tables are registered yet.
+  const siblingMeasuresSkipped: string[] = [];
+  const siblingMeasuresToApply = EUROSTAT_SIBLING_MEASURES_REVIEWED.filter((cm) => {
+    if (existingIds.has(cm.tableId)) return true;
+    siblingMeasuresSkipped.push(cm.key);
+    return false;
+  });
+  const measuresToApply = [...CANONICAL_MEASURES, ...siblingMeasuresToApply];
+
   const canonicalMeasuresUpserted: string[] = [];
-  for (const cm of APPLIED_CANONICAL_MEASURES) {
+  for (const cm of measuresToApply) {
     await db.query(
       `insert into canonical_measures
          (key, table_id, measure, measure_title, dims, definition_label, everyday_terms, alternates, notes, updated_at)
@@ -84,7 +106,7 @@ export async function applyRegistryDefaults(db: Db): Promise<ApplyResult> {
     canonicalMeasuresUpserted.push(cm.key);
   }
 
-  return { tablesUpdated, tablesMissing, canonicalMeasuresUpserted };
+  return { tablesUpdated, tablesMissing, canonicalMeasuresUpserted, siblingMeasuresSkipped };
 }
 
 // CLI entry: node --env-file=.env src/registry/apply.ts
@@ -103,6 +125,11 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
     }
     console.log(`Updated defaults for ${result.tablesUpdated.length} table(s): ${result.tablesUpdated.join(', ')}.`);
     console.log(`Upserted ${result.canonicalMeasuresUpserted.length} canonical measure(s): ${result.canonicalMeasuresUpserted.join(', ')}.`);
+    if (result.siblingMeasuresSkipped.length > 0) {
+      console.log(
+        `Skipped ${result.siblingMeasuresSkipped.length} Eurostat sibling measure(s) (table not yet registered — run "npm run eurostat:siblings -- --apply" first): ${result.siblingMeasuresSkipped.join(', ')}.`,
+      );
+    }
   } finally {
     await pool.end();
   }

@@ -4,9 +4,12 @@
 // (createIngestedDb(), same as intent-resolve.test.ts) PLUS Task 1's shared
 // hand-inserted Eurostat table (tests/helpers/eurostat-test-table.ts).
 //
-// `EUROSTAT_SIBLINGS` ships EMPTY (dark in production) — every test here
+// `activeEurostatSiblings()` is EMPTY in production (dark unless env
+// `EUROSTAT_SIBLINGS_ENABLED` is exactly '1' — E2a step 6) — every test here
 // injects `eurostatSiblings` via resolveCandidate's options so production
-// behaviour is never touched by this suite.
+// behaviour is never touched by this suite. (Flag-gating itself is covered by
+// tests/sources/eurostat-siblings.test.ts and
+// tests/answer/eurostat-siblings-flag.test.ts.)
 //
 // Reason-shape note (R3, checked empirically before writing these tests,
 // recorded in the Task 2 report): `unemployment_rate_seasonally_adjusted`
@@ -127,10 +130,12 @@ describe('Eurostat sibling check (other_source_available)', () => {
     expect(result.intent.target).toEqual({ kind: 'canonical', key: POPULATION_KEY });
   });
 
-  it('6. A measure with no sibling entry + Duitsland: region_unknown (default EUROSTAT_SIBLINGS ships empty)', async () => {
+  it('6. A measure with no sibling entry + Duitsland: region_unknown (default activeEurostatSiblings() is empty)', async () => {
     const candidate = raw(POPULATION_KEY, YEAR_2024, [{ name: 'Duitsland', kind: 'onbekend' }]);
-    // No eurostatSiblings passed: defaults to the production EUROSTAT_SIBLINGS
-    // map, which ships empty — population_on_1_january has no entry there.
+    // No eurostatSiblings passed: defaults to activeEurostatSiblings(), which
+    // is empty in this test environment (EUROSTAT_SIBLINGS_ENABLED unset) —
+    // population_on_1_january has no entry there either way (it's not one of
+    // the three reviewed pairs).
     const result = await resolveCandidate(db, candidate, '2024-06-15');
     expect(isResolutionFailure(result)).toBe(true);
     if (!isResolutionFailure(result)) throw new Error('unreachable');

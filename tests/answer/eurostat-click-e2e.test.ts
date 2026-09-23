@@ -136,8 +136,9 @@ describe('Eurostat chip: offer → trust boundary → click → validated Eurost
   it('the trust boundary keeps the chip with the sibling map, and still drops it with the production (empty) map', async () => {
     const pending = await offeredPending();
     expect(withValidatedClickOptions(pending, { eurostatSiblings: SIBLINGS })).toEqual(pending);
-    // Production today: EUROSTAT_SIBLINGS is empty, so the boundary is as
-    // closed as before this fix — the chip never reaches the take-path.
+    // Production today: activeEurostatSiblings() is empty (EUROSTAT_SIBLINGS_ENABLED
+    // unset), so the boundary is as closed as before this fix — the chip never
+    // reaches the take-path.
     expect(withValidatedClickOptions(pending).clickOptions).toBeUndefined();
   });
 

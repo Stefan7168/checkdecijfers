@@ -148,8 +148,13 @@ function sinceTimePeriodFor(periodFloor: string): string {
  *
  * Params are sorted (key, then value) for a deterministic, stable URL/cache
  * key; `format`/`lang` stay first, matching the unsliced shape exactly.
+ *
+ * Exported (E2a step 5) so `scripts/register-eurostat-siblings.ts`'s dry run
+ * can print the EXACT request URL a real registration would send — one
+ * source of truth for the URL shape, never a second hand-built copy that
+ * could drift from what the adapter actually requests.
  */
-function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined): string {
+export function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined): string {
   const base = `${STATISTICS_BASE}/${nativeCode}?format=JSON&lang=EN`;
   if (!slice) return base;
 

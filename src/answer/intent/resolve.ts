@@ -16,7 +16,7 @@ import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
 import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
 import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
-import { EUROSTAT_SIBLINGS } from '../../sources/eurostat-siblings.ts';
+import { activeEurostatSiblings } from '../../sources/eurostat-siblings.ts';
 import type {
   PeriodSpec,
   RankedCandidate,
@@ -998,8 +998,9 @@ type ResolveCandidateOptions = {
   clickOptionsEnabled?: boolean;
   /** Eurostat E2a (§4.1): CBS canonical key -> Eurostat sibling canonical
    * key, injectable so tests can pin a pair without touching the reviewed
-   * production map. Defaults to `EUROSTAT_SIBLINGS` (ships EMPTY — dark in
-   * production until a person reviews and adds a pair, step 5). */
+   * production map. Defaults to `activeEurostatSiblings()` — EMPTY unless
+   * env `EUROSTAT_SIBLINGS_ENABLED` is exactly '1' (step 6, the owner-signed
+   * runtime flip; docs/RUNBOOK.md "E2a step 5"). */
   eurostatSiblings?: Readonly<Record<string, string>>;
 };
 
@@ -1142,8 +1143,9 @@ async function buildResolvedIntent(
  *    place can cause (`region_unknown`, `region_on_national_measure` — R3:
  *    a national-only CBS measure fails this way, not `region_unknown`);
  *  - the failing table isn't a CBS table (no Eurostat-of-Eurostat siblings);
- *  - `eurostatSiblings` (default EUROSTAT_SIBLINGS, ships EMPTY) has no
- *    entry for this canonical key — dark in production by construction;
+ *  - `eurostatSiblings` (default `activeEurostatSiblings()`, empty unless the
+ *    step-6 flag is set) has no entry for this canonical key — dark in
+ *    production by construction;
  *  - the sibling key isn't in `canonical_measures` (not yet registered —
  *    never crash, just behave as if there were no sibling);
  *  - any named place fails to resolve against the sibling's table (one
@@ -1166,7 +1168,7 @@ async function trySiblingResolution(
   if (failure.reason !== 'region_unknown' && failure.reason !== 'region_on_national_measure') return undefined;
   if (sourceKeyForTableId(canonical.tableId) !== CBS_SOURCE_KEY) return undefined;
 
-  const siblings = options.eurostatSiblings ?? EUROSTAT_SIBLINGS;
+  const siblings = options.eurostatSiblings ?? activeEurostatSiblings();
   const siblingKey = siblings[candidate.canonicalKey];
   if (siblingKey === undefined) return undefined;
 

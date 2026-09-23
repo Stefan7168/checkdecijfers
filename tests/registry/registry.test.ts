@@ -5,10 +5,15 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadFixtureDocsTree } from '../../src/cbs-adapter/fixture-source.ts';
-import { registerTables } from '../../src/ingestion/pipeline.ts';
+import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
 import { applyRegistryDefaults } from '../../src/registry/apply.ts';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from '../../src/registry/defaults.ts';
+import {
+  EUROSTAT_SIBLING_MEASURES_REVIEWED,
+  EUROSTAT_SIBLING_REGISTRATIONS,
+} from '../../src/sources/eurostat-siblings.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 import { resetTestDb } from '../helpers/reset-db.ts';
@@ -141,6 +146,108 @@ describe('registry defaults (ADR 010)', () => {
     for (const alt of cm.alternates!) {
       expect(alt.periodChangeEligible, alt.label).toBe(true);
     }
+  });
+});
+
+// E2a step 5 (docs/RUNBOOK.md "E2a step 5"; requirement 2 of the step-5
+// brief): a reviewed Eurostat sibling measure's table not being registered
+// yet must NEVER abort the CBS-only apply the owner's regular
+// `registry:apply` depends on — it is skipped and reported instead.
+describe('E2a step 5: Eurostat sibling measures never regress the CBS apply', () => {
+  /** Never the real network (same fixture shape register-sync.test.ts's
+   * `FILTERED_DATASET` uses for `eurostat:une_rt_q` — matching
+   * EUROSTAT_SIBLING_MEASURES_REVIEWED's `dims`/`measure` for that table). */
+  const FILTERED_UNE_RT_Q = {
+    version: '2.0',
+    class: 'dataset',
+    label: 'Unemployment by sex and age - quarterly data',
+    id: ['s_adj', 'age', 'sex', 'unit', 'geo', 'time'],
+    size: [1, 1, 1, 1, 1, 1],
+    dimension: {
+      s_adj: { category: { index: { SA: 0 }, label: { SA: 'Seasonally adjusted data' } } },
+      age: { category: { index: { 'Y15-74': 0 }, label: { 'Y15-74': 'From 15 to 74 years' } } },
+      sex: { category: { index: { T: 0 }, label: { T: 'Total' } } },
+      unit: { category: { index: { PC_ACT: 0 }, label: { PC_ACT: 'Percentage of population in the labour force' } } },
+      geo: { category: { index: { NL: 0 }, label: { NL: 'Netherlands' } } },
+      time: { category: { index: { '2024-Q1': 0 }, label: { '2024-Q1': '2024-Q1' } } },
+    },
+    value: [3.5],
+  };
+
+  async function fakeDataciteFetch(): Promise<Response> {
+    return new Response(JSON.stringify({ data: { attributes: { state: 'findable' } } }), {
+      status: 200,
+      headers: { 'content-type': 'application/vnd.api+json' },
+    });
+  }
+
+  it('CBS apply is unaffected and reports all three reviewed siblings skipped when none of their tables are registered', async () => {
+    const db = sharedDb;
+    await registerFixtures(db); // CBS only — no Eurostat table registered
+    const result = await applyRegistryDefaults(db);
+    expect(result.tablesMissing).toEqual([]);
+    expect(result.tablesUpdated.sort()).toEqual(SEED_TABLES.map((t) => t.id).sort());
+    expect(result.canonicalMeasuresUpserted.sort()).toEqual(CANONICAL_MEASURES.map((c) => c.key).sort());
+    expect(result.siblingMeasuresSkipped.sort()).toEqual(
+      EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => m.key).sort(),
+    );
+    const cm = await db.query('select count(*) c from canonical_measures where key = any($1)', [
+      EUROSTAT_SIBLING_MEASURES_REVIEWED.map((m) => m.key),
+    ]);
+    expect(Number(cm.rows[0]!.c)).toBe(0);
+  });
+
+  it('upserts a reviewed sibling measure once its table is registered, still skips the other two', async () => {
+    const db = sharedDb;
+    await registerFixtures(db);
+
+    const uneRtQ = EUROSTAT_SIBLING_REGISTRATIONS.find((r) => r.tableId === 'eurostat:une_rt_q')!;
+    const fetchFn = async () =>
+      new Response(JSON.stringify(FILTERED_UNE_RT_Q), { status: 200, headers: { 'content-type': 'application/json' } });
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    await registerTables(
+      db,
+      source,
+      [{ id: uneRtQ.tableId, updateCadence: uneRtQ.updateCadence, servesTasks: [], slice: uneRtQ.slice }],
+      { fetchImpl: fakeDataciteFetch },
+    );
+    await syncTable(db, source, uneRtQ.tableId);
+
+    const result = await applyRegistryDefaults(db);
+    expect(result.tablesMissing).toEqual([]);
+    expect(result.canonicalMeasuresUpserted).toContain('eu_unemployment_rate_harmonised');
+    expect(result.siblingMeasuresSkipped.sort()).toEqual(['eu_gdp_growth_yoy_volume', 'eu_hicp_annual_rate']);
+
+    const row = await db.query('select table_id, measure from canonical_measures where key = $1', [
+      'eu_unemployment_rate_harmonised',
+    ]);
+    expect(row.rows).toHaveLength(1);
+    expect(row.rows[0]!.table_id).toBe('eurostat:une_rt_q');
+    expect(row.rows[0]!.measure).toBe('une_rt_q|PC_ACT');
+  });
+
+  it('is idempotent for sibling measures too: applying twice after the table is registered yields the same row, no duplicates', async () => {
+    const db = sharedDb;
+    await registerFixtures(db);
+    const uneRtQ = EUROSTAT_SIBLING_REGISTRATIONS.find((r) => r.tableId === 'eurostat:une_rt_q')!;
+    const fetchFn = async () =>
+      new Response(JSON.stringify(FILTERED_UNE_RT_Q), { status: 200, headers: { 'content-type': 'application/json' } });
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    await registerTables(
+      db,
+      source,
+      [{ id: uneRtQ.tableId, updateCadence: uneRtQ.updateCadence, servesTasks: [], slice: uneRtQ.slice }],
+      { fetchImpl: fakeDataciteFetch },
+    );
+    await syncTable(db, source, uneRtQ.tableId);
+
+    await applyRegistryDefaults(db);
+    const second = await applyRegistryDefaults(db);
+    expect(second.siblingMeasuresSkipped.sort()).toEqual(['eu_gdp_growth_yoy_volume', 'eu_hicp_annual_rate']);
+    const rows = await db.query('select key from canonical_measures where key = $1', [
+      'eu_unemployment_rate_harmonised',
+    ]);
+    expect(rows.rows).toHaveLength(1);
   });
 });
 

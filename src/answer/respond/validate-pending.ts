@@ -82,9 +82,11 @@ const clickOptionSchema = optionSchemaFor(clickIntentSchema);
  * chip may name — a Eurostat sibling measure's canonical key, which by design
  * is NOT in CANONICAL_KEYS (that list is the parser vocabulary; a sibling key
  * there would let the parser switch source with no click). Accepted only by
- * membership in the reviewed sibling map's values (default: the production
- * `EUROSTAT_SIBLINGS`, which ships EMPTY — so in production today this path
- * accepts nothing and the boundary is byte-identical to before), minus any
+ * membership in the reviewed sibling map's values (default: `activeEurostat
+ * Siblings()`, which is EMPTY unless env `EUROSTAT_SIBLINGS_ENABLED` is
+ * exactly '1' — step 6, the owner-signed runtime flip; docs/RUNBOOK.md "E2a
+ * step 5" — so in production before that flip this path accepts nothing and
+ * the boundary is byte-identical to before), minus any
  * key that is also a CBS vocabulary key (those take the CBS path above,
  * unchanged, with CBS region-code validation).
  *
@@ -109,7 +111,8 @@ function siblingIntentSchema(siblingKeys: ReadonlySet<string>) {
 
 /** Test seam, same shape as `resolveCandidate`'s `eurostatSiblings` option:
  * the sibling map whose VALUES are the accepted sibling target keys. Absent
- * ⇒ the production `EUROSTAT_SIBLINGS` (ships empty). */
+ * ⇒ `activeEurostatSiblings()` (empty unless `EUROSTAT_SIBLINGS_ENABLED='1'`,
+ * step 6). */
 export interface ClickValidationOptions {
   eurostatSiblings?: Readonly<Record<string, string>>;
 }
