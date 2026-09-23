@@ -51,6 +51,10 @@ export interface EurostatTestTableOptions {
    * Every other observation keeps the default definitive status
    * (`EUROSTAT_DEFINITIVE_STATUS`, 'Published'). */
   statusOverrides?: Readonly<Record<string, string>>;
+  /** The years to insert (default `EUROSTAT_TEST_YEARS`, 2020–2021). E2a fix
+   * wave: the break-in-series window tests need a longer series so a flagged
+   * year can sit BETWEEN two compared years without being one of them. */
+  years?: readonly number[];
 }
 
 /** Hand-inserts the registered table + its dimension_labels + its canonical
@@ -59,6 +63,7 @@ export interface EurostatTestTableOptions {
  * behind for this slice, per the migrations' own column sets. */
 export async function insertEurostatTestTable(db: Db, options: EurostatTestTableOptions = {}): Promise<void> {
   const statusOverrides = options.statusOverrides ?? {};
+  const years = options.years ?? EUROSTAT_TEST_YEARS;
 
   await db.query(
     `insert into cbs_tables (id, title, expected_dimensions, default_coordinates, units, source, status, last_sync_at)
@@ -102,12 +107,12 @@ export async function insertEurostatTestTable(db: Db, options: EurostatTestTable
   } = await db.query(
     `insert into ingestion_batches (table_id, finished_at, outcome, row_count)
      values ($1, now(), 'succeeded', $2) returning id`,
-    [EUROSTAT_TEST_TABLE_ID, Object.keys(EUROSTAT_TEST_REGION_LABELS).length * EUROSTAT_TEST_YEARS.length],
+    [EUROSTAT_TEST_TABLE_ID, Object.keys(EUROSTAT_TEST_REGION_LABELS).length * years.length],
   );
   const batchId = (batch as { id: number }).id;
 
   for (const code of Object.keys(EUROSTAT_TEST_REGION_LABELS)) {
-    for (const [i, year] of EUROSTAT_TEST_YEARS.entries()) {
+    for (const [i, year] of years.entries()) {
       // Mirrors src/eurostat-adapter/jsonstat.ts (~l.470-495): a flagged
       // observation carries the SAME verbatim flag in both `status` and
       // `value_attribute` (they differ only in their UNFLAGGED default,
