@@ -57,6 +57,8 @@ function report(): CoverageReport {
           { key: 'cpi_yearly_inflation', label: 'inflatie (CPI)' },
           { key: 'cpi_index', label: 'consumentenprijsindex' },
         ],
+        sourceDisplayName: 'CBS',
+        nativeId: '86141NED',
       },
       {
         id: '85224NED',
@@ -64,6 +66,8 @@ function report(): CoverageReport {
         status: 'needs_review',
         lastSyncAt: '2026-07-01T08:00:00.000Z',
         measures: [{ key: 'unemployment_rate_seasonally_adjusted', label: 'werkloosheidspercentage' }],
+        sourceDisplayName: 'CBS',
+        nativeId: '85224NED',
       },
     ],
   };
@@ -111,6 +115,8 @@ describe('loadCoverageDisclosure', () => {
       status: 'active',
       lastSyncAt: '2026-07-03T12:00:00.000Z',
       measures: [{ key: 'population_on_1_january', label: 'bevolking op 1 januari' }],
+      sourceDisplayName: 'CBS',
+      nativeId: '03759ned',
     };
     buildCoverageReport.mockResolvedValue(r);
     freshestForCanonical.mockResolvedValue({ periodCode: '2025JJ00', status: 'Definitief' });

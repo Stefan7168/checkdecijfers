@@ -17,10 +17,11 @@
 //     web action's reply turn calls) with the chip's label as the reply;
 //   - R8: loadAuditRecord + reconstructionReport — what `npm run
 //     audit:verify` runs per row.
-// The sibling pair is INJECTED (the production map ships empty) into all
-// three places that read it: the resolver, the policy's offer gate, and the
-// trust boundary.
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+// The sibling pair is INJECTED (activeEurostatSiblings() is empty unless env
+// EUROSTAT_SIBLINGS_ENABLED is exactly '1' — E2a step 6) into all three
+// places that read it: the resolver, the policy's offer gate, and the trust
+// boundary.
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import {
@@ -67,6 +68,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await close();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 const candidate: RawCandidate = {
@@ -134,10 +139,12 @@ describe('Eurostat chip: offer → trust boundary → click → validated Eurost
   });
 
   it('the trust boundary keeps the chip with the sibling map, and still drops it with the production (empty) map', async () => {
+    vi.stubEnv('EUROSTAT_SIBLINGS_ENABLED', '');
     const pending = await offeredPending();
     expect(withValidatedClickOptions(pending, { eurostatSiblings: SIBLINGS })).toEqual(pending);
-    // Production today: EUROSTAT_SIBLINGS is empty, so the boundary is as
-    // closed as before this fix — the chip never reaches the take-path.
+    // Production today: activeEurostatSiblings() is empty (EUROSTAT_SIBLINGS_ENABLED
+    // unset), so the boundary is as closed as before this fix — the chip never
+    // reaches the take-path.
     expect(withValidatedClickOptions(pending).clickOptions).toBeUndefined();
   });
 

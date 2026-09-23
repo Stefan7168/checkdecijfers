@@ -42,9 +42,28 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   asks Eurostat for only the registered slice (it fetched whole datasets, so all three step-5 datasets — up to
   8.2M cells — would have hit the 500k cap; filtered they are 2–4.5k), main CI 35837694364 green incl. deploy.
   Verified dataset choices + settings: [research note](superpowers/specs/2026-09-23-eurostat-e2a-step5-sibling-datasets.md).
-  Next: step 0 (live parse recording, ~10 questions, small AI spend) and step 5 (add the three pairs to
-  `EUROSTAT_SIBLINGS` + `EUROSTAT_SIBLING_MEASURES` — never `defaults.ts` — then `registry:apply` + a narrow sync)
-  once the API cap lifts 2026-10-01; step 6 is the owner-signed flip. [#313](open-questions.md), spec §6.
+  **Step 5 is now MECHANICAL, still fully dark (branch `e2a-step5-staging`):** `EUROSTAT_SIBLINGS_REVIEWED` +
+  `EUROSTAT_SIBLING_MEASURES_REVIEWED` hold the three reviewed pairs (Dutch wording NOT yet owner-signed); the
+  runtime-active map (`activeEurostatSiblings()`, the one function the resolver/offer-gate/click-boundary all
+  fall back to) stays empty unless env `EUROSTAT_SIBLINGS_ENABLED='1'`; `registry:apply` now skips (never
+  aborts on) an unregistered sibling table (`siblingMeasuresSkipped`); a committed script, `npm run
+  eurostat:siblings` (dry run) / `-- --apply`, registers + syncs the three tables (recovers a registered-but-
+  never-synced table on re-run instead of skipping it). **Fix round 1 (independent review, same session):**
+  the `freq` dimension was missing from every reviewed measure (would have made all three unresolvable —
+  proven RED then fixed, real fixture round-trip test); `buildCoverageReport`/`/llms.txt` would have publicly
+  listed the three tables + their not-owner-signed labels as soon as `registry:apply` ran, regardless of the
+  runtime flag — now gated the same way as the resolver (ADR 048 as-built addendum); the registration script's
+  own tests made live DataCite calls, now stubbed. **Fix round 2 (2 items):** a REAL LIVE bug found + fixed —
+  `/llms.txt` on prod was hardcoding "CBS" for every table, mislabelling the already-live `eurostat:tipsbd30`
+  ([#249](open-questions.md)) as "CBS eurostat:tipsbd30"; `buildCoverageReport` now resolves each table's real
+  source name + bare native id from the registry (`sourceDisplayName`/`nativeId`, [#170](open-questions.md));
+  `registry:apply`'s early-return path (CBS tables missing) no longer hardcodes `siblingMeasuresSkipped: []`.
+  Owner steps per docs/RUNBOOK.md "E2a step 5": run the
+  script `--apply`, then `registry:apply`, then verify — all still blocked on the Anthropic API cap only
+  insofar as step 0 (live parse recording) is; step 5's registration itself needs no AI spend. Next: step 0
+  (live parse recording, ~10 questions, small AI spend, after the API
+  cap lifts 2026-10-01) and step 6, the owner-signed flip (wording sweep + `EUROSTAT_SIBLINGS_ENABLED=1`).
+  [#313](open-questions.md), spec §6.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can

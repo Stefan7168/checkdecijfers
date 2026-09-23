@@ -24,6 +24,8 @@ function report(): CoverageReport {
           { key: 'inflation_cpi', label: 'inflatie (CPI)' },
           { key: 'cpi_index', label: 'consumentenprijsindex' },
         ],
+        sourceDisplayName: 'CBS',
+        nativeId: '86141NED',
       },
       {
         id: '85224NED',
@@ -31,8 +33,28 @@ function report(): CoverageReport {
         status: 'needs_review',
         lastSyncAt: '2026-07-01T08:00:00.000Z',
         measures: [{ key: 'unemployment_rate', label: 'werkloosheidspercentage' }],
+        sourceDisplayName: 'CBS',
+        nativeId: '85224NED',
       },
     ],
+  };
+}
+
+// E2a step-5 fix round 2: a REAL live bug (confirmed on the deployed
+// `/llms.txt`, line 73) — a non-CBS table used to render as "CBS
+// eurostat:tipsbd30" because the renderer hardcoded "CBS" for every row.
+// `sourceDisplayName`/`nativeId` are now resolved by the coverage report
+// itself (src/registry/coverage.ts, from the source registry) — this fixture
+// mirrors exactly what that resolution produces for a real Eurostat table.
+function eurostatTable(): CoverageReport['tables'][number] {
+  return {
+    id: 'eurostat:tipsbd30',
+    title: 'Tier-1 capital ratio banking sector',
+    status: 'active',
+    lastSyncAt: '2026-09-16T00:00:00.000Z',
+    measures: [],
+    sourceDisplayName: 'Eurostat',
+    nativeId: 'tipsbd30',
   };
 }
 
@@ -66,6 +88,29 @@ describe('renderLlmsTxt', () => {
   it('is deterministic for unchanged input', () => {
     expect(renderLlmsTxt(report(), '2026-07-18T09:00:00.000Z')).toBe(
       renderLlmsTxt(report(), '2026-07-18T09:00:00.000Z'),
+    );
+  });
+
+  // Fix round 2: reproduces the LIVE bug (checkdecijfers.vercel.app/llms.txt,
+  // line 73: "- CBS eurostat:tipsbd30 — Tier-1 capital ratio banking sector
+  // (gesynchroniseerd 2026-09-16)") and proves it is fixed — the table's
+  // REAL source name, and its bare native id with no redundant
+  // '<sourceKey>:' prefix, never a hardcoded "CBS".
+  it('labels a non-CBS table by its REAL source and native id, never "CBS" (the live #llms.txt bug)', () => {
+    const r = report();
+    r.tables.push(eurostatTable());
+    const text = renderLlmsTxt(r, '2026-09-23T09:00:00.000Z');
+    expect(text).toContain(
+      '- Eurostat tipsbd30 — Tier-1 capital ratio banking sector (gesynchroniseerd 2026-09-16)',
+    );
+    expect(text).not.toContain('CBS eurostat:tipsbd30');
+    expect(text).not.toContain('CBS tipsbd30');
+  });
+
+  it('every CBS line stays byte-identical after the fix (no source/id regression)', () => {
+    const text = renderLlmsTxt(report(), '2026-07-18T09:00:00.000Z');
+    expect(text).toContain(
+      '- CBS 86141NED — Consumentenprijzen; prijsindex 2015=100 (gesynchroniseerd 2026-07-03)',
     );
   });
 });

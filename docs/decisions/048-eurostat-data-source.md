@@ -844,3 +844,41 @@ slice, not dropped. Nothing in this ADR's decisions changes; the proposal awaite
 wording change (the confirm chip names the source it will use; it is not framed as "CBS has no figure"). Steps 1–4 were
 built dark and merged to `main` session 125 (sibling measures live in a sibling-only list, never `defaults.ts`); steps 0/5/6 wait for live spend after 2026-10-01.
 
+## As-built addendum — E2a step 5 built (mechanical, still dark); a real D3(d) risk found and closed (session 125 continuation, 2026-09-23, branch `e2a-step5-staging`)
+
+Step 5 (register the three reviewed sibling tables) is now mechanical: `src/sources/eurostat-siblings.ts`'s
+`EUROSTAT_SIBLINGS_REVIEWED`/`EUROSTAT_SIBLING_MEASURES_REVIEWED` hold the three reviewed pairs, a committed
+script (`scripts/register-eurostat-siblings.ts`, `npm run eurostat:siblings`) registers + syncs the tables,
+and `src/registry/apply.ts` upserts a sibling's `canonical_measures` row once its table exists — all
+independent of the runtime flag, `EUROSTAT_SIBLINGS_ENABLED`, which stays unset (step 6, unchanged, still
+owner-signed). Full account: docs/RUNBOOK.md, "E2a step 5".
+
+**A real D3(d) violation risk, found by an independent review and closed in the same change:** D3(d) above
+requires the public surface (`/llms.txt`, the coverage disclosure) to stay byte-identical until the E2
+wording flip ships. `src/registry/coverage.ts`'s `buildCoverageReport` is a PLAIN enumeration of
+`canonical_measures` with no other filter — so the moment step 5's `registry:apply` upserts a sibling
+measure (which can happen long before step 6, by design — step 5 is meant to be run ahead of the flip), the
+public `/llms.txt` and the coverage-disclosure component would have listed the Eurostat table and its
+NOT-yet-owner-signed Dutch label, exactly the historical Amendment-1 mistake this ADR's D3(b) already
+records once (the "Eurostat — binnenkort" notice, a pre-D3 announcement removed 2026-09-14). **Fixed before
+step 5 ever ran in a real database:** `buildCoverageReport` now excludes a reviewed sibling measure — table
+and label both — for as long as it is not RUNTIME-active, gated through the exact same single function
+(`eurostatSiblingTargetKeys`/`activeEurostatSiblings()`) the resolver, the offer-side clarification gate and
+the click trust boundary already agree on, never a second copy of "which pairs are reviewed." Tests:
+`tests/registry/coverage.test.ts`'s new describe block (flag off → both absent; flag on → both present,
+using the real reviewed key `eu_unemployment_rate_harmonised`).
+
+**A second, independent bug found in the SAME code path — confirmed LIVE on production, unrelated to E2a
+itself (fix round 2, same session):** `web/lib/llms-txt.ts`'s renderer hardcoded `- CBS ${table.id}` for
+every row. Harmless while every registered table really was CBS, but E1 already registered a non-CBS table
+(`eurostat:tipsbd30`, [#249](../open-questions.md)) — the deployed `/llms.txt` was verified to read
+`- CBS eurostat:tipsbd30 — Tier-1 capital ratio banking sector (...)`, naming the wrong source AND printing
+a redundantly double-prefixed id. Fixed at the source: `buildCoverageReport` now resolves each table's real
+`sourceDisplayName` (`resolveSourceForTable(id).displayName`) and bare `nativeId` (`nativeIdFrom`, newly
+exported from `src/sources/registry.ts` for this) from the registry itself, and the renderer prints those —
+never a second, hand-maintained assumption about which source a row belongs to. CBS lines are byte-identical
+(no prefix to strip); a Eurostat line now reads `- Eurostat tipsbd30 — ...`. This was a display bug only —
+D3's "never announced before it answers" rule was never at stake, since `tipsbd30` was already a publicly
+visible coverage row before this fix (E1's own D3 posture never hid a registered table from `/llms.txt`,
+only from chat and the finder).
+

@@ -55,6 +55,15 @@ export interface EurostatTestTableOptions {
    * wave: the break-in-series window tests need a longer series so a flagged
    * year can sit BETWEEN two compared years without being one of them. */
   years?: readonly number[];
+  /** E2a step 5 (flag-gating tests): override the canonical measure key this
+   * table is registered under — e.g. one of the three REAL reviewed sibling
+   * keys (`eurostat-siblings.ts`'s `EUROSTAT_SIBLING_MEASURES_REVIEWED`),
+   * so a test can exercise `resolveCandidate`'s/`decide()`'s DEFAULT
+   * (production) sibling-map lookup end to end under
+   * `EUROSTAT_SIBLINGS_ENABLED='1'`, without needing the real Eurostat table
+   * this synthetic helper stands in for. Defaults to
+   * `EUROSTAT_TEST_CANONICAL_KEY`, unchanged for every existing caller. */
+  canonicalKey?: string;
 }
 
 /** Hand-inserts the registered table + its dimension_labels + its canonical
@@ -64,6 +73,7 @@ export interface EurostatTestTableOptions {
 export async function insertEurostatTestTable(db: Db, options: EurostatTestTableOptions = {}): Promise<void> {
   const statusOverrides = options.statusOverrides ?? {};
   const years = options.years ?? EUROSTAT_TEST_YEARS;
+  const canonicalKey = options.canonicalKey ?? EUROSTAT_TEST_CANONICAL_KEY;
 
   await db.query(
     `insert into cbs_tables (id, title, expected_dimensions, default_coordinates, units, source, status, last_sync_at)
@@ -94,7 +104,7 @@ export async function insertEurostatTestTable(db: Db, options: EurostatTestTable
     `insert into canonical_measures (key, table_id, measure, measure_title, dims, definition_label, everyday_terms)
      values ($1, $2, $3, $4, '{}'::jsonb, $5, '{}'::text[])`,
     [
-      EUROSTAT_TEST_CANONICAL_KEY,
+      canonicalKey,
       EUROSTAT_TEST_TABLE_ID,
       EUROSTAT_TEST_MEASURE,
       'Unemployment rate — Percentage',

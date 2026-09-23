@@ -129,8 +129,13 @@ export const EUROSTAT_SIBLINGS: Readonly<Record<string, string>> = {
 };
 ```
 
+**As-built naming (step 5, session 125 continuation):** the reviewed, static content lives in
+`EUROSTAT_SIBLINGS_REVIEWED`/`EUROSTAT_SIBLING_MEASURES_REVIEWED`; the RUNTIME-active map every caller
+actually falls back to is `activeEurostatSiblings()`, `{}` unless `EUROSTAT_SIBLINGS_ENABLED='1'` — see the
+as-built note under §6 step 5 for the full account.
+
 The Eurostat side is a `CanonicalMeasure` (`tableId: 'eurostat:…'`) kept in a **sibling-only list**,
-`EUROSTAT_SIBLING_MEASURES` in `src/sources/eurostat-siblings.ts` — **never** in `src/registry/defaults.ts`
+`EUROSTAT_SIBLING_MEASURES_REVIEWED` in `src/sources/eurostat-siblings.ts` — **never** in `src/registry/defaults.ts`
 (**corrected session 125**, after the final whole-branch review: a sibling in `CANONICAL_MEASURES` would enter
 the intent parser's vocabulary and schema enum, so the parser could answer "werkloosheid in Duitsland" — or
 even "…in Nederland" — from Eurostat WITHOUT the reader's click, breaking principle (c), and it would change
@@ -143,8 +148,10 @@ deploy.
 
 **The sibling's Eurostat table must be registered with a narrow slice** (countries only, the recent years
 readers ask about), because the full datasets are huge (ADR 048: `namq_10_gdp` is 8.2M cells, far above the
-500k synchronous cap). **Assumption:** the adapter's registration can request a filtered slice (the
-Statistics API supports `geo=`/`time=`/`unit=` filters) rather than the whole dataset. To verify in step 0.
+500k synchronous cap). **Assumption RESOLVED** (branch `eurostat-server-filter`, merged to `main` before step
+5): the adapter's registration DOES request a filtered slice server-side (`src/eurostat-adapter/
+statistics-api.ts`'s `buildRequestUrl`, threaded through `registerTables`/`syncTable`) — see #313 for the
+two-round fix account.
 
 ### 4.2 Dutch country names — a maintained word list, not translation
 
@@ -262,9 +269,28 @@ slice never goes through the finder; siblings are pre-registered.
    new benchmark tasks recorded in step 0's session).
 3. Wiring point 3 (`resolveSource(undefined)` → real source) + the CBS-constant guards in §4.5.
 4. `b`-flag refusal precondition in `src/query/derivations.ts`.
-5. Register the first sibling tables (owner step: add the reviewed pairs to `EUROSTAT_SIBLINGS` and their
-   measures to `EUROSTAT_SIBLING_MEASURES` — not `defaults.ts`, see §4.1 — then `registry:apply` + a narrow
-   sync, like E1's `tipsbd30`).
+5. Register the first sibling tables (owner step, now mechanical: `npm run eurostat:siblings -- --apply` to
+   register + sync the three tables `EUROSTAT_SIBLINGS_REVIEWED`/`EUROSTAT_SIBLING_MEASURES_REVIEWED` already
+   hold — not `defaults.ts`, see §4.1 — then `registry:apply`, like E1's `tipsbd30`; docs/RUNBOOK.md "E2a step
+   5" has the exact commands).
+
+**As built, session 125 continuation (2026-09-23), branch `e2a-step5-staging`:** step 5 is now a MECHANICAL
+owner step, still fully dark. `src/sources/eurostat-siblings.ts` gained `EUROSTAT_SIBLINGS_REVIEWED` (the
+three §7 D4 pairs) and `EUROSTAT_SIBLING_MEASURES_REVIEWED` (their `CanonicalMeasure` entries, from the
+sibling-datasets research doc's §4 drafts) — reviewed in the sense that a person picked the dataset/filter/
+grain match per pair; the Dutch `definitionLabel` wording is carried over verbatim from the research draft,
+**not yet owner-signed** (mirrored in #313 and marked `**Assumption**` inline). The RUNTIME-active map every
+caller falls back to (`activeEurostatSiblings()`, one function, consulted by the resolver default, the
+offer-side gate and the click trust boundary alike) stays `{}` — empty — unless env `EUROSTAT_SIBLINGS_ENABLED`
+is exactly `'1'`; that flip is step 6, unchanged, owner-signed. `src/registry/apply.ts` no longer aborts the
+CBS write when a sibling measure's table isn't registered yet — it upserts a sibling measure only once its
+table exists, otherwise skips it and reports it in the new `siblingMeasuresSkipped` result field, so the
+owner's regular `registry:apply` keeps working exactly as before regardless of how many of the three sibling
+tables are registered. A new committed script, `scripts/register-eurostat-siblings.ts` (`npm run
+eurostat:siblings`), registers + syncs the three tables through the same `registerTables`/`syncTable` +
+`adapterFor('eurostat')` pipeline E1's `tipsbd30` used — dry run by default (prints each table's real request
+URL, from the adapter's own `buildRequestUrl`), `--apply` to write. See docs/RUNBOOK.md, "E2a step 5 — register
+the Eurostat sibling tables (owner step)" for the exact commands.
 
 **As built, session 125 (2026-09-23), merged to `main` (main CI 35820809111 green incl. deploy):** steps 1–4 done dark (both maps ship empty),
 built via subagent-driven development with a review per task and a final whole-branch review. The final
@@ -282,9 +308,13 @@ before, it was offered and then silently stripped on click, ending in the same r
 outcome for the reader, but the stored clarification differs.
 6. **The flip (owner-signed, one change):** the public wording sweep ("official sources", `/llms.txt`, the
    coverage disclosure, `/systeemoverzicht`, CLAUDE.md's public-claim line), plus a live owner-supervised smoke
-   test, plus the benchmark with the new tasks. Until this step no reader can reach any of it: the
-   clarification only fires for a measure with a sibling, and there are no siblings in production until step
-   5. **Steps 1–4 are buildable now, autonomously, with zero spend and zero production change.**
+   test, plus the benchmark with the new tasks — and setting env `EUROSTAT_SIBLINGS_ENABLED='1'` in Vercel
+   (docs/RUNBOOK.md), which is what actually makes the three reviewed pairs runtime-reachable. Until this step
+   no reader can reach any of it: even once step 5 has registered a sibling table and `registry:apply` has
+   upserted its measure into `canonical_measures`, `activeEurostatSiblings()` still returns `{}` and no code
+   path outside that one function ever consults the row. **Steps 1–5 are buildable now, autonomously, with
+   zero spend and zero production change** (step 5's own registration script/`registry:apply` run touch the
+   database, but leave the flag unset — an owner-supervised action, not autonomous).
 
 ---
 

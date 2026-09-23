@@ -74,3 +74,18 @@ lists measured, per-code-documented MeasureCodes entries with ZERO observations 
 sync/conformance treat them as not-published while the schema fingerprint stays unfiltered (CBS changing
 the phantom set still fails the drift check loudly). Without it, `85880NED`'s 17 phantoms quarantine even a
 healthy full ingest.
+
+## As-built addendum (2026-09-23, session 125 continuation — E2a step 5, `src/registry/apply.ts`)
+
+`applyRegistryDefaults`'s all-or-nothing contract (any referenced table missing ⇒ write nothing) stays
+UNCHANGED for the CBS defaults (`TABLE_REGISTRY_DEFAULTS`/`CANONICAL_MEASURES`) — that was and remains the
+correctness guarantee this ADR's "Applying strategy" section describes. A SECOND, independent category was
+added alongside it: Eurostat sibling measures (`src/sources/eurostat-siblings.ts`'s
+`EUROSTAT_SIBLING_MEASURES_REVIEWED` — see spec `2026-09-23-eurostat-e2a-country-answers-design.md` §4.1).
+A sibling measure's table not being registered yet is never a reason to abort the CBS write — it is skipped
+per-measure and reported in the new `siblingMeasuresSkipped` result field, so the owner's regular
+`registry:apply` (an unrelated, already-pending run as of this session) is unaffected by how many of the
+three reviewed sibling tables exist yet. Once a sibling's table IS registered, its measure upserts exactly
+like a CBS one, on the next `registry:apply` run, no special step. See docs/RUNBOOK.md, "E2a step 5" for the
+owner-run sequence, and `tests/registry/registry.test.ts`'s "E2a step 5" describe block for the hermetic
+coverage (both the skip-all-three and upsert-one-skip-two cases, plus idempotency).
