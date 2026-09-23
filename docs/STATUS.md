@@ -28,12 +28,17 @@ autonomously"; verify against `git log` / `gh pr list` before trusting this).**
   ([#291](open-questions.md)–[#294](open-questions.md), [#298](open-questions.md)). Merged locally as one batch,
   full verification block green (backend 3202/3202, web 2727/2727, benchmark gate PASS, real build), main CI run
   35809403268 green incl. deploy.
-- **Eurostat in chat, slice E2a — APPROVED by the owner, BUILDING:** all six spec §7 decisions taken; the confirm
-  chip now names the source it uses ("Voor dit antwoord gebruiken we Eurostat: …") instead of "CBS heeft geen
-  cijfer" (owner steer). Steps 1–4 (zero spend, dark: the sibling map ships empty) are being built on branch
-  `eurostat-e2a` per [the plan](superpowers/plans/2026-09-23-eurostat-e2a-steps-1-4.md), for a PR. Step 0 (live
-  parse recording) and step 5 (register the unemployment/inflation/GDP-growth sibling tables) wait for the API
-  cap to lift 2026-10-01; step 6 is the owner-signed flip. [#313](open-questions.md).
+- **FIRST: PR #41 (`eurostat-e2a`) awaits the owner's review — Eurostat in chat, slice E2a, steps 1–4, BUILT DARK.**
+  All six spec §7 decisions were taken by the owner; the confirm chip names the source it uses ("Voor dit antwoord
+  gebruiken we Eurostat: …"), never "CBS heeft geen cijfer" (owner steer). Nothing reader-visible changes: both
+  sibling lists ship empty. Built via subagent-driven development (4 tasks, per-task reviews, a final review on the
+  top tier that found a Critical — the chip was not clickable — plus 4 Important, all fixed and re-reviewed). Also
+  fixes a LIVE latent gap: on a national-only measure a foreign place tagged `land` silently got the Dutch figure
+  ([#315](open-questions.md)). Verification block green on the final commit (backend 3271/3271, web 2727/2727,
+  benchmark gate PASS, real build), `/code-review` LOW clean, PR CI run 35819008159 green, MERGEABLE.
+  Next after merge: step 0 (live parse recording) and step 5 (register the unemployment/inflation/GDP-growth
+  sibling tables — in `EUROSTAT_SIBLING_MEASURES`, never `defaults.ts`) once the API cap lifts 2026-10-01; step 6
+  is the owner-signed flip, preceded by [#316](open-questions.md). [#313](open-questions.md), spec §6 as-built note.
 - **LIVE on `main`: own-data chart-fit + verified-whole parity** (`7694cf5c`, session 123 build + session 124
   fix wave `133176aa`). CI run 35766585479 green end to end incl. deploy. The "eigen data" card gains
   dumbbell/slope/heatmap and always-available pie/stacked/100%-stacked with an honest note; the reader can
