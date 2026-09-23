@@ -310,6 +310,95 @@ describe('UserChartView — honesty contract (mirrors chart.test.tsx)', () => {
   });
 });
 
+// #318 (session 126, own-data parity): the CSV download — built by
+// web/lib/user-csv.ts (its own suite pins the file format and the
+// formula-injection defense); here only that the card offers it, in every
+// form, and hands it THIS spec.
+const CSV_BUTTON = 'CSV';
+describe('UserChartView — CSV download (#318 own-data parity)', () => {
+  it('offers the CSV download in chart and table form alike', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(screen.getByRole('button', { name: CSV_BUTTON })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByRole('button', { name: CSV_BUTTON })).toBeInTheDocument();
+  });
+
+  it('downloads this chart\'s own points as a named CSV file', async () => {
+    const blobs: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob);
+      return 'blob:test';
+    });
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    try {
+      render(<UserChartView spec={twoSeriesSpec()} />);
+      fireEvent.click(screen.getByRole('button', { name: CSV_BUTTON }));
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      const anchor = clickSpy.mock.contexts[0] as HTMLAnchorElement;
+      expect(anchor.download).toBe('checkdecijfers-your-data-7.csv');
+      const text = await blobs[0]!.text();
+      expect(text).toContain('Amsterdam;42;42,0;r2:c1');
+      expect(text).toContain('Rotterdam;20;20,0;r1:c2');
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
+    } finally {
+      clickSpy.mockRestore();
+    }
+  });
+});
+
+// #318 (session 126, own-data parity): small multiples — the CBS card's
+// one-mini-chart-per-series view, same line-only gate, same toggle labels.
+describe('UserChartView — small multiples (#318 own-data parity)', () => {
+  it('offers no toggle for a single series', () => {
+    render(<UserChartView spec={spec()} />);
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).not.toBeInTheDocument();
+  });
+
+  it('draws one panel per series, hides the image download, and toggles back', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('button', { name: 'Kleine grafieken' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('group', { name: 'Kleine grafieken per reeks' })).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-panel-for]').length).toBe(2);
+    expect(screen.getByRole('button', { name: 'Gelijke assen' })).toHaveAttribute('aria-pressed', 'true');
+    // Several small <svg>s are not one exportable chart — same rule as the CBS card.
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eigen assen' }));
+    expect(screen.getByRole('button', { name: 'Eigen assen' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(container.querySelectorAll('[data-panel-for]').length).toBe(0);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
+
+  it('leaves no half-applied view behind when the reader switches to a bar chart', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-panel-for]').length).toBe(0);
+    expect(container.querySelectorAll('.recharts-bar-rectangle').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
+
+  it('keeps the CSV download while small multiples hide the image download', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    expect(screen.getByRole('button', { name: CSV_BUTTON })).toBeInTheDocument();
+  });
+
+  it('keeps the whole-card digit scan clean with small multiples on', () => {
+    const s = twoSeriesSpec();
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Kleine grafieken' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Eigen assen' }));
+    expectDigitsTraceToSpec(container, s);
+  });
+});
+
 // (b) The form switch — the same tablist contract as the CBS card, over the
 // own-data card's own command history.
 describe('UserChartView — the form switch (co-pilot phase 2)', () => {

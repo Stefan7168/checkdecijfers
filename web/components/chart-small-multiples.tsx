@@ -3,10 +3,15 @@
 // axis. Line charts only (see the plan's Task 2 header for why bar charts
 // are out of scope). Reuses chart.tsx's own pure spec-only helpers so the
 // plotted values are identical to the combined view, never re-derived.
+//
+// Session 126 (own-data parity, #318): typed over `PlottableSpec` — the
+// minimal structural subset chart.tsx's helpers already take (ADR 037 D11)
+// — instead of `ChartSpec`, so the own-data card can hand it its adapted
+// `toPlottableSpec` shape. Type-only: a real `ChartSpec` satisfies
+// `PlottableSpec` structurally, so the CBS call site is unchanged.
 'use client';
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
-import type { ChartSpec } from '../backend/chart/types.ts';
 import { dotGeometry, LINE_WIDTH_PX, seriesColor, type ChartPresentation } from '../lib/chart-presentation.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import {
@@ -17,6 +22,7 @@ import {
   buildRows,
   GRID_LINE_PROPS,
   labelWidthPx,
+  type PlottableSpec,
   type Row,
   valueLabelPlan,
   yAxisDomain,
@@ -78,7 +84,7 @@ function ProvisionalDot(seriesKey: string, color: string, geometry: { r: number;
 // assen" vs "eigen assen" hinges on, and Recharts renders it as raw SVG path
 // geometry with no data-attribute to bind a DOM assertion to -- a unit test
 // on the real computation is more robust than inferring it from pixels.
-export function sharedLineDomain(spec: ChartSpec, visibleIndexes: number[]): [number, number] | undefined {
+export function sharedLineDomain(spec: PlottableSpec, visibleIndexes: number[]): [number, number] | undefined {
   let min = Infinity;
   let max = -Infinity;
   for (const i of visibleIndexes) {
@@ -103,7 +109,7 @@ export function ChartSmallMultiples({
    * (see chart.tsx's `translateSpecForDisplay`) — this component never
    * translates anything itself, only draws whatever spec it is given, same
    * division of labour as `presentation` below. */
-  spec: ChartSpec;
+  spec: PlottableSpec;
   hiddenKeys: Set<string>;
   axisMode: 'shared' | 'own';
   /** WP218 (ADR 039) Phase 0: the resolved effective values from ChartView's

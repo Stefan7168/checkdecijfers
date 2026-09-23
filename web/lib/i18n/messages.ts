@@ -183,6 +183,18 @@ const nl = {
   'userChart.renderFailed.zero_rows': 'Geen rijen voldoen aan dit filter.',
   'userChart.renderFailed.too_many_points': 'Te veel punten — filter eerst.',
 
+  // user-csv.ts — the own-data CSV export's preamble source line (ADR 037
+  // D11) and its data-table headers. `{file}`/`{date}` mirror
+  // userChart.provenanceLine's own vars.
+  'userCsv.sourceLine': 'Bron: eigen bestand {file}, geüpload op {date}',
+  'userCsv.seriesHeader': 'Reeks',
+  'userCsv.valueHeader': 'Waarde',
+  'userCsv.shownAsHeader': 'Weergave',
+  'userCsv.cellHeader': 'Cel',
+  'userCsv.noteHeader': 'Opmerking',
+  'userCsv.incompleteNote': 'onvolledige groep: lege of niet-numerieke cellen overgeslagen',
+  'userCsv.fileCreatedBy': 'Bestand aangemaakt door checkdecijfers.nl',
+
 
   // chart-data-panel.tsx — co-pilot phase 2 (session 113, Task 6): doorway A
   // for a data command. Digit-free throughout; the spelled-out numbers below
@@ -1511,6 +1523,18 @@ const en: Messages = {
   'userChart.renderFailed.validation': "This combination can't be drawn.",
   'userChart.renderFailed.zero_rows': 'No rows match this filter.',
   'userChart.renderFailed.too_many_points': 'Too many points — filter first.',
+
+  // user-csv.ts — the own-data CSV export's preamble source line (ADR 037
+  // D11) and its data-table headers. `{file}`/`{date}` mirror
+  // userChart.provenanceLine's own vars.
+  'userCsv.sourceLine': 'Source: your file {file}, uploaded {date}',
+  'userCsv.seriesHeader': 'Series',
+  'userCsv.valueHeader': 'Value',
+  'userCsv.shownAsHeader': 'Shown as',
+  'userCsv.cellHeader': 'Cell',
+  'userCsv.noteHeader': 'Note',
+  'userCsv.incompleteNote': 'incomplete group: empty or non-numeric cells skipped',
+  'userCsv.fileCreatedBy': 'File created by checkdecijfers.nl',
 
 
   'chart.data.trigger': 'Data',

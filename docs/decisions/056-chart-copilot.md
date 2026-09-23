@@ -230,7 +230,7 @@ reload → restored.
 
 **Not built (recorded in open-questions):** a chip click opens the owning panel but does not
 select the exact row; no streaming of chips (one call, one reply); `count` ignores the y column; the
-own-data table form has no CSV export; the Data panel's problem line shows the validator's English
+own-data table form has no CSV export (built session 126, [#318](../open-questions.md)); the Data panel's problem line shows the validator's English
 message; the reply lives in the card and only appears in the thread after a reload.
 
 ## As built — phase 3, the CBS/Eurostat chat doorway (session 114, 2026-09-18)

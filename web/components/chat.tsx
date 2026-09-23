@@ -12,7 +12,7 @@
 // branch here explicitly and must never fall into the generic catch below.
 'use client';
 
-import { Check, Copy, Database, Download, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
+import { Check, Copy, Database, FileSpreadsheet, Globe, Link2, PanelRight, Paperclip, Plug } from 'lucide-react';
 import NextLink from 'next/link';
 import { unstable_isUnrecognizedActionError } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -35,6 +35,7 @@ import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { useT } from '../lib/i18n/lang-provider.tsx';
+import { DownloadCsvButton } from './download-csv-button.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
 import { sourceTableUrl } from '../lib/statline.ts';
 import { statCardData } from '../lib/stat-card-data.ts';
@@ -213,42 +214,6 @@ function WebSectionView({ section }: { section: WebSection }) {
         ))}
       </ul>
     </div>
-  );
-}
-
-/** WP21 #52: downloads the pre-built CSV as a client-side Blob — no server
- * round-trip, nothing stored. Mirrors the stat card's failure honesty. */
-function DownloadCsvButton({ csv }: { csv: AnswerCsv }) {
-  const [failed, setFailed] = useState(false);
-  const t = useT();
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="xs"
-        onClick={() => {
-          try {
-            const url = URL.createObjectURL(
-              new Blob([csv.content], { type: 'text/csv;charset=utf-8' }),
-            );
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = csv.filename;
-            link.click();
-            URL.revokeObjectURL(url);
-          } catch {
-            setFailed(true);
-          }
-        }}
-      >
-        <Download aria-hidden className="size-3.5" />
-        {t('chat.downloadCsv')}
-      </Button>
-      {failed ? (
-        <span className="text-xs text-destructive">{t('chat.downloadCsvFailed')}</span>
-      ) : null}
-    </>
   );
 }
 
