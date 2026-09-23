@@ -6,6 +6,37 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 125 — merge a PR batch locally in one verified pass; a "dark" feature needs an end-to-end
+## test through the REAL take path, or its dead parts stay invisible
+
+1. **Four adjacent-row docs conflicts: merge the batch locally, not PR by PR.** PRs #37–#40 each edited
+   neighbouring rows of `docs/open-questions.md`; merging one by one on GitHub would have made each later PR
+   conflict (and a conflicting PR gets no CI run). Instead: one local integration branch, `git merge --no-ff`
+   each PR in order, resolve the single row-level conflict by taking each side's own rows, run ONE full
+   verification block + `/code-review` LOW on the combined result, fast-forward `main`, push. GitHub marked
+   all four PRs MERGED automatically once their commits were in `main`. ~15 minutes instead of four serial
+   CI waits and three rebases.
+2. **Per-task reviews passed four tasks whose composite feature could not work.** Every task review was clean,
+   but the final whole-branch review (top tier) found the Eurostat chip could never be taken: the click trust
+   boundary (`validate-pending.ts`) is CBS-shaped (≥4-char region codes, parser-vocabulary keys only) and
+   silently dropped it. No task owned "the click path" and none of the task tests crossed it. Lesson: when a
+   plan builds an offer (a chip, a link, a button), one task's done-definition must include an end-to-end test
+   through the SAME function the app calls on the take — not just "the offer is well-formed". The fix wave's
+   e2e test then found a second bug nobody had listed (attribution hard-coded to CBS).
+3. **Where a new entity is registered decides who can reach it.** The approved spec said the Eurostat sibling
+   measure would be "an ordinary row in `defaults.ts`". That list IS the parser's vocabulary, so the parser
+   could have picked Eurostat directly — a silent source switch, principle (c) — and every fixture's prompt
+   bytes would have shifted. Before placing a new key/measure/option in an existing list, check every consumer
+   of that list, not just the one you need.
+4. **An implementer's "out of my scope" concern can be a live production bug.** Task 2's implementer flagged
+   (and correctly left alone) that on a national-only measure a region tagged `kind: 'land'` skipped the
+   mismatch check — so "Duitsland" tagged `land` got the Dutch national figure, today. Read every DONE-report's
+   concerns before the review, and rule on them: this one became a fix in the same branch (#315).
+5. **Ask the owner only what changes the next action, in plain sentences.** One `AskUserQuestion` with four
+   questions (merge the PRs? disclose-or-refuse? approve the six E2a decisions as one bundle? the chip wording)
+   got everything needed for hours of autonomous work; the owner's free-text answer on the wording ("it is a
+   tool with several sources, don't say CBS lacks it") was the one real design input.
+
 ## Session 124 — probe the real DOM before trusting a reviewer's root cause; additive spec fields
 ## break byte-for-byte audit reconstruction of OLD rows
 
