@@ -98,7 +98,7 @@ GOLDEN RULE (see CLAUDE.md): verify EVERY date/PR#/SHA/status/count against real
 4. Stale-doc sweep: grep -rn across docs/ for the OLD framing of anything changed this session; fix every hit (every doc that mentions it, not just the ones you edited).
 5. Clean state: git status clean + fully pushed; git worktree list (no strays); CI green per commit.
 6. Cleanup: delete one-off scratch/verify scripts (incl. zzdel_*/__scratch* review-agent test files); spin off out-of-scope hygiene as task chips.
-7. Next-session prompt: paste-ready kickoff AND a durable copy saved to docs/session-briefs/<date>-session-<n>-kickoff.md.
+7. Next-session prompt: paste-ready kickoff AND a durable copy saved to docs/session-briefs/<date>-session-<n>-kickoff.md. END the reply with the one-sentence opener the owner pastes into the new chat (own fenced block, real path): Read CLAUDE.md, then docs/STATUS.md's top block, then docs/session-briefs/<date>-session-<n>-kickoff.md. Continue from there.
 8. FINAL SELF-AUDIT (last): re-read your own STATUS/archive/memory/lessons edits and cross-check every date/PR#/SHA/count/status against the verified sources; fix mismatches; only then declare wrapped.
 REMINDER
 exit 0
