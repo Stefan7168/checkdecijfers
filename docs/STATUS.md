@@ -24,8 +24,8 @@ the GitHub PR list / Actions runs before trusting this). Kickoff:
 
 - **Own-data parity (#306 candidate (d), owner pick session 126) — phase A MERGED + LIVE.** The own-data chart card
   now has small multiples and a CSV download of its plotted points, with ADR 037 D11's formula-injection defense
-  (PR #45, `4dcdbd1`, main CI 35854222153 green incl. deploy + post-deploy smoke). Same-session follow-up branch
-  `claude/session-126-kickoff-o0w2lk`: the own-data image download menu is hidden in Tabel/Warmtekaart (no chart to
+  (PR #45, `4dcdbd1`, main CI 35854222153 green incl. deploy + post-deploy smoke). Same-session follow-up PR #46 (branch
+  `claude/session-126-kickoff-o0w2lk`): the own-data image download menu is hidden in Tabel/Warmtekaart (no chart to
   export) and gets the chart's language and frame. Spec:
   [own-data parity design](superpowers/specs/2026-09-23-own-data-parity-design.md); [#318](open-questions.md).
 - **Owner decisions waiting (#318):** B1 — may a user publish an own-data chart (embed link / gallery)?

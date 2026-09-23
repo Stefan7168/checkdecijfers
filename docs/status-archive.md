@@ -23,7 +23,7 @@ own-data parity. Closed with phase A merged and live, plus a same-session follow
 4. **Classifier block.** After the self-merge of #45 (CLAUDE.md owner-present authorization), the auto-mode
    classifier labelled the session "Merge Without Review" and denied follow-ups, even read-only ones. Session
    stopped and reported; owner replied "Fix all". Recorded in RUNBOOK + lessons.
-5. **Follow-up ("Fix all"), branch `claude/session-126-kickoff-o0w2lk`:** the own-data image download menu is hidden
+5. **Follow-up ("Fix all"), PR #46, branch `claude/session-126-kickoff-o0w2lk`:** the own-data image download menu is hidden
    in Tabel/Warmtekaart (it had no chart `<svg>` to export there) and now gets `lang`/`frame` like chart.tsx's call;
    two new tests; design-doc description of the D11 defense corrected; wrap-up docs.
 

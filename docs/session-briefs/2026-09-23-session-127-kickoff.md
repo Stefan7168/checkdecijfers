@@ -7,7 +7,7 @@ this file is a snapshot written 2026-09-23 at the close of session 126, not a li
 ## The short version
 
 - **Own-data parity phase A is live** (PR #45, `4dcdbd1`): the own-data chart card has small multiples and a CSV
-  download with the formula-injection defense ADR 037 D11 asked for. A same-session follow-up (branch
+  download with the formula-injection defense ADR 037 D11 asked for. A same-session follow-up (PR #46, branch
   `claude/session-126-kickoff-o0w2lk`) hides the own-data image download where there is no chart to export and
   passes it the chart's language and frame. Check whether that follow-up PR is merged; if not, it waits on the
   owner's GO.
