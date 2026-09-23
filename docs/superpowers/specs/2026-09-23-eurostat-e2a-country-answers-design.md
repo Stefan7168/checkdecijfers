@@ -266,7 +266,7 @@ slice never goes through the finder; siblings are pre-registered.
    measures to `EUROSTAT_SIBLING_MEASURES` — not `defaults.ts`, see §4.1 — then `registry:apply` + a narrow
    sync, like E1's `tipsbd30`).
 
-**As built, session 125 (2026-09-23), branch `eurostat-e2a`:** steps 1–4 done dark (both maps ship empty),
+**As built, session 125 (2026-09-23), merged to `main` (main CI 35820809111 green incl. deploy):** steps 1–4 done dark (both maps ship empty),
 built via subagent-driven development with a review per task and a final whole-branch review. The final
 review and its fix wave also: made the chip clickable end to end (it was silently rejected by the click trust
 boundary's CBS-shaped code check), made the R11 provisional-marking check source-aware ("(schatting)" etc. for

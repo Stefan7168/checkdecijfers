@@ -809,6 +809,6 @@ when CBS has no reading for a named country (D5a / Amendment 5, never an automat
 answer, countries only (the adapter already drops every NUTS 1–3 row), and Dutch country names via a
 maintained word list (the ADR 040 precedent). D2's taxonomy widening (sub-national NUTS) is deferred to a later
 slice, not dropped. Nothing in this ADR's decisions changes; the proposal awaited six owner decisions (its §7). **Session 125 (2026-09-23): the owner approved all six** — D3 with a
-wording change (the confirm chip names the source it will use; it is not framed as "CBS has no figure"). Steps 1–4 are
-built dark on a branch + PR; steps 0/5/6 wait for live spend after 2026-10-01.
+wording change (the confirm chip names the source it will use; it is not framed as "CBS has no figure"). Steps 1–4 were
+built dark and merged to `main` session 125 (sibling measures live in a sibling-only list, never `defaults.ts`); steps 0/5/6 wait for live spend after 2026-10-01.
 
