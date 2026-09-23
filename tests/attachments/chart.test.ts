@@ -199,3 +199,18 @@ it('a combined aggregate→derive label keeps the aggregation prefix on the oper
   );
   expect(spec.yHeaders).toEqual(['Sum of Omzet, share of total (%)']);
 });
+
+describe('buildUserChartSpec — incomplete points reach the spec (#314)', () => {
+  it('a sum that skipped a blank cell is carried as incomplete on its point; a complete one is not', () => {
+    const spec = buildUserChartSpec(dataset(), instruction({ kind: 'bar', aggregate: { fn: 'sum' } }));
+    const points = spec.series[0]!.points;
+    expect(points.map((p) => [p.xLabel, p.value, p.incomplete])).toEqual([
+      ['2020', 200.5, undefined],
+      ['2021', 150, true],
+    ]);
+  });
+  it('an unaggregated chart never marks a point incomplete', () => {
+    const spec = buildUserChartSpec(dataset(), instruction({ seriesBy: 'c1' }));
+    expect(spec.series.flatMap((s) => s.points).some((p) => p.incomplete)).toBe(false);
+  });
+});

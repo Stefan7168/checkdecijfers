@@ -240,6 +240,60 @@ describe('derived (fixed set)', () => {
   });
 });
 
+describe('incomplete: a value computed over fewer cells than its group has (#314)', () => {
+  // SALES' 2021 group is Amsterdam 150 + Rotterdam '' (blank) + Utrecht 30:
+  // the sum skips the blank (180, spreadsheet semantics — unchanged) and is
+  // now marked incomplete instead of passing for the complete 2021 total.
+  it('sum/mean/min/max over a group with a blank cell are marked incomplete; a complete group is not', () => {
+    for (const fn of ['sum', 'mean', 'min', 'max'] as const) {
+      const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn } }));
+      expect(points.map((p) => [p.xRaw, p.computed?.incomplete]), fn).toEqual([['2020', undefined], ['2021', true]]);
+    }
+  });
+  it('the value itself is unchanged — only the flag is new', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' } }));
+    expect(points.map((p) => p.computed?.value)).toEqual([150, 180]);
+  });
+  it('count counts rows, blanks included — never incomplete', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'count' } }));
+    expect(points.map((p) => p.computed?.incomplete)).toEqual([undefined, undefined]);
+  });
+  it('a group with NO number at all stays a plain null, not an incomplete value', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'line', x: 'c0', y: ['c2'], seriesBy: 'c1', aggregate: { fn: 'sum' } }));
+    const rotterdam2021 = points.find((p) => p.seriesKey === 'Rotterdam' && p.xRaw === '2021')!;
+    expect(rotterdam2021.computed).toMatchObject({ value: null });
+    expect(rotterdam2021.computed?.incomplete).toBeUndefined();
+  });
+  it('share_of_total: every share is incomplete when the total leaves out a point with no number', () => {
+    const points = executeInstruction(
+      dataset(SALES),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2021'] }], derived: { op: 'share_of_total', b: null } }),
+    );
+    expect(points.map((p) => [p.xRaw, p.computed?.value === null ? null : 'value', p.computed?.incomplete])).toEqual([
+      ['Amsterdam', 'value', true],
+      ['Rotterdam', null, undefined],
+      ['Utrecht', 'value', true],
+    ]);
+  });
+  it('share_of_total over complete values is not incomplete', () => {
+    const points = executeInstruction(
+      dataset(SALES),
+      instruction({ kind: 'bar', x: 'c1', y: ['c2'], filters: [{ column: 'c0', op: 'in', values: ['2020'] }], derived: { op: 'share_of_total', b: null } }),
+    );
+    expect(points.map((p) => p.computed?.incomplete)).toEqual([undefined, undefined]);
+  });
+  it('aggregate then derive: an incomplete yearly sum makes every share of the total incomplete', () => {
+    const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' }, derived: { op: 'share_of_total', b: null } }));
+    expect(points.map((p) => p.computed?.incomplete)).toEqual([true, true]);
+  });
+  it('difference and percent_change inherit incomplete from an incomplete input', () => {
+    const diff = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' }, derived: { op: 'difference', b: 'c3' } }));
+    expect(diff.map((p) => [p.xRaw, p.computed?.incomplete])).toEqual([['2020', undefined], ['2021', true]]);
+    const change = executeInstruction(dataset(SALES), instruction({ kind: 'line', x: 'c0', y: ['c2'], aggregate: { fn: 'sum' }, derived: { op: 'percent_change', b: null } }));
+    expect(change.map((p) => [p.xRaw, p.computed?.incomplete])).toEqual([['2020', undefined], ['2021', true]]);
+  });
+});
+
 describe('aggregate/sort-by-value edge cases (fix round 1)', () => {
   it('multi-y + aggregate: each y column aggregates independently as its own series', () => {
     const points = executeInstruction(dataset(SALES), instruction({ kind: 'bar', x: 'c0', y: ['c2', 'c3'], aggregate: { fn: 'sum' } }));

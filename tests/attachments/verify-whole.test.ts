@@ -105,6 +105,44 @@ describe('verifyDatasetWhole', () => {
     expect(outcome).toEqual({ verified: false, reason: 'sum_mismatch' });
   });
 
+  it('#314: an aggregate part that skipped a blank cell is withheld — never summed as if complete', () => {
+    const cells = [
+      ['Jaar', 'Regio', 'Omzet'],
+      ['2020', 'Noord', '10'],
+      ['2020', 'Zuid', '5'],
+      ['2021', 'Noord', '20'],
+      ['2021', 'Zuid', ''],
+      ['2020', 'Totaal', '35'],
+    ];
+    // Grouped by Regio, summed over Jaar: Noord = 30 (complete), Zuid = 5
+    // (its 2021 cell is blank — incomplete), Totaal = 35. 30 + 5 = 35 would
+    // "verify" — but Zuid's 5 is only part of Zuid, so the honest answer is
+    // withheld_member.
+    const outcome = verifyDatasetWhole(
+      dataset(cells),
+      instruction({ x: 'c1', y: ['c2'], seriesBy: null, aggregate: { fn: 'sum' } }),
+      'agg:sum:r5:c2',
+      ['agg:sum:r1:c2+r3:c2', 'agg:sum:r2:c2+r4:c2'],
+    );
+    expect(outcome).toEqual({ verified: false, reason: 'withheld_member' });
+  });
+
+  it('#314: an incomplete designated whole cannot be checked (missing_whole)', () => {
+    const cells = [
+      ['Jaar', 'Regio', 'Omzet'],
+      ['2020', 'Noord', '10'],
+      ['2020', 'Totaal', '10'],
+      ['2021', 'Totaal', ''],
+    ];
+    const outcome = verifyDatasetWhole(
+      dataset(cells),
+      instruction({ x: 'c1', y: ['c2'], seriesBy: null, aggregate: { fn: 'sum' } }),
+      'agg:sum:r2:c2+r3:c2',
+      ['agg:sum:r1:c2'],
+    );
+    expect(outcome).toEqual({ verified: false, reason: 'missing_whole' });
+  });
+
   it('resolves an already-computed (aggregate) rowRef verbatim for both the whole and a part', () => {
     const cells = [
       ['Jaar', 'Regio', 'Omzet'],

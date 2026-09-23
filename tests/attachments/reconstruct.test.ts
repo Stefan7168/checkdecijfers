@@ -44,7 +44,7 @@ const CELLS = [
   ['2022', 'Amsterdam', '90,0'],
 ];
 
-async function seed(db: Db): Promise<{ dataset: UserDataset; threadId: number }> {
+async function seed(db: Db, cells: string[][] = CELLS): Promise<{ dataset: UserDataset; threadId: number }> {
   const userId = randomUUID();
   const dataset = await insertDataset(db, {
     userId,
@@ -56,8 +56,8 @@ async function seed(db: Db): Promise<{ dataset: UserDataset; threadId: number }>
     contentSha256: 'deadbeef',
     requestId: null,
     fileBytes: null,
-    cells: CELLS,
-    profile: buildDatasetProfile(CELLS),
+    cells,
+    profile: buildDatasetProfile(cells),
     status: 'ready',
   });
   const { rows } = await db.query('insert into chat_threads (user_id) values ($1::uuid) returning id', [
@@ -194,6 +194,83 @@ describe('reconstructDatasetTurn — chart turns', () => {
       const report = reconstructDatasetTurn(record!, currentDataset!);
       expect(report.ok).toBe(false);
       expect(report.problems).toContain('stored instruction column differs from envelope.instruction');
+    });
+  });
+});
+
+describe('reconstructDatasetTurn — the #314 incomplete flag', () => {
+  // 2021's group has a blank Revenue cell: the yearly sum skips it and the
+  // point carries `incomplete: true`.
+  const GAPPY = [
+    ['Year', 'City', 'Revenue'],
+    ['2020', 'Amsterdam', '120,5'],
+    ['2020', 'Rotterdam', '80,0'],
+    ['2021', 'Amsterdam', '150,0'],
+    ['2021', 'Rotterdam', ''],
+  ];
+
+  async function gappyTurn(db: Db) {
+    const { dataset, threadId } = await seed(db, GAPPY);
+    await respondToDatasetQuestion(db, {
+      dataset,
+      threadId,
+      question: 'total revenue by year',
+      requestId: randomUUID(),
+      rawState: null,
+      llmOptions: { client: fakeClient(chartInstructionOutput({ kind: 'bar', aggregate: { fn: 'sum' } })) },
+    });
+    const record = (await getDatasetTurnById(db, await lastTurnId(db, dataset.id)))!;
+    const currentDataset = (await getDataset(db, dataset.userId, dataset.id))!;
+    return { record, currentDataset };
+  }
+
+  /** The same record as a pre-#314 writer would have stored it: identical,
+   * minus every `incomplete` key. */
+  function asPreFlagRow<T>(record: T): T {
+    return JSON.parse(JSON.stringify(record, (key, value) => (key === 'incomplete' ? undefined : value))) as T;
+  }
+
+  it('a chart turn with an incomplete sum stores the flag and reconstructs', async () => {
+    await withDb(async (db) => {
+      const { record, currentDataset } = await gappyTurn(db);
+      expect(JSON.stringify(record.envelope)).toContain('"incomplete":true');
+      expect(reconstructDatasetTurn(record, currentDataset)).toEqual({ ok: true, problems: [] });
+    });
+  });
+
+  it('a turn stored BEFORE the flag existed still reconstructs (the flag is disclosure, never a value)', async () => {
+    await withDb(async (db) => {
+      const { record, currentDataset } = await gappyTurn(db);
+      const legacy = asPreFlagRow(record);
+      expect(JSON.stringify(legacy.envelope)).not.toContain('incomplete');
+      expect(reconstructDatasetTurn(legacy, currentDataset)).toEqual({ ok: true, problems: [] });
+    });
+  });
+
+  it('the legacy allowance never masks a changed value', async () => {
+    await withDb(async (db) => {
+      const { record, currentDataset } = await gappyTurn(db);
+      const legacy = asPreFlagRow(record);
+      const chart = (legacy.envelope as { chart: { series: { points: { value: number | null }[] }[] } }).chart;
+      chart.series[0]!.points[1]!.value = 999;
+      const report = reconstructDatasetTurn(legacy, currentDataset);
+      expect(report.ok).toBe(false);
+      expect(report.problems).toContain('chart spec does not re-derive from the current dataset + stored instruction');
+    });
+  });
+
+  it('a post-#314 row that LOST its flag is not treated as legacy when another point still has one', async () => {
+    await withDb(async (db) => {
+      const { record, currentDataset } = await gappyTurn(db);
+      // Keep the key present elsewhere in the stored chart (as a post-#314
+      // writer always would), but drop it from the incomplete point: the
+      // rebuild disagrees and the legacy allowance must not apply.
+      const tampered = JSON.parse(JSON.stringify(record)) as typeof record;
+      const chart = (tampered.envelope as unknown as { chart: { series: { points: Record<string, unknown>[] }[] } }).chart;
+      delete chart.series[0]!.points[1]!['incomplete'];
+      chart.series[0]!.points[0]!['incomplete'] = true;
+      const report = reconstructDatasetTurn(tampered, currentDataset);
+      expect(report.ok).toBe(false);
     });
   });
 });

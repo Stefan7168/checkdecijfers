@@ -64,6 +64,15 @@ export interface ComputedValue {
   decimals: number;
   rowRef: string;
   reason?: MissingValueReason;
+  /** Session 124 (#314): the value is real arithmetic, but over FEWER cells
+   * than its group/series actually has — a sum/mean/min/max whose group
+   * contained an empty or non-numeric cell (skipped, never read as zero), a
+   * share_of_total whose total left out a series point with no number, or
+   * any derived value computed from such an input. The number itself is
+   * unchanged (spreadsheet semantics: blanks are skipped); the chart says so
+   * instead of presenting a partial total as a complete one (principle c).
+   * PRESENT-ONLY: `true` or absent, never `false`. */
+  incomplete?: true;
 }
 
 interface RawPoint {
@@ -227,6 +236,10 @@ function aggregatePoints(points: readonly RawPoint[], fn: AggregateFn, yColumn: 
 
     let value: number | null;
     let resultDecimals = decimals;
+    // `count` counts rows, blanks included — it is never partial. Every
+    // other fn reduces only the numeric members; when some members had no
+    // number but at least one did, the result covers part of the group.
+    const incomplete = fn !== 'count' && values.length > 0 && values.length < group.members.length;
     if (fn === 'count') {
       value = group.members.length;
       resultDecimals = 0;
@@ -250,16 +263,24 @@ function aggregatePoints(points: readonly RawPoint[], fn: AggregateFn, yColumn: 
       yRaw: '',
       seriesKey: group.seriesKey,
       seriesLabel: group.seriesLabel,
-      computed: { value, decimals: resultDecimals, rowRef },
+      computed: { value, decimals: resultDecimals, rowRef, ...(incomplete ? { incomplete: true as const } : {}) },
     };
   });
 }
 
 /** A point's plotted value/decimals/traceability ref, whichever stage
  * produced it — already computed (aggregate ran) or still one raw cell. */
-function valueAndDecimals(point: RawPoint, column: ColumnProfile): { value: number | null; decimals: number; ref: string } {
+function valueAndDecimals(
+  point: RawPoint,
+  column: ColumnProfile,
+): { value: number | null; decimals: number; ref: string; incomplete?: true } {
   if (point.computed) {
-    return { value: point.computed.value, decimals: point.computed.decimals, ref: point.computed.rowRef };
+    return {
+      value: point.computed.value,
+      decimals: point.computed.decimals,
+      ref: point.computed.rowRef,
+      ...(point.computed.incomplete ? { incomplete: true as const } : {}),
+    };
   }
   const value = numericCellValue(point.yRaw, column);
   const decimals = value === null ? 0 : decimalsOf(point.yRaw, resolvedFormat(column));
@@ -312,13 +333,22 @@ function derivePoints(
       const nonNull = aVals.filter((v) => v.value !== null);
       const total = nonNull.reduce((sum, v) => sum + v.value!, 0);
       const n = nonNull.length;
+      // Every share's denominator is the series total: if any point is left
+      // out of it (no number) or is itself partial, EVERY share is partial.
+      const totalIncomplete = n < aVals.length || aVals.some((v) => v.incomplete);
       seriesPoints.forEach((p, i) => {
         const av = aVals[i]!;
         const value = av.value === null || total === 0 ? null : (av.value / total) * 100;
         const reason: MissingValueReason | undefined = av.value === null ? 'geen getal' : undefined;
         result.push({
           ...p,
-          computed: { value, decimals: 1, rowRef: `der:share_of_total:${av.ref}|total:${n}`, ...(reason ? { reason } : {}) },
+          computed: {
+            value,
+            decimals: 1,
+            rowRef: `der:share_of_total:${av.ref}|total:${n}`,
+            ...(reason ? { reason } : {}),
+            ...(value !== null && totalIncomplete ? { incomplete: true as const } : {}),
+          },
         });
       });
       continue;
@@ -350,6 +380,7 @@ function derivePoints(
             decimals: 1,
             rowRef: `der:percent_change:${av.ref}|prev:${prev.ref}`,
             ...(reason ? { reason } : {}),
+            ...(value !== null && (av.incomplete || prev.incomplete) ? { incomplete: true as const } : {}),
           },
         });
       });
@@ -387,7 +418,13 @@ function derivePoints(
       const refB = bv?.ref ?? 'none';
       result.push({
         ...p,
-        computed: { value, decimals, rowRef: `der:${op}:${av.ref}|${refB}`, ...(reason ? { reason } : {}) },
+        computed: {
+          value,
+          decimals,
+          rowRef: `der:${op}:${av.ref}|${refB}`,
+          ...(reason ? { reason } : {}),
+          ...(value !== null && (av.incomplete || bv?.incomplete) ? { incomplete: true as const } : {}),
+        },
       });
     });
   }

@@ -2245,6 +2245,70 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
   });
 });
 
+describe('UserChartView — the incomplete-values note (#314)', () => {
+  /** twoSeriesSpec with Rotterdam's 2024 point computed over fewer cells
+   * than its group has (execute.ts's `incomplete`). */
+  function incompleteSpec(): UserChartSpec {
+    const s = twoSeriesSpec();
+    s.series[1]!.points[1] = { ...s.series[1]!.points[1]!, incomplete: true };
+    return s;
+  }
+  const NOTE_NL = 'Let op: niet alle waarden telden mee voor Rotterdam · 2024 — lege of niet-numerieke cellen worden overgeslagen.';
+
+  it('names the incomplete point by its own series + x labels, with no number of its own', () => {
+    render(<UserChartView spec={incompleteSpec()} />);
+    const note = screen.getByTestId('own-incomplete-note');
+    expect(note.textContent).toBe(NOTE_NL);
+    expect(note).toHaveClass('text-warning');
+  });
+
+  it('stays in every form, table included', () => {
+    render(<UserChartView spec={incompleteSpec()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getByTestId('own-incomplete-note').textContent).toBe(NOTE_NL);
+  });
+
+  it('is absent when no point is incomplete', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(screen.queryByTestId('own-incomplete-note')).toBeNull();
+  });
+
+  it('drops a point whose series the reader hid (the note describes what is on screen)', () => {
+    render(<UserChartView spec={incompleteSpec()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Rotterdam' }));
+    expect(screen.queryByTestId('own-incomplete-note')).toBeNull();
+  });
+
+  it('a single-series chart names the point by its x label alone', () => {
+    const s = spec();
+    s.series[0]!.points[0] = { ...s.series[0]!.points[0]!, incomplete: true };
+    render(<UserChartView spec={s} />);
+    expect(screen.getByTestId('own-incomplete-note').textContent).toBe(
+      `Let op: niet alle waarden telden mee voor ${s.series[0]!.points[0]!.xLabel} — lege of niet-numerieke cellen worden overgeslagen.`,
+    );
+  });
+
+  it('caps the list at three, then an ellipsis', () => {
+    const s = twoSeriesSpec();
+    for (const series of s.series) series.points = series.points.map((p) => ({ ...p, incomplete: true as const }));
+    render(<UserChartView spec={s} />);
+    expect(screen.getByTestId('own-incomplete-note').textContent).toBe(
+      'Let op: niet alle waarden telden mee voor Amsterdam · 2023; Amsterdam · 2024; Rotterdam · 2023; … — lege of niet-numerieke cellen worden overgeslagen.',
+    );
+  });
+
+  it('renders the English note under LangProvider lang="en"', () => {
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={incompleteSpec()} />
+      </LangProvider>,
+    );
+    expect(screen.getByTestId('own-incomplete-note').textContent).toBe(
+      'Note: not every value counted towards Rotterdam · 2024 — empty or non-numeric cells are skipped.',
+    );
+  });
+});
+
 // WP218 phase 4 (#219): proves the language switch reaches this surface (the
 // heading/provenance line the component itself composes; disclaimerLine is
 // backend data and stays as given regardless of language).

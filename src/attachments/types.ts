@@ -286,6 +286,11 @@ export interface UserChartPoint {
    * exactly what the file said, even for a null/unparseable value. */
   sourceText: string;
   reason?: MissingValueReason;
+  /** Session 124 (#314): computed from fewer cells than its group/series
+   * has (an empty or non-numeric cell was skipped). The value is still real
+   * arithmetic over real cells; the card discloses it under the chart. See
+   * execute.ts's ComputedValue.incomplete. Present-only. */
+  incomplete?: true;
 }
 
 export interface UserChartSeries {

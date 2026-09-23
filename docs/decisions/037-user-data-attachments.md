@@ -192,3 +192,32 @@ deterministically ("Sum of Omzet", "Omzet − Kosten", "Omzet, share of total (%
 schema v2 (`version: 2`); a stored v1 instruction is upgraded on read (`upgradeInstruction`). The
 chat doorway (`src/attachments/copilot/`) and the on-screen Data panel are described in ADR 056's
 "As built — phase 2" section.
+
+## As-built addendum — incomplete groups are disclosed, never presented as complete (session 124, 2026-09-23, [#314](../open-questions.md))
+
+**Context.** The own-data aggregates (`sum`/`mean`/`min`/`max`, session 113) reduce only a group's
+numeric cells: an empty or non-numeric cell is skipped (spreadsheet semantics — the same result Excel's
+`SUM` gives). The rowRef already listed every member (U1), but nothing on screen told the reader that a
+group total was built from, say, 2 of its 3 rows — and the session-123 reader-designated-total check could
+"verify" a whole against such a partial sum (the #312 M3 finding).
+
+**Decision (built on branch `own-data-incomplete-aggregate-note`, PR for owner review).** Values are
+unchanged; honesty is added around them. (1) `execute.ts` marks a computed value `incomplete: true` when
+its group had at least one number AND at least one cell without one (`count` counts rows and is never
+partial); the flag propagates to `share_of_total` (a total that left out a point — or was built from a
+partial one — makes every share partial), `difference`/`ratio` and `percent_change`. (2) The card names
+the affected visible points under the chart in a digit-free note (NL/EN), in every form including the
+table. (3) `verify-whole.ts` treats an incomplete part as withheld and an incomplete designated whole as
+missing, so the note reads "can't be checked" instead of a "Checked" built on a partial sum. (4) The R8-
+analog reconstruction (`reconstruct.ts`) accepts a turn stored before the flag existed only when that
+stored chart contains no `incomplete` key at all and matches byte for byte once that one key is removed
+from the rebuild — every value, label and rowRef is still compared exactly.
+
+**Alternatives rejected.** Returning null for any group with a gap (principle (c)'s strictest reading):
+it would blank most real spreadsheets, where a blank often means zero or "not applicable", and would
+break the spreadsheet expectation readers bring. Silently keeping today's behaviour: a partial total
+passing for a complete one is exactly the guess principle (c) forbids. Disclosure keeps the reader's
+number and says what it is.
+
+**Not done (residuals).** The note sits outside the export container (like every caveat), so a PNG/PDF
+export of such a chart does not carry it; tooltips do not repeat it.
