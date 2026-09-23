@@ -190,10 +190,24 @@ obligations:**
   `dimensionPrefixes` has NO Eurostat server-side equivalent and stays client-side only (geo is the one
   exception, already covered structurally, not via a per-slice `dimensionPrefixes.geo`) — the client-side
   filter (`matchesSlice`, jsonstat.ts) still runs unconditionally afterwards regardless (defence in depth,
-  unchanged). A call with no slice (e.g. `fetchTableSchema`/`fetchCodeList`, which `src/ingestion/pipeline.ts`
-  never passes a slice to) is byte-identical to the pre-fix URL — those calls still fetch the dataset
-  unfiltered and are NOT fixed by this change; see open-questions [#313](../open-questions.md) for that
-  residual gap. Tests: `tests/eurostat-adapter/statistics-api.test.ts`.
+  unchanged). A call with truly no slice at all (e.g. registering a table with no `Phase0Table.slice`, like
+  `tipsbd30`, the one real registered Eurostat table) is byte-identical to the pre-fix URL. Tests:
+  `tests/eurostat-adapter/statistics-api.test.ts`.
+
+  **Fix round 2 (same session, 2026-09-23):** the fix above covered `fetchAndParse`/`fetchObservations` only —
+  `registerTables` and `syncTable` (`src/ingestion/pipeline.ts`) independently call `fetchTableSchema` and
+  `fetchCodeList` to read a table's schema/dimension metadata, and BOTH did so with no slice at all, so
+  registering (or ever re-syncing) one of the three E2a siblings would still have fetched the unfiltered
+  dataset for its schema and hit `AsyncApiRequiredError`, even with round 1's fix in place. Fixed by adding an
+  optional `slice?: CbsSlice` parameter to `CbsSource.fetchTableSchema`/`fetchCodeList` (`src/cbs-adapter/
+  types.ts`) — CBS's own adapters ignore it, so CBS registration/sync stays byte-identical — and threading
+  `table.slice` (`registerTables`) / `registry.slice` (`syncTable`) through both calls. `StatisticsApiSource`
+  and `EurostatFixtureSource` now route `fetchTableSchema`/`fetchCodeList` through the SAME per-(tableId,
+  slice) cache (`loadDataset`/`parsed`) `fetchObservations` already used, so a registration + its first sync
+  of one sliced table share ONE underlying fetch, not three. Tests:
+  `tests/eurostat-adapter/register-sync.test.ts` (a stubbed over-cap-unfiltered/under-cap-filtered pair,
+  proving registration throws `AsyncApiRequiredError` without a slice and succeeds — from exactly one fetch —
+  with one).
 
 **D7 — Proof and citation carry over on the existing "Bewijs dit cijfer" panel with two additive fields.**
 `web/lib/answer-proof.ts` builds the panel once from the stored envelope (no arithmetic, every digit a shared

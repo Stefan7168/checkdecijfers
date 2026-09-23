@@ -103,6 +103,9 @@ function sinceTimePeriodFor(periodFloor: string): string {
  *   already covered above via the structural restriction, not via any
  *   `dimensionPrefixes.geo` the caller might also pass) — stays client-side
  *   only, exactly as before (`matchesSlice` in jsonstat.ts).
+ * - `slice.dimensionEquals.geo` — REFUSED (throws): `geo` is handled
+ *   exclusively via the structural sweep above, never as a per-slice pin, so
+ *   this can never silently coexist with (and corrupt) that sweep.
  *
  * Params are sorted (key, then value) for a deterministic, stable URL/cache
  * key; `format`/`lang` stay first, matching the unsliced shape exactly.
@@ -110,6 +113,20 @@ function sinceTimePeriodFor(periodFloor: string): string {
 function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined): string {
   const base = `${STATISTICS_BASE}/${nativeCode}?format=JSON&lang=EN`;
   if (!slice) return base;
+
+  // LOW-effort code-review finding, fixed: `geo` is handled EXCLUSIVELY via
+  // the structural EU/EFTA sweep below, never as a per-slice pin — a
+  // `dimensionEquals.geo` entry would otherwise silently coexist with (not
+  // replace) that ~34-code sweep, producing a request with both the
+  // caller's single `geo=<code>` AND every structural geo code, which is not
+  // what a caller pinning one country would want. Refuse loudly (principle
+  // c) rather than silently building a broken/ambiguous request.
+  if (slice.dimensionEquals && 'geo' in slice.dimensionEquals) {
+    throw new Error(
+      "Eurostat adapter: CbsSlice.dimensionEquals must never pin 'geo' — the D6 structural " +
+        'EU/EFTA restriction (EU_EFTA_STAND_IN_GEO_CODES) is the only geo filter this adapter applies.',
+    );
+  }
 
   const params: Array<[string, string]> = [];
   if (slice.dimensionEquals) {
@@ -203,12 +220,20 @@ export class StatisticsApiSource implements CbsSource {
     return parseJsonStatDataset(raw, tableId, slice);
   }
 
-  async fetchTableSchema(tableId: string): Promise<CbsTableSchema> {
-    return (await this.loadDataset(tableId)).schema;
+  // E2a step-5 fix (2026-09-23): `slice`, routed through the SAME
+  // `loadDataset` (and its per-(tableId, slice) cache) `fetchObservations`
+  // uses below — a registered table's schema/code-list read now hits the
+  // exact server-filtered request its observations do, instead of always
+  // requesting the whole (potentially over-cap) dataset. When the caller
+  // (registerTables/syncTable, src/ingestion/pipeline.ts) passes the SAME
+  // slice for schema, code lists AND observations, all three come from ONE
+  // underlying fetch (the cache key is identical). No slice ⇒ unchanged.
+  async fetchTableSchema(tableId: string, slice?: CbsSlice): Promise<CbsTableSchema> {
+    return (await this.loadDataset(tableId, slice)).schema;
   }
 
-  async fetchCodeList(tableId: string, dimension: string): Promise<CbsCode[]> {
-    const parsed = await this.loadDataset(tableId);
+  async fetchCodeList(tableId: string, dimension: string, slice?: CbsSlice): Promise<CbsCode[]> {
+    const parsed = await this.loadDataset(tableId, slice);
     const codes = parsed.codeLists[dimension];
     if (!codes) {
       throw new Error(

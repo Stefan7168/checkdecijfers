@@ -218,6 +218,24 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
     expect(fetchFn.mock.calls[0]![0]).toBe(fetchFn.mock.calls[1]![0]);
   });
 
+  it('a dimensionEquals pinning "geo" is REFUSED — it would silently coexist with the structural geo sweep', async () => {
+    // code-review finding (LOW effort, this branch): dimensionEquals.geo
+    // would otherwise sit alongside the ~34-code structural sweep rather
+    // than replacing it, producing a request with both the caller's single
+    // geo=<code> AND every structural geo code — never what a caller
+    // pinning one country would want. Refuse loudly instead.
+    const fetchFn = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse(SAMPLE_DATASET));
+    const source = new StatisticsApiSource(fetchFn as unknown as typeof fetch);
+    const slice: CbsSlice = { dimensionEquals: { geo: 'DE' } };
+
+    await expect(async () => {
+      for await (const _page of source.fetchObservations('eurostat:demo_pjan', slice)) {
+        // should never get here
+      }
+    }).rejects.toThrow(/must never pin 'geo'/);
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it('a stubbed unfiltered ("no slice") request over the cap throws, but the SAME table with a slice — whose URL the ' +
     'server would filter on — resolves to a small response: the threshold now judges the (server-)filtered size',
     async () => {
