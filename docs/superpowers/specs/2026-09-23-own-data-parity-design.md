@@ -54,6 +54,9 @@ audit/reconstruction (R8 analog); aggregate/derived arithmetic; incomplete-group
 
 ## 4. Phase B — needs the owner
 
+> **Decided 2026-09-24 (session 127):** B1 yes (design: [2026-09-24-own-data-publish-design.md](2026-09-24-own-data-publish-design.md),
+> ADR 057 — a saved publish record, not a signed link); B2 wait for evidence.
+
 - **B1 publish an own-data chart (embed link / gallery).** The biggest remaining parity gap and the one that matters
   for the "graphmaker" positioning. Open questions for the owner: may a user make their uploaded data public at all?
   If yes: opt-in per chart, a visible "unverified, from the user's own file" frame on the public page, and the

@@ -28,9 +28,10 @@ the GitHub PR list / Actions runs before trusting this). Kickoff:
   `claude/session-126-kickoff-o0w2lk`): the own-data image download menu is hidden in Tabel/Warmtekaart (no chart to
   export) and gets the chart's language and frame. Spec:
   [own-data parity design](superpowers/specs/2026-09-23-own-data-parity-design.md); [#318](open-questions.md).
-- **Owner decisions waiting (#318):** B1 — may a user publish an own-data chart (embed link / gallery)?
-  Recommendation: yes, opt-in per chart, plotted points only, link dies on file delete / retention purge.
-  B2 — own data + CBS in one chart (reverses ADR 037's "never for v1"); recommendation: wait for evidence.
+- **Owner decided #318 (2026-09-24, session 127):** B1 YES — publish an own-data chart via a saved, revocable,
+  pruned publish record (ADR [057](decisions/057-own-data-publish.md), spec
+  [own-data publish](superpowers/specs/2026-09-24-own-data-publish-design.md)); being built in session 127, ships
+  dark behind `OWN_DATA_PUBLISH_ENABLED` + migration 036 (owner-supervised). B2 (own data + CBS) — wait for evidence.
 - **Merging:** a self-merge via the GitHub tool tripped the auto-mode classifier ("Merge Without Review") after it
   succeeded (RUNBOOK). Get an explicit in-chat "merge it" from the owner before the merge call.
 - **Eurostat in chat (E2a) — BUILT, STAGED, SWITCHED OFF, unchanged since session 125.** Remaining steps are
