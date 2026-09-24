@@ -197,18 +197,41 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       points: s.points.map((p) => ({ rowRef: p.rowRef, xKey: p.xKey, xLabel: p.xLabel, value: null, formattedValue: null, sourceText: '' })),
     };
   });
-  // Fix round 1 (C1): with no seriesBy, chart.ts's own buildUserChartSpec
-  // groups `series` by y-column, in `instruction.y` order — the SAME order
-  // `yHeaders` lists those columns' headers in (aggregate/derived included:
-  // aggregate keeps one entry per y column in that order; derived collapses
-  // both `series` and `yHeaders` to the SAME one entry). So `yHeaders[i]`
-  // is always that hidden series' own original column header in this case,
-  // and must be blanked exactly like the series' own `label` above. With a
-  // seriesBy set, every series instead shares the SAME single y column
-  // (`yHeaders` has one entry for all of them), so hiding one series never
-  // isolates a header unique to it — nothing to scrub there.
+  // Fix round 2 (C1, correcting fix round 1's wrong assumption): `yHeaders`
+  // is always built straight from `instruction.y` — a fixed, sort/limit-
+  // blind column order (chart.ts ~135-140). `series`, however, is grouped
+  // by first-appearance order over `executeInstruction`'s OWN returned
+  // points — and those points are sorted (and possibly `limit`-sliced)
+  // BEFORE chart.ts ever groups them (execute.ts ~545-550: `sortPoints`
+  // then an optional `.slice(0, limit)` run over ALL series' points
+  // together, then chart.ts's `bySeries` Map takes first-appearance order
+  // over THAT already-reordered list). A `sort: { by: 'value' }` can
+  // freely interleave which y-column's points appear first, so `series[i]`
+  // and `yHeaders[i]` are NOT guaranteed to name the same column by
+  // POSITION — position-based blanking (fix round 1's bug) can both leak a
+  // hidden column's header (wrong index) and wrongly blank a still-visible
+  // one. Matching by LABEL instead is index-order-independent: `aggregate`
+  // wraps both a series' `label` and its `yHeaders` entry in the SAME
+  // `aggregateLabel(fn, header)` text (chart.ts ~127-140), so the two still
+  // compare equal; `derived` collapses `series`/`yHeaders` to one shared
+  // entry each, so the label the derived series carries after prune-time
+  // blanking is checked the same way. A `limit` can drop an ENTIRE
+  // y-column's series (none of its points survive the slice) without it
+  // ever becoming a `series[i]` at all — that header names nothing
+  // currently drawn, so it is blanked too (`!visibleLabels.has(h)`), not
+  // only headers belonging to a still-present-but-hidden series
+  // (`hiddenLabels.has(h)`). With a seriesBy set, every series instead
+  // shares the SAME single y column (`yHeaders` has one entry for all of
+  // them), so hiding one series never isolates a header unique to it —
+  // nothing to scrub there.
   const seriesByNull = state.instruction !== null && state.instruction.seriesBy === null;
-  const yHeaders = seriesByNull ? spec.yHeaders.map((h, i) => (hidden.has(`s${i}`) ? '' : h)) : spec.yHeaders;
+  let yHeaders = spec.yHeaders;
+  if (seriesByNull) {
+    const hiddenLabels = new Set<string>();
+    const visibleLabels = new Set<string>();
+    spec.series.forEach((s, i) => (hidden.has(`s${i}`) ? hiddenLabels : visibleLabels).add(s.label));
+    yHeaders = spec.yHeaders.map((h) => (hiddenLabels.has(h) || !visibleLabels.has(h) ? '' : h));
+  }
   const prunedSpec: UserChartSpec = {
     ...spec,
     yHeaders,

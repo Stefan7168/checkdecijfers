@@ -224,6 +224,102 @@ describe('pruneForPublic — C1: a hidden series own column header must not leak
     expect(pub.spec.series[1]!.label).toBe('');
     expect(JSON.stringify(pub)).not.toContain('GeheimeKolom');
   });
+
+  // Fix round 2: `yHeaders[i]` and `series[i]` are NOT guaranteed to name the
+  // same column BY POSITION — `yHeaders` always lists `instruction.y` in
+  // its own fixed order, while `series` is grouped by first-appearance
+  // order over execute.ts's OWN returned points, which a `sort`/`limit` can
+  // reorder or shrink independently of `instruction.y`'s order. A dataset
+  // where GeheimeKolom's values dwarf Omzet's, plotted with
+  // `sort: { by: 'value', direction: 'desc' }` over both y columns
+  // together, puts GeheimeKolom's points first, so `series[0]` is
+  // GeheimeKolom and `series[1]` is Omzet — the OPPOSITE of
+  // `instruction.y`'s own `['c1' Omzet, 'c2' GeheimeKolom]` order. Hiding
+  // `s0` (GeheimeKolom) must blank `yHeaders`' GeheimeKolom entry (position
+  // 1, not 0) and leave Omzet's (position 0) alone — the exact case a
+  // position-based blank gets backwards. A SEPARATE dataset from
+  // `datasetMultiY` above (whose own values happen to sort the OTHER way)
+  // so this repro is unambiguous.
+  const CELLS_SORT_DESC = [
+    ['Jaar', 'Omzet', 'GeheimeKolom'],
+    ['2020', '10', '777'],
+    ['2021', '20', '888'],
+  ];
+  const datasetSortDesc: UserDataset = {
+    id: 44,
+    userId: 'u1',
+    sourceKind: 'file_csv',
+    displayName: 'sort.csv',
+    sourceUrl: null,
+    cells: CELLS_SORT_DESC,
+    profile: buildDatasetProfile(CELLS_SORT_DESC),
+    status: 'ready',
+    contentSha256: 'baadf00d',
+    createdAt: '2026-09-06T00:00:00Z',
+  };
+  const instructionSortDesc = {
+    version: 2,
+    kind: 'bar',
+    x: 'c0',
+    y: ['c1', 'c2'],
+    seriesBy: null,
+    filters: [],
+    sort: { by: 'value', direction: 'desc' },
+    limit: null,
+    aggregate: null,
+    derived: null,
+    unsupported: null,
+    reading: '',
+    confidence: 1,
+  };
+  const turnSortDesc = {
+    id: 9,
+    userId: 'u1',
+    datasetId: 44,
+    kind: 'chart',
+    chartEmitted: true,
+    instruction: instructionSortDesc,
+  } as unknown as DatasetTurnRecord;
+
+  it('blanks by LABEL, not by position, when sort reorders series ahead of instruction.y', () => {
+    const built = buildPublishedChart(datasetSortDesc, turnSortDesc, [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')]);
+    if (!built.ok) throw new Error('expected ok');
+    // Sanity: confirms the premise — series order is REVERSED from
+    // instruction.y's own column order, and s0 is really GeheimeKolom.
+    expect(built.spec.series.map((s) => s.label)).toEqual(['GeheimeKolom', 'Omzet']);
+    expect(built.spec.yHeaders).toEqual(['Omzet', 'GeheimeKolom']);
+
+    const pub = pruneForPublic(built, null);
+    expect(JSON.stringify(pub)).not.toContain('GeheimeKolom');
+    expect(pub.spec.yHeaders).toContain('Omzet');
+    expect(pub.spec.yHeaders).toEqual(['Omzet', '']);
+  });
+
+  it('also blanks a header whose entire series was dropped by limit, even the one that stays hidden', () => {
+    // limit: 2 keeps only the two highest-value points overall — both are
+    // GeheimeKolom's (777, 888) — so Omzet's series disappears ENTIRELY
+    // (zero points survive the slice), not merely "hidden": there is no
+    // `series[i]` for it at all any more, only a `yHeaders` entry naming a
+    // column nothing currently draws.
+    const turnSortDescLimited = {
+      ...turnSortDesc,
+      instruction: { ...instructionSortDesc, limit: 2 },
+    } as unknown as DatasetTurnRecord;
+    const built = buildPublishedChart(datasetSortDesc, turnSortDescLimited, [
+      makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    // Sanity: only ONE series remains (GeheimeKolom), against TWO yHeaders.
+    expect(built.spec.series).toHaveLength(1);
+    expect(built.spec.series[0]!.label).toBe('GeheimeKolom');
+    expect(built.spec.yHeaders).toEqual(['Omzet', 'GeheimeKolom']);
+
+    const pub = pruneForPublic(built, null);
+    expect(JSON.stringify(pub)).not.toContain('GeheimeKolom');
+    // Omzet's own header is blanked too — its column is not plotted at all,
+    // visible or otherwise, so the public heading must not name it either.
+    expect(pub.spec.yHeaders).toEqual(['', '']);
+  });
 });
 
 describe('pruneForPublic — C2: a note stays anchored to a rowRef the FINAL spec no longer plots', () => {
@@ -253,5 +349,30 @@ describe('pruneForPublic — C2: a note stays anchored to a rowRef the FINAL spe
     const pub = pruneForPublic(built, null);
     expect(pub.state.notes).toEqual([]);
     expect(JSON.stringify(pub)).not.toContain('Geheim BV');
+  });
+
+  it('also drops an overlay request and a headline override pointing at a rowRef the final spec no longer plots', () => {
+    const filtered = { ...instruction, filters: [{ column: 'c1', op: 'in', values: ['Open NV'] }] } as Record<string, unknown>;
+    delete filtered.reading;
+    delete filtered.confidence;
+    const built = buildPublishedChart(dataset, turn, [
+      // Both valid against the chart as it stood at this point (Geheim
+      // BV's own two points, still real rowRefs on the original chart).
+      makeCommand({ kind: 'addDerivedOverlay', overlay: { id: 'o-stale', calcKind: 'difference', resultIds: ['r1:c2', 'r3:c2'] } }, 'panel'),
+      makeCommand({ kind: 'setHeadlineOverride', resultId: 'r1:c2' }, 'panel'),
+      // Filters the chart down to Open NV only — Geheim BV, and both
+      // rowRefs above with it, no longer exist on the final chart at all.
+      makeCommand({ kind: 'setInstruction', instruction: filtered as unknown as ClientChartInstruction, summary: 'alleen Open NV' }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    expect(built.dropped).toBe(0);
+    // Sanity: both are really still in the raw (unpruned) state.
+    expect(built.state.derivedOverlayRequests.map((r) => r.id)).toEqual(['o-stale']);
+    expect(built.state.headlineOverrideResultId).toBe('r1:c2');
+
+    const pub = pruneForPublic(built, null);
+    expect(pub.state.derivedOverlayRequests).toEqual([]);
+    expect(pub.overlays['o-stale']).toBeUndefined();
+    expect(pub.state.headlineOverrideResultId).toBeNull();
   });
 });
