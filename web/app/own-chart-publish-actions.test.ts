@@ -162,6 +162,20 @@ describe('publishOwnChart', () => {
     expect(buildPublishedChart).not.toHaveBeenCalled();
   });
 
+  // B4: shape is checked BEFORE size — JSON.stringify(undefined) is not a
+  // string, so a missing log used to throw inside the size check and land in
+  // the catch as 'error' + reportError, for what is just a malformed payload.
+  it.each([
+    ['undefined', undefined],
+    ['an object', { kind: 'setTitle', title: 'x' }],
+    ['a string', 'not a log'],
+  ])('refuses a non-array log (%s) as invalid, without reporting an error or building', async (_label, log) => {
+    expect(await publishOwnChart(7, log, null)).toEqual({ ok: false, reason: 'invalid' });
+    expect(buildPublishedChart).not.toHaveBeenCalled();
+    expect(reportError).not.toHaveBeenCalled();
+    expect(upsertPublication).not.toHaveBeenCalled();
+  });
+
   it('maps a buildPublishedChart failure to invalid', async () => {
     buildPublishedChart.mockReturnValue({ ok: false, reason: 'render_failed' });
     expect(await publishOwnChart(7, [], null)).toEqual({ ok: false, reason: 'invalid' });

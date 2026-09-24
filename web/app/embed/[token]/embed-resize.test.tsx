@@ -7,7 +7,7 @@
 // this is the first ResizeObserver use).
 import { act, cleanup, render } from '@testing-library/react';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EmbedResize } from './embed-resize.tsx';
 
@@ -173,9 +173,17 @@ describe('EmbedResize', () => {
       return files;
     }
 
+    // C2: "inside this directory", never a bare prefix — a bare startsWith
+    // would also exempt a SIBLING whose name merely begins the same way
+    // (e.g. a future web/app/embed/own-drafts/), silently widening the
+    // sanctioned set. Pinned by the sanity check right below.
+    const isUnder = (dir: string, file: string): boolean => file.startsWith(dir + sep);
+    expect(isUnder(ownEmbedDir, `${ownEmbedDir}-drafts${sep}page.tsx`)).toBe(false);
+    expect(isUnder(ownEmbedDir, join(ownEmbedDir, '[publicId]', 'page.tsx'))).toBe(true);
+
     const offenders = collect(appDir).filter((file) => {
-      if (file.startsWith(thisDir)) return false; // the component + this test itself
-      if (file.startsWith(ownEmbedDir)) return false; // ADR 057 Task 5's own sanctioned importer
+      if (isUnder(thisDir, file)) return false; // the component + this test itself
+      if (isUnder(ownEmbedDir, file)) return false; // ADR 057 Task 5's own sanctioned importer
       return readFileSync(file, 'utf8').includes('embed-resize');
     });
 

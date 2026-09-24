@@ -81,6 +81,11 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
       return { ok: false, reason: 'forbidden' };
     }
 
+    // B4: shape BEFORE size. JSON.stringify(undefined) is undefined (not a
+    // string), so `.length` on it threw a TypeError that landed in the catch
+    // below as an 'error' + a reportError — a malformed client payload is
+    // simply 'invalid', not a server fault worth reporting.
+    if (!Array.isArray(log)) return { ok: false, reason: 'invalid' };
     if (JSON.stringify(log).length > CHART_EDITS_MAX_JSON) return { ok: false, reason: 'invalid' };
 
     const built = buildPublishedChart(dataset, turn, log);
@@ -99,7 +104,7 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
       userId,
       datasetId: dataset.id,
       datasetTurnId: turnId,
-      log: log as unknown[],
+      log,
       sourceLine: normalized.value,
     });
     if (result === null) return { ok: false, reason: 'unavailable' };

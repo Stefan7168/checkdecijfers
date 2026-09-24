@@ -27,3 +27,18 @@ describe('normalizeSourceLine', () => {
     expect(normalizeSourceLine(input)).toEqual(expected);
   });
 });
+
+// B5: bidi override/embedding (U+202A–U+202E) and isolate (U+2066–U+2069)
+// controls are stripped too — they can visually reorder the public source
+// line ("Bron: …") so it reads as something other than what was typed.
+describe('normalizeSourceLine — bidi controls (B5)', () => {
+  it.each(['\u202A', '\u202B', '\u202C', '\u202D', '\u202E', '\u2066', '\u2067', '\u2068', '\u2069'])('strips %j', (ch) => {
+    expect(normalizeSourceLine(`eigen${ch} administratie`)).toEqual({ ok: true, value: 'eigen administratie' });
+  });
+  it('a value that is only bidi controls and spaces becomes null', () => {
+    expect(normalizeSourceLine(' \u202E\u2066 ')).toEqual({ ok: true, value: null });
+  });
+  it('leaves ordinary non-ASCII text alone (e.g. é, –, the LRM-free Dutch/English copy)', () => {
+    expect(normalizeSourceLine('Jaarverslag – café')).toEqual({ ok: true, value: 'Jaarverslag – café' });
+  });
+});

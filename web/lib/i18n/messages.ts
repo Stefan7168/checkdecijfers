@@ -207,7 +207,7 @@ const nl = {
   'ownChart.publish.disclosure':
     'Iedereen met de link kan deze grafiek zien. Verborgen reeksen, en notities of berekeningen die daaraan vastzitten, worden weggelaten. De bestandsnaam wordt nooit getoond. De pagina vermeldt dat de cijfers uit je eigen bestand komen en niet door ons zijn gecontroleerd.',
   'ownChart.publish.sourceLineLabel': 'Bronregel (optioneel)',
-  'ownChart.publish.sourceLinePlaceholder': 'bijv. Bron: onze eigen verkoopcijfers',
+  'ownChart.publish.sourceLinePlaceholder': 'bijv. onze eigen verkoopadministratie',
   'ownChart.publish.sourceLineHelper':
     'Tot 120 tekens. Leeg gelaten toont de pagina “gegevens aangeleverd door de maker”.',
   'ownChart.publish.languageLabel': 'Taal',
@@ -229,9 +229,9 @@ const nl = {
   'ownChart.publish.unpublishConfirmCancel': 'Annuleren',
   'ownChart.publish.failureDisabled': 'Publiceren is op dit moment niet beschikbaar.',
   'ownChart.publish.failureLimit':
-    'Je hebt de limiet van 50 gepubliceerde grafieken bereikt. Maak er eerst een ongedaan.',
+    'Je hebt de limiet van 50 gepubliceerde grafieken bereikt. Depubliceer er eerst een.',
   'ownChart.publish.failureChanged':
-    'Deze grafiek kon niet precies zo worden gepubliceerd als getoond. Probeer het opnieuw nadat je laatste wijziging is opgeslagen.',
+    'Deze grafiek kon niet precies zo worden gepubliceerd als getoond. Herlaad de pagina en probeer het opnieuw.',
   'ownChart.publish.failureInvalid': 'De bronregel is te lang, of deze grafiek kan niet worden gepubliceerd.',
   'ownChart.publish.failureGeneric': 'Er is iets misgegaan. Probeer het opnieuw.',
   // Co-pilot phase 2 (session 113): the own-data card's own title (the CBS
@@ -1589,7 +1589,7 @@ const en: Messages = {
   'ownChart.publish.disclosure':
     'Anyone with the link can see this chart. Hidden series, and notes or calculations tied to them, are left out. The file name is never shown. The page says the numbers come from your own file and were not checked by us.',
   'ownChart.publish.sourceLineLabel': 'Source line (optional)',
-  'ownChart.publish.sourceLinePlaceholder': 'e.g. Source: our own sales records',
+  'ownChart.publish.sourceLinePlaceholder': 'e.g. our own sales records',
   'ownChart.publish.sourceLineHelper':
     'Up to 120 characters. Left empty, the page says “data supplied by the author”.',
   'ownChart.publish.languageLabel': 'Language',
@@ -1612,7 +1612,7 @@ const en: Messages = {
   'ownChart.publish.failureDisabled': 'Publishing is not available right now.',
   'ownChart.publish.failureLimit': 'You have reached the limit of 50 published charts. Unpublish one first.',
   'ownChart.publish.failureChanged':
-    'This chart could not be published exactly as shown. Try again after your last change is saved.',
+    'This chart could not be published exactly as shown. Reload the page and try again.',
   'ownChart.publish.failureInvalid': 'The source line is too long or this chart cannot be published.',
   'ownChart.publish.failureGeneric': 'Something went wrong. Please try again.',
   'userChart.title.placeholder': 'Title above the chart',
