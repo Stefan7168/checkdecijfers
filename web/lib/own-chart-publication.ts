@@ -16,6 +16,7 @@ import { renderInstructionForDataset } from '../backend/attachments/render.ts';
 import {
   toClientInstruction,
   upgradeInstruction,
+  type ChartInstruction,
   type DatasetTurnRecord,
   type UserChartSpec,
   type UserDataset,
@@ -23,6 +24,7 @@ import {
 import { replayLog } from './chart-history.ts';
 import {
   initialDocState,
+  parseCommandLog,
   type ChartCommand,
   type ChartDocState,
   type CommandContext,
@@ -68,8 +70,17 @@ export type BuildPublishedChartResult =
   | { ok: true; state: ChartDocState; spec: UserChartSpec; dataset: UserDataset; dropped: number }
   | { ok: false; reason: 'not_chart' | 'invalid_log' | 'render_failed' };
 
-function isCommandShaped(x: unknown): x is ChartCommand {
-  return x !== null && typeof x === 'object' && !Array.isArray(x) && typeof (x as { kind?: unknown }).kind === 'string';
+/** Fix round 1 (I3): a bare `typeof kind === 'string'` shape check let a
+ * well-shaped-but-incomplete command (e.g. `{ kind: 'addNote' }`, missing
+ * `note`) reach `validateCommand`/`applyCommand`, which read its other
+ * fields unconditionally and throw a TypeError instead of a reachable
+ * refusal. `chart-commands.ts` already exports the real per-command zod
+ * schema for exactly this: parsing a single-entry array through it is the
+ * same "is this a real ChartCommand" check the card's own stored-log
+ * hydration runs, so a stale/malformed log entry is counted as dropped
+ * here exactly as it would be there, never a thrown error. */
+function parseLogEntry(entry: unknown): ChartCommand | undefined {
+  return parseCommandLog([entry])?.[0];
 }
 
 /** Mirrors web/app/dataset-derivation-actions.ts's private
@@ -107,21 +118,31 @@ export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecor
 
   const first = renderInstructionForDataset(dataset, turn.instruction);
   if (first.kind !== 'ok') return { ok: false, reason: 'render_failed' };
-  const firstInstruction = toClientInstruction(turn.instruction);
+  // Fix round 1 (M6): the card never hydrates a raw stored instruction
+  // as-is — replay.ts's own `assistantMessage` upgrades it first
+  // (`upgradeInstruction(envelope.state.lastInstruction)`) before it ever
+  // becomes `state.instruction`/a cache key on the client. A pre-v2 stored
+  // row lacks the `aggregate`/`derived` keys entirely, so an un-upgraded
+  // `toClientInstruction` result would JSON-stringify to a DIFFERENT key
+  // than the same instruction upgraded — matching the card's own hydration
+  // step here keeps this cache's keys identical to the ones a real card
+  // would compute for the same stored data.
+  const firstInstruction = toClientInstruction(upgradeInstruction(turn.instruction) as ChartInstruction);
 
   const cache = new Map<string, UserChartSpec>([[instructionKey(firstInstruction), first.chart]]);
   let garbage = 0;
   const commands: ChartCommand[] = [];
   for (const entry of log) {
-    if (!isCommandShaped(entry)) {
+    const parsed = parseLogEntry(entry);
+    if (parsed === undefined) {
       garbage++;
       continue;
     }
-    commands.push(entry);
-    if (entry.kind === 'setInstruction') {
-      const key = instructionKey(entry.instruction);
+    commands.push(parsed);
+    if (parsed.kind === 'setInstruction') {
+      const key = instructionKey(parsed.instruction);
       if (!cache.has(key)) {
-        const outcome = renderInstructionForDataset(dataset, entry.instruction);
+        const outcome = renderInstructionForDataset(dataset, parsed.instruction);
         if (outcome.kind === 'ok') cache.set(key, outcome.chart);
       }
     }
@@ -157,6 +178,16 @@ export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecor
 export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: true }>, sourceLine: string | null): PublicOwnChart {
   const { state, spec, dataset } = built;
   const hidden = new Set(state.hiddenKeys);
+  // Fix round 1 (C2): mirrors user-chart.tsx's own `plottedRowRefs` (the
+  // card filters a stale note the SAME way, at render — every rowRef the
+  // FINAL spec plots, hidden or not). A `setInstruction` reset can drop a
+  // rowRef out of the chart entirely (a filter/column change), and
+  // `blankedRefs` below only ever knows about points that are STILL on the
+  // current chart but hidden — it says nothing about a rowRef from a PRIOR
+  // instruction that the final spec no longer plots at all. Built from the
+  // spec BEFORE blanking, so a still-plotted-but-hidden point is counted
+  // here too (blankedRefs is checked separately below to still drop it).
+  const plottedRowRefs = new Set(spec.series.flatMap((s) => s.points.map((p) => p.rowRef)));
   const blankedRefs = new Set<string>();
   const series = spec.series.map((s, i) => {
     if (!hidden.has(`s${i}`)) return s;
@@ -166,12 +197,27 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       points: s.points.map((p) => ({ rowRef: p.rowRef, xKey: p.xKey, xLabel: p.xLabel, value: null, formattedValue: null, sourceText: '' })),
     };
   });
+  // Fix round 1 (C1): with no seriesBy, chart.ts's own buildUserChartSpec
+  // groups `series` by y-column, in `instruction.y` order — the SAME order
+  // `yHeaders` lists those columns' headers in (aggregate/derived included:
+  // aggregate keeps one entry per y column in that order; derived collapses
+  // both `series` and `yHeaders` to the SAME one entry). So `yHeaders[i]`
+  // is always that hidden series' own original column header in this case,
+  // and must be blanked exactly like the series' own `label` above. With a
+  // seriesBy set, every series instead shares the SAME single y column
+  // (`yHeaders` has one entry for all of them), so hiding one series never
+  // isolates a header unique to it — nothing to scrub there.
+  const seriesByNull = state.instruction !== null && state.instruction.seriesBy === null;
+  const yHeaders = seriesByNull ? spec.yHeaders.map((h, i) => (hidden.has(`s${i}`) ? '' : h)) : spec.yHeaders;
   const prunedSpec: UserChartSpec = {
     ...spec,
+    yHeaders,
     series,
     provenance: { ...spec.provenance, datasetId: 0, displayName: '', sourceUrlHost: null, contentSha256: '' },
   };
-  const overlayRequests = state.derivedOverlayRequests.filter((r) => r.resultIds.every((id) => !blankedRefs.has(id)));
+  const overlayRequests = state.derivedOverlayRequests.filter((r) =>
+    r.resultIds.every((id) => plottedRowRefs.has(id) && !blankedRefs.has(id)),
+  );
   const overlays: Record<string, ResolvedOverlay> = {};
   if (state.instruction !== null) {
     let instruction: ReturnType<typeof validateInstructionObject> | null = null;
@@ -205,13 +251,15 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       dimmedKeys: [...state.dimmedKeys],
       highlightedKey: state.highlightedKey !== null && hidden.has(state.highlightedKey) ? null : state.highlightedKey,
       presentation: state.presentation,
-      notes: state.notes.filter((n) => !blankedRefs.has(n.resultId)),
+      notes: state.notes.filter((n) => plottedRowRefs.has(n.resultId) && !blankedRefs.has(n.resultId)),
       title: state.title,
       caption: state.caption,
       goalLines: state.goalLines,
       eraShadings: state.eraShadings,
       headlineOverrideResultId:
-        state.headlineOverrideResultId !== null && blankedRefs.has(state.headlineOverrideResultId) ? null : state.headlineOverrideResultId,
+        state.headlineOverrideResultId !== null && plottedRowRefs.has(state.headlineOverrideResultId) && !blankedRefs.has(state.headlineOverrideResultId)
+          ? state.headlineOverrideResultId
+          : null,
       derivedOverlayRequests: overlayRequests,
     },
     overlays,
