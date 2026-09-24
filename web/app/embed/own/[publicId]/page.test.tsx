@@ -18,7 +18,8 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Metadata } from 'next';
 import { buildDatasetProfile } from '../../../../backend/attachments/ingest/profile.ts';
-import type { DatasetTurnRecord, UserDataset } from '../../../../backend/attachments/types.ts';
+import type { ChartInstruction, DatasetTurnRecord, UserChartSpec, UserDataset } from '../../../../backend/attachments/types.ts';
+import { renderInstructionForDataset } from '../../../../backend/attachments/render.ts';
 import type { PublicationRow } from '../../../../backend/attachments/publications.ts';
 import { makeCommand } from '../../../../lib/chart-commands.ts';
 
@@ -30,14 +31,16 @@ const { notFound } = vi.hoisted(() => ({
 vi.mock('next/navigation', () => ({ notFound }));
 
 const { getPublicationByPublicId } = vi.hoisted(() => ({ getPublicationByPublicId: vi.fn() }));
-// isPublicIdShape is real, pure logic (a 22-char base64url regex, publications.ts's
-// own PUBLIC_ID_PATTERN) — reimplemented inline rather than imported, same
-// "keep the pure guard real, mock only the DB call" precedent the CBS route's
-// own test sets for isRedacted.
-vi.mock('../../../../backend/attachments/publications.ts', () => ({
-  getPublicationByPublicId,
-  isPublicIdShape: (s: unknown) => typeof s === 'string' && /^[A-Za-z0-9_-]{22}$/.test(s),
-}));
+// isPublicIdShape is real, pure logic (publications.ts's own
+// PUBLIC_ID_PATTERN) — kept REAL via vi.importActual (C3), never a
+// hand-copied regex that could silently drift from the module's own; only
+// the DB call is mocked.
+vi.mock('../../../../backend/attachments/publications.ts', async () => {
+  const actual = await vi.importActual<typeof import('../../../../backend/attachments/publications.ts')>(
+    '../../../../backend/attachments/publications.ts',
+  );
+  return { getPublicationByPublicId, isPublicIdShape: actual.isPublicIdShape };
+});
 
 const { getDatasetTurnById } = vi.hoisted(() => ({ getDatasetTurnById: vi.fn() }));
 vi.mock('../../../../backend/attachments/read.ts', () => ({ getDatasetTurnById }));
@@ -127,6 +130,9 @@ function turn(overrides: Partial<DatasetTurnRecord> = {}): DatasetTurnRecord {
     createdAt: '2026-09-10T12:00:00.000Z',
     ...overrides,
   };
+}
+function envelopeWithChart(chart: UserChartSpec): DatasetTurnRecord['envelope'] {
+  return { schemaVersion: 1, kind: 'chart', question: 'q', text: 't', instruction: INSTRUCTION, chart } as unknown as DatasetTurnRecord['envelope'];
 }
 function row(overrides: Partial<PublicationRow> = {}): PublicationRow {
   return {
@@ -325,26 +331,61 @@ describe('/embed/own/[publicId] — happy path', () => {
     getPublicationByPublicId.mockResolvedValue(row());
     getDatasetTurnById.mockResolvedValue(turn());
     getDataset.mockResolvedValue(DATASET);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
     expect(userChartViewProps.current).not.toBeNull();
     const props = userChartViewProps.current as { publicView: { accountStyle: unknown } };
     expect(props.publicView.accountStyle).toBeNull();
+    // C1: logged with a short fixed message and NO payload (not the error).
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(consoleError.mock.calls[0]).toHaveLength(1);
+    expect(typeof consoleError.mock.calls[0]![0]).toBe('string');
+    expect(String(consoleError.mock.calls[0]![0])).not.toContain('pool exhausted');
+    consoleError.mockRestore();
   });
 
-  // Spec §3.2 / this task's own ruling: an old log that no longer fully
-  // replays (dropped > 0) still renders what DOES replay — never an error —
-  // since the chart is still valid and pruned; only the publish ACTION
-  // (own-chart-publish-actions.ts) refuses a nonzero drop count at write time.
-  it('still renders when the stored log no longer fully replays (dropped > 0), rather than showing an error', async () => {
+  // Final-review fix A2 (ruling R12): fail closed. An old log that no longer
+  // fully replays (dropped > 0) would render a chart that differs from what
+  // the author published — possibly missing a toggleSeries that hid a series
+  // — so the page refuses instead of rendering "what still replays".
+  it('shows the not-available page when the stored log no longer fully replays (dropped > 0)', async () => {
     process.env.OWN_DATA_PUBLISH_ENABLED = '1';
     getPublicationByPublicId.mockResolvedValue(
       row({ log: [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel'), { kind: 'toggleSeries', key: 's9' }] }),
     );
     getDatasetTurnById.mockResolvedValue(turn());
     getDataset.mockResolvedValue(DATASET);
-    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+    expect(userChartViewProps.current).toBeNull();
+  });
+
+  // Final-review fix A3 (ruling R16): the log's positional series keys only
+  // mean what they meant at publish time if the turn's first render still
+  // names the same series, in the same order, as the envelope's stored chart.
+  it('renders when the envelope\'s stored chart names the same series in the same order as today\'s first render', async () => {
+    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+    const first = renderInstructionForDataset(DATASET, INSTRUCTION as unknown as ChartInstruction);
+    if (first.kind !== 'ok') throw new Error('expected ok');
+    getPublicationByPublicId.mockResolvedValue(row());
+    getDatasetTurnById.mockResolvedValue(turn({ envelope: envelopeWithChart(first.chart) }));
+    getDataset.mockResolvedValue(DATASET);
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
     expect(screen.queryByText(/no longer available/i)).not.toBeInTheDocument();
     expect(userChartViewProps.current).not.toBeNull();
+  });
+
+  it('shows the not-available page when the envelope\'s stored chart names its series in a different order (code drift)', async () => {
+    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+    const first = renderInstructionForDataset(DATASET, INSTRUCTION as unknown as ChartInstruction);
+    if (first.kind !== 'ok') throw new Error('expected ok');
+    const drifted = { ...first.chart, series: [...first.chart.series].reverse() };
+    getPublicationByPublicId.mockResolvedValue(row());
+    getDatasetTurnById.mockResolvedValue(turn({ envelope: envelopeWithChart(drifted) }));
+    getDataset.mockResolvedValue(DATASET);
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+    expect(userChartViewProps.current).toBeNull();
   });
 
   it('sets noindex via the exported metadata', () => {

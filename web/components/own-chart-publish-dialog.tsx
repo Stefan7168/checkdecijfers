@@ -109,10 +109,13 @@ export function OwnChartPublishButton({
 }: {
   turnId: number;
   lang: Lang;
-  /** The card's own current, serialized command log (`serializeHistory
-   * (history)` at the call site) — read fresh on every publish/update click,
-   * never cached, so an update always sends what the author sees right now. */
-  getLog: () => unknown[];
+  /** The card's own current, serialized command log (own-chart-publish-
+   * log.ts's `buildPublishLog` at the call site) — read fresh on every
+   * publish/update click, never cached, so an update always sends what the
+   * author sees right now. `null` means "this log would not reproduce the
+   * chart exactly as shown" (final-review fix A5): the dialog then shows the
+   * 'changed' failure line and never calls the server. */
+  getLog: () => unknown[] | null;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -145,7 +148,7 @@ function OwnChartPublishDialog({
 }: {
   turnId: number;
   lang: Lang;
-  getLog: () => unknown[];
+  getLog: () => unknown[] | null;
   onClose: () => void;
 }) {
   const [publication, setPublication] = useState<Publication | null | 'loading'>('loading');
@@ -187,30 +190,51 @@ function OwnChartPublishDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- turnId is the only input that should ever re-trigger this fetch.
   }, [turnId]);
 
+  // B1: try/finally so a rejected Server Action promise (network drop,
+  // server crash) never leaves the buttons disabled; a rejection shows the
+  // generic failure line rather than nothing.
   async function runPublish() {
+    const log = getLog();
+    if (log === null) {
+      setFailure('changed');
+      return;
+    }
     setSubmitting(true);
     setFailure(null);
     const trimmed = sourceLine.trim();
-    const result = await publishOwnChart(turnId, getLog(), trimmed);
-    setSubmitting(false);
-    if (result.ok) {
-      setPublication({ publicId: result.publicId, sourceLine: trimmed === '' ? null : trimmed });
-      setCopiedLink(false);
-      setCopiedCode(false);
-    } else {
-      setFailure(result.reason);
+    try {
+      const result = await publishOwnChart(turnId, log, trimmed);
+      if (result.ok) {
+        setPublication({ publicId: result.publicId, sourceLine: trimmed === '' ? null : trimmed });
+        setCopiedLink(false);
+        setCopiedCode(false);
+      } else {
+        setFailure(result.reason);
+      }
+    } catch {
+      setFailure('error');
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function runUnpublish() {
     setUnpublishing(true);
-    const result = await unpublishOwnChart(turnId);
-    setUnpublishing(false);
-    setConfirmingUnpublish(false);
-    if (result.ok) {
-      setPublication(null);
-      setFailure(null);
-      setSourceLine('');
+    try {
+      const result = await unpublishOwnChart(turnId);
+      setConfirmingUnpublish(false);
+      if (result.ok) {
+        setPublication(null);
+        setFailure(null);
+        setSourceLine('');
+      } else {
+        setFailure('error');
+      }
+    } catch {
+      setConfirmingUnpublish(false);
+      setFailure('error');
+    } finally {
+      setUnpublishing(false);
     }
   }
 

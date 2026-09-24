@@ -50,7 +50,7 @@ import { getPublicationByPublicId, isPublicIdShape } from '../../../../backend/a
 import { getDatasetTurnById } from '../../../../backend/attachments/read.ts';
 import { getDataset } from '../../../../backend/attachments/store.ts';
 import { chartStylesTablePresent, getUserChartStyle } from '../../../../backend/chart/user-styles.ts';
-import { buildPublishedChart, pruneForPublic } from '../../../../lib/own-chart-publication.ts';
+import { buildPublishedChart, firstRenderMatchesEnvelope, pruneForPublic } from '../../../../lib/own-chart-publication.ts';
 import { UserChartView } from '../../../../components/user-chart.tsx';
 import { getDb } from '../../../../lib/db.ts';
 import { isLang, t, type Lang } from '../../../../lib/i18n/messages.ts';
@@ -139,14 +139,22 @@ export default async function OwnEmbedPage({
   const built = buildPublishedChart(dataset, turn, row.log);
   if (!built.ok) return <NotAvailable lang={lang} />;
 
-  // Spec §3.2 vs. this route's own ruling: the PUBLISH action refuses to
-  // save a log that no longer fully replays (`dropped > 0` -> 'changed').
-  // This READ path takes the opposite stance on purpose — an OLD publication
-  // whose log no longer fully replays against the chart as it stands today
-  // (a later edit elsewhere invalidated one stored command) still renders
-  // everything that DOES replay; the chart is still valid and pruned, so
-  // there is nothing here worth erroring over. `built.dropped` is
-  // deliberately unused below.
+  // Final-review fix A2 (ruling R12) — fail closed. A stored log that no
+  // longer fully replays (`dropped > 0`: a later code change made one of its
+  // commands invalid for this chart) would render a chart that differs from
+  // what the author published — possibly WITHOUT a `toggleSeries` that hid a
+  // series they meant to keep private. The publish action already refuses a
+  // nonzero drop count at write time; the read path now refuses it too.
+  if (built.dropped > 0) return <NotAvailable lang={lang} />;
+
+  // Final-review fix A3 (ruling R16) — code-drift guard: series keys in the
+  // log are positional (s0, s1, ...), so they only mean what they meant at
+  // publish time if the turn's first render still names the same series in
+  // the same order as the chart the turn stored (own-chart-publication.ts's
+  // `firstRenderMatchesEnvelope`). A mismatch refuses rather than risk
+  // hiding the wrong series.
+  if (!firstRenderMatchesEnvelope(dataset, turn)) return <NotAvailable lang={lang} />;
+
   const pub = pruneForPublic(built, row.sourceLine);
 
   // Carried from Task 4's review: a style-load failure must not break the
@@ -160,6 +168,10 @@ export default async function OwnEmbedPage({
       accountStyle = styleRow?.style ?? null;
     }
   } catch {
+    // C1: logged, never swallowed silently — a short fixed message and no
+    // payload (the error object could carry connection details or row
+    // content; the visitor-facing page must not depend on it either way).
+    console.error('own-data embed: author chart style lookup failed; rendering without it');
     accountStyle = null;
   }
 

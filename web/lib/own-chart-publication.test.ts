@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDatasetProfile } from '../backend/attachments/ingest/profile.ts';
 import type { ClientChartInstruction, DatasetTurnRecord, UserDataset } from '../backend/attachments/types.ts';
 import { makeCommand } from './chart-commands.ts';
-import { buildPublishedChart, pruneForPublic } from './own-chart-publication.ts';
+import { buildPublishedChart, firstRenderMatchesEnvelope, pruneForPublic } from './own-chart-publication.ts';
 
 const CELLS = [
   ['Jaar', 'Klant', 'Omzet'],
@@ -374,5 +374,116 @@ describe('pruneForPublic — C2: a note stays anchored to a rowRef the FINAL spe
     expect(pub.state.derivedOverlayRequests).toEqual([]);
     expect(pub.overlays['o-stale']).toBeUndefined();
     expect(pub.state.headlineOverrideResultId).toBeNull();
+  });
+});
+
+// Final-review fix A1 (ruling R11): buildRows unions every series' x keys, so
+// a blanked slot that kept all its points would put a category that exists
+// ONLY in the hidden series on the public axis/table/heatmap. x = customer
+// name, series = segment: 'Minister X' is a VIP-only customer.
+describe('pruneForPublic — A1: a category only the hidden series plots never reaches the payload', () => {
+  const CELLS_SEGMENT = [
+    ['Segment', 'Klant', 'Omzet'],
+    ['VIP', 'Minister X', '500'],
+    ['VIP', 'Bakker', '100'],
+    ['Normaal', 'Bakker', '50'],
+    ['Normaal', 'Jansen', '60'],
+  ];
+  const datasetSegment: UserDataset = {
+    id: 45,
+    userId: 'u1',
+    sourceKind: 'file_csv',
+    displayName: 'segmenten.csv',
+    sourceUrl: null,
+    cells: CELLS_SEGMENT,
+    profile: buildDatasetProfile(CELLS_SEGMENT),
+    status: 'ready',
+    contentSha256: 'feedface',
+    createdAt: '2026-09-06T00:00:00Z',
+  };
+  const instructionSegment = {
+    version: 2,
+    kind: 'bar',
+    x: 'c1',
+    y: ['c2'],
+    seriesBy: 'c0',
+    filters: [],
+    sort: null,
+    limit: null,
+    aggregate: null,
+    derived: null,
+    unsupported: null,
+    reading: '',
+    confidence: 1,
+  };
+  const turnSegment = {
+    id: 10,
+    userId: 'u1',
+    datasetId: 45,
+    kind: 'chart',
+    chartEmitted: true,
+    instruction: instructionSegment,
+  } as unknown as DatasetTurnRecord;
+
+  it('drops the hidden-only category from the blanked slot, keeps the shared one, keeps the slot', () => {
+    const built = buildPublishedChart(datasetSegment, turnSegment, [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')]);
+    if (!built.ok) throw new Error('expected ok');
+    // Sanity: s0 = VIP (first appearance), really plotting Minister X.
+    expect(built.spec.series.map((s) => s.label)).toEqual(['VIP', 'Normaal']);
+    expect(built.spec.series[0]!.points.map((p) => p.xKey)).toContain('Minister X');
+
+    const pub = pruneForPublic(built, null);
+    expect(JSON.stringify(pub)).not.toContain('Minister X');
+    expect(JSON.stringify(pub)).not.toContain('VIP');
+    expect(JSON.stringify(pub)).not.toContain('500');
+    expect(pub.spec.series).toHaveLength(2);
+    expect(pub.spec.series[0]!.label).toBe('');
+    expect(pub.spec.series[0]!.points.map((p) => p.xKey)).toEqual(['Bakker']);
+    expect(pub.spec.series[1]!.label).toBe('Normaal');
+  });
+
+  it('drops an era shading anchored to a hidden-only category, keeps one between visible categories', () => {
+    const built = buildPublishedChart(datasetSegment, turnSegment, [
+      makeCommand({ kind: 'addEraShading', era: { id: 'e-hidden', fromPeriodCode: 'Minister X', toPeriodCode: 'Bakker', label: 'geheim tijdperk' } }, 'panel'),
+      makeCommand({ kind: 'addEraShading', era: { id: 'e-visible', fromPeriodCode: 'Bakker', toPeriodCode: 'Jansen', label: 'open tijdperk' } }, 'panel'),
+      makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    expect(built.dropped).toBe(0);
+    expect(built.state.eraShadings.map((e) => e.id)).toEqual(['e-hidden', 'e-visible']);
+
+    const pub = pruneForPublic(built, null);
+    expect(pub.state.eraShadings.map((e) => e.id)).toEqual(['e-visible']);
+    expect(JSON.stringify(pub)).not.toContain('Minister X');
+  });
+});
+
+// Final-review fix A3 (ruling R16): series keys are positional (s0, s1, ...),
+// so a stored log only means what the author meant if the FIRST render of the
+// turn's instruction still produces the same series, in the same order, as
+// the chart the turn stored when it was made.
+describe('firstRenderMatchesEnvelope — A3 code-drift guard', () => {
+  function withEnvelope(chart: unknown): DatasetTurnRecord {
+    return { ...turn, envelope: { schemaVersion: 1, kind: 'chart', question: 'q', text: 't', instruction, ...(chart === undefined ? {} : { chart }) } } as unknown as DatasetTurnRecord;
+  }
+  it('true when the stored chart names the same series in the same order', () => {
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope({ series: [{ label: 'Geheim BV' }, { label: 'Open NV' }] }))).toBe(true);
+  });
+  it('false when the order differs (s0 would now mean a different series)', () => {
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope({ series: [{ label: 'Open NV' }, { label: 'Geheim BV' }] }))).toBe(false);
+  });
+  it('false when a label differs or the count differs', () => {
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope({ series: [{ label: 'Geheim BV' }, { label: 'Ander NV' }] }))).toBe(false);
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope({ series: [{ label: 'Geheim BV' }] }))).toBe(false);
+  });
+  it('false (fail closed) when the stored chart is present but malformed', () => {
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope({ series: 'nope' }))).toBe(false);
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope('nope'))).toBe(false);
+  });
+  it('true (check skipped) only when the envelope carries no chart at all', () => {
+    expect(firstRenderMatchesEnvelope(dataset, withEnvelope(undefined))).toBe(true);
+  });
+  it('false for a turn with no instruction', () => {
+    expect(firstRenderMatchesEnvelope(dataset, { ...withEnvelope(undefined), instruction: null })).toBe(false);
   });
 });

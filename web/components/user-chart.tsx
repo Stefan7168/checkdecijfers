@@ -95,7 +95,6 @@ import type { PublicChartState } from '../lib/own-chart-publication.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { exampleChips, ownDataCapabilities } from '../lib/chart-capabilities.ts';
 import { acceptReply, type ChipOpens } from '../lib/chart-copilot-reply.ts';
-import { serializeHistory } from '../lib/chart-history.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import {
@@ -156,6 +155,7 @@ import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { DownloadCsvButton } from './download-csv-button.tsx';
 import { OwnChartPublishButton } from './own-chart-publish-dialog.tsx';
+import { buildPublishLog } from '../lib/own-chart-publish-log.ts';
 import { ChartEditableText } from './chart-editable-text.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -1205,7 +1205,21 @@ function UserChartCard({
   // guards, which are false for every own-data spec, so the three forms
   // could never become `activeForm` here. Every other form is the shared
   // policy unchanged (it delegates).
-  const activeForm = ownDataFallbackForm(state.form, plottable, seriesCount);
+  // Final-review fix A6 (public mode only): pruneForPublic blanks a hidden
+  // series' values to null, so the shared heatmap guard — which needs a real
+  // value in every cell of every series — would always refuse a published
+  // heatmap that has a hidden series and quietly degrade it to the table.
+  // The public heatmap draws only the VISIBLE series (the author's own
+  // heatmap already passed this guard over all of them, so every visible
+  // series is complete), so it is checked over those. Every other form, and
+  // the author's card, keep the shared policy unchanged.
+  const activeForm =
+    publicMode && state.form === 'heatmap'
+      ? (() => {
+          const visible = plottable.series.filter((_, i) => !state.hiddenKeys.has(`s${i}`));
+          return heatmapFormAllowed({ ...plottable, series: visible }, visible.length) ? 'heatmap' : 'table';
+        })()
+      : ownDataFallbackForm(state.form, plottable, seriesCount);
   // Own-data chart-fit parity (Task 1): the ONE definition of "draws no
   // chart" — the table and the heatmap — shared with chart.tsx and
   // chart-capabilities.ts through chart-view-state.ts's `isTabularForm`, so
@@ -1317,6 +1331,11 @@ function UserChartCard({
     else if (fontFamily !== null) ensureFontLoaded({ family: fontFamily, source: 'google', stack: fontStack(fontFamily)! });
   }, [fontFamily]);
   const { rows, seriesMeta } = buildRows(plottable, (i) => seriesColor(pres, i));
+  // Public mode (A6, requirement 4): a hidden series' slot is kept but
+  // blanked, so every LISTING of series — legend, table columns, heatmap
+  // rows — leaves it out rather than showing an empty-headed column/row. The
+  // author's own card lists every series (a hidden one stays restorable).
+  const listedSeriesMeta = publicMode ? seriesMeta.filter((s) => !state.hiddenKeys.has(s.key)) : seriesMeta;
   const plan = valueLabelPlan(plottable);
   const tickByValue = new Map(plan.axisTicks.map((tick) => [tick.value, tick]));
   // Goal lines / era shading (mirrors chart.tsx): a stored command names a
@@ -1340,6 +1359,16 @@ function UserChartCard({
   // note back with its data.
   const plottedRowRefs = new Set(activeSpec.series.flatMap((s) => s.points.map((p) => p.rowRef)));
   const visibleNotes = state.notes.filter((note) => plottedRowRefs.has(note.resultId));
+  // A7: the eras the public list can name — both ends resolved to a period
+  // label the chart plots, exactly the eras the plot itself can place (the
+  // ReferenceArea below skips the same unresolvable ones).
+  const publicEras = publicMode
+    ? state.eraShadings.flatMap((era) => {
+        const fromLabel = periodLabelByCode.get(era.fromPeriodCode);
+        const toLabel = periodLabelByCode.get(era.toPeriodCode);
+        return fromLabel === undefined || toLabel === undefined ? [] : [{ era, fromLabel, toLabel }];
+      })
+    : [];
 
   // --- derived overlays (difference / mean) ---------------------------------
   // Mirrors chart.tsx's own Task 7 split exactly: the RECIPE (which points,
@@ -2081,7 +2110,7 @@ function UserChartCard({
             <th scope="col" className="border-b border-border px-2 py-1 text-left font-medium text-muted-foreground">
               {activeSpec.xHeader}
             </th>
-            {seriesMeta.map((s) => (
+            {listedSeriesMeta.map((s) => (
               <th key={s.key} scope="col" className="border-b border-border px-2 py-1 text-right font-medium text-muted-foreground">
                 {s.label}
               </th>
@@ -2094,7 +2123,7 @@ function UserChartCard({
               <th scope="row" className="px-2 py-1 text-left font-normal text-foreground">
                 {String(row.periodLabel)}
               </th>
-              {seriesMeta.map((s) => (
+              {listedSeriesMeta.map((s) => (
                 <td
                   key={s.key}
                   className="px-2 py-1 text-right text-foreground"
@@ -2592,7 +2621,7 @@ function UserChartCard({
         // `tabpanel` id the tablist points at. Mirrors chart.tsx's own
         // canvas dispatch. Mounted (and its model built) only in this form.
         <div id={panelId} role="tabpanel" aria-label={t(chartLang, 'chart.form.heatmap')} className="mt-2 overflow-x-auto">
-          <UserHeatmapGrid xHeader={activeSpec.xHeader} rows={rows} seriesMeta={seriesMeta} label={heading} />
+          <UserHeatmapGrid xHeader={activeSpec.xHeader} rows={rows} seriesMeta={listedSeriesMeta} label={heading} />
         </div>
       ) : activeForm === 'table' ? (
         tableNode
@@ -2618,7 +2647,7 @@ function UserChartCard({
             // rendered as an empty chip. Signed-in path unchanged: the
             // reader's own card still lists a hidden series (dimmed) so they
             // can bring it back.
-            seriesMeta={publicMode ? seriesMeta.filter((s) => !state.hiddenKeys.has(s.key)) : seriesMeta}
+            seriesMeta={listedSeriesMeta}
             hiddenKeys={state.hiddenKeys}
             dimmedKeys={state.dimmedKeys}
             highlightedKey={state.highlightedKey}
@@ -2678,14 +2707,12 @@ function UserChartCard({
         * to a hidden point; the rest are exactly what the author meant a
         * reader to see) is still shown, read-only, same binding convention
         * ChartNotes itself uses (`{seriesLabel} · {periodLabel}: {text}` —
-        * both labels are spec strings, U6-safe). Goal lines/era shadings
-        * need no read-only substitute: their VALUE is already drawn on the
-        * plot itself (the `<ReferenceLine>`/`<ReferenceArea>` below, built
-        * straight from `state.goalLines`/`state.eraShadings`) — only their
-        * own add/remove editor list is skipped here. */}
+        * both labels are spec strings, U6-safe). Goal lines and era
+        * shadings are listed read-only in the same list (final-review fix
+        * A7) — only their add/remove editors are skipped here. */}
       {!tabularForm ? (
         publicMode ? (
-          visibleNotes.length > 0 ? (
+          visibleNotes.length > 0 || state.goalLines.length > 0 || publicEras.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-1.5" data-testid="public-notes-list">
               {visibleNotes.map((note) => (
                 <li key={note.id} className="text-sm">
@@ -2693,6 +2720,27 @@ function UserChartCard({
                     {note.seriesLabel} · {note.periodLabel}:{' '}
                   </span>
                   {note.text}
+                </li>
+              ))}
+              {/* Final-review fix A7 (ruling R9): the plot draws a goal line
+                * and an era band WITHOUT their typed labels (those stay out
+                * of the export container), so a visitor would otherwise see
+                * an unexplained line/band. Listed read-only here, the same
+                * binding the author's own ChartGoalLine/ChartEraShading lists
+                * use: the goal line's author-typed value + label, the era's
+                * two period labels (spec strings) + label. */}
+              {state.goalLines.map((line) => (
+                <li key={line.id} className="text-sm" data-testid="public-goal-line">
+                  <span className="text-xs text-muted-foreground">{String(line.value)}: </span>
+                  {line.label}
+                </li>
+              ))}
+              {publicEras.map(({ era, fromLabel, toLabel }) => (
+                <li key={era.id} className="text-sm" data-testid="public-era-shading">
+                  <span className="text-xs text-muted-foreground">
+                    {fromLabel} – {toLabel}:{' '}
+                  </span>
+                  {era.label}
                 </li>
               ))}
             </ul>
@@ -3007,7 +3055,17 @@ function UserChartCard({
             * in public mode — same posture as DownloadCsvButton right
             * above; the public route never has an edit context anyway. */}
           {edit?.publishEnabled === true && !publicMode ? (
-            <OwnChartPublishButton turnId={edit.turnId} lang={chartLang} getLog={() => serializeHistory(history)} />
+            <OwnChartPublishButton
+              turnId={edit.turnId}
+              lang={chartLang}
+              // Final-review fixes A4 + A5 (own-chart-publish-log.ts): the
+              // SEALED log (an unfinished colour drag is part of what the
+              // author sees), and only if replaying it from this card's own
+              // starting document reproduces the current series/data/form —
+              // `null` otherwise, which the dialog shows as "could not be
+              // published exactly as shown" without calling the server.
+              getLog={() => buildPublishLog(history, initial, ctxForReplay, state)}
+            />
           ) : null}
           {/* The image export needs the one chart <svg> inside
             * `containerRef`: the table and heatmap draw none (they sit

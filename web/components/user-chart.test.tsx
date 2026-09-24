@@ -42,6 +42,16 @@ const wholeVerificationActions = vi.hoisted(() => ({
 }));
 vi.mock('../app/dataset-whole-verification-actions.ts', () => wholeVerificationActions);
 
+// Final-review fixes A4/A5: the Publish dialog's Server Actions, mocked at
+// the module boundary (own-chart-publish-dialog.test.tsx's own shape) so the
+// card's publish WIRING — which log it hands over — can be asserted.
+const publishActions = vi.hoisted(() => ({
+  getOwnChartPublication: vi.fn().mockResolvedValue(null),
+  publishOwnChart: vi.fn().mockResolvedValue({ ok: true, publicId: 'abc123' }),
+  unpublishOwnChart: vi.fn().mockResolvedValue({ ok: true }),
+}));
+vi.mock('../app/own-chart-publish-actions.ts', () => publishActions);
+
 import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
 import { UserChartView, type UserChartEditContext, type UserChartPublicView } from './user-chart.tsx';
 
@@ -53,6 +63,9 @@ afterEach(() => {
   datasetActions.renderDatasetInstruction.mockReset();
   derivationActions.requestDatasetDerivation.mockReset();
   wholeVerificationActions.requestDatasetWholeVerification.mockReset();
+  publishActions.getOwnChartPublication.mockResolvedValue(null);
+  publishActions.publishOwnChart.mockResolvedValue({ ok: true, publicId: 'abc123' });
+  publishActions.unpublishOwnChart.mockResolvedValue({ ok: true });
 });
 
 function point(overrides: Partial<UserChartSpec['series'][0]['points'][0]> = {}) {
@@ -442,6 +455,58 @@ describe('UserChartView — Publish button (own-data publish, ADR 057, Task 6)',
   it('never renders Publish in public mode, even if publishEnabled were somehow true', () => {
     render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} publicView={publicChartView()} />);
     expect(screen.queryByRole('button', { name: 'Publiceren' })).toBeNull();
+  });
+
+  /** Opens the publish dialog from the card's own trigger and clicks the
+   * in-dialog Publish button (same accessible name — scoped via `within`). */
+  async function publishFromCard(): Promise<HTMLElement> {
+    fireEvent.click(screen.getByRole('button', { name: 'Publiceren' }));
+    const dialog = await screen.findByRole('dialog', { name: /grafiek publiceren/i });
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Publiceren' })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Publiceren' }));
+    return dialog;
+  }
+
+  it('publishes the card\'s own command log (a legend toggle) for this turn', async () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Reeksen' })).getByRole('button', { name: 'Amsterdam' }));
+    await publishFromCard();
+    await waitFor(() => expect(publishActions.publishOwnChart).toHaveBeenCalledTimes(1));
+    const [turnId, log] = publishActions.publishOwnChart.mock.calls[0]! as [number, { kind: string; key?: string }[]];
+    expect(turnId).toBe(7);
+    expect(log.map((c) => [c.kind, c.key])).toEqual([['toggleSeries', 's0']]);
+  });
+
+  // A4 (ruling R14): a colour drag is a TRANSIENT history entry until
+  // sealed, and bare serializeHistory skips it — the published chart would
+  // lack the colour the author is looking at. Publishing mid-drag (the Style
+  // panel still open, so nothing has sealed it) must include it.
+  it('A4: an unsealed colour drag is part of the published log', async () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    await screen.findByRole('tab', { name: 'Grafiek' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Kleuren' }));
+    const picker = (await screen.findByLabelText('Kleur van Amsterdam kiezen')) as HTMLInputElement;
+    fireEvent.change(picker, { target: { value: '#ff8800' } });
+    await publishFromCard();
+    await waitFor(() => expect(publishActions.publishOwnChart).toHaveBeenCalledTimes(1));
+    const log = publishActions.publishOwnChart.mock.calls[0]![1] as { kind: string }[];
+    expect(log.map((c) => c.kind)).toEqual(['setPresentation']);
+  });
+
+  // A5 (ruling R13): the history keeps at most HISTORY_CAP (200) entries, so
+  // after 201 toggles of the same series the oldest toggle is trimmed — the
+  // remaining 200 replay to Amsterdam SHOWN while the author sees it HIDDEN.
+  // Publishing that log would expose a series the author hid, so the card
+  // refuses client-side: the 'changed' line, and the server is never called.
+  it('A5: refuses (changed line, no server call) when the trimmed history no longer replays to what the author sees', async () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
+    const toggle = within(screen.getByRole('group', { name: 'Reeksen' })).getByRole('button', { name: 'Amsterdam' });
+    for (let i = 0; i < 201; i++) fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    const dialog = await publishFromCard();
+    await waitFor(() => expect(within(dialog).getByText(/niet precies zo worden gepubliceerd/i)).toBeInTheDocument());
+    expect(publishActions.publishOwnChart).not.toHaveBeenCalled();
   });
 });
 
@@ -2862,6 +2927,89 @@ describe('publicView (ADR 057)', () => {
       // The visible series is unaffected.
       expect(container.textContent).toContain('Open NV');
     });
+  });
+});
+
+// Final-review fixes A6/A7 — hand-built specs shaped exactly as pruneForPublic
+// leaves them: the hidden slot kept, label '' and every value null.
+function blankedSlot(points: UserChartSpec['series'][0]['points']): UserChartSpec['series'][0] {
+  return { label: '', points: points.map((p) => ({ ...p, value: null, formattedValue: null, sourceText: '' })) };
+}
+
+/** Three series × three years, s0 ('Utrecht') blanked as pruneForPublic
+ * would leave it — the two visible series are a complete 2 × 3 heatmap grid. */
+function publicThreeSeriesSpecS0Blanked(): UserChartSpec {
+  const base = twoSeriesThreeYearSpec();
+  const utrecht = [
+    point({ rowRef: 'r1:c3', xKey: '2022', xLabel: '2022', value: 70, formattedValue: '70,0', sourceText: '70,0' }),
+    point({ rowRef: 'r2:c3', xKey: '2023', xLabel: '2023', value: 80, formattedValue: '80,0', sourceText: '80,0' }),
+    point({ rowRef: 'r3:c3', xKey: '2024', xLabel: '2024', value: 90, formattedValue: '90,0', sourceText: '90,0' }),
+  ];
+  return { ...base, series: [blankedSlot(utrecht), ...base.series] };
+}
+
+describe('publicView — A6: a hidden series is left out of the table and the heatmap (public mode only)', () => {
+  it('the public table has no column for the hidden slot (no empty header)', () => {
+    const s = twoSeriesSpec();
+    const pruned = { ...s, series: [blankedSlot(s.series[0]!.points), s.series[1]!] };
+    render(<UserChartView spec={pruned} publicView={publicChartView({ state: publicChartState({ form: 'table', hiddenKeys: ['s0'] }) })} />);
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent);
+    expect(headers).toEqual(['Year', 'Rotterdam']);
+    // Two cells per row: the period + Rotterdam's value, nothing blank for the slot.
+    for (const row of screen.getAllByRole('row').slice(1)) expect(within(row).getAllByRole('cell')).toHaveLength(1);
+  });
+
+  it('the author\'s own table still lists a hidden series (restorable), unchanged', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Reeksen' })).getByRole('button', { name: 'Amsterdam' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Tabel' }));
+    expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Year', 'Amsterdam', 'Rotterdam']);
+  });
+
+  it('a published heatmap with a hidden series draws the heatmap over the visible series only', () => {
+    const { container } = render(
+      <UserChartView
+        spec={publicThreeSeriesSpecS0Blanked()}
+        publicView={publicChartView({ state: publicChartState({ form: 'heatmap', hiddenKeys: ['s0'] }) })}
+      />,
+    );
+    const grid = container.querySelector<HTMLElement>('[data-testid="user-heatmap-grid"]');
+    expect(grid).not.toBeNull();
+    expect(within(grid!).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Year', 'Amsterdam', 'Rotterdam']);
+    expect(within(grid!).getAllByRole('cell')).toHaveLength(6);
+  });
+});
+
+describe('publicView — A7: goal lines and era shadings are listed read-only', () => {
+  it('lists a goal line (value + label) and an era (period labels + label)', () => {
+    render(
+      <UserChartView
+        spec={twoSeriesThreeYearSpec()}
+        publicView={publicChartView({
+          state: publicChartState({
+            goalLines: [{ id: 'g1', value: 35, label: 'Doel omzet' }],
+            eraShadings: [{ id: 'e1', fromPeriodCode: '2022', toPeriodCode: '2023', label: 'Crisisjaren' }],
+          }),
+        })}
+      />,
+    );
+    const list = screen.getByTestId('public-notes-list');
+    expect(within(list).getByTestId('public-goal-line')).toHaveTextContent('35: Doel omzet');
+    expect(within(list).getByTestId('public-era-shading')).toHaveTextContent('2022 – 2023: Crisisjaren');
+    // Still read-only: no remove controls.
+    expect(within(list).queryByRole('button')).toBeNull();
+  });
+
+  it('the public digit scan stays clean with a goal line (its author-typed value is allowed, like note text)', () => {
+    const s = spec({ provenance: { ...spec().provenance, displayName: '' } });
+    const { container } = render(
+      <UserChartView
+        spec={s}
+        publicView={publicChartView({ state: publicChartState({ goalLines: [{ id: 'g1', value: 35, label: 'Doel' }] }) })}
+      />,
+    );
+    expect(screen.getByTestId('public-goal-line')).toBeInTheDocument();
+    expectPublicDigitsTraceToSpec(container, s, ['35']);
   });
 });
 

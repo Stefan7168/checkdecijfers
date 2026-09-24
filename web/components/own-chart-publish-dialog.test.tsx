@@ -63,6 +63,8 @@ describe('OwnChartPublishButton / dialog', () => {
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(within(dialog).getByLabelText(/source line/i)).toBeInTheDocument());
 
+    // B2: the placeholder carries no "Source:" prefix — the page adds it.
+    expect(within(dialog).getByLabelText(/source line/i)).toHaveAttribute('placeholder', 'e.g. our own sales records');
     fireEvent.change(within(dialog).getByLabelText(/source line/i), { target: { value: '  our own sales records  ' } });
     fireEvent.click(within(dialog).getByRole('button', { name: /^publish$/i }));
 
@@ -120,6 +122,64 @@ describe('OwnChartPublishButton / dialog', () => {
     await waitFor(() => expect(within(dialog).getByRole('button', { name: /^publish$/i })).toBeInTheDocument());
     fireEvent.click(within(dialog).getByRole('button', { name: /^publish$/i }));
     await waitFor(() => expect(within(dialog).getByText(expected)).toBeInTheDocument());
+  });
+});
+
+// Final-review fix A5: getLog() returning null means "this log would not
+// reproduce the chart exactly as shown" — refused client-side, never sent.
+describe('OwnChartPublishButton — a log that cannot reproduce the chart (A5)', () => {
+  it('shows the "changed" failure line and never calls publishOwnChart when getLog() returns null', async () => {
+    renderButton({ getLog: () => null });
+    fireEvent.click(screen.getByRole('button', { name: /^publish$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /^publish$/i })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: /^publish$/i }));
+    await waitFor(() => expect(within(dialog).getByText(/could not be published exactly as shown/i)).toBeInTheDocument());
+    expect(publishOwnChart).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole('button', { name: /^publish$/i })).not.toBeDisabled();
+  });
+});
+
+// B1: a rejected Server Action must never leave a button disabled, and must
+// say something (the generic line) rather than nothing.
+describe('OwnChartPublishButton — rejected actions (B1)', () => {
+  it('a rejected publish shows the generic line and re-enables Publish', async () => {
+    publishOwnChart.mockRejectedValue(new Error('network down'));
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: /^publish$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /^publish$/i })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: /^publish$/i }));
+    await waitFor(() => expect(within(dialog).getByText(/something went wrong/i)).toBeInTheDocument());
+    expect(within(dialog).getByRole('button', { name: /^publish$/i })).not.toBeDisabled();
+  });
+
+  async function openPublishedAndConfirmUnpublish() {
+    getOwnChartPublication.mockResolvedValue({ publicId: 'xyz789', sourceLine: null });
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: /^publish$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: /^unpublish$/i })).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: /^unpublish$/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /yes, unpublish/i }));
+    return dialog;
+  }
+
+  it('a rejected unpublish shows the generic line and leaves no button disabled', async () => {
+    unpublishOwnChart.mockRejectedValue(new Error('network down'));
+    const dialog = await openPublishedAndConfirmUnpublish();
+    await waitFor(() => expect(within(dialog).getByText(/something went wrong/i)).toBeInTheDocument());
+    // Still published (nothing was removed), and the Unpublish control is usable again.
+    expect(within(dialog).getByText(/\/embed\/own\/xyz789/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /^unpublish$/i })).not.toBeDisabled();
+    for (const button of within(dialog).getAllByRole('button')) expect(button).not.toBeDisabled();
+  });
+
+  it('an unpublish that returns ok:false shows the generic line', async () => {
+    unpublishOwnChart.mockResolvedValue({ ok: false });
+    const dialog = await openPublishedAndConfirmUnpublish();
+    await waitFor(() => expect(within(dialog).getByText(/something went wrong/i)).toBeInTheDocument());
+    expect(within(dialog).getByText(/\/embed\/own\/xyz789/)).toBeInTheDocument();
   });
 });
 

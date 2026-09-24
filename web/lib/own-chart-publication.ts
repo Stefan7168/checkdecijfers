@@ -166,12 +166,42 @@ export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecor
 }
 
 /**
+ * Final-review fix A3 (ruling R16) — a code-drift guard for the public page.
+ * A stored log names series POSITIONALLY (`s0`, `s1`, ...): `toggleSeries
+ * s0` means "hide whichever series the chart drew first". That only means
+ * what the author meant if rendering the turn's own instruction today still
+ * yields the same series, in the same order, as the chart the turn stored
+ * when it was made (`envelope.chart`). If a later code change reordered or
+ * relabelled them, the same log would hide a DIFFERENT series — so the page
+ * refuses instead. Skipped only when the envelope carries no chart at all
+ * (nothing to compare against); a chart that is present but malformed fails
+ * closed.
+ */
+export function firstRenderMatchesEnvelope(dataset: UserDataset, turn: DatasetTurnRecord): boolean {
+  if (turn.instruction === null) return false;
+  const envelope: unknown = turn.envelope;
+  const chart = envelope !== null && typeof envelope === 'object' ? (envelope as { chart?: unknown }).chart : undefined;
+  if (chart === undefined || chart === null) return true;
+  if (typeof chart !== 'object') return false;
+  const stored = (chart as { series?: unknown }).series;
+  if (!Array.isArray(stored)) return false;
+  const first = renderInstructionForDataset(dataset, turn.instruction);
+  if (first.kind !== 'ok') return false;
+  const now = first.chart.series.map((s) => s.label);
+  return (
+    stored.length === now.length &&
+    stored.every((s, i) => s !== null && typeof s === 'object' && (s as { label?: unknown }).label === now[i])
+  );
+}
+
+/**
  * The single enforcement point of invariant P1 (docs/05-data-rules.md): a
  * hidden series' label/value/source text, the dataset's own file name/
  * source url/content hash/raw cells/profile, and the reader's command log
  * itself must never reach an anonymous visitor. A hidden series' SLOT is
  * kept (blanked, not removed) so the remaining series' keys/colours never
- * shift; anything anchored to a hidden point (a note, an overlay touching
+ * shift — holding only the points at categories a visible series also plots
+ * (A1: never a category only the hidden series has); anything anchored to a hidden point (a note, an overlay touching
  * it, the headline override, the highlight) is dropped rather than shown
  * against a blank.
  */
@@ -189,12 +219,23 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
   // here too (blankedRefs is checked separately below to still drop it).
   const plottedRowRefs = new Set(spec.series.flatMap((s) => s.points.map((p) => p.rowRef)));
   const blankedRefs = new Set<string>();
+  // Final-review fix A1 (ruling R11): the x categories at least one VISIBLE
+  // series plots. buildRows (chart.tsx) unions every series' x keys into the
+  // axis/table/heatmap rows, so a blanked slot that kept ALL its points would
+  // still put a category that exists ONLY in the hidden series (x = customer
+  // name, series = segment, 'VIP' hidden, customer 'Minister X' only in VIP)
+  // on the public page. A blanked slot therefore keeps only the points whose
+  // xKey a visible series also plots — the slot itself (and so every other
+  // series' positional key/colour) is still kept.
+  const visibleXKeys = new Set(spec.series.flatMap((s, i) => (hidden.has(`s${i}`) ? [] : s.points.map((p) => p.xKey))));
   const series = spec.series.map((s, i) => {
     if (!hidden.has(`s${i}`)) return s;
     for (const p of s.points) blankedRefs.add(p.rowRef);
     return {
       label: '',
-      points: s.points.map((p) => ({ rowRef: p.rowRef, xKey: p.xKey, xLabel: p.xLabel, value: null, formattedValue: null, sourceText: '' })),
+      points: s.points
+        .filter((p) => visibleXKeys.has(p.xKey))
+        .map((p) => ({ rowRef: p.rowRef, xKey: p.xKey, xLabel: p.xLabel, value: null, formattedValue: null, sourceText: '' })),
     };
   });
   // Fix round 2 (C1, correcting fix round 1's wrong assumption): `yHeaders`
@@ -278,7 +319,13 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       title: state.title,
       caption: state.caption,
       goalLines: state.goalLines,
-      eraShadings: state.eraShadings,
+      // A1 follow-through: an era names its ends by xKey (the category
+      // string itself for own-data — chart.ts sets xKey = xLabel), so an era
+      // anchored to a hidden-only category would carry that category to the
+      // visitor even though no row draws it. Kept only when BOTH ends are
+      // categories a visible series plots (the card could not place it
+      // otherwise anyway).
+      eraShadings: state.eraShadings.filter((e) => visibleXKeys.has(e.fromPeriodCode) && visibleXKeys.has(e.toPeriodCode)),
       headlineOverrideResultId:
         state.headlineOverrideResultId !== null && plottedRowRefs.has(state.headlineOverrideResultId) && !blankedRefs.has(state.headlineOverrideResultId)
           ? state.headlineOverrideResultId
