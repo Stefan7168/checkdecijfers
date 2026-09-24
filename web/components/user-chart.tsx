@@ -116,6 +116,7 @@ import {
 } from '../lib/chart-view-state.ts';
 import { useLang } from '../lib/i18n/lang-provider.tsx';
 import { t, type Lang, type MessageKey } from '../lib/i18n/messages.ts';
+import { instructionKey, toCommandSpec } from '../lib/user-chart-command-spec.ts';
 import { buildUserChartCsv } from '../lib/user-csv.ts';
 import {
   AxisTick,
@@ -232,42 +233,6 @@ export function toPlottableSpec(spec: UserChartSpec): PlottableSpec {
       })),
     })),
   };
-}
-
-/** The command validator (chart-commands.ts) reads only `kind`, the series
- * INDEX, `periodCode` and `resultId`; it never touches a CBS-only field. Its
- * parameter type is nevertheless `Pick<ChartSpec, 'kind' | 'series'>`, so
- * this maps the own-data spec onto that interface with inert placeholders for
- * the CBS metadata it demands and nothing reads. D11 is untouched: the result
- * is missing every OTHER ChartSpec field (title, dims, unit, attribution, …),
- * so it still cannot be handed to `ChartView` or to any CBS builder — it
- * exists only inside `validateCommand`. */
-function toCommandSpec(spec: UserChartSpec): CommandContext['spec'] {
-  return {
-    kind: spec.kind,
-    series: spec.series.map((series) => ({
-      label: series.label,
-      regionCode: null,
-      points: series.points.map((point) => ({
-        resultId: point.rowRef,
-        periodCode: point.xKey,
-        periodLabel: point.xLabel,
-        value: point.value,
-        formattedValue: point.formattedValue,
-        decimals: 0,
-        status: '',
-        provisional: false,
-        valueAttribute: '',
-      })),
-    })),
-  };
-}
-
-/** The rendered-spec cache's key. An instruction is a small, flat, closed-
- * vocabulary object, so its JSON is a sound identity — and it is the same
- * value the doorways hand us, never a derived label. */
-function instructionKey(instruction: ClientChartInstruction | null): string {
-  return JSON.stringify(instruction);
 }
 
 /** The one line a failed render shows. `invalid` is the reader's own doing
