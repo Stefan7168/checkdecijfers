@@ -1181,7 +1181,9 @@ function UserChartCard({
   // computed — never a fresh `initialDocState` (that would drop the
   // author's title/notes/hidden series/etc. a visitor is meant to see).
   const initial =
-    publicView !== undefined ? chartDocStateFromPublic(publicView.state) : initialDocState(defaultFormFor(toCommandSpec(spec)), {}, edit?.lastInstruction ?? null);
+    publicView !== undefined
+      ? chartDocStateFromPublic(publicView.state)
+      : initialDocState(defaultFormFor(toCommandSpec(spec)), {}, edit?.lastInstruction ?? null);
   const { state, history, canUndo, canRedo, dispatch, undo, redo, seal, replace } = useChartHistory(initial);
 
   const plottable = toPlottableSpec(activeSpec);
@@ -1523,7 +1525,11 @@ function UserChartCard({
       : null;
 
   // --- keyboard ------------------------------------------------------------
+  // Fix round 1 (I1): a public visitor has no history to undo/redo at all
+  // (no `dispatch` ever runs) — ⌘Z/⌘⇧Z/Ctrl+Y are simply not this card's
+  // keys to intercept in public mode, same as the CBS card's `embedMode`.
   function onHistoryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (publicMode) return;
     if (!(event.metaKey || event.ctrlKey)) return;
     const target = event.target as HTMLElement | null;
     const tag = target?.tagName;
@@ -2037,12 +2043,17 @@ function UserChartCard({
   // Forced on for bar/hbar by the resolver, the reader's own choice on
   // line/area.
   const showValueLabels = pres.valueLabels === 'shown';
+  // Fix round 1 (I1): a public visitor's click must open no note-draft
+  // composer — `undefined` here is what `UserSeriesDot` (≈358-397) already
+  // reads as "no note trigger at all": no `role="button"`, no `tabIndex`, no
+  // `aria-label`, no click handler on the dot. Same convention chart.tsx's
+  // own `embedMode` uses for its `onPointClick` (≈2623).
   const dotFor = (s: SeriesMeta): ReturnType<typeof UserSeriesDot> =>
     UserSeriesDot(
       s.key,
       opacityFor(s),
       s.label,
-      onPointClick,
+      publicMode ? undefined : onPointClick,
       { ...dotGeometry(pres.lineWidth), markers: pres.markers, ends: endpointsByKey.get(s.key) ?? null },
       chartLang,
     );
@@ -2613,7 +2624,12 @@ function UserChartCard({
             // nothing".
             disabled={publicMode}
           />
-          {state.hiddenKeys.size > 0 ? (
+          {/* Ruling R7 (M1, fix round 1): "N of M series hidden" names a
+            * COUNT, never a label, so it is not a P1 leak on its own — but
+            * it is still the reader's own toggle-state disclosure, not
+            * something a public visitor (who cannot toggle anything) has a
+            * use for, so it is skipped in public mode. */}
+          {state.hiddenKeys.size > 0 && !publicMode ? (
             <p className="mt-1 text-xs text-muted-foreground">
               {t(chartLang, 'chart.hiddenSeriesDisclosure', { n: state.hiddenKeys.size, m: seriesMeta.length })}
             </p>
@@ -2644,46 +2660,72 @@ function UserChartCard({
           ) : null}
         </div>
       ) : null}
+      {/* Fix round 1 (I1): a public visitor gets none of the editing UI
+        * (composer, delete, set/clear headline, add/remove goal line or era)
+        * — but a surviving note (spec §3.5 already pruned the ones anchored
+        * to a hidden point; the rest are exactly what the author meant a
+        * reader to see) is still shown, read-only, same binding convention
+        * ChartNotes itself uses (`{seriesLabel} · {periodLabel}: {text}` —
+        * both labels are spec strings, U6-safe). Goal lines/era shadings
+        * need no read-only substitute: their VALUE is already drawn on the
+        * plot itself (the `<ReferenceLine>`/`<ReferenceArea>` below, built
+        * straight from `state.goalLines`/`state.eraShadings`) — only their
+        * own add/remove editor list is skipped here. */}
       {!tabularForm ? (
-        // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
-        // focuses (Task 8) — the strip itself has no single control to aim at.
-        <div ref={notesRef} tabIndex={-1} className="outline-none">
-          <ChartNotes
-            notes={visibleNotes}
-            pendingPoint={pendingPoint}
-            idPrefix={domId}
-            lang={chartLang}
-            onSave={(text) => {
-              if (!pendingPoint) return;
-              const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
-              dispatch({ kind: 'addNote', note }, 'canvas');
-              setPendingPoint(null);
-            }}
-            onCancelPending={() => setPendingPoint(null)}
-            onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
-            headlineOverrideResultId={state.headlineOverrideResultId}
-            onSetHeadline={(resultId) => {
-              dispatch({ kind: 'setHeadlineOverride', resultId }, 'canvas');
-              setPendingPoint(null);
-            }}
-            onClearHeadline={() => {
-              dispatch({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
-              setPendingPoint(null);
-            }}
-          />
-          {/* Outside `containerRef`, like the notes above — see
-            * chart-goal-line.tsx's own header comment for the export-boundary
-            * invariant this mirrors from chart.tsx. */}
-          <ChartGoalLine
-            goalLines={state.goalLines}
-            lang={chartLang}
-            idPrefix={domId}
-            onAdd={(value, label) => dispatch({ kind: 'addGoalLine', goalLine: { id: newCommandId(), value, label } }, 'panel')}
-            onRemove={(id) => dispatch({ kind: 'removeGoalLine', goalLineId: id }, 'panel')}
-          />
-        </div>
+        publicMode ? (
+          visibleNotes.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-1.5" data-testid="public-notes-list">
+              {visibleNotes.map((note) => (
+                <li key={note.id} className="text-sm">
+                  <span className="text-xs text-muted-foreground">
+                    {note.seriesLabel} · {note.periodLabel}:{' '}
+                  </span>
+                  {note.text}
+                </li>
+              ))}
+            </ul>
+          ) : null
+        ) : (
+          // `tabIndex={-1}`: the target a "Notities" chip in a co-pilot reply
+          // focuses (Task 8) — the strip itself has no single control to aim at.
+          <div ref={notesRef} tabIndex={-1} className="outline-none">
+            <ChartNotes
+              notes={visibleNotes}
+              pendingPoint={pendingPoint}
+              idPrefix={domId}
+              lang={chartLang}
+              onSave={(text) => {
+                if (!pendingPoint) return;
+                const note: ChartNote = { id: `${pendingPoint.resultId}-${newCommandId()}`, ...pendingPoint, text };
+                dispatch({ kind: 'addNote', note }, 'canvas');
+                setPendingPoint(null);
+              }}
+              onCancelPending={() => setPendingPoint(null)}
+              onDelete={(id) => dispatch({ kind: 'removeNote', noteId: id }, 'canvas')}
+              headlineOverrideResultId={state.headlineOverrideResultId}
+              onSetHeadline={(resultId) => {
+                dispatch({ kind: 'setHeadlineOverride', resultId }, 'canvas');
+                setPendingPoint(null);
+              }}
+              onClearHeadline={() => {
+                dispatch({ kind: 'setHeadlineOverride', resultId: null }, 'canvas');
+                setPendingPoint(null);
+              }}
+            />
+            {/* Outside `containerRef`, like the notes above — see
+              * chart-goal-line.tsx's own header comment for the export-boundary
+              * invariant this mirrors from chart.tsx. */}
+            <ChartGoalLine
+              goalLines={state.goalLines}
+              lang={chartLang}
+              idPrefix={domId}
+              onAdd={(value, label) => dispatch({ kind: 'addGoalLine', goalLine: { id: newCommandId(), value, label } }, 'panel')}
+              onRemove={(id) => dispatch({ kind: 'removeGoalLine', goalLineId: id }, 'panel')}
+            />
+          </div>
+        )
       ) : null}
-      {!tabularForm ? (
+      {!tabularForm && !publicMode ? (
         <div tabIndex={-1} className="outline-none">
           <ChartEraShading
             eraShadings={state.eraShadings}

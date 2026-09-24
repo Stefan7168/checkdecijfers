@@ -281,6 +281,37 @@ function expectDigitsTraceToSpec(container: HTMLElement, s: UserChartSpec, extra
   }
 }
 
+// Own-data publish (ADR 057, Task 4 fix round 1, ruling R8/M2): a
+// PUBLIC-specific allowed list, deliberately narrower than
+// `expectDigitsTraceToSpec` above — a public render never shows
+// `provenance.capturedAt`, `provenance.displayName`, or the plotted-point
+// count (none of them are read by the card in public mode at all: the
+// footer's own source line replaces `provenanceLine`, see requirement 5),
+// so including them in the allowed list would let a real leak of one of
+// those three past this scan undetected. Only what a public visitor can
+// actually see traces a digit: series labels, formatted values, x labels,
+// `yHeaders`, and whatever `extraAllowed` the caller passes (the source
+// line's own text).
+function expectPublicDigitsTraceToSpec(container: HTMLElement, s: UserChartSpec, extraAllowed: readonly string[] = []): void {
+  const allowed = [
+    ...extraAllowed,
+    ...s.yHeaders,
+    ...s.series.flatMap((se) => [se.label, ...se.points.flatMap((p) => [p.formattedValue ?? '', p.xLabel])]),
+  ].filter(Boolean);
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const tokens: string[] = [];
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    tokens.push(...((node.textContent ?? '').match(/\d[\d.,]*/g) ?? []));
+  }
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const tok of tokens) {
+    expect(
+      allowed.some((str) => str.includes(tok)),
+      `numeric token "${tok}" in the rendered DOM has no source in the spec's own strings (public-mode allowed list)`,
+    ).toBe(true);
+  }
+}
+
 describe('UserChartView — H2 structural distinction from ChartView', () => {
   it('renders the persistent "Your data · unverified" badge', () => {
     render(<UserChartView spec={spec()} />);
@@ -2610,6 +2641,65 @@ describe('publicView (ADR 057)', () => {
     expect(screen.queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
   });
 
+  // Fix round 1 (I1): a data point must not be a focusable note-trigger
+  // button at all in public mode — `dotFor` passes `undefined` instead of
+  // `onPointClick`, which `UserSeriesDot` reads as "no role, no tabIndex, no
+  // click handler" (≈358-397). Scoped to the export container (dots only —
+  // the legend's own, still-`disabled`, buttons live outside it).
+  it('fix round 1 (I1): no chart point is a note-trigger button, and clicking one opens no composer', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView()} />);
+    const exportContainer = container.querySelector('[data-testid="user-chart-container"]');
+    expect(exportContainer).not.toBeNull();
+    expect(exportContainer!.querySelectorAll('[role="button"]')).toHaveLength(0);
+    const dot = exportContainer!.querySelector('circle[data-point="value"]');
+    expect(dot).not.toBeNull();
+    fireEvent.click(dot!);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  // Fix round 1 (I1): none of ChartNotes' delete/headline controls, or
+  // ChartGoalLine's/ChartEraShading's add controls, are mounted — but a
+  // surviving note (one `pruneForPublic` did NOT drop) is still shown,
+  // read-only, bound the same way ChartNotes itself displays it.
+  it('fix round 1 (I1): no note/goal-line/era-shading editing controls exist; a surviving note stays visible', () => {
+    render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({
+          state: publicChartState({
+            notes: [{ id: 'n1', resultId: 'r1:c1', periodLabel: '2023', seriesLabel: 'Amsterdam', text: 'Piekmoment' }],
+          }),
+        })}
+      />,
+    );
+    expect(screen.getByText('Piekmoment')).toBeInTheDocument();
+    expect(screen.getByTestId('public-notes-list')).toHaveTextContent('Amsterdam');
+    expect(screen.getByTestId('public-notes-list')).toHaveTextContent('2023');
+    expect(screen.queryByRole('button', { name: 'Verwijder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Doellijn toevoegen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Periode markeren' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('fix round 1 (I1): ⌘Z/Ctrl+Y is not intercepted in public mode', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView()} />);
+    const card = container.firstElementChild as HTMLElement;
+    // undo/redo are unreachable in public mode (no dispatch ever runs), so
+    // this only proves the handler bails early — nothing observable changes,
+    // but it must not throw reading `history`/`undo`/`redo` for a doc with
+    // no persistence wired up.
+    expect(() => fireEvent.keyDown(card, { key: 'z', metaKey: true })).not.toThrow();
+  });
+
+  // Ruling R7 (M1): the reader's own toggle-state disclosure ("N of M series
+  // hidden") is skipped in public mode — a visitor cannot toggle anything,
+  // so it has no use for them, even though the count itself names no label
+  // and so is not on its own a P1 leak.
+  it('ruling R7 (M1): does not show the hidden-series count disclosure', () => {
+    render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView({ state: publicChartState({ hiddenKeys: ['s0'] }) })} />);
+    expect(screen.queryByText(/verborgen/)).not.toBeInTheDocument();
+  });
+
   // Requirement 4: a hidden series' slot is kept (label blanked, not
   // removed — pruneForPublic's own contract), but the legend never lists it.
   it('requirement 4: the legend lists no hidden series (kept slot, no empty chip)', () => {
@@ -2663,15 +2753,20 @@ describe('publicView (ADR 057)', () => {
   });
 
   // Requirement 7 (U6): every digit in a public render traces to the spec's
-  // own strings — the source line's digits included, via `extraAllowed` —
-  // and the file name (blanked to '') is NOT in the allowed list at all
-  // (`expectDigitsTraceToSpec` filters out empty strings, so it contributes
-  // nothing to `allowed`).
-  it('requirement 7 (U6): the whole-card digit scan is clean for a public render, file name excluded from the allowed list', () => {
+  // own strings — the source line's digits included, via `extraAllowed`.
+  // Ruling R8/M2 (fix round 1): uses `expectPublicDigitsTraceToSpec`, NOT
+  // the general `expectDigitsTraceToSpec` — the public allowed list omits
+  // `provenance.capturedAt`/`displayName`/the point count on purpose (a
+  // public render never shows any of the three), so a real leak of one of
+  // them would fail this test instead of silently passing under an allowed
+  // list that was too generous to catch it. `displayName` is additionally
+  // set to '' here (as pruneForPublic itself would leave it), belt-and-
+  // braces against the same leak even if the allowed list ever widened back.
+  it('requirement 7 (U6): the whole-card digit scan is clean for a public render, against the tighter public-only allowed list', () => {
     const s = spec({ provenance: { ...spec().provenance, displayName: '' } });
     const sourceLine = 'Jaarverslag 2025';
     const { container } = render(<UserChartView spec={s} publicView={publicChartView({ sourceLine })} />);
-    expectDigitsTraceToSpec(container, s, [sourceLine]);
+    expectPublicDigitsTraceToSpec(container, s, [sourceLine]);
   });
 
   // Requirement 8: a hidden series' former label and values never reach
