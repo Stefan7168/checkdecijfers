@@ -37,7 +37,7 @@ import { CHART_EDITS_MAX_JSON } from '../backend/chart/edits-store.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
-import { buildPublishedChart } from '../lib/own-chart-publication.ts';
+import { buildPublishedChart, firstRenderMatchesEnvelope } from '../lib/own-chart-publication.ts';
 // Fix round 1: normalizeSourceLine is a plain synchronous function, which
 // Next's server-boundary check refuses as an export of a 'use server' file
 // (bare tsc doesn't catch it) — it now lives in its own pure lib module and
@@ -91,6 +91,11 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
     const built = buildPublishedChart(dataset, turn, log);
     if (!built.ok) return { ok: false, reason: 'invalid' };
     if (built.dropped > 0) return { ok: false, reason: 'changed' };
+    // m3 (ruling R16, same guard as the public page): if the turn's first
+    // render no longer names the same series, in order, as the chart the
+    // turn stored, the public page would show "not available" for this link
+    // — so the author is told 'changed' here instead of "published".
+    if (!firstRenderMatchesEnvelope(dataset, turn)) return { ok: false, reason: 'changed' };
 
     const normalized = normalizeSourceLine(sourceLine);
     if (!normalized.ok) return { ok: false, reason: 'invalid' };

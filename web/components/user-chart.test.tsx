@@ -2980,6 +2980,82 @@ describe('publicView — A6: a hidden series is left out of the table and the he
   });
 });
 
+// Re-review follow-ups m1/m2: pruneForPublic leaves a hidden slot blanked
+// (and, after A1, holding only points at categories a visible series plots),
+// so the pie and heatmap SHAPE guards must read the visible series while the
+// series COUNT stays the full one — exactly what the author's card counted.
+describe('publicView — m1/m2: whole-shape forms survive a hidden series (public mode)', () => {
+  it('m1: a pie whose hidden slice sat at its own x still draws as a pie, over the real pipeline, with no trace of the hidden slice', () => {
+    const cells = [
+      ['Segment', 'Jaar', 'Omzet'],
+      ['Alfa', '2022', '111'],
+      ['Geheimsegment', '2023', '999'],
+      ['Gamma', '2024', '333'],
+    ];
+    const dataset: UserDataset = {
+      id: 61,
+      userId: 'u1',
+      sourceKind: 'file_csv',
+      displayName: 'segmenten.csv',
+      sourceUrl: null,
+      cells,
+      profile: buildDatasetProfile(cells),
+      status: 'ready',
+      contentSha256: 'feedbeef',
+      createdAt: '2026-09-06T00:00:00Z',
+    };
+    const instruction = {
+      version: 2,
+      kind: 'bar',
+      x: 'c1',
+      y: ['c2'],
+      seriesBy: 'c0',
+      filters: [],
+      sort: null,
+      limit: null,
+      aggregate: null,
+      derived: null,
+      unsupported: null,
+      reading: '',
+      confidence: 1,
+    };
+    const turn = { id: 7, userId: 'u1', datasetId: 61, kind: 'chart', chartEmitted: true, instruction } as unknown as DatasetTurnRecord;
+    const built = buildPublishedChart(dataset, turn, [
+      makeCommand({ kind: 'setForm', form: 'pie' }, 'panel'),
+      makeCommand({ kind: 'toggleSeries', key: 's1' }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    // Sanity: the author's card drew a pie (setForm survived validation).
+    expect(built.dropped).toBe(0);
+    expect(built.state.form).toBe('pie');
+    const pub = pruneForPublic(built, null);
+    // The premise: the hidden slice's only point (2023) is a category no
+    // visible series plots, so the blanked slot is now EMPTY.
+    expect(pub.spec.series[1]!.points).toEqual([]);
+
+    const { container } = render(
+      <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: null, accountStyle: null }} />,
+    );
+    expect(container.querySelector('table')).toBeNull();
+    const labels = [...container.querySelectorAll('[data-testid="user-chart-container"] [data-role="pie-label"]')].map((el) => el.textContent);
+    expect(labels).toEqual(['111', '333']);
+    expect(container.textContent).not.toContain('Geheimsegment');
+    expect(container.textContent).not.toContain('999');
+  });
+
+  it('m2: a heatmap with one visible of two series still draws as a heatmap (one column)', () => {
+    const base = twoSeriesThreeYearSpec();
+    const pruned = { ...base, series: [blankedSlot(base.series[0]!.points), base.series[1]!] };
+    const { container } = render(
+      <UserChartView spec={pruned} publicView={publicChartView({ state: publicChartState({ form: 'heatmap', hiddenKeys: ['s0'] }) })} />,
+    );
+    const grid = container.querySelector<HTMLElement>('[data-testid="user-heatmap-grid"]');
+    expect(grid).not.toBeNull();
+    expect(within(grid!).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Year', 'Rotterdam']);
+    expect(within(grid!).getAllByRole('cell')).toHaveLength(3);
+  });
+});
+
 describe('publicView — A7: goal lines and era shadings are listed read-only', () => {
   it('lists a goal line (value + label) and an era (period labels + label)', () => {
     render(

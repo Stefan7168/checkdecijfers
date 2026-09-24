@@ -41,8 +41,11 @@ vi.mock('../backend/attachments/publications.ts', () => ({
   PUBLICATION_SOURCE_LINE_MAX: 120,
 }));
 
-const { buildPublishedChart } = vi.hoisted(() => ({ buildPublishedChart: vi.fn() }));
-vi.mock('../lib/own-chart-publication.ts', () => ({ buildPublishedChart }));
+const { buildPublishedChart, firstRenderMatchesEnvelope } = vi.hoisted(() => ({
+  buildPublishedChart: vi.fn(),
+  firstRenderMatchesEnvelope: vi.fn(),
+}));
+vi.mock('../lib/own-chart-publication.ts', () => ({ buildPublishedChart, firstRenderMatchesEnvelope }));
 
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
@@ -114,6 +117,7 @@ beforeEach(() => {
   getDatasetTurnById.mockResolvedValue(TURN);
   getDataset.mockResolvedValue(DATASET);
   buildPublishedChart.mockReturnValue(BUILT_OK);
+  firstRenderMatchesEnvelope.mockReturnValue(true);
   getPublicationForTurn.mockResolvedValue(null);
   countPublications.mockResolvedValue(0);
   upsertPublication.mockResolvedValue({ publicId: 'new-public-id-xxxxxx' });
@@ -185,6 +189,16 @@ describe('publishOwnChart', () => {
   it('maps a nonzero dropped count to changed, never publishing a silently different chart', async () => {
     buildPublishedChart.mockReturnValue({ ...BUILT_OK, dropped: 1 });
     expect(await publishOwnChart(7, [], null)).toEqual({ ok: false, reason: 'changed' });
+    expect(upsertPublication).not.toHaveBeenCalled();
+  });
+
+  // m3 (ruling R16): the public page refuses a turn whose first render no
+  // longer matches the envelope's stored chart, so the publish action must
+  // refuse it too — never "published" for a link that shows not-available.
+  it('maps an envelope series-label drift to changed, never publishing', async () => {
+    firstRenderMatchesEnvelope.mockReturnValue(false);
+    expect(await publishOwnChart(7, [], null)).toEqual({ ok: false, reason: 'changed' });
+    expect(firstRenderMatchesEnvelope).toHaveBeenCalledWith(DATASET, TURN);
     expect(upsertPublication).not.toHaveBeenCalled();
   });
 

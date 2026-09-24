@@ -1205,20 +1205,25 @@ function UserChartCard({
   // guards, which are false for every own-data spec, so the three forms
   // could never become `activeForm` here. Every other form is the shared
   // policy unchanged (it delegates).
-  // Final-review fix A6 (public mode only): pruneForPublic blanks a hidden
-  // series' values to null, so the shared heatmap guard — which needs a real
-  // value in every cell of every series — would always refuse a published
-  // heatmap that has a hidden series and quietly degrade it to the table.
-  // The public heatmap draws only the VISIBLE series (the author's own
-  // heatmap already passed this guard over all of them, so every visible
-  // series is complete), so it is checked over those. Every other form, and
-  // the author's card, keep the shared policy unchanged.
+  // Final-review fixes A6/m1/m2 (public mode only): pruneForPublic blanks a
+  // hidden series' values to null and keeps only its points at categories a
+  // visible series plots — so the two guards that read the SHAPE of every
+  // series would refuse a published chart the author's own card draws, and
+  // quietly degrade it to the table: the heatmap guard (a real value in
+  // every cell) and the pie guard (exactly one point per series — a hidden
+  // slice at its own x now has none). In public mode those two run their
+  // shape check over the VISIBLE series (the author's card already passed
+  // it over all of them, so every visible series still fits) while keeping
+  // the FULL series count, exactly as the author's card counts the hidden
+  // series. Every other form, and the author's card, keep the shared policy.
+  const publicShapeForm = (form: 'heatmap' | 'pie'): ChartForm => {
+    const visible = { ...plottable, series: plottable.series.filter((_, i) => !state.hiddenKeys.has(`s${i}`)) };
+    const allowed = form === 'heatmap' ? heatmapFormAllowed(visible, seriesCount) : ownDataPieFormAllowed(visible, seriesCount);
+    return allowed ? form : 'table';
+  };
   const activeForm =
-    publicMode && state.form === 'heatmap'
-      ? (() => {
-          const visible = plottable.series.filter((_, i) => !state.hiddenKeys.has(`s${i}`));
-          return heatmapFormAllowed({ ...plottable, series: visible }, visible.length) ? 'heatmap' : 'table';
-        })()
+    publicMode && (state.form === 'heatmap' || state.form === 'pie')
+      ? publicShapeForm(state.form)
       : ownDataFallbackForm(state.form, plottable, seriesCount);
   // Own-data chart-fit parity (Task 1): the ONE definition of "draws no
   // chart" — the table and the heatmap — shared with chart.tsx and
