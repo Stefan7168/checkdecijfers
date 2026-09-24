@@ -47,12 +47,7 @@ vi.mock('../lib/own-chart-publication.ts', () => ({ buildPublishedChart }));
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
 
-import {
-  getOwnChartPublication,
-  normalizeSourceLine,
-  publishOwnChart,
-  unpublishOwnChart,
-} from './own-chart-publish-actions.ts';
+import { getOwnChartPublication, publishOwnChart, unpublishOwnChart } from './own-chart-publish-actions.ts';
 
 const DB = {} as Db;
 
@@ -306,21 +301,5 @@ describe('getOwnChartPublication', () => {
   it.each([0, -1, 1.5, NaN])('returns null for a non-positive-integer turnId (%s), never touching the DB', async (turnId) => {
     expect(await getOwnChartPublication(turnId)).toBeNull();
     expect(getDb).not.toHaveBeenCalled();
-  });
-});
-
-describe('normalizeSourceLine', () => {
-  it.each([
-    ['  Bron  ', { ok: true, value: 'Bron' }],
-    ['', { ok: true, value: null }],
-    ['   ', { ok: true, value: null }],
-    [null, { ok: true, value: null }],
-    [undefined, { ok: true, value: null }],
-    ['a\u0000b\u0007c', { ok: true, value: 'abc' }],
-    ['a'.repeat(120), { ok: true, value: 'a'.repeat(120) }],
-    ['a'.repeat(121), { ok: false }],
-    [42, { ok: false }],
-  ] as const)('%j -> %j', (input, expected) => {
-    expect(normalizeSourceLine(input)).toEqual(expected);
   });
 });

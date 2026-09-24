@@ -31,7 +31,6 @@ import {
   deletePublicationForTurn,
   getPublicationForTurn,
   MAX_PUBLICATIONS_PER_USER,
-  PUBLICATION_SOURCE_LINE_MAX,
   upsertPublication,
 } from '../backend/attachments/publications.ts';
 import { CHART_EDITS_MAX_JSON } from '../backend/chart/edits-store.ts';
@@ -39,6 +38,11 @@ import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
 import { buildPublishedChart } from '../lib/own-chart-publication.ts';
+// Fix round 1: normalizeSourceLine is a plain synchronous function, which
+// Next's server-boundary check refuses as an export of a 'use server' file
+// (bare tsc doesn't catch it) — it now lives in its own pure lib module and
+// is imported, NEVER re-exported, here.
+import { normalizeSourceLine } from '../lib/publication-source-line.ts';
 
 export type PublishFailure =
   | 'disabled'
@@ -54,19 +58,6 @@ export type PublishOwnChartResult = { ok: true; publicId: string } | { ok: false
 
 function isValidTurnId(turnId: number): boolean {
   return Number.isInteger(turnId) && turnId > 0;
-}
-
-/** Strips ASCII control characters (incl. DEL), trims, then applies the
- * empty-string-is-null and length rules (spec §3.2 step 4). Non-string,
- * non-nullish input (e.g. a number) fails rather than being coerced. */
-export function normalizeSourceLine(raw: unknown): { ok: true; value: string | null } | { ok: false } {
-  if (raw === null || raw === undefined) return { ok: true, value: null };
-  if (typeof raw !== 'string') return { ok: false };
-  // eslint-disable-next-line no-control-regex -- deliberately stripping control chars
-  const stripped = raw.replace(/[\u0000-\u001F\u007F]/g, '').trim();
-  if (stripped === '') return { ok: true, value: null };
-  if (stripped.length > PUBLICATION_SOURCE_LINE_MAX) return { ok: false };
-  return { ok: true, value: stripped };
 }
 
 export async function publishOwnChart(turnId: number, log: unknown, sourceLine: unknown): Promise<PublishOwnChartResult> {
