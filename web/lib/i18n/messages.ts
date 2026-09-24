@@ -184,6 +184,15 @@ const nl = {
   // a generic fallback when they left it blank.
   'ownChart.public.sourceLine': 'Bron: {source}',
   'ownChart.public.sourceDefault': 'gegevens aangeleverd door de maker',
+  // Own-data publish (ADR 057, Task 5): the public route's own two strings —
+  // the digit-free "gone" message (a deleted/unpublished/never-existed
+  // publication, or one whose dataset/turn no longer qualifies) and the
+  // outbound backlink sentence, mirroring the CBS embed's own "Bevroren
+  // op"/"checkdecijfers.nl" footer shape but as ONE translated sentence
+  // (this route owns no split link text of its own, unlike ChartView's
+  // embedFooter).
+  'ownChart.public.unavailable': 'Deze grafiek is niet meer beschikbaar.',
+  'ownChart.public.footer': 'Gemaakt met checkdecijfers — gegevens van de maker, niet door ons gecontroleerd',
   // Co-pilot phase 2 (session 113): the own-data card's own title (the CBS
   // card's caption keys — chart.caption.* — are tier-neutral and reused as
   // they are), and the three ways a data command can fail to draw.
@@ -1531,6 +1540,8 @@ const en: Messages = {
   'userChart.provenanceLine': 'From file {file}, uploaded {date} · {count} points plotted',
   'ownChart.public.sourceLine': 'Source: {source}',
   'ownChart.public.sourceDefault': 'data supplied by the author',
+  'ownChart.public.unavailable': 'This chart is no longer available.',
+  'ownChart.public.footer': 'Made with checkdecijfers — the author’s own data, not checked by us',
   'userChart.title.placeholder': 'Title above the chart',
   'userChart.title.edit': 'Edit title',
   'userChart.title.add': 'Add a title',

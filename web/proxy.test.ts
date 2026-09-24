@@ -109,6 +109,16 @@ describe('proxy isPublicPath allowlist', () => {
     expect(isPublicPath('/embed/999.deadbeef')).toBe(true);
   });
 
+  // ADR 057 (session 127), Task 5: /embed/own/[publicId] — the own-data
+  // twin of /embed/[token] — is a `/embed/`-prefixed path too, so it's
+  // already covered by the SAME prefix entry above without any change to
+  // PUBLIC_PATH_PREFIXES: the authorization there is a saved publication row
+  // (checked inside the route itself, not a session), the same "no current
+  // user to check a session against" reasoning as the CBS route's own entry.
+  it('#5(1) / ADR 057 Task 5: /embed/own/[publicId] is public too — same prefix, own-data\'s saved-row authorization', () => {
+    expect(isPublicPath('/embed/own/AAAAAAAAAAAAAAAAAAAAAA')).toBe(true);
+  });
+
   it('#5(1): the bare prefix with nothing after it is also public (lenient by design)', () => {
     // No real token names anything under `/embed/` alone — the route itself
     // 404s on a missing/invalid token (verifyEmbedToken fails closed) — so
@@ -203,6 +213,20 @@ describe('embedRequestHeaders (fix round, Piece 2)', () => {
 
   it('combines x-embed-lang and x-embed-theme when both ?lang= and ?theme= are valid', () => {
     expect(embedRequestHeaders('/embed/42.sig', new URLSearchParams('lang=en&theme=dark'))).toEqual({
+      'x-embed-route': '1',
+      'x-embed-lang': 'en',
+      'x-embed-theme': 'dark',
+    });
+  });
+
+  // ADR 057, Task 5: embedRequestHeaders matches on the PATHNAME PREFIX
+  // ('/embed/'), not a specific route — so /embed/own/[publicId] gets the
+  // exact same header treatment as /embed/[token] with zero changes to this
+  // function. Pinned directly (rather than trusted by inference from the
+  // prefix-match tests above) since this task's own brief calls it out by
+  // name.
+  it('ADR 057 Task 5: /embed/own/[publicId] gets the same headers as /embed/[token], unchanged', () => {
+    expect(embedRequestHeaders('/embed/own/x', new URLSearchParams('lang=en&theme=dark'))).toEqual({
       'x-embed-route': '1',
       'x-embed-lang': 'en',
       'x-embed-theme': 'dark',
