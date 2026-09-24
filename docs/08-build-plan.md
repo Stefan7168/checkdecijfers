@@ -1172,5 +1172,15 @@ CSV download (with ADR 037 D11's formula-injection defense) on the own-data char
 Same-session follow-up: the own-data image download menu is hidden where there is no chart `<svg>` to export
 (Tabel, Warmtekaart) and now gets the chart's language and frame. **Owner decisions (2026-09-24, session 127):** B1 publish an
 own-data chart — YES, as a saved, revocable, pruned publish record (ADR 057,
-[spec](superpowers/specs/2026-09-24-own-data-publish-design.md)) — **next build**; B2 own data + CBS in one chart —
+[spec](superpowers/specs/2026-09-24-own-data-publish-design.md)); B2 own data + CBS in one chart —
 wait for evidence (ADR 037's "never for v1" stands). Phase C (drafted headline, Insights/story on own data) only on usage evidence.
+
+**B1 publish an own-data chart — ✅ BUILT (session 127, 2026-09-24), dark behind `OWN_DATA_PUBLISH_ENABLED`.**
+Migration 036 (`published_user_charts`) + store, server-side replay + pruning (invariant P1), publish/unpublish
+server actions, a read-only card mode, the public route `/embed/own/[publicId]`, and the publish dialog — 6
+tasks via `superpowers:subagent-driven-development` plus a final whole-branch review and two fix waves (rulings
+R11–R17, closing a Critical category-leak, two Important fail-closed gaps, and re-review follow-ups on the pie
+and heatmap forms). Measured web suite at the final commit: 158 files, 2,951 tests, clean typechecks. Full
+as-built account, files and known v1 differences: ADR [057](decisions/057-own-data-publish.md). **Owner steps
+still pending:** apply migration 036, set the flag in Vercel Production, redeploy, run the live check —
+[RUNBOOK.md](RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on".

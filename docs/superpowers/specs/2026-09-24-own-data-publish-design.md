@@ -33,6 +33,18 @@ moderation), Live embeds (an uploaded file never changes, U12), downloads on the
   badge and disclaimer, the source line, and a small "Made with checkdecijfers" backlink like the CBS embed
   footer. `noindex, nofollow`. A missing, unpublished or deleted chart shows a neutral, digit-free "This chart
   is no longer available" message in both languages.
+  - **As-built (final review ruling R7):** a hidden series is not listed anywhere on the public page — not in
+    the legend, not as a table column, not as a heatmap row/column — and the "N of M series hidden" line the
+    author sees while editing is not shown to a visitor either. The public chart is the author's own composed
+    view; the hidden slot carries no data a visitor could reveal, and the publish dialog already tells the
+    author that hidden series are left out before they publish, so a visitor is told nothing more than "this is
+    the chart," the same as any other published subset chart.
+  - **As-built (final review ruling R9):** the author's own annotations — notes, goal lines (their typed label
+    AND value) and era shadings (their typed label, with the period range shown via the chart's own period
+    labels) — appear in a plain, read-only list under the chart, the same standing as the author's title and
+    caption: their own free text, kept verbatim, not a chart value (see [05-data-rules.md](../../05-data-rules.md)
+    P1/U6). An era whose start or end period cannot be resolved (for example because it anchored on a
+    now-hidden-only category, §3.5) is left out of the list rather than shown with a broken reference.
 
 ## 3. How it works
 
@@ -73,6 +85,26 @@ precedent.
 dialog show the current state. The client flushes pending edits first by sending its own current serialized log
 (`serializeHistory`), so the debounce on `chart_edits` saves can never publish a stale version.
 
+**As-built (final review rulings R13/R14) — a client-side refusal BEFORE the log ever reaches the server.**
+Before the card even calls `publishOwnChart`, it builds the log it is about to send with a new pure helper,
+`buildPublishLog` (`web/lib/own-chart-publish-log.ts`), which:
+1. Replays that exact log, from the same starting point (`initial`) and context (`ctxForReplay`) the card
+   itself uses, and compares the result against the card's OWN current state (which hidden series are hidden,
+   the current instruction, the current form). If they don't match, `buildPublishLog` returns `null` instead of
+   a log.
+2. This matters because the card's undo history is capped (`HISTORY_CAP`, 200 entries) — a chart edited more
+   than 200 times can have its log trimmed, and a trimmed log might replay to a DIFFERENT hidden-series state
+   than what the reader currently sees on screen, which would be a fidelity/privacy gap ("what you published"
+   silently diverging from "what you see").
+3. When `buildPublishLog` returns `null`, the publish dialog shows a "changed" failure line and never calls the
+   server action at all — no network round trip, no possibility of publishing a log that doesn't match the
+   screen. An author who hits this must reload the page (which restarts the log from the stored state) and
+   republish.
+4. The log actually sent, when it matches, is the SEALED and serialized form (`serializeHistory(seal(history))`)
+   — sealing includes any transient, not-yet-committed edit still open in the UI (for example a colour still
+   being dragged in the style panel), so what is published really is what is on screen at the moment of
+   publishing, not just the last committed command.
+
 ### 3.3 The public route `web/app/embed/own/[publicId]/page.tsx`
 
 Server component, `force-dynamic`, `runtime = 'nodejs'`, noindex. Already covered by the proxy's `/embed/`
@@ -82,6 +114,27 @@ lesson). Steps: flag check → shape-check `publicId` → load the row → load 
 → refuse (not-available page) unless dataset `ready` and turn not redacted → replay (§3.4) → **prune** (§3.5) →
 render the read-only card with the pruned spec, the final view state and every server-derived piece
 precomputed. No server action is ever callable from this page for an anonymous visitor.
+
+**As-built (final review rulings R12/R16) — the page fails closed in two more cases, not only the ones
+above:**
+- **A stored command no longer replays.** If replaying the stored log against today's code drops even one
+  command (`built.dropped > 0` — a later app change made some command invalid), the page shows the same
+  not-available page rather than rendering a partial or silently different chart. This is principle (c) —
+  refuse rather than guess — applied to code drift, not just to a missing row; it supersedes an earlier,
+  looser draft ruling that would have rendered whatever still replayed. An author whose stored log stops
+  replaying after a code change must republish.
+- **A code-drift guard on the first render.** `firstRenderMatchesEnvelope(dataset, turn)` re-renders the turn's
+  ORIGINAL `instruction` and compares the resulting series labels, in order and in count, against the series
+  labels the stored turn envelope recorded at the time the chart was first made. A mismatch (or a malformed
+  stored chart) shows the not-available page; a turn with no stored chart at all is treated as matching (there
+  is nothing to compare against). This guards against the deterministic renderer itself changing shape between
+  when a chart was published and when a visitor loads it — the same failure mode R12 guards for the STORED
+  log, but for the code path that turns the first instruction into a chart. This check runs once per page view
+  and is a known performance cost (see ADR 057's as-built note); it covers only the first-made chart, not every
+  later command replayed on top of it.
+- **The same drift guard also runs at publish time** (m3, folded into the final fix wave): `publishOwnChart`
+  calls `firstRenderMatchesEnvelope` right after the dropped-command check and refuses (`reason: 'changed'`)
+  before writing anything, rather than only checking once a visitor loads the public page.
 
 ### 3.4 Server-side replay (shared by publish and the public page)
 
@@ -95,15 +148,29 @@ reuse, exactly as ADR 041 gets R1/R6/R11 by reusing `ChartView`.
 
 ### 3.5 Pruning — the privacy guarantee
 
+**As-built (session 127, ADR 057 final review, rulings R11/R4/R3/R7/R9):** the paragraph below is
+corrected from the original design to match what `pruneForPublic` (`web/lib/own-chart-publication.ts`)
+actually does.
+
 Before anything is serialized to the browser, a pure `pruneForPublic` step:
 - **Hidden series are blanked in place, not removed.** Series keys are positional (`s0`, `s1`, … —
   `chart-commands.ts` `seriesKeys`) and colours are by index, so removing a series would re-key and re-colour the
   rest. A hidden series keeps its slot but loses its label (→ `''`) and every point's `value`, `formattedValue`,
-  `sourceText`, `reason` and `incomplete` (→ null/empty). `rowRef`, `xKey` and `xLabel` stay (the x axis is shared
-  with visible series).
-- **Anything anchored to a blanked point is dropped:** notes whose `resultId` is a blanked point's rowRef,
-  derived overlays whose `resultIds` include one (a difference with a hidden value would reveal it), and a
-  `headlineOverrideResultId` pointing at one (→ null).
+  `sourceText`, `reason` and `incomplete` (→ null/empty).
+- **A blanked slot keeps only the points a visible series also plots.** `pruneForPublic` builds the set of x
+  keys every non-hidden series plots (`visibleXKeys`) and drops any point on a blanked slot whose `xKey` is not
+  in that set — a category only the hidden series ever had is dropped from the slot entirely, not merely
+  blanked, so its category name cannot leak through the slot's own `xKey`/`xLabel`. An era shading is dropped
+  the same way: unless BOTH its `fromPeriodCode` and `toPeriodCode` are in `visibleXKeys`, it is removed (for
+  own data the era's period codes ARE the category strings, `chart.ts` sets `xKey = xLabel`, so an era anchored
+  on a hidden-only category would otherwise carry that string into the public payload).
+- **`yHeaders` are blanked by label, not by position.** The multi-y table/heatmap header list is filtered by
+  matching each header's own series label against the set of hidden labels, not by column index — an
+  index-based blank could misalign under a sort/limit and either leak a hidden header or blank a visible one.
+- **Notes, derived overlays and the headline override are kept only when every `rowRef` they reference is
+  plotted in the FINAL pruned spec and not itself blanked** (mirrors `user-chart.tsx`'s own
+  `plottedRowRefs` check) — a note, an overlay or a headline pointing at anything blanked or dropped is left
+  out entirely, not partially redacted.
 - **Verified-whole is not shown publicly in v1.** `wholeReferenceRowRef` → null, so a pie/stacked chart shows the
   honest default "not checked" note. Computing the verdict needs either a server call an anonymous visitor could
   aim at hidden cells or a server-side copy of the card's render-time part selection; neither is worth it before
@@ -114,7 +181,8 @@ Before anything is serialized to the browser, a pure `pruneForPublic` step:
   `sourceUrlHost`, `contentSha256` or the command log (commands like `addNote` carry series labels). The client
   receives the pruned spec and the final state only; `provenance` is replaced by `capturedAt` + the source line.
 
-A test asserts the serialized public props contain none of a hidden series' label, values or source texts.
+A test asserts the serialized public props contain none of a hidden series' label, values or source texts
+(invariant P1, [05-data-rules.md](../../05-data-rules.md)).
 
 ### 3.6 Rendering — `UserChart` read-only mode
 

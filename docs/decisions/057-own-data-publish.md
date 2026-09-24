@@ -2,7 +2,9 @@
 
 **Status:** accepted 2026-09-24 (session 127, owner present, decided in chat). Design:
 [superpowers/specs/2026-09-24-own-data-publish-design.md](../superpowers/specs/2026-09-24-own-data-publish-design.md).
-Not yet built — an as-built note is added here when it lands.
+**BUILT (session 127, 2026-09-24), dark behind `OWN_DATA_PUBLISH_ENABLED` — see the as-built note below.
+Owner steps (migration 036, the flag, a live check) are still pending; see
+[RUNBOOK.md](../RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on".**
 
 ## Context
 
@@ -53,6 +55,79 @@ it, ADR [056](056-chart-copilot.md)), and file names can be revealing.
 - A second public surface that hosts author-written text (titles, notes, source line) on our domain — noindex,
   plain text only, no rendered links; abuse is a revisit trigger.
 - The own-data card gains a read-only mode that later features (e.g. a stage/story mode) can reuse.
+
+## As built (session 127, 2026-09-24)
+
+Built via `superpowers:subagent-driven-development`, 6 tasks (migration + store, server-side replay + pruning,
+server actions, read-only card mode, the public route, the publish dialog + flag plumbing) plus a final
+whole-branch review and two fix waves, all on branch `own-data-publish` (worktree
+`/Users/amity/Documents/cdc-own-data-publish`), base `598d0f10`:
+
+```
+550d817a feat: migration 036 + publications store + retention leg
+4be0cfc0 feat: server-side replay + P1 pruning
+61a5cbd9 fix: fix round 1 for Task 2 — C1/C2/I3/M6
+4ebebb38 fix: fix round 2 for Task 2 — C1, by label not position
+60913593 feat: publish/unpublish server actions
+2fb2b0f5 fix: move normalizeSourceLine out of the 'use server' file
+1eeb9736 feat: read-only publicView mode on the own-data card
+84582e8c fix: fix round 1 for Task 4 — I1/R7/R8
+a194e101 feat: public route /embed/own/[publicId]
+45b75bfd feat: publish dialog + flag plumbing
+3b7d9c21 fix: final-review privacy/fidelity fixes A1-A7
+4606c5d2 test: end-to-end P1 test with the real card (final review D)
+99eceb7b fix: final-review robustness/copy fixes B2-B5, C2
+302c38f3 fix: re-review follow-ups m1-m3
+```
+
+**Files:** migration `migrations/036_published_user_charts.sql`; store `src/attachments/publications.ts`;
+server-side replay + pruning `web/lib/own-chart-publication.ts`; the sealed/verified publish log
+`web/lib/own-chart-publish-log.ts`; the source-line normalizer (pulled out of the server-action file so a
+`'use server'` file never exports a plain sync function) `web/lib/publication-source-line.ts`; server actions
+`web/app/own-chart-publish-actions.ts`; the public route `web/app/embed/own/[publicId]/page.tsx`; the publish
+dialog `web/components/own-chart-publish-dialog.tsx`; the card's read-only mode and public-mode form-fallback
+logic, in the existing `web/components/user-chart.tsx`; i18n strings in `web/lib/i18n/messages.ts`.
+
+**Measured web test suite (final commit `302c38f3`):** 158 test files, 2,951 tests, all passing, one
+foreground `npx vitest run` from `web/`. `npm run web:typecheck` and `npm run typecheck` both clean. The
+backend suite count is measured at merge time — see [STATUS.md](../STATUS.md), not restated here to avoid a
+stale number.
+
+**A privacy-critical review chain, not a straight build.** The final whole-branch review (base `598d0f10`,
+tip `45b75bfd`) found one Critical and two Important gaps a more surface-level pass would have missed, because
+each one only shows up when the pruning is checked against the REAL pipeline rather than against hand-built
+fixtures: a hidden series' own category name could still leak through a blanked slot's kept `xKey`/`xLabel`
+(closed by ruling R11 — see the spec's §3.5 as-built note); the public page still rendered a chart when the
+stored log no longer fully replayed against today's code (closed by ruling R12, fail closed); and the 200-entry
+undo-history cap could silently trim what got published, and the unsealed transient part of an edit was never
+sent at all (closed together by rulings R13/R14, a client-side replay-and-compare check before the server is
+ever called — see the spec's §3.2 as-built note). The fix wave that closed these also introduced two new
+fallback-to-table gaps in the pie and heatmap forms (a hidden slice at its own category, and a heatmap with only
+one of two series visible), caught by a re-review and closed in one small follow-up (ruling R17, commit
+`302c38f3`).
+
+**Known v1 differences from "an exact frozen snapshot," each a deliberate, documented trade — not bugs:**
+- **The public page renders with the author's CURRENT account style, not the style at publish time.**
+  `web/app/embed/own/[publicId]/page.tsx` looks up the author's saved chart style (`getUserChartStyle`) fresh on
+  every request; if the author changes their default look after publishing, every one of their public pages
+  picks it up immediately. This includes the **presentation language**: a language set in the author's account
+  style overrides the page's own `?lang=` URL parameter for the chart itself (the URL parameter still controls
+  the page's own chrome — the "no longer available" message and the footer link text). Revisit if this
+  surprises an author in practice.
+- **The small-multiples toggle is not saved,** so a public page always shows one chart, never the small-multiples
+  grid, even if the author had it turned on while editing (same as the CBS-tier embed: it is view-only local
+  state, not a stored chart command).
+- **Verified-whole is not shown publicly in v1** (§3.5): a published pie/stacked/100%-stacked chart always shows
+  the honest "not checked" note, never the reader-designated-total verdict the author may see on their own
+  screen.
+- **The code-drift guard (`firstRenderMatchesEnvelope`) covers only the chart AS FIRST MADE**, not every later
+  data command replayed on top of it. A data command added after the first render is validated against
+  TODAY'S code when the log is replayed (and the whole page fails closed if any command is dropped, ruling R12),
+  but is not independently re-checked for the kind of series-identity drift the first-render guard catches.
+- **One extra deterministic render per public page view.** The drift guard re-renders the turn's first
+  instruction purely to compare series labels against the stored envelope; this doubles the render work for the
+  first chart on every visitor request. Not measured to matter at today's traffic; a revisit trigger if it ever
+  does.
 
 ## Revisit triggers
 

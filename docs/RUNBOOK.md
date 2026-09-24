@@ -528,6 +528,49 @@ applied anywhere.
 table is absent. Dropping `chart_edits` would simply make chart edits stop persisting again
 (readers keep editing charts in the current session; nothing survives a reload).
 
+## Own-data publishing (ADR 057) — switching it on
+
+**Status: BUILT and merged (session 127, 2026-09-24), dark — `OWN_DATA_PUBLISH_ENABLED` is unset in
+Vercel and migration 036 is FILE-ONLY. Every reader in `src/attachments/publications.ts` probes for
+the table first (`to_regclass('public.published_user_charts')`), and the public route and the
+Publish button both gate on the flag, so the app runs byte-identically today whether or not these
+steps have been done.** This section is the checklist for when the owner is ready to turn it on.
+
+Lets a reader who is signed in publish a chart they made from their own uploaded file as a public,
+read-only link anyone can open — see ADR [057](decisions/057-own-data-publish.md) for the full
+design and what is built. No new secret is needed (it reuses the existing database connection and
+calls no third-party API).
+
+1. **Apply migration 036** — `npm run db:migrate` from the repo root. Should apply exactly one
+   pending migration, `036_published_user_charts.sql`. Additive only (one new table,
+   `published_user_charts`); zero changes to any existing table.
+2. **Standard per-migration check for a NEW table** (migration-011 queries): `published_user_charts`
+   must show 0 `anon`/`authenticated` grants + RLS enabled, 0 policies (migration 003's
+   `rls_auto_enable` locks it down automatically, same as every table since).
+3. **Set `OWN_DATA_PUBLISH_ENABLED=1` in Vercel (Production)** and redeploy. Not a secret — plain
+   text, like `ATTACHMENTS_ENABLED`.
+4. **Live check (you, signed in, on a chart made from your own uploaded file):**
+   - Click **Publish**, leave the source line blank (or type a short one), confirm — you should get
+     a link and an `<iframe>` snippet.
+   - Open the link in a private/incognito window: the chart renders read-only, with the "own data /
+     unverified" badge, your source line (or the default "data supplied by the author" text), and a
+     "Made with checkdecijfers" backlink. Confirm any series you had hidden on your own screen is
+     genuinely absent from the public page — not just visually hidden, but gone from the legend,
+     table and heatmap.
+   - Back on your own chart, click **Unpublish**. Reload the private-window tab: the page now shows
+     "This chart is no longer available."
+5. **Rollback:** unset `OWN_DATA_PUBLISH_ENABLED` and redeploy. Existing `published_user_charts`
+   rows are left in place (nothing is deleted) — every public page for them starts showing "not
+   available" again, and the Publish button disappears from the chart card, the same deploy-order-safe
+   degrade the table-absent case already handles.
+6. **Owner takedown of one abusive or unwanted public page**, without waiting for the author to
+   unpublish it themselves — via the Supabase SQL editor:
+   ```sql
+   delete from published_user_charts where public_id = '<id-from-the-url>';
+   ```
+   The link dies immediately (the public route re-checks the row on every request, `force-dynamic`).
+   This does not touch the author's own file or chart — only the published snapshot.
+
 ## Supervised live step — migration 031 chart_headlines (✅ RUN 2026-09-16, session 105, owner present — built + merged + deployed same session via subagent-driven development on branch `worktree-chart-journalist-headline`, ADR [050](decisions/050-journalist-chart-headline.md))
 
 The journalist chart-headline feature ([open-questions #259](open-questions.md)) was built, reviewed

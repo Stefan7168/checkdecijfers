@@ -1,5 +1,7 @@
 One route is intentionally public with no session: `/embed/[token]` serves a shared, read-only chart page for third-party embedding (ADR [041](../docs/decisions/041-public-embed-pages.md)) — see `docs/RUNBOOK.md`'s Embed go-live section for its env vars.
 
+`/embed/own/[publicId]` is its own-data twin: a reader's chart made from their own uploaded file, published as a saved, revocable, pruned snapshot rather than a signed token (ADR [057](../docs/decisions/057-own-data-publish.md)). Built, but dark behind `OWN_DATA_PUBLISH_ENABLED` — see `docs/RUNBOOK.md`'s "Own-data publishing (ADR 057) — switching it on" section.
+
 `/bevolking-3d-demo` is a standalone, login-gated, noindexed, unlinked DEMO over entirely fictional data — a 3D municipality map, not part of the product (ADR [049](../docs/decisions/049-3d-municipality-map-demo.md)); `three`/`@types/three` is the one owner-approved library exception, reachable only through that route's own dynamic import.
 
 `/eurostat-explorer` is another internal, flag-gated tool (`EUROSTAT_EXPLORER_ENABLED`, ADR [048](../docs/decisions/048-eurostat-data-source.md)) for browsing the Eurostat adapter's own tables — not part of the public product either, and off by default.
