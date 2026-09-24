@@ -19,6 +19,7 @@
 import type { Db } from '../db/types.ts';
 import { twoYearsBefore } from '../answer/audit/retention.ts';
 import { deleteChartEditsForTurns } from '../chart/edits-store.ts';
+import { deletePublicationsForTurns } from './publications.ts';
 import { redactedDatasetEnvelope, REDACTED_DATASET_TEXT, type DatasetProfile } from './types.ts';
 import { FILE_BYTES_RETENTION_DAYS } from './limits.ts';
 
@@ -70,6 +71,13 @@ async function redactTurnsForDatasets(tx: Db, datasetIds: number[]): Promise<num
   // is dead weight — hard-delete it in the SAME transaction as the turn
   // redaction below, before the turns themselves are overwritten.
   await deleteChartEditsForTurns(
+    tx,
+    rows.map((r) => (r as { id: number }).id),
+  );
+  // ADR 057 (session 127): a published own-data chart dies with its turn —
+  // hard-deleted in the SAME transaction (it holds author text and nothing
+  // any other table needs), so deletion and the retention purge kill the link.
+  await deletePublicationsForTurns(
     tx,
     rows.map((r) => (r as { id: number }).id),
   );
