@@ -169,8 +169,21 @@ const nl = {
   // user-chart.tsx.
   'userChart.keyboardHint': 'Gebruik de pijltjestoetsen om de punten van de grafiek te doorlopen.',
   'userChart.heading': '{y} per {x}',
+  // Own-data publish (ADR 057, Task 4): a hidden series' yHeaders entry is
+  // blanked by pruneForPublic (web/lib/own-chart-publication.ts), so a
+  // public render whose every y header is blanked falls back to this
+  // heading (x alone) rather than showing a bare ", per {x}" — see
+  // user-chart.tsx's `heading` computation. Also reachable, harmlessly, on
+  // the author's own card if every series were ever hidden at once.
+  'userChart.headingXOnly': '{x}',
   'userChart.accessibleName': 'Grafiek: {heading}',
   'userChart.provenanceLine': 'Uit bestand {file}, geüpload op {date} · {count} punten weergegeven',
+  // Own-data publish (ADR 057, Task 4): the public page's read-only
+  // provenance line — never the file name (spec §3.5 scrubs it before this
+  // ever reaches the client), just the author's own optional source text or
+  // a generic fallback when they left it blank.
+  'ownChart.public.sourceLine': 'Bron: {source}',
+  'ownChart.public.sourceDefault': 'gegevens aangeleverd door de maker',
   // Co-pilot phase 2 (session 113): the own-data card's own title (the CBS
   // card's caption keys — chart.caption.* — are tier-neutral and reused as
   // they are), and the three ways a data command can fail to draw.
@@ -1513,8 +1526,11 @@ const en: Messages = {
 
   'userChart.keyboardHint': 'Use the arrow keys to move through the chart’s points.',
   'userChart.heading': '{y} by {x}',
+  'userChart.headingXOnly': '{x}',
   'userChart.accessibleName': 'Chart: {heading}',
   'userChart.provenanceLine': 'From file {file}, uploaded {date} · {count} points plotted',
+  'ownChart.public.sourceLine': 'Source: {source}',
+  'ownChart.public.sourceDefault': 'data supplied by the author',
   'userChart.title.placeholder': 'Title above the chart',
   'userChart.title.edit': 'Edit title',
   'userChart.title.add': 'Add a title',

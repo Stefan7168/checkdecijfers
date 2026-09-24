@@ -12,11 +12,17 @@
 // per-turn persistence). The Server Action modules are mocked the way
 // chart-edits-persistence.test.tsx mocks them — without that, the imports
 // would reach the real 'use server' modules in jsdom.
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
-import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
+import type { ClientChartInstruction, DatasetProfile, DatasetTurnRecord, UserChartSpec, UserDataset } from '../backend/attachments/types.ts';
+// Own-data publish (ADR 057, Task 4): requirement 8 renders the card off the
+// REAL server-side replay + prune pipeline (Task 2), not a hand-built
+// fixture — the same fixture style as own-chart-publication.test.ts.
+import { buildDatasetProfile } from '../backend/attachments/ingest/profile.ts';
+import { makeCommand } from '../lib/chart-commands.ts';
+import { buildPublishedChart, pruneForPublic, type PublicChartState } from '../lib/own-chart-publication.ts';
 
 const datasetActions = vi.hoisted(() => ({
   renderDatasetInstruction: vi.fn(),
@@ -37,7 +43,7 @@ const wholeVerificationActions = vi.hoisted(() => ({
 vi.mock('../app/dataset-whole-verification-actions.ts', () => wholeVerificationActions);
 
 import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
-import { UserChartView, type UserChartEditContext } from './user-chart.tsx';
+import { UserChartView, type UserChartEditContext, type UserChartPublicView } from './user-chart.tsx';
 
 afterEach(() => {
   cleanup();
@@ -131,6 +137,33 @@ const LAST_INSTRUCTION: ClientChartInstruction = {
 
 function editContext(overrides: Partial<UserChartEditContext> = {}): UserChartEditContext {
   return { datasetId: 3, threadId: 42, turnId: 7, profile: PROFILE, lastInstruction: LAST_INSTRUCTION, ...overrides };
+}
+
+// Own-data publish (ADR 057, Task 4) — `publicView (ADR 057)` below tests
+// against these two builders directly (requirements 1-7); requirement 8
+// instead runs the REAL `buildPublishedChart`/`pruneForPublic` pipeline (see
+// that describe block) so it proves the actual privacy guarantee, not a
+// hand-built stand-in for it.
+function publicChartState(overrides: Partial<PublicChartState> = {}): PublicChartState {
+  return {
+    form: 'line',
+    hiddenKeys: [],
+    dimmedKeys: [],
+    highlightedKey: null,
+    presentation: {},
+    notes: [],
+    title: null,
+    caption: null,
+    goalLines: [],
+    eraShadings: [],
+    headlineOverrideResultId: null,
+    derivedOverlayRequests: [],
+    ...overrides,
+  };
+}
+
+function publicChartView(overrides: Partial<UserChartPublicView> = {}): UserChartPublicView {
+  return { state: publicChartState(), overlays: {}, sourceLine: null, accountStyle: null, ...overrides };
 }
 
 /** Two series × three years — heatmap-shaped (a 2 × 3 grid, every cell a real
@@ -2457,5 +2490,266 @@ describe('UserChartView — en', () => {
     );
     expect(screen.getByRole('tab', { name: 'Line' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Style' })).toBeInTheDocument();
+  });
+});
+
+// Own-data publish (ADR 057, Task 4): the public page's read-only
+// `UserChartView({ spec, publicView })` mode. `publicView` and `edit` are
+// mutually exclusive (the public page never passes `edit`), so every test
+// below renders with `edit` omitted. See the task brief's 8 requirements +
+// the heading fallback carried over from Task 2's review.
+describe('publicView (ADR 057)', () => {
+  // Requirement 1: the initial document is `publicView.state` converted
+  // back to a real `ChartDocState` — never a fresh `initialDocState` — and
+  // no `useChartEdits` persistence runs (already off without `edit`; the
+  // mocks below prove it is never even attempted).
+  it('requirement 1: builds the initial doc state from publicView.state (title, hiddenKeys, form) with no edit persistence', () => {
+    const { container } = render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({ state: publicChartState({ title: 'Omzet per klant', hiddenKeys: ['s0'], form: 'bar' }) })}
+      />,
+    );
+    // title (state.title) landed.
+    expect(screen.getByText('Omzet per klant')).toBeInTheDocument();
+    // form (state.form) landed: a real bar chart, no line curve at all.
+    expect(container.querySelectorAll('.recharts-bar-rectangle').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.recharts-line-curve')).toHaveLength(0);
+    // hiddenKeys (Set, not the wire array) landed: Amsterdam (s0) is hidden
+    // from the legend (requirement 4 covers the full rule; this just proves
+    // the conversion reached `state.hiddenKeys` as a real Set the legend's
+    // own filter can call `.has()` on).
+    expect(within(screen.getByRole('group', { name: 'Reeksen' })).queryByText('Amsterdam')).not.toBeInTheDocument();
+    // No persistence: fetchChartEdits/saveChartEdits are the useChartEdits
+    // hook's own server actions — never called without an `edit` context,
+    // and a public render never has one.
+    expect(chartEditsActions.fetchChartEdits).not.toHaveBeenCalled();
+    expect(chartEditsActions.saveChartEdits).not.toHaveBeenCalled();
+  });
+
+  it('requirement 1: periodRange/selectedReading/instruction/wholeReferenceRowRef convert to their null defaults', () => {
+    // wholeReferenceRowRef is the one of the four with an observable effect
+    // on this card: a pie/stacked form's own honesty note reads it. Forced
+    // null here shows as the SAME read-only "not checked" state a signed-in
+    // reader sees with no edit context at all (datasetId undefined) —
+    // `not_checked_read_only`, chart-view's own convention for "no server to
+    // check this against".
+    render(<UserChartView spec={twoSeriesOneMomentSpec()} publicView={publicChartView({ state: publicChartState({ form: 'pie' }) })} />);
+    expect(screen.getByTestId('own-whole-note')).toHaveAttribute('data-state', 'not_checked_read_only');
+    // instruction: null means the data-command render effect (which needs
+    // both `datasetId` and a non-null instruction) never fires either.
+    expect(datasetActions.renderDatasetInstruction).not.toHaveBeenCalled();
+    expect(wholeVerificationActions.requestDatasetWholeVerification).not.toHaveBeenCalled();
+  });
+
+  // Requirement 2: resolved overlays come from `publicView.overlays` (turned
+  // into a Map), and the derivation effect — which needs `datasetId`, never
+  // set in public mode — never runs.
+  it('requirement 2: a resolved overlay renders from publicView.overlays, never from requestDatasetDerivation', () => {
+    const pv = publicChartView({
+      state: publicChartState({ derivedOverlayRequests: [{ id: 'o1', calcKind: 'mean', resultIds: ['r1:c1', 'r2:c1'] }] }),
+      overlays: { o1: { value: 41, decimals: 1, rowRef: 'agg:mean:r1:c1+r2:c1' } },
+    });
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} publicView={pv} />);
+    expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0);
+    expect(container.textContent).toContain('41,0');
+    expect(derivationActions.requestDatasetDerivation).not.toHaveBeenCalled();
+  });
+
+  // Requirement 3: no edit panels, no history, no download, no form tabs —
+  // and every editable affordance is either absent or inert.
+  it('requirement 3: hides every editing/history/panel/download affordance', () => {
+    render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({ state: publicChartState({ title: 'Publieke titel', caption: 'Publiek bijschrift' }) })}
+      />,
+    );
+    // No form tabs at all.
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+    // No history, Style panel trigger, Data panel trigger.
+    expect(screen.queryByRole('button', { name: 'Ongedaan maken' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Opnieuw' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Opmaak' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Data' })).not.toBeInTheDocument();
+    // No co-pilot composer.
+    expect(screen.queryByPlaceholderText('Pas deze grafiek aan')).not.toBeInTheDocument();
+    // No small-multiples toggle.
+    expect(screen.queryByRole('button', { name: 'Kleine grafieken' })).not.toBeInTheDocument();
+    // No downloads of any kind.
+    expect(screen.queryByRole('button', { name: 'CSV' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Download' })).not.toBeInTheDocument();
+    // ChartEditableText renders read-only text: the reader's own title and
+    // caption show, with no edit pencil and no "add a title/caption" link.
+    expect(screen.getByText('Publieke titel')).toBeInTheDocument();
+    expect(screen.getByText('Publiek bijschrift')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Titel bewerken' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Titel toevoegen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bijschrift bewerken' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bijschrift toevoegen' })).not.toBeInTheDocument();
+  });
+
+  it('requirement 3: the legend does not toggle — every legend control is disabled and a click changes nothing', () => {
+    render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView()} />);
+    const legend = screen.getByRole('group', { name: 'Reeksen' });
+    const amsterdamToggle = within(legend).getByRole('button', { name: 'Amsterdam' });
+    expect(amsterdamToggle).toBeDisabled();
+    expect(amsterdamToggle).toHaveAttribute('aria-pressed', 'true');
+    for (const button of within(legend).getAllByRole('button')) expect(button).toBeDisabled();
+    fireEvent.click(amsterdamToggle);
+    // Unchanged: a disabled control never dispatches, so Amsterdam is still
+    // shown (still "pressed" = shown) and still plotted.
+    expect(amsterdamToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+  });
+
+  it('requirement 3: no Publish button (Task 6 has not shipped it yet, and never would on the public page anyway)', () => {
+    render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView()} />);
+    expect(screen.queryByRole('button', { name: /publiceer/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
+  });
+
+  // Requirement 4: a hidden series' slot is kept (label blanked, not
+  // removed — pruneForPublic's own contract), but the legend never lists it.
+  it('requirement 4: the legend lists no hidden series (kept slot, no empty chip)', () => {
+    render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView({ state: publicChartState({ hiddenKeys: ['s0'] }) })} />);
+    const legend = screen.getByRole('group', { name: 'Reeksen' });
+    expect(within(legend).queryByText('Amsterdam')).not.toBeInTheDocument();
+    // Rotterdam's own toggle/dim/highlight trio alone — Amsterdam's hidden
+    // slot contributes none of its own (SeriesLegend renders three buttons
+    // per LISTED series; Amsterdam is filtered out of the list entirely).
+    expect(within(legend).getAllByRole('button')).toHaveLength(3);
+    expect(within(legend).getByText('Rotterdam')).toBeInTheDocument();
+  });
+
+  // Requirement 5: the provenance line never shows the file name — the
+  // public page's own source line instead, bound as a spec string
+  // (data-label-for), with USER_DATA_BADGE and the disclaimer line intact.
+  it('requirement 5: shows the author\'s own source line, never the file name', () => {
+    const s = twoSeriesSpec();
+    render(<UserChartView spec={s} publicView={publicChartView({ sourceLine: 'Jaarverslag 2025' })} />);
+    const sourceLine = screen.getByText('Bron: Jaarverslag 2025');
+    expect(sourceLine).toBeInTheDocument();
+    expect(sourceLine).toHaveAttribute('data-label-for', 'source-line');
+    expect(screen.queryByText(/verkoop-2024\.csv/)).not.toBeInTheDocument();
+    expect(screen.getByText('Your data · unverified')).toBeInTheDocument();
+    expect(screen.getByText(s.disclaimerLine)).toBeInTheDocument();
+  });
+
+  it('requirement 5: falls back to the generic source line when the author left it blank', () => {
+    render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView({ sourceLine: null })} />);
+    expect(screen.getByText('Bron: gegevens aangeleverd door de maker')).toBeInTheDocument();
+  });
+
+  // Requirement 6: the resolved presentation uses `publicView.accountStyle`,
+  // sanitised, exactly the way the signed-in path sanitises the context's
+  // own `accountStyle` — proven observably (grid is a free override on a
+  // line chart; a garbage key alongside a real one must not crash the
+  // sanitiser or block the real key from applying).
+  it('requirement 6: applies a sanitised publicView.accountStyle as the account default', () => {
+    const { container } = render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({ accountStyle: { grid: 'none', notARealOverrideKey: 'nope' } })}
+      />,
+    );
+    expect(container.querySelector('.recharts-cartesian-grid')).toBeNull();
+  });
+
+  it('requirement 6: a null accountStyle falls back to the stock look, same as no account default', () => {
+    const { container } = render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView({ accountStyle: null })} />);
+    expect(container.querySelector('.recharts-cartesian-grid')).not.toBeNull();
+  });
+
+  // Requirement 7 (U6): every digit in a public render traces to the spec's
+  // own strings — the source line's digits included, via `extraAllowed` —
+  // and the file name (blanked to '') is NOT in the allowed list at all
+  // (`expectDigitsTraceToSpec` filters out empty strings, so it contributes
+  // nothing to `allowed`).
+  it('requirement 7 (U6): the whole-card digit scan is clean for a public render, file name excluded from the allowed list', () => {
+    const s = spec({ provenance: { ...spec().provenance, displayName: '' } });
+    const sourceLine = 'Jaarverslag 2025';
+    const { container } = render(<UserChartView spec={s} publicView={publicChartView({ sourceLine })} />);
+    expectDigitsTraceToSpec(container, s, [sourceLine]);
+  });
+
+  // Requirement 8: a hidden series' former label and values never reach
+  // `container.textContent` — run over the REAL Task 2 replay + prune
+  // pipeline (own-chart-publication.ts), not a hand-built stand-in, mirroring
+  // own-chart-publication.test.ts's own fixture (rowRef format
+  // `r{row}:c{col}`, header row 0).
+  describe('requirement 8: a hidden series never reaches the rendered DOM (real buildPublishedChart/pruneForPublic)', () => {
+    const CELLS = [
+      ['Jaar', 'Klant', 'Omzet'],
+      ['2020', 'Geheim BV', '120,5'],
+      ['2020', 'Open NV', '80,0'],
+      ['2021', 'Geheim BV', '150,0'],
+      ['2021', 'Open NV', '90,0'],
+    ];
+    const dataset: UserDataset = {
+      id: 42,
+      userId: 'u1',
+      sourceKind: 'file_csv',
+      displayName: 'klanten_vertrouwelijk.csv',
+      sourceUrl: 'https://intranet.example.com/x.csv',
+      cells: CELLS,
+      profile: buildDatasetProfile(CELLS),
+      status: 'ready',
+      contentSha256: 'deadbeefcafe',
+      createdAt: '2026-09-06T00:00:00Z',
+    };
+    const instruction = {
+      version: 2 as const,
+      kind: 'line' as const,
+      x: 'c0',
+      y: ['c2'],
+      seriesBy: 'c1',
+      filters: [],
+      sort: null,
+      limit: null,
+      aggregate: null,
+      derived: null,
+      unsupported: null,
+      reading: '',
+      confidence: 1,
+    };
+    const turn = { id: 7, userId: 'u1', datasetId: 42, kind: 'chart', chartEmitted: true, instruction } as unknown as DatasetTurnRecord;
+
+    it('renders neither the hidden series\' label nor its values', () => {
+      const built = buildPublishedChart(dataset, turn, [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')]);
+      if (!built.ok) throw new Error('expected ok');
+      const pub = pruneForPublic(built, 'Bron: eigen administratie');
+      // Sanity, mirrors own-chart-publication.test.ts: s0 = Geheim BV
+      // (first-appearance order), really hidden.
+      expect(pub.spec.series[0]!.label).toBe('');
+      expect(pub.state.hiddenKeys).toEqual(['s0']);
+
+      const { container } = render(
+        <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: pub.sourceLine, accountStyle: null }} />,
+      );
+      expect(container.textContent).not.toContain('Geheim BV');
+      expect(container.textContent).not.toContain('120,5');
+      expect(container.textContent).not.toContain('150,0');
+      // The visible series is unaffected.
+      expect(container.textContent).toContain('Open NV');
+    });
+  });
+});
+
+// Task 4 review carry-over: `pruneForPublic` can blank EVERY `yHeaders`
+// entry (every series on the chart hidden), and the heading must not render
+// a bare ", per {x}" — this fix applies in every mode (harmless on the
+// author's own card, whose headers are never blank), so it is tested here
+// with a plain hand-built spec, not `publicView`.
+describe('UserChartView — heading fallback when yHeaders has no surviving header (Task 4 review carry-over)', () => {
+  it('falls back to naming just x when every yHeaders entry is blank', () => {
+    render(<UserChartView spec={spec({ yHeaders: [''] })} />);
+    expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Year');
+  });
+
+  it('keeps the normal "{y} per {x}" heading when at least one header survives', () => {
+    render(<UserChartView spec={spec({ yHeaders: ['', 'Revenue'] })} />);
+    expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Revenue per Year');
   });
 });

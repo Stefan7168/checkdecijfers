@@ -80,11 +80,18 @@ import {
   fontStack,
   markerVisible,
   resolvePresentation,
+  sanitizeOverrides,
   seriesColor,
   withAccountDefault,
   type SeriesEndpoints,
 } from '../lib/chart-presentation.ts';
 import { useChartStyle } from '../lib/chart-style-context.tsx';
+// Own-data publish (ADR 057, Task 4): type-only — `own-chart-publication.ts`
+// is a server-side module (it imports backend/attachments/render.ts etc.);
+// `import type` erases this at compile time, so none of that code ever
+// reaches this client component's bundle. `PublicOwnChart` is unused here
+// (the public page hands its pieces apart, see `UserChartPublicView` below).
+import type { PublicChartState } from '../lib/own-chart-publication.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { exampleChips, ownDataCapabilities } from '../lib/chart-capabilities.ts';
 import { acceptReply, type ChipOpens } from '../lib/chart-copilot-reply.ts';
@@ -195,6 +202,61 @@ export interface UserChartEditContext {
   turnId: number;
   profile: DatasetProfile;
   lastInstruction: ClientChartInstruction;
+}
+
+/** Own-data publish (ADR 057, Task 4): what the public page (`/embed/own/
+ * [publicId]`) hands the card instead of an `UserChartEditContext` — the
+ * final, already-pruned view state and the overlays/account style resolved
+ * server-side, precomputed (spec §3.3/§3.6). `publicView` and `edit` are
+ * mutually exclusive: the public page never has a signed-in reader's account
+ * to key edits on, and an authenticated card never has a server-precomputed
+ * public payload. */
+export interface UserChartPublicView {
+  state: PublicChartState;
+  /** `ResolvedOverlay` keyed by `DerivedOverlayRequest.id` — a plain record
+   * (own-chart-publication.ts's `PublicOwnChart.overlays`, JSON-safe across
+   * the server→client boundary), turned into the `Map` this card's own
+   * `resolvedOverlays` state already expects. */
+  overlays: Record<string, ResolvedOverlay>;
+  sourceLine: string | null;
+  /** The author's account default look (sanitised by the card like the
+   * context value — `useChartStyle()`'s own `accountStyle`), or null. Raw
+   * `unknown` at the boundary: it is a `user_chart_styles.style` jsonb value
+   * the public page reads for the CHART'S AUTHOR (not the anonymous
+   * visitor, who is never signed in), so it goes through the same
+   * `sanitizeOverrides` allow-list every other untrusted overrides input
+   * does, here rather than trusting the page to have done it. */
+  accountStyle: unknown;
+}
+
+/** Own-data publish (ADR 057, Task 4), requirement 1: the inverse of
+ * `pruneForPublic`'s `PublicChartState` projection — reconstructs a real
+ * `ChartDocState` for `useChartHistory`'s initial value. The four fields
+ * `PublicChartState` deliberately drops (see its own doc comment in
+ * own-chart-publication.ts) are set to their "nothing here" value: an
+ * anonymous visitor never has a data command (`instruction: null`, own-data
+ * has no period zoom (`periodRange: null`), no alternate reading
+ * (`selectedReading: null`), and v1 never ships the verified-whole
+ * designation publicly (`wholeReferenceRowRef: null`, spec §3.5). */
+function chartDocStateFromPublic(pub: PublicChartState): ChartDocState {
+  return {
+    form: pub.form,
+    hiddenKeys: new Set(pub.hiddenKeys),
+    dimmedKeys: new Set(pub.dimmedKeys),
+    highlightedKey: pub.highlightedKey,
+    periodRange: null,
+    presentation: pub.presentation,
+    selectedReading: null,
+    notes: pub.notes,
+    title: pub.title,
+    caption: pub.caption,
+    instruction: null,
+    goalLines: pub.goalLines,
+    eraShadings: pub.eraShadings,
+    headlineOverrideResultId: pub.headlineOverrideResultId,
+    derivedOverlayRequests: pub.derivedOverlayRequests,
+    wholeReferenceRowRef: null,
+  };
 }
 
 /** #318: chart.tsx's `tabClass` pill styling for the small-multiples toggle
@@ -1049,21 +1111,50 @@ function wholeReferenceLabel(
  * card's own re-renders (a data command replaces `activeSpec` INSIDE the
  * card, never the prop) never trip it.
  */
-export function UserChartView({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEditContext }) {
+export function UserChartView({
+  spec,
+  edit,
+  publicView,
+}: {
+  spec: UserChartSpec;
+  edit?: UserChartEditContext;
+  /** Own-data publish (ADR 057, Task 4). Mutually exclusive with `edit` —
+   * the public page never passes `edit`, and an authenticated card is never
+   * handed a `publicView`. */
+  publicView?: UserChartPublicView;
+}) {
   const [epoch, setEpoch] = useState(0);
   const lastSpec = useRef(spec);
   if (lastSpec.current !== spec) {
     lastSpec.current = spec;
     setEpoch((n) => n + 1);
   }
-  return <UserChartCard key={epoch} spec={spec} edit={edit} />;
+  return <UserChartCard key={epoch} spec={spec} edit={edit} publicView={publicView} />;
 }
 
-function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEditContext }) {
+function UserChartCard({
+  spec,
+  edit,
+  publicView,
+}: {
+  spec: UserChartSpec;
+  edit?: UserChartEditContext;
+  publicView?: UserChartPublicView;
+}) {
   const domId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const appLang = useLang();
   const { accountStyle, signedIn, setAccountStyle, brandLookupAvailable } = useChartStyle();
+  // Own-data publish (ADR 057, Task 4): the ONE boolean every read-only mount
+  // point below gates on — `publicView !== undefined`, threaded through
+  // rather than re-derived, so `edit`/`publicView` mutual exclusivity is
+  // checked once. Requirement 6: the public page has no signed-in reader (no
+  // `useChartStyle()` provider account to read), so its own account default
+  // — precomputed server-side for the chart's AUTHOR — takes over here,
+  // through the SAME sanitiser the context provider itself runs untrusted
+  // jsonb through (chart-style-context.tsx's `sanitizeInitial`).
+  const publicMode = publicView !== undefined;
+  const effectiveAccountStyle = publicView !== undefined ? sanitizeOverrides(publicView.accountStyle) : accountStyle;
 
   // --- the drawn spec ------------------------------------------------------
   // `activeSpec` is what is on screen. It starts as the prop and is replaced
@@ -1085,8 +1176,12 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   activeSpecRef.current = activeSpec;
 
   // --- the command document ------------------------------------------------
-  const initialForm = defaultFormFor(toCommandSpec(spec));
-  const initial = initialDocState(initialForm, {}, edit?.lastInstruction ?? null);
+  // Own-data publish (ADR 057, Task 4), requirement 1: a public render's
+  // initial document is the replayed-and-pruned state the server already
+  // computed — never a fresh `initialDocState` (that would drop the
+  // author's title/notes/hidden series/etc. a visitor is meant to see).
+  const initial =
+    publicView !== undefined ? chartDocStateFromPublic(publicView.state) : initialDocState(defaultFormFor(toCommandSpec(spec)), {}, edit?.lastInstruction ?? null);
   const { state, history, canUndo, canRedo, dispatch, undo, redo, seal, replace } = useChartHistory(initial);
 
   const plottable = toPlottableSpec(activeSpec);
@@ -1192,7 +1287,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   });
 
   // --- presentation --------------------------------------------------------
-  const base = withAccountDefault(accountStyle);
+  const base = withAccountDefault(effectiveAccountStyle);
   const resolved = resolvePresentation({ kind: activeSpec.kind, form: activeForm, seriesCount, hasProvisional: false }, state.presentation, base);
   const pres = resolved.values;
   const chartLang: Lang = pres.language ?? appLang;
@@ -1238,7 +1333,14 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   // (state.derivedOverlayRequests); the resolved NUMBER is transient,
   // session-local state here, re-fetched from the server whenever the
   // recipe list changes — never stored in the command log itself.
-  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, ResolvedOverlay>>(new Map());
+  // Requirement 2: a public render's overlays come from the server-resolved
+  // `publicView.overlays` record, never from the derivation effect below
+  // (which bails without `datasetId` — never set in public mode, since
+  // `edit` is undefined). Lazy initializer: read once, on mount, like every
+  // other `publicView`-derived initial value on this card.
+  const [resolvedOverlays, setResolvedOverlays] = useState<Map<string, ResolvedOverlay>>(() =>
+    publicView !== undefined ? new Map(Object.entries(publicView.overlays)) : new Map(),
+  );
   const [derivationRefusals, setDerivationRefusals] = useState<Map<string, string>>(new Map());
   const [differencePickerActive, setDifferencePickerActive] = useState(false);
   const [firstDifferencePoint, setFirstDifferencePoint] = useState<{ resultId: string; seriesLabel: string } | null>(null);
@@ -1388,7 +1490,17 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
   const dataEdit = profile !== undefined && state.instruction !== null ? { profile, instruction: state.instruction } : null;
 
   // --- text ----------------------------------------------------------------
-  const heading = t(chartLang, 'userChart.heading', { y: activeSpec.yHeaders.join(', '), x: activeSpec.xHeader });
+  // Task 4 review carry-over: `pruneForPublic` blanks a hidden series' own
+  // `yHeaders` entry to `''` (own-chart-publication.ts), and can blank every
+  // one of them (a chart with just one series, hidden). Joining the raw
+  // array would then render a bare ", " or an empty `y` — filtered here, in
+  // EVERY mode (harmless on the author's own card, whose headers are never
+  // blank), with a fallback heading naming only `x` when nothing is left.
+  const visibleYHeaders = activeSpec.yHeaders.filter((h) => h !== '');
+  const heading =
+    visibleYHeaders.length > 0
+      ? t(chartLang, 'userChart.heading', { y: visibleYHeaders.join(', '), x: activeSpec.xHeader })
+      : t(chartLang, 'userChart.headingXOnly', { x: activeSpec.xHeader });
   const accessibleName = t(chartLang, 'userChart.accessibleName', { heading: state.title ?? heading });
   const uploadedOn = activeSpec.provenance.capturedAt.slice(0, 10);
   // `rows.length` is THIS CHART's own plotted x-categories (post filter/limit)
@@ -1399,6 +1511,16 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
     date: uploadedOn,
     count: rows.length,
   });
+  // Requirement 5: the public page's own provenance line — never the file
+  // name (already scrubbed to '' by pruneForPublic; §3.5 — this line simply
+  // never reads `activeSpec.provenance.displayName` at all in public mode),
+  // the author's own optional source text or the generic fallback.
+  const publicSourceLine =
+    publicView !== undefined
+      ? t(chartLang, 'ownChart.public.sourceLine', {
+          source: publicView.sourceLine ?? t(chartLang, 'ownChart.public.sourceDefault'),
+        })
+      : null;
 
   // --- keyboard ------------------------------------------------------------
   function onHistoryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
@@ -2323,24 +2445,45 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               {heading}
             </div>
           ) : null}
-          <ChartEditableText
-            value={state.title}
-            commandKind="setTitle"
-            placeholder={t(chartLang, 'userChart.title.placeholder')}
-            editLabel={t(chartLang, 'userChart.title.edit')}
-            addLabel={t(chartLang, 'userChart.title.add')}
-            saveLabel={t(chartLang, 'userChart.title.save')}
-            cancelLabel={t(chartLang, 'userChart.title.cancel')}
-            maxLength={CHART_TITLE_MAX_LENGTH}
-            onCommit={(next) => dispatch({ kind: 'setTitle', title: next }, 'canvas')}
-            testId="user-chart-title"
-            as="h3"
-            className="text-sm font-semibold text-foreground"
-          />
+          {/* Requirement 3: a public visitor gets the reader's OWN title text
+            * (state.title, already replayed into `initial` above) with no
+            * edit pencil and no "add a title" affordance — ChartEditableText
+            * always renders one of those two for a non-null/null value, so
+            * public mode renders the plain text/nothing instead of mounting
+            * it at all. Harmless duplication with the `state.title === null`
+            * branch above is impossible: exactly one of the two conditions
+            * below is ever true for a given state.title. */}
+          {publicMode ? (
+            state.title !== null ? (
+              <h3 data-testid="user-chart-title" className="text-sm font-semibold text-foreground">
+                {state.title}
+              </h3>
+            ) : null
+          ) : (
+            <ChartEditableText
+              value={state.title}
+              commandKind="setTitle"
+              placeholder={t(chartLang, 'userChart.title.placeholder')}
+              editLabel={t(chartLang, 'userChart.title.edit')}
+              addLabel={t(chartLang, 'userChart.title.add')}
+              saveLabel={t(chartLang, 'userChart.title.save')}
+              cancelLabel={t(chartLang, 'userChart.title.cancel')}
+              maxLength={CHART_TITLE_MAX_LENGTH}
+              onCommit={(next) => dispatch({ kind: 'setTitle', title: next }, 'canvas')}
+              testId="user-chart-title"
+              as="h3"
+              className="text-sm font-semibold text-foreground"
+            />
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <ChartHistoryActions undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} history={history} lang={chartLang} />
-          {!tabularForm ? (
+          {/* Requirement 3: no history (nothing to undo — a public visitor
+            * never dispatches a command), no Style panel trigger, no Data
+            * panel trigger. */}
+          {!publicMode ? (
+            <ChartHistoryActions undo={undo} redo={redo} canUndo={canUndo} canRedo={canRedo} history={history} lang={chartLang} />
+          ) : null}
+          {!tabularForm && !publicMode ? (
             <ChartConfigTrigger
               open={styleOpen}
               onToggle={() => setStyleOpen((open) => !open)}
@@ -2350,7 +2493,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
               compact
             />
           ) : null}
-          {dataEdit !== null ? (
+          {dataEdit !== null && !publicMode ? (
             <ChartDataTrigger
               open={dataOpen}
               onToggle={() => setDataOpen((open) => !open)}
@@ -2361,6 +2504,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           ) : null}
         </div>
       </div>
+      {/* Requirement 3: no form tabs at all in public mode — no `role="tablist"`
+        * on the page. `activeForm` is unaffected: it already comes from
+        * `state.form`, which the replayed `initial` doc state set correctly
+        * (chartDocStateFromPublic), so the right form still renders below —
+        * a public visitor simply cannot switch it. */}
+      {!publicMode ? (
+        <>
       <div
         role="tablist"
         aria-label={t(chartLang, 'chart.weergaveLabel')}
@@ -2403,6 +2553,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           {formReason(form)}
         </span>
       ))}
+        </>
+      ) : null}
       {/* A data command that could not be drawn: one digit-free line, and the
         * previous chart stays on screen so Undo is a real way back. */}
       {renderFailure !== null ? (
@@ -2435,7 +2587,15 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       {!tabularForm && seriesMeta.length > 1 ? (
         <>
           <SeriesLegend
-            seriesMeta={seriesMeta}
+            // Requirement 4: a hidden series' slot is kept (pruneForPublic
+            // blanks it, never removes it — the remaining series' keys/
+            // colours must not shift), but its label is '' and it has
+            // nothing to restore-by-clicking in public mode, so it is
+            // filtered out of the legend LIST entirely here rather than
+            // rendered as an empty chip. Signed-in path unchanged: the
+            // reader's own card still lists a hidden series (dimmed) so they
+            // can bring it back.
+            seriesMeta={publicMode ? seriesMeta.filter((s) => !state.hiddenKeys.has(s.key)) : seriesMeta}
             hiddenKeys={state.hiddenKeys}
             dimmedKeys={state.dimmedKeys}
             highlightedKey={state.highlightedKey}
@@ -2445,6 +2605,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             }
             onHighlight={(key) => dispatch({ kind: 'setHighlight', key }, 'canvas')}
             lang={chartLang}
+            // Requirement 3: a public visitor's click must change nothing —
+            // `disabled` (already a real prop, the story-mode lock uses it
+            // the same way) sets the HTML `disabled` attribute on every
+            // legend button, so a click never reaches `onToggle`/`onDim`/
+            // `onHighlight` at all, not merely "the handler chooses to do
+            // nothing".
+            disabled={publicMode}
           />
           {state.hiddenKeys.size > 0 ? (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -2453,7 +2620,7 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           ) : null}
         </>
       ) : null}
-      {activeForm === 'line' && seriesMeta.length > 1 ? (
+      {activeForm === 'line' && seriesMeta.length > 1 && !publicMode ? (
         // #318: the same toggle row as chart.tsx's (same labels, same
         // pill styling), minus the story lock this card has no story for.
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -2609,24 +2776,38 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           ))}
         </div>
       ) : null}
-      <ChartEditableText
-        value={state.caption}
-        commandKind="setCaption"
-        placeholder={t(chartLang, 'chart.caption.placeholder')}
-        editLabel={t(chartLang, 'chart.caption.edit')}
-        addLabel={t(chartLang, 'chart.caption.add')}
-        saveLabel={t(chartLang, 'chart.caption.save')}
-        cancelLabel={t(chartLang, 'chart.caption.cancel')}
-        maxLength={CHART_CAPTION_MAX_LENGTH}
-        onCommit={(next) => dispatch({ kind: 'setCaption', caption: next }, 'canvas')}
-        testId="chart-caption"
-        as="p"
-        className="text-sm text-muted-foreground"
-      />
+      {/* Requirement 3: same read-only-text-or-nothing treatment as the
+        * title above — no edit pencil, no "add a caption" link. */}
+      {publicMode ? (
+        state.caption !== null ? (
+          <p data-testid="chart-caption" className="text-sm text-muted-foreground">
+            {state.caption}
+          </p>
+        ) : null
+      ) : (
+        <ChartEditableText
+          value={state.caption}
+          commandKind="setCaption"
+          placeholder={t(chartLang, 'chart.caption.placeholder')}
+          editLabel={t(chartLang, 'chart.caption.edit')}
+          addLabel={t(chartLang, 'chart.caption.add')}
+          saveLabel={t(chartLang, 'chart.caption.save')}
+          cancelLabel={t(chartLang, 'chart.caption.cancel')}
+          maxLength={CHART_CAPTION_MAX_LENGTH}
+          onCommit={(next) => dispatch({ kind: 'setCaption', caption: next }, 'canvas')}
+          testId="chart-caption"
+          as="p"
+          className="text-sm text-muted-foreground"
+        />
+      )}
       {/* Doorway B, directly under the caption (Task 8). OUTSIDE
         * `containerRef` like everything the reader wrote, so the one figure
-        * it can show — the turn's credit cost — never enters an export. */}
-      {dataEdit !== null ? (
+        * it can show — the turn's credit cost — never enters an export.
+        * Requirement 3: never in public mode — belt-and-braces alongside
+        * `dataEdit !== null` (structurally already null there, since a
+        * public render never has an `edit` context/profile to validate a
+        * data command against — ADR 037 D11). */}
+      {dataEdit !== null && !publicMode ? (
         <ChartCopilotInput
           lang={chartLang}
           busy={copilotBusy}
@@ -2655,8 +2836,9 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
         />
       ) : null}
       {/* Under the plot, above the Style region — and available in Tabel form
-        * too: WHICH data is drawn is orthogonal to how it is shown. */}
-      {dataEdit !== null ? (
+        * too: WHICH data is drawn is orthogonal to how it is shown.
+        * Requirement 3: never in public mode. */}
+      {dataEdit !== null && !publicMode ? (
         <ChartDataPanel
           instruction={dataEdit.instruction}
           profile={dataEdit.profile}
@@ -2668,7 +2850,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
           onChange={(instruction, summary) => dispatch({ kind: 'setInstruction', instruction, summary }, 'panel')}
         />
       ) : null}
-      {!tabularForm ? (
+      {/* Requirement 3: never in public mode — no Style panel at all. */}
+      {!tabularForm && !publicMode ? (
         <ChartConfigPanel
           resolved={resolved}
           seriesMeta={seriesMeta}
@@ -2744,7 +2927,13 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
       ) : null}
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">
-          <p>{provenanceLine}</p>
+          {/* Requirement 5: the public page's own source line — never the
+            * file name (already scrubbed to '' by pruneForPublic before this
+            * spec ever left the server), bound as a spec-level string
+            * (U6) like every other value label on this card. USER_DATA_BADGE
+            * (above) and the disclaimer line (right below, unconditional)
+            * still render either way. */}
+          {publicMode ? <p data-label-for="source-line">{publicSourceLine}</p> : <p>{provenanceLine}</p>}
           <p>{activeSpec.disclaimerLine}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -2752,8 +2941,9 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             * not a picture of the chart) — built from the spec alone by
             * user-csv.ts, which neutralises formula-shaped text from the
             * reader's own file (ADR 037 D11). All series, hidden ones
-            * included, exactly like the Tabel view. */}
-          <DownloadCsvButton csv={buildUserChartCsv(activeSpec, chartLang)} />
+            * included, exactly like the Tabel view.
+            * Requirement 3: never in public mode — no download of any kind. */}
+          {!publicMode ? <DownloadCsvButton csv={buildUserChartCsv(activeSpec, chartLang)} /> : null}
           {/* The image export needs the one chart <svg> inside
             * `containerRef`: the table and heatmap draw none (they sit
             * outside the export container) and small multiples draw
@@ -2761,8 +2951,8 @@ function UserChartCard({ spec, edit }: { spec: UserChartSpec; edit?: UserChartEd
             * where there is a picture to export. `lang`/`frame` match
             * chart.tsx's call so the export carries the chart's language
             * and the same ChartFrame the reader sees (this card has no
-            * frame image, hence `null`). */}
-          {!tabularForm && !smallMultiplesOn ? (
+            * frame image, hence `null`). Requirement 3: never in public mode. */}
+          {!tabularForm && !smallMultiplesOn && !publicMode ? (
             <ChartDownloadMenu
               containerRef={containerRef}
               attributionText={`${activeSpec.disclaimerLine} · checkdecijfers.nl`}
