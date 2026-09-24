@@ -107,6 +107,7 @@ export function Workspace({
   brandLookupAvailable = false,
   packs,
   coverage,
+  ownDataPublish,
 }: {
   initialBalance: number;
   simplePrice: number;
@@ -155,6 +156,12 @@ export function Workspace({
    * `coverage` prop. Null when the registry read has never once succeeded;
    * that's Chat's own "render nothing" case, not Workspace's concern. */
   coverage?: CoverageDisclosure | null;
+  /** Own-data publish (ADR 057, Task 6): present ONLY when
+   * `OWN_DATA_PUBLISH_ENABLED='1'` — the SAME dormancy pattern as
+   * `attachments` above (page.tsx reads the flag; presence, not the value,
+   * is what gates the Publish button downstream). Threaded into DatasetChat's
+   * own `publishEnabled` boolean prop just below. */
+  ownDataPublish?: { enabled: true };
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [threads, setThreads] = useState<ThreadSummary[]>(initialThreads);
@@ -440,6 +447,7 @@ export function Workspace({
           onVisualsChange={handleVisualsChange}
           activeVisualId={activeVisualId}
           onActivateVisual={activateVisual}
+          publishEnabled={ownDataPublish?.enabled === true}
         />
       ) : (
         <Chat

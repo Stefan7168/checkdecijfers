@@ -412,6 +412,39 @@ describe('UserChartView — CSV download (#318 own-data parity)', () => {
   });
 });
 
+// Task 6 (own-data publish, ADR 057): the Publish button next to
+// DownloadCsvButton — gated on `edit?.publishEnabled === true`, and never in
+// public mode (mirroring DownloadCsvButton's own `!publicMode` gate). The
+// dialog's own open/fetch/field behaviour is own-chart-publish-dialog.test.tsx's
+// job; this suite only proves the button's presence/absence contract.
+describe('UserChartView — Publish button (own-data publish, ADR 057, Task 6)', () => {
+  it('does not render Publish when there is no edit context', () => {
+    render(<UserChartView spec={twoSeriesSpec()} />);
+    expect(screen.queryByRole('button', { name: 'Publiceren' })).toBeNull();
+  });
+
+  it('does not render Publish when edit.publishEnabled is not true (flag off / not yet updated)', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext()} />);
+    expect(screen.queryByRole('button', { name: 'Publiceren' })).toBeNull();
+  });
+
+  // UserChartView has no `lang` prop of its own — `chartLang` falls back to
+  // the ambient LangProvider default ('nl', lang-provider.tsx) when no
+  // provider wraps the test, exactly like every other Dutch-by-default
+  // assertion in this file — so the trigger renders "Publiceren" here, not
+  // "Publish" (own-chart-publish-dialog.test.tsx pins the English copy
+  // directly via its own explicit `lang="en"` prop).
+  it('renders Publish when edit.publishEnabled is true', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
+    expect(screen.getByRole('button', { name: 'Publiceren' })).toBeInTheDocument();
+  });
+
+  it('never renders Publish in public mode, even if publishEnabled were somehow true', () => {
+    render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} publicView={publicChartView()} />);
+    expect(screen.queryByRole('button', { name: 'Publiceren' })).toBeNull();
+  });
+});
+
 // Session 126 follow-up: the image download menu is offered only where
 // there is one chart <svg> to export, and it follows the chart's language.
 describe('UserChartView — image download menu (session 126 follow-up)', () => {

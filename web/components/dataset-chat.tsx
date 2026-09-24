@@ -57,6 +57,15 @@ export interface DatasetChatProps {
   onVisualsChange?: (visuals: DockVisual[]) => void;
   activeVisualId?: string | null;
   onActivateVisual?: (visualId: string) => void;
+  /** Own-data publish (ADR 057, Task 6): `OWN_DATA_PUBLISH_ENABLED`, read
+   * server-side only (page.tsx) and threaded down through Workspace — the
+   * SAME dormancy pattern as `attachments` (Workspace's own prop of that
+   * name). Reaches every `UserChartEditContext` this component builds (the
+   * inline chart render below AND, via `deriveDatasetVisuals`'s `edit`
+   * param, a docked chart's `userChartEdit`) as `publishEnabled`. Optional,
+   * default-less here (undefined ≠ false is fine — every read below is
+   * `=== true`), so every existing call site/test stays byte-identical. */
+  publishEnabled?: boolean;
 }
 
 function ambiguousColumns(profile: DatasetProfile): ColumnProfile[] {
@@ -77,6 +86,7 @@ export function DatasetChat({
   onVisualsChange,
   activeVisualId = null,
   onActivateVisual,
+  publishEnabled,
 }: DatasetChatProps) {
   const [status, setStatus] = useState(initialStatus);
   const [profile, setProfile] = useState(initialProfile);
@@ -106,8 +116,10 @@ export function DatasetChat({
   useEffect(() => {
     // Co-pilot phase 2 (session 113): the dock's own-data card is editable
     // too, so the tab carries the same edit context the in-flow bubble does.
-    onVisualsChange?.(deriveDatasetVisuals(messages, { datasetId, threadId, profile }));
-  }, [messages, onVisualsChange, datasetId, threadId, profile]);
+    // Task 6 (ADR 057): `publishEnabled` rides along on this SAME edit
+    // context so a docked chart's Publish button matches the inline one.
+    onVisualsChange?.(deriveDatasetVisuals(messages, { datasetId, threadId, profile, publishEnabled }));
+  }, [messages, onVisualsChange, datasetId, threadId, profile, publishEnabled]);
 
   async function submitDecision(format: NumberFormat): Promise<void> {
     const columns = ambiguousColumns(profile);
@@ -302,7 +314,14 @@ export function DatasetChat({
                     edit={
                       message.turnId === null
                         ? undefined
-                        : { datasetId, threadId, turnId: message.turnId, profile, lastInstruction: message.lastInstruction }
+                        : {
+                            datasetId,
+                            threadId,
+                            turnId: message.turnId,
+                            profile,
+                            lastInstruction: message.lastInstruction,
+                            publishEnabled,
+                          }
                     }
                   />
                 )

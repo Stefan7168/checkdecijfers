@@ -193,6 +193,47 @@ const nl = {
   // embedFooter).
   'ownChart.public.unavailable': 'Deze grafiek is niet meer beschikbaar.',
   'ownChart.public.footer': 'Gemaakt met checkdecijfers — gegevens van de maker, niet door ons gecontroleerd',
+  // Own-data publish (ADR 057, Task 6): the Publish button + dialog on the
+  // card itself (signed-in author's own view — never rendered in public
+  // mode). `languageLabel`/`colourLabel`/`colourLight`/`colourDark`/
+  // `colourAuto`/`copyCode`/`copyCodeCopied` deliberately get their OWN keys
+  // here rather than reusing `chart.embed.*` (that surface's own comment
+  // shows only the NL/EN proper-noun labels — `chart.panel.languageNl`/
+  // `languageEn`, reused below — are shared across surfaces; every other
+  // embed-dialog string is its own scoped key, even when the text matches).
+  'ownChart.publish.trigger': 'Publiceren',
+  'ownChart.publish.dialogTitle': 'Deze grafiek publiceren',
+  'ownChart.publish.loading': 'Bezig met controleren…',
+  'ownChart.publish.disclosure':
+    'Iedereen met de link kan deze grafiek zien. Verborgen reeksen, en notities of berekeningen die daaraan vastzitten, worden weggelaten. De bestandsnaam wordt nooit getoond. De pagina vermeldt dat de cijfers uit je eigen bestand komen en niet door ons zijn gecontroleerd.',
+  'ownChart.publish.sourceLineLabel': 'Bronregel (optioneel)',
+  'ownChart.publish.sourceLinePlaceholder': 'bijv. Bron: onze eigen verkoopcijfers',
+  'ownChart.publish.sourceLineHelper':
+    'Tot 120 tekens. Leeg gelaten toont de pagina “gegevens aangeleverd door de maker”.',
+  'ownChart.publish.languageLabel': 'Taal',
+  'ownChart.publish.colourLabel': 'Kleur',
+  'ownChart.publish.colourLight': 'Licht',
+  'ownChart.publish.colourDark': 'Donker',
+  'ownChart.publish.colourAuto': 'Volgt apparaat van de lezer',
+  'ownChart.publish.publishCta': 'Publiceren',
+  'ownChart.publish.linkLabel': 'Link',
+  'ownChart.publish.copyLink': 'Kopieer link',
+  'ownChart.publish.copyLinkCopied': 'Gekopieerd!',
+  'ownChart.publish.copyCode': 'Kopieer code',
+  'ownChart.publish.copyCodeCopied': 'Gekopieerd!',
+  'ownChart.publish.updateButton': 'Gepubliceerde versie bijwerken',
+  'ownChart.publish.unpublishButton': 'Depubliceren',
+  'ownChart.publish.unpublishConfirm':
+    'Depubliceren? De link stopt direct met werken. Opnieuw publiceren geeft later een nieuwe link.',
+  'ownChart.publish.unpublishConfirmYes': 'Ja, depubliceren',
+  'ownChart.publish.unpublishConfirmCancel': 'Annuleren',
+  'ownChart.publish.failureDisabled': 'Publiceren is op dit moment niet beschikbaar.',
+  'ownChart.publish.failureLimit':
+    'Je hebt de limiet van 50 gepubliceerde grafieken bereikt. Maak er eerst een ongedaan.',
+  'ownChart.publish.failureChanged':
+    'Deze grafiek kon niet precies zo worden gepubliceerd als getoond. Probeer het opnieuw nadat je laatste wijziging is opgeslagen.',
+  'ownChart.publish.failureInvalid': 'De bronregel is te lang, of deze grafiek kan niet worden gepubliceerd.',
+  'ownChart.publish.failureGeneric': 'Er is iets misgegaan. Probeer het opnieuw.',
   // Co-pilot phase 2 (session 113): the own-data card's own title (the CBS
   // card's caption keys — chart.caption.* — are tier-neutral and reused as
   // they are), and the three ways a data command can fail to draw.
@@ -1542,6 +1583,38 @@ const en: Messages = {
   'ownChart.public.sourceDefault': 'data supplied by the author',
   'ownChart.public.unavailable': 'This chart is no longer available.',
   'ownChart.public.footer': 'Made with checkdecijfers — the author’s own data, not checked by us',
+  'ownChart.publish.trigger': 'Publish',
+  'ownChart.publish.dialogTitle': 'Publish this chart',
+  'ownChart.publish.loading': 'Checking…',
+  'ownChart.publish.disclosure':
+    'Anyone with the link can see this chart. Hidden series, and notes or calculations tied to them, are left out. The file name is never shown. The page says the numbers come from your own file and were not checked by us.',
+  'ownChart.publish.sourceLineLabel': 'Source line (optional)',
+  'ownChart.publish.sourceLinePlaceholder': 'e.g. Source: our own sales records',
+  'ownChart.publish.sourceLineHelper':
+    'Up to 120 characters. Left empty, the page says “data supplied by the author”.',
+  'ownChart.publish.languageLabel': 'Language',
+  'ownChart.publish.colourLabel': 'Colour',
+  'ownChart.publish.colourLight': 'Light',
+  'ownChart.publish.colourDark': 'Dark',
+  'ownChart.publish.colourAuto': "Reader's device",
+  'ownChart.publish.publishCta': 'Publish',
+  'ownChart.publish.linkLabel': 'Link',
+  'ownChart.publish.copyLink': 'Copy link',
+  'ownChart.publish.copyLinkCopied': 'Copied!',
+  'ownChart.publish.copyCode': 'Copy code',
+  'ownChart.publish.copyCodeCopied': 'Copied!',
+  'ownChart.publish.updateButton': 'Update published version',
+  'ownChart.publish.unpublishButton': 'Unpublish',
+  'ownChart.publish.unpublishConfirm':
+    'Unpublish? The link stops working immediately. Publishing again later gives a new link.',
+  'ownChart.publish.unpublishConfirmYes': 'Yes, unpublish',
+  'ownChart.publish.unpublishConfirmCancel': 'Cancel',
+  'ownChart.publish.failureDisabled': 'Publishing is not available right now.',
+  'ownChart.publish.failureLimit': 'You have reached the limit of 50 published charts. Unpublish one first.',
+  'ownChart.publish.failureChanged':
+    'This chart could not be published exactly as shown. Try again after your last change is saved.',
+  'ownChart.publish.failureInvalid': 'The source line is too long or this chart cannot be published.',
+  'ownChart.publish.failureGeneric': 'Something went wrong. Please try again.',
   'userChart.title.placeholder': 'Title above the chart',
   'userChart.title.edit': 'Edit title',
   'userChart.title.add': 'Add a title',

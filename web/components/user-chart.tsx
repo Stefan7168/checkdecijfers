@@ -95,6 +95,7 @@ import type { PublicChartState } from '../lib/own-chart-publication.ts';
 import { ensureFontLoaded } from '../lib/font-loader.ts';
 import { exampleChips, ownDataCapabilities } from '../lib/chart-capabilities.ts';
 import { acceptReply, type ChipOpens } from '../lib/chart-copilot-reply.ts';
+import { serializeHistory } from '../lib/chart-history.ts';
 import { useChartHistory } from '../lib/use-chart-history.ts';
 import { useChartEdits } from '../lib/use-chart-edits.ts';
 import {
@@ -154,6 +155,7 @@ import { ChartDataPanel, ChartDataTrigger } from './chart-data-panel.tsx';
 import { ChartDownloadMenu } from './chart-download.tsx';
 import { ChartSmallMultiples } from './chart-small-multiples.tsx';
 import { DownloadCsvButton } from './download-csv-button.tsx';
+import { OwnChartPublishButton } from './own-chart-publish-dialog.tsx';
 import { ChartEditableText } from './chart-editable-text.tsx';
 import { ChartFrame } from './chart-frame.tsx';
 import { ChartHistoryActions } from './chart-history-actions.tsx';
@@ -202,6 +204,16 @@ export interface UserChartEditContext {
   turnId: number;
   profile: DatasetProfile;
   lastInstruction: ClientChartInstruction;
+  /** Own-data publish (ADR 057, Task 6): `OWN_DATA_PUBLISH_ENABLED`, read
+   * ONLY server-side (web/app/workspace/page.tsx) and threaded down as a
+   * presence prop (the `attachments` dormancy pattern — see that flag's own
+   * comment there), through Workspace → DatasetChat → here, and separately
+   * into `deriveDatasetVisuals`'s own `edit` param for a docked visual's
+   * `userChartEdit`. `true` on both paths only when the flag is on; absent
+   * (`undefined`, same as `false` at the `=== true` check below) for every
+   * existing call site/test that hasn't been updated, so the Publish button
+   * stays hidden everywhere until the flag is flipped on. */
+  publishEnabled?: boolean;
 }
 
 /** Own-data publish (ADR 057, Task 4): what the public page (`/embed/own/
@@ -2986,6 +2998,17 @@ function UserChartCard({
             * included, exactly like the Tabel view.
             * Requirement 3: never in public mode — no download of any kind. */}
           {!publicMode ? <DownloadCsvButton csv={buildUserChartCsv(activeSpec, chartLang)} /> : null}
+          {/* Own-data publish (ADR 057, Task 6): the flag/presence chain
+            * (page.tsx → Workspace → DatasetChat/deriveDatasetVisuals) ends
+            * here as `edit.publishEnabled === true` — see that field's own
+            * doc comment on UserChartEditContext above. `edit` is defined
+            * whenever `publishEnabled` is `true` (the field only exists on
+            * `UserChartEditContext`), so `edit.turnId` below is safe. Never
+            * in public mode — same posture as DownloadCsvButton right
+            * above; the public route never has an edit context anyway. */}
+          {edit?.publishEnabled === true && !publicMode ? (
+            <OwnChartPublishButton turnId={edit.turnId} lang={chartLang} getLog={() => serializeHistory(history)} />
+          ) : null}
           {/* The image export needs the one chart <svg> inside
             * `containerRef`: the table and heatmap draw none (they sit
             * outside the export container) and small multiples draw

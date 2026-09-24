@@ -97,6 +97,15 @@ export default async function WorkspaceRoute({
   // matters inside the WORKSPACE_ENABLED branch below.
   const attachmentsEnabled = process.env.ATTACHMENTS_ENABLED === '1';
 
+  // Own-data publish (ADR 057, Task 6): same dormancy pattern as
+  // `attachmentsEnabled` above — read ONLY here (never client-side, never
+  // inside a Server Action's own gate alone), passed down as a presence
+  // prop. The three Server Actions (own-chart-publish-actions.ts) ALSO
+  // check this flag themselves (defence in depth, matching every other
+  // dormant feature here) — this read only controls whether the Publish
+  // button ever renders, not whether publishing is actually allowed.
+  const ownDataPublishEnabled = process.env.OWN_DATA_PUBLISH_ENABLED === '1';
+
   // Row 11 (session 110 UX audit pass 5, still-broken recheck): a plain env
   // presence check, no dormancy flag involved (Brandfetch itself has been
   // live since WP218 phase 3) — this is the SAME fact chart-style-actions.ts's
@@ -148,6 +157,7 @@ export default async function WorkspaceRoute({
           ? { websearch: { enabled: true as const, addonPrice: wsWebAddonPrice } }
           : {})}
         {...(attachmentsEnabled ? { attachments: { enabled: true as const } } : {})}
+        {...(ownDataPublishEnabled ? { ownDataPublish: { enabled: true as const } } : {})}
       />
     );
   }
