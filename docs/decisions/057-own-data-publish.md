@@ -22,11 +22,11 @@ it, ADR [056](056-chart-copilot.md)), and file names can be revealing.
    chart per author; updating keeps the link; unpublish hard-deletes the row (the link dies at once).
 2. **What is published is exactly what the author sees.** The publish action replays the log server-side and
    refuses if any command would be dropped.
-3. **Pruning before serialization (new invariant P1):** hidden series, points outside the chosen period range,
-   the file name, the source URL host, the content hash, the raw cells and the profile never reach a visitor's
+3. **Pruning before serialization (new invariant P1):** hidden series (blanked in place, with the notes and
+   calculations tied to them), the file name, the source URL host, the content hash, the raw cells and the profile never reach a visitor's
    browser.
 4. **Re-derived on every request** from the immutable stored cells (U12) through the same builders the card
-   uses (`renderInstructionForDataset`, `deriveChartOverlay`, `verifyDatasetWhole`) — no new code computes a
+   uses (`renderInstructionForDataset`, `deriveChartOverlay`) — no new code computes a
    number, so U1/U5/U6 hold by reuse.
 5. **Rendered by the own-data card in a read-only `publicMode`**, never by `ChartView` (ADR 037 D11).
 6. **Deletion:** the shared `redactTurnsForDatasets` leg hard-deletes publications in the same transaction, so
@@ -56,5 +56,7 @@ it, ADR [056](056-chart-copilot.md)), and file names can be revealing.
 
 ## Revisit triggers
 
+Demand for the "parts add up to the total" verdict on public pages (v1 shows the honest "not checked" note) →
+a publication-scoped check restricted to published points. 
 Abuse reports or evidence of spam/phishing via published text → report link + takedown script. Demand for a user
 gallery → its own design. Evidence users want own data next to CBS data → ADR 037's B2 revisit.

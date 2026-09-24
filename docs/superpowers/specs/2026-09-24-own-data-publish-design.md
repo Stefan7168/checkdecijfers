@@ -23,8 +23,8 @@ moderation), Live embeds (an uploaded file never changes, U12), downloads on the
 - **Publish** button on the own-data chart card, next to Download. Shown only when the feature flag is on and the
   reader is signed in (the card only exists for signed-in readers anyway).
 - **Publish dialog:** optional source-line field (≤120 chars); language (NL/EN) and colour (light/dark/auto) like
-  the CBS embed dialog; a plain disclosure: *anyone with the link can see this chart; hidden series and periods
-  outside the chosen range are left out; the page says the numbers come from your own file and were not checked
+  the CBS embed dialog; a plain disclosure: *anyone with the link can see this chart; hidden series (and notes or
+  calculations tied to them) are left out; the page says the numbers come from your own file and were not checked
   by us.* On publish: the link and an `<iframe>` snippet, with copy buttons.
 - **Already published:** the dialog shows the existing link, an **Update published version** button (replaces
   the snapshot, same link) and **Unpublish** (the link dies at once; publishing again later gives a NEW link).
@@ -85,20 +85,36 @@ precomputed. No server action is ever callable from this page for an anonymous v
 
 ### 3.4 Server-side replay (shared by publish and the public page)
 
-A pure-ish module in `src/attachments/` (name decided in the plan) that takes `(dataset, turn, log)` and returns
-`{ state, spec, overlays, wholeVerification, dropped }` using the SAME building blocks the card uses through its
+A server-only module in `web/lib/` (it needs `replayLog`, which lives in `web/lib/` and `src/` may not import
+`web/`), `web/lib/own-chart-publication.ts`, that takes `(dataset, turn, log)` and returns
+`{ state, spec, overlays, dropped }` using the SAME building blocks the card uses through its
 server actions: `replayLog` + `validateCommand` (web/lib/chart-history.ts — pure), `renderInstructionForDataset`
-for every `setInstruction` in the log, `deriveChartOverlay` for each `addDerivedOverlay` still active in the
-final state, `verifyDatasetWhole` when the final form needs it. Nothing new computes a number — U1/U5/U6 hold by
+for every `setInstruction` in the log, `deriveChartOverlay` for each derived overlay still active in the final
+state (after pruning, §3.5). Nothing new computes a number — U1/U5/U6 hold by
 reuse, exactly as ADR 041 gets R1/R6/R11 by reusing `ChartView`.
 
 ### 3.5 Pruning — the privacy guarantee
 
-Before anything is serialized to the browser: drop every series in the final state's `hiddenKeys`; drop every
-point outside `periodRange`; drop overlay points the same way. Dimmed series stay (they are visible). The public
-payload never contains `cells`, `profile`, the file name (`provenance.displayName`), `sourceUrlHost` or
-`contentSha256`; `provenance` is replaced by a public provenance carrying only `capturedAt` and the source line.
-A test asserts the serialized props of the public page contain none of a hidden series' labels or values.
+Before anything is serialized to the browser, a pure `pruneForPublic` step:
+- **Hidden series are blanked in place, not removed.** Series keys are positional (`s0`, `s1`, … —
+  `chart-commands.ts` `seriesKeys`) and colours are by index, so removing a series would re-key and re-colour the
+  rest. A hidden series keeps its slot but loses its label (→ `''`) and every point's `value`, `formattedValue`,
+  `sourceText`, `reason` and `incomplete` (→ null/empty). `rowRef`, `xKey` and `xLabel` stay (the x axis is shared
+  with visible series).
+- **Anything anchored to a blanked point is dropped:** notes whose `resultId` is a blanked point's rowRef,
+  derived overlays whose `resultIds` include one (a difference with a hidden value would reveal it), and a
+  `headlineOverrideResultId` pointing at one (→ null).
+- **Verified-whole is not shown publicly in v1.** `wholeReferenceRowRef` → null, so a pie/stacked chart shows the
+  honest default "not checked" note. Computing the verdict needs either a server call an anonymous visitor could
+  aim at hidden cells or a server-side copy of the card's render-time part selection; neither is worth it before
+  there is demand (cheapest mechanism first). Revisit trigger in ADR 057.
+- **No period pruning is needed:** the own-data card has no period zoom (`periodRange` is never read by
+  `user-chart.tsx`); the public state's `periodRange` is set to null.
+- The public payload never contains `cells`, `profile`, the file name (`provenance.displayName`),
+  `sourceUrlHost`, `contentSha256` or the command log (commands like `addNote` carry series labels). The client
+  receives the pruned spec and the final state only; `provenance` is replaced by `capturedAt` + the source line.
+
+A test asserts the serialized public props contain none of a hidden series' label, values or source texts.
 
 ### 3.6 Rendering — `UserChart` read-only mode
 
