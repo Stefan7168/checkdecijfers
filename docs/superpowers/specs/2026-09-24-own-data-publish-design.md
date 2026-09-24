@@ -132,7 +132,7 @@ above:**
   log, but for the code path that turns the first instruction into a chart. This check runs once per page view
   and is a known performance cost (see ADR 057's as-built note); it covers only the first-made chart, not every
   later command replayed on top of it.
-- **The same drift guard also runs at publish time** (m3, folded into the final fix wave): `publishOwnChart`
+- **The same drift guard also runs at publish time** (m3, closed in the re-review follow-up, commit `302c38f3`): `publishOwnChart`
   calls `firstRenderMatchesEnvelope` right after the dropped-command check and refuses (`reason: 'changed'`)
   before writing anything, rather than only checking once a visitor loads the public page.
 
