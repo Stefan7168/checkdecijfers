@@ -530,6 +530,13 @@ table is absent. Dropping `chart_edits` would simply make chart edits stop persi
 
 ## Own-data publishing (ADR 057) — switching it on
 
+**✅ Steps 1–3 DONE 2026-09-25 (session 131, owner present):** `npm run db:migrate` applied exactly
+`036_published_user_charts.sql`; step-2 check: 0 `anon`/`authenticated` grants, RLS on, 0 policies, 3 FKs
+(dataset, dataset turn, auth.users); `OWN_DATA_PUBLISH_ENABLED=1` set with `vercel env add` (Production) and
+deployed by `gh run rerun 36131271620` (every job green incl. deploy). Logged-out probe of a made-up
+`/embed/own/<id>` link shows "Deze grafiek is niet meer beschikbaar." Step 4 (the owner's signed-in
+publish → private window → unpublish walk) is the remaining live check.
+
 **Status: BUILT and merged (session 127, 2026-09-24; the look-freeze + `?lang=` precedence fixes below
 added session 128, 2026-09-25), dark — `OWN_DATA_PUBLISH_ENABLED` is unset in Vercel and migration 036
 is STILL FILE-ONLY (edited in place session 128 to add the `style` column — no new migration number,

@@ -28,6 +28,8 @@ sees a half-translated product.
 
 *(tracker #271)*
 
+**Decided session 131 (2026-09-25): fully translate every answer** (option 3). Needs a design pass before building; real-model testing waits for the 1 October cap reset.
+
 ---
 
 ## 2. Should a shared chart link actually show what the visitor customized?
@@ -73,6 +75,8 @@ undo them.
 *(tracker #260)*
 
 **Partly done session 129 (2026-09-25):** bars now have rounded ends (never on the zero line) and the hover card is tidier. The colours are unchanged — a punchier palette is a taste call I left for you (it must stay readable for colour-blind readers).
+
+**Decided session 131 (2026-09-25):** colour-blind safety is no longer a rule for the default colours — the default should be whatever looks best, and people can choose their own colours. Change nothing now.
 
 ---
 
@@ -152,6 +156,8 @@ instead of seeing the demo.
 
 *(tracker #256)*
 
+**Decided session 131 (2026-09-25): keep it behind the login.**
+
 ---
 
 ## 8. A homepage row showing off the different chart "looks" side by side
@@ -171,6 +177,8 @@ open, not because nothing was proposed, but because you weren't satisfied yet.
 **If you don't decide:** no homepage showcase row; the five looks remain available only via the chart styling panel.
 
 *(tracker #275)*
+
+**Decided session 131 (2026-09-25): try again later** — you'll say what felt off about the earlier mockups first.
 
 ---
 
@@ -229,6 +237,8 @@ be an accepted, consistent pattern rather than an oversight.
 **If you don't decide:** the incomplete-data warning stays on-screen only, not in downloads.
 
 *(tracker #314)*
+
+**Decided session 131 (2026-09-25): screen only.** Closed.
 
 ---
 
