@@ -7,7 +7,7 @@ their own specs.
 
 ## Context
 
-The EN/NL interface switch (ADR [040](040-i18n-toggle.md)) translated the interface but deliberately left every
+The EN/NL interface switch (ADR [040](040-interface-language-switch.md)) translated the interface but deliberately left every
 CBS answer Dutch. An English reader now sees a half-translated product ([open-questions #271](../open-questions.md)).
 The owner chose (2026-09-25) to fully translate answers for English readers, official CBS names included.
 
