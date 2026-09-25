@@ -1676,6 +1676,12 @@ per-machine cache:
    `=== DONE` marker: `nohup scripts/verify-block.sh <dir> <log> >/dev/null 2>&1 & disown`. Measured
    2026-09-03 on an idle machine: ~8 minutes per block (three PRs: 8:07, 7:37, 7:31) — the 1,423 s of
    session 70 was the same suite under parallel-agent load, not its natural length.
+   **Session 130 additions:** a third argument `--e2e` (`verify-block.sh <dir> <log> --e2e`) also runs the
+   Playwright smoke (`web/e2e/`, dev harness) after the build — off by default because the harness + Chromium are
+   heavy on the 8 GB machine; use it on a quiet machine when a change touches text a chart/card shows (CI always
+   runs it). **Never edit `scripts/verify-block.sh` while a block is running from that checkout:** bash reads a
+   script incrementally, so when the running `{ … }` block ends it resumes reading the EDITED file at the old byte
+   offset and can execute a fragment of it. Park the edit (copy aside, `git checkout` the file) until `=== DONE`.
 8. **Local `node_modules` lag the lockfiles between sessions — `npm ci` (root AND `web/`) before any
    verification.** On 2026-09-03 `web/` had `next` 16.2.11 installed against a 16.3.2 pin and the root
    had `@anthropic-ai/sdk` 0.117.1 against 0.120.0 wanted; a local block would have tested code CI never

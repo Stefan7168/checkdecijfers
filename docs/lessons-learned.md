@@ -6,6 +6,28 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 130 — bash reads a running script incrementally; a tracker row's own "still open" list can be stale
+
+1. **Editing `scripts/verify-block.sh` while a verify block ran from the same checkout was a live hazard.** The
+   session added an `--e2e` switch mid-run; bash had parsed only the current `{ … }` block, and after it ends it
+   reads on from the old byte offset — in the longer edited file that offset lands inside the block's own
+   commands, so a stray `next build`/Playwright fragment could have run. Caught before the block finished: the edit
+   was copied aside, the file restored with `git checkout`, and reapplied after `=== DONE`. Rule now in RUNBOOK
+   (Multi-agent autonomous sessions, item 7).
+2. **An open-questions row can contradict itself.** #312's "Still open" sentence listed three minors; two had been
+   fixed by later sessions (focus restore = Task 4's M2; the aggregate-`sum` masking = #314) and the third was
+   pinned by a test — all recorded elsewhere in the SAME row or a neighbouring one. The cheaper-tier triage agent
+   also offered #316 as buildable although its row starts "RESOLVED". Before building from a row: read the whole
+   row and grep the code for the fix, not just the row's last "still open" line or an agent's summary.
+3. **A move-only split is cheap to prove verbatim.** Diffing the moved block against the original with the added
+   `export ` prefixes stripped gave "identical" in one command; `tsc` then caught the one thing the scripted import
+   pruning got wrong (an identifier used only as `{...X}` was treated as a property access and dropped). Verbatim
+   diff + typecheck + full suite is the whole proof for this kind of change.
+4. **Load-proof tests: build the state, don't click to it.** A5's 201 real clicks overran even a 30 s budget on a
+   loaded machine; one real click plus a pass-through spy handing the card's own arguments a directly-built
+   201-entry history keeps the wiring assertion and runs in well under a second. Mutation-check the rewrite (make
+   the code under test wrong, watch the test fail) so the cheaper test is not a hollower one.
+
 ## Session 129 — the verify block does not run Playwright; a change to what a chart SAYS must grep the e2e specs
 
 1. **A label change passed every local check and still turned main CI red.** `buildUserChartSpec` started naming a

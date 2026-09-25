@@ -18,42 +18,28 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-25, session 129 — owner present, "continue working autonomously"; verify against
-`git log` / Actions runs before trusting this). Kickoff: [session-briefs/2026-09-25-session-130-kickoff.md](session-briefs/2026-09-25-session-130-kickoff.md)
-— it lists the owner-only chores and the autonomous queue.**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-25, session 130 — owner present; verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-25-session-131-kickoff.md](session-briefs/2026-09-25-session-131-kickoff.md)
+— the autonomous queue is EMPTY; everything left needs the owner.**
 
-- **Sessions 127–128 are PUSHED and LIVE (dark):** `origin/main` = `d8438fa3`, CI run 36106419342 green incl. deploy; prod 200.
-  Before the push, measured locally at `d8438fa3`: typechecks clean, backend 219 files / 3,346 tests, benchmark GATE PASS
-  (6/6, 0 fabricated), web 160 files / 3,042 tests (no timeouts on a quiet machine), `next build` compiled; the own-data
-  publish + co-pilot e2e passed for the first time (10/10); `/code-review` LOW over `598d0f10..d8438fa3`: 0 findings.
-- **#322 I-3 LIVE (owner GO in-chat, 2026-09-25):** merge `dbd5c6d0`, CI run 36108726250 green incl. deploy; prod 200.
-  The monthly purge now has an uploaded-dataset leg (full redaction at 2 years incl. turns/chart edits/publications; raw
-  file bytes at 90 days) and "delete my question history" also deletes uploads (not fail-soft). Verify block green at
-  `3b27e5d4` (backend 3,349, web 3,046, gate PASS, build); `/code-review` LOW 0. Live dry run (`npm run gdpr:purge`,
-  2026-09-25): new datasets line prints, 0 datasets / 0 file-byte clears due (uploads went live 2026-09-18).
-- **Session 129 autonomous batch — all LIVE, main CI green incl. deploy (last run 36122408632 @ `f2fe860c`):**
-  #294 English unit words on English chart overlays (`c3994188`); #285 a chart edit that applied nothing is refunded
-  (CBS) / priced as a clarification (own-data) (`977df193`); #260 scoped: rounded free-end bar corners + tidier tooltip,
-  palette unchanged (`afabdf87`); published dumbbell/slope keep their form with a hidden series, and a split
-  aggregate/derived own-data chart names each series by its split value (`2b149d27`, e2e expectations `f2fe860c` —
-  `2b149d27` alone was red in CI on those two e2e strings, deploy skipped, fixed next commit).
-- **Dependabot #33/#34 merged** (actions/upload-artifact v7, actions/cache v6; merges `c566c9c5` + `ddbe5734`, CI 36123908380 green incl. deploy).
-- **Session 130: Dependabot #35/#36 merged + LIVE** (npm: Next 16.3.5, React 19.3.0, zod 4.6.5, cn 0.3.0, Anthropic SDK 0.126.0, vitest
-  5.0.1 and patch bumps; merges `b5a8c759` + `d8dec7f8`) **and #323 fixed** (`5d5e045d`: A5 builds its trimmed history directly, the contract
-  test pre-imports lazy chunks, `verify-block.sh ... --e2e` runs Playwright). Verify block at `d8dec7f8`+#323: typechecks clean, backend
-  219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060 (at load avg ~30), `next build` compiled; `/code-review`
-  LOW 0. CI run 36129561946 green incl. e2e + deploy; prod 200. No open PRs.
-- **Session 130: `user-chart.tsx` move-only split LIVE** (`f90356b1` + `0eaa1302`): 29 helpers moved verbatim into
-  `web/components/user-chart-parts.tsx` (3,198 → 2,339 lines); verify block green, `/code-review` LOW 0, CI 36131271620 green incl. deploy.
-  #312 now has nothing open. The kickoff's autonomous queue is exhausted — what remains needs the owner (publish flip, decisions brief).
-- **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
+- **Everything is pushed and LIVE.** `origin/main` = the session-130 wrap-up docs commit on top of `8a80128a`; last code CI run
+  36131271620 (`0eaa1302`) green on every job incl. Playwright e2e + deploy; prod 200. No open PRs.
+- **Session 130 shipped (details: [status-archive.md](status-archive.md)):** Dependabot #35/#36 merged (Next 16.3.5, React 19.3.0,
+  zod 4.6.5, cn 0.3.0, Anthropic SDK 0.126.0, vitest 5.0.1 + patches; merges `b5a8c759` + `d8dec7f8`); #323 fixed (`5d5e045d` —
+  load-proof A5 + contract test; `scripts/verify-block.sh <dir> <log> --e2e` runs Playwright); `user-chart.tsx` move-only split into
+  `user-chart-parts.tsx` (`f90356b1` + `0eaa1302`, 3,198 → 2,339 lines), closing #312. Measured at `f90356b1`: typechecks clean,
+  backend 219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060, `next build` compiled; `/code-review` LOW 0.
+- **Next (owner-supervised) — the publish flag flip, nothing blocks it:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
-- **Decisions waiting on the owner:** the 13-item brief [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md);
-  session 129 did items 4 (#294) and 6 (#285) and part of 3 (#260) on their recommendations — each marked "Done" in the brief.
-- **Eurostat in chat (E2a) — unchanged:** built, staged, switched off; owner steps 0/5/6 after the API cap lifts
-  2026-10-01 ([#313](open-questions.md)). Stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
+- **Decisions waiting on the owner:** [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md) —
+  open: #271 English answer sentences (item 1 — would change the Dutch answer pipeline that CLAUDE.md keeps Dutch, so owner's call),
+  #250 Eurostat wording (5), #256 3D demo page (7), #275 homepage looks row (8), #314 incomplete-total warning in downloads (11),
+  #245 test-speed questions (12), and a punchier colour-blind-safe palette (#260 remainder). Items 4 and 6 done in session 129.
+- **After the Anthropic API cap lifts 2026-10-01:** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)), the `:record`
+  scripts, the live benchmark. Stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
+- **Unscheduled, no demand signal (cheapest-mechanism rule — don't build on spec):** #277 (embed shows the author's edits),
+  #278 (export-excludes-title disclosure), #299 (verified "alle gemeenten" pie).
 - **Merging:** get an explicit in-chat GO before any merge or push that changes live deletion behaviour.
-
 ---
 
 ## Phase 0 checklist

@@ -1,5 +1,32 @@
 # STATUS archive — the session log
 
+**Session 130 (2026-09-25, owner present at start; worked the session-130 kickoff's autonomous queue to empty, then
+"wrap up").**
+
+1. **State verified at start:** `main` = `599ed93a`, CI 36123908380 green incl. deploy, prod 200, open PRs only
+   Dependabot #35/#36; machine loaded (swap 4.5 GB used, later load average ~30 during the suites).
+2. **Dependabot #35/#36:** patch/minor only (no majors) — `cn` 0.3.0's notes are additive (new `cn/build`, `cn/vite`,
+   `cn/next`); the only `main` change to package files since their base was a script entry, so both merged cleanly
+   onto a local branch (`b5a8c759`, `d8dec7f8`) after `npm ci` in root and `web/`. Verify block green (typechecks,
+   backend 219 / 3,355, benchmark GATE PASS 6/6 + 0 fabricated, web 162 / 3,060, build).
+3. **#323 (load-flaky web tests), `5d5e045d`:** A5 now makes one real toggle; a pass-through spy on
+   `buildPublishLog` feeds the card's own initial document, replay context and current state a 201-toggle history
+   built with the real `pushCommand` (mutation-checked: a dialog that publishes a `null` log fails it). The
+   command-contract test pre-imports the next/dynamic chunks in `beforeAll`. `scripts/verify-block.sh` gained an
+   optional `--e2e` third argument (Playwright smoke after the build). `/code-review` LOW over `599ed93a..5d5e045d`:
+   0 findings. Pushed; CI 36129561946 green on every job incl. e2e + deploy; GitHub marks #35/#36 MERGED.
+4. **Backlog triage (Sonnet-tier Explore agent over open-questions #240–#323):** no strong owner-free item left.
+   Checked by hand: #316 is already RESOLVED (agent missed it); #312's "still open" list was stale (focus loss = M2
+   fixed s125, `sum` masking fixed by #314, form lists pinned by a test) — only the optional extraction remained.
+5. **`user-chart.tsx` move-only split (#312), `f90356b1` + `0eaa1302`:** 29 module-level declarations (~870 lines)
+   moved into `web/components/user-chart-parts.tsx`; the moved block diffed identical to the original with the
+   added `export ` prefixes stripped; imports pruned both sides; four public names re-exported. Verify block green
+   at `f90356b1` (same counts as item 2); `/code-review` LOW 0; CI 36131271620 green incl. deploy; prod 200.
+6. **Not done / owner-only:** publish flag flip (owner present needed); owner-decisions brief items 1, 5, 7, 8, 11,
+   12 + palette; cap-blocked steps after 2026-10-01; #277/#278/#299 left unscheduled (no demand signal).
+7. **Near-miss:** the `--e2e` edit to `verify-block.sh` was made while a block was running from the same checkout
+   (bash reads scripts incrementally) — parked and reapplied after `=== DONE`; rule added to RUNBOOK.
+
 **Session 129 (2026-09-25, owner present at start, then "continue working autonomously" / "work autonomously for
 hours"). Opened on the session-129 kickoff: push the local sessions 127–128 work.**
 
