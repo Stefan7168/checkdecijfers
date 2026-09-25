@@ -679,11 +679,9 @@ function UserCategoryAxisTick(props: { x?: number | string; y?: number | string;
  * text drawn is `tick.display`, an existing spec string reached via
  * `tickByValue`, never a number this component formats or invents — this
  * is a rendering-ORIENTATION variant of `AxisTick`, not a new formatting
- * path. It is safe to reuse `plan`/`tickByValue` (computed once, above,
- * from `plottable`) here: the hbar form draws the SAME `rows`/`seriesMeta`
- * model as the vertical bar/line forms (see the hbar branch's own comment),
- * so its numeric domain and their `plan.axisTicks` (the plotted min/max)
- * are the same values. */
+ * path. Fed `hbarTickByValue` (below): `valueLabelPlan`'s lo/hi tick pair
+ * for the same `plottable` the other forms plot, so every tick is a plotted
+ * point's own `formattedValue`. */
 function UserHbarValueAxisTick(tickByValue: Map<number, AxisTickLabel>) {
   return function Tick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
     const value = props.payload?.value;
