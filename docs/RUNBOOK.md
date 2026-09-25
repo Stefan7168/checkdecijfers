@@ -530,9 +530,11 @@ table is absent. Dropping `chart_edits` would simply make chart edits stop persi
 
 ## Own-data publishing (ADR 057) — switching it on
 
-**Status: BUILT and merged (session 127, 2026-09-24), dark — `OWN_DATA_PUBLISH_ENABLED` is unset in
-Vercel and migration 036 is FILE-ONLY. Every reader in `src/attachments/publications.ts` probes for
-the table first (`to_regclass('public.published_user_charts')`), and the public route and the
+**Status: BUILT and merged (session 127, 2026-09-24; the look-freeze + `?lang=` precedence fixes below
+added session 128, 2026-09-25), dark — `OWN_DATA_PUBLISH_ENABLED` is unset in Vercel and migration 036
+is STILL FILE-ONLY (edited in place session 128 to add the `style` column — no new migration number,
+since it has never been applied to any real database). Every reader in `src/attachments/publications.ts`
+probes for the table first (`to_regclass('public.published_user_charts')`), and the public route and the
 Publish button both gate on the flag, so the app runs byte-identically today whether or not these
 steps have been done.** This section is the checklist for when the owner is ready to turn it on.
 
@@ -543,7 +545,8 @@ calls no third-party API).
 
 1. **Apply migration 036** — `npm run db:migrate` from the repo root. Should apply exactly one
    pending migration, `036_published_user_charts.sql`. Additive only (one new table,
-   `published_user_charts`); zero changes to any existing table.
+   `published_user_charts`, now with a nullable `style` jsonb column added session 128); zero changes
+   to any existing table.
 2. **Standard per-migration check for a NEW table** (migration-011 queries): `published_user_charts`
    must show 0 `anon`/`authenticated` grants + RLS enabled, 0 policies (migration 003's
    `rls_auto_enable` locks it down automatically, same as every table since).
@@ -559,6 +562,13 @@ calls no third-party API).
      table and heatmap.
    - Back on your own chart, click **Unpublish**. Reload the private-window tab: the page now shows
      "This chart is no longer available."
+   - **Session 128 checks:** set an account chart style (a font, a colour, a language) BEFORE
+     publishing, publish, then change the account style again — the already-published link's look must
+     NOT change (it is frozen at publish time; click "Update published version" if you want the link to
+     pick up the new look). Also open the link once with no `?lang=` at all (should show the frozen
+     style's own language, or Dutch if none was set) and once with an explicit `?lang=` that disagrees
+     with the frozen style's language (the URL parameter must win for the chart itself, not just the
+     page chrome).
 5. **Rollback:** unset `OWN_DATA_PUBLISH_ENABLED` and redeploy. Existing `published_user_charts`
    rows are left in place (nothing is deleted) — every public page for them starts showing "not
    available" again, and the Publish button disappears from the chart card, the same deploy-order-safe

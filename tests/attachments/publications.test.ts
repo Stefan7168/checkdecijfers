@@ -132,7 +132,7 @@ describe('public ids', () => {
 });
 
 describe('publications store', () => {
-  it('insert then update keeps the same public id and replaces log + source line', async () => {
+  it('insert then update keeps the same public id and replaces log + source line + style', async () => {
     const userId = randomUUID();
     const { datasetId, turnId } = await seedTurnFixture(sharedDb, userId);
 
@@ -142,6 +142,7 @@ describe('publications store', () => {
       datasetTurnId: turnId,
       log: [],
       sourceLine: 'Bron A',
+      style: { fontFamily: 'Georgia' },
     });
     const b = await upsertPublication(sharedDb, {
       userId,
@@ -149,12 +150,34 @@ describe('publications store', () => {
       datasetTurnId: turnId,
       log: [{ kind: 'setTitle', title: 'X' }],
       sourceLine: null,
+      style: null,
     });
     expect(b!.publicId).toBe(a!.publicId);
 
     const row = await getPublicationByPublicId(sharedDb, a!.publicId);
     expect(row!.log).toEqual([{ kind: 'setTitle', title: 'X' }]);
     expect(row!.sourceLine).toBeNull();
+    // Session 128 (ADR 057 ruling 1): the update replaced the style too —
+    // an upsert never leaves the FIRST publish's style stranded behind a
+    // later, style-less update.
+    expect(row!.style).toBeNull();
+  });
+
+  it('round-trips a non-null style', async () => {
+    const userId = randomUUID();
+    const { datasetId, turnId } = await seedTurnFixture(sharedDb, userId);
+
+    const created = await upsertPublication(sharedDb, {
+      userId,
+      datasetId,
+      datasetTurnId: turnId,
+      log: [],
+      sourceLine: null,
+      style: { fontFamily: 'Georgia', language: 'en' },
+    });
+
+    const row = await getPublicationByPublicId(sharedDb, created!.publicId);
+    expect(row!.style).toEqual({ fontFamily: 'Georgia', language: 'en' });
   });
 
   it('getPublicationForTurn is scoped by user', async () => {
@@ -162,7 +185,7 @@ describe('publications store', () => {
     const attackerId = randomUUID();
     const { datasetId, turnId } = await seedTurnFixture(sharedDb, userId);
 
-    await upsertPublication(sharedDb, { userId, datasetId, datasetTurnId: turnId, log: [], sourceLine: null });
+    await upsertPublication(sharedDb, { userId, datasetId, datasetTurnId: turnId, log: [], sourceLine: null, style: null });
 
     expect(await getPublicationForTurn(sharedDb, attackerId, turnId)).toBeNull();
     expect(await getPublicationForTurn(sharedDb, userId, turnId)).not.toBeNull();
@@ -179,6 +202,7 @@ describe('publications store', () => {
       datasetTurnId: turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
 
     expect(await deletePublicationForTurn(sharedDb, attackerId, turnId)).toBe(false);
@@ -201,6 +225,7 @@ describe('publications store', () => {
       datasetTurnId: fixtureA1.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
     await upsertPublication(sharedDb, {
       userId: userA,
@@ -208,6 +233,7 @@ describe('publications store', () => {
       datasetTurnId: fixtureA2.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
     await upsertPublication(sharedDb, {
       userId: userB,
@@ -215,6 +241,7 @@ describe('publications store', () => {
       datasetTurnId: fixtureB.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
 
     expect(await countPublications(sharedDb, userA)).toBe(2);
@@ -224,7 +251,7 @@ describe('publications store', () => {
   it('the DB rejects a source line over 120 chars', async () => {
     const userId = randomUUID();
     const { datasetId, turnId } = await seedTurnFixture(sharedDb, userId);
-    const base = { userId, datasetId, datasetTurnId: turnId, log: [] as unknown[] };
+    const base = { userId, datasetId, datasetTurnId: turnId, log: [] as unknown[], style: null };
 
     await expect(upsertPublication(sharedDb, { ...base, sourceLine: 'x'.repeat(121) })).rejects.toThrow();
   });
@@ -240,6 +267,7 @@ describe('retention kills publications (GDPR)', () => {
       datasetTurnId: turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
 
     await deleteOneDataset(sharedDb, userId, datasetId);
@@ -257,6 +285,7 @@ describe('retention kills publications (GDPR)', () => {
       datasetTurnId: fixture1.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
     const created2 = await upsertPublication(sharedDb, {
       userId,
@@ -264,6 +293,7 @@ describe('retention kills publications (GDPR)', () => {
       datasetTurnId: fixture2.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
 
     await deleteUserDatasets(sharedDb, userId);
@@ -283,6 +313,7 @@ describe('retention kills publications (GDPR)', () => {
       datasetTurnId: expired.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
     const freshPub = await upsertPublication(sharedDb, {
       userId,
@@ -290,6 +321,7 @@ describe('retention kills publications (GDPR)', () => {
       datasetTurnId: fresh.turnId,
       log: [],
       sourceLine: null,
+      style: null,
     });
 
     await sharedDb.query("update user_datasets set created_at = now() - interval '3 years' where id = $1", [
@@ -310,7 +342,7 @@ describe('table absent (deploy-order safety)', () => {
     try {
       const userId = randomUUID();
       const { datasetId, turnId } = await seedTurnFixture(db, userId);
-      const base = { userId, datasetId, datasetTurnId: turnId, log: [] as unknown[], sourceLine: null };
+      const base = { userId, datasetId, datasetTurnId: turnId, log: [] as unknown[], sourceLine: null, style: null };
 
       await db.query('drop table published_user_charts');
 

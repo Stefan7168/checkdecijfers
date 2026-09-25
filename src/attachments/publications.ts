@@ -19,6 +19,11 @@ export interface PublicationRow {
   datasetTurnId: number;
   log: unknown[];
   sourceLine: string | null;
+  /** Session 128 (ADR 057 ruling 1): the author's account chart style AS IT
+   * WAS at publish time, already validated (see the migration's own
+   * comment) — null when the author had no saved style, or the lookup
+   * failed, at publish time. */
+  style: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +45,15 @@ function iso(v: unknown): string {
   return typeof v === 'string' ? v : new Date(v as Date).toISOString();
 }
 
+/** jsonb column -> plain object/null. Same `decodeJsonb`-style tolerance as
+ * src/chart/user-styles.ts (pg and PGlite can hand back either a parsed
+ * object or a raw string for a jsonb select), extended with a null pass
+ * through for this column's own nullable shape. */
+function decodeStyle(raw: unknown): Record<string, unknown> | null {
+  if (raw === null || raw === undefined) return null;
+  return (typeof raw === 'string' ? JSON.parse(raw) : raw) as Record<string, unknown>;
+}
+
 function toRow(r: Record<string, unknown>): PublicationRow {
   return {
     id: Number(r.id),
@@ -49,25 +63,46 @@ function toRow(r: Record<string, unknown>): PublicationRow {
     datasetTurnId: Number(r.dataset_turn_id),
     log: Array.isArray(r.log) ? (r.log as unknown[]) : [],
     sourceLine: (r.source_line as string | null) ?? null,
+    style: decodeStyle(r.style),
     createdAt: iso(r.created_at),
     updatedAt: iso(r.updated_at),
   };
 }
 
-const COLUMNS = 'id, public_id, user_id, dataset_id, dataset_turn_id, log, source_line, created_at, updated_at';
+const COLUMNS = 'id, public_id, user_id, dataset_id, dataset_turn_id, log, source_line, style, created_at, updated_at';
 
 export async function upsertPublication(
   db: Db,
-  input: { userId: string; datasetId: number; datasetTurnId: number; log: unknown[]; sourceLine: string | null },
+  input: {
+    userId: string;
+    datasetId: number;
+    datasetTurnId: number;
+    log: unknown[];
+    sourceLine: string | null;
+    /** Session 128 (ADR 057 ruling 1): the caller (own-chart-publish-
+     * actions.ts) has already resolved and validated the author's account
+     * style — this store never reads it live and never re-validates it, the
+     * same "store is a dumb reader/writer, validation lives at the call
+     * site" discipline `log`/`sourceLine` already follow here. */
+    style: Record<string, unknown> | null;
+  },
 ): Promise<{ publicId: string } | null> {
   if (!(await publicationsTablePresent(db))) return null;
   const { rows } = await db.query(
-    `insert into published_user_charts (public_id, user_id, dataset_id, dataset_turn_id, log, source_line)
-     values ($1, $2::uuid, $3, $4, $5::jsonb, $6)
+    `insert into published_user_charts (public_id, user_id, dataset_id, dataset_turn_id, log, source_line, style)
+     values ($1, $2::uuid, $3, $4, $5::jsonb, $6, $7::jsonb)
      on conflict (dataset_turn_id, user_id) do update
-       set log = excluded.log, source_line = excluded.source_line, updated_at = now()
+       set log = excluded.log, source_line = excluded.source_line, style = excluded.style, updated_at = now()
      returning public_id`,
-    [newPublicId(), input.userId, input.datasetId, input.datasetTurnId, JSON.stringify(input.log), input.sourceLine],
+    [
+      newPublicId(),
+      input.userId,
+      input.datasetId,
+      input.datasetTurnId,
+      JSON.stringify(input.log),
+      input.sourceLine,
+      input.style === null ? null : JSON.stringify(input.style),
+    ],
   );
   return { publicId: rows[0]!.public_id as string };
 }

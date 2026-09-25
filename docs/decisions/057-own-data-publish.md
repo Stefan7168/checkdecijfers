@@ -4,7 +4,10 @@
 [superpowers/specs/2026-09-24-own-data-publish-design.md](../superpowers/specs/2026-09-24-own-data-publish-design.md).
 **BUILT (session 127, 2026-09-24), dark behind `OWN_DATA_PUBLISH_ENABLED` — see the as-built note below.
 Owner steps (migration 036, the flag, a live check) are still pending; see
-[RUNBOOK.md](../RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on".**
+[RUNBOOK.md](../RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on". Session 128
+(2026-09-25) closed two of the original "known v1 differences" (the look now freezes at publish
+time; `?lang=` now wins for the chart too) — migration 036 is STILL file-only, edited in place to add
+the new `style` column (no owner-facing change to the rollout steps above).**
 
 ## Context
 
@@ -107,13 +110,27 @@ one of two series visible), caught by a re-review and closed in one small follow
 `302c38f3`).
 
 **Known v1 differences from "an exact frozen snapshot," each a deliberate, documented trade — not bugs:**
-- **The public page renders with the author's CURRENT account style, not the style at publish time.**
-  `web/app/embed/own/[publicId]/page.tsx` looks up the author's saved chart style (`getUserChartStyle`) fresh on
-  every request; if the author changes their default look after publishing, every one of their public pages
-  picks it up immediately. This includes the **presentation language**: a language set in the author's account
-  style overrides the page's own `?lang=` URL parameter for the chart itself (the URL parameter still controls
-  the page's own chrome — the "no longer available" message and the footer link text). Revisit if this
-  surprises an author in practice.
+- **Session 128 (2026-09-25) update — both bullets below are RESOLVED, not open differences any more.**
+  Two orchestrator rulings closed them in the same session: (1) **the look is now frozen at publish time.** A
+  nullable `style` column (migration 036) holds the author's account chart style AS IT WAS when they clicked
+  Publish (or last clicked "Update published version") — resolved and re-validated server-side by
+  `publishOwnChart` (`resolveAuthorStyleForPublish`, own-chart-publish-actions.ts, reusing the exact allow-list
+  `saveMyChartStyle` validates against, moved into the shared `web/lib/chart-style-sanitize.ts` for this reuse),
+  never read from the client. The public page (`web/app/embed/own/[publicId]/page.tsx`) no longer calls
+  `getUserChartStyle` AT ALL — it reads `row.style` straight off the row it already loaded. An author who
+  changes their account default no longer sees it silently ripple into charts they already published; a style
+  load failure at publish time stores `null` (the same fail-soft "no default look" posture the page used to
+  apply at request time, now applied once, at write time, and logged the same way). (2) **`?lang=` now wins for
+  the chart too.** The CBS-tier embed (`web/app/embed/[token]/page.tsx`) turned out to have no equivalent
+  precedence to mirror — its `ChartSpec` carries no language field at all (see that file's own `lang` comment:
+  every string `buildChartSpec` produces is unconditionally Dutch), so there was nothing there to copy. Instead,
+  own-data's own card (`UserChartView`'s `chartLang`, user-chart.tsx) now takes an explicit `explicitLang: Lang |
+  null` on `UserChartPublicView` — the page's own validated `?lang=`, or null when absent/invalid — and applies
+  it BEFORE the frozen style's `language`: `explicitLang ?? pres.language ?? 'nl'` in public mode, the exact
+  reverse of the `pres.language ?? appLang` order that let an account style silently outrank an explicit
+  `?lang=` before this session. Authenticated/edit mode is unchanged (`pres.language ?? appLang`, `appLang` from
+  the ambient `useLang()`). See the spec's own §3.1 table and RUNBOOK's "Own-data publishing" section for the
+  as-built column and behaviour.
 - **The small-multiples toggle is not saved,** so a public page always shows one chart, never the small-multiples
   grid, even if the author had it turned on while editing (same as the CBS-tier embed: it is view-only local
   state, not a stored chart command).

@@ -38,18 +38,24 @@
 // caught and turned into the "not available" page. This file follows that
 // same, already-reviewed precedent for its own DB reads
 // (getPublicationByPublicId/getDatasetTurnById/getDataset/
-// buildPublishedChart) — deliberately NOT wrapping them in a try/catch —
-// with ONE carried-over exception: the account-style lookup (Task 4's
-// review finding) gets its own try/catch, because a failure there is
-// explicitly meant to degrade to "no default look" rather than take the
-// whole page down, unlike every other read on this page which names a
-// piece of content the visitor cannot see a sensible page without.
+// buildPublishedChart) — deliberately NOT wrapping them in a try/catch.
+//
+// Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): this
+// page used to also call `getUserChartStyle` fresh on every request (with
+// its OWN try/catch, since a live style-load failure had to degrade to "no
+// default look" rather than take the whole page down) — an author changing
+// their account default silently changed every chart they had already
+// published. It no longer reads that table AT ALL: the author's style is
+// now resolved and validated once, server-side, at publish time
+// (own-chart-publish-actions.ts's `resolveAuthorStyleForPublish`) and
+// stored on the publication row (`row.style`), so this page just reads a
+// plain field off the row it already loaded — no separate lookup, no
+// separate try/catch left to carry.
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPublicationByPublicId, isPublicIdShape } from '../../../../backend/attachments/publications.ts';
 import { getDatasetTurnById } from '../../../../backend/attachments/read.ts';
 import { getDataset } from '../../../../backend/attachments/store.ts';
-import { chartStylesTablePresent, getUserChartStyle } from '../../../../backend/chart/user-styles.ts';
 import { buildPublishedChart, firstRenderMatchesEnvelope, pruneForPublic } from '../../../../lib/own-chart-publication.ts';
 import { UserChartView } from '../../../../components/user-chart.tsx';
 import { getDb } from '../../../../lib/db.ts';
@@ -101,6 +107,14 @@ export default async function OwnEmbedPage({
   const { publicId } = await params;
   const query = await searchParams;
   const lang: Lang = isLang(query.lang) ? query.lang : 'nl';
+  // Session 128 (ADR 057 ruling 2, "?lang= wins for the chart too"): unlike
+  // `lang` above (which already collapses absent/invalid to 'nl' for the
+  // page's OWN chrome text), the chart itself needs to tell "explicitly
+  // valid ?lang=" apart from "absent/invalid" — the precedence the card
+  // applies (user-chart.tsx's `chartLang` in public mode) is explicit valid
+  // ?lang= > the frozen style's own language > 'nl', so only a real,
+  // validated query value may win over the frozen style; null defers to it.
+  const explicitLang: Lang | null = isLang(query.lang) ? query.lang : null;
 
   if (process.env.OWN_DATA_PUBLISH_ENABLED !== '1') notFound();
   if (!isPublicIdShape(publicId)) notFound();
@@ -157,24 +171,6 @@ export default async function OwnEmbedPage({
 
   const pub = pruneForPublic(built, row.sourceLine);
 
-  // Carried from Task 4's review: a style-load failure must not break the
-  // page — render without the author's saved look rather than falling
-  // through to not-available or letting the failure propagate, unlike every
-  // other read on this page.
-  let accountStyle: unknown = null;
-  try {
-    if (await chartStylesTablePresent(db)) {
-      const styleRow = await getUserChartStyle(db, row.userId);
-      accountStyle = styleRow?.style ?? null;
-    }
-  } catch {
-    // C1: logged, never swallowed silently — a short fixed message and no
-    // payload (the error object could carry connection details or row
-    // content; the visitor-facing page must not depend on it either way).
-    console.error('own-data embed: author chart style lookup failed; rendering without it');
-    accountStyle = null;
-  }
-
   return (
     <>
       <EmbedResize />
@@ -185,7 +181,8 @@ export default async function OwnEmbedPage({
             state: pub.state,
             overlays: pub.overlays,
             sourceLine: pub.sourceLine,
-            accountStyle,
+            accountStyle: row.style,
+            explicitLang,
           }}
         />
       </main>

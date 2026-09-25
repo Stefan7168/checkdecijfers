@@ -8,14 +8,24 @@
 // imports ONLY this file, never actions.ts.
 //
 // `raw` is untrusted input straight from the browser (the panel's current
-// resolved.values) — `sanitizeOverridesStrict` (below) is the zod-backed
-// allow-list every overrides input used to go through via
+// resolved.values) — `sanitizeOverridesStrict` (imported below) is the
+// zod-backed allow-list every overrides input used to go through via
 // lib/chart-presentation.ts's `sanitizeOverrides`, so a stale/removed key or
-// outright garbage can never reach the store or get persisted. Session 110
-// moved the zod schema itself into THIS file (still `'use server'`-only,
-// never bundled to the client) so the render path's `sanitizeOverrides`
-// could drop zod from chart.tsx's import graph — see the schema's own
-// comment below.
+// outright garbage can never reach the store or get persisted.
+//
+// Session 110 moved the zod schema itself into a `'use server'`-only file
+// (never bundled to the client) so the render path's `sanitizeOverrides`
+// could drop zod from chart.tsx's import graph. Session 128 (ADR 057 ruling
+// 1) moved the schema ONE step further, out of this file and into
+// `web/lib/chart-style-sanitize.ts` (a plain module, not `'use server'` —
+// see that file's own header) — own-chart-publish-actions.ts needs the
+// SAME validator to freeze an author's account style into a publication row
+// at publish time, and a `'use server'` file cannot re-export a plain sync
+// function through its own server-action boundary (the exact
+// `normalizeSourceLine` trap, publication-source-line.ts). Both
+// `'use server'` files now import the one shared copy; neither re-exports
+// it. Kept pinned against `sanitizeOverrides` (chart-presentation.ts) by
+// chart-style-actions.test.ts running the same fixtures through both.
 'use server';
 
 import {
@@ -35,84 +45,10 @@ import {
   pickBrandColours,
   pickBrandFont,
 } from '../backend/chart/brandfetch.ts';
-import { z } from 'zod';
 import { currentUserEmail, currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
-import { HEX_COLOR, FONT_FAMILY_NAME, type PresentationOverrides } from '../lib/chart-presentation.ts';
+import { sanitizeOverridesStrict } from '../lib/chart-style-sanitize.ts';
 import { reportError } from '../lib/error-report.ts';
-
-// Landing-bundle pass 3 (session 110, docs/session-briefs/2026-09-13-build-
-// performance-diagnosis.md "Target A"): this zod schema used to live in
-// lib/chart-presentation.ts as `overridesSchema`/`frameBackgroundSchema`/
-// `hexSchema`, exported as `sanitizeOverrides` and called from BOTH this
-// write path and chart.tsx's render path. Because chart.tsx is a client
-// component rendered on the anonymous landing (the gallery's SSR'd chart),
-// that shared module dragged `zod` (~382 KB) into every visitor's first
-// load for a check the render path never actually needed — its inputs
-// there are already well-typed `PresentationOverrides`, not raw browser
-// JSON. `sanitizeOverrides` in chart-presentation.ts is now a hand-written,
-// zod-free validator with IDENTICAL semantics for the render path; this
-// copy — the real security boundary for untrusted input — keeps zod,
-// because THIS file is a `'use server'` Server Action module Next.js
-// compiles into a server-only bundle and never ships to the client. Kept
-// pinned against `sanitizeOverrides` by chart-style-actions.test.ts running
-// the same fixtures through both.
-const hexSchema = z.string().transform((s) => s.toLowerCase()).pipe(z.string().regex(HEX_COLOR));
-const frameBackgroundSchema = z.union([
-  z.literal('none'),
-  z.object({ kind: z.literal('solid'), hex: hexSchema }).strict(),
-  z.object({ kind: z.literal('gradient'), from: hexSchema, to: hexSchema }).strict(),
-  z.object({ kind: z.literal('image') }).strict(),
-]);
-const overridesSchema = z.object({
-  lineWidth: z.enum(['thin', 'normal', 'thick', 'extraThick']).optional(),
-  markers: z.enum(['all', 'ends', 'provisionalOnly']).optional(),
-  grid: z.enum(['both', 'horizontal', 'none']).optional(),
-  xLabels: z.enum(['flat', 'tilted']).optional(),
-  axisLines: z.enum(['shown', 'hidden']).optional(),
-  valueLabels: z.enum(['shown', 'hidden']).optional(),
-  zeroBaseline: z.enum(['auto', 'zero']).optional(),
-  areaFill: z.enum(['gradient', 'flat']).optional(),
-  pieHole: z.enum(['none', 'donut']).optional(),
-  seriesColors: z.record(z.string(), z.unknown()).optional(),
-  fontFamily: z.string().regex(FONT_FAMILY_NAME).nullable().optional(),
-  language: z.enum(['nl', 'en']).nullable().optional(),
-  frameBackground: frameBackgroundSchema.optional(),
-  framePadding: z.enum(['none', 'small', 'medium', 'large']).optional(),
-  frameCorners: z.enum(['square', 'rounded', 'veryRounded']).optional(),
-  frameShadow: z.enum(['none', 'soft', 'strong']).optional(),
-  frameInset: z.enum(['none', 'small', 'large']).optional(),
-  frameAspect: z.enum(['auto', '16:9', '4:5', '1:1', '1.91:1']).optional(),
-});
-
-/** Allow-list parse of anything claiming to be overrides (a reducer patch, a
- * stored row, a browser-submitted patch). Unknown keys, wrong enum values,
- * malformed colours and non-numeric series indexes are DROPPED, never
- * thrown on — verbatim the same behaviour lib/chart-presentation.ts's
- * `sanitizeOverrides` had before this pass split the render path off it. */
-function sanitizeOverridesStrict(raw: unknown): PresentationOverrides {
-  if (raw === null || typeof raw !== 'object') return {};
-  const out: PresentationOverrides = {};
-  for (const key of Object.keys(overridesSchema.shape) as (keyof PresentationOverrides)[]) {
-    if (!(key in raw)) continue;
-    const parsed = overridesSchema.pick({ [key]: true } as never).safeParse({ [key]: (raw as Record<string, unknown>)[key] });
-    if (!parsed.success) continue;
-    const value = (parsed.data as Record<string, unknown>)[key];
-    if (value === undefined) continue;
-    if (key === 'seriesColors') {
-      const colors: Record<number, string> = {};
-      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-        const index = /^\d+$/.test(k) ? Number(k) : NaN;
-        const hex = hexSchema.safeParse(v);
-        if (Number.isInteger(index) && hex.success) colors[index] = hex.data;
-      }
-      out.seriesColors = colors;
-    } else {
-      (out as Record<string, unknown>)[key] = value;
-    }
-  }
-  return out;
-}
 
 /** The exact allow-listed shape `saveMyChartStyle`'s `brandApplied` argument
  * must have before it is forwarded to `setAppliedBrand` — `domain` re-run

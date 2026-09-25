@@ -1,10 +1,13 @@
 -- 036 — published_user_charts: a reader's own-data chart made public (ADR 057,
--- session 127). One row = one live publication of one dataset-turn chart by its
--- author. ⚠ FILE-ONLY until the owner-supervised `npm run db:migrate`; every
--- reader (src/attachments/publications.ts) probes for the table first, so the
--- code is deploy-order-safe. Unpublish and every redaction path HARD-DELETE the
--- row (it holds author text — the log's titles/notes and the source line — and
--- nothing any other table needs). Plain Postgres only (ADR 009).
+-- session 127; `style` column added session 128, ruling 1). One row = one live
+-- publication of one dataset-turn chart by its author. ⚠ FILE-ONLY until the
+-- owner-supervised `npm run db:migrate` — this file has never been applied to
+-- any real database and may still be edited in place (no 037 needed for the
+-- `style` column). Every reader (src/attachments/publications.ts) probes for
+-- the table first, so the code is deploy-order-safe. Unpublish and every
+-- redaction path HARD-DELETE the row (it holds author text — the log's
+-- titles/notes and the source line — and nothing any other table needs).
+-- Plain Postgres only (ADR 009).
 create table published_user_charts (
   id bigint generated always as identity primary key,
   public_id text not null unique check (public_id ~ '^[A-Za-z0-9_-]{22}$'),
@@ -13,6 +16,20 @@ create table published_user_charts (
   dataset_turn_id bigint not null references dataset_turns(id),
   log jsonb not null,
   source_line text check (source_line is null or char_length(source_line) <= 120),
+  -- Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): the
+  -- author's `user_chart_styles.style` value AS IT WAS at publish time —
+  -- read server-side by publishOwnChart (never from the client) and
+  -- re-validated through the same allow-list schema `saveMyChartStyle` uses
+  -- (web/lib/chart-style-sanitize.ts) before it is ever written here, so a
+  -- stale/removed key can never reach a visitor's browser either. Nullable:
+  -- no saved account style, and a style-load failure at publish time, both
+  -- store null (the public page then renders with no default look, same
+  -- fail-soft posture the page used to have at REQUEST time). No DB size
+  -- check of its own — it is inherently bounded by the same
+  -- USER_CHART_STYLE_MAX_JSON cap (src/chart/user-styles.ts) the source
+  -- account row was already saved under, the same "size-bounded like the
+  -- existing log" posture `log` above has via CHART_EDITS_MAX_JSON.
+  style jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
