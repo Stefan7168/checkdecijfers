@@ -62,7 +62,7 @@ function toPartCell(point: ResolvedPoint | undefined): PartCell {
  * wants "every OTHER currently-displayed part" must build that list itself
  * (the UI never lets a reader designate a point that isn't currently
  * displayed, and never includes the designated point in its own parts list —
- * see user-chart.tsx's wholePartRowRefsFor).
+ * see user-chart-parts.tsx's wholePartRowRefsFor).
  */
 export function verifyDatasetWhole(
   dataset: UserDataset,
