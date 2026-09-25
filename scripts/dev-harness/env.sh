@@ -15,6 +15,7 @@ export ANSWER_FIRST_ENABLED=1
 export SEMANTIC_CHECK_ENABLED=1
 export EUROSTAT_EXPLORER_ENABLED=1                                # dev-harness Task 2: /eurostat-explorer now has a registered table to show
 export ATTACHMENTS_ENABLED=1                                      # co-pilot phase 2 Task 9: the "Bestand uploaden" control + the own-data chat
+export OWN_DATA_PUBLISH_ENABLED=1                                 # ADR 057 (session 127): own-data card's Publish button + /embed/own/[publicId] — dark in prod, on here for the local harness only
 # dev-harness Task 1: HARNESS_INTENT_INJECT=1 makes a "!!regionset <name>" /
 # "!!intent {json}" question skip the parser (src/answer/respond/harness-intent.ts)
 # — unset/anything else in production, and the pipeline treats the text as an
