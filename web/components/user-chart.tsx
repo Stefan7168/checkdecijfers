@@ -140,6 +140,7 @@ import {
   RegionTooltip,
   valueLabelPlan,
   yAxisDomain,
+  type AxisTickLabel,
   type DumbbellEnd,
   type DumbbellRow,
   type PlottablePoint,
@@ -668,6 +669,30 @@ function UserCategoryAxisTick(props: { x?: number | string; y?: number | string;
       {value}
     </text>
   );
+}
+
+/** #283 residual: the hbar form's numeric (X) axis tick — chart.tsx's
+ * `AxisTick`, oriented for a BOTTOM axis instead of a left-hand one
+ * (`textAnchor="middle"` and a downward `dy`, vs. `AxisTick`'s right-
+ * aligned, vertically-centred layout, which assumes ticks running down a Y
+ * axis). Same honesty contract and same lookup map as `AxisTick`: the only
+ * text drawn is `tick.display`, an existing spec string reached via
+ * `tickByValue`, never a number this component formats or invents — this
+ * is a rendering-ORIENTATION variant of `AxisTick`, not a new formatting
+ * path. Fed `hbarTickByValue` (below): `valueLabelPlan`'s lo/hi tick pair
+ * for the same `plottable` the other forms plot, so every tick is a plotted
+ * point's own `formattedValue`. */
+function UserHbarValueAxisTick(tickByValue: Map<number, AxisTickLabel>) {
+  return function Tick(props: { x?: number | string; y?: number | string; payload?: { value?: unknown } }) {
+    const value = props.payload?.value;
+    const tick = typeof value === 'number' ? tickByValue.get(value) : undefined;
+    if (!tick || props.x == null || props.y == null) return null;
+    return (
+      <text x={props.x} y={props.y} dy={12} fontSize={11} fill="var(--muted-foreground)" textAnchor="middle" data-role="axis-tick" data-label-for={tick.resultId}>
+        {tick.display}
+      </text>
+    );
+  };
 }
 
 /** The dumbbell's whole drawing. Per row: a `<line>` from
@@ -1343,6 +1368,22 @@ function UserChartCard({
   const listedSeriesMeta = publicMode ? seriesMeta.filter((s) => !state.hiddenKeys.has(s.key)) : seriesMeta;
   const plan = valueLabelPlan(plottable);
   const tickByValue = new Map(plan.axisTicks.map((tick) => [tick.value, tick]));
+  // #283 residual: the hbar form's numeric axis. `valueLabelPlan`'s
+  // `kind === 'bar'` branch deliberately returns NO `axisTicks` (only
+  // `barLabels` — the vertical bar form's own per-bar numbers, drawn
+  // directly on the bars, needs no separate axis scale) — but hbar is
+  // ONLY ever offered for a `kind: 'bar'` spec (`hbarFormAllowed`), so
+  // `plan.axisTicks` above is always empty for it. hbar draws BOTH a
+  // per-bar end label (unchanged, below) AND a numeric axis (new here) —
+  // the axis answers "where does this value sit in the whole range",
+  // which no single bar's own label can. That axis needs the SAME lo/hi
+  // tick pair the line/area forms' Y-axis already shows, computed by
+  // `valueLabelPlan`'s OTHER branch — its own pre-existing lo/hi
+  // selection, reached by asking for it with `kind: 'line'` rather than
+  // reimplementing that selection here. Every digit is still a plotted
+  // point's own `value`/`formattedValue` (R6) — no new formatting path.
+  const hbarAxisPlan = valueLabelPlan({ ...plottable, kind: 'line' });
+  const hbarTickByValue = new Map(hbarAxisPlan.axisTicks.map((tick) => [tick.value, tick]));
   // Goal lines / era shading (mirrors chart.tsx): a stored command names a
   // periodCode, but the x-axis plots `periodLabel` (buildRows keys rows by
   // it) — this maps one to the other. `periodOptions` is the era-shading
@@ -2266,14 +2307,23 @@ function UserChartCard({
             // The transposed bar: the x categories move to the category axis,
             // the values run horizontally. Same `rows`/`seriesMeta` model as
             // every other form here (R6: the spec's order IS the render
-            // order) — grid meaning swaps with the axes, exactly as it does
-            // on the CBS card's own hbar form.
+            // order) — grid meaning swaps with the axes. Unlike the CBS
+            // card's own hbar form (which plots per-REGION rows and keeps
+            // its number axis tick-less, `tick={false}`, on principle: "no
+            // invented ticks"), this form draws a real numeric axis, from
+            // `hbarAxisPlan`/`hbarTickByValue` above (#283 residual) — the
+            // SAME `valueLabelPlan` + `AxisTick` mechanism the line/area
+            // forms' Y-axis already uses, oriented for a bottom axis by
+            // `UserHbarValueAxisTick` (see its own comment). Every tick's
+            // text is still a plotted point's own `formattedValue`.
             <BarChart layout="vertical" data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} desc={t(chartLang, 'userChart.keyboardHint')} aria-label={accessibleName}>
               {pres.grid !== 'none' ? <CartesianGrid {...GRID_LINE_PROPS} vertical horizontal={pres.grid === 'both'} /> : null}
               <XAxis
                 type="number"
                 domain={[0, 'auto']}
-                tick={false}
+                ticks={hbarAxisPlan.axisTicks.map((tick) => tick.value)}
+                interval={0}
+                tick={hbarAxisPlan.axisTicks.length > 0 ? UserHbarValueAxisTick(hbarTickByValue) : false}
                 stroke={AXIS_COLOR}
                 axisLine={pres.axisLines === 'shown'}
                 tickLine={pres.axisLines === 'shown'}
