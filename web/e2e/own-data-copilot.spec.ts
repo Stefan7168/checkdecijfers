@@ -443,10 +443,11 @@ test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole
     await pieTab.click();
     await amsterdam.click();
     await expect(note).toHaveAttribute('data-state', 'checked', { timeout: 15_000 });
-    await expect(note).toHaveText('Gecontroleerd tegen de rij die je koos: Omzet − Kosten.');
-    // Fix wave (session 124, final-review I2/I3): both slices share the
-    // label "Omzet − Kosten" (a derived chart), so the note's label alone
-    // cannot say WHICH slice is the total — the mark on the chart does.
+    // Session 129: a split derived chart now names each slice by its own
+    // split value (buildUserChartSpec), so the note says WHICH slice is the
+    // total. (Before, both slices were labelled "Omzet − Kosten" and only the
+    // mark on the chart — still asserted below — told them apart.)
+    await expect(note).toHaveText('Gecontroleerd tegen de rij die je koos: Amsterdam.');
     await expect(amsterdam).toHaveAttribute('aria-pressed', 'true');
     await expect(amsterdam).toHaveAttribute('data-whole-reference', 'true');
     await expect(rotterdam).toHaveAttribute('aria-pressed', 'false');
@@ -495,7 +496,7 @@ test.describe.serial('the own-data chart co-pilot — chart-fit + verified-whole
     const amsterdam = page.locator('path.recharts-sector[data-point="value"][data-result-id="der:difference:r1:c2|r1:c3"]');
     await amsterdam.click();
     await expect(note).toHaveAttribute('data-state', 'mismatch', { timeout: 15_000 });
-    await expect(note).toHaveText('Deze delen tellen niet op tot Omzet − Kosten — controleer je selectie.');
+    await expect(note).toHaveText('Deze delen tellen niet op tot Amsterdam — controleer je selectie.');
     // A mismatch still renders the chart in full — never hidden, never
     // refused.
     await expect(slices).toHaveCount(2);
