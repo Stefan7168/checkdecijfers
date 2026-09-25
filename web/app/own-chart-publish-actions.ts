@@ -22,8 +22,15 @@
 // silently different chart; the client is expected to flush pending edits
 // (its own current serialized log) before calling this, so a `changed`
 // result should be rare in practice, not a caller bug to paper over.
+//
+// Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): this
+// function is also where the author's account chart style is read and
+// frozen into the publication row (`resolveAuthorStyleForPublish` below) —
+// the public page (web/app/embed/own/[publicId]/page.tsx) no longer reads
+// it live on every visitor request.
 'use server';
 
+import type { Db } from '../backend/db/types.ts';
 import { getDataset } from '../backend/attachments/store.ts';
 import { getDatasetTurnById } from '../backend/attachments/read.ts';
 import {
@@ -34,6 +41,7 @@ import {
   upsertPublication,
 } from '../backend/attachments/publications.ts';
 import { CHART_EDITS_MAX_JSON } from '../backend/chart/edits-store.ts';
+import { chartStylesTablePresent, getUserChartStyle } from '../backend/chart/user-styles.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
@@ -41,8 +49,11 @@ import { buildPublishedChart, firstRenderMatchesEnvelope } from '../lib/own-char
 // Fix round 1: normalizeSourceLine is a plain synchronous function, which
 // Next's server-boundary check refuses as an export of a 'use server' file
 // (bare tsc doesn't catch it) — it now lives in its own pure lib module and
-// is imported, NEVER re-exported, here.
+// is imported, NEVER re-exported, here. sanitizeOverridesStrict (session
+// 128) is the same kind of import for the same reason — see that module's
+// own header for why it moved out of chart-style-actions.ts.
 import { normalizeSourceLine } from '../lib/publication-source-line.ts';
+import { sanitizeOverridesStrict } from '../lib/chart-style-sanitize.ts';
 
 export type PublishFailure =
   | 'disabled'
@@ -58,6 +69,33 @@ export type PublishOwnChartResult = { ok: true; publicId: string } | { ok: false
 
 function isValidTurnId(turnId: number): boolean {
   return Number.isInteger(turnId) && turnId > 0;
+}
+
+/** Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): reads
+ * the author's CURRENT account chart style, right here at publish time —
+ * never on the public page's own request path, which used to call
+ * `getUserChartStyle` fresh on every visitor request (the v1 "known
+ * difference" ADR 057 documented and this session closes). Re-validated
+ * through the same allow-list `saveMyChartStyle` uses
+ * (`sanitizeOverridesStrict`) before it is ever stored — "never store
+ * unvalidated JSON" — rather than trusting that the row was already clean
+ * when it was originally saved. Same fail-soft posture the public page used
+ * to have at request time: no saved style, an absent table, or a thrown
+ * lookup error all degrade to null (no default look) rather than failing
+ * the publish — a style is a nice-to-have presentation default, not
+ * something worth refusing "Publish" over. A thrown error is logged with a
+ * short fixed message and no payload (same C1 discipline the page's own
+ * try/catch documents), never via `reportError`: like the page's own
+ * comment says, this isn't a server fault worth paging anyone over. */
+async function resolveAuthorStyleForPublish(db: Db, userId: string): Promise<Record<string, unknown> | null> {
+  try {
+    if (!(await chartStylesTablePresent(db))) return null;
+    const styleRow = await getUserChartStyle(db, userId);
+    return styleRow === null ? null : sanitizeOverridesStrict(styleRow.style);
+  } catch {
+    console.error('own-chart publish: author chart style lookup failed; publishing without it');
+    return null;
+  }
 }
 
 export async function publishOwnChart(turnId: number, log: unknown, sourceLine: unknown): Promise<PublishOwnChartResult> {
@@ -105,12 +143,20 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
       return { ok: false, reason: 'limit' };
     }
 
+    // Session 128 (ADR 057 ruling 1): resolved AFTER every refusal above (no
+    // point reading a style for a publish that's about to fail anyway) but
+    // BEFORE the write — "Update published version" is this SAME function
+    // called again, so the style is re-resolved and re-frozen on every call,
+    // never stale from the first publish.
+    const style = await resolveAuthorStyleForPublish(db, userId);
+
     const result = await upsertPublication(db, {
       userId,
       datasetId: dataset.id,
       datasetTurnId: turnId,
       log,
       sourceLine: normalized.value,
+      style,
     });
     if (result === null) return { ok: false, reason: 'unavailable' };
 

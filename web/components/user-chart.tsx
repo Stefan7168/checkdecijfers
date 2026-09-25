@@ -231,14 +231,26 @@ export interface UserChartPublicView {
    * `resolvedOverlays` state already expects. */
   overlays: Record<string, ResolvedOverlay>;
   sourceLine: string | null;
-  /** The author's account default look (sanitised by the card like the
-   * context value — `useChartStyle()`'s own `accountStyle`), or null. Raw
-   * `unknown` at the boundary: it is a `user_chart_styles.style` jsonb value
-   * the public page reads for the CHART'S AUTHOR (not the anonymous
-   * visitor, who is never signed in), so it goes through the same
+  /** Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): the
+   * author's account style AS IT WAS AT PUBLISH TIME — the publication
+   * row's own `style` column (`published_user_charts.style`, resolved and
+   * validated server-side by `resolveAuthorStyleForPublish`,
+   * own-chart-publish-actions.ts), never a live `user_chart_styles` read.
+   * Still raw `unknown` at THIS boundary and still re-run through the same
    * `sanitizeOverrides` allow-list every other untrusted overrides input
-   * does, here rather than trusting the page to have done it. */
+   * does (below), rather than trusting the page to have done it — a second,
+   * cheap sanitisation pass costs nothing and means this card never has to
+   * trust that a stored row still matches today's schema. */
   accountStyle: unknown;
+  /** Session 128 (ADR 057 ruling 2, "?lang= wins for the chart too"): the
+   * public page's own `?lang=` query parameter, already validated
+   * (`isLang`) — null when absent or invalid. Precedence for the CHART's
+   * own language (`chartLang` below) is this value, when non-null, over the
+   * frozen style's `language`, over `'nl'` — the exact reverse of the order
+   * `pres.language ?? appLang` used to apply, which let an account style's
+   * language silently override an explicit `?lang=` (ADR 057's own "known
+   * v1 difference", closed this session). */
+  explicitLang: Lang | null;
 }
 
 /** Own-data publish (ADR 057, Task 4), requirement 1: the inverse of
@@ -1323,7 +1335,16 @@ function UserChartCard({
   const base = withAccountDefault(effectiveAccountStyle);
   const resolved = resolvePresentation({ kind: activeSpec.kind, form: activeForm, seriesCount, hasProvisional: false }, state.presentation, base);
   const pres = resolved.values;
-  const chartLang: Lang = pres.language ?? appLang;
+  // Session 128 (ADR 057 ruling 2): public mode uses the page's own
+  // explicit `?lang=` (when valid) ahead of the frozen style's own
+  // `language` — `pres.language ?? 'nl'` — never `appLang`, which for an
+  // /embed/ route already resolves `?lang=` down to a plain `Lang` with NO
+  // way left to tell "explicitly set" apart from "absent, fell back to the
+  // visitor's own cookie/Accept-Language" (web/proxy.ts's `x-embed-lang` /
+  // web/app/layout.tsx's `getLang()`) — exactly the ambiguity this ruling's
+  // precedence needs to resolve. Authenticated/edit mode is UNCHANGED:
+  // `pres.language ?? appLang`, same as before this session.
+  const chartLang: Lang = publicView !== undefined ? (publicView.explicitLang ?? pres.language ?? 'nl') : (pres.language ?? appLang);
   // A chosen font has to be REQUESTED, or the chart silently renders in the
   // fallback stack while the panel says the font is applied (a chart.tsx
   // final-review finding). An uncurated family (a brand font) is requested

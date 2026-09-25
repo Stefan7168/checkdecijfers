@@ -34,11 +34,10 @@ vi.mock('../../../../backend/attachments/read.ts', () => ({ getDatasetTurnById }
 const { getDataset } = vi.hoisted(() => ({ getDataset: vi.fn() }));
 vi.mock('../../../../backend/attachments/store.ts', () => ({ getDataset }));
 
-vi.mock('../../../../backend/chart/user-styles.ts', () => ({
-  chartStylesTablePresent: vi.fn(async () => false),
-  getUserChartStyle: vi.fn(async () => null),
-}));
-
+// Session 128 (ADR 057 ruling 1): the page no longer reads
+// backend/chart/user-styles.ts at all — the publication row's own `style`
+// field (set below) is the only source for publicView.accountStyle now, so
+// there is nothing left to mock here.
 vi.mock('../../../../lib/db.ts', () => ({ getDb: vi.fn(() => ({})) }));
 
 import OwnEmbedPage from './page.tsx';
@@ -114,6 +113,7 @@ function publish(dataset: UserDataset, instruction: Record<string, unknown>, log
     datasetTurnId: 7,
     log: log.map((params) => makeCommand(params, 'panel')),
     sourceLine: 'eigen administratie',
+    style: null,
     createdAt: '2026-09-10T12:00:00.000Z',
     updatedAt: '2026-09-10T12:00:00.000Z',
   };

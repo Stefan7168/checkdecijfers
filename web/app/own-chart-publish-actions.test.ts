@@ -50,6 +50,25 @@ vi.mock('../lib/own-chart-publication.ts', () => ({ buildPublishedChart, firstRe
 const { reportError } = vi.hoisted(() => ({ reportError: vi.fn() }));
 vi.mock('../lib/error-report.ts', () => ({ reportError }));
 
+// Session 128 (ADR 057 ruling 1): publishOwnChart now resolves+freezes the
+// author's account style at publish time — mocked here the same way every
+// other I/O boundary in this file is, so the pure control-flow assertions
+// stay hermetic.
+const { chartStylesTablePresent, getUserChartStyle } = vi.hoisted(() => ({
+  chartStylesTablePresent: vi.fn(async () => false),
+  getUserChartStyle: vi.fn(async () => null as { style: Record<string, unknown>; brand: unknown; updatedAt: string } | null),
+}));
+vi.mock('../backend/chart/user-styles.ts', () => ({ chartStylesTablePresent, getUserChartStyle }));
+
+// sanitizeOverridesStrict is real, pure logic (the exact allow-list
+// saveMyChartStyle's write path uses) — kept REAL via vi.importActual so
+// these tests prove something about the actual validator, not a stub that
+// happens to echo its input back unchanged.
+vi.mock('../lib/chart-style-sanitize.ts', async () => {
+  const actual = await vi.importActual<typeof import('../lib/chart-style-sanitize.ts')>('../lib/chart-style-sanitize.ts');
+  return { sanitizeOverridesStrict: actual.sanitizeOverridesStrict };
+});
+
 import { getOwnChartPublication, publishOwnChart, unpublishOwnChart } from './own-chart-publish-actions.ts';
 
 const DB = {} as Db;
@@ -104,6 +123,7 @@ function publicationRow(overrides: Partial<PublicationRow> = {}): PublicationRow
     datasetTurnId: 7,
     log: [],
     sourceLine: null,
+    style: null,
     createdAt: '2026-09-24T00:00:00Z',
     updatedAt: '2026-09-24T00:00:00Z',
     ...overrides,
@@ -122,6 +142,8 @@ beforeEach(() => {
   countPublications.mockResolvedValue(0);
   upsertPublication.mockResolvedValue({ publicId: 'new-public-id-xxxxxx' });
   deletePublicationForTurn.mockResolvedValue(true);
+  chartStylesTablePresent.mockResolvedValue(false);
+  getUserChartStyle.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -255,6 +277,7 @@ describe('publishOwnChart', () => {
       datasetTurnId: 7,
       log,
       sourceLine: 'Bron: eigen data',
+      style: null,
     });
   });
 
@@ -263,6 +286,64 @@ describe('publishOwnChart', () => {
     const result = await publishOwnChart(7, [], null);
     expect(result).toEqual({ ok: false, reason: 'error' });
     expect(reportError).toHaveBeenCalledWith('publishOwnChart', expect.any(Error), expect.objectContaining({ userId: 'user-1', extra: { turnId: 7 } }));
+  });
+
+  // Session 128 (ADR 057 ruling 1, "freeze the look at publish time"):
+  // publishOwnChart now resolves and freezes the author's account style.
+  describe('account style freeze', () => {
+    it('stores null when the chart-style table is absent, without calling getUserChartStyle', async () => {
+      chartStylesTablePresent.mockResolvedValue(false);
+      expect(await publishOwnChart(7, [], null)).toEqual({ ok: true, publicId: 'new-public-id-xxxxxx' });
+      expect(getUserChartStyle).not.toHaveBeenCalled();
+      expect(upsertPublication).toHaveBeenCalledWith(DB, expect.objectContaining({ style: null }));
+    });
+
+    it('stores null when the author has no saved style row', async () => {
+      chartStylesTablePresent.mockResolvedValue(true);
+      getUserChartStyle.mockResolvedValue(null);
+      expect(await publishOwnChart(7, [], null)).toEqual({ ok: true, publicId: 'new-public-id-xxxxxx' });
+      expect(getUserChartStyle).toHaveBeenCalledWith(DB, 'user-1');
+      expect(upsertPublication).toHaveBeenCalledWith(DB, expect.objectContaining({ style: null }));
+    });
+
+    it('re-validates and stores the author\'s current style, dropping any unknown/invalid keys', async () => {
+      chartStylesTablePresent.mockResolvedValue(true);
+      getUserChartStyle.mockResolvedValue({
+        style: { fontFamily: 'Georgia', language: 'en', notARealKey: 'drop me', valueLabels: 'not-a-real-enum-value' },
+        brand: null,
+        updatedAt: '2026-09-01T00:00:00Z',
+      });
+      expect(await publishOwnChart(7, [], null)).toEqual({ ok: true, publicId: 'new-public-id-xxxxxx' });
+      expect(upsertPublication).toHaveBeenCalledWith(
+        DB,
+        expect.objectContaining({ style: { fontFamily: 'Georgia', language: 'en' } }),
+      );
+    });
+
+    it('stores null and logs (never reportError) when the style lookup throws', async () => {
+      chartStylesTablePresent.mockResolvedValue(true);
+      getUserChartStyle.mockRejectedValue(new Error('pool exhausted'));
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(await publishOwnChart(7, [], null)).toEqual({ ok: true, publicId: 'new-public-id-xxxxxx' });
+      expect(upsertPublication).toHaveBeenCalledWith(DB, expect.objectContaining({ style: null }));
+      expect(reportError).not.toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalledTimes(1);
+      expect(consoleError.mock.calls[0]).toHaveLength(1);
+      expect(String(consoleError.mock.calls[0]![0])).not.toContain('pool exhausted');
+      consoleError.mockRestore();
+    });
+
+    it('re-resolves the style on every call, so "Update published version" refreshes it', async () => {
+      chartStylesTablePresent.mockResolvedValue(true);
+      getUserChartStyle.mockResolvedValue({ style: { fontFamily: 'Georgia' }, brand: null, updatedAt: '2026-09-01T00:00:00Z' });
+      await publishOwnChart(7, [], null);
+      expect(upsertPublication).toHaveBeenLastCalledWith(DB, expect.objectContaining({ style: { fontFamily: 'Georgia' } }));
+
+      getUserChartStyle.mockResolvedValue({ style: { fontFamily: 'Times New Roman' }, brand: null, updatedAt: '2026-09-02T00:00:00Z' });
+      getPublicationForTurn.mockResolvedValue(publicationRow());
+      await publishOwnChart(7, [], null);
+      expect(upsertPublication).toHaveBeenLastCalledWith(DB, expect.objectContaining({ style: { fontFamily: 'Times New Roman' } }));
+    });
   });
 
   it.each([0, -1, 1.5, NaN])('returns forbidden for a non-positive-integer turnId (%s), never touching the DB', async (turnId) => {

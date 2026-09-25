@@ -176,7 +176,7 @@ function publicChartState(overrides: Partial<PublicChartState> = {}): PublicChar
 }
 
 function publicChartView(overrides: Partial<UserChartPublicView> = {}): UserChartPublicView {
-  return { state: publicChartState(), overlays: {}, sourceLine: null, accountStyle: null, ...overrides };
+  return { state: publicChartState(), overlays: {}, sourceLine: null, accountStyle: null, explicitLang: null, ...overrides };
 }
 
 /** Two series × three years — heatmap-shaped (a 2 × 3 grid, every cell a real
@@ -2872,6 +2872,43 @@ describe('publicView (ADR 057)', () => {
     expect(container.querySelector('.recharts-cartesian-grid')).not.toBeNull();
   });
 
+  // Session 128 (ADR 057 ruling 2, "?lang= wins for the chart too"):
+  // precedence for the CHART's own language in public mode is explicit valid
+  // ?lang= > the frozen style's own `language` > 'nl' — proven observably via
+  // the "Bron:"/"Source:" source-line prefix, the one chartLang-driven string
+  // requirement 5 above already exercises.
+  describe('public mode chart language precedence (ruling 2)', () => {
+    it('an explicit publicView.explicitLang wins over the frozen style\'s own language', () => {
+      render(
+        <UserChartView
+          spec={twoSeriesSpec()}
+          publicView={publicChartView({ sourceLine: null, accountStyle: { language: 'nl' }, explicitLang: 'en' })}
+        />,
+      );
+      expect(screen.getByText('Source: data supplied by the author')).toBeInTheDocument();
+    });
+
+    it('the frozen style\'s own language applies when ?lang= is absent (explicitLang null)', () => {
+      render(
+        <UserChartView
+          spec={twoSeriesSpec()}
+          publicView={publicChartView({ sourceLine: null, accountStyle: { language: 'en' }, explicitLang: null })}
+        />,
+      );
+      expect(screen.getByText('Source: data supplied by the author')).toBeInTheDocument();
+    });
+
+    it('falls back to Dutch when neither ?lang= nor the frozen style set a language', () => {
+      render(
+        <UserChartView
+          spec={twoSeriesSpec()}
+          publicView={publicChartView({ sourceLine: null, accountStyle: null, explicitLang: null })}
+        />,
+      );
+      expect(screen.getByText('Bron: gegevens aangeleverd door de maker')).toBeInTheDocument();
+    });
+  });
+
   // Requirement 7 (U6): every digit in a public render traces to the spec's
   // own strings — the source line's digits included, via `extraAllowed`.
   // Ruling R8/M2 (fix round 1): uses `expectPublicDigitsTraceToSpec`, NOT
@@ -2941,7 +2978,7 @@ describe('publicView (ADR 057)', () => {
       expect(pub.state.hiddenKeys).toEqual(['s0']);
 
       const { container } = render(
-        <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: pub.sourceLine, accountStyle: null }} />,
+        <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: pub.sourceLine, accountStyle: null, explicitLang: null }} />,
       );
       expect(container.textContent).not.toContain('Geheim BV');
       expect(container.textContent).not.toContain('120,5');
@@ -3056,7 +3093,7 @@ describe('publicView — m1/m2: whole-shape forms survive a hidden series (publi
     expect(pub.spec.series[1]!.points).toEqual([]);
 
     const { container } = render(
-      <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: null, accountStyle: null }} />,
+      <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: null, accountStyle: null, explicitLang: null }} />,
     );
     expect(container.querySelector('table')).toBeNull();
     const labels = [...container.querySelectorAll('[data-testid="user-chart-container"] [data-role="pie-label"]')].map((el) => el.textContent);

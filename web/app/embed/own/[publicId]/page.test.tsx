@@ -7,13 +7,18 @@
 // aborts rendering via a thrown, digest-tagged error).
 //
 // Unlike the CBS route, this file mocks ONLY the DB readers
-// (getPublicationByPublicId, getDatasetTurnById, getDataset,
-// chartStylesTablePresent, getUserChartStyle) plus the client chart card
-// itself (UserChartView, stubbed to record its props). `buildPublishedChart`
-// and `pruneForPublic` (web/lib/own-chart-publication.ts) are the REAL,
-// pure implementations — reused verbatim from that module's own test fixture
-// (web/lib/own-chart-publication.test.ts) — so the digit/leak assertions
-// below prove something about the REAL prune, not a stubbed one.
+// (getPublicationByPublicId, getDatasetTurnById, getDataset) plus the client
+// chart card itself (UserChartView, stubbed to record its props).
+// `buildPublishedChart` and `pruneForPublic` (web/lib/own-chart-publication.ts)
+// are the REAL, pure implementations — reused verbatim from that module's own
+// test fixture (web/lib/own-chart-publication.test.ts) — so the digit/leak
+// assertions below prove something about the REAL prune, not a stubbed one.
+//
+// Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): this
+// page no longer calls `chartStylesTablePresent`/`getUserChartStyle` AT ALL
+// — it reads `row.style` straight off the publication row, so those two are
+// no longer mocked here (own-chart-publish-actions.test.ts now covers the
+// style RESOLUTION behaviour, at publish time, where it actually happens).
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Metadata } from 'next';
@@ -47,12 +52,6 @@ vi.mock('../../../../backend/attachments/read.ts', () => ({ getDatasetTurnById }
 
 const { getDataset } = vi.hoisted(() => ({ getDataset: vi.fn() }));
 vi.mock('../../../../backend/attachments/store.ts', () => ({ getDataset }));
-
-const { chartStylesTablePresent, getUserChartStyle } = vi.hoisted(() => ({
-  chartStylesTablePresent: vi.fn(async () => false),
-  getUserChartStyle: vi.fn(async () => null as { style: Record<string, unknown>; brand: unknown; updatedAt: string } | null),
-}));
-vi.mock('../../../../backend/chart/user-styles.ts', () => ({ chartStylesTablePresent, getUserChartStyle }));
 
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn(() => ({})) }));
 vi.mock('../../../../lib/db.ts', () => ({ getDb }));
@@ -143,6 +142,7 @@ function row(overrides: Partial<PublicationRow> = {}): PublicationRow {
     datasetTurnId: 7,
     log: [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')],
     sourceLine: 'Bron: eigen administratie',
+    style: null,
     createdAt: '2026-09-10T12:00:00.000Z',
     updatedAt: '2026-09-10T12:00:00.000Z',
     ...overrides,
@@ -159,8 +159,6 @@ function search(query: { lang?: string } = {}) {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  chartStylesTablePresent.mockResolvedValue(false);
-  getUserChartStyle.mockResolvedValue(null);
   userChartViewProps.current = null;
   delete process.env.OWN_DATA_PUBLISH_ENABLED;
 });
@@ -296,52 +294,62 @@ describe('/embed/own/[publicId] — happy path', () => {
     expect(props.publicView.sourceLine).toBe('Bron: mijn eigen administratie');
   });
 
-  it('resolves the author\'s account style via getUserChartStyle when the table is present, and hands it through as publicView.accountStyle', async () => {
+  // Session 128 (ADR 057 ruling 1, "freeze the look at publish time"): the
+  // page now hands `publicView.accountStyle` straight off `row.style` — no
+  // DB read of its own, so no "table absent" or "lookup throws" branch is
+  // left to test HERE; that resolution now happens at publish time
+  // (own-chart-publish-actions.test.ts's "account style freeze" suite).
+  it('passes the row\'s style straight through publicView.accountStyle', async () => {
     process.env.OWN_DATA_PUBLISH_ENABLED = '1';
-    chartStylesTablePresent.mockResolvedValue(true);
-    getUserChartStyle.mockResolvedValue({ style: { fontFamily: 'Georgia' }, brand: null, updatedAt: '2026-09-01T00:00:00Z' });
-    getPublicationByPublicId.mockResolvedValue(row());
+    getPublicationByPublicId.mockResolvedValue(row({ style: { fontFamily: 'Georgia' } }));
     getDatasetTurnById.mockResolvedValue(turn());
     getDataset.mockResolvedValue(DATASET);
     render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
-    expect(getUserChartStyle).toHaveBeenCalledWith(expect.anything(), 'author-1');
     const props = userChartViewProps.current as { publicView: { accountStyle: unknown } };
     expect(props.publicView.accountStyle).toEqual({ fontFamily: 'Georgia' });
   });
 
-  it('never calls getUserChartStyle when the style table is absent, and renders with a null accountStyle', async () => {
+  it('renders with a null accountStyle when the row has no stored style', async () => {
     process.env.OWN_DATA_PUBLISH_ENABLED = '1';
-    chartStylesTablePresent.mockResolvedValue(false);
-    getPublicationByPublicId.mockResolvedValue(row());
+    getPublicationByPublicId.mockResolvedValue(row({ style: null }));
     getDatasetTurnById.mockResolvedValue(turn());
     getDataset.mockResolvedValue(DATASET);
     render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
-    expect(getUserChartStyle).not.toHaveBeenCalled();
     const props = userChartViewProps.current as { publicView: { accountStyle: unknown } };
     expect(props.publicView.accountStyle).toBeNull();
   });
 
-  // Carried from Task 4's review: a style-load failure must not break the
-  // page — render without it rather than falling through to not-available or
-  // throwing.
-  it('still renders the chart with a null accountStyle when loading the style throws', async () => {
-    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
-    chartStylesTablePresent.mockResolvedValue(true);
-    getUserChartStyle.mockRejectedValue(new Error('pool exhausted'));
-    getPublicationByPublicId.mockResolvedValue(row());
-    getDatasetTurnById.mockResolvedValue(turn());
-    getDataset.mockResolvedValue(DATASET);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
-    expect(userChartViewProps.current).not.toBeNull();
-    const props = userChartViewProps.current as { publicView: { accountStyle: unknown } };
-    expect(props.publicView.accountStyle).toBeNull();
-    // C1: logged with a short fixed message and NO payload (not the error).
-    expect(consoleError).toHaveBeenCalledTimes(1);
-    expect(consoleError.mock.calls[0]).toHaveLength(1);
-    expect(typeof consoleError.mock.calls[0]![0]).toBe('string');
-    expect(String(consoleError.mock.calls[0]![0])).not.toContain('pool exhausted');
-    consoleError.mockRestore();
+  // Session 128 (ADR 057 ruling 2, "?lang= wins for the chart too").
+  describe('publicView.explicitLang', () => {
+    it('is the validated ?lang= value when present', async () => {
+      process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+      getPublicationByPublicId.mockResolvedValue(row());
+      getDatasetTurnById.mockResolvedValue(turn());
+      getDataset.mockResolvedValue(DATASET);
+      render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
+      const props = userChartViewProps.current as { publicView: { explicitLang: string | null } };
+      expect(props.publicView.explicitLang).toBe('en');
+    });
+
+    it('is null when ?lang= is absent', async () => {
+      process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+      getPublicationByPublicId.mockResolvedValue(row());
+      getDatasetTurnById.mockResolvedValue(turn());
+      getDataset.mockResolvedValue(DATASET);
+      render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
+      const props = userChartViewProps.current as { publicView: { explicitLang: string | null } };
+      expect(props.publicView.explicitLang).toBeNull();
+    });
+
+    it('is null (not "de") when ?lang= is present but invalid — never coerced to the "nl" chrome default', async () => {
+      process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+      getPublicationByPublicId.mockResolvedValue(row());
+      getDatasetTurnById.mockResolvedValue(turn());
+      getDataset.mockResolvedValue(DATASET);
+      render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'de' }) }));
+      const props = userChartViewProps.current as { publicView: { explicitLang: string | null } };
+      expect(props.publicView.explicitLang).toBeNull();
+    });
   });
 
   // Final-review fix A2 (ruling R12): fail closed. An old log that no longer

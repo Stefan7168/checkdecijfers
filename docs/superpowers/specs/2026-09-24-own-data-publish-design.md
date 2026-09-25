@@ -59,9 +59,14 @@ moderation), Live embeds (an uploaded file never changes, U12), downloads on the
 | `dataset_turn_id` | bigint not null → `dataset_turns(id)` |
 | `log` | jsonb not null — the frozen chart command log (same shape as `chart_edits.log`, size-capped by `CHART_EDITS_MAX_JSON`) |
 | `source_line` | text null, `check (char_length(source_line) <= 120)` |
+| `style` | jsonb, nullable — added session 128 (ruling 1, "freeze the look at publish time"): the author's account chart style AS IT WAS at publish time, resolved and re-validated server-side (never from the client) through the same allow-list `saveMyChartStyle` uses. Null = no saved style, or a style-load failure, at publish time — same fail-soft posture the public page used to have at request time. No DB size check of its own (inherently bounded by `USER_CHART_STYLE_MAX_JSON`, the cap the source row was already saved under). |
 | `created_at`, `updated_at` | timestamptz |
 
-Language and colour are URL parameters only (`?lang=`, `?theme=`), exactly as on the CBS embed — not stored.
+Colour is a URL parameter only (`?theme=`), exactly as on the CBS embed — not stored. **Language is a URL
+parameter for the CHROME (`?lang=`) but the CHART's own language now also considers the frozen `style` column**
+(session 128, ruling 2) — precedence is explicit valid `?lang=` > the frozen style's own `language` > `'nl'`; see
+ADR 057's as-built note for the full mechanism. This corrects the original design line above, which predates the
+`style` column and said language was "not stored" at all.
 Unique `(dataset_turn_id, user_id)` — one live publication per chart per author. **Unpublish and every redaction
 path hard-delete the row** (it holds nothing any other table needs; the chart_edits precedent in
 `redactTurnsForDatasets`). File-only until the owner-supervised `npm run db:migrate`; every reader of the table
