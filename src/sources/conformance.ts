@@ -357,8 +357,12 @@ async function checkTable(
     );
   }
 
-  // F1: schema through the real parse code.
-  const schema: CbsTableSchema = await adapter.fetchTableSchema(id);
+  // F1: schema through the real parse code. #317: threaded with the
+  // manifest's registered slice, exactly like src/ingestion/pipeline.ts's
+  // registerTables (`source.fetchTableSchema(table.id, table.slice)`) — a
+  // sliced schema/code-list read is what keeps a live-scale sliced sibling
+  // under the sync-cell cap; fetchObservations below already received it.
+  const schema: CbsTableSchema = await adapter.fetchTableSchema(id, spec.slice);
   if (schema.title.trim().length === 0) add('F1_replay', 'fetchTableSchema returned an empty title.', id);
   if (schema.measures.length === 0) add('F1_replay', 'fetchTableSchema returned zero measures.', id);
   const timeDims = schema.dimensions.filter((d) => d.kind === 'TimeDimension');
@@ -374,10 +378,12 @@ async function checkTable(
   }
   const timeDim = timeDims[0]!;
 
-  // F1: code lists per dimension.
+  // F1: code lists per dimension. #317: same slice threading as above,
+  // matching src/ingestion/pipeline.ts's fetchAllCodeLists
+  // (`source.fetchCodeList(tableId, dim.name, slice)`).
   const codeLists: Record<string, CbsCode[]> = {};
   for (const dim of schema.dimensions) {
-    const codes = await adapter.fetchCodeList(id, dim.name);
+    const codes = await adapter.fetchCodeList(id, dim.name, spec.slice);
     if (codes.length === 0) add('F1_replay', `fetchCodeList('${dim.name}') returned zero codes.`, id);
     codeLists[dim.name] = codes;
   }
