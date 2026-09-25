@@ -40,6 +40,7 @@ it, ADR [056](056-chart-copilot.md)), and file names can be revealing.
    deletion and the 2-year dataset retention purge would go through the same leg, but `deleteUserDatasets` and
    `purgeExpiredDatasets` have no production caller yet — tracked as [#322](../open-questions.md) I-3, NOT yet
    built, and required before the flag is switched on.
+   **Update (session 129, 2026-09-25): WIRED** — the monthly purge (cron + `scripts/gdpr-purge.ts`) now runs `purgeExpiredDatasets` as its uploaded-dataset leg (full redaction at the audit leg's two-year cutoff, file bytes at 90 days), and "delete my question history" now calls `deleteUserDatasets` (not fail-soft: a failure shows the reader a failed delete). [#322](../open-questions.md) I-3 closed.
 7. Free, no AI, noindex, max 50 live publications per author, behind `OWN_DATA_PUBLISH_ENABLED` (fails closed).
    Route `/embed/own/[publicId]` reuses the `/embed/` proxy prefix, framing headers and layout signal.
 
@@ -180,8 +181,7 @@ exposed:
   Google Fonts (the 2022 LG München pattern). Self-hosting the curated fonts would bring the choice back; not
   built (cheapest mechanism first).
 
-**Still open (#322):** I-3 (dataset retention + account-level deletion not wired — see decision 6's correction)
-and M-2 (the 50-publication cap is a count-then-insert race, accepted as #320). Not built from I-4: storing the
+**Still open (#322):** ~~I-3~~ (wired session 129 — see decision 6's update) and M-2 (the 50-publication cap is a count-then-insert race, accepted as #320). Not built from I-4: storing the
 pruned payload at publish time (the review's (c)) and a firewall rate limit on `/embed/own/*` (d); a crafted log
 of up to 200 distinct `setInstruction` commands still costs one render each per view, bounded by the cap.
 

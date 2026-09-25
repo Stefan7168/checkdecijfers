@@ -20,9 +20,18 @@ import {
   describeRetentionPurge,
   RetentionPurgePartialError,
   runRetentionPurge,
+  type DatasetRetentionLeg,
   type InjectedRetentionLeg,
   type TrialRetentionLeg,
 } from '../../src/answer/audit/retention-job.ts';
+import {
+  countPurgeableDatasets,
+  datasetsTablePresent,
+  fileBytesCutoff,
+  purgeExpiredDatasets,
+} from '../../src/attachments/retention.ts';
+import { insertDataset } from '../../src/attachments/store.ts';
+import type { DatasetProfile } from '../../src/attachments/types.ts';
 import { REDACTED_QUESTION_TEXT } from '../../src/answer/audit/retention.ts';
 import {
   countPurgeableTrialBookkeeping,
@@ -528,6 +537,99 @@ describe('#189 runRetentionPurge — the shared job behind the CLI and the cron'
         expect(applied.auditRows).toBe(dry.auditRows);
         expect((dry.accountRows ?? 0) + (dry.anonymousTrialRows ?? 0)).toBe(applied.auditRows);
       });
+    });
+  });
+});
+
+// #322 I-3 (session 129, ADR 037 point 6): the uploaded-dataset leg. Before
+// this, purgeExpiredDatasets existed and was tested but NOTHING scheduled it,
+// so a two-year-old upload (and any public link to a chart of it) lived
+// forever. These pin that the job actually runs it, with the audit leg's own
+// two-year cutoff, dry run writing nothing, and a failure carrying what the
+// earlier legs committed.
+describe('the uploaded-dataset leg (#322 I-3)', () => {
+  const DATASETS_LEG: DatasetRetentionLeg = {
+    present: datasetsTablePresent,
+    filesCutoff: fileBytesCutoff,
+    count: countPurgeableDatasets,
+    purge: purgeExpiredDatasets,
+  };
+  const PROFILE: DatasetProfile = { columns: [], rowCount: 1 };
+
+  async function seedUpload(db: Db, createdAt: string): Promise<number> {
+    const userId = randomUUID();
+    const inserted = await insertDataset(db, {
+      userId,
+      sourceKind: 'file_csv',
+      displayName: 'klanten.csv',
+      sourceUrl: null,
+      mimeSniffed: 'text/csv',
+      byteSize: 3,
+      contentSha256: 'deadbeef',
+      requestId: null,
+      fileBytes: new Uint8Array([1, 2, 3]),
+      cells: [['Naam'], ['Jansen']],
+      profile: PROFILE,
+      status: 'ready',
+    });
+    await db.query('update user_datasets set created_at = $1 where id = $2', [createdAt, inserted.id]);
+    return inserted.id;
+  }
+
+  async function statusOf(db: Db, id: number): Promise<{ status: string; hasBytes: boolean }> {
+    const { rows } = await db.query('select status, file_bytes is not null as has_bytes from user_datasets where id = $1', [id]);
+    return { status: rows[0]!.status as string, hasBytes: rows[0]!.has_bytes as boolean };
+  }
+
+  it('dry run counts but writes nothing; apply redacts at 2 years and clears bytes at 90 days', async () => {
+    await withDb(async (db) => {
+      const old = await seedUpload(db, '2023-01-01T00:00:00.000Z'); // > 2 years before NOW
+      const mid = await seedUpload(db, '2026-01-01T00:00:00.000Z'); // > 90 days, < 2 years
+      const fresh = await seedUpload(db, '2026-07-20T00:00:00.000Z'); // 5 days old
+
+      const dry = await runRetentionPurge({ db, now: NOW, apply: false, trial: null, chartStyles: null, datasets: DATASETS_LEG });
+      expect(dry.datasets).toMatchObject({ datasets: 1, fileBytes: 2, turns: null, cellsCutoff: dry.auditCutoff });
+      expect(await statusOf(db, old)).toEqual({ status: 'ready', hasBytes: true });
+
+      const applied = await runRetentionPurge({ db, now: NOW, apply: true, trial: null, chartStyles: null, datasets: DATASETS_LEG });
+      expect(applied.datasets).toMatchObject({ datasets: 1, fileBytes: 1, turns: 0, cellsCutoff: applied.auditCutoff });
+      expect(await statusOf(db, old)).toEqual({ status: 'redacted', hasBytes: false });
+      expect(await statusOf(db, mid)).toEqual({ status: 'ready', hasBytes: false });
+      expect(await statusOf(db, fresh)).toEqual({ status: 'ready', hasBytes: true });
+
+      const line = describeRetentionPurge(applied);
+      expect(line).toContain('1 uploaded dataset(s)');
+      expect(line).not.toContain('klanten');
+
+      const second = await runRetentionPurge({ db, now: NOW, apply: true, trial: null, chartStyles: null, datasets: DATASETS_LEG });
+      expect(second.datasets).toMatchObject({ datasets: 0, fileBytes: 0 });
+    });
+  });
+
+  it('is "not-configured" when omitted, never silently run', async () => {
+    await withDb(async (db) => {
+      const summary = await runRetentionPurge({ db, now: NOW, apply: false, trial: null, chartStyles: null });
+      expect(summary.datasets).toEqual({ skipped: 'not-configured' });
+    });
+  });
+
+  it('throws RetentionPurgePartialError tagged leg:datasets when the dataset leg fails after commit', async () => {
+    await withDb(async (db) => {
+      await seedExpired(db);
+      const exploding: DatasetRetentionLeg = {
+        ...DATASETS_LEG,
+        purge: async () => {
+          throw new Error('dataset purge exploded');
+        },
+      };
+      const err = await runRetentionPurge({ db, now: NOW, apply: true, trial: TRIAL_LEG, chartStyles: null, datasets: exploding }).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(RetentionPurgePartialError);
+      const partial = err as RetentionPurgePartialError;
+      expect(partial.leg).toBe('datasets');
+      expect(partial.auditRowsRedacted).toBe(1);
     });
   });
 });

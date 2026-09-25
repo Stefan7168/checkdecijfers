@@ -62,6 +62,26 @@ export interface InjectedRetentionLeg {
  * exactly an `InjectedRetentionLeg` that happens not to set `present`. */
 export type TrialRetentionLeg = InjectedRetentionLeg;
 
+/** #322 I-3 (session 129): the own-data upload sweep (ADR 037 point 6,
+ * src/attachments/retention.ts). Its own shape rather than an
+ * `InjectedRetentionLeg`: it runs TWO windows — a dataset and its turns
+ * (and, through redactTurnsForDatasets, its chart edits and any public
+ * publication) are fully redacted at the SAME two-year account cutoff as
+ * the audit leg, and the raw uploaded file bytes alone are cleared earlier,
+ * at 90 days. Injected, like the trial leg, so this module never imports
+ * src/attachments (whose retention module already imports this one's
+ * sibling). */
+export interface DatasetRetentionLeg {
+  present(db: Db): Promise<boolean>;
+  filesCutoff(now: Date): Date;
+  count(db: Db, cellsCutoff: Date, filesCutoff: Date): Promise<{ datasets: number; fileBytesOnly: number }>;
+  purge(
+    db: Db,
+    cellsCutoff: Date,
+    filesCutoff: Date,
+  ): Promise<{ datasets: number; turns: number; fileBytesCleared: number }>;
+}
+
 export interface RetentionPurgeOptions {
   db: Db;
   /** Injected clock — never `new Date()` inside, so a test can pin the cutoffs. */
@@ -72,6 +92,9 @@ export interface RetentionPurgeOptions {
   /** WP218 phase 2: the user_chart_styles preference-row sweep, injected
    * exactly like `trial` — `null` means this run deliberately skips it. */
   chartStyles: InjectedRetentionLeg | null;
+  /** #322 I-3: the uploaded-dataset sweep. Omitted/`null` = this run
+   * deliberately skips it (both composition roots wire it). */
+  datasets?: DatasetRetentionLeg | null;
 }
 
 export interface RetentionPurgeSummary {
@@ -120,6 +143,15 @@ export interface RetentionPurgeSummary {
     | { cutoff: string; rows: number }
     | { skipped: 'table-absent' }
     | { skipped: 'not-configured' };
+  /** #322 I-3: uploaded datasets. Dry run: `datasets` = full redactions due
+   * (2-year cutoff), `fileBytesOnly` = datasets whose raw file would be
+   * cleared at 90 days (a pre-apply count that also includes the 2-year
+   * ones — countPurgeableDatasets' own documented contract), `turns` null
+   * (not counted ahead of time). Applied: what was actually done. */
+  datasets:
+    | { cellsCutoff: string; filesCutoff: string; datasets: number; turns: number | null; fileBytes: number }
+    | { skipped: 'table-absent' }
+    | { skipped: 'not-configured' };
 }
 
 /** Normalises a leg's count/purge result into the plain row count the
@@ -162,6 +194,7 @@ export async function runRetentionPurge(
   options: RetentionPurgeOptions,
 ): Promise<RetentionPurgeSummary> {
   const { db, now, apply, trial, chartStyles } = options;
+  const datasets = options.datasets ?? null;
   const auditCutoff = twoYearsBefore(now);
   // #181: anonymous trial CONTENT expires with its own bookkeeping at 90 days,
   // not at the account window. Derived from the SAME injected `now` as the
@@ -189,6 +222,22 @@ export async function runRetentionPurge(
       ? await chartStyles.purge(db, cutoff)
       : await chartStyles.count(db, cutoff);
     return { cutoff: cutoff.toISOString(), rows: legRowCount(result) };
+  };
+
+  // #322 I-3: uploaded datasets. The full-redaction cutoff IS the audit
+  // leg's own 2-year cutoff (one clock, and ADR 037 §8 Q2's "the same #14
+  // account window"); only the file-bytes cutoff comes from the leg.
+  const datasetsLeg = async (): Promise<RetentionPurgeSummary['datasets']> => {
+    if (datasets === null) return { skipped: 'not-configured' };
+    if (!(await datasets.present(db))) return { skipped: 'table-absent' };
+    const filesCutoff = datasets.filesCutoff(now);
+    const base = { cellsCutoff: auditCutoff.toISOString(), filesCutoff: filesCutoff.toISOString() };
+    if (!apply) {
+      const c = await datasets.count(db, auditCutoff, filesCutoff);
+      return { ...base, datasets: c.datasets, turns: null, fileBytes: c.fileBytesOnly };
+    }
+    const r = await datasets.purge(db, auditCutoff, filesCutoff);
+    return { ...base, datasets: r.datasets, turns: r.turns, fileBytes: r.fileBytesCleared };
   };
 
   // #65: the 90-day error_log sweep — the same one-clock rule (cutoff derived
@@ -219,6 +268,7 @@ export async function runRetentionPurge(
       trial: await trialLeg(),
       errorLog: await errorLogLeg(),
       chartStyles: await chartStylesLeg(),
+      datasets: await datasetsLeg(),
     };
   }
 
@@ -280,6 +330,21 @@ export async function runRetentionPurge(
       redacted.length > 0 ? byKind : undefined,
     );
   }
+  // #322 I-3: same "carry what committed" rule — every earlier leg has run.
+  let datasetsResult: RetentionPurgeSummary['datasets'];
+  try {
+    datasetsResult = await datasetsLeg();
+  } catch (error) {
+    throw new RetentionPurgePartialError(
+      `dataset leg failed AFTER the audit leg committed ${redacted.length} redaction(s) ` +
+        `(the trial, error_log and chart-style legs also already ran)`,
+      redacted.length,
+      error,
+      auditCutoff.toISOString(),
+      'datasets',
+      redacted.length > 0 ? byKind : undefined,
+    );
+  }
   return {
     mode: 'applied',
     auditCutoff: auditCutoff.toISOString(),
@@ -290,6 +355,7 @@ export async function runRetentionPurge(
     trial: trialResult,
     errorLog: errorLogResult,
     chartStyles: chartStylesResult,
+    datasets: datasetsResult,
   };
 }
 
@@ -309,14 +375,14 @@ export class RetentionPurgePartialError extends Error {
    * composition roots hardcoding "the trial leg" regardless of which leg
    * threw, which self-contradicts this error's own `message` on an
    * error_log-leg failure. */
-  readonly leg: 'trial' | 'errorLog' | 'chartStyles';
+  readonly leg: 'trial' | 'errorLog' | 'chartStyles' | 'datasets';
 
   constructor(
     message: string,
     auditRowsRedacted: number,
     reason: unknown,
     auditCutoff: string,
-    leg: 'trial' | 'errorLog' | 'chartStyles',
+    leg: 'trial' | 'errorLog' | 'chartStyles' | 'datasets',
     byKind?: Record<string, number>,
   ) {
     super(`${message}: ${reason instanceof Error ? reason.message : String(reason)}`, {
@@ -377,5 +443,20 @@ export function describeRetentionPurge(s: RetentionPurgeSummary): string {
         : '\n  note: chart-style leg not configured for this run.'
       : `\n  chart-style cutoff ${s.chartStyles.cutoff}: ${s.chartStyles.rows} user_chart_styles row(s) ` +
         `${s.mode === 'dry-run' ? 'WOULD be' : 'were'} DELETED (WP218 phase 2, two-year account window).`;
-  return head + kinds + trial + errorLog + chartStyle;
+  // #322 I-3: the uploaded-dataset line.
+  const d = s.datasets;
+  const datasetLine =
+    'skipped' in d
+      ? d.skipped === 'table-absent'
+        ? '\n  note: user_datasets absent (migration 026 not applied) — dataset leg skipped.'
+        : '\n  note: dataset leg not configured for this run.'
+      : s.mode === 'dry-run'
+        ? `\n  datasets cutoff ${d.cellsCutoff}: ${d.datasets} uploaded dataset(s) WOULD be redacted with their ` +
+          `chat turns, chart edits and publications (two-year account window, ADR 037); files cutoff ` +
+          `${d.filesCutoff}: ${d.fileBytes} dataset(s) with raw file bytes older than 90 days (incl. the ` +
+          `two-year ones) WOULD have them cleared.`
+        : `\n  datasets cutoff ${d.cellsCutoff}: ${d.datasets} uploaded dataset(s) and ${d.turns ?? 0} chat turn(s) ` +
+          `were redacted (with their chart edits and publications, ADR 037); files cutoff ${d.filesCutoff}: ` +
+          `raw file bytes cleared on ${d.fileBytes} further dataset(s).`;
+  return head + kinds + trial + errorLog + chartStyle + datasetLine;
 }

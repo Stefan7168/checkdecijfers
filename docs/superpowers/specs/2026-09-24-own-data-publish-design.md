@@ -238,6 +238,7 @@ transaction, deploy-order-safe when the table is absent. The public page checks 
 production caller — neither the monthly GDPR cron, `scripts/gdpr-purge.ts` nor "delete my question history"
 runs them — so account-level deletion and the 2-year dataset retention purge do NOT yet kill a published link.
 Tracked as #322 I-3; must be fixed before the flag is switched on.
+**Update (session 129, 2026-09-25): WIRED** — the monthly purge (cron + `scripts/gdpr-purge.ts`) now runs `purgeExpiredDatasets` as its uploaded-dataset leg (full redaction at the audit leg's two-year cutoff, file bytes at 90 days), and "delete my question history" now calls `deleteUserDatasets` (not fail-soft: a failure shows the reader a failed delete). [#322](../../open-questions.md) I-3 closed.
 
 ## 4. Invariants at stake
 

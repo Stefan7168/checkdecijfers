@@ -98,6 +98,7 @@ differently:**
    and are tested but have NO production caller — the monthly purge cron, `scripts/gdpr-purge.ts` and "delete my
    question history" never touch uploaded datasets. Wiring them is tracked in #322 (owner GO: it changes what the
    live monthly purge deletes).
+   **Update (session 129, 2026-09-25): WIRED** — the monthly purge (cron + `scripts/gdpr-purge.ts`) now runs `purgeExpiredDatasets` as its uploaded-dataset leg (full redaction at the audit leg's two-year cutoff, file bytes at 90 days), and "delete my question history" now calls `deleteUserDatasets` (not fail-soft: a failure shows the reader a failed delete). [#322](../open-questions.md) I-3 closed.
 7. **Cost rides the existing one-time-credit ledger** (`dataset_ingest`, `dataset_turn` — new
    reason `dataset_cost`, migration 027), never a new subscription model. CSV/TSV upload is free
    (deterministic, no AI work); each dataset-chat turn costs credits.
