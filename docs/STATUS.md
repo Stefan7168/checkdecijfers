@@ -18,36 +18,24 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-25, sessions 127–128 close — owner present; verify against `git log` /
-`git log origin/main..main` / Actions runs before trusting this). Kickoff:
-[session-briefs/2026-09-25-session-129-kickoff.md](session-briefs/2026-09-25-session-129-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-25, session 129 — owner present, "continue working autonomously"; verify against
+`git log` / Actions runs before trusting this). Previous kickoff: [session-briefs/2026-09-25-session-129-kickoff.md](session-briefs/2026-09-25-session-129-kickoff.md).**
 
-- **⚠ NOTHING FROM SESSIONS 127–128 IS PUSHED.** The owner said "keep working locally, don't push yet". Local `main`
-  is ~50 commits ahead of `origin/main` (`598d0f10`). Production is unchanged since session 126. First job next
-  session: owner GO on the plain-English summary → full verification block on a quiet machine → `/code-review`
-  LOW over `origin/main..main` → push → CI green (deploy included).
-- **Own-data publishing (ADR [057](decisions/057-own-data-publish.md), #318 B1) — BUILT, dark behind
-  `OWN_DATA_PUBLISH_ENABLED` + migration 036 (file-only).** Session 128 added: the author's look frozen at publish
-  time and `?lang=` winning for the chart; a shared embed error page (#319); a real-browser e2e
-  (`web/e2e/own-data-publish.spec.ts`, **never yet passed** — both local runs died on dev-server timing under
-  memory pressure, not on an assertion); and an independent opus security review (#322) whose two proven hidden-data
-  leaks (internal row ids, hidden-slot order) and unbounded public work were FIXED the same session.
-  **Still blocking the flag flip: #322 I-3** — uploaded datasets are never purged after 2 years and account-level
-  delete never touches them (pre-existing gap; publishing makes it public). Wiring the purge changes what the live
-  monthly cron deletes → owner GO first.
-- **Session 128 backlog fixes (local, unpushed):** #317 #319 #321 #243 #283 #282 #309 #287 #304; #272 lint fix
-  REJECTED (it needed a TypeScript 7→6 downgrade); `web/components/chart.tsx` split move-only (6,535 → 4,761 lines,
-  into `web/lib/chart-models.ts` + `web/components/chart-parts.tsx`).
-- **Measured at `c966f9c4` (local, 2026-09-25):** typecheck root + web clean; backend 219 files / 3,346 tests
-  passed; benchmark GATE PASS (refusal 6/6, 0 fabricated); `next build` compiled. Web suite: 160 files, 3,042
-  tests — every file passes on its own, but full-suite runs had 1–2 load-dependent timeouts (a 201-click publish
-  test, a lazy-loaded tab) while the machine ran at load average 12–15 from other work. Re-run before pushing.
+- **Sessions 127–128 are PUSHED and LIVE (dark):** `origin/main` = `d8438fa3`, CI run 36106419342 green incl. deploy; prod 200.
+  Before the push, measured locally at `d8438fa3`: typechecks clean, backend 219 files / 3,346 tests, benchmark GATE PASS
+  (6/6, 0 fabricated), web 160 files / 3,042 tests (no timeouts on a quiet machine), `next build` compiled; the own-data
+  publish + co-pilot e2e passed for the first time (10/10); `/code-review` LOW over `598d0f10..d8438fa3`: 0 findings.
+- **#322 I-3 BUILT on local branch `s129/dataset-retention` (`3b27e5d4`), NOT pushed — waits for the owner's GO** because
+  it changes what the LIVE monthly purge deletes: the purge gains an uploaded-dataset leg (full redaction at 2 years incl.
+  turns/chart edits/publications; raw file bytes at 90 days), and "delete my question history" now also deletes uploads
+  (not fail-soft). Verify block green at `3b27e5d4` (backend 3,349, web 3,046, gate PASS, build); `/code-review` LOW 0.
+  Practical effect on the first live run: none yet (uploads went live 2026-09-18, nothing is 90 days old).
+- **After I-3 lands, the publish flag flip still needs the owner:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
+  redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** 13, in plain English — [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md).
 - **Eurostat in chat (E2a) — unchanged:** built, staged, switched off; owner steps 0/5/6 after the API cap lifts
-  2026-10-01 ([#313](open-questions.md)). Other owner steps pending since session 110/111 are still cap-blocked
-  ([#317](open-questions.md) is now fixed; the rest unchanged). Dependabot PRs #33–#36; stale worktree
-  `chart-copilot-phase6` @ `58db5097` (owner's call).
-- **Merging:** get an explicit in-chat "merge it"/GO before any merge or push call (RUNBOOK, session 126).
+  2026-10-01 ([#313](open-questions.md)). Dependabot PRs #33–#36; stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
+- **Merging:** get an explicit in-chat GO before any merge or push that changes live deletion behaviour.
 
 ---
 
