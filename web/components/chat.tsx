@@ -59,6 +59,11 @@ export { extendsPreviousChart };
 import { fetchChartEdits } from '../app/chart-edits-actions.ts';
 import { applyCommand, initialDocState, parseCommandLog, type ChartDocState } from '../lib/chart-commands.ts';
 import { defaultFormFor } from '../lib/chart-view-state.ts';
+// #287 fix round: `seriesColors` in a replayed command log is keyed by the
+// EARLIER card's own series index — remapped by series identity below
+// before it ever reaches `chartSeeds`, so a follow-up over a different
+// region/series set never inherits a colour on the wrong series.
+import { remapSeriesColorsByIdentity } from '../lib/chart-presentation.ts';
 // WP135 (ADR 033 D4): the right-pane dock derives its tabs from these same
 // messages; Chat renders an in-flow reference chip (instead of the inline
 // visual) when the dock is active, using the SAME id scheme the dock does.
@@ -593,6 +598,12 @@ export function Chat({
   useEffect(() => {
     messages.forEach((message, i) => {
       if (message.role !== 'assistant' || message.auditId === null) return;
+      // #287 fix round: narrows `message.chart` for the seriesColors remap
+      // below — always non-null here in practice (previousCompatibleChartIndex
+      // itself only ever returns non-null when messages[i].chart is), but
+      // TypeScript can't see that across the function boundary.
+      const chart = message.chart;
+      if (chart === null) return;
       if (message.auditId in chartSeeds) return;
       if (chartSeedRequestedRef.current.has(message.auditId)) return;
       const prevIndex = previousCompatibleChartIndex(messages, i);
@@ -610,7 +621,16 @@ export function Chat({
         if (commands === null) return;
         let state = initialDocState(defaultFormFor(prevSpec));
         for (const command of commands) state = applyCommand(state, command);
-        setChartSeeds((prev) => ({ ...prev, [auditId]: { form: state.form, presentation: state.presentation } }));
+        // #287 fix round: the replayed presentation's `seriesColors` are
+        // keyed by the PREVIOUS card's series index — remap them onto the
+        // NEW chart's own series (by regionCode/label identity, dropping any
+        // colour whose series isn't in the new set) before this seed ever
+        // reaches a ChartView mount.
+        const presentation = {
+          ...state.presentation,
+          seriesColors: remapSeriesColorsByIdentity(state.presentation.seriesColors, prevSpec.series, chart.series),
+        };
+        setChartSeeds((prev) => ({ ...prev, [auditId]: { form: state.form, presentation } }));
       })();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `chartSeeds`
@@ -1375,18 +1395,16 @@ export function Chat({
             )}
             {!dockMode && message.chart ? (
               (() => {
-                // Co-pilot phase 3 fix round: `initialFormOverride`/
-                // `initialPresentation` are applied ONCE, on mount (chart.tsx's
-                // own prop comments) — but the seed above resolves
-                // asynchronously, after this card has already mounted plainly.
-                // Cheapest mechanism for a log that is only ever a few
-                // commands: force a clean remount once the seed is ready by
-                // changing `key`, rather than teaching ChartView to accept a
-                // late-arriving override.
+                // #287 fix round: no more `key` trick here. chart.tsx's own
+                // `initialFormOverride`/`initialPresentation` effect now
+                // applies the seed the first time it's actually available —
+                // at mount, or (this card's case) once the async fetch below
+                // resolves — onto the SAME mounted ChartView instance, so a
+                // remount (and the co-pilot input text it used to discard,
+                // #287a) never happens.
                 const seed = message.auditId !== null ? chartSeeds[message.auditId] : undefined;
                 return (
                   <ChartView
-                    key={`${i}-${seed ? 'seeded' : 'plain'}`}
                     spec={message.chart}
                     alternates={message.chartAlternates}
                     embed={message.auditId !== null ? { auditId: message.auditId } : undefined}

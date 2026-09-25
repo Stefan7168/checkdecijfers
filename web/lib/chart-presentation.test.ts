@@ -29,6 +29,7 @@ import {
   judgeColorAgainst,
   markerVisible,
   normalizeHex,
+  remapSeriesColorsByIdentity,
   resolvePresentation,
   sanitizeOverrides,
   seriesColor,
@@ -392,6 +393,63 @@ describe('resolvePresentation', () => {
     expect(resolvePresentation({ ...lineCtx, form: 'area' }, { areaFill: 'flat' }).values.areaFill).toBe('flat');
     expect(sanitizeOverrides({ areaFill: 'striped' })).toEqual({});
     expect(sanitizeOverrides({ markers: 'ends' })).toEqual({ markers: 'ends' });
+  });
+});
+
+// #287: chat.tsx's continuing-chart seed folds a saved command log's
+// `seriesColors` (index-keyed against the EARLIER card's series) onto a
+// NEW spec whose series can differ in set and order — remapped by identity
+// (regionCode, or label for the at-most-one regionless series) rather than
+// carried onto whatever happens to sit at the same index.
+describe('remapSeriesColorsByIdentity — #287, carrying seriesColors by series identity, not index', () => {
+  it('follows a series to its new index when the set is reordered', () => {
+    const from = [
+      { label: 'Amsterdam', regionCode: 'GM0363' },
+      { label: 'Rotterdam', regionCode: 'GM0599' },
+    ];
+    const to = [
+      { label: 'Rotterdam', regionCode: 'GM0599' },
+      { label: 'Amsterdam', regionCode: 'GM0363' },
+    ];
+    expect(remapSeriesColorsByIdentity({ 0: '#111111', 1: '#222222' }, from, to)).toEqual({ 0: '#222222', 1: '#111111' });
+  });
+
+  it('drops a colour whose series is not in the new set, and never invents one for a series that was never coloured', () => {
+    const from = [
+      { label: 'Amsterdam', regionCode: 'GM0363' },
+      { label: 'Rotterdam', regionCode: 'GM0599' },
+    ];
+    const to = [
+      { label: 'Rotterdam', regionCode: 'GM0599' },
+      { label: 'Utrecht', regionCode: 'GM0344' },
+    ];
+    // Amsterdam (index 0 in `from`) isn't in `to` at all — its colour is
+    // dropped. Rotterdam (index 1 in `from`) moves to index 0 in `to`.
+    // Utrecht was never coloured by the reader and gets no entry (falls
+    // back to the palette at the call site, `seriesColor`).
+    expect(remapSeriesColorsByIdentity({ 0: '#111111', 1: '#222222' }, from, to)).toEqual({ 0: '#222222' });
+  });
+
+  it('falls back to label for the (at most one) regionless series', () => {
+    const from = [{ label: 'Nederland', regionCode: null }];
+    const to = [{ label: 'Nederland', regionCode: null }];
+    expect(remapSeriesColorsByIdentity({ 0: '#123456' }, from, to)).toEqual({ 0: '#123456' });
+    const toDifferentMeasure = [{ label: 'Bevolkingsgroei', regionCode: null }];
+    expect(remapSeriesColorsByIdentity({ 0: '#123456' }, from, toDifferentMeasure)).toEqual({});
+  });
+
+  it('is a no-op on an unchanged series list', () => {
+    const series = [
+      { label: 'Nederland', regionCode: 'NL01' },
+      { label: 'Utrecht', regionCode: 'GM0344' },
+    ];
+    expect(remapSeriesColorsByIdentity({ 0: '#aaaaaa', 1: '#bbbbbb' }, series, series)).toEqual({ 0: '#aaaaaa', 1: '#bbbbbb' });
+  });
+
+  it('treats undefined/empty input as no colours, regardless of the series lists', () => {
+    const series = [{ label: 'Nederland', regionCode: 'NL01' }];
+    expect(remapSeriesColorsByIdentity(undefined, series, series)).toEqual({});
+    expect(remapSeriesColorsByIdentity({}, series, series)).toEqual({});
   });
 });
 

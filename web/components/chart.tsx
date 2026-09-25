@@ -2345,44 +2345,68 @@ export function ChartView({
   // are selectable), and the embed button's table id (an embed republishes
   // the stored PRIMARY answer, which carries no reading selection).
   const activeSpec = activeReadingSpec(spec, alternates, state.selectedReading);
-  // Fix round (Task 5 review, Piece 3): applies `initialFormOverride` exactly
-  // once, on mount — never on a later spec swap (that's the `specIdentity`
-  // block further down, and `reset` there deliberately preserves state.form
-  // instead of re-reading this prop, so a reader's own subsequent tab choice
-  // is never clobbered by a stale query-string value). Guarded by the SAME
-  // allow functions the tablist below uses, so this can never render a form
-  // the honesty rules forbid for this spec.
+  // Fix round (Task 5 review, Piece 3): applies `initialFormOverride`/
+  // `initialPresentation` exactly once — the first render at which either is
+  // actually AVAILABLE, never on a later spec swap (that's the
+  // `specIdentity` block further down, and `reset` there deliberately
+  // preserves state.form/state.presentation instead of re-reading these
+  // props, so a reader's own subsequent tab/style choice is never clobbered
+  // by a stale seed). Guarded by the SAME allow functions the tablist below
+  // uses, so this can never render a form the honesty rules forbid for this
+  // spec.
+  //
+  // #287 fix round: originally this ran once ON MOUNT ONLY (`[]` deps) — true
+  // for the /embed route's own one-shot query-string value (always present
+  // at mount) but NOT for chat.tsx's co-pilot seed, which resolves
+  // asynchronously from a saved command-log fetch, after this card has
+  // already mounted plainly. chat.tsx used to paper over that by changing
+  // this instance's `key` once the seed arrived, forcing a full remount with
+  // the prop already set — but that remount also wiped the co-pilot input's
+  // own in-progress text (ChartCopilotInput's `value` is local React state,
+  // unmounted along with everything else). Watching both props instead and
+  // applying them the first time either becomes defined — whether that is at
+  // mount (embed route, unchanged) or on a later render (the seed, chat.tsx
+  // no longer needs the `key` trick at all) — lands the exact same
+  // form/presentation on the SAME mounted instance, so nothing else under it
+  // (the co-pilot input included) is ever discarded. `lateSeedAppliedRef`
+  // keeps this to exactly one application, matching the old "once" guarantee.
+  const lateSeedAppliedRef = useRef(false);
   useEffect(() => {
-    if (initialFormOverride === undefined) return;
-    const allowed =
-      initialFormOverride === 'line'
-        ? lineFormAllowed(spec, spec.series.length)
-        : initialFormOverride === 'area'
-          ? areaFormAllowed(spec, spec.series.length)
-          : initialFormOverride === 'hbar'
-            ? hbarFormAllowed(spec)
-            : initialFormOverride === 'slope'
-              ? slopeFormAllowed(spec, spec.series.length)
-              : initialFormOverride === 'dumbbell'
-                ? dumbbellFormAllowed(spec, spec.series.length)
-                : initialFormOverride === 'heatmap'
-                  ? heatmapFormAllowed(spec, spec.series.length)
-                  : initialFormOverride === 'pie'
-                    ? pieFormAllowed(spec, spec.series.length)
-                    : initialFormOverride === 'stacked'
-                      ? stackedFormAllowed(spec, spec.series.length)
-                      : initialFormOverride === 'stacked100'
-                        ? stacked100FormAllowed(spec, spec.series.length)
-                        : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
-    // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms are
-    // guarded here too. `fallbackForm` below re-checks on every render
-    // regardless, so an unguarded override could never render a forbidden
-    // form — but it WOULD leave a never-valid entry at the bottom of the
-    // undo history when an embed URL names one of them on a spec that
-    // doesn't qualify.
-    if (allowed) dispatchRaw({ type: 'setForm', form: initialFormOverride });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately once-on-mount only: initialFormOverride is a one-shot prop from the embed route, never expected to change on a live instance, and a later spec swap is this component's own `reset` action's job (below), not this effect re-firing.
-  }, []);
+    if (lateSeedAppliedRef.current) return;
+    if (initialFormOverride === undefined && initialPresentation === undefined) return;
+    lateSeedAppliedRef.current = true;
+    if (initialPresentation !== undefined) dispatchRaw({ type: 'setPresentation', patch: initialPresentation });
+    if (initialFormOverride !== undefined) {
+      const allowed =
+        initialFormOverride === 'line'
+          ? lineFormAllowed(spec, spec.series.length)
+          : initialFormOverride === 'area'
+            ? areaFormAllowed(spec, spec.series.length)
+            : initialFormOverride === 'hbar'
+              ? hbarFormAllowed(spec)
+              : initialFormOverride === 'slope'
+                ? slopeFormAllowed(spec, spec.series.length)
+                : initialFormOverride === 'dumbbell'
+                  ? dumbbellFormAllowed(spec, spec.series.length)
+                  : initialFormOverride === 'heatmap'
+                    ? heatmapFormAllowed(spec, spec.series.length)
+                    : initialFormOverride === 'pie'
+                      ? pieFormAllowed(spec, spec.series.length)
+                      : initialFormOverride === 'stacked'
+                        ? stackedFormAllowed(spec, spec.series.length)
+                        : initialFormOverride === 'stacked100'
+                          ? stacked100FormAllowed(spec, spec.series.length)
+                          : true; // 'bar' and 'table' are never gated (fallbackForm's own convention, chart-view-state.ts).
+      // Phase 5 (Task 4, deferred from Tasks 2/3): the three new forms are
+      // guarded here too. `fallbackForm` below re-checks on every render
+      // regardless, so an unguarded override could never render a forbidden
+      // form — but it WOULD leave a never-valid entry at the bottom of the
+      // undo history when an embed URL names one of them on a spec that
+      // doesn't qualify.
+      if (allowed) dispatchRaw({ type: 'setForm', form: initialFormOverride });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `spec`/`dispatchRaw` deliberately excluded: `dispatchRaw` is a stable useCallback (use-chart-history.ts) and `spec` is read only to gate an already-known override against the CURRENT spec at application time, never to re-trigger this effect — a genuinely new spec is this component's own `reset` action's job (below), not this effect re-firing.
+  }, [initialFormOverride, initialPresentation]);
   const lineTabRef = useRef<HTMLButtonElement>(null);
   const areaTabRef = useRef<HTMLButtonElement>(null);
   const barTabRef = useRef<HTMLButtonElement>(null);

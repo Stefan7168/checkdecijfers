@@ -18,6 +18,7 @@ import { previousCompatibleChartIndex } from '../lib/chat-message.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
+import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
 import { Chat, extendsPreviousChart } from './chat.tsx';
 import { ChartView } from './chart.tsx';
@@ -1425,6 +1426,127 @@ describe('Chat — a continuing chart seeds from the earlier card (co-pilot phas
     // Give any stray microtask a chance to fire before asserting the negative.
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchChartEdits).not.toHaveBeenCalled();
+  });
+
+  // #287: two residuals the final review flagged for this feature — (a) the
+  // seed's remount-via-`key` trick discarded anything typed into the
+  // extending card's own co-pilot input in the window before the seed
+  // arrived; (b) carried-over `seriesColors` were keyed by series INDEX, so
+  // a follow-up over a different region/series set could inherit a colour
+  // on the wrong series. `signedIn` (ChartStyleProvider) is required here —
+  // the co-pilot input only renders when `editsKey !== null` (chart.tsx).
+  describe('#287 residuals', () => {
+    it('(a) text typed into the extending card\'s co-pilot input survives the seed arriving late', async () => {
+      // Controlled resolution: the seed fetch settles AFTER the reader has
+      // already started typing, reproducing the exact race chat.tsx's own
+      // comment describes ("the seed above resolves asynchronously, after
+      // this card has already mounted plainly").
+      let resolveFetch: (value: { ok: true; log: unknown[] }) => void = () => {};
+      fetchChartEdits.mockReturnValue(
+        new Promise((resolve) => {
+          resolveFetch = resolve;
+        }),
+      );
+      const first = seededMessage(11);
+      const second = seededMessage(22);
+      render(
+        <ChartStyleProvider initial={{}}>
+          <Chat initialMessages={[first, second]} />
+        </ChartStyleProvider>,
+      );
+      // No call-count assertion here: signed in (ChartStyleProvider), EACH
+      // mounted ChartView also has its own `editsKey` and independently
+      // calls `fetchChartEdits` to restore ITS OWN saved edit history
+      // (lib/use-chart-edits.ts) — unrelated to chat.tsx's co-pilot seed.
+      // All three calls (chat.tsx's seed fetch for auditId 11, and each
+      // card's own restore fetch) share this one mocked, still-pending
+      // promise; resolving it below settles all of them at once, which is
+      // fine — none of that changes what this test checks (the EXTENDING
+      // card's own co-pilot input, typed into and never remounted).
+      const inputsBefore = screen.getAllByPlaceholderText('Pas deze grafiek aan');
+      expect(inputsBefore).toHaveLength(2);
+      // inputsBefore[0] is the first (non-extending) card's own input;
+      // inputsBefore[1] belongs to the extending card (message index 1).
+      fireEvent.change(inputsBefore[1]!, { target: { value: 'nog niet verzonden tekst' } });
+      expect(inputsBefore[1]).toHaveValue('nog niet verzonden tekst');
+      // Now let the seed resolve and land on `chartSeeds`.
+      await act(async () => {
+        resolveFetch({
+          ok: true,
+          log: [{ kind: 'setForm', form: 'bar', id: 'c1', at: '2026-01-01T00:00:00.000Z', source: 'chat' }],
+        });
+      });
+      await waitFor(() => {
+        const seededCall = vi
+          .mocked(ChartView)
+          .mock.calls.find((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22 && 'initialFormOverride' in call[0]);
+        expect(seededCall).toBeDefined();
+      });
+      // The extending card's input must still hold what was typed — no
+      // remount should have discarded it.
+      const inputsAfter = screen.getAllByPlaceholderText('Pas deze grafiek aan');
+      expect(inputsAfter).toHaveLength(2);
+      expect(inputsAfter[1]).toHaveValue('nog niet verzonden tekst');
+    });
+
+    it("(b) carried-over seriesColors follow series IDENTITY, not index, across a different region set", async () => {
+      // Two regions in the earlier card: Amsterdam at index 0, Rotterdam at
+      // index 1. The reader coloured BOTH (chart-config-panel.tsx dispatches
+      // `{ seriesColors: { [index]: hex } }`).
+      const prevSpec: ChartSpec = {
+        ...CHART_SPEC,
+        kind: 'bar',
+        series: [
+          { ...CHART_SPEC.series[0]!, label: 'Amsterdam', regionCode: 'GM0363' },
+          { ...CHART_SPEC.series[0]!, label: 'Rotterdam', regionCode: 'GM0599' },
+        ],
+      };
+      // The follow-up drops Amsterdam, keeps Rotterdam (now at index 0
+      // instead of 1), and adds Utrecht — same table/unit/kind/dims, so
+      // `extendsPreviousChart` still treats it as a continuation, but the
+      // series SET and ORDER are both different.
+      const nextSpec: ChartSpec = {
+        ...CHART_SPEC,
+        kind: 'bar',
+        series: [
+          { ...CHART_SPEC.series[0]!, label: 'Rotterdam', regionCode: 'GM0599' },
+          { ...CHART_SPEC.series[0]!, label: 'Utrecht', regionCode: 'GM0344' },
+        ],
+      };
+      fetchChartEdits.mockResolvedValue({
+        ok: true,
+        log: [
+          {
+            kind: 'setPresentation',
+            patch: { seriesColors: { 0: '#111111', 1: '#222222' } },
+            id: 'c1',
+            at: '2026-01-01T00:00:00.000Z',
+            source: 'chat',
+          },
+        ],
+      });
+      const first = seededMessage(11, prevSpec);
+      const second = seededMessage(22, nextSpec);
+      render(<Chat initialMessages={[first, second]} />);
+      await waitFor(() => {
+        const seededCall = vi
+          .mocked(ChartView)
+          .mock.calls.find((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22 && 'initialPresentation' in call[0]);
+        expect(seededCall).toBeDefined();
+      });
+      const seededCall = vi
+        .mocked(ChartView)
+        .mock.calls.find((call) => (call[0] as { embed?: { auditId: number } }).embed?.auditId === 22 && 'initialPresentation' in call[0]);
+      const props = seededCall?.[0] as { initialPresentation?: { seriesColors?: Record<number, string> } };
+      // Rotterdam's own colour ('#222222', index 1 in the earlier card)
+      // follows Rotterdam to ITS new index (0) in the follow-up. Amsterdam's
+      // colour is dropped (Amsterdam isn't in the follow-up at all), and
+      // Utrecht — never coloured by the reader — gets no override, falling
+      // back to the palette. The buggy index-keyed carry would instead
+      // produce `{ 0: '#111111', 1: '#222222' }` (Amsterdam's colour on
+      // Rotterdam, Rotterdam's colour on Utrecht).
+      expect(props.initialPresentation?.seriesColors).toEqual({ 0: '#222222' });
+    });
   });
 });
 
