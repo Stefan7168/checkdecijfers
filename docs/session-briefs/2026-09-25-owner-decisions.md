@@ -72,6 +72,8 @@ undo them.
 
 *(tracker #260)*
 
+**Partly done session 129 (2026-09-25):** bars now have rounded ends (never on the zero line) and the hover card is tidier. The colours are unchanged — a punchier palette is a taste call I left for you (it must stay readable for colour-blind readers).
+
 ---
 
 ## 4. Dutch words still show up inside English-language charts

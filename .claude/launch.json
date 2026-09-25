@@ -33,6 +33,14 @@
       ],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "harness",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "/Users/amity/Documents/Check de Cijfers/scripts/dev-harness/start-all.mjs"
+      ],
+      "port": 3102
     }
   ]
 }

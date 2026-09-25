@@ -121,9 +121,9 @@ export function ChartTooltip({
     <div
       role="status"
       aria-live="polite"
-      className="rounded-lg border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md"
+      className="min-w-36 rounded-lg border border-border bg-popover px-3 py-2 text-sm text-popover-foreground shadow-md"
     >
-      <div className="font-medium">{label}</div>
+      <div className="mb-1 text-xs font-medium text-muted-foreground">{label}</div>
       {payload.map((entry) => {
         const display = entry.payload[`${entry.dataKey}_display`];
         if (display == null) return null;
@@ -145,8 +145,13 @@ export function ChartTooltip({
               className="inline-block size-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: entry.color }}
             />
-            <span>
-              {labelByKey.get(entry.dataKey)}: {String(display)}
+            {/* #260 (session 129): the series name left, its value right in
+              * tabular figures — same two spec strings as before, laid out as
+              * a card row. The ':' stays (visually quiet) so the node's text
+              * still reads "Label: value" to a screen reader and a copy. */}
+            <span className="text-muted-foreground">{labelByKey.get(entry.dataKey)}:</span>
+            <span className="ml-auto pl-3 font-medium tabular-nums">
+              {String(display)}
               {provisional ? ' *' : ''}
             </span>
           </div>
@@ -656,6 +661,54 @@ export function SeriesDot(
   };
 }
 
+/** #260 (session 129, owner-decisions brief item 3): a final (non-
+ * provisional) bar's two corners AWAY from the zero baseline are rounded;
+ * the two corners ON the baseline stay square, so a bar never looks lifted
+ * off zero (the ADR 042 refusal of a rounded baseline still stands). Drawn
+ * as a `clipPath` over the unchanged `<rect>` — the rect keeps every
+ * data-point/click/keyboard attribute and every test selector — and only
+ * for non-provisional bars: a provisional bar's hatch + outline stays
+ * square, since clipping would halve its outline (R11 must stay legible).
+ * Pure geometry; no number is drawn or changed. */
+export const BAR_CORNER_RADIUS_PX = 4;
+
+export type BarFreeEnd = 'top' | 'bottom' | 'right' | 'left';
+
+/** The rounded outline of a bar whose free (non-baseline) end is `end`, or
+ * null when the bar is too small for a visible radius. */
+export function roundedBarClipPath(x: number, y: number, width: number, height: number, end: BarFreeEnd): string | null {
+  // Normalise a negative extent (a renderer may hand a downward/leftward bar
+  // as a negative height/width) — the outline itself is always drawn from
+  // the rectangle's true top-left corner.
+  if (width < 0) {
+    x += width;
+    width = -width;
+  }
+  if (height < 0) {
+    y += height;
+    height = -height;
+  }
+  const r = Math.min(BAR_CORNER_RADIUS_PX, width / 2, height / 2);
+  if (!(r >= 0.5)) return null;
+  const x2 = x + width;
+  const y2 = y + height;
+  switch (end) {
+    case 'top':
+      return `M${x},${y2}L${x},${y + r}Q${x},${y} ${x + r},${y}L${x2 - r},${y}Q${x2},${y} ${x2},${y + r}L${x2},${y2}Z`;
+    case 'bottom':
+      return `M${x},${y}L${x2},${y}L${x2},${y2 - r}Q${x2},${y2} ${x2 - r},${y2}L${x + r},${y2}Q${x},${y2} ${x},${y2 - r}Z`;
+    case 'right':
+      return `M${x},${y}L${x2 - r},${y}Q${x2},${y} ${x2},${y + r}L${x2},${y2 - r}Q${x2},${y2} ${x2 - r},${y2}L${x},${y2}Z`;
+    case 'left':
+      return `M${x2},${y}L${x2},${y2}L${x + r},${y2}Q${x},${y2} ${x},${y2 - r}L${x},${y + r}Q${x},${y} ${x + r},${y}Z`;
+  }
+}
+
+/** A DOM-safe clipPath id built from ids already unique on the page. */
+export function barClipId(...parts: string[]): string {
+  return parts.join('-').replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
 /** Bar-chart bar: the series colour, or a hatch pattern in that colour when
  * provisional (a provisional bar used to be indistinguishable from a final
  * one — only the prose note said so), plus the #197 value label.
@@ -699,6 +752,8 @@ export function SeriesBar(
     const label = labelByPeriod.get(String(payload.periodCode));
     const negative = typeof value === 'number' && value < 0;
     const isStory = storyPeriodCode !== null && payload.periodCode === storyPeriodCode;
+    const clipD = provisional ? null : roundedBarClipPath(x, y, width, height, negative ? 'bottom' : 'top');
+    const clipId = clipD === null ? null : barClipId(patternId, 'clip', String(payload.periodCode));
     // Row 1 (session 110 UX audit pass 4): wrapped in the shared `label`
     // zIndex layer (see the block comment above SeriesDot) so a LATER
     // series' bar `<rect>` — Recharts draws every `<Bar>` through its own
@@ -733,11 +788,17 @@ export function SeriesBar(
     };
     return (
       <g>
+        {clipD !== null && clipId !== null ? (
+          <clipPath id={clipId}>
+            <path d={clipD} />
+          </clipPath>
+        ) : null}
         <rect
           x={x}
           y={y}
           width={width}
           height={height}
+          clipPath={clipId === null ? undefined : `url(#${clipId})`}
           fill={provisional ? `url(#${patternId})` : color}
           fillOpacity={opacity}
           stroke={provisional ? color : undefined}
@@ -948,13 +1009,23 @@ export function RegionBar(
       if (value_resultId == null || !onPointClick) return;
       onPointClick({ resultId: value_resultId, periodLabel, seriesLabel: label });
     };
+    // #260: the free end of a horizontal bar is its right end (left for a
+    // negative value); the baseline end stays square.
+    const clipD = value_provisional ? null : roundedBarClipPath(x, y, width, height, payload.value < 0 ? 'left' : 'right');
+    const clipId = clipD === null ? null : barClipId(patternId, 'clip', key);
     return (
       <g>
+        {clipD !== null && clipId !== null ? (
+          <clipPath id={clipId}>
+            <path d={clipD} />
+          </clipPath>
+        ) : null}
         <rect
           x={x}
           y={y}
           width={width}
           height={height}
+          clipPath={clipId === null ? undefined : `url(#${clipId})`}
           fill={value_provisional ? `url(#${patternId})` : color}
           fillOpacity={dimmed ? 0.25 : 1}
           stroke={value_provisional ? color : undefined}

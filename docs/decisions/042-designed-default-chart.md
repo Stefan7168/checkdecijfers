@@ -162,3 +162,18 @@ Every end-of-line label on a comparison-shaped multi-region time series repeated
 **Tests, `web/components/chart.test.tsx`:** `valueLabelPlan` pinned directly — a 3-series spec all ending `2024JJ00` produces bare `text` (`'1,0'`, `'2,0'`, `'3,0'`) with every `resultId` still individually bound (R1); a 3-series spec where one series (Eemsdelta-style) ends `2023JJ00` instead keeps every label prefixed (`'2024: 1,0'`, `'2024: 2,0'`, `'2023: 3,0'`). The pre-existing row 3 collision test (two series both ending 2024, near-adjacent values) was updated for the new expected wording: with a real x-axis tick list present (the common case), both end labels come back bare and un-truncated.
 
 **Verification (measured, this row only):** `cd web && npm run typecheck` clean. `components/chart.test.tsx` 308/308, solo, `--maxWorkers=1` (three runs in this worktree session: the first surfaced the row 3 test's now-stale expectation, the second caught that jsdom's `useXAxisTicks()` returns a real (non-empty) tick list rather than `undefined` in this fixture — so the tick-less fallback path itself is exercised only by code inspection here, not a dedicated render test; a future session adding a partial `recharts` mock for `useXAxisTicks` could close that gap — the third run is the green one reported above).
+
+## Session 129 addendum (2026-09-25) — rounded bar ends, a tidier tooltip card ([#260](../open-questions.md), scoped)
+
+Built autonomously on the owner-decisions brief's recommendation (item 3, "scoped visual refresh"; owner: "work
+autonomously", vetoable). **Re-examined, not re-litigated:** the "Alternatives" list above refused *rounded bar tops*
+because "a rounded baseline floats the bar off zero". That refusal is about the BASELINE corners, so it still holds —
+and the change keeps it: only the two corners at a bar's FREE end (top for a positive vertical bar, bottom for a
+negative one; right/left for a horizontal bar) are rounded, radius `BAR_CORNER_RADIUS_PX = 4` capped at half the bar;
+the baseline corners stay square. Mechanism: a per-bar `<clipPath>` (`roundedBarClipPath`, `web/components/chart-parts.tsx`)
+over the unchanged `<rect>`, so every `data-point`/click/keyboard attribute and test selector is untouched. Scope:
+`SeriesBar` (Staaf) and `RegionBar` (Liggend) on the CBS card; stacked segments, the own-data card (ADR 037 H2 keeps
+it distinct) and **provisional bars** (their hatch + 1 px outline would be half-clipped — R11 legibility wins) stay
+square. The tooltip card now puts the series name left (muted) and the value right in tabular figures, same two spec
+strings. **Not changed:** `DEFAULT_PALETTE` (colour-blind safety is a pinned guarantee; a "punchier" palette is a taste
+call left for the owner — #260 row) and hover animation (export integrity). Tests: `web/components/chart-bar-corners.test.tsx`.
