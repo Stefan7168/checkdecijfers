@@ -694,11 +694,22 @@ export interface RegionChartRow {
 export function formatOverlayValue(
   record: Extract<DerivationRecord, { kind: 'mean' } | { kind: 'difference' }>,
   points: ChartPoint[],
+  lang: Lang = 'nl',
 ): string {
   const decimals =
     record.sourceResultIds
       .map((id) => points.find((p) => p.resultId === id)?.decimals)
       .find((d): d is number => d !== undefined) ?? 0;
+  if (lang === 'en') {
+    // #294 (session 129, owner-decisions brief item 4): an English chart's
+    // overlay label uses the SAME hand-written CBS-word table as the rest of
+    // the translated spec (translateSpecForDisplay's `translateUnit`) — the
+    // number itself is formatted exactly as in Dutch (same helper, same
+    // decimals); only the unit word after it changes. A difference over %
+    // cells is a percentage point, never % (R10), in English too.
+    const unit = record.kind === 'difference' && record.unit.trim() === '%' ? 'percentage point' : translateUnit(record.unit);
+    return displayValueUnit(record.value, decimals, unit);
+  }
   return record.kind === 'mean'
     ? displayValueUnit(record.value, decimals, record.unit)
     : displayDifferenceUnit(record.value, decimals, record.unit);

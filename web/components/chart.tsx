@@ -125,9 +125,6 @@ import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
 // — its own tiny-import-graph file, the same reasoning as every Server
 // Action import above. Read by the `wholeOutcomes` effect below.
 import { requestWholeVerification, type WholePeriodOutcome } from '../app/chart-whole-verification-actions.ts';
-// Final-review fix I1: the same value+unit formatters the answer body's own
-// derivation rendering uses (answer-proof.ts) — see formatOverlayValue below.
-import { displayDifferenceUnit, displayValueUnit } from '../backend/answer/compose/template.ts';
 // Phase 5b: the 100%-stacked share label is the ONE computed number this
 // file ever draws (spec §11: pure arithmetic over already-verified parts,
 // done only AFTER the whole check passed) — formatted by the same Dutch
@@ -2801,7 +2798,7 @@ export function ChartView({
                 * AreaChart branches now use — see derivedOverlayElements's
                 * own doc comment above (a plain function, not a component —
                 * load-bearing for Recharts to actually draw these). */}
-              {derivedOverlayElements(resolvedOverlays, displaySpec)}
+              {derivedOverlayElements(resolvedOverlays, displaySpec, chartLang)}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {
@@ -2936,7 +2933,7 @@ export function ChartView({
               ))}
               {/* Task 7 (I2/I3 final-review fix): see the LineChart branch
                 * above — same shared function, same reasoning. */}
-              {derivedOverlayElements(resolvedOverlays, displaySpec)}
+              {derivedOverlayElements(resolvedOverlays, displaySpec, chartLang)}
               {seriesMeta
                 .filter((s) => !state.hiddenKeys.has(s.key))
                 .map((s) => {

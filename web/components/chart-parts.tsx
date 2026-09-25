@@ -486,6 +486,7 @@ export function DumbbellOverlay({ rows }: { rows: DumbbellChartRow[] }) {
 export function derivedOverlayElements(
   resolvedOverlays: Map<string, DerivationRecord>,
   displaySpec: Pick<ChartSpec, 'series'>,
+  lang: Lang = 'nl',
 ): ReactNode[] {
   const allPoints = displaySpec.series.flatMap((s) => s.points);
   return Array.from(resolvedOverlays.entries()).map(([id, record]) => {
@@ -496,7 +497,7 @@ export function derivedOverlayElements(
           y={record.value}
           stroke="var(--accent)"
           strokeDasharray="2 2"
-          label={{ value: formatOverlayValue(record, allPoints), position: 'right' }}
+          label={{ value: formatOverlayValue(record, allPoints, lang), position: 'right' }}
           data-label-for={record.sourceResultIds.join(',')}
         />
       );
@@ -514,7 +515,7 @@ export function derivedOverlayElements(
           ]}
           stroke="var(--accent)"
           strokeWidth={2}
-          label={{ value: formatOverlayValue(record, allPoints), position: 'top' }}
+          label={{ value: formatOverlayValue(record, allPoints, lang), position: 'top' }}
           data-label-for={record.sourceResultIds.join(',')}
         />
       );

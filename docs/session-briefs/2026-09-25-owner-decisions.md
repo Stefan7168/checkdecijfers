@@ -91,6 +91,8 @@ more jarring because everything else around it is in English.
 
 *(tracker #294)*
 
+**Done session 129 (2026-09-25), on the recommendation:** English charts now say "percentage point" and the other translated unit words. Say so if you'd rather keep them Dutch — it's a one-line revert.
+
 ---
 
 ## 5. Approve the wording for "no data from this European source"
