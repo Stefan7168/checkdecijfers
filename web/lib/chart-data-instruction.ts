@@ -5,7 +5,12 @@
 // the very same function, so the two doorways can never drift apart).
 import { CHART_INSTRUCTION_SUMMARY_MAX_LENGTH } from './chart-commands.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
-import { InstructionValidationError, validateInstructionObject } from '../backend/attachments/instruct/schema.ts';
+import {
+  InstructionValidationError,
+  validateInstructionObject,
+  type ValidationReason,
+  type ValidationReasonCode,
+} from '../backend/attachments/instruct/schema.ts';
 import {
   DERIVED_OPS_WITH_B,
   reviveClientInstruction,
@@ -16,9 +21,14 @@ import {
   type DerivedOp,
 } from '../backend/attachments/types.ts';
 
-/** The `InstructionValidationError` message, verbatim — the reader sees the
- * server's OWN reason, never a second copy of the rules paraphrased here. */
-export type ClientInstructionProblem = string;
+/** The validator's OWN structured reason (a stable code plus whatever
+ * numbers/ids the sentence needs) — never a pre-built string. #282 fix: the
+ * Data panel used to render `InstructionValidationError.message` verbatim,
+ * the schema's raw ENGLISH text (which can carry a digit, e.g. a limit
+ * "1..50"), the one place on the own-data card non-spec, untranslated text
+ * reached the screen. `translateValidationReason` below is the only place
+ * that turns one of these into reader-facing nl/en text. */
+export type ClientInstructionProblem = ValidationReason;
 
 export const AGGREGATE_KEYS: Record<AggregateFn, MessageKey> = {
   sum: 'chart.data.agg.sum',
@@ -150,9 +160,63 @@ export function validateClientInstruction(i: ClientChartInstruction, profile: Da
     validateInstructionObject(reviveClientInstruction(i), profile);
     return null;
   } catch (error) {
-    if (error instanceof InstructionValidationError) return error.message;
-    return (error as Error).message;
+    if (error instanceof InstructionValidationError) return error.reason;
+    // Defensive fallback for a genuinely unexpected throw (never observed —
+    // validateInstructionObject only ever throws InstructionValidationError):
+    // still a real reason code, so the panel always has translated text to
+    // show rather than a raw, possibly-English `Error.message`.
+    return { code: 'schema_violation', params: { detail: (error as Error).message } };
   }
+}
+
+/** One i18n key per `ValidationReasonCode` — see the matching
+ * `chart.data.validation.*` block in messages.ts. */
+const VALIDATION_REASON_KEYS: Record<ValidationReasonCode, MessageKey> = {
+  invalid_json: 'chart.data.validation.invalidJson',
+  schema_violation: 'chart.data.validation.schemaViolation',
+  unknown_column: 'chart.data.validation.unknownColumn',
+  y_count_out_of_range: 'chart.data.validation.yCountOutOfRange',
+  y_column_wrong_type: 'chart.data.validation.yColumnWrongType',
+  y_column_ambiguous: 'chart.data.validation.yColumnAmbiguous',
+  line_x_wrong_type: 'chart.data.validation.lineXWrongType',
+  line_x_ambiguous: 'chart.data.validation.lineXAmbiguous',
+  series_no_distinct: 'chart.data.validation.seriesNoDistinct',
+  series_too_many: 'chart.data.validation.seriesTooMany',
+  filter_in_no_distinct: 'chart.data.validation.filterInNoDistinct',
+  filter_value_invalid: 'chart.data.validation.filterValueInvalid',
+  filter_between_ambiguous: 'chart.data.validation.filterBetweenAmbiguous',
+  filter_between_no_range: 'chart.data.validation.filterBetweenNoRange',
+  filter_range_reversed: 'chart.data.validation.filterRangeReversed',
+  filter_range_outside: 'chart.data.validation.filterRangeOutside',
+  limit_out_of_range: 'chart.data.validation.limitOutOfRange',
+  derived_needs_one_y: 'chart.data.validation.derivedNeedsOneY',
+  derived_needs_b: 'chart.data.validation.derivedNeedsB',
+  derived_no_b: 'chart.data.validation.derivedNoB',
+  derived_b_wrong_type: 'chart.data.validation.derivedBWrongType',
+  derived_b_ambiguous: 'chart.data.validation.derivedBAmbiguous',
+  derived_with_count: 'chart.data.validation.derivedWithCount',
+  percent_change_x_wrong_type: 'chart.data.validation.percentChangeXWrongType',
+  sort_illegal_with_aggregate: 'chart.data.validation.sortIllegalWithAggregate',
+  confidence_out_of_range: 'chart.data.validation.confidenceOutOfRange',
+  copilot_invalid_json: 'chart.data.validation.copilotInvalidJson',
+  copilot_schema_violation: 'chart.data.validation.copilotSchemaViolation',
+  copilot_confidence_out_of_range: 'chart.data.validation.copilotConfidenceOutOfRange',
+};
+
+/** `reason` (from `validateClientInstruction`) → the Data panel's problem
+ * line, in the reader's own language. A `derived`-shaped reason's `op`
+ * param is itself translated first (via `DERIVED_KEYS`, the same lookup the
+ * calculation dropdown uses), so the reader sees "Verschil kan niet …", not
+ * the raw op id "difference". Every other param (a column id, a count, a
+ * limit) is passed through as-is — the same convention `chart.data.filterValues`
+ * already uses for a raw column header in `{col}`. */
+export function translateValidationReason(lang: Lang, reason: ValidationReason): string {
+  const key = VALIDATION_REASON_KEYS[reason.code];
+  const params = { ...reason.params };
+  if (typeof params.op === 'string' && params.op in DERIVED_KEYS) {
+    params.op = t(lang, DERIVED_KEYS[params.op as DerivedOp]);
+  }
+  return t(lang, key, params);
 }
 
 /**

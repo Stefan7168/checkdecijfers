@@ -22,12 +22,134 @@ import { MAX_LIMIT, MAX_SERIES, MAX_Y_COLUMNS } from '../limits.ts';
 
 export const CHART_INSTRUCTION_SCHEMA_VERSION = 2;
 
+/**
+ * Every reason `validateInstructionObject`/`validateCopilotOutput` can
+ * refuse an instruction for — a stable code plus whatever numbers/ids the
+ * message needs, never a pre-built sentence (#282: the Data panel used to
+ * render this class's raw English `.message` straight to the screen, the
+ * one place a non-spec, untranslated string with a digit reached the UI).
+ * `describeValidationReason` below is the ONLY place that turns a reason
+ * into English (for `.message`, kept for server logs/audit — never shown to
+ * a reader); `web/lib/i18n/messages.ts` is the ONLY place that turns one
+ * into reader-facing nl/en text. Neither copies the other's wording, so
+ * they can't drift the way a hand-paraphrased second copy would.
+ */
+export type ValidationReasonCode =
+  | 'invalid_json'
+  | 'schema_violation'
+  | 'unknown_column'
+  | 'y_count_out_of_range'
+  | 'y_column_wrong_type'
+  | 'y_column_ambiguous'
+  | 'line_x_wrong_type'
+  | 'line_x_ambiguous'
+  | 'series_no_distinct'
+  | 'series_too_many'
+  | 'filter_in_no_distinct'
+  | 'filter_value_invalid'
+  | 'filter_between_ambiguous'
+  | 'filter_between_no_range'
+  | 'filter_range_reversed'
+  | 'filter_range_outside'
+  | 'limit_out_of_range'
+  | 'derived_needs_one_y'
+  | 'derived_needs_b'
+  | 'derived_no_b'
+  | 'derived_b_wrong_type'
+  | 'derived_b_ambiguous'
+  | 'derived_with_count'
+  | 'percent_change_x_wrong_type'
+  | 'sort_illegal_with_aggregate'
+  | 'confidence_out_of_range'
+  | 'copilot_invalid_json'
+  | 'copilot_schema_violation'
+  | 'copilot_confidence_out_of_range';
+
+export interface ValidationReason {
+  readonly code: ValidationReasonCode;
+  readonly params: Readonly<Record<string, string | number>>;
+}
+
+/** The reason's OWN English rendering. Used only for `InstructionValidationError.message`
+ * (server logs, audit rows, `DatasetInstructFailure`'s message) — never
+ * shown to a reader. Exported so the invariant tests can pin these strings
+ * without duplicating them. */
+export function describeValidationReason(reason: ValidationReason): string {
+  const p = reason.params;
+  switch (reason.code) {
+    case 'invalid_json':
+      return `instruction output is not valid JSON: ${p.detail}`;
+    case 'schema_violation':
+      return `instruction output violates the schema: ${p.detail}`;
+    case 'unknown_column':
+      return `instruction references column id '${p.column}' which is NOT in the dataset's profile`;
+    case 'y_count_out_of_range':
+      return `instruction has ${p.count} y column(s), outside the allowed 1..${p.max}`;
+    case 'y_column_wrong_type':
+      return `y column '${p.column}' has type '${p.type}', not 'number' or 'year'`;
+    case 'y_column_ambiguous':
+      return `y column '${p.column}' has an unresolved ambiguous number format — ask the user to disambiguate first`;
+    case 'line_x_wrong_type':
+      return `line chart x column '${p.column}' has type '${p.type}', which has no natural order`;
+    case 'line_x_ambiguous':
+      return `line chart x column '${p.column}' has an unresolved ambiguous number format`;
+    case 'series_no_distinct':
+      return `seriesBy column '${p.column}' has no distinct value list to split series on`;
+    case 'series_too_many':
+      return `seriesBy column '${p.column}' has ${p.count} distinct values, more than the ${p.max} series cap — ask the user to filter first`;
+    case 'filter_in_no_distinct':
+      return `filter on column '${p.column}' uses 'in' but that column has no distinct value list`;
+    case 'filter_value_invalid':
+      return `filter value '${p.value}' on column '${p.column}' is NOT one of its real values`;
+    case 'filter_between_ambiguous':
+      return `filter on column '${p.column}' has an unresolved ambiguous number format`;
+    case 'filter_between_no_range':
+      return `filter on column '${p.column}' uses 'between' but that column has no min/max range`;
+    case 'filter_range_reversed':
+      return `filter on column '${p.column}' has from (${p.from}) greater than to (${p.to})`;
+    case 'filter_range_outside':
+      return `filter on column '${p.column}' range [${p.from}, ${p.to}] falls outside the column's real range [${p.min}, ${p.max}]`;
+    case 'limit_out_of_range':
+      return `instruction limit ${p.limit} is outside the allowed 1..${p.max}`;
+    case 'derived_needs_one_y':
+      return `derived '${p.op}' needs exactly one y column`;
+    case 'derived_needs_b':
+      return `derived '${p.op}' needs a second column b`;
+    case 'derived_no_b':
+      return `derived '${p.op}' takes no second column`;
+    case 'derived_b_wrong_type':
+      return `derived column b '${p.column}' has type '${p.type}', not 'number' or 'year'`;
+    case 'derived_b_ambiguous':
+      return `derived column b '${p.column}' has an unresolved ambiguous number format`;
+    case 'derived_with_count':
+      return `derived '${p.op}' cannot be combined with aggregate 'count'`;
+    case 'percent_change_x_wrong_type':
+      return `derived 'percent_change' x column '${p.column}' has type '${p.type}', which has no natural order`;
+    case 'sort_illegal_with_aggregate':
+      return `with aggregate/derived, sort by 'x' or 'value' only (got '${p.by}')`;
+    case 'confidence_out_of_range':
+      return `instruction confidence ${p.confidence} is outside 0..1`;
+    case 'copilot_invalid_json':
+      return `co-pilot output is not valid JSON: ${p.detail}`;
+    case 'copilot_schema_violation':
+      return `co-pilot output violates the schema: ${p.detail}`;
+    case 'copilot_confidence_out_of_range':
+      return `co-pilot confidence ${p.confidence} is outside 0..1`;
+    default: {
+      const _exhaustive: never = reason.code;
+      throw new Error(`internal: unhandled validation reason code ${String(_exhaustive)}`);
+    }
+  }
+}
+
 export class InstructionValidationError extends Error {
   readonly outputText: string;
+  readonly reason: ValidationReason;
 
-  constructor(message: string, outputText: string) {
-    super(message);
+  constructor(reason: ValidationReason, outputText: string) {
+    super(describeValidationReason(reason));
     this.name = 'InstructionValidationError';
+    this.reason = reason;
     this.outputText = outputText;
   }
 }
@@ -80,8 +202,8 @@ function collectColumnRefs(data: z.infer<typeof chartInstructionSchema>): string
   return refs;
 }
 
-function fail(message: string, outputText: string): never {
-  throw new InstructionValidationError(message, outputText);
+function fail(reason: ValidationReason, outputText: string): never {
+  throw new InstructionValidationError(reason, outputText);
 }
 
 /**
@@ -98,7 +220,7 @@ export function validateInstruction(outputText: string, profile: DatasetProfile)
   try {
     parsed = JSON.parse(outputText);
   } catch (error) {
-    fail(`instruction output is not valid JSON: ${(error as Error).message}`, outputText);
+    fail({ code: 'invalid_json', params: { detail: (error as Error).message } }, outputText);
   }
   return validateInstructionObject(parsed, profile, outputText);
 }
@@ -116,7 +238,7 @@ export function validateInstructionObject(
   const text = outputText ?? JSON.stringify(rawInput);
   const result = chartInstructionSchema.safeParse(rawInput);
   if (!result.success) {
-    fail(`instruction output violates the schema: ${result.error.message}`, text);
+    fail({ code: 'schema_violation', params: { detail: result.error.message } }, text);
   }
   const data = result.data;
 
@@ -126,17 +248,17 @@ export function validateInstructionObject(
   // profile column — a single pass over ALL ColumnId-bearing fields.
   for (const ref of collectColumnRefs(data)) {
     if (!columnsById.has(ref)) {
-      fail(`instruction references column id '${ref}' which is NOT in the dataset's profile`, text);
+      fail({ code: 'unknown_column', params: { column: ref } }, text);
     }
   }
 
   if (data.y.length < 1 || data.y.length > MAX_Y_COLUMNS) {
-    fail(`instruction has ${data.y.length} y column(s), outside the allowed 1..${MAX_Y_COLUMNS}`, text);
+    fail({ code: 'y_count_out_of_range', params: { count: data.y.length, max: MAX_Y_COLUMNS } }, text);
   }
   for (const yId of data.y) {
     const column = columnsById.get(yId)!;
     if (column.type !== 'number' && column.type !== 'year') {
-      fail(`y column '${yId}' has type '${column.type}', not 'number' or 'year'`, text);
+      fail({ code: 'y_column_wrong_type', params: { column: yId, type: column.type } }, text);
     }
     // Fixed in review: a 'number' column whose numberFormat is still
     // 'ambiguous' (D5) must never be plotted — it blocks charting until
@@ -145,32 +267,34 @@ export function validateInstructionObject(
     // omitting min/max, so this reads as an explicit rule rather than a
     // side-effect of a different check.
     if (column.numberFormat === 'ambiguous') {
-      fail(`y column '${yId}' has an unresolved ambiguous number format — ask the user to disambiguate first`, text);
+      fail({ code: 'y_column_ambiguous', params: { column: yId } }, text);
     }
   }
 
   if (data.kind === 'line') {
     const xColumn = columnsById.get(data.x)!;
     if (xColumn.type !== 'year' && xColumn.type !== 'date' && xColumn.type !== 'number') {
-      fail(`line chart x column '${data.x}' has type '${xColumn.type}', which has no natural order`, text);
+      fail({ code: 'line_x_wrong_type', params: { column: data.x, type: xColumn.type } }, text);
     }
     if (xColumn.numberFormat === 'ambiguous') {
-      fail(`line chart x column '${data.x}' has an unresolved ambiguous number format`, text);
+      fail({ code: 'line_x_ambiguous', params: { column: data.x } }, text);
     }
   }
 
   if (data.seriesBy !== null) {
     const seriesColumn = columnsById.get(data.seriesBy)!;
     if (seriesColumn.distinct === undefined) {
-      fail(`seriesBy column '${data.seriesBy}' has no distinct value list to split series on`, text);
+      fail({ code: 'series_no_distinct', params: { column: data.seriesBy } }, text);
     }
     // Fixed in review: exceeding the cap is a validation THROW (routed to a
     // clarification), never a silently-truncated legend — the "never
     // silent omission" rule extended from the points cap (D7) to this one.
     if (seriesColumn.distinct.length > MAX_SERIES) {
       fail(
-        `seriesBy column '${data.seriesBy}' has ${seriesColumn.distinct.length} distinct values, ` +
-          `more than the ${MAX_SERIES} series cap — ask the user to filter first`,
+        {
+          code: 'series_too_many',
+          params: { column: data.seriesBy, count: seriesColumn.distinct.length, max: MAX_SERIES },
+        },
         text,
       );
     }
@@ -182,22 +306,22 @@ export function validateInstructionObject(
 
   if (data.limit !== null) {
     if (!Number.isInteger(data.limit) || data.limit < 1 || data.limit > MAX_LIMIT) {
-      fail(`instruction limit ${data.limit} is outside the allowed 1..${MAX_LIMIT}`, text);
+      fail({ code: 'limit_out_of_range', params: { limit: data.limit, max: MAX_LIMIT } }, text);
     }
   }
 
   if (data.derived !== null) {
-    if (data.y.length !== 1) fail(`derived '${data.derived.op}' needs exactly one y column`, text);
+    if (data.y.length !== 1) fail({ code: 'derived_needs_one_y', params: { op: data.derived.op } }, text);
     const needsB = DERIVED_OPS_WITH_B.includes(data.derived.op);
-    if (needsB && data.derived.b === null) fail(`derived '${data.derived.op}' needs a second column b`, text);
-    if (!needsB && data.derived.b !== null) fail(`derived '${data.derived.op}' takes no second column`, text);
+    if (needsB && data.derived.b === null) fail({ code: 'derived_needs_b', params: { op: data.derived.op } }, text);
+    if (!needsB && data.derived.b !== null) fail({ code: 'derived_no_b', params: { op: data.derived.op } }, text);
     if (data.derived.b !== null) {
       const b = columnsById.get(data.derived.b)!;
       if (b.type !== 'number' && b.type !== 'year') {
-        fail(`derived column b '${data.derived.b}' has type '${b.type}', not 'number' or 'year'`, text);
+        fail({ code: 'derived_b_wrong_type', params: { column: data.derived.b, type: b.type } }, text);
       }
       if (b.numberFormat === 'ambiguous') {
-        fail(`derived column b '${data.derived.b}' has an unresolved ambiguous number format`, text);
+        fail({ code: 'derived_b_ambiguous', params: { column: data.derived.b } }, text);
       }
     }
     // Final review (session 113): two combinations that validate field by
@@ -207,24 +331,21 @@ export function validateInstructionObject(
     // point with the PREVIOUS one, which needs an ordered x — the same rule
     // (and message) the line chart's x already carries above.
     if (DERIVED_OPS_WITH_B.includes(data.derived.op) && data.aggregate?.fn === 'count') {
-      fail(`derived '${data.derived.op}' cannot be combined with aggregate 'count'`, text);
+      fail({ code: 'derived_with_count', params: { op: data.derived.op } }, text);
     }
     if (data.derived.op === 'percent_change') {
       const xColumn = columnsById.get(data.x)!;
       if (xColumn.type === 'text') {
-        fail(
-          `derived 'percent_change' x column '${data.x}' has type '${xColumn.type}', which has no natural order`,
-          text,
-        );
+        fail({ code: 'percent_change_x_wrong_type', params: { column: data.x, type: xColumn.type } }, text);
       }
     }
   }
   if (data.sort !== null && data.sort.by !== 'x' && data.sort.by !== 'value' && (data.aggregate !== null || data.derived !== null)) {
-    fail(`with aggregate/derived, sort by 'x' or 'value' only (got '${data.sort.by}')`, text);
+    fail({ code: 'sort_illegal_with_aggregate', params: { by: data.sort.by } }, text);
   }
 
   if (!Number.isFinite(data.confidence) || data.confidence < 0 || data.confidence > 1) {
-    fail(`instruction confidence ${data.confidence} is outside 0..1`, text);
+    fail({ code: 'confidence_out_of_range', params: { confidence: data.confidence } }, text);
   }
 
   return data;
@@ -244,30 +365,32 @@ function validateFilter(
   const column = columnsById.get(filter.column)!;
   if (filter.op === 'in') {
     if (column.distinct === undefined) {
-      fail(`filter on column '${filter.column}' uses 'in' but that column has no distinct value list`, outputText);
+      fail({ code: 'filter_in_no_distinct', params: { column: filter.column } }, outputText);
     }
     const allowed = new Set(column.distinct);
     for (const value of filter.values) {
       if (!allowed.has(value)) {
-        fail(`filter value '${value}' on column '${filter.column}' is NOT one of its real values`, outputText);
+        fail({ code: 'filter_value_invalid', params: { value, column: filter.column } }, outputText);
       }
     }
     return;
   }
   // op === 'between'
   if (column.numberFormat === 'ambiguous') {
-    fail(`filter on column '${filter.column}' has an unresolved ambiguous number format`, outputText);
+    fail({ code: 'filter_between_ambiguous', params: { column: filter.column } }, outputText);
   }
   if (column.min === undefined || column.max === undefined) {
-    fail(`filter on column '${filter.column}' uses 'between' but that column has no min/max range`, outputText);
+    fail({ code: 'filter_between_no_range', params: { column: filter.column } }, outputText);
   }
   if (filter.from > filter.to) {
-    fail(`filter on column '${filter.column}' has from (${filter.from}) greater than to (${filter.to})`, outputText);
+    fail({ code: 'filter_range_reversed', params: { column: filter.column, from: filter.from, to: filter.to } }, outputText);
   }
   if (filter.from < column.min || filter.to > column.max) {
     fail(
-      `filter on column '${filter.column}' range [${filter.from}, ${filter.to}] falls outside ` +
-        `the column's real range [${column.min}, ${column.max}]`,
+      {
+        code: 'filter_range_outside',
+        params: { column: filter.column, from: filter.from, to: filter.to, min: column.min, max: column.max },
+      },
       outputText,
     );
   }

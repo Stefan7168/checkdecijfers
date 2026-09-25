@@ -142,15 +142,15 @@ export function validateCopilotOutput(outputText: string, profile: DatasetProfil
   try {
     parsed = JSON.parse(outputText);
   } catch (error) {
-    throw new InstructionValidationError(`co-pilot output is not valid JSON: ${(error as Error).message}`, outputText);
+    throw new InstructionValidationError({ code: 'copilot_invalid_json', params: { detail: (error as Error).message } }, outputText);
   }
   const result = copilotOutputSchema.safeParse(parsed);
   if (!result.success) {
-    throw new InstructionValidationError(`co-pilot output violates the schema: ${result.error.message}`, outputText);
+    throw new InstructionValidationError({ code: 'copilot_schema_violation', params: { detail: result.error.message } }, outputText);
   }
   const data = result.data;
   if (!Number.isFinite(data.confidence) || data.confidence < 0 || data.confidence > 1) {
-    throw new InstructionValidationError(`co-pilot confidence ${data.confidence} is outside 0..1`, outputText);
+    throw new InstructionValidationError({ code: 'copilot_confidence_out_of_range', params: { confidence: data.confidence } }, outputText);
   }
   const instruction = data.instruction === null ? null : validateInstructionObject(data.instruction, profile, outputText);
   return {
