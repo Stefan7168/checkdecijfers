@@ -14,6 +14,10 @@
 // own action class (which WOULD need a migration) is open-questions #285.
 //
 // SETTLEMENT: an 'edit' reply keeps the full debit (netCost = required).
+// #285 (session 129, owner-decisions brief item 6, recommended option):
+// an 'edit' reply that applied NOTHING — zero commands, i.e. "Nothing could
+// be applied." or the "That asks for other data" hand-off — is refunded in
+// full too, exactly like a clarification: the reader got no chart change.
 // A 'clarification' or a 'refusal' delivered no chart change — full
 // compensation, netCost 0 (both already equal the debited amount here,
 // since both the debit and the clarification price are the SAME
@@ -48,8 +52,9 @@ export async function chargeAndRunChartEdit(
   try {
     const reply = await run();
     let netCost = required;
-    if (reply.kind !== 'edit') {
-      // 'clarification' or 'refusal' — no chart change was delivered.
+    if (reply.kind !== 'edit' || reply.commands.length === 0) {
+      // 'clarification', 'refusal', or an edit that applied nothing (#285)
+      // — no chart change was delivered.
       await compensateSplit(db, userId, split, required, null);
       netCost = 0;
     }

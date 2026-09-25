@@ -46,7 +46,13 @@ export async function chargeAndRunDataset(
       // kind the (never-persisted) envelope would have been.
       await compensateSplit(db, userId, split, required, null);
       netCost = 0;
-    } else if (result.envelope.kind === 'clarification') {
+    } else if (
+      result.envelope.kind === 'clarification' ||
+      // #285 (session 129): an own-data co-pilot edit that applied NOTHING
+      // (zero commands — the chart is unchanged) is priced like a
+      // clarification, not a full chart turn: the reader got no change.
+      (result.envelope.kind === 'chart' && result.envelope.copilot !== undefined && result.envelope.copilot.commands.length === 0)
+    ) {
       const clarifyPrice = await getActionClassPrice(db, 'clarification');
       const refund = required - clarifyPrice;
       if (refund > 0) {

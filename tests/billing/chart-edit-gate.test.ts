@@ -147,3 +147,20 @@ describe('chargeAndRunChartEdit — compensation carries no audit_answer_id', ()
     });
   });
 });
+
+// #285 (session 129): an edit that applied nothing costs nothing.
+describe('chargeAndRunChartEdit — an edit reply that applied nothing (#285)', () => {
+  it.each([
+    ['"Nothing could be applied."', false],
+    ['the "asks for other data" hand-off', true],
+  ])('%s ends at net 0', async (_label, dataRequest) => {
+    await withPricedDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const empty: CbsCopilotReply = { kind: 'edit', text: 'Nothing could be applied.', commands: [], refused: [], dataRequest, llmCalls: [] };
+      const result = await chargeAndRunChartEdit(db, userId, randomUUID(), vi.fn(async () => empty));
+      expect(result).toMatchObject({ kind: 'ok', netCost: 0 });
+      expect(await getBalance(db, userId)).toBe(100);
+    });
+  });
+});

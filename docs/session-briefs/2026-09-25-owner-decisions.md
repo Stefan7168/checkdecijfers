@@ -130,6 +130,8 @@ on their chart. A separate, similar case (the AI asking a clarifying question) i
 
 *(tracker #285)*
 
+**Done session 129 (2026-09-25), on the recommendation:** a chart-edit request that changes nothing is now refunded (own-data: charged like a clarifying question). Say so if you'd rather keep charging — a one-line revert.
+
 ---
 
 ## 7. Should the population 3D demo page be shareable with people who don't have an account?

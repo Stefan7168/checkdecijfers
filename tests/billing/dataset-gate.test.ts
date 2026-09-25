@@ -169,3 +169,41 @@ describe('chargeAndRunDataset — a thrown error refunds in full', () => {
     });
   });
 });
+
+// #285 (session 129): a co-pilot edit that applied nothing is priced like a
+// clarification; a co-pilot edit with a command, and a plain chart turn with
+// no co-pilot record at all, keep the full chart price.
+describe('chargeAndRunDataset — a co-pilot edit that applied nothing (#285)', () => {
+  function copilotTurn(commands: unknown[]): AuditedDatasetTurn {
+    return {
+      envelope: {
+        schemaVersion: 1,
+        kind: 'chart',
+        question: 'test',
+        text: 'test',
+        copilot: { message: 'm', commands, refused: [], targetTurnId: 1, feedback: null },
+      } as unknown as AuditedDatasetTurn['envelope'],
+      auditId: 9,
+      datasetGone: false,
+    };
+  }
+
+  it('zero commands -> the clarification price', async () => {
+    await withPricedDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const result = await chargeAndRunDataset(db, userId, randomUUID(), vi.fn(async () => copilotTurn([])));
+      expect(result).toMatchObject({ kind: 'ok', netCost: 10 });
+      expect(await getBalance(db, userId)).toBe(90);
+    });
+  });
+
+  it('one command -> the full chart price', async () => {
+    await withPricedDb(async (db) => {
+      const userId = randomUUID();
+      await db.query('select public.grant_signup_credits($1)', [userId]);
+      const result = await chargeAndRunDataset(db, userId, randomUUID(), vi.fn(async () => copilotTurn([{ kind: 'setForm', form: 'bar' }])));
+      expect(result).toMatchObject({ kind: 'ok', netCost: DATASET_TURN_PRICE });
+    });
+  });
+});

@@ -263,7 +263,8 @@ round; the Playwright proof and the final review by the session).
 - **Billing without DDL.** `src/billing/chart-edit-gate.ts` (the dataset-gate pattern; hot path untouched)
   reserves the existing `clarification` action-class price through the existing `question_cost`
   reservation with a fresh request id; an `edit` reply keeps the debit, a clarification/refusal refunds
-  in full; every compensation passes `auditAnswerId: null`. **A chart edit never writes `audit_answers`**
+  in full (**session 129, #285:** so does an `edit` that applied zero commands; the own-data tier prices a
+  zero-command co-pilot edit at the clarification price in `dataset-gate.ts`); every compensation passes `auditAnswerId: null`. **A chart edit never writes `audit_answers`**
   (spec §6). What survives: the ledger rows and the applied commands in the card's `chart_edits` log
   (phase 1). The reply text, refusals and token counts are not stored, so this tier has no 👍/👎 —
   [#285](../open-questions.md) (re-pricing), [#286](../open-questions.md) (a turn record).
