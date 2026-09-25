@@ -30,6 +30,12 @@
   file bytes at 90 days) and "delete my question history" also deletes uploads (not fail-soft). Verify block green at
   `3b27e5d4` (backend 3,349, web 3,046, gate PASS, build); `/code-review` LOW 0. Live dry run (`npm run gdpr:purge`,
   2026-09-25): new datasets line prints, 0 datasets / 0 file-byte clears due (uploads went live 2026-09-18).
+- **Session 129 autonomous batch — all LIVE, main CI green incl. deploy (last run 36122408632 @ `f2fe860c`):**
+  #294 English unit words on English chart overlays (`c3994188`); #285 a chart edit that applied nothing is refunded
+  (CBS) / priced as a clarification (own-data) (`977df193`); #260 scoped: rounded free-end bar corners + tidier tooltip,
+  palette unchanged (`afabdf87`); published dumbbell/slope keep their form with a hidden series, and a split
+  aggregate/derived own-data chart names each series by its split value (`2b149d27`, e2e expectations `f2fe860c` —
+  `2b149d27` alone was red in CI on those two e2e strings, deploy skipped, fixed next commit).
 - **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** 13, in plain English — [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md).

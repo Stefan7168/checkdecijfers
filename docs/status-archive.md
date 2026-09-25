@@ -1,5 +1,24 @@
 # STATUS archive — the session log
 
+**Session 129 (2026-09-25, owner present at start, then "continue working autonomously" / "work autonomously for
+hours"). Opened on the session-129 kickoff: push the local sessions 127–128 work.**
+
+1. **Push of sessions 127–128:** on a freshly rebooted machine the verify block was fully green at `d8438fa3`
+   (backend 219/3,346, web 160/3,042 with no timeouts, benchmark GATE PASS 6/6 + 0 fabricated, build); the own-data
+   publish + co-pilot e2e passed for the first time (10/10); `/code-review` LOW over `598d0f10..d8438fa3` 0 findings.
+   Owner answered the push question with "Continue working autonomously" → pushed; CI 36106419342 green incl. deploy.
+2. **#322 I-3 (dataset retention):** retention job gained an injected uploaded-dataset leg (2-year full redaction
+   incl. turns/chart edits/publications; file bytes at 90 days), wired in the cron and `scripts/gdpr-purge.ts`;
+   "delete my question history" now deletes uploads too (not fail-soft). Owner GO in chat ("Yes"); merge `dbd5c6d0`,
+   CI 36108726250 green incl. deploy; live dry run shows the new line, 0 due.
+3. **Owner: "I thought I told you to work autonomously for hours."** The publish flag flip stays an owner step (live
+   DDL + env flag). Ran the owner-decisions brief's cheap, reversible recommendations: #294 (`c3994188`), #285
+   (`977df193`), #260 scoped (`afabdf87`; palette left for the owner), plus two own-data publish residuals
+   (`2b149d27`). `2b149d27` turned main CI red on two e2e strings that pinned the old duplicate label (verify block
+   does not run Playwright; local harness could not start with the owner's Glaibaan dev server + Docker running);
+   fixed in `f2fe860c`, CI 36122408632 green incl. deploy. Each push had its own green verify block and `/code-review`
+   LOW (0 findings).
+
 **Sessions 127–128 (2026-09-24 → 2026-09-25, one conversation, owner present). Opened on session 127's kickoff:
 owner decisions B1/B2 on own-data parity (#318). Closed with everything merged to LOCAL `main` only — the owner said
 "keep working locally, don't push yet" — so `origin/main` is still `598d0f10` and production is unchanged.**

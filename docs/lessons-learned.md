@@ -6,6 +6,26 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 129 — the verify block does not run Playwright; a change to what a chart SAYS must grep the e2e specs
+
+1. **A label change passed every local check and still turned main CI red.** `buildUserChartSpec` started naming a
+   split aggregate/derived series by its split value (`2b149d27`). The full verify block (typechecks, backend 3,355,
+   benchmark, web 3,060, build) and `/code-review` were green — but two `web/e2e/own-data-copilot.spec.ts`
+   assertions pinned the OLD label text ("Gecontroleerd tegen de rij die je koos: Omzet − Kosten."), and
+   `scripts/verify-block.sh` never runs Playwright. CI's e2e smoke caught it; deploy was skipped, so production
+   never saw the red commit, and the fix (`test(e2e)` commit) followed. Lesson: before pushing any change to text a
+   chart or card SHOWS (labels, notes, headings), `grep -rn "<old text>" web/e2e/` and update/run the matching
+   specs — a unit-green change can still break an e2e string pin.
+2. **The owner's other project is part of the machine budget.** With the Glaibaan `next dev` server and Docker
+   running, swap sat at 4.7–5.7 GB and the Playwright harness could not start within its 240 s window; two web
+   unit tests (the 201-click publish test and the command-contract test) timed out in the full run and passed
+   alone. On a loaded machine: re-run a timed-out file alone before calling it a regression, and let CI run the
+   e2e rather than fighting the harness start-up.
+3. **"Work autonomously" means chain, don't check in.** After the owner said "continue working autonomously", the
+   session pushed, then ended a turn asking for the next GO; the owner: "I thought I told you to work autonomously
+   for hours". Run the owner-decisions brief's cheap, reversible recommendations back to back and push each;
+   park only live DDL/env flips/real LLM spend, documented as owner steps rather than asked about.
+
 ## Sessions 127–128 — a separate adversarial security review found two real leaks the build's own review chain missed;
 ## on an 8 GB machine, parallel agents need a machine-wide lock AND the owner's other work counts
 
