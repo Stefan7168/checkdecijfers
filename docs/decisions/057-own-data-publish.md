@@ -34,9 +34,12 @@ it, ADR [056](056-chart-copilot.md)), and file names can be revealing.
    uses (`renderInstructionForDataset`, `deriveChartOverlay`) — no new code computes a
    number, so U1/U5/U6 hold by reuse.
 5. **Rendered by the own-data card in a read-only `publicMode`**, never by `ChartView` (ADR 037 D11).
-6. **Deletion:** the shared `redactTurnsForDatasets` leg hard-deletes publications in the same transaction, so
-   file deletion, account deletion and the 2-year retention purge all kill the link; the page also checks the
-   dataset's status on every request.
+6. **Deletion:** the shared `redactTurnsForDatasets` leg hard-deletes publications in the same transaction, and
+   the page also checks the dataset's status on every request. **Correction (session 128, 2026-09-25):** only
+   FILE/thread deletion (`deleteOneDataset`) is wired in production and kills the link today. Account-level
+   deletion and the 2-year dataset retention purge would go through the same leg, but `deleteUserDatasets` and
+   `purgeExpiredDatasets` have no production caller yet — tracked as [#322](../open-questions.md) I-3, NOT yet
+   built, and required before the flag is switched on.
 7. Free, no AI, noindex, max 50 live publications per author, behind `OWN_DATA_PUBLISH_ENABLED` (fails closed).
    Route `/embed/own/[publicId]` reuses the `/embed/` proxy prefix, framing headers and layout signal.
 
@@ -145,6 +148,42 @@ one of two series visible), caught by a re-review and closed in one small follow
   instruction purely to compare series labels against the stored envelope; this doubles the render work for the
   first chart on every visitor request. Not measured to matter at today's traffic; a revisit trigger if it ever
   does.
+
+### Security-review fix wave (session 128, 2026-09-25)
+
+An independent adversarial security + privacy review
+([superpowers/specs/2026-09-25-own-data-publish-security-review.md](../superpowers/specs/2026-09-25-own-data-publish-security-review.md),
+[#322](../open-questions.md)) proved two P1 leaks in the pruning above by executed probes, plus unbounded
+anonymous work and three smaller gaps. Fixed in `web/lib/own-chart-publication.ts` (plus the publish action, the
+card and one split in `src/attachments/derive-overlay.ts`); the feature was dark throughout, so nothing was ever
+exposed:
+- **I-1 — internal row references removed from the payload.** A blanked point kept its `rowRef`, and an
+  aggregate rowRef lists its member rows (`agg:count:r1:c0+r2:c0+r3:c0`), so a hidden count was readable from the
+  RSC payload — and a visible aggregate point revealed its group size n (a mean over n = 1 is one person's value).
+  Every public point now carries an opaque id (`p0`, `p1`, …) and every reference (note `resultId` and note `id`,
+  overlay `resultIds`, the headline override, the resolved overlay's own handle) is remapped through the same map.
+  The card only uses a rowRef as an identity key, so nothing it draws changes. `sourceText` is blanked on every
+  public point (unused by the card; on a derived point it is the unplotted operand's raw text).
+- **I-2 — a hidden slot carries no information.** It is one blank point per visible category, in visible order,
+  instead of the hidden series' own points in their own (with sort-by-value: ranked) order.
+- **M-1 — note labels** are rebuilt from the final public spec, so a label from an earlier chart (a customer name
+  before a `setInstruction`) never reaches the payload.
+- **I-4 a/b — bounded work.** The whole log goes through the capped command schema (max 200) at publish (the
+  action now also stores the PARSED log) and on every read — the old entry-by-entry parse bypassed the cap (a
+  crafted 64 KB log of 377 overlay commands was accepted). The per-entry tolerance was dropped: a malformed entry
+  now refuses the log (`invalid`/not-available) instead of counting as "dropped" — equally fail-closed, and a real
+  card never writes one. More than 20 derived overlays (`PUBLIC_OVERLAY_MAX`) refuses the chart the same way,
+  and every overlay is resolved from ONE `allResolvedPoints` map per request (`overlayFromResolvedPoints`, the
+  unchanged body `deriveChartOverlay` now delegates to — no new arithmetic, principle (a)).
+- **M-3 — no third-party font on the public page.** Public mode ignores the frozen style's (and the log's)
+  `fontFamily` and uses the default font stack, so an embed never makes an anonymous visitor's browser contact
+  Google Fonts (the 2022 LG München pattern). Self-hosting the curated fonts would bring the choice back; not
+  built (cheapest mechanism first).
+
+**Still open (#322):** I-3 (dataset retention + account-level deletion not wired — see decision 6's correction)
+and M-2 (the 50-publication cap is a count-then-insert race, accepted as #320). Not built from I-4: storing the
+pruned payload at publish time (the review's (c)) and a firewall rate limit on `/embed/own/*` (d); a crafted log
+of up to 200 distinct `setInstruction` commands still costs one render each per view, bounded by the cap.
 
 ## Revisit triggers
 

@@ -537,6 +537,9 @@ since it has never been applied to any real database). Every reader in `src/atta
 probes for the table first (`to_regclass('public.published_user_charts')`), and the public route and the
 Publish button both gate on the flag, so the app runs byte-identically today whether or not these
 steps have been done.** This section is the checklist for when the owner is ready to turn it on.
+**Precondition (session 128, [#322](open-questions.md)):** do NOT switch it on until #322 I-3 is fixed —
+account-level deletion and the 2-year dataset retention purge are not yet wired, so a published link
+would outlive both. The review's other leaks (I-1, I-2, M-1, I-4 a/b, M-3) were fixed session 128.
 
 Lets a reader who is signed in publish a chart they made from their own uploaded file as a public,
 read-only link anyone can open — see ADR [057](decisions/057-own-data-publish.md) for the full
@@ -565,10 +568,12 @@ calls no third-party API).
      table and heatmap.
    - Back on your own chart, click **Unpublish**. Reload the private-window tab: the page now shows
      "This chart is no longer available."
-   - **Session 128 checks:** set an account chart style (a font, a colour, a language) BEFORE
+   - **Session 128 checks:** set an account chart style (a colour, a language) BEFORE
      publishing, publish, then change the account style again — the already-published link's look must
      NOT change (it is frozen at publish time; click "Update published version" if you want the link to
-     pick up the new look). Also open the link once with no `?lang=` at all (should show the frozen
+     pick up the new look). A chosen FONT is deliberately never used on the public page (#322 M-3: it
+     would make every visitor's browser contact Google Fonts) — the public chart always uses the default
+     font, whatever the author picked. Also open the link once with no `?lang=` at all (should show the frozen
      style's own language, or Dutch if none was set) and once with an explicit `?lang=` that disagrees
      with the frozen style's language (the URL parameter must win for the chart itself, not just the
      page chrome).
