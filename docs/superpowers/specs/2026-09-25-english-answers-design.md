@@ -81,6 +81,9 @@ existing `LlmClient` (real / replay / recording), so CI replays hermetic fixture
 
 ### 3.4 Checks (deterministic, blocking)
 
+*C7/C8 added during the build (session 131, SDD ruling 6): C1 compares placeholder sets, so a swap of two
+numbers would otherwise pass every check.*
+
 Run on the model output **before** filling. Any failure → one retry with the problems appended (the same
 retry shape the phrasing rung uses), then fallback.
 
@@ -92,6 +95,8 @@ retry shape the phrasing rung uses), then fallback.
 | C4 | Caveats kept: each provisional/estimate marker in the Dutch body has its English counterpart in the English body | a dropped "provisional" |
 | C5 | Glossary respected: for every glossary name the Dutch body mentions (via the existing `mentions` matcher), the English body contains the English form (case-insensitive) | an improvised measure name ("average" for "median") |
 | C6 | Chip count equal to the input chip count, each chip non-empty | a lost chip |
+| C7 | Number placeholders keep their relative order within each item (period/caveat placeholders may move) | two numbers swapped between places |
+| C8 | Sentence binding: each number placeholder's Dutch-sentence companions (period placeholders, region names) appear in the English sentence that holds it | a number re-attached to another period or region |
 
 Then **fill**: `⟦n⟧` → the Dutch token converted to English number format by a pure function
 (`17.942.942` → `17,942,942`, `3,5` → `3.5`, `x 1 000` → `x 1,000`), `⟦Pn⟧` → the English period label. The
