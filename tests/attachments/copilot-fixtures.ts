@@ -67,5 +67,9 @@ export const CAPABILITIES_FIXTURE: CopilotCapabilities = {
   presentationKeys: ['lineWidth', 'grid', 'markers'],
   templates: ['standard', 'newsroom'],
   overlays: true,
+  // #309: nothing currently hidden/dimmed in this fixture's default state —
+  // the merge tests build their own capabilities with these set instead.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };

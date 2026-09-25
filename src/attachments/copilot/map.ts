@@ -277,6 +277,21 @@ export function mapCopilotOutput(
       // chart-commands.ts's validateCommand drops a key that is hidden and
       // dimmed at once, and a stored command must never be one the client
       // will drop.
+      //
+      // #309 (mirrors the CBS tier's own fix, src/chart/copilot/map.ts):
+      // the model was only ever shown the vocabulary to answer THIS
+      // request — never which series the reader already hid or dimmed by
+      // clicking the legend — so its hiddenLabels/dimmedLabels can only
+      // ever speak for the series it names. Storing them as-is would be a
+      // wholesale replace of the chart's WHOLE hidden/dimmed set, silently
+      // un-hiding/un-dimming everything the reader set that the chat did
+      // not mention. MERGE instead: a key the reader currently holds
+      // hidden or dimmed and this command does not name keeps its own
+      // state; a key the command DOES name moves to what it asked for,
+      // overriding any prior state of its own. One command still reaches
+      // the client either way, so the undo history stays one invertible
+      // entry (chart-commands.ts's own before/after inversion needs no
+      // change for this).
       case 'setDimmed': {
         const unknown = [...command.hiddenLabels, ...command.dimmedLabels].find((label) => !seriesIndex.has(label));
         if (unknown !== undefined) {
@@ -288,10 +303,22 @@ export function mapCopilotOutput(
           out.refused.push({ request: cap(`series: ${both}`), reason: 'invalid', control: 'form' });
           break;
         }
+        const hiddenKeys = command.hiddenLabels.map((label) => `s${seriesIndex.get(label)!}`);
+        const dimmedKeys = command.dimmedLabels.map((label) => `s${seriesIndex.get(label)!}`);
+        const mentioned = new Set([...hiddenKeys, ...dimmedKeys]);
+        // Stale/malformed current-state keys (an older client, a race with
+        // a chart that has since changed) are dropped rather than trusted —
+        // a key the client would refuse the whole command over is worse
+        // than one silently ignored here.
+        const validKeys = new Set(chart.series.map((_, index) => `s${index}`));
+        const keepCurrent = (keys: string[] | undefined): string[] =>
+          (keys ?? []).filter((key) => validKeys.has(key) && !mentioned.has(key));
+        const mergedHidden = new Set([...keepCurrent(capabilities.currentHiddenKeys), ...hiddenKeys]);
+        const mergedDimmed = new Set([...keepCurrent(capabilities.currentDimmedKeys), ...dimmedKeys]);
         out.commands.push({
           kind: 'setDimmed',
-          hiddenKeys: command.hiddenLabels.map((label) => `s${seriesIndex.get(label)!}`),
-          dimmedKeys: command.dimmedLabels.map((label) => `s${seriesIndex.get(label)!}`),
+          hiddenKeys: [...mergedHidden],
+          dimmedKeys: [...mergedDimmed],
         });
         break;
       }
@@ -370,9 +397,11 @@ export function mapCopilotOutput(
       // would otherwise refuse after the fact — a stored command must never
       // be one it drops. Like the CBS tier, chat averages EVERY point of
       // the named series: naming the series is the reader's own
-      // disambiguation, and this mapping has no view state (hidden/dimmed
-      // keys) to window by. The command carries rowRefs only — never a
-      // value.
+      // disambiguation. (#309 gave this mapping access to the reader's
+      // current hidden/dimmed keys via capabilities, but only setDimmed's
+      // own merge reads them — the mean deliberately stays unwindowed, per
+      // the prompt's own wording above.) The command carries rowRefs only —
+      // never a value.
       case 'addDerivedOverlay': {
         // The SAME gate the CBS tier's own difference/mean controls use
         // (form === 'line' || form === 'area') — without it, asking for an

@@ -103,8 +103,16 @@ export function ownDataCapabilities(input: {
    * actually offers (a bar chart has no line width, a table has nothing). */
   applicable: ReadonlySet<PresentationKey>;
   lang: Lang;
+  /** #309: the reader's own current hidden/dimmed series (ChartDocState's
+   * `hiddenKeys`/`dimmedKeys`) — read by copilot/map.ts's setDimmed case to
+   * MERGE a chat request onto what the reader already set instead of
+   * replacing it wholesale. Optional so every existing call site (tests, a
+   * card with no view state yet) keeps compiling; omitted reads as
+   * "nothing currently hidden/dimmed". */
+  currentHiddenKeys?: ReadonlySet<string>;
+  currentDimmedKeys?: ReadonlySet<string>;
 }): CopilotCapabilities {
-  const { spec, form, seriesCount, applicable, lang } = input;
+  const { spec, form, seriesCount, applicable, lang, currentHiddenKeys, currentDimmedKeys } = input;
   return {
     // Three separate steps, on purpose (Task 1): what the scorer offers,
     // capped to what this card renders (`ownDataRenderableForms` — since
@@ -130,6 +138,9 @@ export function ownDataCapabilities(input: {
     // would re-hash every fixture): enforced only at
     // src/attachments/copilot/map.ts's addDerivedOverlay case.
     overlays: form === 'line' || form === 'area',
+    // #309: same NOT-in-the-prompt treatment as `overlays` above.
+    currentHiddenKeys: currentHiddenKeys === undefined ? [] : [...currentHiddenKeys],
+    currentDimmedKeys: currentDimmedKeys === undefined ? [] : [...currentDimmedKeys],
     lang,
   };
 }
@@ -174,8 +185,16 @@ export function cbsCapabilities(input: {
    * live verdict AND local refusals AND the period window). */
   liveWholeForms: { pie: boolean; stacked: boolean; stacked100: boolean };
   lang: Lang;
+  /** #309: the reader's own current hidden/dimmed series (ChartDocState's
+   * `hiddenKeys`/`dimmedKeys`) — read by copilot/map.ts's setDimmed case to
+   * MERGE a chat request onto what the reader already set instead of
+   * replacing it wholesale. Optional so every existing call site (tests, a
+   * card with no view state yet) keeps compiling; omitted reads as
+   * "nothing currently hidden/dimmed". */
+  currentHiddenKeys?: ReadonlySet<string>;
+  currentDimmedKeys?: ReadonlySet<string>;
 }): CbsCopilotCapabilities {
-  const { spec, form, applicable, zoomAvailable, liveWholeForms, lang } = input;
+  const { spec, form, applicable, zoomAvailable, liveWholeForms, lang, currentHiddenKeys, currentDimmedKeys } = input;
   const forms = allowedForms(spec, spec.series.length).filter((f) =>
     f === 'pie' ? liveWholeForms.pie : f === 'stacked' ? liveWholeForms.stacked : f === 'stacked100' ? liveWholeForms.stacked100 : true,
   );
@@ -195,6 +214,9 @@ export function cbsCapabilities(input: {
     // doorway is open on), so the form half of that same test is what this
     // tier can see.
     overlays: form === 'line' || form === 'area',
+    // #309: same NOT-in-the-prompt treatment as `overlays` above.
+    currentHiddenKeys: currentHiddenKeys === undefined ? [] : [...currentHiddenKeys],
+    currentDimmedKeys: currentDimmedKeys === undefined ? [] : [...currentDimmedKeys],
     lang,
   };
 }

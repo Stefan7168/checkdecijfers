@@ -119,6 +119,11 @@ const LINE_CAPABILITIES: CopilotCapabilities = {
   // form === 'area'` test `ownDataCapabilities` (web/lib/chart-capabilities.ts)
   // uses for its own `overlays` field.
   overlays: true,
+  // #309: not serialized into the prompt (serializeCopilotRequest doesn't
+  // read either field), so every fixture request built from this constant
+  // is indifferent to them.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };
 

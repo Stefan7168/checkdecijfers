@@ -216,6 +216,8 @@ describe('sanitizeCapabilities', () => {
       presentationKeys: ['grid'],
       templates: ['newsroom'],
       overlays: false,
+      currentHiddenKeys: [],
+      currentDimmedKeys: [],
       lang: 'nl',
     });
   });
@@ -224,5 +226,18 @@ describe('sanitizeCapabilities', () => {
     expect(sanitizeCapabilities({ overlays: true }).overlays).toBe(true);
     expect(sanitizeCapabilities({ overlays: 1 }).overlays).toBe(false);
     expect(sanitizeCapabilities({}).overlays).toBe(false);
+  });
+
+  // #309 (mirrors the CBS tier's own test): the merge in copilot/map.ts's
+  // setDimmed case trusts these keys structurally (a real `s${n}` shape),
+  // so sanitize is the only gate.
+  it('#309: keeps well-formed s${n} keys, drops anything else, dedupes', () => {
+    expect(sanitizeCapabilities({ currentHiddenKeys: ['s0', 's0', 's12', 'bogus', 3, null] }).currentHiddenKeys).toEqual([
+      's0',
+      's12',
+    ]);
+    expect(sanitizeCapabilities({ currentDimmedKeys: 'not-an-array' }).currentDimmedKeys).toEqual([]);
+    expect(sanitizeCapabilities({}).currentHiddenKeys).toEqual([]);
+    expect(sanitizeCapabilities({}).currentDimmedKeys).toEqual([]);
   });
 });

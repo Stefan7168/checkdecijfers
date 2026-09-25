@@ -3829,6 +3829,11 @@ export function ChartView({
           zoomAvailable,
           liveWholeForms: { pie: canUsePie, stacked: canUseStacked, stacked100: canUseStacked100 },
           lang: chartLang,
+          // #309: so copilot/map.ts's setDimmed case can MERGE a chat
+          // request onto what the reader already hid/dimmed by clicking
+          // the legend, instead of replacing the whole set.
+          currentHiddenKeys: state.hiddenKeys,
+          currentDimmedKeys: state.dimmedKeys,
         }),
       );
       applyCopilotOutcome(message, outcome);
