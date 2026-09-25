@@ -32,17 +32,18 @@ export function translateMeasureTitle(title: string): string {
   return MEASURE_TITLES[title] ?? title;
 }
 
-/** ADR 058 (English answers, Task 2): CBS's own table title
- * (`ValidatedResult.attribution.tableTitle`), same never-guess contract as
- * every other converter here — an unseeded title (TABLE_TITLES starts empty;
- * Task 3 fills it) stays Dutch. */
+/** ADR 058 (English answers, Task 2; filled by Task 3): CBS's own table
+ * title (`ValidatedResult.attribution.tableTitle`), same never-guess
+ * contract as every other converter here — an unseeded title (a future
+ * registered table not yet run through scripts/english-names-fetch.ts) stays
+ * Dutch. */
 export function translateTableTitle(title: string): string {
   return TABLE_TITLES[title] ?? title;
 }
 
-/** ADR 058 (English answers, Task 2): a CBS non-region dimension value label
- * (`ResultCell.dimLabels`'s values), same never-guess contract — an unseeded
- * label (DIM_LABELS starts empty; Task 3 fills it) stays Dutch. */
+/** ADR 058 (English answers, Task 2; filled by Task 3): a CBS non-region
+ * dimension value label (`ResultCell.dimLabels`'s values), same never-guess
+ * contract — an unseeded label stays Dutch. */
 export function translateDimLabel(label: string): string {
   return DIM_LABELS[label] ?? label;
 }

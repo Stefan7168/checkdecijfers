@@ -11,13 +11,13 @@ import { describe, expect, it } from 'vitest';
 import { hasEnglishName, translateDimLabel, translateTableTitle } from '../../src/registry/english-names.ts';
 
 describe('translateTableTitle', () => {
-  it('returns the input for an unknown table title (TABLE_TITLES starts empty — never guess)', () => {
+  it('returns the input for an unknown table title (never guess)', () => {
     expect(translateTableTitle('Onbekende tabel')).toBe('Onbekende tabel');
   });
 });
 
 describe('translateDimLabel', () => {
-  it('returns the input for an unknown dim label (DIM_LABELS starts empty — never guess)', () => {
+  it('returns the input for an unknown dim label (never guess)', () => {
     expect(translateDimLabel('Seizoensgecorrigeerd')).toBe('Seizoensgecorrigeerd');
   });
 });
@@ -33,7 +33,7 @@ describe('hasEnglishName', () => {
     expect(hasEnglishName('region', 'Utrecht')).toBe(false);
   });
 
-  it('is false for every table title and dim label (both lists start empty)', () => {
+  it('is false for an unseeded table title and an unseeded dim label (ADR 058 Task 3 filled both lists — this pins an entry neither ever gets, not "both lists start empty" anymore)', () => {
     expect(hasEnglishName('table', 'Onbekende tabel')).toBe(false);
     expect(hasEnglishName('dim', 'Seizoensgecorrigeerd')).toBe(false);
   });

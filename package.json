@@ -67,6 +67,7 @@
     "registry:apply": "node --env-file=.env src/registry/apply.ts",
     "pricing:apply": "node --env-file=.env src/billing/pricing-apply.ts",
     "fixtures:capture": "node scripts/capture-cbs-fixtures.ts",
+    "english-names:fetch": "node scripts/english-names-fetch.ts",
     "fixtures:capture:catalog": "node scripts/capture-cbs-fixtures.ts --catalog",
     "fixtures:capture:eurostat": "node scripts/capture-eurostat-fixtures.ts",
     "backfill:eurostat-doi": "node --env-file=.env scripts/backfill-eurostat-doi.ts",
