@@ -52,6 +52,17 @@ const publishActions = vi.hoisted(() => ({
 }));
 vi.mock('../app/own-chart-publish-actions.ts', () => publishActions);
 
+// #323: a pass-through spy on the card's publish-log builder — the real
+// function runs unless a test swaps it for one call. A5 uses that to hand
+// the card's own arguments a history past HISTORY_CAP without 201 UI clicks
+// (201 full card re-renders overran even a 30 s budget on a loaded machine).
+vi.mock('../lib/own-chart-publish-log.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/own-chart-publish-log.ts')>();
+  return { ...actual, buildPublishLog: vi.fn(actual.buildPublishLog) };
+});
+
+import { buildPublishLog } from '../lib/own-chart-publish-log.ts';
+import { emptyHistory, HISTORY_CAP, pushCommand } from '../lib/chart-history.ts';
 import { CHART_EDITS_SAVE_DEBOUNCE_MS } from '../lib/use-chart-edits.ts';
 import { UserChartView, type UserChartEditContext, type UserChartPublicView } from './user-chart.tsx';
 
@@ -526,18 +537,38 @@ describe('UserChartView — Publish button (own-data publish, ADR 057, Task 6)',
   // remaining 200 replay to Amsterdam SHOWN while the author sees it HIDDEN.
   // Publishing that log would expose a series the author hid, so the card
   // refuses client-side: the 'changed' line, and the server is never called.
+  //
+  // #323: the author makes ONE real toggle; the publish-log builder then gets
+  // the card's own initial document, replay context and current state, with
+  // only the history swapped for 201 of that same toggle built directly
+  // (trimmed to HISTORY_CAP by the real pushCommand). The trimming logic
+  // itself is unit-tested in own-chart-publish-log.test.ts; this test holds
+  // the card's wiring — its real arguments refuse, and a refusal never
+  // reaches the server.
   it('A5: refuses (changed line, no server call) when the trimmed history no longer replays to what the author sees', async () => {
+    const actual = await vi.importActual<typeof import('../lib/own-chart-publish-log.ts')>('../lib/own-chart-publish-log.ts');
+    vi.mocked(buildPublishLog).mockImplementationOnce((history, initial, ctx, current) => {
+      const toggle = history.past[0]!.command;
+      expect(toggle.kind).toBe('toggleSeries');
+      let trimmed = emptyHistory();
+      let state = initial;
+      for (let i = 0; i < HISTORY_CAP + 1; i++) {
+        ({ history: trimmed, state } = pushCommand(trimmed, state, { ...toggle, id: `${toggle.id}-${i}` }));
+      }
+      expect(trimmed.past).toHaveLength(HISTORY_CAP);
+      // 201 toggles land where the author's one toggle did: Amsterdam hidden.
+      expect(actual.publishStateMatches(state, current)).toBe(true);
+      return actual.buildPublishLog(trimmed, initial, ctx, current);
+    });
     render(<UserChartView spec={twoSeriesSpec()} edit={editContext({ publishEnabled: true })} />);
     const toggle = within(screen.getByRole('group', { name: 'Reeksen' })).getByRole('button', { name: 'Amsterdam' });
-    for (let i = 0; i < 201; i++) fireEvent.click(toggle);
+    fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     const dialog = await publishFromCard();
     await waitFor(() => expect(within(dialog).getByText(/niet precies zo worden gepubliceerd/i)).toBeInTheDocument());
+    expect(buildPublishLog).toHaveBeenCalled();
     expect(publishActions.publishOwnChart).not.toHaveBeenCalled();
-    // 201 real clicks, each a full card re-render: well under a second alone,
-    // but it overran vitest's 5 s default inside the full web suite on the
-    // 8 GB machine (session 128) — a budget for the load, not a slower card.
-  }, 30_000);
+  });
 });
 
 // Session 126 follow-up: the image download menu is offered only where

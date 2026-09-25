@@ -9,7 +9,7 @@
 // (which in turn copied chart.test.tsx): `vi.hoisted` + `vi.mock` for every
 // Server Action module chart.tsx imports directly.
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CHART_COMMAND_KINDS, validateCommand, type ChartCommandKind, type CommandContext } from '../lib/chart-commands.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
@@ -167,6 +167,22 @@ function provinciesRosterSpec(): ChartSpec {
 }
 
 afterEach(cleanup);
+
+// #323: chart.tsx loads the Style panel (and the notes/story pieces) through
+// next/dynamic. On a loaded machine the FIRST import of those chunks inside a
+// test could outlast findByRole's 1 s wait, so the scan below saw a panel
+// that had not mounted yet. Importing them once up front puts them in the
+// module cache; each dynamic() then resolves on its next tick, whatever the
+// machine is doing. (Goal line and era shading are already imported at the
+// top of this file.)
+beforeAll(async () => {
+  await Promise.all([
+    import('./chart-edit-modal.tsx'),
+    import('./chart-config-panel.tsx'),
+    import('./chart-story-stage.tsx'),
+    import('./chart-notes.tsx'),
+  ]);
+}, 60_000);
 
 /** Kinds whose control only exists inside the open Style panel. */
 const PANEL_KINDS: ChartCommandKind[] = ['setPresentation', 'replacePresentation', 'resetPresentation', 'applyTemplate'];

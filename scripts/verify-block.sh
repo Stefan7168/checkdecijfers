@@ -6,6 +6,13 @@
 #
 #   nohup scripts/verify-block.sh <checkout-dir> <log-file> >/dev/null 2>&1 & disown
 #   # then watch <log-file> for the "=== DONE" marker (or grep the exit= lines)
+#   nohup scripts/verify-block.sh <checkout-dir> <log-file> --e2e >/dev/null 2>&1 & disown
+#   # same, plus the Playwright e2e smoke (web/e2e/, the dev harness) after the build
+#
+# --e2e (session 130, open-questions #323): CI runs the Playwright smoke, this block did not, so a
+# changed on-screen string pinned by an e2e test could only break in CI (session 129, `2b149d27`).
+# Off by default: it starts the dev harness and a real Chromium, which is heavy on the 8 GB
+# machine — use it on a quiet machine whenever a change touches text a chart/card shows.
 #
 # What it runs, in order: typecheck (root + web) → the FULL backend suite → benchmark:run +
 # benchmark:score → the web suite → a real `next build`. Each step prints its summary lines and
@@ -19,8 +26,8 @@
 # the literal pattern in some shell's own command line — `pgrep -f vitest` inside a backgrounded
 # shell matched itself and deadlocked two agents on 2026-09-03 (RUNBOOK "Multi-agent autonomous
 # sessions", item 6). This script's own command line is its path, so it is safe either way.
-W="$1"; L="$2"
-if [[ -z "$W" || -z "$L" ]]; then echo "usage: verify-block.sh <checkout-dir> <log-file>" >&2; exit 2; fi
+W="$1"; L="$2"; E2E="$3"
+if [[ -z "$W" || -z "$L" ]] || [[ -n "$E2E" && "$E2E" != "--e2e" ]]; then echo "usage: verify-block.sh <checkout-dir> <log-file> [--e2e]" >&2; exit 2; fi
 cd "$W" || exit 1
 wait_for_vitest() { while pgrep -f "[n]ode.*vitest" >/dev/null; do sleep 15; done; }
 {
@@ -35,5 +42,8 @@ wait_for_vitest() { while pgrep -f "[n]ode.*vitest" >/dev/null; do sleep 15; don
   wait_for_vitest
   echo "--- web suite $(date -u +%T) ---"; npm run web:test 2>&1 | grep -E "Test Files|Tests |failed|FAIL" | tail -8; echo "exit=${PIPESTATUS[0]}"
   echo "--- next build $(date -u +%T) ---"; npm run web:build 2>&1 | grep -E "Compiled|TypeScript|error|Error|✓|✗|Route \(app\)" | head -12; echo "exit=${PIPESTATUS[0]}"
+  if [[ "$E2E" == "--e2e" ]]; then
+    echo "--- e2e smoke (Playwright, dev harness) $(date -u +%T) ---"; (cd web && npx playwright test 2>&1) | grep -E "passed|failed|flaky|skipped|✘|Error:" | tail -15; echo "exit=${PIPESTATUS[0]}"
+  fi
   echo "=== DONE $(date -u +%T) ==="
 } > "$L" 2>&1
