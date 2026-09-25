@@ -7,7 +7,7 @@
 // re-exports the four names (toPlottableSpec, userHeatmapModel, UserHeatmapCell,
 // UserHeatmapModel) that were part of its own public API before this split —
 // the same shape as session 128's chart.tsx -> chart-parts.tsx split.
-import { type KeyboardEvent, type ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import {
   Bar,
   BarChart,
@@ -23,7 +23,7 @@ import {
   ZIndexLayer,
 } from 'recharts';
 import type { PieLabelRenderProps, PieSectorShapeProps } from 'recharts';
-import { type RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
+import type { RenderDatasetInstructionOutcome } from '../app/dataset-actions.ts';
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import type { ResolvedOverlay } from '../backend/attachments/derive-overlay.ts';
 import type { DerivedOverlayRequest } from '../lib/chart-commands.ts';
