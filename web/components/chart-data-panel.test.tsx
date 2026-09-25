@@ -105,11 +105,12 @@ describe('ChartDataPanel — a valid change', () => {
   it('switching the data orientation to a line chart dispatches the new kind', () => {
     const { onChange } = renderPanel({ instruction: { ...INSTRUCTION, x: 'c0' } });
     // A text x column has no natural order, so the LINE option is refused by
-    // the server's own rule — the panel shows that reason and dispatches
-    // nothing.
+    // the server's own rule — the panel shows that reason, translated into
+    // Dutch (#282: never the validator's raw English message), and
+    // dispatches nothing.
     fireEvent.click(screen.getByRole('radio', { name: 'Lijn' }));
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('no natural order');
+    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('geen natuurlijke volgorde');
   });
 
   it('a filter on the text column dispatches an "in" clause', () => {
@@ -136,18 +137,19 @@ describe('ChartDataPanel — a valid change', () => {
 });
 
 describe('ChartDataPanel — a change the server would refuse', () => {
-  it('picking "Verschil" with no second column shows the schema\'s reason and dispatches nothing', () => {
+  it('picking "Verschil" with no second column shows the schema\'s reason, in Dutch, and dispatches nothing', () => {
     const { onChange } = renderPanel();
     fireEvent.change(screen.getByLabelText('Berekening'), { target: { value: 'difference' } });
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent("derived 'difference' needs a second column b");
+    // The op itself is translated too ("Verschil", not the raw id "difference").
+    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('Verschil heeft een tweede kolom nodig');
   });
 
-  it('a limit past the cap shows the reason and dispatches nothing', () => {
+  it('a limit past the cap shows the reason, in Dutch, with the real cap (never a hardcoded digit)', () => {
     const { onChange } = renderPanel();
     fireEvent.change(screen.getByLabelText('Maximaal aantal'), { target: { value: '500' } });
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('outside the allowed');
+    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('toegestane 1..50');
   });
 
   it('unticking the only value column shows the reason and dispatches nothing', () => {
@@ -172,6 +174,13 @@ describe('ChartDataPanel — en', () => {
     renderPanel({ lang: 'en' });
     expect(screen.getByLabelText('Horizontal axis')).toBeInTheDocument();
     expect(screen.getByLabelText('Summarise')).toBeInTheDocument();
+  });
+
+  it('renders the problem line in English too (#282: same reason, translated per lang)', () => {
+    const { onChange } = renderPanel({ lang: 'en' });
+    fireEvent.change(screen.getByLabelText('Maximum number'), { target: { value: '500' } });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId('chart-data-problem')).toHaveTextContent('outside the allowed 1..50');
   });
 });
 

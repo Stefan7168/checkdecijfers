@@ -297,8 +297,11 @@ const nl = {
   'chart.data.derived.percent_change': 'Verandering',
   'chart.data.derived.ratio': 'Verhouding',
   'chart.data.derivedB': 'Tweede kolom',
-  // The reason comes from the server's own validator (English, like every
-  // other backend-built string in this tier — #206).
+  // #282 fix: `{message}` is now the ALREADY-TRANSLATED text built from the
+  // validator's structured reason (see chart.data.validation.* below) —
+  // never the validator's raw English `.message` again (that string is for
+  // server logs/audit only, src/attachments/instruct/schema.ts's
+  // describeValidationReason).
   'chart.data.problem': 'Dit kan niet: {message}',
   // summarizeInstruction (chart-data-instruction.ts) — the history-menu label.
   'chart.data.summary.aggregate': '{fn} van {y}',
@@ -326,6 +329,48 @@ const nl = {
   'chart.data.count.eight': 'acht',
   'chart.data.count.nine': 'negen',
   'chart.data.count.ten': 'tien',
+
+  // #282: one entry per `ValidationReasonCode`
+  // (src/attachments/instruct/schema.ts) — the Data panel's problem line
+  // (chart.data.problem above). Any number here (a limit, a cap) is always
+  // a `{param}` filled from the SAME constant the validator itself checked
+  // against (limits.ts's MAX_LIMIT/MAX_SERIES/MAX_Y_COLUMNS), never a
+  // literal typed into the sentence. `chart-data-instruction.ts`'s
+  // `translateValidationReason` is the only caller.
+  'chart.data.validation.invalidJson': 'De invoer kon niet worden gelezen.',
+  'chart.data.validation.schemaViolation': 'Deze combinatie voldoet niet aan het verwachte formaat.',
+  'chart.data.validation.unknownColumn': 'Kolom "{column}" bestaat niet in deze dataset.',
+  'chart.data.validation.yCountOutOfRange': '{count} waarde-kolommen is te veel of te weinig — kies er 1 tot {max}.',
+  'chart.data.validation.yColumnWrongType': 'Kolom "{column}" (type {type}) is geen getal- of jaarkolom.',
+  'chart.data.validation.yColumnAmbiguous': 'Het getalformaat van kolom "{column}" is nog niet vastgesteld.',
+  'chart.data.validation.lineXWrongType': 'Kolom "{column}" (type {type}) heeft geen natuurlijke volgorde voor een lijngrafiek.',
+  'chart.data.validation.lineXAmbiguous': 'Het getalformaat van kolom "{column}" is nog niet vastgesteld.',
+  'chart.data.validation.seriesNoDistinct': 'Kolom "{column}" heeft geen vaste lijst met waarden om op uit te splitsen.',
+  'chart.data.validation.seriesTooMany':
+    'Kolom "{column}" heeft {count} verschillende waarden, meer dan de {max} toegestane reeksen — filter eerst.',
+  'chart.data.validation.filterInNoDistinct': 'Kolom "{column}" heeft geen vaste lijst met waarden om op te filteren.',
+  'chart.data.validation.filterValueInvalid': 'Waarde "{value}" komt niet voor in kolom "{column}".',
+  'chart.data.validation.filterBetweenAmbiguous': 'Het getalformaat van kolom "{column}" is nog niet vastgesteld.',
+  'chart.data.validation.filterBetweenNoRange': 'Kolom "{column}" heeft geen bereik (min/max) om op te filteren.',
+  'chart.data.validation.filterRangeReversed':
+    'Bij kolom "{column}" is de startwaarde ({from}) groter dan de eindwaarde ({to}).',
+  'chart.data.validation.filterRangeOutside':
+    'Het bereik [{from}, {to}] van kolom "{column}" valt buiten het werkelijke bereik [{min}, {max}].',
+  'chart.data.validation.limitOutOfRange': 'Het maximum {limit} valt buiten de toegestane 1..{max}.',
+  'chart.data.validation.derivedNeedsOneY': '{op} kan alleen met precies één waarde-kolom.',
+  'chart.data.validation.derivedNeedsB': '{op} heeft een tweede kolom nodig.',
+  'chart.data.validation.derivedNoB': '{op} gebruikt geen tweede kolom.',
+  'chart.data.validation.derivedBWrongType': 'De tweede kolom "{column}" (type {type}) is geen getal- of jaarkolom.',
+  'chart.data.validation.derivedBAmbiguous': 'Het getalformaat van de tweede kolom "{column}" is nog niet vastgesteld.',
+  'chart.data.validation.derivedWithCount': '{op} kan niet samen met "Aantal rijen".',
+  'chart.data.validation.percentChangeXWrongType':
+    'Kolom "{column}" (type {type}) heeft geen natuurlijke volgorde voor een verandering-berekening.',
+  'chart.data.validation.sortIllegalWithAggregate':
+    'Bij een samenvatting of berekening kan alleen op as of waarde worden gesorteerd.',
+  'chart.data.validation.confidenceOutOfRange': 'Onverwachte betrouwbaarheidswaarde ({confidence}).',
+  'chart.data.validation.copilotInvalidJson': 'De invoer kon niet worden gelezen.',
+  'chart.data.validation.copilotSchemaViolation': 'Deze combinatie voldoet niet aan het verwachte formaat.',
+  'chart.data.validation.copilotConfidenceOutOfRange': 'Onverwachte betrouwbaarheidswaarde ({confidence}).',
 
   // chart-copilot-input.tsx — co-pilot phase 2 (session 113, Task 8):
   // doorway B for a chart edit, the chat under the own-data card. Digit-free
@@ -1698,6 +1743,40 @@ const en: Messages = {
   'chart.data.count.eight': 'eight',
   'chart.data.count.nine': 'nine',
   'chart.data.count.ten': 'ten',
+
+  'chart.data.validation.invalidJson': 'The input could not be read.',
+  'chart.data.validation.schemaViolation': 'This combination does not match the expected format.',
+  'chart.data.validation.unknownColumn': 'Column "{column}" does not exist in this dataset.',
+  'chart.data.validation.yCountOutOfRange': '{count} value columns is too many or too few — pick 1 to {max}.',
+  'chart.data.validation.yColumnWrongType': 'Column "{column}" (type {type}) is not a number or year column.',
+  'chart.data.validation.yColumnAmbiguous': 'The number format of column "{column}" has not been resolved yet.',
+  'chart.data.validation.lineXWrongType': 'Column "{column}" (type {type}) has no natural order for a line chart.',
+  'chart.data.validation.lineXAmbiguous': 'The number format of column "{column}" has not been resolved yet.',
+  'chart.data.validation.seriesNoDistinct': 'Column "{column}" has no fixed list of values to split on.',
+  'chart.data.validation.seriesTooMany':
+    'Column "{column}" has {count} distinct values, more than the {max} allowed series — filter first.',
+  'chart.data.validation.filterInNoDistinct': 'Column "{column}" has no fixed list of values to filter on.',
+  'chart.data.validation.filterValueInvalid': 'Value "{value}" is not one of column "{column}"\'s real values.',
+  'chart.data.validation.filterBetweenAmbiguous': 'The number format of column "{column}" has not been resolved yet.',
+  'chart.data.validation.filterBetweenNoRange': 'Column "{column}" has no range (min/max) to filter on.',
+  'chart.data.validation.filterRangeReversed':
+    'On column "{column}", the start value ({from}) is greater than the end value ({to}).',
+  'chart.data.validation.filterRangeOutside':
+    'The range [{from}, {to}] on column "{column}" falls outside its real range [{min}, {max}].',
+  'chart.data.validation.limitOutOfRange': 'The limit {limit} is outside the allowed 1..{max}.',
+  'chart.data.validation.derivedNeedsOneY': '{op} only works with exactly one value column.',
+  'chart.data.validation.derivedNeedsB': '{op} needs a second column.',
+  'chart.data.validation.derivedNoB': '{op} does not take a second column.',
+  'chart.data.validation.derivedBWrongType': 'The second column "{column}" (type {type}) is not a number or year column.',
+  'chart.data.validation.derivedBAmbiguous': 'The number format of the second column "{column}" has not been resolved yet.',
+  'chart.data.validation.derivedWithCount': '{op} cannot be combined with "Count of rows".',
+  'chart.data.validation.percentChangeXWrongType':
+    'Column "{column}" (type {type}) has no natural order for a change calculation.',
+  'chart.data.validation.sortIllegalWithAggregate': 'With a summary or calculation, you can only sort by axis or value.',
+  'chart.data.validation.confidenceOutOfRange': 'Unexpected confidence value ({confidence}).',
+  'chart.data.validation.copilotInvalidJson': 'The input could not be read.',
+  'chart.data.validation.copilotSchemaViolation': 'This combination does not match the expected format.',
+  'chart.data.validation.copilotConfidenceOutOfRange': 'Unexpected confidence value ({confidence}).',
 
   'chart.copilot.placeholder': 'Adjust this chart',
   'chart.copilot.regionLabel': 'Adjust this chart through chat',

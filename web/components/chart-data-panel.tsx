@@ -7,11 +7,21 @@
 //
 // The panel never decides what is drawable: a change goes through `withPatch`
 // and then the SERVER's own allowlist (validateClientInstruction). A refused
-// combination shows the validator's own reason and dispatches nothing — the
-// chart on screen is never changed by a control the schema would reject.
+// combination shows the validator's own reason, translated into the
+// reader's language (#282: translateValidationReason, never the schema's
+// raw English `.message`), and dispatches nothing — the chart on screen is
+// never changed by a control the schema would reject.
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Database } from 'lucide-react';
-import { AGGREGATE_KEYS, DERIVED_KEYS, summarizeInstruction, validateClientInstruction, withPatch } from '../lib/chart-data-instruction.ts';
+import {
+  AGGREGATE_KEYS,
+  DERIVED_KEYS,
+  summarizeInstruction,
+  translateValidationReason,
+  validateClientInstruction,
+  withPatch,
+  type ClientInstructionProblem,
+} from '../lib/chart-data-instruction.ts';
 import { t, type Lang } from '../lib/i18n/messages.ts';
 import { Button } from './ui/button.tsx';
 import {
@@ -63,7 +73,7 @@ export function ChartDataPanel({
   idPrefix,
   onChange,
 }: ChartDataPanelProps): ReactNode {
-  const [problem, setProblem] = useState<{ group: Group; message: string } | null>(null);
+  const [problem, setProblem] = useState<{ group: Group; reason: ClientInstructionProblem } | null>(null);
 
   if (!open) return null;
 
@@ -78,7 +88,7 @@ export function ChartDataPanel({
     const next = withPatch(instruction, patch);
     const reason = validateClientInstruction(next, profile);
     if (reason !== null) {
-      setProblem({ group, message: reason });
+      setProblem({ group, reason });
       return;
     }
     setProblem(null);
@@ -97,7 +107,7 @@ export function ChartDataPanel({
     if (problem === null || problem.group !== group) return null;
     return (
       <p role="status" data-testid="chart-data-problem" className="mt-1 text-muted-foreground">
-        {t(lang, 'chart.data.problem', { message: problem.message })}
+        {t(lang, 'chart.data.problem', { message: translateValidationReason(lang, problem.reason) })}
       </p>
     );
   }
