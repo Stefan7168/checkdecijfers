@@ -43,6 +43,9 @@
   test pre-imports lazy chunks, `verify-block.sh ... --e2e` runs Playwright). Verify block at `d8dec7f8`+#323: typechecks clean, backend
   219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060 (at load avg ~30), `next build` compiled; `/code-review`
   LOW 0. CI run 36129561946 green incl. e2e + deploy; prod 200. No open PRs.
+- **Session 130: `user-chart.tsx` move-only split LIVE** (`f90356b1` + `0eaa1302`): 29 helpers moved verbatim into
+  `web/components/user-chart-parts.tsx` (3,198 → 2,339 lines); verify block green, `/code-review` LOW 0, CI 36131271620 green incl. deploy.
+  #312 now has nothing open. The kickoff's autonomous queue is exhausted — what remains needs the owner (publish flip, decisions brief).
 - **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** the 13-item brief [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md);
