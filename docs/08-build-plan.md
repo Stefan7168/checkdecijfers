@@ -1188,3 +1188,6 @@ still pending:** apply migration 036, set the flag in Vercel Production, redeplo
 error page (#319); a real-browser e2e (not yet passing locally); an independent security review (#322) whose proven
 leaks were fixed the same session. **Before the flag flip:** #322 I-3 (wire the dataset retention purge + decide the
 account-level delete — changes the live monthly purge, owner GO), a green e2e run, and the push itself.
+**Session 129 (2026-09-25): all three DONE and LIVE** — pushed (CI 36106419342 green incl. deploy), the e2e passed
+(10/10, first time), and #322 I-3 wired with the owner's GO (merge `dbd5c6d0`, CI 36108726250). **Only the owner-supervised
+switch-on remains** (migration 036, the flag, the live check).

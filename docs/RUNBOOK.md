@@ -538,8 +538,8 @@ probes for the table first (`to_regclass('public.published_user_charts')`), and 
 Publish button both gate on the flag, so the app runs byte-identically today whether or not these
 steps have been done.** This section is the checklist for when the owner is ready to turn it on.
 **Precondition (session 128, [#322](open-questions.md)):** do NOT switch it on until #322 I-3 is fixed —
-account-level deletion and the 2-year dataset retention purge are not yet wired, so a published link
-would outlive both. The review's other leaks (I-1, I-2, M-1, I-4 a/b, M-3) were fixed session 128.
+account-level deletion and the 2-year dataset retention purge were not yet wired, so a published link
+would have outlived both. The review's other leaks (I-1, I-2, M-1, I-4 a/b, M-3) were fixed session 128.
 **Session 129: I-3 is fixed** (the monthly purge now has an uploaded-dataset leg; "delete my question history"
 deletes uploads too). Before the flag flip, run `npm run gdpr:purge` (dry run) once and check its new
 "datasets cutoff" line reads sensibly. (Done 2026-09-25 after the I-3 deploy: the line prints, 0 due.)
