@@ -106,7 +106,11 @@ const CHART_TYPE_LABEL_KEY: Record<ChartTypeOption, MessageKey> = {
 // selector that finds the right one, mirroring EmbedResize's message
 // `type` string exactly (`checkdecijfers:embed-height`) so the two halves of
 // this mechanism can never silently drift apart.
-function buildEmbedResizeScript(token: string): string {
+// Exported (Task 6, own-data publish, ADR 057): own-chart-publish-dialog.tsx
+// reuses this SAME script verbatim for the own-data embed snippet — the two
+// halves of the resize mechanism (this script + EmbedResize) must never
+// exist as two near-identical copies that could silently drift apart.
+export function buildEmbedResizeScript(token: string): string {
   return [
     '<script>',
     '(function () {',

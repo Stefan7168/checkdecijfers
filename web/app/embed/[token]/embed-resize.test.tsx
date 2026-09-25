@@ -7,7 +7,7 @@
 // this is the first ResizeObserver use).
 import { act, cleanup, render } from '@testing-library/react';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EmbedResize } from './embed-resize.tsx';
 
@@ -141,15 +141,24 @@ describe('EmbedResize', () => {
     expect(removeEventListener).toHaveBeenCalledWith('load', expect.any(Function));
   });
 
-  // Deliberately mounted ONLY under this one route (web/app/embed/[token]/)
-  // — a general chat/dock chart is never inside an iframe, so it has no
-  // business posting a resize message to a "parent" that doesn't exist.
-  // A grep-shaped test rather than an import-graph assertion: cheap, exact,
-  // and fails loudly the moment any OTHER app/ route starts importing this
-  // module, without needing to render every route to prove a negative.
-  it('is imported only under web/app/embed/[token]/ (this file itself the sole exception)', () => {
+  // Deliberately mounted ONLY under the public embed routes — a general
+  // chat/dock chart is never inside an iframe, so it has no business posting
+  // a resize message to a "parent" that doesn't exist. A grep-shaped test
+  // rather than an import-graph assertion: cheap, exact, and fails loudly
+  // the moment any OTHER app/ route starts importing this module, without
+  // needing to render every route to prove a negative.
+  //
+  // ADR 057 (session 127), Task 5: web/app/embed/own/[publicId]/page.tsx —
+  // the own-data twin of this route, also a real public iframe target — is
+  // now a second sanctioned importer, per this task's own brief ("EmbedResize
+  // from web/app/embed/[token]/embed-resize.tsx"). Reusing the ONE
+  // component (never a copy) keeps the auto-resize postMessage contract
+  // identical across both embed tiers; the exclusion below is scoped to
+  // exactly that one sibling directory, not to `app/` at large.
+  it('is imported only under web/app/embed/[token]/ and web/app/embed/own/ (this file itself the sole exception)', () => {
     const appDir = join(import.meta.dirname, '..', '..'); // .../web/app
     const thisDir = import.meta.dirname; // .../web/app/embed/[token]
+    const ownEmbedDir = join(import.meta.dirname, '..', 'own'); // .../web/app/embed/own
 
     function collect(dir: string): string[] {
       let files: string[] = [];
@@ -164,8 +173,17 @@ describe('EmbedResize', () => {
       return files;
     }
 
+    // C2: "inside this directory", never a bare prefix — a bare startsWith
+    // would also exempt a SIBLING whose name merely begins the same way
+    // (e.g. a future web/app/embed/own-drafts/), silently widening the
+    // sanctioned set. Pinned by the sanity check right below.
+    const isUnder = (dir: string, file: string): boolean => file.startsWith(dir + sep);
+    expect(isUnder(ownEmbedDir, `${ownEmbedDir}-drafts${sep}page.tsx`)).toBe(false);
+    expect(isUnder(ownEmbedDir, join(ownEmbedDir, '[publicId]', 'page.tsx'))).toBe(true);
+
     const offenders = collect(appDir).filter((file) => {
-      if (file.startsWith(thisDir)) return false; // the component + this test itself
+      if (isUnder(thisDir, file)) return false; // the component + this test itself
+      if (isUnder(ownEmbedDir, file)) return false; // ADR 057 Task 5's own sanctioned importer
       return readFileSync(file, 'utf8').includes('embed-resize');
     });
 

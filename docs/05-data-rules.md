@@ -79,6 +79,17 @@ code in `intent/`/`compose/`/`clarify`/`followup`, zero prompt bytes, every CBS 
 | **U10** | Units are never inferred; a header like "Omzet (x 1.000 euro)" is shown verbatim as the header, never parsed into a unit; the spec's `unit` field is always `null`. | R10 | Schema literal + render pin. |
 | **U11** | Empty/unparseable cells stay in the spec as `null` with a reason and render as gaps, never silently omitted; an ambiguous numeric format (`,`/`.` as decimal vs. thousands separator) blocks charting until the user picks one. | R11 | Parser/profile fixtures (delimiter/decimal-comma/thousands-dot ambiguity, BOM, quoted fields, blanks). |
 | **U12** | `user_datasets.cells`/`.profile` are immutable once `status` first becomes `'ready'`, except through the redaction transaction — no code path re-interprets an already-`ready` dataset's stored content in place. | R8 (reconstruction "from the row alone") | A mutation test asserting no code path updates `cells`/`profile` outside `ingest*`/redaction. |
+| **P1** | A published own-data chart's public payload contains no hidden series label/value/source text (blanked in place), nothing anchored to a blanked point, no file name, source URL host, content hash, cells, profile or command log (ADR 057). | R-new (public surface) | web/lib/own-chart-publication.test.ts "pruneForPublic — invariant P1" + the public route's props test. |
+
+**P1 and U6 together — author text is not a data value.** A published page also carries text the
+author typed: the chart's title and caption, note text, goal-line labels and values, era labels,
+and the optional source line. None of that is a number read from a stored cell — it is the
+author's own wording, kept verbatim (never rewritten, never validated as a chart value) and shown
+only because the author chose to publish it. U6 ("every visible numeric string is a spec string")
+still holds for it: a goal-line value is bound the same way any other spec string is, it is simply
+author-supplied rather than cell-derived. P1 governs what must NOT be there (hidden series and
+everything anchored to them); it does not turn the author's own free text into a data value subject
+to R1's cell-traceability rule.
 
 **Separation pins (the ADR 032 list, transposed):** user-data text/values never appear in any CBS
 prompt request (a serialized-prompt scan over the CBS harness with a dataset thread active), never

@@ -129,6 +129,14 @@ describe('framing headers (ADR 041)', () => {
     // one covers it".
     const embedMatches = compile(embedGroup!.source);
     expect(embedMatches('/embed/abc123')).not.toBe(false);
+
+    // ADR 057, Task 5: /embed/own/[publicId] (web/app/embed/own/[publicId]/
+    // page.tsx) is a DEEPER path under the same prefix — `/embed/:path+`
+    // (one-or-more segments) already covers it with no config change, but
+    // this task's own brief calls for an explicit assertion rather than
+    // trusting that by inference from the single-segment case above.
+    expect(catchAllMatches('/embed/own/abc123')).toBe(false);
+    expect(embedMatches('/embed/own/abc123')).not.toBe(false);
   });
 
   it('the bare /embed path (no token) matches ONLY the catch-all group, not the embed group', async () => {

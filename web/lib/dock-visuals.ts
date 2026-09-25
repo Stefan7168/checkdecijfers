@@ -207,8 +207,13 @@ export function deriveDatasetVisuals(
   /** Co-pilot phase 2 (session 113): the dataset/thread/profile the whole
    * thread belongs to. Given → each chart tab with a turn id carries the edit
    * context an editable card needs; omitted (every pre-phase-2 call site and
-   * every test that only cares about the tabs) → every tab is read-only. */
-  edit?: { datasetId: number; threadId: number; profile: DatasetProfile },
+   * every test that only cares about the tabs) → every tab is read-only.
+   * `publishEnabled` (Task 6, ADR 057, own-data publish): the same
+   * `OWN_DATA_PUBLISH_ENABLED` presence flag DatasetChat's own inline
+   * render carries — spread straight onto `userChartEdit` below via
+   * `...edit`, so a DOCKED own-data chart's Publish button appears/hides in
+   * lockstep with the inline one. */
+  edit?: { datasetId: number; threadId: number; profile: DatasetProfile; publishEnabled?: boolean },
 ): DockVisual[] {
   const visuals: DockVisual[] = [];
   let chartCount = 0;
