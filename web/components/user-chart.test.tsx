@@ -385,6 +385,33 @@ describe('UserChartView — honesty contract (mirrors chart.test.tsx)', () => {
     const { container } = render(<UserChartView spec={s} />);
     expectDigitsTraceToSpec(container, s);
   });
+
+  // #283 residual: the hbar (Liggend) form's numeric axis used to draw NO
+  // scale at all (`tick={false}`) — a reader could see the bars and their
+  // own end labels but nothing locating those values in the wider range.
+  // It now draws the same lo/hi tick pair the line/area forms' Y-axis
+  // already shows (`valueLabelPlan` + `AxisTick`, just oriented for a
+  // bottom axis) — each tick's text is a plotted point's own
+  // `formattedValue`, never a number this card invents or rounds.
+  it('#283: the Liggend form draws a real numeric-axis scale — two ticks, each an existing point\'s own formattedValue; the whole-card digit scan stays clean', () => {
+    const s = twoSeriesOneMomentSpec(); // Amsterdam 40, Rotterdam 20 — kind: 'bar', comparison-shaped
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const ticks = [...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="axis-tick"]')];
+    expect(ticks.map((el) => el.textContent).sort()).toEqual(['20,0', '40,0']);
+    // Bound to a real result, exactly like every other axis-tick/value-label
+    // on this card (data-label-for) — never free-floating text.
+    expect(ticks.map((el) => el.getAttribute('data-label-for')).sort()).toEqual(['r1:c1', 'r1:c2']);
+    expectDigitsTraceToSpec(container, s);
+  });
+
+  it('#283: a single-value Liggend chart (lo === hi) draws exactly one axis tick, not a fabricated pair', () => {
+    const s = spec({ kind: 'bar', series: [{ label: 'Amsterdam', points: [point({ rowRef: 'r1:c1', value: 40, formattedValue: '40,0' })] }] });
+    const { container } = render(<UserChartView spec={s} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Liggend' }));
+    const ticks = [...container.querySelectorAll('[data-testid="user-chart-container"] svg [data-role="axis-tick"]')];
+    expect(ticks.map((el) => el.textContent)).toEqual(['40,0']);
+  });
 });
 
 // #318 (session 126, own-data parity): the CSV download — built by
@@ -2731,6 +2758,31 @@ describe('publicView (ADR 057)', () => {
     // shown (still "pressed" = shown) and still plotted.
     expect(amsterdamToggle).toHaveAttribute('aria-pressed', 'true');
     expect(document.querySelectorAll('.recharts-line-curve')).toHaveLength(2);
+  });
+
+  // #321(iii): the legend group's own render gate (`!tabularForm &&
+  // seriesMeta.length > 1`, below) reads the RAW series count, but the
+  // buttons it actually draws come from `listedSeriesMeta` — the public-
+  // mode filter that drops a hidden series' slot entirely (requirement 4).
+  // A 2-series spec with one hidden therefore still passes the gate (2 > 1)
+  // yet the group it renders holds exactly ONE series' worth of controls —
+  // this pins that real, previously-untested combination, not just the
+  // "more than one series" / "one series, no legend" ends already covered
+  // by 'renders a legend only when there is more than one series' above.
+  it('#321(iii): a public render with one series filtered out still renders the legend group, with exactly the one remaining series\' controls', () => {
+    render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({ state: publicChartState({ hiddenKeys: ['s0'] }) })}
+      />,
+    );
+    const legend = screen.getByRole('group', { name: 'Reeksen' });
+    expect(within(legend).getByRole('button', { name: 'Rotterdam' })).toBeInTheDocument();
+    expect(within(legend).queryByRole('button', { name: 'Amsterdam' })).not.toBeInTheDocument();
+    expect(within(legend).queryByText('Amsterdam')).not.toBeInTheDocument();
+    // Exactly one series' worth of controls (toggle + dim + highlight) —
+    // Amsterdam contributes none, not merely a blank/disabled chip.
+    expect(within(legend).getAllByRole('button')).toHaveLength(3);
   });
 
   it('requirement 3: no Publish button (Task 6 has not shipped it yet, and never would on the public page anyway)', () => {
