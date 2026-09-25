@@ -46,11 +46,16 @@ npm run lint         # eslint
 npm run build        # next build (also what CI runs before deploy)
 ```
 
-`npx playwright test` runs `e2e/` — five short tests that drive the real app in a real browser
-through the dev harness above (landing, an answered benchmark question with its chart and proof
-panel, the same answer re-opened from storage, a region-set answer, a refusal). It brings the whole
-harness up and down itself, so there is nothing to start first; if a harness is already running it
-reuses it. Details and gotchas: `docs/RUNBOOK.md` § "CI e2e smoke".
+`npx playwright test` runs `e2e/` — several suites that drive the real app in a real browser
+through the dev harness above: `landing.spec.ts`, `answer.spec.ts` (an answered benchmark question
+with its chart and proof panel, the same answer re-opened from storage, a region-set answer, a
+refusal), `cbs-copilot.spec.ts` and `chart-copilot.spec.ts` (the CBS chart co-pilot), the own-data
+uploads-and-charts walk in `own-data-copilot.spec.ts`, and `own-data-publish.spec.ts` (session 128:
+publish an own-data chart with a hidden series, read it back with a cookie-less browser context,
+then unpublish — behind `OWN_DATA_PUBLISH_ENABLED`, set for the harness only, see
+`scripts/dev-harness/{run-next-dev.mjs,env.sh}`). It brings the whole harness up and down itself, so
+there is nothing to start first; if a harness is already running it reuses it. Details and gotchas:
+`docs/RUNBOOK.md` § "CI e2e smoke".
 
 CI (`.github/workflows/ci.yml`) runs this app's own typecheck + test suite + that e2e smoke in its own `web` job,
 alongside a `backend` job for the rest of the repo; a separate `deploy` job (`needs: [backend,

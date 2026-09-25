@@ -552,7 +552,10 @@ calls no third-party API).
    `rls_auto_enable` locks it down automatically, same as every table since).
 3. **Set `OWN_DATA_PUBLISH_ENABLED=1` in Vercel (Production)** and redeploy. Not a secret — plain
    text, like `ATTACHMENTS_ENABLED`.
-4. **Live check (you, signed in, on a chart made from your own uploaded file):**
+4. **Live check (you, signed in, on a chart made from your own uploaded file)** — this exact walk
+   (publish with a hidden series → a cookie-less browser context reads the link back → unpublish
+   kills it) now has automated coverage against the local harness, `web/e2e/own-data-publish.spec.ts`
+   (session 128), so a live run here is a real-account spot-check, not the only proof this works:
    - Click **Publish**, leave the source line blank (or type a short one), confirm — you should get
      a link and an `<iframe>` snippet.
    - Open the link in a private/incognito window: the chart renders read-only, with the "own data /

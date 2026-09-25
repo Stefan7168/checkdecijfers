@@ -24,6 +24,7 @@ process.env.ANSWER_FIRST_ENABLED = '1';
 process.env.SEMANTIC_CHECK_ENABLED = '1';
 process.env.EUROSTAT_EXPLORER_ENABLED = '1'; // dev-harness Task 2: /eurostat-explorer now has a registered table
 process.env.ATTACHMENTS_ENABLED = '1'; // co-pilot phase 2 Task 9: the "Bestand uploaden" control + the own-data chat
+process.env.OWN_DATA_PUBLISH_ENABLED = '1'; // ADR 057 (session 127): the own-data card's Publish button + /embed/own/[publicId] — dark in prod, on here so e2e/own-data-publish.spec.ts (session 128) can exercise it; harness only, never a .env file
 process.env.HARNESS_INTENT_INJECT = '1'; // dev-harness Task 1: "!!regionset <name>" / "!!intent {json}" bypass
 process.env.NO_PROXY = 'localhost,127.0.0.1';
 process.env.no_proxy = 'localhost,127.0.0.1';
