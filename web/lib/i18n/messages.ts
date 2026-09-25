@@ -193,6 +193,19 @@ const nl = {
   // embedFooter).
   'ownChart.public.unavailable': 'Deze grafiek is niet meer beschikbaar.',
   'ownChart.public.footer': 'Gemaakt met checkdecijfers — gegevens van de maker, niet door ons gecontroleerd',
+  // #319 (session 128): web/app/embed/error.tsx — the shared route-segment
+  // error boundary for BOTH public embed routes (/embed/[token], CBS/ADR
+  // 041, and /embed/own/[publicId], own-data/ADR 057). Deliberately its own
+  // string, not a reuse of `ownChart.public.unavailable`/the CBS route's own
+  // inline "no longer available" text: those two mean "this chart was
+  // deleted/redacted/never existed" (a normal, permanent business state);
+  // this one means "something broke rendering it just now" (an unexpected
+  // server error) — different enough that conflating them would misinform a
+  // visitor into thinking a transient error is a dead link. Never includes
+  // `error.message`/`error.digest` (see that file's own header comment) —
+  // digit-free and detail-free by construction, so no fabrication guard is
+  // even needed here.
+  'embed.error.unavailable': 'Deze grafiek is op dit moment niet beschikbaar.',
   // Own-data publish (ADR 057, Task 6): the Publish button + dialog on the
   // card itself (signed-in author's own view — never rendered in public
   // mode). `languageLabel`/`colourLabel`/`colourLight`/`colourDark`/
@@ -1583,6 +1596,7 @@ const en: Messages = {
   'ownChart.public.sourceDefault': 'data supplied by the author',
   'ownChart.public.unavailable': 'This chart is no longer available.',
   'ownChart.public.footer': 'Made with checkdecijfers — the author’s own data, not checked by us',
+  'embed.error.unavailable': 'This chart is not available right now.',
   'ownChart.publish.trigger': 'Publish',
   'ownChart.publish.dialogTitle': 'Publish this chart',
   'ownChart.publish.loading': 'Checking…',

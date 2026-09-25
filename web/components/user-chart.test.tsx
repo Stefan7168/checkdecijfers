@@ -2779,14 +2779,36 @@ describe('publicView (ADR 057)', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('fix round 1 (I1): ⌘Z/Ctrl+Y is not intercepted in public mode', () => {
-    const { container } = render(<UserChartView spec={twoSeriesSpec()} publicView={publicChartView()} />);
+  // #321(i) (session 128): strengthened from "does not throw" to actually
+  // proving undo/redo are inert — `onHistoryKeyDown`'s very first line is
+  // `if (publicMode) return;` (user-chart.tsx), before it even looks at
+  // which key was pressed, so no ⌘Z/⌘⇧Z/Ctrl+Y combo should ever reach
+  // `dispatch`. A full DOM snapshot before/after each key combo is a
+  // stronger proof than spying on `undo`/`redo` directly: this card has no
+  // persistence/history UI to begin with in public mode (requirement 3), so
+  // if the handler ever DID call `undo`/`redo`, nothing in `history.past`
+  // exists for it to pop anyway — a spy could stay silent while the doc
+  // still re-rendered from some other unintended effect. Comparing the
+  // rendered markup itself catches that class of regression too, not just
+  // "was undo() called".
+  it('fix round 1 (I1): ⌘Z/Ctrl+Y is not intercepted in public mode — undo/redo never run, chart state stays unchanged', () => {
+    const { container } = render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({ state: publicChartState({ title: 'Publieke titel', hiddenKeys: ['s0'], form: 'bar' }) })}
+      />,
+    );
     const card = container.firstElementChild as HTMLElement;
-    // undo/redo are unreachable in public mode (no dispatch ever runs), so
-    // this only proves the handler bails early — nothing observable changes,
-    // but it must not throw reading `history`/`undo`/`redo` for a doc with
-    // no persistence wired up.
+    const before = container.innerHTML;
+
     expect(() => fireEvent.keyDown(card, { key: 'z', metaKey: true })).not.toThrow();
+    expect(container.innerHTML).toBe(before);
+
+    expect(() => fireEvent.keyDown(card, { key: 'z', metaKey: true, shiftKey: true })).not.toThrow();
+    expect(container.innerHTML).toBe(before);
+
+    expect(() => fireEvent.keyDown(card, { key: 'y', ctrlKey: true })).not.toThrow();
+    expect(container.innerHTML).toBe(before);
   });
 
   // Ruling R7 (M1): the reader's own toggle-state disclosure ("N of M series

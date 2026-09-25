@@ -75,6 +75,43 @@ describe('OwnChartPublishButton / dialog', () => {
     expect(within(dialog).getByText(/<iframe/)).toBeInTheDocument();
   });
 
+  // #321(ii) (session 128): copies were only tested for CALLING the
+  // clipboard API, never for what text they passed it. Mirrors
+  // chart-embed-dialog.test.tsx's own "copying the code" pattern (same
+  // `Object.defineProperty(navigator, 'clipboard', ...)` mock shape) but
+  // checks BOTH buttons this dialog has, each against what the dialog
+  // itself is actually showing at that moment — `getByDisplayValue` for the
+  // link input, the `<pre>`'s own `textContent` for the code block — rather
+  // than a value recomputed independently, so a real drift between what the
+  // reader sees and what lands on their clipboard would fail this test even
+  // if this test's own expectations were wrong in the same way the
+  // component is.
+  it('copy link and copy embed code put exactly the displayed text on the clipboard', async () => {
+    getOwnChartPublication.mockResolvedValue({ publicId: 'xyz789', sourceLine: 'Our data' });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderButton();
+    fireEvent.click(screen.getByRole('button', { name: /^publish$/i }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByText(/\/embed\/own\/xyz789/)).toBeInTheDocument());
+
+    const expectedLink = buildOwnEmbedUrl('xyz789', { lang: 'en', theme: 'light' });
+    const linkInput = within(dialog).getByDisplayValue(expectedLink) as HTMLInputElement;
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /^copy link$/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(writeText).toHaveBeenCalledWith(expectedLink);
+    expect(writeText).toHaveBeenCalledWith(linkInput.value);
+    expect(await within(dialog).findByRole('button', { name: /^copied!$/i })).toBeInTheDocument();
+
+    const codeBlock = within(dialog).getByText(/<iframe/);
+    const expectedCode = codeBlock.textContent;
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /^copy code$/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    expect(writeText).toHaveBeenLastCalledWith(expectedCode);
+  });
+
   it('published state shows Update published version and Unpublish', async () => {
     getOwnChartPublication.mockResolvedValue({ publicId: 'xyz789', sourceLine: 'Our data' });
     renderButton();
