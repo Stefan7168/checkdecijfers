@@ -65,6 +65,11 @@ test.describe.serial('own-data chart publishing', () => {
     page,
     browser,
   }) => {
+    // The public route is its own entry point, so `next dev` compiles it
+    // (and the whole own-data card behind it) on the visitor's FIRST request —
+    // measured over 60 s on a loaded 8 GB machine (session 128), past the
+    // config's 90 s budget for the whole walk. test.slow() triples it here only.
+    test.slow();
     // 1. Upload, ask the one question, get the chart — the same upload +
     // question own-data-copilot.spec.ts already proves; nothing new here.
     await page.goto('/');
