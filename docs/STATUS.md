@@ -25,12 +25,12 @@
   Before the push, measured locally at `d8438fa3`: typechecks clean, backend 219 files / 3,346 tests, benchmark GATE PASS
   (6/6, 0 fabricated), web 160 files / 3,042 tests (no timeouts on a quiet machine), `next build` compiled; the own-data
   publish + co-pilot e2e passed for the first time (10/10); `/code-review` LOW over `598d0f10..d8438fa3`: 0 findings.
-- **#322 I-3 BUILT on local branch `s129/dataset-retention` (`3b27e5d4`), NOT pushed — waits for the owner's GO** because
-  it changes what the LIVE monthly purge deletes: the purge gains an uploaded-dataset leg (full redaction at 2 years incl.
-  turns/chart edits/publications; raw file bytes at 90 days), and "delete my question history" now also deletes uploads
-  (not fail-soft). Verify block green at `3b27e5d4` (backend 3,349, web 3,046, gate PASS, build); `/code-review` LOW 0.
-  Practical effect on the first live run: none yet (uploads went live 2026-09-18, nothing is 90 days old).
-- **After I-3 lands, the publish flag flip still needs the owner:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
+- **#322 I-3 LIVE (owner GO in-chat, 2026-09-25):** merge `dbd5c6d0`, CI run 36108726250 green incl. deploy; prod 200.
+  The monthly purge now has an uploaded-dataset leg (full redaction at 2 years incl. turns/chart edits/publications; raw
+  file bytes at 90 days) and "delete my question history" also deletes uploads (not fail-soft). Verify block green at
+  `3b27e5d4` (backend 3,349, web 3,046, gate PASS, build); `/code-review` LOW 0. Live dry run (`npm run gdpr:purge`,
+  2026-09-25): new datasets line prints, 0 datasets / 0 file-byte clears due (uploads went live 2026-09-18).
+- **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** 13, in plain English — [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md).
 - **Eurostat in chat (E2a) — unchanged:** built, staged, switched off; owner steps 0/5/6 after the API cap lifts

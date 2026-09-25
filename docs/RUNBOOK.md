@@ -542,7 +542,7 @@ account-level deletion and the 2-year dataset retention purge are not yet wired,
 would outlive both. The review's other leaks (I-1, I-2, M-1, I-4 a/b, M-3) were fixed session 128.
 **Session 129: I-3 is fixed** (the monthly purge now has an uploaded-dataset leg; "delete my question history"
 deletes uploads too). Before the flag flip, run `npm run gdpr:purge` (dry run) once and check its new
-"datasets cutoff" line reads sensibly.
+"datasets cutoff" line reads sensibly. (Done 2026-09-25 after the I-3 deploy: the line prints, 0 due.)
 
 Lets a reader who is signed in publish a chart they made from their own uploaded file as a public,
 read-only link anyone can open — see ADR [057](decisions/057-own-data-publish.md) for the full
