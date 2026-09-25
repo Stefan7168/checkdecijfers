@@ -46,6 +46,7 @@ import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
 import { reportError } from '../lib/error-report.ts';
 import { buildPublishedChart, firstRenderMatchesEnvelope } from '../lib/own-chart-publication.ts';
+import { parseCommandLog } from '../lib/chart-commands.ts';
 // Fix round 1: normalizeSourceLine is a plain synchronous function, which
 // Next's server-boundary check refuses as an export of a 'use server' file
 // (bare tsc doesn't catch it) — it now lives in its own pure lib module and
@@ -125,8 +126,17 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
     // simply 'invalid', not a server fault worth reporting.
     if (!Array.isArray(log)) return { ok: false, reason: 'invalid' };
     if (JSON.stringify(log).length > CHART_EDITS_MAX_JSON) return { ok: false, reason: 'invalid' };
+    // Session 128 (#322 I-4a): the WHOLE log through the capped command
+    // schema (at most CHART_COMMAND_LOG_MAX real commands) before anything is
+    // built — the size check above alone let a crafted 64 KB log of 377
+    // overlay commands through. The public page applies the same parse
+    // (inside buildPublishedChart) on every read. What is stored is the
+    // PARSED log, never the raw client payload — the same rule
+    // chart-edits-actions.ts's saveChartEdits follows.
+    const parsedLog = parseCommandLog(log);
+    if (parsedLog === null) return { ok: false, reason: 'invalid' };
 
-    const built = buildPublishedChart(dataset, turn, log);
+    const built = buildPublishedChart(dataset, turn, parsedLog);
     if (!built.ok) return { ok: false, reason: 'invalid' };
     if (built.dropped > 0) return { ok: false, reason: 'changed' };
     // m3 (ruling R16, same guard as the public page): if the turn's first
@@ -154,7 +164,7 @@ export async function publishOwnChart(turnId: number, log: unknown, sourceLine: 
       userId,
       datasetId: dataset.id,
       datasetTurnId: turnId,
-      log,
+      log: parsedLog,
       sourceLine: normalized.value,
       style,
     });

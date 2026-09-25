@@ -524,8 +524,13 @@ const commandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('removeDerivedOverlay'), overlayId: z.string(), ...envelope }),
   z.object({ kind: z.literal('setWholeReference'), rowRef: z.string().nullable(), ...envelope }),
 ]);
-// The 200 cap is defensive (a sane upper bound for a stored log), not a contract other code relies on.
-export const commandLogSchema = z.array(commandSchema).max(200);
+/** The longest stored log (chart-history.ts's HISTORY_CAP keeps a card's own
+ * history at this same length). Session 128 (#322 I-4a): no longer only
+ * defensive — own-data publishing relies on it: the publish action and the
+ * anonymous public page both parse the WHOLE log through
+ * `commandLogSchema`, so a crafted over-long log is refused, never replayed. */
+export const CHART_COMMAND_LOG_MAX = 200;
+export const commandLogSchema = z.array(commandSchema).max(CHART_COMMAND_LOG_MAX);
 
 /** Presentation patches are re-sanitised on parse so a stored log can never
  * inject a key the resolver does not know (defence in depth: validateCommand

@@ -148,24 +148,29 @@ A server-only module in `web/lib/` (it needs `replayLog`, which lives in `web/li
 `{ state, spec, overlays, dropped }` using the SAME building blocks the card uses through its
 server actions: `replayLog` + `validateCommand` (web/lib/chart-history.ts — pure), `renderInstructionForDataset`
 for every `setInstruction` in the log, `deriveChartOverlay` for each derived overlay still active in the final
-state (after pruning, §3.5). Nothing new computes a number — U1/U5/U6 hold by
+state (after pruning, §3.5) — since session 128 (#322 I-4b) its own body, `overlayFromResolvedPoints`, run over
+ONE `allResolvedPoints` map per request rather than one per overlay. Nothing new computes a number — U1/U5/U6 hold by
 reuse, exactly as ADR 041 gets R1/R6/R11 by reusing `ChartView`.
 
 ### 3.5 Pruning — the privacy guarantee
 
-**As-built (session 127, ADR 057 final review, rulings R11/R4/R3/R7/R9):** the paragraph below is
-corrected from the original design to match what `pruneForPublic` (`web/lib/own-chart-publication.ts`)
-actually does.
+**As-built (session 127, ADR 057 final review, rulings R11/R4/R3/R7/R9; session 128 security-review fix
+wave, [#322](../../open-questions.md)):** the paragraph below is corrected from the original design to match what
+`pruneForPublic` (`web/lib/own-chart-publication.ts`) actually does.
 
 Before anything is serialized to the browser, a pure `pruneForPublic` step:
 - **Hidden series are blanked in place, not removed.** Series keys are positional (`s0`, `s1`, … —
   `chart-commands.ts` `seriesKeys`) and colours are by index, so removing a series would re-key and re-colour the
   rest. A hidden series keeps its slot but loses its label (→ `''`) and every point's `value`, `formattedValue`,
   `sourceText`, `reason` and `incomplete` (→ null/empty).
-- **A blanked slot keeps only the points a visible series also plots.** `pruneForPublic` builds the set of x
-  keys every non-hidden series plots (`visibleXKeys`) and drops any point on a blanked slot whose `xKey` is not
-  in that set — a category only the hidden series ever had is dropped from the slot entirely, not merely
-  blanked, so its category name cannot leak through the slot's own `xKey`/`xLabel`. An era shading is dropped
+- **A blanked slot is built from the VISIBLE series alone — its shape and order carry no information about
+  the hidden series.** Since session 128 (#322 I-2) a blanked slot holds exactly one blank point per category a
+  visible series plots, in visible order (first appearance across the visible series). Before, it kept the hidden
+  series' own points at those categories in their own order — with "sort by value" that order was the hidden
+  series' ranking (proven by probe), and which categories it had was itself information (for `count`, a missing
+  category means zero). A category only the hidden series ever had is still never in the slot (session 127, A1),
+  so its name cannot leak through an `xKey`/`xLabel`. Any consumer that takes the union of x keys in series order
+  (hidden slot first) therefore gets the visible order too (the card's own `buildRows` sorts them anyway). An era shading is dropped
   the same way: unless BOTH its `fromPeriodCode` and `toPeriodCode` are in `visibleXKeys`, it is removed (for
   own data the era's period codes ARE the category strings, `chart.ts` sets `xKey = xLabel`, so an era anchored
   on a hidden-only category would otherwise carry that string into the public payload).
@@ -176,6 +181,28 @@ Before anything is serialized to the browser, a pure `pruneForPublic` step:
   plotted in the FINAL pruned spec and not itself blanked** (mirrors `user-chart.tsx`'s own
   `plottedRowRefs` check) — a note, an overlay or a headline pointing at anything blanked or dropped is left
   out entirely, not partially redacted.
+- **No internal row reference reaches the payload (session 128, #322 I-1).** Every public point — visible and
+  blanked — is re-keyed to an opaque id (`p0`, `p1`, … handed out in series order, the blanked slot's from
+  visible data only), and every reference is remapped through the same map: a note's `resultId` (and its own
+  `id`, which the card builds as `${resultId}-…`), each overlay's `resultIds`, the headline override; a resolved
+  overlay's own handle becomes `${calcKind}:${public ids}`. An internal rowRef is not a neutral key: an
+  aggregate's (`agg:count:r1:c0+r2:c0+r3:c0`) lists its member rows — so the group size n, which for `count` IS
+  the value, and which file rows form the group — and a share's carries `|total:n`. The card only ever uses a
+  rowRef as an identity key (React keys, `data-label-for`/`data-result-id`, lookups), so opaque ids change
+  nothing it draws. `sourceText` is blanked on every public point too (the card never reads it; on a derived
+  point it is the unplotted operand's raw cell text).
+- **A kept note's series/period labels are rebuilt from the final public spec (session 128, #322 M-1).** A note
+  stores the labels the chart had when it was added; a later `setInstruction` keeps the note but can make those
+  labels name a series no longer plotted (a customer name, when the chart is now split by region).
+- **Bounded work per anonymous view (session 128, #322 I-4 a/b).** The stored log is parsed WHOLE through the
+  capped command schema (`commandLogSchema`, at most `CHART_COMMAND_LOG_MAX` = 200 commands) at publish time AND
+  on every read (over the cap → the publish action refuses `invalid`, the page shows "not available"); a chart
+  with more than `PUBLIC_OVERLAY_MAX` = 20 derived overlays is refused the same way; and every kept overlay is
+  resolved from ONE point map per request. Storing the pruned payload at publish time (review suggestion (c))
+  and a rate limit on `/embed/own/*` (d) are not built.
+- **No third-party font in public mode (session 128, #322 M-3).** The card ignores any `fontFamily` (from the
+  frozen style or the log) in public mode and draws in the default stack, so an embed never makes a visitor's
+  browser request a Google Fonts stylesheet.
 - **Verified-whole is not shown publicly in v1.** `wholeReferenceRowRef` → null, so a pie/stacked chart shows the
   honest default "not checked" note. Computing the verdict needs either a server call an anonymous visitor could
   aim at hidden cells or a server-side copy of the card's render-time part selection; neither is worth it before
@@ -186,8 +213,10 @@ Before anything is serialized to the browser, a pure `pruneForPublic` step:
   `sourceUrlHost`, `contentSha256` or the command log (commands like `addNote` carry series labels). The client
   receives the pruned spec and the final state only; `provenance` is replaced by `capturedAt` + the source line.
 
-A test asserts the serialized public props contain none of a hidden series' label, values or source texts
-(invariant P1, [05-data-rules.md](../../05-data-rules.md)).
+A test asserts the serialized public props contain none of a hidden series' label, values or source texts —
+and, since session 128, no `agg:`/`der:`/`r<n>:c<n>` internal reference for count/sum/mean aggregates,
+`share_of_total` and sort-by-value charts (invariant P1, [05-data-rules.md](../../05-data-rules.md);
+`web/app/embed/own/[publicId]/page.test.tsx` + `web/lib/own-chart-publication.test.ts`).
 
 ### 3.6 Rendering — `UserChart` read-only mode
 
@@ -203,6 +232,12 @@ visible string (U6: its digits are spec strings, never free-floating).
 `purgeExpiredDatasets`) also hard-deletes `published_user_charts` rows for those turns, in the same
 transaction, deploy-order-safe when the table is absent. The public page checks dataset status on every request
 (`force-dynamic`), so a deleted file's link dies on the very next load even before any row cleanup.
+
+**Correction (session 128, [#322](../../open-questions.md) I-3):** only the FILE/thread-deletion path
+(`deleteOneDataset`) is wired in production today. `deleteUserDatasets` and `purgeExpiredDatasets` have no
+production caller — neither the monthly GDPR cron, `scripts/gdpr-purge.ts` nor "delete my question history"
+runs them — so account-level deletion and the 2-year dataset retention purge do NOT yet kill a published link.
+Tracked as #322 I-3; must be fixed before the flag is switched on.
 
 ## 4. Invariants at stake
 

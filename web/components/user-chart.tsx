@@ -1359,7 +1359,12 @@ function UserChartCard({
   // --- presentation --------------------------------------------------------
   const base = withAccountDefault(effectiveAccountStyle);
   const resolved = resolvePresentation({ kind: activeSpec.kind, form: activeForm, seriesCount, hasProvisional: false }, state.presentation, base);
-  const pres = resolved.values;
+  // Session 128 (#322 M-3, ADR 057): public mode ignores any chosen font —
+  // from the frozen author style or from the log — and draws in the default
+  // stack. Requesting it would make every anonymous visitor's browser fetch
+  // a stylesheet from Google Fonts (sending their IP to a third party on a
+  // page embedded on someone else's site, without consent).
+  const pres = publicMode ? { ...resolved.values, fontFamily: null } : resolved.values;
   // Session 128 (ADR 057 ruling 2): public mode uses the page's own
   // explicit `?lang=` (when valid) ahead of the frozen style's own
   // `language` — `pres.language ?? 'nl'` — never `appLang`, which for an

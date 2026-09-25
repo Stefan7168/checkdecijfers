@@ -3141,8 +3141,12 @@ describe('publicView — m1/m2: whole-shape forms survive a hidden series (publi
     expect(built.state.form).toBe('pie');
     const pub = pruneForPublic(built, null);
     // The premise: the hidden slice's only point (2023) is a category no
-    // visible series plots, so the blanked slot is now EMPTY.
-    expect(pub.spec.series[1]!.points).toEqual([]);
+    // visible series plots, so it never reaches the blanked slot. Since the
+    // session-128 fix wave (#322 I-2) the slot is one blank point per
+    // VISIBLE category, in visible order — so it holds 2022 and 2024
+    // (blank), never 2023.
+    expect(pub.spec.series[1]!.points.map((p) => p.xKey)).toEqual(['2022', '2024']);
+    expect(pub.spec.series[1]!.points.every((p) => p.value === null && p.formattedValue === null)).toBe(true);
 
     const { container } = render(
       <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: null, accountStyle: null, explicitLang: null }} />,
@@ -3214,5 +3218,98 @@ describe('UserChartView — heading fallback when yHeaders has no surviving head
   it('keeps the normal "{y} per {x}" heading when at least one header survives', () => {
     render(<UserChartView spec={spec({ yHeaders: ['', 'Revenue'] })} />);
     expect(screen.getByRole('heading', { level: 3 }).textContent).toBe('Revenue per Year');
+  });
+});
+
+// Session 128 security-review fix wave (#322): the public card over the REAL
+// pipeline once every point carries an opaque public id (I-1) — the card
+// only ever uses a rowRef as an identity key, so notes, overlays and the
+// headline keep working and no internal reference reaches the DOM — and a
+// chosen font is never requested from Google Fonts in public mode (M-3).
+describe('publicView — #322 fix wave', () => {
+  const cells = [
+    ['Jaar', 'Afdeling', 'Bedrag'],
+    ['2020', 'Geheime afdeling', '7771'],
+    ['2020', 'Open afdeling', '11'],
+    ['2021', 'Geheime afdeling', '7774'],
+    ['2021', 'Open afdeling', '12'],
+    ['2021', 'Open afdeling', '13'],
+  ];
+  const dataset: UserDataset = {
+    id: 64,
+    userId: 'u1',
+    sourceKind: 'file_csv',
+    displayName: 'afdelingen.csv',
+    sourceUrl: null,
+    cells,
+    profile: buildDatasetProfile(cells),
+    status: 'ready',
+    contentSha256: 'c0ffee',
+    createdAt: '2026-09-06T00:00:00Z',
+  };
+  const instruction = {
+    version: 2,
+    kind: 'line',
+    x: 'c0',
+    y: ['c2'],
+    seriesBy: 'c1',
+    filters: [],
+    sort: null,
+    limit: null,
+    aggregate: { fn: 'sum' },
+    derived: null,
+    unsupported: null,
+    reading: '',
+    confidence: 1,
+  };
+  const turn = { id: 7, userId: 'u1', datasetId: 64, kind: 'chart', chartEmitted: true, instruction } as unknown as DatasetTurnRecord;
+
+  it('I-1: notes, a mean overlay and the headline work over opaque ids, and no internal ref reaches the DOM', () => {
+    const first = buildPublishedChart(dataset, turn, []);
+    if (!first.ok) throw new Error('expected ok');
+    const openRefs = first.spec.series[1]!.points.map((p) => p.rowRef);
+    const built = buildPublishedChart(dataset, turn, [
+      makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel'),
+      makeCommand({ kind: 'addNote', note: { id: `${openRefs[0]}-n`, resultId: openRefs[0]!, periodLabel: '2020', seriesLabel: 'oud', text: 'startjaar' } }, 'panel'),
+      makeCommand({ kind: 'addDerivedOverlay', overlay: { id: 'avg', calcKind: 'mean', resultIds: openRefs } }, 'panel'),
+      makeCommand({ kind: 'setHeadlineOverride', resultId: openRefs[1]! }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    expect(built.dropped).toBe(0);
+    const pub = pruneForPublic(built, null);
+    const publicIds = pub.spec.series[1]!.points.map((p) => p.rowRef);
+
+    const { container } = render(
+      <UserChartView spec={pub.spec} publicView={{ state: pub.state, overlays: pub.overlays, sourceLine: null, accountStyle: null, explicitLang: null }} />,
+    );
+    // The mean overlay (11 and 25 -> 18) is drawn, bound to the public ids.
+    expect(container.querySelectorAll('.recharts-reference-line').length).toBeGreaterThan(0);
+    expect(container.querySelector(`[data-label-for="${publicIds.join(',')}"]`)).not.toBeNull();
+    // The note survives, with the label the FINAL chart gives its point (M-1).
+    expect(within(screen.getByTestId('public-notes-list')).getByText('startjaar')).toBeInTheDocument();
+    expect(screen.getByTestId('public-notes-list').textContent).not.toContain('oud');
+    // No internal reference anywhere in the rendered markup.
+    const html = container.innerHTML;
+    expect(html).not.toMatch(/agg:/);
+    expect(html).not.toMatch(/r\d+:c\d+/);
+    expect(html).not.toContain('Geheime afdeling');
+    expect(html).not.toContain('7771');
+  });
+
+  it('M-3: a font chosen in the frozen style or the log is never requested from Google Fonts in public mode', () => {
+    for (const link of document.head.querySelectorAll('link[data-font-family]')) link.remove();
+    const { container } = render(
+      <UserChartView
+        spec={twoSeriesSpec()}
+        publicView={publicChartView({
+          accountStyle: { fontFamily: 'Merriweather' },
+          state: publicChartState({ presentation: { fontFamily: 'Lora' } }),
+        })}
+      />,
+    );
+    expect(document.head.querySelector('link[href^="https://fonts.googleapis.com"]')).toBeNull();
+    expect(document.head.querySelector('link[data-font-family]')).toBeNull();
+    expect(container.innerHTML).not.toContain('Merriweather');
+    expect(container.innerHTML).not.toContain('Lora');
   });
 });

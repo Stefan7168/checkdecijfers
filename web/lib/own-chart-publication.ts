@@ -5,10 +5,19 @@
 // deriveChartOverlay) — no new code computes a number, so U1/U5/U6 hold by
 // reuse. pruneForPublic is the single enforcement point of invariant P1
 // (docs/05-data-rules.md): read the spec §3.5 before changing it.
+//
+// Session 128 security-review fix wave (#322; docs/superpowers/specs/
+// 2026-09-25-own-data-publish-security-review.md): every public point is
+// re-keyed to an opaque id (I-1), a hidden slot is one blank point per
+// visible category in visible order (I-2), note labels are rebuilt from the
+// final public spec (M-1), and the log and overlay count are capped, with
+// every overlay resolved from ONE point map per request (I-4 a/b).
 import {
-  deriveChartOverlay,
+  allResolvedPoints,
   OverlaySelectionError,
+  overlayFromResolvedPoints,
   type ResolvedOverlay,
+  type ResolvedPoint,
 } from '../backend/attachments/derive-overlay.ts';
 import { NoRowsError, TooManyPointsError } from '../backend/attachments/execute.ts';
 import { InstructionValidationError, validateInstructionObject } from '../backend/attachments/instruct/schema.ts';
@@ -18,6 +27,7 @@ import {
   upgradeInstruction,
   type ChartInstruction,
   type DatasetTurnRecord,
+  type UserChartPoint,
   type UserChartSpec,
   type UserDataset,
 } from '../backend/attachments/types.ts';
@@ -25,7 +35,6 @@ import { replayLog } from './chart-history.ts';
 import {
   initialDocState,
   parseCommandLog,
-  type ChartCommand,
   type ChartDocState,
   type CommandContext,
   type DerivedOverlayRequest,
@@ -68,20 +77,15 @@ export interface PublicOwnChart {
 
 export type BuildPublishedChartResult =
   | { ok: true; state: ChartDocState; spec: UserChartSpec; dataset: UserDataset; dropped: number }
-  | { ok: false; reason: 'not_chart' | 'invalid_log' | 'render_failed' };
+  | { ok: false; reason: 'not_chart' | 'invalid_log' | 'render_failed' | 'too_many_overlays' };
 
-/** Fix round 1 (I3): a bare `typeof kind === 'string'` shape check let a
- * well-shaped-but-incomplete command (e.g. `{ kind: 'addNote' }`, missing
- * `note`) reach `validateCommand`/`applyCommand`, which read its other
- * fields unconditionally and throw a TypeError instead of a reachable
- * refusal. `chart-commands.ts` already exports the real per-command zod
- * schema for exactly this: parsing a single-entry array through it is the
- * same "is this a real ChartCommand" check the card's own stored-log
- * hydration runs, so a stale/malformed log entry is counted as dropped
- * here exactly as it would be there, never a thrown error. */
-function parseLogEntry(entry: unknown): ChartCommand | undefined {
-  return parseCommandLog([entry])?.[0];
-}
+/** Session 128 (#322 I-4a): the most derived overlays a published chart may
+ * carry. Each one the public page draws is a lookup in the point map
+ * pruneForPublic builds once per request, but the count still bounds that
+ * per-view work and the payload — checked in buildPublishedChart, so the
+ * publish action (-> 'invalid') and the public page (-> "not available")
+ * enforce the SAME limit. */
+export const PUBLIC_OVERLAY_MAX = 20;
 
 /** Mirrors web/app/dataset-derivation-actions.ts's private
  * toValidatableInstruction (itself a copy of render.ts's own private
@@ -108,9 +112,21 @@ function toValidatableInstruction(raw: unknown): unknown {
  * (`turn.instruction`) — the same replay path a reader's own card runs
  * (`replayLog` + `validateCommand`), so a command that could never have
  * applied to this chart is dropped here exactly as it would be there, never
- * silently accepted. A structurally-invalid log entry (not command-shaped
- * at all) is ALSO counted as dropped, so `dropped` covers both "the log was
- * garbage" and "the log named something no longer true of this chart".
+ * silently accepted (`dropped`).
+ *
+ * Session 128 (#322 I-4a): the log is parsed WHOLE through the capped
+ * schema (`parseCommandLog`: every entry a real ChartCommand — fix round 1's
+ * I3 reason for using the real zod schema at all — and at most
+ * CHART_COMMAND_LOG_MAX of them), the same parse the card's own stored-log
+ * hydration runs (use-chart-edits.ts) and the edits store writes through
+ * (chart-edits-actions.ts). It used to parse entry by entry, which counted
+ * a malformed entry as "dropped" but also bypassed the 200-command cap (a
+ * crafted 64 KB log of 377 overlay commands was accepted). A malformed or
+ * over-long log is now `invalid_log`. Both outcomes fail closed (the
+ * publish action refuses, the public page shows "not available"), and a
+ * real card never produces a malformed entry, so the per-entry tolerance
+ * was not needed for anything. `dropped` now counts only commands that no
+ * longer validate against this chart.
  */
 export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecord, log: unknown): BuildPublishedChartResult {
   if (turn.kind !== 'chart' || !turn.chartEmitted || turn.instruction === null) return { ok: false, reason: 'not_chart' };
@@ -129,20 +145,15 @@ export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecor
   // would compute for the same stored data.
   const firstInstruction = toClientInstruction(upgradeInstruction(turn.instruction) as ChartInstruction);
 
+  const commands = parseCommandLog(log);
+  if (commands === null) return { ok: false, reason: 'invalid_log' };
+
   const cache = new Map<string, UserChartSpec>([[instructionKey(firstInstruction), first.chart]]);
-  let garbage = 0;
-  const commands: ChartCommand[] = [];
-  for (const entry of log) {
-    const parsed = parseLogEntry(entry);
-    if (parsed === undefined) {
-      garbage++;
-      continue;
-    }
-    commands.push(parsed);
-    if (parsed.kind === 'setInstruction') {
-      const key = instructionKey(parsed.instruction);
+  for (const command of commands) {
+    if (command.kind === 'setInstruction') {
+      const key = instructionKey(command.instruction);
       if (!cache.has(key)) {
-        const outcome = renderInstructionForDataset(dataset, parsed.instruction);
+        const outcome = renderInstructionForDataset(dataset, command.instruction);
         if (outcome.kind === 'ok') cache.set(key, outcome.chart);
       }
     }
@@ -162,7 +173,8 @@ export function buildPublishedChart(dataset: UserDataset, turn: DatasetTurnRecor
   const { state, dropped } = replayLog(initial, commands, ctx);
   const spec = cache.get(instructionKey(state.instruction));
   if (spec === undefined) return { ok: false, reason: 'render_failed' };
-  return { ok: true, state, spec, dataset, dropped: dropped + garbage };
+  if (state.derivedOverlayRequests.length > PUBLIC_OVERLAY_MAX) return { ok: false, reason: 'too_many_overlays' };
+  return { ok: true, state, spec, dataset, dropped };
 }
 
 /**
@@ -197,47 +209,108 @@ export function firstRenderMatchesEnvelope(dataset: UserDataset, turn: DatasetTu
 /**
  * The single enforcement point of invariant P1 (docs/05-data-rules.md): a
  * hidden series' label/value/source text, the dataset's own file name/
- * source url/content hash/raw cells/profile, and the reader's command log
- * itself must never reach an anonymous visitor. A hidden series' SLOT is
- * kept (blanked, not removed) so the remaining series' keys/colours never
- * shift — holding only the points at categories a visible series also plots
- * (A1: never a category only the hidden series has); anything anchored to a hidden point (a note, an overlay touching
- * it, the headline override, the highlight) is dropped rather than shown
- * against a blank.
+ * source url/content hash/raw cells/profile, the reader's command log
+ * itself, and any internal row reference must never reach an anonymous
+ * visitor. A hidden series' SLOT is kept (blanked, not removed) so the
+ * remaining series' keys/colours never shift; anything anchored to a hidden
+ * point (a note, an overlay touching it, the headline override, the
+ * highlight) is dropped rather than shown against a blank.
+ *
+ * Session 128 security-review fix wave (#322):
+ * - I-1: every public point gets an opaque id (`p0`, `p1`, …) in place of
+ *   its internal rowRef, and every reference (a note's resultId, an
+ *   overlay's resultIds, the headline override) is remapped through the
+ *   same map. An internal rowRef is not a neutral key: an aggregate's
+ *   (`agg:count:r1:c0+r2:c0+r3:c0`) lists its member rows — so its group
+ *   size n, which for `count` IS the value — and a share's carries
+ *   `|total:n`. The card only ever uses a rowRef as an identity key
+ *   (React keys, `data-label-for`/`data-result-id`, lookups), so an opaque
+ *   id works unchanged. Ids are handed out in series order, the blanked
+ *   slot's from visible data only, so their numbering carries nothing
+ *   about a hidden series either. A note's own id (the card builds it as
+ *   `${resultId}-…`) is re-keyed too, and a resolved overlay's own handle
+ *   becomes `${calcKind}:${public ids}`.
+ * - I-2: a blanked slot is exactly one blank point per category a VISIBLE
+ *   series plots, in visible order (first appearance across the visible
+ *   series). It used to keep the hidden series' own points (A1: only those
+ *   at visible categories) in their own order — with sort-by-value that
+ *   order IS the hidden series' ranking, and which categories it has is
+ *   itself information (for `count`, a missing category means zero).
+ * - M-1: a kept note's series/period labels are rebuilt from the final
+ *   public spec — a note keeps the labels the chart had when it was added,
+ *   and a later setInstruction can make them name a series no longer
+ *   plotted (a customer name, when the chart is now split by region).
+ * - I-4b: every kept overlay is resolved from ONE `allResolvedPoints` map
+ *   (one executeInstruction over the file per request, not one per
+ *   overlay), through derive-overlay.ts's own arithmetic.
+ * - `sourceText` is blanked on every public point: the card never reads
+ *   it, and on a derived point it is the unplotted operand's raw cell text.
  */
 export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: true }>, sourceLine: string | null): PublicOwnChart {
   const { state, spec, dataset } = built;
   const hidden = new Set(state.hiddenKeys);
-  // Fix round 1 (C2): mirrors user-chart.tsx's own `plottedRowRefs` (the
-  // card filters a stale note the SAME way, at render — every rowRef the
-  // FINAL spec plots, hidden or not). A `setInstruction` reset can drop a
-  // rowRef out of the chart entirely (a filter/column change), and
-  // `blankedRefs` below only ever knows about points that are STILL on the
-  // current chart but hidden — it says nothing about a rowRef from a PRIOR
-  // instruction that the final spec no longer plots at all. Built from the
-  // spec BEFORE blanking, so a still-plotted-but-hidden point is counted
-  // here too (blankedRefs is checked separately below to still drop it).
-  const plottedRowRefs = new Set(spec.series.flatMap((s) => s.points.map((p) => p.rowRef)));
-  const blankedRefs = new Set<string>();
-  // Final-review fix A1 (ruling R11): the x categories at least one VISIBLE
-  // series plots. buildRows (chart.tsx) unions every series' x keys into the
-  // axis/table/heatmap rows, so a blanked slot that kept ALL its points would
-  // still put a category that exists ONLY in the hidden series (x = customer
-  // name, series = segment, 'VIP' hidden, customer 'Minister X' only in VIP)
-  // on the public page. A blanked slot therefore keeps only the points whose
-  // xKey a visible series also plots — the slot itself (and so every other
-  // series' positional key/colour) is still kept.
-  const visibleXKeys = new Set(spec.series.flatMap((s, i) => (hidden.has(`s${i}`) ? [] : s.points.map((p) => p.xKey))));
+  const isHidden = (i: number) => hidden.has(`s${i}`);
+
+  // Every rowRef a hidden series plots — never referenced publicly, even if
+  // (defensively) the same rowRef were also plotted by a visible series.
+  const blankedRefs = new Set(spec.series.flatMap((s, i) => (isHidden(i) ? s.points.map((p) => p.rowRef) : [])));
+
+  // Final-review fix A1 (ruling R11) + I-2: the categories at least one
+  // VISIBLE series plots, in first-appearance order across the visible
+  // series — the only categories, and the only order, a blanked slot shows.
+  const visibleCategories: { xKey: string; xLabel: string }[] = [];
+  const visibleXKeys = new Set<string>();
+  spec.series.forEach((s, i) => {
+    if (isHidden(i)) return;
+    for (const p of s.points) {
+      if (visibleXKeys.has(p.xKey)) continue;
+      visibleXKeys.add(p.xKey);
+      visibleCategories.push({ xKey: p.xKey, xLabel: p.xLabel });
+    }
+  });
+
+  // I-1: internal rowRef -> opaque public id, for every VISIBLE point. The
+  // same internal rowRef always maps to the same public id, so identity
+  // (and so every lookup the card does) is preserved exactly. `location`
+  // is what M-1 rebuilds a note's labels from.
+  const publicIdByRef = new Map<string, string>();
+  const location = new Map<string, { seriesLabel: string; xLabel: string }>();
+  let nextId = 0;
+  const freshId = () => `p${nextId++}`;
   const series = spec.series.map((s, i) => {
-    if (!hidden.has(`s${i}`)) return s;
-    for (const p of s.points) blankedRefs.add(p.rowRef);
+    if (isHidden(i)) {
+      return {
+        label: '',
+        points: visibleCategories.map(({ xKey, xLabel }): UserChartPoint => ({
+          rowRef: freshId(),
+          xKey,
+          xLabel,
+          value: null,
+          formattedValue: null,
+          sourceText: '',
+        })),
+      };
+    }
     return {
-      label: '',
-      points: s.points
-        .filter((p) => visibleXKeys.has(p.xKey))
-        .map((p) => ({ rowRef: p.rowRef, xKey: p.xKey, xLabel: p.xLabel, value: null, formattedValue: null, sourceText: '' })),
+      label: s.label,
+      points: s.points.map((p): UserChartPoint => {
+        let id = publicIdByRef.get(p.rowRef);
+        if (id === undefined) {
+          id = freshId();
+          publicIdByRef.set(p.rowRef, id);
+          location.set(p.rowRef, { seriesLabel: s.label, xLabel: p.xLabel });
+        }
+        return { ...p, rowRef: id, sourceText: '' };
+      }),
     };
   });
+  // Fix round 1 (C2) + I-1: a reference survives only if the FINAL spec
+  // plots it in a visible series (a `setInstruction` can drop a rowRef out
+  // of the chart entirely; a hidden one is blanked). The card filters a
+  // stale note the same way at render (its own `plottedRowRefs`).
+  const isVisibleRef = (ref: string) => publicIdByRef.has(ref) && !blankedRefs.has(ref);
+  const publicRef = (ref: string) => publicIdByRef.get(ref)!;
+
   // Fix round 2 (C1, correcting fix round 1's wrong assumption): `yHeaders`
   // is always built straight from `instruction.y` — a fixed, sort/limit-
   // blind column order (chart.ts ~135-140). `series`, however, is grouped
@@ -270,7 +343,7 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
   if (seriesByNull) {
     const hiddenLabels = new Set<string>();
     const visibleLabels = new Set<string>();
-    spec.series.forEach((s, i) => (hidden.has(`s${i}`) ? hiddenLabels : visibleLabels).add(s.label));
+    spec.series.forEach((s, i) => (isHidden(i) ? hiddenLabels : visibleLabels).add(s.label));
     yHeaders = spec.yHeaders.map((h) => (hiddenLabels.has(h) || !visibleLabels.has(h) ? '' : h));
   }
   const prunedSpec: UserChartSpec = {
@@ -279,34 +352,25 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
     series,
     provenance: { ...spec.provenance, datasetId: 0, displayName: '', sourceUrlHost: null, contentSha256: '' },
   };
-  const overlayRequests = state.derivedOverlayRequests.filter((r) =>
-    r.resultIds.every((id) => plottedRowRefs.has(id) && !blankedRefs.has(id)),
-  );
+
+  const keptOverlayRequests = state.derivedOverlayRequests.filter((r) => r.resultIds.every(isVisibleRef));
   const overlays: Record<string, ResolvedOverlay> = {};
-  if (state.instruction !== null) {
-    let instruction: ReturnType<typeof validateInstructionObject> | null = null;
-    try {
-      instruction = validateInstructionObject(toValidatableInstruction(upgradeInstruction(state.instruction)), dataset.profile);
-    } catch (e) {
-      if (!(e instanceof InstructionValidationError)) throw e;
-    }
-    if (instruction !== null) {
-      for (const r of overlayRequests) {
-        try {
-          overlays[r.id] = deriveChartOverlay(dataset, instruction, { calcKind: r.calcKind, resultIds: r.resultIds });
-        } catch (e) {
-          // A refused overlay is simply not drawn on the public page (the
-          // author's card shows the refusal text; the public page never
-          // shows error copy). Narrowed to the three reachable throw
-          // classes (derive-overlay.ts's own OverlaySelectionError, plus
-          // execute.ts's NoRowsError/TooManyPointsError it can propagate
-          // via executeInstruction) so an unrelated programming error still
-          // surfaces instead of being swallowed here.
-          if (!(e instanceof OverlaySelectionError) && !(e instanceof NoRowsError) && !(e instanceof TooManyPointsError)) throw e;
-        }
+  const byRef = keptOverlayRequests.length > 0 ? resolvedPointsForOverlays(state, dataset) : null;
+  if (byRef !== null) {
+    for (const r of keptOverlayRequests) {
+      try {
+        const resolved = overlayFromResolvedPoints(byRef, { calcKind: r.calcKind, resultIds: r.resultIds });
+        overlays[r.id] = { value: resolved.value, decimals: resolved.decimals, rowRef: `${r.calcKind}:${r.resultIds.map(publicRef).join('+')}` };
+      } catch (e) {
+        // A refused overlay is simply not drawn on the public page (the
+        // author's card shows the refusal text; the public page never
+        // shows error copy). Narrowed to derive-overlay.ts's own refusal
+        // class so an unrelated programming error still surfaces.
+        if (!(e instanceof OverlaySelectionError)) throw e;
       }
     }
   }
+
   return {
     spec: prunedSpec,
     state: {
@@ -315,7 +379,12 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       dimmedKeys: [...state.dimmedKeys],
       highlightedKey: state.highlightedKey !== null && hidden.has(state.highlightedKey) ? null : state.highlightedKey,
       presentation: state.presentation,
-      notes: state.notes.filter((n) => plottedRowRefs.has(n.resultId) && !blankedRefs.has(n.resultId)),
+      notes: state.notes
+        .filter((n) => isVisibleRef(n.resultId))
+        .map((n, i) => {
+          const at = location.get(n.resultId)!;
+          return { id: `n${i}`, resultId: publicRef(n.resultId), seriesLabel: at.seriesLabel, periodLabel: at.xLabel, text: n.text };
+        }),
       title: state.title,
       caption: state.caption,
       goalLines: state.goalLines,
@@ -327,12 +396,27 @@ export function pruneForPublic(built: Extract<BuildPublishedChartResult, { ok: t
       // otherwise anyway).
       eraShadings: state.eraShadings.filter((e) => visibleXKeys.has(e.fromPeriodCode) && visibleXKeys.has(e.toPeriodCode)),
       headlineOverrideResultId:
-        state.headlineOverrideResultId !== null && plottedRowRefs.has(state.headlineOverrideResultId) && !blankedRefs.has(state.headlineOverrideResultId)
-          ? state.headlineOverrideResultId
-          : null,
-      derivedOverlayRequests: overlayRequests,
+        state.headlineOverrideResultId !== null && isVisibleRef(state.headlineOverrideResultId) ? publicRef(state.headlineOverrideResultId) : null,
+      derivedOverlayRequests: keptOverlayRequests.map((r) => ({ id: r.id, calcKind: r.calcKind, resultIds: r.resultIds.map(publicRef) })),
     },
     overlays,
     sourceLine,
   };
+}
+
+/** I-4b: the ONE point map every kept overlay is resolved from — null when
+ * the instruction no longer validates or the chart can no longer be built
+ * (then no overlay is drawn, exactly as each per-overlay call used to
+ * refuse). Narrowed to the reachable throw classes (the schema's own
+ * refusal, execute.ts's NoRowsError/TooManyPointsError) so an unrelated
+ * programming error still surfaces instead of being swallowed. */
+function resolvedPointsForOverlays(state: ChartDocState, dataset: UserDataset): Map<string, ResolvedPoint> | null {
+  if (state.instruction === null) return null;
+  try {
+    const instruction = validateInstructionObject(toValidatableInstruction(upgradeInstruction(state.instruction)), dataset.profile);
+    return allResolvedPoints(dataset, instruction);
+  } catch (e) {
+    if (e instanceof InstructionValidationError || e instanceof NoRowsError || e instanceof TooManyPointsError) return null;
+    throw e;
+  }
 }
