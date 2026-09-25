@@ -528,6 +528,56 @@ export function seriesColor(
   return values.seriesColors[index] ?? DEFAULT_PALETTE[paletteIndex % DEFAULT_PALETTE.length]!;
 }
 
+/** The minimal per-series shape `remapSeriesColorsByIdentity` needs — the
+ * same two fields every real `ChartSeries` (`backend/chart/types.ts`)
+ * carries, kept structural here rather than importing that type so this
+ * file stays the pure "no ChartSpec" leaf its header describes. */
+export interface SeriesIdentity {
+  label: string;
+  regionCode: string | null;
+}
+
+/** #287 fix round: a continuing chart's `seriesColors` override is keyed by
+ * a series' INDEX within the spec that was showing when the reader set it
+ * (chart-config-panel.tsx dispatches `{ seriesColors: { [index]: hex } }`).
+ * Carrying that raw index-keyed map onto a NEW spec — as chat.tsx's co-pilot
+ * seed does for a follow-up answer that "continues" an earlier card
+ * (`extendsPreviousChart`: same table/unit/kind/dims, NOT same series — a
+ * different region/series set is entirely possible) — would recolour
+ * whichever series happens to land on the same index, not the one the
+ * reader actually coloured (#287).
+ *
+ * This remaps by series IDENTITY instead of position: `regionCode` when the
+ * series has one, else `label`. Safe as a unique key because a spec's
+ * series are built one-per-region into a `Map<regionCode, ChartSeries>`
+ * (src/chart/build.ts's `seriesByRegion`) — at most ONE series per spec can
+ * have a null `regionCode` (the single national/measure-labelled series a
+ * regionless table produces), so falling back to `label` for that one case
+ * never collides with a real region code. A colour whose identity is not
+ * present in `toSeries` is DROPPED rather than carried onto an arbitrary
+ * index — the honest behaviour once the reader's colour choice no longer
+ * applies to anything the new chart actually draws. */
+export function remapSeriesColorsByIdentity(
+  colors: Record<number, string> | undefined,
+  fromSeries: readonly SeriesIdentity[],
+  toSeries: readonly SeriesIdentity[],
+): Record<number, string> {
+  if (colors === undefined || Object.keys(colors).length === 0) return {};
+  const identityOf = (series: SeriesIdentity): string => series.regionCode ?? `label:${series.label}`;
+  const hexByIdentity = new Map<string, string>();
+  for (const [indexKey, hex] of Object.entries(colors)) {
+    const series = fromSeries[Number(indexKey)];
+    if (series === undefined) continue;
+    hexByIdentity.set(identityOf(series), hex);
+  }
+  const remapped: Record<number, string> = {};
+  toSeries.forEach((series, index) => {
+    const hex = hexByIdentity.get(identityOf(series));
+    if (hex !== undefined) remapped[index] = hex;
+  });
+  return remapped;
+}
+
 // --- colours -----------------------------------------------------------------
 // The card grounds the hollow R11 ring is drawn on (globals.css): light
 // --card oklch(1 0 0) = #ffffff, dark --card oklch(0.205 0 0) ≈ #171717.
