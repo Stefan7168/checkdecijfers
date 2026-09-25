@@ -3174,6 +3174,33 @@ describe('publicView — m1/m2: whole-shape forms survive a hidden series (publi
   });
 });
 
+// Session 129: dumbbell and slope share the "every point has a value" shape
+// guard, so a blanked hidden slot used to push a published dumbbell/slope
+// back to bars for visitors.
+describe('publicView — dumbbell/slope survive a hidden series (public mode)', () => {
+  function threeSeriesTwoYears(): UserChartSpec {
+    const s = twoSeriesSpec();
+    const utrecht = [
+      point({ rowRef: 'r1:c3', xKey: '2023', xLabel: '2023', value: 70, formattedValue: '70,0', sourceText: '70,0' }),
+      point({ rowRef: 'r2:c3', xKey: '2024', xLabel: '2024', value: 90, formattedValue: '90,0', sourceText: '90,0' }),
+    ];
+    return { ...s, series: [blankedSlot(utrecht), ...s.series] };
+  }
+
+  it.each(['dumbbell', 'slope'] as const)('a published %s with one hidden of three series still draws that form, without the hidden one', (form) => {
+    const { container } = render(
+      <UserChartView spec={threeSeriesTwoYears()} publicView={publicChartView({ state: publicChartState({ form, hiddenKeys: ['s0'] }) })} />,
+    );
+    const svgText = container.querySelector('[data-testid="user-chart-container"]')!.textContent ?? '';
+    expect(svgText).not.toContain('90,0');
+    if (form === 'dumbbell') {
+      expect(container.querySelectorAll('[data-testid="user-chart-container"] [data-role="dumbbell-connector"]')).toHaveLength(2);
+    } else {
+      expect(container.querySelectorAll('[data-testid="user-chart-container"] .recharts-bar-rectangle')).toHaveLength(0);
+    }
+  });
+});
+
 describe('publicView — A7: goal lines and era shadings are listed read-only', () => {
   it('lists a goal line (value + label) and an era (period labels + label)', () => {
     render(

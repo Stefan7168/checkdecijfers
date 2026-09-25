@@ -214,3 +214,22 @@ describe('buildUserChartSpec — incomplete points reach the spec (#314)', () =>
     expect(spec.series.flatMap((s) => s.points).some((p) => p.incomplete)).toBe(false);
   });
 });
+
+// Session 129: an aggregate or derived chart SPLIT by a column names each
+// series by its own split value; the computation's description stays in
+// yHeaders (the card heading). Before, every series got the same
+// "Count of Omzet" label — an unreadable legend and duplicate co-pilot names.
+describe('buildUserChartSpec — a split aggregate/derived chart names each series by its split value', () => {
+  it('count per year, split by gemeente', () => {
+    const spec = buildUserChartSpec(dataset(), instruction({ seriesBy: 'c1', aggregate: { fn: 'count' } }));
+    expect(spec.series.map((s) => s.label).sort()).toEqual(['Amsterdam', 'Rotterdam']);
+    expect(spec.yHeaders).toEqual(['Count of rows']);
+  });
+
+  it('without a split, the aggregate label is unchanged', () => {
+    const spec = buildUserChartSpec(dataset(), instruction({ aggregate: { fn: 'sum' } }));
+    expect(spec.series).toHaveLength(1);
+    expect(spec.series[0]!.label).toBe(spec.yHeaders[0]);
+    expect(spec.series[0]!.label).not.toBe('Omzet');
+  });
+});

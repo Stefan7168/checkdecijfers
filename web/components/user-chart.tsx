@@ -1253,13 +1253,26 @@ function UserChartCard({
   // it over all of them, so every visible series still fits) while keeping
   // the FULL series count, exactly as the author's card counts the hidden
   // series. Every other form, and the author's card, keep the shared policy.
-  const publicShapeForm = (form: 'heatmap' | 'pie'): ChartForm => {
+  // Session 129: dumbbell and slope carry the same shape guard (every
+  // point of every series has a value), so a published dumbbell/slope with
+  // a hidden series used to fall back to bars for visitors — they get the
+  // same visible-series treatment here. A refusal still falls back to the
+  // shared policy (bar), never to a form the author did not see.
+  const publicShapeForm = (form: 'heatmap' | 'pie' | 'dumbbell' | 'slope'): ChartForm => {
     const visible = { ...plottable, series: plottable.series.filter((_, i) => !state.hiddenKeys.has(`s${i}`)) };
-    const allowed = form === 'heatmap' ? heatmapFormAllowed(visible, seriesCount) : ownDataPieFormAllowed(visible, seriesCount);
-    return allowed ? form : 'table';
+    const allowed =
+      form === 'heatmap'
+        ? heatmapFormAllowed(visible, seriesCount)
+        : form === 'pie'
+          ? ownDataPieFormAllowed(visible, seriesCount)
+          : form === 'dumbbell'
+            ? dumbbellFormAllowed(visible, seriesCount)
+            : slopeFormAllowed(visible, seriesCount);
+    if (allowed) return form;
+    return form === 'heatmap' || form === 'pie' ? 'table' : ownDataFallbackForm(form, plottable, seriesCount);
   };
   const activeForm =
-    publicMode && (state.form === 'heatmap' || state.form === 'pie')
+    publicMode && (state.form === 'heatmap' || state.form === 'pie' || state.form === 'dumbbell' || state.form === 'slope')
       ? publicShapeForm(state.form)
       : ownDataFallbackForm(state.form, plottable, seriesCount);
   // Own-data chart-fit parity (Task 1): the ONE definition of "draws no

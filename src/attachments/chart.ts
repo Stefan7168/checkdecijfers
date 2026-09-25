@@ -127,8 +127,17 @@ export function buildUserChartSpec(dataset: UserDataset, instruction: ChartInstr
   const series: UserChartSeries[] = [...bySeries.entries()].map(([, points]) => {
     const first = points[0]!;
     const yColumn = singleY ?? columnById(profile, first.seriesKey);
+    // Session 129: with a seriesBy split, every series is named by its OWN
+    // split value (a cell of the seriesBy column, exactly as an unsplit
+    // aggregate-free chart already does) — the computation's description
+    // lives in `yHeaders` (the card heading) instead. Before, an aggregate or
+    // derived split labelled EVERY series with the same computation text
+    // ("Count of Omzet" × n), leaving a legend nobody could tell apart and
+    // a co-pilot vocabulary with duplicate names.
     const label =
-      derivedLabelText ?? (instruction.aggregate !== null ? aggregateLabel(instruction.aggregate.fn, yColumn.header) : first.seriesLabel);
+      instruction.seriesBy !== null
+        ? first.seriesLabel
+        : (derivedLabelText ?? (instruction.aggregate !== null ? aggregateLabel(instruction.aggregate.fn, yColumn.header) : first.seriesLabel));
     return { label, points: points.map((p) => buildPoint(p, yColumn.id, yColumn)) };
   });
 
