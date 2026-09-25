@@ -1100,7 +1100,7 @@ const nl = {
   // fix of making the token itself carry that state. Owner: keep this in
   // sync if buildEmbedCode ever gains a new encoded field.
   'chart.embed.previewCaveat':
-    'Dit voorbeeld toont de grafiek zoals u die nu ziet. De ingesloten grafiek gebruikt altijd de standaardopmaak: kleur-, lettertype- en kaderaanpassingen, een ingezoomde periode en verborgen reeksen worden niet meegenomen.',
+    'Dit voorbeeld toont de grafiek zoals je die nu ziet. De ingesloten grafiek gebruikt altijd de standaardopmaak: kleur-, lettertype- en kaderaanpassingen, een ingezoomde periode en verborgen reeksen worden niet meegenomen.',
   'chart.embed.languageLabel': 'Taal',
   'chart.embed.colourLabel': 'Kleuren',
   'chart.embed.colourLight': 'Licht',
