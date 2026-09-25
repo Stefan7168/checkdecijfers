@@ -27,7 +27,7 @@ trusting this). Kickoff: [session-briefs/2026-09-25-session-131-kickoff.md](sess
 - **Session 130 shipped (details: [status-archive.md](status-archive.md)):** Dependabot #35/#36 merged (Next 16.3.5, React 19.3.0,
   zod 4.6.5, cn 0.3.0, Anthropic SDK 0.126.0, vitest 5.0.1 + patches; merges `b5a8c759` + `d8dec7f8`); #323 fixed (`5d5e045d` —
   load-proof A5 + contract test; `scripts/verify-block.sh <dir> <log> --e2e` runs Playwright); `user-chart.tsx` move-only split into
-  `user-chart-parts.tsx` (`f90356b1` + `0eaa1302`, 3,198 → 2,339 lines), closing #312. Measured at `f90356b1`: typechecks clean,
+  `user-chart-parts.tsx` (`f90356b1` + `0eaa1302`, 3,198 → 2,341 lines), closing #312. Measured at `f90356b1`: typechecks clean,
   backend 219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060, `next build` compiled; `/code-review` LOW 0.
 - **Next (owner-supervised) — the publish flag flip, nothing blocks it:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
