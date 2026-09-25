@@ -125,6 +125,31 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     expect(screen.getByText(/paste this code/i)).toBeInTheDocument();
   });
 
+  // Open-questions #243(b): the live preview beside these controls (this
+  // file's own `chartSlot`, chart.tsx's canvasNode/legendNode) can show
+  // Style-panel colour/font/frame overrides, a zoomed period, and series
+  // hidden via the legend — none of which buildEmbedCode (below) encodes
+  // into the generated code. Rather than silently let the preview read as a
+  // promise of what a visitor gets, the dialog now says plainly which
+  // settings carry over. This test pins that the note is present (and, like
+  // its instruction-paragraph siblings above, gone once embedding itself is
+  // unavailable — nothing left to caveat).
+  it('shows an honest note that style/zoom/hidden-series state in the preview does not carry over to the published embed', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await waitFor(() => expect(screen.getByText(/<iframe/)).toBeInTheDocument());
+    expect(screen.getByText(/default look/i)).toBeInTheDocument();
+  });
+
+  it('hides the preview caveat once embedding is unavailable, same as the other instruction paragraphs', async () => {
+    createEmbedCode.mockResolvedValue({ ok: false, reason: 'unavailable' });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    fireEvent.click(screen.getByRole('button', { name: /embed/i }));
+    await waitFor(() => expect(screen.getByText(/not available/i)).toBeInTheDocument());
+    expect(screen.queryByText(/default look/i)).toBeNull();
+  });
+
   // Minor #3 (opus review): a rejected Server Action promise must not leave
   // the dialog stuck on "loading" forever with an unhandled rejection — it
   // should collapse to the same terminal 'unavailable' state as { ok: false }.
@@ -370,6 +395,37 @@ describe('ChartEmbedButton / ChartEmbedDialog', () => {
     fireEvent.click(trigger);
     await screen.findByRole('dialog');
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  // Open-questions #243(a): row #243 flagged a possible Escape-to-close
+  // focus-restore gap "specific to the Embed trigger" (ADR 039's 2026-09-13
+  // addendum). Session 128 tried hard to reproduce it: this exact jsdom test
+  // above already passed before this session touched anything, and a real
+  // Chromium browser (Playwright-driven, against the actual production
+  // ChartEmbedButton/ChartEditModal/Dialog code, not a mock) also correctly
+  // restored focus to the trigger across every scenario tried — closing
+  // while still loading, closing with the fetched fieldset/radios/live-switch
+  // rendered, Escape fired with focus on the dialog's own × close button, AND
+  // (this test's own scenario) with focus on an interior control the reader
+  // actually tabbed to, like a colour/language radio. No failure surfaced in
+  // either environment. This test adds the one scenario the original test
+  // above didn't cover (focus starting inside the loaded fieldsets, not on
+  // the dialog root) as extra regression coverage, not because it was ever
+  // observed to fail. If the original finding was real, it may be a
+  // WebKit/Safari-specific quirk this session could not check (no Safari
+  // available here) — see docs/open-questions.md #243 for the full account.
+  it('Escape from an interior control (not just the dialog root) still refocuses the trigger', async () => {
+    createEmbedCode.mockResolvedValue({ ok: true, token: '42.abc', pro: false });
+    render(<Uncontrolled auditId={42} tableId="83693NED" lang="en" />);
+    const trigger = screen.getByRole('button', { name: /embed/i });
+    fireEvent.click(trigger);
+    await screen.findByText(/<iframe/);
+    const darkRadio = screen.getByRole('radio', { name: 'Dark' });
+    darkRadio.focus();
+    expect(darkRadio).toHaveFocus();
+    fireEvent.keyDown(darkRadio, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(trigger).toHaveFocus();
   });
