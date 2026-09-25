@@ -1,10 +1,15 @@
-// ADR 058 (English answers, Task 3): fetches CBS's own English (ENG) sibling
-// tables for every registered CBS table and reports, per table, which table
-// title / measure titles / dimension-value labels the product actually shows
-// (docs/05-data-rules.md principle c — never guess) can be read straight off
-// CBS's own English words, versus which have no CBS-published English form
-// and must be hand-curated by a session (reading the Dutch definition text)
-// into src/registry/english-names.data.ts.
+// ADR 058 (English answers, Task 3; Fix round 1): fetches CBS's own English
+// (ENG) sibling tables for every registered CBS table and WRITES the
+// CBS-sourced pairs into src/registry/english-names.cbs.generated.ts — the
+// table title / measure title / dimension-value label / region name pairs
+// the product actually shows (docs/05-data-rules.md principle c — never
+// guess) read straight off CBS's own English words. Anything CBS publishes
+// no English form for, or where CBS's own words genuinely disagree with each
+// other for the same Dutch string, is a session's job to hand-curate in
+// src/registry/english-names.data.ts instead (rule 5's "reading the Dutch
+// table's own definition text first" is inherently a human step; rule 3's
+// "emit neither, list the conflict" is a judgment call, not something to
+// paper over here).
 //
 // Public CBS v3 API only — no database, no model, no secrets, no .env:
 //   TableInfos      https://opendata.cbs.nl/ODataApi/odata/<id>/TableInfos
@@ -15,18 +20,36 @@
 // sibling"). Every request carries its own 25s timeout so a slow/dead
 // endpoint can never hang this script.
 //
+// Fix round 1 (task review) corrected a real bug in how "which measure
+// titles matter" was computed: v1 of this script scoped pairing to each
+// canonical measure's registry `measureTitle` field — but a ResultCell's
+// `measureTitle` at runtime is `normalizeLabel(measureMeta.title)`
+// (src/query/resolve.ts), the RAW CBS measure-codes Title
+// (src/ingestion/pipeline.ts / src/cbs-adapter/parse-v4.ts) — never a
+// session-assembled "TopicGroup / Topic" breadcrumb like a `measureTitle`
+// field can be. This script now reads the SAME ground truth the product (and
+// tests/registry/english-names-data.test.ts) actually use —
+// tests/fixtures/cbs/<table>/measure-codes.json — for every REACHABLE
+// measure code per canonical measure: its own `measure`, plus every
+// alternate that carries its own `measure` code (an alternate that only
+// varies `dims` keeps the primary's code, already covered). Matching a v1
+// fixture's Identifier to a position in the live v3 DataProperties response
+// (the two APIs use different code schemes) is done by Title+Unit+Decimals
+// equality — unique in every table this registry has, verified by requiring
+// EXACTLY one candidate position.
+//
 // Pairing rules (task-3-brief.md rules 1-4), implemented literally:
 //  - table title: TableInfos' own `Title` field, NED -> ENG, paired directly.
-//  - measures: DataProperties rows of Type 'Topic' (CBS v3's leaf measure
-//    type across every registered table) are paired by `Position`, and ONLY
-//    kept when Type, Decimals AND Unit also agree on both sides. Unit is
-//    compared after normalising case/hyphenation/plural-s (CBS's own English
-//    units are not always byte-identical in spelling to a literal
-//    translation — e.g. 'average balance of the subquestions' vs the hand-
-//    written 'average balance of the sub-questions', or 'euro' vs 'euros' —
-//    the normaliser exists so a real, position-verified pairing isn't
-//    thrown away over wording noise; two GENUINELY different units still
-//    fail this check because their normalised forms differ).
+//  - measures: matched by v3 Position (found via the Title+Unit+Decimals
+//    lookup above), and ONLY kept when Type, Decimals AND Unit also agree on
+//    both sides. Unit is compared after normalising case/hyphenation/
+//    plural-s (CBS's own English units are not always byte-identical in
+//    spelling to a literal translation — e.g. 'average balance of the
+//    subquestions' vs the hand-written 'average balance of the
+//    sub-questions', or 'euro' vs 'euros' — the normaliser exists so a real,
+//    position-verified pairing isn't thrown away over wording noise; two
+//    GENUINELY different units still fail this check because their
+//    normalised forms differ).
 //  - dimensions: matched by Position too (NED/ENG use different Keys for the
 //    same dimension, e.g. TypeGefailleerde/TypeOfBankruptcy), then their code
 //    lists are paired by `Key` (rule 2: codes are language-neutral) — but
@@ -34,24 +57,38 @@
 //    defaultCoordinates, a canonical measure's own `dims`, and its
 //    `alternates[].dims`), never a table's full code list, per rule 4 ("only
 //    labels the product can show are needed").
-//  - conflict: the same Dutch string pairing to two different English
-//    strings across tables is reported, never silently resolved either way
-//    (rule 3).
+//  - regions: the one real GeoDimension table in the registry (83625NED) —
+//    its FULL code list (skip GM/municipality codes, which read the same in
+//    English by design — rule 4), paired by Key.
+//  - conflict (rule 3, widened in Fix round 1 to cover every REACHABLE
+//    measure code, not just each table's own primaries): the same Dutch
+//    string pairing to two different English strings anywhere in this run —
+//    across tables (e.g. 'Prijsindex verkoopprijzen', reachable both as
+//    house_price_index_regional's own primary on 85792NED and as
+//    average_existing_home_sale_price's alternate M001505_2 on 85773NED,
+//    with two different CBS English forms) is EXCLUDED from the generated
+//    file entirely, never silently resolved either way.
 //
-// This script only REPORTS (it never writes english-names.data.ts) — turning
-// a "paired"/"no sibling" report into hand-curated entries, reviewing a
-// wording surprise (CBS's own English can read as a non-literal translation
-// — that's still correct, never a guess), and running the digit-invariance
-// test are a session's own job (task-3-brief.md step 4), the same way rule 5
-// ("write the English by hand ... reading the Dutch table's own definition
-// text first") is inherently a human step.
+// This script WRITES src/registry/english-names.cbs.generated.ts — a
+// generated, CBS-sourced-only sibling of the hand-written
+// english-names.data.ts (which composes `{ ...CBS_X, ...HAND_X }` for each
+// map). It does NOT read or know about the hand-written maps: a hand
+// override that deliberately differs from what this script would derive
+// (e.g. stripping a table-specific noun CBS's own wording bakes in) is
+// tracked in data.ts's own `OVERRIDDEN_BY_HAND` set, checked by
+// tests/registry/english-names-data.test.ts, not by this script.
 //
 //   npm run english-names:fetch
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { CANONICAL_MEASURES, TABLE_REGISTRY_DEFAULTS } from '../src/registry/defaults.ts';
+import type { CanonicalMeasure } from '../src/registry/types.ts';
 import { translateUnit } from '../src/registry/english-names.ts';
 
 const CBS_BASE = 'https://opendata.cbs.nl/ODataApi/odata';
 const TIMEOUT_MS = 25_000;
+const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/cbs', import.meta.url));
+const OUTPUT_FILE = fileURLToPath(new URL('../src/registry/english-names.cbs.generated.ts', import.meta.url));
 
 function normalizeLabel(label: string): string {
   return label.replace(/\s+/g, ' ').trim();
@@ -123,6 +160,33 @@ async function fetchCodes(tableId: string, dimKey: string): Promise<Map<string, 
   return map;
 }
 
+interface FixtureMeasureRow {
+  Identifier: string;
+  Title: string;
+  Unit?: string;
+  Decimals?: number;
+}
+
+/** The Dutch fixture measure-codes.json — the SAME ground truth
+ * tests/registry/english-names-data.test.ts reads, and the ONLY source for
+ * "what does this measure code's Title actually say" (the v3 API used for
+ * everything else here has no equivalent to a v1-style flat Identifier). */
+function readFixtureMeasures(tableId: string): FixtureMeasureRow[] {
+  const raw = JSON.parse(readFileSync(`${FIXTURES_DIR}/${tableId}/measure-codes.json`, 'utf8'));
+  return raw.value as FixtureMeasureRow[];
+}
+
+/** Every measure code a canonical measure can put in a ResultCell: its own
+ * `measure`, plus every alternate that carries its own `measure` code (an
+ * alternate that only varies `dims` keeps the primary's measure code,
+ * already covered). Mirrors tests/registry/english-names-data.test.ts's own
+ * reachable-set logic — keep both in sync. */
+function reachableMeasureCodes(m: CanonicalMeasure): string[] {
+  const codes = [m.measure];
+  for (const alt of m.alternates ?? []) if (alt.measure) codes.push(alt.measure);
+  return codes;
+}
+
 interface TableSpec {
   num: string;
   nedId: string;
@@ -131,14 +195,9 @@ interface TableSpec {
    * coordinates plus every canonical measure (and its alternates) on it —
    * the "only labels the product can show" scope from rule 4. */
   codesOfInterest: Map<string, Set<string>>;
-  /** `measureTitle` (normalised) of every canonical measure registered on
-   * this table — the only measures rule 4 needs a pairing for. A table like
-   * 85880NED carries 200+ unrelated Topics (every national-accounts line
-   * item); reporting those would bury the ones the product actually shows,
-   * and would raise false "conflicts" for generic words (Totaal, Saldo) that
-   * legitimately mean different things at different positions in the SAME
-   * table — never a real cross-table conflict. */
-  registeredMeasureTitles: Set<string>;
+  /** Every measure code reachable from this table's registered canonical
+   * measures (Fix round 1 — see header). */
+  measureCodes: Set<string>;
 }
 
 function buildTableSpecs(): TableSpec[] {
@@ -150,7 +209,7 @@ function buildTableSpecs(): TableSpec[] {
       nedId: t.tableId,
       defaultCoordinates: t.defaultCoordinates,
       codesOfInterest: new Map(),
-      registeredMeasureTitles: new Set(),
+      measureCodes: new Set(),
     });
   }
   const addCode = (spec: TableSpec, dim: string, code: string) => {
@@ -168,24 +227,9 @@ function buildTableSpecs(): TableSpec[] {
     for (const alt of m.alternates ?? []) {
       for (const [dim, code] of Object.entries(alt.dims ?? {})) addCode(spec, dim, code);
     }
-    spec.registeredMeasureTitles.add(normalizeLabel(m.measureTitle));
+    for (const code of reachableMeasureCodes(m)) spec.measureCodes.add(code);
   }
   return [...specs.values()];
-}
-
-/** A registered composite measureTitle (e.g. "Waarde / Ontwikkeling t.o.v.
- * jaar eerder / Ongecorrigeerd") is a session-assembled breadcrumb over a
- * multi-level CBS TopicGroup hierarchy, not literally any one Title field —
- * so it never matches a DataProperties row by equality. Match instead on the
- * LEAF segment (after the last '/'), trimmed: that leaf IS a real CBS Title
- * for a Topic at some position, and is what this function uses to flag the
- * position as "registered" so the report doesn't drown it in noise. The
- * composite string itself still needs a session to hand-assemble its English
- * form (rule 5) — this only stops the report from hiding the one row that
- * makes that assembly possible. */
-function leafOf(measureTitle: string): string {
-  const parts = measureTitle.split('/');
-  return normalizeLabel(parts[parts.length - 1]!);
 }
 
 interface PairedLabel {
@@ -204,12 +248,12 @@ async function processTable(spec: TableSpec) {
   if (!engTitle.ok) {
     report.push(`  NO CBS ENGLISH SIBLING (${engTitle.reason}) — curate by hand.`);
     console.log(report.join('\n'));
-    return { spec, hasSibling: false as const };
+    return { spec, hasSibling: false as const, titlePair: undefined, measurePairs: [], dimPairs: [], regionPairs: [] };
   }
   if (!nedTitle.ok) {
     report.push(`  NED TableInfos failed unexpectedly (${nedTitle.reason}) — skipping.`);
     console.log(report.join('\n'));
-    return { spec, hasSibling: false as const };
+    return { spec, hasSibling: false as const, titlePair: undefined, measurePairs: [], dimPairs: [], regionPairs: [] };
   }
 
   const titlePair: PairedLabel = { nl: nedTitle.title, en: engTitle.title, via: 'table title' };
@@ -220,39 +264,79 @@ async function processTable(spec: TableSpec) {
   if (!nedProps.ok || !engProps.ok) {
     report.push(`  DataProperties fetch failed (NED: ${nedProps.ok ? 'ok' : nedProps.reason}, ENG: ${engProps.ok ? 'ok' : engProps.reason}) — skipping measures/dims.`);
     console.log(report.join('\n'));
-    return { spec, hasSibling: true as const, titlePair, measurePairs: [], unpaired: [], dimPairs: [] };
+    return { spec, hasSibling: true as const, titlePair, measurePairs: [], dimPairs: [], regionPairs: [] };
   }
 
   const engByPosition = new Map<number, DataPropRow>();
   for (const row of engProps.rows) if (row.Position !== null) engByPosition.set(row.Position, row);
 
-  const leaves = new Set([...spec.registeredMeasureTitles].map(leafOf));
+  // --- measures: reachable measure codes, matched via the Dutch FIXTURE's
+  // own Title+Unit+Decimals against the live v3 NED DataProperties (the two
+  // APIs use different code schemes — see this file's header). ---
   const measurePairs: PairedLabel[] = [];
-  const unpaired: string[] = [];
-  for (const row of nedProps.rows) {
-    if (row.Type !== 'Topic' || row.Position === null) continue;
-    const nlRaw = normalizeLabel(row.Title);
-    if (!spec.registeredMeasureTitles.has(nlRaw) && !leaves.has(nlRaw)) continue;
-    const eng = engByPosition.get(row.Position);
-    const nl = nlRaw;
-    if (!eng || eng.Type !== row.Type || eng.Decimals !== row.Decimals) {
-      unpaired.push(`${nl} (position ${row.Position}: no structurally matching ENG entry)`);
-      continue;
+  if (spec.measureCodes.size > 0) {
+    const fixtureRows = readFixtureMeasures(spec.nedId);
+    for (const code of spec.measureCodes) {
+      const fixtureRow = fixtureRows.find((r) => r.Identifier === code);
+      if (!fixtureRow) {
+        report.push(`    measure ${code}: not found in tests/fixtures/cbs/${spec.nedId}/measure-codes.json — curate by hand.`);
+        continue;
+      }
+      const nl = normalizeLabel(fixtureRow.Title);
+      const fixtureDecimals = fixtureRow.Decimals ?? null;
+      const fixtureUnit = fixtureRow.Unit ?? '';
+      const candidates = nedProps.rows.filter(
+        (r) =>
+          r.Type === 'Topic' &&
+          r.Position !== null &&
+          normalizeLabel(r.Title) === nl &&
+          (r.Decimals ?? null) === fixtureDecimals &&
+          unitKey(r.Unit ?? '') === unitKey(fixtureUnit),
+      );
+      if (candidates.length === 0) {
+        report.push(`    UNPAIRED measure ${code} "${nl}": no v3 position candidate — curate by hand.`);
+        continue;
+      }
+      // A generic leaf title ('Ongecorrigeerd', 'Bruto binnenlands product', …)
+      // legitimately repeats at several positions within the SAME table
+      // (different TopicGroup branches) — Title+Unit+Decimals alone doesn't
+      // always pick a unique position. That's fine as long as every matching
+      // position's ENG counterpart structurally validates AND agrees on the
+      // same English text; only a genuine DISAGREEMENT across candidates (or
+      // zero valid ones) is treated as unresolved.
+      const engTitlesFound = new Set<string>();
+      const structFailures: string[] = [];
+      for (const cand of candidates) {
+        const eng = engByPosition.get(cand.Position!);
+        if (!eng || eng.Type !== 'Topic' || (eng.Decimals ?? null) !== fixtureDecimals) {
+          structFailures.push(`position ${cand.Position}: no structurally matching ENG entry`);
+          continue;
+        }
+        const engUnit = eng.Unit ?? '';
+        const nedUnitTranslated = translateUnitLoose(fixtureUnit);
+        if (unitKey(nedUnitTranslated) !== unitKey(engUnit) && unitKey(fixtureUnit) !== unitKey(engUnit)) {
+          structFailures.push(`position ${cand.Position}: unit mismatch "${fixtureUnit}" vs "${engUnit}"`);
+          continue;
+        }
+        engTitlesFound.add(normalizeLabel(eng.Title));
+      }
+      if (engTitlesFound.size !== 1) {
+        const reason =
+          engTitlesFound.size === 0
+            ? `no valid candidate (${structFailures.join('; ')})`
+            : `${engTitlesFound.size} disagreeing ENG titles across ${candidates.length} candidate positions: ${[...engTitlesFound].join(' / ')}`;
+        report.push(`    UNPAIRED measure ${code} "${nl}": ${reason} — curate by hand.`);
+        continue;
+      }
+      const en = [...engTitlesFound][0]!;
+      measurePairs.push({ nl, en, via: `measure ${code} (${candidates.length} position(s) agree)` });
+      report.push(`    PAIRED measure ${code} "${nl}" -> "${en}" (${candidates.length} position(s) agree)`);
     }
-    const nedUnit = row.Unit ?? '';
-    const engUnit = eng.Unit ?? '';
-    const nedUnitTranslated = translateUnitLoose(nedUnit);
-    if (unitKey(nedUnitTranslated) !== unitKey(engUnit) && unitKey(nedUnit) !== unitKey(engUnit)) {
-      unpaired.push(`${nl} (position ${row.Position}: unit mismatch "${nedUnit}" vs "${engUnit}")`);
-      continue;
-    }
-    measurePairs.push({ nl, en: normalizeLabel(eng.Title), via: `position ${row.Position}` });
   }
-  report.push(`  measures: ${measurePairs.length} paired, ${unpaired.length} unpaired`);
-  for (const p of measurePairs) report.push(`    PAIRED  "${p.nl}" -> "${p.en}" (${p.via})`);
-  for (const u of unpaired) report.push(`    UNPAIRED ${u}`);
 
-  // Dimension code pairing, scoped to the codes the registry actually uses.
+  // --- dimension code pairing, scoped to the codes the registry actually
+  // uses (plain Dimension/GeoDimension only — TimeDimension is out of scope,
+  // translatePeriodLabel handles periods separately). ---
   const nedDims = nedProps.rows.filter((r) => (r.Type === 'Dimension' || r.Type === 'GeoDimension') && r.Position !== null);
   const dimPairs: PairedLabel[] = [];
   for (const nedDim of nedDims) {
@@ -287,8 +371,114 @@ async function processTable(spec: TableSpec) {
     }
   }
 
+  // --- regions: the one real GeoDimension in the registry — its FULL code
+  // list (skip municipalities, GM*, which read the same in English by
+  // rule 4), paired by Key. ---
+  const regionPairs: PairedLabel[] = [];
+  const geoDim = nedProps.rows.find((r) => r.Type === 'GeoDimension' && r.Position !== null);
+  if (geoDim) {
+    const engGeoDim = engByPosition.get(geoDim.Position!);
+    if (engGeoDim && engGeoDim.Type === 'GeoDimension') {
+      const nedCodes = await fetchCodes(spec.nedId, geoDim.Key);
+      const engCodes = await fetchCodes(engId, engGeoDim.Key);
+      if (nedCodes && engCodes) {
+        for (const [code, nl] of nedCodes) {
+          if (code.startsWith('GM')) continue;
+          const en = engCodes.get(code);
+          if (en === undefined || en === nl) continue;
+          regionPairs.push({ nl, en, via: `${geoDim.Key}=${code}` });
+          report.push(`    PAIRED region ${code}: "${nl}" -> "${en}"`);
+        }
+      }
+    }
+  }
+
+  report.push(`  measures: ${measurePairs.length} paired`);
   console.log(report.join('\n'));
-  return { spec, hasSibling: true as const, titlePair, measurePairs, unpaired, dimPairs };
+  return { spec, hasSibling: true as const, titlePair, measurePairs, dimPairs, regionPairs };
+}
+
+/** A bare, generic Dutch dimension-value word that this registry reuses,
+ * across DIFFERENT dimensions on DIFFERENT tables, to mean something
+ * context-specific each time — never safe as a flat Dutch-string map entry,
+ * even when exactly one of its occurrences happens to have a CBS English
+ * sibling to derive a value from. 'Totaal' is the one confirmed case: CBS's
+ * own English for 80590ned's Geslacht default (T001038) is 'Total sex' —
+ * correct THERE, but 'Totaal' is also 03759ned's Leeftijd default (10000)
+ * and 83932NED's Inkomensklassen default (T001226), on tables with no ENG
+ * sibling to check against, where 'Total sex' would be flatly wrong. Add a
+ * new entry here only after confirming (not assuming) the SAME risk — a
+ * bare word this registry uses in more than one dimension. */
+const AMBIGUOUS_BARE_WORDS: ReadonlySet<string> = new Set(['Totaal']);
+
+/** Rule 3, widened in Fix round 1 to scan every reachable measure code (not
+ * just each table's own registered primaries): collapse a list of pairs into
+ * a Dutch -> English map, EXCLUDING any Dutch key that maps to more than one
+ * distinct English value anywhere in this run. Returns the clean map plus
+ * the excluded conflicts (reported, never silently resolved). */
+function dedupeWithConflictCheck(pairs: PairedLabel[]): { map: Record<string, string>; conflicts: string[]; excludedAmbiguous: string[] } {
+  const byNl = new Map<string, Set<string>>();
+  for (const p of pairs) {
+    if (!byNl.has(p.nl)) byNl.set(p.nl, new Set());
+    byNl.get(p.nl)!.add(p.en);
+  }
+  const map: Record<string, string> = {};
+  const conflicts: string[] = [];
+  const excludedAmbiguous: string[] = [];
+  for (const [nl, ens] of byNl) {
+    if (AMBIGUOUS_BARE_WORDS.has(nl)) {
+      excludedAmbiguous.push(`"${nl}": ${[...ens].map((e) => `"${e}"`).join(', ')}`);
+      continue;
+    }
+    if (ens.size === 1) {
+      map[nl] = [...ens][0]!;
+    } else {
+      conflicts.push(`"${nl}": ${[...ens].map((e) => `"${e}"`).join(' vs ')}`);
+    }
+  }
+  return { map, conflicts, excludedAmbiguous };
+}
+
+function sortedObjectLiteral(map: Record<string, string>, indent = '  '): string {
+  const keys = Object.keys(map).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  return keys.map((k) => `${indent}${JSON.stringify(k)}: ${JSON.stringify(map[k])},`).join('\n');
+}
+
+function writeGeneratedFile(measureTitles: Record<string, string>, tableTitles: Record<string, string>, dimLabels: Record<string, string>, regions: Record<string, string>) {
+  const content = `// GENERATED by \`npm run english-names:fetch\` (scripts/english-names-fetch.ts) —
+// DO NOT HAND-EDIT. Every entry here was read directly off CBS's own public
+// English (ENG) sibling tables (ADR 058, Task 3 Fix round 1) — a Dutch
+// string that CBS itself never gave a matching English form for, or that
+// CBS's own words genuinely disagree on across two reachable contexts (rule
+// 3 — a conflict), is never written here; it is hand-curated instead in the
+// sibling src/registry/english-names.data.ts, which composes its exported
+// maps as \`{ ...CBS_X, ...HAND_X }\`. Re-run the fetch script to regenerate
+// this file after a registry change (a new canonical measure, a new
+// alternate, a new default coordinate) — hand edits here are silently
+// overwritten on the next run and never reviewed as "the CBS source of
+// truth" again.
+//
+// Pure data, no functions, no imports — same "table module" contract as
+// english-names.data.ts (see that file's header): importable from anywhere,
+// including the web client bundle, without pulling in any logic.
+
+export const CBS_MEASURE_TITLES: Record<string, string> = {
+${sortedObjectLiteral(measureTitles)}
+};
+
+export const CBS_TABLE_TITLES: Record<string, string> = {
+${sortedObjectLiteral(tableTitles)}
+};
+
+export const CBS_DIM_LABELS: Record<string, string> = {
+${sortedObjectLiteral(dimLabels)}
+};
+
+export const CBS_REGIONS: Record<string, string> = {
+${sortedObjectLiteral(regions)}
+};
+`;
+  writeFileSync(OUTPUT_FILE, content, 'utf8');
 }
 
 async function main() {
@@ -298,33 +488,48 @@ async function main() {
     results.push(await processTable(spec));
   }
 
-  // Cross-table conflict detection (rule 3): the same Dutch string pairing to
-  // two different English strings anywhere in this run.
-  const seen = new Map<string, { en: string; table: string }>();
-  const conflicts: string[] = [];
-  for (const r of results) {
-    if (!r.hasSibling) continue;
-    const pairs = [r.titlePair, ...r.measurePairs, ...r.dimPairs].filter(Boolean) as PairedLabel[];
-    for (const p of pairs) {
-      const prior = seen.get(p.nl);
-      if (prior && prior.en !== p.en) {
-        conflicts.push(`"${p.nl}": "${prior.en}" (${prior.table}) vs "${p.en}" (${r.spec.nedId})`);
-      } else {
-        seen.set(p.nl, { en: p.en, table: r.spec.nedId });
-      }
-    }
-  }
+  const allMeasurePairs = results.flatMap((r) => r.measurePairs);
+  const allTitlePairs = results.map((r) => r.titlePair).filter((p): p is PairedLabel => p !== undefined);
+  const allDimPairs = results.flatMap((r) => r.dimPairs);
+  const allRegionPairs = results.flatMap((r) => r.regionPairs);
+
+  const measures = dedupeWithConflictCheck(allMeasurePairs);
+  const titles = dedupeWithConflictCheck(allTitlePairs);
+  const dims = dedupeWithConflictCheck(allDimPairs);
+  const regions = dedupeWithConflictCheck(allRegionPairs);
+
+  writeGeneratedFile(measures.map, titles.map, dims.map, regions.map);
 
   console.log('\n=== SUMMARY ===');
   const noSibling = results.filter((r) => !r.hasSibling).map((r) => r.spec.nedId);
   const paired = results.filter((r) => r.hasSibling).map((r) => r.spec.nedId);
   console.log(`Tables with a CBS English sibling (${paired.length}): ${paired.join(', ')}`);
   console.log(`Tables with NO CBS English sibling (${noSibling.length}): ${noSibling.join(', ')}`);
-  if (conflicts.length > 0) {
-    console.log(`\nCONFLICTS (${conflicts.length}) — emit neither side, curate by hand instead:`);
-    for (const c of conflicts) console.log(`  ${c}`);
+  console.log(`Generated: ${Object.keys(measures.map).length} measure titles, ${Object.keys(titles.map).length} table titles, ${Object.keys(dims.map).length} dim labels, ${Object.keys(regions.map).length} regions.`);
+  console.log(`Written to ${OUTPUT_FILE}`);
+
+  const allConflicts = [
+    ...measures.conflicts.map((c) => `measure title ${c}`),
+    ...titles.conflicts.map((c) => `table title ${c}`),
+    ...dims.conflicts.map((c) => `dim label ${c}`),
+    ...regions.conflicts.map((c) => `region ${c}`),
+  ];
+  if (allConflicts.length > 0) {
+    console.log(`\nCONFLICTS (${allConflicts.length}) — excluded from the generated file, hand-curate instead:`);
+    for (const c of allConflicts) console.log(`  ${c}`);
   } else {
-    console.log('\nNo cross-table conflicts.');
+    console.log('\nNo conflicts.');
+  }
+
+  const allAmbiguous = [
+    ...measures.excludedAmbiguous.map((c) => `measure title ${c}`),
+    ...titles.excludedAmbiguous.map((c) => `table title ${c}`),
+    ...dims.excludedAmbiguous.map((c) => `dim label ${c}`),
+    ...regions.excludedAmbiguous.map((c) => `region ${c}`),
+  ];
+  if (allAmbiguous.length > 0) {
+    console.log(`\nEXCLUDED AS AMBIGUOUS BARE WORDS (${allAmbiguous.length}) — a real CBS value exists but this exact Dutch word is reused with a different meaning elsewhere in the registry, so it is never safe as a flat map entry:`);
+    for (const c of allAmbiguous) console.log(`  ${c}`);
   }
 }
 
