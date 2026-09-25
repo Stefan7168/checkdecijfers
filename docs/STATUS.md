@@ -19,7 +19,8 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-25, session 129 — owner present, "continue working autonomously"; verify against
-`git log` / Actions runs before trusting this). Previous kickoff: [session-briefs/2026-09-25-session-129-kickoff.md](session-briefs/2026-09-25-session-129-kickoff.md).**
+`git log` / Actions runs before trusting this). Kickoff: [session-briefs/2026-09-25-session-130-kickoff.md](session-briefs/2026-09-25-session-130-kickoff.md)
+— it lists the owner-only chores and the autonomous queue.**
 
 - **Sessions 127–128 are PUSHED and LIVE (dark):** `origin/main` = `d8438fa3`, CI run 36106419342 green incl. deploy; prod 200.
   Before the push, measured locally at `d8438fa3`: typechecks clean, backend 219 files / 3,346 tests, benchmark GATE PASS
@@ -36,11 +37,14 @@
   palette unchanged (`afabdf87`); published dumbbell/slope keep their form with a hidden series, and a split
   aggregate/derived own-data chart names each series by its split value (`2b149d27`, e2e expectations `f2fe860c` —
   `2b149d27` alone was red in CI on those two e2e strings, deploy skipped, fixed next commit).
+- **Dependabot #33/#34 merged** (actions/upload-artifact v7, actions/cache v6; merges `c566c9c5` + `ddbe5734`, CI 36123908380 green incl. deploy). #35/#36 (npm bumps) are
+  still open — next autonomous item. Load-flaky web tests tracked as [#323](open-questions.md).
 - **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
-- **Decisions waiting on the owner:** 13, in plain English — [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md).
+- **Decisions waiting on the owner:** the 13-item brief [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md);
+  session 129 did items 4 (#294) and 6 (#285) and part of 3 (#260) on their recommendations — each marked "Done" in the brief.
 - **Eurostat in chat (E2a) — unchanged:** built, staged, switched off; owner steps 0/5/6 after the API cap lifts
-  2026-10-01 ([#313](open-questions.md)). Dependabot PRs #33–#36; stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
+  2026-10-01 ([#313](open-questions.md)). Dependabot PRs #35–#36; stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
 - **Merging:** get an explicit in-chat GO before any merge or push that changes live deletion behaviour.
 
 ---
