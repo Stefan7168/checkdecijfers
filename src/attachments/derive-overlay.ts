@@ -167,8 +167,19 @@ function compareX(a: ResolvedPoint, b: ResolvedPoint): number {
  * where a gap is shown rather than omitted, U11).
  */
 export function deriveChartOverlay(dataset: UserDataset, instruction: ChartInstruction, selection: OverlaySelection): ResolvedOverlay {
-  const byRef = allResolvedPoints(dataset, instruction);
+  return overlayFromResolvedPoints(allResolvedPoints(dataset, instruction), selection);
+}
 
+/**
+ * deriveChartOverlay's own body, over an ALREADY-BUILT `allResolvedPoints`
+ * map — split out (session 128, #322 I-4b) so a caller resolving SEVERAL
+ * overlays over the same chart (the public own-data page,
+ * web/lib/own-chart-publication.ts's pruneForPublic) builds that map, and
+ * so runs executeInstruction over every row of the file, once per request
+ * instead of once per overlay. The same arithmetic, the same refusals —
+ * deriveChartOverlay above is now just this function over a fresh map.
+ */
+export function overlayFromResolvedPoints(byRef: ReadonlyMap<string, ResolvedPoint>, selection: OverlaySelection): ResolvedOverlay {
   if (selection.calcKind === 'mean') {
     if (selection.resultIds.length < 2) {
       throw new OverlaySelectionError('too few points for an average');

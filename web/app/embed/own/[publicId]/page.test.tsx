@@ -425,3 +425,84 @@ describe('/embed/own/[publicId] — happy path', () => {
     expect(screen.getByText(/made with checkdecijfers/i)).toBeInTheDocument();
   });
 });
+
+// Session 128 security-review fix wave (#322). These assert on EXACTLY what
+// the page hands the client card — JSON.stringify of UserChartView's props,
+// i.e. what ends up in the RSC flight payload view-source can read.
+describe('/embed/own/[publicId] — #322 security-review fix wave', () => {
+  // Complaints per year by department, the secret department hidden. Its
+  // amounts are distinctive so a leaked value is unmistakable.
+  const DEPT_CELLS = [
+    ['Jaar', 'Afdeling', 'Bedrag'],
+    ['2020', 'Geheime afdeling', '7771'],
+    ['2020', 'Geheime afdeling', '7772'],
+    ['2020', 'Geheime afdeling', '7773'],
+    ['2020', 'Open afdeling', '11'],
+    ['2021', 'Geheime afdeling', '7774'],
+    ['2021', 'Geheime afdeling', '7775'],
+    ['2021', 'Open afdeling', '12'],
+    ['2021', 'Open afdeling', '13'],
+  ];
+  const DEPT_DATASET: UserDataset = { ...DATASET, cells: DEPT_CELLS, profile: buildDatasetProfile(DEPT_CELLS) };
+  function deptInstruction(overrides: Record<string, unknown>): Record<string, unknown> {
+    return { ...INSTRUCTION, kind: 'bar', x: 'c0', y: ['c2'], seriesBy: 'c1', ...overrides };
+  }
+  function deptTurn(instruction: Record<string, unknown>): DatasetTurnRecord {
+    return turn({
+      instruction: instruction as unknown as DatasetTurnRecord['instruction'],
+      envelope: { schemaVersion: 1, kind: 'chart', question: 'q', text: 't', instruction } as unknown as DatasetTurnRecord['envelope'],
+    });
+  }
+  async function propsJson(): Promise<string> {
+    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search() }));
+    expect(userChartViewProps.current).not.toBeNull();
+    return JSON.stringify(userChartViewProps.current);
+  }
+
+  const cases: [string, Record<string, unknown>][] = [
+    ['count', { aggregate: { fn: 'count' } }],
+    ['sum', { aggregate: { fn: 'sum' } }],
+    ['mean', { aggregate: { fn: 'mean' } }],
+    ['share_of_total', { derived: { op: 'share_of_total', b: null } }],
+    ['sort by value, hidden series', { sort: { by: 'value', direction: 'desc' } }],
+  ];
+  for (const [name, overrides] of cases) {
+    it(`P1 (${name}): the props carry no agg:/der:/r<n>:c<n> reference and no hidden label or value`, async () => {
+      getPublicationByPublicId.mockResolvedValue(row({ log: [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')] }));
+      getDatasetTurnById.mockResolvedValue(deptTurn(deptInstruction(overrides)));
+      getDataset.mockResolvedValue(DEPT_DATASET);
+      const json = await propsJson();
+      expect(json).not.toMatch(/agg:/);
+      expect(json).not.toMatch(/der:/);
+      expect(json).not.toMatch(/r\d+:c\d+/);
+      expect(json).not.toContain('Geheime afdeling');
+      for (const v of ['7771', '7772', '7773', '7774', '7775', '23316', '23.316', '15549', '15.549']) expect(json).not.toContain(v);
+    });
+  }
+
+  it('I-4a: a stored log over the 200-command cap shows the not-available page', async () => {
+    const log = Array.from({ length: 201 }, (_, i) => makeCommand({ kind: 'setTitle', title: `t${i}` }, 'panel'));
+    getPublicationByPublicId.mockResolvedValue(row({ log }));
+    getDatasetTurnById.mockResolvedValue(turn());
+    getDataset.mockResolvedValue(DATASET);
+    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+    expect(userChartViewProps.current).toBeNull();
+  });
+
+  it('I-4a: a stored log with more overlays than the cap shows the not-available page', async () => {
+    // r2:c2 / r4:c2 = Open NV's two points in the shared fixture.
+    const log = Array.from({ length: 21 }, (_, i) =>
+      makeCommand({ kind: 'addDerivedOverlay', overlay: { id: `o${i}`, calcKind: 'difference', resultIds: ['r2:c2', 'r4:c2'] } }, 'panel'),
+    );
+    getPublicationByPublicId.mockResolvedValue(row({ log }));
+    getDatasetTurnById.mockResolvedValue(turn());
+    getDataset.mockResolvedValue(DATASET);
+    process.env.OWN_DATA_PUBLISH_ENABLED = '1';
+    render(await OwnEmbedPage({ params: params('A'.repeat(22)), searchParams: search({ lang: 'en' }) }));
+    expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+    expect(userChartViewProps.current).toBeNull();
+  });
+});

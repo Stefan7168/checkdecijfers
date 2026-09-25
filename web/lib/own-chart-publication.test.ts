@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDatasetProfile } from '../backend/attachments/ingest/profile.ts';
 import type { ClientChartInstruction, DatasetTurnRecord, UserDataset } from '../backend/attachments/types.ts';
 import { makeCommand } from './chart-commands.ts';
-import { buildPublishedChart, firstRenderMatchesEnvelope, pruneForPublic } from './own-chart-publication.ts';
+import { buildPublishedChart, firstRenderMatchesEnvelope, PUBLIC_OVERLAY_MAX, pruneForPublic } from './own-chart-publication.ts';
 
 const CELLS = [
   ['Jaar', 'Klant', 'Omzet'],
@@ -72,21 +72,24 @@ describe('buildPublishedChart', () => {
     if (!r.ok) throw new Error('expected ok');
     expect(r.dropped).toBe(1);
   });
-  it('counts garbage entries as dropped', () => {
-    const r = buildPublishedChart(dataset, turn, [null, 42, 'x', { nokind: true }]);
-    if (!r.ok) throw new Error('expected ok');
-    expect(r.dropped).toBe(4);
+  // Session 128 fix wave (#322 I-4a): the log is now parsed WHOLE through
+  // the capped schema (the card's own stored-log hydration does the same,
+  // use-chart-edits.ts), so a garbage entry refuses the log as invalid_log
+  // rather than being counted as one dropped entry. Both outcomes fail
+  // closed (publish refuses, the public page shows "not available"); a
+  // garbage entry never comes from a real card, so 'invalid' is the more
+  // accurate refusal than 'changed'.
+  it('refuses a log with garbage entries as invalid_log', () => {
+    expect(buildPublishedChart(dataset, turn, [null, 42, 'x', { nokind: true }])).toEqual({ ok: false, reason: 'invalid_log' });
   });
-  it('counts a well-shaped-but-incomplete command as dropped, never throws (I3)', () => {
+  it('refuses a well-shaped-but-incomplete command as invalid_log, never throws (I3)', () => {
     // Each of these has a real `kind` string chart-commands.ts recognises,
-    // but is missing the fields that kind's own schema (and, before this
-    // fix, validateCommand/applyCommand reading them unconditionally) —
+    // but is missing the fields that kind's own schema (and, before fix
+    // round 1, validateCommand/applyCommand reading them unconditionally) —
     // so a loose `typeof kind === 'string'` shape check would let them
-    // through to a crash instead of a reachable "dropped" outcome.
+    // through to a crash instead of a reachable refusal.
     const r = buildPublishedChart(dataset, turn, [{ kind: 'setSeriesView' }, { kind: 'addNote' }, { kind: 'setInstruction' }]);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.dropped).toBe(3);
+    expect(r).toEqual({ ok: false, reason: 'invalid_log' });
   });
   it('a non-array log is invalid_log', () => {
     expect(buildPublishedChart(dataset, turn, { kind: 'setTitle' })).toEqual({ ok: false, reason: 'invalid_log' });
@@ -438,7 +441,11 @@ describe('pruneForPublic — A1: a category only the hidden series plots never r
     expect(JSON.stringify(pub)).not.toContain('500');
     expect(pub.spec.series).toHaveLength(2);
     expect(pub.spec.series[0]!.label).toBe('');
-    expect(pub.spec.series[0]!.points.map((p) => p.xKey)).toEqual(['Bakker']);
+    // Session 128 fix wave (#322 I-2): the blanked slot is now exactly one
+    // blank point per VISIBLE category, in visible order — it no longer
+    // mirrors which of those categories the hidden series itself has (VIP
+    // has no Jansen row; the slot must not say so).
+    expect(pub.spec.series[0]!.points.map((p) => p.xKey)).toEqual(['Bakker', 'Jansen']);
     expect(pub.spec.series[1]!.label).toBe('Normaal');
   });
 
@@ -485,5 +492,230 @@ describe('firstRenderMatchesEnvelope — A3 code-drift guard', () => {
   });
   it('false for a turn with no instruction', () => {
     expect(firstRenderMatchesEnvelope(dataset, { ...withEnvelope(undefined), instruction: null })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Session 128 security-review fix wave (docs/superpowers/specs/
+// 2026-09-25-own-data-publish-security-review.md, open-questions #322).
+// ---------------------------------------------------------------------------
+
+/** Any internal row reference: an aggregate (`agg:fn:r1:c2+r3:c2`, which
+ * lists the group's member rows — and so its size n, which for `count` IS
+ * the value), a derived one (`der:share_of_total:r1:c2|total:3`), or a bare
+ * cell reference (`r1:c2`). None may reach the public payload (I-1). */
+function expectNoInternalRefs(json: string): void {
+  expect(json).not.toMatch(/agg:/);
+  expect(json).not.toMatch(/der:/);
+  expect(json).not.toMatch(/r\d+:c\d+/);
+  expect(json).not.toMatch(/\|total:/);
+}
+
+function datasetFrom(id: number, cells: string[][]): UserDataset {
+  return {
+    id,
+    userId: 'u1',
+    sourceKind: 'file_csv',
+    displayName: 'afdelingen.csv',
+    sourceUrl: null,
+    cells,
+    profile: buildDatasetProfile(cells),
+    status: 'ready',
+    contentSha256: 'c0ffee',
+    createdAt: '2026-09-06T00:00:00Z',
+  };
+}
+function turnFor(datasetId: number, instr: Record<string, unknown>): DatasetTurnRecord {
+  return { id: 70, userId: 'u1', datasetId, kind: 'chart', chartEmitted: true, instruction: instr } as unknown as DatasetTurnRecord;
+}
+function instructionWith(overrides: Record<string, unknown>): Record<string, unknown> {
+  return {
+    version: 2,
+    kind: 'bar',
+    x: 'c0',
+    y: ['c2'],
+    seriesBy: 'c1',
+    filters: [],
+    sort: null,
+    limit: null,
+    aggregate: null,
+    derived: null,
+    unsupported: null,
+    reading: '',
+    confidence: 1,
+    ...overrides,
+  };
+}
+
+// Complaints per year by department; the secret department is hidden. Its
+// amounts are distinctive (7771..7775) so a leaked value is unmistakable.
+const DEPT_CELLS = [
+  ['Jaar', 'Afdeling', 'Bedrag'],
+  ['2020', 'Geheime afdeling', '7771'],
+  ['2020', 'Geheime afdeling', '7772'],
+  ['2020', 'Geheime afdeling', '7773'],
+  ['2020', 'Open afdeling', '11'],
+  ['2021', 'Geheime afdeling', '7774'],
+  ['2021', 'Geheime afdeling', '7775'],
+  ['2021', 'Open afdeling', '12'],
+  ['2021', 'Open afdeling', '13'],
+];
+const HIDDEN_DEPT_VALUES = ['7771', '7772', '7773', '7774', '7775', '23316', '23.316', '15549', '15.549', '7.772', '7.774,5', '7774,5'];
+
+describe('pruneForPublic — I-1: no internal row reference ever reaches the payload', () => {
+  const cases: [string, Record<string, unknown>][] = [
+    ['count', { aggregate: { fn: 'count' } }],
+    ['sum', { aggregate: { fn: 'sum' } }],
+    ['mean', { aggregate: { fn: 'mean' } }],
+    ['share_of_total', { derived: { op: 'share_of_total', b: null } }],
+    ['sort by value (raw)', { sort: { by: 'value', direction: 'desc' } }],
+    ['sort by value (sum)', { aggregate: { fn: 'sum' }, sort: { by: 'value', direction: 'desc' } }],
+  ];
+  for (const [name, overrides] of cases) {
+    it(`${name}: a hidden series leaves no internal ref, label or value — and neither does a visible point`, () => {
+      const ds = datasetFrom(60, DEPT_CELLS);
+      const built = buildPublishedChart(ds, turnFor(60, instructionWith(overrides)), [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')]);
+      if (!built.ok) throw new Error(`expected ok, got ${built.reason}`);
+      expect(built.dropped).toBe(0);
+      // Sanity: the unpruned spec really carries the internal refs the
+      // public one must not (proves the fixture has something to leak).
+      expect(JSON.stringify(built.spec)).toMatch(/agg:|der:|r\d+:c\d+/);
+
+      const json = JSON.stringify(pruneForPublic(built, null));
+      expectNoInternalRefs(json);
+      expect(json).not.toContain('Geheime afdeling');
+      for (const v of HIDDEN_DEPT_VALUES) expect(json).not.toContain(v);
+    });
+  }
+
+  it('re-keys every point to opaque public ids and remaps notes, overlays and the headline through the same map', () => {
+    const ds = datasetFrom(61, DEPT_CELLS);
+    const built = buildPublishedChart(ds, turnFor(61, instructionWith({ aggregate: { fn: 'sum' } })), []);
+    if (!built.ok) throw new Error('expected ok');
+    // Visible = s1 (Open afdeling): its two aggregate points' internal refs.
+    const [refA, refB] = built.spec.series[1]!.points.map((p) => p.rowRef) as [string, string];
+    const rebuilt = buildPublishedChart(ds, turnFor(61, instructionWith({ aggregate: { fn: 'sum' } })), [
+      makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel'),
+      makeCommand({ kind: 'addNote', note: { id: `${refA}-x1`, resultId: refA, periodLabel: '2020', seriesLabel: 'Sum of Bedrag', text: 'begin' } }, 'panel'),
+      makeCommand({ kind: 'addDerivedOverlay', overlay: { id: 'o-diff', calcKind: 'difference', resultIds: [refA, refB] } }, 'panel'),
+      makeCommand({ kind: 'setHeadlineOverride', resultId: refB }, 'panel'),
+    ]);
+    if (!rebuilt.ok) throw new Error('expected ok');
+    expect(rebuilt.dropped).toBe(0);
+
+    const pub = pruneForPublic(rebuilt, null);
+    expectNoInternalRefs(JSON.stringify(pub));
+    const ids = pub.spec.series.flatMap((s) => s.points.map((p) => p.rowRef));
+    for (const id of ids) expect(id).toMatch(/^p\d+$/);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    const [pubA, pubB] = pub.spec.series[1]!.points.map((p) => p.rowRef);
+    expect(pub.state.notes).toHaveLength(1);
+    expect(pub.state.notes[0]!.resultId).toBe(pubA);
+    expect(pub.state.notes[0]!.id).toMatch(/^n\d+$/);
+    expect(pub.state.derivedOverlayRequests).toEqual([{ id: 'o-diff', calcKind: 'difference', resultIds: [pubA, pubB] }]);
+    // Same value the author's card is served (11 → 25), from the same
+    // derivation function; its own handle is opaque too.
+    expect(pub.overlays['o-diff']!.value).toBe(14);
+    expect(pub.state.headlineOverrideResultId).toBe(pubB);
+  });
+});
+
+// I-2: sort by value orders every series' points by value — so a hidden
+// slot that kept its own points in their own order would publish the hidden
+// series' RANKING, and which categories it has at all (for `count`, a
+// missing category IS a value: zero).
+describe('pruneForPublic — I-2: a blanked slot carries no information about the hidden series', () => {
+  function rankCells(vip: [string, string][]): string[][] {
+    return [
+      ['Jaar', 'Segment', 'Omzet'],
+      ...vip.map(([year, v]) => [year, 'VIP', v]),
+      ['2019', 'Normaal', '50'],
+      ['2020', 'Normaal', '40'],
+      ['2021', 'Normaal', '60'],
+    ];
+  }
+  const sorted = instructionWith({ sort: { by: 'value', direction: 'desc' } });
+  function publish(cells: string[][]) {
+    const built = buildPublishedChart(datasetFrom(62, cells), turnFor(62, sorted), [makeCommand({ kind: 'toggleSeries', key: 's0' }, 'panel')]);
+    if (!built.ok) throw new Error('expected ok');
+    return { built, pub: pruneForPublic(built, null) };
+  }
+
+  it('orders the blanked slot by the VISIBLE x order, never the hidden ranking', () => {
+    const { built, pub } = publish(rankCells([['2019', '10'], ['2020', '900'], ['2021', '300']]));
+    // Premise: the unpruned hidden series is in its own value order.
+    expect(built.spec.series[0]!.label).toBe('VIP');
+    expect(built.spec.series[0]!.points.map((p) => p.xKey)).toEqual(['2020', '2021', '2019']);
+    const visibleOrder = pub.spec.series[1]!.points.map((p) => p.xKey);
+    expect(visibleOrder).toEqual(['2021', '2019', '2020']);
+    expect(pub.spec.series[0]!.points.map((p) => p.xKey)).toEqual(visibleOrder);
+  });
+
+  it('any consumer taking the union of x keys in series order (hidden slot first) gets the visible order', () => {
+    const { pub } = publish(rankCells([['2019', '10'], ['2020', '900'], ['2021', '300']]));
+    const union: string[] = [];
+    for (const s of pub.spec.series) for (const p of s.points) if (!union.includes(p.xKey)) union.push(p.xKey);
+    expect(union).toEqual(pub.spec.series[1]!.points.map((p) => p.xKey));
+  });
+
+  it('two hidden series with different values, ranking and coverage produce the IDENTICAL blanked slot', () => {
+    const a = publish(rankCells([['2019', '10'], ['2020', '900'], ['2021', '300']])).pub;
+    const b = publish(rankCells([['2019', '999'], ['2020', '1']])).pub; // no 2021 row at all
+    expect(a.spec.series[0]).toEqual(b.spec.series[0]);
+    expect(a.spec.series[0]!.points).toHaveLength(3);
+  });
+});
+
+// M-1: a note stores the series/period label the chart had WHEN it was
+// added; a later setInstruction keeps the note (by design) while the series
+// can now mean something else entirely.
+describe('pruneForPublic — M-1: note labels are rebuilt from the final public spec', () => {
+  const NOTE_CELLS = [
+    ['Jaar', 'Klant', 'Regio', 'Omzet'],
+    ['2020', 'Minister X', 'Noord', '100'],
+    ['2020', 'Bakker', 'Zuid', '200'],
+    ['2021', 'Minister X', 'Noord', '110'],
+    ['2021', 'Bakker', 'Zuid', '210'],
+  ];
+  it('a note made under "series by Klant" shows the Regio series label after a switch, never the old customer name', () => {
+    const byKlant = instructionWith({ kind: 'line', y: ['c3'], seriesBy: 'c1' });
+    const byRegio = { ...instructionWith({ kind: 'line', y: ['c3'], seriesBy: 'c2' }) };
+    delete byRegio.reading;
+    delete byRegio.confidence;
+    const built = buildPublishedChart(datasetFrom(63, NOTE_CELLS), turnFor(63, byKlant), [
+      makeCommand({ kind: 'addNote', note: { id: 'n-old', resultId: 'r1:c3', periodLabel: '2020', seriesLabel: 'Minister X', text: 'let op' } }, 'panel'),
+      makeCommand({ kind: 'setInstruction', instruction: byRegio as unknown as ClientChartInstruction, summary: 'per regio' }, 'panel'),
+    ]);
+    if (!built.ok) throw new Error('expected ok');
+    expect(built.dropped).toBe(0);
+    expect(built.spec.series.map((s) => s.label)).toEqual(['Noord', 'Zuid']);
+    // Premise: the raw state still carries the stale label.
+    expect(built.state.notes[0]!.seriesLabel).toBe('Minister X');
+
+    const pub = pruneForPublic(built, null);
+    expect(JSON.stringify(pub)).not.toContain('Minister X');
+    expect(pub.state.notes).toHaveLength(1);
+    expect(pub.state.notes[0]).toMatchObject({ seriesLabel: 'Noord', periodLabel: '2020', text: 'let op' });
+  });
+});
+
+// I-4 (a): the whole log goes through the capped schema — at publish AND at
+// read time — and the number of overlays a public view resolves is capped.
+describe('buildPublishedChart — I-4: the log and the overlay count are capped', () => {
+  it('a log of 200 commands replays; 201 is invalid_log (the capped schema, not entry by entry)', () => {
+    const titles = (n: number) => Array.from({ length: n }, (_, i) => makeCommand({ kind: 'setTitle', title: `t${i}` }, 'panel'));
+    expect(buildPublishedChart(dataset, turn, titles(200)).ok).toBe(true);
+    expect(buildPublishedChart(dataset, turn, titles(201))).toEqual({ ok: false, reason: 'invalid_log' });
+  });
+  it(`${PUBLIC_OVERLAY_MAX} overlays are fine; one more refuses the whole chart`, () => {
+    const overlays = (n: number) =>
+      Array.from({ length: n }, (_, i) =>
+        makeCommand({ kind: 'addDerivedOverlay', overlay: { id: `o${i}`, calcKind: 'difference', resultIds: ['r2:c2', 'r4:c2'] } }, 'panel'),
+      );
+    const ok = buildPublishedChart(dataset, turn, overlays(PUBLIC_OVERLAY_MAX));
+    if (!ok.ok) throw new Error('expected ok');
+    expect(Object.keys(pruneForPublic(ok, null).overlays)).toHaveLength(PUBLIC_OVERLAY_MAX);
+    expect(buildPublishedChart(dataset, turn, overlays(PUBLIC_OVERLAY_MAX + 1))).toEqual({ ok: false, reason: 'too_many_overlays' });
   });
 });

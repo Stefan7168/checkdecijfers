@@ -8,6 +8,7 @@ import type { Db } from '../backend/db/types.ts';
 import type { DatasetTurnRecord, UserDataset } from '../backend/attachments/types.ts';
 import type { PublicationRow } from '../backend/attachments/publications.ts';
 import type { BuildPublishedChartResult } from '../lib/own-chart-publication.ts';
+import { makeCommand } from '../lib/chart-commands.ts';
 
 const { currentUserId } = vi.hoisted(() => ({ currentUserId: vi.fn<() => Promise<string | null>>() }));
 vi.mock('../lib/current-user.ts', () => ({ currentUserId }));
@@ -188,6 +189,22 @@ describe('publishOwnChart', () => {
     expect(buildPublishedChart).not.toHaveBeenCalled();
   });
 
+  // Session 128 (#322 I-4a): the WHOLE log goes through the capped command
+  // schema before anything is built — a crafted log over the 200-command cap
+  // (the review's probe: 377 overlay commands inside the 64 KB size limit) is
+  // refused here, never replayed.
+  it('refuses a log of 201 valid commands (over the cap) as invalid, without building', async () => {
+    const log = Array.from({ length: 201 }, (_, i) => makeCommand({ kind: 'setTitle', title: `t${i}` }, 'panel'));
+    expect(JSON.stringify(log).length).toBeLessThan(64_000);
+    expect(await publishOwnChart(7, log, null)).toEqual({ ok: false, reason: 'invalid' });
+    expect(buildPublishedChart).not.toHaveBeenCalled();
+    expect(reportError).not.toHaveBeenCalled();
+  });
+  it('refuses a log with a malformed entry as invalid, without building', async () => {
+    expect(await publishOwnChart(7, [{ kind: 'toggleSeries', key: 's0' }], null)).toEqual({ ok: false, reason: 'invalid' });
+    expect(buildPublishedChart).not.toHaveBeenCalled();
+  });
+
   // B4: shape is checked BEFORE size — JSON.stringify(undefined) is not a
   // string, so a missing log used to throw inside the size check and land in
   // the catch as 'error' + reportError, for what is just a malformed payload.
@@ -268,7 +285,9 @@ describe('publishOwnChart', () => {
   });
 
   it('publishes on the happy path, calling upsertPublication with the right shape', async () => {
-    const log = [{ kind: 'setTitle', title: 'x' }];
+    // A real command (session 128: the whole log must parse through the
+    // capped command schema before anything is built or stored).
+    const log = [makeCommand({ kind: 'setTitle', title: 'x' }, 'panel')];
     const result = await publishOwnChart(7, log, 'Bron: eigen data');
     expect(result).toEqual({ ok: true, publicId: 'new-public-id-xxxxxx' });
     expect(upsertPublication).toHaveBeenCalledWith(DB, {
