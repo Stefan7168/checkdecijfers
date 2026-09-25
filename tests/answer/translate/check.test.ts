@@ -59,3 +59,39 @@ describe('directions', () => {
     expect([...englishDirections(en)]).toEqual([dir]);
   });
 });
+
+describe('C7 and C8 checks (fix round 1)', () => {
+  it('C7: swap within one sentence fails', () => {
+    const swapped = {
+      maskedDutch: items('Utrecht telde ⟦Na⟧ inwoners en Zeeland telde ⟦Nb⟧ inwoners.', []),
+      dutch: items('Utrecht telde 1.234 inwoners en Zeeland telde 5.678 inwoners.', []),
+      english: items('Utrecht had ⟦Nb⟧ inhabitants and Zeeland had ⟦Na⟧ inhabitants.', []),
+      glossary: [],
+    };
+    expect(checkTranslation(swapped).join()).toMatch(/C7/);
+  });
+
+  it('C8: periods swapped across sentences fails', () => {
+    const swappedPeriods = {
+      maskedDutch: items('Utrecht telde ⟦Na⟧ inwoners in ⟦Pb⟧. Zeeland telde ⟦Nc⟧ inwoners in ⟦Pd⟧.', []),
+      dutch: items('Utrecht telde 1.234 inwoners in 2023. Zeeland telde 5.678 inwoners in 2024.', []),
+      english: items('Utrecht had ⟦Na⟧ inhabitants in ⟦Pd⟧. Zeeland had ⟦Nc⟧ inhabitants in ⟦Pb⟧.', []),
+      glossary: [],
+    };
+    expect(checkTranslation(swappedPeriods).join()).toMatch(/C8/);
+  });
+
+  it('legitimate reorder passes', () => {
+    const legitimateReorder = {
+      maskedDutch: items('In ⟦Pb⟧ telde Utrecht ⟦Na⟧ inwoners.', []),
+      dutch: items('In 2023 telde Utrecht 1.234 inwoners.', []),
+      english: items('Utrecht had ⟦Na⟧ inhabitants in ⟦Pb⟧.', []),
+      glossary: [{ dutch: 'Utrecht', english: 'Utrecht', kind: 'region' as const, translated: true }],
+    };
+    expect(checkTranslation(legitimateReorder)).toEqual([]);
+  });
+
+  it('existing ok case still passes', () => {
+    expect(checkTranslation(ok)).toEqual([]);
+  });
+});

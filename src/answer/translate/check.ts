@@ -44,6 +44,16 @@ function placeholders(text: string): string[] {
   return (text.match(PLACEHOLDER_RE) ?? []).sort();
 }
 
+/** Extract number placeholders (⟦N[a-z]+⟧) in order of appearance. */
+function numberPlaceholders(text: string): string[] {
+  return text.match(/⟦N[a-z]+⟧/g) ?? [];
+}
+
+/** Extract period placeholders (⟦P[a-z]+⟧) in order of appearance. */
+function periodPlaceholders(text: string): string[] {
+  return text.match(/⟦P[a-z]+⟧/g) ?? [];
+}
+
 function pairs(t: TranslationItems): [string, string][] {
   return [
     ['body', t.body],
@@ -51,6 +61,76 @@ function pairs(t: TranslationItems): [string, string][] {
     ...(t.definition === null ? [] : [['definition', t.definition] as [string, string]]),
     ...t.alternates.map((a, i): [string, string] => [`alternate ${i + 1}`, a]),
   ];
+}
+
+/** C7: Number placeholders must appear in the same relative order in English as in
+ * masked Dutch. A swapped number (e.g., "Utrecht ⟦Na⟧ and Zeeland ⟦Nb⟧" →
+ * "Utrecht ⟦Nb⟧ and Zeeland ⟦Na⟧") attaches values to the wrong region,
+ * fabricating claims about which value belongs where. Period and caveat
+ * placeholders may move; only number order is deterministic. */
+function checkNumberOrder(
+  maskedDutch: string,
+  english: string,
+  name: string,
+): string | null {
+  const dutchNumbers = numberPlaceholders(maskedDutch);
+  const englishNumbers = numberPlaceholders(english);
+  if (dutchNumbers.join(' ') !== englishNumbers.join(' ')) {
+    return `C7: ${name} number placeholders are reordered (expected [${dutchNumbers.join(' ')}], got [${englishNumbers.join(' ')}])`;
+  }
+  return null;
+}
+
+/** C8: Sentence binding for number placeholders. Each number in a Dutch sentence
+ * must keep its companion period placeholders and region mentions in the English
+ * sentence. A lost companion (e.g., periods swapped across sentences) breaks the
+ * binding guarantee and attaches a number to the wrong period or region,
+ * fabricating a false claim. */
+function checkSentenceBinding(
+  maskedDutch: string,
+  dutch: string,
+  english: string,
+  glossary: GlossaryEntry[],
+): string | null {
+  // Split into sentences.
+  const dutchSentences = maskedDutch.split(/(?<=[.!?])\s+/);
+  const dutchUnmaskedSentences = dutch.split(/(?<=[.!?])\s+/);
+  const englishSentences = english.split(/(?<=[.!?])\s+/);
+
+  for (let i = 0; i < dutchSentences.length; i++) {
+    const dlSentence = dutchSentences[i];
+    const dunSentence = dutchUnmaskedSentences[i];
+    const numberMatches = numberPlaceholders(dlSentence);
+
+    for (const numberPlaceholder of numberMatches) {
+      // Companions: period placeholders in this Dutch sentence.
+      const periodCompanions = periodPlaceholders(dlSentence);
+
+      // Companions: region glossary entries mentioned in the unmasked Dutch sentence.
+      const regionCompanions = glossary.filter((g) => g.kind === 'region' && mentions(dunSentence ?? '', g.dutch));
+
+      // Find the English sentence containing this number.
+      const englishSentenceWithNumber = englishSentences.find((es) => es.includes(numberPlaceholder));
+      if (!englishSentenceWithNumber) {
+        return `C8: ${numberPlaceholder} not found in English`;
+      }
+
+      // Check period companions are present.
+      for (const period of periodCompanions) {
+        if (!englishSentenceWithNumber.includes(period)) {
+          return `C8: ${numberPlaceholder} lost its companion ${period} in translation`;
+        }
+      }
+
+      // Check region companions are mentioned.
+      for (const region of regionCompanions) {
+        if (!mentions(englishSentenceWithNumber, region.english)) {
+          return `C8: ${numberPlaceholder} lost its companion ${region.english} in translation`;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 export function checkTranslation(input: {
@@ -81,7 +161,14 @@ export function checkTranslation(input: {
         problems.push(`C5: ${name} must name '${g.english}' (for '${g.dutch}')`);
       }
     }
+    // C7 and C8 after C6 passes
+    const c7 = checkNumberOrder(masked[i]![1], text, name);
+    if (c7) problems.push(c7);
   });
+
+  // C8 for body only
+  const c8 = checkSentenceBinding(maskedDutch.body, dutch.body, english.body, glossary);
+  if (c8) problems.push(c8);
 
   const nlDir = [...dutchDirections(dutch.body)].sort().join(',');
   const enDir = [...englishDirections(english.body)].sort().join(',');
