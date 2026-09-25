@@ -182,6 +182,52 @@ describe('setDimmed — labels resolve to s${index} keys, hidden and dimmed alik
     expect(commands).toEqual([]);
     expect(refused).toEqual([{ request: 'series: Rotterdam', reason: 'invalid', control: 'form' }]);
   });
+
+  // #309: the model is never told which series the reader already hid or
+  // dimmed by clicking the legend, so its own hiddenLabels/dimmedLabels can
+  // only ever speak for the series it names — a wholesale replace would
+  // silently show a series the reader hid themselves.
+  describe('#309 — merges onto the reader-held state instead of replacing it wholesale', () => {
+    it('a reader-hidden series stays hidden when the chat only asks to dim another one', () => {
+      const { commands, refused } = map(
+        output([{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Amsterdam'] }]),
+        { ...CBS_CAPABILITIES_FIXTURE, currentHiddenKeys: ['s1'], currentDimmedKeys: [] },
+      );
+      expect(refused).toEqual([]);
+      expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: ['s1'], dimmedKeys: ['s0'] }]);
+    });
+
+    it('a reader-dimmed series stays dimmed when the chat only asks to hide another one', () => {
+      const { commands } = map(
+        output([{ kind: 'setDimmed', hiddenLabels: ['Amsterdam'], dimmedLabels: [] }]),
+        { ...CBS_CAPABILITIES_FIXTURE, currentHiddenKeys: [], currentDimmedKeys: ['s1'] },
+      );
+      expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: ['s0'], dimmedKeys: ['s1'] }]);
+    });
+
+    it('naming a series the reader already held overrides ITS OWN prior state', () => {
+      // Rotterdam was dimmed; the chat now asks to hide it instead — the
+      // command names it, so it moves, it does not stay dimmed.
+      const { commands } = map(
+        output([{ kind: 'setDimmed', hiddenLabels: ['Rotterdam'], dimmedLabels: [] }]),
+        { ...CBS_CAPABILITIES_FIXTURE, currentHiddenKeys: [], currentDimmedKeys: ['s1'] },
+      );
+      expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: ['s1'], dimmedKeys: [] }]);
+    });
+
+    it('absent currentHiddenKeys/currentDimmedKeys reads as nothing held — same as before #309', () => {
+      const { commands } = map(output([{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Rotterdam'] }]));
+      expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: [], dimmedKeys: ['s1'] }]);
+    });
+
+    it('drops a stale/malformed current key that is not a real series on this chart', () => {
+      const { commands } = map(
+        output([{ kind: 'setDimmed', hiddenLabels: [], dimmedLabels: ['Amsterdam'] }]),
+        { ...CBS_CAPABILITIES_FIXTURE, currentHiddenKeys: ['s9'], currentDimmedKeys: [] },
+      );
+      expect(commands).toEqual([{ kind: 'setDimmed', hiddenKeys: [], dimmedKeys: ['s0'] }]);
+    });
+  });
 });
 
 describe('setHeadlineOverride — the point resolves to its own resultId', () => {

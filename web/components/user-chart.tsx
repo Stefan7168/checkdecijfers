@@ -1783,7 +1783,18 @@ function UserChartCard({
         // than a replay of the charged one (chat.tsx's own convention).
         crypto.randomUUID(),
         state.instruction,
-        ownDataCapabilities({ spec: plottable, form: activeForm, seriesCount, applicable: resolved.applicable, lang: chartLang }),
+        ownDataCapabilities({
+          spec: plottable,
+          form: activeForm,
+          seriesCount,
+          applicable: resolved.applicable,
+          lang: chartLang,
+          // #309: so copilot/map.ts's setDimmed case can MERGE a chat
+          // request onto what the reader already hid/dimmed by clicking
+          // the legend, instead of replacing the whole set.
+          currentHiddenKeys: state.hiddenKeys,
+          currentDimmedKeys: state.dimmedKeys,
+        }),
       );
       applyCopilotOutcome(message, outcome);
     } catch {

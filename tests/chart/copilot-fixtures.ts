@@ -116,5 +116,9 @@ export const CBS_CAPABILITIES_FIXTURE: CbsCopilotCapabilities = {
   templates: ['standard', 'newsroom'],
   zoom: true,
   overlays: true,
+  // #309: nothing currently hidden/dimmed in this fixture's default state —
+  // the merge tests build their own capabilities with these set instead.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };

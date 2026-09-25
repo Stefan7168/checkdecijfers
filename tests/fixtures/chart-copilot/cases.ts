@@ -258,6 +258,12 @@ export const REGION_SERIES_CAPABILITIES: CbsCopilotCapabilities = {
   // co-pilot phase 6 final review, #310) — real for every case below that
   // reuses this fixture, including the two-city addDerivedOverlay case.
   overlays: true,
+  // #309: not serialized into the prompt (serializeCbsCopilotRequest
+  // doesn't read either field) and this drift-guarded fixture's own chart
+  // opens with nothing hidden/dimmed — the #298 drift guard in
+  // web/lib/chart-capabilities.test.ts calls `cbsCapabilities` the same way.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };
 
@@ -583,6 +589,10 @@ export const PROVINCIES_CAPABILITIES: CbsCopilotCapabilities = {
   // Opens in hbar form (see the comment above) — neither line nor area, so
   // the overlay buttons are not mounted (#310).
   overlays: false,
+  // #309: not serialized into the prompt — nothing hidden/dimmed in this
+  // fixture's own opening state.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };
 

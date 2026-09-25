@@ -23,6 +23,10 @@ const CAPABILITIES: CopilotCapabilities = {
   presentationKeys: ['lineWidth', 'grid'],
   templates: ['standard', 'newsroom'],
   overlays: true,
+  // #309: not serialized into the prompt (serializeCopilotRequest doesn't
+  // read either field), so this prompt-text suite is indifferent to them.
+  currentHiddenKeys: [],
+  currentDimmedKeys: [],
   lang: 'nl',
 };
 

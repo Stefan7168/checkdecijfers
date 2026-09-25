@@ -49,6 +49,21 @@ export interface CbsCopilotCapabilities {
    * ASKED for an overlay, it just comes back refused instead of silently
    * storing a command that renders nothing. */
   overlays: boolean;
+  /** The reader's own current hidden/dimmed series, as `s${index}` keys —
+   * open-questions #309. `setDimmed` answers in LABELS the model itself
+   * chose to name, and the model is never TOLD which series the reader
+   * already hid or dimmed by clicking the legend (telling it would mean
+   * printing this in the prompt text, a byte change that re-hashes every
+   * fixture — the same trade-off `overlays` above already makes). So
+   * copilot/map.ts's setDimmed case reads these to MERGE the command's own
+   * named keys onto the reader's existing state instead of replacing the
+   * whole set: a series the chat did not mention keeps whatever state it
+   * already had. Empty (never absent, same convention as every other field
+   * here) when nothing is currently hidden/dimmed. Never serialized into
+   * the prompt (prompt.ts's serializeCbsCopilotRequest does not read either
+   * field). */
+  currentHiddenKeys: string[];
+  currentDimmedKeys: string[];
   lang: 'nl' | 'en';
 }
 
@@ -116,12 +131,19 @@ export function sanitizeCbsCapabilities(raw: unknown): CbsCopilotCapabilities {
   const o = (raw !== null && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const pick = <T extends string>(value: unknown, allowed: readonly T[]): T[] =>
     Array.isArray(value) ? [...new Set(value.filter((v): v is T => allowed.includes(v as T)))] : [];
+  // #309: no fixed allowlist to check against (a series key is chart-
+  // specific, not enum-fixed like a form or style key) — just the `s${n}`
+  // shape the browser's own key convention always produces, deduplicated.
+  const pickKeys = (value: unknown): string[] =>
+    Array.isArray(value) ? [...new Set(value.filter((v): v is string => typeof v === 'string' && /^s\d+$/.test(v)))] : [];
   return {
     forms: pick(o.forms, CBS_COPILOT_FORMS) as CbsCopilotCapabilities['forms'],
     presentationKeys: pick(o.presentationKeys, PRESENTATION_KEYS),
     templates: pick(o.templates, TEMPLATE_IDS),
     zoom: o.zoom === true,
     overlays: o.overlays === true,
+    currentHiddenKeys: pickKeys(o.currentHiddenKeys),
+    currentDimmedKeys: pickKeys(o.currentDimmedKeys),
     lang: o.lang === 'en' ? 'en' : 'nl',
   };
 }

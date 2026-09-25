@@ -131,8 +131,24 @@ describe('sanitizeCbsCapabilities', () => {
       templates: ['newsroom'],
       zoom: false,
       overlays: false,
+      currentHiddenKeys: [],
+      currentDimmedKeys: [],
       lang: 'nl',
     });
+  });
+
+  // #309: the merge in copilot/map.ts's setDimmed case trusts these keys
+  // structurally (a real `s${n}` shape), so sanitize is the only gate —
+  // anything off-shape, or not even an array, is dropped rather than
+  // reaching the mapping layer.
+  it('#309: keeps well-formed s${n} keys, drops anything else, dedupes', () => {
+    expect(sanitizeCbsCapabilities({ currentHiddenKeys: ['s0', 's0', 's12', 'bogus', 3, null] }).currentHiddenKeys).toEqual([
+      's0',
+      's12',
+    ]);
+    expect(sanitizeCbsCapabilities({ currentDimmedKeys: 'not-an-array' }).currentDimmedKeys).toEqual([]);
+    expect(sanitizeCbsCapabilities({}).currentHiddenKeys).toEqual([]);
+    expect(sanitizeCbsCapabilities({}).currentDimmedKeys).toEqual([]);
   });
 
   it('phase 5b: keeps pie, stacked and stacked100 — CBS-tier forms since the verified whole', () => {
