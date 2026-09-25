@@ -93,6 +93,11 @@ differently:**
    single-enforcement-point retention machinery (`src/answer/audit/retention.ts`) on their first
    commit — self-service delete, a new per-file delete, and the monthly purge, all in the same
    transaction discipline already proven for CBS question history.
+   **Correction (session 128, 2026-09-25, [#322](../open-questions.md) I-3):** as built, only the per-file and
+   per-thread deletes are wired. `deleteUserDatasets`/`purgeExpiredDatasets` (`src/attachments/retention.ts`) exist
+   and are tested but have NO production caller — the monthly purge cron, `scripts/gdpr-purge.ts` and "delete my
+   question history" never touch uploaded datasets. Wiring them is tracked in #322 (owner GO: it changes what the
+   live monthly purge deletes).
 7. **Cost rides the existing one-time-credit ledger** (`dataset_ingest`, `dataset_turn` — new
    reason `dataset_cost`, migration 027), never a new subscription model. CSV/TSV upload is free
    (deterministic, no AI work); each dataset-chat turn costs credits.

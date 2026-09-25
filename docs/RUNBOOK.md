@@ -1751,6 +1751,13 @@ per-machine cache:
     running them one at a time on a tight disk. A partial copy left behind by an aborted worktree is safe
     to `rm -rf` (it is a fresh, uncommitted install, never source) — do that before anything else if space
     is the blocker.
+15. **Parallel worktrees without re-installing (session 128, 2026-09-25):** symlink the main checkout's
+    `node_modules` and `web/node_modules` into each worktree and add `/node_modules` to `.git/info/exclude` (the
+    `.gitignore`'s `node_modules/` only matches directories, so the symlink otherwise shows as untracked). vitest
+    and tsc work through the symlink; **`next dev`/Playwright does not** (Turbopack: "Symlink … points out of the
+    filesystem root") — run e2e from the main checkout. Serialize every vitest/tsc/playwright across all agents
+    with one `mkdir`-based lock script, and check `sysctl vm.swapusage` + `df -h /` before each dispatch wave:
+    the owner's own work on the same machine counts (session 128 hit 14 GB swap / 1.5 GB free disk).
 
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 

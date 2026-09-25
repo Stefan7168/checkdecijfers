@@ -1184,3 +1184,7 @@ and heatmap forms). Measured web suite at the final commit: 158 files, 2,951 tes
 as-built account, files and known v1 differences: ADR [057](decisions/057-own-data-publish.md). **Owner steps
 still pending:** apply migration 036, set the flag in Vercel Production, redeploy, run the live check —
 [RUNBOOK.md](RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on".
+**Session 128 (2026-09-25, local `main` only, NOT pushed):** look frozen at publish time + `?lang=` wins; shared embed
+error page (#319); a real-browser e2e (not yet passing locally); an independent security review (#322) whose proven
+leaks were fixed the same session. **Before the flag flip:** #322 I-3 (wire the dataset retention purge + decide the
+account-level delete — changes the live monthly purge, owner GO), a green e2e run, and the push itself.

@@ -1,5 +1,53 @@
 # STATUS archive — the session log
 
+**Sessions 127–128 (2026-09-24 → 2026-09-25, one conversation, owner present). Opened on session 127's kickoff:
+owner decisions B1/B2 on own-data parity (#318). Closed with everything merged to LOCAL `main` only — the owner said
+"keep working locally, don't push yet" — so `origin/main` is still `598d0f10` and production is unchanged.**
+
+1. **Owner decisions (2026-09-24):** B1 publish own-data charts — yes, opt-in per chart, as a saved publish record;
+   the source line is author-typed (≤120 chars, default "data supplied by the author"), the file name never shown.
+   B2 own data + CBS in one chart — wait for evidence. ADR [057](decisions/057-own-data-publish.md), spec
+   [own-data publish](superpowers/specs/2026-09-24-own-data-publish-design.md), plan committed (`7db40738`,
+   `598d0f10`, pushed).
+2. **Build (session 127, via `superpowers:subagent-driven-development`, worktree `cdc-own-data-publish`, base
+   `598d0f10`):** 6 tasks, per-task reviews, an opus final whole-branch review, two fix waves, rulings R1–R17
+   (ledger kept in the session scratchpad). Verify block at `302c38f3`: typechecks clean, backend 218 files / 3,331
+   tests, benchmark GATE PASS (6/6, 0 fabricated), web 158 files / 2,951 tests, `next build` compiled;
+   `/code-review` LOW 0 findings. Docs commit `e7aec9ce` + `345702ce`. Merged to local `main` as `fd774a35`
+   (2026-09-25).
+3. **Session 128 (2026-09-25, owner: "continue autonomously, spawn many subagents, keep working locally"):**
+   a cheap-tier triage of open-questions #240–#321 found 10 buildable items; eight parallel worktree agents
+   (symlinked `node_modules`, one machine-wide lock for every vitest/tsc/playwright) plus later waves produced,
+   each reviewed by the session before a local `--no-ff` merge:
+   - #317 conformance threads the registered slice (`e23dc1bc`); #319 shared `app/embed/error.tsx` + #321 (i)/(ii)
+     test depth (`b88b3fb0`); #243 embed-dialog preview caveat, Escape-focus gap not reproducible in Chromium
+     (`f8e0a6fb`); #283 own-data hbar spec-bound value axis + #321 (iii) (`c281bd83`); #282 own-data validation
+     reasons translated nl/en (`537ca83d`); #309 chat `setDimmed` merges onto the reader's own hidden/dimmed series
+     (`cb6e17e8`); #287 extending card keeps the co-pilot input and carries colours by series identity
+     (`fc67d673`); #304 stale plan line (`eee89134`).
+   - Publishing: the author's look frozen at publish time (a `style` column added to the never-applied migration
+     036) and `?lang=` winning for the chart (`e2b10204`); a real-browser e2e `web/e2e/own-data-publish.spec.ts`
+     (`ac0e6047`) — **never passed locally**: run 1 timed out on `next dev`'s first compile of the public route
+     (`test.slow()` added), run 2 on harness start-up under memory pressure.
+   - An independent opus security review of the publish surface ([#322](open-questions.md), report
+     [superpowers/specs/2026-09-25-own-data-publish-security-review.md](superpowers/specs/2026-09-25-own-data-publish-security-review.md)):
+     0 Critical, 4 Important, 3 Minor. Fixed the same session by an opus fix agent (`2e836777`): opaque public
+     point ids (I-1), hidden-slot order = visible x order (I-2), note labels rebuilt from the final spec (M-1),
+     whole-log cap at publish and read + overlay cap 20 + resolved points once (I-4 a/b), no web font on public
+     pages (M-3). **Open and blocking the flag flip: I-3** — dataset retention purge and account-level delete are
+     not wired (pre-existing gap).
+   - #272 lint: diagnosed as blocked upstream (typescript-eslint has no TypeScript 7 support); the agent's working
+     fix (TS 7→6 + ESLint 10→9) was REJECTED (`0bd263f7`).
+   - `web/components/chart.tsx` move-only split, 6,535 → 4,761 lines (`c966f9c4`).
+   - A plain-English list of 13 owner decisions: [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md).
+4. **Machine incident:** swap reached 14 GB and free disk 1.5 GB (owner's other project's dev servers + a second
+   Claude session running alongside). Stopped our heavy processes, paused the agents; recovered to 13 GB free.
+5. **Measured at `c966f9c4` (verify block, local):** typecheck root + web clean; backend 219 files / 3,346 tests;
+   benchmark GATE PASS (refusal 6/6, 0 fabricated); `next build` compiled. Web: 1 failure in the block run, and
+   1–2 load-dependent timeouts in two re-runs (the 201-click publish test A5 — given a 30 s budget in
+   `d444c477` — and a lazy-loaded tab in the command-contract test), each file passing on its own; machine load
+   average 12–15 at the time. Not pushed, so no CI run exists for any of this.
+
 **Session 126 (2026-09-23, owner present). Opened on session 125's handoff: Eurostat E2a built and switched off,
 its remaining steps owner-supervised and blocked on the 2026-10-01 API cap. Owner picked #306's candidate (d),
 own-data parity. Closed with phase A merged and live, plus a same-session follow-up.**

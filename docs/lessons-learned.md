@@ -6,6 +6,46 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Sessions 127–128 — a separate adversarial security review found two real leaks the build's own review chain missed;
+## on an 8 GB machine, parallel agents need a machine-wide lock AND the owner's other work counts
+
+1. **An independent security review, AFTER the build's own final review, found two proven P1 leaks.** The own-data
+   publish build (session 127) had per-task reviews, an opus final whole-branch review and two fix waves, all of
+   which checked the pruned payload for hidden LABELS and VALUES. A separate opus reviewer (session 128), briefed
+   to attack the public surface and allowed to execute probes, found what those reviews never looked for: a
+   blanked point kept its internal `rowRef`, and an aggregate rowRef lists its member rows (`agg:count:r1+r2+r3`),
+   so a hidden COUNT was recoverable exactly; and with sort-by-value, the ORDER of a hidden slot's points was the
+   hidden ranking. It also found that dataset retention/account deletion is not wired at all (pre-existing, #322
+   I-3). Lesson: for a privacy surface, "no hidden value in the payload" is the wrong test — test "nothing in the
+   payload is a function of hidden data" (ids, order, counts, presence), and run a dedicated adversarial review
+   with executed probes before a flag flip, separate from the build's review chain.
+2. **Parallel agents on an 8 GB machine: a machine-wide lock for heavy commands worked, but the machine still hit
+   14 GB swap and 1.5 GB free disk.** Eight worktrees shared the main checkout's `node_modules` by symlink (no
+   extra installs; `/node_modules` added to `.git/info/exclude` so the symlink is not an untracked file) and every
+   vitest/tsc/playwright ran through one `mkdir`-lock script, one at a time. That kept our own load serial — but
+   the owner was running another project's dev servers and a second Claude session at the same time, and swap grew
+   until disk fell to 1.5 GB. Stopping our heavy processes and pausing the agents recovered it. Lesson: check
+   `sysctl vm.swapusage` + `df -h /` before each dispatch wave, not after; the lock protects against our own
+   parallelism only.
+3. **Symlinked `node_modules` in a worktree break `next dev` (Turbopack): "Symlink … points out of the filesystem
+   root".** Vitest and tsc work fine through the symlink; Playwright's dev-harness does not. Run e2e from the main
+   checkout (real `node_modules`).
+4. **Removing a worktree while its agent still has a queued command kills that command** ("Cannot find module
+   vitest.setup.ts"). Harmless when the run was redundant, but wait for the agent's final "no background work"
+   notification before `git worktree remove`.
+5. **A "smallest dependency fix" can be the wrong trade.** The lint crash (#272) was fixable only by downgrading
+   TypeScript 7 → 6 (typescript-eslint has no TS 7 support). The agent did exactly what it was asked; the
+   orchestrator rejected it because it weakens the compiler behind the CI typecheck gate to revive a lint step that
+   gates nothing. Brief dependency fixes with "no downgrade of anything CI depends on" up front.
+6. **The first real-browser run of a new e2e spec needs its own time budget.** `next dev` compiles a new public route
+   on the first visitor request; on a loaded machine that took over 60 s, past the suite's 90 s per-test budget.
+   `test.slow()` on that one test, with a comment saying why.
+7. **Kept from session 127 (the build itself):** a plan that tells an implementer to `export function` from a
+   `'use server'` file breaks `next build` and neither `tsc` nor CI's web job catches it (only the real build
+   does); positional blanking of `yHeaders` misaligned under sort/limit — blank by label; a hidden-only x category
+   leaked through `buildRows`' union of x keys — each found by an opus reviewer executing adversarial inputs, not by
+   reading.
+
 ## Session 126 — quote the repo's own earlier spec in a delegation brief; a self-merge can trip the
 ## auto-mode classifier after it succeeds
 
