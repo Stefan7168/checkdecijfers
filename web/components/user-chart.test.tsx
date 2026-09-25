@@ -534,7 +534,10 @@ describe('UserChartView — Publish button (own-data publish, ADR 057, Task 6)',
     const dialog = await publishFromCard();
     await waitFor(() => expect(within(dialog).getByText(/niet precies zo worden gepubliceerd/i)).toBeInTheDocument());
     expect(publishActions.publishOwnChart).not.toHaveBeenCalled();
-  });
+    // 201 real clicks, each a full card re-render: well under a second alone,
+    // but it overran vitest's 5 s default inside the full web suite on the
+    // 8 GB machine (session 128) — a budget for the load, not a slower card.
+  }, 30_000);
 });
 
 // Session 126 follow-up: the image download menu is offered only where
