@@ -375,6 +375,21 @@ function ChartEmbedDialog({
         <>
           <p className="text-sm text-muted-foreground">{t(lang, 'chart.embed.dialogExplain')}</p>
           <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.autoResizeExplain')}</p>
+          {/* Open-questions #243(b): the preview beside these controls is the
+            * live on-screen chart (chart.tsx's own canvasNode/legendNode,
+            * `chartSlot` above) — any Style-panel colour/font/frame changes,
+            * a zoomed period, or series hidden via the legend all show up
+            * here, but buildEmbedCode below only ever encodes language,
+            * chart type (and only for "as shown"), and live-embed. Making
+            * the two match would mean either re-deriving a second, pristine
+            * render just for this preview (the no-duplicate-live-instance
+            * design chart-edit-modal.tsx documents against) or teaching the
+            * embed token to carry style/zoom/hidden-series state — both are
+            * real design decisions, not attempted here. This line is the
+            * small, honest fix: say plainly which settings do and don't
+            * carry over, so the preview never reads as a promise it can't
+            * keep. */}
+          <p className="text-xs text-muted-foreground">{t(lang, 'chart.embed.previewCaveat')}</p>
         </>
       ) : null}
 

@@ -1087,6 +1087,20 @@ const nl = {
   // <iframe> itself is only the fallback for a host that blocks scripts.
   'chart.embed.autoResizeExplain':
     'De grafiek past zichzelf aan op de inhoud; de hoogte in de code is de terugvaloptie als scripts geblokkeerd zijn.',
+  // Open-questions #243(b) (session 128): the preview beside these controls
+  // is the SAME live chart shown on screen — including any kleur/lettertype/
+  // kader-aanpassingen from Opmaak, an ingezoomde periode, and verborgen
+  // reeksen — but the generated code/URL only ever encodes taal, grafiektype
+  // (alleen bij "Zoals getoond") en live-insluiten (buildEmbedCode,
+  // chart-embed-dialog.tsx); the embed page itself renders the chart's
+  // standaardopmaak (web/app/embed/[token]/page.tsx passes no
+  // presentation/zoom/hidden-series prop). Without this line the preview
+  // reads as a pixel-guarantee of what a visitor will see, which it is not —
+  // a small, honest caveat rather than the larger (and not attempted here)
+  // fix of making the token itself carry that state. Owner: keep this in
+  // sync if buildEmbedCode ever gains a new encoded field.
+  'chart.embed.previewCaveat':
+    'Dit voorbeeld toont de grafiek zoals u die nu ziet. De ingesloten grafiek gebruikt altijd de standaardopmaak: kleur-, lettertype- en kaderaanpassingen, een ingezoomde periode en verborgen reeksen worden niet meegenomen.',
   'chart.embed.languageLabel': 'Taal',
   'chart.embed.colourLabel': 'Kleuren',
   'chart.embed.colourLight': 'Licht',
@@ -2241,6 +2255,12 @@ const en: Messages = {
   'chart.embed.dialogExplain': 'Paste this code into an article to show this chart, with attribution.',
   'chart.embed.autoResizeExplain':
     'The chart resizes itself to its content; the height attribute is the fallback when scripts are blocked.',
+  // Open-questions #243(b) (session 128): see the nl entry's comment for the
+  // full reasoning — the preview is the live on-screen chart (style
+  // overrides, zoom, hidden series included) but the generated code only
+  // ever encodes language, chart type (As shown only) and live-embed.
+  'chart.embed.previewCaveat':
+    'This preview shows the chart as you see it now. The embedded chart always uses its default look: colour, font and frame changes, a zoomed period and hidden series are not carried over.',
   'chart.embed.languageLabel': 'Language',
   'chart.embed.colourLabel': 'Colours',
   'chart.embed.colourLight': 'Light',
