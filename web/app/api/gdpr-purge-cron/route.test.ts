@@ -20,11 +20,11 @@ const { runRetentionPurge, maybeAlertRetentionPurge, FakePartialError } = vi.hoi
   maybeAlertRetentionPurge: vi.fn(),
   FakePartialError: class extends Error {
     auditRowsRedacted: number;
-    leg: 'trial' | 'errorLog' | 'chartStyles';
+    leg: 'trial' | 'errorLog' | 'chartStyles' | 'datasets';
     constructor(
       message: string,
       auditRowsRedacted: number,
-      leg: 'trial' | 'errorLog' | 'chartStyles' = 'trial',
+      leg: 'trial' | 'errorLog' | 'chartStyles' | 'datasets' = 'trial',
     ) {
       super(message);
       this.name = 'RetentionPurgePartialError';
@@ -52,6 +52,14 @@ vi.mock('../../../backend/chart/user-styles.ts', () => ({
   countPurgeableChartStyles: vi.fn(),
   purgeExpiredChartStyles: vi.fn(),
   chartStylesTablePresent: vi.fn(),
+}));
+// #322 I-3: the uploaded-dataset leg's four injected functions, mocked the
+// same way.
+vi.mock('../../../backend/attachments/retention.ts', () => ({
+  countPurgeableDatasets: vi.fn(),
+  datasetsTablePresent: vi.fn(),
+  fileBytesCutoff: vi.fn(),
+  purgeExpiredDatasets: vi.fn(),
 }));
 vi.mock('../../../lib/db.ts', () => ({ getDb: vi.fn(() => ({ query: vi.fn() })) }));
 
@@ -170,6 +178,23 @@ describe('gdpr-purge-cron route', () => {
     );
     expect(detail).not.toContain('only the 90-day trial leg did not');
     expect(detail).not.toContain('only the error_log leg did not');
+  });
+
+  it('says what COMMITTED when the uploaded-dataset leg fails after the audit leg, without blaming the other legs', async () => {
+    runRetentionPurge.mockRejectedValue(new FakePartialError('dataset leg failed', 5, 'datasets'));
+    const res = await GET(req('Bearer sekrit'));
+    expect(res.status).toBe(500);
+    const detail = maybeAlertRetentionPurge.mock.calls[0]![0].detail as string;
+    expect(detail).toContain('5 redaction(s) DID commit');
+    expect(detail).toContain('only the uploaded-dataset leg did not');
+    expect(detail).not.toContain('only the chart-style leg did not');
+  });
+
+  it('wires the uploaded-dataset leg into the job (#322 I-3)', async () => {
+    await GET(req('Bearer sekrit'));
+    const options = runRetentionPurge.mock.calls[0]![0] as { datasets?: Record<string, unknown> | null };
+    expect(options.datasets).toBeTruthy();
+    expect(Object.keys(options.datasets!).sort()).toEqual(['count', 'filesCutoff', 'present', 'purge']);
   });
 
   // Migration 020 has been live since the 2026-07-17 go-live, so on THIS

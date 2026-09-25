@@ -49,6 +49,13 @@ export function fileBytesCutoff(now: Date): Date {
   return cutoff;
 }
 
+/** #322 I-3: the retention job's presence gate for this leg (the same
+ * check-not-catch rule the job's other legs follow). */
+export async function datasetsTablePresent(db: Db): Promise<boolean> {
+  const { rows } = await db.query(`select to_regclass('public.user_datasets') as t`);
+  return rows[0]?.t != null;
+}
+
 interface RedactedCounts {
   datasets: number;
   turns: number;
@@ -120,6 +127,10 @@ async function redactDatasets(tx: Db, datasetIds: number[]): Promise<number> {
  * no-op (same target values written again).
  */
 export async function deleteUserDatasets(db: Db, userId: string): Promise<RedactedCounts> {
+  // #322 I-3: "delete my question history" now calls this for every user,
+  // so a database without migration 026 must be an honest no-op, not a
+  // throw (a check, not a catch — the retention job's own rule).
+  if (!(await datasetsTablePresent(db))) return { datasets: 0, turns: 0 };
   return db.withTransaction(async (tx) => {
     const { rows } = await tx.query(`select id from user_datasets where user_id = $1 for update`, [
       userId,

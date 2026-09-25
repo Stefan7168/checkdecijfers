@@ -47,6 +47,12 @@ import {
 } from '../../../backend/chart/user-styles.ts';
 import { getDb } from '../../../lib/db.ts';
 
+import {
+  countPurgeableDatasets,
+  datasetsTablePresent,
+  fileBytesCutoff,
+  purgeExpiredDatasets,
+} from '../../../backend/attachments/retention.ts';
 // Injected, not imported by the job — ADR 001's arrow points billing → answer,
 // never back. This route and `scripts/gdpr-purge.ts` are the two composition
 // roots and they inject the SAME three functions, so the cron and the CLI can
@@ -68,6 +74,18 @@ const CHART_STYLES_LEG = {
   count: countPurgeableChartStyles,
   purge: purgeExpiredChartStyles,
   present: chartStylesTablePresent,
+};
+
+// #322 I-3 (session 129): the uploaded-dataset leg (ADR 037 point 6) — a
+// dataset, its chat turns, chart edits and any public publication are fully
+// redacted at the two-year account cutoff; the raw file bytes alone at 90
+// days. Injected the same way in both composition roots so the cron and the
+// CLI cannot describe different work.
+const DATASETS_LEG = {
+  present: datasetsTablePresent,
+  filesCutoff: fileBytesCutoff,
+  count: countPurgeableDatasets,
+  purge: purgeExpiredDatasets,
 };
 
 export async function GET(request: Request): Promise<Response> {
@@ -95,6 +113,7 @@ export async function GET(request: Request): Promise<Response> {
       apply,
       trial: TRIAL_LEG,
       chartStyles: CHART_STYLES_LEG,
+      datasets: DATASETS_LEG,
     });
     // The same operator line the CLI prints — Vercel logs are the owner's only
     // production visibility (WP12 review), and two descriptions of one run is
@@ -132,7 +151,9 @@ export async function GET(request: Request): Promise<Response> {
               ? 'the 2-year leg ran, only the 90-day trial leg did not.'
               : error.leg === 'errorLog'
                 ? 'the 2-year leg and the 90-day trial leg both ran; only the error_log leg did not.'
-                : 'the 2-year leg, the 90-day trial leg, and the error_log leg all ran; only the chart-style leg did not.'
+                : error.leg === 'chartStyles'
+                  ? 'the 2-year leg, the 90-day trial leg, and the error_log leg all ran; only the chart-style leg did not.'
+                  : 'the 2-year leg, the 90-day trial leg, the error_log leg and the chart-style leg all ran; only the uploaded-dataset leg did not.'
           }`
         : error instanceof Error
           ? error.message

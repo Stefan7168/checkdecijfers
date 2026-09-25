@@ -605,7 +605,7 @@ const nl = {
 
   // delete-history-button.tsx.
   'deleteHistory.confirmText':
-    'Weet je het zeker? Je vraagteksten worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.',
+    'Weet je het zeker? Je vraagteksten en je geüploade bestanden (met de grafieken en gesprekken daarover) worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.',
   'deleteHistory.confirmYes': 'Ja, verwijder',
   'deleteHistory.cancel': 'Annuleren',
   'deleteHistory.trigger': 'Verwijder mijn vraaggeschiedenis',
@@ -1972,7 +1972,7 @@ const en: Messages = {
   'footer.systemMapLabel': 'System map',
 
   'deleteHistory.confirmText':
-    'Are you sure? Your question texts will be permanently deleted. This cannot be undone.',
+    'Are you sure? Your question texts and your uploaded files (with their charts and chats) will be permanently deleted. This cannot be undone.',
   'deleteHistory.confirmYes': 'Yes, delete',
   'deleteHistory.cancel': 'Cancel',
   'deleteHistory.trigger': 'Delete my question history',

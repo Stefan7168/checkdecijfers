@@ -37,6 +37,7 @@ export {
   RetentionPurgePartialError,
 } from './retention-job.ts';
 export type {
+  DatasetRetentionLeg,
   InjectedRetentionLeg,
   RetentionPurgeOptions,
   RetentionPurgeSummary,

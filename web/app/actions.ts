@@ -93,7 +93,7 @@ import {
 // ADR 037 D10: loadMyThread's dataset-thread dispatch leg — deterministic,
 // zero LLM, exactly like the CBS replay it sits beside.
 import { getDatasetTurnsByThread } from '../backend/attachments/read.ts';
-import { deleteOneDataset } from '../backend/attachments/retention.ts';
+import { deleteOneDataset, deleteUserDatasets } from '../backend/attachments/retention.ts';
 import { lastChartState, replayDatasetTurns } from '../backend/attachments/replay.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { RawDatasetState } from '../backend/attachments/respond.ts';
@@ -1042,6 +1042,20 @@ export async function deleteMyQuestionHistory(): Promise<{ deletedCount: number 
     await deleteUserChartStyle(getDb(), userId);
   } catch (error) {
     await reportError('deleteMyQuestionHistory', error, { userId });
+  }
+  // #322 I-3 (session 129, ADR 037 point 6): the account-level delete also
+  // covers the reader's uploaded files — every dataset, its chat turns,
+  // chart edits and any public publication, redacted in one transaction
+  // (src/attachments/retention.ts). Unlike the chart-style wipe above this
+  // is NOT fail-soft: an upload can hold third parties' personal data, so a
+  // failure here must reach the reader as a failed delete (the button shows
+  // "deleting did not work"), never a silent success. Re-clicking is safe —
+  // the history redaction above and this leg are both idempotent.
+  try {
+    await deleteUserDatasets(getDb(), userId);
+  } catch (error) {
+    await reportError('deleteMyQuestionHistory', error, { userId });
+    throw error;
   }
   return { deletedCount: redacted.length };
 }

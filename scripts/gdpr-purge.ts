@@ -53,6 +53,12 @@ import {
 } from '../src/chart/user-styles.ts';
 import { connectFromEnv } from '../src/db/client.ts';
 
+import {
+  countPurgeableDatasets,
+  datasetsTablePresent,
+  fileBytesCutoff,
+  purgeExpiredDatasets,
+} from '../src/attachments/retention.ts';
 // The trial leg is INJECTED, not imported by the job — ADR 001's arrow points
 // billing → answer, never back. This script is one of the two composition roots
 // (the other is web/app/api/gdpr-purge-cron/route.ts) and they inject the SAME
@@ -76,6 +82,18 @@ const CHART_STYLES_LEG = {
   present: chartStylesTablePresent,
 };
 
+// #322 I-3 (session 129): the uploaded-dataset leg (ADR 037 point 6) — a
+// dataset, its chat turns, chart edits and any public publication are fully
+// redacted at the two-year account cutoff; the raw file bytes alone at 90
+// days. Injected the same way in both composition roots so the cron and the
+// CLI cannot describe different work.
+const DATASETS_LEG = {
+  present: datasetsTablePresent,
+  filesCutoff: fileBytesCutoff,
+  count: countPurgeableDatasets,
+  purge: purgeExpiredDatasets,
+};
+
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply');
   // ONE clock for both windows: two `new Date()` calls could straddle midnight
@@ -91,6 +109,7 @@ async function main(): Promise<void> {
         apply,
         trial: TRIAL_LEG,
         chartStyles: CHART_STYLES_LEG,
+        datasets: DATASETS_LEG,
       });
       console.log(describeRetentionPurge(summary));
       if (!apply) console.log('Re-run with --apply to actually redact/delete them.');
@@ -103,7 +122,9 @@ async function main(): Promise<void> {
             ? 'the 90-day trial leg then failed.'
             : error.leg === 'errorLog'
               ? 'the 90-day trial leg then ran; the error_log leg failed.'
-              : 'the 90-day trial leg and the error_log leg then ran; the chart-style leg failed.';
+              : error.leg === 'chartStyles'
+                ? 'the 90-day trial leg and the error_log leg then ran; the chart-style leg failed.'
+                : 'the 90-day trial leg, the error_log leg and the chart-style leg then ran; the uploaded-dataset leg failed.';
         console.error(
           `PARTIAL — ${error.auditRowsRedacted} audit redaction(s) COMMITTED under cutoff ` +
             `${error.auditCutoff}` +

@@ -71,6 +71,14 @@ vi.mock('../lib/error-report.ts', () => errorReport);
 const chartStyles = vi.hoisted(() => ({ deleteUserChartStyle: vi.fn() }));
 vi.mock('../backend/chart/user-styles.ts', () => chartStyles);
 
+// #322 I-3: the account-level uploaded-dataset delete deleteMyQuestionHistory
+// now also calls — mocked so the tests below can drive it (and fail it).
+const attachmentsRetention = vi.hoisted(() => ({
+  deleteOneDataset: vi.fn(),
+  deleteUserDatasets: vi.fn().mockResolvedValue({ datasets: 0, turns: 0 }),
+}));
+vi.mock('../backend/attachments/retention.ts', () => attachmentsRetention);
+
 // #252 (session 109): the live ingestion_batches.request_urls side-lookup —
 // mocked wholesale so this suite pins the WIRING (outcomeProofRequestUrls
 // calls buildAnswerProof/batchIdsForProof/fetchRequestUrlsByBatch on the
@@ -591,5 +599,30 @@ describe('deleteMyQuestionHistory — the chart-style leg (WP218 phase 2)', () =
       styleError,
       { userId: 'user-1' },
     );
+  });
+});
+
+// #322 I-3 (session 129, ADR 037 point 6): "delete my question history" also
+// deletes the reader's uploaded files — and, unlike the chart-style wipe,
+// a failure there is NOT swallowed: an upload can carry third parties'
+// personal data, so the reader must see the delete fail and retry it.
+describe('deleteMyQuestionHistory — the uploaded-dataset leg (#322 I-3)', () => {
+  it('deletes every uploaded dataset of the same user', async () => {
+    audit.deleteUserQuestionHistory.mockResolvedValue([{ id: 1 }]);
+    chartStyles.deleteUserChartStyle.mockResolvedValue(true);
+    attachmentsRetention.deleteUserDatasets.mockResolvedValue({ datasets: 2, turns: 5 });
+
+    await expect(deleteMyQuestionHistory()).resolves.toEqual({ deletedCount: 1 });
+    expect(attachmentsRetention.deleteUserDatasets).toHaveBeenCalledWith(fakeDb, 'user-1');
+  });
+
+  it('reports AND rethrows when the dataset delete fails — never a silent success', async () => {
+    audit.deleteUserQuestionHistory.mockResolvedValue([{ id: 1 }]);
+    chartStyles.deleteUserChartStyle.mockResolvedValue(true);
+    const boom = new Error('user_datasets is down');
+    attachmentsRetention.deleteUserDatasets.mockRejectedValueOnce(boom);
+
+    await expect(deleteMyQuestionHistory()).rejects.toBe(boom);
+    expect(errorReport.reportError).toHaveBeenCalledWith('deleteMyQuestionHistory', boom, { userId: 'user-1' });
   });
 });
