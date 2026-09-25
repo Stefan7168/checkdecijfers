@@ -37,14 +37,18 @@
   palette unchanged (`afabdf87`); published dumbbell/slope keep their form with a hidden series, and a split
   aggregate/derived own-data chart names each series by its split value (`2b149d27`, e2e expectations `f2fe860c` —
   `2b149d27` alone was red in CI on those two e2e strings, deploy skipped, fixed next commit).
-- **Dependabot #33/#34 merged** (actions/upload-artifact v7, actions/cache v6; merges `c566c9c5` + `ddbe5734`, CI 36123908380 green incl. deploy). #35/#36 (npm bumps) are
-  still open — next autonomous item. Load-flaky web tests tracked as [#323](open-questions.md).
+- **Dependabot #33/#34 merged** (actions/upload-artifact v7, actions/cache v6; merges `c566c9c5` + `ddbe5734`, CI 36123908380 green incl. deploy).
+- **Session 130: Dependabot #35/#36 merged + LIVE** (npm: Next 16.3.5, React 19.3.0, zod 4.6.5, cn 0.3.0, Anthropic SDK 0.126.0, vitest
+  5.0.1 and patch bumps; merges `b5a8c759` + `d8dec7f8`) **and #323 fixed** (`5d5e045d`: A5 builds its trimmed history directly, the contract
+  test pre-imports lazy chunks, `verify-block.sh ... --e2e` runs Playwright). Verify block at `d8dec7f8`+#323: typechecks clean, backend
+  219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060 (at load avg ~30), `next build` compiled; `/code-review`
+  LOW 0. CI run 36129561946 green incl. e2e + deploy; prod 200. No open PRs.
 - **Next: the publish flag flip (owner-supervised) — nothing blocks it now:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** the 13-item brief [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md);
   session 129 did items 4 (#294) and 6 (#285) and part of 3 (#260) on their recommendations — each marked "Done" in the brief.
 - **Eurostat in chat (E2a) — unchanged:** built, staged, switched off; owner steps 0/5/6 after the API cap lifts
-  2026-10-01 ([#313](open-questions.md)). Dependabot PRs #35–#36; stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
+  2026-10-01 ([#313](open-questions.md)). Stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
 - **Merging:** get an explicit in-chat GO before any merge or push that changes live deletion behaviour.
 
 ---
