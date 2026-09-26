@@ -75,6 +75,24 @@ function reachableMeasureCodes(m: CanonicalMeasure): string[] {
   return codes;
 }
 
+// Fix round 2 (owner-driven): 80590NED's Leeftijd age-band labels are NOT a
+// CBS wording error — Dutch "tot" is EXCLUSIVE ('15 tot 75 jaar' means ages
+// 15 through 74), so CBS's own English states the same band inclusively
+// ('15 to 74 years'). Mirrors scripts/english-names-fetch.ts's own copy —
+// keep both in sync (and see its own comment for the confirming detail: all
+// four of 80590NED's Leeftijd bands never overlap).
+const AGE_RANGE_NL_RE = /^(\d+) tot (\d+) jaar$/;
+const AGE_RANGE_EN_RE = /^(\d+) to (\d+) years$/;
+
+function isDutchExclusiveAgeRangePair(nl: string, en: string): boolean {
+  const nlMatch = AGE_RANGE_NL_RE.exec(nl);
+  const enMatch = AGE_RANGE_EN_RE.exec(en);
+  if (!nlMatch || !enMatch) return false;
+  const [, nlFrom, nlTo] = nlMatch;
+  const [, enFrom, enTo] = enMatch;
+  return nlFrom === enFrom && Number(enTo) === Number(nlTo) - 1;
+}
+
 const cbsMeasures = CANONICAL_MEASURES.filter((m) => sourceKeyForTableId(m.tableId) === CBS_SOURCE_KEY);
 
 /** Every {table, code, runtime title} a registered CBS canonical measure can
@@ -98,11 +116,30 @@ describe('english-names data', () => {
     }
   });
 
-  it('never maps to an empty string or a digit-changed string', () => {
-    for (const [nl, en] of Object.entries({ ...MEASURE_TITLES, ...TABLE_TITLES })) {
+  it('never maps to an empty string or a digit-changed string (Fix round 2: except the one narrow, exclusive/inclusive age-range shape)', () => {
+    // DIM_LABELS is included here from Fix round 2 on — the age-range
+    // exception only matters for dim labels, so this is also the first time
+    // this test covers that map (a coverage gap in Task 3's original test,
+    // closed as part of the same change).
+    for (const [nl, en] of Object.entries({ ...MEASURE_TITLES, ...TABLE_TITLES, ...DIM_LABELS })) {
       expect(en.trim().length).toBeGreaterThan(0);
+      if (isDutchExclusiveAgeRangePair(nl, en)) continue;
       expect((en.match(/\d+/g) ?? []).join()).toBe((nl.match(/\d+/g) ?? []).join());
     }
+  });
+
+  it('the age-range exception is narrowly scoped: only the exact exclusive/inclusive shape passes', () => {
+    // The real pairs this exception exists for (80590ned's Leeftijd bands).
+    expect(isDutchExclusiveAgeRangePair('15 tot 75 jaar', '15 to 74 years')).toBe(true);
+    expect(isDutchExclusiveAgeRangePair('15 tot 25 jaar', '15 to 24 years')).toBe(true);
+    expect(isDutchExclusiveAgeRangePair('25 tot 45 jaar', '25 to 44 years')).toBe(true);
+    expect(isDutchExclusiveAgeRangePair('45 tot 75 jaar', '45 to 74 years')).toBe(true);
+    // A genuine digit disagreement must NOT slip through disguised as this
+    // shape: same wording, but the English number is NOT "Dutch minus 1".
+    expect(isDutchExclusiveAgeRangePair('15 tot 75 jaar', '15 to 75 years')).toBe(false);
+    // Neither label matching the exact anchored shape at all must fail too.
+    expect(isDutchExclusiveAgeRangePair('Totaal', 'Total sex')).toBe(false);
+    expect(isDutchExclusiveAgeRangePair('15 tot 75 jaar', 'Something else')).toBe(false);
   });
 
   it('marks curated entries only for labels that exist in the maps', () => {

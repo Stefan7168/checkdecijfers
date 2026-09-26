@@ -115,6 +115,20 @@ export const HAND_MEASURE_TITLES: Record<string, string> = {
   // retail_turnover_yoy's own primary measure A042501_2 and its alternate
   // A042501_1) is 'Uncorrected production/turnover'.
   Ongecorrigeerd: 'Uncorrected',
+  // Fix round 2 (owner-driven, "just pick one"): this Dutch string is
+  // reachable both as house_price_index_regional's own primary measure
+  // (M001505_2, 85792NED — CBS: 'Price index purchase prices') and as
+  // average_existing_home_sale_price's alternate (same code, 85773NED — CBS:
+  // 'Price index selling prices.') — a genuine rule-3 conflict, still
+  // reported as such by scripts/english-names-fetch.ts's conflict scan
+  // (CONFLICTED no longer lists it — the conflict is resolved here, not
+  // hidden). Picked 'Price index purchase prices': BOTH tables' own CBS
+  // English TABLE titles use "purchase prices" (85773ENG 'Existing own
+  // homes; purchase prices, price indices 2020=100'; 85792ENG 'Existing own
+  // homes; purchase prices, price index 2020=100, region') — this measure
+  // title is the one that matches the table it's actually shown on either
+  // way, per that shared wording.
+  'Prijsindex verkoopprijzen': 'Price index purchase prices',
   Werkloosheidspercentage: 'Unemployment rate',
 };
 export const MEASURE_TITLES: Record<string, string> = { ...CBS_MEASURE_TITLES, ...HAND_MEASURE_TITLES };
@@ -144,6 +158,17 @@ export const TABLE_TITLES: Record<string, string> = { ...CBS_TABLE_TITLES, ...HA
 // ENG sibling) plus this file's HAND_DIM_LABELS for the four no-sibling
 // tables' codes.
 //
+// 80590ned's four Leeftijd age bands (52052 '15 tot 75 jaar', 53050
+// '15 tot 25 jaar', 53310 '25 tot 45 jaar', 53825 '45 tot 75 jaar') ARE
+// covered, in CBS_DIM_LABELS, as CBS's own '15 to 74 years' etc. — Fix
+// round 2 (owner-driven) established these are NOT a CBS wording error:
+// Dutch "tot" is exclusive (the four bands don't overlap), so CBS's English
+// states the identical ranges inclusively, one less on the upper bound. The
+// digit-invariance checks (this file's own test and
+// scripts/english-names-fetch.ts's dim-pairing check) both carry one
+// narrowly-scoped exception for exactly this shape — see
+// isDutchExclusiveAgeRangePair in either file.
+//
 // Deliberately NOT covered (each verified, not assumed — see
 // task-3-report.md for the full trace):
 //  - the bare word 'Totaal' (03759ned's Leeftijd default 10000, 80590ned's
@@ -155,12 +180,6 @@ export const TABLE_TITLES: Record<string, string> = { ...CBS_TABLE_TITLES, ...HA
 //    scripts/english-names-fetch.ts's own AMBIGUOUS_BARE_WORDS list excludes
 //    it from CBS_DIM_LABELS for exactly this reason, so it never even
 //    reaches this file to be hand-overridden — left Dutch everywhere.
-//  - 80590ned's Leeftijd code 52052 ('15 tot 75 jaar'): CBS's own English
-//    label is '15 to 74 years' — a genuine EN/NL boundary-convention
-//    difference (Dutch "tot" here reads as inclusive-sounding, English
-//    states the true inclusive upper bound), not a translation error, but
-//    the digit literally differs — exactly what the digit-invariance test
-//    exists to catch. Left Dutch; flagged to the owner (open-questions).
 //  - 85792NED's RegioS default NL01 ('Nederland'): CBS's OWN English table
 //    for this dimension leaves it as 'Nederland', unchanged (confirmed by
 //    fetching it directly — this table's RegioS is even typed inconsistently
@@ -205,6 +224,11 @@ export const CURATED: ReadonlySet<string> = new Set([
   'Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken',
   'Kalendergecorrigeerd',
   'Ongecorrigeerd',
+  // Fix round 2 (owner-driven): a resolved rule-3 conflict (see the
+  // HAND_MEASURE_TITLES entry's own comment and CONFLICTED below) — the
+  // owner picked one of CBS's own two disagreeing English forms, so this is
+  // a session's (the owner's) judgment call, not a straight CBS derivation.
+  'Prijsindex verkoopprijzen',
   'Voorraad woningen; standen en mutaties vanaf 1921',
   'Werkloosheidspercentage',
 ]);
@@ -220,14 +244,19 @@ export const CURATED: ReadonlySet<string> = new Set([
 // none) and by its own sibling test (a CONFLICTED entry must NEVER actually
 // gain a MEASURE_TITLES/TABLE_TITLES entry, which would mean the conflict
 // was silently resolved one way without this set being updated to match).
-export const CONFLICTED: ReadonlySet<string> = new Set([
-  // 'Prijsindex verkoopprijzen' is house_price_index_regional's own primary
-  // measure (M001505_2, 85792NED) — CBS: 'Price index purchase prices' —
-  // AND average_existing_home_sale_price's alternate (same code M001505_2,
-  // but on 85773NED) — CBS: 'Price index selling prices.' (verified via
-  // scripts/english-names-fetch.ts's widened conflict scan, task-3-report.md).
-  'Prijsindex verkoopprijzen',
-]);
+//
+// Empty as of Fix round 2: 'Prijsindex verkoopprijzen' was this set's one
+// entry (house_price_index_regional's own primary measure M001505_2,
+// 85792NED, CBS: 'Price index purchase prices' — vs
+// average_existing_home_sale_price's alternate, same code M001505_2 but on
+// 85773NED, CBS: 'Price index selling prices.') until the owner resolved it
+// with an explicit pick ("just pick one" — see HAND_MEASURE_TITLES's own
+// comment on that entry). scripts/english-names-fetch.ts's conflict scan is
+// UNCHANGED and still reports this exact conflict on every run (the
+// generated file still never carries this key) — the hand map is what
+// resolves it now, not the detector. Kept (with its own test) for the next
+// genuine conflict, rather than deleted now that it happens to be empty.
+export const CONFLICTED: ReadonlySet<string> = new Set([]);
 
 // --- overridden by hand --------------------------------------------------------
 // ADR 058 phase 1 (English answers, Task 3 Fix round 1): every key where a

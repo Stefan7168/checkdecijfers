@@ -62,6 +62,10 @@ export const CBS_TABLE_TITLES: Record<string, string> = {
 
 export const CBS_DIM_LABELS: Record<string, string> = {
   "000000 Alle bestedingen": "000000 All items",
+  "15 tot 25 jaar": "15 to 24 years",
+  "15 tot 75 jaar": "15 to 74 years",
+  "25 tot 45 jaar": "25 to 44 years",
+  "45 tot 75 jaar": "45 to 74 years",
   "47 Detailhandel (niet in auto's)": "47 Retail trade (not in motor vehicles)",
   "471 Supermarkten en warenhuizen": "471 Non-specialised retail sales.",
   "B-E Nijverheid (geen bouw) en energie": "B-E Industry (except construction)",

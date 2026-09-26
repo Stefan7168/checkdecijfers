@@ -103,6 +103,30 @@ function unitKey(unit: string): string {
   return unit.toLowerCase().replace(/[-\s]+/g, '').replace(/s$/, '');
 }
 
+// Fix round 2 (owner-driven, task review): 80590NED's Leeftijd age-band
+// labels are NOT a CBS wording error — Dutch "tot" is EXCLUSIVE ('15 tot 75
+// jaar' means ages 15 through 74), so CBS's own English states the same band
+// inclusively ('15 to 74 years'). The two numbers this exception allows to
+// differ are the SAME range, just each language's own idiomatic convention —
+// confirmed by checking all four of 80590NED's Leeftijd bands never overlap
+// (52052 '15 tot 75'/'15 to 74', 53050 '15 tot 25'/'15 to 24', 53310
+// '25 tot 45'/'25 to 44', 53825 '45 tot 75'/'45 to 74'). Deliberately narrow
+// (exact-anchored regexes, exact arithmetic relation) so it can never mask a
+// genuine CBS wording disagreement on a DIFFERENT shape of label — mirrored
+// in tests/registry/english-names-data.test.ts's own copy, kept in sync by
+// comment, with its own passing/failing-pair test.
+const AGE_RANGE_NL_RE = /^(\d+) tot (\d+) jaar$/;
+const AGE_RANGE_EN_RE = /^(\d+) to (\d+) years$/;
+
+function isDutchExclusiveAgeRangePair(nl: string, en: string): boolean {
+  const nlMatch = AGE_RANGE_NL_RE.exec(nl);
+  const enMatch = AGE_RANGE_EN_RE.exec(en);
+  if (!nlMatch || !enMatch) return false;
+  const [, nlFrom, nlTo] = nlMatch;
+  const [, enFrom, enTo] = enMatch;
+  return nlFrom === enFrom && Number(enTo) === Number(nlTo) - 1;
+}
+
 /** UNITS (english-names.data.ts) is keyed by CBS's usual lowercase spelling
  * ('aantal'), but some tables capitalise it ('Aantal', 82242NED's own
  * DataProperties) — translateUnit does an exact-string lookup, so this tries
@@ -228,6 +252,17 @@ function buildTableSpecs(): TableSpec[] {
       for (const [dim, code] of Object.entries(alt.dims ?? {})) addCode(spec, dim, code);
     }
     for (const code of reachableMeasureCodes(m)) spec.measureCodes.add(code);
+  }
+  // Fix round 2 (owner-driven): 80590ned's Leeftijd default (52052) is the
+  // only code that comes out of the derivation above, but a user can ask
+  // this table's own monthly-unemployment question for any of its FOUR
+  // non-overlapping age bands via an explicit dim (not just the registry's
+  // pinned default) — the controller ruling was to fetch and pair all four
+  // rather than only the one formally "reachable" today, per "include all
+  // four if unsure".
+  const leeftijd80590 = specs.get('80590');
+  if (leeftijd80590) {
+    for (const code of ['52052', '53050', '53310', '53825']) addCode(leeftijd80590, 'Leeftijd', code);
   }
   return [...specs.values()];
 }
@@ -362,7 +397,7 @@ async function processTable(spec: TableSpec) {
       }
       const nlDigits = (nl.match(/\d+/g) ?? []).join();
       const enDigits = (en.match(/\d+/g) ?? []).join();
-      if (nlDigits !== enDigits) {
+      if (nlDigits !== enDigits && !isDutchExclusiveAgeRangePair(nl, en)) {
         report.push(`    dim "${nedDim.Key}" code "${code}": DIGIT MISMATCH "${nl}" -> "${en}" — CBS's own EN/NL wording disagree on the number here; do not use, flag for the owner.`);
         continue;
       }
