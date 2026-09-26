@@ -18,25 +18,27 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 132 — owner present; verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-26-session-133-kickoff.md](session-briefs/2026-09-26-session-133-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 133 — owner present; verify against `git log` / Actions runs before
+trusting this). Previous kickoff: [session-briefs/2026-09-26-session-133-kickoff.md](session-briefs/2026-09-26-session-133-kickoff.md).**
 
-- **`main` is live and green @ `5c74e633`.** CI run 36238579801 green incl. deploy (2026-09-26); prod 200. No open PRs.
-- **Session 132 shipped:** English answers phase 1 (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md))
-  merged via PR #49 (`5954ccb2`) — DARK: `ENGLISH_ANSWERS_ENABLED` unset everywhere, no user-visible change. Verify block
-  before the PR: backend 227/227 files, web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated, build, e2e 40/40.
-  Dependabot #47 + #48 merged (Anthropic SDK 0.126 → 0.128 in root and web, 9 minor web bumps).
-- **English switch-on is gated by [#325](open-questions.md):** the checks make an altered NUMBER impossible, but five
-  review rounds kept finding word-level false passes on direction/negation meaning (e.g. "hardly rose"). Recommended fix:
-  an independent semantic comparison step (ADR 034 pattern) before the flip. **Designed session 133** (not built):
-  [spec](superpowers/specs/2026-09-26-english-meaning-check-design.md) — check C12, ≈€0.003 per English answer; awaits the owner's GO.
+- **`main` is live and green @ `3438deed`.** CI run 36252531510 green incl. deploy (2026-09-26); prod 200. No open PRs.
+- **Session 133 shipped (DARK, no user-visible change):** check C12, the English meaning check ([#325](open-questions.md),
+  ADR [059](decisions/059-english-meaning-check.md)): a second, independent AI call that compares the masked Dutch and
+  masked English of every English answer before it is shown, fail-closed to Dutch; audit role `'meaning_check'`, R8 scope
+  leg, a 13 must-reject / 6 must-pass labelled set, `npm run meaning-check:eval`/`:record`. Owner GO on design + zero-spend
+  build. Built via SDD (4 tasks + final opus review, fixes applied). Verify block: root+web tsc, backend 3659 pass / 1 todo,
+  web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated (template fallbacks 3, unchanged), web build, `audit:verify` 1–309
+  clean (2 pinned), `/code-review` LOW clean.
+- **English switch-on still waits** for the recording run after 2026-10-01 (RUNBOOK "English answers" steps 1–3 + 3b):
+  `translate:record`, `translate:eval`, then `meaning-check:record` (≈€1, Haiku vs Sonnet 5 ×3) → pick the model by the
+  measured bar (0 missed reversals, 0 false alarms), add the 14 real translations as must-pass cases; only then the owner
+  decides the `ENGLISH_ANSWERS_ENABLED` flip. English costs ≈€0.003 extra per answer for the check.
 - **Fixed live, Dutch path:** [#326](open-questions.md) — the Dutch validator let a negated trend word reverse the validated
   direction ("De inflatie daalde niet" on a real decline). Now checked / failing closed (`5c74e633`); benchmark 14/14 + 6/6
   + 0 fabricated, template fallbacks unchanged at 3; `audit:verify` 1–309 clean apart from the 2 pinned rows.
 - **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (what felt off about the looks-row
   mockups). Owner signed-in spot-check of own-data publishing still to do (RUNBOOK ADR 057 step 4).
-- **After the Anthropic API cap lifts 2026-10-01:** `translate:record` + `translate:eval` (measure English fallback
-  rates), then #325; Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
+- **After the Anthropic API cap lifts 2026-10-01:** the English recording run above (steps 1–3 + 3b); Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
   benchmark.
 - **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; English phase-1 UI gaps #324.
 ---
