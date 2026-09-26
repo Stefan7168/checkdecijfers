@@ -23,6 +23,10 @@ on top.
 3. **Measure the model choice; don't argue it.** The cheap-tier default (Haiku) missed exactly one seeded case (a
    dropped hedge) on all three repeats. A labelled set with must-reject AND must-pass cases turned "is Haiku good enough?"
    into a two-line answer.
+4. **"CI green incl. deploy" is not "deployed" — confirm a NEW deployment exists.** Re-running an older run to pick up a
+   new env flag reported `deploy: success`, but the job had skipped itself (main's tip was a newer commit) and the rerun
+   had cancelled the tip's own run, so production kept the old deployment and the first live English check came back
+   Dutch. `vercel ls --prod` showing a deployment younger than the flag is the real proof; rerun the TIP's run.
 
 ## Session 133 — a kickoff's build trigger must be measurable; give reviewers the spec, not only the brief
 
