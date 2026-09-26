@@ -1207,3 +1207,11 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 **✅ Flag flipped the same session (owner GO) — English answers LIVE since 2026-09-26.** Owner-supervised. Phases 2 (refusals/clarifications) and 3
 (chart texts) get their own specs.
 
+
+## Regional statistics → region questions (owner pick 2026-09-26, session 134; NEXT, not yet designed)
+
+Only 2 of 26 measures are regional, so ADR 054's region-set query (built, unreachable until [#267](open-questions.md)) has
+almost nothing to answer. Next step: brainstorm → spec for a regional-statistics set from ONE CBS table (candidate
+`70072ned`, re-checked live — phase 0 rejected it for schema-fingerprint churn), zero AI spend; then bundle the parser step
+(#267) into one owner-supervised recording session. Blocked first on [#329](open-questions.md) (CBS data APIs unreachable
+from the owner's machine on 2026-09-26). Kickoff: [session-briefs/2026-09-27-session-135-kickoff.md](session-briefs/2026-09-27-session-135-kickoff.md).

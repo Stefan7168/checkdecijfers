@@ -1,5 +1,43 @@
 # STATUS archive — the session log
 
+**Session 134 (2026-09-26 → 09-27 local UTC+7 — owner present; the "API cap" root-caused and lifted, English recording
+run done, English answers switched LIVE, live benchmark PASS; wrapped on the owner's "Retry later, wrap up now").**
+
+1. **State verified at start:** `main` = `47af8869` (last code `3438deed`, CI 36252531510 green incl. deploy), no open PRs,
+   prod 200. Proposed next capability (architecture-over-polish): regional statistics + region questions (#267), since only
+   2 of 26 measures are regional and ADR 054's region-set query is unreachable without the parser step.
+2. **The "API cap" was our own spend limit.** Owner reported a $100 Anthropic credit grant. A one-call probe still got
+   "specified API usage limits … 2026-10-01". In the owner's Chrome (the owner signed in) the Console's Settings →
+   **Billing** → "Spend limits" showed Monthly spend limit **$35**, $35.01 spent (100%). The 09-14 diagnosis ("Anthropic-side,
+   no lever") had only looked at Settings → Limits (rate limits). At the owner's request the session clicked "Adjust limit",
+   typed 50, and the owner pressed "Update limit"; the page then showed $50 / 70% used and the probe answered "ok". RUNBOOK
+   "Bill-shock protection", memory, #288 corrected.
+3. **English recording run (RUNBOOK steps 1–3b):** first `translate:record` (Haiku C12): 11/14 verified, 3 Dutch fallbacks,
+   zero wrong English through (B6 closing→opening stock and B12 garbled around loose `1 000 euro` placeholders = real
+   mistranslations caught by C12; B8 = C10 false alarm on 'upwards'). `meaning-check:record` ×3: Haiku missed D7 (dropped
+   hedge) every repeat; Sonnet 5 0/0/0/0, max 2.9 s. Owner GO on four fixes: `MEANING_CHECK_MODEL` = Sonnet 5; alternates-line
+   CBS names join the glossary; unit `1 000 euro` registered; `upwards?/downwards?` in the English C10 lists; prompt rule 3
+   "tot en met" → "up to and including". Final recording 13/14 verified first attempt, B10 falls back ('standcijfer'
+   mistranslated, C12 rejects). The 13 real renderings became must-pass cases (`tests/fixtures/meaning-check-real-translations.json`);
+   all 32 cases on Sonnet 5 ×3: 0/0/0/0, max 3.2 s.
+4. **Verify block + push:** root+web tsc 0; backend 230 files / 3694 pass / 1 todo; web 163 files / 3085 pass; benchmark 14/14
+   + 6/6 + 0 fabricated (template fallbacks 3, unchanged); web build 0; `audit:verify 1 400` → rows 1–309 clean (2 pinned);
+   `/code-review` LOW: no findings. Pushed `156292fa`, CI 36259045980 green incl. deploy. Docs `db889c5b`.
+5. **Live benchmark (owner chose it before the flip):** PASS — 14/14 + 6/6 + 0 fabricated, median 10.7 s, template fallbacks 4
+   (09-08: 3). All four are old R9 rules (3× period label '2025 4e kwartaal' not named; 1× clause direction on "na een daling
+   in 2023 volgde een herstel in 2024" on a rising series); none is #326's new negation message. Report `15be624a`.
+6. **English answers LIVE (owner GO):** `vercel env add ENGLISH_ANSWERS_ENABLED production` (value 1). First redeploy
+   attempt (`gh run rerun 36259045980`) reported green but its deploy job SKIPPED (main's tip was `15be624a`) and it had
+   cancelled the tip's own run 36259837787, so nothing deployed and the first live question (row 334) stayed Dutch.
+   Rerunning 36259837787 deployed (every job green incl. deploy; `vercel ls --prod` showed the new deployment). Live check,
+   owner's signed-in Chrome, EN interface: "Hoeveel faillissementen waren er in 2024?" → English body, `3,782`, English
+   source line and chips; audit row 336 `english.status = verified`, C12 Sonnet 5 "same" (2.5 s); `audit:verify 330 336`
+   clean. Wording follow-up #328 ("Pronounced bankruptcies of Companies and institutions"). Docs `10c42683`, `b8029e56`.
+7. **Regional plan blocked on CBS:** the research agent (Sonnet tier) and the session both found CBS's data APIs
+   (datasets.cbs.nl, opendata.cbs.nl, odata4.cbs.nl) resetting every TLS connection from this machine, also outside the
+   sandbox and in the built-in browser, while www.cbs.nl returns 200. Last successful ingestion batch 2026-09-16. Recorded
+   as #329; the owner chose to wrap and retry next session. Spend this session ≈ $3 of the $50 roof.
+
 **Session 133 (2026-09-26, owner present; #325 English meaning check designed, planned, built (hermetic half) and
 merged dark; wrapped on the owner's "we're wrapping up").**
 

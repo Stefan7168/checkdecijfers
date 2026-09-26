@@ -2,8 +2,8 @@
 
 **Status:** accepted 2026-09-25 (session 131, owner present, decided in chat). Design:
 [superpowers/specs/2026-09-25-english-answers-design.md](../superpowers/specs/2026-09-25-english-answers-design.md).
-Phase 1 (regular answers) specified; **built** (sessions 131-132) and merged to `main` 2026-09-26 (PR #49, `5954ccb2`); flag off, not live — the flip is gated by
-[#325](../open-questions.md). Build rulings added two checks (C7 number order, C8 sentence binding) and a fourth
+Phase 1 (regular answers) specified; **built** (sessions 131-132) and merged to `main` 2026-09-26 (PR #49, `5954ccb2`); flag switched ON 2026-09-26 (session 134, owner GO, after
+[#325](../open-questions.md) was measured) — **LIVE**. Build rulings added two checks (C7 number order, C8 sentence binding) and a fourth
 placeholder kind for digit-bearing official names (⟦G…⟧) — see the spec's §3.4 on the branch and the SDD ledger copy in
 [session-briefs/2026-09-26-session-132-kickoff.md](../session-briefs/2026-09-26-session-132-kickoff.md). Phases 2 (refusals/clarifications) and 3 (chart texts) get
 their own specs.
@@ -51,7 +51,7 @@ benchmark and the R8 reconstruction are all Dutch-coupled.
 - One small extra model call per English answer; Dutch answers unchanged in cost, bytes and fixtures.
 - A new text producer inside R8's scope, with its own reconstruction leg and tamper tests.
 - Real-model fixtures and the English eval wait for the Anthropic API cap to lift (2026-10-01); the flag stays off
-  until then.
+  until then. (Superseded: the "cap" was our own spend limit; recorded and flipped ON 2026-09-26, session 134.)
 
 ## As-built (phase 1, sessions 131-132, merged to `main` 2026-09-26 via PR #49, flag off)
 

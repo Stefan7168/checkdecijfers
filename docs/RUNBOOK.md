@@ -542,8 +542,8 @@ table is absent. Dropping `chart_edits` would simply make chart edits stop persi
 ## English answers (ADR 058) — switching it on
 
 **Status: BUILT phase 1 (sessions 131-132, 2026-09-25/26) and
-merged to `main` 2026-09-26 (PR #49), dark — `ENGLISH_ANSWERS_ENABLED` is unset everywhere (translate + C12 fixtures recorded and committed
-session 134, 2026-09-27), so the app runs byte-identically until step 4.** Translates the already-checked Dutch answer for a reader on the
+merged to `main` 2026-09-26 (PR #49); fixtures recorded and the flag switched ON (`ENGLISH_ANSWERS_ENABLED=1`, Production)
+session 134, 2026-09-26 — English answers are LIVE; see the ✅ block below.** Translates the already-checked Dutch answer for a reader on the
 English interface — numbers stay masked from the model the whole time and are filled back in by
 code, never written by the model (ADR [058](decisions/058-english-answers.md)). A failed check
 falls back to the unchanged Dutch answer with one honest line above it — nothing is ever guessed.
