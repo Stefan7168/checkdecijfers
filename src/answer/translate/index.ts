@@ -28,7 +28,7 @@ export type { EnglishLines } from './lines.ts';
 export { ENGLISH_RENDERING_SCHEMA_VERSION } from './types.ts';
 export type { EnglishAttempt, EnglishRendering } from './types.ts';
 
-export { buildTranslateRequest, TRANSLATE_JSON_SCHEMA, TRANSLATE_PROMPT_VERSION } from './prompt.ts';
+export { buildTranslateRequest, TRANSLATE_JSON_SCHEMA, TRANSLATE_PROMPT_VERSION, TRANSLATE_SYSTEM_PROMPT } from './prompt.ts';
 
 export { attachEnglish, CAVEAT_TRANSLATIONS, prepareTranslation, translateAnswer } from './translate.ts';
 export type { PreparedTranslation } from './translate.ts';

@@ -30,7 +30,11 @@ export const TRANSLATE_JSON_SCHEMA: Record<string, unknown> = {
   additionalProperties: false,
 };
 
-const SYSTEM_PROMPT = [
+/** Exported (ruling 9c, Task 6 fix round 1) so translate.ts's pre-call digit
+ * gate can check ONLY what a retry APPENDS to this fixed text — the base
+ * prompt is audited once, here, as digit-free except its own rule numbers
+ * ('1.'–'7.'). */
+export const TRANSLATE_SYSTEM_PROMPT = [
   'You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.',
   'Input: JSON with "items" (body, chips, definition, alternates) and "glossary" (Dutch name -> required English name).',
   'Rules:',
@@ -43,16 +47,46 @@ const SYSTEM_PROMPT = [
   '7. Output only the JSON object.',
 ].join('\n');
 
-/** Appended on a retry (up to 1, translateAnswer's ladder): names the
- * deterministic checks the previous attempt failed, in the model's own
- * problem-report vocabulary — never a digit (checkTranslation's problem
- * strings never carry one; a test in translate.test.ts asserts this holds
- * for the request as a whole). */
+/** Ruling 10 (Task 6 fix round 1): checkTranslation's raw `problems` strings
+ * are AUDIT text, not model-safe text — they quote item names/indices/counts
+ * and, since some of those are drawn from the Dutch source (a glossary name,
+ * a chip index), can themselves carry a digit (e.g. a problem naming
+ * 'Bevolking op 1 januari', or 'chip 1'). Sending them verbatim in a retry
+ * would smuggle a digit past the mask straight into the model's own prompt —
+ * exactly the class of bug ruling 9 fixes for the glossary. So the retry
+ * suffix below never quotes a problem string: it maps each one to a FIXED,
+ * digit-free English sentence naming which CHECK KIND failed (deduped), and
+ * the original problem strings stay where they belong — `attempts[].problems`
+ * (audit only, never sent to the model). */
+const PROBLEM_KIND_SENTENCE: [RegExp, string][] = [
+  [/^C1:/, 'Some placeholders were dropped, duplicated or invented.'],
+  [/^C2:/, 'A digit was written.'],
+  [/^C3:/, 'A direction word was changed.'],
+  [/^C4:/, 'A caveat word was dropped.'],
+  [/^C5:/, 'A required name was not used exactly.'],
+  [/^C6:/, 'The number of chips or alternates changed.'],
+  [/^C7:/, 'Numbers were reordered.'],
+  [/^C8:/, 'A number was moved away from its period or region.'],
+];
+const JSON_SHAPE_PROBLEM_SENTENCE = 'The output was not valid JSON of the required shape.';
+const FALLBACK_PROBLEM_SENTENCE = 'A translation check failed.';
+
+/** Ruling 11 (Task 6 fix round 1): translateAnswer also uses the exact
+ * literal problem strings below for a malformed/unparseable model response —
+ * mapped here to the same fixed JSON-shape sentence as any other shape
+ * failure. */
+function problemSentence(problem: string): string {
+  if (problem === 'unparseable output' || problem === 'malformed output') return JSON_SHAPE_PROBLEM_SENTENCE;
+  const match = PROBLEM_KIND_SENTENCE.find(([re]) => re.test(problem));
+  return match ? match[1] : FALLBACK_PROBLEM_SENTENCE;
+}
+
 function retrySuffix(problems: string[]): string {
+  const sentences = [...new Set(problems.map(problemSentence))];
   return [
     '',
     'STRICTER: your previous attempt failed these automatic checks. Fix every one, without changing anything else:',
-    ...problems.map((p) => `- ${p}`),
+    ...sentences.map((s) => `- ${s}`),
   ].join('\n');
 }
 
@@ -61,7 +95,8 @@ export function buildTranslateRequest(
   glossary: GlossaryEntry[],
   opts: { model?: string; retryProblems?: string[] } = {},
 ): LlmRequest {
-  const system = SYSTEM_PROMPT + (opts.retryProblems && opts.retryProblems.length > 0 ? retrySuffix(opts.retryProblems) : '');
+  const system =
+    TRANSLATE_SYSTEM_PROMPT + (opts.retryProblems && opts.retryProblems.length > 0 ? retrySuffix(opts.retryProblems) : '');
   return {
     model: opts.model ?? PHRASING_MODEL,
     maxTokens: 1200,

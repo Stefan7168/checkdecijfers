@@ -74,3 +74,42 @@ describe('createMasker', () => {
     expect(hasDigitOutsidePlaceholders('⟦Na⟧ ⟦Pb⟧')).toBe(false);
   });
 });
+
+describe('createMasker — names (ruling 9, Task 6 fix round 1)', () => {
+  it('masks a digit-bearing name WHOLE, before it can be sliced up by period/number scanning', () => {
+    const m = createMasker({
+      names: [{ dutch: 'Bevolking op 1 januari', english: 'Population on 1 January' }],
+      periodLabels: [{ dutch: '2023', english: '2023' }],
+      caveats: [],
+    });
+    const out = m.mask('Bevolking op 1 januari in Nederland was in 2023 1.234.');
+    expect(hasDigitOutsidePlaceholders(out)).toBe(false);
+    // Exactly one 'name' entry, covering the WHOLE phrase (not split into a
+    // separate '1' number placeholder plus leftover text) — its own '1'
+    // never becomes an independent number placeholder.
+    const nameEntries = m.entries.filter((e) => e.kind === 'name');
+    expect(nameEntries).toHaveLength(1);
+    expect(nameEntries[0]!.dutch).toBe('Bevolking op 1 januari');
+    expect(nameEntries[0]!.english).toBe('Population on 1 January');
+    expect(m.entries.filter((e) => e.kind === 'number').map((e) => e.dutch)).toEqual(['1.234']);
+    expect(m.entries.filter((e) => e.kind === 'period').map((e) => e.dutch)).toEqual(['2023']);
+    expect(fillPlaceholders(out, m.entries)).toBe('Population on 1 January in Nederland was in 2023 1,234.');
+  });
+
+  it('is exact and case-sensitive: a differently-cased occurrence is left to ordinary number masking', () => {
+    const m = createMasker({
+      names: [{ dutch: 'Bevolking op 1 januari', english: 'Population on 1 January' }],
+      periodLabels: [],
+      caveats: [],
+    });
+    const out = m.mask('bevolking op 1 januari');
+    expect(m.entries.filter((e) => e.kind === 'name')).toHaveLength(0);
+    expect(m.entries.filter((e) => e.kind === 'number').map((e) => e.dutch)).toEqual(['1']);
+    expect(out).toBe('bevolking op ⟦Na⟧ januari');
+  });
+
+  it('createMasker without `names` behaves exactly as before (optional, defaults to none)', () => {
+    const m = createMasker({ periodLabels: [{ dutch: '2023', english: '2023' }], caveats: [] });
+    expect(m.mask('in 2023')).toBe('in ⟦Pa⟧');
+  });
+});

@@ -9,8 +9,10 @@ import { describe, expect, it } from 'vitest';
 import { composeAnswer } from '../../../src/answer/compose/index.ts';
 import type { LlmClient, LlmRequest } from '../../../src/answer/llm/client.ts';
 import type { AnswerResponse, ComposedResponse } from '../../../src/answer/respond/types.ts';
-import { makeCell, makeResult } from '../../helpers/synthetic-results.ts';
+import { makeCell, makeResult, populationSingle } from '../../helpers/synthetic-results.ts';
 import { SOURCES } from '../../../src/sources/registry.ts';
+import { hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
+import { TRANSLATE_SYSTEM_PROMPT } from '../../../src/answer/translate/prompt.ts';
 import {
   attachEnglish,
   CAVEAT_TRANSLATIONS,
@@ -106,6 +108,69 @@ function faithfulEnglish(masked: TranslationItems): TranslationItems {
   };
 }
 
+/** Ruling 9 (Task 6 fix round 1, Critical): `populationSingle` is the
+ * FLAGSHIP digit-bearing-name case — its measure title 'Bevolking op 1
+ * januari' → 'Population on 1 January' carries a digit in BOTH languages,
+ * so before the fix it deadlocked C5 ("use the glossary name exactly",
+ * which is 'Population on 1 January') against C2 ("never write a digit").
+ * A dedicated helper (rather than reusing `makeAnswerResponse`) keeps that
+ * fixture's exact shape visible in this file. */
+async function makePopulationAnswerResponse(
+  overrides: { suggestions?: string[]; stalenessWarning?: string | null } = {},
+): Promise<AnswerResponse> {
+  const answer = await composeAnswer(populationSingle, { client: new NeverCallAnswerClient(), templateOnly: true });
+  return {
+    schemaVersion: 1,
+    kind: 'answer',
+    question: 'Hoeveel inwoners heeft Nederland?',
+    text: answer.text,
+    answer,
+    chart: null,
+    chartAlternates: [],
+    stalenessWarning: overrides.stalenessWarning ?? null,
+    parse: {},
+    result: populationSingle,
+    suggestions: overrides.suggestions ?? ['Hoe was dit een jaar eerder?'],
+  } as unknown as AnswerResponse;
+}
+
+const POPULATION_BODY_RE = /^(⟦G[a-z]+⟧) in Nederland was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)\.$/;
+const POPULATION_DEFINITION_RE = /^bevolking op (⟦N[a-z]+⟧) januari$/;
+
+/** A faithful English translation of the masked `populationSingle` body,
+ * derived from the ACTUAL maskedDutch (never hand-counted placeholder ids —
+ * same discipline as `faithfulEnglish` above). The name-masking fix (ruling
+ * 9) means 'Bevolking op 1 januari' is now ONE 'name' placeholder (⟦G..⟧) in
+ * the body; the definition text uses the lowercase, differently-cased
+ * 'bevolking op 1 januari', which name-masking's exact-case match
+ * deliberately does NOT catch (mask.test.ts pins this), so its '1' is
+ * masked as an ordinary number placeholder instead. */
+function faithfulPopulationEnglish(masked: TranslationItems): TranslationItems {
+  const bodyMatch = POPULATION_BODY_RE.exec(masked.body);
+  if (!bodyMatch) throw new Error(`unexpected masked population body shape: ${JSON.stringify(masked.body)}`);
+  const [, name, period, number] = bodyMatch;
+  const definitionMatch = masked.definition === null ? null : POPULATION_DEFINITION_RE.exec(masked.definition);
+  if (masked.definition !== null && !definitionMatch) {
+    throw new Error(`unexpected masked population definition shape: ${JSON.stringify(masked.definition)}`);
+  }
+  return {
+    body: `${name} in the Netherlands was ${number} in ${period}.`,
+    chips: masked.chips.map((chip) => chip.replace('Hoe was dit een jaar eerder?', 'What was this a year earlier?')),
+    definition: definitionMatch ? `population on ${definitionMatch[1]} January` : masked.definition,
+    alternates: masked.alternates,
+  };
+}
+
+/** Every digit in `text` outside a placeholder, checking BOTH the whole
+ * `question` and only what a retry APPENDS to the fixed system prompt
+ * (ruling 9c/10) — the rule numbers '1.'–'7.' live in the fixed base prompt
+ * and are audited there once, never re-allowed here. */
+function assertRequestCarriesNoDigit(req: LlmRequest): void {
+  expect(hasDigitOutsidePlaceholders(req.question)).toBe(false);
+  const appendix = req.system.startsWith(TRANSLATE_SYSTEM_PROMPT) ? req.system.slice(TRANSLATE_SYSTEM_PROMPT.length) : req.system;
+  expect(hasDigitOutsidePlaceholders(appendix)).toBe(false);
+}
+
 describe('translateAnswer', () => {
   it('1. a faithful translation is verified: English-notation numbers, no Dutch digits, chips carry the Dutch submit text', async () => {
     const response = await makeAnswerResponse();
@@ -133,22 +198,43 @@ describe('translateAnswer', () => {
     expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null }]);
   });
 
-  it('2. no request the model sees ever carries a digit (items or system, beyond the rule numbers)', async () => {
-    const response = await makeAnswerResponse();
+  it('2. no request the model sees ever carries a digit — using the digit-bearing population fixture, across a retry (rulings 9c/9d/10)', async () => {
+    // populationSingle's glossary carries a digit in BOTH languages
+    // ('Bevolking op 1 januari' → 'Population on 1 January'): the fixture
+    // most likely to leak a digit through the glossary if ruling 9's fix
+    // regressed. A spurious direction claim forces a real retry, so the
+    // SECOND request (with its appended retry suffix) is checked too —
+    // ruling 10's fixed, digit-free problem sentences must hold there.
+    const response = await makePopulationAnswerResponse();
     const { maskedDutch } = prepareTranslation(response);
-    const english = faithfulEnglish(maskedDutch);
-    const client = stub([JSON.stringify(english)]);
-    await translateAnswer(response, client);
+    const faithful = faithfulPopulationEnglish(maskedDutch);
+    const withSpuriousRise = { ...faithful, body: faithful.body.replace('was', 'rose to') };
+    const client = stub([JSON.stringify(withSpuriousRise), JSON.stringify(faithful)]);
 
-    expect(client.requests.length).toBeGreaterThan(0);
-    for (const req of client.requests) {
-      const { items } = JSON.parse(req.question) as { items: unknown };
-      expect(JSON.stringify(items)).not.toMatch(/\p{Nd}/u);
-      // The system prompt names its rules '1.' through '7.' — those digits
-      // are allowed; nothing else may appear.
-      const withoutRuleNumbers = req.system.replace(/^[1-7]\./gm, '');
-      expect(withoutRuleNumbers).not.toMatch(/\p{Nd}/u);
-    }
+    const rendering = await translateAnswer(response, client);
+
+    // Sanity: the retry actually happened and the deadlock is really gone.
+    expect(rendering.status).toBe('verified');
+    expect(client.requests).toHaveLength(2);
+    for (const req of client.requests) assertRequestCarriesNoDigit(req);
+    // The retry's appended text must never quote the raw problem string
+    // (which could itself carry a digit via a glossary name) — only the
+    // fixed, digit-free sentence for its check kind (ruling 10).
+    expect(client.requests[1]!.system).toContain('A direction word was changed.');
+  });
+
+  it("the population fixture (digit-bearing glossary name) verifies with a single faithful stub — no C5/C2 deadlock", async () => {
+    const response = await makePopulationAnswerResponse();
+    const { maskedDutch } = prepareTranslation(response);
+    const faithful = faithfulPopulationEnglish(maskedDutch);
+    const client = stub([JSON.stringify(faithful)]);
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('verified');
+    expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null }]);
+    expect(rendering.text).toContain('Population on 1 January');
+    expect(rendering.text).toContain('18,044,027');
   });
 
   it('3. a first attempt with a spurious direction claim (C3) fails, a corrected retry passes; the retry names the problem', async () => {
@@ -163,10 +249,13 @@ describe('translateAnswer', () => {
     expect(rendering.status).toBe('verified');
     expect(rendering.attempts).toHaveLength(2);
     expect(rendering.attempts[0]!.ok).toBe(false);
+    // The raw 'C3: ...' problem is audit-only (attempts[].problems); the
+    // retry sent to the MODEL uses ruling 10's fixed, digit-free sentence.
     expect(rendering.attempts[0]!.problems.join()).toMatch(/C3/);
     expect(rendering.attempts[1]!.ok).toBe(true);
     expect(client.requests).toHaveLength(2);
-    expect(client.requests[1]!.system).toMatch(/C3/);
+    expect(client.requests[1]!.system).not.toMatch(/C3/);
+    expect(client.requests[1]!.system).toContain('A direction word was changed.');
   });
 
   it('4. both attempts fail their checks ⇒ fallback, no English text', async () => {
@@ -187,7 +276,7 @@ describe('translateAnswer', () => {
     expect(rendering.attempts.every((a) => !a.ok)).toBe(true);
   });
 
-  it('5. the client throwing ⇒ fallback with the error recorded on the first attempt', async () => {
+  it('5. the client throwing on every attempt ⇒ fallback, the error recorded on each attempt (ruling 11: an error retries, same as a failed check)', async () => {
     const response = await makeAnswerResponse();
     const client: LlmClient = {
       complete: async () => {
@@ -199,7 +288,9 @@ describe('translateAnswer', () => {
 
     expect(rendering.status).toBe('fallback');
     expect(rendering.text).toBeNull();
+    expect(rendering.attempts).toHaveLength(2);
     expect(rendering.attempts[0]!.error).toContain('boom');
+    expect(rendering.attempts[1]!.error).toContain('boom');
   });
 
   it('7. every registered source\'s provisionalDisplay value has a caveat-translation entry', () => {
@@ -212,6 +303,110 @@ describe('translateAnswer', () => {
     // for a status absent from a source's own map) must always be covered
     // too, independent of what's actually listed in the registry today.
     expect(CAVEAT_TRANSLATIONS[' (voorlopig cijfer)']).toBe(' (provisional figure)');
+  });
+});
+
+describe('translateAnswer — fallback paths (ruling 11, Task 6 fix round 1)', () => {
+  it('an unknown registry caveat marker is caught before any model spend', async () => {
+    const response = await makeAnswerResponse();
+    // CAVEAT_TRANSLATIONS is typed Readonly but is a plain object at
+    // runtime; temporarily removing an entry exercises caveatsForResult's
+    // defensive throw without needing a second, fabricated source registry.
+    // Restored in `finally` so no other test in this file (or any other,
+    // hermetic per-file module registry) ever sees the mutation.
+    const table = CAVEAT_TRANSLATIONS as Record<string, string>;
+    const original = table[' (voorlopig cijfer)']!;
+    delete table[' (voorlopig cijfer)'];
+    try {
+      const client = stub(['{}']);
+      const rendering = await translateAnswer(response, client);
+      expect(rendering.status).toBe('fallback');
+      expect(rendering.attempts).toEqual([{ ok: false, problems: ['unknown caveat marker'], error: null }]);
+      expect(client.requests).toHaveLength(0);
+    } finally {
+      table[' (voorlopig cijfer)'] = original;
+    }
+  });
+
+  it('a digit that survives masking (a non-ASCII digit the masker cannot recognize as numeric) blocks the model call entirely', async () => {
+    // findNumericTokens (mask.ts) matches ASCII digits only (`\d`). A
+    // FULLWIDTH digit is normalized to ASCII by normalizeForScan's NFKC pass
+    // before scanning (so it IS masked — not a useful test case here); a
+    // DEVANAGARI digit is a genuine Unicode Nd character that NFKC does NOT
+    // decompose to ASCII, so it survives normalizeForScan untouched and is
+    // invisible to findNumericTokens, yet IS caught by
+    // hasDigitOutsidePlaceholders (unicode \p{Nd}) — exactly the gap the
+    // pre-call gate exists to catch, independent of the ruling-9 fix.
+    const response = await makeAnswerResponse({ suggestions: ['Hoe was dit in jaar १२३?'] });
+    const client = stub(['{}']);
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts).toEqual([{ ok: false, problems: ['C2: digit survived masking'], error: null }]);
+    expect(client.requests).toHaveLength(0);
+  });
+
+  it('an unrecognized staleness-warning shape blocks the model call entirely (no spend)', async () => {
+    const response = await makeAnswerResponse({ stalenessWarning: 'Let op: iets ongebruikelijks staat hier.' });
+    const client = stub(['{}']);
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts).toEqual([{ ok: false, problems: ['staleness warning shape unknown'], error: null }]);
+    expect(client.requests).toHaveLength(0);
+  });
+
+  it('unparseable output, then a faithful retry ⇒ verified', async () => {
+    const response = await makeAnswerResponse();
+    const { maskedDutch } = prepareTranslation(response);
+    const faithful = faithfulEnglish(maskedDutch);
+    const client = stub(['not valid json{', JSON.stringify(faithful)]);
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('verified');
+    expect(rendering.attempts).toHaveLength(2);
+    expect(rendering.attempts[0]!).toEqual({ ok: false, problems: ['unparseable output'], error: null });
+    expect(rendering.attempts[1]!.ok).toBe(true);
+    expect(client.requests[1]!.system).toContain('The output was not valid JSON of the required shape.');
+  });
+
+  it('malformed (but validly-parsed) output twice ⇒ fallback, rawTranslation is the LAST attempt\'s output', async () => {
+    const response = await makeAnswerResponse();
+    const client = stub(['{}', '{}']);
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts).toHaveLength(2);
+    expect(rendering.attempts.every((a) => a.problems.join() === 'malformed output')).toBe(true);
+    expect(rendering.rawTranslation).toEqual({});
+  });
+
+  it('a client error, then a faithful retry ⇒ verified (ruling 11: an error retries, same as a failed check)', async () => {
+    const response = await makeAnswerResponse();
+    const { maskedDutch } = prepareTranslation(response);
+    const faithful = faithfulEnglish(maskedDutch);
+    const requests: LlmRequest[] = [];
+    let calls = 0;
+    const client: LlmClient = {
+      async complete(req) {
+        requests.push(req);
+        calls += 1;
+        if (calls === 1) throw new Error('transient outage');
+        return { outputText: JSON.stringify(faithful), model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    };
+
+    const rendering = await translateAnswer(response, client);
+
+    expect(rendering.status).toBe('verified');
+    expect(rendering.attempts).toHaveLength(2);
+    expect(rendering.attempts[0]!.error).toContain('transient outage');
+    expect(rendering.attempts[1]!.ok).toBe(true);
+    expect(requests).toHaveLength(2);
   });
 });
 
