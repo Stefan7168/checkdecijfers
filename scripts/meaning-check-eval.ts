@@ -1,10 +1,18 @@
 // #325 check C12: the labelled-set eval + fixture recorder (spec §4–§5).
 // The LIVE half — deliberately NOT on the CI gate.
 //
-//   npm run meaning-check:eval     replay committed fixtures (no key, no network)
+//   npm run meaning-check:eval     replay committed fixtures (no key, no
+//                                  network, writes no report file); defaults
+//                                  to the shipped model (haiku) only — CI
+//                                  replay has nothing to gain from also
+//                                  exercising the escalation-only sonnet path
 //   npm run meaning-check:record   real calls (owner-supervised, real spend,
-//                                  blocked until the Anthropic cap lifts 2026-10-01)
-//   flags: --model=haiku|sonnet|both (default both)  --repeat=N (record/live; house standard 3)
+//                                  blocked until the Anthropic cap lifts
+//                                  2026-10-01); appends to
+//                                  benchmark/meaning-check-eval-report.json
+//   flags: --model=haiku|sonnet|both (default: haiku in replay, both in
+//          record/live; an explicit --model= always wins in every mode)
+//          --repeat=N (record/live; house standard 3)
 //
 // Scores MISSED REVERSALS (expected 'different', verdict 'same') and FALSE
 // ALARMS (expected 'same', verdict 'different'); both are flag-flip blockers,
@@ -39,7 +47,8 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const mode = args.includes('--record') ? 'record' : args.includes('--live') ? 'live' : 'replay';
   const repeat = mode === 'replay' ? 1 : Number(args.find((a) => a.startsWith('--repeat='))?.split('=')[1] ?? '1');
-  const which = args.find((a) => a.startsWith('--model='))?.split('=')[1] ?? 'both';
+  const explicitModel = args.find((a) => a.startsWith('--model='))?.split('=')[1];
+  const which = explicitModel ?? (mode === 'replay' ? 'haiku' : 'both');
   const models = which === 'both' ? Object.values(MODELS) : [MODELS[which] ?? which];
 
   // Structural guard BEFORE any spend (the same rule the CI test pins).
@@ -93,8 +102,10 @@ async function main(): Promise<void> {
     if (missed > 0 || falseAlarms > 0 || errors > 0 || flips > 0) failed = true;
   }
 
-  writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
-  console.log('\nReport: benchmark/meaning-check-eval-report.json');
+  if (mode !== 'replay') {
+    writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+    console.log('\nReport: benchmark/meaning-check-eval-report.json');
+  }
   if (failed) process.exit(1);
 }
 

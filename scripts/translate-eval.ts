@@ -12,12 +12,13 @@
 //   npm run translate:eval     replay the committed fixtures, no key, no
 //                              network — fails loudly if none are recorded
 //                              yet (see below).
-//   npm run translate:record   real Anthropic calls — 14 translate requests
-//                              plus one C12 meaning-check request per
-//                              translation that passes C1–C11 (both recorded
-//                              into tests/fixtures/llm/translate/), one
-//                              translate request per answerable benchmark
-//                              task — that (re)write the replay fixtures.
+//   npm run translate:record   real Anthropic calls that (re)write the
+//                              replay fixtures: one translate request per
+//                              answerable benchmark task (14), a second one
+//                              per task that needs a retry, and one C12
+//                              meaning-check request per translation that
+//                              passes C1–C11, all recorded into
+//                              tests/fixtures/llm/translate/.
 //
 // BLOCKED until the Anthropic workspace usage cap lifts (2026-10-01, see
 // docs/open-questions.md #288/#271) — `translate:record` is an owner-
@@ -82,19 +83,27 @@ function buildTranslateClient(mode: 'record' | 'replay', labelFor: () => string 
  * whole answer over a translate hiccup), but it means the missing-fixture
  * condition this eval script must fail LOUDLY on never reaches this script
  * as a thrown error — it arrives as an ordinary `fallback` rendering whose
- * `attempts[].error` strings happen to start with `ReplayLlmClient`'s own
- * fixed message (client.ts). Detected here by that literal prefix, never by
- * a broader "any error" rule (a real transient error must still just count
- * as one fallback case, not abort the whole run). */
+ * `attempts[].error` strings happen to CONTAIN `ReplayLlmClient`'s own fixed
+ * message (client.ts) somewhere in the string: as the whole message when the
+ * translate request itself is missing its fixture, or wrapped behind a
+ * `"meaning check: "` prefix (translate.ts) around `errorMessage`'s own
+ * `"<ErrorName>: <message>"` shape (meaning-check.ts) when it is the C12
+ * meaning-check request that is missing its fixture. Detected here by a
+ * substring test, never a broader "any error" rule (a real transient error
+ * must still just count as one fallback case, not abort the whole run). */
 function missingFixtureError(attempts: { error: string | null }[]): string | null {
   return attempts.find((a) => a.error !== null && isMissingFixtureMessage(a.error))?.error ?? null;
 }
 
-/** ReplayLlmClient's own fixed "no recorded fixture" message prefix
- * (client.ts). Final-review fold-in 3: ONLY this condition earns the
- * "run translate:record" hint — any other failure is reported as itself. */
-function isMissingFixtureMessage(message: string): boolean {
-  return message.startsWith('no recorded LLM fixture');
+/** ReplayLlmClient's own fixed "no recorded fixture" message (client.ts),
+ * matched as a substring rather than a prefix because a C12 meaning-check
+ * attempt's error arrives wrapped as `"meaning check: Error: no recorded
+ * LLM fixture…"` (translate.ts + meaning-check.ts's error formatting), not
+ * as the raw message itself. Exported for tests/answer/translate/eval.test.ts.
+ * Final-review fold-in 3: ONLY this condition earns the "run translate:record"
+ * hint — any other failure is reported as itself. */
+export function isMissingFixtureMessage(message: string): boolean {
+  return message.includes('no recorded LLM fixture');
 }
 
 /** Ruling 6/the check kinds (src/answer/translate/check.ts): C1 (placeholder

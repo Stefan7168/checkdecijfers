@@ -18,7 +18,8 @@ import { hasDigitOutsidePlaceholders } from './mask.ts';
  * 'claude-sonnet-5' only on a measured eval miss (scripts/meaning-check-eval.ts). */
 export const MEANING_CHECK_MODEL = 'claude-haiku-4-5';
 
-/** Bump when the prompt's rules change — re-keys every fixture hash. */
+/** A prompt TEXT change re-keys fixtures, not this number (it never enters
+ * the LlmRequest) — bump it only to record which prompt produced a stored verdict. */
 export const MEANING_CHECK_PROMPT_VERSION = 1;
 
 export interface MeaningItem {

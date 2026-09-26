@@ -706,5 +706,13 @@ describe('C12 meaning check in the ladder (#325)', () => {
     });
     expect(req.system).toContain('The meaning of a sentence changed: a direction, negation, strength, comparison, hedge, or which region or period a statement is about.');
     expect(req.system).not.toContain('hardly');
+    // Checked on the retry appendix only, not the whole `req.system`: the
+    // base TRANSLATE_SYSTEM_PROMPT's own numbered rules ('1.'-'7.') are a
+    // known, audited digit exception (translate.ts's prepareTranslation
+    // applies the same slice for the same reason). The retryProblems input
+    // above deliberately contains "item 2" — this proves that digit does not
+    // leak into the fixed retry sentence appended to the prompt.
+    const retryAppendix = req.system.startsWith(TRANSLATE_SYSTEM_PROMPT) ? req.system.slice(TRANSLATE_SYSTEM_PROMPT.length) : req.system;
+    expect(hasDigitOutsidePlaceholders(retryAppendix)).toBe(false);
   });
 });
