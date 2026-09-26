@@ -248,7 +248,7 @@ export async function translateAnswer(
     });
   }
 
-  const { glossary, maskedDutch, maskTable, dutch, untranslatedNames, digitSurvived } = prep;
+  const { glossary, maskedDutch, maskTable, untranslatedNames, digitSurvived } = prep;
 
   if (digitSurvived) {
     return fallbackRendering({
@@ -319,14 +319,17 @@ export async function translateAnswer(
     }
 
     if (!isTranslationItemsShape(parsed)) {
-      rawTranslation = parsed as TranslationItems;
+      // Controller ruling 14: leave rawTranslation null on malformed shape —
+      // `parsed` has not passed isTranslationItemsShape, so it is not a
+      // TranslationItems, and rawTranslation's type stays a guarantee that
+      // any non-null value is shape-valid.
       attempts.push({ ok: false, problems: ['malformed output'], error: null });
       retryProblems = ['malformed output'];
       continue;
     }
     rawTranslation = parsed;
 
-    const problems = checkTranslation({ maskedDutch, dutch, english: parsed, glossary });
+    const problems = checkTranslation({ maskedDutch, english: parsed, glossary });
     if (problems.length > 0) {
       attempts.push({ ok: false, problems, error: null });
       retryProblems = problems;

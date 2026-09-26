@@ -85,29 +85,33 @@ function checkNumberOrder(
  * must keep its companion period placeholders and region mentions in the English
  * sentence. A lost companion (e.g., periods swapped across sentences) breaks the
  * binding guarantee and attaches a number to the wrong period or region,
- * fabricating a false claim. */
+ * fabricating a false claim.
+ *
+ * Controller ruling 15 (Task 6b): region companions are read from the MASKED
+ * Dutch sentence, the same text the model saw — reading them from an
+ * independently split unmasked body (the pre-fix behaviour) can misalign
+ * sentence-for-sentence with the masked split, and a region name is plain
+ * text in maskedDutch regardless (only digit-bearing names are ⟦G…⟧-masked),
+ * so nothing is lost by reading it there instead. */
 function checkSentenceBinding(
   maskedDutch: string,
-  dutch: string,
   english: string,
   glossary: GlossaryEntry[],
 ): string | null {
   // Split into sentences.
   const dutchSentences = maskedDutch.split(/(?<=[.!?])\s+/);
-  const dutchUnmaskedSentences = dutch.split(/(?<=[.!?])\s+/);
   const englishSentences = english.split(/(?<=[.!?])\s+/);
 
   for (let i = 0; i < dutchSentences.length; i++) {
     const dlSentence = dutchSentences[i];
-    const dunSentence = dutchUnmaskedSentences[i];
     const numberMatches = numberPlaceholders(dlSentence);
 
     for (const numberPlaceholder of numberMatches) {
       // Companions: period placeholders in this Dutch sentence.
       const periodCompanions = periodPlaceholders(dlSentence);
 
-      // Companions: region glossary entries mentioned in the unmasked Dutch sentence.
-      const regionCompanions = glossary.filter((g) => g.kind === 'region' && mentions(dunSentence ?? '', g.dutch));
+      // Companions: region glossary entries mentioned in the masked Dutch sentence.
+      const regionCompanions = glossary.filter((g) => g.kind === 'region' && mentions(dlSentence ?? '', g.dutch));
 
       // Find the English sentence containing this number.
       const englishSentenceWithNumber = englishSentences.find((es) => es.includes(numberPlaceholder));
@@ -135,11 +139,10 @@ function checkSentenceBinding(
 
 export function checkTranslation(input: {
   maskedDutch: TranslationItems;
-  dutch: TranslationItems;
   english: TranslationItems;
   glossary: GlossaryEntry[];
 }): string[] {
-  const { maskedDutch, dutch, english, glossary } = input;
+  const { maskedDutch, english, glossary } = input;
   const problems: string[] = [];
   // C6 — shape first; later checks index items by position.
   if (english.chips.length !== maskedDutch.chips.length) problems.push(`C6: expected ${maskedDutch.chips.length} chips, got ${english.chips.length}`);
@@ -148,8 +151,13 @@ export function checkTranslation(input: {
   for (const [name, text] of pairs(english)) if (text.trim().length === 0) problems.push(`C6: ${name} is empty`);
   if (problems.length > 0) return problems;
 
+  // Controller ruling 15 (Task 6b): C5 reads the MASKED Dutch — the same text
+  // the model saw. A digit-free glossary name that sits inside a G-masked
+  // digit-bearing name (e.g. 'Bevolking' inside 'Bevolking op 1 januari' ->
+  // ⟦Ga⟧) no longer appears literally in maskedDutch, so C5 no longer demands
+  // its English form from a model that only ever saw the placeholder — C1
+  // already guarantees the placeholder's exact reuse.
   const masked = pairs(maskedDutch);
-  const dutchPairs = pairs(dutch);
   const out = pairs(english);
   out.forEach(([name, text], i) => {
     const want = placeholders(masked[i]![1]).join(' ');
@@ -157,7 +165,7 @@ export function checkTranslation(input: {
     if (want !== got) problems.push(`C1: ${name} placeholders differ (expected [${want}], got [${got}])`);
     if (hasDigitOutsidePlaceholders(text)) problems.push(`C2: ${name} contains a digit outside placeholders`);
     for (const g of glossary) {
-      if (mentions(dutchPairs[i]![1], g.dutch) && !mentions(text, g.english)) {
+      if (mentions(masked[i]![1], g.dutch) && !mentions(text, g.english)) {
         problems.push(`C5: ${name} must name '${g.english}' (for '${g.dutch}')`);
       }
     }
@@ -167,10 +175,13 @@ export function checkTranslation(input: {
   });
 
   // C8 for body only
-  const c8 = checkSentenceBinding(maskedDutch.body, dutch.body, english.body, glossary);
+  const c8 = checkSentenceBinding(maskedDutch.body, english.body, glossary);
   if (c8) problems.push(c8);
 
-  const nlDir = [...dutchDirections(dutch.body)].sort().join(',');
+  // C3 also reads the masked Dutch (ruling 15) — direction words are never
+  // masked, so the scan is unaffected, and it keeps every check in this
+  // function reading the one text the model actually saw.
+  const nlDir = [...dutchDirections(maskedDutch.body)].sort().join(',');
   const enDir = [...englishDirections(english.body)].sort().join(',');
   if (nlDir !== enDir) problems.push(`C3: direction claims differ (Dutch [${nlDir}], English [${enDir}])`);
 

@@ -373,7 +373,7 @@ describe('translateAnswer — fallback paths (ruling 11, Task 6 fix round 1)', (
     expect(client.requests[1]!.system).toContain('The output was not valid JSON of the required shape.');
   });
 
-  it('malformed (but validly-parsed) output twice ⇒ fallback, rawTranslation is the LAST attempt\'s output', async () => {
+  it('malformed (but validly-parsed) output twice ⇒ fallback, rawTranslation stays null (controller ruling 14)', async () => {
     const response = await makeAnswerResponse();
     const client = stub(['{}', '{}']);
 
@@ -382,7 +382,10 @@ describe('translateAnswer — fallback paths (ruling 11, Task 6 fix round 1)', (
     expect(rendering.status).toBe('fallback');
     expect(rendering.attempts).toHaveLength(2);
     expect(rendering.attempts.every((a) => a.problems.join() === 'malformed output')).toBe(true);
-    expect(rendering.rawTranslation).toEqual({});
+    // Ruling 14: a malformed (shape-invalid) parse is never assigned to
+    // rawTranslation — its type stays TranslationItems | null, so any
+    // non-null value is guaranteed shape-valid.
+    expect(rendering.rawTranslation).toBeNull();
   });
 
   it('a client error, then a faithful retry ⇒ verified (ruling 11: an error retries, same as a failed check)', async () => {
