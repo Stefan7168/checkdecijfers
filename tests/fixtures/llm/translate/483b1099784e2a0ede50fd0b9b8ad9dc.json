@@ -1,0 +1,55 @@
+{
+  "requestHash": "483b1099784e2a0ede50fd0b9b8ad9dc",
+  "question": "{\"items\":{\"body\":\"Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"Wat was gemiddeld besteedbaar inkomen van huishoudens in ⟦Nc⟧?\",\"Hoe ontwikkelde gemiddeld besteedbaar inkomen van huishoudens zich van ⟦Ne⟧ tot en met ⟦Pd⟧?\"],\"definition\":\"gemiddeld besteedbaar inkomen van huishoudens\",\"alternates\":[\"primair inkomen\",\"bruto inkomen\",\"gestandaardiseerd inkomen\"]},\"glossary\":[{\"dutch\":\"Gemiddeld inkomen\",\"english\":\"Average income\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Particuliere huishoudens\",\"english\":\"Private households\"},{\"dutch\":\"Besteedbaar inkomen\",\"english\":\"Disposable income\"},{\"dutch\":\"Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken\",\"english\":\"Income of households; income brackets, household characteristics\"}]}",
+  "label": "B12",
+  "recordedAt": "2026-09-26T16:57:35.989Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"Wat was gemiddeld besteedbaar inkomen van huishoudens in ⟦Nc⟧?\",\"Hoe ontwikkelde gemiddeld besteedbaar inkomen van huishoudens zich van ⟦Ne⟧ tot en met ⟦Pd⟧?\"],\"definition\":\"gemiddeld besteedbaar inkomen van huishoudens\",\"alternates\":[\"primair inkomen\",\"bruto inkomen\",\"gestandaardiseerd inkomen\"]},\"glossary\":[{\"dutch\":\"Gemiddeld inkomen\",\"english\":\"Average income\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Particuliere huishoudens\",\"english\":\"Private households\"},{\"dutch\":\"Besteedbaar inkomen\",\"english\":\"Disposable income\"},{\"dutch\":\"Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken\",\"english\":\"Income of households; income brackets, household characteristics\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"The average disposable income of households was ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"What was the average disposable income of households in ⟦Nc⟧?\",\"How did the average disposable income of households develop from ⟦Ne⟧ up to and including ⟦Pd⟧?\"],\"definition\":\"average disposable income of households\",\"alternates\":[\"primary income\",\"gross income\",\"standardised income\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 894,
+      "outputTokens": 118
+    }
+  }
+}

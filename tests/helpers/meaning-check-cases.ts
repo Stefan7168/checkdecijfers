@@ -12,6 +12,7 @@
 // Labels are product-policy judgments; changing one is a reviewed decision,
 // never a way to green a run (ADR 012). Grow it from measured behaviour in
 // the owner-supervised recording step.
+import { readFileSync } from 'node:fs';
 import type { TranslationItems } from '../../src/answer/translate/check.ts';
 import type { GlossaryEntry } from '../../src/answer/translate/glossary.ts';
 import type { MaskEntry } from '../../src/answer/translate/mask.ts';
@@ -151,4 +152,17 @@ export const MEANING_CHECK_CASES: MeaningCheckCase[] = [
     'In ⟦Pb⟧ lag de werkloosheid op ongeveer ⟦Na⟧.', 'In ⟦Pb⟧ unemployment stood at about ⟦Na⟧.'),
   c('S8-passive', 'voice changed', 'same',
     'In ⟦Pb⟧ werd een werkloosheid van ⟦Na⟧ gemeten.', 'In ⟦Pb⟧ an unemployment rate of ⟦Na⟧ was measured.'),
+  // --- must pass: the benchmark's REAL recorded translations (spec §4) ---
+  // Every task whose rendering verified in the last `npm run translate:record`
+  // (written by scripts/translate-eval.ts; session 134: 13 of 14, B10 fell
+  // back). Labelled 'same': they already passed C1–C12 once, so a later
+  // "different" verdict on them is a false alarm — and English fallback rate.
+  ...REAL_TRANSLATIONS().map(
+    (r): MeaningCheckCase => ({ ...r, id: `R-${r.id}`, note: `real recorded translation, benchmark ${r.id}`, expected: 'same' }),
+  ),
 ];
+
+function REAL_TRANSLATIONS(): Omit<MeaningCheckCase, 'note' | 'expected'>[] {
+  const path = new URL('../fixtures/meaning-check-real-translations.json', import.meta.url);
+  return JSON.parse(readFileSync(path, 'utf8')) as Omit<MeaningCheckCase, 'note' | 'expected'>[];
+}

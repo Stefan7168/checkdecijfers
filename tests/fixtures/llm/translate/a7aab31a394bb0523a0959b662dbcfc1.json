@@ -1,0 +1,55 @@
+{
+  "requestHash": "a7aab31a394bb0523a0959b662dbcfc1",
+  "question": "{\"items\":{\"body\":\"De bruto elektriciteitsproductie uit zonnestroom bedroeg in ⟦Pb⟧ ⟦Nc⟧ kWh⟦Ca⟧.\",\"chips\":[\"Wat was bruto elektriciteitsproductie uit zonnestroom in ⟦Nd⟧?\",\"Hoe ontwikkelde bruto elektriciteitsproductie uit zonnestroom zich van ⟦Nf⟧ tot en met ⟦Pe⟧?\"],\"definition\":\"bruto elektriciteitsproductie uit zonnestroom\",\"alternates\":[]},\"glossary\":[{\"dutch\":\"Bruto elektriciteitsproductie\",\"english\":\"Gross production of electricity\"},{\"dutch\":\"Zonnestroom\",\"english\":\"Solar photovoltaic\"},{\"dutch\":\"Hernieuwbare elektriciteit; productie en vermogen\",\"english\":\"Renewable electricity; production and capacity\"}]}",
+  "label": "B11",
+  "recordedAt": "2026-09-26T16:57:32.303Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"De bruto elektriciteitsproductie uit zonnestroom bedroeg in ⟦Pb⟧ ⟦Nc⟧ kWh⟦Ca⟧.\",\"chips\":[\"Wat was bruto elektriciteitsproductie uit zonnestroom in ⟦Nd⟧?\",\"Hoe ontwikkelde bruto elektriciteitsproductie uit zonnestroom zich van ⟦Nf⟧ tot en met ⟦Pe⟧?\"],\"definition\":\"bruto elektriciteitsproductie uit zonnestroom\",\"alternates\":[]},\"glossary\":[{\"dutch\":\"Bruto elektriciteitsproductie\",\"english\":\"Gross production of electricity\"},{\"dutch\":\"Zonnestroom\",\"english\":\"Solar photovoltaic\"},{\"dutch\":\"Hernieuwbare elektriciteit; productie en vermogen\",\"english\":\"Renewable electricity; production and capacity\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"Gross production of electricity from Solar photovoltaic was ⟦Nc⟧ kWh⟦Ca⟧ in ⟦Pb⟧.\",\"chips\":[\"What was Gross production of electricity from Solar photovoltaic in ⟦Nd⟧?\",\"How did Gross production of electricity from Solar photovoltaic develop from ⟦Nf⟧ up to and including ⟦Pe⟧?\"],\"definition\":\"Gross production of electricity from Solar photovoltaic\",\"alternates\":[]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 860,
+      "outputTokens": 139
+    }
+  }
+}

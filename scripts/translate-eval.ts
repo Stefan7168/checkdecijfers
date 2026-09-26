@@ -51,6 +51,7 @@ import {
 } from '../src/answer/llm/client.ts';
 import type { LlmClient } from '../src/answer/llm/client.ts';
 import type { AnswerResponse } from '../src/answer/respond/types.ts';
+import { prepareTranslation } from '../src/answer/translate/index.ts';
 import { createIngestedDb } from '../tests/helpers/ingested-db.ts';
 import { ANSWERABLE_TASKS } from '../tests/helpers/benchmark-intents.ts';
 import { loadLabelledSet } from '../tests/helpers/intent-expectations.ts';
@@ -59,6 +60,9 @@ const INTENT_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/intent', im
 const ANSWER_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/answer', import.meta.url));
 const TRANSLATE_FIXTURES = fileURLToPath(new URL('../tests/fixtures/llm/translate', import.meta.url));
 const REPORT_PATH = fileURLToPath(new URL('../benchmark/translate-eval-report.json', import.meta.url));
+// #325 spec §4: the verified renderings, written on record, become the C12
+// labelled set's must-pass REAL cases (tests/helpers/meaning-check-cases.ts).
+const REAL_CASES_PATH = fileURLToPath(new URL('../tests/fixtures/meaning-check-real-translations.json', import.meta.url));
 const REFERENCE_DATE = loadLabelledSet().referenceDate;
 
 interface CaseResult {
@@ -131,6 +135,7 @@ async function main(): Promise<void> {
   const translateClient = buildTranslateClient(mode, () => currentTask);
 
   const results: CaseResult[] = [];
+  const realCases: unknown[] = [];
   let loudFailure: string | null = null;
   let loudFailureIsMissingFixture = false;
 
@@ -180,6 +185,15 @@ async function main(): Promise<void> {
       }
 
       const report = reconstructionReport(record);
+      if (english.status === 'verified' && english.rawTranslation !== null) {
+        realCases.push({
+          id: taskId,
+          maskedDutch: english.maskedDutch,
+          english: english.rawTranslation,
+          glossary: prepareTranslation(response).glossary,
+          maskTable: english.maskTable,
+        });
+      }
       const c1c2 = english.status === 'verified' ? c1OrC2Problems(english.attempts) : [];
 
       results.push({
@@ -212,8 +226,8 @@ async function main(): Promise<void> {
     console.error('\n' + loudFailure);
     if (mode === 'replay' && loudFailureIsMissingFixture) {
       console.error(
-        '\nNo recorded translate fixtures yet — run `npm run translate:record` after the API cap ' +
-          'lifts (2026-10-01, docs/open-questions.md #271/#288), owner-supervised, real spend.',
+        '\nA translate fixture is missing — re-run `npm run translate:record` ' +
+          '(owner-supervised, real spend; RUNBOOK "English answers").',
       );
     }
     process.exitCode = 1;
@@ -236,6 +250,12 @@ async function main(): Promise<void> {
   if (mode === 'record') {
     writeFileSync(REPORT_PATH, `${JSON.stringify(summary, null, 2)}\n`);
     console.log(`report written to ${REPORT_PATH}`);
+  }
+  // Also on `--write-real-cases` in replay: regenerates the file from the
+  // committed fixtures without spend.
+  if (mode === 'record' || args.includes('--write-real-cases')) {
+    writeFileSync(REAL_CASES_PATH, `${JSON.stringify(realCases, null, 2)}\n`);
+    console.log(`real must-pass C12 cases written to ${REAL_CASES_PATH}`);
   }
 
   const anyReconstructionFailed = results.some((r) => !r.reconstructionOk);

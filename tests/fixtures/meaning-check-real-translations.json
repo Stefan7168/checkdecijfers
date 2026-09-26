@@ -1,0 +1,1449 @@
+[
+  {
+    "id": "B1",
+    "maskedDutch": {
+      "body": "Op ⟦Nb⟧ januari ⟦Pa⟧ telde Nederland ⟦Nc⟧ inwoners.",
+      "chips": [
+        "Wat was bevolking op ⟦Nd⟧ januari in Nederland in ⟦Ne⟧?",
+        "Hoe ontwikkelde bevolking op ⟦Ng⟧ januari in Nederland zich van ⟦Nh⟧ tot en met ⟦Pf⟧?",
+        "Wat was bevolking op ⟦Nj⟧ januari in de gemeentes Amsterdam, Rotterdam, Den Haag en Utrecht in ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "Gemiddelde bevolking (jaargemiddelde, geen standcijfer)"
+      ],
+      "definition": "bevolking op ⟦Nk⟧ januari"
+    },
+    "english": {
+      "body": "On ⟦Nb⟧ January ⟦Pa⟧ the Netherlands had ⟦Nc⟧ inhabitants.",
+      "chips": [
+        "What was the population on ⟦Nd⟧ January in the Netherlands in ⟦Ne⟧?",
+        "How did the population on ⟦Ng⟧ January in the Netherlands develop from ⟦Nh⟧ up to and including ⟦Pf⟧?",
+        "What was the population on ⟦Nj⟧ January in the municipalities Amsterdam, Rotterdam, The Hague and Utrecht in ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "Average population (annual average, not a snapshot figure)"
+      ],
+      "definition": "population on ⟦Nk⟧ January"
+    },
+    "glossary": [
+      {
+        "dutch": "Nederland",
+        "english": "the Netherlands",
+        "kind": "region",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal mannen en vrouwen",
+        "english": "Total men and women",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal",
+        "english": "Totaal",
+        "kind": "dim",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal burgerlijke staat",
+        "english": "Total marital status",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Gemiddelde bevolking",
+        "english": "Average population",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "18.044.027",
+        "english": "18,044,027",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2026",
+        "english": "2026",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Ng⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2021",
+        "english": "2021",
+        "placeholder": "⟦Nh⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pi⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nk⟧"
+      }
+    ]
+  },
+  {
+    "id": "B2",
+    "maskedDutch": {
+      "body": "Op ⟦Nb⟧ januari ⟦Pa⟧ telde Utrecht ⟦Nc⟧ inwoners.",
+      "chips": [
+        "Wat was bevolking op ⟦Nd⟧ januari in Utrecht in ⟦Ne⟧?",
+        "Hoe ontwikkelde bevolking op ⟦Ng⟧ januari in Utrecht zich van ⟦Nh⟧ tot en met ⟦Pf⟧?",
+        "Wat was bevolking op ⟦Nj⟧ januari in Nederland in ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "Gemiddelde bevolking (jaargemiddelde, geen standcijfer)"
+      ],
+      "definition": "bevolking op ⟦Nk⟧ januari"
+    },
+    "english": {
+      "body": "On ⟦Nb⟧ January ⟦Pa⟧ Utrecht had ⟦Nc⟧ inhabitants.",
+      "chips": [
+        "What was the population on ⟦Nd⟧ January in Utrecht in ⟦Ne⟧?",
+        "How did the population on ⟦Ng⟧ January in Utrecht develop from ⟦Nh⟧ up to and including ⟦Pf⟧?",
+        "What was the population on ⟦Nj⟧ January in the Netherlands in ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "Average population (annual average, not a snapshot figure)"
+      ],
+      "definition": "population on ⟦Nk⟧ January"
+    },
+    "glossary": [
+      {
+        "dutch": "Utrecht",
+        "english": "Utrecht",
+        "kind": "region",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal mannen en vrouwen",
+        "english": "Total men and women",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal",
+        "english": "Totaal",
+        "kind": "dim",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal burgerlijke staat",
+        "english": "Total marital status",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Gemiddelde bevolking",
+        "english": "Average population",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "374.238",
+        "english": "374,238",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Ng⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Nh⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pi⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nk⟧"
+      }
+    ]
+  },
+  {
+    "id": "B3",
+    "maskedDutch": {
+      "body": "De inflatie bedroeg in ⟦Pa⟧ gemiddeld ⟦Nb⟧.",
+      "chips": [
+        "Wat was inflatie (jaarmutatie CPI, alle bestedingen) in ⟦Nc⟧?",
+        "Hoe ontwikkelde inflatie (jaarmutatie CPI, alle bestedingen) zich van ⟦Ne⟧ tot en met ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "CPI indexniveau (⟦Nf⟧=⟦Ng⟧), geen mutatiepercentage"
+      ],
+      "definition": "inflatie (jaarmutatie CPI, alle bestedingen)"
+    },
+    "english": {
+      "body": "Inflation averaged ⟦Nb⟧ in ⟦Pa⟧.",
+      "chips": [
+        "What was inflation (annual rate of change CPI, all expenditure) in ⟦Nc⟧?",
+        "How did inflation (annual rate of change CPI, all expenditure) develop from ⟦Ne⟧ up to and including ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "CPI index level (⟦Nf⟧=⟦Ng⟧), not a rate of change percentage"
+      ],
+      "definition": "inflation (annual rate of change CPI, all expenditure)"
+    },
+    "glossary": [
+      {
+        "dutch": "Jaarmutatie CPI",
+        "english": "Annual rate of change CPI",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "CPI",
+        "english": "CPI",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "3,3 %",
+        "english": "3.3%",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "100",
+        "english": "100",
+        "placeholder": "⟦Ng⟧"
+      }
+    ]
+  },
+  {
+    "id": "B4",
+    "maskedDutch": {
+      "body": "De inflatie bedroeg in ⟦Pa⟧ ⟦Nk⟧, in ⟦Pc⟧ ⟦Nl⟧, in ⟦Pd⟧ ⟦Nm⟧, in ⟦Pf⟧ ⟦Nn⟧ en in ⟦Ph⟧ ⟦No⟧. Over de gehele periode van ⟦Pb⟧ tot en met ⟦Pi⟧ steeg de inflatie met ⟦Np⟧, maar deze ontwikkeling verliep niet in een rechte lijn: na een sterke stijging in ⟦Pe⟧ volgde een daling in ⟦Pg⟧ en ⟦Pj⟧.",
+      "chips": [
+        "Wat was inflatie (jaarmutatie CPI, alle bestedingen) in ⟦Nq⟧?"
+      ],
+      "alternates": [
+        "CPI indexniveau (⟦Nr⟧=⟦Ns⟧), geen mutatiepercentage"
+      ],
+      "definition": "inflatie (jaarmutatie CPI, alle bestedingen)"
+    },
+    "english": {
+      "body": "Inflation was ⟦Nk⟧ in ⟦Pa⟧, ⟦Nl⟧ in ⟦Pc⟧, ⟦Nm⟧ in ⟦Pd⟧, ⟦Nn⟧ in ⟦Pf⟧ and ⟦No⟧ in ⟦Ph⟧. Over the entire period from ⟦Pb⟧ up to and including ⟦Pi⟧, inflation rose by ⟦Np⟧, but this development did not follow a straight line: after a sharp rise in ⟦Pe⟧, a fall followed in ⟦Pg⟧ and ⟦Pj⟧.",
+      "chips": [
+        "What was inflation (Annual rate of change CPI, all expenditure) in ⟦Nq⟧?"
+      ],
+      "alternates": [
+        "CPI index level (⟦Nr⟧=⟦Ns⟧), not a rate of change percentage"
+      ],
+      "definition": "inflation (Annual rate of change CPI, all expenditure)"
+    },
+    "glossary": [
+      {
+        "dutch": "Jaarmutatie CPI",
+        "english": "Annual rate of change CPI",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "CPI",
+        "english": "CPI",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Pb⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2021",
+        "english": "2021",
+        "placeholder": "⟦Pc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2022",
+        "english": "2022",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2022",
+        "english": "2022",
+        "placeholder": "⟦Pe⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pf⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pg⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Ph⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pi⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1,3 %",
+        "english": "1.3%",
+        "placeholder": "⟦Nk⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2,7 %",
+        "english": "2.7%",
+        "placeholder": "⟦Nl⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "10,0 %",
+        "english": "10.0%",
+        "placeholder": "⟦Nm⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "3,8 %",
+        "english": "3.8%",
+        "placeholder": "⟦Nn⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "3,3 %",
+        "english": "3.3%",
+        "placeholder": "⟦No⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2,0 procentpunt",
+        "english": "2.0 percentage points",
+        "placeholder": "⟦Np⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nq⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nr⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "100",
+        "english": "100",
+        "placeholder": "⟦Ns⟧"
+      }
+    ]
+  },
+  {
+    "id": "B5",
+    "maskedDutch": {
+      "body": "Werkloosheidspercentage, seizoengecorrigeerd was in ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "Wat was werkloosheidspercentage, seizoengecorrigeerd in het eerste kwartaal van ⟦Nc⟧?",
+        "Hoe ontwikkelde werkloosheidspercentage, seizoengecorrigeerd zich van het vierde kwartaal van ⟦Nd⟧ tot en met het vierde kwartaal van ⟦Ne⟧?"
+      ],
+      "alternates": [
+        "oorspronkelijke, ongecorrigeerde cijfers"
+      ],
+      "definition": "werkloosheidspercentage, seizoengecorrigeerd"
+    },
+    "english": {
+      "body": "Unemployment rate, seasonally adjusted was in ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "What was the Unemployment rate, seasonally adjusted in the first quarter of ⟦Nc⟧?",
+        "How did the Unemployment rate, seasonally adjusted develop from the fourth quarter of ⟦Nd⟧ up to and including the fourth quarter of ⟦Ne⟧?"
+      ],
+      "alternates": [
+        "original, unadjusted figures"
+      ],
+      "definition": "Unemployment rate, seasonally adjusted"
+    },
+    "glossary": [
+      {
+        "dutch": "Werkloosheidspercentage",
+        "english": "Unemployment rate",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "Seizoengecorrigeerde cijfers",
+        "english": "Seasonally adjusted figures",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Arbeidsdeelname; kerncijfers seizoengecorrigeerd",
+        "english": "Labour participation; key figures, seasonally adjusted",
+        "kind": "table",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2025 4e kwartaal",
+        "english": "2025 Q4",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "4,0%",
+        "english": "4.0%",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2026",
+        "english": "2026",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Ne⟧"
+      }
+    ]
+  },
+  {
+    "id": "B6",
+    "maskedDutch": {
+      "body": "De woningvoorraad bedroeg per ⟦Nb⟧ januari ⟦Pa⟧ ⟦Nc⟧ x ⟦Nd⟧ ⟦Ne⟧ (= ⟦Nf⟧) woningen.",
+      "chips": [
+        "Wat was woningvoorraad per ⟦Ng⟧ januari in ⟦Nh⟧?",
+        "Hoe ontwikkelde woningvoorraad per ⟦Nj⟧ januari zich van ⟦Nk⟧ tot en met ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "stand per ⟦Nm⟧ december (Eindstand Voorraad)"
+      ],
+      "definition": "woningvoorraad per ⟦Nl⟧ januari"
+    },
+    "english": {
+      "body": "The housing stock amounted to ⟦Nb⟧ January ⟦Pa⟧ ⟦Nc⟧ x ⟦Nd⟧ ⟦Ne⟧ (= ⟦Nf⟧) dwellings.",
+      "chips": [
+        "What was the housing stock on ⟦Ng⟧ January in ⟦Nh⟧?",
+        "How did the housing stock on ⟦Nj⟧ January develop from ⟦Nk⟧ up to and including ⟦Pi⟧?"
+      ],
+      "alternates": [
+        "position on ⟦Nm⟧ December (Closing stock)"
+      ],
+      "definition": "housing stock on ⟦Nl⟧ January"
+    },
+    "glossary": [
+      {
+        "dutch": "Beginstand voorraad",
+        "english": "Opening stock",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "Eindstand Voorraad",
+        "english": "Closing stock",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "8.204",
+        "english": "8,204",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "000",
+        "english": "000",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "8.204.000",
+        "english": "8,204,000",
+        "placeholder": "⟦Nf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Ng⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nh⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pi⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Nk⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nl⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "31",
+        "english": "31",
+        "placeholder": "⟦Nm⟧"
+      }
+    ]
+  },
+  {
+    "id": "B7",
+    "maskedDutch": {
+      "body": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "Wat was gemiddelde verkoopprijs van bestaande koopwoningen in ⟦Nc⟧?",
+        "Hoe ontwikkelde gemiddelde verkoopprijs van bestaande koopwoningen zich van ⟦Ne⟧ tot en met ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs)"
+      ],
+      "definition": "gemiddelde verkoopprijs van bestaande koopwoningen"
+    },
+    "english": {
+      "body": "The Average purchase price of existing owner-occupied homes was ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "What was the Average purchase price of existing owner-occupied homes in ⟦Nc⟧?",
+        "How did the Average purchase price of existing owner-occupied homes develop from ⟦Ne⟧ up to and including ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "price index of purchase prices (market development, not composition-adjusted vs. the average price)"
+      ],
+      "definition": "Average purchase price of existing owner-occupied homes"
+    },
+    "glossary": [
+      {
+        "dutch": "Gemiddelde verkoopprijs",
+        "english": "Average purchase price",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "450.985 euro",
+        "english": "450,985 euros",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Ne⟧"
+      }
+    ]
+  },
+  {
+    "id": "B8",
+    "maskedDutch": {
+      "body": "De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg ⟦Nj⟧ in ⟦Pa⟧, ⟦Nk⟧ in ⟦Pb⟧, ⟦Nl⟧ in ⟦Pc⟧, ⟦Nm⟧ in ⟦Pd⟧, ⟦Nn⟧ in ⟦Pf⟧ en ⟦No⟧ in ⟦Ph⟧. Over deze periode was sprake van een stijging van ⟦Np⟧, hoewel de reeks niet in een rechte lijn omhoog bewoog: in ⟦Pg⟧ daalde de prijs ten opzichte van ⟦Pe⟧, waarna deze in ⟦Pi⟧ weer steeg.",
+      "chips": [
+        "Wat was gemiddelde verkoopprijs van bestaande koopwoningen in ⟦Nq⟧?"
+      ],
+      "alternates": [
+        "prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs)"
+      ],
+      "definition": "gemiddelde verkoopprijs van bestaande koopwoningen"
+    },
+    "english": {
+      "body": "The Average purchase price of existing owner-occupied homes was ⟦Nj⟧ in ⟦Pa⟧, ⟦Nk⟧ in ⟦Pb⟧, ⟦Nl⟧ in ⟦Pc⟧, ⟦Nm⟧ in ⟦Pd⟧, ⟦Nn⟧ in ⟦Pf⟧ and ⟦No⟧ in ⟦Ph⟧. Over this period there was a rise of ⟦Np⟧, although the series did not move upwards in a straight line: in ⟦Pg⟧ the price fell compared with ⟦Pe⟧, after which it rose again in ⟦Pi⟧.",
+      "chips": [
+        "What was the Average purchase price of existing owner-occupied homes in ⟦Nq⟧?"
+      ],
+      "alternates": [
+        "price index of purchase prices (market development, not composition-adjusted vs. the average price)"
+      ],
+      "definition": "Average purchase price of existing owner-occupied homes"
+    },
+    "glossary": [
+      {
+        "dutch": "Gemiddelde verkoopprijs",
+        "english": "Average purchase price",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2019",
+        "english": "2019",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Pb⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2021",
+        "english": "2021",
+        "placeholder": "⟦Pc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2022",
+        "english": "2022",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2022",
+        "english": "2022",
+        "placeholder": "⟦Pe⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pf⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pg⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Ph⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pi⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "307.978 euro",
+        "english": "307,978 euros",
+        "placeholder": "⟦Nj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "334.488 euro",
+        "english": "334,488 euros",
+        "placeholder": "⟦Nk⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "386.714 euro",
+        "english": "386,714 euros",
+        "placeholder": "⟦Nl⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "428.591 euro",
+        "english": "428,591 euros",
+        "placeholder": "⟦Nm⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "416.153 euro",
+        "english": "416,153 euros",
+        "placeholder": "⟦Nn⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "450.985 euro",
+        "english": "450,985 euros",
+        "placeholder": "⟦No⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "143.007 euro",
+        "english": "143,007 euros",
+        "placeholder": "⟦Np⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nq⟧"
+      }
+    ]
+  },
+  {
+    "id": "B9",
+    "maskedDutch": {
+      "body": "In ⟦Pa⟧ bedroeg het aantal faillissementen van bedrijven en instellingen ⟦Nb⟧ aantal.",
+      "chips": [
+        "Wat was faillissementen van bedrijven en instellingen in ⟦Nc⟧?",
+        "Hoe ontwikkelde faillissementen van bedrijven en instellingen zich van ⟦Ne⟧ tot en met ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "totaal rechtsvormen (incl. particuliere faillissementen)"
+      ],
+      "definition": "faillissementen van bedrijven en instellingen"
+    },
+    "english": {
+      "body": "In ⟦Pa⟧ the number of Pronounced bankruptcies of Companies and institutions was ⟦Nb⟧.",
+      "chips": [
+        "What were Pronounced bankruptcies of Companies and institutions in ⟦Nc⟧?",
+        "How did Pronounced bankruptcies of Companies and institutions develop from ⟦Ne⟧ up to and including ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "total legal forms (including private bankruptcies)"
+      ],
+      "definition": "Pronounced bankruptcies of Companies and institutions"
+    },
+    "glossary": [
+      {
+        "dutch": "Uitgesproken faillissementen",
+        "english": "Pronounced bankruptcies",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "Bedrijven en instellingen",
+        "english": "Companies and institutions",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Faillissementen; kerncijfers",
+        "english": "Bankruptcies; key figures",
+        "kind": "table",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "3.226",
+        "english": "3,226",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2021",
+        "english": "2021",
+        "placeholder": "⟦Ne⟧"
+      }
+    ]
+  },
+  {
+    "id": "B11",
+    "maskedDutch": {
+      "body": "De bruto elektriciteitsproductie uit zonnestroom bedroeg in ⟦Pb⟧ ⟦Nc⟧ kWh⟦Ca⟧.",
+      "chips": [
+        "Wat was bruto elektriciteitsproductie uit zonnestroom in ⟦Nd⟧?",
+        "Hoe ontwikkelde bruto elektriciteitsproductie uit zonnestroom zich van ⟦Nf⟧ tot en met ⟦Pe⟧?"
+      ],
+      "alternates": [],
+      "definition": "bruto elektriciteitsproductie uit zonnestroom"
+    },
+    "english": {
+      "body": "Gross production of electricity from Solar photovoltaic was ⟦Nc⟧ kWh⟦Ca⟧ in ⟦Pb⟧.",
+      "chips": [
+        "What was Gross production of electricity from Solar photovoltaic in ⟦Nd⟧?",
+        "How did Gross production of electricity from Solar photovoltaic develop from ⟦Nf⟧ up to and including ⟦Pe⟧?"
+      ],
+      "alternates": [],
+      "definition": "Gross production of electricity from Solar photovoltaic"
+    },
+    "glossary": [
+      {
+        "dutch": "Bruto elektriciteitsproductie",
+        "english": "Gross production of electricity",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "Zonnestroom",
+        "english": "Solar photovoltaic",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Hernieuwbare elektriciteit; productie en vermogen",
+        "english": "Renewable electricity; production and capacity",
+        "kind": "table",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "caveat",
+        "dutch": " (voorlopig cijfer)",
+        "english": " (provisional figure)",
+        "placeholder": "⟦Ca⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "21.822 mln",
+        "english": "21,822 million",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pe⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2020",
+        "english": "2020",
+        "placeholder": "⟦Nf⟧"
+      }
+    ]
+  },
+  {
+    "id": "B12",
+    "maskedDutch": {
+      "body": "Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "Wat was gemiddeld besteedbaar inkomen van huishoudens in ⟦Nc⟧?",
+        "Hoe ontwikkelde gemiddeld besteedbaar inkomen van huishoudens zich van ⟦Ne⟧ tot en met ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "primair inkomen",
+        "bruto inkomen",
+        "gestandaardiseerd inkomen"
+      ],
+      "definition": "gemiddeld besteedbaar inkomen van huishoudens"
+    },
+    "english": {
+      "body": "The average disposable income of households was ⟦Pa⟧ ⟦Nb⟧.",
+      "chips": [
+        "What was the average disposable income of households in ⟦Nc⟧?",
+        "How did the average disposable income of households develop from ⟦Ne⟧ up to and including ⟦Pd⟧?"
+      ],
+      "alternates": [
+        "primary income",
+        "gross income",
+        "standardised income"
+      ],
+      "definition": "average disposable income of households"
+    },
+    "glossary": [
+      {
+        "dutch": "Gemiddeld inkomen",
+        "english": "Average income",
+        "kind": "measure",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal",
+        "english": "Totaal",
+        "kind": "dim",
+        "translated": false
+      },
+      {
+        "dutch": "Besteedbaar inkomen",
+        "english": "Disposable income",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Particuliere huishoudens",
+        "english": "Private households",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Inkomen van huishoudens; inkomensklassen, huishoudenskenmerken",
+        "english": "Income of households; income brackets, household characteristics",
+        "kind": "table",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "57,6 1 000 euro",
+        "english": "57.6 1 000 euros",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2023",
+        "english": "2023",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2019",
+        "english": "2019",
+        "placeholder": "⟦Ne⟧"
+      }
+    ]
+  },
+  {
+    "id": "B13",
+    "maskedDutch": {
+      "body": "Op ⟦Ne⟧ januari ⟦Pa⟧ telde Nederland ⟦Nf⟧ inwoners, op ⟦Ng⟧ januari ⟦Pc⟧ waren dat ⟦Nh⟧ inwoners. Dit betekent een stijging van ⟦Ni⟧ inwoners tussen ⟦Pb⟧ en ⟦Pd⟧.",
+      "chips": [
+        "Wat was bevolking op ⟦Nj⟧ januari in Nederland in ⟦Nk⟧?",
+        "Hoe ontwikkelde bevolking op ⟦Nm⟧ januari in Nederland zich van ⟦Nn⟧ tot en met ⟦Pl⟧?",
+        "Wat was bevolking op ⟦Np⟧ januari in de gemeentes Amsterdam, Rotterdam, Den Haag en Utrecht in ⟦Po⟧?"
+      ],
+      "alternates": [
+        "Gemiddelde bevolking (jaargemiddelde, geen standcijfer)"
+      ],
+      "definition": "bevolking op ⟦Nq⟧ januari"
+    },
+    "english": {
+      "body": "On ⟦Ne⟧ January ⟦Pa⟧ the Netherlands had ⟦Nf⟧ inhabitants, on ⟦Ng⟧ January ⟦Pc⟧ that was ⟦Nh⟧ inhabitants. This represents an increase of ⟦Ni⟧ inhabitants between ⟦Pb⟧ and ⟦Pd⟧.",
+      "chips": [
+        "What was the population on ⟦Nj⟧ January in the Netherlands in ⟦Nk⟧?",
+        "How did the population on ⟦Nm⟧ January in the Netherlands develop from ⟦Nn⟧ up to and including ⟦Pl⟧?",
+        "What was the population on ⟦Np⟧ January in the municipalities Amsterdam, Rotterdam, The Hague and Utrecht in ⟦Po⟧?"
+      ],
+      "alternates": [
+        "Average population (annual average, not a snapshot figure)"
+      ],
+      "definition": "population on ⟦Nq⟧ January"
+    },
+    "glossary": [
+      {
+        "dutch": "Nederland",
+        "english": "the Netherlands",
+        "kind": "region",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal mannen en vrouwen",
+        "english": "Total men and women",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal",
+        "english": "Totaal",
+        "kind": "dim",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal burgerlijke staat",
+        "english": "Total marital status",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Gemiddelde bevolking",
+        "english": "Average population",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2024",
+        "english": "2024",
+        "placeholder": "⟦Pb⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pc⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "17.942.942",
+        "english": "17,942,942",
+        "placeholder": "⟦Nf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Ng⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "18.044.027",
+        "english": "18,044,027",
+        "placeholder": "⟦Nh⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "101.085",
+        "english": "101,085",
+        "placeholder": "⟦Ni⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2026",
+        "english": "2026",
+        "placeholder": "⟦Nk⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pl⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nm⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2021",
+        "english": "2021",
+        "placeholder": "⟦Nn⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Po⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Np⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nq⟧"
+      }
+    ]
+  },
+  {
+    "id": "B14",
+    "maskedDutch": {
+      "body": "Op ⟦Nb⟧ januari ⟦Pa⟧ had Amsterdam ⟦Nc⟧ inwoners, Rotterdam ⟦Nd⟧ inwoners, 's-Gravenhage ⟦Ne⟧ inwoners en Utrecht ⟦Nf⟧ inwoners. Amsterdam was de grootste van deze ⟦Ng⟧ gemeenten.",
+      "chips": [
+        "Wat was bevolking op ⟦Nh⟧ januari in Amsterdam, Rotterdam, 's-Gravenhage en Utrecht in ⟦Ni⟧?",
+        "Wat was bevolking op ⟦Nk⟧ januari in Nederland in ⟦Pj⟧?"
+      ],
+      "alternates": [
+        "Gemiddelde bevolking (jaargemiddelde, geen standcijfer)"
+      ],
+      "definition": "bevolking op ⟦Nl⟧ januari"
+    },
+    "english": {
+      "body": "On ⟦Nb⟧ January ⟦Pa⟧ Amsterdam had ⟦Nc⟧ inhabitants, Rotterdam ⟦Nd⟧ inhabitants, 's-Gravenhage ⟦Ne⟧ inhabitants and Utrecht ⟦Nf⟧ inhabitants. Amsterdam was the largest of these ⟦Ng⟧ municipalities.",
+      "chips": [
+        "What was the population on ⟦Nh⟧ January in Amsterdam, Rotterdam, 's-Gravenhage and Utrecht in ⟦Ni⟧?",
+        "What was the population on ⟦Nk⟧ January in the Netherlands in ⟦Pj⟧?"
+      ],
+      "alternates": [
+        "Average population (annual average, not a snapshot figure)"
+      ],
+      "definition": "population on ⟦Nl⟧ January"
+    },
+    "glossary": [
+      {
+        "dutch": "Amsterdam",
+        "english": "Amsterdam",
+        "kind": "region",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal mannen en vrouwen",
+        "english": "Total men and women",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Totaal",
+        "english": "Totaal",
+        "kind": "dim",
+        "translated": false
+      },
+      {
+        "dutch": "Totaal burgerlijke staat",
+        "english": "Total marital status",
+        "kind": "dim",
+        "translated": true
+      },
+      {
+        "dutch": "Rotterdam",
+        "english": "Rotterdam",
+        "kind": "region",
+        "translated": false
+      },
+      {
+        "dutch": "'s-Gravenhage",
+        "english": "'s-Gravenhage",
+        "kind": "region",
+        "translated": false
+      },
+      {
+        "dutch": "Utrecht",
+        "english": "Utrecht",
+        "kind": "region",
+        "translated": false
+      },
+      {
+        "dutch": "Gemiddelde bevolking",
+        "english": "Average population",
+        "kind": "measure",
+        "translated": true
+      }
+    ],
+    "maskTable": [
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pa⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nb⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "934.526",
+        "english": "934,526",
+        "placeholder": "⟦Nc⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "672.960",
+        "english": "672,960",
+        "placeholder": "⟦Nd⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "568.945",
+        "english": "568,945",
+        "placeholder": "⟦Ne⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "376.757",
+        "english": "376,757",
+        "placeholder": "⟦Nf⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "4",
+        "english": "4",
+        "placeholder": "⟦Ng⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nh⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "2026",
+        "english": "2026",
+        "placeholder": "⟦Ni⟧"
+      },
+      {
+        "kind": "period",
+        "dutch": "2025",
+        "english": "2025",
+        "placeholder": "⟦Pj⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nk⟧"
+      },
+      {
+        "kind": "number",
+        "dutch": "1",
+        "english": "1",
+        "placeholder": "⟦Nl⟧"
+      }
+    ]
+  }
+]

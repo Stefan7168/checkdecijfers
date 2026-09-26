@@ -48,11 +48,18 @@ describe('meaningItems', () => {
 });
 
 describe('the request (payload whitelist)', () => {
-  it('carries only {items:[{id,dutch,english}]}, no digit anywhere, Haiku at temperature 0', () => {
-    const req = buildMeaningCheckRequest(meaningItems(NL, EN));
-    expect(req.model).toBe(MEANING_CHECK_MODEL);
+  it('the measured-not-shipped Haiku path (eval --model=haiku) keeps temperature 0 and no thinking field', () => {
+    const req = buildMeaningCheckRequest(meaningItems(NL, EN), { model: 'claude-haiku-4-5' });
     expect(req.temperature).toBe(0);
     expect(req.thinking).toBeUndefined();
+  });
+
+  it('carries only {items:[{id,dutch,english}]}, no digit anywhere, the shipped Sonnet 5 with thinking disabled', () => {
+    const req = buildMeaningCheckRequest(meaningItems(NL, EN));
+    expect(req.model).toBe(MEANING_CHECK_MODEL);
+    expect(MEANING_CHECK_MODEL).toBe('claude-sonnet-5');
+    expect(req.temperature).toBeUndefined();
+    expect(req.thinking).toBe('disabled');
     expect(req.system).toBe(MEANING_CHECK_SYSTEM_PROMPT);
     const payload = JSON.parse(req.question) as Record<string, unknown>;
     expect(Object.keys(payload)).toEqual(['items']);

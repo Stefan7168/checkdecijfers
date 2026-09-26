@@ -14,9 +14,10 @@ import type { LlmClient, LlmRequest } from '../llm/client.ts';
 import type { TranslationItems } from './check.ts';
 import { hasDigitOutsidePlaceholders } from './mask.ts';
 
-/** Cheap tier by role, the translator's own tier (spec §2.6). Escalation to
- * 'claude-sonnet-5' only on a measured eval miss (scripts/meaning-check-eval.ts). */
-export const MEANING_CHECK_MODEL = 'claude-haiku-4-5';
+/** Escalated from the cheap tier on a measured eval miss (spec §2.6), session 134,
+ * 2026-09-26: `meaning-check:record` ×3 — Haiku missed D7 (dropped hedge) on every
+ * repeat; Sonnet 5 scored 0 missed / 0 false alarms / 0 errors / 0 flips, max 2.9 s. */
+export const MEANING_CHECK_MODEL = 'claude-sonnet-5';
 
 /** A prompt TEXT change re-keys fixtures, not this number (it never enters
  * the LlmRequest) — bump it only to record which prompt produced a stored verdict. */

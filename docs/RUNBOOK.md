@@ -127,6 +127,16 @@ docs the same day (sources in the session archive entry).
 `CRON_SECRET`-gated fail-closed; the homepage charts are LLM-free behind a 30-min cache. Runaway LLM spend is
 bounded twice (app logic + Anthropic hard caps).
 
+**✅ RESOLVED 2026-09-26 (session 134, owner present) — the 09-14 diagnosis below was WRONG.** The block was
+our OWN organisation-level **Monthly spend limit** (Console → Settings → **Billing**, scroll to the bottom section
+"Spend limits": it was **$35**, spend had hit **$35.01 = 100% used**). The 09-14 pass looked at Settings → Limits (that
+page only shows *rate* limits) and missed this section. The owner raised it to **$50** via "Adjust limit" → "Update
+limit"; a one-call Haiku probe answered immediately after (before: the 400 below). **This is the spend roof** — the app
+can never spend past it in a calendar month; it resets on the 1st (UTC). Billing also shows a $100 promotional credit
+(granted 2026-09-26, $64.98 left, expires 2027-03-25) and a $25/$50/$75 admin e-mail alert. **How to apply:** if live
+questions ever refuse with "specified API usage limits" again, open Billing → Spend limits first; raising the roof is an
+owner decision (account setting), never self-served.
+
 **⚠ Correction + live incident, 2026-09-14 (owner present, separate session — see
 [open-questions.md](open-questions.md) for the row if one gets filed) — the "€25/mo workspace cap"
 row above is STALE and the table's own "structurally impossible" conclusion no longer holds
@@ -531,9 +541,8 @@ table is absent. Dropping `chart_edits` would simply make chart edits stop persi
 ## English answers (ADR 058) — switching it on
 
 **Status: BUILT phase 1 (sessions 131-132, 2026-09-25/26) and
-merged to `main` 2026-09-26 (PR #49), dark — `ENGLISH_ANSWERS_ENABLED` is unset everywhere and no committed fixtures
-exist yet for the new translate model call, so the app runs byte-identically today whether or not
-this section has been done.** Translates the already-checked Dutch answer for a reader on the
+merged to `main` 2026-09-26 (PR #49), dark — `ENGLISH_ANSWERS_ENABLED` is unset everywhere (translate + C12 fixtures recorded and committed
+session 134, 2026-09-27), so the app runs byte-identically until step 4.** Translates the already-checked Dutch answer for a reader on the
 English interface — numbers stay masked from the model the whole time and are filled back in by
 code, never written by the model (ADR [058](decisions/058-english-answers.md)). A failed check
 falls back to the unchanged Dutch answer with one honest line above it — nothing is ever guessed.
@@ -542,14 +551,31 @@ falls back to the unchanged Dutch answer with one honest line above it — nothi
 a changed NUMBER impossible, but the meaning of words like "rose / did not rise / hardly rose" is checked by word lists,
 and the final review still found ways a reversed English sentence could pass. **Session 133 (2026-09-26, owner GO):** the
 fix is designed and its zero-spend half is built: check C12, a second, independent AI call that compares the Dutch and the
-English meaning before any English answer is shown, with the Dutch answer as the fallback (ADR [059](decisions/059-english-meaning-check.md),
-≈€0.003 per English answer). What remains is measuring it, step 3b below.
+English meaning before any English answer is shown, with the Dutch answer as the fallback (ADR [059](decisions/059-english-meaning-check.md)).
+**Measured session 134 (step 3b): it runs on Sonnet 5 (≈€0.006 per English answer, ≈€0.017 worst case) — #325's
+measurement is done; only the owner's flip decision (step 4) remains.**
 No new secret is needed (it reuses the existing `ANTHROPIC_API_KEY`); no database migration either
 (the rendering rides the existing audit row as an extra field).
 
-**Blocked until the Anthropic workspace usage cap lifts, 2026-10-01** ([open-questions
-#271](open-questions.md)/[#288](open-questions.md)) — step 1 below needs real API calls, and the
-cap currently refuses every one.
+**Unblocked 2026-09-26 (session 134):** the "cap" was our own $35 monthly spend limit, raised to $50 by the owner
+(see "Bill-shock protection" above) — step 1 below needs real API calls, which work again.
+
+**✅ Steps 1–3b DONE 2026-09-26/27 (session 134, owner present, total spend well under $2):**
+- First `translate:record` (Haiku check): 11/14 verified, 3 Dutch fallbacks, zero wrong English through — B6 ('Eindstand
+  Voorraad' rendered 'Opening stock') and B12 (sentence garbled around an unregistered '1 000 euro' unit) were real
+  mistranslations caught by C12; B8 was a C10 false alarm ('did not move upwards' — 'upwards' missing from the English list).
+- `meaning-check:record` ×3: **Haiku missed D7 (dropped hedge) every repeat → failed the bar; Sonnet 5 0 missed / 0 false
+  alarms / 0 errors / 0 flips, max 2.9 s → `MEANING_CHECK_MODEL` = `'claude-sonnet-5'`.**
+- Fixes (owner GO): alternate-line names join the glossary; `'1 000 euro'` registered as a unit; `upwards?`/`downwards?`
+  in the English C10 lists; prompt rule 3 now says "tot en met" → "up to and including" (5 of 14 first attempts had
+  written a bare "to", which Sonnet rejected — each a wasted retry).
+- Final `translate:record`: **13/14 verified on the first attempt; B10 falls back** (the translator rendered the CBS term
+  "standcijfer" as "benchmark figure"; C12 rejected it on both attempts — correct). `translate:eval` exits clean.
+- The 13 verified renderings are now must-pass cases (`tests/fixtures/meaning-check-real-translations.json`, written by
+  `translate:record`, or free from the committed fixtures with `node scripts/translate-eval.ts --write-real-cases`);
+  `meaning-check:record --model=sonnet --repeat=3` over all 32 cases: 0 / 0 / 0 / 0, max 3.2 s.
+- **Remaining: steps 4–5, the owner's flip decision.** Measured English fallback rate on the benchmark: 1 of 14 (≈7%, under
+  ADR 058's ~10% revisit trigger).
 
 Steps, in order, owner present:
 

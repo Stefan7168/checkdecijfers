@@ -1,0 +1,55 @@
+{
+  "requestHash": "1cdb139312328f8194bfe600cb91d8a5",
+  "question": "{\"items\":{\"body\":\"Op ⟦Ne⟧ januari ⟦Pa⟧ telde Nederland ⟦Nf⟧ inwoners, op ⟦Ng⟧ januari ⟦Pc⟧ waren dat ⟦Nh⟧ inwoners. Dit betekent een stijging van ⟦Ni⟧ inwoners tussen ⟦Pb⟧ en ⟦Pd⟧.\",\"chips\":[\"Wat was bevolking op ⟦Nj⟧ januari in Nederland in ⟦Nk⟧?\",\"Hoe ontwikkelde bevolking op ⟦Nm⟧ januari in Nederland zich van ⟦Nn⟧ tot en met ⟦Pl⟧?\",\"Wat was bevolking op ⟦Np⟧ januari in de gemeentes Amsterdam, Rotterdam, Den Haag en Utrecht in ⟦Po⟧?\"],\"definition\":\"bevolking op ⟦Nq⟧ januari\",\"alternates\":[\"Gemiddelde bevolking (jaargemiddelde, geen standcijfer)\"]},\"glossary\":[{\"dutch\":\"Nederland\",\"english\":\"the Netherlands\"},{\"dutch\":\"Totaal mannen en vrouwen\",\"english\":\"Total men and women\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Totaal burgerlijke staat\",\"english\":\"Total marital status\"},{\"dutch\":\"Gemiddelde bevolking\",\"english\":\"Average population\"}]}",
+  "label": "B13",
+  "recordedAt": "2026-09-26T16:57:42.041Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"Op ⟦Ne⟧ januari ⟦Pa⟧ telde Nederland ⟦Nf⟧ inwoners, op ⟦Ng⟧ januari ⟦Pc⟧ waren dat ⟦Nh⟧ inwoners. Dit betekent een stijging van ⟦Ni⟧ inwoners tussen ⟦Pb⟧ en ⟦Pd⟧.\",\"chips\":[\"Wat was bevolking op ⟦Nj⟧ januari in Nederland in ⟦Nk⟧?\",\"Hoe ontwikkelde bevolking op ⟦Nm⟧ januari in Nederland zich van ⟦Nn⟧ tot en met ⟦Pl⟧?\",\"Wat was bevolking op ⟦Np⟧ januari in de gemeentes Amsterdam, Rotterdam, Den Haag en Utrecht in ⟦Po⟧?\"],\"definition\":\"bevolking op ⟦Nq⟧ januari\",\"alternates\":[\"Gemiddelde bevolking (jaargemiddelde, geen standcijfer)\"]},\"glossary\":[{\"dutch\":\"Nederland\",\"english\":\"the Netherlands\"},{\"dutch\":\"Totaal mannen en vrouwen\",\"english\":\"Total men and women\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Totaal burgerlijke staat\",\"english\":\"Total marital status\"},{\"dutch\":\"Gemiddelde bevolking\",\"english\":\"Average population\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"On ⟦Ne⟧ January ⟦Pa⟧ the Netherlands had ⟦Nf⟧ inhabitants, on ⟦Ng⟧ January ⟦Pc⟧ that was ⟦Nh⟧ inhabitants. This represents an increase of ⟦Ni⟧ inhabitants between ⟦Pb⟧ and ⟦Pd⟧.\",\"chips\":[\"What was the population on ⟦Nj⟧ January in the Netherlands in ⟦Nk⟧?\",\"How did the population on ⟦Nm⟧ January in the Netherlands develop from ⟦Nn⟧ up to and including ⟦Pl⟧?\",\"What was the population on ⟦Np⟧ January in the municipalities Amsterdam, Rotterdam, The Hague and Utrecht in ⟦Po⟧?\"],\"definition\":\"population on ⟦Nq⟧ January\",\"alternates\":[\"Average population (annual average, not a snapshot figure)\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1010,
+      "outputTokens": 274
+    }
+  }
+}

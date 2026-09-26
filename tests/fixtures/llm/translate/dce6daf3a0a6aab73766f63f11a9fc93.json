@@ -1,0 +1,55 @@
+{
+  "requestHash": "dce6daf3a0a6aab73766f63f11a9fc93",
+  "question": "{\"items\":{\"body\":\"De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"Wat was gemiddelde verkoopprijs van bestaande koopwoningen in ⟦Nc⟧?\",\"Hoe ontwikkelde gemiddelde verkoopprijs van bestaande koopwoningen zich van ⟦Ne⟧ tot en met ⟦Pd⟧?\"],\"definition\":\"gemiddelde verkoopprijs van bestaande koopwoningen\",\"alternates\":[\"prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs)\"]},\"glossary\":[{\"dutch\":\"Gemiddelde verkoopprijs\",\"english\":\"Average purchase price\"}]}",
+  "label": "B7",
+  "recordedAt": "2026-09-26T16:57:08.433Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"De gemiddelde verkoopprijs van bestaande koopwoningen bedroeg in ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"Wat was gemiddelde verkoopprijs van bestaande koopwoningen in ⟦Nc⟧?\",\"Hoe ontwikkelde gemiddelde verkoopprijs van bestaande koopwoningen zich van ⟦Ne⟧ tot en met ⟦Pd⟧?\"],\"definition\":\"gemiddelde verkoopprijs van bestaande koopwoningen\",\"alternates\":[\"prijsindex verkoopprijzen (marktontwikkeling, niet composition-adjusted vs. de gemiddelde prijs)\"]},\"glossary\":[{\"dutch\":\"Gemiddelde verkoopprijs\",\"english\":\"Average purchase price\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"The Average purchase price of existing owner-occupied homes was ⟦Pa⟧ ⟦Nb⟧.\",\"chips\":[\"What was the Average purchase price of existing owner-occupied homes in ⟦Nc⟧?\",\"How did the Average purchase price of existing owner-occupied homes develop from ⟦Ne⟧ up to and including ⟦Pd⟧?\"],\"definition\":\"Average purchase price of existing owner-occupied homes\",\"alternates\":[\"price index of purchase prices (market development, not composition-adjusted vs. the average price)\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 835,
+      "outputTokens": 139
+    }
+  }
+}

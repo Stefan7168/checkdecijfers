@@ -47,3 +47,29 @@ describe('glossaryForResult — translated flag (final-review fold-in 5)', () =>
     expect(g).toContainEqual({ dutch: 'Onbekende tabel', english: 'Onbekende tabel', kind: 'table', translated: false });
   });
 });
+
+// Session 134 live recording, B6: the alternates line names a DIFFERENT CBS
+// name ('stand per 31 december (Eindstand Voorraad)') than the result's
+// own cells ('Beginstand voorraad'). With only the cells' names in the
+// glossary the model reused 'Opening stock' for 'Eindstand Voorraad' (C12
+// caught it, Dutch fallback on both attempts). A listed name found verbatim in
+// an alternate label now joins the glossary, so the model is given — and C5
+// requires — CBS's own English for it.
+describe('glossaryForResult — names inside the alternates line', () => {
+  const withAlternates = (labels: string[]) =>
+    ({
+      cells: [cell({ measureTitle: 'Beginstand voorraad', regionLabel: null })],
+      attribution: { tableTitle: 'Onbekende tabel', alternates: labels.map((label) => ({ label })) },
+    }) as unknown as ValidatedResult;
+
+  it("adds a listed name found verbatim in an alternate label ('Eindstand Voorraad' → 'Closing stock')", () => {
+    const g = glossaryForResult(withAlternates(['stand per 31 december (Eindstand Voorraad)']));
+    expect(g).toContainEqual({ dutch: 'Beginstand voorraad', english: 'Opening stock', kind: 'measure', translated: true });
+    expect(g).toContainEqual({ dutch: 'Eindstand Voorraad', english: 'Closing stock', kind: 'measure', translated: true });
+  });
+
+  it('adds nothing for an alternate label that contains no listed name, and matches case-sensitively', () => {
+    const before = glossaryForResult(withAlternates([]));
+    expect(glossaryForResult(withAlternates(['primair inkomen', 'eindstand voorraad']))).toEqual(before);
+  });
+});

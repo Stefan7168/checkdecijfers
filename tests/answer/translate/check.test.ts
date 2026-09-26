@@ -399,6 +399,27 @@ describe('ruling 18: C3 — directions compared as an ORDERED sequence', () => {
 });
 
 describe('ruling 18: C10 — negation of each direction must match', () => {
+  // Session 134 live recording, B8: the faithful 'did not move upwards' read as
+  // no direction at all (EN_UP lacked 'upwards'), so the Dutch negated 'omhoog'
+  // had no English partner — a false C10 alarm and a needless Dutch fallback.
+  it("faithful: 'niet … omhoog bewoog' → 'did not move upwards' passes", () => {
+    const masked = maskWithPeriods(
+      'Er was een stijging, hoewel de reeks niet in een rechte lijn omhoog bewoog: in 2023 daalde de prijs, waarna deze in 2024 weer steeg.',
+    );
+    const [p] = phs(masked, 'P');
+    const [n] = phs(masked, 'N');
+    const english = `There was a rise, although the series did not move upwards in a straight line: in ${p} the price fell, after which it rose again in ${n}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+
+  it.each([
+    ['Het aantal ging omhoog.', 'The number moved upwards.', 'up'],
+    ['Het aantal ging omlaag.', 'The number moved downwards.', 'down'],
+  ])('upwards/downwards read as a direction: %s ~ %s', (nl, en, dir) => {
+    expect([...dutchDirections(nl)]).toEqual([dir]);
+    expect([...englishDirections(en)]).toEqual([dir]);
+  });
+
   it("adversarial: 'niet gedaald' → 'has fallen' fails", () => {
     const masked = maskWithPeriods('Het aantal is sinds 2022 niet gedaald en was 1.234.');
     const [p] = phs(masked, 'P');

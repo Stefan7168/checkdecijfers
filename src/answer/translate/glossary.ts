@@ -13,7 +13,7 @@
 // cbs-words.ts re-exports its converters straight into the web's
 // client-side chart bundle (via the web/backend symlink), so nothing in
 // english-names.ts's import graph may reach into src/answer/.
-import { baseRegionLabel } from '../compose/format.ts';
+import { baseRegionLabel, displayAlternateLabel } from '../compose/format.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import {
   hasEnglishName,
@@ -23,6 +23,7 @@ import {
   translateRegion,
   translateTableTitle,
 } from '../../registry/english-names.ts';
+import { DIM_LABELS, MEASURE_TITLES } from '../../registry/english-names.data.ts';
 
 export interface GlossaryEntry {
   dutch: string;
@@ -57,7 +58,26 @@ export function glossaryForResult(result: ValidatedResult): GlossaryEntry[] {
     for (const label of Object.values(c.dimLabels)) add('dim', label, translateDimLabel(label));
   }
   add('table', result.attribution.tableTitle, translateTableTitle(result.attribution.tableTitle));
+  // Session 134 (live B6): the alternates line can name a DIFFERENT CBS name
+  // than the cells ('stand per 31 december (Eindstand Voorraad)' next to a
+  // 'Beginstand voorraad' result). A listed measure title or dim label found
+  // verbatim in it — case-sensitive, whole-word — joins the glossary, so the
+  // model is given (and C5 requires) CBS's own English, never a neighbour's.
+  for (const alt of result.attribution.alternates ?? []) {
+    const label = displayAlternateLabel(alt.label);
+    for (const dutch of Object.keys(MEASURE_TITLES)) {
+      if (containsExactly(label, dutch)) add('measure', dutch, translateMeasureTitle(dutch));
+    }
+    for (const dutch of Object.keys(DIM_LABELS)) {
+      if (containsExactly(label, dutch)) add('dim', dutch, translateDimLabel(dutch));
+    }
+  }
   return [...out.values()];
+}
+
+function containsExactly(text: string, name: string): boolean {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, 'u').test(text);
 }
 
 /** Every distinct `periodLabel` the result's cells carry, in first-seen

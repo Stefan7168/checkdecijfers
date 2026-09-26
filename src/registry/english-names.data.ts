@@ -39,6 +39,11 @@ export const UNITS: Record<string, string> = {
   aantal: 'number',
   euro: 'euros',
   'mln euro': 'million euros',
+  // Space-grouped for the same digit-token reason as 'per 1 000 inwoners' below.
+  // Registered so the masker joins '57,6 1 000 euro' into ONE placeholder
+  // (session 134 live recording, B12: unregistered, it split into three loose
+  // number placeholders and the translation garbled the sentence).
+  '1 000 euro': '1 000 euros',
   personen: 'persons',
   // Space-grouped, not 'per 1,000 inhabitants': a comma would MERGE the two
   // digit tokens '1'/'000' into one '1,000' token under the digit-invariance

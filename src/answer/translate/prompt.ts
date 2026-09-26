@@ -40,7 +40,7 @@ export const TRANSLATE_SYSTEM_PROMPT = [
   'Rules:',
   '1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.',
   '2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.',
-  '3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Add no claim, explanation or opinion.',
+  '3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate "tot en met" as "up to and including" (never a bare "to"). Add no claim, explanation or opinion.',
   '4. When a glossary name occurs, use its English form exactly as given, including capitalisation.',
   '5. "chips" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.',
   '6. Return "definition": null when the input definition is null.',

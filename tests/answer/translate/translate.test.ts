@@ -506,6 +506,47 @@ describe('prepareTranslation — units (final-review fix wave, ruling 17a)', () 
     expect(numbers.find((e) => e.dutch === '450.985 euro')?.english).toBe('450,985 euros');
     expect(prep.maskedDutch.body).not.toMatch(/euro/);
   });
+
+  // Session 134 live recording, B12: an unregistered '1 000 euro' left
+  // '57,6 1 000 euro' as three loose placeholders, and the model garbled the
+  // sentence around them (caught by C12, Dutch fallback on both attempts).
+  it("the digit-bearing factor unit '1 000 euro' travels WITH its number as one placeholder", () => {
+    const result = makeResult({
+      shape: 'single',
+      definitionLabel: 'gemiddeld besteedbaar inkomen van huishoudens',
+      cells: [
+        makeCell({
+          table: '83932NED',
+          measure: 'M000002',
+          measureTitle: 'Gemiddeld inkomen',
+          region: null,
+          periodCode: '2023JJ00',
+          periodLabel: '2023',
+          value: 57.6,
+          unit: '1 000 euro',
+          decimals: 1,
+        }),
+      ],
+    });
+    const response = {
+      schemaVersion: 1,
+      kind: 'answer',
+      question: 'Wat was het gemiddeld besteedbaar inkomen van huishoudens in 2023?',
+      text: '',
+      answer: { body: 'Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in 2023 57,6 1 000 euro.' },
+      chart: null,
+      chartAlternates: [],
+      stalenessWarning: null,
+      parse: {},
+      result,
+      suggestions: [],
+    } as unknown as AnswerResponse;
+    const prep = prepareTranslation(response);
+    const numbers = prep.maskTable.filter((e) => e.kind === 'number');
+    expect(numbers).toHaveLength(1);
+    expect(numbers[0]).toMatchObject({ dutch: '57,6 1 000 euro', english: '57.6 1 000 euros' });
+    expect(prep.maskedDutch.body).toMatch(/^Het gemiddeld besteedbaar inkomen van huishoudens bedroeg in ⟦P\w+⟧ ⟦N\w+⟧\.$/);
+  });
 });
 
 describe('retry sentences for the final-review checks (ruling 10 discipline: fixed, digit-free)', () => {

@@ -1,0 +1,55 @@
+{
+  "requestHash": "8ed4807748c98d635fc3dcfc4e91089f",
+  "question": "{\"items\":{\"body\":\"De inflatie bedroeg in ⟦Pa⟧ ⟦Nk⟧, in ⟦Pc⟧ ⟦Nl⟧, in ⟦Pd⟧ ⟦Nm⟧, in ⟦Pf⟧ ⟦Nn⟧ en in ⟦Ph⟧ ⟦No⟧. Over de gehele periode van ⟦Pb⟧ tot en met ⟦Pi⟧ steeg de inflatie met ⟦Np⟧, maar deze ontwikkeling verliep niet in een rechte lijn: na een sterke stijging in ⟦Pe⟧ volgde een daling in ⟦Pg⟧ en ⟦Pj⟧.\",\"chips\":[\"Wat was inflatie (jaarmutatie CPI, alle bestedingen) in ⟦Nq⟧?\"],\"definition\":\"inflatie (jaarmutatie CPI, alle bestedingen)\",\"alternates\":[\"CPI indexniveau (⟦Nr⟧=⟦Ns⟧), geen mutatiepercentage\"]},\"glossary\":[{\"dutch\":\"Jaarmutatie CPI\",\"english\":\"Annual rate of change CPI\"},{\"dutch\":\"CPI\",\"english\":\"CPI\"}]}",
+  "label": "B4",
+  "recordedAt": "2026-09-26T16:56:56.776Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"De inflatie bedroeg in ⟦Pa⟧ ⟦Nk⟧, in ⟦Pc⟧ ⟦Nl⟧, in ⟦Pd⟧ ⟦Nm⟧, in ⟦Pf⟧ ⟦Nn⟧ en in ⟦Ph⟧ ⟦No⟧. Over de gehele periode van ⟦Pb⟧ tot en met ⟦Pi⟧ steeg de inflatie met ⟦Np⟧, maar deze ontwikkeling verliep niet in een rechte lijn: na een sterke stijging in ⟦Pe⟧ volgde een daling in ⟦Pg⟧ en ⟦Pj⟧.\",\"chips\":[\"Wat was inflatie (jaarmutatie CPI, alle bestedingen) in ⟦Nq⟧?\"],\"definition\":\"inflatie (jaarmutatie CPI, alle bestedingen)\",\"alternates\":[\"CPI indexniveau (⟦Nr⟧=⟦Ns⟧), geen mutatiepercentage\"]},\"glossary\":[{\"dutch\":\"Jaarmutatie CPI\",\"english\":\"Annual rate of change CPI\"},{\"dutch\":\"CPI\",\"english\":\"CPI\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"Inflation was ⟦Nk⟧ in ⟦Pa⟧, ⟦Nl⟧ in ⟦Pc⟧, ⟦Nm⟧ in ⟦Pd⟧, ⟦Nn⟧ in ⟦Pf⟧ and ⟦No⟧ in ⟦Ph⟧. Over the entire period from ⟦Pb⟧ up to and including ⟦Pi⟧, inflation rose by ⟦Np⟧, but this development did not follow a straight line: after a sharp rise in ⟦Pe⟧, a fall followed in ⟦Pg⟧ and ⟦Pj⟧.\",\"chips\":[\"What was inflation (Annual rate of change CPI, all expenditure) in ⟦Nq⟧?\"],\"definition\":\"inflation (Annual rate of change CPI, all expenditure)\",\"alternates\":[\"CPI index level (⟦Nr⟧=⟦Ns⟧), not a rate of change percentage\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 979,
+      "outputTokens": 288
+    }
+  }
+}

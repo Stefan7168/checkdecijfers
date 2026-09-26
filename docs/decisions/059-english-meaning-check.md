@@ -1,8 +1,8 @@
 # ADR 059 — The English meaning check (C12): an independent, reject-only comparison of masked Dutch and masked English
 
 **Status:** accepted 2026-09-26 (session 133, owner present: GO on the design and on building the zero-spend half).
-Hermetic half **built** on branch `english-meaning-check`. Live recording and the model choice wait for the Anthropic API cap to
-lift (2026-10-01). Design: [superpowers/specs/2026-09-26-english-meaning-check-design.md](../superpowers/specs/2026-09-26-english-meaning-check-design.md);
+Hermetic half **built** (session 133). **Measured + model chosen session 134 (2026-09-26/27): Sonnet 5** — see "As-built (live
+half, session 134)" below. Design: [superpowers/specs/2026-09-26-english-meaning-check-design.md](../superpowers/specs/2026-09-26-english-meaning-check-design.md);
 plan: [superpowers/plans/2026-09-26-english-meaning-check.md](../superpowers/plans/2026-09-26-english-meaning-check.md).
 
 **Relates to:** [open-questions #325](../open-questions.md) (the gap), ADR [058](058-english-answers.md) (English answers; this
@@ -82,6 +82,26 @@ decide beyond the spec:
   Missing must-pass cases only weaken the false-alarm side, which fails safe (toward Dutch).
 - Existing translate test stubs answer meaning-check requests through `tests/helpers/meaning-check-stub.ts` (recognised by
   the fixed system prompt, never by call order), so their request logs and call counts still only see translate calls.
+
+## As-built (live half, session 134, 2026-09-26/27, owner present)
+
+- **Model choice by measurement (decision 6):** `meaning-check:record` ×3 on the 19-case set — Haiku missed D7 (a dropped
+  hedge, `ongeveer ⟦Na⟧` → `⟦Na⟧`) on all three repeats; Sonnet 5: 0 missed, 0 false alarms, 0 errors, 0 flips, latency max
+  2.9 s. `MEANING_CHECK_MODEL` = `'claude-sonnet-5'` (thinking disabled, no sampling params — the builder's existing Sonnet
+  branch). Cost per English answer ≈€0.006 (worst case ≈€0.017), per this ADR's own Sonnet estimate. `meaning-check:eval`
+  (replay) now defaults to the shipped model instead of the name 'haiku'.
+- **What the first real recording caught** (Haiku check at the time): two genuine mistranslations — B6 ('Eindstand
+  Voorraad' → 'Opening stock', the model reusing the glossary's neighbouring 'Beginstand voorraad') and B12 (a sentence
+  garbled around three loose placeholders from the unregistered unit `1 000 euro`) — plus one C10 false alarm (B8,
+  'did not move upwards'). Fixes in ADR 058's territory: listed CBS names found verbatim in the alternates line join the
+  glossary (C5 then requires their English), `'1 000 euro'` is a registered unit, `upwards?`/`downwards?` join the English
+  C10 lists, and prompt rule 3 maps "tot en met" to "up to and including" (Sonnet 5 rejected a bare "to" on 5 of 14 first
+  attempts — correct, but each a wasted retry).
+- **Final state:** 13/14 benchmark answers verify on the first attempt; B10 falls back (the translator wrote "benchmark
+  figure" for the CBS term "standcijfer"; C12 rejected both attempts). Measured English fallback rate 1/14 ≈ 7%.
+- **Spec §4's real cases:** the 13 verified renderings are must-pass cases (`R-B*`), stored in
+  `tests/fixtures/meaning-check-real-translations.json` — written by every `translate:record`, or free from the committed
+  fixtures via `node scripts/translate-eval.ts --write-real-cases`. All 32 cases on Sonnet 5 ×3: 0 / 0 / 0 / 0, max 3.2 s.
 
 ## Revisit triggers
 

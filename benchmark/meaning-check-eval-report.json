@@ -1,0 +1,1315 @@
+{
+  "history": [
+    {
+      "ranAt": "2026-09-26T17:02:40.391Z",
+      "mode": "record",
+      "model": "claude-sonnet-5",
+      "repeat": 3,
+      "promptVersion": 1,
+      "cases": 32,
+      "missedReversals": 0,
+      "falseAlarms": 0,
+      "errors": 0,
+      "verdictFlips": 0,
+      "latencyMsMedian": 2372,
+      "latencyMsMax": 3170,
+      "results": [
+        {
+          "id": "D1-weakener",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds hedge 'hardly' not present in Dutch, weakening the claim of the rise"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D2-stopper",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch states unemployment rose to ⟦Na⟧; English claims it ceased to rise, changing the direction/claim entirely"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D3-intensifier-swap",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment rose barely/hardly (nauwelijks), English says it rose sharply, a significant change in strength of claim"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D4-negation-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch states unemployment rose in Utrecht but NOT in Zeeland, while English claims it rose in both Utrecht and Zeeland"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D5-noun-qualifier",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says the increase was small ('niet groot' = not large), implying there was still some increase; English says 'no increase', negating the increase entirely, which changes the claim's strength/meaning."
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D6-doubled-unit",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'a -point level' phrasing not present in Dutch, implying an index/points scale rather than a plain rate value",
+                "Adds a scale/unit interpretation not supported by the Dutch text"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D7-dropped-hedge",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch includes hedge 'ongeveer' (about/roughly), English omits it and states the figure as exact"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D8-added-cause",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds a causal explanation ('because of the economic downturn') not present in the Dutch text"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D9-intensifier-added",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'sharply', a strength claim not present in Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D10-c10-blind-reversal",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'not really' negating the rise, which Dutch does not state",
+                "English adds 'matching last year' comparison, but Dutch explicitly says there is no comparison with last year"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D11-region-order-no-numbers",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says survey was held first in Utrecht, then Zeeland; English reverses the order to Zeeland first, then Utrecht"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D12-comparison-sides-swapped",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Comparison direction reversed: Dutch says unemployment was higher in Utrecht than in Zeeland, English says higher in Zeeland than in Utrecht",
+                "English adds an unsupported caveat 'These figures are unadjusted' not present in Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D13-period-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch attributes the temporary factor to the rise in ⟦Pa⟧, English attributes it to the fall in ⟦Pb⟧"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S1-plain-rise",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S2-reordered",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S3-negated-fall",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S4-unchanged",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S7-hedge-kept",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S8-passive",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B1",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-c",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B2",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-c",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B3",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B4",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B5",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B6",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B7",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B8",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B9",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B11",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B12",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-c",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B13",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-c",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "R-B14",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-a",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "chip-b",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "definition",
+              "sameMeaning": true,
+              "differences": []
+            },
+            {
+              "id": "alternate-a",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
+      "ranAt": "2026-09-26T16:47:41.475Z",
+      "mode": "record",
+      "model": "claude-sonnet-5",
+      "repeat": 3,
+      "promptVersion": 1,
+      "cases": 19,
+      "missedReversals": 0,
+      "falseAlarms": 0,
+      "errors": 0,
+      "verdictFlips": 0,
+      "latencyMsMedian": 2300,
+      "latencyMsMax": 2925,
+      "results": [
+        {
+          "id": "D1-weakener",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds hedge 'hardly' not present in Dutch, weakening the claim of the rise"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D2-stopper",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch states unemployment rose to ⟦Na⟧, English claims it ceased to rise (contradicts direction/strength)"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D3-intensifier-swap",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment rose hardly/barely (nauwelijks), English says it rose sharply, a strength change"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D4-negation-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch states unemployment rose in Utrecht but NOT in Zeeland, while English claims it rose in both Utrecht and Zeeland"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D5-noun-qualifier",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says the increase was small ('niet groot' = 'not large'), implying there was still an increase; English says there was no increase at all, which changes the claim's strength/negation."
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D6-doubled-unit",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds an unsupported unit/scale phrase ('-point level') not present in Dutch, which simply states unemployment stood at ⟦Na⟧"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D7-dropped-hedge",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch includes hedge 'ongeveer' (about/roughly), English omits this caveat and states an exact figure"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D8-added-cause",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds a causal explanation ('because of the economic downturn') not present in the Dutch text"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D9-intensifier-added",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds intensifier 'sharply' not present in Dutch, which just says 'steeg' (rose)"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D10-c10-blind-reversal",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'not really' negating the rise, which Dutch does not state",
+                "English adds a comparison 'matching last year' that Dutch explicitly says is absent"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D11-region-order-no-numbers",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Order of survey locations reversed: Dutch says Utrecht first then Zeeland, English says Zeeland first then Utrecht"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D12-comparison-sides-swapped",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Comparison direction reversed: Dutch says unemployment was higher in Utrecht than Zeeland, English says higher in Zeeland than Utrecht",
+                "English adds an unsupported claim/caveat 'These figures are unadjusted' not present in Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D13-period-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch attributes the temporary factor to the rise in ⟦Pa⟧, English attributes it to the fall in ⟦Pb⟧"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S1-plain-rise",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S2-reordered",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S3-negated-fall",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S4-unchanged",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S7-hedge-kept",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S8-passive",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        }
+      ]
+    },
+    {
+      "ranAt": "2026-09-26T16:45:29.355Z",
+      "mode": "record",
+      "model": "claude-haiku-4-5",
+      "repeat": 3,
+      "promptVersion": 1,
+      "cases": 19,
+      "missedReversals": 1,
+      "falseAlarms": 0,
+      "errors": 0,
+      "verdictFlips": 0,
+      "latencyMsMedian": 1392,
+      "latencyMsMax": 5135,
+      "results": [
+        {
+          "id": "D1-weakener",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'hardly' which weakens the claim about the rise in unemployment, not present in Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D2-stopper",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment rose to a level; English says unemployment ceased to rise (opposite direction and different claim about change)"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D3-intensifier-swap",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment rose 'nauwelijks' (hardly/barely), English says it rose 'sharply' - opposite strength of claim"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D4-negation-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment rose in Utrecht but NOT in Zeeland; English says it rose in both Utrecht AND Zeeland"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D5-noun-qualifier",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says 'the rise was not large' (a qualified rise), English says 'there was no increase' (negation of rise itself)"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D6-doubled-unit",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "Dutch says unemployment was at ⟦Na⟧, English adds 'a ⟦Na⟧-point level' which introduces an additional claim about the measurement scale or magnitude that is not present in the Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D7-dropped-hedge",
+          "expected": "different",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D8-added-cause",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds a cause ('because of the economic downturn') that is not present in the Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D9-intensifier-added",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'sharply' (strength of claim) not present in Dutch"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D10-c10-blind-reversal",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "English adds 'not really' which negates or weakens the claim that unemployment rose",
+                "English says 'matching last year' which contradicts Dutch's 'geen vergelijking met vorig jaar' (no comparison with last year)"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D11-region-order-no-numbers",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "The order of regions in the survey sequence is reversed: Dutch says 'first in Utrecht and then in Zeeland' but English says 'first in Zeeland. Then it was held in Utrecht'"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D12-comparison-sides-swapped",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "The English reverses the comparison: Dutch states unemployment was higher in Utrecht than in Zeeland, but English states it was higher in Zeeland than in Utrecht",
+                "The English adds a new claim about figures being unadjusted, which is not in the Dutch text"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "D13-period-moved",
+          "expected": "different",
+          "status": "different",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": false,
+              "differences": [
+                "The Dutch attributes the rise to a temporary factor ('steeg de werkloosheid naar ⟦Na⟧ door een tijdelijke factor'), but the English places this explanation after the fall ('fell again to ⟦Nb⟧, due to a temporary factor'), changing which event is attributed to the temporary factor"
+              ]
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S1-plain-rise",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S2-reordered",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S3-negated-fall",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S4-unchanged",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S7-hedge-kept",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        },
+        {
+          "id": "S8-passive",
+          "expected": "same",
+          "status": "same",
+          "verdicts": [
+            {
+              "id": "body",
+              "sameMeaning": true,
+              "differences": []
+            }
+          ],
+          "error": null
+        }
+      ]
+    }
+  ]
+}

@@ -234,6 +234,21 @@ fail-closed to Dutch. The Dutch validator's own negation blind spot found by the
 **Session 133 (2026-09-26):** that comparison is ADR [059](059-english-meaning-check.md), check C12, hermetic half built;
 its recording/eval (`npm run meaning-check:record`) waits for the API cap lift, and the flip waits for its result.
 
+## As-built addendum (session 134, 2026-09-26/27) — first real recording
+
+The first owner-supervised `translate:record` found three things the hermetic build could not, all fixed (owner GO) and
+re-recorded; full numbers in ADR [059](059-english-meaning-check.md)'s live as-built note and RUNBOOK "English answers":
+- **Glossary scope:** `glossaryForResult` now also adds every listed CBS measure title / dim label found verbatim
+  (case-sensitive, whole word) in the alternates line — the alternates can name a DIFFERENT CBS name than the cells
+  ('Eindstand Voorraad' beside a 'Beginstand voorraad' result), and without it the model reused the neighbour's English.
+- **Unit `1 000 euro` registered** (`'1 000 euros'`, space-grouped like `per 1 000 inwoners`), so the masker joins
+  '57,6 1 000 euro' into ONE placeholder instead of three loose ones the model garbled a sentence around.
+- **Prompt rule 3** adds: translate "tot en met" as "up to and including" — rule wording, not a new rule number (the
+  system prompt's '1.'–'7.' digits stay the one audited digit exception).
+- Plus `upwards?`/`downwards?` in the English C10 direction lists (the Dutch lists already had `omhoog`/`omlaag`).
+Result: 13/14 verified on the first attempt; measured benchmark fallback 1/14 ≈ 7%, under the ~10% revisit trigger below.
+No English audit rows exist in production (flag never on), so the glossary/unit changes create no `audit:verify` divergences.
+
 ## Revisit triggers
 
 - English fallback rate above ~10% on real traffic → revisit prompt or move more text to hand-written templates.

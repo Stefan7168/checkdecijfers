@@ -1,0 +1,766 @@
+{
+  "generatedAt": "2026-09-26T16:57:48.935Z",
+  "mode": "record",
+  "totals": {
+    "verified": 13,
+    "fallback": 1,
+    "total": 14
+  },
+  "cases": [
+    {
+      "id": "B1",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-c",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2503,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B2",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-c",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 3007,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B3",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2253,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B4",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2076,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B5",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2015,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B6",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2364,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B7",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2300,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B8",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2349,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B9",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2943,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B10",
+      "status": "fallback",
+      "attempts": [
+        {
+          "ok": false,
+          "error": null,
+          "problems": [
+            "C12: alternate-a meaning differs ('standcijfer' translated as 'benchmark figure' instead of 'point-in-time figure/snapshot figure', changing the meaning)"
+          ],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "different",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [
+                  "'standcijfer' translated as 'benchmark figure' instead of 'point-in-time figure/snapshot figure', changing the meaning"
+                ],
+                "sameMeaning": false
+              }
+            ],
+            "latencyMs": 2657,
+            "promptVersion": 1
+          }
+        },
+        {
+          "ok": false,
+          "error": null,
+          "problems": [
+            "C12: alternate-a meaning differs ('standcijfer' means a point-in-time/status figure, not 'a fixed figure')"
+          ],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "different",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [
+                  "'standcijfer' means a point-in-time/status figure, not 'a fixed figure'"
+                ],
+                "sameMeaning": false
+              }
+            ],
+            "latencyMs": 2460,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B11",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2202,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B12",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-c",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2481,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B13",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-c",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2498,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    },
+    {
+      "id": "B14",
+      "status": "verified",
+      "attempts": [
+        {
+          "ok": true,
+          "error": null,
+          "problems": [],
+          "meaningCheck": {
+            "error": null,
+            "model": "claude-sonnet-5",
+            "status": "same",
+            "verdicts": [
+              {
+                "id": "body",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-a",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "chip-b",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "definition",
+                "differences": [],
+                "sameMeaning": true
+              },
+              {
+                "id": "alternate-a",
+                "differences": [],
+                "sameMeaning": true
+              }
+            ],
+            "latencyMs": 2310,
+            "promptVersion": 1
+          }
+        }
+      ],
+      "untranslatedNames": [
+        "Totaal"
+      ],
+      "reconstructionOk": true,
+      "reconstructionProblems": [],
+      "c1OrC2OnVerified": []
+    }
+  ]
+}

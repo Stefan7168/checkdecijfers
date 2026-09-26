@@ -3,15 +3,15 @@
 //
 //   npm run meaning-check:eval     replay committed fixtures (no key, no
 //                                  network, writes no report file); defaults
-//                                  to the shipped model (haiku) only — CI
-//                                  replay has nothing to gain from also
-//                                  exercising the escalation-only sonnet path
-//   npm run meaning-check:record   real calls (owner-supervised, real spend,
-//                                  blocked until the Anthropic cap lifts
-//                                  2026-10-01); appends to
+//                                  to the shipped model only (MEANING_CHECK_MODEL,
+//                                  Sonnet 5 since session 134) — CI replay has
+//                                  nothing to gain from also exercising the
+//                                  model that was measured and not shipped
+//   npm run meaning-check:record   real calls (owner-supervised, real spend);
+//                                  appends to
 //                                  benchmark/meaning-check-eval-report.json
-//   flags: --model=haiku|sonnet|both (default: haiku in replay, both in
-//          record/live; an explicit --model= always wins in every mode)
+//   flags: --model=haiku|sonnet|both (default: the shipped model in replay,
+//          both in record/live; an explicit --model= always wins in every mode)
 //          --repeat=N (record/live; house standard 3)
 //
 // Scores MISSED REVERSALS (expected 'different', verdict 'same') and FALSE
@@ -29,7 +29,7 @@ import { MEANING_CHECK_CASES } from '../tests/helpers/meaning-check-cases.ts';
 
 const FIXTURES_DIR = fileURLToPath(new URL('../tests/fixtures/llm/meaning-check', import.meta.url));
 const REPORT_PATH = fileURLToPath(new URL('../benchmark/meaning-check-eval-report.json', import.meta.url));
-const MODELS: Record<string, string> = { haiku: MEANING_CHECK_MODEL, sonnet: 'claude-sonnet-5' };
+const MODELS: Record<string, string> = { haiku: 'claude-haiku-4-5', sonnet: 'claude-sonnet-5' };
 
 function buildClient(mode: string, labelFor: () => string | null): LlmClient {
   if (mode === 'replay') return new ReplayLlmClient(FIXTURES_DIR);
@@ -48,8 +48,8 @@ async function main(): Promise<void> {
   const mode = args.includes('--record') ? 'record' : args.includes('--live') ? 'live' : 'replay';
   const repeat = mode === 'replay' ? 1 : Number(args.find((a) => a.startsWith('--repeat='))?.split('=')[1] ?? '1');
   const explicitModel = args.find((a) => a.startsWith('--model='))?.split('=')[1];
-  const which = explicitModel ?? (mode === 'replay' ? 'haiku' : 'both');
-  const models = which === 'both' ? Object.values(MODELS) : [MODELS[which] ?? which];
+  const which = explicitModel ?? (mode === 'replay' ? 'shipped' : 'both');
+  const models = which === 'both' ? Object.values(MODELS) : which === 'shipped' ? [MEANING_CHECK_MODEL] : [MODELS[which] ?? which];
 
   // Structural guard BEFORE any spend (the same rule the CI test pins).
   for (const c of MEANING_CHECK_CASES) {

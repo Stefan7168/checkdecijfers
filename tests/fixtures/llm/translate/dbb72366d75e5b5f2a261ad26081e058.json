@@ -1,0 +1,55 @@
+{
+  "requestHash": "dbb72366d75e5b5f2a261ad26081e058",
+  "question": "{\"items\":{\"body\":\"Op ⟦Nb⟧ januari ⟦Pa⟧ had Amsterdam ⟦Nc⟧ inwoners, Rotterdam ⟦Nd⟧ inwoners, 's-Gravenhage ⟦Ne⟧ inwoners en Utrecht ⟦Nf⟧ inwoners. Amsterdam was de grootste van deze ⟦Ng⟧ gemeenten.\",\"chips\":[\"Wat was bevolking op ⟦Nh⟧ januari in Amsterdam, Rotterdam, 's-Gravenhage en Utrecht in ⟦Ni⟧?\",\"Wat was bevolking op ⟦Nk⟧ januari in Nederland in ⟦Pj⟧?\"],\"definition\":\"bevolking op ⟦Nl⟧ januari\",\"alternates\":[\"Gemiddelde bevolking (jaargemiddelde, geen standcijfer)\"]},\"glossary\":[{\"dutch\":\"Amsterdam\",\"english\":\"Amsterdam\"},{\"dutch\":\"Totaal mannen en vrouwen\",\"english\":\"Total men and women\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Totaal burgerlijke staat\",\"english\":\"Total marital status\"},{\"dutch\":\"Rotterdam\",\"english\":\"Rotterdam\"},{\"dutch\":\"'s-Gravenhage\",\"english\":\"'s-Gravenhage\"},{\"dutch\":\"Utrecht\",\"english\":\"Utrecht\"},{\"dutch\":\"Gemiddelde bevolking\",\"english\":\"Average population\"}]}",
+  "label": "B14",
+  "recordedAt": "2026-09-26T16:57:46.571Z",
+  "request": {
+    "model": "claude-haiku-4-5",
+    "maxTokens": 1200,
+    "temperature": 0,
+    "system": "You translate short Dutch statistical texts from checkdecijfers.nl into clear, natural British English for a general reader.\nInput: JSON with \"items\" (body, chips, definition, alternates) and \"glossary\" (Dutch name -> required English name).\nRules:\n1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.\n2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.\n3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Translate \"tot en met\" as \"up to and including\" (never a bare \"to\"). Add no claim, explanation or opinion.\n4. When a glossary name occurs, use its English form exactly as given, including capitalisation.\n5. \"chips\" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.\n6. Return \"definition\": null when the input definition is null.\n7. Output only the JSON object.",
+    "question": "{\"items\":{\"body\":\"Op ⟦Nb⟧ januari ⟦Pa⟧ had Amsterdam ⟦Nc⟧ inwoners, Rotterdam ⟦Nd⟧ inwoners, 's-Gravenhage ⟦Ne⟧ inwoners en Utrecht ⟦Nf⟧ inwoners. Amsterdam was de grootste van deze ⟦Ng⟧ gemeenten.\",\"chips\":[\"Wat was bevolking op ⟦Nh⟧ januari in Amsterdam, Rotterdam, 's-Gravenhage en Utrecht in ⟦Ni⟧?\",\"Wat was bevolking op ⟦Nk⟧ januari in Nederland in ⟦Pj⟧?\"],\"definition\":\"bevolking op ⟦Nl⟧ januari\",\"alternates\":[\"Gemiddelde bevolking (jaargemiddelde, geen standcijfer)\"]},\"glossary\":[{\"dutch\":\"Amsterdam\",\"english\":\"Amsterdam\"},{\"dutch\":\"Totaal mannen en vrouwen\",\"english\":\"Total men and women\"},{\"dutch\":\"Totaal\",\"english\":\"Totaal\"},{\"dutch\":\"Totaal burgerlijke staat\",\"english\":\"Total marital status\"},{\"dutch\":\"Rotterdam\",\"english\":\"Rotterdam\"},{\"dutch\":\"'s-Gravenhage\",\"english\":\"'s-Gravenhage\"},{\"dutch\":\"Utrecht\",\"english\":\"Utrecht\"},{\"dutch\":\"Gemiddelde bevolking\",\"english\":\"Average population\"}]}",
+    "jsonSchema": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "chips": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "definition": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alternates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "chips",
+        "definition",
+        "alternates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "response": {
+    "outputText": "{\"body\":\"On ⟦Nb⟧ January ⟦Pa⟧ Amsterdam had ⟦Nc⟧ inhabitants, Rotterdam ⟦Nd⟧ inhabitants, 's-Gravenhage ⟦Ne⟧ inhabitants and Utrecht ⟦Nf⟧ inhabitants. Amsterdam was the largest of these ⟦Ng⟧ municipalities.\",\"chips\":[\"What was the population on ⟦Nh⟧ January in Amsterdam, Rotterdam, 's-Gravenhage and Utrecht in ⟦Ni⟧?\",\"What was the population on ⟦Nk⟧ January in the Netherlands in ⟦Pj⟧?\"],\"definition\":\"population on ⟦Nl⟧ January\",\"alternates\":[\"Average population (annual average, not a snapshot figure)\"]}",
+    "model": "claude-haiku-4-5-20251001",
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 986,
+      "outputTokens": 217
+    }
+  }
+}
