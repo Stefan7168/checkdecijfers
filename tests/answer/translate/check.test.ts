@@ -699,7 +699,9 @@ describe('ruling 24.1: C11 — negation parity per item', () => {
   });
 });
 
-describe('ruling 24.2: a negation in a later coordinated CLAUSE does not attach to the verb', () => {
+// Ruling 25 reverted the 24.2 clause-start cut: the faithful English of these
+// three now falls back too (the later negation attaches to the verb again).
+describe('ruling 24.2 (reverted by ruling 25): a negation in a later coordinated clause', () => {
   it.each([
     [
       'Het aantal steeg naar 1.234 en voor 2022 zijn er nog geen cijfers.',
@@ -717,18 +719,20 @@ describe('ruling 24.2: a negation in a later coordinated CLAUSE does not attach 
       'The number did not rise to {n} but no longer in {p}.',
     ],
   ])('%s', (dutch, faithful, unfaithful) => {
-    expect(check24(dutch, faithful)).toEqual([]);
+    // safe fallback, ruling 25
+    expect(check24(dutch, faithful).length).toBeGreaterThan(0);
     expect(check24(dutch, unfaithful).length).toBeGreaterThan(0);
   });
 });
 
-describe('ruling 24.3: niet/geen AFTER a trend noun qualifies the noun', () => {
-  it('passing: "De stijging was niet groot" ~ "The increase was not large"', () => {
-    expect(check24('De stijging was niet groot: het aantal was 1.234.', 'The increase was not large: the number was {n}.')).toEqual([]);
+// Ruling 25 reverted the 24.3 trend-noun skip (it opened new false passes):
+// a 'niet' after a trend noun negates the claim again, so the qualifier case
+// is a KNOWN residual, kept visible here.
+describe('ruling 24.3 (reverted by ruling 25): niet/geen after a trend noun', () => {
+  it('the faithful "The increase was not large" falls back (safe fallback, ruling 25)', () => {
+    expect(check24('De stijging was niet groot: het aantal was 1.234.', 'The increase was not large: the number was {n}.').join()).toMatch(/C10/);
   });
-  it('adversarial: → "There was no increase" fails', () => {
-    expect(check24('De stijging was niet groot: het aantal was 1.234.', 'There was no increase: the number was {n}.').join()).toMatch(/C10/);
-  });
+  it.todo('KNOWN RESIDUAL (ruling 25): "De stijging was niet groot" → "There was no increase" passes (a noun qualifier read as a negated trend on both sides)');
 });
 
 describe('ruling 24.4: more negators (nergens, noch, geenszins, evenmin / neither, nor, nowhere)', () => {
@@ -765,5 +769,34 @@ describe('ruling 24.5: positional pairs run IN ADDITION to the number-based grou
         g,
       ).join(),
     ).toMatch(/C7/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Revert round (ruling 25): the clause-start cut and the trend-noun skip each
+// opened new false passes; they are reverted. These five must FAIL.
+// ---------------------------------------------------------------------------
+
+describe('ruling 25: false passes opened by the reverted clause-start cut and trend-noun skip', () => {
+  const g = [region('Utrecht')];
+  it.each([
+    ['Van een daling is geen sprake; het was 1.234.', 'There was a decline, though not everywhere; it was {n}.'],
+    ['Een stijging was er in 2022 niet: het aantal was 1.234.', 'There was an increase in {p}, though not everywhere: the number was {n}.'],
+    ['Het aantal daalde in 2022 en in 2023 niet; het was 1.234.', 'The number fell in {pa} and in {pb}, though not everywhere; it was {n}.'],
+    ['Het aantal daalde van 2022 tot en met 2023 niet; het was 1.234.', 'The number fell from {pa} through {pb}, though not everywhere; it was {n}.'],
+    ['Het aantal steeg in Utrecht en de rest van het land niet; het was 1.234.', 'The number rose in Utrecht and the rest of the country, though not everywhere; it was {n}.'],
+  ])('adversarial: %s → %s', (dutch, template) => {
+    const masked = maskWithPeriods(dutch);
+    const [pa, pb] = phs(masked, 'P');
+    const english = template
+      .replace('{p}', pa ?? '')
+      .replace('{pa}', pa ?? '')
+      .replace('{pb}', pb ?? '')
+      .replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g }).length).toBeGreaterThan(0);
+  });
+
+  it("C11 counts 'cannot': an added 'cannot' fails", () => {
+    expect(check24('Deze cijfers zijn vergelijkbaar met 2022: 1.234.', 'These figures cannot be compared with {p}: {n}.').join()).toMatch(/C11/);
   });
 });
