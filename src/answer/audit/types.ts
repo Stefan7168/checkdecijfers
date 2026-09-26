@@ -20,8 +20,9 @@ export interface LlmCallRecord {
   /** Which pipeline role made the call (ADR 004's confined roles: intent
    * parsing — plus its clarify- and follow-up-mode variants, WP9/WP15 —
    * answer phrasing, since #144/ADR 034 the reject-only semantic checker,
-   * and since ADR 058 the English-answer translator). */
-  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check' | 'translate';
+   * since ADR 058 the English-answer translator, and since #325 (check C12)
+   * the reject-only English meaning checker). */
+  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check' | 'translate' | 'meaning_check';
   /** The model that answered, as reported by the API response. */
   model: string;
   inputTokens: number;

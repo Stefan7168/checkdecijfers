@@ -56,6 +56,11 @@ import {
 import { fillPlaceholders } from '../translate/mask.ts';
 import { isTranslationItemsShape, prepareTranslation } from '../translate/translate.ts';
 import type { PreparedTranslation } from '../translate/translate.ts';
+// #325 (check C12, the English meaning check): the verdict is recorded, never
+// re-derived (same ADR 034 pattern the semantic checker above uses) — but its
+// SCOPE re-derives from the stored masked Dutch + model output, exactly like
+// the semantic checker's suspect-list scope re-derives above.
+import { meaningCheckScopeProblems, meaningItems } from '../translate/meaning-check.ts';
 import type { AuditRecord } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
@@ -650,6 +655,11 @@ function errorMessage(error: unknown): string {
 //    uses (buildEnglishLines, assembleEnglishText, translateStalenessWarning).
 //  - A `fallback` rendering carries no body/lines/text/chips and at least one
 //    failed attempt — the shape `translateAnswer` guarantees on that status.
+//  - #325 check C12: the final attempt's meaning-check VERDICT is recorded,
+//    never re-derived (an LLM judgment, same ADR 034 doctrine as the semantic
+//    checker) — but its SCOPE is: a verified row's meaning check must be
+//    'same' and its verdicts must cover exactly the items re-derived from the
+//    stored masked Dutch + model output (meaningCheckScopeProblems).
 //
 // `rawTranslation` is stored jsonb: `translateAnswer` never stores a
 // shape-invalid value there, but reconstruction treats every stored field as
@@ -764,6 +774,18 @@ function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: stri
     problems.push(`english: stored verified rawTranslation fails re-check (${checkProblems.join('; ')})`);
     return;
   }
+
+  // #325 check C12 (spec §2.7): the verdict is recorded, never re-derived —
+  // but its SCOPE is: a verified row's final attempt must carry a 'same'
+  // meaning check whose verdicts cover exactly the items re-derived from the
+  // stored masked Dutch + model output, every one saying sameMeaning.
+  const finalAttempt = english.attempts.at(-1) as { meaningCheck?: unknown } | undefined;
+  problems.push(
+    ...meaningCheckScopeProblems(
+      finalAttempt?.meaningCheck,
+      meaningItems(prep.maskedDutch, rawTranslation).map((i) => i.id),
+    ),
+  );
 
   let filledBody: string;
   let filledChips: string[];

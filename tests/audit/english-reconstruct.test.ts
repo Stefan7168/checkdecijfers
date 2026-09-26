@@ -42,6 +42,7 @@ import type { AnswerResponse } from '../../src/answer/respond/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import { ANSWERABLE_TASKS } from '../helpers/benchmark-intents.ts';
 import { loadLabelledSet } from '../helpers/intent-expectations.ts';
+import { withSameMeaning } from '../helpers/meaning-check-stub.ts';
 import type { Db } from '../../src/db/types.ts';
 
 const INTENT_FIXTURES = fileURLToPath(new URL('../fixtures/llm/intent', import.meta.url));
@@ -172,7 +173,11 @@ describe('a verified English row (ADR 058 Task 7)', () => {
     const baseline = await answerQuestionAudited(db, ANSWERABLE_TASKS.B3!.question, fixtureClients());
     if (baseline.response.kind !== 'answer') throw new Error('unreachable: B3 baseline is not an answer');
     dutchBaseline = baseline.response;
-    client = faithfulB3TranslateClient();
+    // #325 (C12): wrapped so the SAME injected client also answers the
+    // meaning-check role (respond-audited.ts wires both from translateClient)
+    // — withSameMeaning keeps `client.requests` (asserted below) seeing only
+    // translate calls, since it answers meaning-check requests itself.
+    client = withSameMeaning(faithfulB3TranslateClient());
     const audited = await answerQuestionAudited(db, ANSWERABLE_TASKS.B3!.question, {
       ...fixtureClients(),
       lang: 'en',
@@ -321,6 +326,40 @@ describe('a verified English row (ADR 058 Task 7)', () => {
     expect(report.ok).toBe(false);
     expect(report.problems.some((p) => p.startsWith('english:'))).toBe(true);
   });
+
+  // #325 (C12): the meaning-check call's own role tag, and R8's SCOPE leg —
+  // the verdict itself is recorded, never re-derived (same ADR 034 pattern
+  // as the semantic checker above), but which items it must cover and that
+  // every one says "same meaning" IS re-derived from the stored masked Dutch
+  // + model output.
+  describe('C12 (#325): llm_calls and R8 scope of the stored meaning check', () => {
+    it("the check call is tracked under the 'meaning_check' role, the translation under 'translate'", () => {
+      const roles = record.llmCalls.map((c) => c.role);
+      expect(roles).toContain('translate');
+      expect(roles).toContain('meaning_check');
+    });
+
+    it('the untampered verified row reconstructs clean', () => {
+      expect(reconstructionReport(record).problems).toEqual([]);
+    });
+
+    const tamper = (mutate: (mc: Record<string, unknown>) => unknown) => {
+      const tampered = clone(record);
+      const final = answerOf(tampered).english!.attempts.at(-1) as unknown as Record<string, unknown>;
+      final.meaningCheck = mutate(structuredClone(final.meaningCheck) as Record<string, unknown>);
+      return reconstructionReport(tampered).problems.join('\n');
+    };
+
+    it.each([
+      ['removed', () => undefined, /carries no meaning check/],
+      ["status 'different'", (mc: Record<string, unknown>) => ({ ...mc, status: 'different' }), /status is 'different'/],
+      ["status 'error'", (mc: Record<string, unknown>) => ({ ...mc, status: 'error', verdicts: null }), /status is 'error'/],
+      ['a verdict dropped', (mc: Record<string, unknown>) => ({ ...mc, verdicts: (mc.verdicts as unknown[]).slice(1) }), /exactly once/],
+      ['a verdict flipped', (mc: Record<string, unknown>) => ({ ...mc, verdicts: (mc.verdicts as Record<string, unknown>[]).map((v, i) => (i === 0 ? { ...v, sameMeaning: false } : v)) }), /meaning differs/],
+    ])('tamper: meaning check %s ⇒ an english: problem', (_label, mutate, pattern) => {
+      expect(tamper(mutate)).toMatch(pattern);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -439,7 +478,9 @@ describe('the reply turn carries English too (answerClarificationReplyAudited)',
       const dutchOnly = await answerClarificationReplyAudited(db, first.response.pending, c.reply, replyOptions());
       if (dutchOnly.response.kind !== 'answer') throw new Error('unreachable: expected an answer');
 
-      const client = faithfulUnemploymentTranslateClient();
+      // #325 (C12): same reasoning as the B3 client above — the SAME injected
+      // client also answers the meaning-check role.
+      const client = withSameMeaning(faithfulUnemploymentTranslateClient());
       const reply = await answerClarificationReplyAudited(db, first.response.pending, c.reply, {
         ...replyOptions(),
         lang: 'en',

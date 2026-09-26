@@ -78,7 +78,8 @@ export interface AuditedRespondOptions extends RespondOptions {
    * ONLY by web/app/actions.ts alongside `lang: 'en'`; absent everywhere else
    * ⇒ zero translate machinery reached (same A1 discipline as `webClient`).
    * Wrapped in the SAME LlmCallTracker as every other role below, so its
-   * token counts land in `llm_calls` under the `'translate'` role. */
+   * token counts land in `llm_calls` under the `'translate'` role — also used
+   * for the C12 meaning check (#325), tracked as `'meaning_check'`. */
   translateClient?: LlmClient;
 }
 
@@ -215,6 +216,9 @@ export async function answerQuestionAudited(
   const withEnglish = await attachEnglish(augmented, {
     lang: options.lang,
     client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
+    // #325 check C12: the SAME injected client, tracked under its own role
+    // so llm_calls separates translation spend from meaning-check spend.
+    checkClient: options.translateClient ? tracker.wrap('meaning_check', options.translateClient) : undefined,
   });
   const audited = await persistOrFailClosed(db, withEnglish, wrap);
   // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
@@ -300,6 +304,9 @@ export async function answerClarificationReplyAudited(
   const withEnglish = await attachEnglish(augmented, {
     lang: options.lang,
     client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
+    // #325 check C12: the SAME injected client, tracked under its own role
+    // so llm_calls separates translation spend from meaning-check spend.
+    checkClient: options.translateClient ? tracker.wrap('meaning_check', options.translateClient) : undefined,
   });
   const audited = await persistOrFailClosed(db, withEnglish, wrap);
   // #144 (ADR 034 §5): same fail-open skip alert on the reply turn.
