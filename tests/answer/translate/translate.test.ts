@@ -12,7 +12,7 @@ import type { AnswerResponse, ComposedResponse } from '../../../src/answer/respo
 import { makeCell, makeResult, populationSingle } from '../../helpers/synthetic-results.ts';
 import { SOURCES } from '../../../src/sources/registry.ts';
 import { hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
-import { TRANSLATE_SYSTEM_PROMPT } from '../../../src/answer/translate/prompt.ts';
+import { buildTranslateRequest, TRANSLATE_SYSTEM_PROMPT } from '../../../src/answer/translate/prompt.ts';
 import {
   attachEnglish,
   CAVEAT_TRANSLATIONS,
@@ -500,5 +500,17 @@ describe('prepareTranslation — units (final-review fix wave, ruling 17a)', () 
     expect(answer.body).toContain('450.985 euro');
     expect(numbers.find((e) => e.dutch === '450.985 euro')?.english).toBe('450,985 euros');
     expect(prep.maskedDutch.body).not.toMatch(/euro/);
+  });
+});
+
+describe('retry sentences for the final-review checks (ruling 10 discipline: fixed, digit-free)', () => {
+  it('C9 and C10 map to their own fixed sentences, never the raw problem text', () => {
+    const req = buildTranslateRequest({ body: 'x', chips: [], definition: null, alternates: [] }, [], {
+      retryProblems: ["C9: body says 'ten' but the Dutch has no counterpart for it", 'C10: negation of a direction claim differs (Dutch [not down], English [down])'],
+    });
+    expect(req.system).toContain('A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain.');
+    expect(req.system).toContain('A negation was added or dropped.');
+    expect(req.system).not.toContain('C9:');
+    expect(req.system).not.toContain("'ten'");
   });
 });

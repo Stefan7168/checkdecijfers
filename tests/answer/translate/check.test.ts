@@ -1,5 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { checkTranslation, dutchDirections, englishDirections } from '../../../src/answer/translate/check.ts';
+import {
+  checkTranslation,
+  dutchDirections,
+  englishDirections,
+  NL_CARDINAL_MORPHEMES,
+  NL_NEGATION,
+} from '../../../src/answer/translate/check.ts';
 import { createMasker, hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
 
 const items = (body: string, chips: string[] = []) => ({ body, chips, definition: null, alternates: [] });
@@ -286,5 +293,139 @@ describe('ruling 17c: C2 and the digit gate see every Unicode number (\\p{N}), n
   it('hasDigitOutsidePlaceholders catches a non-decimal numeral', () => {
     expect(hasDigitOutsidePlaceholders('about ½')).toBe(true);
     expect(hasDigitOutsidePlaceholders('km²')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review fix wave (ruling 18, IMPORTANT 1): same-sentence swaps and
+// negation. Built with the REAL masker.
+// ---------------------------------------------------------------------------
+
+const region = (dutch: string, english = dutch) => ({ dutch, english, kind: 'region' as const, translated: dutch !== english });
+const phs = (text: string, kind: 'N' | 'P') => text.match(new RegExp(`⟦${kind}[a-z]+⟧`, 'g')) ?? [];
+
+function maskWithPeriods(dutch: string) {
+  const masker = createMasker({
+    periodLabels: [
+      { dutch: '2022', english: '2022' },
+      { dutch: '2023', english: '2023' },
+    ],
+    caveats: [],
+  });
+  return masker.mask(dutch);
+}
+
+describe('ruling 18: C7 — periods and regions keep their relative order per item', () => {
+  it('adversarial: two periods swapped inside ONE sentence fail', () => {
+    const masked = maskWithPeriods('In 2022 telde Utrecht 1.234 inwoners, in 2023 telde Utrecht 1.300 inwoners.');
+    const [pa, pb] = phs(masked, 'P');
+    const [na, nb] = phs(masked, 'N');
+    const english = `In ${pb} Utrecht had ${na} inhabitants, in ${pa} Utrecht had ${nb} inhabitants.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Utrecht')] }).join()).toMatch(/C7/);
+  });
+
+  it('adversarial: two regions swapped inside ONE sentence fail', () => {
+    const masked = maskWithPeriods('Utrecht telde 1.234 inwoners en Zeeland telde 1.300 inwoners.');
+    const [na, nb] = phs(masked, 'N');
+    const english = `Zeeland had ${na} inhabitants and Utrecht had ${nb} inhabitants.`;
+    expect(
+      checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Utrecht'), region('Zeeland')] }).join(),
+    ).toMatch(/C7/);
+  });
+
+  it('passing: a legitimate English reordering that keeps each kind in order (adverb and period movement)', () => {
+    const masked = maskWithPeriods('In 2022 telde Utrecht ook 1.234 inwoners en in 2023 telde Zeeland 1.300 inwoners.');
+    const [pa, pb] = phs(masked, 'P');
+    const [na, nb] = phs(masked, 'N');
+    const english = `Utrecht also had ${na} inhabitants in ${pa}, and Zeeland had ${nb} inhabitants in ${pb}.`;
+    expect(
+      checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Utrecht'), region('Zeeland')] }),
+    ).toEqual([]);
+  });
+
+  it('a region nested inside a longer region name is not a separate first mention', () => {
+    const masked = maskWithPeriods('Noord-Holland telde 1.234 inwoners en Holland telde 1.300 inwoners.');
+    const [na, nb] = phs(masked, 'N');
+    const english = `North Holland had ${na} inhabitants and Holland had ${nb} inhabitants.`;
+    const glossaryNested = [region('Noord-Holland', 'North Holland'), region('Holland')];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: glossaryNested })).toEqual([]);
+  });
+});
+
+describe('ruling 18: C3 — directions compared as an ORDERED sequence', () => {
+  it('adversarial: two directions swapped between regions in ONE sentence fail', () => {
+    const masked = maskWithPeriods('Utrecht steeg naar 1.234, Zeeland daalde naar 1.300.');
+    const [na, nb] = phs(masked, 'N');
+    const english = `Utrecht fell to ${na}, Zeeland rose to ${nb}.`;
+    expect(
+      checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Utrecht'), region('Zeeland')] }).join(),
+    ).toMatch(/C3/);
+  });
+
+  it('passing: a repeated direction phrased once in English (consecutive duplicates collapse)', () => {
+    const masked = maskWithPeriods('De bevolking groeide naar 1.234, een groei van 1.300.');
+    const [na, nb] = phs(masked, 'N');
+    expect(
+      checkTranslation({ maskedDutch: items(masked), english: items(`The population grew to ${na}, growth of ${nb}.`), glossary: [] }),
+    ).toEqual([]);
+  });
+});
+
+describe('ruling 18: C10 — negation of each direction must match', () => {
+  it("adversarial: 'niet gedaald' → 'has fallen' fails", () => {
+    const masked = maskWithPeriods('Het aantal is sinds 2022 niet gedaald en was 1.234.');
+    const [p] = phs(masked, 'P');
+    const [n] = phs(masked, 'N');
+    const english = `The number has fallen since ${p} and was ${n}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] }).join()).toMatch(/C10/);
+  });
+
+  it("adversarial: an added negation ('gedaald' → 'has not fallen') fails", () => {
+    const masked = maskWithPeriods('Het aantal is sinds 2022 gedaald en was 1.234.');
+    const [p] = phs(masked, 'P');
+    const [n] = phs(masked, 'N');
+    const english = `The number has not fallen since ${p} and was ${n}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] }).join()).toMatch(/C10/);
+  });
+
+  it.each([
+    ['Het aantal is sinds 2022 niet gedaald en was 1.234.', 'The number has not fallen since {p} and was {n}.'],
+    ['Het aantal is sinds 2022 niet gedaald en was 1.234.', "The number hasn't fallen since {p} and was {n}."],
+    ['Het aantal groeide gestaag tot 1.234 in 2022, zonder tussentijdse dalingen.', 'The number grew steadily to {n} in {p}, without interim declines.'],
+  ])('passing: %s ~ %s', (dutch, template) => {
+    const masked = maskWithPeriods(dutch);
+    const english = template.replace('{p}', phs(masked, 'P')[0]!).replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('fold-in 4: region/name mentions match on word boundaries', () => {
+  it("C5: 'Ede' is not satisfied by 'exceeded'", () => {
+    const masked = maskWithPeriods('Ede telde 1.234 inwoners.');
+    const [n] = phs(masked, 'N');
+    const english = `The count exceeded ${n} inhabitants.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Ede')] }).join()).toMatch(/C5/);
+  });
+
+  it("C5: 'Ede' is not required by a Dutch 'Nederland'", () => {
+    const masked = maskWithPeriods('Nederland telde 1.234 inwoners.');
+    const [n] = phs(masked, 'N');
+    const english = `The Netherlands had ${n} inhabitants.`;
+    const g = [region('Nederland', 'the Netherlands'), region('Ede')];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g })).toEqual([]);
+  });
+});
+
+describe('copies of the Dutch validator rules stay in sync (validate.ts is not edited, so it is read as source)', () => {
+  const validateSource = readFileSync(new URL('../../../src/answer/compose/validate.ts', import.meta.url), 'utf8');
+
+  it("NL_NEGATION is validate.ts's NEGATION_WORDS, verbatim", () => {
+    expect(validateSource).toContain(`const NEGATION_WORDS = ${NL_NEGATION.toString()};`);
+  });
+
+  it("NL_CARDINAL_MORPHEMES is exactly validate.ts's CARDINAL_WORD_FORMS morpheme list", () => {
+    const line = validateSource.split('\n').find((l) => l.includes('(?:(?:twee|drie|'))!;
+    const list = /\(\?:\(\?:([a-z|]+)\)/.exec(line)![1]!.split('|');
+    expect([...NL_CARDINAL_MORPHEMES].sort()).toEqual([...list].sort());
   });
 });

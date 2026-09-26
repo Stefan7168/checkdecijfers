@@ -1,6 +1,6 @@
 // ADR 058 §3.4: deterministic gates on the model's English output. Run BEFORE
 // filling placeholders. An empty problem list is the only pass.
-import { DOWN_WORDS, FLAT_WORDS, mentions, UP_WORDS } from '../compose/validate.ts';
+import { DOWN_WORDS, FLAT_WORDS, splitClauses, splitSentences, UP_WORDS } from '../compose/validate.ts';
 import type { GlossaryEntry } from './glossary.ts';
 import { hasDigitOutsidePlaceholders, PLACEHOLDER_RE } from './mask.ts';
 
@@ -33,6 +33,106 @@ export function englishDirections(text: string): Set<Direction> {
   return classes(text, [['up', EN_UP], ['down', EN_DOWN], ['flat', EN_FLAT], ['more', EN_MORE], ['less', EN_LESS]]);
 }
 
+const NL_DIRECTION_TABLE: [Direction, RegExp][] = [['up', UP_WORDS], ['down', DOWN_WORDS], ['flat', FLAT_WORDS], ['more', NL_MORE], ['less', NL_LESS]];
+const EN_DIRECTION_TABLE: [Direction, RegExp][] = [['up', EN_UP], ['down', EN_DOWN], ['flat', EN_FLAT], ['more', EN_MORE], ['less', EN_LESS]];
+
+/** The Dutch validator's negation-in-clause rule (src/answer/compose/
+ * validate.ts NEGATION_WORDS + negatedMatch, not exported there): a trend
+ * word with 'zonder'/'geen'/'niet' EARLIER in the same clause is negated.
+ * Copied verbatim (tests/answer/translate/check.test.ts pins the copy
+ * against validate.ts's source) rather than exported, so the Dutch validator
+ * stays byte-identical. */
+export const NL_NEGATION = /\b(zonder|geen|niet)\b/i;
+/** The English mirror: 'not'/'no'/'never'/'without'/'cannot' or an "n't"
+ * contraction earlier in the same clause ('did not rise', 'no longer
+ * fell', "hasn't fallen", 'without interim declines'). */
+const EN_NEGATION = /\b(?:not|no|never|without|cannot)\b|n't\b/i;
+
+export interface DirectionClaim {
+  dir: Direction;
+  negated: boolean;
+}
+
+/** Final-review fix wave (ruling 18): direction claims as an ORDERED
+ * sequence — per sentence, per clause (the Dutch validator's own
+ * splitSentences/splitClauses), each clause's classes in text order, each
+ * marked negated or not by the clause's negation rule. Consecutive identical
+ * claims collapse, so 'groeide …, een groei van …' ≡ 'grew … growth of'. */
+function directionSequence(text: string, table: [Direction, RegExp][], negation: RegExp): DirectionClaim[] {
+  const out: DirectionClaim[] = [];
+  for (const sentence of splitSentences(normalizeQuotes(text))) {
+    for (const clause of splitClauses(sentence)) {
+      const found: (DirectionClaim & { index: number })[] = [];
+      for (const [dir, re] of table) {
+        const m = re.exec(clause.text);
+        if (m) found.push({ dir, index: m.index, negated: negation.test(clause.text.slice(0, m.index)) });
+      }
+      found.sort((a, b) => a.index - b.index);
+      for (const f of found) {
+        const last = out[out.length - 1];
+        if (!last || last.dir !== f.dir || last.negated !== f.negated) out.push({ dir: f.dir, negated: f.negated });
+      }
+    }
+  }
+  return out;
+}
+
+export function dutchDirectionSequence(text: string): DirectionClaim[] {
+  return directionSequence(text, NL_DIRECTION_TABLE, NL_NEGATION);
+}
+
+export function englishDirectionSequence(text: string): DirectionClaim[] {
+  return directionSequence(text, EN_DIRECTION_TABLE, EN_NEGATION);
+}
+
+/** Collapse consecutive duplicates of a key. */
+function collapse(keys: string[]): string[] {
+  return keys.filter((k, i) => i === 0 || keys[i - 1] !== k);
+}
+
+// ---------------------------------------------------------------------------
+// Word-boundary name matching (final-review fold-in 4): the Dutch
+// validator's `mentions` is a case-insensitive SUBSTRING test, so 'Ede'
+// matched inside 'exceeded' and 'Nederland'. Here a name must stand on
+// Unicode word boundaries (quote-normalized, case-insensitive).
+// ---------------------------------------------------------------------------
+
+function normalizeQuotes(text: string): string {
+  return text.replace(/[‘’]/g, "'");
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function nameRe(label: string, flags = 'iu'): RegExp {
+  return new RegExp(`(?<![\\p{L}\\p{N}])${escapeRegExp(normalizeQuotes(label))}(?![\\p{L}\\p{N}])`, flags);
+}
+
+export function mentionsName(text: string, label: string): boolean {
+  return label.length > 0 && nameRe(label).test(normalizeQuotes(text));
+}
+
+/** The glossary region entries in order of FIRST mention in `text`, reading
+ * each entry's `side` name. Longest names first, each blanked once found,
+ * so a region nested in a longer one ('Holland' in 'Noord-Holland') never
+ * counts as its own mention. */
+function regionFirstMentions(text: string, regions: GlossaryEntry[], side: 'dutch' | 'english'): GlossaryEntry[] {
+  let working = normalizeQuotes(text);
+  const firsts: { entry: GlossaryEntry; index: number }[] = [];
+  for (const entry of [...regions].sort((a, b) => b[side].length - a[side].length)) {
+    if (entry[side].length === 0) continue;
+    const re = nameRe(entry[side], 'giu');
+    let first = -1;
+    working = working.replace(re, (match, offset: number) => {
+      if (first === -1 || offset < first) first = offset;
+      return ' '.repeat(match.length);
+    });
+    if (first !== -1) firsts.push({ entry, index: first });
+  }
+  return firsts.sort((a, b) => a.index - b.index).map((f) => f.entry);
+}
+
 const CAVEAT_WORDS: [string, string][] = [
   ['nader voorlopig', 'revised provisional'],
   ['voorlopig', 'provisional'],
@@ -57,7 +157,7 @@ const wordRe = (src: string, flags = 'iu'): RegExp => new RegExp(`${WORD_START}(
 /** Dutch cardinal morphemes — the same list as the Dutch validator's
  * CARDINAL_WORD_FORMS (src/answer/compose/validate.ts), longest first so a
  * compound parses into its real parts ('zeventien', never 'zeven' + 'tien'). */
-const NL_CARDINAL_MORPHEMES = [
+export const NL_CARDINAL_MORPHEMES = [
   'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien', 'elf', 'twaalf', 'dertien', 'veertien',
   'vijftien', 'zestien', 'zeventien', 'achttien', 'negentien', 'twintig', 'dertig', 'veertig', 'vijftig', 'zestig',
   'zeventig', 'tachtig', 'negentig', 'honderd', 'duizend', 'miljoen', 'miljard', 'biljoen',
@@ -175,6 +275,36 @@ function checkNumberOrder(
   return null;
 }
 
+/** C7, extended (final-review fix wave, ruling 18): per item, PERIOD
+ * placeholders keep their relative order too, and the glossary's REGION
+ * names keep the relative order of their first mentions. With numbers
+ * already in order, a period or region swapped within one sentence
+ * ('In ⟦Pa⟧ … ⟦Na⟧, in ⟦Pb⟧ … ⟦Nb⟧' → 'In ⟦Pb⟧ … ⟦Na⟧, in ⟦Pa⟧ …') would
+ * bind a number to the wrong period or region — C8, being sentence-level,
+ * cannot see that. Only the relative order WITHIN a kind is pinned: a period
+ * moving past its number ('In ⟦Pa⟧ was X ⟦Na⟧' → 'X was ⟦Na⟧ in ⟦Pa⟧') is
+ * ordinary English word order. */
+function checkCompanionOrder(maskedDutch: string, english: string, name: string, glossary: GlossaryEntry[]): string[] {
+  const problems: string[] = [];
+  const dutchPeriods = periodPlaceholders(maskedDutch).join(' ');
+  const englishPeriods = periodPlaceholders(english).join(' ');
+  if (dutchPeriods !== englishPeriods) {
+    problems.push(`C7: ${name} period placeholders are reordered (expected [${dutchPeriods}], got [${englishPeriods}])`);
+  }
+  const regions = glossary.filter((g) => g.kind === 'region');
+  const dutchOrder = regionFirstMentions(maskedDutch, regions, 'dutch');
+  const englishOrder = regionFirstMentions(english, regions, 'english');
+  // Compare only regions both sides mention — a region missing on one side
+  // is C5's finding, not an order problem.
+  const inBoth = (xs: GlossaryEntry[], ys: GlossaryEntry[]) => xs.filter((x) => ys.includes(x)).map((x) => x.english);
+  const nl = inBoth(dutchOrder, englishOrder);
+  const en = inBoth(englishOrder, dutchOrder);
+  if (nl.join('|') !== en.join('|')) {
+    problems.push(`C7: ${name} regions are reordered (expected [${nl.join(', ')}], got [${en.join(', ')}])`);
+  }
+  return problems;
+}
+
 /** C8: Sentence binding for number placeholders. Each number in a Dutch sentence
  * must keep its companion period placeholders and region mentions in the English
  * sentence. A lost companion (e.g., periods swapped across sentences) breaks the
@@ -205,7 +335,7 @@ function checkSentenceBinding(
       const periodCompanions = periodPlaceholders(dlSentence);
 
       // Companions: region glossary entries mentioned in the masked Dutch sentence.
-      const regionCompanions = glossary.filter((g) => g.kind === 'region' && mentions(dlSentence ?? '', g.dutch));
+      const regionCompanions = glossary.filter((g) => g.kind === 'region' && mentionsName(dlSentence ?? '', g.dutch));
 
       // Find the English sentence containing this number.
       const englishSentenceWithNumber = englishSentences.find((es) => es.includes(numberPlaceholder));
@@ -222,7 +352,7 @@ function checkSentenceBinding(
 
       // Check region companions are mentioned.
       for (const region of regionCompanions) {
-        if (!mentions(englishSentenceWithNumber, region.english)) {
+        if (!mentionsName(englishSentenceWithNumber, region.english)) {
           return `C8: ${numberPlaceholder} lost its companion ${region.english} in translation`;
         }
       }
@@ -259,13 +389,14 @@ export function checkTranslation(input: {
     if (want !== got) problems.push(`C1: ${name} placeholders differ (expected [${want}], got [${got}])`);
     if (hasDigitOutsidePlaceholders(text)) problems.push(`C2: ${name} contains a digit outside placeholders`);
     for (const g of glossary) {
-      if (mentions(masked[i]![1], g.dutch) && !mentions(text, g.english)) {
+      if (mentionsName(masked[i]![1], g.dutch) && !mentionsName(text, g.english)) {
         problems.push(`C5: ${name} must name '${g.english}' (for '${g.dutch}')`);
       }
     }
     // C7 and C8 after C6 passes
     const c7 = checkNumberOrder(masked[i]![1], text, name);
     if (c7) problems.push(c7);
+    problems.push(...checkCompanionOrder(masked[i]![1], text, name, glossary));
     problems.push(...checkQuantityWords(masked[i]![1], text, name));
   });
 
@@ -276,9 +407,23 @@ export function checkTranslation(input: {
   // C3 also reads the masked Dutch (ruling 15) — direction words are never
   // masked, so the scan is unaffected, and it keeps every check in this
   // function reading the one text the model actually saw.
-  const nlDir = [...dutchDirections(maskedDutch.body)].sort().join(',');
-  const enDir = [...englishDirections(english.body)].sort().join(',');
-  if (nlDir !== enDir) problems.push(`C3: direction claims differ (Dutch [${nlDir}], English [${enDir}])`);
+  // Final-review fix wave (ruling 18): an ORDERED sequence, not a set — a
+  // set let 'Utrecht steeg…, Zeeland daalde…' → 'Utrecht fell…, Zeeland
+  // rose…' pass. C10 then compares each claim's negation (the Dutch
+  // validator's negation-in-clause rule and its English mirror): 'niet
+  // gedaald' → 'has fallen' is a reversed claim.
+  const nlSeq = dutchDirectionSequence(maskedDutch.body);
+  const enSeq = englishDirectionSequence(english.body);
+  const nlDir = collapse(nlSeq.map((c) => c.dir)).join(',');
+  const enDir = collapse(enSeq.map((c) => c.dir)).join(',');
+  if (nlDir !== enDir) {
+    problems.push(`C3: direction claims differ (Dutch [${nlDir}], English [${enDir}])`);
+  } else {
+    const key = (c: DirectionClaim) => `${c.negated ? 'not ' : ''}${c.dir}`;
+    const nlNeg = collapse(nlSeq.map(key)).join(',');
+    const enNeg = collapse(enSeq.map(key)).join(',');
+    if (nlNeg !== enNeg) problems.push(`C10: negation of a direction claim differs (Dutch [${nlNeg}], English [${enNeg}])`);
+  }
 
   // C4 reads the MASKED Dutch body: the registry's inline provisional markers are
   // already caveat placeholders there (Task 1), so only free-prose caveat words remain.
