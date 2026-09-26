@@ -18,29 +18,27 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 133 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-26-session-134-kickoff.md](session-briefs/2026-09-26-session-134-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-27, session 134 — owner present; verify against `git log` / Actions runs
+before trusting this). Previous kickoff: [session-briefs/2026-09-26-session-134-kickoff.md](session-briefs/2026-09-26-session-134-kickoff.md).**
 
-- **`main` is live and green @ `3438deed`.** CI run 36252531510 green incl. deploy (2026-09-26); prod 200. No open PRs.
-- **Session 133 shipped (DARK, no user-visible change):** check C12, the English meaning check ([#325](open-questions.md),
-  ADR [059](decisions/059-english-meaning-check.md)): a second, independent AI call that compares the masked Dutch and
-  masked English of every English answer before it is shown, fail-closed to Dutch; audit role `'meaning_check'`, R8 scope
-  leg, a 13 must-reject / 6 must-pass labelled set, `npm run meaning-check:eval`/`:record`. Owner GO on design + zero-spend
-  build. Built via SDD (4 tasks + final opus review, fixes applied). Verify block: root+web tsc, backend 3659 pass / 1 todo,
-  web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated (template fallbacks 3, unchanged), web build, `audit:verify` 1–309
-  clean (2 pinned), `/code-review` LOW clean.
-- **English switch-on still waits** for the recording run after 2026-10-01 (RUNBOOK "English answers" steps 1–3 + 3b):
-  `translate:record`, `translate:eval`, then `meaning-check:record` (≈€1, Haiku vs Sonnet 5 ×3) → pick the model by the
-  measured bar (0 missed reversals, 0 false alarms), add the 14 real translations as must-pass cases; only then the owner
-  decides the `ENGLISH_ANSWERS_ENABLED` flip. English costs ≈€0.003 extra per answer for the check.
-- **Fixed live, Dutch path:** [#326](open-questions.md) — the Dutch validator let a negated trend word reverse the validated
-  direction ("De inflatie daalde niet" on a real decline). Now checked / failing closed (`5c74e633`); benchmark 14/14 + 6/6
-  + 0 fabricated, template fallbacks unchanged at 3; `audit:verify` 1–309 clean apart from the 2 pinned rows.
+- **The Anthropic "API cap" is SOLVED (2026-09-26):** it was our own organisation Monthly spend limit ($35, Console →
+  Settings → Billing → "Spend limits"), not an Anthropic restriction. The owner raised it to **$50** (the spend roof; resets
+  on the 1st). Live questions answer again. A $100 promo credit (granted 09-26, expires 2027-03-25) pays for usage. RUNBOOK
+  "Bill-shock protection" has the details.
+- **English answers: measurement DONE, flip is the owner's call.** Session 134 ran RUNBOOK "English answers" steps 1–3b
+  (`156292fa`, CI 36259045980 green incl. deploy): the meaning check C12 runs on **Sonnet 5** (Haiku missed a dropped hedge; Sonnet 5 0/0/0/0 ×3); four
+  fixes from the first real recording; final **13/14 verified on the first attempt, B10 falls back** (≈7% fallback, under
+  the ~10% trigger); the 13 real renderings are must-pass cases. Verify block: root+web tsc, backend 3694 pass / 1 todo,
+  web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated (template fallbacks 3), web build, `audit:verify` 1–309 clean
+  (2 pinned), `/code-review` LOW clean. **Next: the owner decides `ENGLISH_ANSWERS_ENABLED` (RUNBOOK steps 4–5).**
+- **Now unblocked (the spend room this month is ~$13 until the roof resets 10-01):** the live benchmark (measures whether
+  #326 raised the live rewrite rate); Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); region questions,
+  Task 9 ([#267](open-questions.md)) — only 2 of 26 measures are regional today, so a regional-statistics set is the
+  proposed prerequisite; the other `:record` scripts.
+- **Fixed live, Dutch path (session 133):** [#326](open-questions.md) — a negated trend word can no longer reverse the
+  validated direction (`5c74e633`).
 - **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (what felt off about the looks-row
   mockups). Owner signed-in spot-check of own-data publishing still to do (RUNBOOK ADR 057 step 4).
-- **After the Anthropic API cap lifts 2026-10-01:** the English recording run above (steps 1–3 + 3b); Eurostat E2a
-  owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
-  benchmark.
 - **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; English phase-1 UI gaps #324;
   C12 hygiene leftovers #327.
 ---

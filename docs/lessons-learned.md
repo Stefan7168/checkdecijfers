@@ -6,6 +6,24 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 134 — a "provider restriction" was our own spend limit for 12 days; the first real recording finds what hermetic tests can't
+
+1. **An error that says "your *specified* limits" means a limit someone on our side specified — look for it on every
+   Billing/limits page before concluding "provider-side, no lever".** From 2026-09-14 every live call failed with "You have
+   reached your specified API usage limits"; the 09-14 session checked Settings → Limits (rate limits only), found nothing
+   editable, and documented an "Anthropic-side restriction until 10-01". It was the org **Monthly spend limit ($35)** at the
+   bottom of Settings → **Billing** → "Spend limits". Twelve days of blocked production, live benchmark and every `:record`
+   script, fixed in one click once someone scrolled down. Also: a stated limit ("€25/mo cap" in the RUNBOOK table) that
+   doesn't match the observed spend ($35) is itself a clue that the doc is stale, not that the limit is gone.
+2. **The first real-model recording is a test of the whole design, not a formality.** Hermetic tests had passed for
+   days; one real run surfaced a glossary-scope gap (alternates naming a different CBS name), an unregistered unit that
+   split into loose placeholders, a missing English direction word, and a prompt ambiguity ("tot en met" → bare "to").
+   All four failed safe (Dutch fallback), so the design held, but read every fallback's reason before calling the
+   rate acceptable. Two of the three were fixable causes, not edge cases.
+3. **Measure the model choice; don't argue it.** The cheap-tier default (Haiku) missed exactly one seeded case (a
+   dropped hedge) on all three repeats. A labelled set with must-reject AND must-pass cases turned "is Haiku good enough?"
+   into a two-line answer.
+
 ## Session 133 — a kickoff's build trigger must be measurable; give reviewers the spec, not only the brief
 
 1. **Check that a proposed build trigger can actually be measured.** The kickoff said to build the #325 meaning check

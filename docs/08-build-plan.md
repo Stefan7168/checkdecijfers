@@ -129,7 +129,7 @@ The "new data sources beyond CBS" architecture, designed source-NEUTRALLY (owner
 
 ## WP30c — Eurostat as the second source, phase E1: adapter + internal explorer (owner decision 2026-09-14, [open-questions #248](open-questions.md); design + pre-build adversarial review: ADR [048](decisions/048-eurostat-data-source.md))
 
-**▶ Phase E2 (Eurostat answerable in chat) — design APPROVED by the owner session 125 (2026-09-23), no WP number:** first slice "E2a: country-level answers" — [superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md), [open-questions #313](open-questions.md). All six owner decisions taken session 125 (D3 with revised chip copy, spec §4.4). Steps 1–4 BUILT dark and merged (PR #41), plus the step-5 groundwork: chart-editor break guard (PR #42, #316), server-side filtered Eurostat downloads (PR #43), and step 5 staged behind `EUROSTAT_SIBLINGS_ENABLED` with a registration script (PR #44) — all session 125, all merged, nothing reader-visible. **Next (owner-supervised):** step 0 (live AI-parse recording after the API cap lifts 2026-10-01), step 5 (`npm run eurostat:siblings -- --apply` + `registry:apply`, RUNBOOK "E2a step 5"), step 6 (the flip).
+**▶ Phase E2 (Eurostat answerable in chat) — design APPROVED by the owner session 125 (2026-09-23), no WP number:** first slice "E2a: country-level answers" — [superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md](superpowers/specs/2026-09-23-eurostat-e2a-country-answers-design.md), [open-questions #313](open-questions.md). All six owner decisions taken session 125 (D3 with revised chip copy, spec §4.4). Steps 1–4 BUILT dark and merged (PR #41), plus the step-5 groundwork: chart-editor break guard (PR #42, #316), server-side filtered Eurostat downloads (PR #43), and step 5 staged behind `EUROSTAT_SIBLINGS_ENABLED` with a registration script (PR #44) — all session 125, all merged, nothing reader-visible. **Next (owner-supervised):** step 0 (live AI-parse recording after the API cap lifts 2026-10-01 — **unblocked 2026-09-26, session 134: the cap was our own spend limit**), step 5 (`npm run eurostat:siblings -- --apply` + `registry:apply`, RUNBOOK "E2a step 5"), step 6 (the flip).
 
 **✅ BUILT (session 101 continuation, autonomous overnight, 2026-09-14/15) — branch `wp30c-e1-eurostat-adapter`
 (PR #23), ✅ MERGED to `main` session 107 (2026-09-16/17) — see below for that merge's own account.** Frozen executor brief
@@ -1202,7 +1202,8 @@ plan: [superpowers/plans/2026-09-25-english-answers-phase1.md](superpowers/plans
 after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (semantic false-pass residuals). **Session 133 (2026-09-26):** the #325 fix, check C12
 (ADR [059](decisions/059-english-meaning-check.md), [spec](superpowers/specs/2026-09-26-english-meaning-check-design.md),
 [plan](superpowers/plans/2026-09-26-english-meaning-check.md)), hermetic half ✅ built and merged dark (`3438deed`, CI
-36252531510 green); its recording run `npm run meaning-check:record` (RUNBOOK step 3b) waits for the cap lift too.
-Owner-supervised. Phases 2 (refusals/clarifications) and 3
+36252531510 green). **Session 134 (2026-09-26/27): recording run ✅ DONE** (the "cap" was our own $35 spend limit, raised
+to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) — see ADR 059's live as-built note.
+**Only the owner's `ENGLISH_ANSWERS_ENABLED` flip (RUNBOOK steps 4–5) remains.** Owner-supervised. Phases 2 (refusals/clarifications) and 3
 (chart texts) get their own specs.
 

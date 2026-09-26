@@ -223,7 +223,7 @@ the English chip label that was actually clicked; the citation copy, CSV export 
 an English answer; shared/published pages and exports stay Dutch; chart texts are untouched by this phase (a
 separate, not-yet-specified phase 3, per Decision above).
 
-**Not yet done:** `npm run translate:record` (blocked by the API cap), the owner-supervised go-live
+**Not yet done (at the time — `translate:record` DONE session 134, see the addendum below):** `npm run translate:record` (blocked by the API cap), the owner-supervised go-live
 (`ENGLISH_ANSWERS_ENABLED=1`), and the merge to `main`.
 
 **Known limits at merge (session 132, [#325](../open-questions.md)):** C1–C11 guarantee the NUMBERS; direction and
@@ -232,7 +232,7 @@ reverted two word-level patches that opened new ones). #325 lists the confirmed 
 `ENGLISH_ANSWERS_ENABLED` flip; the recommended structural answer is an ADR 034-style independent semantic comparison,
 fail-closed to Dutch. The Dutch validator's own negation blind spot found by the same review ([#326](../open-questions.md)) was fixed the same session (`5c74e633`).
 **Session 133 (2026-09-26):** that comparison is ADR [059](059-english-meaning-check.md), check C12, hermetic half built;
-its recording/eval (`npm run meaning-check:record`) waits for the API cap lift, and the flip waits for its result.
+its recording/eval (`npm run meaning-check:record`) waits for the API cap lift, and the flip waits for its result. (Recording DONE session 134 — addendum below; only the flip remains.)
 
 ## As-built addendum (session 134, 2026-09-26/27) — first real recording
 
