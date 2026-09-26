@@ -36,6 +36,7 @@
 // so a fixture that "translates" but doesn't RECONSTRUCT is caught here,
 // before it is ever committed.
 import { writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   answerQuestionAudited,
@@ -247,4 +248,6 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}
