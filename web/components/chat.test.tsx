@@ -3112,13 +3112,20 @@ describe('Chat — onboarding confirm-first offer (ADR 026 addendum, #109)', () 
   });
 });
 
-// ADR 058 (English answers, Task 8): the web-side render + chip-split. The
-// flag/language gating itself lives server-side (englishAnswerOptions,
-// web/lib/english-answers.ts) — chat.tsx only ever reacts to whether
-// `message.english` is present, so these tests attach it directly to the
-// fixture rather than driving it through the flag.
+// ADR 058 (English answers, Task 8; fix round 1, controller ruling 16): the
+// web-side render + chip-split. The flag/language gating itself lives
+// server-side (englishAnswerOptions, web/lib/english-answers.ts) — chat.tsx
+// only ever reacts to whether `message.english` is present, so these tests
+// attach it directly to the fixture rather than driving it through the flag.
 describe('Chat — ADR 058 English answers (Task 8)', () => {
-  it('a verified English rendering shows english.text instead of the Dutch structural card', async () => {
+  // A full, real EnglishLines (same discipline as fakeAnswerResponse's own
+  // fixtures) — the attribution line deliberately reads NOTHING like the
+  // Dutch default, so a test asserting on it can't accidentally pass against
+  // Dutch text that happens to be present too.
+  const ENGLISH_ATTRIBUTION_LINE =
+    'Source: CBS StatLine, table 86141NED — Population. Data synced on 2026-07-01. License: CC BY 4.0.';
+
+  it('a verified English rendering shows the English body + attribution line INSIDE the answer card (fix round 1, controller ruling 16)', async () => {
     askQuestion.mockResolvedValueOnce(
       outcome({
         kind: 'ok',
@@ -3126,23 +3133,49 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
         netCost: 20,
         response: fakeAnswerResponse({
           body: 'Nederland telt 18.044.027 inwoners.',
+          shape: 'single',
+          cells: [fakeCell()],
           english: fakeEnglishRendering({
             status: 'verified',
-            text: 'The Netherlands has 18,044,027 inhabitants.',
+            body: 'The Netherlands has 18,044,027 inhabitants.',
+            lines: {
+              assumptionLine: null,
+              regionSetLine: null,
+              regionSeriesLine: null,
+              definitionLine: null,
+              alternatesLine: null,
+              markingLine: null,
+              attributionLine: ENGLISH_ATTRIBUTION_LINE,
+            },
           }),
         }) as ComposedResponse,
       }),
     );
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
-    expect(
-      await screen.findByText('The Netherlands has 18,044,027 inhabitants.'),
-    ).toBeInTheDocument();
+    // The English body renders where the Dutch one would, INSIDE a Card —
+    // not the plain bubble (Important 1/2's review found it dropped the card).
+    expect(await screen.findByText('The Netherlands has 18,044,027 inhabitants.')).toBeInTheDocument();
     expect(screen.queryByText('Nederland telt 18.044.027 inwoners.')).toBeNull();
-    expect(document.querySelector('[data-slot="card"]')).toBeNull();
+    const card = document.querySelector('[data-slot="card"]');
+    expect(card).not.toBeNull();
+    // The attribution TEXT is English...
+    expect(screen.getByText(ENGLISH_ATTRIBUTION_LINE)).toBeInTheDocument();
+    // ...but the SourceBadge (tableId/source/syncedAt) stays the Dutch
+    // answerView's own, unchanged (controller ruling 16) — its rendered
+    // link is the one `<a>` inside the card (getByText would also match
+    // ancestor elements whose combined text happens to contain the same
+    // substring, e.g. the wrapping footer span).
+    expect(within(card as HTMLElement).getByRole('link')).toHaveTextContent('86141NED');
+    // The Dutch-sourced actions still render for an English answer: feedback,
+    // the proof drill-through trigger, and (implicitly, via auditId/proof
+    // being present) nothing about them changed.
+    expect(screen.getByRole('button', { name: 'Nuttig antwoord' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Niet nuttig' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bewijs dit cijfer' })).toBeInTheDocument();
   });
 
-  it('a fallback English rendering shows the fallback notice above the original Dutch text', async () => {
+  it('a fallback English rendering shows the fallback notice above the UNCHANGED Dutch card (fix round 1, controller ruling 16)', async () => {
     askQuestion.mockResolvedValueOnce(
       outcome({
         kind: 'ok',
@@ -3150,7 +3183,7 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
         netCost: 20,
         response: fakeAnswerResponse({
           body: 'Nederland telt 18.044.027 inwoners.',
-          english: fakeEnglishRendering({ status: 'fallback', text: null }),
+          english: fakeEnglishRendering({ status: 'fallback', text: null, body: null, lines: null }),
         }) as ComposedResponse,
       }),
     );
@@ -3161,8 +3194,9 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
         'We konden geen gecontroleerde Engelse versie van dit antwoord maken; hieronder staat het Nederlandse origineel.',
       ),
     ).toBeInTheDocument();
+    // The card itself is the UNCHANGED Dutch one — body AND attribution.
     expect(screen.getByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
-    expect(document.querySelector('[data-slot="card"]')).toBeNull();
+    expect(document.querySelector('[data-slot="card"]')).not.toBeNull();
   });
 
   it('a message with no english rendering keeps the Dutch structural card unchanged', async () => {
@@ -3170,6 +3204,41 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
     render(<Chat />);
     await submit('Hoeveel inwoners heeft Nederland?');
     expect(document.querySelector('[data-slot="card"]')).not.toBeNull();
+  });
+
+  it('dock mode shows the docked-visual trigger for an English answer (fix round 1, Important 2)', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({
+        kind: 'ok',
+        auditId: 25,
+        netCost: 20,
+        response: fakeAnswerResponse({
+          body: 'De inflatie in 2024 was 3,3%.',
+          shape: 'single',
+          cells: [fakeCell()],
+          english: fakeEnglishRendering({
+            status: 'verified',
+            body: 'Inflation was 3.3% in 2024.',
+            lines: {
+              assumptionLine: null,
+              regionSetLine: null,
+              regionSeriesLine: null,
+              definitionLine: null,
+              alternatesLine: null,
+              markingLine: null,
+              attributionLine: ENGLISH_ATTRIBUTION_LINE,
+            },
+          }),
+        }) as ComposedResponse,
+      }),
+    );
+    render(<Chat dockMode />);
+    await submit('Wat was de inflatie in 2024?');
+    // Before the fix: the Card (and its dock trigger) never rendered for an
+    // English answer, AND the outer fallback chip stayed hidden too (it
+    // checked `message.answerView`, which was still non-null) — so an
+    // English answer in dock mode had NO trigger at all.
+    expect(await screen.findByRole('button', { name: 'Kaart in het paneel →' })).toBeInTheDocument();
   });
 
   describe('chip label/submit split', () => {

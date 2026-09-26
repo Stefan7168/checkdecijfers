@@ -791,7 +791,13 @@ export function Chat({
       // `label`/`shown` are the same text) this is byte-identical to `text`.
       // The user bubble pushed above still shows the ORIGINAL `text` — never
       // this value — so an English chip's bubble stays in English.
-      const sendValue = chip ? chip.label : text;
+      // Fix round 1 (minor): `.trim()` the sent label — `text` here is
+      // ALWAYS already trimmed (handleSubmit's `input.trim()`, or a chip
+      // label typed verbatim into the input), but `chip.label` is copied
+      // straight from the server's `submit`/suggestion text and was never
+      // itself trimmed, so this keeps a chip-take byte-identical to the old
+      // behaviour (which always sent the already-trimmed `text`).
+      const sendValue = chip ? chip.label.trim() : text;
       // `chip.pending` is only DEFINED when the clicked chip's own message
       // carried a carrier (ADR 058: Carrier is now optional on chipRef so a
       // carrier-less chip can still record its label/submit split above) —
@@ -1184,6 +1190,46 @@ export function Chat({
             message.kind === 'answer' && message.english?.status === 'verified' ? message.english : null;
           const englishFallback = message.kind === 'answer' && message.english?.status === 'fallback';
           const englishChips = englishVerified ? englishVerified.chips : null;
+          // Fix round 1 (controller ruling 16): a verified English answer
+          // renders INSIDE the existing answer Card, not as a plain bubble —
+          // only the TEXT slots swap to English; tableId/source/syncedAt,
+          // the provisional pill, the dock trigger and every action
+          // (feedback/proof/citation/CSV/copy) stay the Dutch `answerView`'s,
+          // unchanged. A fallback answer is the UNCHANGED Dutch card, with
+          // the fallback notice rendered directly above it. `showsCard` is
+          // computed ONCE and used both for the Card itself and for the
+          // in-flow dock-chip hide rule below (translate.ts's own invariant:
+          // `status === 'verified'` always pairs with non-null `body`/`lines`
+          // — see src/answer/translate/translate.ts — so the `!`s below are
+          // never a guess).
+          const answerView = message.kind === 'answer' ? message.answerView : null;
+          const showsCard = answerView !== null;
+          const useEnglishCardContent = englishVerified !== null && englishVerified.lines !== null;
+          const cardBody = useEnglishCardContent ? englishVerified!.body! : (answerView?.body ?? '');
+          const cardAssumptionLine = useEnglishCardContent
+            ? englishVerified!.lines!.assumptionLine
+            : (answerView?.assumptionLine ?? null);
+          const cardRegionSetLine = useEnglishCardContent
+            ? englishVerified!.lines!.regionSetLine
+            : (answerView?.regionSetLine ?? null);
+          const cardRegionSeriesLine = useEnglishCardContent
+            ? englishVerified!.lines!.regionSeriesLine
+            : (answerView?.regionSeriesLine ?? null);
+          const cardStalenessWarning = useEnglishCardContent
+            ? englishVerified!.stalenessWarning
+            : (answerView?.stalenessWarning ?? null);
+          const cardDefinitionLine = useEnglishCardContent
+            ? englishVerified!.lines!.definitionLine
+            : (answerView?.definitionLine ?? null);
+          const cardAlternatesLine = useEnglishCardContent
+            ? englishVerified!.lines!.alternatesLine
+            : (answerView?.alternatesLine ?? null);
+          const cardMarkingLine = useEnglishCardContent
+            ? englishVerified!.lines!.markingLine
+            : (answerView?.markingLine ?? null);
+          const cardAttribution = useEnglishCardContent
+            ? englishVerified!.lines!.attributionLine
+            : (answerView?.attribution ?? '');
           return (
           <div
             key={i}
@@ -1218,11 +1264,18 @@ export function Chat({
               * collapses into it; R4 attribution stays fully visible, never
               * shortened). Every other message kind (refusal / clarification
               * / info) keeps exactly today's plain bubble below. */}
-            {message.kind === 'answer' && message.answerView && !englishVerified && !englishFallback ? (
-              <Card size="sm" className="mb-2 max-w-full">
+            {showsCard && answerView ? (
+              <>
+                {/* Fix round 1 (controller ruling 16): a fallback answer
+                  * keeps the UNCHANGED Dutch card below — this is the ONLY
+                  * thing that changes for it, directly above the card. */}
+                {englishFallback ? (
+                  <p className="mb-1 text-xs text-muted-foreground">{t('chat.englishFallback')}</p>
+                ) : null}
+                <Card size="sm" className="mb-2 max-w-full">
                 <CardContent className="flex flex-col gap-1">
                   <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
-                    {message.answerView.body}
+                    {cardBody}
                   </div>
                   {/* WP26 mechanism B (ADR 024): the defaulted-axis
                     * disclosure. It sits directly under the body and at
@@ -1231,37 +1284,37 @@ export function Chat({
                     * national figure") and carries the correction path.
                     * Burying it would keep the letter of the safelist and
                     * lose its point. */}
-                  {message.answerView.assumptionLine ? (
-                    <p className="text-sm text-muted-foreground">{message.answerView.assumptionLine}</p>
+                  {cardAssumptionLine ? (
+                    <p className="text-sm text-muted-foreground">{cardAssumptionLine}</p>
                   ) : null}
                   {/* #253: the region-class coverage disclosure — same
                     * muted, body-adjacent weight as the assumption line it
                     * sits directly beside, matching compose.ts's text
                     * order. */}
-                  {message.answerView.regionSetLine ? (
-                    <p className="text-sm text-muted-foreground">{message.answerView.regionSetLine}</p>
+                  {cardRegionSetLine ? (
+                    <p className="text-sm text-muted-foreground">{cardRegionSetLine}</p>
                   ) : null}
                   {/* ADR 055 / MS1: the multi-region-series coverage
                     * disclosure — same slot and weight as the region-set
                     * line it sits beside (the two can never co-occur),
                     * matching compose.ts's text order. */}
-                  {message.answerView.regionSeriesLine ? (
-                    <p className="text-sm text-muted-foreground">{message.answerView.regionSeriesLine}</p>
+                  {cardRegionSeriesLine ? (
+                    <p className="text-sm text-muted-foreground">{cardRegionSeriesLine}</p>
                   ) : null}
-                  {message.answerView.stalenessWarning ? (
-                    <p className="text-sm text-warning">{message.answerView.stalenessWarning}</p>
+                  {cardStalenessWarning ? (
+                    <p className="text-sm text-warning">{cardStalenessWarning}</p>
                   ) : null}
-                  {message.answerView.definitionLine ? (
-                    <p className="text-xs text-muted-foreground">{message.answerView.definitionLine}</p>
+                  {cardDefinitionLine ? (
+                    <p className="text-xs text-muted-foreground">{cardDefinitionLine}</p>
                   ) : null}
                   {/* #39: the alternate-reading disclosure — plain text under
                     * the definition it qualifies (the clickable affordance is
                     * #89, deliberately not built here). */}
-                  {message.answerView.alternatesLine ? (
-                    <p className="text-xs text-muted-foreground">{message.answerView.alternatesLine}</p>
+                  {cardAlternatesLine ? (
+                    <p className="text-xs text-muted-foreground">{cardAlternatesLine}</p>
                   ) : null}
-                  {message.answerView.markingLine ? (
-                    <p className="text-xs text-muted-foreground">{message.answerView.markingLine}</p>
+                  {cardMarkingLine ? (
+                    <p className="text-xs text-muted-foreground">{cardMarkingLine}</p>
                   ) : null}
                 </CardContent>
                 <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
@@ -1269,18 +1322,21 @@ export function Chat({
                     * R4 attribution sentence (always visible, never
                     * shortened — Huisstijl rule 7: quiet, text-xs
                     * text-muted-foreground), and the #86/#170(1) SourceBadge
-                    * deep link. */}
+                    * deep link. Fix round 1: `cardAttribution`'s TEXT swaps to
+                    * English when verified; tableId/source/syncedAt (the
+                    * SourceBadge's own props) stay the Dutch `answerView`'s
+                    * unchanged, per controller ruling 16. */}
                   <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     {message.provisional ? (
                       <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                         {t('chat.provisionalBadge')}
                       </span>
                     ) : null}
-                    <span>{message.answerView.attribution}</span>
+                    <span>{cardAttribution}</span>
                     <SourceBadge
-                      tableId={message.answerView.tableId}
-                      source={message.answerView.source}
-                      syncedAt={message.answerView.syncedAt}
+                      tableId={answerView.tableId}
+                      source={answerView.source}
+                      syncedAt={answerView.syncedAt}
                     />
                   </span>
                   {/* RIGHT: the actions — feedback FIRST (#128; only real
@@ -1292,7 +1348,12 @@ export function Chat({
                     * the proof panel (role="region") opens inside it, so the
                     * panel's own order-last basis-full (answer-proof.tsx)
                     * spans the whole footer instead of just this group's
-                    * shrink-to-fit width. */}
+                    * shrink-to-fit width. Fix round 1: every action here
+                    * (feedback/proof/dock-trigger/copy/csv/cost) is
+                    * DELIBERATELY unchanged for an English answer — it still
+                    * reads from the Dutch `message`/`answerView` fields
+                    * (citation/CSV/proof stay Dutch, per the fix ruling's
+                    * deferred note). */}
                   {/* …and the same for the 👎 panel (data-slot="feedback-panel",
                     * feedback-buttons.tsx), which the answer-card review found
                     * squeezed to the group's width: FeedbackButtons' own root
@@ -1309,7 +1370,11 @@ export function Chat({
                       * button (shared Button, the same toggle-variant pattern
                       * FeedbackButtons already uses — outline/secondary by
                       * aria-pressed — rather than a bespoke rounded pill),
-                      * placed immediately left of Copy. */}
+                      * placed immediately left of Copy. Fix round 1 (Important
+                      * 2): this now renders for an English answer too, since
+                      * `showsCard` (unlike the old guard) no longer excludes
+                      * one — `docked` itself was already true for it; only
+                      * the Card (and thus this trigger) was missing. */}
                     {docked ? (
                       <Button
                         type="button"
@@ -1328,7 +1393,10 @@ export function Chat({
                       * AnswerView to build it from, not only when `citation`
                       * happens to be non-null (it's ALWAYS non-null for a
                       * real answer envelope — this widens the gate to match
-                      * intent, not a behavior change today). */}
+                      * intent, not a behavior change today). Deliberately
+                      * still the DUTCH `answerView` (never `cardBody`/
+                      * `cardAttribution`) — citation/CSV/proof stay Dutch
+                      * (fix ruling's deferred note). */}
                     {message.answerView !== null ? (
                       <CopyAnswerButton
                         view={message.answerView}
@@ -1347,7 +1415,8 @@ export function Chat({
                     ) : null}
                   </div>
                 </CardFooter>
-              </Card>
+                </Card>
+              </>
             ) : message.kind === 'insufficient_credits' && message.insufficientCredits ? (
               // R2.2 (#69/#75/#211): a dedicated render branch, keyed on the
               // message KIND (never on parsing `text`) — a real `<Link>` to
@@ -1397,25 +1466,13 @@ export function Chat({
                         : 'text-[15px] leading-relaxed text-foreground')
                   }
                 >
-                  {/* ADR 058 (English answers, Task 8): a VERIFIED English
-                    * rendering shows its own checked text where the Dutch
-                    * `text` renders today; a FALLBACK shows the Dutch text
-                    * headed by the fallback notice (Task 6's fail-closed-
-                    * to-Dutch posture — `translateAnswer` could not produce
-                    * a verified English answer, so the original Dutch ships
-                    * instead of an unchecked translation, principle c).
-                    * Every other message (Dutch-only, non-answer, or the
-                    * flag off) renders exactly as before. */}
-                  {englishVerified ? (
-                    englishVerified.text
-                  ) : englishFallback ? (
-                    <>
-                      <p className="mb-1 text-xs text-muted-foreground">{t('chat.englishFallback')}</p>
-                      {message.text}
-                    </>
-                  ) : (
-                    message.text
-                  )}
+                  {/* Fix round 1 (controller ruling 16): English content now
+                    * renders ONLY inside the answer Card above (`showsCard`)
+                    * — this branch is reached whenever there is no
+                    * `answerView` to build a card from at all (a legacy/
+                    * minimal replay, or any non-answer kind), so it stays
+                    * exactly the Dutch `message.text`, unchanged. */}
+                  {message.text}
                 </div>
                 {message.cost !== null ? (
                   <div className="mt-0.5 text-xs text-muted-foreground tnum">
@@ -1479,8 +1536,12 @@ export function Chat({
             {/* Task 3 / superseded session 94: an answer card renders its own
               * docked trigger in the CardFooter action row instead (below) —
               * not here. Refusal/clarification/info messages (no answerView)
-              * keep the in-flow chip here, unchanged. */}
-            {docked && !(message.kind === 'answer' && message.answerView) ? (
+              * keep the in-flow chip here, unchanged. Fix round 1: the SAME
+              * `showsCard` the Card above uses — previously this read
+              * `message.answerView` directly, which stayed true for an
+              * English answer even though (pre-fix) its Card didn't render,
+              * hiding BOTH triggers at once (Important 2). */}
+            {docked && !showsCard ? (
               <button
                 type="button"
                 onClick={() => onActivateVisual?.(visualId(i))}
