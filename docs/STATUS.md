@@ -21,7 +21,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 132 — owner present; verify against `git log` / Actions runs before
 trusting this).**
 
-- **`main` is live and green @ `be676f6e`.** CI run 36234807804 green incl. deploy (2026-09-26); prod 200. No open PRs.
+- **`main` is live and green @ `5c74e633`.** CI run 36238579801 green incl. deploy (2026-09-26); prod 200. No open PRs.
 - **Session 132 shipped:** English answers phase 1 (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md))
   merged via PR #49 (`5954ccb2`) — DARK: `ENGLISH_ANSWERS_ENABLED` unset everywhere, no user-visible change. Verify block
   before the PR: backend 227/227 files, web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated, build, e2e 40/40.
@@ -29,8 +29,9 @@ trusting this).**
 - **English switch-on is gated by [#325](open-questions.md):** the checks make an altered NUMBER impossible, but five
   review rounds kept finding word-level false passes on direction/negation meaning (e.g. "hardly rose"). Recommended fix:
   an independent semantic comparison step (ADR 034 pattern) before the flip; owner decides spend after `translate:eval`.
-- **New, live Dutch path, not changed:** [#326](open-questions.md) — the Dutch validator likely misses a negation after
-  the verb ("daalde niet"). Next step: reproduce hermetically, then fix in its own change with the full verify block.
+- **Fixed live, Dutch path:** [#326](open-questions.md) — the Dutch validator let a negated trend word reverse the validated
+  direction ("De inflatie daalde niet" on a real decline). Now checked / failing closed (`5c74e633`); benchmark 14/14 + 6/6
+  + 0 fabricated, template fallbacks unchanged at 3; `audit:verify` 1–309 clean apart from the 2 pinned rows.
 - **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (what felt off about the looks-row
   mockups). Owner signed-in spot-check of own-data publishing still to do (RUNBOOK ADR 057 step 4).
 - **After the Anthropic API cap lifts 2026-10-01:** `translate:record` + `translate:eval` (measure English fallback
