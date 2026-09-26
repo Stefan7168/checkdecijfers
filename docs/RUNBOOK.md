@@ -574,7 +574,9 @@ Steps, in order, owner present:
    does, set `MEANING_CHECK_MODEL` in `src/answer/translate/meaning-check.ts` to `'claude-sonnet-5'`, then re-run steps
    1–3. If neither does, stop: the flag stays off and the prompt needs work. Also check the report's latency maximum:
    two translate calls plus two checks must fit inside the 20 s cap (`TRANSLATE_TIMEOUT_MS`). Commit the fixtures and the
-   report, then confirm `npm run meaning-check:eval` (replay) exits clean.
+   report, then confirm `npm run meaning-check:eval` (replay; it tests only the shipped model and writes no report) exits
+   clean. Finally, ask the session to add the 14 real recorded English translations from step 1 to the labelled set as
+   must-pass cases, and re-record just those (spec §4).
 4. **Set the flag** — in Vercel: add env var `ENGLISH_ANSWERS_ENABLED=1` (Production, plain text,
    not a secret, same as `ATTACHMENTS_ENABLED`/`OWN_DATA_PUBLISH_ENABLED`), then redeploy via
    `gh run rerun <latest main run>`.

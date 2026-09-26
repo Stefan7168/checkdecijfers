@@ -76,6 +76,10 @@ decide beyond the spec:
   over-strictness ADR 058 accepted (a faithful translation falls back to Dutch, the safe side). C12 can only reject, so it
   cannot recover those. If the recorded fallback rate shows they matter, relaxing C8/C10 becomes possible once C12 is
   measured and guards meaning. That would be a later, measured decision, not part of this build.
+- **Must-pass gaps, recorded:** the spec's `nam toe → increased` and sentence-merge must-pass cases are not in the set yet
+  (the first overlaps S1's plain rise; the merge shape needs a two-sentence Dutch body that C8 accepts). The spec's
+  must-pass "14 real recorded translations" can only be added after `translate:record`; that is part of RUNBOOK step 3b.
+  Missing must-pass cases only weaken the false-alarm side, which fails safe (toward Dutch).
 - Existing translate test stubs answer meaning-check requests through `tests/helpers/meaning-check-stub.ts` (recognised by
   the fixed system prompt, never by call order), so their request logs and call counts still only see translate calls.
 
@@ -83,5 +87,7 @@ decide beyond the spec:
 
 - Any missed reversal in the eval or live → move to Sonnet 5 first, then rework the prompt. It blocks the flip.
 - False alarms pushing the total English fallback rate above ~10% → tune the prompt's "not a difference" examples.
+- A verdict with `sameMeaning: true` but a non-empty `differences` list currently counts as "same" (the prompt demands
+  an empty list). If the eval shows the checker doing this, treat such a verdict as "different".
 - `claude-haiku-4-5` is deprecated → swap the constant, re-record and re-run the eval.
 - English traffic makes the check's cost visible on the spend dashboard → revisit batching or gating, with measured data.
