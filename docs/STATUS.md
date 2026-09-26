@@ -18,24 +18,25 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 131 — owner present; verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-26-session-132-kickoff.md](session-briefs/2026-09-26-session-132-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 132 — owner present; verify against `git log` / Actions runs before
+trusting this).**
 
-- **`main` is live and green.** Last code CI run on `main`: 36131271620 (re-run 2026-09-25 to deploy the publish flag;
-  green incl. deploy); later `main` commits are docs-only. Prod 200. Open PRs: Dependabot #47, #48 (2026-09-26, unreviewed).
-- **Session 131 shipped (details: [status-archive.md](status-archive.md)):** own-data chart publishing is LIVE
-  (migration 036 applied, `OWN_DATA_PUBLISH_ENABLED=1` in Production) — the owner's signed-in publish/unpublish
-  spot-check is still to do; owner decisions #250(a), #256, #260, #271, #275, #314 recorded; stale worktree
-  `chart-copilot-phase6` and 8 merged local branches removed.
-- **Top priority — finish English answers phase 1** (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md)):
-  branch `english-answers-phase1` @ `d9b632f1` (pushed, not merged, flag unset), plan Tasks 1–6 of 9 done and
-  review-clean; next Task 7 (audit wiring + R8), then 8 (web), 9 (record/eval + docs), final review, verify block, PR.
-  Real-model recording + the `ENGLISH_ANSWERS_ENABLED` flip wait for the API cap to lift (2026-10-01), owner-supervised.
-- **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (say what felt off about the
-  looks-row mockups). The rest of [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md) is decided.
-- **After the Anthropic API cap lifts 2026-10-01:** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)), the
-  `:record` scripts, the live benchmark, `translate:record` + English eval.
-- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299.
+- **`main` is live and green @ `be676f6e`.** CI run 36234807804 green incl. deploy (2026-09-26); prod 200. No open PRs.
+- **Session 132 shipped:** English answers phase 1 (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md))
+  merged via PR #49 (`5954ccb2`) — DARK: `ENGLISH_ANSWERS_ENABLED` unset everywhere, no user-visible change. Verify block
+  before the PR: backend 227/227 files, web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated, build, e2e 40/40.
+  Dependabot #47 + #48 merged (Anthropic SDK 0.126 → 0.128 in root and web, 9 minor web bumps).
+- **English switch-on is gated by [#325](open-questions.md):** the checks make an altered NUMBER impossible, but five
+  review rounds kept finding word-level false passes on direction/negation meaning (e.g. "hardly rose"). Recommended fix:
+  an independent semantic comparison step (ADR 034 pattern) before the flip; owner decides spend after `translate:eval`.
+- **New, live Dutch path, not changed:** [#326](open-questions.md) — the Dutch validator likely misses a negation after
+  the verb ("daalde niet"). Next step: reproduce hermetically, then fix in its own change with the full verify block.
+- **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (what felt off about the looks-row
+  mockups). Owner signed-in spot-check of own-data publishing still to do (RUNBOOK ADR 057 step 4).
+- **After the Anthropic API cap lifts 2026-10-01:** `translate:record` + `translate:eval` (measure English fallback
+  rates), then #325; Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
+  benchmark.
+- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; English phase-1 UI gaps #324.
 ---
 
 ## Phase 0 checklist

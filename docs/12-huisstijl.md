@@ -162,7 +162,7 @@ Staaf · Liggend · Tabel** (line, area, bar, horizontal bar, table).
    refusals, chart notes and definitions) stay Dutch regardless of the interface language — restyling or
    translating the interface never rewrites that output. **Superseded for regular answers by ADR
    [058](decisions/058-english-answers.md) (owner decision 2026-09-25, session 131; phase 1 built sessions
-   131-132, branch `english-answers-phase1`, not merged, flag off — see [open-questions
+   131-132, merged to `main` 2026-09-26 (PR #49, `5954ccb2`), flag off — see [open-questions
    #271](open-questions.md)/[#324](open-questions.md)): once `ENGLISH_ANSWERS_ENABLED` is on, a validated
    answer's own prose/chips/definition ARE translated for an English reader (numbers masked from the model
    the whole time, checked before use, falling back to the unchanged Dutch card on any failed check).

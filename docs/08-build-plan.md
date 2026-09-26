@@ -1197,10 +1197,9 @@ switch-on remains** (migration 036, the flag, the live check).
 
 Spec: [superpowers/specs/2026-09-25-english-answers-design.md](superpowers/specs/2026-09-25-english-answers-design.md);
 plan: [superpowers/plans/2026-09-25-english-answers-phase1.md](superpowers/plans/2026-09-25-english-answers-phase1.md).
-**Status (2026-09-26):** Tasks 1–6 of 9 built and review-clean on branch `english-answers-phase1` (`d9b632f1`,
-pushed, not merged). **Next: Task 7** (audit wiring + R8 reconstruction), then 8 (web) and 9 (record/eval script,
-RUNBOOK switch-on, docs), then the final whole-branch review, verify block, PR, owner GO. Three carried minors from
-Task 6 must be fixed before `translate:record` (see the session-132 kickoff). Real-model recording and the flag flip
-wait for the Anthropic API cap to lift (2026-10-01) and are owner-supervised. Phases 2 (refusals/clarifications) and 3
+**Status (2026-09-26, session 132): ✅ DONE — all 9 tasks built, final whole-branch review + fix rounds, merged via PR
+#49 (`5954ccb2`), dark behind `ENGLISH_ANSWERS_ENABLED`.** Remaining before the flip: `translate:record` + `translate:eval`
+after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (semantic false-pass residuals — recommended:
+an independent semantic comparison step); owner-supervised. Phases 2 (refusals/clarifications) and 3
 (chart texts) get their own specs.
 
