@@ -14,6 +14,7 @@ import type { AuditedResponse } from '../backend/answer/audit/index.ts';
 import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
+import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 
 const { currentUserId, getDb } = vi.hoisted(() => ({
   currentUserId: vi.fn<() => Promise<string | null>>(),
@@ -66,6 +67,23 @@ vi.mock('../backend/answer/context/index.ts', () => ({
 // filters against the real registry keys.
 vi.mock('../backend/answer/llm/client.ts', () => ({ AnthropicLlmClient: vi.fn() }));
 vi.mock('../backend/websearch/index.ts', () => ({ AnthropicWebSearchClient: vi.fn() }));
+// ADR 058 final-review fixes (ruling 19): web/lib/english-answers.ts builds the
+// translate client on its OWN SDK instance (`new Anthropic({ maxRetries: 0,
+// timeout })`). The real SDK refuses to construct in this browser-like test
+// environment, so it is faked here — the same pattern trial-actions.test.ts
+// uses for trial-actions.ts's identical `new AnthropicLlmClient(new
+// Anthropic({...}))` shape. The fake records its options so the wiring tests
+// below still prove the retries-off / 20 s-timeout construction.
+const sdkInstances = vi.hoisted(() => [] as { opts: unknown }[]);
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: class FakeAnthropic {
+    opts: unknown;
+    constructor(opts?: unknown) {
+      this.opts = opts;
+      sdkInstances.push(this);
+    }
+  },
+}));
 
 // #65: the durable error reporter — hoisted (unlike a plain inline factory)
 // so the WP218 phase 2 tests below can assert it was called; stubbed to a
@@ -642,6 +660,17 @@ function lastReplyOptions(): Record<string, unknown> {
   return audit.answerClarificationReplyAudited.mock.calls[0]![3] as Record<string, unknown>;
 }
 
+/** The translate client is the AnthropicLlmClient built on a fresh SDK
+ * instance with retries off and the 20 s step cap as its request timeout. */
+function expectTranslateClientWiredWithCappedSdk(sdkCountBefore: number, translateClient: unknown): void {
+  expect(sdkInstances.length).toBe(sdkCountBefore + 1);
+  const sdk = sdkInstances.at(-1)!;
+  expect(sdk.opts).toEqual({ maxRetries: 0, timeout: 20_000 });
+  const built = vi.mocked(AnthropicLlmClient).mock.calls.findIndex((args) => (args[0] as unknown) === sdk);
+  expect(built).toBeGreaterThanOrEqual(0);
+  expect(translateClient).toBe(vi.mocked(AnthropicLlmClient).mock.instances[built]);
+}
+
 // ADR 058 (English answers, Task 8): askQuestion/replyToClarification each
 // call getLang() ONCE and spread englishAnswerOptions(lang) into the audited
 // options bag — dormant (no `lang`/`translateClient` key at all) unless BOTH
@@ -672,9 +701,11 @@ describe('askQuestion / replyToClarification — ADR 058 English answers wiring'
     vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
     getLang.mockResolvedValue('en');
     driveGate(fakeAnswer(), 1, 20);
+    const sdkCountBefore = sdkInstances.length;
     await askQuestion('q', RID);
     expect(lastAskOptions().lang).toBe('en');
     expect(lastAskOptions().translateClient).toBeDefined();
+    expectTranslateClientWiredWithCappedSdk(sdkCountBefore, lastAskOptions().translateClient);
   });
 
   it('askQuestion: calls getLang() exactly once per action', async () => {
@@ -707,8 +738,10 @@ describe('askQuestion / replyToClarification — ADR 058 English answers wiring'
     vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
     getLang.mockResolvedValue('en');
     driveGate(fakeAnswer(), 7, 20);
+    const sdkCountBefore = sdkInstances.length;
     await replyToClarification(validPending, '2024', RID);
     expect(lastReplyOptions().lang).toBe('en');
     expect(lastReplyOptions().translateClient).toBeDefined();
+    expectTranslateClientWiredWithCappedSdk(sdkCountBefore, lastReplyOptions().translateClient);
   });
 });
