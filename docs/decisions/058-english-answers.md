@@ -50,6 +50,90 @@ benchmark and the R8 reconstruction are all Dutch-coupled.
 - Real-model fixtures and the English eval wait for the Anthropic API cap to lift (2026-10-01); the flag stays off
   until then.
 
+## As-built (phase 1, sessions 131-132, branch `english-answers-phase1`, NOT merged, flag off)
+
+Built via SDD, 9 tasks — plan
+[superpowers/plans/2026-09-25-english-answers-phase1.md](../superpowers/plans/2026-09-25-english-answers-phase1.md),
+ledger
+[superpowers/sdd/2026-09-25-english-answers-phase1/progress.md](../superpowers/sdd/2026-09-25-english-answers-phase1/progress.md).
+What the Decision above under-specified or the build genuinely had to decide:
+
+- **Two more deterministic checks, C7 and C8, past the six named above.** A review found the original
+  placeholder-identity check (C1) is SET-based: a model swapping two number placeholders — binding a value to
+  the wrong period or region — passed every original check untouched, and a number bound to the wrong region or
+  period is a fabricated claim (principle a), not a stylistic nit. C7 requires a Dutch sentence's number
+  placeholders to keep their relative ORDER in the English sentence; C8 requires each number placeholder's
+  companion period placeholders and region glossary names to land in the SAME English sentence. Both fail
+  toward the Dutch fallback (`src/answer/translate/check.ts`).
+- **A digit-bearing glossary name is masked WHOLE**, as a new placeholder kind `⟦G…⟧` (exact case-sensitive
+  match, longest match first, masked before caveats/periods/numbers). A measure title like "Bevolking op 1
+  januari" or a dimension label like "15 tot 75 jaar" carries a digit in ITS OWN Dutch or English text — sent to
+  the model as literal text, it would either let the model write that digit back (forbidden, C2) or demand the
+  model reproduce an untranslatable name exactly (C5), a guaranteed deadlock. Such names are removed from both
+  the model-facing glossary and the glossary `checkTranslation` runs against; C1's ordinary placeholder-identity
+  check enforces their exact reuse instead.
+- **A retry never quotes `checkTranslation`'s own problem strings — it sends one fixed, digit-free English
+  sentence per failed CHECK KIND, deduplicated.** Those problem strings are audit text: they name item indices,
+  counts and, sometimes, a Dutch source name — which can itself carry a digit (e.g. a problem naming "Bevolking
+  op 1 januari"). Echoing one back to the model on retry would smuggle a digit past the mask straight into the
+  model's own prompt. `src/answer/translate/prompt.ts`'s `PROBLEM_KIND_SENTENCE` table instead maps:
+  - C1 → "Some placeholders were dropped, duplicated or invented."
+  - C2 → "A digit was written."
+  - C3 → "A direction word was changed."
+  - C4 → "A caveat word was dropped."
+  - C5 → "A required name was not used exactly."
+  - C6 → "The number of chips or alternates changed."
+  - C7 → "Numbers were reordered."
+  - C8 → "A number was moved away from its period or region."
+  - malformed/unparseable model output → "The output was not valid JSON of the required shape."
+- **The model's output is shape-validated before anything else touches it** (`isTranslationItemsShape`) — a
+  malformed response becomes an ordinary retryable failed attempt instead of throwing inside
+  `checkTranslation`/`fillPlaceholders`. Up to two attempts total (one fresh, one retry naming the failed check
+  kinds) — the same ladder shape the Dutch compose path uses, just shorter: no template rung, because the
+  fallback here is the ALREADY-VALIDATED Dutch answer, never a fabricated English one.
+- **`TRANSLATE_PROMPT_VERSION` stays `1`** even though system-prompt rule 1 gained the `⟦G…⟧` name-placeholder
+  kind partway through the build — nothing has ever been recorded or served under v1 (recording is this very
+  Task 9, and the flag stays unset until the go-live below), so no consumer can distinguish the old and new
+  wording; a real behaviour change to an ALREADY-RECORDED prompt would instead need a bump.
+- **Every deterministic name/direction/region check (C3, C5, C8) reads the MASKED Dutch text**, not a separately
+  re-split unmasked body — this closes a latent desync risk (regions read from an independently-split body could
+  misalign if sentence counts ever differed) at no extra cost, since C1 already guarantees a `⟦G…⟧`-masked name's
+  own exact reuse regardless.
+- **A verified English answer renders inside the SAME answer card**, not a separate plain bubble:
+  `english.body`/`english.lines.*`/`english.stalenessWarning` map onto the card's existing text slots, with
+  table id, source, synced date, provisional badge and the chart-dock trigger all read from the unchanged Dutch
+  `answerView`. A fallback renders the ORIGINAL Dutch card unchanged, with one honest line above it —
+  `chat.englishFallback` in `web/lib/i18n/messages.ts`: *"We couldn't produce a verified English version of this
+  answer, so here is the original Dutch."* A bare, cardless bubble was rejected: it would have silently dropped
+  the dock trigger and the answer's own source link, the public claim's whole point.
+- **Official English names split into two files** (Decision 4): `src/registry/english-names.cbs.generated.ts`
+  holds ONLY names a script derives from CBS's own English-language sibling tables (12 of 17 registered tables);
+  `src/registry/english-names.data.ts` holds hand-curated entries for everything else, with a test forbidding
+  the same key from appearing in both files with different values (so a regeneration can never silently clobber
+  a curated entry). Two specific hand picks made during the build, recorded here so a later session never has to
+  re-derive them: **'Ongecorrigeerd' → 'Uncorrected'** (CBS's own word from table 85828ENG, its table-specific
+  noun stripped); **'Prijsindex verkoopprijzen' → 'Price index purchase prices'**, picked from CBS's own English
+  titles on both tables that share this Dutch measure name (85773ENG *"Existing own homes; purchase prices,
+  price indices 2020=100"* and 85792ENG *"…; purchase prices, price index 2020=100, region"*) after the owner
+  said to "just pick one" rather than leave it Dutch (open-questions #324). The 80590NED age-bracket labels use
+  CBS's own English verbatim ("15 tot 75 jaar" → "15 to 74 years") — Dutch "tot" is EXCLUSIVE of its own upper
+  bound, so the apparent digit mismatch between the two languages is not an error; the digit-invariance test
+  carries one explicit, narrowly-scoped exception for exactly this CBS shape and nothing else.
+- **`scripts/translate-eval.ts` (Task 9)** mirrors `scripts/answer-eval.ts`'s two-mode harness for this second,
+  smaller LLM call: `npm run translate:eval` replays committed fixtures (none recorded yet — fails loudly with a
+  clear message, never a crash); `npm run translate:record` makes 14 real calls (one per answerable benchmark
+  task) and (re)writes them — owner-supervised, real spend, blocked until the Anthropic workspace usage cap
+  lifts (2026-10-01). See [RUNBOOK.md](../RUNBOOK.md)'s "English answers (ADR 058) — switching it on".
+
+**Known phase-1 gaps, deferred rather than blocking** (tracked at
+[open-questions #324](../open-questions.md)): a reloaded thread's user bubble shows the Dutch submit text, not
+the English chip label that was actually clicked; the citation copy, CSV export and proof panel stay Dutch under
+an English answer; shared/published pages and exports stay Dutch; chart texts are untouched by this phase (a
+separate, not-yet-specified phase 3, per Decision above).
+
+**Not yet done:** `npm run translate:record` (blocked by the API cap), the owner-supervised go-live
+(`ENGLISH_ANSWERS_ENABLED=1`), and the merge to `main`.
+
 ## Revisit triggers
 
 - English fallback rate above ~10% on real traffic → revisit prompt or move more text to hand-written templates.
