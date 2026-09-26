@@ -65,7 +65,7 @@ const PROBLEM_KIND_SENTENCE: [RegExp, string][] = [
   [/^C4:/, 'A caveat word was dropped.'],
   [/^C5:/, 'A required name was not used exactly.'],
   [/^C6:/, 'The number of chips or alternates changed.'],
-  [/^C7:/, 'Numbers were reordered.'],
+  [/^C7:/, 'Numbers, periods or regions were reordered.'],
   [/^C8:/, 'A number was moved away from its period or region.'],
   [/^C9:/, 'A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain.'],
   [/^C10:/, 'A negation was added or dropped.'],

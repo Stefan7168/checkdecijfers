@@ -268,6 +268,17 @@ describe('a verified English row (ADR 058 Task 7)', () => {
     expect(report.problems.some((p) => p.startsWith('english:') && p.includes('C3'))).toBe(true);
   });
 
+  it('tamper (residual round, ruling 22.4): a unit word after a unit-carrying placeholder fails reconstruction (mask table wired into R8)', () => {
+    const tampered = clone(record);
+    const raw = answerOf(tampered).english!.rawTranslation!;
+    const withUnit = raw.body.replace(/(⟦N[a-z]+⟧)/, '$1 points');
+    expect(withUnit).not.toBe(raw.body); // sanity
+    raw.body = withUnit;
+    const report = reconstructionReport(tampered);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.startsWith('english:') && p.includes('already carries its unit'))).toBe(true);
+  });
+
   it('tamper: a changed english.text fails reconstruction', () => {
     const tampered = clone(record);
     const english = answerOf(tampered).english!;

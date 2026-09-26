@@ -398,7 +398,7 @@ async function runLadder(
     }
     state.rawTranslation = parsed;
 
-    const problems = checkTranslation({ maskedDutch, english: parsed, glossary });
+    const problems = checkTranslation({ maskedDutch, english: parsed, glossary, maskTable });
     if (problems.length > 0) {
       attempts.push({ ok: false, problems, error: null });
       retryProblems = problems;

@@ -754,7 +754,12 @@ function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: stri
     return;
   }
   const rawTranslation = english.rawTranslation;
-  const checkProblems = checkTranslation({ maskedDutch: prep.maskedDutch, english: rawTranslation, glossary: prep.glossary });
+  const checkProblems = checkTranslation({
+    maskedDutch: prep.maskedDutch,
+    english: rawTranslation,
+    glossary: prep.glossary,
+    maskTable: prep.maskTable,
+  });
   if (checkProblems.length > 0) {
     problems.push(`english: stored verified rawTranslation fails re-check (${checkProblems.join('; ')})`);
     return;

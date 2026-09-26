@@ -2,7 +2,7 @@
 // filling placeholders. An empty problem list is the only pass.
 import { DOWN_WORDS, FLAT_WORDS, splitClauses, splitSentences, UP_WORDS } from '../compose/validate.ts';
 import type { GlossaryEntry } from './glossary.ts';
-import { hasDigitOutsidePlaceholders, PLACEHOLDER_RE } from './mask.ts';
+import { hasDigitOutsidePlaceholders, PLACEHOLDER_RE, type MaskEntry } from './mask.ts';
 
 export interface TranslationItems {
   body: string;
@@ -62,6 +62,16 @@ export const NL_NEGATION = /\b(zonder|geen|niet)\b/i;
  * fell', "hasn't fallen", 'without interim declines'). */
 const EN_NEGATION = /\b(?:not|no|never|without|cannot)\b|n't\b/i;
 
+/** Residual round (ruling 22.2): Dutch places 'niet' AFTER a finite verb
+ * ('daalde niet', 'nam niet af', 'steeg in ⟦Pa⟧ niet') — invisible to the
+ * validator's earlier-in-the-clause rule above. The English checks' OWN
+ * Dutch scan (never validate.ts) also counts 'niet'/'geen'/'nooit' after the
+ * direction word, up to the clause end, the next direction word, or a
+ * coordinating conjunction ('steeg naar ⟦Na⟧ en er was geen daling' keeps
+ * the rise un-negated). */
+export const NL_NEGATION_AFTER = /\b(niet|geen|nooit)\b/i;
+const NL_WINDOW_STOP = /\b(en|maar|of|want|terwijl)\b/i;
+
 export interface DirectionClaim {
   dir: Direction;
   negated: boolean;
@@ -73,16 +83,23 @@ export interface DirectionClaim {
  * negation rule fires earlier in ITS clause (splitClauses). Consecutive
  * identical claims collapse, so 'groeide …, een groei van …' ≡ 'grew …
  * growth of'. */
-function directionSequence(text: string, tables: DirectionTables, negation: RegExp): DirectionClaim[] {
+function directionSequence(
+  text: string,
+  tables: DirectionTables,
+  negation: RegExp,
+  negationAfter: RegExp | null = null,
+): DirectionClaim[] {
   const out: DirectionClaim[] = [];
   for (const sentence of splitSentences(normalizeQuotes(text))) {
     const clauses = splitClauses(sentence);
-    const found: (DirectionClaim & { index: number })[] = [];
+    const found: (DirectionClaim & { index: number; clauseEnd: number })[] = [];
     for (const clause of clauses) {
       const offset = clause.start - sentence.start;
       for (const [dir, re] of tables.trend) {
         const m = re.exec(clause.text);
-        if (m) found.push({ dir, index: offset + m.index, negated: negation.test(clause.text.slice(0, m.index)) });
+        if (m) {
+          found.push({ dir, index: offset + m.index, clauseEnd: clause.end - sentence.start, negated: negation.test(clause.text.slice(0, m.index)) });
+        }
       }
     }
     for (const [dir, re] of tables.comparative) {
@@ -90,9 +107,26 @@ function directionSequence(text: string, tables: DirectionTables, negation: RegE
       if (!m) continue;
       const clause = clauses.find((c) => m.index >= c.start - sentence.start && m.index < c.end - sentence.start);
       const clauseStart = clause ? clause.start - sentence.start : 0;
-      found.push({ dir, index: m.index, negated: negation.test(sentence.text.slice(clauseStart, m.index)) });
+      const clauseEnd = clause ? clause.end - sentence.start : sentence.text.length;
+      found.push({ dir, index: m.index, clauseEnd, negated: negation.test(sentence.text.slice(clauseStart, m.index)) });
     }
     found.sort((a, b) => a.index - b.index);
+    if (negationAfter !== null) {
+      found.forEach((f, i) => {
+        if (f.negated) return;
+        // The window runs from the direction word itself (so 'nam niet af',
+        // whose match spans the 'niet', counts) to the clause end, cut at the
+        // next direction word in the clause and at a coordinating conjunction
+        // AFTER the direction word's own first word.
+        const nextInClause = found.slice(i + 1).find((g) => g.index < f.clauseEnd);
+        const windowEnd = Math.min(f.clauseEnd, nextInClause?.index ?? Infinity);
+        const window = sentence.text.slice(f.index, windowEnd);
+        const firstWordEnd = /^\S*/.exec(window)![0].length;
+        const stop = NL_WINDOW_STOP.exec(window.slice(firstWordEnd));
+        const scanned = stop ? window.slice(0, firstWordEnd + stop.index) : window;
+        if (negationAfter.test(scanned)) f.negated = true;
+      });
+    }
     for (const f of found) {
       const last = out[out.length - 1];
       if (!last || last.dir !== f.dir || last.negated !== f.negated) out.push({ dir: f.dir, negated: f.negated });
@@ -102,7 +136,7 @@ function directionSequence(text: string, tables: DirectionTables, negation: RegE
 }
 
 export function dutchDirectionSequence(text: string): DirectionClaim[] {
-  return directionSequence(text, NL_DIRECTION_TABLES, NL_NEGATION);
+  return directionSequence(text, NL_DIRECTION_TABLES, NL_NEGATION, NL_NEGATION_AFTER);
 }
 
 export function englishDirectionSequence(text: string): DirectionClaim[] {
@@ -157,6 +191,23 @@ function regionFirstMentions(text: string, regions: GlossaryEntry[], side: 'dutc
   return firsts.sort((a, b) => a.index - b.index).map((f) => f.entry);
 }
 
+/** Every glossary region mention in `text`, in text order (longest names
+ * first, each blanked once found — same nesting rule as above), consecutive
+ * repeats collapsed. */
+function regionMentionSequence(text: string, regions: GlossaryEntry[], side: 'dutch' | 'english'): GlossaryEntry[] {
+  let working = normalizeQuotes(text);
+  const hits: { entry: GlossaryEntry; index: number }[] = [];
+  for (const entry of [...regions].sort((a, b) => b[side].length - a[side].length)) {
+    if (entry[side].length === 0) continue;
+    working = working.replace(nameRe(entry[side], 'giu'), (match, offset: number) => {
+      hits.push({ entry, index: offset });
+      return ' '.repeat(match.length);
+    });
+  }
+  const ordered = hits.sort((a, b) => a.index - b.index).map((h) => h.entry);
+  return ordered.filter((e, i) => i === 0 || ordered[i - 1] !== e);
+}
+
 const CAVEAT_WORDS: [string, string][] = [
   ['nader voorlopig', 'revised provisional'],
   ['voorlopig', 'provisional'],
@@ -206,6 +257,14 @@ const EN_CARDINALS: [string, string][] = [
   ['eighty', 'tachtig'], ['ninety', 'negentig'],
 ];
 
+/** Residual round (ruling 22.3): fractions fourth…tenth, only as a FRACTION
+ * ('a fifth', 'two tenths', 'fifths') — the ordinal ('the fifth year') is not
+ * a quantity claim — paired with their Dutch counterpart. */
+const EN_FRACTIONS: [string, string][] = [
+  ['fourth', 'vierde'], ['fifth', 'vijfde'], ['sixth', 'zesde'], ['seventh', 'zevende'],
+  ['eighth', 'achtste'], ['ninth', 'negende'], ['tenth', 'tiende'],
+];
+
 interface QuantityWord {
   en: RegExp;
   /** The Dutch counterpart, tested on the masked Dutch item outside placeholders. */
@@ -215,7 +274,10 @@ interface QuantityWord {
 const has = (re: RegExp) => (dutch: string) => re.test(dutch);
 
 const QUANTITY_WORDS: QuantityWord[] = [
-  { en: wordRe('one'), nl: has(wordRe('een|één|eén')) },
+  // Residual round (ruling 22.3): bare 'one' needs the ACCENTED numeral
+  // 'één' — the unaccented 'een' is the Dutch indefinite article and was
+  // satisfying every ', one of the largest rises' out of thin air.
+  { en: wordRe('one'), nl: has(wordRe('één|eén')) },
   ...EN_CARDINALS.map(([en, nl]): QuantityWord => ({ en: wordRe(en), nl: (_d, morphemes) => morphemes.has(nl) })),
   { en: wordRe('hundreds?'), nl: (_d, m) => m.has('honderd') },
   { en: wordRe('thousands?'), nl: (_d, m) => m.has('duizend') },
@@ -227,6 +289,12 @@ const QUANTITY_WORDS: QuantityWord[] = [
   // 'third' only as a FRACTION ('a third', 'two thirds') — the ordinal
   // ('the third quarter') is not a quantity claim.
   { en: wordRe('(?:a|one|two)[\\s-]+thirds?|thirds'), nl: has(wordRe('derde\\p{L}*')) },
+  ...EN_FRACTIONS.map(([en, nl]): QuantityWord => ({
+    en: wordRe(`(?:a|one|two|three|four|five|six|seven|eight|nine)[\\s-]+${en}s?|${en}s`),
+    nl: has(wordRe(`${nl}\\p{L}*`)),
+  })),
+  { en: wordRe('decades?'), nl: has(wordRe('decenni\\p{L}*|tien\\s+jaar')) },
+  { en: wordRe('century|centuries'), nl: has(wordRe('eeuw\\p{L}*')) },
   { en: wordRe('twice|doubl\\p{L}*'), nl: has(wordRe('dubbel\\p{L}*|verdubbel\\p{L}*|tweemaal|twee\\s+(?:keer|maal)')) },
   { en: wordRe('thrice|tripl\\p{L}*'), nl: has(wordRe('drievoudig\\p{L}*|verdrievoudig\\p{L}*|driemaal|drie\\s+(?:keer|maal)')) },
   { en: wordRe('quadrupl\\p{L}*'), nl: has(wordRe('viervoudig\\p{L}*|verviervoudig\\p{L}*|viermaal|vier\\s+(?:keer|maal)')) },
@@ -240,6 +308,34 @@ const QUANTITY_WORDS: QuantityWord[] = [
 
 function outsidePlaceholders(text: string): string {
   return text.replace(PLACEHOLDER_RE, ' ');
+}
+
+/** Residual round (ruling 22.4), part of C9: a number placeholder whose
+ * mask entry already carries its unit ('0,5 procentpunt' → '0.5 percentage
+ * points', '450.985 euro' → '450,985 euros', '3,5%') must not be followed by a
+ * unit or scale word the model wrote itself — '⟦Na⟧ points' or '⟦Na⟧ euros'
+ * would fill as a doubled (or swapped) unit. Needs the mask table (only the
+ * table knows which placeholders carry a unit); translateAnswer and the R8
+ * reconstruction both pass it. */
+const UNIT_WORD_AFTER = /^[\s\u00a0]*(%|per\s?cent\b|percent\p{L}*|percentage\b|points?\b|millions?\b|billions?\b|thousands?\b|mln\b|bn\b)/iu;
+
+function checkUnitAfterPlaceholder(english: string, name: string, maskTable: MaskEntry[]): string[] {
+  const byPlaceholder = new Map(maskTable.map((e) => [e.placeholder, e]));
+  const problems: string[] = [];
+  for (const m of english.matchAll(/⟦N[a-z]+⟧/g)) {
+    const entry = byPlaceholder.get(m[0]);
+    if (!entry || /^-?[\d.,]+$/.test(entry.dutch)) continue; // a bare number: no unit to double
+    const after = english.slice(m.index + m[0].length);
+    const fixed = UNIT_WORD_AFTER.exec(after);
+    const unitLast = /(\p{L}+)\s*$/u.exec(entry.english)?.[1];
+    const nextWord = /^[\s\u00a0]*(\p{L}+)/u.exec(after)?.[1];
+    const stem = (w: string) => w.toLowerCase().replace(/s$/, '');
+    const repeated = unitLast !== undefined && nextWord !== undefined && stem(unitLast) === stem(nextWord);
+    if (fixed || repeated) {
+      problems.push(`C9: ${name} writes '${(fixed?.[1] ?? nextWord)!}' after ${m[0]}, which already carries its unit`);
+    }
+  }
+  return problems;
 }
 
 /** C9: every quantity word in `english` (outside placeholders) needs its
@@ -329,6 +425,62 @@ function checkCompanionOrder(maskedDutch: string, english: string, name: string,
   return problems;
 }
 
+/** C7, residual round (ruling 22.1): per ALIGNED sentence group, the ordered
+ * sequence of ALL region mentions must match — C7's per-item first-mention
+ * order cannot see a swap in a LATER sentence ('In ⟦Pb⟧ Zeeland had ⟦Ne⟧ and
+ * Utrecht ⟦Nf⟧'), and C8 is a set per sentence. Alignment is C8's: a Dutch
+ * sentence maps to the English sentence(s) holding its number placeholders;
+ * Dutch sentences whose English sentences overlap (a merge) form one group,
+ * compared as a whole. With the number order already pinned, a region
+ * re-paired with a different number then fails; a region moved after its
+ * own number in the same order ('⟦Nc⟧ in Utrecht and ⟦Nd⟧ in Zeeland') passes. */
+function checkRegionSentenceOrder(
+  maskedDutch: string,
+  english: string,
+  name: string,
+  glossary: GlossaryEntry[],
+): string | null {
+  const regions = glossary.filter((g) => g.kind === 'region');
+  if (regions.length === 0) return null;
+  const dutchSentences = maskedDutch.split(/(?<=[.!?])\s+/);
+  const englishSentences = english.split(/(?<=[.!?])\s+/);
+  const groups: { dutch: Set<number>; english: Set<number> }[] = [];
+  dutchSentences.forEach((sentence, d) => {
+    const targets = new Set<number>();
+    for (const ph of numberPlaceholders(sentence)) {
+      const e = englishSentences.findIndex((es) => es.includes(ph));
+      if (e !== -1) targets.add(e);
+    }
+    if (targets.size === 0) return;
+    const group = { dutch: new Set([d]), english: targets };
+    for (const other of [...groups]) {
+      if ([...other.english].some((e) => group.english.has(e))) {
+        other.dutch.forEach((x) => group.dutch.add(x));
+        other.english.forEach((x) => group.english.add(x));
+        groups.splice(groups.indexOf(other), 1);
+      }
+    }
+    groups.push(group);
+  });
+  for (const group of groups) {
+    const nlText = [...group.dutch].sort((a, b) => a - b).map((i) => dutchSentences[i]).join(' ');
+    const enText = [...group.english].sort((a, b) => a - b).map((i) => englishSentences[i]).join(' ');
+    const nlSeq = regionMentionSequence(nlText, regions, 'dutch');
+    const enSeq = regionMentionSequence(enText, regions, 'english');
+    // Only regions both sides mention (a missing one is C5/C8's finding).
+    const keep = (xs: GlossaryEntry[], ys: GlossaryEntry[]) => {
+      const kept = xs.filter((x) => ys.includes(x));
+      return kept.filter((e, i) => i === 0 || kept[i - 1] !== e).map((e) => e.english);
+    };
+    const nl = keep(nlSeq, enSeq);
+    const en = keep(enSeq, nlSeq);
+    if (nl.join('|') !== en.join('|')) {
+      return `C7: ${name} regions are re-paired within a sentence (expected [${nl.join(', ')}], got [${en.join(', ')}])`;
+    }
+  }
+  return null;
+}
+
 /** C8: Sentence binding for number placeholders. Each number in a Dutch sentence
  * must keep its companion period placeholders and region mentions in the English
  * sentence. A lost companion (e.g., periods swapped across sentences) breaks the
@@ -389,8 +541,12 @@ export function checkTranslation(input: {
   maskedDutch: TranslationItems;
   english: TranslationItems;
   glossary: GlossaryEntry[];
+  /** Residual round (ruling 22.4): the mask table, for C9's "unit written
+   * after a unit-carrying placeholder" leg. Optional only for unit tests of
+   * other checks; translateAnswer and reconstruction always pass it. */
+  maskTable?: MaskEntry[];
 }): string[] {
-  const { maskedDutch, english, glossary } = input;
+  const { maskedDutch, english, glossary, maskTable } = input;
   const problems: string[] = [];
   // C6 — shape first; later checks index items by position.
   if (english.chips.length !== maskedDutch.chips.length) problems.push(`C6: expected ${maskedDutch.chips.length} chips, got ${english.chips.length}`);
@@ -421,7 +577,10 @@ export function checkTranslation(input: {
     const c7 = checkNumberOrder(masked[i]![1], text, name);
     if (c7) problems.push(c7);
     problems.push(...checkCompanionOrder(masked[i]![1], text, name, glossary));
+    const c7r = checkRegionSentenceOrder(masked[i]![1], text, name, glossary);
+    if (c7r) problems.push(c7r);
     problems.push(...checkQuantityWords(masked[i]![1], text, name));
+    if (maskTable) problems.push(...checkUnitAfterPlaceholder(text, name, maskTable));
   });
 
   // C8 for body only

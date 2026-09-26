@@ -588,3 +588,23 @@ describe('the translate step deadline (final-review fix wave, ruling 19)', () =>
     expect(rendering.status).toBe('verified');
   });
 });
+
+describe('residual round (ruling 22.4): translateAnswer wires the mask table into the unit-duplication check', () => {
+  it("a '%' written after the %-carrying placeholder fails both attempts ⇒ fallback", async () => {
+    const response = await makeAnswerResponse();
+    const faithful = faithfulEnglish(prepareTranslation(response).maskedDutch);
+    const doubled = { ...faithful, body: faithful.body.replace(/(⟦N[a-z]+⟧)/, '$1 percent') };
+    expect(doubled.body).not.toBe(faithful.body);
+    const client = stub([JSON.stringify(doubled), JSON.stringify(doubled)]);
+    const rendering = await translateAnswer(response, client);
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts[0]!.problems.join()).toMatch(/C9.*already carries its unit/);
+  });
+
+  it('the C7 retry sentence covers numbers, periods and regions', () => {
+    const req = buildTranslateRequest({ body: 'x', chips: [], definition: null, alternates: [] }, [], {
+      retryProblems: ['C7: body regions are reordered (expected [Utrecht, Zeeland], got [Zeeland, Utrecht])'],
+    });
+    expect(req.system).toContain('Numbers, periods or regions were reordered.');
+  });
+});

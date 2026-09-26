@@ -6,6 +6,7 @@ import {
   englishDirections,
   NL_CARDINAL_MORPHEMES,
   NL_NEGATION,
+  NL_NEGATION_AFTER,
 } from '../../../src/answer/translate/check.ts';
 import { createMasker, hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
 
@@ -448,9 +449,131 @@ describe('copies of the Dutch validator rules stay in sync (validate.ts is not e
     expect(validateSource).toContain(`const NEGATION_WORDS = ${NL_NEGATION.toString()};`);
   });
 
+  // Explicit, deliberate EXCEPTION (residual round, ruling 22.2): the English
+  // checks' own Dutch scan ALSO reads 'niet'/'geen'/'nooit' AFTER the
+  // direction word ('daalde niet', 'nam niet af'). validate.ts's
+  // negatedMatch only looks earlier in the clause and is NOT changed (the
+  // Dutch path stays byte-identical), so this extension lives in its own
+  // constant and is pinned here as NOT being part of the copied rule.
+  it('NL_NEGATION_AFTER is an English-checks-only extension, absent from validate.ts', () => {
+    expect(NL_NEGATION_AFTER.toString()).not.toBe(NL_NEGATION.toString());
+    expect(validateSource).not.toContain(NL_NEGATION_AFTER.toString());
+    expect(validateSource).toMatch(/function negatedMatch[\s\S]*?text\.slice\(0, match\.index\)/);
+  });
+
   it("NL_CARDINAL_MORPHEMES is exactly validate.ts's CARDINAL_WORD_FORMS morpheme list", () => {
     const line = validateSource.split('\n').find((l) => l.includes('(?:(?:twee|drie|'))!;
     const list = /\(\?:\(\?:([a-z|]+)\)/.exec(line)![1]!.split('|');
     expect([...NL_CARDINAL_MORPHEMES].sort()).toEqual([...list].sort());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Residual round (ruling 22). Built with the REAL masker.
+// ---------------------------------------------------------------------------
+
+describe('ruling 22.1: region order per aligned sentence (all mentions, not just the first per item)', () => {
+  const g = [region('Utrecht'), region('Zeeland')];
+
+  it('adversarial: a region swap in a LATER sentence fails', () => {
+    const masked = maskWithPeriods(
+      'In 2022 telde Utrecht 1.234 en Zeeland 1.300. In 2023 telde Utrecht 1.400 en Zeeland 1.500.',
+    );
+    const [pa, pb] = phs(masked, 'P');
+    const [nc, nd, ne, nf] = phs(masked, 'N');
+    const english = `In ${pa} Utrecht had ${nc} and Zeeland ${nd}. In ${pb} Zeeland had ${ne} and Utrecht ${nf}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g }).join()).toMatch(/C7/);
+  });
+
+  it('passing: English moves each region after its number, same order', () => {
+    const masked = maskWithPeriods(
+      'In 2022 telde Utrecht 1.234 en Zeeland 1.300. In 2023 telde Utrecht 1.400 en Zeeland 1.500.',
+    );
+    const [pa, pb] = phs(masked, 'P');
+    const [nc, nd, ne, nf] = phs(masked, 'N');
+    const english = `In ${pa} there were ${nc} in Utrecht and ${nd} in Zeeland. In ${pb} there were ${ne} in Utrecht and ${nf} in Zeeland.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g })).toEqual([]);
+  });
+});
+
+describe('ruling 22.2: Dutch negation AFTER the direction word (same clause) negates it', () => {
+  it.each([
+    ['Het aantal daalde niet en was 1.234 in 2022.', 'The number fell and was {n} in {p}.', 'The number did not fall and was {n} in {p}.'],
+    ['Het aantal nam niet af en was 1.234 in 2022.', 'The number decreased and was {n} in {p}.', 'The number did not decrease and was {n} in {p}.'],
+    ['Het aantal steeg in 2022 niet en was 1.234.', 'The number rose in {p} and was {n}.', 'The number did not rise in {p} and was {n}.'],
+  ])('%s', (dutch, unfaithful, faithful) => {
+    const masked = maskWithPeriods(dutch);
+    const fill = (t: string) => t.replace('{p}', phs(masked, 'P')[0]!).replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(fill(unfaithful)), glossary: [] }).join()).toMatch(/C10/);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(fill(faithful)), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('ruling 22.3: C9 holes — fractions fourth…tenth, decade/century, bare "one"', () => {
+  it.each([
+    ['a fifth', 'The number was {n} in {p}, a fifth more.'],
+    ['a tenth', 'The number was {n} in {p}, a tenth lower.'],
+    ['two fifths', 'The number was {n} in {p}, two fifths of the total.'],
+    ['decade', 'The number was {n} in {p}, the highest in a decade.'],
+    ['century', 'The number was {n} in {p}, the highest in a century.'],
+    ['one (Dutch article een only)', 'The number was {n} in {p}, one of the largest values.'],
+  ])('adversarial: %s without a Dutch counterpart fails', (_w, template) => {
+    const masked = maskWithPeriods('Het aantal was 1.234 in 2022, een hoge waarde.');
+    const english = template.replace('{p}', phs(masked, 'P')[0]!).replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] }).join()).toMatch(/C9/);
+  });
+
+  it.each([
+    ['vijfde', 'Het aantal was 1.234, een vijfde meer.', 'The number was {n}, a fifth more.'],
+    ['tiende', 'Het aantal was 1.234, een tiende lager.', 'The number was {n}, a tenth lower.'],
+    ['decennium', 'Het aantal was 1.234, het hoogste in een decennium.', 'The number was {n}, the highest in a decade.'],
+    ['tien jaar', 'Het aantal was 1.234, het hoogste in tien jaar.', 'The number was {n}, the highest in a decade.'],
+    ['eeuw', 'Het aantal was 1.234, het hoogste in een eeuw.', 'The number was {n}, the highest in a century.'],
+    ['één', 'Het aantal was 1.234, één van de hoogste.', 'The number was {n}, one of the highest.'],
+  ])('passing: %s counterpart', (_w, dutch, template) => {
+    const masked = maskWithPeriods(dutch);
+    const english = template.replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+
+  it('an ordinal ("the fifth year") is not a fraction', () => {
+    const masked = maskWithPeriods('Het aantal was 1.234 in het vijfde jaar.');
+    const english = `The number was ${phs(masked, 'N')[0]!} in the fifth year.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('ruling 22.4: C9 — a unit word written right after a unit-carrying placeholder fails', () => {
+  function unitMasked(dutch: string) {
+    const masker = createMasker({ periodLabels: [], caveats: [], units: [{ dutch: 'euro', english: 'euros' }] });
+    const masked = masker.mask(dutch);
+    return { masked, maskTable: masker.entries };
+  }
+
+  it.each([
+    ['De werkloosheid steeg met 0,5 procentpunt.', 'Unemployment rose by {n} points.'],
+    ['De werkloosheid steeg met 0,5 procentpunt.', 'Unemployment rose by {n} percentage points.'],
+    ['Het cijfer was 3,5%.', 'The figure was {n} percent.'],
+    ['De prijs was 450.985 euro.', 'The price was {n} euros.'],
+    ['De prijs was 450.985 euro.', 'The price was {n} euro.'],
+    ['De uitgaven waren 12 mln.', 'Spending was {n} million.'],
+  ])('adversarial: %s → %s', (dutch, template) => {
+    const { masked, maskTable } = unitMasked(dutch);
+    const english = template.replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [], maskTable }).join()).toMatch(
+      /C9.*already carries its unit/,
+    );
+  });
+
+  it('passing: the same placeholders with no unit word after them', () => {
+    const { masked, maskTable } = unitMasked('De prijs was 450.985 euro.');
+    const english = `The price was ${phs(masked, 'N')[0]!}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [], maskTable })).toEqual([]);
+  });
+
+  it('a bare-number placeholder may be followed by an ordinary noun', () => {
+    const { masked, maskTable } = unitMasked('Het aantal was 1.234 woningen.');
+    const english = `The number was ${phs(masked, 'N')[0]!} dwellings.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [], maskTable })).toEqual([]);
   });
 });
