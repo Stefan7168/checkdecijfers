@@ -12,10 +12,12 @@
 //   npm run translate:eval     replay the committed fixtures, no key, no
 //                              network — fails loudly if none are recorded
 //                              yet (see below).
-//   npm run translate:record   real Anthropic calls (14 short requests, one
-//                              per answerable benchmark task) that (re)write
-//                              the replay fixtures under
-//                              tests/fixtures/llm/translate/.
+//   npm run translate:record   real Anthropic calls — 14 translate requests
+//                              plus one C12 meaning-check request per
+//                              translation that passes C1–C11 (both recorded
+//                              into tests/fixtures/llm/translate/), one
+//                              translate request per answerable benchmark
+//                              task — that (re)write the replay fixtures.
 //
 // BLOCKED until the Anthropic workspace usage cap lifts (2026-10-01, see
 // docs/open-questions.md #288/#271) — `translate:record` is an owner-

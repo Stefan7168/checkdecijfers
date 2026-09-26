@@ -63,6 +63,8 @@
     "semantic-check:record": "node --env-file-if-exists=.env scripts/semantic-check-eval.ts --record",
     "translate:eval": "node scripts/translate-eval.ts",
     "translate:record": "node --env-file-if-exists=.env scripts/translate-eval.ts --record",
+    "meaning-check:eval": "node scripts/meaning-check-eval.ts",
+    "meaning-check:record": "node --env-file-if-exists=.env scripts/meaning-check-eval.ts --record --repeat=3",
     "db:migrate": "node --env-file=.env src/db/migrate.ts",
     "ingest": "node --env-file=.env src/ingestion/cli.ts",
     "catalog:refresh": "node --env-file=.env src/catalog/cli.ts",
