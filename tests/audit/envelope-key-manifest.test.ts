@@ -98,6 +98,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       category: 'ignored',
       why: '#197 step 3: the chip-carrier state behind the takeable follow-up chips (the comparisons first, every takeable chip since #73 v2 — their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
     },
+    english: {
+      category: 'shape-checked',
+      note: "ADR 058 (English answers, Task 7): set only by attachEnglish, present only when translation was attempted (A1). checkEnglishReconstruction re-derives the deterministic half (glossary/caveats/maskedDutch/maskTable) byte-for-byte via translate.ts's prepareTranslation(response) — the SAME function translateAnswer itself calls — and, on a `verified` row, re-checks the stored rawTranslation (checkTranslation), re-fills it through the RE-DERIVED maskTable and re-assembles the structural lines/text, all compared byte-identically to what was stored; chip `submit` values are checked against response.suggestions directly. A `fallback` row is checked for its guaranteed null-everything/failed-attempt shape instead — there is nothing translated to re-derive. Named `shape-checked` rather than `rederived`/`revalidated` because the treatment is a MIX of both (byte-identical re-derivation for the deterministic half, a re-check+re-fill for the model half), like `slotPhrasing`'s own note above.",
+    },
   },
   ClarificationResponse: {
     kind: { category: 'shape-checked' },
@@ -318,7 +322,7 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 9, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`
+      AnswerResponse: 10, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`
       ClarificationResponse: 6,
       RefusalResponse: 11,
       ComposedAnswer: 18, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`
@@ -389,6 +393,10 @@ describe('the envelope-key manifest covers the declared types', () => {
     // that occur as a sub-field of something else. `model` is here because
     // reconstruct genuinely reads `semanticCheck.model` — a bare-identifier
     // match cannot tell that from `answer.model`, which really is ignored.
+    // `attempts` (ADR 058 Task 7): reconstruct genuinely reads
+    // `english.attempts` (checkEnglishReconstruction) — a bare-identifier
+    // match cannot tell that from `answer.attempts`, which really is ignored
+    // (the failed-attempt log, telemetry with nothing to re-derive it from).
     const reconstruct = readFileSync(
       fileURLToPath(new URL('../../src/answer/audit/reconstruct.ts', import.meta.url)),
       'utf8',
@@ -401,6 +409,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       'kind',
       'options',
       'model',
+      'attempts',
       // #253: `ValidatedResult.ok` is a literal discriminant nobody reads, but
       // `ok` is also the field name of every report/validation flag inside
       // reconstruct.ts — a bare-identifier match cannot tell them apart.

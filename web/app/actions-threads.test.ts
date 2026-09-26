@@ -21,6 +21,14 @@ vi.mock('../lib/db.ts', () => ({ getDb }));
 // #65: no-op the durable error reporter (its own pins live in
 // actions-errorlog.test.ts) so exception-path tests here stay silent.
 vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
+// ADR 058 (English answers, Task 8): actions.ts now calls getLang() once per
+// action — mocked wholesale (this suite's real next/headers has no request
+// scope, so the real cookies()/headers() calls would throw). Defaulted to
+// 'nl' below so every pre-existing test here (none of which exercise English
+// answers, and ENGLISH_ANSWERS_ENABLED is never set in this file) stays
+// byte-identical.
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn<() => Promise<'nl' | 'en'>>() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
 
 const billing = vi.hoisted(() => ({
   chargeAndRun: vi.fn(),
@@ -80,6 +88,7 @@ beforeEach(() => {
   // Web off ⇒ no ⟨W4⟩ upfront path; the gate is the only refusal source here.
   vi.stubEnv('WEBSEARCH_ENABLED', '0');
   vi.stubEnv('ONBOARDING_ENABLED', '0');
+  getLang.mockResolvedValue('nl');
 });
 
 afterEach(() => {

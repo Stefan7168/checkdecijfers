@@ -42,6 +42,12 @@ vi.mock('../backend/answer/context/index.ts', () => ({
 }));
 vi.mock('../backend/answer/llm/client.ts', () => ({ AnthropicLlmClient: vi.fn() }));
 vi.mock('../backend/websearch/index.ts', () => ({ AnthropicWebSearchClient: vi.fn() }));
+// ADR 058 (English answers, Task 8): actions.ts now calls getLang() once per
+// action — mocked wholesale (no real request scope in this suite, so the
+// real next/headers cookies()/headers() calls would throw before either
+// catch site under test is even reached).
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn<() => Promise<'nl' | 'en'>>() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
 
 // The one module stubbed DIFFERENTLY from actions.test.ts: logError itself.
 // web/lib/error-report.ts stays REAL — its fail-open belt is under test.
@@ -72,6 +78,7 @@ beforeEach(() => {
   getDb.mockReturnValue(fakeDb);
   errorLog.logError.mockResolvedValue(undefined);
   consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  getLang.mockResolvedValue('nl');
 });
 
 afterEach(() => {

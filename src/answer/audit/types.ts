@@ -19,9 +19,9 @@ export const AUDIT_SCHEMA_VERSION = 1 as const;
 export interface LlmCallRecord {
   /** Which pipeline role made the call (ADR 004's confined roles: intent
    * parsing — plus its clarify- and follow-up-mode variants, WP9/WP15 —
-   * answer phrasing, and since #144/ADR 034 the reject-only semantic
-   * checker). */
-  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check';
+   * answer phrasing, since #144/ADR 034 the reject-only semantic checker,
+   * and since ADR 058 the English-answer translator). */
+  role: 'intent' | 'clarify' | 'followup' | 'compose' | 'semantic_check' | 'translate';
   /** The model that answered, as reported by the API response. */
   model: string;
   inputTokens: number;

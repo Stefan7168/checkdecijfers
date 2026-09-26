@@ -64,13 +64,20 @@ Input: the final Dutch body (after the unit-expansion splice) and each Dutch chi
 1. **Period labels** of the result's cells (e.g. `2023`, `2023 1e kwartaal`, `januari 2024`) are replaced by
    `⟦P1⟧, ⟦P2⟧ …` — longest first, exact match. Their English forms come from the name list (§3.5).
 2. **Every remaining numeric token**, found with the existing `findNumericTokens` scanner, is replaced by
-   `⟦1⟧, ⟦2⟧ …`, including unit notations such as `x 1 000`.
+   `⟦1⟧, ⟦2⟧ …`, including unit notations such as `x 1 000`. *(Final whole-branch review, ruling 17a:) a unit or
+   scale word directly after the token — `%`, procent, procentpunt(en), mln, mld, miljoen, miljard, or one of the
+   result's registered units with an English form (`translateUnit`) — is masked WITH it as one placeholder, filled
+   with fixed English (`%`, `percentage point(s)`, `million`, `billion`, the unit's English), so the model can
+   never swap a unit.*
 3. After masking, the text must contain **no digit** at all; if it does, the scanner missed a token → fallback
    (never send a digit to the model).
 
 The mask table (placeholder → Dutch token → English rendering) is kept for filling and stored for audit.
 
 ### 3.3 Translation (the only model call)
+
+*(Final whole-branch review, ruling 19:) the whole step — both attempts — is capped at 20 s
+(`TRANSLATE_TIMEOUT_MS`); on expiry the answer falls back to Dutch with attempt error `timeout`.*
 
 One request per English answer: the masked body plus the masked chip texts as a JSON array, a glossary of the
 official names present in this answer (Dutch → English, §3.5), and a short English system prompt
@@ -81,17 +88,27 @@ existing `LlmClient` (real / replay / recording), so CI replays hermetic fixture
 
 ### 3.4 Checks (deterministic, blocking)
 
+*C7/C8 added during the build (session 131, SDD ruling 6): C1 compares placeholder sets, so a swap of two
+numbers would otherwise pass every check. C9/C10, the ordered C3, the period/region legs of C7, word-boundary
+name matching and `\p{N}` in C2 added by the final whole-branch review (rulings 17–18, fold-in 4); C11 and the
+later C7/C9/C10 refinements by the residual rounds (rulings 22–24).*
+
 Run on the model output **before** filling. Any failure → one retry with the problems appended (the same
 retry shape the phrasing rung uses), then fallback.
 
 | # | Check | Catches |
 |---|---|---|
 | C1 | Placeholder multiset per item equals the mask table's (each exactly once, none invented, none dropped; order may change) | dropped / duplicated / invented numbers |
-| C2 | No digit character anywhere in the output | a number written out of thin air |
-| C3 | Direction class equal: the Dutch body's rise / fall / flat claims (the validator's existing Dutch word lists) must match the English body's (a small English list: rose/increased/grew …, fell/decreased/declined/dropped …, unchanged/stable/flat …) — same set of classes present, none added | "fell" translated as "rose" |
+| C2 | No numeral character (`\p{N}`: digits, '½', '²', 'Ⅻ' …) anywhere in the output outside placeholders | a number written out of thin air |
+| C3 | Direction claims equal as an ORDERED sequence: per sentence and clause, in text order (consecutive duplicates collapsed), the Dutch body's rise / fall / flat / more / less claims (the validator's existing Dutch word lists) must match the English body's (a small English list: rose/increased/grew …, fell/decreased/declined/dropped …, unchanged/stable/flat …) | "fell" translated as "rose"; two regions' directions traded |
 | C4 | Caveats kept: each provisional/estimate marker in the Dutch body has its English counterpart in the English body | a dropped "provisional" |
-| C5 | Glossary respected: for every glossary name the Dutch body mentions (via the existing `mentions` matcher), the English body contains the English form (case-insensitive) | an improvised measure name ("average" for "median") |
+| C5 | Glossary respected: for every glossary name the Dutch item mentions (on Unicode word boundaries, case-insensitive — not the validator's substring `mentions`, under which 'Ede' matched 'exceeded'), the English item contains the English form | an improvised measure name ("average" for "median") |
 | C6 | Chip count equal to the input chip count, each chip non-empty | a lost chip |
+| C7 | Per item: number placeholders keep their relative order; period placeholders keep theirs; region names keep the order of their first mentions; and per aligned sentence (a Dutch sentence + the English sentence(s) holding its numbers, and — when both items have the same sentence count — additionally every sentence by position) the ordered sequence of ALL region mentions matches (a period or region may move past a number — only the order within a kind is pinned) | two numbers, periods or regions swapped, even within one sentence or in a later one |
+| C8 | Sentence binding: each number placeholder's Dutch-sentence companions (period placeholders, region names) appear in the English sentence that holds it | a number re-attached to another period or region |
+| C9 | Quantity words: an English number word ('one' needs 'één', not the article 'een'), fraction/multiple (half, a third…a tenth, twice, double, -fold …), decade/century, or percent word (percent, '%', percentage point) outside placeholders needs its Dutch counterpart in the masked Dutch item (small explicit map; 'percent' is never satisfied by 'procentpunt'); and no unit/scale word right after a placeholder that already carries its unit | "roughly double", "ten years before", "the highest in a decade", "⟦Na⟧ points" |
+| C10 | Negation: each direction claim's negation must match. Dutch: zonder/geen/niet/nooit/nergens/noch/geenszins/evenmin earlier in the clause (the validator's rule plus those words), or niet/geen/nooit/nergens/noch/geenszins/evenmin AFTER the direction word up to the clause end or the next direction word in the clause. A conjunction does not stop that scan, except that a negation between a conjunction and the NEXT direction word belongs to that next word. (A clause-start cut and a trend-noun exception were reverted, ruling 25: each opened new false passes; C11 covers the case they targeted.) English: not/no/never/without/cannot/neither/nor/nowhere/n't earlier in the clause | "niet gedaald" / "daalde in Utrecht en Zeeland niet" / "is nooit gedaald" → "has fallen" / "fell …" |
+| C11 | Negation parity (structural backstop): per item, the count of negator words is equal — Dutch niet, geen, nooit, nergens, noch, geenszins, evenmin, zonder, niets, niemand; English not, n't, no, never, neither, nor, nowhere, without, nothing, nobody, none, cannot ('no longer' once) | an added "did not" or a dropped "geen", in any sentence shape |
 
 Then **fill**: `⟦n⟧` → the Dutch token converted to English number format by a pure function
 (`17.942.942` → `17,942,942`, `3,5` → `3.5`, `x 1 000` → `x 1,000`), `⟦Pn⟧` → the English period label. The
@@ -159,7 +176,7 @@ re-verifies it (§3.8). ADR 016 gets an as-built note; docs/05's R8 row gets one
 
 ### 3.8 Reconstruction (R8)
 
-`reconstructionReport` gains an English leg for rows that carry `response.english`: re-run C1–C6 on the stored
+`reconstructionReport` gains an English leg for rows that carry `response.english`: re-run every check (C1–C11) on the stored
 `rawTranslation` against the stored `maskedDutch`/`maskTable`; re-derive `maskTable` from the stored Dutch body
 (masking is deterministic); re-fill and compare byte-for-byte with the stored `body`; re-derive every English
 line from the stored result; re-assemble `text`. Tamper tests for each (a changed number in the stored English
@@ -211,7 +228,7 @@ or its audit fields.
 - **Masking:** every token shape `findNumericTokens` accepts is masked; no digit survives; period labels mask
   before numbers.
 - **Number converter:** round-trip property over generated values/decimal counts; unit notations.
-- **Checks C1–C6:** one failing and one passing case each, incl. a direction flip, a dropped provisional
+- **Checks C1–C11:** one failing and one passing case each, incl. a direction flip, a dropped provisional
   marker, an invented placeholder, a stray digit, an improvised measure name.
 - **Lines:** each English builder against every benchmark result shape.
 - **Name list:** every registered table has an entry; every key the script wrote exists in the NED table's

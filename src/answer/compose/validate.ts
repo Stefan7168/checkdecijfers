@@ -921,11 +921,11 @@ function checkBinding(body: string, sentences: Sentence[], tokens: ClassifiedTok
 // Separable verbs ('nam toe', 'namen af', 'neemt toe') and the plain nouns
 // ('daling') were missing — both let a real increase read as a decrease
 // (adversarial-review findings, 2026-07-03).
-const UP_WORDS =
+export const UP_WORDS =
   /\b(stijg\w*|steeg|gestegen|toenam\w*|toegenomen|toename\w*|groei\w*|gegroeid|omhoog|klom|geklommen)\b|\bn(?:am|amen|eemt|emen)\b[^.!?;:]{0,30}?\btoe\b/i;
-const DOWN_WORDS =
+export const DOWN_WORDS =
   /\b(daal\w*|dalen\w*|daling\w*|gedaald|afnam\w*|afgenomen|afname\w*|krimp\w*|kromp|gekrompen|zakte|gezakt|omlaag|terugliep|teruggelopen)\b|\bn(?:am|amen|eemt|emen)\b[^.!?;:]{0,30}?\baf\b|\bliep\w*\b[^.!?;:]{0,30}?\bterug\b/i;
-const FLAT_WORDS = /\b(gelijk gebleven|stabiel|onveranderd|ongewijzigd|constant gebleven)\b|\b(?:vrijwel|nagenoeg)\s+gelijk\b/i;
+export const FLAT_WORDS = /\b(gelijk gebleven|stabiel|onveranderd|ongewijzigd|constant gebleven)\b|\b(?:vrijwel|nagenoeg)\s+gelijk\b/i;
 // A trend word negated earlier in the SAME clause ('zonder tussentijdse
 // dalingen', 'niet gedaald') isn't a claim of that direction at all — it's
 // most often a qualifier reinforcing an already-stated claim elsewhere in

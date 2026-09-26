@@ -1294,6 +1294,13 @@ const nl = {
   // R11: an honest elapsed-time reassurance line — real wait time, never a
   // fabricated pipeline stage (#211 addendum) — after 8 real seconds of busy.
   'chat.slowWaitNotice': 'Dit duurt iets langer dan gewoonlijk; we controleren het antwoord nog.',
+  // ADR 058 (English answers, Task 8): shown ABOVE the Dutch text when the
+  // translation attempt fell back (attachEnglish's fail-closed-to-Dutch
+  // posture, Task 6) — only reachable at all once ENGLISH_ANSWERS_ENABLED is
+  // on and the reader is on English, so this Dutch copy exists purely for
+  // completeness/i18n-table symmetry (Messages = typeof nl requires both).
+  'chat.englishFallback':
+    'We konden geen gecontroleerde Engelse versie van dit antwoord maken; hieronder staat het Nederlandse origineel.',
   // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
   // R4: the coverage disclosure — collapsed by default, one row per served
   // CBS table (title, MEASURED sync date, concepts, an optional example
@@ -2451,6 +2458,11 @@ const en: Messages = {
   'chat.insufficientCreditsBuyGeneric': 'Buy credits via',
   'chat.lowBalanceSuffix': ' Enough for one more question.',
   'chat.slowWaitNotice': 'This is taking a little longer than usual; we are still checking the answer.',
+  // ADR 058 (English answers, Task 8): shown ABOVE the Dutch text when the
+  // translation attempt fell back (attachEnglish's fail-closed-to-Dutch
+  // posture, Task 6).
+  'chat.englishFallback':
+    "We couldn't produce a verified English version of this answer, so here is the original Dutch.",
   // ---- WP-E (journey programme, 2026-09-12, session 98) -----------------
   'coverage.summary': 'Which sources are built in?',
   'coverage.cbsHeading': 'CBS',

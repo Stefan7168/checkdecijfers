@@ -57,8 +57,14 @@ describe('translateMeasureTitle', () => {
   it('translates the five Ontdek curated titles (src/chart/curated.ts, src/registry/defaults.ts measureTitle)', () => {
     expect(translateMeasureTitle('Consumentenvertrouwen')).toBe('Consumer confidence');
     expect(translateMeasureTitle('Bruto binnenlands product')).toBe('Gross domestic product');
-    expect(translateMeasureTitle('Jaarmutatie CPI')).toBe('Annual change in CPI');
-    expect(translateMeasureTitle('Gemiddelde verkoopprijs')).toBe('Average sale price');
+    // ADR 058 Task 3: CBS's own English sibling table (86141ENG) gives
+    // 'Annual rate of change CPI', not the earlier hand-written 'Annual
+    // change in CPI' — CBS's own label wins (task-3-report.md).
+    expect(translateMeasureTitle('Jaarmutatie CPI')).toBe('Annual rate of change CPI');
+    // ADR 058 Task 3: CBS's own English sibling tables (85773ENG/83625ENG)
+    // both give 'Average purchase price', not the earlier hand-written
+    // 'Average sale price' — CBS's own label wins (task-3-report.md).
+    expect(translateMeasureTitle('Gemiddelde verkoopprijs')).toBe('Average purchase price');
     expect(translateMeasureTitle('Werkloosheidspercentage')).toBe('Unemployment rate');
   });
 

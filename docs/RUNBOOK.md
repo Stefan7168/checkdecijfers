@@ -528,6 +528,74 @@ applied anywhere.
 table is absent. Dropping `chart_edits` would simply make chart edits stop persisting again
 (readers keep editing charts in the current session; nothing survives a reload).
 
+## English answers (ADR 058) — switching it on
+
+**Status: BUILT phase 1 (sessions 131-132, 2026-09-25/26) on branch `english-answers-phase1`, NOT
+merged to `main`, dark — `ENGLISH_ANSWERS_ENABLED` is unset everywhere and no committed fixtures
+exist yet for the new translate model call, so the app runs byte-identically today whether or not
+this section has been done.** Translates the already-checked Dutch answer for a reader on the
+English interface — numbers stay masked from the model the whole time and are filled back in by
+code, never written by the model (ADR [058](decisions/058-english-answers.md)). A failed check
+falls back to the unchanged Dutch answer with one honest line above it — nothing is ever guessed.
+
+**Precondition (session 132, [#325](open-questions.md)):** do NOT switch it on until #325 is resolved. The checks make
+a changed NUMBER impossible, but the meaning of words like "rose / did not rise / hardly rose" is checked by word lists,
+and the final review still found ways a reversed English sentence could pass. The recommended fix is one extra,
+independent comparison step before go-live; the owner decides its cost after measuring with `translate:eval`.
+No new secret is needed (it reuses the existing `ANTHROPIC_API_KEY`); no database migration either
+(the rendering rides the existing audit row as an extra field).
+
+**Blocked until the Anthropic workspace usage cap lifts, 2026-10-01** ([open-questions
+#271](open-questions.md)/[#288](open-questions.md)) — step 1 below needs real API calls, and the
+cap currently refuses every one.
+
+Steps, in order, owner present:
+
+1. **Record the real translation fixtures — `npm run translate:record`.** Fourteen short, cheap
+   real Anthropic calls (one per answerable benchmark question), written to
+   `tests/fixtures/llm/translate/`. Never run this from CI or a subagent.
+2. **Read the printout.** Every one of the 14 tasks should print either `verified` (a checked
+   English translation was produced) or `fallback` with an explained reason (e.g. an untranslatable
+   caveat) — never a crash. If several tasks fall back for reasons that look like a real prompt
+   problem rather than a genuine edge case, that is a build issue to fix (adjust
+   `src/answer/translate/prompt.ts`) before going further, not something to paper over by recording
+   anyway. Once the printout looks right, commit the new fixture files.
+3. **Run `npm run translate:eval`.** This replays the fixtures you just recorded — no key, no
+   network — and must exit clean (no task fails reconstruction, no placeholder/digit problem shows
+   up on a translation that claims to be verified). A red result here means something is wrong with
+   the fixtures or the checks, not with the flag — do not proceed to step 4 until it is green.
+4. **Set the flag** — in Vercel: add env var `ENGLISH_ANSWERS_ENABLED=1` (Production, plain text,
+   not a secret, same as `ATTACHMENTS_ENABLED`/`OWN_DATA_PUBLISH_ENABLED`), then redeploy via
+   `gh run rerun <latest main run>`.
+5. **Live check** — switch the site's interface language to English, ask one of the 14 benchmark
+   questions (or any plain CBS question), and confirm: the numbers are shown in English notation
+   (e.g. `1,234.5`, not `1.234,5`), the source/attribution line reads in English, the follow-up
+   chips read in English, and clicking a chip produces a real English answer (not a Dutch one, and
+   not an error). If the answer instead shows Dutch text with one apologetic line above it, that is
+   the documented fallback behaviour, not a bug — check the server logs for which deterministic
+   check failed.
+6. **Rollback:** unset `ENGLISH_ANSWERS_ENABLED` and redeploy. Every reader is additive/flag-gated
+   (`attachEnglish` is a byte-identical no-op with the flag off, tested — ADR 058 Decision/Task 7),
+   so this instantly returns every reader, English interface included, to the Dutch-only answers
+   already live today. Nothing is deleted; the committed fixtures and any already-recorded English
+   renderings in the audit table are simply not read again until the flag is set again.
+
+**Editing an English name later** (a change in `src/registry/english-names.data.ts` or a regenerated
+`english-names.cbs.generated.ts`) makes every OLDER English audit row that used that name diverge in
+`npm run audit:verify` — the check rebuilds each row's name list from today's list. That is expected, not
+corruption: record those rows as known divergences (`src/answer/audit/known-divergences.ts`, the same
+pattern as any other superseded rule), never rewrite the stored rows.
+
+**Time cap:** the whole translation step gives up after 20 seconds and serves the Dutch answer with
+the one honest line (the audit row records the attempt error `timeout`), so a slow model can never
+push a page past its time limit after the credit is already taken.
+
+**Known phase-1 gaps, not blockers** (tracked at [open-questions #324](open-questions.md)): a
+reloaded thread's chat bubble shows the Dutch text that was actually submitted, not the English
+chip label the reader clicked; the citation copy, the CSV export and the "prove it" panel stay
+Dutch under an English answer; a shared/published chart page stays Dutch; chart texts themselves
+are untouched by this phase (a separate, not-yet-specified phase 3).
+
 ## Own-data publishing (ADR 057) — switching it on
 
 **✅ Steps 1–3 DONE 2026-09-25 (session 131, owner present):** `npm run db:migrate` applied exactly

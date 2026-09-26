@@ -40,6 +40,22 @@ import { stableStringify } from '../llm/client.ts';
 import { ANSWER_SCHEMA_VERSION, SEMANTIC_CHECK_SCHEMA_VERSION, SLOT_PHRASING_SCHEMA_VERSION } from '../compose/types.ts';
 import { RESPONSE_SCHEMA_VERSION } from '../respond/types.ts';
 import type { AnswerResponse, RefusalReason } from '../respond/types.ts';
+// ADR 058 (English answers, Task 7): the SAME functions translateAnswer
+// itself calls — `checkEnglishReconstruction` below re-derives the
+// deterministic half of an English rendering from the stored response alone
+// (prepareTranslation), re-checks the stored model output against it
+// (checkTranslation/isTranslationItemsShape), and re-fills/re-assembles it
+// through the same deterministic steps (fillPlaceholders, buildEnglishLines,
+// assembleEnglishText, translateStalenessWarning) — never a re-implementation.
+import { checkTranslation } from '../translate/check.ts';
+import {
+  assembleEnglishText,
+  buildEnglishLines,
+  translateStalenessWarning,
+} from '../translate/lines.ts';
+import { fillPlaceholders } from '../translate/mask.ts';
+import { isTranslationItemsShape, prepareTranslation } from '../translate/translate.ts';
+import type { PreparedTranslation } from '../translate/translate.ts';
 import type { AuditRecord } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
@@ -608,6 +624,193 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   }
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// ADR 058 (English answers, Task 7): R8 for the English rendering
+// (AnswerResponse.english, present only when translation was attempted —
+// A1). What "reconstructs" means here mirrors the rest of this file:
+//
+//  - The DETERMINISTIC half (glossary, caveats, maskedDutch, maskTable) is a
+//    pure function of the stored response — re-derived through
+//    `prepareTranslation`, the SAME function `translateAnswer` itself calls
+//    — and compared byte-identically against what was stored.
+//  - The MODEL-TRANSLATED half (`rawTranslation`) has no ground truth of its
+//    own (like `answer.body`'s LLM half) — but EVERYTHING around it
+//    re-derives: it must still pass `checkTranslation` against the
+//    re-derived maskedDutch/glossary, and re-filling it through the
+//    RE-DERIVED maskTable (never the possibly-tampered stored one — the same
+//    doctrine the #162 slot-phrasing check applies) must reproduce the
+//    stored `body`/chip labels byte-identically. The chip `submit` values
+//    are checked against `response.suggestions` directly — they carry no
+//    translated text, only the Dutch chip's take-intent labels.
+//  - The structural lines and the final text re-assemble byte-identically
+//    from that re-filled prose, through the same builders `translateAnswer`
+//    uses (buildEnglishLines, assembleEnglishText, translateStalenessWarning).
+//  - A `fallback` rendering carries no body/lines/text/chips and at least one
+//    failed attempt — the shape `translateAnswer` guarantees on that status.
+//
+// `rawTranslation` is stored jsonb: `translateAnswer` never stores a
+// shape-invalid value there, but reconstruction treats every stored field as
+// untrusted and shape-checks it (isTranslationItemsShape) before ever calling
+// checkTranslation/fillPlaceholders on it — a malformed value pushes a
+// problem, never throws.
+/** Final-review fold-in 1: the stored `english` jsonb is untrusted — a
+ * minimal shape guard over every field reconstruction reads, so a malformed
+ * value (null, non-array attempts/chips, missing fields) becomes ONE
+ * `english:` problem instead of a TypeError that aborts a whole
+ * audit:verify run. */
+function englishShapeProblem(english: unknown): string | null {
+  if (typeof english !== 'object' || english === null || Array.isArray(english)) return 'stored english is not an object';
+  const e = english as Record<string, unknown>;
+  const isObj = (v: unknown) => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const strOrNull = (v: unknown) => v === null || typeof v === 'string';
+  if (typeof e.status !== 'string') return 'stored english.status is not a string';
+  if (!Array.isArray(e.attempts) || !e.attempts.every((a) => isObj(a) && typeof (a as { ok: unknown }).ok === 'boolean')) {
+    return 'stored english.attempts is not an array of attempts';
+  }
+  if (!Array.isArray(e.chips) || !e.chips.every((c) => isObj(c) && typeof (c as { label: unknown }).label === 'string' && typeof (c as { submit: unknown }).submit === 'string')) {
+    return 'stored english.chips is not an array of {label, submit}';
+  }
+  if (!Array.isArray(e.maskTable)) return 'stored english.maskTable is not an array';
+  if (!('maskedDutch' in e) || !('rawTranslation' in e)) return 'stored english lacks maskedDutch/rawTranslation';
+  if (!strOrNull(e.body) || !strOrNull(e.text) || !strOrNull(e.stalenessWarning)) return 'stored english.body/text/stalenessWarning is not a string or null';
+  if (!(e.lines === null || isObj(e.lines))) return 'stored english.lines is not an object or null';
+  return null;
+}
+
+function checkEnglishReconstruction(record: AuditRecord, problems: string[]): void {
+  const shapeProblem = englishShapeProblem((record.response as AnswerResponse).english);
+  if (shapeProblem !== null) {
+    problems.push(`english: ${shapeProblem}`);
+    return;
+  }
+  try {
+    checkEnglishReconstructionUnguarded(record, problems);
+  } catch (error) {
+    // Belt and braces: anything the guard above did not anticipate is still
+    // a reconstruction problem on THIS row, never a thrown run.
+    problems.push(`english: reconstruction threw (${errorMessage(error)})`);
+  }
+}
+
+function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: string[]): void {
+  const response = record.response as AnswerResponse;
+  const english = response.english;
+  if (english === undefined) return;
+
+  let prep: PreparedTranslation | null = null;
+  try {
+    prep = prepareTranslation(response);
+  } catch (error) {
+    // `translateAnswer` itself falls back to Dutch when prepareTranslation
+    // throws (e.g. an unmapped provisional-marker caveat) — a stored row can
+    // therefore legitimately be `fallback` with nothing further to re-derive
+    // the deterministic half against. Anything OTHER than `fallback` here is
+    // a contradiction: the record claims a translation attempt succeeded
+    // past a step that cannot even be re-run against the stored response.
+    if (english.status !== 'fallback') {
+      problems.push(
+        `english: prepareTranslation cannot re-derive from the stored response (${errorMessage(error)}), but status is '${english.status}'`,
+      );
+    }
+  }
+
+  if (prep !== null) {
+    if (stableStringify(prep.maskedDutch) !== stableStringify(english.maskedDutch)) {
+      problems.push('english: maskedDutch does not re-derive from the stored response');
+    }
+    if (stableStringify(prep.maskTable) !== stableStringify(english.maskTable)) {
+      problems.push('english: maskTable does not re-derive from the stored response');
+    }
+  }
+
+  if (english.status === 'fallback') {
+    if (english.body !== null || english.lines !== null || english.text !== null || english.chips.length > 0) {
+      problems.push('english: fallback status must carry null body/lines/text and no chips');
+    }
+    if (!english.attempts.some((a) => !a.ok)) {
+      problems.push('english: fallback status but no attempt is recorded as failed');
+    }
+    return;
+  }
+
+  if (english.status !== 'verified') {
+    problems.push(`english: unknown status '${String((english as { status: unknown }).status)}'`);
+    return;
+  }
+
+  // From here the record claims `verified` — everything below needs `prep`
+  // (already pushed as a contradiction above when it is null).
+  if (prep === null) return;
+
+  if (english.rawTranslation === null) {
+    problems.push('english: verified status but rawTranslation is null');
+    return;
+  }
+  if (!isTranslationItemsShape(english.rawTranslation)) {
+    problems.push('english: stored rawTranslation is not shape-valid TranslationItems');
+    return;
+  }
+  const rawTranslation = english.rawTranslation;
+  const checkProblems = checkTranslation({
+    maskedDutch: prep.maskedDutch,
+    english: rawTranslation,
+    glossary: prep.glossary,
+    maskTable: prep.maskTable,
+  });
+  if (checkProblems.length > 0) {
+    problems.push(`english: stored verified rawTranslation fails re-check (${checkProblems.join('; ')})`);
+    return;
+  }
+
+  let filledBody: string;
+  let filledChips: string[];
+  let filledDefinition: string | null;
+  let filledAlternates: string[];
+  try {
+    filledBody = fillPlaceholders(rawTranslation.body, prep.maskTable);
+    filledChips = rawTranslation.chips.map((chip) => fillPlaceholders(chip, prep.maskTable));
+    filledDefinition = rawTranslation.definition === null ? null : fillPlaceholders(rawTranslation.definition, prep.maskTable);
+    filledAlternates = rawTranslation.alternates.map((alt) => fillPlaceholders(alt, prep.maskTable));
+  } catch (error) {
+    problems.push(`english: re-filling the stored rawTranslation failed (${errorMessage(error)})`);
+    return;
+  }
+
+  if (filledBody !== english.body) {
+    problems.push('english: body does not re-derive from rawTranslation + maskTable');
+  }
+  if (filledChips.length !== english.chips.length) {
+    problems.push('english: chip count does not re-derive from rawTranslation');
+  } else {
+    filledChips.forEach((label, i) => {
+      if (english.chips[i]!.label !== label) {
+        problems.push(`english: chip ${i + 1} label does not re-derive from rawTranslation + maskTable`);
+      }
+      if (english.chips[i]!.submit !== response.suggestions[i]) {
+        problems.push(`english: chip ${i + 1} submit does not equal response.suggestions[${i}]`);
+      }
+    });
+  }
+
+  const lines = buildEnglishLines(response.result, { definition: filledDefinition, alternates: filledAlternates });
+  if (stableStringify(lines) !== stableStringify(english.lines)) {
+    problems.push('english: lines do not re-derive from the stored result and re-filled prose');
+  }
+
+  const stalenessWarning = response.stalenessWarning === null ? null : translateStalenessWarning(response.stalenessWarning);
+  if (stalenessWarning !== english.stalenessWarning) {
+    problems.push('english: stalenessWarning does not re-derive from response.stalenessWarning');
+  }
+
+  const text = assembleEnglishText(filledBody, lines, stalenessWarning);
+  if (text !== english.text) {
+    problems.push('english: text does not re-assemble from the re-filled body, lines and staleness warning');
+  }
+}
+
 /** Verifies that the record reconstructs its response, from the stored row
  * alone. Empty problems = R8 holds for this record. */
 export function reconstructionReport(record: AuditRecord): ReconstructionReport {
@@ -615,6 +818,9 @@ export function reconstructionReport(record: AuditRecord): ReconstructionReport 
   checkEnvelopeIntegrity(record, problems);
   if (record.response.kind === 'answer') {
     checkAnswerReconstruction(record, problems);
+    if (record.response.english !== undefined) {
+      checkEnglishReconstruction(record, problems);
+    }
   }
   return { ok: problems.length === 0, problems };
 }
