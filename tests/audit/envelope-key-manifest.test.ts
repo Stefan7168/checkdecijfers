@@ -99,8 +99,8 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       why: '#197 step 3: the chip-carrier state behind the takeable follow-up chips (the comparisons first, every takeable chip since #73 v2 — their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
     },
     english: {
-      category: 'ignored',
-      why: 'ADR 058 (English answers, Task 6): set only by attachEnglish, present only when translation was attempted (A1). Its deterministic half (glossary/caveats/maskedDutch) IS re-derivable byte-for-byte via translate.ts\'s prepareTranslation(response) — the same function translateAnswer itself calls — but no reconstruct check wires that up yet; the model-translated half (the accepted body/lines/text) has no ground truth to re-derive against, same policy as `parse`. Wiring the deterministic-half check into reconstruct.ts is a later task in this plan (docs/superpowers/plans/2026-09-25-english-answers-phase1.md); revisit this entry to `shape-checked` when that check lands.',
+      category: 'shape-checked',
+      note: "ADR 058 (English answers, Task 7): set only by attachEnglish, present only when translation was attempted (A1). checkEnglishReconstruction re-derives the deterministic half (glossary/caveats/maskedDutch/maskTable) byte-for-byte via translate.ts's prepareTranslation(response) — the SAME function translateAnswer itself calls — and, on a `verified` row, re-checks the stored rawTranslation (checkTranslation), re-fills it through the RE-DERIVED maskTable and re-assembles the structural lines/text, all compared byte-identically to what was stored; chip `submit` values are checked against response.suggestions directly. A `fallback` row is checked for its guaranteed null-everything/failed-attempt shape instead — there is nothing translated to re-derive. Named `shape-checked` rather than `rederived`/`revalidated` because the treatment is a MIX of both (byte-identical re-derivation for the deterministic half, a re-check+re-fill for the model half), like `slotPhrasing`'s own note above.",
     },
   },
   ClarificationResponse: {
@@ -393,6 +393,10 @@ describe('the envelope-key manifest covers the declared types', () => {
     // that occur as a sub-field of something else. `model` is here because
     // reconstruct genuinely reads `semanticCheck.model` — a bare-identifier
     // match cannot tell that from `answer.model`, which really is ignored.
+    // `attempts` (ADR 058 Task 7): reconstruct genuinely reads
+    // `english.attempts` (checkEnglishReconstruction) — a bare-identifier
+    // match cannot tell that from `answer.attempts`, which really is ignored
+    // (the failed-attempt log, telemetry with nothing to re-derive it from).
     const reconstruct = readFileSync(
       fileURLToPath(new URL('../../src/answer/audit/reconstruct.ts', import.meta.url)),
       'utf8',
@@ -405,6 +409,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       'kind',
       'options',
       'model',
+      'attempts',
       // #253: `ValidatedResult.ok` is a literal discriminant nobody reads, but
       // `ok` is also the field name of every report/validation flag inside
       // reconstruct.ts — a bare-identifier match cannot tell them apart.

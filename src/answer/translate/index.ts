@@ -30,5 +30,11 @@ export type { EnglishAttempt, EnglishRendering } from './types.ts';
 
 export { buildTranslateRequest, TRANSLATE_JSON_SCHEMA, TRANSLATE_PROMPT_VERSION, TRANSLATE_SYSTEM_PROMPT } from './prompt.ts';
 
-export { attachEnglish, CAVEAT_TRANSLATIONS, prepareTranslation, translateAnswer } from './translate.ts';
+export {
+  attachEnglish,
+  CAVEAT_TRANSLATIONS,
+  isTranslationItemsShape,
+  prepareTranslation,
+  translateAnswer,
+} from './translate.ts';
 export type { PreparedTranslation } from './translate.ts';

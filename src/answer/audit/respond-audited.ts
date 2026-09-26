@@ -13,6 +13,7 @@
 //    refusals carry no data values (ADR 015 decision 1), so principle (c) is
 //    not at risk, and masking one honest refusal with another helps nobody.
 import type { Db } from '../../db/types.ts';
+import type { LlmClient } from '../llm/client.ts';
 import { toInternalRefusal } from '../respond/refusals.ts';
 import {
   isRescuePending,
@@ -29,6 +30,11 @@ import type { ConversationContext } from '../context/types.ts';
 // Anthropic SDK enters this graph; actions.ts constructs the real client.
 import { attachWebAugmentation, type WebBilling } from '../../websearch/attach.ts';
 import type { WebSearchClient } from '../../websearch/client.ts';
+// ADR 058 (English answers, Task 7): the English-rendering attach seam runs
+// AFTER attachWebAugmentation and BEFORE persistOrFailClosed, same ordering
+// argument as the web attach — the stored row must carry the English
+// rendering verbatim (R8) and latencyMs must honestly include translate time.
+import { attachEnglish } from '../translate/translate.ts';
 import type { AuditSourceTag } from './types.ts';
 import {
   maybeAlertInternalRefusal,
@@ -61,6 +67,19 @@ export interface AuditedRespondOptions extends RespondOptions {
    * billing/db and the benchmark constructs zero web machinery. */
   webClient?: WebSearchClient;
   webBilling?: WebBilling;
+  /** ADR 058 (English answers, Task 7): the reader's requested language.
+   * Injected ONLY by web/app/actions.ts when the English-answers flag is on
+   * AND the reader is on English; absent everywhere else (benchmark, tests,
+   * CLI, every Dutch reader) ⇒ `attachEnglish` is a byte-identical no-op.
+   * `'nl'` behaves exactly like omitting the field — it exists so a caller
+   * can be explicit without changing behaviour. */
+  lang?: 'nl' | 'en';
+  /** ADR 058 (English answers, Task 7): the translating LLM client. Injected
+   * ONLY by web/app/actions.ts alongside `lang: 'en'`; absent everywhere else
+   * ⇒ zero translate machinery reached (same A1 discipline as `webClient`).
+   * Wrapped in the SAME LlmCallTracker as every other role below, so its
+   * token counts land in `llm_calls` under the `'translate'` role. */
+  translateClient?: LlmClient;
 }
 
 export interface AuditedResponse {
@@ -190,7 +209,14 @@ export async function answerQuestionAudited(
     client: options.webClient,
     billing: options.webBilling,
   });
-  const audited = await persistOrFailClosed(db, augmented, wrap);
+  // ADR 058: the English rendering rides the SAME row (R8), attached before
+  // the write so latency and llm_calls stay honest. No lang/client (the
+  // benchmark, tests, CLI, every Dutch reader) ⇒ the same object back.
+  const withEnglish = await attachEnglish(augmented, {
+    lang: options.lang,
+    client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
+  });
+  const audited = await persistOrFailClosed(db, withEnglish, wrap);
   // #144 (ADR 034 §5, owner decision 2026-07-16): the fail-open skip alert —
   // fail-soft, after the audit write, never affecting the response.
   await maybeAlertSemanticCheckSkip(audited, wrap.userId);
@@ -269,7 +295,13 @@ export async function answerClarificationReplyAudited(
     client: options.webClient,
     billing: options.webBilling,
   });
-  const audited = await persistOrFailClosed(db, augmented, wrap);
+  // ADR 058: same English-attach seam on the reply turn (a reply can settle
+  // into an answer too, e.g. a takeable chip) — same A1 no-op absent lang/client.
+  const withEnglish = await attachEnglish(augmented, {
+    lang: options.lang,
+    client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
+  });
+  const audited = await persistOrFailClosed(db, withEnglish, wrap);
   // #144 (ADR 034 §5): same fail-open skip alert on the reply turn.
   await maybeAlertSemanticCheckSkip(audited, wrap.userId);
   // #121: same internal-refusal alert on the reply turn.

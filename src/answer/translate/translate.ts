@@ -102,7 +102,6 @@ export interface PreparedTranslation {
   caveats: { dutch: string; english: string }[];
   maskedDutch: TranslationItems;
   maskTable: MaskEntry[];
-  dutch: TranslationItems;
   untranslatedNames: string[];
   digitSurvived: boolean;
 }
@@ -169,7 +168,7 @@ export function prepareTranslation(response: AnswerResponse): PreparedTranslatio
     : probeRequest.system;
   const digitSurvived = hasDigitOutsidePlaceholders(probeRequest.question) || hasDigitOutsidePlaceholders(systemAppendix);
 
-  return { glossary, caveats, maskedDutch, maskTable, dutch, untranslatedNames, digitSurvived };
+  return { glossary, caveats, maskedDutch, maskTable, untranslatedNames, digitSurvived };
 }
 
 function errorMessage(error: unknown): string {
@@ -180,8 +179,12 @@ function errorMessage(error: unknown): string {
  * exactly the shape `checkTranslation`/`fillPlaceholders` assume — a
  * malformed response (e.g. `{}`, or a `chips` that isn't a string array)
  * would otherwise throw INSIDE checkTranslation/fillPlaceholders rather than
- * failing as an ordinary, retryable attempt. */
-function isTranslationItemsShape(value: unknown): value is TranslationItems {
+ * failing as an ordinary, retryable attempt. Exported (Task 7) so
+ * reconstruct.ts's `checkEnglishReconstruction` can shape-check the stored,
+ * untrusted `rawTranslation` jsonb the SAME way before ever calling
+ * `checkTranslation`/`fillPlaceholders` on it — a malformed stored value must
+ * push a reconstruction problem, never throw. */
+export function isTranslationItemsShape(value: unknown): value is TranslationItems {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
   const v = value as Record<string, unknown>;
   return (
