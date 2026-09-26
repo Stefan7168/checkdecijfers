@@ -21,7 +21,7 @@
 **▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 134 — owner present; verify against `git log` / Actions runs
 before trusting this). Kickoff: [session-briefs/2026-09-27-session-135-kickoff.md](session-briefs/2026-09-27-session-135-kickoff.md).**
 
-- **`main` is live and green @ `b8029e56`** (last code `156292fa`, deployed by tip run 36259837787 — every job green incl.
+- **`main` is live and green @ `c6d090e9`** (docs-only after the last code commit; last code `156292fa`, deployed by tip run 36259837787 — every job green incl.
   deploy, 2026-09-26). Prod 200. No open PRs.
 - **The Anthropic "API cap" is SOLVED:** it was our own organisation Monthly spend limit ($35, Console → Settings → Billing →
   "Spend limits"). The owner raised it to **$50** (the spend roof; resets on the 1st). ≈$3 spent this session; ≈$11 room

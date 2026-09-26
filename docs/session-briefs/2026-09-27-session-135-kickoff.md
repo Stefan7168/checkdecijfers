@@ -5,7 +5,7 @@ Read order: `CLAUDE.md` → `docs/STATUS.md` top block → this file. Verify eve
 
 ## Where things stand
 
-- **`main` is live and green** @ `b8029e56` (last code commit `156292fa`, deployed by tip run 36259837787, every job green
+- **`main` is live and green** @ `c6d090e9` (docs-only after last code commit `156292fa`, deployed by tip run 36259837787, every job green
   incl. deploy). No open PRs, no worktrees.
 - **English answers are LIVE** (`ENGLISH_ANSWERS_ENABLED=1` since 2026-09-26 ~18:00 UTC, owner GO). The meaning check C12 runs
   on Sonnet 5. Live check: audit row 336 verified. This is a live, money-path feature now: an English-interface reader's
