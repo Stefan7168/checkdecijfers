@@ -575,6 +575,16 @@ Steps, in order, owner present:
    already live today. Nothing is deleted; the committed fixtures and any already-recorded English
    renderings in the audit table are simply not read again until the flag is set again.
 
+**Editing an English name later** (a change in `src/registry/english-names.data.ts` or a regenerated
+`english-names.cbs.generated.ts`) makes every OLDER English audit row that used that name diverge in
+`npm run audit:verify` — the check rebuilds each row's name list from today's list. That is expected, not
+corruption: record those rows as known divergences (`src/answer/audit/known-divergences.ts`, the same
+pattern as any other superseded rule), never rewrite the stored rows.
+
+**Time cap:** the whole translation step gives up after 20 seconds and serves the Dutch answer with
+the one honest line (the audit row records the attempt error `timeout`), so a slow model can never
+push a page past its time limit after the credit is already taken.
+
 **Known phase-1 gaps, not blockers** (tracked at [open-questions #324](open-questions.md)): a
 reloaded thread's chat bubble shows the Dutch text that was actually submitted, not the English
 chip label the reader clicked; the citation copy, the CSV export and the "prove it" panel stay

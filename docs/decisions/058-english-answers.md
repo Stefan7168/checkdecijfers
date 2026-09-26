@@ -58,13 +58,51 @@ ledger
 [superpowers/sdd/2026-09-25-english-answers-phase1/progress.md](../superpowers/sdd/2026-09-25-english-answers-phase1/progress.md).
 What the Decision above under-specified or the build genuinely had to decide:
 
-- **Two more deterministic checks, C7 and C8, past the six named above.** A review found the original
-  placeholder-identity check (C1) is SET-based: a model swapping two number placeholders — binding a value to
-  the wrong period or region — passed every original check untouched, and a number bound to the wrong region or
-  period is a fabricated claim (principle a), not a stylistic nit. C7 requires a Dutch sentence's number
-  placeholders to keep their relative ORDER in the English sentence; C8 requires each number placeholder's
-  companion period placeholders and region glossary names to land in the SAME English sentence. Both fail
-  toward the Dutch fallback (`src/answer/translate/check.ts`).
+- **Four more deterministic checks, C7–C10, past the six named above** (`src/answer/translate/check.ts`; all
+  fail toward the Dutch fallback). A review found the original placeholder-identity check (C1) is SET-based: a
+  model swapping two number placeholders — binding a value to the wrong period or region — passed every
+  original check untouched, and a number bound to the wrong region or period is a fabricated claim (principle
+  a), not a stylistic nit.
+  - **C7 (order, per ITEM — the body, each chip, the definition, each alternate — not per sentence):** the
+    number placeholders keep their exact relative order; so do the PERIOD placeholders; and the glossary's
+    REGION names keep the relative order of their first mentions (longest name first, so a region nested in a
+    longer one — 'Holland' in 'Noord-Holland' — is not its own mention). Only the order WITHIN a kind is
+    pinned: a period moving past its number ('In ⟦Pa⟧ was X ⟦Na⟧' → 'X was ⟦Na⟧ in ⟦Pa⟧') is ordinary English.
+    The period and region legs were added by the final whole-branch review: Dutch bodies are often ONE
+    sentence, so a same-sentence swap ('In ⟦Pa⟧ … ⟦Na⟧, in ⟦Pb⟧ … ⟦Nb⟧' → 'In ⟦Pb⟧ … ⟦Na⟧, in ⟦Pa⟧ …', or
+    two regions traded) passed the sentence-level C8.
+  - **C8 (sentence binding, body):** each number placeholder's companion period placeholders and region names
+    in its Dutch sentence land in the SAME English sentence.
+  - **C9 (quantity words):** an English number word (one…twenty, thirty…ninety, hundred, thousand, million,
+    billion, dozen), fraction/multiple (half, quarter, a third, twice, double(d), triple(d), quadruple(d),
+    -fold) or percent word (percent / per cent / '%', percentage point) outside the placeholders fails unless
+    the masked Dutch item carries its Dutch counterpart (een/twee/…, helft, kwart, derde, verdubbeld/twee
+    keer, drievoudig, procent, procentpunt, …). The map is small and explicit, and 'percent' is never satisfied
+    by 'procentpunt' (a unit swap is R10's own fabrication). The Dutch cardinal morphemes are a copy of the
+    Dutch validator's list, pinned against it by a test.
+  - **C3 compares an ORDERED sequence, and C10 checks negation.** Direction claims are read per sentence, per
+    clause (the Dutch validator's own `splitSentences`/`splitClauses`), in text order, consecutive duplicates
+    collapsed — not as a set, which let 'Utrecht steeg…, Zeeland daalde…' → 'Utrecht fell…, Zeeland rose…'
+    pass. C10 then requires each claim's negation to match: the Dutch side uses the Dutch validator's own
+    negation-in-clause rule (zonder/geen/niet earlier in the clause; copied, pinned against validate.ts by a
+    test), the English side its mirror (not / no / never / without / cannot / n't earlier in the clause) —
+    'niet gedaald' → 'has fallen' is a reversed claim.
+- **A number is masked TOGETHER with a directly following unit or scale word, as ONE placeholder** (final
+  whole-branch review). The model never sees a unit, so it cannot swap one: 'procentpunt' → 'percent' or 'mln'
+  → 'billion' is a fabricated number as surely as a changed digit. Joined: `%` (glued or after one space),
+  procent, procentpunt(en), mln, mld, miljoen, miljard, and the result's own registered unit strings that have
+  an English form in the shared name list (`translateUnit`, longest first, so 'mln euro' beats 'mln'). The mask
+  table stores the combined Dutch text and a FIXED English fill: '%', 'percentage point(s)' (singular only when
+  the number is exactly 1), 'million', 'billion', or the registered unit's English ('450.985 euro' → '450,985
+  euros'). R8 re-derives it through `prepareTranslation` like every other mask entry. C2, the pre-call digit gate
+  and the digit-bearing-name split use `\p{N}` (every Unicode numeral: '½', '²', 'Ⅻ'), not just `\p{Nd}`.
+- **The whole translate step is capped at 20 s** (`TRANSLATE_TIMEOUT_MS`, `src/answer/translate/types.ts`). It
+  runs after the full Dutch pipeline and after the credit is reserved, inside a page with a 90 s maxDuration;
+  an uncapped step (two calls on a default SDK client: 10-minute timeout, 2 retries) could get the function
+  killed — charged, no answer, no audit row. On expiry the answer falls back to Dutch with attempt error
+  `'timeout'`, built from a snapshot; the ladder stops at its next checkpoint, so a late response mutates
+  nothing and starts no further paid call. The web layer (`web/lib/english-answers.ts`) builds the translate
+  client on its own SDK instance with `maxRetries: 0` and a 20 s request timeout.
 - **A digit-bearing glossary name is masked WHOLE**, as a new placeholder kind `⟦G…⟧` (exact case-sensitive
   match, longest match first, masked before caveats/periods/numbers). A measure title like "Bevolking op 1
   januari" or a dimension label like "15 tot 75 jaar" carries a digit in ITS OWN Dutch or English text — sent to
@@ -85,6 +123,8 @@ What the Decision above under-specified or the build genuinely had to decide:
   - C6 → "The number of chips or alternates changed."
   - C7 → "Numbers were reordered."
   - C8 → "A number was moved away from its period or region."
+  - C9 → "A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain."
+  - C10 → "A negation was added or dropped."
   - malformed/unparseable model output → "The output was not valid JSON of the required shape."
 - **The model's output is shape-validated before anything else touches it** (`isTranslationItemsShape`) — a
   malformed response becomes an ordinary retryable failed attempt instead of throwing inside
@@ -95,10 +135,24 @@ What the Decision above under-specified or the build genuinely had to decide:
   kind partway through the build — nothing has ever been recorded or served under v1 (recording is this very
   Task 9, and the flag stays unset until the go-live below), so no consumer can distinguish the old and new
   wording; a real behaviour change to an ALREADY-RECORDED prompt would instead need a bump.
-- **Every deterministic name/direction/region check (C3, C5, C8) reads the MASKED Dutch text**, not a separately
-  re-split unmasked body — this closes a latent desync risk (regions read from an independently-split body could
-  misalign if sentence counts ever differed) at no extra cost, since C1 already guarantees a `⟦G…⟧`-masked name's
-  own exact reuse regardless.
+- **Every deterministic name/direction/region check (C3, C5, C7–C10) reads the MASKED Dutch text**, not a
+  separately re-split unmasked body — this closes a latent desync risk (regions read from an independently-split
+  body could misalign if sentence counts ever differed) at no extra cost, since C1 already guarantees a
+  `⟦G…⟧`-masked name's own exact reuse regardless. **Names match on Unicode word boundaries**
+  (case-insensitive, quote-normalized) — the Dutch validator's `mentions` is a substring test, under which 'Ede'
+  matched inside 'exceeded' and 'Nederland'.
+- **System-prompt rule 2 was widened by the final review** to say a number placeholder already includes its unit
+  (never write a unit or scale word next to one) and never to add a number word, fraction or multiple the Dutch
+  does not contain — the same reasoning as rule 1's `⟦G…⟧` addition keeps `TRANSLATE_PROMPT_VERSION` at `1`.
+- **A glossary entry is `translated` when the shared name list HAS an entry** (`hasEnglishName`), never merely
+  when its English differs — 'CPI' → 'CPI' is a translation, so it is not listed in `untranslatedNames`.
+- **The English R8 leg never throws on a malformed stored row** (`src/answer/audit/reconstruct.ts`): a shape
+  guard over every field it reads (plus a try/catch) turns a null/non-object `english`, non-array
+  `attempts`/`chips` or a missing field into one `english:` problem on that row, instead of aborting a whole
+  `audit:verify` run.
+- **Editing an English name later makes older English rows that used it diverge in `audit:verify`** — the
+  reconstruction re-derives the glossary and mask table from TODAY's name list. Same pattern as any other
+  registry-derived text: record such rows as known divergences, never rewrite them.
 - **A verified English answer renders inside the SAME answer card**, not a separate plain bubble:
   `english.body`/`english.lines.*`/`english.stalenessWarning` map onto the card's existing text slots, with
   table id, source, synced date, provisional badge and the chart-dock trigger all read from the unchanged Dutch
