@@ -80,9 +80,9 @@ What the Decision above under-specified or the build genuinely had to decide:
     keer, drievoudig, procent, procentpunt, …). The map is small and explicit, and 'percent' is never satisfied
     by 'procentpunt' (a unit swap is R10's own fabrication). The Dutch cardinal morphemes are a copy of the
     Dutch validator's list, pinned against it by a test.
-  - **C3 compares an ORDERED sequence, and C10 checks negation.** Direction claims are read per sentence, per
-    clause (the Dutch validator's own `splitSentences`/`splitClauses`), in text order, consecutive duplicates
-    collapsed — not as a set, which let 'Utrecht steeg…, Zeeland daalde…' → 'Utrecht fell…, Zeeland rose…'
+  - **C3 compares an ORDERED sequence, and C10 checks negation.** Direction claims are read the way the Dutch
+    validator reads them — trend words per clause, more/less-than comparatives per sentence (its own
+    `splitSentences`/`splitClauses`) — in text order, consecutive duplicates collapsed — not as a set, which let 'Utrecht steeg…, Zeeland daalde…' → 'Utrecht fell…, Zeeland rose…'
     pass. C10 then requires each claim's negation to match: the Dutch side uses the Dutch validator's own
     negation-in-clause rule (zonder/geen/niet earlier in the clause; copied, pinned against validate.ts by a
     test), the English side its mirror (not / no / never / without / cannot / n't earlier in the clause) —
