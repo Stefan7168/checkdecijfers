@@ -33,7 +33,7 @@ trusting this). Kickoff: [session-briefs/2026-09-25-session-131-kickoff.md](sess
   redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
 - **Decisions waiting on the owner:** [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md) —
   open: #271 English answer sentences (item 1 — would change the Dutch answer pipeline that CLAUDE.md keeps Dutch, so owner's call),
-  #250 Eurostat wording (5), #256 3D demo page (7), #275 homepage looks row (8), #314 incomplete-total warning in downloads (11),
+  [session 131: #250, #256, #260, #271, #275, #314 decided — see open-questions] #256 3D demo page (7), #275 homepage looks row (8), #314 incomplete-total warning in downloads (11),
   #245 test-speed questions (12), and a punchier colour-blind-safe palette (#260 remainder). Items 4 and 6 done in session 129.
 - **After the Anthropic API cap lifts 2026-10-01:** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)), the `:record`
   scripts, the live benchmark. Stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).

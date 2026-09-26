@@ -117,6 +117,8 @@ haven't given it a final look.
 
 *(tracker #250)*
 
+**Decided session 131 (2026-09-26): approved as drafted.**
+
 ---
 
 ## 6. Should a chart-editing request that changes nothing still cost credits?

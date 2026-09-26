@@ -805,7 +805,7 @@ undeclared status is exactly how a typo'd flag could slip outside both `definiti
 **Still unchanged by this addendum:** Constraint 0's two remaining E1 inertness gates — `chatSelectable: false`
 (Eurostat is still not selectable in live chat) and `currentCatalogStatuses: []` (confirmed permanent for that
 endpoint, [#250](../open-questions.md)) — and the open owner sign-off on the Dutch suffix / null-reason
-wording (Amendment 11, [#250](../open-questions.md)(a)).
+wording (Amendment 11, [#250](../open-questions.md)(a)). **Update 2026-09-26 (session 131): the owner approved that wording as drafted — the sign-off is no longer open.**
 
 ## Fifth As-built addendum — footer trust line made source-aware for the Eurostat explorer only (session 110 UX audit pass 2, row 18, 2026-09-17)
 
