@@ -38,3 +38,12 @@ describe('periodLabelPairs', () => {
     ]);
   });
 });
+
+describe('glossaryForResult — translated flag (final-review fold-in 5)', () => {
+  it("a name whose English equals its Dutch but IS on the list ('CPI') counts as translated", () => {
+    const cpi = { cells: [cell({ measureTitle: 'CPI' })], attribution: { tableTitle: 'Onbekende tabel' } } as unknown as ValidatedResult;
+    const g = glossaryForResult(cpi);
+    expect(g).toContainEqual({ dutch: 'CPI', english: 'CPI', kind: 'measure', translated: true });
+    expect(g).toContainEqual({ dutch: 'Onbekende tabel', english: 'Onbekende tabel', kind: 'table', translated: false });
+  });
+});

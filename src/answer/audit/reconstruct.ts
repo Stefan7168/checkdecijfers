@@ -656,7 +656,46 @@ function errorMessage(error: unknown): string {
 // untrusted and shape-checks it (isTranslationItemsShape) before ever calling
 // checkTranslation/fillPlaceholders on it — a malformed value pushes a
 // problem, never throws.
+/** Final-review fold-in 1: the stored `english` jsonb is untrusted — a
+ * minimal shape guard over every field reconstruction reads, so a malformed
+ * value (null, non-array attempts/chips, missing fields) becomes ONE
+ * `english:` problem instead of a TypeError that aborts a whole
+ * audit:verify run. */
+function englishShapeProblem(english: unknown): string | null {
+  if (typeof english !== 'object' || english === null || Array.isArray(english)) return 'stored english is not an object';
+  const e = english as Record<string, unknown>;
+  const isObj = (v: unknown) => typeof v === 'object' && v !== null && !Array.isArray(v);
+  const strOrNull = (v: unknown) => v === null || typeof v === 'string';
+  if (typeof e.status !== 'string') return 'stored english.status is not a string';
+  if (!Array.isArray(e.attempts) || !e.attempts.every((a) => isObj(a) && typeof (a as { ok: unknown }).ok === 'boolean')) {
+    return 'stored english.attempts is not an array of attempts';
+  }
+  if (!Array.isArray(e.chips) || !e.chips.every((c) => isObj(c) && typeof (c as { label: unknown }).label === 'string' && typeof (c as { submit: unknown }).submit === 'string')) {
+    return 'stored english.chips is not an array of {label, submit}';
+  }
+  if (!Array.isArray(e.maskTable)) return 'stored english.maskTable is not an array';
+  if (!('maskedDutch' in e) || !('rawTranslation' in e)) return 'stored english lacks maskedDutch/rawTranslation';
+  if (!strOrNull(e.body) || !strOrNull(e.text) || !strOrNull(e.stalenessWarning)) return 'stored english.body/text/stalenessWarning is not a string or null';
+  if (!(e.lines === null || isObj(e.lines))) return 'stored english.lines is not an object or null';
+  return null;
+}
+
 function checkEnglishReconstruction(record: AuditRecord, problems: string[]): void {
+  const shapeProblem = englishShapeProblem((record.response as AnswerResponse).english);
+  if (shapeProblem !== null) {
+    problems.push(`english: ${shapeProblem}`);
+    return;
+  }
+  try {
+    checkEnglishReconstructionUnguarded(record, problems);
+  } catch (error) {
+    // Belt and braces: anything the guard above did not anticipate is still
+    // a reconstruction problem on THIS row, never a thrown run.
+    problems.push(`english: reconstruction threw (${errorMessage(error)})`);
+  }
+}
+
+function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: string[]): void {
   const response = record.response as AnswerResponse;
   const english = response.english;
   if (english === undefined) return;

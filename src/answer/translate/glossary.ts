@@ -16,6 +16,7 @@
 import { baseRegionLabel } from '../compose/format.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import {
+  hasEnglishName,
   translateDimLabel,
   translateMeasureTitle,
   translatePeriodLabel,
@@ -34,8 +35,8 @@ export interface GlossaryEntry {
  * label the result carries, each paired with its English form. Deduplicated
  * by `kind:dutch` (first occurrence wins, insertion order preserved) — a
  * result with the same measure title on every cell gets exactly one glossary
- * row for it, not one per cell. `translated: false` (english === dutch)
- * means the shared name list has no entry for this exact string — the row
+ * row for it, not one per cell. `translated: false` (hasEnglishName is
+ * false) means the shared name list has no entry for this exact string — the row
  * still appears so a caller (e.g. a "translated verbatim, no English name on
  * file" disclosure) can require it to be echoed unchanged. */
 export function glossaryForResult(result: ValidatedResult): GlossaryEntry[] {
@@ -43,7 +44,9 @@ export function glossaryForResult(result: ValidatedResult): GlossaryEntry[] {
   const add = (kind: GlossaryEntry['kind'], dutch: string | null | undefined, english: string) => {
     if (!dutch) return;
     const key = `${kind}:${dutch}`;
-    if (!out.has(key)) out.set(key, { dutch, english, kind, translated: english !== dutch });
+    // Final-review fold-in 5: `translated` means "the shared name list has an
+    // entry", never "the English differs" — 'CPI' → 'CPI' IS a translation.
+    if (!out.has(key)) out.set(key, { dutch, english, kind, translated: hasEnglishName(kind, dutch) });
   };
   for (const c of result.cells) {
     add('measure', c.measureTitle, translateMeasureTitle(c.measureTitle));

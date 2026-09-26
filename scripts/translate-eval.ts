@@ -85,7 +85,14 @@ function buildTranslateClient(mode: 'record' | 'replay', labelFor: () => string 
  * a broader "any error" rule (a real transient error must still just count
  * as one fallback case, not abort the whole run). */
 function missingFixtureError(attempts: { error: string | null }[]): string | null {
-  return attempts.find((a) => a.error?.startsWith('no recorded LLM fixture'))?.error ?? null;
+  return attempts.find((a) => a.error !== null && isMissingFixtureMessage(a.error))?.error ?? null;
+}
+
+/** ReplayLlmClient's own fixed "no recorded fixture" message prefix
+ * (client.ts). Final-review fold-in 3: ONLY this condition earns the
+ * "run translate:record" hint — any other failure is reported as itself. */
+function isMissingFixtureMessage(message: string): boolean {
+  return message.startsWith('no recorded LLM fixture');
 }
 
 /** Ruling 6/the check kinds (src/answer/translate/check.ts): C1 (placeholder
@@ -113,6 +120,7 @@ async function main(): Promise<void> {
 
   const results: CaseResult[] = [];
   let loudFailure: string | null = null;
+  let loudFailureIsMissingFixture = false;
 
   try {
     for (const taskId of Object.keys(ANSWERABLE_TASKS)) {
@@ -134,7 +142,11 @@ async function main(): Promise<void> {
         // throws its own clear, loud message (client.ts) — surfaced as-is,
         // not swallowed into a generic script crash, and this run stops
         // rather than reporting 14 misleading "fallback" rows.
+        // Final-review fold-in 3: only the missing-fixture throw gets the
+        // record hint below; any other pipeline throw is reported as itself
+        // (and still exits non-zero).
         loudFailure = error instanceof Error ? error.message : String(error);
+        loudFailureIsMissingFixture = isMissingFixtureMessage(loudFailure);
         break;
       }
 
@@ -150,6 +162,7 @@ async function main(): Promise<void> {
         const missing = missingFixtureError(english.attempts);
         if (missing !== null) {
           loudFailure = missing;
+          loudFailureIsMissingFixture = true;
           break;
         }
       }
@@ -185,7 +198,7 @@ async function main(): Promise<void> {
 
   if (loudFailure !== null) {
     console.error('\n' + loudFailure);
-    if (mode === 'replay') {
+    if (mode === 'replay' && loudFailureIsMissingFixture) {
       console.error(
         '\nNo recorded translate fixtures yet — run `npm run translate:record` after the API cap ' +
           'lifts (2026-10-01, docs/open-questions.md #271/#288), owner-supervised, real spend.',

@@ -24,11 +24,13 @@
 // discipline translate.test.ts's own `faithfulEnglish` helpers use (derived
 // from the ACTUAL masked request each call, never a hand-counted placeholder
 // id — so a future masker/glossary change desyncs loudly instead of silently).
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReplayLlmClient, stableStringify } from '../../src/answer/llm/client.ts';
 import type { LlmClient, LlmRequest } from '../../src/answer/llm/client.ts';
 import {
+  answerClarificationReplyAudited,
   answerQuestionAudited,
   loadAuditRecord,
   reconstructionReport,
@@ -44,6 +46,7 @@ import type { Db } from '../../src/db/types.ts';
 
 const INTENT_FIXTURES = fileURLToPath(new URL('../fixtures/llm/intent', import.meta.url));
 const ANSWER_FIXTURES = fileURLToPath(new URL('../fixtures/llm/answer', import.meta.url));
+const CLARIFY_FIXTURES = fileURLToPath(new URL('../fixtures/llm/clarify', import.meta.url));
 const REFERENCE_DATE = loadLabelledSet().referenceDate;
 
 function fixtureClients() {
@@ -162,9 +165,13 @@ describe('a verified English row (ADR 058 Task 7)', () => {
   let close: () => Promise<void>;
   let record: AuditRecord;
   let client: LlmClient & { requests: LlmRequest[] };
+  let dutchBaseline: AnswerResponse;
 
   beforeAll(async () => {
     ({ db, close } = await createIngestedDb());
+    const baseline = await answerQuestionAudited(db, ANSWERABLE_TASKS.B3!.question, fixtureClients());
+    if (baseline.response.kind !== 'answer') throw new Error('unreachable: B3 baseline is not an answer');
+    dutchBaseline = baseline.response;
     client = faithfulB3TranslateClient();
     const audited = await answerQuestionAudited(db, ANSWERABLE_TASKS.B3!.question, {
       ...fixtureClients(),
@@ -193,6 +200,13 @@ describe('a verified English row (ADR 058 Task 7)', () => {
 
     expect(record.llmCalls.some((c) => c.role === 'translate')).toBe(true);
     expect(reconstructionReport(record).problems).toEqual([]);
+
+    // Final-review fold-in 2: the Dutch answer riding a VERIFIED English row
+    // is exactly the Dutch-only baseline — final_text, response.text and the
+    // answer body are untouched by the translation.
+    expect(record.finalText).toBe(dutchBaseline.text);
+    expect(response.text).toBe(dutchBaseline.text);
+    expect(response.answer.body).toBe(dutchBaseline.answer.body);
   });
 
   it('tamper: a changed digit in english.body fails reconstruction', () => {
@@ -263,6 +277,30 @@ describe('a verified English row (ADR 058 Task 7)', () => {
     expect(report.problems.some((p) => p.startsWith('english:'))).toBe(true);
   });
 
+  // Final-review fold-in 1: a malformed stored `english` value (jsonb is
+  // untrusted) must surface as an `english:` problem — never throw out of
+  // reconstructionReport (which would abort a whole audit:verify run).
+  it.each<[string, (english: Record<string, unknown>, response: Record<string, unknown>) => void]>([
+    ['english is null', (_e, r) => { r.english = null; }],
+    ['english is an empty object', (_e, r) => { r.english = {}; }],
+    ['english is a string', (_e, r) => { r.english = 'verified'; }],
+    ['attempts is not an array', (e) => { e.attempts = 'nope'; }],
+    ['chips is null', (e) => { e.chips = null; }],
+    ['chips holds a non-object', (e) => { e.chips = [42]; }],
+    ['lines is missing', (e) => { delete e.lines; }],
+    ['fallback with attempts null', (e) => { e.status = 'fallback'; e.body = null; e.lines = null; e.text = null; e.chips = []; e.attempts = null; }],
+  ])('tamper (malformed shape): %s pushes an english: problem and never throws', (_label, mutate) => {
+    const tampered = clone(record);
+    const response = answerOf(tampered) as unknown as Record<string, unknown>;
+    mutate(response.english as Record<string, unknown>, response);
+    let report: ReturnType<typeof reconstructionReport> | undefined;
+    expect(() => {
+      report = reconstructionReport(tampered);
+    }).not.toThrow();
+    expect(report!.ok).toBe(false);
+    expect(report!.problems.some((p) => p.startsWith('english:'))).toBe(true);
+  });
+
   it("tamper: a changed chip's submit fails reconstruction", () => {
     const tampered = clone(record);
     const english = answerOf(tampered).english!;
@@ -314,6 +352,101 @@ describe('a fallback English row (the translate client fails every attempt)', ()
 
       const record = (await loadAuditRecord(db, audited.auditId!)) as AuditRecord;
       expect(record.finalText).toBe(baseline.response.text);
+      expect(reconstructionReport(record).problems).toEqual([]);
+    } finally {
+      await close();
+    }
+  }, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// (4) The reply turn (final-review fold-in 2): answerClarificationReplyAudited
+// carries the same English seam — a clarification reply that settles into an
+// answer gets a verified English rendering, the Dutch stays the Dutch-only
+// baseline, and the row reconstructs clean.
+// ---------------------------------------------------------------------------
+
+/** Faithful English for the c-b15-full reply's masked Dutch (the seasonally
+ * adjusted unemployment rate, 2025 Q4) — anchored regexes over the ACTUAL
+ * masked request, never hand-counted placeholder ids. */
+function faithfulUnemploymentTranslateClient(): LlmClient & { requests: LlmRequest[] } {
+  const requests: LlmRequest[] = [];
+  return {
+    requests,
+    async complete(req: LlmRequest) {
+      requests.push(req);
+      const { items } = JSON.parse(req.question) as { items: TranslationItems };
+      const body = items.body.replace(
+        /^Werkloosheidspercentage, seizoengecorrigeerd was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)\.$/,
+        'The unemployment rate, seasonally adjusted, was $2 in $1.',
+      );
+      const chips = items.chips.map((chip) =>
+        chip
+          .replace(
+            /^Wat was werkloosheidspercentage, seizoengecorrigeerd in het eerste kwartaal van (⟦N[a-z]+⟧)\?$/,
+            'What was the unemployment rate, seasonally adjusted, in the first quarter of $1?',
+          )
+          .replace(
+            /^Hoe ontwikkelde werkloosheidspercentage, seizoengecorrigeerd zich van het vierde kwartaal van (⟦N[a-z]+⟧) tot en met het vierde kwartaal van (⟦N[a-z]+⟧)\?$/,
+            'How did the unemployment rate, seasonally adjusted, develop from the fourth quarter of $1 to the fourth quarter of $2?',
+          ),
+      );
+      const definition =
+        items.definition === null
+          ? null
+          : items.definition.replace(/^werkloosheidspercentage, seizoengecorrigeerd$/, 'unemployment rate, seasonally adjusted');
+      const alternates = items.alternates.map((alt) =>
+        alt.replace(/^oorspronkelijke, ongecorrigeerde cijfers$/, 'original, unadjusted figures'),
+      );
+      const outputText = JSON.stringify({ body, chips, definition, alternates });
+      return { outputText, model: req.model, stopReason: 'end_turn', usage: { inputTokens: 3, outputTokens: 5 } };
+    },
+  };
+}
+
+describe('the reply turn carries English too (answerClarificationReplyAudited)', () => {
+  it('c-b15-full: the reply answer verifies in English, keeps the Dutch baseline, and reconstructs clean', async () => {
+    const clarifySet = JSON.parse(
+      readFileSync(new URL('../../benchmark/clarification-cases.json', import.meta.url), 'utf8'),
+    ) as { referenceDate: string; cases: { id: string; originalQuestion: string; reply: string }[] };
+    const c = clarifySet.cases.find((x) => x.id === 'c-b15-full')!;
+    const { db, close } = await createIngestedDb();
+    try {
+      const firstOptions = {
+        intentClient: new ReplayLlmClient(INTENT_FIXTURES),
+        answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
+        referenceDate: clarifySet.referenceDate,
+      };
+      const replyOptions = () => ({
+        intentClient: new ReplayLlmClient(CLARIFY_FIXTURES),
+        answerClient: new ReplayLlmClient(ANSWER_FIXTURES),
+        referenceDate: clarifySet.referenceDate,
+      });
+      const first = await answerQuestionAudited(db, c.originalQuestion, firstOptions);
+      if (first.response.kind !== 'clarification') throw new Error('unreachable: expected a clarification');
+
+      const dutchOnly = await answerClarificationReplyAudited(db, first.response.pending, c.reply, replyOptions());
+      if (dutchOnly.response.kind !== 'answer') throw new Error('unreachable: expected an answer');
+
+      const client = faithfulUnemploymentTranslateClient();
+      const reply = await answerClarificationReplyAudited(db, first.response.pending, c.reply, {
+        ...replyOptions(),
+        lang: 'en',
+        translateClient: client,
+      });
+      if (reply.response.kind !== 'answer') throw new Error('unreachable: expected an answer');
+
+      const english = reply.response.english!;
+      expect(english.status).toBe('verified');
+      expect(english.body).toContain('The unemployment rate, seasonally adjusted, was');
+      expect(english.body).not.toContain('⟦');
+      expect(client.requests).toHaveLength(1);
+
+      expect(reply.response.text).toBe(dutchOnly.response.text);
+      const record = (await loadAuditRecord(db, reply.auditId!)) as AuditRecord;
+      expect(record.replyText).toBe(c.reply);
+      expect(record.finalText).toBe(dutchOnly.response.text);
+      expect(record.llmCalls.some((x) => x.role === 'translate')).toBe(true);
       expect(reconstructionReport(record).problems).toEqual([]);
     } finally {
       await close();
