@@ -223,6 +223,12 @@ separate, not-yet-specified phase 3, per Decision above).
 **Not yet done:** `npm run translate:record` (blocked by the API cap), the owner-supervised go-live
 (`ENGLISH_ANSWERS_ENABLED=1`), and the merge to `main`.
 
+**Known limits at merge (session 132, [#325](../open-questions.md)):** C1–C11 guarantee the NUMBERS; direction and
+negation meaning is word-list checked and five review rounds kept finding false passes of the same class (ruling 25
+reverted two word-level patches that opened new ones). #325 lists the confirmed residuals and is a precondition of the
+`ENGLISH_ANSWERS_ENABLED` flip; the recommended structural answer is an ADR 034-style independent semantic comparison,
+fail-closed to Dutch. The Dutch validator's own post-verb negation blind spot is tracked separately as [#326](../open-questions.md).
+
 ## Revisit triggers
 
 - English fallback rate above ~10% on real traffic → revisit prompt or move more text to hand-written templates.

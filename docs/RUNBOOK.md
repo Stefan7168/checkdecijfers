@@ -537,6 +537,11 @@ this section has been done.** Translates the already-checked Dutch answer for a 
 English interface — numbers stay masked from the model the whole time and are filled back in by
 code, never written by the model (ADR [058](decisions/058-english-answers.md)). A failed check
 falls back to the unchanged Dutch answer with one honest line above it — nothing is ever guessed.
+
+**Precondition (session 132, [#325](open-questions.md)):** do NOT switch it on until #325 is resolved. The checks make
+a changed NUMBER impossible, but the meaning of words like "rose / did not rise / hardly rose" is checked by word lists,
+and the final review still found ways a reversed English sentence could pass. The recommended fix is one extra,
+independent comparison step before go-live; the owner decides its cost after measuring with `translate:eval`.
 No new secret is needed (it reuses the existing `ANTHROPIC_API_KEY`); no database migration either
 (the rendering rides the existing audit row as an extra field).
 
