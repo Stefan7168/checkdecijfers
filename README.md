@@ -12,7 +12,8 @@ not yet reachable from the public chat. Country comparisons via Eurostat (a read
 slice E2a) are built and staged but switched off behind `EUROSTAT_SIBLINGS_ENABLED` until the owner's
 step-6 flip. The interface itself is bilingual (a Dutch/English switch
 in the header); translating the answers themselves for an English reader is built (ADR 058) but switched off
-behind `ENGLISH_ANSWERS_ENABLED` until [#325](docs/open-questions.md) is resolved. A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
+behind `ENGLISH_ANSWERS_ENABLED` until [#325](docs/open-questions.md) is resolved (its fix, an independent AI meaning
+check before any English answer is shown, is built — ADR 059 — and waits for a measured recording run after 2026-10-01). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
 chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when comparing
 multiple series across multiple periods, each offered only when it stays honest for the data on
 screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5; on CBS/Eurostat charts and, since

@@ -6,6 +6,32 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 133 — a kickoff's build trigger must be measurable; give reviewers the spec, not only the brief
+
+1. **Check that a proposed build trigger can actually be measured.** The kickoff said to build the #325 meaning check
+   only if `translate:eval` showed the word-list checks weren't enough, but that eval replays 14 honest translations and
+   can never observe a false pass (nothing labels one). Designing the check surfaced this (spec §7), and the real trigger
+   became the owner's GO. Before accepting "build X only if eval Y shows Z", ask whether Y can see Z at all.
+2. **A reviewer given the binding spec catches what the plan dropped.** The Task 4 reviewer compared the labelled set
+   against spec §4 and found four required must-reject shapes the plan had silently omitted. The per-task brief alone
+   would have passed it. For coverage or labelling tasks, point the reviewer at the spec section, not just the brief.
+3. **Memory contention has a clear signature: fix it by re-running the failing files alone.** Under ~10 GB of swap in
+   use, the full backend suite took 53 minutes and showed 16 failures plus one worker that failed to start. Every failure
+   was a "Test timed out" in a file the branch didn't touch, and all 9 files passed on their own (191/191). The web
+   suite had one such flake too. Before treating mass failures as real, check whether every one is a timeout in
+   unrelated code, then re-run those files alone.
+4. **Under heavy swap, a branch in the main checkout beats a worktree for sequential SDD.** A worktree needs its own
+   `node_modules` (RUNBOOK gotcha 3). With one implementer at a time and nothing merged until the end, a plain branch
+   was enough and cost nothing.
+5. **A fix wave's new test can import a script that runs on import.** The fixer exported a helper from
+   `scripts/translate-eval.ts` for a unit test, but that script called `await main()` at top level, so importing it ran
+   the whole 14-task replay pipeline. The scoped re-review caught it only because it actually ran the test. Scripts meant
+   to be importable need the `process.argv[1] === fileURLToPath(import.meta.url)` guard (`scripts/answer-eval.ts` still
+   lacks it).
+6. **The labelled set's CI guard doubles as a probe of the free checks' over-strictness.** Two faithful translations
+   (`niet alleen … maar ook`, a sentence split) had to be dropped because C8/C10 already reject them, so a real English
+   fallback cost now has written evidence (ADR 059 as-built).
+
 ## Session 132 — word-list meaning checks don't converge; informational benchmark counts are real signals
 
 1. **Patching word lists against adversarial probes did not converge.** The English checks' direction/negation layer

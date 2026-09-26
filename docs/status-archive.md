@@ -1,5 +1,53 @@
 # STATUS archive — the session log
 
+**Session 133 (2026-09-26, owner present; #325 English meaning check designed, planned, built (hermetic half) and
+merged dark; wrapped on the owner's "we're wrapping up").**
+
+1. **State verified at start:** `main` = `365a3afc` (last code `5c74e633`, CI 36238579801 green incl. deploy), no open
+   PRs, prod 200. Machine: 8 GB, swap ~9.8 of 10 GB used.
+2. **Design:** spec `docs/superpowers/specs/2026-09-26-english-meaning-check-design.md` (`582bbc81`). Check C12 is a second,
+   independent model call comparing masked Dutch and masked English per item, run after C1–C11 and before fill. It is
+   reject-only and fail-closed to Dutch, always on for English candidates with no trigger gate and no separate flag, and
+   Haiku first with Sonnet 5 only on a measured eval miss. Cost ≈€0.003 per English answer. The spec's §7 records that
+   `translate:eval` cannot measure false passes, so the build trigger is the owner's GO. **Owner GO** (in-dialog):
+   "Yes, build the free part now".
+3. **Plan** `docs/superpowers/plans/2026-09-26-english-meaning-check.md` (`f05b7117`). **Built via SDD** on branch
+   `english-meaning-check` in the main checkout (ruling: no worktree under swap pressure). Implementers: haiku (Task 1),
+   sonnet (Tasks 2–4). Reviewers: sonnet; final review: opus.
+   - Task 1, module (`b4843bb1`): review clean.
+   - Task 2, ladder wiring plus the fixed C12 retry sentence (`5ce6d6ed`): review clean.
+   - Task 3, audit role `'meaning_check'` and the R8 scope leg (`f2110b49`): review clean.
+   - Task 4, labelled set, CI guard and `meaning-check:eval`/`:record` (`66fe2d67`). Fix round 1 (`0174e9b9`) added the
+     four spec §4 must-reject shapes the plan had omitted (plan-mandated finding; ruling: the spec wins). Final set:
+     13 must-reject / 6 must-pass. Two faithful must-pass cases were dropped because C8/C10 already reject them.
+   - Docs: ADR 059, RUNBOOK step 3b, ADR 058 and 04-architecture notes (`010562ed`, `bf7b00ec`).
+4. **Final whole-branch review (opus): "ready to merge with fixes"**, with no path to a verified English answer without a
+   `'same'` check and no leak into any prompt. Fix wave `bc02a287`: `translate:eval` now flags a missing C12 fixture;
+   `meaning-check:eval` replay tests only the shipped model and writes no report; comment and test hardening. Its
+   scoped re-review found a new Important: the new unit test imported a script with top-level `await main()`. Fixed by
+   the same agent with a main-guard (`3438deed`, controller-verified). Stale docs fixed (`92b5d57e`: #325 row, the R8 row
+   in 05-data-rules, ADR 016 addendum, ADR 059 gaps + trigger, RUNBOOK follow-up).
+5. **Verify block:**
+   - Root and web `tsc` clean.
+   - Backend: 3643 passed plus 16 timeouts under memory contention, all 191 of those files' tests passing when re-run
+     alone, so 3659 pass / 1 todo.
+   - Web: 3085/3085 (1 flake passed alone; the branch has no web diff).
+   - Hermetic benchmark: 14/14 + 6/6 + 0 fabricated; template fallbacks 3, unchanged.
+   - Web build OK.
+   - `audit:verify` 1–309 exit 0 (2 pinned rows). Rows 310–330 don't exist yet.
+   - `/code-review` LOW: no findings.
+6. **Merged:** fast-forward of `main` to `3438deed`, pushed. CI 36252531510 green incl. deploy; prod 200. Branch deleted,
+   SDD workspace removed. STATUS `e1b17970`. `ENGLISH_ANSWERS_ENABLED` still unset everywhere: no user-visible change.
+7. **Rulings made on the owner's behalf:**
+   - Branch in the main checkout, not a worktree.
+   - Task 5 docs done by the controller.
+   - The four spec §4 shapes added.
+   - A "same" verdict that lists differences stays "same" until the eval shows it happens (ADR 059 revisit trigger).
+   - The fixer repaired its own regression rather than parking it.
+8. **Next:** after 2026-10-01, owner present, RUNBOOK "English answers" steps 1–3 + 3b (`translate:record`,
+   `translate:eval`, `meaning-check:record` ≈€1, pick the model, add the 14 real translations as must-pass cases). Then
+   the owner decides the flip.
+
 **Session 132 (2026-09-26, owner present; English answers phase 1 finished and merged dark, Dependabot #47/#48
 merged, #326 Dutch negation gap found and fixed live; wrapped on the owner's "wrap up").**
 

@@ -18,8 +18,8 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 133 — owner present; verify against `git log` / Actions runs before
-trusting this). Previous kickoff: [session-briefs/2026-09-26-session-133-kickoff.md](session-briefs/2026-09-26-session-133-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 133 — owner present; verify against `git log` / Actions runs
+before trusting this). Kickoff: [session-briefs/2026-09-26-session-134-kickoff.md](session-briefs/2026-09-26-session-134-kickoff.md).**
 
 - **`main` is live and green @ `3438deed`.** CI run 36252531510 green incl. deploy (2026-09-26); prod 200. No open PRs.
 - **Session 133 shipped (DARK, no user-visible change):** check C12, the English meaning check ([#325](open-questions.md),
@@ -38,9 +38,11 @@ trusting this). Previous kickoff: [session-briefs/2026-09-26-session-133-kickoff
   + 0 fabricated, template fallbacks unchanged at 3; `audit:verify` 1–309 clean apart from the 2 pinned rows.
 - **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (what felt off about the looks-row
   mockups). Owner signed-in spot-check of own-data publishing still to do (RUNBOOK ADR 057 step 4).
-- **After the Anthropic API cap lifts 2026-10-01:** the English recording run above (steps 1–3 + 3b); Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
+- **After the Anthropic API cap lifts 2026-10-01:** the English recording run above (steps 1–3 + 3b); Eurostat E2a
+  owner steps 0/5/6 ([#313](open-questions.md)); the other `:record` scripts; the live
   benchmark.
-- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; English phase-1 UI gaps #324.
+- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; English phase-1 UI gaps #324;
+  C12 hygiene leftovers #327.
 ---
 
 ## Phase 0 checklist

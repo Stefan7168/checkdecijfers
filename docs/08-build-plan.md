@@ -1199,7 +1199,10 @@ Spec: [superpowers/specs/2026-09-25-english-answers-design.md](superpowers/specs
 plan: [superpowers/plans/2026-09-25-english-answers-phase1.md](superpowers/plans/2026-09-25-english-answers-phase1.md).
 **Status (2026-09-26, session 132): ✅ DONE — all 9 tasks built, final whole-branch review + fix rounds, merged via PR
 #49 (`5954ccb2`), dark behind `ENGLISH_ANSWERS_ENABLED`.** Remaining before the flip: `translate:record` + `translate:eval`
-after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (semantic false-pass residuals — recommended:
-an independent semantic comparison step); owner-supervised. Phases 2 (refusals/clarifications) and 3
+after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (semantic false-pass residuals). **Session 133 (2026-09-26):** the #325 fix, check C12
+(ADR [059](decisions/059-english-meaning-check.md), [spec](superpowers/specs/2026-09-26-english-meaning-check-design.md),
+[plan](superpowers/plans/2026-09-26-english-meaning-check.md)), hermetic half ✅ built and merged dark (`3438deed`, CI
+36252531510 green); its recording run `npm run meaning-check:record` (RUNBOOK step 3b) waits for the cap lift too.
+Owner-supervised. Phases 2 (refusals/clarifications) and 3
 (chart texts) get their own specs.
 
