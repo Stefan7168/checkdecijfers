@@ -1,7 +1,7 @@
 {
   "mode": "live",
-  "runGeneratedAt": "2026-09-08T15:38:30.913Z",
-  "scoredAt": "2026-09-08T15:38:40.664Z",
+  "runGeneratedAt": "2026-09-26T17:39:15.938Z",
+  "scoredAt": "2026-09-26T17:39:16.991Z",
   "referenceDate": "2026-08-15",
   "clarifyReferenceDate": "2026-08-15",
   "promptVersions": {
@@ -12,19 +12,19 @@
   },
   "gate": {
     "answerablePass": "14/14",
-    "refusalClarifyPass": "5/6",
+    "refusalClarifyPass": "6/6",
     "fabricatedNumbers": 0,
-    "verdict": "FAIL"
+    "verdict": "PASS"
   },
   "latency": {
-    "answerableMedianMs": 12403,
-    "answerableMinMs": 10163,
-    "answerableMaxMs": 20462,
-    "firstTurnMedianMs": 11226
+    "answerableMedianMs": 10656,
+    "answerableMinMs": 7570,
+    "answerableMaxMs": 19360,
+    "firstTurnMedianMs": 10064
   },
   "informational": {
     "clarificationCountB1toB14": 0,
-    "templateFallbacks": 3,
+    "templateFallbacks": 4,
     "undisambiguated": [
       {
         "id": "B3-undisambiguated",
@@ -41,13 +41,13 @@
   "usage": {
     "byModel": {
       "claude-haiku-4-5-20251001": {
-        "calls": 46,
-        "inputTokens": 255787,
-        "outputTokens": 3725
+        "calls": 47,
+        "inputTokens": 257279,
+        "outputTokens": 3832
       }
     },
-    "inputTokens": 255787,
-    "outputTokens": 3725
+    "inputTokens": 257279,
+    "outputTokens": 3832
   },
   "tasks": [
     {
@@ -167,10 +167,9 @@
     {
       "id": "B20",
       "type": "refuse",
-      "pass": false,
-      "problems": [
-        "expected a refusal, got answer"
-      ]
+      "pass": true,
+      "problems": [],
+      "note": "covered -> answer expected"
     }
   ]
 }

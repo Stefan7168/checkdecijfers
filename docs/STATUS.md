@@ -31,8 +31,11 @@ before trusting this). Previous kickoff: [session-briefs/2026-09-26-session-134-
   the ~10% trigger); the 13 real renderings are must-pass cases. Verify block: root+web tsc, backend 3694 pass / 1 todo,
   web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated (template fallbacks 3), web build, `audit:verify` 1–309 clean
   (2 pinned), `/code-review` LOW clean. **Next: the owner decides `ENGLISH_ANSWERS_ENABLED` (RUNBOOK steps 4–5).**
-- **Now unblocked (the spend room this month is ~$13 until the roof resets 10-01):** the live benchmark (measures whether
-  #326 raised the live rewrite rate); Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); region questions,
+- **Live benchmark 2026-09-26 (session 134): PASS — 14/14 + 6/6 + 0 fabricated**, median 10.7 s. Template fallbacks 4 (09-08:
+  3): three are the old R9 "period '2025 4e kwartaal' not named" strictness (B1/unemployment-Q4-style questions), one is
+  the old clause-direction rule rejecting "na een daling in 2023 volgde een herstel in 2024" on a rising series — **none
+  is #326's new negation check**. Both are safe (plain template wording), candidate over-strictness to look at later.
+- **Now unblocked (spend room this month ≈$12 until the roof resets 10-01):** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)); region questions,
   Task 9 ([#267](open-questions.md)) — only 2 of 26 measures are regional today, so a regional-statistics set is the
   proposed prerequisite; the other `:record` scripts.
 - **Fixed live, Dutch path (session 133):** [#326](open-questions.md) — a negated trend word can no longer reverse the
