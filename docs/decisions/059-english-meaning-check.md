@@ -70,7 +70,7 @@ decide beyond the spec:
   twice, tracked under `'translate'` and `'meaning_check'`.
 - A checker ERROR fails the attempt without setting the retry's problem sentences. The retry is then a fresh translation,
   because the translator did nothing wrong.
-- **The labelled set is 9 must-reject and 6 must-pass cases.** Two planned must-pass cases were dropped because C1–C11
+- **The labelled set is 13 must-reject and 6 must-pass cases** (every #325 shape plus the spec §4 list, each proven to pass C1–C11 by a CI guard test). Two planned must-pass cases were dropped because C1–C11
   already reject those FAITHFUL translations: `niet alleen … maar ook` → `not only … but also` trips C10's negation-after
   scan, and one Dutch sentence split into two English sentences with a shared period trips C8. That is the known
   over-strictness ADR 058 accepted (a faithful translation falls back to Dutch, the safe side). C12 can only reject, so it
