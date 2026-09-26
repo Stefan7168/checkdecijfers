@@ -9,6 +9,11 @@
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { Attribution, ResultCell } from '../backend/query/types.ts';
+// ADR 058 (English answers, Task 8): the optional English rendering a caller
+// can attach to a fixture (verified/fallback rendering tests) — absent by
+// default, exactly like every pre-Task-6 fixture (the flag-off, Dutch-only
+// posture stays the default here too).
+import type { EnglishRendering } from '../backend/answer/translate/types.ts';
 
 export function fakeCell(overrides: Partial<ResultCell> = {}): ResultCell {
   return {
@@ -82,6 +87,10 @@ export function fakeAnswerResponse(opts: {
    * (Task 2). Defaults to [] like `suggestions` above — callers that need a
    * non-empty fixture pass it explicitly. */
   chartAlternates?: { label: string; spec: ChartSpec }[];
+  /** ADR 058 (English answers, Task 8): absent by default (every pre-Task-6
+   * fixture, and every Dutch-only turn) — callers exercising the
+   * verified/fallback rendering pass it explicitly. */
+  english?: EnglishRendering;
 } = {}): AnswerResponse {
   const body = opts.body ?? 'Nederland telt 18.044.027 inwoners.';
   const attribution = fakeAttribution({
@@ -96,6 +105,7 @@ export function fakeAnswerResponse(opts: {
     chartAlternates: opts.chartAlternates ?? [],
     stalenessWarning: opts.stalenessWarning ?? null,
     suggestions: opts.suggestions ?? [],
+    ...(opts.english !== undefined ? { english: opts.english } : {}),
     answer: {
       body,
       assumptionLine: opts.assumptionLine ?? null,
@@ -117,4 +127,28 @@ export function fakeAnswerResponse(opts: {
       attribution,
     },
   } as unknown as AnswerResponse;
+}
+
+/** ADR 058 (English answers, Task 8): a minimal-but-real EnglishRendering —
+ * same discipline as `fakeAnswerResponse` above (every field the web layer
+ * reads is present and correctly typed; the deeper Tasks-1–7 machinery
+ * fields the web layer never inspects are filled with inert defaults). */
+export function fakeEnglishRendering(overrides: Partial<EnglishRendering> = {}): EnglishRendering {
+  return {
+    schemaVersion: 1,
+    status: 'verified',
+    promptVersion: 1,
+    model: 'claude-sonnet-5',
+    maskedDutch: { body: '', chips: [], definition: null, alternates: [] },
+    maskTable: [],
+    rawTranslation: null,
+    attempts: [],
+    body: 'The Netherlands has [[N0]] inhabitants.',
+    lines: null,
+    stalenessWarning: null,
+    text: 'The Netherlands has 18,044,027 inhabitants.',
+    chips: [],
+    untranslatedNames: [],
+    ...overrides,
+  };
 }

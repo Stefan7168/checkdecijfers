@@ -9,6 +9,11 @@
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
+// ADR 058 (English answers, Task 8): the English rendering rides straight off
+// AnswerResponse.english (Task 6) onto the message it belongs to — no
+// re-derivation, no reconstruction, the exact envelope both the live receive
+// path and thread replay already read `answer`/`citation`/`card`/`csv` from.
+import type { EnglishRendering } from '../backend/answer/translate/types.ts';
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
@@ -175,6 +180,15 @@ export interface ChatMessage {
    * to reconstruct live interactive state. A resumed thread shows the
    * historical offer text with no button, same as any other closed turn. */
   onboardingOffer: { token: string; priceCredits: number } | null;
+  /** ADR 058 (English answers, Task 8): the English rendering for THIS turn —
+   * `response.english ?? null` straight off the answer envelope (Task 6),
+   * live and on replay alike (⟨A3⟩). `null` on every non-'answer' message,
+   * every Dutch-only turn (the flag off, or the reader on Dutch — Task 7's
+   * A1: `attachEnglish` never ran), and every row stored before this
+   * feature. The Dutch fields above (`text`, `answerView`, `suggestions`)
+   * are byte-untouched either way; rendering picks between them and this
+   * field, never merging the two (chat.tsx). */
+  english: EnglishRendering | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

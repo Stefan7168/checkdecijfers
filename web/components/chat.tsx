@@ -504,7 +504,19 @@ export function Chat({
   // and (b) lost the race with an in-flight answer whose landing overwrote
   // `pending` again. Consulted only while the sent text is still the clicked
   // label byte for byte; edited text is typed text and keeps the live pending.
-  const chipRef = useRef<({ label: string } & Carrier) | null>(null);
+  // ADR 058 (English answers, Task 8): `label` is what must reach the SERVER
+  // (the Dutch `submit` text, so the deterministic chip rung resolves exactly
+  // as today); `shown` is what the INPUT holds and what the send-time
+  // equality check below compares against (English chip: the English
+  // `label` text; a Dutch chip: the same text in both fields, so `sendValue`
+  // below is byte-identical to `text` whenever no English chip is in play).
+  // `pending` is now OPTIONAL (Carrier, above, is unconditional) — a chip's
+  // label/submit split must record independent of whether ITS message
+  // carries a rescue pending: a plain follow-up chip on a carrier-less
+  // message (the common case) still needs its label/submit remembered, but
+  // sending it must still fall through to the LIVE `pending` exactly as
+  // before this task (the `chip.pending !== undefined` check at send time).
+  const chipRef = useRef<({ label: string; shown: string } & Partial<Carrier>) | null>(null);
   // Strong-tier review HIGH-3(b): an in-flight-send latch that is NOT React
   // state. `busy` only reaches the next render, so two clicks in one tick
   // both saw `busy === false` and both sent (two requests, two charges).
@@ -734,7 +746,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
     ]);
     setInput('');
     setBusy(true);
@@ -771,8 +783,21 @@ export function Chat({
       // answer landing after the click cannot re-route the chip to itself.
       const clicked = chipRef.current;
       chipRef.current = null;
-      const chip = clicked !== null && clicked.label.trim() === text ? clicked : null;
-      const sendPending = chip ? chip.pending : pending;
+      const chip = clicked !== null && clicked.shown.trim() === text ? clicked : null;
+      // ADR 058 (English answers, Task 8): the value that actually reaches
+      // the server. An English chip's `label` is the Dutch `submit` text
+      // (so the deterministic chip rung resolves exactly as today); with no
+      // matching chip (typed text, an edited chip, a Dutch chip whose
+      // `label`/`shown` are the same text) this is byte-identical to `text`.
+      // The user bubble pushed above still shows the ORIGINAL `text` — never
+      // this value — so an English chip's bubble stays in English.
+      const sendValue = chip ? chip.label : text;
+      // `chip.pending` is only DEFINED when the clicked chip's own message
+      // carried a carrier (ADR 058: Carrier is now optional on chipRef so a
+      // carrier-less chip can still record its label/submit split above) —
+      // undefined here falls through to the live `pending`, exactly the
+      // pre-Task-8 behaviour for a chip whose message had no carrier at all.
+      const sendPending = chip?.pending !== undefined ? chip.pending : pending;
       // ⟨A6⟩ addendum (#73 v2 follow-up): send the LIVE thread on both the
       // chip-take and the typed-reply path — proven equivalent to the former
       // captured-threadId fallback (see the `threadId` state comment above),
@@ -782,19 +807,19 @@ export function Chat({
       // carrier together with `threadId` itself, so nothing here can point at
       // a thread other than the current live one — or fork a fresh one).
       const takesRescue =
-        sendPending?.rescueOnly !== true || sendPending.options.some((o) => o.trim() === text);
+        sendPending?.rescueOnly !== true || sendPending.options.some((o) => o.trim() === sendValue);
       if (sendPending && takesRescue) {
         outcome = threadAware
-          ? await replyToClarification(sendPending, text, requestId, selection, threadId)
+          ? await replyToClarification(sendPending, sendValue, requestId, selection, threadId)
           : websearch
-            ? await replyToClarification(sendPending, text, requestId, selection)
-            : await replyToClarification(sendPending, text, requestId);
+            ? await replyToClarification(sendPending, sendValue, requestId, selection)
+            : await replyToClarification(sendPending, sendValue, requestId);
       } else {
         outcome = threadAware
-          ? await askQuestion(text, requestId, context, selection, threadId)
+          ? await askQuestion(sendValue, requestId, context, selection, threadId)
           : websearch
-            ? await askQuestion(text, requestId, context, selection)
-            : await askQuestion(text, requestId, context);
+            ? await askQuestion(sendValue, requestId, context, selection)
+            : await askQuestion(sendValue, requestId, context);
       }
       // WP135 (blocker fix): the chat was reset to a DIFFERENT thread while this
       // action was in flight (the reset effect bumped the generation). Discard
@@ -845,6 +870,7 @@ export function Chat({
                 carrier: null,
                 insufficientCredits: { balance: gated.balance, required: gated.required },
                 onboardingOffer: null,
+                english: null,
               }
             : {
                 role: 'assistant' as const,
@@ -866,6 +892,7 @@ export function Chat({
                 carrier: null,
                 insufficientCredits: null,
                 onboardingOffer: null,
+                english: null,
               },
         ]);
         // None of these kinds change the pending clarification state;
@@ -1007,6 +1034,11 @@ export function Chat({
           // old server bundle omits the key) — a current server always sets
           // it, null on every outcome except a fresh confirm-first offer.
           onboardingOffer: outcome.onboardingOffer ?? null,
+          // ADR 058 (English answers, Task 8): only an 'answer' response
+          // carries `english` at all (AnswerResponse, Task 6); `?? null`
+          // guards the deploy-window skew AND every Dutch-only turn (the
+          // flag off, or the reader on Dutch — Task 7's A1 no-op).
+          english: response.kind === 'answer' ? (response.english ?? null) : null,
         },
       ]);
       // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
@@ -1052,14 +1084,14 @@ export function Chat({
       if (result.kind === 'unauthenticated') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
         ]);
         return;
       }
       if (result.kind === 'insufficient_credits') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null },
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null, english: null },
         ]);
         return;
       }
@@ -1069,7 +1101,7 @@ export function Chat({
       // "asking twice must not cost twice" invariant design §2/§5 always had).
       setMessages((m) => [
         ...m,
-        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null },
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
       ]);
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
@@ -1144,6 +1176,14 @@ export function Chat({
           // each visual renders EXACTLY ONCE. Below lg the visuals render inline
           // exactly as today.
           const docked = dockMode && messageHasVisual(message);
+          // ADR 058 (English answers, Task 8): `english` only ever rides an
+          // 'answer' message (EnglishRendering exists only on AnswerResponse,
+          // Task 6) — dormant (both null) unless ENGLISH_ANSWERS_ENABLED is on
+          // AND the reader is on English (Task 7's A1 no-op otherwise).
+          const englishVerified =
+            message.kind === 'answer' && message.english?.status === 'verified' ? message.english : null;
+          const englishFallback = message.kind === 'answer' && message.english?.status === 'fallback';
+          const englishChips = englishVerified ? englishVerified.chips : null;
           return (
           <div
             key={i}
@@ -1178,7 +1218,7 @@ export function Chat({
               * collapses into it; R4 attribution stays fully visible, never
               * shortened). Every other message kind (refusal / clarification
               * / info) keeps exactly today's plain bubble below. */}
-            {message.kind === 'answer' && message.answerView ? (
+            {message.kind === 'answer' && message.answerView && !englishVerified && !englishFallback ? (
               <Card size="sm" className="mb-2 max-w-full">
                 <CardContent className="flex flex-col gap-1">
                   <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
@@ -1357,7 +1397,25 @@ export function Chat({
                         : 'text-[15px] leading-relaxed text-foreground')
                   }
                 >
-                  {message.text}
+                  {/* ADR 058 (English answers, Task 8): a VERIFIED English
+                    * rendering shows its own checked text where the Dutch
+                    * `text` renders today; a FALLBACK shows the Dutch text
+                    * headed by the fallback notice (Task 6's fail-closed-
+                    * to-Dutch posture — `translateAnswer` could not produce
+                    * a verified English answer, so the original Dutch ships
+                    * instead of an unchecked translation, principle c).
+                    * Every other message (Dutch-only, non-answer, or the
+                    * flag off) renders exactly as before. */}
+                  {englishVerified ? (
+                    englishVerified.text
+                  ) : englishFallback ? (
+                    <>
+                      <p className="mb-1 text-xs text-muted-foreground">{t('chat.englishFallback')}</p>
+                      {message.text}
+                    </>
+                  ) : (
+                    message.text
+                  )}
                 </div>
                 {message.cost !== null ? (
                   <div className="mt-0.5 text-xs text-muted-foreground tnum">
@@ -1461,7 +1519,7 @@ export function Chat({
               * the #75 example chips, and the click handler IS the #75
               * behavior verbatim: fill the input, never send. The user sees
               * the pre-send cost line (#82) and presses Verstuur themselves. */}
-            {message.suggestions.length > 0 ? (
+            {(englishChips ?? message.suggestions).length > 0 ? (
               <>
                 {/* R2.1 (#211, WP-D): the caption varies by message kind —
                   * a clarification's chips are the WP26 proven-answerable
@@ -1477,7 +1535,44 @@ export function Chat({
                       : t('chat.suggestionsHint')}
                 </p>
                 <div className="mt-1 flex flex-wrap gap-2">
-                {message.suggestions.map((question) => (
+                {englishChips ? (
+                  // ADR 058 (English answers, Task 8): an English chip only
+                  // ever rides an 'answer' message (EnglishRendering exists
+                  // only on AnswerResponse), so this branch always falls
+                  // into the #75 fill-don't-send convention below — never
+                  // the clarification immediate-send path.
+                  englishChips.map((englishChip) => (
+                    <button
+                      key={englishChip.submit}
+                      type="button"
+                      onClick={() => {
+                        // `label` carries the DUTCH `submit` text (so the
+                        // deterministic chip rung resolves exactly as
+                        // today); `shown` carries the ENGLISH display text
+                        // — what fills the input and what the send-time
+                        // equality check in sendText compares against. The
+                        // label/submit split is recorded UNCONDITIONALLY
+                        // (unlike the carrier below, which is only present
+                        // when this message carries a rescue pending) — a
+                        // carrier-less chip still needs the split remembered
+                        // so sending it posts the Dutch text, not the shown
+                        // English one; `chip.pending` staying undefined is
+                        // exactly what makes sendText fall through to the
+                        // live `pending`, same as a carrier-less Dutch chip.
+                        chipRef.current = {
+                          label: englishChip.submit,
+                          shown: englishChip.label,
+                          ...(message.carrier ?? {}),
+                        };
+                        setInput(englishChip.label);
+                      }}
+                      className={PILL}
+                    >
+                      {englishChip.label}
+                    </button>
+                  ))
+                ) : (
+                  message.suggestions.map((question) => (
                   <button
                     key={question}
                     type="button"
@@ -1495,7 +1590,7 @@ export function Chat({
                       // chipRef stays null and the send below falls through
                       // to the live `pending`.
                       chipRef.current = message.carrier
-                        ? { label: question, ...message.carrier }
+                        ? { label: question, shown: question, ...message.carrier }
                         : null;
                       // R7 (#211, WP-D): a clarification's own chips are
                       // proven-answerable OPTIONS (WP26 mechanism A) — the
@@ -1519,7 +1614,8 @@ export function Chat({
                   >
                     {question}
                   </button>
-                ))}
+                  ))
+                )}
                 </div>
               </>
             ) : null}

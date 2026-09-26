@@ -16,7 +16,7 @@ import { buildCitation } from './citation.ts';
 import { buildAnswerCsv } from './csv.ts';
 import { deriveVisuals } from './dock-visuals.ts';
 import { assembleMessages } from './replay-assemble.ts';
-import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
+import { fakeAnswerResponse, fakeCell, fakeEnglishRendering } from '../test/fake-answer.ts';
 
 // WP30c D7(b): assembleMessages now awaits fetchRequestUrlsByBatch(db, ...)
 // per answer message, alongside (never inside) buildAnswerProof — this
@@ -221,5 +221,38 @@ describe('assembleMessages — ⟨A7⟩ redacted row is one placeholder', () => 
     expect(messages[0]!.text).toBe('Deze vraag is verwijderd.');
     // #70/#79/#89: the redacted placeholder carries no proof panel.
     expect(messages[0]!.proof).toBeNull();
+  });
+});
+
+// ADR 058 (English answers, Task 8): a reloaded thread re-renders from the
+// stored response, so it must carry `english` the same way every other
+// structural field (citation/card/csv) already does — a reloaded English
+// answer is the same English answer, never re-derived.
+describe('assembleMessages — ADR 058 English rendering carries onto the replayed message', () => {
+  it('a stored answer with a verified English rendering replays with `english` intact', async () => {
+    const english = fakeEnglishRendering({ status: 'verified', text: 'The Netherlands has 18 inhabitants.' });
+    const response = fakeAnswerResponse({
+      body: 'Nederland telt 18 inwoners.',
+      shape: 'single',
+      cells: [fakeCell()],
+      english,
+    }) as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb);
+    expect(assistantMsg!.english).toEqual(english);
+  });
+
+  it('a stored answer with no English rendering (Dutch-only turn) replays with `english` null', async () => {
+    const response = fakeAnswerResponse({ body: 'Nederland telt 18 inwoners.' }) as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb);
+    expect(assistantMsg!.english).toBeNull();
+  });
+
+  it('a redacted row carries `english` null (no envelope to derive one from)', async () => {
+    const response = fakeAnswerResponse({ body: 'ooit een antwoord' }) as unknown as ComposedResponse;
+    const messages = await assembleMessages(
+      replayParts([row({ question: REDACTED_QUESTION_TEXT, response })]),
+      fakeDb,
+    );
+    expect(messages[0]!.english).toBeNull();
   });
 });

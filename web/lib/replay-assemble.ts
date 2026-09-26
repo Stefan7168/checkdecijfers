@@ -70,6 +70,8 @@ function redactedMessage(): ChatMessage {
     insufficientCredits: null,
     // ADR 026 addendum: same posture as carrier — never restored on resume.
     onboardingOffer: null,
+    // ADR 058: a redacted row has no envelope to derive one from anyway.
+    english: null,
   };
 }
 
@@ -95,6 +97,7 @@ function userMessage(text: string): ChatMessage {
     carrier: null,
     insufficientCredits: null,
     onboardingOffer: null,
+    english: null,
   };
 }
 
@@ -179,6 +182,12 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<Chat
     // deterministic reconstruction from stored audit rows, never a place to
     // reconstruct live interactive state. Always null, never a guess.
     onboardingOffer: null,
+    // ADR 058 (English answers, Task 8): straight off the stored envelope,
+    // the SAME `answer` narrowing citation/card/csv already use above — a
+    // reloaded English answer is the same English answer (R8: `finalText`
+    // above is already pinned to the stored string; this is its sibling
+    // structural field, never re-derived).
+    english: answer?.english ?? null,
   };
 }
 

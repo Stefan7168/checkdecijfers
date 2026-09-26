@@ -22,6 +22,16 @@ const { currentUserId, getDb } = vi.hoisted(() => ({
 vi.mock('../lib/current-user.ts', () => ({ currentUserId }));
 vi.mock('../lib/db.ts', () => ({ getDb }));
 
+// ADR 058 (English answers, Task 8): actions.ts now calls getLang() once per
+// action — mocked wholesale (like currentUserId/getDb above) so this hermetic
+// suite never touches the real next/headers cookie/Accept-Language resolution
+// (which throws outside a real request scope). Defaulted to 'nl' in
+// beforeEach below so every PRE-EXISTING test in this file — none of which
+// exercise English answers — stays byte-identical (englishAnswerOptions('nl')
+// is always {}, flag on or off).
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn<() => Promise<'nl' | 'en'>>() }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
+
 // The billing seam — every function actions.ts calls, stubbed so the gate never
 // really runs and the ledger is never touched. chargeAndRun is driven per test.
 const billing = vi.hoisted(() => ({
@@ -127,6 +137,7 @@ beforeEach(() => {
   billing.compensateSplit.mockResolvedValue(undefined);
   vi.stubEnv('WEBSEARCH_ENABLED', '1');
   vi.stubEnv('ONBOARDING_ENABLED', '0');
+  getLang.mockResolvedValue('nl');
   // #252: the realistic default (no proof to look up against) — the two
   // tests below override this to exercise the happy path and the fail-open
   // belt specifically.
@@ -624,5 +635,80 @@ describe('deleteMyQuestionHistory — the uploaded-dataset leg (#322 I-3)', () =
 
     await expect(deleteMyQuestionHistory()).rejects.toBe(boom);
     expect(errorReport.reportError).toHaveBeenCalledWith('deleteMyQuestionHistory', boom, { userId: 'user-1' });
+  });
+});
+
+function lastReplyOptions(): Record<string, unknown> {
+  return audit.answerClarificationReplyAudited.mock.calls[0]![3] as Record<string, unknown>;
+}
+
+// ADR 058 (English answers, Task 8): askQuestion/replyToClarification each
+// call getLang() ONCE and spread englishAnswerOptions(lang) into the audited
+// options bag — dormant (no `lang`/`translateClient` key at all) unless BOTH
+// ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English (the SAME
+// dormancy pattern WEBSEARCH_ENABLED/ONBOARDING_ENABLED already use above).
+// englishAnswerOptions's OWN truth table lives in web/lib/english-answers.test.ts;
+// this suite pins that actions.ts actually WIRES it into both pipelines.
+describe('askQuestion / replyToClarification — ADR 058 English answers wiring', () => {
+  it('askQuestion: flag unset ⇒ no lang/translateClient key at all, regardless of reader language', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', undefined);
+    getLang.mockResolvedValue('en');
+    driveGate(fakeAnswer(), 1, 20);
+    await askQuestion('q', RID);
+    expect(lastAskOptions()).not.toHaveProperty('lang');
+    expect(lastAskOptions()).not.toHaveProperty('translateClient');
+  });
+
+  it('askQuestion: flag on, Dutch reader ⇒ still no lang/translateClient key (Dutch stays byte-identical)', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    getLang.mockResolvedValue('nl');
+    driveGate(fakeAnswer(), 1, 20);
+    await askQuestion('q', RID);
+    expect(lastAskOptions()).not.toHaveProperty('lang');
+    expect(lastAskOptions()).not.toHaveProperty('translateClient');
+  });
+
+  it('askQuestion: flag on, English reader ⇒ lang \'en\' + a translateClient are wired in', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    getLang.mockResolvedValue('en');
+    driveGate(fakeAnswer(), 1, 20);
+    await askQuestion('q', RID);
+    expect(lastAskOptions().lang).toBe('en');
+    expect(lastAskOptions().translateClient).toBeDefined();
+  });
+
+  it('askQuestion: calls getLang() exactly once per action', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    getLang.mockResolvedValue('en');
+    driveGate(fakeAnswer(), 1, 20);
+    await askQuestion('q', RID);
+    expect(getLang).toHaveBeenCalledTimes(1);
+  });
+
+  it('replyToClarification: flag unset ⇒ no lang/translateClient key at all', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', undefined);
+    getLang.mockResolvedValue('en');
+    driveGate(fakeAnswer(), 7, 20);
+    await replyToClarification(validPending, '2024', RID);
+    expect(lastReplyOptions()).not.toHaveProperty('lang');
+    expect(lastReplyOptions()).not.toHaveProperty('translateClient');
+  });
+
+  it('replyToClarification: flag on, Dutch reader ⇒ still no lang/translateClient key', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    getLang.mockResolvedValue('nl');
+    driveGate(fakeAnswer(), 7, 20);
+    await replyToClarification(validPending, '2024', RID);
+    expect(lastReplyOptions()).not.toHaveProperty('lang');
+    expect(lastReplyOptions()).not.toHaveProperty('translateClient');
+  });
+
+  it('replyToClarification: flag on, English reader ⇒ lang \'en\' + a translateClient are wired in', async () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    getLang.mockResolvedValue('en');
+    driveGate(fakeAnswer(), 7, 20);
+    await replyToClarification(validPending, '2024', RID);
+    expect(lastReplyOptions().lang).toBe('en');
+    expect(lastReplyOptions().translateClient).toBeDefined();
   });
 });

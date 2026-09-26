@@ -105,6 +105,13 @@ import { assembleMessages } from '../lib/replay-assemble.ts';
 import type { ChatMessage } from '../lib/replay-assemble.ts';
 import { currentUserId } from '../lib/current-user.ts';
 import { getDb } from '../lib/db.ts';
+// ADR 058 (English answers, Task 8): the reader's language + the resulting
+// audited-options gate. `englishAnswerOptions` lives outside this 'use server'
+// file (a plain sync export here would break the build) — see its own header
+// comment for the dormancy discipline (byte-identical Dutch path unless BOTH
+// ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English).
+import { englishAnswerOptions } from '../lib/english-answers.ts';
+import { getLang } from '../lib/i18n/server.ts';
 // #65 / WP25: durable error logging at the outermost catch sites. Fail-open by
 // contract (reportError never throws) — see web/lib/error-report.ts.
 import { reportError } from '../lib/error-report.ts';
@@ -523,6 +530,10 @@ export async function askQuestion(
 ): Promise<AskOutcome> {
   guardLength(question);
   guardRequestId(requestId);
+  // ADR 058 (English answers, Task 8): read once per action (never per
+  // pipeline stage) — the SAME server-only cookie-then-Accept-Language
+  // resolution the header/layout already use (web/lib/i18n/server.ts).
+  const lang = await getLang();
   const userId = await currentUserId();
   if (userId === null) {
     return { gated: { kind: 'unauthenticated' }, context: null, threadId: null, onboardingOffer: null, proofRequestUrls: null };
@@ -637,6 +648,10 @@ export async function askQuestion(
               }),
             }
           : {}),
+        // ADR 058 (English answers, Task 8): dormant unless
+        // ENGLISH_ANSWERS_ENABLED='1' AND the reader is on English — {} ⇒
+        // byte-identical to today (englishAnswerOptions's own dormancy).
+        ...englishAnswerOptions(lang),
       }),
     );
     // WP16 sub-part 2 (ADR 026, design §2; confirm-first addendum, session
@@ -811,6 +826,8 @@ export async function replyToClarification(
 ): Promise<AskOutcome> {
   guardLength(reply);
   guardRequestId(requestId);
+  // ADR 058 (English answers, Task 8): same once-per-action read as askQuestion.
+  const lang = await getLang();
   // Session 47 (billing-path hunt): bound the untrusted, client-held `pending`
   // to the same spend belt as `reply`/`question` — its prompt-bound fields
   // reach the clarify LLM at a flat price, so an oversized one must be rejected
@@ -901,6 +918,10 @@ export async function replyToClarification(
               },
             }
           : {}),
+        // ADR 058 (English answers, Task 8): same dormant-unless-both-flags
+        // gate as askQuestion (a reply can settle into an answer too, e.g. a
+        // takeable chip).
+        ...englishAnswerOptions(lang),
       }),
     );
     // ⟨W3⟩ Settlement — no maybeTriggerOnboarding on the reply path (no finder),
