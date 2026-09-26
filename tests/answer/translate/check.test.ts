@@ -7,6 +7,7 @@ import {
   NL_CARDINAL_MORPHEMES,
   NL_NEGATION,
   NL_NEGATION_AFTER,
+  NL_NEGATION_BEFORE,
 } from '../../../src/answer/translate/check.ts';
 import { createMasker, hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
 
@@ -461,6 +462,15 @@ describe('copies of the Dutch validator rules stay in sync (validate.ts is not e
     expect(validateSource).toMatch(/function negatedMatch[\s\S]*?text\.slice\(0, match\.index\)/);
   });
 
+  // Second explicit EXCEPTION (final bounded round, ruling 23B): the English
+  // checks' own Dutch scan also treats 'nooit' as a negator BEFORE the verb.
+  // NL_NEGATION_BEFORE is the copied NEGATION_WORDS plus 'nooit' and nothing
+  // else; validate.ts's NEGATION_WORDS stays without it.
+  it("NL_NEGATION_BEFORE is the copied rule plus 'nooit' only; validate.ts is unchanged", () => {
+    expect(NL_NEGATION_BEFORE.toString()).toBe(NL_NEGATION.toString().replace('niet)', 'niet|nooit)'));
+    expect(validateSource).not.toMatch(/const NEGATION_WORDS = [^\n]*nooit/);
+  });
+
   it("NL_CARDINAL_MORPHEMES is exactly validate.ts's CARDINAL_WORD_FORMS morpheme list", () => {
     const line = validateSource.split('\n').find((l) => l.includes('(?:(?:twee|drie|'))!;
     const list = /\(\?:\(\?:([a-z|]+)\)/.exec(line)![1]!.split('|');
@@ -575,5 +585,77 @@ describe('ruling 22.4: C9 — a unit word written right after a unit-carrying pl
     const { masked, maskTable } = unitMasked('Het aantal was 1.234 woningen.');
     const english = `The number was ${phs(masked, 'N')[0]!} dwellings.`;
     expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [], maskTable })).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final bounded round (ruling 23). Built with the REAL masker.
+// ---------------------------------------------------------------------------
+
+describe('ruling 23A: a negation after a coordinated phrase still negates the direction word', () => {
+  const g = [region('Utrecht'), region('Zeeland')];
+  it.each([
+    [
+      'Het aantal daalde in Utrecht en Zeeland niet, het was 1.234 in 2022.',
+      'The number fell in Utrecht and Zeeland, it was {n} in {pa}.',
+      'The number did not fall in Utrecht and Zeeland, it was {n} in {pa}.',
+    ],
+    [
+      'Het aantal steeg in 2022 en 2023 niet; het was 1.234.',
+      'The number rose in {pa} and {pb}; it was {n}.',
+      'The number did not rise in {pa} and {pb}; it was {n}.',
+    ],
+    [
+      'Het aantal nam in Utrecht en Zeeland niet af; het was 1.234.',
+      'The number decreased in Utrecht and Zeeland; it was {n}.',
+      'The number did not decrease in Utrecht and Zeeland; it was {n}.',
+    ],
+  ])('%s', (dutch, unfaithful, faithful) => {
+    const masked = maskWithPeriods(dutch);
+    const [pa, pb] = phs(masked, 'P');
+    const fill = (t: string) => t.replace('{pa}', pa ?? '').replace('{pb}', pb ?? '').replace('{n}', phs(masked, 'N')[0]!);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(fill(unfaithful)), glossary: g }).join()).toMatch(/C10/);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(fill(faithful)), glossary: g })).toEqual([]);
+  });
+
+  it('a negation between a conjunction and the NEXT direction word belongs to that next word', () => {
+    const masked = maskWithPeriods('Het aantal steeg naar 1.234 en er was geen daling in 2022.');
+    const english = `The number rose to ${phs(masked, 'N')[0]!} and there was no decline in ${phs(masked, 'P')[0]!}.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+});
+
+describe("ruling 23B: 'nooit' negates (English 'never')", () => {
+  it("adversarial: 'is nooit gedaald' → 'has fallen' fails; 'has never fallen' passes", () => {
+    const masked = maskWithPeriods('Het aantal is nooit gedaald en was 1.234 in 2022.');
+    const [n, p] = [phs(masked, 'N')[0]!, phs(masked, 'P')[0]!];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The number has fallen and was ${n} in ${p}.`), glossary: [] }).join()).toMatch(/C10/);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The number has never fallen and was ${n} in ${p}.`), glossary: [] })).toEqual([]);
+  });
+
+  it("adversarial: 'daalde nooit' → 'fell' fails; 'never fell' passes", () => {
+    const masked = maskWithPeriods('Het aantal daalde nooit en was 1.234 in 2022.');
+    const [n, p] = [phs(masked, 'N')[0]!, phs(masked, 'P')[0]!];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The number fell and was ${n} in ${p}.`), glossary: [] }).join()).toMatch(/C10/);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The number never fell and was ${n} in ${p}.`), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('ruling 23C: region order in a number-free sentence (sentence counts match ⇒ positional alignment)', () => {
+  const g = [region('Utrecht'), region('Zeeland')];
+  const dutch = 'In 2022 telde Utrecht 1.234 en Zeeland 1.300. Utrecht had meer inwoners dan Zeeland.';
+  it('adversarial: regions swapped in the number-free comparative sentence fail', () => {
+    const masked = maskWithPeriods(dutch);
+    const [p] = phs(masked, 'P');
+    const [na, nb] = phs(masked, 'N');
+    const english = `In ${p} Utrecht had ${na} and Zeeland ${nb}. Zeeland had more inhabitants than Utrecht.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g }).join()).toMatch(/C7/);
+  });
+  it('passing: the faithful order', () => {
+    const masked = maskWithPeriods(dutch);
+    const [p] = phs(masked, 'P');
+    const [na, nb] = phs(masked, 'N');
+    const english = `In ${p} Utrecht had ${na} and Zeeland ${nb}. Utrecht had more inhabitants than Zeeland.`;
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g })).toEqual([]);
   });
 });

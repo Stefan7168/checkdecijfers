@@ -62,15 +62,24 @@ export const NL_NEGATION = /\b(zonder|geen|niet)\b/i;
  * fell', "hasn't fallen", 'without interim declines'). */
 const EN_NEGATION = /\b(?:not|no|never|without|cannot)\b|n't\b/i;
 
-/** Residual round (ruling 22.2): Dutch places 'niet' AFTER a finite verb
- * ('daalde niet', 'nam niet af', 'steeg in ⟦Pa⟧ niet') — invisible to the
- * validator's earlier-in-the-clause rule above. The English checks' OWN
- * Dutch scan (never validate.ts) also counts 'niet'/'geen'/'nooit' after the
- * direction word, up to the clause end, the next direction word, or a
- * coordinating conjunction ('steeg naar ⟦Na⟧ en er was geen daling' keeps
- * the rise un-negated). */
+/** Final bounded round (ruling 23B): the English checks' OWN Dutch scan
+ * (never validate.ts) also treats 'nooit' as a negator before the verb
+ * ('is nooit gedaald') — the copied validator rule above lacks it. English
+ * 'never' is already in EN_NEGATION. */
+export const NL_NEGATION_BEFORE = /\b(zonder|geen|niet|nooit)\b/i;
+
+/** Residual round (ruling 22.2) + final bounded round (ruling 23A): Dutch
+ * places 'niet' AFTER a finite verb ('daalde niet', 'nam niet af', 'steeg in
+ * ⟦Pa⟧ niet', 'daalde in Utrecht en Zeeland niet') — invisible to the
+ * validator's earlier-in-the-clause rule. The English checks' OWN Dutch scan
+ * also counts 'niet'/'geen'/'nooit' after the direction word, up to the
+ * clause end or the next direction word in the clause. A conjunction does
+ * NOT end the scan (that let 'daalde in Utrecht en Zeeland niet' through);
+ * only a negation that sits between a conjunction and the NEXT direction
+ * word belongs to that next word ('steeg naar ⟦Na⟧ en er was geen daling'
+ * keeps the rise un-negated). */
 export const NL_NEGATION_AFTER = /\b(niet|geen|nooit)\b/i;
-const NL_WINDOW_STOP = /\b(en|maar|of|want|terwijl)\b/i;
+const NL_CONJUNCTION = /\b(en|maar|of|want|terwijl)\b/gi;
 
 export interface DirectionClaim {
   dir: Direction;
@@ -115,16 +124,20 @@ function directionSequence(
       found.forEach((f, i) => {
         if (f.negated) return;
         // The window runs from the direction word itself (so 'nam niet af',
-        // whose match spans the 'niet', counts) to the clause end, cut at the
-        // next direction word in the clause and at a coordinating conjunction
-        // AFTER the direction word's own first word.
+        // whose match spans the 'niet', counts) to the clause end, or to the
+        // next direction word in the same clause.
         const nextInClause = found.slice(i + 1).find((g) => g.index < f.clauseEnd);
         const windowEnd = Math.min(f.clauseEnd, nextInClause?.index ?? Infinity);
-        const window = sentence.text.slice(f.index, windowEnd);
-        const firstWordEnd = /^\S*/.exec(window)![0].length;
-        const stop = NL_WINDOW_STOP.exec(window.slice(firstWordEnd));
-        const scanned = stop ? window.slice(0, firstWordEnd + stop.index) : window;
-        if (negationAfter.test(scanned)) f.negated = true;
+        let window = sentence.text.slice(f.index, windowEnd);
+        if (nextInClause) {
+          // With a NEXT direction word in the clause, a negation after the
+          // last conjunction before it belongs to that next word — cut there.
+          const firstWordEnd = /^\S*/.exec(window)![0].length;
+          const conjunctions = [...window.slice(firstWordEnd).matchAll(NL_CONJUNCTION)];
+          const last = conjunctions.at(-1);
+          if (last) window = window.slice(0, firstWordEnd + last.index);
+        }
+        if (negationAfter.test(window)) f.negated = true;
       });
     }
     for (const f of found) {
@@ -136,7 +149,7 @@ function directionSequence(
 }
 
 export function dutchDirectionSequence(text: string): DirectionClaim[] {
-  return directionSequence(text, NL_DIRECTION_TABLES, NL_NEGATION, NL_NEGATION_AFTER);
+  return directionSequence(text, NL_DIRECTION_TABLES, NL_NEGATION_BEFORE, NL_NEGATION_AFTER);
 }
 
 export function englishDirectionSequence(text: string): DirectionClaim[] {
@@ -445,23 +458,31 @@ function checkRegionSentenceOrder(
   const dutchSentences = maskedDutch.split(/(?<=[.!?])\s+/);
   const englishSentences = english.split(/(?<=[.!?])\s+/);
   const groups: { dutch: Set<number>; english: Set<number> }[] = [];
-  dutchSentences.forEach((sentence, d) => {
-    const targets = new Set<number>();
-    for (const ph of numberPlaceholders(sentence)) {
-      const e = englishSentences.findIndex((es) => es.includes(ph));
-      if (e !== -1) targets.add(e);
-    }
-    if (targets.size === 0) return;
-    const group = { dutch: new Set([d]), english: targets };
-    for (const other of [...groups]) {
-      if ([...other.english].some((e) => group.english.has(e))) {
-        other.dutch.forEach((x) => group.dutch.add(x));
-        other.english.forEach((x) => group.english.add(x));
-        groups.splice(groups.indexOf(other), 1);
+  if (dutchSentences.length === englishSentences.length) {
+    // Final bounded round (ruling 23C): equal sentence counts ⇒ align EVERY
+    // sentence by position, so a number-free sentence ('Utrecht had meer
+    // inwoners dan Zeeland.') has its region order pinned too — the
+    // number-placeholder grouping below never reaches such a sentence.
+    dutchSentences.forEach((_, i) => groups.push({ dutch: new Set([i]), english: new Set([i]) }));
+  } else {
+    dutchSentences.forEach((sentence, d) => {
+      const targets = new Set<number>();
+      for (const ph of numberPlaceholders(sentence)) {
+        const e = englishSentences.findIndex((es) => es.includes(ph));
+        if (e !== -1) targets.add(e);
       }
-    }
-    groups.push(group);
-  });
+      if (targets.size === 0) return;
+      const group = { dutch: new Set([d]), english: targets };
+      for (const other of [...groups]) {
+        if ([...other.english].some((e) => group.english.has(e))) {
+          other.dutch.forEach((x) => group.dutch.add(x));
+          other.english.forEach((x) => group.english.add(x));
+          groups.splice(groups.indexOf(other), 1);
+        }
+      }
+      groups.push(group);
+    });
+  }
   for (const group of groups) {
     const nlText = [...group.dutch].sort((a, b) => a - b).map((i) => dutchSentences[i]).join(' ');
     const enText = [...group.english].sort((a, b) => a - b).map((i) => englishSentences[i]).join(' ');
