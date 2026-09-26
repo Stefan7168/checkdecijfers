@@ -26,15 +26,29 @@ function classes(text: string, table: [Direction, RegExp][]): Set<Direction> {
 }
 
 export function dutchDirections(text: string): Set<Direction> {
-  return classes(text, [['up', UP_WORDS], ['down', DOWN_WORDS], ['flat', FLAT_WORDS], ['more', NL_MORE], ['less', NL_LESS]]);
+  return classes(text, [...NL_DIRECTION_TABLES.trend, ...NL_DIRECTION_TABLES.comparative]);
 }
 
 export function englishDirections(text: string): Set<Direction> {
-  return classes(text, [['up', EN_UP], ['down', EN_DOWN], ['flat', EN_FLAT], ['more', EN_MORE], ['less', EN_LESS]]);
+  return classes(text, [...EN_DIRECTION_TABLES.trend, ...EN_DIRECTION_TABLES.comparative]);
 }
 
-const NL_DIRECTION_TABLE: [Direction, RegExp][] = [['up', UP_WORDS], ['down', DOWN_WORDS], ['flat', FLAT_WORDS], ['more', NL_MORE], ['less', NL_LESS]];
-const EN_DIRECTION_TABLE: [Direction, RegExp][] = [['up', EN_UP], ['down', EN_DOWN], ['flat', EN_FLAT], ['more', EN_MORE], ['less', EN_LESS]];
+/** Trend words (up/down/flat) are read per CLAUSE, comparatives (more/less
+ * … than) per SENTENCE — exactly how the Dutch validator's
+ * checkDirectionWords reads them (a comparative's 'dan'/'than' may sit past
+ * a comma, 'meer inwoners, namelijk ⟦Na⟧, dan Zeeland'). */
+interface DirectionTables {
+  trend: [Direction, RegExp][];
+  comparative: [Direction, RegExp][];
+}
+const NL_DIRECTION_TABLES: DirectionTables = {
+  trend: [['up', UP_WORDS], ['down', DOWN_WORDS], ['flat', FLAT_WORDS]],
+  comparative: [['more', NL_MORE], ['less', NL_LESS]],
+};
+const EN_DIRECTION_TABLES: DirectionTables = {
+  trend: [['up', EN_UP], ['down', EN_DOWN], ['flat', EN_FLAT]],
+  comparative: [['more', EN_MORE], ['less', EN_LESS]],
+};
 
 /** The Dutch validator's negation-in-clause rule (src/answer/compose/
  * validate.ts NEGATION_WORDS + negatedMatch, not exported there): a trend
@@ -54,35 +68,45 @@ export interface DirectionClaim {
 }
 
 /** Final-review fix wave (ruling 18): direction claims as an ORDERED
- * sequence — per sentence, per clause (the Dutch validator's own
- * splitSentences/splitClauses), each clause's classes in text order, each
- * marked negated or not by the clause's negation rule. Consecutive identical
- * claims collapse, so 'groeide …, een groei van …' ≡ 'grew … growth of'. */
-function directionSequence(text: string, table: [Direction, RegExp][], negation: RegExp): DirectionClaim[] {
+ * sequence — per sentence (the Dutch validator's own splitSentences), each
+ * claim placed by its position in the sentence and marked negated when the
+ * negation rule fires earlier in ITS clause (splitClauses). Consecutive
+ * identical claims collapse, so 'groeide …, een groei van …' ≡ 'grew …
+ * growth of'. */
+function directionSequence(text: string, tables: DirectionTables, negation: RegExp): DirectionClaim[] {
   const out: DirectionClaim[] = [];
   for (const sentence of splitSentences(normalizeQuotes(text))) {
-    for (const clause of splitClauses(sentence)) {
-      const found: (DirectionClaim & { index: number })[] = [];
-      for (const [dir, re] of table) {
+    const clauses = splitClauses(sentence);
+    const found: (DirectionClaim & { index: number })[] = [];
+    for (const clause of clauses) {
+      const offset = clause.start - sentence.start;
+      for (const [dir, re] of tables.trend) {
         const m = re.exec(clause.text);
-        if (m) found.push({ dir, index: m.index, negated: negation.test(clause.text.slice(0, m.index)) });
+        if (m) found.push({ dir, index: offset + m.index, negated: negation.test(clause.text.slice(0, m.index)) });
       }
-      found.sort((a, b) => a.index - b.index);
-      for (const f of found) {
-        const last = out[out.length - 1];
-        if (!last || last.dir !== f.dir || last.negated !== f.negated) out.push({ dir: f.dir, negated: f.negated });
-      }
+    }
+    for (const [dir, re] of tables.comparative) {
+      const m = re.exec(sentence.text);
+      if (!m) continue;
+      const clause = clauses.find((c) => m.index >= c.start - sentence.start && m.index < c.end - sentence.start);
+      const clauseStart = clause ? clause.start - sentence.start : 0;
+      found.push({ dir, index: m.index, negated: negation.test(sentence.text.slice(clauseStart, m.index)) });
+    }
+    found.sort((a, b) => a.index - b.index);
+    for (const f of found) {
+      const last = out[out.length - 1];
+      if (!last || last.dir !== f.dir || last.negated !== f.negated) out.push({ dir: f.dir, negated: f.negated });
     }
   }
   return out;
 }
 
 export function dutchDirectionSequence(text: string): DirectionClaim[] {
-  return directionSequence(text, NL_DIRECTION_TABLE, NL_NEGATION);
+  return directionSequence(text, NL_DIRECTION_TABLES, NL_NEGATION);
 }
 
 export function englishDirectionSequence(text: string): DirectionClaim[] {
-  return directionSequence(text, EN_DIRECTION_TABLE, EN_NEGATION);
+  return directionSequence(text, EN_DIRECTION_TABLES, EN_NEGATION);
 }
 
 /** Collapse consecutive duplicates of a key. */

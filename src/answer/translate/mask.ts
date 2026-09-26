@@ -117,13 +117,14 @@ export function createMasker(opts: {
   const registeredEnglish = new Map(registeredUnits.map((u) => [u.dutch.toLowerCase(), u.english]));
   // Longest first so 'mln euro' (registered) wins over the bare 'mln', and
   // 'procentpunten' over 'procentpunt' over 'procent'. A word unit needs
-  // whitespace before it and a word end after it; '%' may sit glued or after
-  // one space ('3,5%' and '3,8 %' both occur).
+  // whitespace before it and a word end after it (an apostrophe counts as
+  // part of the word, so "euro's" is left as text rather than half-joined);
+  // '%' may sit glued or after one space ('3,5%' and '3,8 %' both occur).
   const wordUnits = [...registeredUnits.map((u) => u.dutch), ...FIXED_UNIT_WORDS].sort((a, b) => b.length - a.length);
   const UNIT_AFTER = new RegExp(
     `^(?:[ \\u00a0]?(%)|[ \\u00a0]+(${wordUnits
       .map((u) => u.split(/\s+/).map(escapeRegExp).join('[ \\u00a0]+'))
-      .join('|')})(?![\\p{L}\\p{N}]))`,
+      .join('|')})(?![\\p{L}\\p{N}'’]))`,
     'iu',
   );
   const unitFor = (after: string, number: string): { text: string; english: string } | null => {
@@ -165,11 +166,18 @@ export function createMasker(opts: {
       // A unit/scale word directly after the token (ruling 17a) is part of
       // the SAME placeholder: the mask table stores the combined Dutch text
       // ('0,5 procentpunt') and its fixed English ('0.5 percentage points').
-      const tokens = findNumericTokens(text);
-      const replacements = tokens.map((t) => {
+      // A token that falls INSIDE an earlier token's joined unit (the '1' and
+      // '000' of '12,3 per 1 000 inwoners') belongs to that placeholder and
+      // gets none of its own — splicing it separately would corrupt the text.
+      const replacements: { t: { token: string; index: number }; ph: string; length: number; dutch: string; english: string }[] = [];
+      let consumedUntil = 0;
+      for (const t of findNumericTokens(text)) {
+        if (t.index < consumedUntil) continue;
         const unit = unitFor(text.slice(t.index + t.token.length), t.token);
-        return { t, ph: '', length: t.token.length + (unit?.text.length ?? 0), dutch: t.token + (unit?.text ?? ''), english: toEnglishNumberToken(t.token) + (unit?.english ?? '') };
-      });
+        const length = t.token.length + (unit?.text.length ?? 0);
+        consumedUntil = t.index + length;
+        replacements.push({ t, ph: '', length, dutch: t.token + (unit?.text ?? ''), english: toEnglishNumberToken(t.token) + (unit?.english ?? '') });
+      }
       // Assign ids left to right for readable output, splice right to left.
       for (const r of replacements) r.ph = next('number', r.dutch, r.english);
       for (let i = replacements.length - 1; i >= 0; i--) {

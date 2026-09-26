@@ -202,6 +202,21 @@ describe('ruling 17a: a number and its directly-following unit/scale word are ON
     expect(masked).toBe(`De uitgaven waren ${n!.placeholder}.`);
   });
 
+  it('a registered unit that itself carries digits swallows them into the ONE placeholder', () => {
+    const { masked, entries } = maskOne('Het cijfer was 12,3 per 1 000 inwoners in 2023.', [
+      { dutch: 'per 1 000 inwoners', english: 'per 1 000 inhabitants' },
+    ]);
+    const numbers = entries.filter((e) => e.kind === 'number');
+    expect(numbers.map((e) => [e.dutch, e.english])).toEqual([['12,3 per 1 000 inwoners', '12.3 per 1 000 inhabitants']]);
+    expect(masked).toMatch(/^Het cijfer was ⟦N[a-z]+⟧ in ⟦P[a-z]+⟧\.$/);
+  });
+
+  it("a registered unit followed by an apostrophe (\"euro's\") is left as text, never half-joined", () => {
+    const { masked, entries } = maskOne("Het kostte 450.985 euro's.", [{ dutch: 'euro', english: 'euros' }]);
+    expect(entries.filter((e) => e.kind === 'number').map((e) => e.dutch)).toEqual(['450.985']);
+    expect(masked).toMatch(/^Het kostte ⟦N[a-z]+⟧ euro's\.$/);
+  });
+
   it('a unit word NOT directly after a number stays text', () => {
     const { masked } = maskOne('Het verschil in procentpunt was 0,5.');
     expect(masked).toMatch(/in procentpunt was ⟦N[a-z]+⟧\./);
@@ -360,6 +375,16 @@ describe('ruling 18: C3 — directions compared as an ORDERED sequence', () => {
     expect(
       checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [region('Utrecht'), region('Zeeland')] }).join(),
     ).toMatch(/C3/);
+  });
+
+  it('adversarial: a comparative interrupted by commas is still read (sentence-level, as the Dutch validator reads it)', () => {
+    const masked = maskWithPeriods('Utrecht had meer inwoners, namelijk 1.234, dan Zeeland.');
+    const [n] = phs(masked, 'N');
+    const flipped = `Utrecht had fewer inhabitants, namely ${n}, than Zeeland.`;
+    const faithful = `Utrecht had more inhabitants, namely ${n}, than Zeeland.`;
+    const g = [region('Utrecht'), region('Zeeland')];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(flipped), glossary: g }).join()).toMatch(/C3/);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(faithful), glossary: g })).toEqual([]);
   });
 
   it('passing: a repeated direction phrased once in English (consecutive duplicates collapse)', () => {
