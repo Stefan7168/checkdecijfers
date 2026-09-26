@@ -19,6 +19,7 @@ import {
   prepareTranslation,
   translateAnswer,
 } from '../../../src/answer/translate/translate.ts';
+import { TRANSLATE_TIMEOUT_MS } from '../../../src/answer/translate/types.ts';
 import type { TranslationItems } from '../../../src/answer/translate/check.ts';
 
 /** templateOnly makes composeAnswer's LLM rung unreachable (ADR 024) — a real
@@ -512,5 +513,78 @@ describe('retry sentences for the final-review checks (ruling 10 discipline: fix
     expect(req.system).toContain('A negation was added or dropped.');
     expect(req.system).not.toContain('C9:');
     expect(req.system).not.toContain("'ten'");
+  });
+});
+
+describe('the translate step deadline (final-review fix wave, ruling 19)', () => {
+  it('the default cap is 20 000 ms', () => {
+    expect(TRANSLATE_TIMEOUT_MS).toBe(20_000);
+  });
+
+  it("a client that never resolves ⇒ fallback with error 'timeout', within the cap", async () => {
+    const response = await makeAnswerResponse();
+    let calls = 0;
+    const client: LlmClient = {
+      complete: () => {
+        calls += 1;
+        return new Promise<never>(() => {});
+      },
+    };
+    const started = Date.now();
+    const rendering = await translateAnswer(response, client, { timeoutMs: 30 });
+    expect(Date.now() - started).toBeLessThan(2_000);
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.text).toBeNull();
+    expect(rendering.attempts.at(-1)).toEqual({ ok: false, problems: [], error: 'timeout' });
+    expect(rendering.maskedDutch).toEqual(prepareTranslation(response).maskedDutch);
+    expect(calls).toBe(1);
+  });
+
+  it('a LATE faithful response mutates nothing and triggers no further call', async () => {
+    const response = await makeAnswerResponse();
+    const faithful = faithfulEnglish(prepareTranslation(response).maskedDutch);
+    let calls = 0;
+    const client: LlmClient = {
+      complete: (req) => {
+        calls += 1;
+        return new Promise((resolve) =>
+          setTimeout(
+            () => resolve({ outputText: JSON.stringify(faithful), model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } }),
+            60,
+          ),
+        );
+      },
+    };
+    const rendering = await translateAnswer(response, client, { timeoutMs: 10 });
+    const snapshot = JSON.stringify(rendering);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(JSON.stringify(rendering)).toBe(snapshot);
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts).toEqual([{ ok: false, problems: [], error: 'timeout' }]);
+    expect(calls).toBe(1);
+  });
+
+  it('a slow first attempt that fails its checks does not start a second call after the deadline', async () => {
+    const response = await makeAnswerResponse();
+    let calls = 0;
+    const client: LlmClient = {
+      complete: (req) => {
+        calls += 1;
+        return new Promise((resolve) =>
+          setTimeout(() => resolve({ outputText: '{}', model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } }), 40),
+        );
+      },
+    };
+    const rendering = await translateAnswer(response, client, { timeoutMs: 10 });
+    await new Promise((r) => setTimeout(r, 150));
+    expect(rendering.status).toBe('fallback');
+    expect(calls).toBe(1);
+  });
+
+  it('a fast faithful response still verifies under the cap', async () => {
+    const response = await makeAnswerResponse();
+    const client = stub([JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch))]);
+    const rendering = await translateAnswer(response, client, { timeoutMs: 1_000 });
+    expect(rendering.status).toBe('verified');
   });
 });

@@ -10,6 +10,15 @@ import type { EnglishLines } from './lines.ts';
 
 export const ENGLISH_RENDERING_SCHEMA_VERSION = 1 as const;
 
+/** Final-review fix wave (ruling 19): the WHOLE translate step (both
+ * attempts) is capped at this many milliseconds. It runs after the full
+ * Dutch pipeline and after the credit is reserved, inside a page with a 90 s
+ * maxDuration — an uncapped step could get the function killed (charged,
+ * no answer, no audit row). On expiry the answer falls back to Dutch with
+ * attempt error 'timeout'. Lives here (not translate.ts) so the web layer
+ * can size its SDK request timeout without importing the translator. */
+export const TRANSLATE_TIMEOUT_MS = 20_000;
+
 export interface EnglishAttempt {
   ok: boolean;
   problems: string[];

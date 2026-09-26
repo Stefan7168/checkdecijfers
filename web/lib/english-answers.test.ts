@@ -6,7 +6,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../backend/answer/llm/client.ts', () => ({ AnthropicLlmClient: vi.fn() }));
+// Final-review fix wave (ruling 19): the translate client is built on its own
+// SDK instance (retries off, request timeout at the step cap) — stubbed here
+// so no real SDK is constructed (no API key in tests).
+vi.mock('@anthropic-ai/sdk', () => ({ default: vi.fn() }));
 
+import Anthropic from '@anthropic-ai/sdk';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
 import { englishAnswerOptions } from './english-answers.ts';
 
@@ -48,5 +53,22 @@ describe('englishAnswerOptions — truth table (flag off/on × nl/en)', () => {
   it('a non-\'1\' flag value (e.g. "true") stays dormant — only the literal \'1\' arms it', () => {
     vi.stubEnv('ENGLISH_ANSWERS_ENABLED', 'true');
     expect(englishAnswerOptions('en')).toEqual({});
+  });
+});
+
+describe('englishAnswerOptions — the translate client never outlives the step cap (ruling 19)', () => {
+  it('flag on, en reader ⇒ the SDK is built with retries off and a request timeout at the 20 s cap', () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', '1');
+    englishAnswerOptions('en');
+    expect(Anthropic).toHaveBeenCalledTimes(1);
+    expect(Anthropic).toHaveBeenCalledWith({ maxRetries: 0, timeout: 20_000 });
+    const sdk = vi.mocked(Anthropic).mock.instances[0];
+    expect(AnthropicLlmClient).toHaveBeenCalledWith(sdk);
+  });
+
+  it('flag off ⇒ no SDK is constructed at all', () => {
+    vi.stubEnv('ENGLISH_ANSWERS_ENABLED', undefined);
+    englishAnswerOptions('en');
+    expect(Anthropic).not.toHaveBeenCalled();
   });
 });

@@ -28,7 +28,7 @@ import {
 } from './lines.ts';
 import { createMasker, fillPlaceholders, hasDigitOutsidePlaceholders, type MaskEntry } from './mask.ts';
 import { buildTranslateRequest, TRANSLATE_PROMPT_VERSION, TRANSLATE_SYSTEM_PROMPT } from './prompt.ts';
-import { ENGLISH_RENDERING_SCHEMA_VERSION, type EnglishAttempt, type EnglishRendering } from './types.ts';
+import { ENGLISH_RENDERING_SCHEMA_VERSION, TRANSLATE_TIMEOUT_MS, type EnglishAttempt, type EnglishRendering } from './types.ts';
 
 /** ADR 058 §3.2: the registry's own verbatim `provisionalDisplay` suffixes,
  * paired with their fixed English form. A caveat marker is a fixed registry
@@ -243,7 +243,7 @@ function fallbackRendering(input: {
 export async function translateAnswer(
   response: AnswerResponse,
   client: LlmClient,
-  opts: { model?: string } = {},
+  opts: { model?: string; timeoutMs?: number } = {},
 ): Promise<EnglishRendering> {
   let prep: PreparedTranslation;
   try {
@@ -261,7 +261,7 @@ export async function translateAnswer(
     });
   }
 
-  const { glossary, maskedDutch, maskTable, untranslatedNames, digitSurvived } = prep;
+  const { maskedDutch, maskTable, untranslatedNames, digitSurvived } = prep;
 
   if (digitSurvived) {
     return fallbackRendering({
@@ -295,9 +295,59 @@ export async function translateAnswer(
     }
   }
 
-  const attempts: EnglishAttempt[] = [];
-  let model: string | null = null;
-  let rawTranslation: TranslationItems | null = null;
+  // Final-review fix wave (ruling 19): the model ladder below races a
+  // deadline. On expiry the caller gets a fallback built from a SNAPSHOT of
+  // the attempts so far plus a 'timeout' attempt; the ladder sees
+  // `state.expired` after every await and stops — a late client response
+  // mutates nothing that was returned and starts no further (paid) call.
+  const state: LadderState = { attempts: [], model: null, rawTranslation: null, expired: false };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<EnglishRendering>((resolve) => {
+    timer = setTimeout(() => {
+      state.expired = true;
+      resolve(
+        fallbackRendering({
+          model: state.model,
+          maskedDutch,
+          maskTable,
+          rawTranslation: state.rawTranslation,
+          attempts: [
+            ...state.attempts.map((a) => ({ ...a, problems: [...a.problems] })),
+            { ok: false, problems: [], error: 'timeout' },
+          ],
+          untranslatedNames,
+        }),
+      );
+    }, opts.timeoutMs ?? TRANSLATE_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([
+      runLadder(response, client, { prep, stalenessWarning, model: opts.model }, state),
+      deadline,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+interface LadderState {
+  attempts: EnglishAttempt[];
+  model: string | null;
+  rawTranslation: TranslationItems | null;
+  /** Set by the deadline; the ladder stops at its next checkpoint. */
+  expired: boolean;
+}
+
+async function runLadder(
+  response: AnswerResponse,
+  client: LlmClient,
+  ctx: { prep: PreparedTranslation; stalenessWarning: string | null; model: string | undefined },
+  state: LadderState,
+): Promise<EnglishRendering> {
+  const { glossary, maskedDutch, maskTable, untranslatedNames } = ctx.prep;
+  const stalenessWarning = ctx.stalenessWarning;
+  const opts = { model: ctx.model };
+  const attempts = state.attempts;
   let retryProblems: string[] | undefined;
 
   // Up to 2 attempts (one fresh, one retry naming the failed checks) — the
@@ -307,20 +357,26 @@ export async function translateAnswer(
   // just another failed attempt — the ladder still runs its second attempt
   // afterwards, mirroring the Dutch compose ladder's own try/catch-per-rung.
   for (let attempt = 0; attempt < 2; attempt++) {
+    // Deadline checkpoint (ruling 19): never start a new, paid call after
+    // the step has already been answered with a timeout fallback.
+    if (state.expired) return LATE;
     // Reset per attempt (ruling 11): on fallback, `rawTranslation` must be
     // THIS attempt's parsed output (or null), never a stale value carried
     // over from an earlier attempt that this one superseded.
-    rawTranslation = null;
+    state.rawTranslation = null;
 
     const request = buildTranslateRequest(maskedDutch, glossary, { model: opts.model, retryProblems });
     let llmResponse;
     try {
       llmResponse = await client.complete(request);
     } catch (error) {
+      if (state.expired) return LATE;
       attempts.push({ ok: false, problems: [], error: errorMessage(error) });
       continue;
     }
-    model = llmResponse.model;
+    // A late response (the deadline already answered): touch nothing.
+    if (state.expired) return LATE;
+    state.model = llmResponse.model;
 
     let parsed: unknown;
     try {
@@ -340,7 +396,7 @@ export async function translateAnswer(
       retryProblems = ['malformed output'];
       continue;
     }
-    rawTranslation = parsed;
+    state.rawTranslation = parsed;
 
     const problems = checkTranslation({ maskedDutch, english: parsed, glossary });
     if (problems.length > 0) {
@@ -368,10 +424,10 @@ export async function translateAnswer(
         schemaVersion: ENGLISH_RENDERING_SCHEMA_VERSION,
         status: 'verified',
         promptVersion: TRANSLATE_PROMPT_VERSION,
-        model,
+        model: state.model,
         maskedDutch,
         maskTable,
-        rawTranslation,
+        rawTranslation: state.rawTranslation,
         attempts,
         body: filledBody,
         lines,
@@ -382,12 +438,16 @@ export async function translateAnswer(
       };
     } catch (error) {
       attempts.push({ ok: false, problems: [], error: errorMessage(error) });
-      return fallbackRendering({ model, maskedDutch, maskTable, rawTranslation, attempts, untranslatedNames });
+      return fallbackRendering({ model: state.model, maskedDutch, maskTable, rawTranslation: state.rawTranslation, attempts, untranslatedNames });
     }
   }
 
-  return fallbackRendering({ model, maskedDutch, maskTable, rawTranslation, attempts, untranslatedNames });
+  return fallbackRendering({ model: state.model, maskedDutch, maskTable, rawTranslation: state.rawTranslation, attempts, untranslatedNames });
 }
+
+/** What the ladder resolves to once the deadline has already answered —
+ * `Promise.race` has settled, so this value is never observed. */
+const LATE = null as unknown as EnglishRendering;
 
 /** Attaches an `EnglishRendering` to an answer response when English was
  * asked for and a translating client was supplied — returns the SAME object
