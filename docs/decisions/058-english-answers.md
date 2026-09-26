@@ -231,6 +231,8 @@ negation meaning is word-list checked and five review rounds kept finding false 
 reverted two word-level patches that opened new ones). #325 lists the confirmed residuals and is a precondition of the
 `ENGLISH_ANSWERS_ENABLED` flip; the recommended structural answer is an ADR 034-style independent semantic comparison,
 fail-closed to Dutch. The Dutch validator's own negation blind spot found by the same review ([#326](../open-questions.md)) was fixed the same session (`5c74e633`).
+**Session 133 (2026-09-26):** that comparison is ADR [059](059-english-meaning-check.md), check C12, hermetic half built;
+its recording/eval (`npm run meaning-check:record`) waits for the API cap lift, and the flip waits for its result.
 
 ## Revisit triggers
 

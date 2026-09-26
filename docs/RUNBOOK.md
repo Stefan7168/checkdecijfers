@@ -540,8 +540,10 @@ falls back to the unchanged Dutch answer with one honest line above it — nothi
 
 **Precondition (session 132, [#325](open-questions.md)):** do NOT switch it on until #325 is resolved. The checks make
 a changed NUMBER impossible, but the meaning of words like "rose / did not rise / hardly rose" is checked by word lists,
-and the final review still found ways a reversed English sentence could pass. The recommended fix is one extra,
-independent comparison step before go-live; the owner decides its cost after measuring with `translate:eval`.
+and the final review still found ways a reversed English sentence could pass. **Session 133 (2026-09-26, owner GO):** the
+fix is designed and its zero-spend half is built: check C12, a second, independent AI call that compares the Dutch and the
+English meaning before any English answer is shown, with the Dutch answer as the fallback (ADR [059](decisions/059-english-meaning-check.md),
+≈€0.003 per English answer). What remains is measuring it, step 3b below.
 No new secret is needed (it reuses the existing `ANTHROPIC_API_KEY`); no database migration either
 (the rendering rides the existing audit row as an extra field).
 
@@ -552,7 +554,8 @@ cap currently refuses every one.
 Steps, in order, owner present:
 
 1. **Record the real translation fixtures — `npm run translate:record`.** Fourteen short, cheap
-   real Anthropic calls (one per answerable benchmark question), written to
+   real Anthropic calls (one per answerable benchmark question), plus one C12 meaning-check call per translation that
+   passes the other checks, written to
    `tests/fixtures/llm/translate/`. Never run this from CI or a subagent.
 2. **Read the printout.** Every one of the 14 tasks should print either `verified` (a checked
    English translation was produced) or `fallback` with an explained reason (e.g. an untranslatable
@@ -564,6 +567,14 @@ Steps, in order, owner present:
    network — and must exit clean (no task fails reconstruction, no placeholder/digit problem shows
    up on a translation that claims to be verified). A red result here means something is wrong with
    the fixtures or the checks, not with the flag — do not proceed to step 4 until it is green.
+3b. **Measure the meaning check (ADR 059) — `npm run meaning-check:record`.** About €1 of real calls: the labelled set
+   (`tests/helpers/meaning-check-cases.ts`) on both Haiku and Sonnet 5, three repeats each, written to
+   `tests/fixtures/llm/meaning-check/` and `benchmark/meaning-check-eval-report.json`. Read the two summary lines.
+   Haiku stays the model only if it shows 0 missed reversals, 0 false alarms, 0 errors and 0 flips. If only Sonnet 5
+   does, set `MEANING_CHECK_MODEL` in `src/answer/translate/meaning-check.ts` to `'claude-sonnet-5'`, then re-run steps
+   1–3. If neither does, stop: the flag stays off and the prompt needs work. Also check the report's latency maximum:
+   two translate calls plus two checks must fit inside the 20 s cap (`TRANSLATE_TIMEOUT_MS`). Commit the fixtures and the
+   report, then confirm `npm run meaning-check:eval` (replay) exits clean.
 4. **Set the flag** — in Vercel: add env var `ENGLISH_ANSWERS_ENABLED=1` (Production, plain text,
    not a secret, same as `ATTACHMENTS_ENABLED`/`OWN_DATA_PUBLISH_ENABLED`), then redeploy via
    `gh run rerun <latest main run>`.
