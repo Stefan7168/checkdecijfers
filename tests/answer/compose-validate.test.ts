@@ -267,6 +267,46 @@ describe('R9: direction, superlative and comparison words', () => {
   });
 });
 
+// #326 (session 132, 2026-09-26): a negated trend word was skipped as "not a
+// claim" (the #162 rescue) and a negator AFTER the trend word was invisible, so
+// a sentence REVERSING the validated direction passed ("De inflatie daalde niet"
+// when inflation fell). Now a negated trend word is a checked claim of "not that
+// direction", and a negator after (or inside) the trend word is ambiguous and
+// rejected — the phrasing ladder then retries or falls back to the template.
+describe('#326: negated trend words are checked claims, not skipped', () => {
+  const drop = 'van 3,8% in 2023 naar 3,3% in 2024.';
+  const growth = 'van 17.942.942 in 2024 naar 18.044.027 in 2025.';
+  it.each([
+    ['post-verb niet', `De inflatie daalde niet: ${drop}`],
+    ['pre-verb niet', `De inflatie is niet gedaald: ${drop}`],
+    ['nooit', `De inflatie is nooit gedaald: ${drop}`],
+    ['nergens', `De inflatie daalde nergens: ${drop}`],
+    ['separable verb with niet inside', `De inflatie nam niet af: ${drop}`],
+  ])('rejects a reversed decline claim on a real decline (%s)', (_name, body) => {
+    expect(validateAnswerBody(body, inflationDrop()).ok).toBe(false);
+  });
+  it.each([
+    ['groeide niet', `De bevolking op 1 januari in Nederland groeide niet: ${growth}`],
+    ['steeg niet', `De bevolking op 1 januari in Nederland steeg niet: ${growth}`],
+    ['is niet gestegen', `De bevolking op 1 januari in Nederland is niet gestegen: ${growth}`],
+  ])('rejects a reversed growth claim on a real increase (%s)', (_name, body) => {
+    expect(validateAnswerBody(body, populationDifference()).ok).toBe(false);
+  });
+  it('still accepts an honest negated claim that agrees with the data ("is niet gestegen" on a decline)', () => {
+    expect(validateAnswerBody(`De inflatie is niet gestegen: ${drop}`, inflationDrop()).problems).toEqual([]);
+  });
+  it('keeps the #162 rescue for a negation that qualifies HOW the trend moved (the real B-benchmark phrasing)', () => {
+    // Recorded model prose (benchmark, session 132): the series rose, not in a
+    // straight line — the negator is separated from the trend word by a manner
+    // phrase, so it qualifies the movement rather than denying it.
+    const body = `De bevolking op 1 januari in Nederland nam toe, hoewel de reeks niet in een rechte lijn omhoog bewoog: ${growth}`;
+    expect(validateAnswerBody(body, populationDifference()).problems).toEqual([]);
+  });
+  it('still accepts the plain honest claim', () => {
+    expect(validateAnswerBody(`De inflatie daalde: ${drop}`, inflationDrop()).problems).toEqual([]);
+  });
+});
+
 // Multi-region-series task 5 (docs/superpowers/specs/2026-09-17-multi-region-
 // series-design.md, MS1): today's `trendBacking` takes the FIRST `direction`
 // record in `result.derivations`, and `expectedTrendForClause`'s `cellsByYear`

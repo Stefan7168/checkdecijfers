@@ -50,13 +50,12 @@ const EN_DIRECTION_TABLES: DirectionTables = {
   comparative: [['more', EN_MORE], ['less', EN_LESS]],
 };
 
-/** The Dutch validator's negation-in-clause rule (src/answer/compose/
- * validate.ts NEGATION_WORDS + negatedMatch, not exported there): a trend
- * word with 'zonder'/'geen'/'niet' EARLIER in the same clause is negated.
- * Copied verbatim (tests/answer/translate/check.test.ts pins the copy
- * against validate.ts's source) rather than exported, so the Dutch validator
- * stays byte-identical. */
-export const NL_NEGATION = /\b(zonder|geen|niet)\b/i;
+/** The Dutch validator's negator word list (src/answer/compose/validate.ts
+ * NEGATION_WORDS, used by trendReading there; 'nooit'/'nergens' added by
+ * #326, session 132). Copied verbatim (tests/answer/translate/check.test.ts
+ * pins the copy against validate.ts's source) rather than exported; the
+ * English checks build their own before/after scans from it. */
+export const NL_NEGATION = /\b(zonder|geen|niet|nooit|nergens)\b/i;
 /** The English mirror: 'not'/'no'/'never'/'without'/'cannot' or an "n't"
  * contraction earlier in the same clause ('did not rise', 'no longer
  * fell', "hasn't fallen", 'without interim declines'). */

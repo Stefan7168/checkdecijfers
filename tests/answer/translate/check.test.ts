@@ -443,7 +443,7 @@ describe('fold-in 4: region/name mentions match on word boundaries', () => {
   });
 });
 
-describe('copies of the Dutch validator rules stay in sync (validate.ts is not edited, so it is read as source)', () => {
+describe('copies of the Dutch validator rules stay in sync (validate.ts is read as source)', () => {
   const validateSource = readFileSync(new URL('../../../src/answer/compose/validate.ts', import.meta.url), 'utf8');
 
   it("NL_NEGATION is validate.ts's NEGATION_WORDS, verbatim", () => {
@@ -451,27 +451,30 @@ describe('copies of the Dutch validator rules stay in sync (validate.ts is not e
   });
 
   // Explicit, deliberate EXCEPTION (residual round, ruling 22.2): the English
-  // checks' own Dutch scan ALSO reads 'niet'/'geen'/'nooit' AFTER the
-  // direction word ('daalde niet', 'nam niet af'). validate.ts's
-  // negatedMatch only looks earlier in the clause and is NOT changed (the
-  // Dutch path stays byte-identical), so this extension lives in its own
-  // constant and is pinned here as NOT being part of the copied rule.
+  // checks' own Dutch scan reads 'niet'/'geen'/'nooit'/… AFTER the direction
+  // word ('daalde niet', 'nam niet af') as negating it. Since #326 (session
+  // 132) validate.ts also looks at a negator at/after the trend word, but
+  // rejects it as AMBIGUOUS (trendReading) rather than reading it as a
+  // negation — both fail closed, so the English extension stays its own
+  // constant, pinned here as NOT being part of the copied rule.
   it('NL_NEGATION_AFTER is an English-checks-only extension, absent from validate.ts', () => {
     expect(NL_NEGATION_AFTER.toString()).not.toBe(NL_NEGATION.toString());
     expect(validateSource).not.toContain(NL_NEGATION_AFTER.toString());
-    expect(validateSource).toMatch(/function negatedMatch[\s\S]*?text\.slice\(0, match\.index\)/);
+    expect(validateSource).toMatch(/function trendReading[\s\S]*?text\.slice\(match\.index\)\)\) return 'ambiguous'/);
   });
 
   // Second explicit EXCEPTION (final bounded round, ruling 23B; widened in
   // the last round, ruling 24.4): the English checks' own Dutch scan also
-  // treats 'nooit', 'nergens', 'noch', 'geenszins' and 'evenmin' as negators
-  // BEFORE the verb. NL_NEGATION_BEFORE is the copied NEGATION_WORDS plus
-  // exactly those words; validate.ts's NEGATION_WORDS stays without them.
-  it('NL_NEGATION_BEFORE is the copied rule plus the listed extension words only; validate.ts is unchanged', () => {
+  // treats 'noch', 'geenszins' and 'evenmin' as negators BEFORE the verb.
+  // ('nooit' and 'nergens' joined validate.ts's own NEGATION_WORDS in #326,
+  // session 132, so they are now part of the copied rule.)
+  // NL_NEGATION_BEFORE is the copied NEGATION_WORDS plus exactly those words;
+  // validate.ts's NEGATION_WORDS stays without them.
+  it('NL_NEGATION_BEFORE is the copied rule plus the listed extension words only', () => {
     expect(NL_NEGATION_BEFORE.toString()).toBe(
-      NL_NEGATION.toString().replace('niet)', 'niet|nooit|nergens|noch|geenszins|evenmin)'),
+      NL_NEGATION.toString().replace('nergens)', 'nergens|noch|geenszins|evenmin)'),
     );
-    expect(validateSource).not.toMatch(/const NEGATION_WORDS = [^\n]*(nooit|nergens|noch|geenszins|evenmin)/);
+    expect(validateSource).not.toMatch(/const NEGATION_WORDS = [^\n]*(noch|geenszins|evenmin)/);
   });
 
   it("NL_CARDINAL_MORPHEMES is exactly validate.ts's CARDINAL_WORD_FORMS morpheme list", () => {

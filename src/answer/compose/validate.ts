@@ -933,12 +933,32 @@ export const FLAT_WORDS = /\b(gelijk gebleven|stabiel|onveranderd|ongewijzigd|co
 // growth prose ("groeide gestaag, zonder tussentijdse dalingen") was
 // rejected as a false decline claim because UP_WORDS/DOWN_WORDS/FLAT_WORDS
 // matched on the bare word with no negation awareness at all.
-const NEGATION_WORDS = /\b(zonder|geen|niet)\b/i;
+//
+// #326 (session 132, 2026-09-26): that rescue SKIPPED a negated trend word
+// entirely, so a sentence reversing the validated direction passed ("De
+// inflatie is niet gedaald" on a real decline), and a negator AFTER the word
+// ("daalde niet", "nam niet af" — the normal Dutch main-clause order) was
+// never seen at all. Now:
+//  - a negator DIRECTLY before the word ("niet gedaald", "nooit gestegen",
+//    "geen daling") makes it a CHECKED claim of "not that direction";
+//  - a negator earlier in the clause but separated from the word ("zonder
+//    tussentijdse dalingen", "niet in een rechte lijn omhoog" — recorded model
+//    prose) qualifies HOW the series moved: still not a claim (the #162 rescue);
+//  - a negator at or after the word's start in the same clause ("daalde niet",
+//    "nam niet af") is ambiguous and rejected — principle (c), the phrasing
+//    ladder retries or uses the template.
+const NEGATION_WORDS = /\b(zonder|geen|niet|nooit|nergens)\b/i;
+const NEGATION_DIRECTLY_BEFORE = /\b(zonder|geen|niet|nooit|nergens)\s+$/i;
 
-function negatedMatch(text: string, wordRegex: RegExp): boolean {
+type TrendReading = 'none' | 'claim' | 'negated' | 'qualified' | 'ambiguous';
+
+function trendReading(text: string, wordRegex: RegExp): TrendReading {
   const match = wordRegex.exec(text);
-  if (!match) return false;
-  return NEGATION_WORDS.test(text.slice(0, match.index));
+  if (!match) return 'none';
+  if (NEGATION_WORDS.test(text.slice(match.index))) return 'ambiguous';
+  const before = text.slice(0, match.index);
+  if (NEGATION_DIRECTLY_BEFORE.test(before)) return 'negated';
+  return NEGATION_WORDS.test(before) ? 'qualified' : 'claim';
 }
 const SUPERLATIVE_WORDS = /\b(meeste|hoogste|grootste|laagste|minste)\b/i;
 const COMPARATIVE = /\b(meer|hoger|groter|minder|lager|kleiner)\b[^.!?]{0,60}?\bdan\b/i;
@@ -1099,10 +1119,18 @@ function checkDirectionWords(
     const comparative = COMPARATIVE.exec(sentence.text);
 
     for (const clause of splitClauses(sentence)) {
-      const saysUp = UP_WORDS.test(clause.text) && !negatedMatch(clause.text, UP_WORDS);
-      const saysDown = DOWN_WORDS.test(clause.text) && !negatedMatch(clause.text, DOWN_WORDS);
-      const saysFlat = FLAT_WORDS.test(clause.text) && !negatedMatch(clause.text, FLAT_WORDS);
-      if (!saysUp && !saysDown && !saysFlat) continue;
+      const up = trendReading(clause.text, UP_WORDS);
+      const down = trendReading(clause.text, DOWN_WORDS);
+      const flat = trendReading(clause.text, FLAT_WORDS);
+      const noClaim = (r: TrendReading) => r === 'none' || r === 'qualified';
+      if (noClaim(up) && noClaim(down) && noClaim(flat)) continue;
+      if (up === 'ambiguous' || down === 'ambiguous' || flat === 'ambiguous') {
+        problems.push(`R9: ontkenning bij of na een trendwoord is niet eenduidig te controleren: "${clause.text.trim()}"`);
+        continue;
+      }
+      const saysUp = up === 'claim';
+      const saysDown = down === 'claim';
+      const saysFlat = flat === 'claim';
       const backing = resolveTrendBacking(clause.text, candidates, multiRegionResult);
       if (!backing) {
         const reason = candidates.length === 0
@@ -1120,6 +1148,9 @@ function checkDirectionWords(
       if (saysUp && expected !== 'up') problems.push(`R9: zinsdeel claimt stijging maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
       if (saysDown && expected !== 'down') problems.push(`R9: zinsdeel claimt daling maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
       if (saysFlat && expected !== 'flat') problems.push(`R9: zinsdeel claimt 'gelijk gebleven' maar de gevalideerde richting is '${expected}': "${clause.text.trim()}"`);
+      if (up === 'negated' && expected === 'up') problems.push(`R9: zinsdeel ontkent een stijging maar de gevalideerde richting is 'up': "${clause.text.trim()}"`);
+      if (down === 'negated' && expected === 'down') problems.push(`R9: zinsdeel ontkent een daling maar de gevalideerde richting is 'down': "${clause.text.trim()}"`);
+      if (flat === 'negated' && expected === 'flat') problems.push(`R9: zinsdeel ontkent 'gelijk gebleven' maar de gevalideerde richting is 'flat': "${clause.text.trim()}"`);
     }
 
     if (saysSuperlative) {
