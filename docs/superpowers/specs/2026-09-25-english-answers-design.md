@@ -90,7 +90,8 @@ existing `LlmClient` (real / replay / recording), so CI replays hermetic fixture
 
 *C7/C8 added during the build (session 131, SDD ruling 6): C1 compares placeholder sets, so a swap of two
 numbers would otherwise pass every check. C9/C10, the ordered C3, the period/region legs of C7, word-boundary
-name matching and `\p{N}` in C2 added by the final whole-branch review (rulings 17–18, fold-in 4).*
+name matching and `\p{N}` in C2 added by the final whole-branch review (rulings 17–18, fold-in 4); C11 and the
+later C7/C9/C10 refinements by the residual rounds (rulings 22–24).*
 
 Run on the model output **before** filling. Any failure → one retry with the problems appended (the same
 retry shape the phrasing rung uses), then fallback.
@@ -103,10 +104,11 @@ retry shape the phrasing rung uses), then fallback.
 | C4 | Caveats kept: each provisional/estimate marker in the Dutch body has its English counterpart in the English body | a dropped "provisional" |
 | C5 | Glossary respected: for every glossary name the Dutch item mentions (on Unicode word boundaries, case-insensitive — not the validator's substring `mentions`, under which 'Ede' matched 'exceeded'), the English item contains the English form | an improvised measure name ("average" for "median") |
 | C6 | Chip count equal to the input chip count, each chip non-empty | a lost chip |
-| C7 | Per item: number placeholders keep their relative order; period placeholders keep theirs; region names keep the order of their first mentions; and per aligned sentence (every sentence by position when both items have the same sentence count; otherwise a Dutch sentence + the English sentence(s) holding its numbers) the ordered sequence of ALL region mentions matches (a period or region may move past a number — only the order within a kind is pinned) | two numbers, periods or regions swapped, even within one sentence or in a later one |
+| C7 | Per item: number placeholders keep their relative order; period placeholders keep theirs; region names keep the order of their first mentions; and per aligned sentence (a Dutch sentence + the English sentence(s) holding its numbers, and — when both items have the same sentence count — additionally every sentence by position) the ordered sequence of ALL region mentions matches (a period or region may move past a number — only the order within a kind is pinned) | two numbers, periods or regions swapped, even within one sentence or in a later one |
 | C8 | Sentence binding: each number placeholder's Dutch-sentence companions (period placeholders, region names) appear in the English sentence that holds it | a number re-attached to another period or region |
 | C9 | Quantity words: an English number word ('one' needs 'één', not the article 'een'), fraction/multiple (half, a third…a tenth, twice, double, -fold …), decade/century, or percent word (percent, '%', percentage point) outside placeholders needs its Dutch counterpart in the masked Dutch item (small explicit map; 'percent' is never satisfied by 'procentpunt'); and no unit/scale word right after a placeholder that already carries its unit | "roughly double", "ten years before", "the highest in a decade", "⟦Na⟧ points" |
-| C10 | Negation: each direction claim's negation must match. Dutch: zonder/geen/niet/nooit earlier in the clause (the validator's rule plus 'nooit'), or niet/geen/nooit AFTER the direction word up to the clause end or the next direction word in the clause — a conjunction does not stop the scan, except that a negation between a conjunction and the NEXT direction word belongs to that next word. English: not/no/never/without/cannot/n't earlier in the clause | "niet gedaald" / "daalde in Utrecht en Zeeland niet" / "is nooit gedaald" → "has fallen" / "fell …" |
+| C10 | Negation: each direction claim's negation must match. Dutch: zonder/geen/niet/nooit/nergens/noch/geenszins/evenmin earlier in the clause (the validator's rule plus those words), or niet/geen/nooit/nergens/noch/geenszins/evenmin AFTER the direction word up to the clause end or the next direction word in the clause. A conjunction does not stop that scan, except: a negation between a conjunction and the NEXT direction word belongs to that next word; and with no next direction word, 'en'/'maar'/'of' opening a new clause (er, dat, het, dit, zo, de, een, is/was/zijn/heeft…, or a period placeholder not directly after the conjunction, within three words) ends it. A negation after a trend NOUN ('De stijging was niet groot') qualifies the noun. English: not/no/never/without/cannot/neither/nor/nowhere/n't earlier in the clause | "niet gedaald" / "daalde in Utrecht en Zeeland niet" / "is nooit gedaald" → "has fallen" / "fell …" |
+| C11 | Negation parity (structural backstop): per item, the count of negator words is equal — Dutch niet, geen, nooit, nergens, noch, geenszins, evenmin, zonder, niets, niemand; English not, n't, no, never, neither, nor, nowhere, without, nothing, nobody, none ('no longer' once) | an added "did not" or a dropped "geen", in any sentence shape |
 
 Then **fill**: `⟦n⟧` → the Dutch token converted to English number format by a pure function
 (`17.942.942` → `17,942,942`, `3,5` → `3.5`, `x 1 000` → `x 1,000`), `⟦Pn⟧` → the English period label. The
@@ -174,7 +176,7 @@ re-verifies it (§3.8). ADR 016 gets an as-built note; docs/05's R8 row gets one
 
 ### 3.8 Reconstruction (R8)
 
-`reconstructionReport` gains an English leg for rows that carry `response.english`: re-run every check (C1–C10) on the stored
+`reconstructionReport` gains an English leg for rows that carry `response.english`: re-run every check (C1–C11) on the stored
 `rawTranslation` against the stored `maskedDutch`/`maskTable`; re-derive `maskTable` from the stored Dutch body
 (masking is deterministic); re-fill and compare byte-for-byte with the stored `body`; re-derive every English
 line from the stored result; re-assemble `text`. Tamper tests for each (a changed number in the stored English
@@ -226,7 +228,7 @@ or its audit fields.
 - **Masking:** every token shape `findNumericTokens` accepts is masked; no digit survives; period labels mask
   before numbers.
 - **Number converter:** round-trip property over generated values/decimal counts; unit notations.
-- **Checks C1–C10:** one failing and one passing case each, incl. a direction flip, a dropped provisional
+- **Checks C1–C11:** one failing and one passing case each, incl. a direction flip, a dropped provisional
   marker, an invented placeholder, a stray digit, an improvised measure name.
 - **Lines:** each English builder against every benchmark result shape.
 - **Name list:** every registered table has an entry; every key the script wrote exists in the NED table's

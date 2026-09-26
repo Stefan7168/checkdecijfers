@@ -58,7 +58,7 @@ ledger
 [superpowers/sdd/2026-09-25-english-answers-phase1/progress.md](../superpowers/sdd/2026-09-25-english-answers-phase1/progress.md).
 What the Decision above under-specified or the build genuinely had to decide:
 
-- **Four more deterministic checks, C7–C10, past the six named above** (`src/answer/translate/check.ts`; all
+- **Five more deterministic checks, C7–C11, past the six named above** (`src/answer/translate/check.ts`; all
   fail toward the Dutch fallback). A review found the original placeholder-identity check (C1) is SET-based: a
   model swapping two number placeholders — binding a value to the wrong period or region — passed every
   original check untouched, and a number bound to the wrong region or period is a fabricated claim (principle
@@ -77,8 +77,9 @@ What the Decision above under-specified or the build genuinely had to decide:
     after its own number in the same order ('⟦Nc⟧ in Utrecht and ⟦Nd⟧ in Zeeland') passes. The final bounded
     round closed the last gap: a sentence with NO number ('Utrecht had meer inwoners dan Zeeland.') never joined
     such a group, so when the Dutch and English items have the same number of sentences, EVERY sentence is now
-    paired by position and its region order pinned; only when the counts differ does the number-based grouping
-    apply.
+    paired by position and its region order pinned — IN ADDITION to the number-based grouping, which always
+    runs too (an abbreviation such as 'o.a. ' can split a Dutch sentence so the counts match while the positions
+    no longer line up).
   - **C8 (sentence binding, body):** each number placeholder's companion period placeholders and region names
     in its Dutch sentence land in the SAME English sentence.
   - **C9 (quantity words):** an English number word (one…twenty, thirty…ninety, hundred, thousand, million,
@@ -107,9 +108,18 @@ What the Decision above under-specified or the build genuinely had to decide:
     direction word in the clause. A conjunction does not end that scan (an earlier conjunction stop let
     'daalde in Utrecht en Zeeland niet' → 'fell in Utrecht and Zeeland' through); only a negation sitting between
     a conjunction and the NEXT direction word belongs to that next word ('steeg naar ⟦Na⟧ en er was geen daling'
-    keeps the rise un-negated). The same scan also treats 'nooit' as a negator BEFORE the verb ('is nooit
-    gedaald'), English 'never' being its counterpart. The copy-drift test carries both extensions as explicit,
-    commented exceptions.
+    keeps the rise un-negated). With no next direction word, the scan still stops at 'en'/'maar'/'of' when a
+    new clause starts within the next three words (er, dat, het, dit, zo, de, een, a finite verb such as is/was/
+    zijn/heeft, or a period placeholder that is not the very first word after the conjunction) — so 'steeg naar
+    ⟦Nb⟧ en voor ⟦Pa⟧ zijn er nog geen cijfers' keeps the rise un-negated. A 'niet'/'geen' AFTER a trend NOUN
+    ('De stijging was niet groot') qualifies the noun and does not negate the trend. The scan also treats
+    'nooit', 'nergens', 'noch', 'geenszins' and 'evenmin' as negators (English adds 'never', 'neither', 'nor',
+    'nowhere'). The copy-drift test carries these extensions as explicit, commented exceptions.
+  - **C11 (negation parity) — a structural backstop.** Word-by-word negation rules kept leaking (each fix round
+    found another shape), so per item the NUMBER of negator words must be equal on both sides: Dutch niet,
+    geen, nooit, nergens, noch, geenszins, evenmin, zonder, niets, niemand; English not, n't (once per
+    occurrence), no, never, neither, nor, nowhere, without, nothing, nobody, none — 'no longer' counts once.
+    An added or dropped negator anywhere in the item fails, whatever sentence shape carries it.
 - **A number is masked TOGETHER with a directly following unit or scale word, as ONE placeholder** (final
   whole-branch review). The model never sees a unit, so it cannot swap one: 'procentpunt' → 'percent' or 'mln'
   → 'billion' is a fabricated number as surely as a changed digit. Joined: `%` (glued or after one space),
@@ -148,6 +158,7 @@ What the Decision above under-specified or the build genuinely had to decide:
   - C8 → "A number was moved away from its period or region."
   - C9 → "A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain."
   - C10 → "A negation was added or dropped."
+  - C11 → "The number of negation words (not, no, never) changed."
   - malformed/unparseable model output → "The output was not valid JSON of the required shape."
 - **The model's output is shape-validated before anything else touches it** (`isTranslationItemsShape`) — a
   malformed response becomes an ordinary retryable failed attempt instead of throwing inside
@@ -158,7 +169,7 @@ What the Decision above under-specified or the build genuinely had to decide:
   kind partway through the build — nothing has ever been recorded or served under v1 (recording is this very
   Task 9, and the flag stays unset until the go-live below), so no consumer can distinguish the old and new
   wording; a real behaviour change to an ALREADY-RECORDED prompt would instead need a bump.
-- **Every deterministic name/direction/region check (C3, C5, C7–C10) reads the MASKED Dutch text**, not a
+- **Every deterministic name/direction/region check (C3, C5, C7–C11) reads the MASKED Dutch text**, not a
   separately re-split unmasked body — this closes a latent desync risk (regions read from an independently-split
   body could misalign if sentence counts ever differed) at no extra cost, since C1 already guarantees a
   `⟦G…⟧`-masked name's own exact reuse regardless. **Names match on Unicode word boundaries**
