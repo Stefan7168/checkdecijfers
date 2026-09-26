@@ -28,7 +28,8 @@ trusting this). Kickoff: [session-briefs/2026-09-26-session-133-kickoff.md](sess
   Dependabot #47 + #48 merged (Anthropic SDK 0.126 → 0.128 in root and web, 9 minor web bumps).
 - **English switch-on is gated by [#325](open-questions.md):** the checks make an altered NUMBER impossible, but five
   review rounds kept finding word-level false passes on direction/negation meaning (e.g. "hardly rose"). Recommended fix:
-  an independent semantic comparison step (ADR 034 pattern) before the flip; owner decides spend after `translate:eval`.
+  an independent semantic comparison step (ADR 034 pattern) before the flip. **Designed session 133** (not built):
+  [spec](superpowers/specs/2026-09-26-english-meaning-check-design.md) — check C12, ≈€0.003 per English answer; awaits the owner's GO.
 - **Fixed live, Dutch path:** [#326](open-questions.md) — the Dutch validator let a negated trend word reverse the validated
   direction ("De inflatie daalde niet" on a real decline). Now checked / failing closed (`5c74e633`); benchmark 14/14 + 6/6
   + 0 fabricated, template fallbacks unchanged at 3; `audit:verify` 1–309 clean apart from the 2 pinned rows.
