@@ -608,3 +608,14 @@ describe('residual round (ruling 22.4): translateAnswer wires the mask table int
     expect(req.system).toContain('Numbers, periods or regions were reordered.');
   });
 });
+
+describe('last round (ruling 24.1): C11 retry sentence', () => {
+  it('C11 maps to its own fixed, digit-free sentence; earlier sentences unchanged', () => {
+    const req = buildTranslateRequest({ body: 'x', chips: [], definition: null, alternates: [] }, [], {
+      retryProblems: ['C11: body negation words differ (Dutch 1, English 2)', 'C10: x'],
+    });
+    expect(req.system).toContain('The number of negation words (not, no, never) changed.');
+    expect(req.system).toContain('A negation was added or dropped.');
+    expect(req.system).not.toContain('C11:');
+  });
+});

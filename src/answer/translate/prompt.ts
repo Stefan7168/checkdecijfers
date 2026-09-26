@@ -69,6 +69,7 @@ const PROBLEM_KIND_SENTENCE: [RegExp, string][] = [
   [/^C8:/, 'A number was moved away from its period or region.'],
   [/^C9:/, 'A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain.'],
   [/^C10:/, 'A negation was added or dropped.'],
+  [/^C11:/, 'The number of negation words (not, no, never) changed.'],
 ];
 const JSON_SHAPE_PROBLEM_SENTENCE = 'The output was not valid JSON of the required shape.';
 const FALLBACK_PROBLEM_SENTENCE = 'A translation check failed.';

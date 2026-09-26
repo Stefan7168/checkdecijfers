@@ -462,13 +462,16 @@ describe('copies of the Dutch validator rules stay in sync (validate.ts is not e
     expect(validateSource).toMatch(/function negatedMatch[\s\S]*?text\.slice\(0, match\.index\)/);
   });
 
-  // Second explicit EXCEPTION (final bounded round, ruling 23B): the English
-  // checks' own Dutch scan also treats 'nooit' as a negator BEFORE the verb.
-  // NL_NEGATION_BEFORE is the copied NEGATION_WORDS plus 'nooit' and nothing
-  // else; validate.ts's NEGATION_WORDS stays without it.
-  it("NL_NEGATION_BEFORE is the copied rule plus 'nooit' only; validate.ts is unchanged", () => {
-    expect(NL_NEGATION_BEFORE.toString()).toBe(NL_NEGATION.toString().replace('niet)', 'niet|nooit)'));
-    expect(validateSource).not.toMatch(/const NEGATION_WORDS = [^\n]*nooit/);
+  // Second explicit EXCEPTION (final bounded round, ruling 23B; widened in
+  // the last round, ruling 24.4): the English checks' own Dutch scan also
+  // treats 'nooit', 'nergens', 'noch', 'geenszins' and 'evenmin' as negators
+  // BEFORE the verb. NL_NEGATION_BEFORE is the copied NEGATION_WORDS plus
+  // exactly those words; validate.ts's NEGATION_WORDS stays without them.
+  it('NL_NEGATION_BEFORE is the copied rule plus the listed extension words only; validate.ts is unchanged', () => {
+    expect(NL_NEGATION_BEFORE.toString()).toBe(
+      NL_NEGATION.toString().replace('niet)', 'niet|nooit|nergens|noch|geenszins|evenmin)'),
+    );
+    expect(validateSource).not.toMatch(/const NEGATION_WORDS = [^\n]*(nooit|nergens|noch|geenszins|evenmin)/);
   });
 
   it("NL_CARDINAL_MORPHEMES is exactly validate.ts's CARDINAL_WORD_FORMS morpheme list", () => {
@@ -657,5 +660,110 @@ describe('ruling 23C: region order in a number-free sentence (sentence counts ma
     const [na, nb] = phs(masked, 'N');
     const english = `In ${p} Utrecht had ${na} and Zeeland ${nb}. Utrecht had more inhabitants than Zeeland.`;
     expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: g })).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Last round (ruling 24): structural negation parity (C11) + listed cases.
+// Built with the REAL masker.
+// ---------------------------------------------------------------------------
+
+function check24(dutch: string, template: string, glossary = [] as ReturnType<typeof region>[]) {
+  const masked = maskWithPeriods(dutch);
+  const ns = phs(masked, 'N');
+  const ps = phs(masked, 'P');
+  const english = template
+    .replace('{n}', ns[0] ?? '')
+    .replace('{n2}', ns[1] ?? '')
+    .replace('{p}', ps[0] ?? '');
+  return checkTranslation({ maskedDutch: items(masked), english: items(english), glossary });
+}
+
+describe('ruling 24.1: C11 — negation parity per item', () => {
+  it.each([
+    ['an added "not"', 'Het aantal was 1.234 in 2022.', 'The number was not {n} in {p}.'],
+    ['a dropped "geen"', 'Er was geen verschil: 1.234 in 2022.', 'There was a difference: {n} in {p}.'],
+    ['an added "never"', 'Het aantal was 1.234 in 2022.', 'The number was never {n} in {p}.'],
+    ["an added n't", 'Het aantal was 1.234 in 2022.', "The number wasn't {n} in {p}."],
+  ])('adversarial: %s fails C11', (_l, dutch, template) => {
+    expect(check24(dutch, template).join()).toMatch(/C11/);
+  });
+
+  it.each([
+    ['niet ↔ not', 'Het aantal was niet 1.234 in 2022.', 'The number was not {n} in {p}.'],
+    ["niet ↔ n't", 'Het aantal was niet 1.234 in 2022.', "The number wasn't {n} in {p}."],
+    ['niet meer ↔ no longer (counts once)', 'Het aantal was in 2022 niet meer 1.234.', 'The number was no longer {n} in {p}.'],
+    ['zonder ↔ without', 'Het aantal was 1.234 in 2022, zonder uitschieters.', 'The number was {n} in {p}, without outliers.'],
+  ])('passing: %s', (_l, dutch, template) => {
+    expect(check24(dutch, template)).toEqual([]);
+  });
+});
+
+describe('ruling 24.2: a negation in a later coordinated CLAUSE does not attach to the verb', () => {
+  it.each([
+    [
+      'Het aantal steeg naar 1.234 en voor 2022 zijn er nog geen cijfers.',
+      'The number rose to {n} and there are no figures for {p} yet.',
+      'The number did not rise to {n} and there are no figures for {p} yet.',
+    ],
+    [
+      'Het aantal steeg in 2022 naar 1.234 en zo hoog was het nog nooit.',
+      'The number rose to {n} in {p} and it had never been that high.',
+      'The number did not rise to {n} in {p} and it had never been that high.',
+    ],
+    [
+      'Het aantal steeg naar 1.234 maar in 2022 niet meer.',
+      'The number rose to {n} but no longer in {p}.',
+      'The number did not rise to {n} but no longer in {p}.',
+    ],
+  ])('%s', (dutch, faithful, unfaithful) => {
+    expect(check24(dutch, faithful)).toEqual([]);
+    expect(check24(dutch, unfaithful).length).toBeGreaterThan(0);
+  });
+});
+
+describe('ruling 24.3: niet/geen AFTER a trend noun qualifies the noun', () => {
+  it('passing: "De stijging was niet groot" ~ "The increase was not large"', () => {
+    expect(check24('De stijging was niet groot: het aantal was 1.234.', 'The increase was not large: the number was {n}.')).toEqual([]);
+  });
+  it('adversarial: → "There was no increase" fails', () => {
+    expect(check24('De stijging was niet groot: het aantal was 1.234.', 'There was no increase: the number was {n}.').join()).toMatch(/C10/);
+  });
+});
+
+describe('ruling 24.4: more negators (nergens, noch, geenszins, evenmin / neither, nor, nowhere)', () => {
+  const g = [region('Utrecht'), region('Zeeland')];
+  it.each([
+    ['Het aantal steeg nergens; het was 1.234.', 'The number rose everywhere; it was {n}.'],
+    ['Het aantal daalde noch in Utrecht noch in Zeeland; het was 1.234.', 'The number fell in both Utrecht and Zeeland; it was {n}.'],
+    ['Het aantal is geenszins gedaald; het was 1.234.', 'The number has fallen; it was {n}.'],
+    ['Het aantal steeg evenmin; het was 1.234.', 'The number rose as well; it was {n}.'],
+    ['Het aantal steeg in Utrecht en Zeeland; het was 1.234.', 'The number rose in neither Utrecht nor Zeeland; it was {n}.'],
+    ['Het aantal steeg overal; het was 1.234.', 'The number rose nowhere; it was {n}.'],
+  ])('adversarial: %s → %s', (dutch, template) => {
+    expect(check24(dutch, template, g).join()).toMatch(/C10|C11/);
+  });
+
+  it.each([
+    // English puts the negation BEFORE the verb; the English scan is
+    // earlier-only by design, so 'rose nowhere' is not a faithful rendering
+    // the checks can prove — 'did not rise anywhere' is.
+    ['Het aantal steeg nergens; het was 1.234.', 'The number did not rise anywhere; it was {n}.'],
+    ['Het aantal is geenszins gedaald; het was 1.234.', 'The number has not fallen; it was {n}.'],
+  ])('passing: %s ~ %s', (dutch, template) => {
+    expect(check24(dutch, template, g)).toEqual([]);
+  });
+});
+
+describe('ruling 24.5: positional pairs run IN ADDITION to the number-based groups', () => {
+  it('adversarial: an abbreviation split makes counts match but misaligns; the number group still catches the swap', () => {
+    const g = [region('Utrecht'), region('Zeeland')];
+    expect(
+      check24(
+        'Dit gaat o.a. over Utrecht. In 2022 telde Utrecht 1.234 en Zeeland 1.300.',
+        'This concerns Utrecht among others. In {p} Zeeland had {n} and Utrecht {n2}. That is all.',
+        g,
+      ).join(),
+    ).toMatch(/C7/);
   });
 });

@@ -60,13 +60,13 @@ export const NL_NEGATION = /\b(zonder|geen|niet)\b/i;
 /** The English mirror: 'not'/'no'/'never'/'without'/'cannot' or an "n't"
  * contraction earlier in the same clause ('did not rise', 'no longer
  * fell', "hasn't fallen", 'without interim declines'). */
-const EN_NEGATION = /\b(?:not|no|never|without|cannot)\b|n't\b/i;
+const EN_NEGATION = /\b(?:not|no|never|without|cannot|neither|nor|nowhere)\b|n't\b/i;
 
 /** Final bounded round (ruling 23B): the English checks' OWN Dutch scan
  * (never validate.ts) also treats 'nooit' as a negator before the verb
  * ('is nooit gedaald') — the copied validator rule above lacks it. English
  * 'never' is already in EN_NEGATION. */
-export const NL_NEGATION_BEFORE = /\b(zonder|geen|niet|nooit)\b/i;
+export const NL_NEGATION_BEFORE = /\b(zonder|geen|niet|nooit|nergens|noch|geenszins|evenmin)\b/i;
 
 /** Residual round (ruling 22.2) + final bounded round (ruling 23A): Dutch
  * places 'niet' AFTER a finite verb ('daalde niet', 'nam niet af', 'steeg in
@@ -78,8 +78,29 @@ export const NL_NEGATION_BEFORE = /\b(zonder|geen|niet|nooit)\b/i;
  * only a negation that sits between a conjunction and the NEXT direction
  * word belongs to that next word ('steeg naar ⟦Na⟧ en er was geen daling'
  * keeps the rise un-negated). */
-export const NL_NEGATION_AFTER = /\b(niet|geen|nooit)\b/i;
+export const NL_NEGATION_AFTER = /\b(niet|geen|nooit|nergens|noch|geenszins|evenmin)\b/i;
 const NL_CONJUNCTION = /\b(en|maar|of|want|terwijl)\b/gi;
+
+/** Last round (ruling 24.2): with NO next direction word in the clause, the
+ * after-verb window still ends at 'en'/'maar'/'of' when a new clause starts
+ * within the next three words — a subject/placeholder word (er, dat, het,
+ * dit, zo, de, een), a finite verb (zijn, is, was, waren, heeft, hebben,
+ * had), or a period placeholder that is NOT the very first word after the
+ * conjunction ('maar in ⟦Pa⟧ niet meer', 'en voor ⟦Pa⟧ zijn er nog geen
+ * cijfers'). A period placeholder directly after the conjunction is a
+ * coordinated phrase ('steeg in ⟦Pa⟧ en ⟦Pb⟧ niet', ruling 23A), not a clause. */
+const NL_COORD_CONJUNCTION = /\b(en|maar|of)\b/gi;
+const NL_CLAUSE_START_WORD = /^(?:er|dat|het|dit|zo|de|een|zijn|is|was|waren|heeft|hebben|had)$/i;
+
+function newClauseFollows(after: string): boolean {
+  const tokens = after.trim().split(/\s+/).slice(0, 3).map((t) => t.replace(/[,;:.!?]+$/, ''));
+  return tokens.some((t, i) => NL_CLAUSE_START_WORD.test(t) || (i > 0 && /^⟦P[a-z]+⟧$/.test(t)));
+}
+
+/** Last round (ruling 24.3): a 'niet'/'geen' AFTER a trend NOUN qualifies the
+ * noun ('De stijging was niet groot'), it does not negate the trend — the
+ * after-verb scan skips these. */
+const NL_TREND_NOUN = /^(?:stijging(?:en)?|daling(?:en)?|toename|toenamen|afname|afnamen|groei|krimp)$/i;
 
 export interface DirectionClaim {
   dir: Direction;
@@ -101,13 +122,19 @@ function directionSequence(
   const out: DirectionClaim[] = [];
   for (const sentence of splitSentences(normalizeQuotes(text))) {
     const clauses = splitClauses(sentence);
-    const found: (DirectionClaim & { index: number; clauseEnd: number })[] = [];
+    const found: (DirectionClaim & { index: number; clauseEnd: number; word: string })[] = [];
     for (const clause of clauses) {
       const offset = clause.start - sentence.start;
       for (const [dir, re] of tables.trend) {
         const m = re.exec(clause.text);
         if (m) {
-          found.push({ dir, index: offset + m.index, clauseEnd: clause.end - sentence.start, negated: negation.test(clause.text.slice(0, m.index)) });
+          found.push({
+            dir,
+            index: offset + m.index,
+            clauseEnd: clause.end - sentence.start,
+            word: m[0],
+            negated: negation.test(clause.text.slice(0, m.index)),
+          });
         }
       }
     }
@@ -117,12 +144,14 @@ function directionSequence(
       const clause = clauses.find((c) => m.index >= c.start - sentence.start && m.index < c.end - sentence.start);
       const clauseStart = clause ? clause.start - sentence.start : 0;
       const clauseEnd = clause ? clause.end - sentence.start : sentence.text.length;
-      found.push({ dir, index: m.index, clauseEnd, negated: negation.test(sentence.text.slice(clauseStart, m.index)) });
+      found.push({ dir, index: m.index, clauseEnd, word: m[0], negated: negation.test(sentence.text.slice(clauseStart, m.index)) });
     }
     found.sort((a, b) => a.index - b.index);
     if (negationAfter !== null) {
       found.forEach((f, i) => {
         if (f.negated) return;
+        // A trend NOUN's following 'niet'/'geen' qualifies the noun (24.3).
+        if (NL_TREND_NOUN.test(/^\S+/.exec(f.word)![0])) return;
         // The window runs from the direction word itself (so 'nam niet af',
         // whose match spans the 'niet', counts) to the clause end, or to the
         // next direction word in the same clause.
@@ -136,6 +165,17 @@ function directionSequence(
           const conjunctions = [...window.slice(firstWordEnd).matchAll(NL_CONJUNCTION)];
           const last = conjunctions.at(-1);
           if (last) window = window.slice(0, firstWordEnd + last.index);
+        } else {
+          // No next direction word (24.2): end the window at the first
+          // coordinating conjunction that opens a NEW clause.
+          const firstWordEnd = /^\S*/.exec(window)![0].length;
+          for (const c of window.slice(firstWordEnd).matchAll(NL_COORD_CONJUNCTION)) {
+            const at = firstWordEnd + c.index;
+            if (newClauseFollows(window.slice(at + c[0].length))) {
+              window = window.slice(0, at);
+              break;
+            }
+          }
         }
         if (negationAfter.test(window)) f.negated = true;
       });
@@ -351,6 +391,25 @@ function checkUnitAfterPlaceholder(english: string, name: string, maskTable: Mas
   return problems;
 }
 
+/** C11 (last round, ruling 24.1): a STRUCTURAL negation backstop. Per item,
+ * the number of negator words (whole words, outside placeholders,
+ * case-insensitive) must be equal in the masked Dutch and the English. The
+ * word-level C10 reads negation per direction claim and cannot see every
+ * shape ('did not rise … no figures' vs one Dutch 'geen'); parity catches an
+ * added or dropped negator wherever it sits. "n't" counts once per
+ * occurrence; 'no longer' counts once (only 'no' is on the list). */
+const NL_NEGATORS = wordRe('niet|geen|nooit|nergens|noch|geenszins|evenmin|zonder|niets|niemand', 'giu');
+const EN_NEGATORS = new RegExp(
+  `${WORD_START}(?:not|no|never|neither|nor|nowhere|without|nothing|nobody|none)${WORD_END}|n't${WORD_END}`,
+  'giu',
+);
+
+function checkNegationParity(maskedDutch: string, english: string, name: string): string | null {
+  const nl = (outsidePlaceholders(maskedDutch).match(NL_NEGATORS) ?? []).length;
+  const en = (outsidePlaceholders(english).replace(/[‘’]/g, "'").match(EN_NEGATORS) ?? []).length;
+  return nl === en ? null : `C11: ${name} negation words differ (Dutch ${nl}, English ${en})`;
+}
+
 /** C9: every quantity word in `english` (outside placeholders) needs its
  * Dutch counterpart in `maskedDutch` (outside placeholders). */
 function checkQuantityWords(maskedDutch: string, english: string, name: string): string[] {
@@ -458,32 +517,34 @@ function checkRegionSentenceOrder(
   const dutchSentences = maskedDutch.split(/(?<=[.!?])\s+/);
   const englishSentences = english.split(/(?<=[.!?])\s+/);
   const groups: { dutch: Set<number>; english: Set<number> }[] = [];
-  if (dutchSentences.length === englishSentences.length) {
-    // Final bounded round (ruling 23C): equal sentence counts ⇒ align EVERY
-    // sentence by position, so a number-free sentence ('Utrecht had meer
-    // inwoners dan Zeeland.') has its region order pinned too — the
-    // number-placeholder grouping below never reaches such a sentence.
-    dutchSentences.forEach((_, i) => groups.push({ dutch: new Set([i]), english: new Set([i]) }));
-  } else {
-    dutchSentences.forEach((sentence, d) => {
-      const targets = new Set<number>();
-      for (const ph of numberPlaceholders(sentence)) {
-        const e = englishSentences.findIndex((es) => es.includes(ph));
-        if (e !== -1) targets.add(e);
+  // Final bounded round (ruling 23C) + last round (24.5): equal sentence
+  // counts ⇒ ALSO align every sentence by position, so a number-free
+  // sentence ('Utrecht had meer inwoners dan Zeeland.') has its region order
+  // pinned too. The number-based groups below ALWAYS run as well: an
+  // abbreviation split ('o.a. ') can make the counts match while the
+  // positions no longer line up.
+  const positional: { dutch: Set<number>; english: Set<number> }[] =
+    dutchSentences.length === englishSentences.length
+      ? dutchSentences.map((_, i) => ({ dutch: new Set([i]), english: new Set([i]) }))
+      : [];
+  dutchSentences.forEach((sentence, d) => {
+    const targets = new Set<number>();
+    for (const ph of numberPlaceholders(sentence)) {
+      const e = englishSentences.findIndex((es) => es.includes(ph));
+      if (e !== -1) targets.add(e);
+    }
+    if (targets.size === 0) return;
+    const group = { dutch: new Set([d]), english: targets };
+    for (const other of [...groups]) {
+      if ([...other.english].some((e) => group.english.has(e))) {
+        other.dutch.forEach((x) => group.dutch.add(x));
+        other.english.forEach((x) => group.english.add(x));
+        groups.splice(groups.indexOf(other), 1);
       }
-      if (targets.size === 0) return;
-      const group = { dutch: new Set([d]), english: targets };
-      for (const other of [...groups]) {
-        if ([...other.english].some((e) => group.english.has(e))) {
-          other.dutch.forEach((x) => group.dutch.add(x));
-          other.english.forEach((x) => group.english.add(x));
-          groups.splice(groups.indexOf(other), 1);
-        }
-      }
-      groups.push(group);
-    });
-  }
-  for (const group of groups) {
+    }
+    groups.push(group);
+  });
+  for (const group of [...groups, ...positional]) {
     const nlText = [...group.dutch].sort((a, b) => a - b).map((i) => dutchSentences[i]).join(' ');
     const enText = [...group.english].sort((a, b) => a - b).map((i) => englishSentences[i]).join(' ');
     const nlSeq = regionMentionSequence(nlText, regions, 'dutch');
@@ -602,6 +663,8 @@ export function checkTranslation(input: {
     if (c7r) problems.push(c7r);
     problems.push(...checkQuantityWords(masked[i]![1], text, name));
     if (maskTable) problems.push(...checkUnitAfterPlaceholder(text, name, maskTable));
+    const c11 = checkNegationParity(masked[i]![1], text, name);
+    if (c11) problems.push(c11);
   });
 
   // C8 for body only
