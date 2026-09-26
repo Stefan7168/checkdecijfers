@@ -70,14 +70,24 @@ What the Decision above under-specified or the build genuinely had to decide:
     pinned: a period moving past its number ('In ⟦Pa⟧ was X ⟦Na⟧' → 'X was ⟦Na⟧ in ⟦Pa⟧') is ordinary English.
     The period and region legs were added by the final whole-branch review: Dutch bodies are often ONE
     sentence, so a same-sentence swap ('In ⟦Pa⟧ … ⟦Na⟧, in ⟦Pb⟧ … ⟦Nb⟧' → 'In ⟦Pb⟧ … ⟦Na⟧, in ⟦Pa⟧ …', or
-    two regions traded) passed the sentence-level C8.
+    two regions traded) passed the sentence-level C8. A residual round then added a third region leg: first
+    mentions alone missed a swap in a LATER sentence ('… In ⟦Pb⟧ Zeeland had ⟦Ne⟧ and Utrecht ⟦Nf⟧'), so per
+    ALIGNED sentence group (a Dutch sentence and the English sentence(s) holding its number placeholders, merged
+    when English joins sentences) the ordered sequence of ALL region mentions must match too. A region moved
+    after its own number in the same order ('⟦Nc⟧ in Utrecht and ⟦Nd⟧ in Zeeland') passes.
   - **C8 (sentence binding, body):** each number placeholder's companion period placeholders and region names
     in its Dutch sentence land in the SAME English sentence.
   - **C9 (quantity words):** an English number word (one…twenty, thirty…ninety, hundred, thousand, million,
     billion, dozen), fraction/multiple (half, quarter, a third, twice, double(d), triple(d), quadruple(d),
     -fold) or percent word (percent / per cent / '%', percentage point) outside the placeholders fails unless
-    the masked Dutch item carries its Dutch counterpart (een/twee/…, helft, kwart, derde, verdubbeld/twee
-    keer, drievoudig, procent, procentpunt, …). The map is small and explicit, and 'percent' is never satisfied
+    the masked Dutch item carries its Dutch counterpart (één/twee/…, helft, kwart, derde, verdubbeld/twee
+    keer, drievoudig, procent, procentpunt, …). The residual round added fractions fourth…tenth ('a fifth', 'two
+    tenths' — never the ordinal 'the fifth year'; vierde…tiende), decade(s) (decennium, tien jaar) and
+    century (eeuw), and made a bare 'one' require the accented numeral 'één' — the unaccented article 'een' was
+    satisfying every ', one of the largest rises' out of thin air. C9 also fails a unit or scale word the model
+    writes right AFTER a placeholder that already carries its unit ('⟦Na⟧ points', '⟦Na⟧ euros', '⟦Na⟧
+    percent' when the fill already ends in that unit) — a check that needs the mask table, which
+    `translateAnswer` and the R8 reconstruction both pass to `checkTranslation`. The map is small and explicit, and 'percent' is never satisfied
     by 'procentpunt' (a unit swap is R10's own fabrication). The Dutch cardinal morphemes are a copy of the
     Dutch validator's list, pinned against it by a test.
   - **C3 compares an ORDERED sequence, and C10 checks negation.** Direction claims are read the way the Dutch
@@ -86,7 +96,11 @@ What the Decision above under-specified or the build genuinely had to decide:
     pass. C10 then requires each claim's negation to match: the Dutch side uses the Dutch validator's own
     negation-in-clause rule (zonder/geen/niet earlier in the clause; copied, pinned against validate.ts by a
     test), the English side its mirror (not / no / never / without / cannot / n't earlier in the clause) —
-    'niet gedaald' → 'has fallen' is a reversed claim.
+    'niet gedaald' → 'has fallen' is a reversed claim. Dutch also puts 'niet' AFTER a finite verb ('daalde
+    niet', 'nam niet af', 'steeg in ⟦Pa⟧ niet'), which the validator's earlier-only rule cannot see; the English
+    checks' OWN Dutch scan (never validate.ts, which stays byte-identical) also counts niet/geen/nooit after the
+    direction word, up to the clause end, the next direction word, or a coordinating conjunction (en, maar, of,
+    want, terwijl). The copy-drift test carries this as an explicit, commented exception.
 - **A number is masked TOGETHER with a directly following unit or scale word, as ONE placeholder** (final
   whole-branch review). The model never sees a unit, so it cannot swap one: 'procentpunt' → 'percent' or 'mln'
   → 'billion' is a fabricated number as surely as a changed digit. Joined: `%` (glued or after one space),
@@ -121,7 +135,7 @@ What the Decision above under-specified or the build genuinely had to decide:
   - C4 → "A caveat word was dropped."
   - C5 → "A required name was not used exactly."
   - C6 → "The number of chips or alternates changed."
-  - C7 → "Numbers were reordered."
+  - C7 → "Numbers, periods or regions were reordered."
   - C8 → "A number was moved away from its period or region."
   - C9 → "A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain."
   - C10 → "A negation was added or dropped."
