@@ -230,7 +230,7 @@ separate, not-yet-specified phase 3, per Decision above).
 negation meaning is word-list checked and five review rounds kept finding false passes of the same class (ruling 25
 reverted two word-level patches that opened new ones). #325 lists the confirmed residuals and is a precondition of the
 `ENGLISH_ANSWERS_ENABLED` flip; the recommended structural answer is an ADR 034-style independent semantic comparison,
-fail-closed to Dutch. The Dutch validator's own post-verb negation blind spot is tracked separately as [#326](../open-questions.md).
+fail-closed to Dutch. The Dutch validator's own negation blind spot found by the same review ([#326](../open-questions.md)) was fixed the same session (`5c74e633`).
 
 ## Revisit triggers
 
