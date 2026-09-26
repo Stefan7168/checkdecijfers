@@ -74,7 +74,11 @@ What the Decision above under-specified or the build genuinely had to decide:
     mentions alone missed a swap in a LATER sentence ('… In ⟦Pb⟧ Zeeland had ⟦Ne⟧ and Utrecht ⟦Nf⟧'), so per
     ALIGNED sentence group (a Dutch sentence and the English sentence(s) holding its number placeholders, merged
     when English joins sentences) the ordered sequence of ALL region mentions must match too. A region moved
-    after its own number in the same order ('⟦Nc⟧ in Utrecht and ⟦Nd⟧ in Zeeland') passes.
+    after its own number in the same order ('⟦Nc⟧ in Utrecht and ⟦Nd⟧ in Zeeland') passes. The final bounded
+    round closed the last gap: a sentence with NO number ('Utrecht had meer inwoners dan Zeeland.') never joined
+    such a group, so when the Dutch and English items have the same number of sentences, EVERY sentence is now
+    paired by position and its region order pinned; only when the counts differ does the number-based grouping
+    apply.
   - **C8 (sentence binding, body):** each number placeholder's companion period placeholders and region names
     in its Dutch sentence land in the SAME English sentence.
   - **C9 (quantity words):** an English number word (one…twenty, thirty…ninety, hundred, thousand, million,
@@ -97,10 +101,15 @@ What the Decision above under-specified or the build genuinely had to decide:
     negation-in-clause rule (zonder/geen/niet earlier in the clause; copied, pinned against validate.ts by a
     test), the English side its mirror (not / no / never / without / cannot / n't earlier in the clause) —
     'niet gedaald' → 'has fallen' is a reversed claim. Dutch also puts 'niet' AFTER a finite verb ('daalde
-    niet', 'nam niet af', 'steeg in ⟦Pa⟧ niet'), which the validator's earlier-only rule cannot see; the English
-    checks' OWN Dutch scan (never validate.ts, which stays byte-identical) also counts niet/geen/nooit after the
-    direction word, up to the clause end, the next direction word, or a coordinating conjunction (en, maar, of,
-    want, terwijl). The copy-drift test carries this as an explicit, commented exception.
+    niet', 'nam niet af', 'steeg in ⟦Pa⟧ niet', 'daalde in Utrecht en Zeeland niet'), which the validator's
+    earlier-only rule cannot see; the English checks' OWN Dutch scan (never validate.ts, which stays
+    byte-identical) also counts niet/geen/nooit after the direction word, up to the clause end or the next
+    direction word in the clause. A conjunction does not end that scan (an earlier conjunction stop let
+    'daalde in Utrecht en Zeeland niet' → 'fell in Utrecht and Zeeland' through); only a negation sitting between
+    a conjunction and the NEXT direction word belongs to that next word ('steeg naar ⟦Na⟧ en er was geen daling'
+    keeps the rise un-negated). The same scan also treats 'nooit' as a negator BEFORE the verb ('is nooit
+    gedaald'), English 'never' being its counterpart. The copy-drift test carries both extensions as explicit,
+    commented exceptions.
 - **A number is masked TOGETHER with a directly following unit or scale word, as ONE placeholder** (final
   whole-branch review). The model never sees a unit, so it cannot swap one: 'procentpunt' → 'percent' or 'mln'
   → 'billion' is a fabricated number as surely as a changed digit. Joined: `%` (glued or after one space),
