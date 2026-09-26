@@ -247,7 +247,8 @@ re-recorded; full numbers in ADR [059](059-english-meaning-check.md)'s live as-b
   system prompt's '1.'–'7.' digits stay the one audited digit exception).
 - Plus `upwards?`/`downwards?` in the English C10 direction lists (the Dutch lists already had `omhoog`/`omlaag`).
 Result: 13/14 verified on the first attempt; measured benchmark fallback 1/14 ≈ 7%, under the ~10% revisit trigger below.
-No English audit rows exist in production (flag never on), so the glossary/unit changes create no `audit:verify` divergences.
+No English audit rows existed in production before these changes, so they create no `audit:verify` divergences.
+**Flag ON since 2026-09-26 ~18:00 UTC (owner GO, session 134):** first live English row 336 verified, `audit:verify 330 336` clean.
 
 ## Revisit triggers
 

@@ -11,9 +11,9 @@ flag-gated adapter (`EUROSTAT_EXPLORER_ENABLED`, [ADR 048](docs/decisions/048-eu
 not yet reachable from the public chat. Country comparisons via Eurostat (a reader-clicked confirm chip,
 slice E2a) are built and staged but switched off behind `EUROSTAT_SIBLINGS_ENABLED` until the owner's
 step-6 flip. The interface itself is bilingual (a Dutch/English switch
-in the header); translating the answers themselves for an English reader is built (ADR 058) but switched off
-behind `ENGLISH_ANSWERS_ENABLED` until [#325](docs/open-questions.md) is resolved (its fix, an independent AI meaning
-check before any English answer is shown, is built — ADR 059 — and waits for a measured recording run after 2026-10-01). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
+in the header); a reader on the English interface gets answers translated into English (ADR 058, LIVE since 2026-09-26),
+numbers masked from the model and filled back in by code, with an independent AI meaning check (ADR 059) before any
+English answer is shown; a failed check shows the checked Dutch answer instead. A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
 chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when comparing
 multiple series across multiple periods, each offered only when it stays honest for the data on
 screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5; on CBS/Eurostat charts and, since

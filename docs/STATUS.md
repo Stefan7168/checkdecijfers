@@ -30,7 +30,9 @@ before trusting this). Previous kickoff: [session-briefs/2026-09-26-session-134-
   fixes from the first real recording; final **13/14 verified on the first attempt, B10 falls back** (≈7% fallback, under
   the ~10% trigger); the 13 real renderings are must-pass cases. Verify block: root+web tsc, backend 3694 pass / 1 todo,
   web 3085/3085, benchmark 14/14 + 6/6 + 0 fabricated (template fallbacks 3), web build, `audit:verify` 1–309 clean
-  (2 pinned), `/code-review` LOW clean. **Next: the owner decides `ENGLISH_ANSWERS_ENABLED` (RUNBOOK steps 4–5).**
+  (2 pinned), `/code-review` LOW clean. **✅ ENGLISH ANSWERS LIVE since 2026-09-26 ~18:00 UTC** (owner GO; flag set, redeployed
+  via tip run 36259837787; live check: audit row 336 verified, C12 Sonnet 5 "same"). Wording follow-up [#328](open-questions.md)
+  ("Pronounced bankruptcies"); phase-1 UI gaps #324.
 - **Live benchmark 2026-09-26 (session 134): PASS — 14/14 + 6/6 + 0 fabricated**, median 10.7 s. Template fallbacks 4 (09-08:
   3): three are the old R9 "period '2025 4e kwartaal' not named" strictness (B1/unemployment-Q4-style questions), one is
   the old clause-direction rule rejecting "na een daling in 2023 volgde een herstel in 2024" on a rising series — **none

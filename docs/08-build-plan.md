@@ -1204,6 +1204,6 @@ after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (
 [plan](superpowers/plans/2026-09-26-english-meaning-check.md)), hermetic half ✅ built and merged dark (`3438deed`, CI
 36252531510 green). **Session 134 (2026-09-26/27): recording run ✅ DONE** (the "cap" was our own $35 spend limit, raised
 to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) — see ADR 059's live as-built note.
-**Only the owner's `ENGLISH_ANSWERS_ENABLED` flip (RUNBOOK steps 4–5) remains.** Owner-supervised. Phases 2 (refusals/clarifications) and 3
+**✅ Flag flipped the same session (owner GO) — English answers LIVE since 2026-09-26.** Owner-supervised. Phases 2 (refusals/clarifications) and 3
 (chart texts) get their own specs.
 
