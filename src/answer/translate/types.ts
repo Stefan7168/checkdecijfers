@@ -7,6 +7,7 @@
 import type { MaskEntry } from './mask.ts';
 import type { TranslationItems } from './check.ts';
 import type { EnglishLines } from './lines.ts';
+import type { MeaningCheckRecord } from './meaning-check.ts';
 
 export const ENGLISH_RENDERING_SCHEMA_VERSION = 1 as const;
 
@@ -23,6 +24,10 @@ export interface EnglishAttempt {
   ok: boolean;
   problems: string[];
   error: string | null;
+  /** #325 check C12 — present only on an attempt whose translation passed
+   * C1–C11 (the check never runs otherwise). Additive to schema v1: no
+   * English row has ever been stored (the flag has never been on). */
+  meaningCheck?: MeaningCheckRecord;
 }
 
 export interface EnglishRendering {

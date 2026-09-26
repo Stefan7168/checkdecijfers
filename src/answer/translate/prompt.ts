@@ -70,6 +70,11 @@ const PROBLEM_KIND_SENTENCE: [RegExp, string][] = [
   [/^C9:/, 'A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain.'],
   [/^C10:/, 'A negation was added or dropped.'],
   [/^C11:/, 'The number of negation words (not, no, never) changed.'],
+  // #325 check C12 problems carry the meaning-checker's own `differences`
+  // text (a short model-written description, potentially digit-bearing via
+  // a quoted Dutch/English fragment) — which is exactly why the model only
+  // ever sees this fixed sentence, never the raw C12 problem string.
+  [/^C12:/, 'The meaning of a sentence changed: a direction, negation, strength, comparison, hedge, or which region or period a statement is about.'],
 ];
 const JSON_SHAPE_PROBLEM_SENTENCE = 'The output was not valid JSON of the required shape.';
 const FALLBACK_PROBLEM_SENTENCE = 'A translation check failed.';

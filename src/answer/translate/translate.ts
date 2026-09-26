@@ -1,10 +1,11 @@
 // ADR 058 (English answers, Task 6): the orchestrator. Wires Tasks 1–5 into
 // one step — mask the validated Dutch answer (no digit ever reaches the
 // model), ask the model to translate the digit-free text, gate the output
-// with checkTranslation's deterministic checks, fill numbers back in
-// English notation, and build the English structural lines — with a
-// fail-closed-to-Dutch fallback at every failure point (principle c: never
-// guess, never serve an unchecked translation).
+// with checkTranslation's deterministic checks, run check C12 (#325, an
+// independent meaning comparison), fill numbers back in English notation,
+// and build the English structural lines — with a fail-closed-to-Dutch
+// fallback at every failure point (principle c: never guess, never serve an
+// unchecked translation).
 //
 // `prepareTranslation` is exported on its own (Controller ruling 1) because
 // it is EVERYTHING deterministic that precedes the model call, re-derivable
@@ -27,6 +28,7 @@ import {
   translateStalenessWarning,
 } from './lines.ts';
 import { createMasker, fillPlaceholders, hasDigitOutsidePlaceholders, type MaskEntry } from './mask.ts';
+import { runMeaningCheck } from './meaning-check.ts';
 import { buildTranslateRequest, TRANSLATE_PROMPT_VERSION, TRANSLATE_SYSTEM_PROMPT } from './prompt.ts';
 import { ENGLISH_RENDERING_SCHEMA_VERSION, TRANSLATE_TIMEOUT_MS, type EnglishAttempt, type EnglishRendering } from './types.ts';
 
@@ -236,14 +238,14 @@ function fallbackRendering(input: {
 }
 
 /** The Task 6 orchestrator (ADR 058 §3): mask → translate (up to 2 attempts)
- * → check → fill → assemble, fail-closed to Dutch at every step. NEVER
+ * → C1–C11 → C12 → fill → assemble, fail-closed to Dutch at every step. NEVER
  * throws by design (every known failure mode below produces a `fallback`
  * rendering); `attachEnglish` additionally wraps the call as a last-resort
  * net for anything unanticipated. */
 export async function translateAnswer(
   response: AnswerResponse,
   client: LlmClient,
-  opts: { model?: string; timeoutMs?: number } = {},
+  opts: { model?: string; timeoutMs?: number; checkClient?: LlmClient; checkModel?: string } = {},
 ): Promise<EnglishRendering> {
   let prep: PreparedTranslation;
   try {
@@ -322,7 +324,12 @@ export async function translateAnswer(
   });
   try {
     return await Promise.race([
-      runLadder(response, client, { prep, stalenessWarning, model: opts.model }, state),
+      runLadder(
+        response,
+        client,
+        { prep, stalenessWarning, model: opts.model, checkClient: opts.checkClient ?? client, checkModel: opts.checkModel },
+        state,
+      ),
       deadline,
     ]);
   } finally {
@@ -341,7 +348,13 @@ interface LadderState {
 async function runLadder(
   response: AnswerResponse,
   client: LlmClient,
-  ctx: { prep: PreparedTranslation; stalenessWarning: string | null; model: string | undefined },
+  ctx: {
+    prep: PreparedTranslation;
+    stalenessWarning: string | null;
+    model: string | undefined;
+    checkClient: LlmClient;
+    checkModel: string | undefined;
+  },
   state: LadderState,
 ): Promise<EnglishRendering> {
   const { glossary, maskedDutch, maskTable, untranslatedNames } = ctx.prep;
@@ -405,6 +418,24 @@ async function runLadder(
       continue;
     }
 
+    // #325 check C12: an independent meaning comparison of the masked Dutch
+    // and the masked English, only after C1–C11 pass (it never pays for a
+    // translation the free checks already reject). Reject-only and
+    // fail-closed: 'different' retries with the fixed C12 sentence; an
+    // ERROR fails the attempt without steering the retry.
+    const meaning = await runMeaningCheck(maskedDutch, parsed, ctx.checkClient, { model: ctx.checkModel });
+    if (state.expired) return LATE;
+    if (meaning.record.status !== 'same') {
+      attempts.push({
+        ok: false,
+        problems: meaning.problems,
+        error: meaning.record.status === 'error' ? `meaning check: ${meaning.record.error}` : null,
+        meaningCheck: meaning.record,
+      });
+      if (meaning.record.status === 'different') retryProblems = meaning.problems;
+      continue;
+    }
+
     // Passed every deterministic check — fill placeholders and assemble.
     // Still inside a try/catch: an unexpected throw here (fillPlaceholders
     // hitting an unresolved placeholder, despite C1 already having checked
@@ -419,7 +450,7 @@ async function runLadder(
       const text = assembleEnglishText(filledBody, lines, stalenessWarning);
       const chips = filledChips.map((label, i) => ({ label, submit: response.suggestions[i]! }));
 
-      attempts.push({ ok: true, problems: [], error: null });
+      attempts.push({ ok: true, problems: [], error: null, meaningCheck: meaning.record });
       return {
         schemaVersion: ENGLISH_RENDERING_SCHEMA_VERSION,
         status: 'verified',
@@ -459,11 +490,11 @@ const LATE = null as unknown as EnglishRendering;
  * an unhandled rejection reaching the caller. */
 export async function attachEnglish(
   response: ComposedResponse,
-  opts: { lang?: 'nl' | 'en'; client?: LlmClient } = {},
+  opts: { lang?: 'nl' | 'en'; client?: LlmClient; checkClient?: LlmClient } = {},
 ): Promise<ComposedResponse> {
   if (opts.lang !== 'en' || !opts.client || response.kind !== 'answer') return response;
   try {
-    const english = await translateAnswer(response, opts.client, {});
+    const english = await translateAnswer(response, opts.client, { checkClient: opts.checkClient });
     return { ...response, english };
   } catch (error) {
     const english = fallbackRendering({

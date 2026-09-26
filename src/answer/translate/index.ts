@@ -38,3 +38,12 @@ export {
   translateAnswer,
 } from './translate.ts';
 export type { PreparedTranslation } from './translate.ts';
+
+export {
+  meaningCheckScopeProblems,
+  meaningItems,
+  MEANING_CHECK_MODEL,
+  MEANING_CHECK_PROMPT_VERSION,
+  runMeaningCheck,
+} from './meaning-check.ts';
+export type { MeaningCheckRecord, MeaningItem, MeaningVerdict } from './meaning-check.ts';

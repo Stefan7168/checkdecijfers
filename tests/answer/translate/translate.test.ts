@@ -21,6 +21,7 @@ import {
 } from '../../../src/answer/translate/translate.ts';
 import { TRANSLATE_TIMEOUT_MS } from '../../../src/answer/translate/types.ts';
 import type { TranslationItems } from '../../../src/answer/translate/check.ts';
+import { isMeaningCheckRequest, meaningClient, sameMeaningOutput, withSameMeaning } from '../../helpers/meaning-check-stub.ts';
 
 /** templateOnly makes composeAnswer's LLM rung unreachable (ADR 024) — a real
  * reach for this client would be a bug, not a fallback (same pattern as
@@ -82,6 +83,9 @@ function stub(outputs: string[]): LlmClient & { requests: LlmRequest[] } {
   return {
     requests,
     async complete(req: LlmRequest) {
+      if (isMeaningCheckRequest(req)) {
+        return { outputText: sameMeaningOutput(req), model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } };
+      }
       requests.push(req);
       const outputText = outputs.shift() ?? '{}';
       return { outputText, model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } };
@@ -199,7 +203,7 @@ describe('translateAnswer', () => {
     expect(rendering.chips[0]!.submit).toBe(response.suggestions[0]);
     expect(rendering.chips[0]!.label).toBe('What was this a year earlier?');
     expect(rendering.body).toContain('unemployment rate');
-    expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null }]);
+    expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null, meaningCheck: expect.objectContaining({ status: 'same' }) }]);
   });
 
   it('2. no request the model sees ever carries a digit — using the digit-bearing population fixture, across a retry (rulings 9c/9d/10)', async () => {
@@ -236,7 +240,7 @@ describe('translateAnswer', () => {
     const rendering = await translateAnswer(response, client);
 
     expect(rendering.status).toBe('verified');
-    expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null }]);
+    expect(rendering.attempts).toEqual([{ ok: true, problems: [], error: null, meaningCheck: expect.objectContaining({ status: 'same' }) }]);
     expect(rendering.text).toContain('Population on 1 January');
     expect(rendering.text).toContain('18,044,027');
   });
@@ -398,14 +402,14 @@ describe('translateAnswer — fallback paths (ruling 11, Task 6 fix round 1)', (
     const faithful = faithfulEnglish(maskedDutch);
     const requests: LlmRequest[] = [];
     let calls = 0;
-    const client: LlmClient = {
+    const client: LlmClient = withSameMeaning({
       async complete(req) {
         requests.push(req);
         calls += 1;
         if (calls === 1) throw new Error('transient outage');
         return { outputText: JSON.stringify(faithful), model: req.model, stopReason: 'end_turn', usage: { inputTokens: 1, outputTokens: 1 } };
       },
-    };
+    });
 
     const rendering = await translateAnswer(response, client);
 
@@ -617,5 +621,90 @@ describe('last round (ruling 24.1): C11 retry sentence', () => {
     expect(req.system).toContain('The number of negation words (not, no, never) changed.');
     expect(req.system).toContain('A negation was added or dropped.');
     expect(req.system).not.toContain('C11:');
+  });
+});
+
+describe('C12 meaning check in the ladder (#325)', () => {
+  it('a faithful translation is checked once and verifies; the final attempt carries the same-meaning record', async () => {
+    const response = await makeAnswerResponse();
+    const translate = stub([JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch))]);
+    const check = meaningClient(() => true);
+    const rendering = await translateAnswer(response, translate, { checkClient: check });
+    expect(rendering.status).toBe('verified');
+    expect(check.requests).toHaveLength(1);
+    expect(rendering.attempts.at(-1)!.meaningCheck!.status).toBe('same');
+  });
+
+  it('C12 is never called for a translation that fails C1–C11', async () => {
+    const response = await makeAnswerResponse();
+    const check = meaningClient(() => true);
+    const rendering = await translateAnswer(response, stub(['{}', '{}']), { checkClient: check });
+    expect(rendering.status).toBe('fallback');
+    expect(check.requests).toHaveLength(0);
+  });
+
+  it('"different" on attempt 1 ⇒ a retry with the fixed C12 sentence (never the checker text) ⇒ verified on attempt 2', async () => {
+    const response = await makeAnswerResponse();
+    const faithful = JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch));
+    const translate = stub([faithful, faithful]);
+    const check = meaningClient((_id, call) => call > 1);
+    const rendering = await translateAnswer(response, translate, { checkClient: check });
+    expect(rendering.status).toBe('verified');
+    expect(rendering.attempts[0]!.problems[0]).toMatch(/^C12: /);
+    expect(rendering.attempts[0]!.meaningCheck!.status).toBe('different');
+    const retrySystem = translate.requests[1]!.system;
+    expect(retrySystem).toContain('The meaning of a sentence changed');
+    expect(retrySystem).not.toContain('direction reversed');
+  });
+
+  it('"different" on both attempts ⇒ Dutch fallback', async () => {
+    const response = await makeAnswerResponse();
+    const faithful = JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch));
+    const rendering = await translateAnswer(response, stub([faithful, faithful]), { checkClient: meaningClient(() => false) });
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.body).toBeNull();
+    expect(rendering.attempts.every((a) => a.meaningCheck?.status === 'different')).toBe(true);
+  });
+
+  it('a checker ERROR fails closed: both attempts error ⇒ Dutch fallback, never verified', async () => {
+    const response = await makeAnswerResponse();
+    const faithful = JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch));
+    const broken: LlmClient = { complete: async () => { throw new Error('checker outage'); } };
+    const rendering = await translateAnswer(response, stub([faithful, faithful]), { checkClient: broken });
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts[0]!.error).toMatch(/^meaning check: .*checker outage/);
+    expect(rendering.attempts[0]!.meaningCheck!.status).toBe('error');
+  });
+
+  it('without a checkClient the translate client is used for the check too', async () => {
+    const response = await makeAnswerResponse();
+    const seen: string[] = [];
+    const client = withSameMeaning(stub([JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch))]));
+    const spy: LlmClient = { complete: (req) => { seen.push(isMeaningCheckRequest(req) ? 'check' : 'translate'); return client.complete(req); } };
+    const rendering = await translateAnswer(response, spy);
+    expect(rendering.status).toBe('verified');
+    expect(seen).toEqual(['translate', 'check']);
+  });
+
+  it('a deadline that expires during the check ⇒ timeout fallback, no further call', async () => {
+    const response = await makeAnswerResponse();
+    let checkCalls = 0;
+    const slowCheck: LlmClient = { complete: () => { checkCalls += 1; return new Promise<never>(() => {}); } };
+    const rendering = await translateAnswer(
+      response,
+      stub([JSON.stringify(faithfulEnglish(prepareTranslation(response).maskedDutch))]),
+      { checkClient: slowCheck, timeoutMs: 30 },
+    );
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.attempts.at(-1)).toEqual({ ok: false, problems: [], error: 'timeout' });
+    expect(checkCalls).toBe(1);
+  });
+
+  it('the C12 retry sentence is fixed and digit-free', () => {
+    const req = buildTranslateRequest({ body: 'x', chips: [], definition: null, alternates: [] }, [], {
+      retryProblems: ['C12: chip-a meaning differs (rose → hardly rose, item 2)'],
+    });
+    expect(req.system).toContain('The meaning of a sentence changed: a direction, negation, strength, comparison, hedge, or which region or period a statement is about.');
+    expect(req.system).not.toContain('hardly');
   });
 });
