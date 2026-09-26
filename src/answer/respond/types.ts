@@ -18,6 +18,10 @@ import type { FreshnessInfo, QueryRefusal, ValidatedResult } from '../../query/i
 import type { ComposedAnswer } from '../compose/index.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts';
+// ADR 058 (English answers): a pure-type import from translate/types.ts
+// only (never translate/translate.ts, which imports AnswerResponse FROM
+// here) — keeps this the leaf side of the dependency, no cycle.
+import type { EnglishRendering } from '../translate/types.ts';
 // WP26 mechanism A (ADR 024): the clickable-option payload is DEFINED in
 // intent/types.ts (where clarification outcomes are born) and re-exported here
 // so the web layer and the audit reader import it from the response contract,
@@ -291,6 +295,15 @@ export interface AnswerResponse extends ResponseBase {
    * to the pre-#197 one. Client-held between the turns and re-validated
    * fail-closed on the way back, exactly like a clarification's pending. */
   pending?: PendingClarification;
+  /** ADR 058 (English answers, Task 6): the English rendering, set ONLY by
+   * `attachEnglish` when English was asked for and a translating client was
+   * supplied (A1: present only when translation was attempted). Absent on
+   * every Dutch-only turn and every row stored before this feature —
+   * readers use `?? null`. The Dutch fields above (`answer`, `text`,
+   * `suggestions`) are byte-untouched either way; this is a strictly
+   * additive sibling, never a replacement (principle a: the Dutch pipeline
+   * stays the one ground truth). */
+  english?: EnglishRendering;
 }
 
 export interface ClarificationResponse extends ResponseBase {

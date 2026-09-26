@@ -98,6 +98,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       category: 'ignored',
       why: '#197 step 3: the chip-carrier state behind the takeable follow-up chips (the comparisons first, every takeable chip since #73 v2 — their pre-verified intents), offered on this turn; like the refusal-side rescue pending, the REPLY turn\'s copy (record.pendingClarification, checked against reply_text) is what reconstruct reads',
     },
+    english: {
+      category: 'ignored',
+      why: 'ADR 058 (English answers, Task 6): set only by attachEnglish, present only when translation was attempted (A1). Its deterministic half (glossary/caveats/maskedDutch) IS re-derivable byte-for-byte via translate.ts\'s prepareTranslation(response) — the same function translateAnswer itself calls — but no reconstruct check wires that up yet; the model-translated half (the accepted body/lines/text) has no ground truth to re-derive against, same policy as `parse`. Wiring the deterministic-half check into reconstruct.ts is a later task in this plan (docs/superpowers/plans/2026-09-25-english-answers-phase1.md); revisit this entry to `shape-checked` when that check lands.',
+    },
   },
   ClarificationResponse: {
     kind: { category: 'shape-checked' },
@@ -318,7 +322,7 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 9, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`
+      AnswerResponse: 10, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`
       ClarificationResponse: 6,
       RefusalResponse: 11,
       ComposedAnswer: 18, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`
