@@ -13,6 +13,7 @@
 // compare against what was recorded, so it must depend on nothing but its
 // argument.
 import type { ValidatedResult } from '../../query/index.ts';
+import { translateUnit } from '../../registry/english-names.ts';
 import { resolveSourceForTable } from '../../sources/registry.ts';
 import type { LlmClient } from '../llm/client.ts';
 import type { AnswerResponse, ComposedResponse } from '../respond/types.ts';
@@ -87,7 +88,9 @@ function caveatsForResult(result: ValidatedResult): { dutch: string; english: st
   });
 }
 
-const hasDigit = (s: string): boolean => /\p{Nd}/u.test(s);
+// Final-review fix wave (ruling 17c): \p{N}, the same class C2 and the
+// pre-call gate use — a name carrying "²" or "½" is digit-bearing too.
+const hasDigit = (s: string): boolean => /\p{N}/u.test(s);
 
 export interface PreparedTranslation {
   /** Ruling 9 (Task 6 fix round 1): the MODEL-FACING glossary only — every
@@ -134,7 +137,14 @@ export function prepareTranslation(response: AnswerResponse): PreparedTranslatio
   const names = digitBearingGlossary.map((g) => ({ dutch: g.dutch, english: g.english }));
 
   const caveats = caveatsForResult(result);
-  const masker = createMasker({ names, periodLabels: periodLabelPairs(result), caveats });
+  // Final-review fix wave (ruling 17a): the result's registered units that
+  // have an English form in the shared name list — a number directly
+  // followed by one is masked together with it (see mask.ts), so the model
+  // can never swap the unit. A unit with no English form stays text.
+  const units = [...new Set(result.cells.map((c) => c.unit.trim()))]
+    .filter((u) => u.length > 0 && translateUnit(u) !== u)
+    .map((u) => ({ dutch: u, english: translateUnit(u) }));
+  const masker = createMasker({ names, periodLabels: periodLabelPairs(result), caveats, units });
 
   const dutch: TranslationItems = {
     body: response.answer.body,

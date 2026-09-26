@@ -53,7 +53,8 @@ describe('createMasker', () => {
     expect(out).not.toMatch(/\d/);
     expect(m.entries.filter((e) => e.kind === 'period').map((e) => e.dutch)).toEqual(['2023 1e kwartaal', '2023']);
     expect(m.entries.filter((e) => e.kind === 'caveat')).toHaveLength(1);
-    expect(m.entries.filter((e) => e.kind === 'number').map((e) => e.dutch)).toEqual(['1.234,5', '1', '000', '3,5']);
+    // Final-review fix wave (ruling 17a): '3,5%' — the '%' is masked WITH its number.
+    expect(m.entries.filter((e) => e.kind === 'number').map((e) => e.dutch)).toEqual(['1.234,5', '1', '000', '3,5%']);
   });
 
   it('gives unique placeholders across calls on the same masker', () => {

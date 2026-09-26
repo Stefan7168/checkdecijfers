@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkTranslation, dutchDirections, englishDirections } from '../../../src/answer/translate/check.ts';
-import { createMasker } from '../../../src/answer/translate/mask.ts';
+import { createMasker, hasDigitOutsidePlaceholders } from '../../../src/answer/translate/mask.ts';
 
 const items = (body: string, chips: string[] = []) => ({ body, chips, definition: null, alternates: [] });
 const glossary = [{ dutch: 'Noord-Holland', english: 'North Holland', kind: 'region' as const, translated: true }];
@@ -151,5 +151,140 @@ describe('controller ruling 15 (Task 6b): C5/C8 read the masked Dutch', () => {
     // reading the masked sentence directly still catches it.
     const unfaithful = items(`${caveatPh} There were ${numberPh} inhabitants in ${periodPh}. Utrecht grew.`);
     expect(checkTranslation({ maskedDutch, english: unfaithful, glossary: regionGlossary }).join()).toMatch(/C8/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review fix wave (ruling 17, CRITICAL 1): units, scale words and
+// number words. Every fixture is built with the REAL masker — never a
+// hand-counted placeholder id.
+// ---------------------------------------------------------------------------
+
+function maskOne(dutch: string, units: { dutch: string; english: string }[] = []) {
+  const masker = createMasker({ periodLabels: [{ dutch: '2023', english: '2023' }], caveats: [], units });
+  const masked = masker.mask(dutch);
+  return { masked, entries: masker.entries };
+}
+
+describe('ruling 17a: a number and its directly-following unit/scale word are ONE placeholder', () => {
+  it.each([
+    ['De werkloosheid steeg met 0,5 procentpunt.', '0,5 procentpunt', '0.5 percentage points'],
+    ['De werkloosheid steeg met 1 procentpunt.', '1 procentpunt', '1 percentage point'],
+    ['De werkloosheid steeg met 2 procentpunten.', '2 procentpunten', '2 percentage points'],
+    ['Het cijfer was 3,5%.', '3,5%', '3.5%'],
+    ['Het cijfer was 3,8 %.', '3,8 %', '3.8%'],
+    ['Het cijfer was 3,5 procent.', '3,5 procent', '3.5%'],
+    ['De uitgaven waren 12,3 mln euro.', '12,3 mln', '12.3 million'],
+    ['De uitgaven waren 12,3 mld euro.', '12,3 mld', '12.3 billion'],
+    ['Het waren 17 miljoen mensen.', '17 miljoen', '17 million'],
+    ['Het waren 2 miljard mensen.', '2 miljard', '2 billion'],
+  ])('%s', (dutch, token, english) => {
+    const { masked, entries } = maskOne(dutch);
+    const numbers = entries.filter((e) => e.kind === 'number');
+    expect(numbers).toHaveLength(1);
+    expect(numbers[0]!.dutch).toBe(token);
+    expect(numbers[0]!.english).toBe(english);
+    expect(masked).not.toMatch(/procent|mln|mld|miljoen|miljard|%/);
+  });
+
+  it("a registered unit with an English name joins its number (longest first: 'mln euro' beats 'mln')", () => {
+    const { masked, entries } = maskOne('De uitgaven waren 12,3 mln euro.', [{ dutch: 'mln euro', english: 'million euros' }]);
+    const [n] = entries.filter((e) => e.kind === 'number');
+    expect(n!.dutch).toBe('12,3 mln euro');
+    expect(n!.english).toBe('12.3 million euros');
+    expect(masked).toBe(`De uitgaven waren ${n!.placeholder}.`);
+  });
+
+  it('a unit word NOT directly after a number stays text', () => {
+    const { masked } = maskOne('Het verschil in procentpunt was 0,5.');
+    expect(masked).toMatch(/in procentpunt was ⟦N[a-z]+⟧\./);
+  });
+
+  it("adversarial: 'steeg met ⟦Na⟧ procentpunt' → 'rose by ⟦Na⟧ percent' fails", () => {
+    const { masked } = maskOne('De werkloosheid steeg met 0,5 procentpunt.');
+    const ph = masked.match(/⟦N[a-z]+⟧/)![0];
+    const english = items(`Unemployment rose by ${ph} percent.`);
+    expect(checkTranslation({ maskedDutch: items(masked), english, glossary: [] }).join()).toMatch(/C9/);
+  });
+
+  it("adversarial: '⟦Na⟧ mln euro' → '⟦Na⟧ billion euros' fails", () => {
+    const { masked } = maskOne('De uitgaven waren 12,3 mln euro.', [{ dutch: 'mln euro', english: 'million euros' }]);
+    const ph = masked.match(/⟦N[a-z]+⟧/)![0];
+    const english = items(`Spending was ${ph} billion euros.`);
+    expect(checkTranslation({ maskedDutch: items(masked), english, glossary: [] }).join()).toMatch(/C9/);
+  });
+
+  it('passing: the faithful rendering of a combined placeholder passes', () => {
+    const { masked } = maskOne('De werkloosheid steeg met 0,5 procentpunt.');
+    const ph = masked.match(/⟦N[a-z]+⟧/)![0];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`Unemployment rose by ${ph}.`), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('ruling 17b: C9 — number, scale, fraction, multiple and percent words need a Dutch counterpart', () => {
+  it("adversarial: an added 'roughly double the level of ten years before' fails", () => {
+    const { masked } = maskOne('Het aantal was 1.234 in 2023.');
+    const [n, p] = [masked.match(/⟦N[a-z]+⟧/)![0], masked.match(/⟦P[a-z]+⟧/)![0]];
+    const english = items(`The number was ${n} in ${p}, roughly double the level of ten years before.`);
+    const problems = checkTranslation({ maskedDutch: items(masked), english, glossary: [] });
+    expect(problems.join()).toMatch(/C9.*double/);
+    expect(problems.join()).toMatch(/C9.*ten/);
+  });
+
+  it.each([
+    ['half', 'Het aantal was 1.234 in 2023.', 'The number was {n} in {p}, half the peak.'],
+    ['twice', 'Het aantal was 1.234 in 2023.', 'The number was {n} in {p}, twice as high.'],
+    ['tripled', 'Het aantal was 1.234 in 2023.', 'The number tripled to {n} in {p}.'],
+    ['a third', 'Het aantal was 1.234 in 2023.', 'The number was {n} in {p}, a third more.'],
+    ['threefold', 'Het aantal was 1.234 in 2023.', 'The number was {n} in {p}, a threefold rise.'],
+    ['million', 'Het aantal was 1.234 in 2023.', 'The number was {n} million in {p}.'],
+    ['percentage points', 'Het aantal was 1.234 in 2023.', 'The number was {n} percentage points in {p}.'],
+    ['%', 'Het aantal was 1.234 in 2023.', 'The number was {n}% in {p}.'],
+    ['dozen', 'Het aantal was 1.234 in 2023.', 'The number was {n} in {p}, a dozen more.'],
+  ])('adversarial: an added %s fails', (_word, dutch, template) => {
+    const { masked } = maskOne(dutch);
+    const english = template.replace('{n}', masked.match(/⟦N[a-z]+⟧/)![0]).replace('{p}', masked.match(/⟦P[a-z]+⟧/)![0]);
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] }).join()).toMatch(/C9/);
+  });
+
+  it.each([
+    ['helft', 'De eerste helft van 2023 was rustig.', 'The first half of {p} was quiet.'],
+    ['verdubbeld', 'Het aantal is verdubbeld tot 1.234.', 'The number has doubled to {n}.'],
+    ['twee keer', 'Het is twee keer zo hoog: 1.234.', 'It is twice as high: {n}.'],
+    ['procent (not after a number)', 'Het aandeel in procent was 1.234.', 'The share in percent was {n}.'],
+    ['procentpunt (not after a number)', 'Het verschil in procentpunt was 1.234.', 'The difference in percentage points was {n}.'],
+  ])('passing: an English %s counterpart the masked Dutch carries passes', (_word, dutch, template) => {
+    const { masked } = maskOne(dutch);
+    const english = template
+      .replace('{n}', masked.match(/⟦N[a-z]+⟧/)?.[0] ?? '')
+      .replace('{p}', masked.match(/⟦P[a-z]+⟧/)?.[0] ?? '');
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(english), glossary: [] })).toEqual([]);
+  });
+
+  it("'percent' is not satisfied by a Dutch 'procentpunt' (a unit swap, not a counterpart)", () => {
+    const { masked } = maskOne('Het verschil in procentpunt was 1.234.');
+    const n = masked.match(/⟦N[a-z]+⟧/)![0];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The difference in percent was ${n}.`), glossary: [] }).join())
+      .toMatch(/C9/);
+  });
+
+  it('ordinals inside period placeholders are unaffected (masked), and a plain ordinal word is not a number word', () => {
+    const { masked } = maskOne('In 2023 was het aantal 1.234.');
+    const [n, p] = [masked.match(/⟦N[a-z]+⟧/)![0], masked.match(/⟦P[a-z]+⟧/)![0]];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`In ${p} the number was ${n}.`), glossary: [] })).toEqual([]);
+  });
+});
+
+describe('ruling 17c: C2 and the digit gate see every Unicode number (\\p{N}), not just decimal digits', () => {
+  it.each([['½'], ['²'], ['Ⅻ'], ['①']])('adversarial: a %s written by the model fails C2', (numeral) => {
+    const { masked } = maskOne('Het aantal was 1.234.');
+    const n = masked.match(/⟦N[a-z]+⟧/)![0];
+    expect(checkTranslation({ maskedDutch: items(masked), english: items(`The number was ${n}, ${numeral} of it.`), glossary: [] }).join())
+      .toMatch(/C2/);
+  });
+
+  it('hasDigitOutsidePlaceholders catches a non-decimal numeral', () => {
+    expect(hasDigitOutsidePlaceholders('about ½')).toBe(true);
+    expect(hasDigitOutsidePlaceholders('km²')).toBe(true);
   });
 });

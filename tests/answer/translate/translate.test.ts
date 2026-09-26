@@ -96,8 +96,11 @@ function stub(outputs: string[]): LlmClient & { requests: LlmRequest[] } {
 function faithfulEnglish(masked: TranslationItems): TranslationItems {
   return {
     body: masked.body.replace(
-      /Werkloosheidspercentage, seizoengecorrigeerd was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)%\./,
-      'The seasonally adjusted unemployment rate was $2% in $1.',
+      // Final-review fix wave (ruling 17a): the '%' is masked together with
+      // its number (one placeholder, filled as '4.0%'), so it no longer
+      // appears as text after the placeholder.
+      /Werkloosheidspercentage, seizoengecorrigeerd was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)\./,
+      'The seasonally adjusted unemployment rate was $2 in $1.',
     ),
     chips: masked.chips.map((chip) => chip.replace('Hoe was dit een jaar eerder?', 'What was this a year earlier?')),
     definition:
@@ -456,5 +459,46 @@ describe('attachEnglish', () => {
     // The Dutch envelope fields are untouched.
     expect((result as AnswerResponse).text).toBe(response.text);
     expect((result as AnswerResponse).answer).toBe(response.answer);
+  });
+});
+
+describe('prepareTranslation — units (final-review fix wave, ruling 17a)', () => {
+  it("a registered unit with an English name is masked WITH its number and filled in English ('euro' → 'euros')", async () => {
+    const result = makeResult({
+      shape: 'single',
+      definitionLabel: 'gemiddelde verkoopprijs',
+      cells: [
+        makeCell({
+          table: '85773NED',
+          measure: 'M000001',
+          measureTitle: 'Gemiddelde verkoopprijs',
+          region: null,
+          periodCode: '2024JJ00',
+          periodLabel: '2024',
+          value: 450985,
+          unit: 'euro',
+          decimals: 0,
+        }),
+      ],
+    });
+    const answer = await composeAnswer(result, { client: new NeverCallAnswerClient(), templateOnly: true });
+    const response = {
+      schemaVersion: 1,
+      kind: 'answer',
+      question: 'Wat was de gemiddelde verkoopprijs?',
+      text: answer.text,
+      answer,
+      chart: null,
+      chartAlternates: [],
+      stalenessWarning: null,
+      parse: {},
+      result,
+      suggestions: [],
+    } as unknown as AnswerResponse;
+    const prep = prepareTranslation(response);
+    const numbers = prep.maskTable.filter((e) => e.kind === 'number');
+    expect(answer.body).toContain('450.985 euro');
+    expect(numbers.find((e) => e.dutch === '450.985 euro')?.english).toBe('450,985 euros');
+    expect(prep.maskedDutch.body).not.toMatch(/euro/);
   });
 });

@@ -39,7 +39,7 @@ export const TRANSLATE_SYSTEM_PROMPT = [
   'Input: JSON with "items" (body, chips, definition, alternates) and "glossary" (Dutch name -> required English name).',
   'Rules:',
   '1. Keep every placeholder of the form ⟦Na⟧, ⟦Pb⟧, ⟦Cc⟧, ⟦Gd⟧ exactly as written, each exactly as many times as in the input. Never add, drop, merge or alter a placeholder. They stand for numbers, periods, status notes and names that are filled in later.',
-  '2. Never write any digit. All numbers are already placeholders.',
+  '2. Never write any digit. All numbers are already placeholders, and a number placeholder already includes its unit: never write a unit or scale word (percent, percentage point, million, billion) next to one. Never add a number word, fraction or multiple (ten, half, double, twice) that the Dutch does not contain.',
   '3. Translate meaning faithfully: keep every direction (rose, fell, unchanged, higher than, lower than) and every caveat (provisional, estimate, forecast) exactly as the Dutch states it. Add no claim, explanation or opinion.',
   '4. When a glossary name occurs, use its English form exactly as given, including capitalisation.',
   '5. "chips" are follow-up questions a reader can click: translate each as a natural English question, same order, same count.',
@@ -67,6 +67,8 @@ const PROBLEM_KIND_SENTENCE: [RegExp, string][] = [
   [/^C6:/, 'The number of chips or alternates changed.'],
   [/^C7:/, 'Numbers were reordered.'],
   [/^C8:/, 'A number was moved away from its period or region.'],
+  [/^C9:/, 'A number word, fraction, multiple, scale word or unit was written that the Dutch does not contain.'],
+  [/^C10:/, 'A negation was added or dropped.'],
 ];
 const JSON_SHAPE_PROBLEM_SENTENCE = 'The output was not valid JSON of the required shape.';
 const FALLBACK_PROBLEM_SENTENCE = 'A translation check failed.';

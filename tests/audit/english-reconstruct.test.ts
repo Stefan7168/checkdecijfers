@@ -121,9 +121,11 @@ function faithfulB3TranslateClient(): LlmClient & { requests: LlmRequest[] } {
     async complete(req: LlmRequest) {
       requests.push(req);
       const { items } = JSON.parse(req.question) as { items: TranslationItems };
+      // Final-review fix wave (ruling 17a): the ' %' is masked WITH its
+      // number (one placeholder, filled as '<n>%').
       const body = items.body.replace(
-        /^De inflatie bedroeg in (⟦P[a-z]+⟧) gemiddeld (⟦N[a-z]+⟧) %\.$/,
-        'Inflation averaged $2% in $1.',
+        /^De inflatie bedroeg in (⟦P[a-z]+⟧) gemiddeld (⟦N[a-z]+⟧)\.$/,
+        'Inflation averaged $2 in $1.',
       );
       const definition =
         items.definition === null

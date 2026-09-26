@@ -40,6 +40,100 @@ const CAVEAT_WORDS: [string, string][] = [
   ['prognose', 'forecast'],
 ];
 
+// ---------------------------------------------------------------------------
+// C9 (final-review fix wave, ruling 17b): number, scale, fraction, multiple
+// and percent WORDS. The model never sees a digit, but it could still write
+// a quantity in words ("roughly double", "ten years before", "billion",
+// "percent") — a fabricated number the digit checks cannot see. Every such
+// English word, outside placeholders, must have its Dutch counterpart in the
+// masked Dutch item (the text the model saw). The map is deliberately small
+// and explicit; anything not on it is not a quantity word.
+// ---------------------------------------------------------------------------
+
+const WORD_START = '(?<![\\p{L}\\p{N}])';
+const WORD_END = '(?![\\p{L}\\p{N}])';
+const wordRe = (src: string, flags = 'iu'): RegExp => new RegExp(`${WORD_START}(?:${src})${WORD_END}`, flags);
+
+/** Dutch cardinal morphemes — the same list as the Dutch validator's
+ * CARDINAL_WORD_FORMS (src/answer/compose/validate.ts), longest first so a
+ * compound parses into its real parts ('zeventien', never 'zeven' + 'tien'). */
+const NL_CARDINAL_MORPHEMES = [
+  'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien', 'elf', 'twaalf', 'dertien', 'veertien',
+  'vijftien', 'zestien', 'zeventien', 'achttien', 'negentien', 'twintig', 'dertig', 'veertig', 'vijftig', 'zestig',
+  'zeventig', 'tachtig', 'negentig', 'honderd', 'duizend', 'miljoen', 'miljard', 'biljoen',
+].sort((a, b) => b.length - a.length);
+const NL_CARDINAL_WORD = wordRe(`(?:(?:${NL_CARDINAL_MORPHEMES.join('|')})(?:en|ën)?)+`, 'giu');
+const NL_MORPHEME = new RegExp(NL_CARDINAL_MORPHEMES.join('|'), 'giu');
+
+function dutchCardinalMorphemes(dutch: string): Set<string> {
+  const out = new Set<string>();
+  for (const word of dutch.matchAll(NL_CARDINAL_WORD)) {
+    for (const m of word[0].matchAll(NL_MORPHEME)) out.add(m[0].toLowerCase());
+  }
+  return out;
+}
+
+const EN_CARDINALS: [string, string][] = [
+  ['two', 'twee'], ['three', 'drie'], ['four', 'vier'], ['five', 'vijf'], ['six', 'zes'], ['seven', 'zeven'],
+  ['eight', 'acht'], ['nine', 'negen'], ['ten', 'tien'], ['eleven', 'elf'], ['twelve', 'twaalf'],
+  ['thirteen', 'dertien'], ['fourteen', 'veertien'], ['fifteen', 'vijftien'], ['sixteen', 'zestien'],
+  ['seventeen', 'zeventien'], ['eighteen', 'achttien'], ['nineteen', 'negentien'], ['twenty', 'twintig'],
+  ['thirty', 'dertig'], ['forty', 'veertig'], ['fifty', 'vijftig'], ['sixty', 'zestig'], ['seventy', 'zeventig'],
+  ['eighty', 'tachtig'], ['ninety', 'negentig'],
+];
+
+interface QuantityWord {
+  en: RegExp;
+  /** The Dutch counterpart, tested on the masked Dutch item outside placeholders. */
+  nl: (dutch: string, morphemes: Set<string>) => boolean;
+}
+
+const has = (re: RegExp) => (dutch: string) => re.test(dutch);
+
+const QUANTITY_WORDS: QuantityWord[] = [
+  { en: wordRe('one'), nl: has(wordRe('een|één|eén')) },
+  ...EN_CARDINALS.map(([en, nl]): QuantityWord => ({ en: wordRe(en), nl: (_d, morphemes) => morphemes.has(nl) })),
+  { en: wordRe('hundreds?'), nl: (_d, m) => m.has('honderd') },
+  { en: wordRe('thousands?'), nl: (_d, m) => m.has('duizend') },
+  { en: wordRe('millions?'), nl: (d, m) => m.has('miljoen') || wordRe('mln').test(d) },
+  { en: wordRe('billions?'), nl: (d, m) => m.has('miljard') || wordRe('mld').test(d) },
+  { en: wordRe('dozens?'), nl: has(wordRe('dozijn\\p{L}*')) },
+  { en: wordRe('half|halves|halved|halving'), nl: has(wordRe('helft\\p{L}*|half|halve\\p{L}*|halveer\\p{L}*|gehalveerd\\p{L}*|anderhal(?:f|ve)')) },
+  { en: wordRe('quarters?'), nl: has(wordRe('(?:drie)?kwart\\p{L}*')) },
+  // 'third' only as a FRACTION ('a third', 'two thirds') — the ordinal
+  // ('the third quarter') is not a quantity claim.
+  { en: wordRe('(?:a|one|two)[\\s-]+thirds?|thirds'), nl: has(wordRe('derde\\p{L}*')) },
+  { en: wordRe('twice|doubl\\p{L}*'), nl: has(wordRe('dubbel\\p{L}*|verdubbel\\p{L}*|tweemaal|twee\\s+(?:keer|maal)')) },
+  { en: wordRe('thrice|tripl\\p{L}*'), nl: has(wordRe('drievoudig\\p{L}*|verdrievoudig\\p{L}*|driemaal|drie\\s+(?:keer|maal)')) },
+  { en: wordRe('quadrupl\\p{L}*'), nl: has(wordRe('viervoudig\\p{L}*|verviervoudig\\p{L}*|viermaal|vier\\s+(?:keer|maal)')) },
+  { en: wordRe('\\p{L}+-?fold'), nl: has(wordRe('\\p{L}*voudig\\p{L}*')) },
+  // A unit swap is a fabricated number too: 'percentage point(s)' needs a
+  // Dutch 'procentpunt', and 'percent'/'per cent'/'%' needs a Dutch 'procent'
+  // or '%' — never each other ('procentpunt' → 'percent' is exactly R10).
+  { en: wordRe('percentage\\s+points?'), nl: has(wordRe('procentpunt\\p{L}*')) },
+  { en: new RegExp(`${WORD_START}per\\s?cent${WORD_END}|%`, 'iu'), nl: has(new RegExp(`${WORD_START}procent(?:en)?${WORD_END}|%`, 'iu')) },
+];
+
+function outsidePlaceholders(text: string): string {
+  return text.replace(PLACEHOLDER_RE, ' ');
+}
+
+/** C9: every quantity word in `english` (outside placeholders) needs its
+ * Dutch counterpart in `maskedDutch` (outside placeholders). */
+function checkQuantityWords(maskedDutch: string, english: string, name: string): string[] {
+  const dutch = outsidePlaceholders(maskedDutch);
+  const en = outsidePlaceholders(english);
+  const morphemes = dutchCardinalMorphemes(dutch);
+  const problems: string[] = [];
+  for (const q of QUANTITY_WORDS) {
+    const match = q.en.exec(en);
+    if (match && !q.nl(dutch, morphemes)) {
+      problems.push(`C9: ${name} says '${match[0]}' but the Dutch has no counterpart for it`);
+    }
+  }
+  return problems;
+}
+
 function placeholders(text: string): string[] {
   return (text.match(PLACEHOLDER_RE) ?? []).sort();
 }
@@ -172,6 +266,7 @@ export function checkTranslation(input: {
     // C7 and C8 after C6 passes
     const c7 = checkNumberOrder(masked[i]![1], text, name);
     if (c7) problems.push(c7);
+    problems.push(...checkQuantityWords(masked[i]![1], text, name));
   });
 
   // C8 for body only
