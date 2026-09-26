@@ -108,17 +108,18 @@ What the Decision above under-specified or the build genuinely had to decide:
     direction word in the clause. A conjunction does not end that scan (an earlier conjunction stop let
     'daalde in Utrecht en Zeeland niet' → 'fell in Utrecht and Zeeland' through); only a negation sitting between
     a conjunction and the NEXT direction word belongs to that next word ('steeg naar ⟦Na⟧ en er was geen daling'
-    keeps the rise un-negated). With no next direction word, the scan still stops at 'en'/'maar'/'of' when a
-    new clause starts within the next three words (er, dat, het, dit, zo, de, een, a finite verb such as is/was/
-    zijn/heeft, or a period placeholder that is not the very first word after the conjunction) — so 'steeg naar
-    ⟦Nb⟧ en voor ⟦Pa⟧ zijn er nog geen cijfers' keeps the rise un-negated. A 'niet'/'geen' AFTER a trend NOUN
-    ('De stijging was niet groot') qualifies the noun and does not negate the trend. The scan also treats
+    keeps the rise un-negated). Two further heuristics tried in the last round — cutting the scan where 'en'/
+    'maar'/'of' opens a new clause, and skipping a negation after a trend noun ('De stijging was niet groot') —
+    were reverted (ruling 25): each opened new false passes, and C11 covers the case they targeted. So a later
+    negation in a coordinated clause still attaches to the verb (a faithful translation then falls back to Dutch,
+    the safe side), and the noun-qualifier case stays a known residual. The scan also treats
     'nooit', 'nergens', 'noch', 'geenszins' and 'evenmin' as negators (English adds 'never', 'neither', 'nor',
     'nowhere'). The copy-drift test carries these extensions as explicit, commented exceptions.
   - **C11 (negation parity) — a structural backstop.** Word-by-word negation rules kept leaking (each fix round
     found another shape), so per item the NUMBER of negator words must be equal on both sides: Dutch niet,
     geen, nooit, nergens, noch, geenszins, evenmin, zonder, niets, niemand; English not, n't (once per
-    occurrence), no, never, neither, nor, nowhere, without, nothing, nobody, none — 'no longer' counts once.
+    occurrence), no, never, neither, nor, nowhere, without, nothing, nobody, none, cannot — 'no longer' counts
+    once.
     An added or dropped negator anywhere in the item fails, whatever sentence shape carries it.
 - **A number is masked TOGETHER with a directly following unit or scale word, as ONE placeholder** (final
   whole-branch review). The model never sees a unit, so it cannot swap one: 'procentpunt' → 'percent' or 'mln'
