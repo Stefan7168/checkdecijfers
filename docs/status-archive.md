@@ -1,5 +1,39 @@
 # STATUS archive — the session log
 
+**Session 131 (2026-09-25 → 2026-09-26, owner present; publish switch-on, owner decisions, then English answers
+phase 1 designed and half-built; wrapped on the owner's "When done, wrap up").**
+
+1. **State verified at start:** `main` = `d6adafe9`, CI 36131271620 green, prod 200, no open PRs.
+2. **Own-data publishing switched on (owner chose it):** `npm run db:migrate` applied exactly
+   `036_published_user_charts.sql`; post-check 0 `anon`/`authenticated` grants, RLS on, 0 policies, 3 FKs;
+   `OWN_DATA_PUBLISH_ENABLED=1` added with `vercel env add` (Production); redeployed by `gh run rerun 36131271620`
+   (every job green incl. deploy). Logged-out probe of a made-up `/embed/own/<id>` shows "Deze grafiek is niet meer
+   beschikbaar." The owner's signed-in publish → private window → unpublish spot-check is still to do. Docs `d09de8db`.
+3. **Owner decisions:** #271 fully translate answers for English readers, CBS names included; #256 3D demo stays
+   login-gated; #260 colour-blind safety no longer a rule for the default palette, change nothing; #314 screen-only;
+   #275 try again later; #250(a) Eurostat wording approved (`1907959e`). CLAUDE.md's Dutch-pipeline convention, ADR 040
+   and ADR 042 carry the supersede notes.
+4. **Tidy-up:** stale worktree `chart-copilot-phase6` (@ `58db5097`, already in `main`, clean) removed with its branch;
+   8 local branches already merged into `origin/main` deleted with `git branch -d`.
+5. **English answers phase 1 — designed:** brainstorm with the owner (approach "translate the checked answer"; CBS
+   names translated too); ADR 058 + spec (`26db5374`), plan (`5ad8a8f3`). Probe: 12 of 17 CBS tables answered a
+   same-number `…ENG` v3 endpoint (80590 later confirmed too).
+6. **English answers phase 1 — Tasks 1–6 of 9 built via SDD** on branch `english-answers-phase1` (worktree with
+   APFS-cloned `node_modules`), pushed at `d9b632f1`, not merged. Review loop catches: Task 3 (opus) — name list keyed
+   on registry composite titles that never occur at runtime, a rule-3 conflict, no regeneration path (fixed: runtime
+   titles, generated `english-names.cbs.generated.ts`); Task 4 — set-based placeholder check let swapped numbers pass
+   (ruled load-bearing: new checks C7/C8, spec updated); Task 6 (opus, ran a probe) — digit-bearing glossary names
+   reached the model and deadlocked C5 against C2 so the population question could never verify (fixed: ⟦G…⟧ name
+   placeholders, whole-request digit gate, digit-free retry text, shape validation). Owner steers mid-build: the
+   80590 age bands are correct CBS English (Dutch "tot" is exclusive: "15 tot 75 jaar" = "15 to 74 years"), and
+   'Prijsindex verkoopprijzen' → 'Price index purchase prices'. Implementer-reported last runs: `tests/answer/translate`
+   81 passed; `tests/answer tests/audit` 72 files / 1,191 passed; root + web `tsc` clean. The full verify block has NOT
+   run on the branch yet.
+7. **Machine:** load averages up to 28 and ~7 GB swap used during the build; one implementer stalled with zero changes
+   and was resumed with SendMessage.
+8. **Next:** Task 7 (audit wiring + R8 reconstruction) — [session-briefs/2026-09-26-session-132-kickoff.md](session-briefs/2026-09-26-session-132-kickoff.md)
+   carries the rulings and a verbatim copy of the SDD ledger.
+
 **Session 130 (2026-09-25, owner present at start; worked the session-130 kickoff's autonomous queue to empty, then
 "wrap up").**
 

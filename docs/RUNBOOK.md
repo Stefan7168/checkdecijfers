@@ -537,9 +537,9 @@ deployed by `gh run rerun 36131271620` (every job green incl. deploy). Logged-ou
 `/embed/own/<id>` link shows "Deze grafiek is niet meer beschikbaar." Step 4 (the owner's signed-in
 publish → private window → unpublish walk) is the remaining live check.
 
-**Status: BUILT and merged (session 127, 2026-09-24; the look-freeze + `?lang=` precedence fixes below
-added session 128, 2026-09-25), dark — `OWN_DATA_PUBLISH_ENABLED` is unset in Vercel and migration 036
-is STILL FILE-ONLY (edited in place session 128 to add the `style` column — no new migration number,
+**Status (historical, before session 131's switch-on above): BUILT and merged (session 127, 2026-09-24; the look-freeze + `?lang=` precedence fixes below
+added session 128, 2026-09-25), dark — `OWN_DATA_PUBLISH_ENABLED` was unset in Vercel and migration 036
+was still file-only (edited in place session 128 to add the `style` column — no new migration number,
 since it has never been applied to any real database). Every reader in `src/attachments/publications.ts`
 probes for the table first (`to_regclass('public.published_user_charts')`), and the public route and the
 Publish button both gate on the flag, so the app runs byte-identically today whether or not these
@@ -1774,6 +1774,11 @@ per-machine cache:
     filesystem root") — run e2e from the main checkout. Serialize every vitest/tsc/playwright across all agents
     with one `mkdir`-based lock script, and check `sysctl vm.swapusage` + `df -h /` before each dispatch wave:
     the owner's own work on the same machine counts (session 128 hit 14 GB swap / 1.5 GB free disk).
+16. **APFS clones beat both symlinks and installs for a worktree's `node_modules` (session 131, 2026-09-25):**
+    `cp -Rc <main>/node_modules <wt>/node_modules && cp -Rc <main>/web/node_modules <wt>/web/node_modules` took 18 s,
+    used no measurable disk (copy-on-write clones; `df` unchanged at 34 GiB free) and gives REAL directories — so
+    vitest, tsc AND `next build`/Playwright work (no Turbopack "symlink out of the filesystem root" error). macOS `cp`
+    has no `-l`; `-c` is the clonefile flag. Still add `/node_modules` to `.git/info/exclude`.
 
 ## Reviewing and merging a large PR batch (added session 67, 2026-08-28 — reviewed + merged all 19 open PRs left by session 66)
 

@@ -1175,7 +1175,7 @@ own-data chart — YES, as a saved, revocable, pruned publish record (ADR 057,
 [spec](superpowers/specs/2026-09-24-own-data-publish-design.md)); B2 own data + CBS in one chart —
 wait for evidence (ADR 037's "never for v1" stands). Phase C (drafted headline, Insights/story on own data) only on usage evidence.
 
-**B1 publish an own-data chart — ✅ BUILT (session 127, 2026-09-24), dark behind `OWN_DATA_PUBLISH_ENABLED`.**
+**B1 publish an own-data chart — ✅ BUILT (session 127, 2026-09-24); LIVE since 2026-09-25 (session 131, see below).**
 Migration 036 (`published_user_charts`) + store, server-side replay + pruning (invariant P1), publish/unpublish
 server actions, a read-only card mode, the public route `/embed/own/[publicId]`, and the publish dialog — 6
 tasks via `superpowers:subagent-driven-development` plus a final whole-branch review and two fix waves (rulings
@@ -1191,3 +1191,16 @@ account-level delete — changes the live monthly purge, owner GO), a green e2e 
 **Session 129 (2026-09-25): all three DONE and LIVE** — pushed (CI 36106419342 green incl. deploy), the e2e passed
 (10/10, first time), and #322 I-3 wired with the owner's GO (merge `dbd5c6d0`, CI 36108726250). **Only the owner-supervised
 switch-on remains** (migration 036, the flag, the live check).
+**LIVE since 2026-09-25 (session 131, owner present): migration 036 applied, `OWN_DATA_PUBLISH_ENABLED=1` set in Vercel Production, redeployed via CI run 36131271620 (rerun, green incl. deploy); the owner's signed-in publish → private window → unpublish spot-check is still to do.**
+
+## English answers — phase 1 (owner decision 2026-09-25, session 131; ADR [058](decisions/058-english-answers.md), [#271](open-questions.md))
+
+Spec: [superpowers/specs/2026-09-25-english-answers-design.md](superpowers/specs/2026-09-25-english-answers-design.md);
+plan: [superpowers/plans/2026-09-25-english-answers-phase1.md](superpowers/plans/2026-09-25-english-answers-phase1.md).
+**Status (2026-09-26):** Tasks 1–6 of 9 built and review-clean on branch `english-answers-phase1` (`d9b632f1`,
+pushed, not merged). **Next: Task 7** (audit wiring + R8 reconstruction), then 8 (web) and 9 (record/eval script,
+RUNBOOK switch-on, docs), then the final whole-branch review, verify block, PR, owner GO. Three carried minors from
+Task 6 must be fixed before `translate:record` (see the session-132 kickoff). Real-model recording and the flag flip
+wait for the Anthropic API cap to lift (2026-10-01) and are owner-supervised. Phases 2 (refusals/clarifications) and 3
+(chart texts) get their own specs.
+

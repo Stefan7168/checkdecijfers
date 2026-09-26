@@ -177,3 +177,6 @@ it distinct) and **provisional bars** (their hatch + 1 px outline would be half-
 square. The tooltip card now puts the series name left (muted) and the value right in tabular figures, same two spec
 strings. **Not changed:** `DEFAULT_PALETTE` (colour-blind safety is a pinned guarantee; a "punchier" palette is a taste
 call left for the owner — #260 row) and hover animation (export integrity). Tests: `web/components/chart-bar-corners.test.tsx`.
+**Owner decision 2026-09-25 (session 131, [#260](../open-questions.md)):** colour-blind safety is no longer a rule for
+the default palette — the default should be whatever looks best, and readers pick their own colours in the style panel.
+Nothing changed now; the palette and its test-pinned guarantee stay until someone deliberately replaces them.
