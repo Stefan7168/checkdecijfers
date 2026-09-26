@@ -6,6 +6,34 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 132 — word-list meaning checks don't converge; informational benchmark counts are real signals
+
+1. **Patching word lists against adversarial probes did not converge.** The English checks' direction/negation layer
+   went through five review rounds (final review → residual → final bounded → last → revert); each word-level patch
+   (a conjunction stop, a clause-start cut, a trend-noun skip) closed its target and opened a new false pass that the
+   previous head had caught — confirmed each time by the reviewer running the same probe against both heads. What
+   worked: one STRUCTURAL backstop (C11, negation-word count parity) plus reverting the two patches that regressed,
+   then parking the remaining class as a switch-on precondition (#325) with a structural recommendation. Rule: after
+   two rounds in which a fix opens a same-class gap, stop patching words and change the mechanism.
+2. **Ask the re-reviewer to diff behaviour against the PREVIOUS head.** "Passes on this head, failed on the previous
+   head" is what separated new regressions from old residuals; without it, every round looked like progress.
+3. **A fix wave's own test selection missed a break the full block caught.** The final-fix implementer ran `web lib`
+   + `chat.test.tsx` only; the verify block's full web suite found 3 failures in `app/actions.test.ts` (the Anthropic
+   SDK refuses to construct in jsdom once `web/lib/english-answers.ts` built it directly). After any change to a
+   `web/lib` module, run the whole web suite — a module's callers live in `app/` too.
+4. **The benchmark's "informational" lines are signals, not decoration.** The #326 fix passed the GATE (14/14 + 6/6 +
+   0 fabricated), but "template fallbacks" went 3 → 4: the first version rejected honest recorded prose ("niet in een
+   rechte lijn omhoog"). Narrowed before push; fallbacks back to 3. Compare every informational count to the previous
+   run before pushing a validator change, and grep the recorded answer fixtures for the phrase shape you are changing.
+5. **Stored live rows are a free regression corpus for validator changes.** `audit:verify` over all 309 rows
+   (read-only, ~a minute) proved no live answer ever contained the #326 reversal and none is newly flagged. The
+   `SELECT max(id)` first keeps the range tight.
+6. **This repo has GitHub auto-merge disabled**, so "merge when green" means waiting on the PR's checks and merging by
+   hand; a PR opened from a branch that predates later `main` doc commits will conflict on `docs/` rows — merge
+   `origin/main` into the branch before expecting CI.
+7. **A machine reboot wipes `/private/tmp`, including the scratchpad and a detached verify-block log.** The code was
+   safe (in the checkout); the verify run was simply repeated. Keep anything that must survive in the repo.
+
 ## Session 131 — the owner cannot see text written before a question dialog; "Minor" findings can be load-bearing
 
 1. **Text written just before an `AskUserQuestion` dialog did not reach the owner.** The Eurostat wording was put in

@@ -1,5 +1,42 @@
 # STATUS archive — the session log
 
+**Session 132 (2026-09-26, owner present; English answers phase 1 finished and merged dark, Dependabot #47/#48
+merged, #326 Dutch negation gap found and fixed live; wrapped on the owner's "wrap up").**
+
+1. **State verified at start:** `main` = `07073892`, branch `english-answers-phase1` @ `d9b632f1` (Tasks 1–6 done),
+   Dependabot #47/#48 open, prod 200. Machine: 8 GB, swap ~5–6 GB used.
+2. **English answers phase 1 (ADR 058, #271) finished via SDD** (ledger rulings 12–25; implementers sonnet, final
+   fixes opus; reviewers sonnet/opus): Task 6b carry fixes `4a45865f`; Task 7 audit wiring + R8 reconstruction
+   `9177de77`; Task 8 web `a518ade5` + fix round `05afe30d` (English renders inside the answer card; fallback keeps the
+   Dutch card); Task 9 `translate-eval.ts` + RUNBOOK switch-on + ADR as-built `23b1d319`.
+3. **Final whole-branch review (opus): "with fixes"** — CRITICAL units/scale/number words unchecked (procentpunt →
+   percent passed as verified); IMPORTANT same-sentence swaps + dropped negation; IMPORTANT no deadline on the
+   translate step (credits charged if the 90 s function dies). Fix wave `6b78ea1f..f37a35f8` (units masked with their
+   number, C9, C10, 20 s cap, reconstruction never throws). Owner chose "fix both now" for the two residuals; then
+   residual `accfa39e`/`d7171c29`, bounded `418cc229`/`8e262536`, last `0e751323`/`e996895d` (C11 negation-count
+   parity), revert `7dd650fa`/`9c62e72e` — each word-level patch opened new false passes, so ruling 25 kept the
+   structural C11, reverted the two regressing patches and parked the rest as **#325, a precondition of the flag
+   flip** (recommendation: an ADR 034-style independent semantic comparison). `9f82e11e` docs.
+4. **Verify block (at `9f82e11e`, `--e2e`):** backend 227/227 files (3600 tests + 1 todo), benchmark 14/14 + 6/6 + 0
+   fabricated (GATE PASS), build, e2e 40 passed; web 3 failures in `app/actions.test.ts` (SDK built in jsdom) → fixed
+   in the test `e964f5fa`, web 3085/3085. `/code-review` LOW: no findings.
+5. **Merged:** PR #49 (merge commit `5954ccb2`, after merging `origin/main` into the branch `3cddf7f4` to resolve two
+   docs conflicts; CI 36233266766 green). Dependabot #47 (`6dbf0e46`, its main run 36234800860 cancelled as superseded)
+   and #48 (`be676f6e`, CI 36234807804 green incl. deploy; Anthropic SDK 0.126 → 0.128). Repo has auto-merge disabled.
+   Worktree `.claude/worktrees/english-answers` and branch removed. Docs to merged state `b7dc215d`.
+6. **#326 (owner: "look into it", then "fix it now"):** reproduced hermetically — the Dutch validator skipped a
+   negated trend word and never saw a negator after the word, so "De inflatie daalde niet" / "is niet gedaald" on a
+   real decline passed (8 reversed sentences passed). Fix `5c74e633`: negator directly before the word = checked
+   "not that direction"; separated negator = #162 qualifier rescue; negator at/after the word = ambiguous, fails
+   closed; `nooit`/`nergens` added. First version raised template fallbacks 3 → 4 (rejected honest "niet in een rechte
+   lijn omhoog"), narrowed before push. Verify: backend 227/227 (3611 + 1 todo), web 163/163 (3085), 14/14 + 6/6 + 0,
+   fallbacks 3; `audit:verify` 1–309: 271/273 clean + 2 pinned divergences + 36/36 redacted — no live row affected.
+   CI 36238579801 green incl. deploy, prod 200. Docs `affdfcb2`, `8a6b3c9b`. A machine reboot mid-verify wiped
+   `/private/tmp`; the run was repeated.
+7. **Open after this session:** #325 (English flip precondition), `translate:record`/`translate:eval` + live benchmark
+   after the API cap lifts 2026-10-01, #324 English phase-1 UI gaps, #245/#275 owner decisions, own-data publish
+   spot-check, Eurostat E2a steps (#313).
+
 **Session 131 (2026-09-25 → 2026-09-26, owner present; publish switch-on, owner decisions, then English answers
 phase 1 designed and half-built; wrapped on the owner's "When done, wrap up").**
 

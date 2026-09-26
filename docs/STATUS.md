@@ -19,7 +19,7 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 132 — owner present; verify against `git log` / Actions runs before
-trusting this).**
+trusting this). Kickoff: [session-briefs/2026-09-26-session-133-kickoff.md](session-briefs/2026-09-26-session-133-kickoff.md).**
 
 - **`main` is live and green @ `5c74e633`.** CI run 36238579801 green incl. deploy (2026-09-26); prod 200. No open PRs.
 - **Session 132 shipped:** English answers phase 1 (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md))
