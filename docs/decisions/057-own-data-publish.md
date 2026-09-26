@@ -2,12 +2,12 @@
 
 **Status:** accepted 2026-09-24 (session 127, owner present, decided in chat). Design:
 [superpowers/specs/2026-09-24-own-data-publish-design.md](../superpowers/specs/2026-09-24-own-data-publish-design.md).
-**BUILT (session 127, 2026-09-24), dark behind `OWN_DATA_PUBLISH_ENABLED` — see the as-built note below.
-Owner steps (migration 036, the flag, a live check) are still pending; see
-[RUNBOOK.md](../RUNBOOK.md)'s "Own-data publishing (ADR 057) — switching it on". Session 128
-(2026-09-25) closed two of the original "known v1 differences" (the look now freezes at publish
-time; `?lang=` now wins for the chart too) — migration 036 is STILL file-only, edited in place to add
-the new `style` column (no owner-facing change to the rollout steps above).**
+**LIVE since 2026-09-25 (session 131, owner present):** migration 036 applied (0 anon/authenticated grants, RLS on,
+0 policies), `OWN_DATA_PUBLISH_ENABLED=1` set in Vercel Production, redeployed by re-running CI run 36131271620
+(green incl. deploy); a logged-out probe of a made-up link shows the "no longer available" page. The owner's
+signed-in publish → private window → unpublish spot-check is still to do. History: BUILT session 127
+(2026-09-24) dark behind the flag; session 128 (2026-09-25) froze the look at publish time and let `?lang=` win
+(migration 036 was edited in place before it was ever applied).
 
 ## Context
 

@@ -24,7 +24,7 @@ Two things are deliberately NOT interface text: everything the backend builds (a
 
 ## Consequences
 
-- The web app is bilingual in its interface; the CBS answer pipeline and its Dutch output are untouched (intent parsing, phrasing, benchmark phrasing).
+- The web app is bilingual in its interface; the CBS answer pipeline and its Dutch output are untouched (intent parsing, phrasing, benchmark phrasing). **Superseded for English readers by ADR [058](058-english-answers.md) (owner decision 2026-09-25, session 131): answers are to be fully translated for the English interface; the Dutch pipeline itself stays byte-identical. In build, not live.**
 - The "English for new UI" convention of session 84 is superseded: every new interface string gets an `nl` and an `en` entry.
 - Reading cookies in the root layout keeps the layout dynamic — it already was (every page reads the Supabase session); `robots.txt` and `llms.txt` are unaffected.
 - Known limitations recorded on [#219](../open-questions.md): backend Dutch prose on English surfaces; the definition toggle's label and the source badge follow the app language rather than a per-chart override; the citation stays Dutch.

@@ -6,6 +6,32 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 131 — the owner cannot see text written before a question dialog; "Minor" findings can be load-bearing
+
+1. **Text written just before an `AskUserQuestion` dialog did not reach the owner.** The Eurostat wording was put in
+   the reply text directly before the dialog three times; the owner answered "Show me here", then "I dont see it",
+   then "You've asked me this 3 times now, without showing the wording". What worked: a file sent with
+   `SendUserFile`. Rule: everything the owner needs in order to answer goes INSIDE the question (or its preview), or
+   into a sent file — never in the text above the dialog.
+2. **A digit-invariance check raised a false alarm on a correct CBS translation.** 80590's "15 tot 75 jaar" vs CBS's
+   "15 to 74 years" was reported to the owner as "CBS's own labels disagree"; the owner pushed back. Dutch "tot" is
+   exclusive — the neighbouring bands ("15 tot 25", "25 tot 45") don't overlap. Before calling a source wrong, read the
+   neighbouring categories in both languages; the fix was one narrow, tested exception, not a Dutch fallback.
+3. **Adjudicate severity against the invariant, not the reviewer's label.** Task 4's reviewer rated "C1 compares
+   placeholder SETS, so two swapped numbers pass" as Minor and plan-mandated. A number attached to the wrong region
+   is a fabricated claim (principle a), so it went into the fix loop as checks C7 (number order) and C8 (sentence
+   binding) and into the spec.
+4. **A test fixture chosen to avoid an input hides the bug that input triggers.** Task 6's tests used a fixture picked
+   because it had no "1 januari"; the opus reviewer ran a probe with the flagship population question and found that
+   digit-bearing glossary names ("Bevolking op 1 januari") reached the model AND deadlocked C5 against C2, so the most
+   common question could never verify in English. Test with the product's flagship question, not a convenient one.
+5. **Name lists must be keyed on runtime strings.** Task 3 keyed English measure names on the registry's composite
+   `measureTitle` ("group / measure"); the answer pipeline shows the raw CBS measure title from measure-codes, so three
+   entries could never match. The fix made the test read the runtime title from `tests/fixtures/cbs/*/measure-codes.json`.
+6. **Stalls under load, again.** One implementer stalled with zero changes at load average 28; resuming it with
+   `SendMessage` (not a new `Agent`) recovered it. APFS clones (`cp -Rc`) gave the worktree real `node_modules` in 18 s
+   at no disk cost — usable for `next build`, unlike symlinks.
+
 ## Session 130 — bash reads a running script incrementally; a tracker row's own "still open" list can be stale
 
 1. **Editing `scripts/verify-block.sh` while a verify block ran from the same checkout was a live hazard.** The

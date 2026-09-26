@@ -18,28 +18,24 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-25, session 130 — owner present; verify against `git log` / Actions runs before
-trusting this). Kickoff: [session-briefs/2026-09-25-session-131-kickoff.md](session-briefs/2026-09-25-session-131-kickoff.md)
-— the autonomous queue is EMPTY; everything left needs the owner.**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-26, session 131 — owner present; verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-26-session-132-kickoff.md](session-briefs/2026-09-26-session-132-kickoff.md).**
 
-- **Everything is pushed and LIVE.** `origin/main` = the session-130 wrap-up docs commit on top of `8a80128a`; last code CI run
-  36131271620 (`0eaa1302`) green on every job incl. Playwright e2e + deploy; prod 200. No open PRs.
-- **Session 130 shipped (details: [status-archive.md](status-archive.md)):** Dependabot #35/#36 merged (Next 16.3.5, React 19.3.0,
-  zod 4.6.5, cn 0.3.0, Anthropic SDK 0.126.0, vitest 5.0.1 + patches; merges `b5a8c759` + `d8dec7f8`); #323 fixed (`5d5e045d` —
-  load-proof A5 + contract test; `scripts/verify-block.sh <dir> <log> --e2e` runs Playwright); `user-chart.tsx` move-only split into
-  `user-chart-parts.tsx` (`f90356b1` + `0eaa1302`, 3,198 → 2,341 lines), closing #312. Measured at `f90356b1`: typechecks clean,
-  backend 219 files / 3,355 tests, benchmark GATE PASS (6/6, 0 fabricated), web 162 / 3,060, `next build` compiled; `/code-review` LOW 0.
-- **Next (owner-supervised) — the publish flag flip, nothing blocks it:** `npm run db:migrate` (036), `OWN_DATA_PUBLISH_ENABLED=1`,
-  redeploy, the RUNBOOK "Own-data publishing (ADR 057) — switching it on" live check. Residual #322 I-4 (c)/(d) optional.
-- **Decisions waiting on the owner:** [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md) —
-  open: #271 English answer sentences (item 1 — would change the Dutch answer pipeline that CLAUDE.md keeps Dutch, so owner's call),
-  #250 Eurostat wording (5), #256 3D demo page (7), #275 homepage looks row (8), #314 incomplete-total warning in downloads (11),
-  #245 test-speed questions (12), and a punchier colour-blind-safe palette (#260 remainder). Items 4 and 6 done in session 129.
-- **After the Anthropic API cap lifts 2026-10-01:** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)), the `:record`
-  scripts, the live benchmark. Stale worktree `chart-copilot-phase6` @ `58db5097` (owner's call).
-- **Unscheduled, no demand signal (cheapest-mechanism rule — don't build on spec):** #277 (embed shows the author's edits),
-  #278 (export-excludes-title disclosure), #299 (verified "alle gemeenten" pie).
-- **Merging:** get an explicit in-chat GO before any merge or push that changes live deletion behaviour.
+- **`main` is live and green.** Last code CI run on `main`: 36131271620 (re-run 2026-09-25 to deploy the publish flag;
+  green incl. deploy); later `main` commits are docs-only. Prod 200. Open PRs: Dependabot #47, #48 (2026-09-26, unreviewed).
+- **Session 131 shipped (details: [status-archive.md](status-archive.md)):** own-data chart publishing is LIVE
+  (migration 036 applied, `OWN_DATA_PUBLISH_ENABLED=1` in Production) — the owner's signed-in publish/unpublish
+  spot-check is still to do; owner decisions #250(a), #256, #260, #271, #275, #314 recorded; stale worktree
+  `chart-copilot-phase6` and 8 merged local branches removed.
+- **Top priority — finish English answers phase 1** (ADR [058](decisions/058-english-answers.md), [#271](open-questions.md)):
+  branch `english-answers-phase1` @ `d9b632f1` (pushed, not merged, flag unset), plan Tasks 1–6 of 9 done and
+  review-clean; next Task 7 (audit wiring + R8), then 8 (web), 9 (record/eval + docs), final review, verify block, PR.
+  Real-model recording + the `ENGLISH_ANSWERS_ENABLED` flip wait for the API cap to lift (2026-10-01), owner-supervised.
+- **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (say what felt off about the
+  looks-row mockups). The rest of [session-briefs/2026-09-25-owner-decisions.md](session-briefs/2026-09-25-owner-decisions.md) is decided.
+- **After the Anthropic API cap lifts 2026-10-01:** Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md)), the
+  `:record` scripts, the live benchmark, `translate:record` + English eval.
+- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299.
 ---
 
 ## Phase 0 checklist

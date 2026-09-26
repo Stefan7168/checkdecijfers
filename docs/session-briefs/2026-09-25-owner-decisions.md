@@ -117,6 +117,8 @@ haven't given it a final look.
 
 *(tracker #250)*
 
+**Decided session 131 (2026-09-26): approved as drafted.**
+
 ---
 
 ## 6. Should a chart-editing request that changes nothing still cost credits?
@@ -284,7 +286,7 @@ No judgment call is required — they're just queued up:
 - **Eurostat (European data) chat feature** — built and ready, switched off. Once the AI provider's
   usage cap lifts 1 October: record ~10 real test questions, run the two remaining setup commands,
   do a quick read-through of three Dutch topic descriptions, then flip it on in production.
-- **"Publish your own chart" feature** — built and ready, switched off. Needs a database update and
+- **"Publish your own chart" feature** — **DONE session 131 (2026-09-25): switched on; only your signed-in spot-check remains.** Was: built and ready, switched off. Needs a database update and
   a production setting flipped on, both supervised by you.
 - **Several smaller "run this command against the live database" chores** — backfilling a missing
   reference field, applying a registry update, running the full live benchmark test, and a handful of

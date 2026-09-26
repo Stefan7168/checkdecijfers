@@ -2,7 +2,10 @@
 
 **Status:** accepted 2026-09-25 (session 131, owner present, decided in chat). Design:
 [superpowers/specs/2026-09-25-english-answers-design.md](../superpowers/specs/2026-09-25-english-answers-design.md).
-Phase 1 (regular answers) specified; not yet built. Phases 2 (refusals/clarifications) and 3 (chart texts) get
+Phase 1 (regular answers) specified; **in build** (session 131, branch `english-answers-phase1`, Tasks 1–6 of 9 done at
+`d9b632f1`; not merged, not live). Build rulings added two checks (C7 number order, C8 sentence binding) and a fourth
+placeholder kind for digit-bearing official names (⟦G…⟧) — see the spec's §3.4 on the branch and the SDD ledger copy in
+[session-briefs/2026-09-26-session-132-kickoff.md](../session-briefs/2026-09-26-session-132-kickoff.md). Phases 2 (refusals/clarifications) and 3 (chart texts) get
 their own specs.
 
 ## Context
