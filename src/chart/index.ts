@@ -39,4 +39,5 @@ export {
   defaultScale,
   buildScatterSpec,
 } from './scatter.ts';
-export type { AxisScale, ScatterAxis, ScatterPoint, ScatterSpec } from './scatter.ts';
+export type { AxisScale, ScatterAxis, ScatterLeftOut, ScatterPoint, ScatterSideStatus, ScatterSpec } from './scatter.ts';
+export { scatterBodyNl, scatterLineNl, SCATTER_NAMED_LIMIT } from './scatter-text.ts';

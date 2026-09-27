@@ -1,6 +1,8 @@
 // Two-measure scatter (spec 2026-09-27), Task 2: the deterministic ScatterSpec.
+// Task 3 (#296 part 2): self-sufficiency — scope, leftOut, notApplicableCount.
 import { describe, expect, it } from 'vitest';
 import { buildScatterSpec, defaultScale, scatterSpecSchema, SCATTER_MAX_LABELS } from '../../src/chart/index.ts';
+import { pairRegions } from '../../src/query/index.ts';
 import type { ResultCell, ValidatedResult } from '../../src/query/index.ts';
 
 function cell(tableId: string, measureTitle: string, regionCode: string, value: number | null, extra: Partial<ResultCell> = {}): ResultCell {
@@ -27,8 +29,26 @@ function cell(tableId: string, measureTitle: string, regionCode: string, value: 
   };
 }
 
-function leg(tableId: string, measureTitle: string, values: Record<string, number | null>, complete = true): ValidatedResult {
-  const cells = Object.entries(values).map(([code, v]) => cell(tableId, measureTitle, code, v));
+interface LegOptions {
+  complete?: boolean;
+  /** Region codes with NO cell on this leg, added to `regionSet.missing` so
+   * `pairRegions` discovers them (a code absent from every leg's cells AND
+   * coverage lists never surfaces at all — src/query/pair.ts's own codes
+   * collection). */
+  missing?: string[];
+  /** Region codes with NO cell on this leg that CBS says are not a member of
+   * the class this period, added to `regionSet.notApplicable`. */
+  notApplicable?: string[];
+  /** Per-region `valueAttribute` override for a null-valued code (the CBS
+   * marker on a withheld cell) — default cell() always carries 'None'. */
+  attributes?: Record<string, string>;
+}
+
+function leg(tableId: string, measureTitle: string, values: Record<string, number | null>, opts: LegOptions = {}): ValidatedResult {
+  const { complete = true, missing = [], notApplicable = [], attributes = {} } = opts;
+  const cells = Object.entries(values).map(([code, v]) =>
+    cell(tableId, measureTitle, code, v, v === null && attributes[code] !== undefined ? { valueAttribute: attributes[code] } : {}),
+  );
   const withheld = cells.filter((c) => c.value === null).map((c) => c.regionCode!);
   return {
     ok: true,
@@ -49,11 +69,11 @@ function leg(tableId: string, measureTitle: string, values: Record<string, numbe
     intent: {} as never,
     regionSet: {
       scope: { kind: 'all_provincies' },
-      rosterSize: cells.length,
-      notApplicable: [],
+      rosterSize: cells.length + missing.length + notApplicable.length,
+      notApplicable,
       withheld,
-      missing: [],
-      complete: complete && withheld.length === 0,
+      missing,
+      complete: complete && withheld.length === 0 && missing.length === 0 && notApplicable.length === 0,
     },
   } as unknown as ValidatedResult;
 }
@@ -139,5 +159,74 @@ describe('buildScatterSpec', () => {
 
   it('is deterministic', () => {
     expect(JSON.stringify(buildScatterSpec(y, x))).toBe(JSON.stringify(buildScatterSpec(y, x)));
+  });
+});
+
+describe('buildScatterSpec: self-sufficiency (#296 part 2 — scope, leftOut, notApplicableCount)', () => {
+  const y = leg('Y', 'Gemiddelde verkoopprijs', { A: 300_000, B: 500_000, C: 400_000, D: 350_000 });
+  const x = leg('X', 'Bevolking op 1 januari', { A: 1_000, B: 900_000, C: 50_000, D: 20_000 });
+
+  it("carries the y leg's regionSet.scope", () => {
+    const spec = buildScatterSpec(y, x);
+    expect(spec.scope).toEqual(y.regionSet!.scope);
+  });
+
+  it('discloses every left-out region, in pairRegions order, with each side stated', () => {
+    const yLeg = leg(
+      'Y',
+      'Gemiddelde verkoopprijs',
+      { A: 300_000, B: 500_000, E: null, F: 450_000 },
+      { attributes: { E: 'Secret' }, missing: ['G'] },
+    );
+    const xLeg = leg('X', 'Bevolking op 1 januari', { A: 1_000, B: 900_000, E: 800 });
+
+    const spec = buildScatterSpec(yLeg, xLeg);
+    const pairing = pairRegions(yLeg, xLeg);
+
+    expect(spec.leftOut.map((r) => r.regionCode)).toEqual(pairing.leftOut.map((r) => r.regionCode));
+    expect(spec.leftOut).toEqual([
+      {
+        regionCode: 'E',
+        label: 'E (PV)',
+        y: { state: 'withheld', valueAttribute: 'Secret' },
+        x: { state: 'value', valueAttribute: null },
+      },
+      {
+        regionCode: 'F',
+        label: 'F (PV)',
+        y: { state: 'value', valueAttribute: null },
+        x: { state: 'missing', valueAttribute: null },
+      },
+      {
+        // Neither leg ever named G (no cell on either side) — label falls
+        // back to the bare region code.
+        regionCode: 'G',
+        label: 'G',
+        y: { state: 'missing', valueAttribute: null },
+        x: { state: 'missing', valueAttribute: null },
+      },
+    ]);
+  });
+
+  it('notApplicableCount equals pairRegions(...).notApplicable.length', () => {
+    const yLeg = leg('Y', 'Gemiddelde verkoopprijs', { A: 300_000 }, { notApplicable: ['H'] });
+    const xLeg = leg('X', 'Bevolking op 1 januari', { A: 1_000 });
+    const spec = buildScatterSpec(yLeg, xLeg);
+    expect(spec.notApplicableCount).toBe(pairRegions(yLeg, xLeg).notApplicable.length);
+    expect(spec.notApplicableCount).toBe(1);
+  });
+
+  it('throws an explicit error when the y leg has no regionSet', () => {
+    const yNoRegionSet = { ...leg('Y', 'Gemiddelde verkoopprijs', { A: 300_000 }), regionSet: undefined };
+    expect(() => buildScatterSpec(yNoRegionSet, x)).toThrow(
+      /buildScatterSpec: the y leg has no regionSet — a scatter is only built from region-set legs/,
+    );
+  });
+
+  it('validates the extended fields (scope, leftOut, notApplicableCount) against the strict schema', () => {
+    const yLeg = leg('Y', 'Gemiddelde verkoopprijs', { A: 300_000, E: null, F: 450_000 }, { attributes: { E: 'Secret' } });
+    const xLeg = leg('X', 'Bevolking op 1 januari', { A: 1_000, E: 800 });
+    const spec = buildScatterSpec(yLeg, xLeg);
+    expect(scatterSpecSchema.safeParse(spec).success).toBe(true);
   });
 });
