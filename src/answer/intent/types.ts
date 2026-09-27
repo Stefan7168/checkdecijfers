@@ -199,7 +199,14 @@ export interface ClickOption {
    * stored: toRefusalResponse/toClarificationResponse (respond/refusals.ts)
    * strip it before a ClickOption reaches `pending` — the stored click
    * option, the take-path and every audit row must stay byte-identical to a
-   * pre-Task-4 run. */
+   * pre-Task-4 run. ONE deliberate exception (#296 final-review fix I1):
+   * an ANSWER's chip-carrier pending (respond.ts, built from
+   * buildAnswerChips) keeps the plotAgainst chip's deterministic `labelEn`,
+   * because the English translation step keeps that chip out of the model
+   * call and must re-derive that split from the stored response alone (R8,
+   * translate.ts fixedEnglishChipLabels) — a new chip, so no pre-existing
+   * stored bytes change; the click-time trust boundary still strips it
+   * (validate-pending.ts, M5), so it never reaches a take. */
   labelEn?: string;
 }
 

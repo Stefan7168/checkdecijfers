@@ -15,6 +15,7 @@ import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { StructuredIntent } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
+import { fixedEnglishChipLabels, prepareTranslation } from '../../src/answer/translate/translate.ts';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -92,6 +93,20 @@ describe('the "Zet af tegen …" chip: offer + click-take, hermetic end to end',
     // every other generator) — its own id prefix, 'pair-1'.
     expect(pending.options[0]).toBe(CHIP_LABEL);
     expect(pending.clickOptions?.[0]).toMatchObject({ id: 'pair-1', label: CHIP_LABEL });
+
+    // #296 final-review fix I1: the chip carries its deterministic English
+    // label, so an English reader's translation request leaves it out (its
+    // '1' in 'op 1 januari' would otherwise survive masking and send the
+    // whole English answer to the Dutch fallback) and shows the fixed label
+    // in its place.
+    expect(pending.clickOptions?.[0]?.labelEn).toBe('Plot against population on 1 January');
+    expect(fixedEnglishChipLabels(answered)[answered.suggestions.indexOf(CHIP_LABEL)]).toBe(
+      'Plot against population on 1 January',
+    );
+    const prep = prepareTranslation(answered);
+    expect(prep.maskedDutch.chips).toHaveLength(answered.suggestions.length - 1);
+    expect(prep.maskedDutch.chips.join(' ')).not.toContain('Zet af tegen');
+    expect(prep.digitSurvived).toBe(false);
 
     // Turn 2: the click-take, through the ordinary WP26 mechanism A fast
     // path — a reply BYTE-EQUAL to the offered label never reaches

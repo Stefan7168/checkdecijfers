@@ -103,6 +103,41 @@ export interface PreparedTranslation {
   digitSurvived: boolean;
 }
 
+/** #296 final-review fix I1: per `response.suggestions` entry, the
+ * deterministic English label its chip already carries (`ClickOption.labelEn`
+ * on the answer's chip-carrier pending, set at the mint site in
+ * respond/suggestions.ts — today only the "Zet af tegen …" plotAgainst chip),
+ * or null for a chip the model translates. Index-aligned with
+ * `response.suggestions`; a suggestion is matched to its ClickOption by its
+ * exact Dutch label (the carrier's `options` ARE those labels). Pure over the
+ * stored response, so reconstruction (R8) re-derives the same split. */
+export function fixedEnglishChipLabels(response: AnswerResponse): (string | null)[] {
+  const clickOptions = response.pending?.clickOptions ?? [];
+  return response.suggestions.map((label) => clickOptions.find((o) => o.label === label && o.labelEn !== undefined)?.labelEn ?? null);
+}
+
+/** #296 final-review fix I1: the English chip list in the ORIGINAL
+ * `response.suggestions` order — a chip with a deterministic English label
+ * (fixedEnglishChipLabels) shows that label, every other chip takes the next
+ * model-translated (already filled) label, and every `submit` is the Dutch
+ * suggestion the take-path matches byte-exactly. Throws when `translated`
+ * does not hold exactly one label per non-fixed chip — C6 already enforces
+ * that count, so a throw here means a contradiction the callers turn into a
+ * fallback (translateAnswer) or a reconstruction problem (R8). */
+export function assembleEnglishChips(response: AnswerResponse, translated: string[]): { label: string; submit: string }[] {
+  const fixed = fixedEnglishChipLabels(response);
+  let next = 0;
+  const chips = response.suggestions.map((submit, i) => {
+    const fixedLabel = fixed[i];
+    if (fixedLabel !== null && fixedLabel !== undefined) return { label: fixedLabel, submit };
+    const label = translated[next++];
+    if (label === undefined) throw new Error('fewer translated chips than chips to translate');
+    return { label, submit };
+  });
+  if (next !== translated.length) throw new Error('more translated chips than chips to translate');
+  return chips;
+}
+
 /** Everything deterministic that precedes the model call (Controller ruling
  * 1) — pure over `response`, no I/O, no model call. Re-derivable byte-for-
  * byte from a stored AnswerResponse alone. */
@@ -140,9 +175,14 @@ export function prepareTranslation(response: AnswerResponse): PreparedTranslatio
     .map((u) => ({ dutch: u, english: translateUnit(u) }));
   const masker = createMasker({ names, periodLabels: periodLabelPairs(result), caveats, units });
 
+  // #296 final-review fix I1: a chip that already carries a deterministic
+  // English label never reaches the model (assembleEnglishChips puts it back
+  // in place afterwards). With no such chip this is `response.suggestions`
+  // itself, element for element — the request stays byte-identical.
+  const fixedLabels = fixedEnglishChipLabels(response);
   const dutch: TranslationItems = {
     body: response.answer.body,
-    chips: response.suggestions,
+    chips: response.suggestions.filter((_, i) => fixedLabels[i] === null),
     definition: dutchDefinitionContent(result),
     alternates: dutchAlternateLabels(result),
   };
@@ -440,7 +480,7 @@ async function runLadder(
 
       const lines = buildEnglishLines(response.result, { definition: filledDefinition, alternates: filledAlternates });
       const text = assembleEnglishText(filledBody, lines, stalenessWarning);
-      const chips = filledChips.map((label, i) => ({ label, submit: response.suggestions[i]! }));
+      const chips = assembleEnglishChips(response, filledChips);
 
       attempts.push({ ok: true, problems: [], error: null, meaningCheck: meaning.record });
       return {

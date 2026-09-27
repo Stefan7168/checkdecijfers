@@ -327,6 +327,66 @@ describe('a verified English row (ADR 058 Task 7)', () => {
     expect(report.problems.some((p) => p.startsWith('english:'))).toBe(true);
   });
 
+  // #296 final-review fix I1: a chip whose carrier ClickOption carries a
+  // deterministic `labelEn` (the "Zet af tegen …" plot chip) never reached
+  // the model, so R8 must re-derive the SAME split: the masked Dutch still
+  // excludes it, and the English chip list re-assembles with that label in
+  // its original position. Built by adding such a chip to the verified B3
+  // row exactly as translate.ts would have produced it.
+  function withPlotChip(source: AuditRecord): AuditRecord {
+    const withChip = clone(source);
+    const response = answerOf(withChip);
+    const label = 'Zet af tegen bevolking op 1 januari';
+    response.suggestions = [label, ...response.suggestions];
+    response.pending = {
+      version: 1,
+      question: response.question,
+      referenceDate: REFERENCE_DATE,
+      axes: ['measure'],
+      questionNl: 'Vergelijk dit cijfer met:',
+      options: [label],
+      clickOptions: [
+        {
+          id: 'pair-1',
+          label,
+          labelEn: 'Plot against population on 1 January',
+          intent: {
+            schemaVersion: 1,
+            target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+            regionSet: { kind: 'all_provincies' },
+            period: { kind: 'codes', codes: ['2024JJ00'] },
+            derivation: 'none',
+            pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+          },
+          impliedRecency: false,
+        },
+      ],
+      rescueOnly: true,
+    };
+    response.english!.chips = [{ label: 'Plot against population on 1 January', submit: label }, ...response.english!.chips];
+    return withChip;
+  }
+
+  it('a labelEn chip kept out of the translation reconstructs clean in its original position', () => {
+    expect(reconstructionReport(withPlotChip(record)).problems).toEqual([]);
+  });
+
+  it("tamper: a changed English label on the labelEn chip fails reconstruction", () => {
+    const tampered = withPlotChip(record);
+    answerOf(tampered).english!.chips[0]!.label = 'Plot against something else';
+    const report = reconstructionReport(tampered);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.startsWith('english:') && p.includes('chip 1 label'))).toBe(true);
+  });
+
+  it('tamper: dropping the labelEn chip from english.chips fails reconstruction', () => {
+    const tampered = withPlotChip(record);
+    answerOf(tampered).english!.chips.shift();
+    const report = reconstructionReport(tampered);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.startsWith('english:'))).toBe(true);
+  });
+
   // #325 (C12): the meaning-check call's own role tag, and R8's SCOPE leg —
   // the verdict itself is recorded, never re-derived (same ADR 034 pattern
   // as the semantic checker above), but which items it must cover and that

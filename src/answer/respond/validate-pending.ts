@@ -111,9 +111,11 @@ function optionSchemaFor(intent: z.ZodType) {
     // plain chip on a resumed thread; it never widens what a take can do.
     questionShaped: z.literal(true).optional(),
     // ADR 058 phase 2 (#332), Task 4: present-only, decorative display text —
-    // never read to decide servability or the take-path, and in production
-    // never actually present on a client-returned pending at all (respond/
-    // refusals.ts strips it before any pending is stored/sent). Accepted here
+    // never read to decide servability or the take-path. respond/refusals.ts
+    // strips it before a refusal/clarification pending is stored/sent; an
+    // answer's chip carrier keeps the plotAgainst chip's deterministic one
+    // (#296 final-review fix I1, see ClickOption.labelEn), so a client CAN
+    // return it on that carrier. Accepted here
     // (rather than rejected as an unknown key) purely so this trust boundary
     // stays consistent with `decide()`'s own raw output shape — a producer
     // that sets it must not have its otherwise-valid option dropped.

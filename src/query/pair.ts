@@ -65,8 +65,12 @@ export interface LeftOutRegion {
 export interface RegionPairing {
   /** Regions with a value on both legs, in the y leg's cell order. */
   pairs: RegionPair[];
-  /** Every other region of either leg that has a value or a withheld cell on at
-   * least one side, or is missing — disclosed with each side's state (R11). */
+  /** Every region of either leg where at least one side lacks a value, EXCEPT
+   * the one case listed under `notApplicable` below (no cell on either side
+   * and not applicable on at least one) — disclosed with each side's state
+   * (R11). That includes a side that is withheld or missing, AND a side that
+   * is not applicable while the other side has a value (or a withheld cell):
+   * such a region is left out, not filed as not applicable. */
   leftOut: LeftOutRegion[];
   /** Not a member of the class at this period per CBS (`Impossible`) on at
    * least one leg, with no value and no withheld cell on the other. */

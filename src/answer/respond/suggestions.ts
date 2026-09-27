@@ -72,6 +72,8 @@ import { isClickTakeableIntent } from './validate-pending.ts';
 // ADR 058 phase 2 (#332), Task 4: the English siblings buildRefusalSuggestionsBoth
 // assembles its English chip text from, at the same site as the Dutch text.
 import { englishMeasureLabel, joinAndEn, periodCodeToEn, regionLabelEn } from './english.ts';
+import { hasEnglishName, translateMeasureTitle } from '../../registry/english-names.ts';
+import { ENGLISH_TOPIC_TERMS } from './english-measure-labels.ts';
 
 /** ADR 029 D1: at most 3 chips shown, fixed generator priority. */
 export const MAX_SUGGESTIONS = 3;
@@ -176,6 +178,13 @@ interface ChipCandidate {
   label: string;
   intent: StructuredIntent;
   axis: ClarifyAxis;
+  /** #296 final-review fix I1: a deterministic, hand-built English label the
+   * mint site copies onto the ClickOption (`ClickOption.labelEn`). Set only by
+   * a generator whose label is NOT a question the English translation prompt
+   * expects (today: plotAgainst) — src/answer/translate/translate.ts keeps
+   * every chip carrying one out of the model call and shows this text
+   * instead. Absent ⇒ the chip is translated exactly as before. */
+  labelEn?: string;
 }
 
 const ID_PREFIX: Record<GeneratorKind, string> = {
@@ -577,9 +586,31 @@ async function plotAgainst(ctx: SuggestionContext): Promise<ChipCandidate | null
     if (pairIntentProblem(candidate) !== null) continue;
     if (!(await servableAndTakeable(ctx, candidate))) continue;
     const title = measure.measureTitle || measure.definitionLabel;
-    return { kind: 'plotAgainst', label: `Zet af tegen ${lowerFirst(title)}`, intent: candidate, axis: 'measure' };
+    const englishName = plotAgainstEnglishName(title, measure.key);
+    return {
+      kind: 'plotAgainst',
+      label: `Zet af tegen ${lowerFirst(title)}`,
+      intent: candidate,
+      axis: 'measure',
+      ...(englishName !== null ? { labelEn: `Plot against ${englishName}` } : {}),
+    };
   }
   return null;
+}
+
+/** #296 final-review fix I1: the English measure name the plotAgainst chip's
+ * deterministic English label uses — the SAME title the Dutch label names,
+ * through the shared hand-written name list (english-names.data.ts) when it
+ * has an entry ('Bevolking op 1 januari' → 'population on 1 January'), else
+ * the measure's hand-written English topic term (english-measure-labels.ts,
+ * coverage-tested for every canonical key). Lower-cased at the join point
+ * exactly like the Dutch label. Never a guess: null when neither list knows
+ * the measure, and the chip then carries no `labelEn` (it is translated like
+ * any other chip). */
+function plotAgainstEnglishName(title: string, key: string): string | null {
+  if (hasEnglishName('measure', title)) return lowerFirst(translateMeasureTitle(title));
+  const term = ENGLISH_TOPIC_TERMS[key];
+  return term === undefined ? null : lowerFirst(term);
 }
 
 /** What respondToIntent assembles under an answer: the chip labels in display
@@ -735,6 +766,13 @@ export async function buildAnswerChips(
         // rule must not treat a click as one (the rescue chip's reasoning).
         impliedRecency: false,
         ...(QUESTION_SHAPED.has(produced.kind) ? { questionShaped: true as const } : {}),
+        // #296 final-review fix I1: present-only — the deterministic English
+        // label (plotAgainst only today). It rides the carrier pending so the
+        // English translation step (translate.ts) can keep this chip out of
+        // the model call and re-derive that from the stored response alone
+        // (R8); the click-time trust boundary strips it (validate-pending.ts,
+        // M5), so it never shapes a take.
+        ...(produced.labelEn !== undefined ? { labelEn: produced.labelEn } : {}),
       });
       if (!axes.includes(produced.axis)) axes.push(produced.axis);
     }

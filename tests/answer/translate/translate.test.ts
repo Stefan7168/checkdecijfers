@@ -757,3 +757,134 @@ describe('C12 meaning check in the ladder (#325)', () => {
     expect(hasDigitOutsidePlaceholders(retryAppendix)).toBe(false);
   });
 });
+
+// #296 final-review fix I1: a chip whose ClickOption carries a deterministic
+// English label (`labelEn` — today only the "Zet af tegen …" plotAgainst
+// chip, suggestions.ts) is NOT a question the translation prompt expects and
+// may carry a digit ('bevolking op 1 januari'), so it is kept OUT of the
+// model call and put back, in its original position, with its hand-built
+// English label. Every other answer's request stays byte-identical.
+describe('chips with a deterministic English label (#296 final-review fix I1)', () => {
+  const PLOT = 'Zet af tegen bevolking op 1 januari';
+  const PLOT_EN = 'Plot against population on 1 January';
+  const ADJACENT = 'Hoe was dit een jaar eerder?';
+  const PAIR_INTENT = {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+    regionSet: { kind: 'all_provincies' },
+    period: { kind: 'codes', codes: ['2024JJ00'] },
+    derivation: 'none',
+    pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+  };
+  const ADJACENT_INTENT = {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' },
+    period: { kind: 'codes', codes: ['2024KW04'] },
+    derivation: 'none',
+  };
+
+  /** The answer's chip-carrier pending (respond.ts), with or without the
+   * plot chip's `labelEn`. */
+  function withCarrier(response: AnswerResponse, options: { label: string; labelEn?: string; intent: unknown }[]): AnswerResponse {
+    return {
+      ...response,
+      pending: {
+        version: 1,
+        question: response.question,
+        referenceDate: '2026-08-15',
+        axes: ['measure', 'period'],
+        questionNl: 'Vergelijk dit cijfer met:',
+        options: options.map((o) => o.label),
+        clickOptions: options.map((o, i) => ({
+          id: `opt-${i + 1}`,
+          label: o.label,
+          intent: o.intent,
+          impliedRecency: false,
+          ...(o.labelEn !== undefined ? { labelEn: o.labelEn } : {}),
+        })),
+        rescueOnly: true,
+      },
+    } as unknown as AnswerResponse;
+  }
+
+  it('a response without any labelEn chip yields exactly the items and request it did before (with or without a carrier)', async () => {
+    const plain = await makeAnswerResponse({ suggestions: [ADJACENT, 'Vergelijk met Nederland'] });
+    const carried = withCarrier(plain, [
+      { label: ADJACENT, intent: ADJACENT_INTENT },
+      { label: 'Vergelijk met Nederland', intent: ADJACENT_INTENT },
+    ]);
+    const before = prepareTranslation(plain);
+    const after = prepareTranslation(carried);
+    // Both suggestions travel to the model, in order (neither carries a digit,
+    // so masking leaves them as-is).
+    expect(before.maskedDutch.chips).toEqual([ADJACENT, 'Vergelijk met Nederland']);
+    expect(after).toEqual(before);
+    expect(buildTranslateRequest(after.maskedDutch, after.glossary)).toEqual(
+      buildTranslateRequest(before.maskedDutch, before.glossary),
+    );
+  });
+
+  it('the plot chip is excluded from the translation items (no digit reaches the model) and comes back first, with its fixed label and Dutch submit', async () => {
+    const response = withCarrier(await makeAnswerResponse({ suggestions: [PLOT, ADJACENT] }), [
+      { label: PLOT, labelEn: PLOT_EN, intent: PAIR_INTENT },
+      { label: ADJACENT, intent: ADJACENT_INTENT },
+    ]);
+    const prep = prepareTranslation(response);
+    expect(prep.maskedDutch.chips).toEqual([ADJACENT]);
+    // Before the fix the plot chip's '1' (op 1 januari) survived masking and
+    // sent the whole English answer to the Dutch fallback with no model call.
+    expect(prep.digitSurvived).toBe(false);
+
+    const client = stub([JSON.stringify(faithfulEnglish(prep.maskedDutch))]);
+    const rendering = await translateAnswer(response, client);
+    expect(rendering.status).toBe('verified');
+    expect(client.requests).toHaveLength(1);
+    expect(client.requests[0]!.question).not.toContain('Zet af tegen');
+    expect(rendering.chips).toEqual([
+      { label: PLOT_EN, submit: PLOT },
+      { label: 'What was this a year earlier?', submit: ADJACENT },
+    ]);
+  });
+
+  it('keeps the original position when the labelEn chip is not first', async () => {
+    const response = withCarrier(await makeAnswerResponse({ suggestions: [ADJACENT, PLOT] }), [
+      { label: ADJACENT, intent: ADJACENT_INTENT },
+      { label: PLOT, labelEn: PLOT_EN, intent: PAIR_INTENT },
+    ]);
+    const prep = prepareTranslation(response);
+    const client = stub([JSON.stringify(faithfulEnglish(prep.maskedDutch))]);
+    const rendering = await translateAnswer(response, client);
+    expect(rendering.status).toBe('verified');
+    expect(rendering.chips).toEqual([
+      { label: 'What was this a year earlier?', submit: ADJACENT },
+      { label: PLOT_EN, submit: PLOT },
+    ]);
+  });
+
+  it('the only chip being a labelEn chip sends an empty chip list and still verifies with that chip shown', async () => {
+    const response = withCarrier(await makeAnswerResponse({ suggestions: [PLOT] }), [
+      { label: PLOT, labelEn: PLOT_EN, intent: PAIR_INTENT },
+    ]);
+    const prep = prepareTranslation(response);
+    expect(prep.maskedDutch.chips).toEqual([]);
+    const client = stub([JSON.stringify(faithfulEnglish(prep.maskedDutch))]);
+    const rendering = await translateAnswer(response, client);
+    expect(rendering.status).toBe('verified');
+    expect(rendering.chips).toEqual([{ label: PLOT_EN, submit: PLOT }]);
+  });
+
+  it('C6 still holds: a model that returns a chip for the excluded plot chip too (one chip too many) fails the count check ⇒ Dutch fallback', async () => {
+    const response = withCarrier(await makeAnswerResponse({ suggestions: [PLOT, ADJACENT] }), [
+      { label: PLOT, labelEn: PLOT_EN, intent: PAIR_INTENT },
+      { label: ADJACENT, intent: ADJACENT_INTENT },
+    ]);
+    const prep = prepareTranslation(response);
+    const tooMany = faithfulEnglish(prep.maskedDutch);
+    tooMany.chips = ['Plot against population', ...tooMany.chips];
+    const client = stub([JSON.stringify(tooMany), JSON.stringify(tooMany)]);
+    const rendering = await translateAnswer(response, client);
+    expect(rendering.status).toBe('fallback');
+    expect(rendering.chips).toEqual([]);
+    expect(rendering.attempts.every((a) => a.problems.some((p) => p.startsWith('C6:')))).toBe(true);
+  });
+});

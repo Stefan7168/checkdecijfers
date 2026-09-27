@@ -884,6 +884,7 @@ const nl = {
   // whole-DOM digit scan in scatter-view.test.tsx).
   'chart.scatter.ariaLabel': 'Spreidingsdiagram: {title}',
   'chart.scatter.tabChart': 'Grafiek',
+  'chart.scatter.tableHint': 'Kies de weergave Tabel om de waarden van elke regio te lezen.',
   'chart.scatter.logSuffix': ' (log. schaal)',
   'chart.scatter.logVertical': 'Log. schaal verticaal',
   'chart.scatter.logHorizontal': 'Log. schaal horizontaal',
@@ -2195,6 +2196,7 @@ const en: Messages = {
 
   'chart.scatter.ariaLabel': 'Scatter plot: {title}',
   'chart.scatter.tabChart': 'Chart',
+  'chart.scatter.tableHint': 'Switch to the Table view to read each region’s values.',
   'chart.scatter.logSuffix': ' (log scale)',
   'chart.scatter.logVertical': 'Log scale vertical',
   'chart.scatter.logHorizontal': 'Log scale horizontal',

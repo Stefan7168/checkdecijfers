@@ -61,7 +61,7 @@ import {
   translateStalenessWarning,
 } from '../translate/lines.ts';
 import { fillPlaceholders } from '../translate/mask.ts';
-import { isTranslationItemsShape, prepareTranslation } from '../translate/translate.ts';
+import { assembleEnglishChips, isTranslationItemsShape, prepareTranslation } from '../translate/translate.ts';
 import type { PreparedTranslation } from '../translate/translate.ts';
 // #325 (check C12, the English meaning check): the verdict is recorded, never
 // re-derived (same ADR 034 pattern the semantic checker above uses) — but its
@@ -776,7 +776,10 @@ function errorMessage(error: unknown): string {
 //    doctrine the #162 slot-phrasing check applies) must reproduce the
 //    stored `body`/chip labels byte-identically. The chip `submit` values
 //    are checked against `response.suggestions` directly — they carry no
-//    translated text, only the Dutch chip's take-intent labels.
+//    translated text, only the Dutch chip's take-intent labels. A chip whose
+//    carrier ClickOption carries a deterministic `labelEn` (#296 final-review
+//    fix I1) never reached the model: the expected list is re-assembled
+//    through translate.ts's own assembleEnglishChips, that label in place.
 //  - The structural lines and the final text re-assemble byte-identically
 //    from that re-filled prose, through the same builders `translateAnswer`
 //    uses (buildEnglishLines, assembleEnglishText, translateStalenessWarning).
@@ -931,11 +934,20 @@ function checkEnglishReconstructionUnguarded(record: AuditRecord, problems: stri
   if (filledBody !== english.body) {
     problems.push('english: body does not re-derive from rawTranslation + maskTable');
   }
-  if (filledChips.length !== english.chips.length) {
+  // #296 final-review fix I1: the expected English chip list is the SAME
+  // assembly translateAnswer used — a chip with a deterministic `labelEn` in
+  // its original position, every other chip from the re-filled translation.
+  let expectedChips: { label: string; submit: string }[] | null = null;
+  try {
+    expectedChips = assembleEnglishChips(response, filledChips);
+  } catch (error) {
+    problems.push(`english: chip list does not re-assemble from rawTranslation (${errorMessage(error)})`);
+  }
+  if (expectedChips !== null && expectedChips.length !== english.chips.length) {
     problems.push('english: chip count does not re-derive from rawTranslation');
-  } else {
-    filledChips.forEach((label, i) => {
-      if (english.chips[i]!.label !== label) {
+  } else if (expectedChips !== null) {
+    expectedChips.forEach((expected, i) => {
+      if (english.chips[i]!.label !== expected.label) {
         problems.push(`english: chip ${i + 1} label does not re-derive from rawTranslation + maskTable`);
       }
       if (english.chips[i]!.submit !== response.suggestions[i]) {

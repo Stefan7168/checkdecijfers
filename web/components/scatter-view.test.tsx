@@ -523,6 +523,30 @@ describe('ScatterView — the card around the plot (Dutch)', () => {
     expect(screen.getByRole('link', { name: 'checkdecijfers.nl' })).toBeInTheDocument();
   });
 
+  // Final-review fix M3: Recharts' ScatterChart keyboard navigation is not
+  // verified, so the chart's accessible description never promises arrow
+  // keys — it points to the Table view, the verified way to read every
+  // value. Embed mode has no tablist and no table view: the canvas is then no
+  // tabpanel and carries no such description.
+  it('the chart panel describes the Table view as the way to read the values — no arrow-key claim', () => {
+    const { container } = renderNl();
+    const panel = screen.getByTestId('scatter-container');
+    expect(panel).toHaveAttribute('role', 'tabpanel');
+    const desc = container.querySelector('svg desc');
+    expect(desc?.textContent).toBe('Kies de weergave Tabel om de waarden van elke regio te lezen.');
+    expect(container.textContent).not.toMatch(/pijltjestoetsen/);
+  });
+
+  it('embed mode: the canvas is not a tabpanel (there is no tablist) and carries no Table-view description', () => {
+    const { container } = renderNl({ embedMode: true, embedFooter: 'Bevroren op 20 september 2026 ·' });
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.queryByRole('tabpanel')).toBeNull();
+    expect(screen.getByTestId('scatter-container')).not.toHaveAttribute('role');
+    // Recharts always renders a <desc> element; in embed mode it is empty.
+    expect(container.querySelector('svg desc')?.textContent ?? '').toBe('');
+    expect(container.textContent).not.toMatch(/pijltjestoetsen|Tabel om de waarden/);
+  });
+
   it('refuses a spec from a newer schema version instead of drawing it', () => {
     const { container } = render(<ScatterView spec={{ ...spec(), schemaVersion: 2 as 1 }} />);
     expect(dots(container)).toHaveLength(0);
@@ -542,6 +566,12 @@ describe('ScatterView — English', () => {
     expect(screen.getByText(PROVISIONAL_NOTE_EN)).toBeInTheDocument();
     expect(screen.getByText(translateAttributionLine(s.y.attributionLine))).toBeInTheDocument();
     expect(screen.getByText(translateAttributionLine(s.x.attributionLine))).toBeInTheDocument();
+  });
+
+  it('the English chart description points to the Table view, never to arrow keys (fix M3)', () => {
+    const { container } = renderEn();
+    expect(container.querySelector('svg desc')?.textContent).toBe('Switch to the Table view to read each region’s values.');
+    expect(container.textContent).not.toMatch(/arrow keys/i);
   });
 
   it('omits the English body/coverage line when the caller passed no Dutch one', () => {

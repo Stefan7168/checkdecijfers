@@ -616,8 +616,9 @@ export function ScatterView({
   const canvasNode = (
     <div
       id={panelId}
-      role="tabpanel"
-      aria-label={t(lang, 'chart.scatter.tabChart')}
+      // Final-review fix M3: a tabpanel only where a tablist controls it —
+      // embed mode renders no view tabs, so the canvas is a plain container.
+      {...(embedMode ? {} : { role: 'tabpanel', 'aria-label': t(lang, 'chart.scatter.tabChart') })}
       ref={containerRef}
       data-testid="scatter-container"
       // touch-pan-y: a tap-to-pin tooltip must not fight vertical page
@@ -628,7 +629,11 @@ export function ScatterView({
       <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 320 }}>
         <ScatterChart
           aria-label={t(lang, 'chart.scatter.ariaLabel', { title })}
-          desc={t(lang, 'chart.keyboardHint')}
+          // Final-review fix M3: never promise arrow-key navigation (Recharts'
+          // ScatterChart keyboard support is not verified) — point to the
+          // Table view, the verified accessible way to read every value. Embed
+          // mode has no Table view, so no such description there.
+          desc={embedMode ? undefined : t(lang, 'chart.scatter.tableHint')}
           margin={{
             top: 8 + verticalTitleLines.length * AXIS_TITLE_LINE_PX,
             right: 24,

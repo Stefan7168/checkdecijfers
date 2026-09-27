@@ -44,6 +44,7 @@ import type { ServabilityCheck } from '../../src/answer/intent/policy.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import type { RawParse } from '../../src/answer/intent/types.ts';
 import { echoServability, runQuery, INTENT_SCHEMA_VERSION } from '../../src/query/index.ts';
+import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts';
 import {
   answerClarificationReplyAudited,
@@ -416,6 +417,11 @@ describe('buildAnswerChips — plotAgainst (stub checks)', () => {
         pairWith: { kind: 'canonical', key: 'population_on_1_january' },
       },
       impliedRecency: false,
+      // Final-review fix I1: a deterministic, hand-built English label — the
+      // measure title's own English name (english-names.data.ts), never a
+      // model translation — so the chip stays out of the English
+      // translation call entirely.
+      labelEn: 'Plot against population on 1 January',
     });
     expect(chips.axes[0]).toBe('measure');
     expectNoValueDigits(chips.suggestions);
@@ -438,6 +444,22 @@ describe('buildAnswerChips — plotAgainst (stub checks)', () => {
       kind: 'canonical',
       key: 'average_home_sale_price_by_gemeente',
     });
+    // The pair measure's title 'Gemiddelde verkoopprijs' through the shared
+    // hand-written English name list, lower-cased like the Dutch label.
+    expect(chips.clickOptions[0]!.labelEn).toBe('Plot against average purchase price');
+  });
+
+  it("a pair measure whose title has no English name falls back to its hand-written English topic term, never the Dutch title", async () => {
+    const result = await answered(homePriceAllProvinces);
+    const check: ServabilityCheck = async () => SERVABLE;
+    // An injected registry: the population measure under a title the shared
+    // English name list does not know.
+    const registry = CANONICAL_MEASURES.map((m) =>
+      m.key === 'population_on_1_january' ? { ...m, measureTitle: 'Inwonertal zonder Engelse naam' } : m,
+    );
+    const chips = await buildAnswerChips(homePriceAllProvinces, result, check, ON, registry);
+    expect(chips.suggestions[0]).toBe('Zet af tegen inwonertal zonder Engelse naam');
+    expect(chips.clickOptions[0]!.labelEn).toBe('Plot against population');
   });
 
   it('a non-region_set answer offers no plotAgainst chip', async () => {
@@ -470,8 +492,11 @@ describe('buildAnswerChips — plotAgainst against the real fixture db + real dr
     expect(pairOption!.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
     // The producer-side gate (servableAndTakeable) and the click-time trust
     // boundary must agree: an offered pair chip always survives the reply
-    // turn's own re-validation.
-    expect(validateClickOptions([pairOption])).toEqual([pairOption]);
+    // turn's own re-validation — minus its display-only English label, which
+    // the trust boundary accepts and then strips (M5, validate-pending.ts).
+    expect(pairOption!.labelEn).toBe('Plot against population on 1 January');
+    const { labelEn: _labelEn, ...withoutEnglish } = pairOption!;
+    expect(validateClickOptions([pairOption])).toEqual([withoutEnglish]);
   });
 });
 

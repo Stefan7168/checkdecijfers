@@ -3389,6 +3389,68 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
       expect(askQuestion.mock.calls[1]![0]).toBe('Wat was de inflatie in 2025?');
     });
 
+    it('#296 fix I1: the "Plot against …" English chip on an answer with a chip carrier sends the DUTCH label through the carrier (the click-take)', async () => {
+      const plot = 'Zet af tegen bevolking op 1 januari';
+      const plotEn = 'Plot against population on 1 January';
+      const pending = {
+        version: 1,
+        question: 'Gemiddelde verkoopprijs per provincie in 2024',
+        referenceDate: '2026-08-15',
+        axes: ['measure'],
+        questionNl: 'Vergelijk dit cijfer met:',
+        options: [plot],
+        clickOptions: [
+          {
+            id: 'pair-1',
+            label: plot,
+            labelEn: plotEn,
+            intent: {
+              schemaVersion: 1,
+              target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+              regionSet: { kind: 'all_provincies' },
+              period: { kind: 'codes', codes: ['2024JJ00'] },
+              derivation: 'none',
+              pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+            },
+            impliedRecency: false,
+          },
+        ],
+        rescueOnly: true,
+      };
+      askQuestion.mockResolvedValueOnce(
+        outcome({
+          kind: 'ok',
+          auditId: 23,
+          netCost: 20,
+          response: {
+            ...fakeAnswerResponse({
+              body: 'De gemiddelde verkoopprijs verschilde per provincie.',
+              suggestions: [plot],
+              english: fakeEnglishRendering({
+                status: 'verified',
+                text: 'The average purchase price differed by province.',
+                chips: [{ label: plotEn, submit: plot }],
+              }),
+            }),
+            pending,
+          } as unknown as ComposedResponse,
+        }),
+      );
+      replyToClarification.mockResolvedValueOnce(outcome(fakeAnswer('Spreidingsdiagram.')));
+      render(<Chat />);
+      await submit('Gemiddelde verkoopprijs per provincie in 2024');
+      const chip = await screen.findByRole('button', { name: plotEn });
+      expect(screen.queryByRole('button', { name: plot })).toBeNull();
+      fireEvent.click(chip);
+      expect(screen.getByPlaceholderText('Stel een vraag…')).toHaveValue(plotEn);
+      fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+      await screen.findByText('Spreidingsdiagram.');
+      expect(replyToClarification).toHaveBeenCalledTimes(1);
+      expect(replyToClarification.mock.calls[0]![0]).toMatchObject({ rescueOnly: true, options: [plot] });
+      expect(replyToClarification.mock.calls[0]![1]).toBe(plot);
+      expect(askQuestion).toHaveBeenCalledTimes(1);
+    });
+
     it("editing the filled English chip text before sending posts what was typed (today's rule for edited chips)", async () => {
       askQuestion.mockResolvedValueOnce(
         outcome(answerWithEnglishChip('De inflatie bedroeg in 2024 3,3%.', 'Inflation was 3.3% in 2024.')),
