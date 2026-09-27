@@ -218,27 +218,22 @@ function wasSubjectInPeriodEn(subject: string, periodCode: string | null): strin
  * measure's own freshest available period, so the example is answerable and
  * every digit in it is whitelistable (periodCodeNumbers of a genuinely loaded
  * code). */
-async function exampleQuestionNl(db: Db): Promise<string> {
+async function exampleQuestions(db: Db): Promise<{ nl: string; en: string }> {
   const preferred = CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation');
   const measure = preferred ?? CANONICAL_MEASURES[0]!;
+  // ONE lookup for both languages (#332): the English sibling must name the
+  // SAME measure and period, and must not cost a Dutch reader a second query.
   const freshest = await freshestForCanonical(db, measure.key);
-  const subject = preferred ? preferred.everydayTerms[0] : measure.definitionLabel;
-  return `"${wasSubjectInPeriodNl(subject, freshest?.periodCode ?? null)}"`;
-}
-
-/** English sibling of exampleQuestionNl — same measure/freshest selection,
- * subject preferring the English topic term (ENGLISH_TOPIC_TERMS, the
- * sibling of everydayTerms[0]) with an englishMeasureLabel fallback
- * (the sibling of definitionLabel), so the two examples always name the
- * SAME measure and period. */
-async function exampleQuestionEn(db: Db): Promise<string> {
-  const preferred = CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation');
-  const measure = preferred ?? CANONICAL_MEASURES[0]!;
-  const freshest = await freshestForCanonical(db, measure.key);
-  const subject = preferred
+  const subjectNl = preferred ? preferred.everydayTerms[0] : measure.definitionLabel;
+  // English: the English topic term (sibling of everydayTerms[0]), falling
+  // back to englishMeasureLabel (sibling of definitionLabel).
+  const subjectEn = preferred
     ? (ENGLISH_TOPIC_TERMS[measure.key] ?? englishMeasureLabel(measure.key))
     : englishMeasureLabel(measure.key);
-  return `"${wasSubjectInPeriodEn(subject, freshest?.periodCode ?? null)}"`;
+  return {
+    nl: `"${wasSubjectInPeriodNl(subjectNl!, freshest?.periodCode ?? null)}"`,
+    en: `"${wasSubjectInPeriodEn(subjectEn, freshest?.periodCode ?? null)}"`,
+  };
 }
 
 /** #134(c) (ADR 029): the offerChip candidate both buildForecastRefusal and
@@ -342,10 +337,11 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
 async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
   const body =
     `Daarover heb ik geen CBS-cijfers geladen — mijn bronnen dekken momenteel officiële CBS-cijfers over: ${loadedTopicsCompact()}.`;
-  const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
+  const example = await exampleQuestions(db);
+  const offer = `Vraag bijvoorbeeld: ${example.nl}`;
   const bodyEn =
     `I don't have any CBS figures loaded on that — my sources currently cover official CBS figures on: ${loadedTopicsCompactEn()}.`;
-  const offerEn = `For example, ask: ${await exampleQuestionEn(db)}`;
+  const offerEn = `For example, ask: ${example.en}`;
   return {
     reason: 'scope',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -395,8 +391,9 @@ function buildCompoundRefusal(): BuiltRefusal {
  * share the example-question offer, so every digit in either text stays
  * whitelistable from the same structured sources (labels + freshest period). */
 async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRefusal> {
-  const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
-  const offerEn = `For example, ask: ${await exampleQuestionEn(db)}`;
+  const example = await exampleQuestions(db);
+  const offer = `Vraag bijvoorbeeld: ${example.nl}`;
+  const offerEn = `For example, ask: ${example.en}`;
   const template = matchMetaTemplate(question);
   if (template) {
     const body = template.buildBody({ topicsCompact: loadedTopicsCompact() });
@@ -1151,9 +1148,10 @@ export async function buildStillAmbiguousRefusal(
   axes: ClarifyAxis[],
 ): Promise<BuiltRefusal> {
   const body = `Ook met je toelichting is me nog niet duidelijk ${axesNl(axes.length > 0 ? axes : ['measure'])}.`;
-  const guidance = `Stel je vraag het beste opnieuw in één zin, met onderwerp, regio en periode — bijvoorbeeld ${await exampleQuestionNl(db)}`;
+  const example = await exampleQuestions(db);
+  const guidance = `Stel je vraag het beste opnieuw in één zin, met onderwerp, regio en periode — bijvoorbeeld ${example.nl}`;
   const bodyEn = `Even with your clarification, it's still not clear to me ${axesEn(axes.length > 0 ? axes : ['measure'])}.`;
-  const guidanceEn = `Try asking your question again in one sentence, with topic, region and period — for example ${await exampleQuestionEn(db)}`;
+  const guidanceEn = `Try asking your question again in one sentence, with topic, region and period — for example ${example.en}`;
   return {
     reason: 'still_ambiguous',
     text: assertNotAQuestion(joinParts([body, guidance])),
