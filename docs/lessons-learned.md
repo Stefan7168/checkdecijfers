@@ -6,6 +6,25 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 137 — per-task reviews miss what only a rendered screen or a cross-task view shows
+
+1. **Look at a screenshot of every new visual component before accepting its review.** The Task 6 reviewer approved axis
+   ticks that showed only min and max (the brief had mandated the one-measure chart's convention); one glance at the
+   implementer's headless screenshot showed a scatter is unreadable that way. Ask implementers of UI tasks for a screenshot
+   path in the report and open it.
+2. **A top-tier final whole-branch review keeps paying for itself.** Both final reviews found things no task review could:
+   duplicate "Bergen" labels, a live-embed path that could re-run a scatter as one measure, the audited intent losing
+   `pairWith`, and a new chip silently entering the LIVE paid English translation call (an unmeasured LLM-facing change).
+   Budget one opus final review per part, not per plan.
+3. **"No LLM change" must include what flows INTO an existing LLM call.** The scatter answer itself had no model call, but
+   its chip text rode into the region-set answer's translate request. Check every new string's downstream consumers, not
+   just the new path.
+4. **The local harness can drive the Claude browser pane too** (not only Playwright): fetch the auth-stub's token and set
+   the session cookie from the page (RUNBOOK). A recorded region-class intent fixture gave a free end-to-end click test.
+5. **Split a big feature into two plans when the second half's seams can't be held in one context.** Part 1 (pure backend,
+   full code in the plan) went through with zero fix rounds; Part 2 was planned only after three parallel seam maps, with
+   integration tasks on a stronger model — and still needed one fix round each on 4 of 5 tasks.
+
 ## Session 136 — render the real surface before designing; a "gap" row can already be closed
 
 1. **Render the real page before designing a fix for it.** #324 gap 3 said shared pages and downloads "stay Dutch". A

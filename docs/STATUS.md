@@ -19,9 +19,9 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-27/28 local, session 137 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: see the newest file in [session-briefs/](session-briefs/).**
+before trusting this). Kickoff: [session-briefs/2026-09-28-session-138-kickoff.md](session-briefs/2026-09-28-session-138-kickoff.md).**
 
-- **`main` is live**: last code push `ad96af3c` (session 137). Prod 200. Full session log: [status-archive.md](status-archive.md).
+- **`main` is live and green**: last code push `ad96af3c` (CI 36340666368 green incl. deploy), docs `895fe168`. Prod 200. Full session log: [status-archive.md](status-archive.md).
 - **Shipped LIVE in session 137 (owner pick while CBS is down): two-measure charts** ([#296](open-questions.md), ADR
   [060](decisions/060-two-measure-scatter.md)). Under a CBS region-set answer a zero-AI chip "Zet af tegen …" answers with an
   audited scatter chart: one dot per region, auto log scale, named extremes, search, swap, table, left-out regions with CBS

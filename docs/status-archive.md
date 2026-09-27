@@ -1,5 +1,27 @@
 # STATUS archive — the session log
 
+**Session 137 (2026-09-27 → 2026-09-28, local UTC+7 — owner present throughout; one feature shipped LIVE in two parts;
+wrapped on the owner's "Wrap up").**
+
+1. **State verified at start:** `main` = `4352f28a`, CI 36319175494 green, prod 200, no open PRs. CBS data API still reset
+   connections (curl 000) and cbs.nl still showed "Technische storing" (19:58 local 09-27; still at 01:35 local 09-28).
+2. **Owner pick (from four sized options): two-measure charts** ([#296](open-questions.md) un-held). Design GO after the
+   owner asked "What's best UX?" and accepted the session's committed answer (auto log scale on ≥100× spread, named extremes +
+   search, asked-about figure vertical + swap, no trend line in v1). Spec `docs/superpowers/specs/2026-09-27-two-measure-scatter-design.md`.
+3. **Part 1 (backend, invisible) `3a0be206..89902c11`**: paired query (`src/query/pair.ts`), `ScatterSpec`. CI 36326353749 green
+   incl. deploy.
+4. **Part 2 (user-visible) `4998c7c9..ad96af3c`**: the zero-AI "Zet af tegen …" chip on CBS region-set answers, a
+   template-only audited scatter answer (`scatter` + `pairedResult` envelope fields), `ScatterView` in chat/replay/embed/CSV/
+   proof panel, Dutch + English (English at render time). ADR [060](decisions/060-two-measure-scatter.md). Verify block on
+   `ad96af3c`: typechecks clean, backend 3964 passed + 1 todo, web 3262 passed, benchmark 14/14 + 6/6 + 0 fabricated
+   (template fallbacks 0), `next build` OK; `audit:verify 1 400`: 298 clean + 2 pinned + 36 redacted of 336 rows (unchanged);
+   `/code-review` LOW no findings; real browser pass on the local harness (NL + EN, desktop + phone). CI 36340666368 green incl.
+   deploy; prod 200. Docs `895fe168`.
+5. **Reviews caught (all fixed before merge):** duplicate "Bergen" labels; live-embed re-run hole; audited intent missing
+   `pairWith`; x-leg refusal naming the wrong measure; ambiguous two-table staleness; missing definitions; sparse ticks; Dutch
+   in English; muted staleness caution; the chip entering the live English translate call.
+6. **Spend:** zero AI spend. Follow-ups: [#333](open-questions.md).
+
 **Session 136 (2026-09-27, evening local UTC+7 — owner present throughout; one change shipped LIVE; wrapped on the owner's
 "Wrap up").**
 
