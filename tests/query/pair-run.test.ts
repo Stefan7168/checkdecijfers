@@ -82,18 +82,43 @@ describe('runPairQuery', () => {
     }
   });
 
-  it('refuses when a leg refuses — a period only one table has', async () => {
-    // 03759ned carries 2026JJ00, 83625NED stops at 2025JJ00.
-    const outcome = await runPairQuery(db, pair({ kind: 'all_provincies' }, '2026JJ00'));
+  it('refuses when the y leg refuses — the y leg\'s own refusal, with the pair intent as pairedFrom', async () => {
+    // 03759ned carries 2026JJ00, 83625NED stops at 2025JJ00 — the y leg refuses.
+    const asked = pair({ kind: 'all_provincies' }, '2026JJ00');
+    const outcome = await runPairQuery(db, asked);
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
-    expect(outcome.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(outcome.refusal.kind).toBe('no_data');
+    expect(outcome.refusal.axis).toBe('region');
+    // The failing leg's own one-measure intent, so refusal text names it.
+    expect(outcome.intent.target).toEqual({ kind: 'canonical', key: 'average_home_sale_price_by_gemeente' });
+    expect('pairWith' in outcome.intent).toBe(false);
+    expect(outcome.pairedFrom).toEqual(asked);
   });
 
-  it('refuses a structurally invalid pair intent without querying', async () => {
-    const outcome = await runPairQuery(db, { ...pair({ kind: 'all_provincies' }), derivation: 'max' });
+  it('refuses when the x leg refuses — the x leg\'s own refusal, with the pair intent as pairedFrom', async () => {
+    // 83625NED carries 2015–2025, 03759ned's loaded slice starts at 2019JJ00 —
+    // at 2017JJ00 the y leg (home price) serves and the x leg (population) refuses.
+    const asked = pair({ kind: 'all_provincies' }, '2017JJ00');
+    const outcome = await runPairQuery(db, asked);
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect(outcome.refusal.kind).toBe('invalid_intent');
+    if (outcome.ok) return;
+    expect(outcome.refusal.kind).toBe('outside_loaded_slice');
+    expect(outcome.refusal.axis).toBe('period');
+    expect(outcome.refusal.nearestAlternative).toBe('2019JJ00');
+    expect(outcome.intent.target).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect('pairWith' in outcome.intent).toBe(false);
+    expect(outcome.pairedFrom).toEqual(asked);
+  });
+
+  it('refuses a structurally invalid pair intent without querying — intent stays the pair, no pairedFrom', async () => {
+    const asked: StructuredIntent = { ...pair({ kind: 'all_provincies' }), derivation: 'max' };
+    const outcome = await runPairQuery(db, asked);
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.refusal.kind).toBe('invalid_intent');
+    expect(outcome.intent).toEqual(asked);
+    expect('pairedFrom' in outcome).toBe(false);
   });
 
   it('the provinces pair builds a valid ScatterSpec with 12 points, x on a linear scale', async () => {

@@ -20,7 +20,14 @@
 //     no-unbacked-numbers guarantee is structural + belt-checked by the WP9
 //     suites at produce time, and the benchmark scorer re-scans refusal texts
 //     against run-time whitelists.
-import { DERIVED_DATA_MARKING, isDerivedResult, RESULT_SCHEMA_VERSION } from '../../query/index.ts';
+import {
+  DERIVED_DATA_MARKING,
+  isDerivedResult,
+  pairIntentProblem,
+  pairRegions,
+  RESULT_SCHEMA_VERSION,
+  SCATTER_MIN_PAIRS,
+} from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
 import { buildChartSpec, chartSpecSchema, scatterSpecSchema } from '../../chart/index.ts';
 import {
@@ -66,7 +73,7 @@ import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
 // #296 (two-measure scatter): the SAME pure builder respondToIntent composed
 // the scatter answer with — re-run here over the two stored legs.
-import { composeScatterAnswer } from '../respond/scatter-answer.ts';
+import { composeScatterAnswer, isScatterAnswer, pairedResultOf } from '../respond/scatter-answer.ts';
 // WP129+130 (ADR 032): the ⟨W3⟩ skip-list is shared with src/websearch/attach.ts
 // (the pure leaf) so reconstruct check (d) can never drift from the owed-check.
 import { WEBSEARCH_SKIP_REASONS } from '../../websearch/types.ts';
@@ -111,7 +118,7 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
     );
   }
   // #296: the scatter's x leg is a second stored result, pinned the same way.
-  const pairedResult = response.kind === 'answer' ? (response.pairedResult ?? null) : null;
+  const pairedResult = pairedResultOf(response);
   if (pairedResult !== null && pairedResult.schemaVersion !== RESULT_SCHEMA_VERSION) {
     problems.push(
       `pairedResult schemaVersion ${pairedResult.schemaVersion} is not the v${RESULT_SCHEMA_VERSION} this reconstructor handles`,
@@ -664,9 +671,32 @@ function checkScatterReconstruction(record: AuditRecord, problems: string[]): vo
   if (response.chart !== null) {
     problems.push('a scatter answer must carry no one-measure chart');
   }
+  // The pair's own structural preconditions (runPairQuery refuses otherwise),
+  // re-checked on the stored legs: a row whose legs could never have been
+  // served as a scatter is lying about itself, whatever its texts say.
+  const result = response.result as ValidatedResult;
+  const intentProblem = pairIntentProblem(resolvedIntent(response)!);
+  if (intentProblem !== null) {
+    problems.push(`the recorded pair intent is not a servable pair: ${intentProblem}`);
+  }
+  if (result.shape !== 'region_set' || pairedResult.shape !== 'region_set') {
+    problems.push(`a scatter answer needs two region_set legs (y=${result.shape}, x=${pairedResult.shape})`);
+  }
+  const period = result.intent.period.kind === 'codes' && result.intent.period.codes.length === 1
+    ? result.intent.period.codes[0]
+    : null;
+  if (period === null || [...result.cells, ...pairedResult.cells].some((c) => c.periodCode !== period)) {
+    problems.push('the two scatter legs do not share one single period');
+  }
+  if (stableStringify(result.regionSet?.scope ?? null) !== stableStringify(pairedResult.regionSet?.scope ?? null)) {
+    problems.push('the two scatter legs do not share one region class');
+  }
+  if (pairRegions(result, pairedResult).pairs.length < SCATTER_MIN_PAIRS) {
+    problems.push(`a scatter answer needs at least ${SCATTER_MIN_PAIRS} paired regions`);
+  }
   let rederived: ReturnType<typeof composeScatterAnswer>;
   try {
-    rederived = composeScatterAnswer(response.result as ValidatedResult, pairedResult);
+    rederived = composeScatterAnswer(result, pairedResult);
   } catch (error) {
     problems.push(`scatter answer cannot re-derive from the stored results (${errorMessage(error)})`);
     return;
@@ -687,6 +717,12 @@ function checkScatterReconstruction(record: AuditRecord, problems: string[]): vo
   if (answer.attributionLine !== rederived.answer.attributionLine) {
     problems.push('attribution line does not re-derive from the stored attribution');
   }
+  if (answer.definitionLine !== rederived.answer.definitionLine) {
+    problems.push('definition line does not re-derive from the stored attribution');
+  }
+  if ((answer.pairedDefinitionLine ?? null) !== (rederived.answer.pairedDefinitionLine ?? null)) {
+    problems.push('paired definition line does not re-derive from the stored x-leg attribution');
+  }
   if (stableStringify(answer.validation) !== stableStringify(rederived.answer.validation)) {
     problems.push('scatter validation report differs from the value-free-body report');
   }
@@ -696,7 +732,6 @@ function checkScatterReconstruction(record: AuditRecord, problems: string[]): vo
     assumptionLine: answer.assumptionLine ?? null,
     regionSetLine: answer.regionSetLine ?? null,
     regionSeriesLine: answer.regionSeriesLine ?? null,
-    definitionLine: answer.definitionLine,
     alternatesLine: answer.alternatesLine ?? null,
     markingLine: answer.markingLine,
   };
@@ -933,7 +968,7 @@ export function reconstructionReport(record: AuditRecord): ReconstructionReport 
   if (record.response.kind === 'answer') {
     // #296: either scatter key present routes to the scatter check, which
     // itself fails a row carrying only one of the two.
-    if (record.response.scatter !== undefined || record.response.pairedResult !== undefined) {
+    if (isScatterAnswer(record.response)) {
       checkScatterReconstruction(record, problems);
     } else {
       checkAnswerReconstruction(record, problems);

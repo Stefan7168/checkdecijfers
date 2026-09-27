@@ -20,7 +20,7 @@ import { respondToIntent } from '../../src/answer/respond/respond.ts';
 import type { ParseOutcome } from '../../src/answer/intent/types.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
 import { scatterBodyNl, scatterLineNl } from '../../src/chart/scatter-text.ts';
-import { buildAttributionLine } from '../../src/answer/compose/format.ts';
+import { buildAttributionLine, buildDefinitionLine } from '../../src/answer/compose/format.ts';
 import type { StructuredIntent } from '../../src/query/index.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
@@ -119,37 +119,73 @@ describe('respondToIntent — a pair intent answers as a template-only scatter',
     expect(answer.validation).toEqual({ ok: true, problems: [] });
     expect(answer.body).toBe(scatterBodyNl(scatter));
     expect(answer.scatterLine).toBe(scatterLineNl(scatter));
-    expect(answer.definitionLine).toBeNull();
+    // docs/05: both measures' chosen definitions are stated, y first.
+    const yDefinition = buildDefinitionLine(response.result);
+    const xDefinition = buildDefinitionLine(paired);
+    expect(yDefinition).not.toBeNull();
+    expect(xDefinition).not.toBeNull();
+    expect(answer.definitionLine).toBe(yDefinition);
+    expect(answer.pairedDefinitionLine).toBe(xDefinition);
+    expect('alternatesLine' in answer).toBe(false);
     expect(answer.markingLine).toBeNull();
     expect(answer.attributionLine).toBe(buildAttributionLine(response.result));
 
-    // Both tables' R4 sentences, y first, after the coverage line — the
-    // compose.ts assemble() join (body, blank line, structural lines, one per line).
+    // The compose.ts assemble() join (body, blank line, structural lines one
+    // per line): coverage, the two definitions, then both tables' R4
+    // sentences — y first each time.
     const yAttribution = buildAttributionLine(response.result);
     const xAttribution = buildAttributionLine(paired);
-    expect(answer.text).toBe([answer.body, '', answer.scatterLine, yAttribution, xAttribution].join('\n'));
+    expect(answer.text).toBe(
+      [answer.body, '', answer.scatterLine, yDefinition, xDefinition, yAttribution, xAttribution].join('\n'),
+    );
     expect(response.text).toContain(yAttribution);
     expect(response.text).toContain(xAttribution);
     expect(response.stalenessWarning).toBeNull();
     expect(response.text).toBe(answer.text);
   });
 
-  it('a pair with a leg that refuses (2026JJ00: only 03759ned has it) is a refusal, not a one-measure answer', async () => {
+  it('the y leg refuses (2026JJ00: only 03759ned has it) — the leg\'s own no_data refusal, not a one-measure answer', async () => {
     const client = new CountingThrowingClient();
     const response = await respondToIntent(db, QUESTION, stubIntent(QUESTION, pairIntent('2026JJ00')), {
       answerClient: client,
       referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
     });
     expect(response.kind).toBe('refusal');
     if (response.kind !== 'refusal') return;
-    expect(response.queryRefusal?.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
-    // The LEG's own refusal (re-pinned to the pair intent) — not runQuery's
-    // blanket invalid_intent for a paired intent it never answers.
-    expect(response.queryRefusal?.refusal.kind).not.toBe('invalid_intent');
+    expect(response.queryRefusal?.refusal.kind).toBe('no_data');
+    expect(response.reason).toBe('internal');
+    expect(response.queryRefusal?.intent.target).toEqual({ kind: 'canonical', key: 'average_home_sale_price_by_gemeente' });
+    expect(response.queryRefusal?.pairedFrom?.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(response.suggestions).toEqual([]);
+    expect('pending' in response).toBe(false);
     expect(client.calls).toBe(0);
   });
 
-  it('both legs stale, historical question: warn-and-serve with both legs\' warnings, y first', async () => {
+  it('the x leg refuses (2017JJ00: before 03759ned\'s loaded slice) — worded about the x measure, with no retry chip', async () => {
+    const client = new CountingThrowingClient();
+    const response = await respondToIntent(db, QUESTION, stubIntent(QUESTION, pairIntent('2017JJ00')), {
+      answerClient: client,
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+    });
+    expect(response.kind).toBe('refusal');
+    if (response.kind !== 'refusal') return;
+    expect(response.queryRefusal?.refusal.kind).toBe('outside_loaded_slice');
+    expect(response.reason).toBe('outside_loaded_slice');
+    // The refusal names the measure that has no figure (population), never the
+    // y measure that does.
+    expect(response.text).toContain('bevolking op 1 januari');
+    expect(response.text).not.toContain('verkoopprijs');
+    expect(response.queryRefusal?.intent.target).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect(response.queryRefusal?.pairedFrom?.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    // A one-measure retry chip would silently drop the pairing.
+    expect(response.suggestions).toEqual([]);
+    expect('pending' in response).toBe(false);
+    expect(client.calls).toBe(0);
+  });
+
+  it('both legs stale, historical question: warn-and-serve, one line per leg, each naming its own table (y first)', async () => {
     const response = await respondToIntent(db, QUESTION, stubIntent(QUESTION, pairIntent()), {
       answerClient: new CountingThrowingClient(),
       referenceDate: STALE_REFERENCE_DATE,
@@ -159,17 +195,46 @@ describe('respondToIntent — a pair intent answers as a template-only scatter',
     expect(warning).not.toBeNull();
     const parts = warning!.split('\n');
     expect(parts).toHaveLength(2);
-    for (const part of parts) expect(part.startsWith('Let op: deze tabel')).toBe(true);
+    expect(parts[0]!.startsWith('Let op: de tabel 83625NED (')).toBe(true);
+    expect(parts[1]!.startsWith('Let op: de tabel 03759ned (')).toBe(true);
+    for (const part of parts) {
+      expect(part).toContain(' wordt normaal jaarlijks bijgewerkt door CBS, ');
+      expect(part).not.toContain('deze tabel');
+    }
     expect(response.text).toBe(`${response.answer.text}\n\n${warning}`);
   });
 
-  it('a stale leg under a recency-implying question refuses (staleness), exactly like the one-measure path', async () => {
+  it('a stale leg under a recency-implying question refuses (staleness), naming the stale table', async () => {
     const response = await respondToIntent(db, QUESTION, stubIntent(QUESTION, pairIntent(), true), {
       answerClient: new CountingThrowingClient(),
       referenceDate: STALE_REFERENCE_DATE,
+      lang: 'en',
     });
     expect(response.kind).toBe('refusal');
     if (response.kind !== 'refusal') return;
     expect(response.reason).toBe('staleness');
+    expect(response.text.startsWith('De cijfers van de tabel 83625NED (')).toBe(true);
+    expect(response.english?.text.startsWith('The figures of table 83625NED (')).toBe(true);
+  });
+
+  describe('only ONE leg stale (03759ned carries no recognised cadence here)', () => {
+    beforeAll(async () => {
+      await db.query(`update cbs_tables set update_cadence = null where id = '03759ned'`);
+    });
+    afterAll(async () => {
+      await db.query(`update cbs_tables set update_cadence = 'yearly (next CBS update Q2 2027)' where id = '03759ned'`);
+    });
+
+    it('warn-and-serve names that table only', async () => {
+      const response = await respondToIntent(db, QUESTION, stubIntent(QUESTION, pairIntent()), {
+        answerClient: new CountingThrowingClient(),
+        referenceDate: STALE_REFERENCE_DATE,
+      });
+      if (response.kind !== 'answer') throw new Error(`expected an answer, got ${response.kind}: ${response.text}`);
+      const warning = response.stalenessWarning!;
+      expect(warning.split('\n')).toHaveLength(1);
+      expect(warning.startsWith('Let op: de tabel 83625NED (')).toBe(true);
+      expect(warning).not.toContain('03759ned');
+    });
   });
 });

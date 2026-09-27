@@ -136,18 +136,19 @@ function refusePair(intent: StructuredIntent, kind: QueryRefusal['refusal']['kin
 }
 
 /** Run a paired intent: both legs through the ordinary runQuery, then the join.
- * A refused leg refuses the pair (with the leg's own refusal, re-pinned to the
- * full pair intent); too few pairs refuses `no_data` — never a partial scatter
- * of one measure. */
+ * A refused leg refuses the pair with the LEG'S OWN refusal unchanged (its own
+ * one-measure intent, so the refusal text names the measure that has no
+ * figure) plus `pairedFrom` = the full pair intent; too few pairs refuses
+ * `no_data` — never a partial scatter of one measure. */
 export async function runPairQuery(db: Db, intent: StructuredIntent, options: QueryOptions = {}): Promise<PairOutcome> {
   const problem = pairIntentProblem(intent);
   if (problem !== null) return refusePair(intent, 'invalid_intent', problem);
   const legs = legIntents(intent);
 
   const y = await runQuery(db, legs.y, options);
-  if (!y.ok) return { ...y, intent };
+  if (!y.ok) return { ...y, pairedFrom: intent };
   const x = await runQuery(db, legs.x, options);
-  if (!x.ok) return { ...x, intent };
+  if (!x.ok) return { ...x, pairedFrom: intent };
 
   if (y.shape !== 'region_set' || x.shape !== 'region_set') {
     return refusePair(intent, 'internal_inconsistency', `a paired leg did not answer as a region set (y=${y.shape}, x=${x.shape})`);

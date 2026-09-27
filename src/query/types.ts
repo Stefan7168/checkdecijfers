@@ -554,6 +554,20 @@ export interface QueryRefusal {
     nearestAlternative?: string;
   };
   intent: StructuredIntent;
+  /** #296 (two-measure scatter): set ONLY when one LEG of a pair intent
+   * refused (runPairQuery, src/query/pair.ts). `intent` is then the failing
+   * leg's own one-measure intent — so every refusal builder words the refusal
+   * about the measure that actually has no figure — and this field carries
+   * the full pair intent (with `pairWith`) that was asked, which is what the
+   * audit records as the resolved intent (audit/write.ts resolvedIntent).
+   * The answer layer offers no retry/offer chips on such a refusal (a
+   * one-measure retry would silently drop the pairing).
+   *
+   * Present-only (docs/13): absent on every other refusal — including the
+   * pair's own STRUCTURAL refusals (invalid pair intent, internal
+   * inconsistency, too few pairs), whose `intent` already is the pair intent —
+   * and on every row stored before #296; readers use `?? null`. */
+  pairedFrom?: StructuredIntent;
 }
 
 export type QueryOutcome = ValidatedResult | QueryRefusal;

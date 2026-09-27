@@ -166,6 +166,25 @@ describe('the audited scatter take writes a row that reconstructs (R8)', () => {
     expect(report.problems).toContain('a scatter answer must carry both scatter and pairedResult');
   });
 
+  it('a tampered x-measure definition line diverges', () => {
+    const record = clone(stored);
+    const answer = (record.response as AnswerResponse).answer;
+    expect(answer.pairedDefinitionLine).toMatch(/^Definitie: /);
+    answer.pairedDefinitionLine = 'Definitie: iets anders.';
+    const report = reconstructionReport(record);
+    expect(report.ok).toBe(false);
+    expect(report.problems).toContain('paired definition line does not re-derive from the stored x-leg attribution');
+  });
+
+  it('x leg over a different region class diverges (the pair precondition, re-checked on the stored legs)', () => {
+    const record = clone(stored);
+    const paired = (record.response as AnswerResponse).pairedResult!;
+    paired.regionSet = { ...paired.regionSet!, scope: { kind: 'all_landsdelen' } };
+    const report = reconstructionReport(record);
+    expect(report.ok).toBe(false);
+    expect(report.problems).toContain('the two scatter legs do not share one region class');
+  });
+
   it('a tampered body diverges', () => {
     const record = clone(stored);
     const answer = (record.response as AnswerResponse).answer;
@@ -173,5 +192,34 @@ describe('the audited scatter take writes a row that reconstructs (R8)', () => {
     const report = reconstructionReport(record);
     expect(report.ok).toBe(false);
     expect(report.problems).toContain('scatter body does not re-derive from the stored results');
+  });
+});
+
+describe('an audited pair-leg refusal records the pair it was asked as', () => {
+  it('x leg refuses (2017JJ00): the stored intent is the pair, the text names the x measure, no chips, reconstructs clean', async () => {
+    const label = 'Zet af tegen bevolking op 1 januari (2017)';
+    const pairIntent: StructuredIntent = { ...PAIR_INTENT, period: { kind: 'codes', codes: ['2017JJ00'] } };
+    const pending: PendingClarification = {
+      ...PENDING,
+      options: [label],
+      clickOptions: [{ id: 'opt-1', label, intent: pairIntent, impliedRecency: false }],
+    };
+    const outcome = await answerClarificationReplyAudited(db, pending, label, {
+      intentClient: new CountingThrowingClient(),
+      answerClient: new CountingThrowingClient(),
+      referenceDate: REFERENCE_DATE,
+      clickOptionsEnabled: true,
+      sourceTag: 'validation',
+    });
+    expect(outcome.response.kind).toBe('refusal');
+    if (outcome.response.kind !== 'refusal') return;
+    expect(outcome.response.reason).toBe('outside_loaded_slice');
+    expect(outcome.response.text).toContain('bevolking op 1 januari');
+    expect(outcome.response.suggestions ?? []).toEqual([]);
+    const record = await loadAuditRecord(db, outcome.auditId!);
+    if (record === null) throw new Error('audit row missing');
+    expect(record.intent).toEqual(pairIntent);
+    expect(record.intentHash).toBe(intentHash(pairIntent));
+    expect(reconstructionReport(record).problems).toEqual([]);
   });
 });

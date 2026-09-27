@@ -22,7 +22,7 @@ import type { Db } from '../../db/types.ts';
 import type { PairedResults, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import { buildScatterSpec, scatterBodyNl, scatterLineNl } from '../../chart/index.ts';
 import type { ScatterSpec } from '../../chart/index.ts';
-import { buildAttributionLine } from '../compose/format.ts';
+import { buildAttributionLine, buildDefinitionLine } from '../compose/format.ts';
 import { COMPOSE_PROMPT_VERSION } from '../compose/prompt.ts';
 import { ANSWER_SCHEMA_VERSION } from '../compose/types.ts';
 import type { ComposedAnswer } from '../compose/types.ts';
@@ -31,11 +31,21 @@ import { checkStaleness } from './staleness.ts';
 import type { AnswerResponse, ComposedResponse } from './types.ts';
 import { RESPONSE_SCHEMA_VERSION } from './types.ts';
 
-/** A scatter answer, by envelope shape: the one discriminator every consumer
- * (the audited wrappers, write.ts, reconstruct.ts) keys on. `?? undefined`
- * reads (A1): the keys are present-only. */
-export function isScatterAnswer(response: ComposedResponse): response is AnswerResponse & { scatter: ScatterSpec } {
-  return response.kind === 'answer' && response.scatter !== undefined;
+/** A scatter answer, by envelope shape: THE one discriminator every consumer
+ * (the audited wrappers, write.ts, reconstruct.ts) keys on. True when EITHER
+ * present-only scatter key is on the envelope — respond always sets both
+ * together, and reconstruct fails a row carrying only one of the two, so
+ * keying on "either" routes a half-tampered row to the check that catches it.
+ * Readers still read the data itself with `?? null` (A1). */
+export function isScatterAnswer(response: ComposedResponse): boolean {
+  return response.kind === 'answer' && (response.scatter !== undefined || response.pairedResult !== undefined);
+}
+
+/** The x leg of a scatter answer as stored (null on every other response,
+ * and on a half-tampered scatter row missing it) — read through the SAME
+ * predicate, so every consumer agrees on what a scatter answer is. */
+export function pairedResultOf(response: ComposedResponse): ValidatedResult | null {
+  return isScatterAnswer(response) ? ((response as AnswerResponse).pairedResult ?? null) : null;
 }
 
 /** The full pair intent an audited scatter answer rests on, re-derived from
@@ -55,21 +65,37 @@ export function composeScatterAnswer(
   const scatter = buildScatterSpec(result, pairedResult);
   const body = scatterBodyNl(scatter);
   const scatterLine = scatterLineNl(scatter);
+  // docs/05: an answer always states the chosen definition — here BOTH
+  // measures', y first, through the same builder the one-measure answer uses.
+  // No alternatesLine: alternate readings belong to the one-measure answer
+  // (a scatter pairs the two canonical defaults, nothing to toggle).
+  const definitionLine = buildDefinitionLine(result);
+  const pairedDefinitionLine = buildDefinitionLine(pairedResult);
   const attributionLine = buildAttributionLine(result);
   const pairedAttributionLine = buildAttributionLine(pairedResult);
   // The compose.ts assemble() join: the body, a blank line, then the
-  // structural lines one per line — the coverage line first (the slot
-  // regionSetLine takes), then the R4 attribution sentences, y leg first
-  // (two tables, two sentences — spec D7). A staleness warning is NOT part of
-  // answer.text: respondToIntent appends it to the response `text` after a
-  // blank line, exactly as the one-measure path does.
-  const text = [body, '', scatterLine, attributionLine, pairedAttributionLine].join('\n');
+  // structural lines one per line in assemble()'s slot order — the coverage
+  // line (the slot regionSetLine takes), the definitions (y, then x), then
+  // the R4 attribution sentences, y leg first (two tables, two sentences —
+  // spec D7). A staleness warning is NOT part of answer.text:
+  // respondToIntent appends it to the response `text` after a blank line,
+  // exactly as the one-measure path does.
+  const text = [
+    body,
+    '',
+    scatterLine,
+    ...(definitionLine ? [definitionLine] : []),
+    ...(pairedDefinitionLine ? [pairedDefinitionLine] : []),
+    attributionLine,
+    pairedAttributionLine,
+  ].join('\n');
   const answer: ComposedAnswer = {
     schemaVersion: ANSWER_SCHEMA_VERSION,
     source: 'template',
     body,
     scatterLine,
-    definitionLine: null,
+    definitionLine,
+    pairedDefinitionLine,
     markingLine: null,
     attributionLine,
     text,
@@ -101,7 +127,8 @@ export async function checkPairStaleness(
   let staleLeg: ValidatedResult | null = null;
   const warnings: string[] = [];
   for (const leg of [paired.result, paired.pairedResult]) {
-    const check = await checkStaleness(db, leg, referenceDate);
+    // Named: two tables, so each warning says which one it is about.
+    const check = await checkStaleness(db, leg, referenceDate, { namedTable: true });
     if (!check.stale) continue;
     staleLeg ??= leg;
     if (check.warning !== null) warnings.push(check.warning);

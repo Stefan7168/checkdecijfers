@@ -62,6 +62,14 @@ async function readTableLastSync(db: Db, tableId: string): Promise<string | null
   return raw == null ? null : new Date(raw as string | Date).toISOString();
 }
 
+/** "de tabel 83625NED (Gemiddelde verkoopprijs)" — the table id plus the
+ * measure title verbatim from the result's own cells (R10), for a warning or
+ * refusal that must say WHICH of several tables it is about (#296). */
+export function namedTableNl(result: ValidatedResult): string {
+  const title = result.cells[0]?.measureTitle;
+  return `de tabel ${result.attribution.tableId}${title ? ` (${title})` : ''}`;
+}
+
 /** docs/05 staleness row, both branches: stale iff the floor of days between
  * the table's last sync and the injected reference date STRICTLY EXCEEDS the
  * cadence's max-age threshold (boundary: age == maxAge is NOT stale — a
@@ -70,6 +78,13 @@ export async function checkStaleness(
   db: Db,
   result: ValidatedResult,
   referenceDate: string,
+  options: {
+    /** #296 (two-measure scatter): name the table the warning is about —
+     * "Let op: de tabel {tableId} ({measureTitle}) wordt normaal …" — because
+     * a scatter answer rests on two tables and "deze tabel" would not say
+     * which. Absent/false ⇒ the one-measure wording, byte-identical. */
+    namedTable?: boolean;
+  } = {},
 ): Promise<StalenessCheck> {
   // #196 (session 73): a real runQuery result carries the registry facts it
   // was resolved with (ValidatedResult.registry — the same cbs_tables row the
@@ -102,8 +117,9 @@ export async function checkStaleness(
   const clause = retainedMin
     ? `maar een deel van deze cijfers is door CBS sinds ${syncDate} niet opnieuw bevestigd`
     : `maar onze laatste synchronisatie was op ${syncDate}`;
+  const subject = options.namedTable === true ? namedTableNl(result) : 'deze tabel';
   const warning =
-    `Let op: deze tabel wordt normaal ${cadenceWordsNl(cadence!)} bijgewerkt door CBS, ` +
+    `Let op: ${subject} wordt normaal ${cadenceWordsNl(cadence!)} bijgewerkt door CBS, ` +
     `${clause} — recentere cijfers kunnen inmiddels beschikbaar zijn.`;
   return { stale: true, warning };
 }

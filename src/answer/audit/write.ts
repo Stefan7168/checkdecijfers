@@ -11,7 +11,7 @@ import { CLARIFY_PROMPT_VERSION } from '../intent/clarify.ts';
 import { FOLLOWUP_PROMPT_VERSION } from '../intent/followup.ts';
 import { COMPOSE_PROMPT_VERSION } from '../compose/prompt.ts';
 import type { ComposedResponse, PendingClarification } from '../respond/types.ts';
-import { pairIntentOf } from '../respond/scatter-answer.ts';
+import { pairedResultOf, pairIntentOf } from '../respond/scatter-answer.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { AuditRecord, AuditSourceTag, LlmCallRecord, PromptVersions, TableRef } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
@@ -43,11 +43,14 @@ export function intentHash(intent: StructuredIntent): string {
  * re-runs as an embed) as the y leg's one-measure question. */
 export function resolvedIntent(response: ComposedResponse): StructuredIntent | null {
   if (response.kind === 'answer') {
-    const paired = response.pairedResult ?? null;
+    const paired = pairedResultOf(response);
     return paired === null ? response.result.intent : pairIntentOf(response.result, paired);
   }
   if (response.kind === 'refusal') {
-    if (response.queryRefusal) return response.queryRefusal.intent;
+    // #296: a pair-leg refusal carries the failing LEG's intent (so its text
+    // names the right measure) and the asked pair intent as `pairedFrom` —
+    // the audit records what was asked.
+    if (response.queryRefusal) return response.queryRefusal.pairedFrom ?? response.queryRefusal.intent;
     if (response.parse?.kind === 'intent') return response.parse.intent;
   }
   return null;
@@ -83,7 +86,8 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
   const isAnswer = response.kind === 'answer';
   // #296: a scatter answer rests on TWO results (y leg, then the x leg in
   // `pairedResult`) — both tables and both legs' cells are promoted.
-  const legs = isAnswer ? [response.result, ...(response.pairedResult ? [response.pairedResult] : [])] : [];
+  const paired = pairedResultOf(response);
+  const legs = isAnswer ? [response.result, ...(paired !== null ? [paired] : [])] : [];
   const tables: TableRef[] = legs.map((leg) => ({
     tableId: leg.attribution.tableId,
     tableVersion: leg.attribution.tableVersion,

@@ -98,6 +98,30 @@ describe('buildConversationContext (ADR 016: the stored query plan, in registry 
     expect(context?.topicKey).toBe('population_on_1_january');
   });
 
+  it('#296: a scatter answer (two measures) hands NO context — a follow-up must not silently narrow to the y measure', async () => {
+    const y = popIntent({ target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' }, regions: undefined, regionSet: { kind: 'all_provincies' } });
+    const x = { ...y, target: { kind: 'canonical' as const, key: 'population_on_1_january' } };
+    const scatterAnswer = {
+      kind: 'answer',
+      result: { intent: y },
+      pairedResult: { intent: x },
+      scatter: {},
+    } as unknown as ComposedResponse;
+    // Sanity: the same y intent WITHOUT the pair is a real referent.
+    expect(await buildConversationContext(db, answerWith(y))).not.toBeNull();
+    expect(await buildConversationContext(db, scatterAnswer)).toBeNull();
+  });
+
+  it('#296: a pair-leg refusal (pairedFrom) hands NO context either — the audited intent is the pair', async () => {
+    const pair = popIntent({ regions: undefined, regionSet: { kind: 'all_provincies' }, pairWith: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' } });
+    const legRefusal = {
+      kind: 'refusal',
+      queryRefusal: { ok: false, intent: popIntent({ regions: undefined, regionSet: { kind: 'all_provincies' } }), pairedFrom: pair },
+      parse: null,
+    } as unknown as ComposedResponse;
+    expect(await buildConversationContext(db, legRefusal)).toBeNull();
+  });
+
   it('a clarification leaves no referent — the pending mechanism owns that turn', async () => {
     expect(await buildConversationContext(db, clarification())).toBeNull();
   });

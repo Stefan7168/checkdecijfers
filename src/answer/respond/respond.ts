@@ -51,12 +51,12 @@ import {
 // ADR 058 phase 2 (#332), Task 2: the English siblings for the staleness
 // refusal built inline below (this file's only BuiltRefusal that isn't built
 // in refusals.ts itself).
-import { periodCodeToEn, statusSuffixEn } from './english.ts';
+import { englishMeasureLabel, periodCodeToEn, statusSuffixEn } from './english.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
-import { checkStaleness } from './staleness.ts';
+import { checkStaleness, namedTableNl } from './staleness.ts';
 import { buildScatterAnswerResponse, checkPairStaleness } from './scatter-answer.ts';
 import { buildAnswerChips, buildRefusalSuggestionsBoth } from './suggestions.ts';
 import type {
@@ -381,12 +381,14 @@ function sourceSelectionRefusal(
 /** docs/05 staleness row, recency-implying branch: the refusal served when
  * the question implied "now"/"latest" and `result`'s table is stale. Shared by
  * the one-measure path and the #296 scatter path (which passes its first
- * stale leg), so the two can never word it differently. */
+ * stale leg with `namedTable` — a scatter rests on two tables, so the refusal
+ * names which one is stale), so the two can never drift apart otherwise. */
 function stalenessRefusal(
   question: string,
   parse: Extract<ParseOutcome, { kind: 'intent' }>,
   result: ValidatedResult,
   lang: 'nl' | 'en' | undefined,
+  namedTable = false,
 ): RefusalResponse {
   // R11 also applies to a period OFFER: when the period we point at carries
   // a non-definitive CBS status, say so — same marker the freshness refusal
@@ -402,13 +404,22 @@ function stalenessRefusal(
   const freshestPeriodLabelEn = lastCell
     ? `${periodCodeToEn(lastCell.periodCode)}${statusSuffixEn(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
     : '';
+  // #296: the subject names the stale table on a scatter (two tables);
+  // the one-measure wording is byte-identical otherwise.
+  const subjectNl = namedTable ? `De cijfers van ${namedTableNl(result)}` : 'Deze cijfers';
+  const subjectEn = namedTable
+    ? `The figures of table ${result.attribution.tableId} (${englishMeasureLabel(
+        result.intent.target.kind === 'canonical' ? result.intent.target.key : '',
+        result.cells[0]?.measureTitle ?? null,
+      )})`
+    : 'These figures';
   const body =
-    `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
+    `${subjectNl} zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
     `onze laatste synchronisatie was op ${result.attribution.syncedAt.slice(0, 10)}, ` +
     `en ik wil geen verouderd cijfer als "actueel" laten doorgaan.`;
   const guidance = `Vraag gerust naar het cijfer voor een specifieke, al gedekte periode (bijvoorbeeld ${freshestPeriodLabel}) — dat kan ik direct geven.`;
   const bodyEn =
-    `These figures are older than expected for a question about the most recent figure — ` +
+    `${subjectEn} are older than expected for a question about the most recent figure — ` +
     `our last synchronization was on ${result.attribution.syncedAt.slice(0, 10)}, ` +
     `and I don't want to let an outdated figure pass as "current".`;
   const guidanceEn = `Feel free to ask for the figure for a specific, already covered period (for example ${freshestPeriodLabelEn}) — I can give that directly.`;
@@ -538,18 +549,24 @@ export async function respondToIntent(
     // index-aligned — built by the SAME call (buildRefusalSuggestionsBoth),
     // never a second pass over the refusal.
     let suggestionsEn: string[] = [];
-    try {
-      ({ nl: suggestions, en: suggestionsEn } = await buildRefusalSuggestionsBoth(
-        outcome,
-        (candidate) => echoServability(db, candidate, queryOptions),
-        // #138: the honest code→label source for a regional retry chip —
-        // registry/dimension_labels via regionTermsFor (context/build.ts),
-        // injected so suggestions.ts keeps its never-sees-db confinement.
-        (canonicalKey, codes) => regionTermsFor(db, canonicalKey, codes),
-      ));
-    } catch {
-      suggestions = [];
-      suggestionsEn = [];
+    // #296: one LEG of a pair intent refused (`pairedFrom` set) — no retry or
+    // offer chip: every chip is built from the leg's one-measure intent, so
+    // taking it would silently drop the pairing the reader asked for.
+    const pairLegRefusal = outcome.pairedFrom !== undefined;
+    if (!pairLegRefusal) {
+      try {
+        ({ nl: suggestions, en: suggestionsEn } = await buildRefusalSuggestionsBoth(
+          outcome,
+          (candidate) => echoServability(db, candidate, queryOptions),
+          // #138: the honest code→label source for a regional retry chip —
+          // registry/dimension_labels via regionTermsFor (context/build.ts),
+          // injected so suggestions.ts keeps its never-sees-db confinement.
+          (canonicalKey, codes) => regionTermsFor(db, canonicalKey, codes),
+        ));
+      } catch {
+        suggestions = [];
+        suggestionsEn = [];
+      }
     }
     // Row 13 / row 15 (session 110, ADR 054 addendum + ADR 029 #134(c) note):
     // the two invalid_intent sub-reasons (region_scope_on_national_measure,
@@ -559,7 +576,7 @@ export async function respondToIntent(
     // FAIL-OPEN belt, same as every other #134 chip: a hiccup here must never
     // turn an honest refusal into an internal error.
     let chip: Awaited<ReturnType<typeof buildOfferChip>> = null;
-    if (options.clickOptionsEnabled === true) {
+    if (options.clickOptionsEnabled === true && !pairLegRefusal) {
       try {
         let offerChip = built.refusal.offerChip;
         // Row 5 (session 110 UX audit pass 4, #269): the
@@ -630,7 +647,7 @@ export async function respondToIntent(
   if ('pairedResult' in outcome) {
     const pairStaleness = await checkPairStaleness(db, outcome, options.referenceDate);
     if (pairStaleness.staleLeg !== null && parse.impliedRecency) {
-      return stalenessRefusal(question, parse, pairStaleness.staleLeg, options.lang);
+      return stalenessRefusal(question, parse, pairStaleness.staleLeg, options.lang, true);
     }
     return buildScatterAnswerResponse(question, parse, outcome, pairStaleness.warning);
   }

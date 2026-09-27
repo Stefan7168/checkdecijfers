@@ -100,6 +100,11 @@ export async function buildConversationContext(
   const intent: StructuredIntent | null = resolvedIntent(response);
   if (intent === null) return null;
   if (intent.target.kind !== 'canonical') return null;
+  // #296: a two-measure (scatter) intent has no one-measure referent — the
+  // context vocabulary carries ONE topic, so round-tripping it would silently
+  // narrow a follow-up to the y measure. Fail closed (header policy): the
+  // follow-up degrades to a standalone parse.
+  if (intent.pairWith !== undefined) return null;
 
   // #267: a region CLASS round-trips as its name (plus, for
   // gemeenten_in_provincie, the parent provincie as the one region term — the

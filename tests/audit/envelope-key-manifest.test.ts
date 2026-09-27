@@ -138,7 +138,7 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     parse: { category: 'shape-checked' }, // read by resolvedIntent when there is no queryRefusal
     queryRefusal: {
       category: 'shape-checked',
-      note: 'read by resolvedIntent — the intent the hash must recompute from. ONE nested key is checked in its own right rather than opaquely: #253\'s present-only `refusal.subReason`, because the served `reason` is a pure function of it (an invalid_intent WITH it is the honest "published nationally only" scope limit; the same kind WITHOUT it is the internal fault that pages the owner). reconstruct checks that pairing in both directions, like the onboarding one. Every OTHER nested key stays covered by this one opaque entry: they feed the refusal WORDING, which is `ignored` by the same argument as `offer`/`guidance` (deterministic, value-free templates).',
+      note: 'read by resolvedIntent — the intent the hash must recompute from. ONE nested key is checked in its own right rather than opaquely: #253\'s present-only `refusal.subReason`, because the served `reason` is a pure function of it (an invalid_intent WITH it is the honest "published nationally only" scope limit; the same kind WITHOUT it is the internal fault that pages the owner). reconstruct checks that pairing in both directions, like the onboarding one. #296 adds a second nested key read in its own right: the present-only `pairedFrom` (a pair-leg refusal), which resolvedIntent returns in place of `intent` so the audited intent is the pair that was asked — its presence also suppresses every refusal chip. Every OTHER nested key stays covered by this one opaque entry: they feed the refusal WORDING, which is `ignored` by the same argument as `offer`/`guidance` (deterministic, value-free templates).',
     },
     internalNote: { category: 'ignored', why: 'an owner-readable diagnostic, never rendered to the user and never part of the answer surface' },
     onboarding: { category: 'shape-checked' }, // presence must match reason === 'onboarding_pending'
@@ -167,6 +167,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       note: 'ADR 055: buildRegionSeriesLine over the stored per-region coverage record, byte-identical, `?? null` (A1). Present-only in a second way its region-set sibling is not — a COMPLETE multi-region series has nothing to disclose, so the key is absent on rows OF THIS VERY SHAPE as well as on every other shape and every pre-ADR-055 row. The `?? null` read is therefore load-bearing twice over, and a stripped line still fails (tests/audit/region-series-r8.test.ts).',
     },
     definitionLine: { category: 'rederived' }, // buildDefinitionLine, byte-identical
+    pairedDefinitionLine: {
+      category: 'rederived',
+      note: "#296 (two-measure scatter): buildDefinitionLine over the stored `pairedResult` (the x leg), byte-identical, `?? null` (A1) — the x measure's sibling of definitionLine (which, on a scatter answer, is the y measure's). Present-only: only a scatter answer carries the key.",
+    },
     alternatesLine: { category: 'rederived' }, // #39 buildAlternatesLine, byte-identical, `?? null` (A1)
     markingLine: { category: 'rederived' }, // from result.derivations
     attributionLine: { category: 'rederived' }, // buildAttributionLine, byte-identical (R4 positional)
@@ -345,7 +349,7 @@ describe('the envelope-key manifest covers the declared types', () => {
       AnswerResponse: 12, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`; #296: + present-only `pairedResult`, `scatter`
       ClarificationResponse: 7, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
       RefusalResponse: 12, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
-      ComposedAnswer: 19, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`; #296: + present-only `scatterLine`
+      ComposedAnswer: 20, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`; #296: + present-only `scatterLine`, `pairedDefinitionLine`
       ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
     };
     for (const [name, count] of Object.entries(expectedCounts)) {

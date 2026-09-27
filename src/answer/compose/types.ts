@@ -187,6 +187,15 @@ export interface ComposedAnswer {
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;
+  /** #296 (two-measure scatter): the ADDED measure's (x leg's) "Definitie: …"
+   * line, built by the same buildDefinitionLine over `pairedResult`, placed
+   * directly after `definitionLine` (the y measure's) and re-derived
+   * byte-identically at audit time (R8).
+   *
+   * OPTIONAL and present-only: only a scatter answer carries the key (its
+   * value may be null when the x measure needs no definition statement) —
+   * readers MUST use `?? null`. */
+  pairedDefinitionLine?: string | null;
   /** #39 (owner policy 2026-07-04): the alternate-reading disclosure ("Er is
    * ook een andere lezing beschikbaar: …") — built by deterministic code
    * (buildAlternatesLine) from the registry alternates carried on the stored
