@@ -19,6 +19,20 @@ import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts'
 import type { ConversationContext } from '../context/types.ts';
 import { matchMetaTemplate } from './meta.ts';
 import { periodCodeToNl } from './period-nl.ts';
+// ADR 058 phase 2 (#332), Task 2: the English parameter helpers built in
+// Task 1 — every English sibling below is assembled from THESE, at the same
+// site as its Dutch counterpart, never a machine translation of the Dutch
+// string itself.
+import {
+  axesEn,
+  cardinalEn,
+  englishMeasureLabel,
+  FIXED_OPTION_EN,
+  loadedTopicsCompactEn,
+  periodCodeToEn,
+  statusSuffixEn,
+} from './english.ts';
+import { ENGLISH_TOPIC_TERMS } from './english-measure-labels.ts';
 import type {
   ClarificationResponse,
   OnboardingEnvelope,
@@ -62,6 +76,23 @@ export interface BuiltRefusal {
     | { canonicalKey: string; periodCode: string; label: string }
     | { intent: StructuredIntent; label: string }
     | null;
+  /** ADR 058 phase 2 (#332), Task 2: the English sibling of {text, offer,
+   * guidance}, assembled at the SAME site from the SAME parameters as the
+   * Dutch fields above (never a post-hoc translation of the Dutch string —
+   * several parameters, e.g. definitionLabel/period/region, exist only
+   * inside the Dutch string, so it could not be rebuilt afterwards). REQUIRED
+   * on every BuiltRefusal so the compiler proves every builder has an
+   * English sibling (a builder that forgets it fails to typecheck).
+   * `untranslated` lists the Dutch fragments kept verbatim inside `text` —
+   * the intent model's own free-text reading, or the user's own unmatched
+   * term — the ONE non-template ingredient (design doc, "Why templates, not
+   * the translation model"). Not yet wired into any envelope (Task 5). */
+  en: {
+    text: string;
+    offer: string | null;
+    guidance: string | null;
+    untranslated: string[];
+  };
 }
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
@@ -117,6 +148,12 @@ function periodWithStatusNl(period: { periodCode: string; status: string }, sour
   return `${periodCodeToNl(period.periodCode)}${statusSuffixNl(period.status, sourceKey)}`;
 }
 
+/** English sibling of periodWithStatusNl — same sourceKey argument, same
+ * shape, via periodCodeToEn/statusSuffixEn (english.ts, Task 1). */
+function periodWithStatusEn(period: { periodCode: string; status: string }, sourceKey?: string): string {
+  return `${periodCodeToEn(period.periodCode)}${statusSuffixEn(period.status, sourceKey)}`;
+}
+
 /** E2a: resolves the table id a query-level refusal's own intent target
  * names — `explicit` carries it directly, `canonical` requires the same
  * registry lookup `definitionLabelForRefusal` already does below. Returns
@@ -163,6 +200,16 @@ function wasSubjectInPeriodNl(subject: string, periodCode: string | null): strin
   return `Wat was de ${subject}${periodPhrase}?`;
 }
 
+/** English sibling of wasSubjectInPeriodNl — text-only (design doc: "English
+ * example questions are only shown as text; the parser is Dutch, so do NOT
+ * turn them into submitted chips"). `subject` is the English topic term
+ * (ENGLISH_TOPIC_TERMS) when the caller has one, mirroring the Dutch
+ * everydayTerms[0] preference, else an englishMeasureLabel fallback. */
+function wasSubjectInPeriodEn(subject: string, periodCode: string | null): string {
+  const periodPhrase = periodCode ? ` in ${periodCodeToEn(periodCode)}` : '';
+  return `What was ${subject}${periodPhrase}?`;
+}
+
 /** A genuinely answerable, grammatical example question over a loaded topic —
  * the out_of_scope/smalltalk offer and the still-ambiguous guidance example.
  * Prefers the inflation measure because "Wat was de inflatie in {periode}?"
@@ -177,6 +224,21 @@ async function exampleQuestionNl(db: Db): Promise<string> {
   const freshest = await freshestForCanonical(db, measure.key);
   const subject = preferred ? preferred.everydayTerms[0] : measure.definitionLabel;
   return `"${wasSubjectInPeriodNl(subject, freshest?.periodCode ?? null)}"`;
+}
+
+/** English sibling of exampleQuestionNl — same measure/freshest selection,
+ * subject preferring the English topic term (ENGLISH_TOPIC_TERMS, the
+ * sibling of everydayTerms[0]) with an englishMeasureLabel fallback
+ * (the sibling of definitionLabel), so the two examples always name the
+ * SAME measure and period. */
+async function exampleQuestionEn(db: Db): Promise<string> {
+  const preferred = CANONICAL_MEASURES.find((m) => m.key === 'cpi_yearly_inflation');
+  const measure = preferred ?? CANONICAL_MEASURES[0]!;
+  const freshest = await freshestForCanonical(db, measure.key);
+  const subject = preferred
+    ? (ENGLISH_TOPIC_TERMS[measure.key] ?? englishMeasureLabel(measure.key))
+    : englishMeasureLabel(measure.key);
+  return `"${wasSubjectInPeriodEn(subject, freshest?.periodCode ?? null)}"`;
 }
 
 /** #134(c) (ADR 029): the offerChip candidate both buildForecastRefusal and
@@ -204,15 +266,21 @@ async function buildForecastRefusal(db: Db, raw: { nearestCanonicalKeys: string[
   const nearestKey = raw.nearestCanonicalKeys[0];
   const definitionLabel = nearestKey ? definitionLabelByKey.get(nearestKey) : undefined;
   let offer: string | null = null;
+  let offerEn: string | null = null;
   let offerChip: BuiltRefusal['offerChip'] = null;
   if (definitionLabel) {
     const freshest = await freshestForCanonical(db, nearestKey!);
+    const definitionLabelEn = englishMeasureLabel(nearestKey!);
     offer = freshest
       ? `Ik kan wel het gerealiseerde cijfer over ${definitionLabel} voor ${periodWithStatusNl(freshest)} voor je opzoeken.`
       : `Ik kan wel het meest recente gerealiseerde cijfer over ${definitionLabel} voor je opzoeken.`;
+    offerEn = freshest
+      ? `I can look up the realized figure on ${definitionLabelEn} for ${periodWithStatusEn(freshest)} for you.`
+      : `I can look up the most recent realized figure on ${definitionLabelEn} for you.`;
     if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   }
   const body = 'CBS publiceert gerealiseerde cijfers, geen voorspellingen — ik kan geen toekomstig cijfer geven.';
+  const bodyEn = "CBS publishes realized figures, not forecasts — I can't give a future figure.";
   return {
     reason: 'forecast',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -221,6 +289,12 @@ async function buildForecastRefusal(db: Db, raw: { nearestCanonicalKeys: string[
     freshness: null,
     internalNote: null,
     offerChip,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -229,16 +303,24 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
   const definitionLabel = nearestKey ? definitionLabelByKey.get(nearestKey) : undefined;
   const body =
     'Ik kan geen oorzakelijk verband beoordelen — CBS-cijfers beschrijven wát er is gemeten, niet waardóór het komt.';
+  const bodyEn =
+    "I can't assess a causal relationship — CBS figures describe what was measured, not why it happened.";
   let offer: string | null = null;
+  let offerEn: string | null = null;
   let offerChip: BuiltRefusal['offerChip'] = null;
   if (definitionLabel) {
     const freshest = await freshestForCanonical(db, nearestKey!);
+    const definitionLabelEn = englishMeasureLabel(nearestKey!);
     offer = freshest
       ? `Ik kan wel de onderliggende cijfers over ${definitionLabel} laten zien, voor ${periodWithStatusNl(freshest)} of een andere periode.`
       : `Ik kan wel de onderliggende cijfers over ${definitionLabel} laten zien.`;
+    offerEn = freshest
+      ? `I can show the underlying figures on ${definitionLabelEn}, for ${periodWithStatusEn(freshest)} or another period.`
+      : `I can show the underlying figures on ${definitionLabelEn}.`;
     if (freshest) offerChip = forecastCausalOfferChip(nearestKey!, definitionLabel, freshest);
   } else {
     offer = `Ik heb hierover geen cijfers geladen — mijn bronnen dekken momenteel: ${loadedTopicsCompact()}.`;
+    offerEn = `I don't have figures loaded on this — my sources currently cover: ${loadedTopicsCompactEn()}.`;
   }
   return {
     reason: 'causal',
@@ -248,6 +330,12 @@ async function buildCausalRefusal(db: Db, raw: { nearestCanonicalKeys: string[] 
     freshness: null,
     internalNote: null,
     offerChip,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -255,6 +343,9 @@ async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
   const body =
     `Daarover heb ik geen CBS-cijfers geladen — mijn bronnen dekken momenteel officiële CBS-cijfers over: ${loadedTopicsCompact()}.`;
   const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
+  const bodyEn =
+    `I don't have any CBS figures loaded on that — my sources currently cover official CBS figures on: ${loadedTopicsCompactEn()}.`;
+  const offerEn = `For example, ask: ${await exampleQuestionEn(db)}`;
   return {
     reason: 'scope',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -262,6 +353,12 @@ async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -272,6 +369,8 @@ async function buildOutOfScopeRefusal(db: Db): Promise<BuiltRefusal> {
 function buildCompoundRefusal(): BuiltRefusal {
   const body = 'Dat zijn twee (of meer) vragen tegelijk — ik beantwoord er één per keer.';
   const guidance = 'Stel de vragen na elkaar, dan pak ik ze één voor één op.';
+  const bodyEn = "That's two (or more) questions at once — I answer one at a time.";
+  const guidanceEn = "Ask them one after another, and I'll take them one by one.";
   return {
     reason: 'compound',
     text: assertNotAQuestion(joinParts([body, guidance])),
@@ -279,6 +378,12 @@ function buildCompoundRefusal(): BuiltRefusal {
     guidance,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, guidanceEn])),
+      offer: null,
+      guidance: guidanceEn,
+      untranslated: [],
+    },
   };
 }
 
@@ -291,9 +396,11 @@ function buildCompoundRefusal(): BuiltRefusal {
  * whitelistable from the same structured sources (labels + freshest period). */
 async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRefusal> {
   const offer = `Vraag bijvoorbeeld: ${await exampleQuestionNl(db)}`;
+  const offerEn = `For example, ask: ${await exampleQuestionEn(db)}`;
   const template = matchMetaTemplate(question);
   if (template) {
     const body = template.buildBody({ topicsCompact: loadedTopicsCompact() });
+    const bodyEn = template.buildBodyEn({ topicsCompactEn: loadedTopicsCompactEn() });
     return {
       reason: 'meta',
       text: assertNotAQuestion(joinParts([body, offer])),
@@ -301,10 +408,17 @@ async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRef
       guidance: null,
       freshness: null,
       internalNote: null,
+      en: {
+        text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+        offer: offerEn,
+        guidance: null,
+        untranslated: [],
+      },
     };
   }
   const body =
     'Ik beantwoord vragen over officiële CBS-cijfers en geef elk antwoord met bron en peildatum.';
+  const bodyEn = 'I answer questions about official CBS figures and give every answer with its source and reference date.';
   return {
     reason: 'smalltalk',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -312,6 +426,12 @@ async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRef
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -335,11 +455,22 @@ async function buildSmalltalkRefusal(db: Db, question: string): Promise<BuiltRef
 export const ONBOARDING_PENDING_TEXT =
   'Dat onderwerp staat nog niet in onze database. We vragen de cijfers nu automatisch op bij het CBS en controleren ze — meestal een kwestie van minuten. Je krijgt een e-mail zodra je vraag beantwoord kan worden. Heb je ondertussen nog een andere vraag?';
 
+/** English sibling of ONBOARDING_PENDING_TEXT (ADR 058 phase 2, #332, Task
+ * 2) — same verbatim-copy contract: kept byte-exact once shipped, produced
+ * at the same site as the Dutch text, never wired into the envelope here
+ * (Task 5). */
+export const ONBOARDING_PENDING_TEXT_EN =
+  "That topic isn't in our database yet. We're now automatically requesting the figures from CBS and checking them — usually a matter of minutes. You'll get an email as soon as your question can be answered. Do you have another question in the meantime?";
+
 /** Owner-approved VERBATIM Dutch copy (design §2): the SAME (user, table) is
  * already being fetched — no new debit, no second queue entry. Does not end in
  * '?', but skips assertNotAQuestion for symmetry with its sibling above. */
 export const ONBOARDING_ALREADY_PENDING_TEXT =
   'Deze cijfers worden al voor je opgehaald bij het CBS. Je krijgt een e-mail zodra je vraag beantwoord kan worden.';
+
+/** English sibling of ONBOARDING_ALREADY_PENDING_TEXT (Task 2). */
+export const ONBOARDING_ALREADY_PENDING_TEXT_EN =
+  "These figures are already being fetched from CBS for you. You'll get an email as soon as your question can be answered.";
 
 /** ADR 026 addendum (session 101, 2026-09-13) — #109's confirm-first
  * reversal, owner decision 4. Shown INSTEAD of `ONBOARDING_PENDING_TEXT` on
@@ -378,6 +509,12 @@ export function buildOnboardingRefusal(
       freshness: null,
       internalNote: null,
       onboarding: null,
+      en: {
+        text: ONBOARDING_ALREADY_PENDING_TEXT_EN,
+        offer: null,
+        guidance: null,
+        untranslated: [],
+      },
     };
   }
   return {
@@ -388,6 +525,12 @@ export function buildOnboardingRefusal(
     freshness: null,
     internalNote: null,
     onboarding,
+    en: {
+      text: ONBOARDING_PENDING_TEXT_EN,
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -433,9 +576,19 @@ function definitionLabelForRefusal(refusal: QueryRefusal): string | null {
     : null;
 }
 
+/** English sibling of definitionLabelForRefusal — same null-iff-explicit-
+ * target contract, via englishMeasureLabel (english.ts, Task 1) rather than
+ * definitionLabelByKey. */
+function definitionLabelEnForRefusal(refusal: QueryRefusal): string | null {
+  return refusal.intent.target.kind === 'canonical'
+    ? englishMeasureLabel(refusal.intent.target.key)
+    : null;
+}
+
 function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
   const freshness = refusal.refusal.freshness ?? null;
   const definitionLabel = definitionLabelForRefusal(refusal);
+  const definitionLabelEn = definitionLabelEnForRefusal(refusal);
   // E2a (spec §4.5): the refusal's own intent NAMES a target table, so the
   // status suffix on the offered period must resolve THAT table's real
   // source, not assume CBS.
@@ -448,14 +601,20 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
 
   let body: string;
   let offer: string | null;
+  let bodyEn: string;
+  let offerEn: string | null;
   if (available) {
     body = definitionLabel
       ? `Zo recent heb ik de cijfers over ${definitionLabel} nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available, resolvedSourceKey)}.`
       : `Zo recente cijfers heb ik nog niet — de meest recente periode waarvoor ik een cijfer heb is ${periodWithStatusNl(available, resolvedSourceKey)}.`;
+    bodyEn = definitionLabelEn
+      ? `I don't yet have figures on ${definitionLabelEn} that recent — the most recent period I have a figure for is ${periodWithStatusEn(available, resolvedSourceKey)}.`
+      : `I don't yet have figures that recent — the most recent period I have a figure for is ${periodWithStatusEn(available, resolvedSourceKey)}.`;
     // A statement, never a bare question (refusals never end in '?'): the
     // offer states what we CAN serve; the user asking again for that period
     // is how they take us up on it.
     offer = `Ik kan het cijfer voor ${periodWithStatusNl(available, resolvedSourceKey)} direct geven, vraag daar gerust naar.`;
+    offerEn = `I can give the figure for ${periodWithStatusEn(available, resolvedSourceKey)} directly, feel free to ask for it.`;
     if (differs) {
       offer += ` (Het laatste definitieve cijfer is er voor ${periodCodeToNl(definitief!.periodCode)}.)`;
       // OQ-193 (measured 2026-08-07): CBS revised 1,103 figures already
@@ -464,12 +623,18 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
       // current publication status, not "final". The freshestDefinitief
       // preference itself stays correct and unchanged.
       offer += ` (De laatste periode met CBS-status 'definitief' is ${periodCodeToNl(definitief!.periodCode)} — ook die cijfers kan CBS later nog bijstellen.)`;
+      offerEn += ` (The last definitive figure is for ${periodCodeToEn(definitief!.periodCode)}.)`;
+      offerEn += ` (The latest period with CBS status 'definitive' is ${periodCodeToEn(definitief!.periodCode)} — those figures too may still be revised later by CBS.)`;
     }
   } else {
     body = definitionLabel
       ? `Ik heb nog geen cijfers over ${definitionLabel}.`
       : 'Daar heb ik nog geen cijfers over.';
+    bodyEn = definitionLabelEn
+      ? `I don't have any figures yet on ${definitionLabelEn}.`
+      : "I don't have any figures on that yet.";
     offer = null;
+    offerEn = null;
   }
   return {
     reason: 'freshness',
@@ -478,6 +643,12 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
     guidance: null,
     freshness,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -486,9 +657,13 @@ function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
  * wording per docs/05. */
 function buildNotPublishedRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
+  const definitionLabelEn = definitionLabelEnForRefusal(refusal);
   const body = definitionLabel
     ? `CBS heeft voor ${definitionLabel} (nog) geen cijfer over deze periode gepubliceerd.`
     : 'CBS heeft (nog) geen cijfer over deze periode gepubliceerd.';
+  const bodyEn = definitionLabelEn
+    ? `CBS has not (yet) published a figure for this period for ${definitionLabelEn}.`
+    : 'CBS has not (yet) published a figure for this period.';
   return {
     reason: 'not_published',
     text: assertNotAQuestion(body),
@@ -496,18 +671,29 @@ function buildNotPublishedRefusal(refusal: QueryRefusal): BuiltRefusal {
     guidance: null,
     freshness: refusal.refusal.freshness ?? null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
 function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
+  const definitionLabelEn = definitionLabelEnForRefusal(refusal);
   const nearest = refusal.refusal.nearestAlternative;
   const body = definitionLabel
     ? `CBS publiceert de cijfers over ${definitionLabel} wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.`
     : 'CBS publiceert deze cijfers wel, maar het gevraagde deel ligt buiten wat wij hebben ingeladen.';
+  const bodyEn = definitionLabelEn
+    ? `CBS does publish figures on ${definitionLabelEn}, but the requested part lies outside what we have loaded.`
+    : 'CBS does publish these figures, but the requested part lies outside what we have loaded.';
   const offer = nearest
     ? `Ik kan wel cijfers laten zien vanaf ${periodCodeToNl(nearest)}.`
     : null;
+  const offerEn = nearest ? `I can show figures from ${periodCodeToEn(nearest)} onwards.` : null;
   return {
     reason: 'outside_loaded_slice',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -515,6 +701,12 @@ function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -569,12 +761,18 @@ function regionScopeOnNationalMeasureOfferChip(
 
 function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltRefusal {
   const definitionLabel = definitionLabelForRefusal(refusal);
+  const definitionLabelEn = definitionLabelEnForRefusal(refusal);
   const body = definitionLabel
     ? `De cijfers over ${definitionLabel} publiceert het CBS alleen landelijk, voor heel Nederland: in deze tabel zit geen uitsplitsing naar gemeente, provincie of landsdeel.`
     : 'Deze cijfers publiceert het CBS alleen landelijk, voor heel Nederland: in deze tabel zit geen uitsplitsing naar gemeente, provincie of landsdeel.';
+  const bodyEn = definitionLabelEn
+    ? `CBS publishes the figures on ${definitionLabelEn} only nationally, for the Netherlands as a whole: this table has no breakdown by municipality, province or region.`
+    : 'CBS publishes these figures only nationally, for the Netherlands as a whole: this table has no breakdown by municipality, province or region.';
   const offer = 'Ik kan je wel het landelijke cijfer geven.';
+  const offerEn = 'I can give you the national figure instead.';
   const guidance =
     "Voor een vergelijking tussen regio's is een onderwerp nodig dat het CBS wél per regio publiceert.";
+  const guidanceEn = 'A comparison between regions needs a topic that CBS does publish per region.';
   return {
     reason: 'region_scope_on_national_measure',
     text: assertNotAQuestion(joinParts([body, offer, guidance])),
@@ -583,6 +781,12 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
     freshness: null,
     internalNote: null,
     offerChip: regionScopeOnNationalMeasureOfferChip(refusal),
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn, guidanceEn])),
+      offer: offerEn,
+      guidance: guidanceEn,
+      untranslated: [],
+    },
   };
 }
 
@@ -619,10 +823,15 @@ function buildRegionScopeOnNationalMeasureRefusal(refusal: QueryRefusal): BuiltR
  * exactly that drift risk). */
 function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal {
   const cap = cardinalNl(REGION_SERIES_MAX_REGIONS);
+  const capEn = cardinalEn(REGION_SERIES_MAX_REGIONS);
   const body =
     `Een ontwikkeling over meerdere periodes kan ik voor maximaal ${cap} met name genoemde regio's samen laten zien, ` +
     "maar deze vraag gaat over een hele groep regio's, of over meer regio's dan in één antwoord passen.";
+  const bodyEn =
+    `I can show a development over multiple periods for up to ${capEn} explicitly named regions together, ` +
+    'but this question is about a whole group of regions, or about more regions than fit in one answer.';
   const offer = `Vraag tot ${cap} regio's met naam over die periode, of de hele groep voor één periode.`;
+  const offerEn = `Ask for up to ${capEn} named regions over that period, or the whole group for one period.`;
   return {
     reason: 'multi_region_multi_period',
     text: assertNotAQuestion(joinParts([body, offer])),
@@ -631,6 +840,12 @@ function buildMultiRegionMultiPeriodRefusal(refusal: QueryRefusal): BuiltRefusal
     freshness: null,
     internalNote: null,
     offerChip: multiRegionMultiPeriodOfferChip(refusal),
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, offerEn])),
+      offer: offerEn,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -728,6 +943,8 @@ export function relabelMultiRegionMultiPeriodOfferChip(
 function buildQuarantinedRefusal(): BuiltRefusal {
   const body =
     'Deze tabel is tijdelijk niet beschikbaar omdat we de gegevens opnieuw aan het controleren zijn (kwaliteitscheck na een mogelijke wijziging bij CBS).';
+  const bodyEn =
+    "This table is temporarily unavailable because we're re-checking the data (a quality check after a possible change at CBS).";
   return {
     reason: 'quarantined',
     text: assertNotAQuestion(body),
@@ -735,6 +952,12 @@ function buildQuarantinedRefusal(): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -746,6 +969,8 @@ function buildQuarantinedRefusal(): BuiltRefusal {
 function buildEvictedRefusal(refusal: QueryRefusal): BuiltRefusal {
   const body =
     'Deze cijfers stonden in onze database, maar zijn zojuist opgeruimd omdat er lange tijd niet naar gevraagd was. Ze zijn niet weg bij het CBS: stel je vraag opnieuw, dan proberen we ze opnieuw op te halen.';
+  const bodyEn =
+    "These figures were in our database, but have just been cleaned up because they hadn't been asked for in a long time. They're not gone at CBS: ask your question again and we'll try to fetch them again.";
   return {
     reason: 'evicted',
     text: assertNotAQuestion(body),
@@ -753,6 +978,12 @@ function buildEvictedRefusal(refusal: QueryRefusal): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: refusal.refusal.message,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -794,14 +1025,25 @@ function buildNeedsClarificationAsClarification(refusal: QueryRefusal): {
   axes: ClarifyAxis[];
   questionNl: string;
   options: string[];
+  /** ADR 058 phase 2 (#332), Task 2: the English sibling of questionNl/
+   * options, built at the same site (axesEn/FIXED_OPTION_EN, english.ts) —
+   * NOT yet wired into the ClarificationResponse envelope (Task 5). */
+  questionEn: string;
+  optionsEn: string[];
 } {
   const rawAxes = (refusal.refusal.axes ?? (refusal.refusal.axis ? [refusal.refusal.axis] : [])) as ClarifyAxis[];
   const axes = rawAxes.length > 0 ? rawAxes : (['measure'] as ClarifyAxis[]);
   const questionNl = `Kun je aangeven ${axesNl(axes)}?`;
+  const questionEn = `Could you specify ${axesEn(axes)}?`;
   const options = axes.includes('region')
     ? ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam']
     : [];
-  return { axes, questionNl, options };
+  // FIXED_OPTION_EN covers both fixed Dutch options above; the `?? o`
+  // fallback is defensive only (never reached while the map stays in sync
+  // with this list — same fail-closed-to-Dutch posture as englishMeasureLabel
+  // falling back to 'these figures' rather than throwing).
+  const optionsEn = options.map((o) => FIXED_OPTION_EN[o] ?? o);
+  return { axes, questionNl, options, questionEn, optionsEn };
 }
 
 function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
@@ -815,8 +1057,17 @@ function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
     derivation_failed: 'Ik kon de gevraagde berekening niet betrouwbaar uitvoeren op deze cijfers.',
     internal_inconsistency: 'Ik zag een inconsistentie in onze data die eerst gecontroleerd moet worden.',
   };
+  const kindWordingEn: Record<keyof typeof kindWording, string> = {
+    invalid_intent: "I couldn't turn this question into a valid query on our data.",
+    table_not_registered: "This data isn't registered with us.",
+    no_data:
+      "I couldn't find a figure for this combination in our data, even though one was expected — this needs checking on our side.",
+    derivation_failed: "I couldn't reliably perform the requested calculation on these figures.",
+    internal_inconsistency: 'I saw an inconsistency in our data that needs to be checked first.',
+  };
   const kind = refusal.refusal.kind as keyof typeof kindWording;
   const body = `${kindWording[kind]} Ik geef liever geen antwoord dan een onbetrouwbaar antwoord.`;
+  const bodyEn = `${kindWordingEn[kind]} I'd rather give no answer than an unreliable one.`;
   return {
     reason: 'internal',
     text: assertNotAQuestion(body),
@@ -824,12 +1075,26 @@ function buildInternalRefusal(refusal: QueryRefusal): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: refusal.refusal.message,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
 export type QueryRefusalOutcome =
   | { kind: 'refusal'; refusal: BuiltRefusal }
-  | { kind: 'clarification'; axes: ClarifyAxis[]; questionNl: string; options: string[] };
+  | {
+      kind: 'clarification';
+      axes: ClarifyAxis[];
+      questionNl: string;
+      options: string[];
+      /** ADR 058 phase 2 (#332), Task 2 — see buildNeedsClarificationAsClarification. */
+      questionEn: string;
+      optionsEn: string[];
+    };
 
 /** Every QueryRefusal kind, per docs/05 wording rules — exhaustive switch. */
 export function buildQueryRefusal(refusal: QueryRefusal): QueryRefusalOutcome {
@@ -887,6 +1152,8 @@ export async function buildStillAmbiguousRefusal(
 ): Promise<BuiltRefusal> {
   const body = `Ook met je toelichting is me nog niet duidelijk ${axesNl(axes.length > 0 ? axes : ['measure'])}.`;
   const guidance = `Stel je vraag het beste opnieuw in één zin, met onderwerp, regio en periode — bijvoorbeeld ${await exampleQuestionNl(db)}`;
+  const bodyEn = `Even with your clarification, it's still not clear to me ${axesEn(axes.length > 0 ? axes : ['measure'])}.`;
+  const guidanceEn = `Try asking your question again in one sentence, with topic, region and period — for example ${await exampleQuestionEn(db)}`;
   return {
     reason: 'still_ambiguous',
     text: assertNotAQuestion(joinParts([body, guidance])),
@@ -894,6 +1161,12 @@ export async function buildStillAmbiguousRefusal(
     guidance,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(joinParts([bodyEn, guidanceEn])),
+      offer: null,
+      guidance: guidanceEn,
+      untranslated: [],
+    },
   };
 }
 
@@ -910,6 +1183,7 @@ export async function buildStillAmbiguousRefusal(
  * deselected"). In the ⟨W3⟩ skip-list ⇒ no web attempt ⇒ full refund ⇒ net 0. */
 export function buildNoSourcesRefusal(): BuiltRefusal {
   const body = 'Geen bronnen geselecteerd — selecteer minstens één bron om een antwoord te krijgen.';
+  const bodyEn = 'No sources selected — select at least one source to get an answer.';
   return {
     reason: 'no_sources',
     text: assertNotAQuestion(body),
@@ -917,6 +1191,12 @@ export function buildNoSourcesRefusal(): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -927,6 +1207,8 @@ export function buildNoSourcesRefusal(): BuiltRefusal {
 export function buildWebOnlyRefusal(): BuiltRefusal {
   const body =
     'Je hebt CBS-data uitgeschakeld voor deze vraag, dus ik geef geen geverifieerd antwoord. Hieronder staan alleen onbevestigde resultaten van het web.';
+  const bodyEn =
+    "You've turned off CBS data for this question, so I won't give a verified answer. Below are only unconfirmed results from the web.";
   return {
     reason: 'web_only',
     text: assertNotAQuestion(body),
@@ -934,6 +1216,12 @@ export function buildWebOnlyRefusal(): BuiltRefusal {
     guidance: null,
     freshness: null,
     internalNote: null,
+    en: {
+      text: assertNotAQuestion(bodyEn),
+      offer: null,
+      guidance: null,
+      untranslated: [],
+    },
   };
 }
 
@@ -1033,6 +1321,16 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     parse: input.parse,
   };
 }
+
+/** English sibling of toInternalRefusal's fixed body (ADR 058 phase 2, #332,
+ * Task 2). toInternalRefusal builds a RefusalResponse directly rather than
+ * a BuiltRefusal (it is the pipeline's own catch-all fail-closed path, not
+ * one of the QueryRefusal/ParseOutcome builders), so there is no `en` field
+ * to hang this off yet — produced here, at the same site as the Dutch text,
+ * so Task 5 can attach it to the envelope without hunting for the string
+ * again. Not wired into RefusalResponse here (Task 5 does that). */
+export const INTERNAL_REFUSAL_TEXT_EN =
+  "I can't reliably answer this question right now. I'd rather give no answer than an unreliable one.";
 
 export function toInternalRefusal(question: string, internalNote: string): RefusalResponse {
   const text = 'Ik kan deze vraag nu niet betrouwbaar beantwoorden. Ik geef liever geen antwoord dan een onbetrouwbaar antwoord.';

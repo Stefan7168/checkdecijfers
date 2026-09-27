@@ -46,6 +46,10 @@ import {
   toInternalRefusal,
   toRefusalResponse,
 } from './refusals.ts';
+// ADR 058 phase 2 (#332), Task 2: the English siblings for the staleness
+// refusal built inline below (this file's only BuiltRefusal that isn't built
+// in refusals.ts itself).
+import { periodCodeToEn, statusSuffixEn } from './english.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
@@ -530,11 +534,23 @@ export async function respondToIntent(
     const freshestPeriodLabel = lastCell
       ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
       : '';
+    // ADR 058 phase 2 (#332), Task 2: the English sibling, built at the same
+    // site from the same cell (periodCode/status/tableId) — periodLabel
+    // itself has no English twin on the cell, so periodCodeToEn(periodCode)
+    // is the direct sibling of that Dutch label.
+    const freshestPeriodLabelEn = lastCell
+      ? `${periodCodeToEn(lastCell.periodCode)}${statusSuffixEn(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
+      : '';
     const body =
       `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
       `onze laatste synchronisatie was op ${result.attribution.syncedAt.slice(0, 10)}, ` +
       `en ik wil geen verouderd cijfer als "actueel" laten doorgaan.`;
     const guidance = `Vraag gerust naar het cijfer voor een specifieke, al gedekte periode (bijvoorbeeld ${freshestPeriodLabel}) — dat kan ik direct geven.`;
+    const bodyEn =
+      `These figures are older than expected for a question about the most recent figure — ` +
+      `our last synchronization was on ${result.attribution.syncedAt.slice(0, 10)}, ` +
+      `and I don't want to let an outdated figure pass as "current".`;
+    const guidanceEn = `Feel free to ask for the figure for a specific, already covered period (for example ${freshestPeriodLabelEn}) — I can give that directly.`;
     return toRefusalResponse({
       question,
       built: {
@@ -544,6 +560,12 @@ export async function respondToIntent(
         guidance,
         freshness: null,
         internalNote: null,
+        en: {
+          text: `${bodyEn} ${guidanceEn}`,
+          offer: null,
+          guidance: guidanceEn,
+          untranslated: [],
+        },
       },
       parse,
       queryRefusal: null,
