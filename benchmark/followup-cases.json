@@ -577,6 +577,37 @@
      "derivation": "none"
     }
    }
+  },
+  {
+   "id": "f-e2e-cbs-copilot-utrecht-erbij",
+   "context": {
+    "version": 1,
+    "topicKey": "population_on_1_january",
+    "regions": [
+     {
+      "name": "Amsterdam",
+      "kind": "gemeente"
+     },
+     {
+      "name": "Rotterdam",
+      "kind": "gemeente"
+     }
+    ],
+    "period": {
+     "kind": "year_range",
+     "fromYear": 2020,
+     "toYear": 2024
+    },
+    "derivation": "none"
+   },
+   "question": "en Utrecht erbij",
+   "expect": {
+    "outcome": "clarification",
+    "axesInclude": [
+     "region"
+    ]
+   },
+   "note": "Session 135: the exact follow-up web/e2e/cbs-copilot.spec.ts hands off (Amsterdam + Rotterdam 2020-2024, then 'en Utrecht erbij'). Before this case the e2e only passed through the llm-stub's first-60-characters fallback, which picked whichever recorded follow-up sorted first — it broke when a re-record reshuffled the hash file names. Bare 'Utrecht' is gemeente-or-provincie ambiguous, so the honest outcome is a region clarification."
   }
  ]
 }

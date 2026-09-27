@@ -6,6 +6,34 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 135 — a prompt EXAMPLE bleeds harder than a rule; check the provider's own status page before blaming the network
+
+1. **A worked example in the intent prompt moved two unrelated cases; the rule text alone moved none.** The v7 draft added
+   one example ("Welke provincie had in 2023 de meeste inwoners?" → all_provincies, max). Measured: the WP16 delivery re-run
+   ("Hoeveel mensen zaten er in 2023 in de bijstand?") went from delivered (2/2 on v6) to unanswerable (3/3), and follow-up
+   `f-merge-topic-switch-national` stopped clarifying (3/3). Removing only the example restored both (2/2, 23/23) while
+   all six region cases still passed ×3. Next time: add rules first, examples only if the rule measurably fails, and keep
+   `onboarding-delivery:record` in the loop — it is the one case that exercises the prompt with 18 extra onboarded measures.
+2. **Before diagnosing "blocked from our machine", open the provider's own homepage.** #329 was recorded (session 134) as
+   "CBS resets connections from the owner's machine"; session 135 found a CBS outage banner on www.cbs.nl and the same
+   ECONNRESET from Anthropic's servers (WebFetch = a second network, free). Two checks, one minute.
+3. **Bisect a prompt regression against the LIVE prompt with `git stash -u`, not by reasoning.** One delivery call on the
+   stashed tree (≈€0.01) proved v6 still answered, so the regression was ours — before that, "Haiku is bistable here" was an
+   equally plausible story.
+4. **A line-based regex over test files misses multi-line objects; put a new required field's default in the shared
+   helper.** The raw-parse v4 bump was applied with a script that inserted `regionScope: null` after single-line `regions:`
+   lines — it missed `regions: [` blocks (one suite failure) and hit a function signature (typecheck caught it). The fix
+   that covers every case: `rawDataQuery` helpers now spread `{ regionScope: null, ...c }`.
+5. **Price the stability runs before starting.** `intent:eval --repeat=3` is ≈2.35M Haiku input tokens (≈$2.40); a full
+   re-record set ≈$1.20. Two prompt iterations with both runs cost ≈$8–9 — most of the month's remaining $50 roof. A
+   delivery-only probe first (≈€0.01) would have caught the example bleed before the first full record.
+6. **An e2e that passes through the llm-stub's PREFIX fallback is passing by file-name luck.** `cbs-copilot.spec.ts`'s
+   follow-up hand-off ("en Utrecht erbij") never had its own fixture; the stub served the first follow-up fixture whose
+   first 60 characters matched — i.e. whichever hash file sorted first. The #267 re-record reshuffled the hashes and CI
+   went red (run 36284080185, web job; nothing deployed). Fix: a real labelled case + one-call recording
+   (`f-e2e-cbs-copilot-utrecht-erbij`), now an `exact` hit. When touching a prompt, grep the CI log for
+   `[llm-stub] prefix` / `question-only` lines — each is an e2e step with no fixture of its own.
+
 ## Session 134 — a "provider restriction" was our own spend limit for 12 days; the first real recording finds what hermetic tests can't
 
 1. **An error that says "your *specified* limits" means a limit someone on our side specified — look for it on every
