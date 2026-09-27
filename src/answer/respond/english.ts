@@ -59,15 +59,12 @@ export function periodCodeToEn(code: string): string {
 // ---------------------------------------------------------------------------
 
 /** English of every distinct provisionalDisplay VALUE across the registered
- * sources (src/sources/registry.ts SOURCES) — kept in sync BY HAND with
- * src/answer/translate/translate.ts's CAVEAT_TRANSLATIONS (that module is
- * not importable here: it pulls in lines.ts, which value-imports
- * isDerivedResult from the query module, i.e. the DB-coupled query/run.ts
- * graph — exactly what this file's purity contract rules out). The coverage
- * test (tests/answer/english-helpers.test.ts) pins that every CBS status
- * with a Dutch suffix also has an English one here, the same guarantee
- * translate.test.ts holds over CAVEAT_TRANSLATIONS itself. */
-const CAVEAT_SUFFIX_EN: Readonly<Record<string, string>> = {
+ * sources (src/sources/registry.ts SOURCES). THE single copy (#332): the answer
+ * translator (src/answer/translate/translate.ts) imports and re-exports it as
+ * CAVEAT_TRANSLATIONS, so the answer path and these templates cannot drift. The
+ * coverage tests (tests/answer/english-helpers.test.ts, translate.test.ts) pin
+ * that every status with a Dutch suffix has an English one. */
+export const CAVEAT_TRANSLATIONS: Readonly<Record<string, string>> = {
   ' (voorlopig cijfer)': ' (provisional figure)',
   ' (nader voorlopig cijfer)': ' (revised provisional figure)',
   ' (schatting)': ' (estimate)',
@@ -91,10 +88,10 @@ const CAVEAT_SUFFIX_EN: Readonly<Record<string, string>> = {
 export function statusSuffixEn(status: string, sourceKey?: string): string {
   const dutch = resolveSource(sourceKey).provisionalDisplay[status] ?? '';
   if (!dutch) return '';
-  const en = CAVEAT_SUFFIX_EN[dutch];
+  const en = CAVEAT_TRANSLATIONS[dutch];
   if (en === undefined) {
     throw new Error(
-      `internal: statusSuffixEn has no English mapped for Dutch suffix '${dutch}' (status '${status}') — extend CAVEAT_SUFFIX_EN`,
+      `internal: statusSuffixEn has no English mapped for Dutch suffix '${dutch}' (status '${status}') — extend CAVEAT_TRANSLATIONS`,
     );
   }
   return en;
