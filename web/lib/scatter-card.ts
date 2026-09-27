@@ -4,15 +4,18 @@
 //
 // Pure leaf (no React). Dutch = the STORED structural fields verbatim (R8:
 // they re-derive byte-identically from the two stored legs at audit time),
-// with one display-only touch: each definition line is labelled with its axis
-// ("Definitie (verticale as): …"), since a scatter shows two definitions and
-// the stored "Definitie: …" doesn't say which is which (Task 4 carry-over).
+// with one display-only touch: each definition line is named by its MEASURE
+// ("Definitie gemiddeld inkomen: …"), since a scatter shows two definitions
+// and the stored "Definitie: …" doesn't say which is which (Task 4
+// carry-over). By measure, not by axis (Task 7 fix M2): "swap axes" would
+// make an axis label wrong; a measure name stays right.
 // English = derived at render time from the spec (spec D7 — a scatter answer
 // stores no English): the English body/coverage/definition builders
 // (scatter-text-en.ts) and the shared staleness translator taught the
 // named-table subject — never a Dutch sentence on the English card.
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import type { ScatterSpec } from '../backend/chart/scatter.ts';
+import { lowerFirst } from '../backend/chart/scatter-text.ts';
 import { translateAttributionLine } from './i18n/cbs-words.ts';
 import type { Lang } from './i18n/messages.ts';
 import {
@@ -28,25 +31,26 @@ export interface ScatterCardText {
   /** The coverage line as the reader sees it; null only on an envelope that
    * lacks the stored key (a scatter answer always carries it). */
   line: string | null;
-  /** Vertical axis first; an axis without a definition has no line. */
+  /** The asked-about measure (y) first; a measure without a definition has
+   * no line. ScatterView's `extraLines`. */
   definitionLines: string[];
-  /** One per stale table, in stored order (y first). */
+  /** One per stale table, in stored order (y first). ScatterView's
+   * `warningLines` — shown in the warning style under the coverage line,
+   * never through `extraLines` (Task 7 fix I1). */
   stalenessLines: string[];
-  /** `definitionLines` then `stalenessLines` — exactly ScatterView's
-   * `extraLines` prop. */
-  extraLines: string[];
   /** Both axes' R4 attribution sentences, y first; one when both axes share
    * the identical sentence (ScatterView's own rule). */
   attributionLines: string[];
 }
 
-/** "Definitie: X." → "Definitie (verticale as): X." — display-only; a line
- * in any other shape is shown as stored rather than rewritten on a guess. */
-function labelDefinitionNl(line: string | null | undefined, side: 'y' | 'x'): string | null {
+/** "Definitie: X." → "Definitie gemiddeld inkomen: X." — display-only (the
+ * stored text is unchanged); a line in any other shape is shown as stored
+ * rather than rewritten on a guess. */
+function nameDefinitionNl(line: string | null | undefined, measureTitle: string): string | null {
   if (line === null || line === undefined || line === '') return null;
   const prefix = 'Definitie: ';
   if (!line.startsWith(prefix)) return line;
-  return `Definitie (${side === 'y' ? 'verticale as' : 'horizontale as'}): ${line.slice(prefix.length)}`;
+  return `Definitie ${lowerFirst(measureTitle)}: ${line.slice(prefix.length)}`;
 }
 
 /** What the card text is built from: the stored structural fields of a
@@ -90,13 +94,12 @@ export function scatterCardText(source: ScatterCardSource, lang: Lang): ScatterC
       line: storedLine === null ? null : scatterLineEn(spec),
       definitionLines,
       stalenessLines,
-      extraLines: [...definitionLines, ...stalenessLines],
       attributionLines: attributions.map(translateAttributionLine),
     };
   }
   const definitionLines = [
-    labelDefinitionNl(source.definitionLine, 'y'),
-    labelDefinitionNl(source.pairedDefinitionLine, 'x'),
+    nameDefinitionNl(source.definitionLine, spec.y.measureTitle),
+    nameDefinitionNl(source.pairedDefinitionLine, spec.x.measureTitle),
   ].filter((line): line is string => line !== null);
   const stalenessLines = warning === null ? [] : warning.split('\n').filter((line) => line.trim() !== '');
   return {
@@ -104,7 +107,6 @@ export function scatterCardText(source: ScatterCardSource, lang: Lang): ScatterC
     line: storedLine,
     definitionLines,
     stalenessLines,
-    extraLines: [...definitionLines, ...stalenessLines],
     attributionLines: attributions,
   };
 }

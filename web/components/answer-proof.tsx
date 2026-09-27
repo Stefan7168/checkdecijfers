@@ -147,6 +147,12 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
   );
 }
 
+/** The measure a table's proof is about, for a two-table heading: its cells'
+ * own (display) measure title, else the table title. */
+function proofMeasure(proof: AnswerProofData): string {
+  return proof.cells[0]?.measureTitle ?? proof.tableTitle;
+}
+
 /** The three depths (why / which cells / step by step) for ONE table's
  * proof — once for a one-measure answer, twice (per axis) for a scatter. */
 function ProofSections({
@@ -283,17 +289,21 @@ export const AnswerProof = memo(function AnswerProof({
           </Button>
 
           {/* #296 part 2 Task 7: a scatter answer's proof covers TWO tables —
-            * the vertical axis's (the fields above) and the horizontal axis's
-            * (`paired`), each under its own heading, each with all three
-            * depths. A one-table proof renders exactly as before. */}
+            * the asked-about measure's (the fields above) and the added
+            * measure's (`paired`), each under a heading naming its MEASURE
+            * (fix M2: not its axis — "swap axes" would make that wrong), each
+            * with all three depths. A one-table proof renders as before. */}
           {displayProof.paired !== undefined ? (
             <>
               <h3 className="mb-2 font-semibold text-foreground">
-                {t('answerProof.axisVertical', { tableId: displayProof.tableId })}
+                {t('answerProof.tableHeading', { measure: proofMeasure(displayProof), tableId: displayProof.tableId })}
               </h3>
               <ProofSections proof={displayProof} technical={technical} requestUrlsByBatch={requestUrlsByBatch} />
               <h3 className="mb-2 mt-4 font-semibold text-foreground">
-                {t('answerProof.axisHorizontal', { tableId: displayProof.paired.tableId })}
+                {t('answerProof.tableHeading', {
+                  measure: proofMeasure(displayProof.paired),
+                  tableId: displayProof.paired.tableId,
+                })}
               </h3>
               <ProofSections proof={displayProof.paired} technical={technical} requestUrlsByBatch={requestUrlsByBatch} />
             </>

@@ -28,13 +28,13 @@ describe('buildScatterCsv — Dutch', () => {
   });
   const rows = lines(csv.content);
 
-  it('preamble: both attribution sentences verbatim, both definitions labelled per axis, the coverage line, the file credit', () => {
+  it('preamble: both attribution sentences verbatim, both definitions named by measure, the coverage line, the file credit', () => {
     const blank = rows.indexOf('');
     expect(rows.slice(0, blank)).toEqual([
       spec.y.attributionLine,
       spec.x.attributionLine,
-      'Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.',
-      'Definitie (horizontale as): inwoners op 1 januari.',
+      'Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.',
+      'Definitie bevolking op 1 januari: inwoners op 1 januari.',
       scatterLineNl(spec),
       'Bestand aangemaakt door checkdecijfers.nl',
     ]);

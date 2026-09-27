@@ -233,7 +233,8 @@ export default async function EmbedPage({
             spec={scatter}
             body={response.answer.body}
             {...(response.answer.scatterLine != null ? { scatterLine: response.answer.scatterLine } : {})}
-            extraLines={card.extraLines}
+            warningLines={card.stalenessLines}
+            extraLines={card.definitionLines}
             frameless
             embedMode
             embedFooter={frozenFooter}

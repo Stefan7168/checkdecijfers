@@ -136,22 +136,24 @@ export function scatterLineEn(spec: ScatterSpec): string {
   return `Coverage: ${coverage}${notApplicableClause}`;
 }
 
-/** The English definition line for ONE axis (fix round 1; split per axis in
- * #296 part 2 Task 7 so the card can pair each with its Dutch sibling): the
- * hand-written English label (ENGLISH_MEASURE_LABELS) for the leg's
- * canonical key, cased like toEnglishChartSpec's own 'Definition: …' line —
- * or null when there is none (never guessed). "vertical"/"horizontal" name
- * the spec's own axes (y/x), i.e. the view as it opens. */
+/** The English definition line for ONE axis's measure (fix round 1; split
+ * per axis in #296 part 2 Task 7): the hand-written English label
+ * (ENGLISH_MEASURE_LABELS) for the leg's canonical key, cased like
+ * toEnglishChartSpec's own 'Definition: …' line — or null when there is none
+ * (never guessed). Named by the MEASURE ("Definition of population on
+ * 1 January: …", the same English name the axis titles use), not by the
+ * axis: "swap axes" would make an axis label wrong (Task 7 fix M2 —
+ * supersedes Task 6's "(vertical axis)" wording). */
 export function scatterDefinitionLineEn(spec: ScatterSpec, side: 'y' | 'x'): string | null {
   const axis = spec[side];
   const label = axis.canonicalKey === null ? undefined : ENGLISH_MEASURE_LABELS[axis.canonicalKey];
   if (label === undefined) return null;
-  return `Definition (${side === 'y' ? 'vertical axis' : 'horizontal axis'}): ${capitalise(label)}.`;
+  return `Definition of ${midSentence(measureEn(axis))}: ${capitalise(label)}.`;
 }
 
-/** The English definition lines for the card: one per axis that has one,
- * vertical (y) first — the English sibling of the Dutch per-axis definition
- * lines. */
+/** The English definition lines for the card: one per measure that has one,
+ * the asked-about measure (y) first — the English sibling of the Dutch
+ * measure-named definition lines. */
 export function scatterDefinitionLinesEn(spec: ScatterSpec): string[] {
   return (['y', 'x'] as const)
     .map((side) => scatterDefinitionLineEn(spec, side))

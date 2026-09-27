@@ -63,8 +63,8 @@ export function buildScatterCsv(
     stalenessWarning?: string | null;
   } = {},
 ): AnswerCsv {
-  // The Dutch card text is the preamble's source (definitions labelled per
-  // axis, staleness one line per table) — the SAME lines the card shows.
+  // The Dutch card text is the preamble's source (definitions named by
+  // measure, staleness one line per table) — the SAME lines the card shows.
   const card = scatterCardText(
     {
       scatter: spec,

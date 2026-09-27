@@ -481,9 +481,9 @@ const nl = {
   // RequestUrlsSection).
   'answerProof.requestUrlsHeading': "Opgehaalde URL's",
   'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
-  // #296 part 2 Task 7: a scatter answer's proof, one heading per table.
-  'answerProof.axisVertical': 'Verticale as: tabel {tableId}',
-  'answerProof.axisHorizontal': 'Horizontale as: tabel {tableId}',
+  // #296 part 2 Task 7: a scatter answer's proof, one heading per table,
+  // named by its measure (fix M2: never by axis — "swap axes" breaks that).
+  'answerProof.tableHeading': '{measure}: tabel {tableId}',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B: pages + shell).
   // landing.tsx. The owner asked (session 90) to keep the Dutch headline
@@ -1915,8 +1915,7 @@ const en: Messages = {
   'answerProof.highlightLinkTitle': 'View this cell at CBS',
   'answerProof.requestUrlsHeading': 'Fetched URLs',
   'answerProof.requestUrlsBatchLabel': 'Batch {batchId}:',
-  'answerProof.axisVertical': 'Vertical axis: table {tableId}',
-  'answerProof.axisHorizontal': 'Horizontal axis: table {tableId}',
+  'answerProof.tableHeading': '{measure}: table {tableId}',
 
   // WP218 phase 4 (#219), Task 3 (Sweep B). Faithful MEANING translations of
   // the Dutch marketing copy — the Dutch headline stays owner-pinned verbatim

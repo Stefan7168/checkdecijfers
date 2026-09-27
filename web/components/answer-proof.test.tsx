@@ -346,29 +346,36 @@ describe('AnswerProof — scatter answer (two tables)', () => {
     });
     render(<AnswerProof proof={fakeProof({ paired })} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bewijs deze cijfers' }));
-    expect(screen.getByText('Horizontale as: tabel 03759ned')).toBeInTheDocument();
+    expect(screen.getByText('Bevolking op 1 januari: tabel 03759ned')).toBeInTheDocument();
     expect(screen.getByText('Gebruikte lezing: Bevolking op 1 januari.')).toBeInTheDocument();
     expect(screen.getByText('596.075')).toBeInTheDocument();
     expect(screen.getByText('Gelezen: 3 cellen uit tabel 03759ned (de tabel hierboven).')).toBeInTheDocument();
-    // The main table is still there, under its own vertical-axis heading.
-    expect(screen.getByText('Verticale as: tabel 86141NED')).toBeInTheDocument();
+    // The main table is still there, under its own measure-named heading
+    // (named by measure, not axis: "swap axes" must not make it wrong).
+    expect(screen.getByText('Inflatie (CPI): tabel 86141NED')).toBeInTheDocument();
     expect(screen.getByText('3,3%')).toBeInTheDocument();
   });
 
-  it('a one-table proof shows no axis headings', () => {
+  it('a one-table proof shows no table headings', () => {
     render(<AnswerProof proof={fakeProof()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
-    expect(screen.queryByText(/Verticale as|Horizontale as/)).toBeNull();
+    expect(screen.queryByText(/: tabel 86141NED$/)).toBeNull();
   });
 
-  it('English chrome for the axis headings', () => {
+  it('English chrome for the table headings, with the English measure names', () => {
+    const cells = (measureTitle: string) => [fakeProofCell({ measureTitle })];
     render(
       <LangProvider lang="en">
-        <AnswerProof proof={fakeProof({ paired: fakeProof({ tableId: '03759ned' }) })} />
+        <AnswerProof
+          proof={fakeProof({
+            cells: cells('Gemiddeld inkomen'),
+            paired: fakeProof({ tableId: '03759ned', cells: cells('Bevolking op 1 januari') }),
+          })}
+        />
       </LangProvider>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Prove these numbers' }));
-    expect(screen.getByText('Vertical axis: table 86141NED')).toBeInTheDocument();
-    expect(screen.getByText('Horizontal axis: table 03759ned')).toBeInTheDocument();
+    expect(screen.getByText('Average income: table 86141NED')).toBeInTheDocument();
+    expect(screen.getByText('Population on 1 January: table 03759ned')).toBeInTheDocument();
   });
 });

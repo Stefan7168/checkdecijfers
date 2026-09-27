@@ -445,6 +445,7 @@ export function ScatterView({
   body,
   scatterLine,
   extraLines = [],
+  warningLines = [],
   frameless = false,
   embed,
   embedMode = false,
@@ -461,6 +462,12 @@ export function ScatterView({
   /** Structural lines the CALLER has already localized (the definition lines,
    * a staleness warning) — rendered under the coverage line, in order. */
   extraLines?: string[];
+  /** Cautions the CALLER has already localized (the staleness lines, one per
+   * stale table) — shown in the one-measure answer card's warning style
+   * (text-sm text-warning), DIRECTLY under the coverage line and above
+   * `extraLines`, never as muted fine print (#296 part 2 Task 7 fix I1).
+   * Shown in embed mode too. */
+  warningLines?: string[];
   /** Same as ChartView's: drop the card frame when the mount point already is
    * a card (the visual dock). */
   frameless?: boolean;
@@ -827,6 +834,11 @@ export function ScatterView({
       {view === 'table' && !embedMode ? tableNode : embedOpen ? null : canvasNode}
 
       {shownLine !== null ? <p className="mt-2 text-sm text-muted-foreground">{shownLine}</p> : null}
+      {warningLines.map((line, i) => (
+        <p key={`w${i}`} className="mt-1 text-sm text-warning">
+          {line}
+        </p>
+      ))}
       {extraLines.map((line, i) => (
         <p key={i} className="mt-1 text-sm text-muted-foreground">
           {line}

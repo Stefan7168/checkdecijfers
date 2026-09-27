@@ -439,6 +439,22 @@ describe('ScatterView — table view', () => {
 });
 
 describe('ScatterView — the card around the plot (Dutch)', () => {
+  it('warningLines render in the warning style DIRECTLY under the coverage line, above the extra lines (Task 7 fix I1)', () => {
+    renderNl({ extraLines: ['Definitie gemiddeld inkomen: y.'], warningLines: ['Let op: de tabel 84639NED is verouderd.'] });
+    const line = screen.getByText(LINE);
+    const warning = screen.getByText('Let op: de tabel 84639NED is verouderd.');
+    const definition = screen.getByText('Definitie gemiddeld inkomen: y.');
+    expect(warning).toHaveClass('text-sm', 'text-warning');
+    expect(warning).not.toHaveClass('text-muted-foreground');
+    expect(line.nextElementSibling).toBe(warning);
+    expect(warning.compareDocumentPosition(definition) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('warningLines also show in embed mode', () => {
+    renderNl({ embedMode: true, warningLines: ['Let op: de tabel 84639NED is verouderd.'] });
+    expect(screen.getByText('Let op: de tabel 84639NED is verouderd.')).toHaveClass('text-warning');
+  });
+
   it('shows the title, body, coverage line, extra lines in order, provisional note and both attribution lines', () => {
     const s = spec();
     renderNl({ extraLines: ['Definitie verticale as.', 'Let op: de tabel 03759ned is verouderd.'] });

@@ -1013,7 +1013,9 @@ export function Chat({
                   // #296: a scatter's coverage line, second definition and
                   // second attribution — present-only, so a one-measure
                   // answerView is byte-identical to before.
-                  ...(response.scatter !== undefined
+                  // Task 7 fix M3: ONE presence check (`!= null`), so a stored
+                  // `scatter: null` can never reach pairedAttributionOf.
+                  ...(response.scatter != null
                     ? {
                         scatterLine: response.answer.scatterLine ?? null,
                         pairedDefinitionLine: response.answer.pairedDefinitionLine ?? null,
@@ -1403,19 +1405,22 @@ export function Chat({
                 {scatter !== null && scatterText !== null ? (
                   // #296 part 2 Task 7: a scatter answer. Not docked: the
                   // card's content IS the ScatterView (frameless, like the
-                  // dock mounts ChartView) — body, coverage line, labelled
-                  // definitions, staleness and both attributions, in the
+                  // dock mounts ChartView) — body, coverage line, the
+                  // staleness caution (warning style, right under coverage),
+                  // measure-named definitions and both attributions, in the
                   // reader's language (ScatterView builds its English body/
-                  // line itself; `extraLines` arrive localized). Docked: the
-                  // chart lives in the dock, so the card keeps the same text
-                  // lines here — each line shown exactly once either way.
+                  // line itself; `warningLines`/`extraLines` arrive
+                  // localized). Docked: the chart lives in the dock, so the
+                  // card keeps the same text lines, in the same order and
+                  // weight — each line shown exactly once either way.
                   <CardContent className="flex flex-col gap-1">
                     {!docked ? (
                       <ScatterView
                         spec={scatter}
                         body={answerView.body}
                         {...(answerView.scatterLine != null ? { scatterLine: answerView.scatterLine } : {})}
-                        extraLines={scatterText.extraLines}
+                        warningLines={scatterText.stalenessLines}
+                        extraLines={scatterText.definitionLines}
                         frameless
                         embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
                       />
@@ -1789,8 +1794,8 @@ export function Chat({
                 }
               >
                 {message.chart !== null || message.scatter !== null
-                          ? t('chat.dockedChipChart')
-                          : t('chat.dockedChipCard')}
+                  ? t('chat.dockedChipChart')
+                  : t('chat.dockedChipCard')}
               </button>
             ) : null}
             {/* ADR 026 addendum (session 101): the confirm-first offer's own

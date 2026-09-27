@@ -131,20 +131,20 @@ describe('English text for a home-price × population scatter carries no Dutch m
 });
 
 describe('scatterDefinitionLinesEn', () => {
-  it('one line per axis with a canonical key, vertical first, from the hand-written English labels', () => {
+  it('one line per axis with a canonical key, vertical first, named by its English measure name (Task 7 fix M2)', () => {
     const s = spec({
       y: axis('Gemiddelde verkoopprijs', 'Y', 'euro', '2024', 'average_existing_home_sale_price'),
       x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january'),
     });
     expect(scatterDefinitionLinesEn(s)).toEqual([
-      'Definition (vertical axis): The average sale price of existing owner-occupied homes.',
-      'Definition (horizontal axis): The population on 1 January.',
+      'Definition of average purchase price: The average sale price of existing owner-occupied homes.',
+      'Definition of population on 1 January: The population on 1 January.',
     ]);
   });
 
   it('skips an axis without a canonical key (or with an unknown one) rather than guessing', () => {
     const s = spec({ x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january') });
-    expect(scatterDefinitionLinesEn(s)).toEqual(['Definition (horizontal axis): The population on 1 January.']);
+    expect(scatterDefinitionLinesEn(s)).toEqual(['Definition of population on 1 January: The population on 1 January.']);
     expect(scatterDefinitionLinesEn(spec({ y: axis('X', 'Y', 'euro', '2024', 'no_such_key') }))).toEqual([]);
   });
 });
@@ -248,7 +248,7 @@ describe('scatterDefinitionLineEn (#296 part 2 Task 7: one axis at a time)', () 
   it('agrees with scatterDefinitionLinesEn, per axis, and is null for an axis without an English label', () => {
     const s = spec({ x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january') });
     expect(scatterDefinitionLineEn(s, 'y')).toBeNull();
-    expect(scatterDefinitionLineEn(s, 'x')).toBe('Definition (horizontal axis): The population on 1 January.');
+    expect(scatterDefinitionLineEn(s, 'x')).toBe('Definition of population on 1 January: The population on 1 January.');
   });
 });
 

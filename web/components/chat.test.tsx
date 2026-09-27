@@ -3756,9 +3756,16 @@ describe('Chat — scatter answer card (#296)', () => {
     expect(vi.mocked(ChartView)).not.toHaveBeenCalled();
     expect(within(view).getByText(response.answer.body)).toBeInTheDocument();
     expect(within(view).getByText(response.answer.scatterLine!)).toBeInTheDocument();
-    expect(within(view).getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
-    expect(within(view).getByText('Definitie (horizontale as): inwoners op 1 januari.')).toBeInTheDocument();
-    expect(within(view).getByText(Y_STALE)).toBeInTheDocument();
+    expect(within(view).getByText('Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(within(view).getByText('Definitie bevolking op 1 januari: inwoners op 1 januari.')).toBeInTheDocument();
+    // Task 7 fix I1: the staleness caution is prominent (warning style) and
+    // sits directly under the coverage line, above the definitions.
+    const stale = within(view).getByText(Y_STALE);
+    expect(stale).toHaveClass('text-sm', 'text-warning');
+    expect(within(view).getByText(response.answer.scatterLine!).nextElementSibling).toBe(stale);
+    expect(
+      stale.compareDocumentPosition(within(view).getByText('Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     // Each text line exactly once on the page (the card does not repeat them).
     expect(screen.getAllByText(response.answer.body)).toHaveLength(1);
     expect(screen.getAllByText(response.scatter!.y.attributionLine)).toHaveLength(1);
@@ -3788,8 +3795,12 @@ describe('Chat — scatter answer card (#296)', () => {
     const view = await screen.findByTestId('scatter-view');
     expect(within(view).getByText(scatterBodyEn(response.scatter!))).toBeInTheDocument();
     expect(within(view).getByText(scatterLineEn(response.scatter!))).toBeInTheDocument();
-    expect(within(view).getByText('Definition (horizontal axis): The population on 1 January.')).toBeInTheDocument();
-    expect(within(view).getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/)).toBeInTheDocument();
+    expect(within(view).getByText('Definition of population on 1 January: The population on 1 January.')).toBeInTheDocument();
+    const staleEn = within(view).getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/);
+    expect(staleEn).toHaveClass('text-sm', 'text-warning');
+    expect(
+      staleEn.compareDocumentPosition(within(view).getByText('Definition of population on 1 January: The population on 1 January.')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(container.textContent).not.toMatch(/Let op|Definitie|Dekking|tegenover|Elke stip|hebben beide|Bron:|gesynchroniseerd/);
   });
 
@@ -3825,8 +3836,8 @@ describe('Chat — scatter answer card (#296)', () => {
     for (const line of [
       response.answer.body,
       response.answer.scatterLine!,
-      'Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.',
-      'Definitie (horizontale as): inwoners op 1 januari.',
+      'Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.',
+      'Definitie bevolking op 1 januari: inwoners op 1 januari.',
       response.scatter!.y.attributionLine,
       response.scatter!.x.attributionLine,
       'tabel 03759ned, gesynchroniseerd 21 september 2026',
@@ -3843,7 +3854,12 @@ describe('Chat — scatter answer card (#296)', () => {
     expect(await screen.findByText(response.answer.body)).toBeInTheDocument();
     expect(screen.queryByTestId('scatter-view')).toBeNull();
     expect(screen.getByText(response.answer.scatterLine!)).toBeInTheDocument();
-    expect(screen.getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(screen.getByText('Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    // Same order and weight as the undocked card: the caution in the warning
+    // style right under the coverage line, before the definitions.
+    const stale = screen.getByText(Y_STALE);
+    expect(stale).toHaveClass('text-sm', 'text-warning');
+    expect(screen.getByText(response.answer.scatterLine!).nextElementSibling).toBe(stale);
     expect(screen.getByText(response.scatter!.y.attributionLine)).toBeInTheDocument();
     expect(screen.getByText(response.scatter!.x.attributionLine)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Grafiek in het paneel →' })).toBeInTheDocument();

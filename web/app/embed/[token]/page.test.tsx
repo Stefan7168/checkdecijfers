@@ -947,9 +947,12 @@ describe('/embed/[token] — scatter answer (#296)', () => {
     expect(screen.getByTestId('scatter-view')).toBeInTheDocument();
     expect(screen.getByText(response.answer.body)).toBeInTheDocument();
     expect(screen.getByText(response.answer.scatterLine!)).toBeInTheDocument();
-    expect(screen.getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
-    expect(screen.getByText('Definitie (horizontale as): inwoners op 1 januari.')).toBeInTheDocument();
-    expect(screen.getByText(Y_STALE)).toBeInTheDocument();
+    expect(screen.getByText('Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(screen.getByText('Definitie bevolking op 1 januari: inwoners op 1 januari.')).toBeInTheDocument();
+    const stale = screen.getByText(Y_STALE);
+    expect(stale).toHaveClass('text-sm', 'text-warning');
+    expect(screen.getByText(response.answer.scatterLine!).nextElementSibling).toBe(stale);
+    expect(stale.compareDocumentPosition(screen.getByText('Definitie gemiddeld inkomen: gemiddeld besteedbaar inkomen per huishouden.')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText(response.scatter!.y.attributionLine)).toBeInTheDocument();
     expect(screen.getByText(response.scatter!.x.attributionLine)).toBeInTheDocument();
     expect(screen.getByText(/Bevroren op 2026-09-10/)).toBeInTheDocument();
@@ -968,8 +971,8 @@ describe('/embed/[token] — scatter answer (#296)', () => {
     );
     expect(screen.getByText(scatterBodyEn(response.scatter!))).toBeInTheDocument();
     expect(screen.getByText(scatterLineEn(response.scatter!))).toBeInTheDocument();
-    expect(screen.getByText('Definition (horizontal axis): The population on 1 January.')).toBeInTheDocument();
-    expect(screen.getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/)).toBeInTheDocument();
+    expect(screen.getByText('Definition of population on 1 January: The population on 1 January.')).toBeInTheDocument();
+    expect(screen.getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/)).toHaveClass('text-warning');
     expect(screen.getByText(/Frozen on 2026-09-10/)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/Let op|Definitie|Dekking|Bevroren|tegenover|Elke stip|Bron:|gesynchroniseerd/);
   });
