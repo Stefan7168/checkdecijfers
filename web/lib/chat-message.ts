@@ -22,6 +22,10 @@ import type { EnglishRendering, NonAnswerEnglish } from '../backend/answer/trans
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
+// open-questions #324 gap 1: only the TYPE, so this pure leaf gains no
+// runtime i18n dependency — `Lang` is a two-value string union, not a
+// component or a message table.
+import type { Lang } from './i18n/messages.ts';
 
 /** WP23 (#90/#84): an answer renders from its STRUCTURAL fields — body in
  * the bubble, staleness/definition/marking as their own lines, attribution
@@ -204,6 +208,49 @@ export interface ChatMessage {
    * byte-untouched either way; chat.tsx picks between them and this field,
    * never merging the two. */
   nonAnswerEnglish: NonAnswerEnglish | null;
+}
+
+/** open-questions #324 gap 1: a reloaded thread's user bubble, for an
+ * ENGLISH-interface reader, shows the Dutch `submit` text that was actually
+ * sent to the server (the chip's label/submit split, ADR 058 Task 8 +
+ * phase 2 Task 6) rather than the English `label` the reader actually saw
+ * and clicked — replay-assemble.ts has no notion of interface language (⟨A3⟩:
+ * it stays a pure server-side reconstruction), so the substitution happens
+ * here, at RENDER time, once chat.tsx already knows the language.
+ *
+ * Pure and read-only: given the full message list, the index of a 'user'
+ * message, and the render's own language, returns the English chip LABEL to
+ * show instead of `messages[index].text` — or `null` when nothing should be
+ * substituted, in which case the caller renders `message.text` exactly as
+ * before this fix. That covers every case that must stay unchanged: a Dutch
+ * interface (`lang !== 'en'`); a message that isn't a user turn; no
+ * immediately preceding ASSISTANT message; that message carrying no English
+ * chips at all (Dutch-only turn, a fallback English answer — `chips: []` per
+ * translate.ts's `fallbackRendering` — or a refusal/clarification with no
+ * `nonAnswerEnglish`); and ordinary typed text that doesn't exactly match any
+ * chip's Dutch `submit` string.
+ *
+ * The SAME live chat already shows the correct English label directly in the
+ * bubble at send time (chat.tsx's `sendText` pushes the clicked chip's
+ * `shown` text, never `submit`) — this function is a no-op for that path too:
+ * a live-pushed bubble's `text` is already the English label, which will
+ * equal a chip's `submit` only when the two happen to be byte-identical (an
+ * untranslated term), in which case "substituting" the label for itself
+ * changes nothing. */
+export function englishUserBubbleOverride(
+  messages: ChatMessage[],
+  index: number,
+  lang: Lang,
+): string | null {
+  if (lang !== 'en') return null;
+  const message = messages[index];
+  if (message === undefined || message.role !== 'user') return null;
+  const previous = messages[index - 1];
+  if (previous === undefined || previous.role !== 'assistant') return null;
+  const chips = previous.english?.chips ?? previous.nonAnswerEnglish?.chips ?? null;
+  if (chips === null) return null;
+  const match = chips.find((chip) => chip.submit === message.text);
+  return match?.label ?? null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

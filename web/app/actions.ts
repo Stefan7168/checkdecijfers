@@ -1289,7 +1289,12 @@ export async function loadMyThread(rawThreadId: unknown): Promise<LoadedThread> 
     const datasetId = await getThreadDatasetId(getDb(), userId, threadId);
     if (datasetId !== null) return loadDatasetThread(userId, threadId, datasetId);
     const rows = await getThreadRows(getDb(), userId, threadId);
-    const messages = await assembleMessages(replayParts(rows), getDb());
+    // open-questions #324 gap 2: a resumed thread's CSV export gets English
+    // column headers for an English-interface reader — assembleMessages is
+    // otherwise a pure, zero-LLM reconstruction; this is its one reader-facing
+    // field that is a fully pre-rendered string (see that module's own
+    // comment on the parameter).
+    const messages = await assembleMessages(replayParts(rows), getDb(), await getLang());
     const rebuilt = await rebuildContext(getDb(), rows);
     const context = await validateConversationContext(getDb(), rebuilt);
     return { kind: 'cbs', threadId, messages, context };

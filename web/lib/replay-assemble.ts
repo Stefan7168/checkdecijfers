@@ -37,6 +37,13 @@ import type { ChatMessage } from './chat-message.ts';
 import { messageKind } from './chat-message.ts';
 import { buildAnswerCsv } from './csv.ts';
 import { statCardData } from './stat-card-data.ts';
+// open-questions #324 gap 2: the ONE reader-facing field this module builds
+// that is a fully pre-rendered string, not structural data a component can
+// translate at render time (contrast the proof panel and the citation copy,
+// both display-transformed in chat.tsx/answer-proof.tsx from data this
+// module hands over untouched) — so, per the fix's own instruction, the
+// language is passed IN here rather than resolved inside this pure module.
+import type { Lang } from './i18n/messages.ts';
 
 export type { ChatMessage } from './chat-message.ts';
 
@@ -116,7 +123,7 @@ async function fetchProofRequestUrls(db: Db, proof: AnswerProof | null): Promise
   return fetchRequestUrlsByBatch(db, batchIdsForProof(proof));
 }
 
-async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<ChatMessage> {
+async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): Promise<ChatMessage> {
   const response = part.response;
   const isAnswer = response.kind === 'answer';
   const answer = isAnswer ? (response as AnswerResponse) : null;
@@ -166,7 +173,7 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<Chat
     // citation/card/csv reconstruction.
     citation: answer !== null ? buildCitation(answer) : null,
     card: answer !== null ? statCardData(answer) : null,
-    csv: answer !== null ? buildAnswerCsv(answer) : null,
+    csv: answer !== null ? buildAnswerCsv(answer, lang) : null,
     proof,
     proofRequestUrls,
     answerView,
@@ -205,8 +212,11 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<Chat
  * one genuinely new live read this Task adds (WP30c D7(b)): the
  * request_urls side-lookup per answer message, which is why this is now
  * `async` and takes `db` — every other builder here is unchanged pure
- * reconstruction from the stored envelope. */
-export async function assembleMessages(parts: ReplayPart[], db: Db): Promise<ChatMessage[]> {
+ * reconstruction from the stored envelope. `lang` (open-questions #324 gap
+ * 2) defaults to 'nl' so every existing call site (and every existing test)
+ * is byte-identical without passing it; it only ever reaches
+ * `buildAnswerCsv` — see that call's own comment. */
+export async function assembleMessages(parts: ReplayPart[], db: Db, lang: Lang = 'nl'): Promise<ChatMessage[]> {
   return Promise.all(
     parts.map((part) => {
       switch (part.role) {
@@ -215,7 +225,7 @@ export async function assembleMessages(parts: ReplayPart[], db: Db): Promise<Cha
         case 'user':
           return userMessage(part.text);
         case 'assistant':
-          return assistantMessage(db, part);
+          return assistantMessage(db, part, lang);
       }
     }),
   );

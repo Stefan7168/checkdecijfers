@@ -14,7 +14,7 @@ import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { UnrecognizedActionError } from 'next/dist/client/components/unrecognized-action-error';
 import type { ChatMessage } from '../lib/chat-message.ts';
-import { previousCompatibleChartIndex } from '../lib/chat-message.ts';
+import { englishUserBubbleOverride, previousCompatibleChartIndex } from '../lib/chat-message.ts';
 import { buildAnswerCsv } from '../lib/csv.ts';
 import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
@@ -150,6 +150,15 @@ async function submit(text: string) {
   fireEvent.change(screen.getByPlaceholderText('Stel een vraag…'), { target: { value: text } });
   fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
   // Let the pending promise from askQuestion resolve.
+  await screen.findByText(text);
+}
+
+// open-questions #324 gap 2: the English-interface counterpart of `submit`
+// above (its own placeholder/button chrome, WP218 phase 4) — for tests
+// rendered under `<LangProvider lang="en">`.
+async function submitEn(text: string) {
+  fireEvent.change(screen.getByPlaceholderText('Ask a question…'), { target: { value: text } });
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }));
   await screen.findByText(text);
 }
 
@@ -464,6 +473,76 @@ describe('Chat — copy the whole answer with the source link (owner ask)', () =
     await submit('Hoeveel werklozen zijn er?');
     expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kopieer' })).toBeNull();
+  });
+
+  // open-questions #324 gap 2: "Copy" used to always read the Dutch
+  // `answerView`, even under a verified English answer. writeText (not the
+  // rich ClipboardItem path — already proven language-agnostic above) keeps
+  // these assertions on the plain string.
+  const EN_ATTRIBUTION =
+    'Source: CBS StatLine, table 86141NED — Population. Data synced on 2026-07-03. License: CC BY 4.0.';
+
+  it('copies the VERIFIED English body + attribution, with no Dutch citation-flags line appended', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const response = fakeAnswerResponse({
+      body: 'Nederland telt 18.044.027 inwoners.',
+      english: fakeEnglishRendering({
+        status: 'verified',
+        body: 'The Netherlands has 18,044,027 inhabitants.',
+        lines: {
+          assumptionLine: null,
+          regionSetLine: null,
+          regionSeriesLine: null,
+          definitionLine: null,
+          alternatesLine: null,
+          markingLine: null,
+          attributionLine: EN_ATTRIBUTION,
+        },
+      }),
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    await submitEn('How many inhabitants does the Netherlands have?');
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text).toContain('The Netherlands has 18,044,027 inhabitants.');
+    expect(text).toContain(EN_ATTRIBUTION);
+    expect(text).not.toContain('Nederland telt 18.044.027 inwoners.');
+    // The Dutch compact citation quote (voorlopige cijfers/derived flags) is
+    // never appended to a verified English copy — it has no English
+    // rendering of its own (see the button's own comment in chat.tsx).
+    expect(text).not.toContain('gesynchroniseerd');
+  });
+
+  it('copies the DUTCH text unchanged when English translation only produced a FALLBACK (no verified rendering)', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const response = fakeAnswerResponse({
+      body: 'Nederland telt 18.044.027 inwoners.',
+      english: fakeEnglishRendering({ status: 'fallback', text: null, body: null, lines: null }),
+    });
+    askQuestion.mockResolvedValue(
+      outcome({ kind: 'ok', auditId: 1, netCost: 20, response: response as ComposedResponse }),
+    );
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    await submitEn('How many inhabitants does the Netherlands have?');
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text).toContain('Nederland telt 18.044.027 inwoners.');
+    expect(text).toContain('(CBS StatLine, tabel 86141NED, gesynchroniseerd 3 juli 2026)');
   });
 });
 
@@ -3478,5 +3557,171 @@ describe('Chat — ADR 058 phase 2 English refusals/clarifications (Task 6, #332
       await screen.findByText('Ik ben een chatbot die vragen beantwoordt met CBS-cijfers.'),
     ).toBeInTheDocument();
     expect(screen.queryByText("I'm a chatbot that answers questions using CBS figures.")).toBeNull();
+  });
+});
+
+// open-questions #324 gap 1: a reloaded thread's user bubble used to show
+// the Dutch `submit` text a reader actually clicked as an English chip,
+// never the English `label` they saw and clicked (replay-assemble.ts has no
+// live carrier/pending to tell a click from typed text apart, and no notion
+// of interface language either — chat-message.ts's own comment explains why
+// the fix lives here, at render, instead). A complete, self-contained
+// ChatMessage per the file's own discipline (never a cast-away partial) —
+// same base literal `previousCompatibleChartIndex`'s neighbouring tests use.
+function baseMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
+  return {
+    role: 'assistant',
+    kind: 'answer',
+    text: 'x',
+    chart: null,
+    chartAlternates: [],
+    cost: null,
+    citation: null,
+    card: null,
+    csv: null,
+    proof: null,
+    proofRequestUrls: null,
+    answerView: null,
+    provisional: false,
+    suggestions: [],
+    auditId: null,
+    webSection: null,
+    carrier: null,
+    insufficientCredits: null,
+    onboardingOffer: null,
+    english: null,
+    nonAnswerEnglish: null,
+    ...overrides,
+  };
+}
+
+function userTurn(text: string): ChatMessage {
+  return baseMessage({ role: 'user', kind: null, text });
+}
+
+describe('englishUserBubbleOverride (open-questions #324 gap 1)', () => {
+  const CHIP = { label: 'What was inflation in 2025?', submit: 'Wat was de inflatie in 2025?' };
+
+  it("returns the chip's English label when the user text exactly matches an answer's english.chips submit, on English", () => {
+    const messages = [baseMessage({ english: fakeEnglishRendering({ chips: [CHIP] }) }), userTurn(CHIP.submit)];
+    expect(englishUserBubbleOverride(messages, 1, 'en')).toBe(CHIP.label);
+  });
+
+  it("does the same for a clarification/refusal's nonAnswerEnglish.chips", () => {
+    const messages = [
+      baseMessage({
+        kind: 'clarification',
+        nonAnswerEnglish: { source: 'template', text: 'Which one?', chips: [CHIP], untranslated: [] },
+      }),
+      userTurn(CHIP.submit),
+    ];
+    expect(englishUserBubbleOverride(messages, 1, 'en')).toBe(CHIP.label);
+  });
+
+  it('returns null on the Dutch interface, even with an exact-matching chip', () => {
+    const messages = [baseMessage({ english: fakeEnglishRendering({ chips: [CHIP] }) }), userTurn(CHIP.submit)];
+    expect(englishUserBubbleOverride(messages, 1, 'nl')).toBeNull();
+  });
+
+  it('returns null for ordinary typed text that matches no chip', () => {
+    const messages = [baseMessage({ english: fakeEnglishRendering({ chips: [CHIP] }) }), userTurn('Something else')];
+    expect(englishUserBubbleOverride(messages, 1, 'en')).toBeNull();
+  });
+
+  it('returns null when the preceding answer carries no English chips at all (Dutch-only turn, or translate.ts\'s own fallback shape, chips: [])', () => {
+    const messages = [
+      baseMessage({ english: fakeEnglishRendering({ status: 'fallback', chips: [] }) }),
+      userTurn(CHIP.submit),
+    ];
+    expect(englishUserBubbleOverride(messages, 1, 'en')).toBeNull();
+  });
+
+  it('returns null for a non-user message, for a user message with nothing immediately before it, and for one whose immediately preceding message is not an assistant turn', () => {
+    const withChip = baseMessage({ english: fakeEnglishRendering({ chips: [CHIP] }) });
+    expect(englishUserBubbleOverride([withChip], 0, 'en')).toBeNull(); // not a user message
+    expect(englishUserBubbleOverride([userTurn(CHIP.submit)], 0, 'en')).toBeNull(); // no previous message
+    // The chip-bearing assistant message is two turns back, not immediately
+    // preceding — an in-between user message means no substitution, even
+    // though the same text would match if it directly followed the chip.
+    expect(
+      englishUserBubbleOverride([withChip, userTurn('anything'), userTurn(CHIP.submit)], 2, 'en'),
+    ).toBeNull();
+  });
+});
+
+describe('Chat — reloaded thread shows the English chip label (open-questions #324 gap 1)', () => {
+  const CHIP = { label: 'What was inflation in 2025?', submit: 'Wat was de inflatie in 2025?' };
+
+  it("an answer's English chip: the resumed user bubble shows the English label, not the stored Dutch submit text", () => {
+    const messages = [
+      baseMessage({
+        text: 'De inflatie bedroeg in 2024 3,3%.',
+        english: fakeEnglishRendering({ text: 'Inflation was 3.3% in 2024.', chips: [CHIP] }),
+      }),
+      userTurn(CHIP.submit),
+    ];
+    render(
+      <LangProvider lang="en">
+        <Chat initialMessages={messages} />
+      </LangProvider>,
+    );
+    // The chip button itself ALSO shows the English label (unrelated to this
+    // fix — English chips render regardless of which turn is newest), so
+    // there must be at least two matches, and at least one of them is NOT
+    // the button — i.e. the user's own bubble (same assertion shape as the
+    // live-path "chip label/submit split" tests above).
+    const matches = screen.getAllByText(CHIP.label);
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    expect(matches.some((el) => el.tagName !== 'BUTTON')).toBe(true);
+    expect(screen.queryByText(CHIP.submit)).toBeNull();
+  });
+
+  it("a clarification's English chip: the resumed user bubble shows the English label", () => {
+    const messages = [
+      baseMessage({
+        kind: 'clarification',
+        text: 'Gemeente of provincie?',
+        nonAnswerEnglish: { source: 'template', text: 'Municipality or province?', chips: [CHIP], untranslated: [] },
+      }),
+      userTurn(CHIP.submit),
+    ];
+    render(
+      <LangProvider lang="en">
+        <Chat initialMessages={messages} />
+      </LangProvider>,
+    );
+    const matches = screen.getAllByText(CHIP.label);
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    expect(matches.some((el) => el.tagName !== 'BUTTON')).toBe(true);
+    expect(screen.queryByText(CHIP.submit)).toBeNull();
+  });
+
+  it('a genuinely Dutch-only resumed thread (no english/nonAnswerEnglish at all — the ordinary case) renders the stored text unchanged, on either interface language', () => {
+    const messages = [
+      baseMessage({ text: 'De inflatie bedroeg in 2024 3,3%.' }),
+      userTurn('Wat was de inflatie in 2025?'),
+    ];
+    render(
+      <LangProvider lang="en">
+        <Chat initialMessages={messages} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Wat was de inflatie in 2025?')).toBeInTheDocument();
+  });
+
+  it('ordinary typed text that does not match any chip renders unchanged on English too', () => {
+    const messages = [
+      baseMessage({
+        text: 'De inflatie bedroeg in 2024 3,3%.',
+        english: fakeEnglishRendering({ text: 'Inflation was 3.3% in 2024.', chips: [CHIP] }),
+      }),
+      userTurn('Een heel andere, zelf getypte vraag'),
+    ];
+    render(
+      <LangProvider lang="en">
+        <Chat initialMessages={messages} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Een heel andere, zelf getypte vraag')).toBeInTheDocument();
   });
 });

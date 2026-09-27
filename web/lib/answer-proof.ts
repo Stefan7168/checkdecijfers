@@ -64,6 +64,15 @@ import type { Db } from '../backend/db/types.ts';
 // context for the old import) and missing from every stored one.
 import { syncDateLabel } from './sync-date.ts';
 import { cbsHighlightUrl } from './statline.ts';
+// open-questions #324 gap 2: the proof panel's DISPLAY-only English name
+// swap (see `toEnglishAnswerProof` below) — `regionLabelEn` also translates
+// the qualifier suffix a disambiguated region label carries ('Utrecht
+// (gemeente)'), which the bare `translateRegion` table (keyed on unqualified
+// names only) leaves in Dutch; `translateMeasureTitle`/`translatePeriodLabel`
+// are the same never-guess converters chart.tsx and the English answer
+// translator already use for these exact two name kinds.
+import { regionLabelEn } from '../backend/answer/respond/english.ts';
+import { translateMeasureTitle, translatePeriodLabel } from './i18n/cbs-words.ts';
 
 /** One `response.result.cells[i]`, carrying everything the "De gebruikte
  * cellen" table (Depth 2, #70) shows — human labels always, codes/ids only
@@ -420,6 +429,33 @@ export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
     );
     return null;
   }
+}
+
+/** open-questions #324 gap 2: a DISPLAY-only transform for an
+ * English-interface reader — the SAME pattern as `toEnglishChartSpec`
+ * (src/chart/english.ts, ADR 058 phase 3): the stored/built `proof` is never
+ * mutated, and every full-sentence field this module composes above
+ * (`reading`, `periodSemantics`, `alternates[].label`, `steps[].text`,
+ * `nullNotice`) stays Dutch untouched — translating those would mean
+ * hand-writing a whole second English proof-narrative (every derivation
+ * kind's own sentence), well past this gap's "display names" scope. Only the
+ * cell table's region/period/measure DISPLAY NAMES swap to their registered
+ * English form; every identifier, code, raw formatted value and status is
+ * copied verbatim — this can never touch a digit (the same never-guess
+ * converters back it, and none of them is a number formatter). Safe to call
+ * on any `AnswerProof`, including one built before this feature (there is
+ * nothing here that assumes a newer shape) and safe to call twice (each
+ * converter is idempotent on already-English or already-unmatched input). */
+export function toEnglishAnswerProof(proof: AnswerProof): AnswerProof {
+  return {
+    ...proof,
+    cells: proof.cells.map((cell) => ({
+      ...cell,
+      measureTitle: translateMeasureTitle(cell.measureTitle),
+      regionLabel: cell.regionLabel !== null ? regionLabelEn(cell.regionLabel) : null,
+      periodLabel: translatePeriodLabel(cell.periodLabel),
+    })),
+  };
 }
 
 /** WP30c D7(b): request URL(s) per ingestion batch, keyed by

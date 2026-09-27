@@ -16,8 +16,9 @@
 import { ShieldCheck } from 'lucide-react';
 import { memo, useEffect, useId, useRef, useState } from 'react';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
-import { useT } from '../lib/i18n/lang-provider.tsx';
+import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import type { AnswerProof as AnswerProofData, RequestUrlsByBatch } from '../lib/answer-proof.ts';
+import { toEnglishAnswerProof } from '../lib/answer-proof.ts';
 import { Button } from './ui/button.tsx';
 
 /** WP30c D7(b) (ADR 048, Amendment 6): the batch ids this proof's own cells
@@ -169,7 +170,14 @@ export const AnswerProof = memo(function AnswerProof({
   const [technical, setTechnical] = useState(false);
   const panelId = useId();
   const t = useT();
-  const triggerLabel = proof.cells.length === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
+  const lang = useLang();
+  // open-questions #324 gap 2: the DISPLAY-only name swap — `proof` itself
+  // (and every prop/callback keyed on it, e.g. `requestUrlsByBatch`'s batch
+  // ids) is unaffected, since `toEnglishAnswerProof` only ever changes the
+  // three DISPLAY-name fields on each cell, never an id/code.
+  const displayProof = lang === 'en' ? toEnglishAnswerProof(proof) : proof;
+  const triggerLabel =
+    displayProof.cells.length === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
   // #9 (session 110 UX audit): "Prove these numbers" — the product's own
   // namesake trust action — used to open this panel below the fold with no
   // scroll, leaving only a grey strip visible behind the composer. Guarded
@@ -218,13 +226,13 @@ export const AnswerProof = memo(function AnswerProof({
 
           <div className="mb-3">
             <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.whyHeading')}</h4>
-            <p>{t('answerProof.readingLine', { reading: proof.reading })}</p>
-            {proof.periodSemantics !== null ? (
-              <p>{t('answerProof.periodSemanticsLine', { value: proof.periodSemantics })}</p>
+            <p>{t('answerProof.readingLine', { reading: displayProof.reading })}</p>
+            {displayProof.periodSemantics !== null ? (
+              <p>{t('answerProof.periodSemanticsLine', { value: displayProof.periodSemantics })}</p>
             ) : null}
-            {proof.alternates.length > 0 ? (
+            {displayProof.alternates.length > 0 ? (
               <ul className="mt-1 space-y-0.5">
-                {proof.alternates.map((alternate, i) => (
+                {displayProof.alternates.map((alternate, i) => (
                   <li key={i}>
                     {t('answerProof.notChosenLine', { label: alternate.label })}
                     {technical && alternate.technical !== null ? alternate.technical : ''}
@@ -236,25 +244,25 @@ export const AnswerProof = memo(function AnswerProof({
 
           <div className="mb-3">
             <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.cellsHeading')}</h4>
-            <CellTable proof={proof} technical={technical} />
+            <CellTable proof={displayProof} technical={technical} />
             {/* WP30c D7(b): shown alongside the cell table's own "Batch"
               * column (same technical-only gate) — the per-batch request
               * URL(s), when the live lookup found any. */}
-            {technical ? <RequestUrlsSection proof={proof} requestUrlsByBatch={requestUrlsByBatch} /> : null}
+            {technical ? <RequestUrlsSection proof={displayProof} requestUrlsByBatch={requestUrlsByBatch} /> : null}
           </div>
 
           <div>
             <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.stepsHeading')}</h4>
             <ol className="list-decimal space-y-0.5 pl-4">
-              {proof.steps.map((step, i) => (
+              {displayProof.steps.map((step, i) => (
                 <li key={i}>
                   {step.text}
                   {technical && step.technical !== null ? step.technical : ''}
                 </li>
               ))}
             </ol>
-            {proof.nullNotice !== null ? <p className="mt-1">{proof.nullNotice}</p> : null}
-            {proof.marked ? <p className="mt-1">{DERIVED_DATA_MARKING}</p> : null}
+            {displayProof.nullNotice !== null ? <p className="mt-1">{displayProof.nullNotice}</p> : null}
+            {displayProof.marked ? <p className="mt-1">{DERIVED_DATA_MARKING}</p> : null}
           </div>
         </div>
       ) : null}

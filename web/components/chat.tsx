@@ -34,7 +34,7 @@ import { buildAnswerCopy, escapeHtml as escapeHtmlForCopy } from '../lib/copy-an
 import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
-import { useT } from '../lib/i18n/lang-provider.tsx';
+import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import { DownloadCsvButton } from './download-csv-button.tsx';
 import type { MessageKey } from '../lib/i18n/messages.ts';
 import { sourceTableUrl } from '../lib/statline.ts';
@@ -44,7 +44,12 @@ import { statCardData } from '../lib/stat-card-data.ts';
 // (web/lib/replay-assemble.ts, called from a Server Action) reconstructs the
 // SAME messages this live path appends — byte-identity by construction.
 import type { AnswerView, ChatMessage } from '../lib/chat-message.ts';
-import { extendsPreviousChart, messageKind, previousCompatibleChartIndex } from '../lib/chat-message.ts';
+import {
+  englishUserBubbleOverride,
+  extendsPreviousChart,
+  messageKind,
+  previousCompatibleChartIndex,
+} from '../lib/chat-message.ts';
 // Co-pilot phase 3 (session 114, Task 3): re-exported here (defined in
 // chat-message.ts, a pure leaf dock-visuals.ts also imports) so this
 // component's own test can import it the way it imports everything else
@@ -394,6 +399,7 @@ export function Chat({
 } = {}) {
   const threadAware = onThreadId !== undefined;
   const t = useT();
+  const lang = useLang();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages ?? []);
   const [pending, setPending] = useState<PendingClarification | null>(null);
   // WP135 (ADR 033 D1): the thread this chat is currently in — seeded from the
@@ -964,7 +970,9 @@ export function Chat({
           cost: gated.netCost,
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
-          csv: response.kind === 'answer' ? buildAnswerCsv(response) : null,
+          // open-questions #324 gap 2: English-interface headers, Dutch data
+          // values unchanged either way (csv.ts's own scope).
+          csv: response.kind === 'answer' ? buildAnswerCsv(response, lang) : null,
           proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
           // #252 (was Amendment B5's named residual): this component is
           // 'use client' with no server execution context, so the request_urls
@@ -1219,6 +1227,12 @@ export function Chat({
           // hid the English text on exactly those reasons even though the
           // envelope carried it.
           const nonAnswerEnglish = message.nonAnswerEnglish;
+          // open-questions #324 gap 1: only ever computed for a 'user'
+          // message, and only ever CHANGES anything for a reloaded thread
+          // (see chat-message.ts's own doc comment for why the live path is
+          // already a no-op here).
+          const userBubbleOverride =
+            message.role === 'user' ? englishUserBubbleOverride(messages, i, lang) : null;
           const englishChips = englishVerified
             ? englishVerified.chips
             : nonAnswerEnglish
@@ -1264,6 +1278,28 @@ export function Chat({
           const cardAttribution = useEnglishCardContent
             ? englishVerified!.lines!.attributionLine
             : (answerView?.attribution ?? '');
+          // open-questions #324 gap 2: "Copy" reuses the SAME card* values
+          // the card itself just rendered above (English when verified, the
+          // unchanged Dutch answerView otherwise) — so the copied text can
+          // never disagree with what's on screen, and the fallback/Dutch case
+          // is exactly today's `message.answerView`, unchanged. tableId/
+          // source/syncedAt (identifiers, not display prose) stay the Dutch
+          // view's, same as the SourceBadge beside it.
+          const copyView: AnswerView | null =
+            answerView !== null
+              ? {
+                  ...answerView,
+                  body: cardBody,
+                  assumptionLine: cardAssumptionLine,
+                  regionSetLine: cardRegionSetLine,
+                  regionSeriesLine: cardRegionSeriesLine,
+                  stalenessWarning: cardStalenessWarning,
+                  definitionLine: cardDefinitionLine,
+                  alternatesLine: cardAlternatesLine,
+                  markingLine: cardMarkingLine,
+                  attribution: cardAttribution,
+                }
+              : null;
           return (
           <div
             key={i}
@@ -1382,12 +1418,18 @@ export function Chat({
                     * the proof panel (role="region") opens inside it, so the
                     * panel's own order-last basis-full (answer-proof.tsx)
                     * spans the whole footer instead of just this group's
-                    * shrink-to-fit width. Fix round 1: every action here
-                    * (feedback/proof/dock-trigger/copy/csv/cost) is
-                    * DELIBERATELY unchanged for an English answer — it still
-                    * reads from the Dutch `message`/`answerView` fields
-                    * (citation/CSV/proof stay Dutch, per the fix ruling's
-                    * deferred note). */}
+                    * shrink-to-fit width. Fix round 1: feedback/dock-trigger/
+                    * cost are unaffected by the reader's language (feedback
+                    * anchors to the audit row by id; the dock trigger and
+                    * cost line are chrome, already through messages.ts).
+                    * open-questions #324 gap 2 (fixed this session): the proof
+                    * panel now shows English chrome + translated region/
+                    * period/measure display names (answer-proof.tsx), and
+                    * Copy now copies the verified English text when there is
+                    * one (`copyView` above) — see that button's own comment.
+                    * The CSV stays a DIFFERENT case: its DATA values are
+                    * deliberately still Dutch on every language (csv.ts's own
+                    * scope: only the column HEADERS translate). */}
                   {/* …and the same for the 👎 panel (data-slot="feedback-panel",
                     * feedback-buttons.tsx), which the answer-card review found
                     * squeezed to the group's width: FeedbackButtons' own root
@@ -1427,18 +1469,29 @@ export function Chat({
                       * AnswerView to build it from, not only when `citation`
                       * happens to be non-null (it's ALWAYS non-null for a
                       * real answer envelope — this widens the gate to match
-                      * intent, not a behavior change today). Deliberately
-                      * still the DUTCH `answerView` (never `cardBody`/
-                      * `cardAttribution`) — citation/CSV/proof stay Dutch
-                      * (fix ruling's deferred note). */}
-                    {message.answerView !== null ? (
+                      * intent, not a behavior change today).
+                      * open-questions #324 gap 2 fix: `copyView` (built above,
+                      * right beside `cardBody`/`cardAttribution`) is the
+                      * VERIFIED-English text when there is one, else this is
+                      * byte-identical to the old `message.answerView`. The
+                      * compact flagged `citation` quote (voorlopige cijfers/
+                      * derived-data flags) has no English rendering of its
+                      * own (ADR 058 never built one — Dutch-only templates,
+                      * §"Hand-written English for everything template-built"),
+                      * so it is appended ONLY for the Dutch/fallback case,
+                      * exactly as before; a verified English copy's body
+                      * already carries the derived-data marking line (and the
+                      * provisional flag is still shown on-screen as the
+                      * card's own badge, just not duplicated into this
+                      * quote). */}
+                    {copyView !== null ? (
                       <CopyAnswerButton
-                        view={message.answerView}
+                        view={copyView}
                         sourceUrl={sourceTableUrl(
-                          message.answerView.source ?? sourceKeyForTableId(message.answerView.tableId),
-                          message.answerView.tableId,
+                          copyView.source ?? sourceKeyForTableId(copyView.tableId),
+                          copyView.tableId,
                         )}
-                        citation={message.citation}
+                        citation={useEnglishCardContent ? null : message.citation}
                       />
                     ) : null}
                     {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
@@ -1508,8 +1561,12 @@ export function Chat({
                     * here stays exactly the Dutch `message.text`, unchanged.
                     * ADR 058 phase 2 (#332, Task 6): a refusal/clarification
                     * has no card at all — its English sibling (deterministic
-                    * template, Task 5) swaps in RIGHT HERE instead. */}
-                  {nonAnswerEnglish ? nonAnswerEnglish.text : message.text}
+                    * template, Task 5) swaps in RIGHT HERE instead.
+                    * open-questions #324 gap 1: `userBubbleOverride` is only
+                    * ever non-null for a 'user' message (nonAnswerEnglish is
+                    * always null there), so this adds a THIRD fallback rung
+                    * without touching either existing one. */}
+                  {nonAnswerEnglish ? nonAnswerEnglish.text : (userBubbleOverride ?? message.text)}
                 </div>
                 {message.cost !== null ? (
                   <div className="mt-0.5 text-xs text-muted-foreground tnum">
