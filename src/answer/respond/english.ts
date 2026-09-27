@@ -235,6 +235,11 @@ export const FIXED_OPTION_EN: Readonly<Record<string, string>> = {
   'een specifieke gemeente of provincie — noem de naam': 'a specific municipality or province — name it',
   'heel Nederland': 'the Netherlands as a whole',
   'Toon de Eurostat-cijfers': 'Show the Eurostat figures',
+  // Task 3 (#332): intent/resolve.ts's GRAIN_LABEL, offered as clarification
+  // options on a 'grain_unavailable' failure (intent/policy.ts).
+  'per jaar': 'per year',
+  'per kwartaal': 'per quarter',
+  'per maand': 'per month',
 };
 
 // ---------------------------------------------------------------------------

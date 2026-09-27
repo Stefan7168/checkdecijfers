@@ -21,6 +21,18 @@ import { periodCodeToNl } from '../respond/period-nl.ts';
 // — nothing that imports this file back), so the offer side can refuse to
 // mint a chip the take side would strip.
 import { isClickTakeableIntent, type ClickValidationOptions } from '../respond/validate-pending.ts';
+// ADR 058 phase 2 (#332), Task 3: the English parameter helpers built in
+// Task 1 (leaf module, DB-free) — every English clarification question below
+// is assembled from THESE, at the same site as its Dutch counterpart, never
+// a machine translation of the Dutch string itself. Importing a respond/
+// leaf module from intent/ is the same precedent as periodCodeToNl above.
+import {
+  englishMeasureLabel,
+  FIXED_OPTION_EN,
+  joinOfEn,
+  periodCodeToEn,
+  regionLabelEn,
+} from '../respond/english.ts';
 import { stableStringify } from './client.ts';
 import { isResolutionFailure, type CandidateResolution } from './resolve.ts';
 import type {
@@ -103,6 +115,107 @@ function failureQuestion(failure: ResolutionFailure): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// English siblings (ADR 058 phase 2, #332, Task 3) — assembled at the SAME
+// site as failureQuestion above, from the SAME ResolutionFailure, never a
+// post-hoc translation of the Dutch string. Threaded onto the ParseOutcome as
+// question_en/options_en/untranslated_en, present-only and stripped again
+// before the outcome is stored (respond/refusals.ts's withoutEnglish) — the
+// Dutch path stays byte-identical.
+// ---------------------------------------------------------------------------
+
+/** 'Bedoel je X?' -> 'Did you mean: X?' — the one Dutch confirm template
+ * reused verbatim across region_ambiguous (here) and every rule 3/4 confirm
+ * in decide() below; kept as one function so the phrasing can never drift
+ * between the sites that share the Dutch template. */
+function didYouMeanEn(text: string): string {
+  return `Did you mean: ${text}?`;
+}
+
+/** '2015 tot en met 2024' -> '2015 to 2024' — the one option shape
+ * openEndedRangeOptions (resolve.ts) assembles from year PARTS, never
+ * through periodCodeToNl, for the period_missing / max_on_national_measure
+ * failures. Built from the same parts here (a regex over the exact shape
+ * that builder ever emits), not a translation of the Dutch string; anything
+ * else passes through unchanged (defensive — this shape is the only one
+ * either failure reason ever offers). */
+function yearRangeOptionToEn(option: string): string {
+  const match = /^(\d{4}) tot en met (\d{4})$/.exec(option);
+  return match ? `${match[1]!} to ${match[2]!}` : option;
+}
+
+/** English options for a ResolutionFailure, index-aligned with
+ * `failure.options` (same length, always — pinned by
+ * tests/answer/english-clarifications.test.ts). Region labels through
+ * regionLabelEn; the one "X tot en met Y" shape through yearRangeOptionToEn;
+ * every other fixed Dutch literal through FIXED_OPTION_EN (english.ts) — the
+ * `?? o` fallback is defensive only, never reached while that map stays in
+ * sync with every fixed option string this module (and resolve.ts) emits. */
+function failureOptionsEn(failure: ResolutionFailure): string[] {
+  if (failure.reason === 'region_ambiguous') return failure.options.map(regionLabelEn);
+  if (failure.reason === 'max_on_national_measure' || failure.reason === 'period_missing') {
+    return failure.options.map(yearRangeOptionToEn);
+  }
+  return failure.options.map((o) => FIXED_OPTION_EN[o] ?? o);
+}
+
+/** The one non-template ingredient (design doc): siblingDefinitionLabel is
+ * Dutch registry text with no English sibling reachable from a
+ * ResolutionFailure alone (the Eurostat sibling canonical key never lives in
+ * CANONICAL_MEASURES — src/sources/eurostat-siblings.ts's own ruling — so
+ * englishMeasureLabel has nothing to look up), so it rides verbatim and is
+ * listed here rather than silently left untranslated in the sentence. */
+function failureUntranslatedEn(failure: ResolutionFailure): string[] {
+  if (failure.reason === 'other_source_available' && failure.siblingDefinitionLabel) {
+    return [failure.siblingDefinitionLabel];
+  }
+  return [];
+}
+
+/** English sibling of failureQuestion — same switch, same cases, English
+ * options via failureOptionsEn above. One question mark wherever the Dutch
+ * has exactly one (including other_source_available, which — like the
+ * Dutch — has ZERO: it is a statement naming the source switch, not phrased
+ * as a question). */
+function failureQuestionEn(failure: ResolutionFailure): string {
+  const optionsEn = failureOptionsEn(failure);
+  switch (failure.reason) {
+    case 'region_ambiguous':
+      return didYouMeanEn(joinOfEn(optionsEn));
+    case 'region_unknown':
+      return 'Which municipality or province do you mean exactly, or do you want the figure for the Netherlands as a whole?';
+    case 'region_on_national_measure':
+      return "I only have those figures for the Netherlands as a whole, not per municipality or neighbourhood — do you want the national figure?";
+    case 'max_needs_regions':
+      return 'Which municipalities or provinces do you want to compare? Name at least two in your question.';
+    case 'max_on_national_measure': {
+      const leadEn =
+        "These figures exist only for the Netherlands as a whole, so comparing regions isn't possible here — " +
+        "and looking up the period with the highest or lowest value isn't something I can do yet. ";
+      return optionsEn.length > 0
+        ? `${leadEn}Would you like to see the trend instead, for example ${joinOfEn(optionsEn)}?`
+        : `${leadEn}Would you like to see the trend over a period instead?`;
+    }
+    case 'grain_unavailable':
+      return optionsEn.length > 0
+        ? `Those figures are only available ${optionsEn.join(' and ')} — which period do you want them for?`
+        : 'Which period do you want this for?';
+    case 'period_missing':
+      return optionsEn.length > 0
+        ? `Which period do you want this for — for example ${joinOfEn(optionsEn)}?`
+        : 'Which period do you want this for (for example a year or quarter)?';
+    case 'period_invalid':
+      return 'Which exact period do you mean?';
+    case 'unknown_canonical_key':
+      return 'Which topic from the official CBS figures do you mean exactly?';
+    case 'other_source_available':
+      return (
+        `For this answer we use Eurostat: ${failure.siblingDefinitionLabel ?? ''}. ` +
+        'Eurostat applies one single definition for every country; that may differ from the CBS definition.'
+      );
+  }
+}
+
 /** WP26 mechanism A (ADR 024, execute-brief §3): turn candidate (label,intent)
  * pairs into offered ClickOptions — but only after PROVING each one answers,
  * through the same real-query dry-run the #56 echo uses. An option that would
@@ -163,7 +276,10 @@ async function clarificationFromFailure(
     ...context,
     axes: [failure.axis],
     question_nl: failureQuestion(failure),
+    question_en: failureQuestionEn(failure),
     options: failure.options,
+    options_en: failureOptionsEn(failure),
+    untranslated_en: failureUntranslatedEn(failure),
     reason: failure.message,
   } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
   // The resolver attaches per-option intents only where the options ARE the
@@ -261,22 +377,41 @@ export async function resolveUnmatched(
  * and without a measure neither region nor period can resolve — the one
  * clarification round names all axes at once (docs/05 failure table). */
 export function buildUnmatchedClarification(context: OutcomeContext): ParseOutcome {
-  const term = context.raw.unmatchedMeasureTerm ?? 'dit onderwerp';
-  const nearest = context.raw.nearestCanonicalKeys
-    .map((key) => definitionLabelByKey.get(key))
-    .filter((label): label is string => label !== undefined);
+  const rawTerm = context.raw.unmatchedMeasureTerm;
+  const term = rawTerm ?? 'dit onderwerp';
+  // ADR 058 phase 2 (#332), Task 3: the user's own unmatched term stays
+  // VERBATIM Dutch inside the English sentence (design doc's one
+  // non-template ingredient) — but the 'dit onderwerp'/'this topic' FILLER
+  // (no term at all) is our own template text, not user input, so it gets a
+  // real English word instead of riding along untranslated.
+  const termEn = rawTerm ?? 'this topic';
+  const nearestKeys = context.raw.nearestCanonicalKeys.filter((key) => definitionLabelByKey.has(key));
+  const nearest = nearestKeys.map((key) => definitionLabelByKey.get(key)!);
+  const nearestEn = nearestKeys.map((key) => englishMeasureLabel(key));
   const options = nearest.length > 0 ? nearest : [...definitionLabelByKey.values()].slice(0, 3);
+  const optionsEn =
+    nearestEn.length > 0
+      ? nearestEn
+      : [...definitionLabelByKey.keys()].slice(0, 3).map((key) => englishMeasureLabel(key));
   const lead = `Ik heb geen CBS-cijfers over "${term}" geladen`;
+  const leadEn = `I don't have any CBS figures about "${termEn}" loaded`;
   const question =
     nearest.length > 0
       ? `${lead} — bedoel je misschien ${joinOf(nearest)}, en zo ja voor welke regio en periode?`
       : `${lead} — welk onderwerp uit mijn bronnen bedoel je (bijvoorbeeld ${options.join(', ')}), en voor welke regio en periode?`;
+  const questionEn =
+    nearestEn.length > 0
+      ? `${leadEn} — do you perhaps mean ${joinOfEn(nearestEn)}, and if so for which region and period?`
+      : `${leadEn} — which topic from my sources do you mean (for example ${optionsEn.join(', ')}), and for which region and period?`;
   return {
     kind: 'clarification',
     ...context,
     axes: ['measure', 'region', 'period'],
     question_nl: question,
+    question_en: questionEn,
     options,
+    options_en: optionsEn,
+    untranslated_en: rawTerm ? [rawTerm] : [],
     reason: `measure term "${term}" matches no canonical measure`,
   };
 }
@@ -345,6 +480,7 @@ function echoUnservableClarification(
   const key = top.intent.target.kind === 'canonical' ? top.intent.target.key : null;
   const label = key === null ? null : (definitionLabelByKey.get(key) ?? null);
   const subject = label ?? 'deze cijfers';
+  const subjectEn = key === null ? 'these figures' : englishMeasureLabel(key);
 
   // The suggestion is fine but incomplete (e.g. no region on a geo table):
   // confirm it AND ask the missing axes in the same, single round (docs/05:
@@ -356,14 +492,28 @@ function echoUnservableClarification(
     const question = askRegion
       ? `Bedoel je ${top.reading}? Geef dan ook aan voor welke regio: heel Nederland, of een specifieke gemeente of provincie.`
       : `Bedoel je ${top.reading}? Kun je de vraag dan iets preciezer stellen?`;
+    // ADR 058 phase 2 (#332), Task 3: top.reading is the model's own
+    // free-text reading — kept VERBATIM Dutch inside the English sentence
+    // (design doc's one non-template ingredient), listed in untranslated_en.
+    const questionEn = askRegion
+      ? `${didYouMeanEn(top.reading)} Then also specify the region: the Netherlands as a whole, or a specific municipality or province.`
+      : `${didYouMeanEn(top.reading)} Could you phrase the question a bit more precisely?`;
+    const options = askRegion
+      ? ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam']
+      : [top.reading];
     return {
       kind: 'clarification',
       ...context,
       axes: ['measure', ...axes],
       question_nl: question,
-      options: askRegion
-        ? ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam']
-        : [top.reading],
+      question_en: questionEn,
+      options,
+      // Translated through FIXED_OPTION_EN (english.ts) — the SAME lookup
+      // failureOptionsEn uses, rather than a second hand-copied literal pair
+      // that could drift from it. top.reading (the non-region branch) is not
+      // a fixed literal, so it falls through the `?? o` unchanged.
+      options_en: options.map((o) => FIXED_OPTION_EN[o] ?? o),
+      untranslated_en: [top.reading],
       reason: `echo suggestion resolves but is not yet servable (${verdict.kind}: ${axes.join(', ') || 'unspecified axes'})`,
     };
   }
@@ -379,7 +529,10 @@ function echoUnservableClarification(
       ...context,
       axes: ['period'],
       question_nl: `Die precieze periode kan ik niet leveren — van ${subject} heb ik jaarcijfers van ${range.fromYear} tot en met ${range.toYear}. Welke periode bedoel je?`,
+      question_en: `I can't give you that exact period — for ${subjectEn} I have yearly figures from ${range.fromYear} to ${range.toYear}. Which period do you mean?`,
       options: [`${range.fromYear} tot en met ${range.toYear}`],
+      options_en: [`${range.fromYear} to ${range.toYear}`],
+      untranslated_en: [],
       reason: `echo suggestion is not servable (${verdict.kind}); offering the loaded year window instead`,
     };
   }
@@ -389,7 +542,10 @@ function echoUnservableClarification(
       ...context,
       axes: ['period'],
       question_nl: `Die precieze periode kan ik niet leveren — het meest recente cijfer van ${subject} gaat over ${periodCodeToNl(freshest.periodCode)}. Welke periode bedoel je?`,
+      question_en: `I can't give you that exact period — the most recent figure for ${subjectEn} covers ${periodCodeToEn(freshest.periodCode)}. Which period do you mean?`,
       options: [periodCodeToNl(freshest.periodCode)],
+      options_en: [periodCodeToEn(freshest.periodCode)],
+      untranslated_en: [],
       reason: `echo suggestion is not servable (${verdict.kind}); offering the freshest loaded period instead`,
     };
   }
@@ -398,7 +554,10 @@ function echoUnservableClarification(
     ...context,
     axes: ['measure'],
     question_nl: `Zo kan ik dit niet leveren uit de geladen CBS-cijfers. Kun je aangeven wat je precies wilt weten over ${subject}?`,
+    question_en: `I can't give you this from the loaded CBS figures. Could you specify exactly what you want to know about ${subjectEn}?`,
     options: [],
+    options_en: [],
+    untranslated_en: [],
     reason: `echo suggestion is not servable (${verdict.kind}) and no honest availability window exists`,
   };
 }
@@ -532,7 +691,10 @@ export async function decide(
       ...context,
       axes: ['measure'],
       question_nl: `Bedoel je ${top.reading}?`,
+      question_en: didYouMeanEn(top.reading),
       options: [top.reading],
+      options_en: [top.reading],
+      untranslated_en: [top.reading],
       reason: `top reading confidence ${top.confidence} is below the answer threshold ${config.answerThreshold}`,
     } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
     // WP26 mechanism A: this exact intent was JUST proven servable one line
@@ -597,7 +759,10 @@ export async function decide(
         ...context,
         axes: ['measure'],
         question_nl: `Bedoel je ${solo.reading}?`,
+        question_en: didYouMeanEn(solo.reading),
         options: [solo.reading],
+        options_en: [solo.reading],
+        untranslated_en: [solo.reading],
         reason: `only one of two plausible readings is servable (rule 4 → rule-3-shaped confirm): the other would dead-end`,
       } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
       return clickOptionsEnabled
@@ -618,7 +783,10 @@ export async function decide(
       ...context,
       axes: failed ? [runnerUp.axis] : differingAxes(top, runnerUp),
       question_nl: `Bedoel je ${joinOf([top.reading, runnerUp.reading])}?`,
+      question_en: didYouMeanEn(joinOfEn([top.reading, runnerUp.reading])),
       options: [top.reading, runnerUp.reading],
+      options_en: [top.reading, runnerUp.reading],
+      untranslated_en: [top.reading, runnerUp.reading],
       reason: failed
         ? `plausible alternative reading did not resolve: ${runnerUp.message}`
         : `two plausible readings above the runner-up threshold ${config.runnerUpThreshold}`,

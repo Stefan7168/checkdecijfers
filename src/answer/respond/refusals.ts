@@ -1245,6 +1245,22 @@ export interface RefusalEnvelopeInput {
   pending?: PendingClarification;
 }
 
+/** ADR 058 phase 2 (#332), Task 3: strips the present-only English
+ * clarification keys (`question_en`/`options_en`/`untranslated_en`) before
+ * `parse` is stored on ANY envelope — the STORED parse (every audit row, the
+ * Dutch envelope, a replayed pending) must stay byte-identical to a
+ * pre-Task-3 run (design doc: "Byte-identical Dutch storage"). Needed on
+ * BOTH toRefusalResponse and toClarificationResponse: a still-ambiguous
+ * final round (respond.ts's parseClarificationReply call site) passes a
+ * 'clarification'-kind ParseOutcome straight into toRefusalResponse, not
+ * just toClarificationResponse. Only that one kind can ever carry the keys;
+ * every other kind passes through completely unchanged. */
+function withoutEnglish(parse: ParseOutcome): ParseOutcome {
+  if (parse.kind !== 'clarification') return parse;
+  const { question_en, options_en, untranslated_en, ...rest } = parse;
+  return rest;
+}
+
 export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse {
   return {
     schemaVersion: RESPONSE_SCHEMA_VERSION,
@@ -1255,7 +1271,7 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     offer: input.built.offer,
     guidance: input.built.guidance,
     freshness: input.built.freshness,
-    parse: input.parse,
+    parse: input.parse === null ? null : withoutEnglish(input.parse),
     queryRefusal: input.queryRefusal,
     internalNote: input.built.internalNote,
     // WP16 sub-part 2 (ADR 026): present-only on the 'onboarding_pending'
@@ -1286,6 +1302,15 @@ export interface ClarificationEnvelopeInput {
    * the producing layer built any. Absent/empty → pending and envelope keep
    * the exact pre-WP26 field set. */
   clickOptions?: ClickOption[];
+  /** ADR 058 phase 2 (#332), Task 3: the English sibling of
+   * {questionNl, options} — threaded from the ParseOutcome's
+   * question_en/options_en/untranslated_en, or from
+   * buildNeedsClarificationAsClarification's questionEn/optionsEn, at each
+   * call site (respond.ts). Accepted here so Task 3's call sites have
+   * somewhere to hand it, but NOT YET attached to the returned envelope —
+   * Task 5 attaches it to ClarificationResponse.english, gated on
+   * `lang === 'en'`. */
+  english?: { question: string; options: string[]; untranslated: string[] };
 }
 
 export function toClarificationResponse(input: ClarificationEnvelopeInput): ClarificationResponse {
@@ -1316,7 +1341,9 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     // the server reads the taken reading from.
     ...(clickOptions.length > 0 ? { suggestions: clickOptions.map((o) => o.label) } : {}),
     pending,
-    parse: input.parse,
+    // ADR 058 phase 2 (#332), Task 3: strip question_en/options_en/
+    // untranslated_en before storage — see withoutEnglish's own comment.
+    parse: withoutEnglish(input.parse),
   };
 }
 

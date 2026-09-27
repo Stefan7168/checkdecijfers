@@ -429,6 +429,10 @@ export async function respondToIntent(
         options: built.options,
         parse,
         conversationContext: options.conversationContext ?? null,
+        // ADR 058 phase 2 (#332), Task 3: threaded now so Task 5 only has to
+        // attach it to the envelope (not yet read here — see
+        // ClarificationEnvelopeInput.english's own comment).
+        english: { question: built.questionEn, options: built.optionsEn, untranslated: [] },
       });
     }
     // #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
@@ -778,6 +782,14 @@ async function respondToParseOutcome(
       // WP26 mechanism A: the dry-run-verified takeable options policy.ts
       // built (absent when the flag is off → pending unchanged).
       ...(parse.clickOptions ? { clickOptions: parse.clickOptions } : {}),
+      // ADR 058 phase 2 (#332), Task 3: threaded now so Task 5 only has to
+      // attach it to the envelope (not yet read here — see
+      // ClarificationEnvelopeInput.english's own comment).
+      english: {
+        question: parse.question_en ?? '',
+        options: parse.options_en ?? [],
+        untranslated: parse.untranslated_en ?? [],
+      },
     });
   }
   return respondToIntent(db, question, parse, options);
