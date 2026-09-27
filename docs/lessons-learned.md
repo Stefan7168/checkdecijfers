@@ -33,6 +33,18 @@ on top.
    went red (run 36284080185, web job; nothing deployed). Fix: a real labelled case + one-call recording
    (`f-e2e-cbs-copilot-utrecht-erbij`), now an `exact` hit. When touching a prompt, grep the CI log for
    `[llm-stub] prefix` / `question-only` lines — each is an e2e step with no fixture of its own.
+7. **Never `git add -A` while a reviewer agent works in the SAME checkout.** The final reviewer wrote a throwaway
+   `tests/answer/zzscratch-review.test.ts` into the tree; the session's docs commit swept it in (it would have failed CI
+   without its env var). The reviewer caught it itself. Stage explicit paths while any agent is active in the checkout.
+8. **"Reuse the existing branch" in a spec can carry the wrong behaviour along with the code.** Task 6 reused the English
+   answer-chip branch as told, which only FILLS the input — for a clarification that dropped the one-click send (R7, #211).
+   The session caught it in review (commit 3eb96496). When a spec says "reuse X", name the behaviours X has that must NOT
+   transfer.
+9. **An executed base-vs-head envelope diff is the review that proves "Dutch byte-identical".** Per-task tests compared
+   Dutch against lang-less — both leaked `labelEn` with click options on, so they agreed and passed. The opus reviewer's
+   throwaway harness (every labelled question × click options on/off × reply turns, base worktree vs head) found 29
+   differing envelopes; after the fix wave, 374 comparisons, 0 differences. Budget one such run for any "unchanged for
+   existing users" claim.
 
 ## Session 134 — a "provider restriction" was our own spend limit for 12 days; the first real recording finds what hermetic tests can't
 

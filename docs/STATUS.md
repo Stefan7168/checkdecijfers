@@ -31,9 +31,12 @@ before trusting this).**
   monthly roof is nearly reached until it resets 2026-10-01. **No further live LLM runs before 10-01** unless the owner raises it.
 - **CBS outage ([#329](open-questions.md)): CBS-side, not us** — the www.cbs.nl banner says StatLine is down; the API resets
   from Anthropic's network too. Retry at session start; no ingest possible meanwhile.
-- **NEXT PRIORITY: the owner's language-mix check [#332](open-questions.md)** (asked "when done" in session 135 — English
-  and Dutch mixed in one view), zero spend. Then regional statistics (a table set, after CBS is back — owner: no paper design
-  around the outage), and [#331](open-questions.md) scripts-instead-of-AI (charts first; owner ask).
+- **#332 English refusals + clarifications LIVE** (owner GO, same session): deterministic English templates at every Dutch
+  template site, no AI cost; `main` @ `94794ff1`, CI run 36301262188 green incl. deploy (new prod deployment verified).
+  Independent base-vs-head check: Dutch envelopes byte-identical (374 comparisons, 0 differences). ADR 058 "Phase 2 as built".
+- **NEXT PRIORITY: ADR 058 phase 3 — chart titles/captions/insights in English**, same template approach where the text is
+  code-built (the other half of the owner's language-mix report, #332); then [#331](open-questions.md) scripts-instead-of-AI
+  (charts first; owner ask). Regional statistics wait for CBS to come back (owner: no paper design around the outage).
 - **English answers LIVE since 2026-09-26** (`ENGLISH_ANSWERS_ENABLED=1`); follow-ups #328, #324.
 - **Decisions still waiting on the owner:** #245, #275; own-data publishing spot-check (RUNBOOK ADR 057 step 4); Eurostat E2a
   steps 0/5/6 ([#313](open-questions.md)).
