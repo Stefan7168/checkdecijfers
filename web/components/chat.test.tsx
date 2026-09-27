@@ -266,6 +266,7 @@ function chartMessage(chart: ChartSpec | null, role: ChatMessage['role'] = 'assi
     insufficientCredits: null,
     onboardingOffer: null,
     english: null,
+    nonAnswerEnglish: null,
   };
 }
 
@@ -1761,6 +1762,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       insufficientCredits: null,
       onboardingOffer: null,
       english: null,
+      nonAnswerEnglish: null,
     };
     render(<Chat initialMessages={[legacyMessage]} />);
     expect(screen.getByText('Nederland telt 18.044.027 inwoners.')).toBeInTheDocument();
@@ -2880,6 +2882,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
         insufficientCredits: null,
         onboardingOffer: null,
         english: null,
+        nonAnswerEnglish: null,
       };
       render(<Chat initialMessages={[resumed]} />);
       fireEvent.click(screen.getByRole('button', { name: 'Amsterdam' }));
@@ -3319,5 +3322,115 @@ describe('Chat — ADR 058 English answers (Task 8)', () => {
       await waitFor(() => expect(askQuestion).toHaveBeenCalledTimes(2));
       expect(askQuestion.mock.calls[1]![0]).toBe('What was inflation in 2026?');
     });
+  });
+});
+
+// ADR 058 phase 2 (#332, Task 6): the refusal/clarification sibling of the
+// block above — deterministic templates (never a translation-model call), so
+// there is no verified/fallback split and no answer Card to swap text inside
+// (a refusal/clarification never renders one). Same discipline as Task 8's
+// own tests: chat.tsx only ever reacts to whether `message.nonAnswerEnglish`
+// is present, so these tests attach it directly to the fixture rather than
+// driving it through the server-side flag/language gate.
+describe('Chat — ADR 058 phase 2 English refusals/clarifications (Task 6, #332)', () => {
+  const EN_CLARIFICATION = {
+    source: 'template' as const,
+    text: 'Which municipality did you mean?',
+    chips: [{ label: 'the Netherlands as a whole', submit: 'heel Nederland' }],
+    untranslated: [],
+  };
+
+  const EN_REFUSAL = {
+    source: 'template' as const,
+    text: 'CBS publishes realized figures, not forecasts.',
+    chips: [],
+    untranslated: [],
+  };
+
+  function fakeClarificationResponse(english?: typeof EN_CLARIFICATION): ComposedResponse {
+    return {
+      kind: 'clarification',
+      text: 'Welke gemeente bedoel je?',
+      pending: { questionNl: 'Welke gemeente bedoel je?' },
+      ...(english !== undefined ? { english } : {}),
+    } as unknown as ComposedResponse;
+  }
+
+  function fakeRefusalResponse(english?: typeof EN_REFUSAL): ComposedResponse {
+    return {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+      ...(english !== undefined ? { english } : {}),
+    } as unknown as ComposedResponse;
+  }
+
+  it('a clarification with english shows the English question and English chip label, not the Dutch ones', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 40, netCost: 10, response: fakeClarificationResponse(EN_CLARIFICATION) }),
+    );
+    render(<Chat />);
+    await submit('Welke gemeente?');
+    expect(await screen.findByText('Which municipality did you mean?')).toBeInTheDocument();
+    expect(screen.queryByText('Welke gemeente bedoel je?')).toBeNull();
+    expect(screen.getByRole('button', { name: 'the Netherlands as a whole' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'heel Nederland' })).toBeNull();
+  });
+
+  it("clicking a clarification's English chip fills the input with the English label, and sending it submits the Dutch label", async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 41, netCost: 10, response: fakeClarificationResponse(EN_CLARIFICATION) }),
+    );
+    replyToClarification.mockResolvedValueOnce(outcome(fakeAnswer('Nederland telt 18.044.027 inwoners.')));
+    render(<Chat />);
+    await submit('Welke gemeente?');
+    const chip = await screen.findByRole('button', { name: 'the Netherlands as a whole' });
+    fireEvent.click(chip);
+    // #75 fill-don't-send (deliberately reused for a clarification's English
+    // chip too, per the design's own instruction): the click only fills the
+    // input — it does not immediately reply, unlike the Dutch clarification
+    // one-click-send path. (The composer's placeholder becomes the open
+    // clarification's own Dutch question while a round is pending — R7's own
+    // convention — so the textarea is found by role here, not by its usual
+    // placeholder text.)
+    expect(screen.getByRole('textbox')).toHaveValue('the Netherlands as a whole');
+    expect(replyToClarification).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    await screen.findByText('Nederland telt 18.044.027 inwoners.');
+    expect(replyToClarification).toHaveBeenCalledWith(
+      { questionNl: 'Welke gemeente bedoel je?' },
+      'heel Nederland',
+      expect.any(String),
+    );
+  });
+
+  it('a refusal with english shows the English text, not the Dutch one', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 42, netCost: 0, response: fakeRefusalResponse(EN_REFUSAL) }),
+    );
+    render(<Chat />);
+    await submit('Hoe hoog wordt de inflatie volgend jaar?');
+    expect(await screen.findByText('CBS publishes realized figures, not forecasts.')).toBeInTheDocument();
+    expect(screen.queryByText('CBS publiceert gerealiseerde cijfers, geen voorspellingen.')).toBeNull();
+  });
+
+  it('the SAME clarification without english (a Dutch reader, or a pre-#332 row) renders the Dutch question and chip exactly as before', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 43, netCost: 10, response: fakeClarificationResponse() }),
+    );
+    render(<Chat />);
+    await submit('Welke gemeente?');
+    expect(await screen.findByText('Welke gemeente bedoel je?')).toBeInTheDocument();
+    expect(screen.queryByText('Which municipality did you mean?')).toBeNull();
+  });
+
+  it('the SAME refusal without english renders the Dutch text exactly as before', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 44, netCost: 0, response: fakeRefusalResponse() }),
+    );
+    render(<Chat />);
+    await submit('Hoe hoog wordt de inflatie volgend jaar?');
+    expect(await screen.findByText('CBS publiceert gerealiseerde cijfers, geen voorspellingen.')).toBeInTheDocument();
+    expect(screen.queryByText('CBS publishes realized figures, not forecasts.')).toBeNull();
   });
 });

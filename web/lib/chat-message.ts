@@ -13,7 +13,12 @@ import type { WebSection } from '../backend/websearch/types.ts';
 // AnswerResponse.english (Task 6) onto the message it belongs to — no
 // re-derivation, no reconstruction, the exact envelope both the live receive
 // path and thread replay already read `answer`/`citation`/`card`/`csv` from.
-import type { EnglishRendering } from '../backend/answer/translate/types.ts';
+// ADR 058 phase 2 (#332, Task 6): NonAnswerEnglish is the refusal/
+// clarification sibling (deterministic templates, never a translation-model
+// call) — a DIFFERENT shape from EnglishRendering (no `status`/`attempts`/
+// `lines`), so it rides its own field (`nonAnswerEnglish` below) rather than
+// widening `english`'s type.
+import type { EnglishRendering, NonAnswerEnglish } from '../backend/answer/translate/types.ts';
 import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import type { AnswerCsv } from './csv.ts';
 import type { StatCardData } from './stat-card-data.ts';
@@ -189,6 +194,16 @@ export interface ChatMessage {
    * are byte-untouched either way; rendering picks between them and this
    * field, never merging the two (chat.tsx). */
   english: EnglishRendering | null;
+  /** ADR 058 phase 2 (#332, Task 6): the English sibling for a REFUSAL or
+   * CLARIFICATION message — `response.english ?? null` straight off the
+   * envelope (Task 5), live and on replay alike, mirroring `english` above
+   * exactly. `null` on every 'answer'/'info'/'insufficient_credits' message,
+   * user messages, redacted rows, every Dutch-only turn (the reader on
+   * Dutch, or a lang-less run — benchmark/CLI/tests), and every row stored
+   * before this feature. The Dutch fields above (`text`, `suggestions`) stay
+   * byte-untouched either way; chat.tsx picks between them and this field,
+   * never merging the two. */
+  nonAnswerEnglish: NonAnswerEnglish | null;
 }
 
 export type MessageKind = 'answer' | 'clarification' | 'refusal' | 'info';

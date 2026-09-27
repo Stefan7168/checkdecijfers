@@ -746,7 +746,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
+      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
     ]);
     setInput('');
     setBusy(true);
@@ -877,6 +877,7 @@ export function Chat({
                 insufficientCredits: { balance: gated.balance, required: gated.required },
                 onboardingOffer: null,
                 english: null,
+                nonAnswerEnglish: null,
               }
             : {
                 role: 'assistant' as const,
@@ -899,6 +900,7 @@ export function Chat({
                 insufficientCredits: null,
                 onboardingOffer: null,
                 english: null,
+                nonAnswerEnglish: null,
               },
         ]);
         // None of these kinds change the pending clarification state;
@@ -1045,6 +1047,15 @@ export function Chat({
           // guards the deploy-window skew AND every Dutch-only turn (the
           // flag off, or the reader on Dutch — Task 7's A1 no-op).
           english: response.kind === 'answer' ? (response.english ?? null) : null,
+          // ADR 058 phase 2 (#332, Task 6): the refusal/clarification
+          // sibling — the mirror image of `english` above: present only on
+          // those two kinds (RefusalResponse/ClarificationResponse, Task 5),
+          // `?? null` guarding the same deploy-window skew AND every
+          // Dutch-only turn.
+          nonAnswerEnglish:
+            response.kind === 'refusal' || response.kind === 'clarification'
+              ? (response.english ?? null)
+              : null,
         },
       ]);
       // ⟨A6⟩: `carried` also becomes the live round a plain typed reply
@@ -1090,14 +1101,14 @@ export function Chat({
       if (result.kind === 'unauthenticated') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
         ]);
         return;
       }
       if (result.kind === 'insufficient_credits') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null, english: null },
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null, english: null, nonAnswerEnglish: null },
         ]);
         return;
       }
@@ -1107,7 +1118,7 @@ export function Chat({
       // "asking twice must not cost twice" invariant design §2/§5 always had).
       setMessages((m) => [
         ...m,
-        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null },
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
       ]);
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
@@ -1189,7 +1200,23 @@ export function Chat({
           const englishVerified =
             message.kind === 'answer' && message.english?.status === 'verified' ? message.english : null;
           const englishFallback = message.kind === 'answer' && message.english?.status === 'fallback';
-          const englishChips = englishVerified ? englishVerified.chips : null;
+          // ADR 058 phase 2 (#332, Task 6): the refusal/clarification
+          // sibling — `nonAnswerEnglish` only ever rides those two kinds
+          // (Task 5), present exactly like `english` above (dormant unless
+          // the reader is on English — the field is simply absent otherwise,
+          // the same A1 no-op). Never a translation-model output: a
+          // deterministic template built at the same site as its Dutch
+          // counterpart, so there is no verified/fallback split to mirror
+          // here — it either rides the envelope or it doesn't.
+          const nonAnswerEnglish =
+            message.kind === 'refusal' || message.kind === 'clarification'
+              ? message.nonAnswerEnglish
+              : null;
+          const englishChips = englishVerified
+            ? englishVerified.chips
+            : nonAnswerEnglish
+              ? nonAnswerEnglish.chips
+              : null;
           // Fix round 1 (controller ruling 16): a verified English answer
           // renders INSIDE the existing answer Card, not as a plain bubble —
           // only the TEXT slots swap to English; tableId/source/syncedAt,
@@ -1466,13 +1493,16 @@ export function Chat({
                         : 'text-[15px] leading-relaxed text-foreground')
                   }
                 >
-                  {/* Fix round 1 (controller ruling 16): English content now
+                  {/* Fix round 1 (controller ruling 16): an English ANSWER
                     * renders ONLY inside the answer Card above (`showsCard`)
                     * — this branch is reached whenever there is no
                     * `answerView` to build a card from at all (a legacy/
-                    * minimal replay, or any non-answer kind), so it stays
-                    * exactly the Dutch `message.text`, unchanged. */}
-                  {message.text}
+                    * minimal replay, or any non-answer kind), so an answer
+                    * here stays exactly the Dutch `message.text`, unchanged.
+                    * ADR 058 phase 2 (#332, Task 6): a refusal/clarification
+                    * has no card at all — its English sibling (deterministic
+                    * template, Task 5) swaps in RIGHT HERE instead. */}
+                  {nonAnswerEnglish ? nonAnswerEnglish.text : message.text}
                 </div>
                 {message.cost !== null ? (
                   <div className="mt-0.5 text-xs text-muted-foreground tnum">
@@ -1597,11 +1627,16 @@ export function Chat({
                 </p>
                 <div className="mt-1 flex flex-wrap gap-2">
                 {englishChips ? (
-                  // ADR 058 (English answers, Task 8): an English chip only
-                  // ever rides an 'answer' message (EnglishRendering exists
-                  // only on AnswerResponse), so this branch always falls
-                  // into the #75 fill-don't-send convention below — never
-                  // the clarification immediate-send path.
+                  // ADR 058 (English answers, Task 8) + phase 2 (#332, Task
+                  // 6): an English chip rides an 'answer' message's
+                  // EnglishRendering.chips OR a refusal/clarification's
+                  // NonAnswerEnglish.chips (englishChips is unified above) —
+                  // either way this ONE branch always falls into the #75
+                  // fill-don't-send convention below, deliberately not the
+                  // Dutch clarification's immediate-send path (the design's
+                  // own instruction: reuse this branch rather than write a
+                  // second one). The label/submit split still ends in the
+                  // Dutch text reaching the server either way (sendText).
                   englishChips.map((englishChip) => (
                     <button
                       key={englishChip.submit}
