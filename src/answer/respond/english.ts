@@ -140,6 +140,16 @@ export function joinOfEn(items: string[]): string {
   return joinWithConnective(items, 'or');
 }
 
+/** ADR 058 phase 2 (#332), Task 4: the AND sibling of joinOfEn — 'A'; 'A and
+ * B'; 'A, B and C'. Region lists (suggestions.ts's #138 retry chip,
+ * refusals.ts's multi-region offer chip) are a CONJUNCTION ("in Amsterdam and
+ * Rotterdam"), never a disjunction, so they use this instead of joinOfEn
+ * (which stays 'or', for measure/reading alternatives) — mirrors joinNl's own
+ * always-'en' join for the same lists. */
+export function joinAndEn(items: string[]): string {
+  return joinWithConnective(items, 'and');
+}
+
 // ---------------------------------------------------------------------------
 // Cardinal numbers — English sibling of refusals.ts's cardinalNl
 // ---------------------------------------------------------------------------

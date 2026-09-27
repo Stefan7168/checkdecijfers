@@ -73,6 +73,14 @@ function optionSchemaFor(intent: z.ZodType) {
     // malformation. The bit only decides whether the label may replay as a
     // plain chip on a resumed thread; it never widens what a take can do.
     questionShaped: z.literal(true).optional(),
+    // ADR 058 phase 2 (#332), Task 4: present-only, decorative display text —
+    // never read to decide servability or the take-path, and in production
+    // never actually present on a client-returned pending at all (respond/
+    // refusals.ts strips it before any pending is stored/sent). Accepted here
+    // (rather than rejected as an unknown key) purely so this trust boundary
+    // stays consistent with `decide()`'s own raw output shape — a producer
+    // that sets it must not have its otherwise-valid option dropped.
+    labelEn: z.string().min(1).max(500).optional(),
   });
 }
 

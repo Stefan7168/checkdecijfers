@@ -55,7 +55,7 @@ import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
 import { checkStaleness } from './staleness.ts';
-import { buildAnswerChips, buildRefusalSuggestions } from './suggestions.ts';
+import { buildAnswerChips, buildRefusalSuggestionsBoth } from './suggestions.ts';
 import type {
   AnswerResponse,
   ClarificationResponse,
@@ -433,6 +433,12 @@ export async function respondToIntent(
         // attach it to the envelope (not yet read here — see
         // ClarificationEnvelopeInput.english's own comment).
         english: { question: built.questionEn, options: built.optionsEn, untranslated: [] },
+        // ADR 058 phase 2 (#332), Task 4: this clarification carries no
+        // ClickOption (buildNeedsClarificationAsClarification never sets one)
+        // — its "chips" are the plain options themselves, so the English
+        // sibling is just options_en index-aligned with options, submit ==
+        // the exact Dutch option.
+        englishChips: built.options.map((o, i) => ({ label: built.optionsEn[i] ?? o, submit: o })),
       });
     }
     // #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
@@ -444,17 +450,22 @@ export async function respondToIntent(
     // FAIL-OPEN belt (mirrors the answer path): a chip hiccup must never turn
     // an honest refusal into an internal error.
     let suggestions: string[] = [];
+    // ADR 058 phase 2 (#332), Task 4: the English sibling of `suggestions`,
+    // index-aligned — built by the SAME call (buildRefusalSuggestionsBoth),
+    // never a second pass over the refusal.
+    let suggestionsEn: string[] = [];
     try {
-      suggestions = await buildRefusalSuggestions(
+      ({ nl: suggestions, en: suggestionsEn } = await buildRefusalSuggestionsBoth(
         outcome,
         (candidate) => echoServability(db, candidate, queryOptions),
         // #138: the honest code→label source for a regional retry chip —
         // registry/dimension_labels via regionTermsFor (context/build.ts),
         // injected so suggestions.ts keeps its never-sees-db confinement.
         (canonicalKey, codes) => regionTermsFor(db, canonicalKey, codes),
-      );
+      ));
     } catch {
       suggestions = [];
+      suggestionsEn = [];
     }
     // Row 13 / row 15 (session 110, ADR 054 addendum + ADR 029 #134(c) note):
     // the two invalid_intent sub-reasons (region_scope_on_national_measure,
@@ -500,6 +511,12 @@ export async function respondToIntent(
       parse,
       queryRefusal: outcome,
       suggestions: chip ? [chip.label] : suggestions,
+      // ADR 058 phase 2 (#332), Task 4: the offer chip's own labelEn takes
+      // priority (it is the ONE chip actually offered whenever it exists —
+      // see `suggestions` above), else the plain retry chips' English array.
+      englishChips: chip
+        ? [{ label: chip.labelEn, submit: chip.label }]
+        : suggestions.map((label, i) => ({ label: suggestionsEn[i] ?? label, submit: label })),
       ...(chip
         ? {
             pending: {
@@ -735,6 +752,8 @@ async function respondToParseOutcome(
       ...(chip
         ? {
             suggestions: [chip.label],
+            // ADR 058 phase 2 (#332), Task 4: the one chip's own English label.
+            englishChips: [{ label: chip.labelEn, submit: chip.label }],
             pending: {
               version: RESPONSE_SCHEMA_VERSION,
               question,
@@ -790,6 +809,11 @@ async function respondToParseOutcome(
         options: parse.options_en ?? [],
         untranslated: parse.untranslated_en ?? [],
       },
+      // ADR 058 phase 2 (#332), Task 4: options_en is index-aligned with
+      // options regardless of whether a ClickOption exists for any of
+      // them — the same pairing covers a plain fill-in option and a
+      // takeable chip alike, submit == the exact Dutch option string.
+      englishChips: parse.options.map((o, i) => ({ label: parse.options_en?.[i] ?? o, submit: o })),
     });
   }
   return respondToIntent(db, question, parse, options);

@@ -228,7 +228,16 @@ function failureQuestionEn(failure: ResolutionFailure): string {
  * aligned with `options[]` even when middle entries drop out. */
 async function buildClickOptions(
   servability: ServabilityCheck,
-  entries: { label: string; intent: StructuredIntent | null; impliedRecency: boolean }[],
+  entries: {
+    label: string;
+    /** ADR 058 phase 2 (#332), Task 4: the option's English label — carried
+     * onto the minted ClickOption, present-only. Absent for an entry with no
+     * honest English sibling computed yet (defensive; every real caller today
+     * supplies one). */
+    labelEn?: string;
+    intent: StructuredIntent | null;
+    impliedRecency: boolean;
+  }[],
   clickValidation: ClickValidationOptions,
 ): Promise<ClickOption[]> {
   const offered: ClickOption[] = [];
@@ -246,6 +255,7 @@ async function buildClickOptions(
     offered.push({
       id: `opt-${index + 1}`,
       label: entry.label,
+      ...(entry.labelEn !== undefined ? { labelEn: entry.labelEn } : {}),
       intent: entry.intent,
       impliedRecency: entry.impliedRecency,
     });
@@ -271,6 +281,11 @@ async function clarificationFromFailure(
   clickOptionsEnabled: boolean,
   clickValidation: ClickValidationOptions,
 ): Promise<ParseOutcome> {
+  // ADR 058 phase 2 (#332), Task 4: computed once, shared by the outcome's
+  // own options_en AND by buildClickOptions below — index-aligned with
+  // failure.options either way, so a click option's English label can never
+  // drift from the plain-text options_en the same failure produces.
+  const optionsEn = failureOptionsEn(failure);
   const outcome = {
     kind: 'clarification',
     ...context,
@@ -278,7 +293,7 @@ async function clarificationFromFailure(
     question_nl: failureQuestion(failure),
     question_en: failureQuestionEn(failure),
     options: failure.options,
-    options_en: failureOptionsEn(failure),
+    options_en: optionsEn,
     untranslated_en: failureUntranslatedEn(failure),
     reason: failure.message,
   } as const satisfies Extract<ParseOutcome, { kind: 'clarification' }>;
@@ -292,6 +307,7 @@ async function clarificationFromFailure(
           servability,
           failure.options.map((label, i) => ({
             label,
+            labelEn: optionsEn[i],
             intent: failure.optionIntents?.[i] ?? null,
             impliedRecency: failure.optionImpliedRecency ?? false,
           })),
@@ -705,6 +721,11 @@ export async function decide(
           {
             id: 'opt-1',
             label: top.reading,
+            // ADR 058 phase 2 (#332), Task 4: the label IS the model's own
+            // free-text reading — the design doc's one non-template
+            // exception — so its English label stays the SAME Dutch string
+            // (mirrored in this outcome's own untranslated_en above).
+            labelEn: top.reading,
             intent: top.intent,
             impliedRecency: top.impliedRecency,
           },
@@ -770,6 +791,8 @@ export async function decide(
             {
               id: 'opt-1',
               label: solo.reading,
+              // Task 4: same non-template exception as rule 3's confirm above.
+              labelEn: solo.reading,
               intent: solo.intent,
               impliedRecency: solo.impliedRecency,
             },
@@ -797,11 +820,19 @@ export async function decide(
     // already known from the dry-run above — reused here, not re-run. (Both
     // reaching here implies !failed, since a failed runner-up is never
     // servable — runnerUpIntent is therefore never null in this branch.)
+    // Task 4: both labels are model readings — same non-template exception.
     const clickOptions: ClickOption[] = [
-      { id: 'opt-1', label: top.reading, intent: top.intent, impliedRecency: top.impliedRecency },
+      {
+        id: 'opt-1',
+        label: top.reading,
+        labelEn: top.reading,
+        intent: top.intent,
+        impliedRecency: top.impliedRecency,
+      },
       {
         id: 'opt-2',
         label: runnerUp.reading,
+        labelEn: runnerUp.reading,
         intent: runnerUpIntent!,
         impliedRecency: runnerUpImpliedRecency,
       },

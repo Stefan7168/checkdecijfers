@@ -30,6 +30,7 @@ import {
   FIXED_OPTION_EN,
   loadedTopicsCompactEn,
   periodCodeToEn,
+  regionLabelEn,
   statusSuffixEn,
 } from './english.ts';
 import { ENGLISH_TOPIC_TERMS } from './english-measure-labels.ts';
@@ -73,8 +74,8 @@ export interface BuiltRefusal {
    * candidate instead of the canonical-key + one-period shape — see
    * `rescue.ts`'s `OfferChipIntentCandidate`. */
   offerChip?:
-    | { canonicalKey: string; periodCode: string; label: string }
-    | { intent: StructuredIntent; label: string }
+    | { canonicalKey: string; periodCode: string; label: string; labelEn?: string }
+    | { intent: StructuredIntent; label: string; labelEn?: string }
     | null;
   /** ADR 058 phase 2 (#332), Task 2: the English sibling of {text, offer,
    * guidance}, assembled at the SAME site from the SAME parameters as the
@@ -247,13 +248,18 @@ function forecastCausalOfferChip(
   nearestKey: string,
   definitionLabel: string,
   freshest: { periodCode: string },
-): { canonicalKey: string; periodCode: string; label: string } {
+): { canonicalKey: string; periodCode: string; label: string; labelEn: string } {
   const measure = CANONICAL_MEASURES.find((m) => m.key === nearestKey);
   const subject = measure?.everydayTerms[0] ?? definitionLabel;
+  // ADR 058 phase 2 (#332), Task 4: the English subject — ENGLISH_TOPIC_TERMS
+  // is everydayTerms[0]'s own sibling map, falling back to englishMeasureLabel
+  // exactly like exampleQuestions above does for the same pair.
+  const subjectEn = ENGLISH_TOPIC_TERMS[nearestKey] ?? englishMeasureLabel(nearestKey);
   return {
     canonicalKey: nearestKey,
     periodCode: freshest.periodCode,
     label: wasSubjectInPeriodNl(subject, freshest.periodCode),
+    labelEn: wasSubjectInPeriodEn(subjectEn, freshest.periodCode),
   };
 }
 
@@ -735,7 +741,7 @@ function buildOutsideSliceRefusal(refusal: QueryRefusal): BuiltRefusal {
  * never a guess. */
 function regionScopeOnNationalMeasureOfferChip(
   refusal: QueryRefusal,
-): { intent: StructuredIntent; label: string } | null {
+): { intent: StructuredIntent; label: string; labelEn: string } | null {
   const intent = refusal.intent;
   const target = intent.target;
   if (target.kind !== 'canonical') return null;
@@ -745,6 +751,9 @@ function regionScopeOnNationalMeasureOfferChip(
   if (definitionLabel === undefined) return null;
   const measure = CANONICAL_MEASURES.find((m) => m.key === target.key);
   const subject = measure?.everydayTerms[0] ?? definitionLabel;
+  // ADR 058 phase 2 (#332), Task 4: same subject/subjectEn pairing as
+  // forecastCausalOfferChip above.
+  const subjectEn = ENGLISH_TOPIC_TERMS[target.key] ?? englishMeasureLabel(target.key);
   return {
     intent: {
       schemaVersion: intent.schemaVersion,
@@ -753,6 +762,7 @@ function regionScopeOnNationalMeasureOfferChip(
       derivation: 'none',
     },
     label: wasSubjectInPeriodNl(subject, periodCode),
+    labelEn: wasSubjectInPeriodEn(subjectEn, periodCode),
   };
 }
 
@@ -882,9 +892,24 @@ function multiRegionMultiPeriodOfferLabel(
   );
 }
 
+/** ADR 058 phase 2 (#332), Task 4: English sibling of
+ * multiRegionMultiPeriodOfferLabel above, same parameter shape (bare CBS
+ * code passes straight through — a code is language-neutral, never itself a
+ * Dutch word to translate). */
+function multiRegionMultiPeriodOfferLabelEn(
+  definitionLabelEn: string,
+  regionDisplay: string,
+  period: { from: string; to: string },
+): string {
+  return (
+    `How did ${definitionLabelEn} in ${regionDisplay} develop from ` +
+    `${periodCodeToEn(period.from)} to ${periodCodeToEn(period.to)}?`
+  );
+}
+
 function multiRegionMultiPeriodOfferChip(
   refusal: QueryRefusal,
-): { intent: StructuredIntent; label: string } | null {
+): { intent: StructuredIntent; label: string; labelEn: string } | null {
   const intent = refusal.intent;
   const target = intent.target;
   if (target.kind !== 'canonical') return null;
@@ -894,6 +919,7 @@ function multiRegionMultiPeriodOfferChip(
   const firstRegion = regions[0]!;
   const definitionLabel = definitionLabelByKey.get(target.key);
   if (definitionLabel === undefined) return null;
+  const definitionLabelEn = englishMeasureLabel(target.key);
   return {
     intent: {
       schemaVersion: intent.schemaVersion,
@@ -911,6 +937,7 @@ function multiRegionMultiPeriodOfferChip(
     // this bare-code sentence only ever reaches the user when that lookup
     // itself fails closed (unlabelable code / no geo dimension).
     label: multiRegionMultiPeriodOfferLabel(definitionLabel, firstRegion, intent.period),
+    labelEn: multiRegionMultiPeriodOfferLabelEn(definitionLabelEn, firstRegion, intent.period),
   };
 }
 
@@ -927,14 +954,26 @@ function multiRegionMultiPeriodOfferChip(
  * never trigger in practice (fail-closed: keep the bare-code label rather
  * than throw). */
 export function relabelMultiRegionMultiPeriodOfferChip(
-  candidate: { intent: StructuredIntent; label: string },
+  candidate: { intent: StructuredIntent; label: string; labelEn?: string },
   regionLabel: string,
-): { intent: StructuredIntent; label: string } {
+): { intent: StructuredIntent; label: string; labelEn?: string } {
   const { intent } = candidate;
   if (intent.target.kind !== 'canonical' || intent.period.kind !== 'range') return candidate;
   const definitionLabel = definitionLabelByKey.get(intent.target.key);
   if (definitionLabel === undefined) return candidate;
-  return { intent, label: multiRegionMultiPeriodOfferLabel(definitionLabel, regionLabel, intent.period) };
+  // ADR 058 phase 2 (#332), Task 4: the English re-labelling, through the SAME
+  // template as the fallback (multiRegionMultiPeriodOfferLabelEn) and the same
+  // honest region-name translation (regionLabelEn) the #138 retry chip uses —
+  // never a second hand-copied pair. Always computed (unlike `label`, which
+  // this function has always recomputed unconditionally too): a pre-Task-4
+  // candidate missing labelEn simply gains one, which changes nothing a
+  // pre-Task-4 caller reads.
+  const definitionLabelEn = englishMeasureLabel(intent.target.key);
+  return {
+    intent,
+    label: multiRegionMultiPeriodOfferLabel(definitionLabel, regionLabel, intent.period),
+    labelEn: multiRegionMultiPeriodOfferLabelEn(definitionLabelEn, regionLabelEn(regionLabel), intent.period),
+  };
 }
 
 function buildQuarantinedRefusal(): BuiltRefusal {
@@ -1243,6 +1282,15 @@ export interface RefusalEnvelopeInput {
   /** WP26c (ADR 024): the rescue-chip state, set ONLY by respond.ts's misfire
    * site. Present-only on the envelope. */
   pending?: PendingClarification;
+  /** ADR 058 phase 2 (#332), Task 4: the English sibling of every chip in
+   * `suggestions` above (and, when `pending` carries one, its ClickOption) —
+   * `label` shown in English, `submit` the exact Dutch string that is
+   * shown/submitted today (the same {label, submit} contract
+   * EnglishRendering.chips, the answer path's sibling, already uses).
+   * Threaded from respond.ts's chip-building call sites so Task 5 only has
+   * to attach it to the envelope, gated on `lang === 'en'` — NOT attached
+   * here (this input is accepted but unused by this function today). */
+  englishChips?: { label: string; submit: string }[];
 }
 
 /** ADR 058 phase 2 (#332), Task 3: strips the present-only English
@@ -1259,6 +1307,27 @@ function withoutEnglish(parse: ParseOutcome): ParseOutcome {
   if (parse.kind !== 'clarification') return parse;
   const { question_en, options_en, untranslated_en, ...rest } = parse;
   return rest;
+}
+
+/** ADR 058 phase 2 (#332), Task 4: strips the present-only `labelEn` off every
+ * ClickOption before a `clickOptions` array is stored on ANY envelope's
+ * `pending` — the STORED pending (every audit row, a replayed pending, the
+ * take-path) must stay byte-identical to a pre-Task-4 run, exactly like
+ * `withoutEnglish` above does for a clarification's parse fields. Needed
+ * wherever a `pending.clickOptions` gets assembled, regardless of which
+ * builder (policy.ts, rescue.ts) set `labelEn` on the option. */
+function withoutClickOptionEnglish(options: ClickOption[]): ClickOption[] {
+  return options.map(({ labelEn, ...rest }) => rest);
+}
+
+/** Same strip as `withoutClickOptionEnglish`, applied to an already-built
+ * `PendingClarification` — the shape `toRefusalResponse` receives, since a
+ * refusal's pending is fully assembled by respond.ts itself (unlike a
+ * clarification's, which `toClarificationResponse` below builds from raw
+ * `clickOptions`). `undefined` in, `undefined` out. */
+function withoutPendingClickOptionEnglish(pending: PendingClarification): PendingClarification {
+  if (!pending.clickOptions) return pending;
+  return { ...pending, clickOptions: withoutClickOptionEnglish(pending.clickOptions) };
 }
 
 export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse {
@@ -1282,8 +1351,9 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     // period-coverage kinds the caller gates on. Never touches `text` (R8).
     suggestions: input.suggestions ?? [],
     // WP26c: present-only, so every refusal without a rescue keeps the exact
-    // pre-WP26 field set.
-    ...(input.pending ? { pending: input.pending } : {}),
+    // pre-WP26 field set. Stripped of any ClickOption.labelEn (Task 4) so the
+    // stored pending stays byte-identical.
+    ...(input.pending ? { pending: withoutPendingClickOptionEnglish(input.pending) } : {}),
   };
 }
 
@@ -1311,12 +1381,24 @@ export interface ClarificationEnvelopeInput {
    * Task 5 attaches it to ClarificationResponse.english, gated on
    * `lang === 'en'`. */
   english?: { question: string; options: string[]; untranslated: string[] };
+  /** ADR 058 phase 2 (#332), Task 4: the English sibling of every chip this
+   * clarification offers — index-aligned with the DUTCH `options[]`, `label`
+   * shown in English and `submit` the exact Dutch option string (the same
+   * {label, submit} contract EnglishRendering.chips already uses). Threaded
+   * from respond.ts's call sites (typically `options.map((o,i) => ({label:
+   * options_en[i] ?? o, submit: o}))`), but NOT attached to the returned
+   * envelope here — Task 5 attaches it to ClarificationResponse.english. */
+  englishChips?: { label: string; submit: string }[];
 }
 
 export function toClarificationResponse(input: ClarificationEnvelopeInput): ClarificationResponse {
   // WP26 mechanism A: present-only, like conversationContext below — an empty
   // list must serialize NO key so a flag-off turn stays byte-identical.
-  const clickOptions = input.clickOptions ?? [];
+  // ADR 058 phase 2 (#332), Task 4: labelEn is stripped BEFORE `clickOptions`
+  // reaches `pending` or the `suggestions` mapping below — the stored pending
+  // (and everything the take-path/audit reads from it) stays byte-identical
+  // to a pre-Task-4 run; `.label` itself is unaffected by the strip.
+  const clickOptions = withoutClickOptionEnglish(input.clickOptions ?? []);
   const pending: PendingClarification = {
     version: RESPONSE_SCHEMA_VERSION,
     question: input.question,

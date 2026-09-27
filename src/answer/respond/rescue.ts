@@ -25,6 +25,9 @@ import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
 import type { EchoServability, StructuredIntent } from '../../query/index.ts';
 import type { ClickOption, ParseOutcome } from '../intent/types.ts';
 import { periodCodeToNl } from './period-nl.ts';
+// ADR 058 phase 2 (#332), Task 4: the English siblings this module's two
+// chip labels are assembled from, at the same site as their Dutch text.
+import { englishMeasureLabel, periodCodeToEn } from './english.ts';
 
 const definitionLabelByKey = new Map(CANONICAL_MEASURES.map((m) => [m.key, m.definitionLabel]));
 
@@ -69,6 +72,12 @@ export function absolutePeriodInText(text: string): string | null {
 export interface RescueOffer {
   /** The chip label — also the byte-exact string the take-path matches. */
   label: string;
+  /** ADR 058 phase 2 (#332), Task 4: the English label for this chip — the
+   * same {label, submit} contract EnglishRendering.chips (answer path) uses:
+   * this is the English SHOWN text, `label` above stays the exact Dutch
+   * SUBMIT string. Assembled from the same parameters as `label`
+   * (englishMeasureLabel/periodCodeToEn), never a post-hoc translation. */
+  labelEn: string;
   option: ClickOption;
 }
 
@@ -132,8 +141,18 @@ export async function buildRescueOffer(
     parse.refusalKind === 'forecast'
       ? `${periodNl} is al gepubliceerd — toon het cijfer voor ${label}.`
       : `Toon het cijfer voor ${label} (${periodNl}).`;
+  // ADR 058 phase 2 (#332), Task 4: the English sibling, from the SAME key
+  // and period code — englishMeasureLabel/periodCodeToEn, never a
+  // translation of chipLabel itself.
+  const labelEn = englishMeasureLabel(key);
+  const periodEn = periodCodeToEn(periodCode);
+  const chipLabelEn =
+    parse.refusalKind === 'forecast'
+      ? `${periodEn} has already been published — show the figure for ${labelEn}.`
+      : `Show the figure for ${labelEn} (${periodEn}).`;
   return {
     label: chipLabel,
+    labelEn: chipLabelEn,
     option: {
       id: 'rescue-1',
       label: chipLabel,
@@ -163,6 +182,12 @@ export interface OfferChipCandidate {
   canonicalKey: string;
   periodCode: string;
   label: string;
+  /** ADR 058 phase 2 (#332), Task 4: the candidate's English label, present-
+   * only. Optional here (rather than required like BuiltRefusal.en) so a
+   * pre-Task-4 candidate literal stays valid; every real builder in
+   * refusals.ts sets it. Falls back to `label` itself (never a Dutch label
+   * silently going unshown) if a caller ever omits it. */
+  labelEn?: string;
 }
 
 /** Session 110 (row 13/row 15, ADR 054 addendum + ADR 029 #134(c) note): the
@@ -177,6 +202,8 @@ export interface OfferChipCandidate {
 export interface OfferChipIntentCandidate {
   intent: StructuredIntent;
   label: string;
+  /** ADR 058 phase 2 (#332), Task 4: see OfferChipCandidate.labelEn. */
+  labelEn?: string;
 }
 
 export async function buildOfferChip(
@@ -189,6 +216,9 @@ export async function buildOfferChip(
   if (!verdict.servable) return null;
   return {
     label: candidate.label,
+    // Task 4: every real candidate sets labelEn; the `?? label` fallback is
+    // defensive only, matching this file's other never-drop-to-Dutch guards.
+    labelEn: candidate.labelEn ?? candidate.label,
     option: {
       id: 'offer-1',
       label: candidate.label,

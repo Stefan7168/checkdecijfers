@@ -189,6 +189,18 @@ export interface ClickOption {
    * is not restored. PRESENT-ONLY (`true` or absent, never `false`): a
    * pre-v2 row simply lacks the key and reads as today. */
   questionShaped?: true;
+  /** ADR 058 phase 2 (#332), Task 4: the English label for this option's chip
+   * — the same {label, submit} contract EnglishRendering.chips (answer path)
+   * already uses: this field is the English SHOWN text, `label` above stays
+   * the Dutch SUBMIT value the take-path matches byte-exactly. A chip whose
+   * `label` IS the model's own free-text reading (top.reading) sets this to
+   * the SAME Dutch string — the design doc's one non-template exception,
+   * mirrored in that outcome's own `untranslated_en`. PRESENT-ONLY, and NEVER
+   * stored: toRefusalResponse/toClarificationResponse (respond/refusals.ts)
+   * strip it before a ClickOption reaches `pending` — the stored click
+   * option, the take-path and every audit row must stay byte-identical to a
+   * pre-Task-4 run. */
+  labelEn?: string;
 }
 
 /** Bounds the dry-run work one clarification may trigger (each option costs a
