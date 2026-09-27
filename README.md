@@ -16,7 +16,7 @@ numbers masked from the model and filled back in by code, with an independent AI
 English answer is shown; a failed check shows the checked Dutch answer instead. Refusals, clarification questions and
 chart texts are shown in English from hand-written templates and name tables — no AI call (ADR 058 phases 2-3, 2026-09-27).
 Region-wide questions ("per provincie", "welke gemeente in Utrecht had de hoogste …") are answered with one checked
-figure per region and a sorted bar chart ([ADR 054](docs/decisions/054-region-set-query.md), live since 2026-09-27). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
+figure per region and a sorted bar chart ([ADR 054](docs/decisions/054-region-set-query.md), live since 2026-09-27). Under such an answer a zero-AI "Zet af tegen …" chip draws a scatter of two regional figures, one dot per region ([ADR 060](docs/decisions/060-two-measure-scatter.md), live since 2026-09-28). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
 chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when comparing
 multiple series across multiple periods, each offered only when it stays honest for the data on
 screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5; on CBS/Eurostat charts and, since
