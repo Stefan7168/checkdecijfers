@@ -73,9 +73,17 @@ import {
 } from '../backend/ingestion/onboarding-offer-token.ts';
 import {
   ONBOARDING_ALREADY_PENDING_TEXT,
+  ONBOARDING_ALREADY_PENDING_TEXT_EN,
   ONBOARDING_OFFER_TEXT,
+  // I4 fix (2026-09-27 review): the English siblings of the two Dutch
+  // overrides below, so an English reader's `response.english.text` gets
+  // overridden to match, never left holding ONBOARDING_PENDING_TEXT_EN's
+  // "requesting now" wording on a turn that only just asked permission.
+  ONBOARDING_OFFER_TEXT_EN,
   ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+  ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN,
   ONBOARDING_PENDING_TEXT,
+  ONBOARDING_PENDING_TEXT_EN,
 } from '../backend/answer/respond/refusals.ts';
 import { loadOnboardedVocabulary } from '../backend/ingestion/onboarding-vocab.ts';
 import type { OnboardedMeasure } from '../backend/answer/intent/prompt.ts';
@@ -742,7 +750,20 @@ async function maybeTriggerOnboarding(
     // honest message instead of an offer nobody could actually confirm.
     // Means the confirm-first go-live RUNBOOK step hasn't set this secret yet.
     return {
-      gated: { ...gated, response: { ...response, text: ONBOARDING_OFFER_UNAVAILABLE_TEXT } },
+      gated: {
+        ...gated,
+        response: {
+          ...response,
+          text: ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+          // I4 fix (2026-09-27 review): `response.english` is present ONLY
+          // when this turn ran for an English reader (the pipeline's own
+          // `lang === 'en'` gate) — override its `.text` the same way the
+          // Dutch `.text` above is overridden, keeping it absent otherwise.
+          ...(response.english
+            ? { english: { ...response.english, text: ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN } }
+            : {}),
+        },
+      },
       offer: null,
     };
   }
@@ -768,7 +789,16 @@ async function maybeTriggerOnboarding(
   // yet to read an authoritative amount FROM).
   const priceCredits = await onboardingPrice(getDb());
   return {
-    gated: { ...gated, response: { ...response, text: ONBOARDING_OFFER_TEXT } },
+    gated: {
+      ...gated,
+      response: {
+        ...response,
+        text: ONBOARDING_OFFER_TEXT,
+        // I4 fix (2026-09-27 review): same override-the-English-sibling-too
+        // rule as the unavailable-degrade branch above.
+        ...(response.english ? { english: { ...response.english, text: ONBOARDING_OFFER_TEXT_EN } } : {}),
+      },
+    },
     offer: { token, priceCredits },
   };
 }
@@ -986,6 +1016,12 @@ export type ConfirmOnboardingOutcome =
 // gets today).
 export async function confirmOnboardingFetch(token: string): Promise<ConfirmOnboardingOutcome> {
   guardOnboardingOfferToken(token);
+  // I4 fix (2026-09-27 review): this outcome's `text` is user-visible copy
+  // built directly here (not a pipeline envelope with its own `.english`
+  // sibling), so it must pick its language the same way every other
+  // server-action reply does — the same once-per-action getLang() read
+  // askQuestion/replyToClarification already use.
+  const lang = await getLang();
   const userId = await currentUserId();
   if (userId === null) return { kind: 'unauthenticated' };
 
@@ -1021,13 +1057,24 @@ export async function confirmOnboardingFetch(token: string): Promise<ConfirmOnbo
     case 'started':
       // #113 kick-on-trigger, unchanged from the pre-addendum behavior.
       after(() => kickOnboardingJob());
-      return { kind: 'started', text: ONBOARDING_PENDING_TEXT, netCost: result.credits };
+      // I4 fix: an English reader gets the English sibling, never the
+      // Dutch ONBOARDING_PENDING_TEXT this always returned before.
+      return {
+        kind: 'started',
+        text: lang === 'en' ? ONBOARDING_PENDING_TEXT_EN : ONBOARDING_PENDING_TEXT,
+        netCost: result.credits,
+      };
     case 'duplicate':
       // An active row already exists (a concurrent confirm click, or a
       // retried Server Action) — no second charge, same copy the pipeline
       // itself would have shown for a genuine re-ask.
       after(() => kickOnboardingJob());
-      return { kind: 'duplicate', text: ONBOARDING_ALREADY_PENDING_TEXT };
+      // I4 fix: same language pick as 'started' above — no reason for this
+      // sibling outcome to stay Dutch-only for an English reader.
+      return {
+        kind: 'duplicate',
+        text: lang === 'en' ? ONBOARDING_ALREADY_PENDING_TEXT_EN : ONBOARDING_ALREADY_PENDING_TEXT,
+      };
     case 'insufficient':
       return { kind: 'insufficient_credits', balance: result.balance, required: result.required };
   }

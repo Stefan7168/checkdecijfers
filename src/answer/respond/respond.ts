@@ -446,12 +446,14 @@ export async function respondToIntent(
         // attach it to the envelope (not yet read here — see
         // ClarificationEnvelopeInput.english's own comment).
         english: { question: built.questionEn, options: built.optionsEn, untranslated: [] },
-        // ADR 058 phase 2 (#332), Task 4: this clarification carries no
-        // ClickOption (buildNeedsClarificationAsClarification never sets one)
-        // — its "chips" are the plain options themselves, so the English
-        // sibling is just options_en index-aligned with options, submit ==
-        // the exact Dutch option.
-        englishChips: built.options.map((o, i) => ({ label: built.optionsEn[i] ?? o, submit: o })),
+        // I2 fix (2026-09-27 review): a clarification's English chips must be
+        // EXACTLY the takeable options, like the Dutch envelope's own
+        // `suggestions` (built only from clickOptions, never from the plain
+        // option list). This call site passes no `clickOptions` at all
+        // (buildNeedsClarificationAsClarification never sets one), so the
+        // Dutch envelope carries no `suggestions` key here — the English
+        // sibling must match that with `[]`, not one chip per plain option.
+        englishChips: [],
         // ADR 058 phase 2 (#332), Task 5: attach `english` only for an
         // English reader.
         lang: options.lang,
@@ -704,7 +706,15 @@ export async function respondToIntent(
   return response;
 }
 
-async function respondToParseOutcome(
+// Exported for direct unit testing (M7 fix regression, 2026-09-27 review) —
+// same rationale as respondToIntent's own export comment: this function's
+// 'clarification' branch is otherwise reachable only through a real parser
+// call, and the defensive `parse.question_en ?? parse.question_nl` fallback
+// this fix touches is (like ClarificationEnvelopeInput.english's own
+// identical fallback one layer up) never exercised by any real parser output
+// — every production ParseOutcome sets question_en unconditionally
+// (policy.ts). A hand-built ParseOutcome is the only way to exercise it.
+export async function respondToParseOutcome(
   db: Db,
   question: string,
   parse: ParseOutcome,
@@ -831,15 +841,24 @@ async function respondToParseOutcome(
       // attach it to the envelope (not yet read here — see
       // ClarificationEnvelopeInput.english's own comment).
       english: {
-        question: parse.question_en ?? '',
+        // M7 fix (2026-09-27 review): `?? ''` defeated the fallback (an empty
+        // string is still "present", so the empty-bubble-in-English-chat
+        // branch this feeds never fires) — fall back to the Dutch question,
+        // exactly like `toClarificationResponse`'s own defensive `??
+        // input.questionNl` fallback already does one layer up.
+        question: parse.question_en ?? parse.question_nl,
         options: parse.options_en ?? [],
         untranslated: parse.untranslated_en ?? [],
       },
-      // ADR 058 phase 2 (#332), Task 4: options_en is index-aligned with
-      // options regardless of whether a ClickOption exists for any of
-      // them — the same pairing covers a plain fill-in option and a
-      // takeable chip alike, submit == the exact Dutch option string.
-      englishChips: parse.options.map((o, i) => ({ label: parse.options_en?.[i] ?? o, submit: o })),
+      // I2 fix (2026-09-27 review): a clarification's English chips must be
+      // EXACTLY the takeable options, like the Dutch envelope's own
+      // `suggestions` (built only from `clickOptions`, via
+      // toClarificationResponse's `clickOptions.map((o) => o.label)` — never
+      // from the plain option list). Previously this built one chip per
+      // Dutch OPTION regardless of whether it was ever takeable, so an
+      // English reader could see chips for options the Dutch reader never
+      // got as `suggestions` at all.
+      englishChips: (parse.clickOptions ?? []).map((o) => ({ label: o.labelEn ?? o.label, submit: o.label })),
       lang: options.lang,
     });
   }

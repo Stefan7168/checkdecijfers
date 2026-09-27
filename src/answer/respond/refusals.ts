@@ -489,12 +489,30 @@ export const ONBOARDING_ALREADY_PENDING_TEXT_EN =
 export const ONBOARDING_OFFER_TEXT =
   'Dat onderwerp staat nog niet in onze database. We kunnen de cijfers voor je ophalen bij het CBS en controleren — dat duurt meestal een paar minuten. Wil je dat we dit opzoeken?';
 
+/** I4 fix (2026-09-27 review): English sibling of ONBOARDING_OFFER_TEXT —
+ * needed because web/app/actions.ts's maybeTriggerOnboarding overrides
+ * `response.text` with this Dutch string on the confirm-first offer turn
+ * (#109's reversal) but, before this fix, left `response.english.text`
+ * holding ONBOARDING_PENDING_TEXT_EN's "we're now automatically requesting"
+ * wording — false on a turn that has not fetched anything yet and is only
+ * asking permission. Byte-exact translation, no added claim. */
+export const ONBOARDING_OFFER_TEXT_EN =
+  "That topic isn't in our database yet. We can fetch the figures from CBS for you and check them — that usually takes a few minutes. Do you want us to look this up?";
+
 /** ADR 026 addendum: the fail-closed degrade when `ONBOARDING_OFFER_SECRET`
  * is not configured — same posture as `createEmbedCode`'s "unavailable"
  * (RUNBOOK: "fail closed, no error pages"). Nothing is charged and nothing
  * is queued; the reader is told plainly rather than shown a broken button. */
 export const ONBOARDING_OFFER_UNAVAILABLE_TEXT =
   'Dat onderwerp staat nog niet in onze database, en het automatisch ophalen is op dit moment niet beschikbaar. Probeer het later nog eens, of stel een andere vraag.';
+
+/** I4 fix (2026-09-27 review): English sibling of
+ * ONBOARDING_OFFER_UNAVAILABLE_TEXT — same reasoning as
+ * ONBOARDING_OFFER_TEXT_EN above: nothing was fetched or queued on this
+ * degrade path, so the English reader must not see the "requesting now"
+ * wording either. */
+export const ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN =
+  "That topic isn't in our database yet, and fetching it automatically isn't available right now. Please try again later, or ask a different question.";
 
 /** The onboarding acknowledgment builder (design §2). `already` picks between
  * the two verbatim copies; only the first-ask ('onboarding_pending') carries
@@ -581,11 +599,20 @@ function definitionLabelForRefusal(refusal: QueryRefusal): string | null {
 
 /** English sibling of definitionLabelForRefusal — same null-iff-explicit-
  * target contract, via englishMeasureLabel (english.ts, Task 1) rather than
- * definitionLabelByKey. */
+ * definitionLabelByKey.
+ *
+ * M6 fix (2026-09-27 review): must return null in EXACTLY the cases
+ * `definitionLabelForRefusal` does — an explicit target, AND a canonical key
+ * with no static `CANONICAL_MEASURES` entry (an onboarded/unknown key,
+ * `definitionLabelByKey.get` misses). `englishMeasureLabel` on its own
+ * never returns null — its "these figures" fallback exists for a caller
+ * that also tries a real `measureTitle` first — so calling it unconditionally
+ * here produced "figures on these figures" instead of falling through to the
+ * generic-sentence branch every caller below already has for the null case. */
 function definitionLabelEnForRefusal(refusal: QueryRefusal): string | null {
-  return refusal.intent.target.kind === 'canonical'
-    ? englishMeasureLabel(refusal.intent.target.key)
-    : null;
+  if (refusal.intent.target.kind !== 'canonical') return null;
+  if (!definitionLabelByKey.has(refusal.intent.target.key)) return null;
+  return englishMeasureLabel(refusal.intent.target.key);
 }
 
 function buildFreshnessRefusal(refusal: QueryRefusal): BuiltRefusal {
@@ -1308,11 +1335,19 @@ export interface RefusalEnvelopeInput {
  * final round (respond.ts's parseClarificationReply call site) passes a
  * 'clarification'-kind ParseOutcome straight into toRefusalResponse, not
  * just toClarificationResponse. Only that one kind can ever carry the keys;
- * every other kind passes through completely unchanged. */
+ * every other kind passes through completely unchanged.
+ *
+ * I1 fix (2026-09-27 review): policy.ts's `withClickOptions` also puts a
+ * present-only `clickOptions` (with per-option `labelEn`) directly on the
+ * clarification ParseOutcome — a THIRD English-carrying field this function
+ * used to miss (it only destructured question_en/options_en/untranslated_en),
+ * so with click options enabled every stored `envelope.parse.clickOptions[].
+ * labelEn` leaked into the byte-identical-Dutch storage. Stripped the same
+ * way `withoutClickOptionEnglish` already strips `pending.clickOptions`. */
 function withoutEnglish(parse: ParseOutcome): ParseOutcome {
   if (parse.kind !== 'clarification') return parse;
-  const { question_en, options_en, untranslated_en, ...rest } = parse;
-  return rest;
+  const { question_en, options_en, untranslated_en, clickOptions, ...rest } = parse;
+  return clickOptions ? { ...rest, clickOptions: withoutClickOptionEnglish(clickOptions) } : rest;
 }
 
 /** ADR 058 phase 2 (#332), Task 4: strips the present-only `labelEn` off every

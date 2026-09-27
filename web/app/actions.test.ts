@@ -15,6 +15,17 @@ import type { ComposedResponse } from '../backend/answer/respond/types.ts';
 import type { PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 import { AnthropicLlmClient } from '../backend/answer/llm/client.ts';
+// I4 fix (2026-09-27 review): the offer/unavailable overrides
+// maybeTriggerOnboarding writes must equal these exact constants, English
+// sibling included — importing the real constants (not re-typing the copy)
+// so the test breaks if either string ever drifts from its source.
+import {
+  ONBOARDING_OFFER_TEXT,
+  ONBOARDING_OFFER_TEXT_EN,
+  ONBOARDING_OFFER_UNAVAILABLE_TEXT,
+  ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN,
+  ONBOARDING_PENDING_TEXT_EN,
+} from '../backend/answer/respond/refusals.ts';
 
 const { currentUserId, getDb } = vi.hoisted(() => ({
   currentUserId: vi.fn<() => Promise<string | null>>(),
@@ -43,6 +54,24 @@ const billing = vi.hoisted(() => ({
   reserveWebSearchDebit: vi.fn(),
 }));
 vi.mock('../backend/billing/index.ts', () => billing);
+
+// I4 fix (2026-09-27 review): maybeTriggerOnboarding's success path reads a
+// live price via `onboardingPrice(getDb())` (src/ingestion/onboarding-
+// trigger.ts) — that module is reached from src/ingestion/ via the plain
+// `../billing/index.ts` specifier, a DIFFERENT resolved module id than this
+// file's own `vi.mock('../backend/billing/index.ts', ...)` above (the
+// web/backend symlink is not the same id Vitest mocks by), so the billing
+// mock above does NOT cover it — confirmed by running this suite against the
+// unmocked module first (a real `db.query is not a function` throw from
+// `fakeDb`). Mocked wholesale here, matching the `billing`/`audit` hoisted
+// pattern; `triggerOnboarding` is unused by any test in this file (only
+// `confirmOnboardingFetch`, tested elsewhere as source pins, calls it) but
+// stubbed anyway so nothing here can ever reach a real DB by accident.
+const onboardingTrigger = vi.hoisted(() => ({
+  onboardingPrice: vi.fn(),
+  triggerOnboarding: vi.fn(),
+}));
+vi.mock('../backend/ingestion/onboarding-trigger.ts', () => onboardingTrigger);
 
 // The audited pipeline — answerQuestionAudited is where the injected web
 // billing closure is exercised (it calls options.webBilling.reserve() to
@@ -151,6 +180,7 @@ beforeEach(() => {
     cls === 'web_addon' ? 10 : cls === 'simple' ? 20 : 10,
   );
   billing.getBalance.mockResolvedValue(100);
+  onboardingTrigger.onboardingPrice.mockResolvedValue(100);
   billing.reserveWebSearchDebit.mockResolvedValue({ kind: 'debited', split: FAKE_WEB_SPLIT });
   billing.compensateSplit.mockResolvedValue(undefined);
   vi.stubEnv('WEBSEARCH_ENABLED', '1');
@@ -743,5 +773,84 @@ describe('askQuestion / replyToClarification — ADR 058 English answers wiring'
     expect(lastReplyOptions().lang).toBe('en');
     expect(lastReplyOptions().translateClient).toBeDefined();
     expectTranslateClientWiredWithCappedSdk(sdkCountBefore, lastReplyOptions().translateClient);
+  });
+});
+
+// I4 fix (2026-09-27 review): maybeTriggerOnboarding overrides
+// `response.text` with a Dutch confirm-first-offer/unavailable string — it
+// must override `response.english.text` the SAME way, never leave it holding
+// the pipeline's own ONBOARDING_PENDING_TEXT_EN ("we're now automatically
+// requesting…") on a turn that has fetched/queued NOTHING yet.
+describe('maybeTriggerOnboarding: the English sibling is overridden alongside the Dutch text', () => {
+  function fakeOnboardingPendingRefusal(lang: 'nl' | 'en'): ComposedResponse {
+    return {
+      kind: 'refusal',
+      question: 'een nog niet geladen onderwerp',
+      reason: 'onboarding_pending',
+      onboarding: {
+        tableId: '12345NED',
+        topicTerm: 'een nog niet geladen onderwerp',
+        confidence: 0.9,
+        candidateIds: ['12345NED'],
+      },
+      // What the real pipeline attaches for lang 'en' (buildOnboardingRefusal
+      // + toRefusalResponse's lang gate) BEFORE maybeTriggerOnboarding runs —
+      // absent entirely for 'nl', exactly like every other refusal envelope.
+      ...(lang === 'en'
+        ? {
+            english: {
+              source: 'template',
+              text: ONBOARDING_PENDING_TEXT_EN,
+              chips: [],
+              untranslated: [],
+            },
+          }
+        : {}),
+    } as unknown as ComposedResponse;
+  }
+
+  it('English reader, secret configured: the offer overrides BOTH `text` and `english.text` to the offer copy', async () => {
+    vi.stubEnv('ONBOARDING_OFFER_SECRET', 'test-secret');
+    getLang.mockResolvedValue('en');
+    driveGate(fakeOnboardingPendingRefusal('en'), 1, 0);
+    const { gated, onboardingOffer } = await askQuestion('een nog niet geladen onderwerp', RID);
+    if (gated.kind !== 'ok') throw new Error(`expected an 'ok' gate, got ${gated.kind}`);
+    const response = gated.response as ComposedResponse & {
+      english?: { text: string };
+    };
+    expect(response.text).toBe(ONBOARDING_OFFER_TEXT);
+    expect(response.english).toBeDefined();
+    expect(response.english!.text).toBe(ONBOARDING_OFFER_TEXT_EN);
+    // Belt: the false claim this fix removes — the pending "requesting now"
+    // text must NOT be what an English reader sees on the offer turn.
+    expect(response.english!.text).not.toBe(ONBOARDING_PENDING_TEXT_EN);
+    expect(onboardingOffer).not.toBeNull();
+  });
+
+  it('Dutch reader: no `english` key at all (unchanged) — the override only ever touches `text`', async () => {
+    vi.stubEnv('ONBOARDING_OFFER_SECRET', 'test-secret');
+    getLang.mockResolvedValue('nl');
+    driveGate(fakeOnboardingPendingRefusal('nl'), 1, 0);
+    const { gated } = await askQuestion('een nog niet geladen onderwerp', RID);
+    if (gated.kind !== 'ok') throw new Error(`expected an 'ok' gate, got ${gated.kind}`);
+    const response = gated.response as ComposedResponse & { english?: unknown };
+    expect(response.text).toBe(ONBOARDING_OFFER_TEXT);
+    expect('english' in response).toBe(false);
+  });
+
+  it('English reader, secret UNSET (fail-closed): both `text` and `english.text` become the unavailable copy', async () => {
+    vi.stubEnv('ONBOARDING_OFFER_SECRET', undefined);
+    getLang.mockResolvedValue('en');
+    driveGate(fakeOnboardingPendingRefusal('en'), 1, 0);
+    const { gated, onboardingOffer } = await askQuestion('een nog niet geladen onderwerp', RID);
+    if (gated.kind !== 'ok') throw new Error(`expected an 'ok' gate, got ${gated.kind}`);
+    const response = gated.response as ComposedResponse & {
+      english?: { text: string };
+    };
+    expect(response.text).toBe(ONBOARDING_OFFER_UNAVAILABLE_TEXT);
+    expect(response.english).toBeDefined();
+    expect(response.english!.text).toBe(ONBOARDING_OFFER_UNAVAILABLE_TEXT_EN);
+    expect(response.english!.text).not.toBe(ONBOARDING_PENDING_TEXT_EN);
+    expect(onboardingOffer).toBeNull();
   });
 });

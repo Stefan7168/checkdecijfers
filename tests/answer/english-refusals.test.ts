@@ -242,6 +242,27 @@ describe('English refusal siblings — exact text for the reasons the brief name
     expect(outcome.refusal.en.text).toBe('CBS has not (yet) published a figure for this period.');
   });
 
+  // M6 fix (2026-09-27 review): a CANONICAL target whose key has no static
+  // CANONICAL_MEASURES entry (an onboarded/unknown key) must take the SAME
+  // no-label fallback branch as the explicit-target case above — before the
+  // fix, `englishMeasureLabel`'s own "these figures" fallback made this
+  // return non-null, producing "CBS has not (yet) published a figure for
+  // this period for these figures." instead of the plain sentence the Dutch
+  // side (`definitionLabel` also null here) actually takes.
+  it('not_published: falls back to the no-label sentence for an onboarded/unknown canonical key too', () => {
+    const onboardedIntent: StructuredIntent = {
+      schemaVersion: 1,
+      target: { kind: 'canonical', key: 'onboarded:some_freshly_onboarded_measure' },
+      period: { kind: 'codes', codes: ['2024JJ00'] },
+      derivation: 'none',
+    };
+    const outcome = buildQueryRefusal(queryRefusal('not_published', {}, onboardedIntent));
+    if (outcome.kind !== 'refusal') throw new Error('unreachable');
+    expect(outcome.refusal.text).toBe('CBS heeft (nog) geen cijfer over deze periode gepubliceerd.');
+    expect(outcome.refusal.en.text).toBe('CBS has not (yet) published a figure for this period.');
+    expect(outcome.refusal.en.text).not.toContain('these figures');
+  });
+
   it('outside_loaded_slice: exact English body + offer naming the nearest period', () => {
     const outcome = buildQueryRefusal(
       queryRefusal('outside_loaded_slice', { nearestAlternative: '2019JJ00' }),

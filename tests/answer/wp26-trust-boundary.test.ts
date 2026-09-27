@@ -124,6 +124,31 @@ describe('withValidatedClickOptions carries only known keys', () => {
     expect(validateClickOptions('not an array')).toEqual([]);
     expect(validateClickOptions([chip()])).toHaveLength(1);
   });
+
+  // M5 fix (2026-09-27 review): a client-supplied `labelEn` must never ride
+  // back through this boundary verbatim — it is accepted only so it does not
+  // sink an otherwise-valid option, then STRIPPED before the option is
+  // returned (the caller stores the result directly in the reply turn's
+  // audit row — see respond-audited.ts's `pendingClarification: pending`).
+  it('accepts a client-supplied `labelEn` but strips it — never trusted through the boundary', () => {
+    const forgedLabelEn = 'ATTACKER-CONTROLLED DISPLAY TEXT';
+    const withLabelEn = chip({ labelEn: forgedLabelEn }) as ClickOption;
+
+    const valid = validateClickOptions([withLabelEn]);
+    // Accepted (the option is not dropped just for carrying the field)...
+    expect(valid).toHaveLength(1);
+    // ...but the field itself never survives.
+    expect(Object.hasOwn(valid[0]!, 'labelEn')).toBe(false);
+    expect(JSON.stringify(valid)).not.toContain(forgedLabelEn);
+
+    // Same through the full pending-rebuild path (what actually reaches the
+    // reply turn and its audit row): a rescue/carrier pending whose click
+    // option carries a forged labelEn comes back clean.
+    const safe = withValidatedClickOptions(rescuePending({ clickOptions: [withLabelEn] }));
+    expect(safe.clickOptions).toHaveLength(1);
+    expect(Object.hasOwn(safe.clickOptions![0]!, 'labelEn')).toBe(false);
+    expect(JSON.stringify(safe)).not.toContain(forgedLabelEn);
+  });
 });
 
 // #73 v2 review round 2 (PR #122): the boundary, not respond.ts's shape check,

@@ -3428,4 +3428,55 @@ describe('Chat — ADR 058 phase 2 English refusals/clarifications (Task 6, #332
     expect(await screen.findByText('CBS publiceert gerealiseerde cijfers, geen voorspellingen.')).toBeInTheDocument();
     expect(screen.queryByText('CBS publishes realized figures, not forecasts.')).toBeNull();
   });
+
+  // I3 fix (2026-09-27 review): a meta/smalltalk/onboarding refusal is
+  // RECLASSIFIED by messageKind() (chat-message.ts) to kind 'info' for
+  // display purposes (the refusal header would visually claim the opposite
+  // of what these texts actually say) — but `nonAnswerEnglish` is set from
+  // the raw `response.kind === 'refusal'` at both the live-append site
+  // (chat.tsx) and replay-assemble.ts, regardless of `reason`. Before this
+  // fix, the render site gated on `message.kind === 'refusal'` too, so the
+  // English text silently never showed for exactly these three reasons even
+  // though the envelope carried it — the bug is invisible on 'forecast'
+  // (tested above, raw kind and reclassified kind agree) and only shows on
+  // a reason that gets reclassified.
+  function fakeMetaRefusalResponse(english?: typeof EN_REFUSAL): ComposedResponse {
+    return {
+      kind: 'refusal',
+      reason: 'meta',
+      text: 'Ik ben een chatbot die vragen beantwoordt met CBS-cijfers.',
+      ...(english !== undefined ? { english } : {}),
+    } as unknown as ComposedResponse;
+  }
+
+  const EN_META = {
+    source: 'template' as const,
+    text: "I'm a chatbot that answers questions using CBS figures.",
+    chips: [],
+    untranslated: [],
+  };
+
+  it('a `reason: "meta"` refusal (rendered as kind \'info\') still shows the English text when the envelope carries it', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 45, netCost: 0, response: fakeMetaRefusalResponse(EN_META) }),
+    );
+    render(<Chat />);
+    await submit('Wie ben je?');
+    expect(
+      await screen.findByText("I'm a chatbot that answers questions using CBS figures."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Ik ben een chatbot die vragen beantwoordt met CBS-cijfers.')).toBeNull();
+  });
+
+  it('the SAME meta refusal without english renders the Dutch text exactly as before', async () => {
+    askQuestion.mockResolvedValueOnce(
+      outcome({ kind: 'ok', auditId: 46, netCost: 0, response: fakeMetaRefusalResponse() }),
+    );
+    render(<Chat />);
+    await submit('Wie ben je?');
+    expect(
+      await screen.findByText('Ik ben een chatbot die vragen beantwoordt met CBS-cijfers.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("I'm a chatbot that answers questions using CBS figures.")).toBeNull();
+  });
 });

@@ -1208,10 +1208,17 @@ export function Chat({
           // deterministic template built at the same site as its Dutch
           // counterpart, so there is no verified/fallback split to mirror
           // here — it either rides the envelope or it doesn't.
-          const nonAnswerEnglish =
-            message.kind === 'refusal' || message.kind === 'clarification'
-              ? message.nonAnswerEnglish
-              : null;
+          //
+          // I3 fix (2026-09-27 review): gate on the FIELD, not on
+          // `message.kind` — `message.kind` is `messageKind()`'s
+          // RECLASSIFIED kind, which turns a meta/smalltalk/onboarding
+          // refusal (raw `response.kind === 'refusal'`, the kind
+          // `nonAnswerEnglish` is actually set from at both the live-append
+          // site above and replay-assemble.ts) into 'info' for display
+          // purposes. Gating on `message.kind === 'refusal'` here silently
+          // hid the English text on exactly those reasons even though the
+          // envelope carried it.
+          const nonAnswerEnglish = message.nonAnswerEnglish;
           const englishChips = englishVerified
             ? englishVerified.chips
             : nonAnswerEnglish
