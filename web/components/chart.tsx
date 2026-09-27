@@ -1559,14 +1559,26 @@ export function ChartView({
   // never rewrites them) while every CBS-word label on screen matches
   // `chartLang`. A no-op (`displaySpec === viewSpec`) when chartLang is 'nl'.
   const displaySpec = translateSpecForDisplay(viewSpec, chartLang);
+  // #332 (ADR 058 phase 3): the ACTIVE reading's own full English display
+  // copy — same `translateSpecForDisplay`/`toEnglishChartSpec` converter as
+  // `displaySpec` above, called on `activeSpec` instead of the (possibly
+  // zoomed) `viewSpec` because `provisionalNote`/`nullNotes`/`definitionLine`/
+  // `attribution.trendHeadline`/`dimLabels` are per-reading facts that
+  // describe the cells `activeSpec` plots (#254 principle, same as
+  // `displayAttributionLine` below), not the windowed subset. A no-op
+  // (`displayActiveSpec === activeSpec`) when chartLang is 'nl'.
+  const displayActiveSpec = translateSpecForDisplay(activeSpec, chartLang);
   // WP218 phase 4: the download menu receives this SAME displayed string
   // (never re-derived from spec.attributionLine independently), so the
   // exported PNG/SVG's baked-in attribution matches what the card shows.
   // #254: the ACTIVE reading's own R4 sentence — it names the table, version
   // and sync date the numbers on screen actually came from, which is a
   // per-reading fact (an alternate can live in another table entirely).
-  const displayAttributionLine =
-    chartLang === 'en' ? translateAttributionLine(activeSpec.attributionLine) : activeSpec.attributionLine;
+  // #332: reads off `displayActiveSpec` (the same converter, not a second
+  // independent `translateAttributionLine` call) so the attribution line
+  // shown here and the one `toEnglishChartSpec` would produce can never
+  // drift apart.
+  const displayAttributionLine = displayActiveSpec.attributionLine;
 
   // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
   // included) is computed above, ahead of the schemaVersion guard — see the
@@ -1632,7 +1644,9 @@ export function ChartView({
   // that NAMES the reading (e.g. "SeizoensCorrectie: Niet gecorrigeerd") —
   // showing the primary's coordinates over an alternate's data would
   // mislabel every plotted cell.
-  const dimEntries = Object.entries(activeSpec.dimLabels);
+  // #332: dimLabels are a per-reading fact (see displayActiveSpec above) and
+  // now have a deterministic English form too (translateDimLabel).
+  const dimEntries = Object.entries(displayActiveSpec.dimLabels);
   // Final review finding: this used to read `viewSpec` (the ORIGINAL
   // spec.kind) directly, so a line-kind chart's curated annotations stayed
   // non-empty even after switching to Staaf — but the <ReferenceLine>
@@ -3634,8 +3648,11 @@ export function ChartView({
         * in the table, never under a zoom (it describes the full range). */}
       {/* #254: the ACTIVE reading's own trend sentence — it describes the
         * plotted line (and carries its own periods), so the primary's copy
-        * must never survive a switch to an alternate reading. */}
-      {!inStage && !tabularForm && !state.periodRange && activeSpec.attribution.trendHeadline !== undefined ? (
+        * must never survive a switch to an alternate reading.
+        * #332: read off `displayActiveSpec`, whose `trendHeadline` is the
+        * English sibling when chartLang is 'en' (translateTrendHeadline),
+        * else byte-identical to `activeSpec`'s own copy. */}
+      {!inStage && !tabularForm && !state.periodRange && displayActiveSpec.attribution.trendHeadline !== undefined ? (
         <p
           data-testid="trend-headline"
           className={
@@ -3644,7 +3661,7 @@ export function ChartView({
               : 'mt-1 text-sm text-foreground'
           }
         >
-          {activeSpec.attribution.trendHeadline}
+          {displayActiveSpec.attribution.trendHeadline}
         </p>
       ) : null}
       {/* Chart-card polish (2026-09-15): ONE quiet control row above the
@@ -4580,18 +4597,34 @@ export function ChartView({
             : ''}
         </p>
       ) : null}
-      {activeSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{activeSpec.provisionalNote}</p> : null}
-      {activeSpec.nullNotes.map((note) => (
+      {/* #332: `displayActiveSpec.provisionalNote` is the English sibling
+        * (PROVISIONAL_NOTE_EN) when chartLang is 'en' and the spec carries
+        * the ONE recognised Dutch constant; any other string (a test
+        * fixture, an unrecognised shape) passes through unchanged — never
+        * guessed. */}
+      {displayActiveSpec.provisionalNote ? <p className="mt-2 text-sm text-warning">{displayActiveSpec.provisionalNote}</p> : null}
+      {/* #332: `humanizeNullNote` resolves a CBS valueAttribute into a fuller
+        * DUTCH reason sentence via a Dutch-only table (`source.
+        * nullReasonLabels`, no English sibling exists) — applying it to an
+        * already-English note would mix languages inside one sentence. On
+        * an English chart, `displayActiveSpec.nullNotes` is instead shown
+        * AS-IS: `toEnglishChartSpec`'s own `translateNullNote` already
+        * produced a complete, honest (if less embellished) English
+        * sentence, and a note it couldn't parse stays Dutch, unguessed. */}
+      {(chartLang === 'en' ? displayActiveSpec.nullNotes : activeSpec.nullNotes).map((note) => (
         <p key={note} className="text-sm text-warning">
-          {humanizeNullNote(note, activeSpec.attribution.tableId)}
+          {chartLang === 'en' ? note : humanizeNullNote(note, activeSpec.attribution.tableId)}
         </p>
       ))}
       {/* Fix round 2 (item 9): the definition line is reference prose for a
         * chat answer, not something anyone reads off a presentation slide —
         * dropped in stage mode. The caveats that carry data-quality meaning
         * (nullNotes, the provisional sentence and its marker key, the event
-        * markers) and the attribution stay, in the stage as everywhere. */}
-      {!inStage && activeSpec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{activeSpec.definitionLine}</p> : null}
+        * markers) and the attribution stay, in the stage as everywhere.
+        * #332: `displayActiveSpec.definitionLine` is the English sibling
+        * (translateDefinitionLine) when recognised, else the Dutch line
+        * unchanged. */}
+      {!inStage && displayActiveSpec.definitionLine ? <p className="mt-2 text-xs text-muted-foreground">{displayActiveSpec.definitionLine}</p> : null}
       {/* #170(4): curated event markers, always-visible text (never
         * hover-only — see the ReferenceLine comment above). Neutral tone
         * (text-muted-foreground), distinct from the #92 amber caveats above: this

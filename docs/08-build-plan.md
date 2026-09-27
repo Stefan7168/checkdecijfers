@@ -1205,7 +1205,7 @@ after the Anthropic API cap lifts (2026-10-01), then [#325](open-questions.md) (
 36252531510 green). **Session 134 (2026-09-26/27): recording run ✅ DONE** (the "cap" was our own $35 spend limit, raised
 to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) — see ADR 059's live as-built note.
 **✅ Flag flipped the same session (owner GO) — English answers LIVE since 2026-09-26.** Owner-supervised. **Phase 2 (refusals/clarifications) ✅ built
-session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** Phase 3 (chart texts) gets its own spec — next.
+session 135 as deterministic English templates, no AI cost (ADR 058 "Phase 2 as built", #332).** **Phase 3 (chart texts) ✅ built the same session** (display layer, ADR 058 "Phase 3 as built").
 
 
 ## Regional statistics → region questions (owner pick 2026-09-26, session 134; NEXT, not yet designed)
