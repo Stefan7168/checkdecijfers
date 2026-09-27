@@ -875,6 +875,24 @@ const nl = {
   'chart.eraShading.save': 'Opslaan',
   'chart.eraShading.cancel': 'Annuleren',
 
+  // #296 part 2 Task 6: the two-measure scatter card (scatter-view.tsx).
+  // Only the card's own chrome — every measure title, unit, region name and
+  // number on it is a spec string. Digit-free on purpose (the card's own
+  // whole-DOM digit scan in scatter-view.test.tsx).
+  'chart.scatter.ariaLabel': 'Spreidingsdiagram: {title}',
+  'chart.scatter.tabChart': 'Grafiek',
+  'chart.scatter.logSuffix': ' (log. schaal)',
+  'chart.scatter.logVertical': 'Log. schaal verticaal',
+  'chart.scatter.logHorizontal': 'Log. schaal horizontaal',
+  'chart.scatter.logHint':
+    'Een logaritmische schaal toont verhoudingen: elke stap op de as is een vermenigvuldiging. Zet uit voor een gewone schaal.',
+  'chart.scatter.swapAxes': 'Assen omwisselen',
+  'chart.scatter.searchLabel': 'Zoek een regio in de grafiek',
+  'chart.scatter.searchPlaceholder': 'Zoek een regio',
+  'chart.scatter.searchNoMatch': 'Geen regio in deze grafiek past bij “{query}”.',
+  'chart.scatter.searchMore': 'Meer regio’s gevonden — typ verder om te verfijnen.',
+  'chart.scatter.searchResultsLabel': 'Gevonden regio’s',
+
   // chart-download.tsx.
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Downloadformaat',
@@ -2170,6 +2188,20 @@ const en: Messages = {
   'chart.eraShading.labelPlaceholder': 'E.g. financial crisis',
   'chart.eraShading.save': 'Save',
   'chart.eraShading.cancel': 'Cancel',
+
+  'chart.scatter.ariaLabel': 'Scatter plot: {title}',
+  'chart.scatter.tabChart': 'Chart',
+  'chart.scatter.logSuffix': ' (log scale)',
+  'chart.scatter.logVertical': 'Log scale vertical',
+  'chart.scatter.logHorizontal': 'Log scale horizontal',
+  'chart.scatter.logHint':
+    'A logarithmic scale shows ratios: each step along the axis is a multiplication. Switch off for a regular scale.',
+  'chart.scatter.swapAxes': 'Swap axes',
+  'chart.scatter.searchLabel': 'Find a region in the chart',
+  'chart.scatter.searchPlaceholder': 'Find a region',
+  'chart.scatter.searchNoMatch': 'No region in this chart matches “{query}”.',
+  'chart.scatter.searchMore': 'More regions found — keep typing to narrow down.',
+  'chart.scatter.searchResultsLabel': 'Regions found',
 
   'chart.download.trigger': 'Download',
   'chart.download.menuLabel': 'Download format',
