@@ -624,8 +624,9 @@ export function heatmapCellColor(intensity: number): string {
 /** WP218 phase 4 (#219, design §4) → ADR 058 phase 3 (#332): a
  * verbatim-projection view of `spec` with its CBS-word DISPLAY TEXT
  * translated — the SAME "project, never recompute" contract as `windowSpec`
- * (chart-view-state.ts): every value/formattedValue/resultId/provisional/
- * status/decimals/dims/regionScope field is untouched, and 'nl' returns
+ * (chart-view-state.ts): every value/resultId/provisional/status/decimals/
+ * dims/regionScope field is untouched (`formattedValue` keeps the SAME number,
+ * only its notation becomes English — '1.234,5' → '1,234.5'), and 'nl' returns
  * `spec` itself unchanged (no-op fast path). Every downstream pure function
  * (buildRows, annotationMarkers, valueLabelPlan, tableModel) reads whatever
  * spec it is given verbatim, so feeding this one translated spec into all of
