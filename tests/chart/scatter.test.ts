@@ -160,6 +160,28 @@ describe('buildScatterSpec', () => {
   it('is deterministic', () => {
     expect(JSON.stringify(buildScatterSpec(y, x))).toBe(JSON.stringify(buildScatterSpec(y, x)));
   });
+  it("carries each leg's canonical key (null for a non-canonical target) and measured sync date", () => {
+    const yKeyed = { ...y, intent: { target: { kind: 'canonical', key: 'average_existing_home_sale_price' } } } as unknown as ValidatedResult;
+    const xExplicit = {
+      ...x,
+      intent: { target: { kind: 'explicit', tableId: 'X', measure: 'M', dims: {} } },
+      attribution: { ...x.attribution, syncedAt: '2026-09-05T12:00:00.000Z' },
+    } as unknown as ValidatedResult;
+    const spec = buildScatterSpec(yKeyed, xExplicit);
+    expect(spec.y.canonicalKey).toBe('average_existing_home_sale_price');
+    expect(spec.x.canonicalKey).toBeNull();
+    expect(spec.y.syncedAt).toBe('2026-09-01T00:00:00.000Z');
+    expect(spec.x.syncedAt).toBe('2026-09-05T12:00:00.000Z');
+    expect(scatterSpecSchema.safeParse(spec).success).toBe(true);
+  });
+
+  it('the schema rejects an axis missing canonicalKey or syncedAt', () => {
+    const spec = buildScatterSpec(y, x);
+    const { canonicalKey: _k, ...noKey } = spec.y;
+    const { syncedAt: _s, ...noSync } = spec.x;
+    expect(scatterSpecSchema.safeParse({ ...spec, y: noKey }).success).toBe(false);
+    expect(scatterSpecSchema.safeParse({ ...spec, x: noSync }).success).toBe(false);
+  });
 });
 
 describe('buildScatterSpec: self-sufficiency (#296 part 2 — scope, leftOut, notApplicableCount)', () => {

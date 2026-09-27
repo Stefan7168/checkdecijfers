@@ -4,9 +4,21 @@
 import { describe, expect, it } from 'vitest';
 import type { ScatterAxis, ScatterLeftOut, ScatterPoint, ScatterSideStatus, ScatterSpec } from '../backend/chart/scatter.ts';
 import { SCATTER_NAMED_LIMIT } from '../backend/chart/scatter-text.ts';
-import { scatterAxisTitle, scatterBodyEn, scatterLineEn, scatterTitleEn } from './scatter-text-en.ts';
+import {
+  scatterAxisTitle,
+  scatterBodyEn,
+  scatterDefinitionLinesEn,
+  scatterLineEn,
+  scatterTitleEn,
+} from './scatter-text-en.ts';
 
-function axis(measureTitle: string, tableId: string, unit = 'euro', periodLabel = '2024'): ScatterAxis {
+function axis(
+  measureTitle: string,
+  tableId: string,
+  unit = 'euro',
+  periodLabel = '2024',
+  canonicalKey: string | null = null,
+): ScatterAxis {
   return {
     measureTitle,
     unit,
@@ -15,6 +27,8 @@ function axis(measureTitle: string, tableId: string, unit = 'euro', periodLabel 
     tableId,
     defaultScale: 'linear',
     attributionLine: `Bron: CBS StatLine, tabel ${tableId}.`,
+    canonicalKey,
+    syncedAt: '2026-09-01T00:00:00.000Z',
   };
 }
 
@@ -67,10 +81,68 @@ describe('scatterTitleEn', () => {
     expect(scatterTitleEn(spec())).toBe('Average income against population on 1 January, 2024');
   });
 
-  it('leaves an unseeded measure title in Dutch rather than guessing', () => {
+  it('names a measure with no English title by its hand-written English topic term, never in Dutch', () => {
+    // A Dutch title with no entry in the English name tables (an unseeded
+    // CBS title), on a known canonical key.
+    const s = spec({ y: axis('Gemiddelde verkoopwaarde woningen', 'Y', 'euro', '2024', 'average_existing_home_sale_price') });
+    expect(scatterTitleEn(s)).toBe('House prices against population on 1 January, 2024');
+  });
+
+  it('falls back to the generic English wording when there is neither an English title nor a known key', () => {
     expect(scatterTitleEn(spec({ y: axis('Onbekende maat', 'Y') }))).toBe(
-      'Onbekende maat against population on 1 January, 2024',
+      'These figures against population on 1 January, 2024',
     );
+    expect(scatterTitleEn(spec({ y: axis('Onbekende maat', 'Y', 'euro', '2024', 'no_such_key') }))).not.toContain('Onbekende');
+  });
+});
+
+describe('English text for a home-price × population scatter carries no Dutch measure words', () => {
+  const s = spec({
+    title: 'Gemiddelde verkoopprijs tegenover bevolking op 1 januari, 2024',
+    y: axis('Gemiddelde verkoopprijs', 'Y', 'euro', '2024', 'average_existing_home_sale_price'),
+    x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january'),
+    scope: { kind: 'all_gemeenten' },
+    points: points(300, 'GM'),
+    leftOut: [
+      leftOutRegion('GM1', 'Vlieland', side('withheld', 'Confidential'), side('value')),
+      leftOutRegion('GM2', 'Schiermonnikoog', side('value'), side('missing')),
+    ],
+  });
+
+  it('title, body, coverage line and axis titles', () => {
+    const texts = [
+      scatterTitleEn(s),
+      scatterBodyEn(s),
+      scatterLineEn(s),
+      scatterAxisTitle(s.y, 'en', true),
+      scatterAxisTitle(s.x, 'en', false),
+    ];
+    for (const text of texts) {
+      expect(text).not.toMatch(/Gemiddelde|verkoopprijs|Bevolking|januari|tegenover/i);
+    }
+    // 'Gemiddelde verkoopprijs' has a CBS English title in the name tables.
+    expect(scatterTitleEn(s)).toBe('Average purchase price against population on 1 January, 2024');
+    expect(scatterLineEn(s)).toContain('Vlieland (average purchase price: CBS publishes no value)');
+    expect(scatterAxisTitle(s.y, 'en', true)).toBe('Average purchase price (euros) (log scale)');
+  });
+});
+
+describe('scatterDefinitionLinesEn', () => {
+  it('one line per axis with a canonical key, vertical first, from the hand-written English labels', () => {
+    const s = spec({
+      y: axis('Gemiddelde verkoopprijs', 'Y', 'euro', '2024', 'average_existing_home_sale_price'),
+      x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january'),
+    });
+    expect(scatterDefinitionLinesEn(s)).toEqual([
+      'Definition (vertical axis): The average sale price of existing owner-occupied homes.',
+      'Definition (horizontal axis): The population on 1 January.',
+    ]);
+  });
+
+  it('skips an axis without a canonical key (or with an unknown one) rather than guessing', () => {
+    const s = spec({ x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january') });
+    expect(scatterDefinitionLinesEn(s)).toEqual(['Definition (horizontal axis): The population on 1 January.']);
+    expect(scatterDefinitionLinesEn(spec({ y: axis('X', 'Y', 'euro', '2024', 'no_such_key') }))).toEqual([]);
   });
 });
 

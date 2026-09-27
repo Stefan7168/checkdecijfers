@@ -3,8 +3,11 @@
 // every English display layer (src/chart/english.ts, src/answer/translate/
 // lines.ts): pure, deterministic, NO model call — the stored spec stays
 // Dutch and English is derived here at render time. Every name goes through
-// the shared, hand-checked name tables (cbs-words.ts / regionLabelEn), and an
-// unseeded name stays Dutch rather than being guessed at (principle c).
+// the shared, hand-checked name tables (cbs-words.ts / regionLabelEn). A
+// MEASURE never stays Dutch (see measureEn: the hand-written English label
+// for the leg's canonical key, else generic English wording); an unseeded
+// region name or unit does stay Dutch rather than being guessed at
+// (principle c) — a proper name reads the same in both languages.
 //
 // Same structure as the Dutch builders, clause for clause: the body carries
 // no data value and no causal or superlative claim (R9); every count lives in
@@ -19,7 +22,9 @@
 import type { ScatterAxis, ScatterLeftOut, ScatterSideStatus, ScatterSpec } from '../backend/chart/index.ts';
 import { SCATTER_NAMED_LIMIT } from '../backend/chart/index.ts';
 import { lowerFirst } from '../backend/chart/scatter-text.ts';
-import { regionLabelEn } from '../backend/answer/respond/english.ts';
+import { englishMeasureLabel, regionLabelEn } from '../backend/answer/respond/english.ts';
+import { ENGLISH_MEASURE_LABELS, ENGLISH_TOPIC_TERMS } from '../backend/answer/respond/english-measure-labels.ts';
+import { hasEnglishName } from '../backend/registry/english-names.ts';
 import type { RegionScope } from '../backend/query/types.ts';
 import { resolveSourceForTable } from '../backend/sources/registry.ts';
 import { translateMeasureTitle, translatePeriodLabel, translateUnit } from './i18n/cbs-words.ts';
@@ -40,8 +45,27 @@ function nounEn(scope: RegionScope, count: number): string {
   return count === 1 ? singular : plural;
 }
 
+function capitalise(text: string): string {
+  return text.length === 0 ? text : text[0]!.toUpperCase() + text.slice(1);
+}
+
+/** lowerFirst for a name joined mid-sentence — except an acronym-led name
+ * ("GDP growth"), whose capitals are part of the word. */
+function midSentence(text: string): string {
+  return /^[A-Z]{2}/.test(text) ? text : lowerFirst(text);
+}
+
+/** The English name of an axis's measure, sentence-start cased — NEVER the
+ * Dutch CBS title (fix round 1: a title with no English entry used to leak
+ * Dutch into English text). In order: CBS's own English title when the name
+ * tables have one; else the hand-written English topic term for the leg's
+ * canonical key; else the codebase's generic English wording
+ * (englishMeasureLabel's 'these figures'). */
 function measureEn(axis: ScatterAxis): string {
-  return translateMeasureTitle(axis.measureTitle);
+  if (hasEnglishName('measure', axis.measureTitle)) return translateMeasureTitle(axis.measureTitle);
+  const topic = axis.canonicalKey === null ? undefined : ENGLISH_TOPIC_TERMS[axis.canonicalKey];
+  if (topic !== undefined) return capitalise(topic);
+  return capitalise(englishMeasureLabel(axis.canonicalKey ?? ''));
 }
 
 /** The English sibling of `sideReason` (scatter-text.ts). */
@@ -61,9 +85,9 @@ function sideReasonEn(side: ScatterSideStatus, axis: ScatterAxis): string | null
 function namedLeftOutEn(item: ScatterLeftOut, spec: ScatterSpec): string {
   const reasons: string[] = [];
   const yReason = sideReasonEn(item.y, spec.y);
-  if (yReason !== null) reasons.push(`${lowerFirst(measureEn(spec.y))}: ${yReason}`);
+  if (yReason !== null) reasons.push(`${midSentence(measureEn(spec.y))}: ${yReason}`);
   const xReason = sideReasonEn(item.x, spec.x);
-  if (xReason !== null) reasons.push(`${lowerFirst(measureEn(spec.x))}: ${xReason}`);
+  if (xReason !== null) reasons.push(`${midSentence(measureEn(spec.x))}: ${xReason}`);
   return `${regionLabelEn(item.label)} (${reasons.join('; ')})`;
 }
 
@@ -71,14 +95,14 @@ function namedLeftOutEn(item: ScatterLeftOut, spec: ScatterSpec): string {
  * scatter.ts) — rebuilt from the spec's own fields, never by parsing the
  * Dutch sentence. */
 export function scatterTitleEn(spec: ScatterSpec): string {
-  return `${measureEn(spec.y)} against ${lowerFirst(measureEn(spec.x))}, ${translatePeriodLabel(spec.y.periodLabel)}`;
+  return `${measureEn(spec.y)} against ${midSentence(measureEn(spec.x))}, ${translatePeriodLabel(spec.y.periodLabel)}`;
 }
 
 /** English of `scatterBodyNl`. */
 export function scatterBodyEn(spec: ScatterSpec): string {
   const noun = nounEn(spec.scope, 1);
   return (
-    `${measureEn(spec.y)} against ${lowerFirst(measureEn(spec.x))} per ${noun}, ${translatePeriodLabel(spec.y.periodLabel)}. ` +
+    `${measureEn(spec.y)} against ${midSentence(measureEn(spec.x))} per ${noun}, ${translatePeriodLabel(spec.y.periodLabel)}. ` +
     `Each dot is one ${noun}. The chart shows how the two figures occur together, ` +
     'not that one causes the other.'
   );
@@ -108,6 +132,25 @@ export function scatterLineEn(spec: ScatterSpec): string {
       : '';
 
   return `Coverage: ${coverage}${notApplicableClause}`;
+}
+
+/** The English definition lines for the card (fix round 1): one per axis
+ * whose leg has a canonical key with a hand-written English label
+ * (ENGLISH_MEASURE_LABELS), vertical (y) first — the English sibling of the
+ * Dutch per-axis definition lines, cased like toEnglishChartSpec's own
+ * 'Definition: …' line. An axis without one gets no line (never guessed).
+ * "vertical"/"horizontal" name the spec's own axes (y/x), i.e. the view as
+ * it opens. */
+export function scatterDefinitionLinesEn(spec: ScatterSpec): string[] {
+  const lines: string[] = [];
+  for (const [axis, where] of [
+    [spec.y, 'vertical axis'],
+    [spec.x, 'horizontal axis'],
+  ] as const) {
+    const label = axis.canonicalKey === null ? undefined : ENGLISH_MEASURE_LABELS[axis.canonicalKey];
+    if (label !== undefined) lines.push(`Definition (${where}): ${capitalise(label)}.`);
+  }
+  return lines;
 }
 
 /** An axis title as the card shows it: the measure title plus its unit (both

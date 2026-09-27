@@ -34,6 +34,8 @@ function axis(overrides: Partial<ScatterAxis> = {}): ScatterAxis {
     defaultScale: 'linear',
     attributionLine:
       'Bron: CBS StatLine, tabel 84639NED — Inkomen van huishoudens. Gegevens gesynchroniseerd op 2026-09-20. Periode: 2024. Licentie: CC BY 4.0.',
+    canonicalKey: null,
+    syncedAt: '2026-09-20T04:00:00.000Z',
     ...overrides,
   };
 }
@@ -77,6 +79,8 @@ function spec(overrides: Partial<ScatterSpec> = {}): ScatterSpec {
       defaultScale: 'log',
       attributionLine:
         'Bron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari en gemiddeld; geslacht, leeftijd en regio. Gegevens gesynchroniseerd op 2026-09-21. Periode: 2024. Licentie: CC BY 4.0.',
+      canonicalKey: 'population_on_1_january',
+      syncedAt: '2026-09-21T04:00:00.000Z',
     }),
     points: POINTS,
     scope: { kind: 'all_provincies' },
@@ -183,21 +187,16 @@ describe('ScatterView — the plot', () => {
     expect(screen.getByRole('button', { name: 'Log. schaal horizontaal' })).toBeInTheDocument();
   });
 
-  it('labels each axis only at its plotted extremes, with the extreme point\'s own string bound to its cell', () => {
+  it('labels each axis with real plotted values only, extremes included, each bound to its own cell', () => {
     const { container } = renderNl();
-    const ticks = Array.from(container.querySelectorAll('[data-role="axis-tick"]')).map((n) => [
-      n.textContent,
-      n.getAttribute('data-label-for'),
-    ]);
-    expect(ticks).toEqual(
-      expect.arrayContaining([
-        ['36,9', 'Y:PV21'],
-        ['47,5', 'Y:PV27'],
-        ['1.500', 'X:PV24'],
-        ['2.952.622', 'X:PV27'],
-      ]),
-    );
-    expect(ticks).toHaveLength(4);
+    const ticks = Array.from(container.querySelectorAll('[data-role="axis-tick"]'));
+    const byId = new Map(POINTS.flatMap((p) => [[p.yResultId, p.yFormatted], [p.xResultId, p.xFormatted]] as const));
+    for (const tick of ticks) {
+      // The tick's text is exactly the formatted string of the cell it is bound to.
+      expect(byId.get(tick.getAttribute('data-label-for') ?? '')).toBe(tick.textContent);
+    }
+    const labels = ticks.map((n) => n.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['36,9', '47,5', '1.500', '2.952.622']));
   });
 
   it('shows a visible text label on every labelled point, * on a provisional one', () => {
@@ -223,6 +222,82 @@ describe('ScatterView — the plot', () => {
       if (paint === null || paint === 'none' || paint.startsWith('var(--') || paint.startsWith('url(')) continue;
       expect(DEFAULT_PALETTE, `unexpected paint ${paint}`).toContain(paint);
     }
+  });
+});
+
+describe('ScatterView — axis ticks (fix round 1: up to five real plotted values)', () => {
+  // Twelve provinces with a skewed population (x) and an even income (y).
+  const TWELVE: ScatterPoint[] = [
+    pt('P01', 'Groningen (PV)', 38.2, '38,2', 596075, '596.075'),
+    pt('P02', 'Fryslân', 36.9, '36,9', 659551, '659.551'),
+    pt('P03', 'Drenthe', 37.8, '37,8', 502051, '502.051'),
+    pt('P04', 'Overijssel', 39.4, '39,4', 1184333, '1.184.333'),
+    pt('P05', 'Flevoland', 40.1, '40,1', 445731, '445.731'),
+    pt('P06', 'Gelderland', 41.0, '41,0', 2133708, '2.133.708'),
+    pt('P07', 'Utrecht (PV)', 45.2, '45,2', 1387643, '1.387.643'),
+    pt('P08', 'Noord-Holland', 47.5, '47,5', 2952622, '2.952.622'),
+    pt('P09', 'Zuid-Holland', 42.1, '42,1', 3804906, '3.804.906'),
+    pt('P10', 'Zeeland', 39.1, '39,1', 391124, '391.124'),
+    pt('P11', 'Noord-Brabant', 44.0, '44,0', 2626210, '2.626.210'),
+    pt('P12', 'Limburg (PV)', 38.0, '38,0', 1128367, '1.128.367'),
+  ];
+  const twelve = () => spec({ points: TWELVE, labelled: [], x: { ...spec().x, defaultScale: 'linear' } });
+  const formatted = new Set(TWELVE.flatMap((p) => [p.yFormatted, p.xFormatted]));
+
+  function ticksOf(container: HTMLElement, which: 'vertical' | 'horizontal'): string[] {
+    return Array.from(container.querySelectorAll(`[data-role="axis-tick"][data-axis="${which}"]`)).map((n) => n.textContent ?? '');
+  }
+
+  it('draws five distinct ticks per axis, each some point\'s own formatted string', () => {
+    const { container } = render(<ScatterView spec={twelve()} />);
+    for (const which of ['vertical', 'horizontal'] as const) {
+      const ticks = ticksOf(container, which);
+      expect(ticks).toHaveLength(5);
+      expect(new Set(ticks).size).toBe(5);
+      for (const tick of ticks) expect(formatted.has(tick), `${which} tick ${tick}`).toBe(true);
+    }
+    // Min and max always included.
+    expect(ticksOf(container, 'horizontal')).toEqual(expect.arrayContaining(['391.124', '3.804.906']));
+    expect(ticksOf(container, 'vertical')).toEqual(expect.arrayContaining(['36,9', '47,5']));
+  });
+
+  it('draws a light gridline per tick (the grid follows the ticks), in the shared grid token', () => {
+    const { container } = render(<ScatterView spec={twelve()} />);
+    // Recharts also draws the plot box's two edges in each direction; the
+    // rest are one line per tick.
+    const inner = (sel: string, coord: 'y1' | 'x1', lo: 'y' | 'x', size: 'height' | 'width') =>
+      Array.from(container.querySelectorAll(sel)).filter((l) => {
+        const at = Number(l.getAttribute(coord));
+        const start = Number(l.getAttribute(lo));
+        return at !== start && at !== start + Number(l.getAttribute(size));
+      });
+    const horizontal = inner('.recharts-cartesian-grid-horizontal line', 'y1', 'y', 'height');
+    const vertical = inner('.recharts-cartesian-grid-vertical line', 'x1', 'x', 'width');
+    expect(horizontal).toHaveLength(5);
+    expect(vertical).toHaveLength(5);
+    for (const line of [...horizontal, ...vertical]) expect(line.getAttribute('stroke')).toBe('var(--border)');
+  });
+
+  it('recomputes the ticks in log positions when an axis switches to log', () => {
+    const { container } = render(<ScatterView spec={twelve()} />);
+    const linear = ticksOf(container, 'horizontal');
+    fireEvent.click(screen.getByRole('button', { name: 'Log. schaal horizontaal' }));
+    const log = ticksOf(container, 'horizontal');
+    expect(log).not.toEqual(linear);
+    expect(log.length).toBeGreaterThanOrEqual(3);
+    for (const tick of log) expect(formatted.has(tick)).toBe(true);
+    expect(log).toEqual(expect.arrayContaining(['391.124', '3.804.906']));
+  });
+
+  it('keeps each tick on its own measure after a swap', () => {
+    const { container } = render(<ScatterView spec={twelve()} />);
+    const yTicks = ticksOf(container, 'vertical');
+    const xTicks = ticksOf(container, 'horizontal');
+    fireEvent.click(screen.getByRole('button', { name: 'Assen omwisselen' }));
+    expect(ticksOf(container, 'horizontal')).toEqual(yTicks);
+    expect(ticksOf(container, 'vertical')).toEqual(xTicks);
+    const vert = container.querySelector('[data-role="axis-tick"][data-axis="vertical"]');
+    expect(vert?.getAttribute('data-label-for')).toMatch(/^X:/);
   });
 });
 
@@ -322,7 +397,9 @@ describe('ScatterView — swap axes', () => {
     const vertTicks = Array.from(container.querySelectorAll('[data-role="axis-tick"][data-axis="vertical"]')).map(
       (n) => n.getAttribute('data-label-for'),
     );
-    expect(vertTicks.sort()).toEqual(['X:PV24', 'X:PV27']);
+    expect(vertTicks.length).toBeGreaterThanOrEqual(2);
+    expect(vertTicks.every((id) => id?.startsWith('X:'))).toBe(true);
+    expect(vertTicks).toEqual(expect.arrayContaining(['X:PV24', 'X:PV27']));
     // Flevoland had the smallest population (leftmost); on the income axis it
     // sits mid-field, so it moved right.
     expect(Number(dot(container, 'PV24').getAttribute('cx'))).toBeGreaterThan(cxBefore);
@@ -403,6 +480,15 @@ describe('ScatterView — the card around the plot (Dutch)', () => {
     unmount();
     renderNl({ embed: { auditId: 42 } });
     expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+  });
+
+  it('shows one source badge per table, each with that table\'s own sync date', () => {
+    renderNl();
+    const badges = screen.getAllByRole('link').filter((a) => /84639NED|03759ned/.test(a.textContent ?? ''));
+    expect(badges.map((b) => b.textContent)).toEqual([
+      expect.stringContaining('84639NED · gesynchroniseerd 2026-09-20'),
+      expect.stringContaining('03759ned · gesynchroniseerd 2026-09-21'),
+    ]);
   });
 
   it('shows the same attribution line once when both axes share it', () => {

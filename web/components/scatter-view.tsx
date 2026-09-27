@@ -10,9 +10,9 @@
 // the raw `x`/`y` are geometry only (where a dot sits, which dots are the
 // axis extremes). Every displayed value is bound to its source cell via
 // `data-label-for="<resultId>"`. Axis ticks follow chart.tsx's own rule (see
-// `valueLabelPlan`/`AxisTick`): a tick only at each axis's plotted minimum and
-// maximum, labelled with that point's own string — no invented tick values,
-// on a linear or a log axis alike. On an English card the strings go through
+// `valueLabelPlan`/`AxisTick`) generalised: up to five ticks per axis, each a
+// REAL plotted value labelled with that point's own string (`scatterTicks`) —
+// no invented tick values, on a linear or a log axis alike. On an English card the strings go through
 // the same notation swap an English line chart uses (`toEnglishNumberToken`,
 // the one step `toEnglishChartSpec` applies to `formattedValue`) — the digits
 // themselves never change.
@@ -164,22 +164,68 @@ interface ShownAxis {
   domain: [number, number];
 }
 
-function extremeTicks(points: ScatterPoint[], side: AxisSide, lang: Lang): AxisTickLabel[] {
+/** At most this many ticks per axis (fix round 1: min/max alone left the
+ * spread unreadable). */
+export const SCATTER_MAX_TICKS = 5;
+
+/** The axis ticks: up to SCATTER_MAX_TICKS REAL plotted values — never an
+ * invented round number, so every digit on the chart stays a point's own
+ * formatted string bound to its cell (chart.tsx's convention, generalised
+ * from min/max). The plotted values nearest to evenly spaced positions
+ * between the minimum and the maximum, measured IN THE AXIS'S CURRENT SCALE
+ * (log positions on a log axis), de-duplicated, ascending; min and max are
+ * always among them. Ties go to the first point in spec order —
+ * deterministic. Then a label-collision pass over the approximate axis
+ * length (`lengthPx`): a middle tick whose label would touch a kept
+ * neighbour is dropped (min and max always stay), so a clustered pick or a
+ * phone-width axis never prints overlapping numbers. */
+export function scatterTicks(
+  points: ScatterPoint[],
+  side: AxisSide,
+  log: boolean,
+  lang: Lang,
+  orientation: 'vertical' | 'horizontal',
+  lengthPx: number,
+): AxisTickLabel[] {
   if (points.length === 0) return [];
-  // First occurrence wins on ties, in the spec's own order — deterministic,
-  // the same rule as valueLabelPlan (chart-models.ts).
-  let lo = points[0]!;
-  let hi = points[0]!;
-  for (const p of points) {
-    if (p[side] < lo[side]) lo = p;
-    if (p[side] > hi[side]) hi = p;
+  const tf = (v: number): number => (log ? Math.log10(v) : v);
+  const tvals = points.map((p) => tf(p[side]));
+  const lo = Math.min(...tvals);
+  const hi = Math.max(...tvals);
+  const picked: ScatterPoint[] = [];
+  const steps = lo === hi ? 1 : SCATTER_MAX_TICKS;
+  for (let i = 0; i < steps; i++) {
+    const target = steps === 1 ? lo : lo + ((hi - lo) * i) / (steps - 1);
+    let best = 0;
+    for (let j = 1; j < points.length; j++) {
+      if (Math.abs(tvals[j]! - target) < Math.abs(tvals[best]! - target)) best = j;
+    }
+    const p = points[best]!;
+    if (!picked.some((q) => q[side] === p[side])) picked.push(p);
   }
+  picked.sort((a, b) => a[side] - b[side]);
   const tick = (p: ScatterPoint): AxisTickLabel => ({
     value: p[side],
     display: displayNumber(side === 'y' ? p.yFormatted : p.xFormatted, lang),
     resultId: side === 'y' ? p.yResultId : p.xResultId,
   });
-  return lo[side] === hi[side] ? [tick(lo)] : [tick(lo), tick(hi)];
+  const ticks = picked.map(tick);
+  if (ticks.length <= 2 || hi === lo) return ticks;
+  // Collision pass, in pixels along the axis.
+  const pos = (tk: AxisTickLabel): number => ((tf(tk.value) - lo) / (hi - lo)) * lengthPx;
+  const extent = (tk: AxisTickLabel): number =>
+    orientation === 'horizontal' ? tk.display.length * LABEL_CHAR_PX + 8 : LABEL_HEIGHT_PX + 4;
+  const first = ticks[0]!;
+  const last = ticks[ticks.length - 1]!;
+  const kept: AxisTickLabel[] = [first];
+  for (const tk of ticks.slice(1, -1)) {
+    const prev = kept[kept.length - 1]!;
+    const clearsPrev = pos(tk) - pos(prev) >= (extent(tk) + extent(prev)) / 2;
+    const clearsLast = pos(last) - pos(tk) >= (extent(tk) + extent(last)) / 2;
+    if (clearsPrev && clearsLast) kept.push(tk);
+  }
+  kept.push(last);
+  return kept;
 }
 
 /** chart-parts.tsx's `AxisTick` contract (a tick shows only a point's own
@@ -478,25 +524,33 @@ export function ScatterView({
   const provisionalNote = provisionalNoteFor(spec, lang);
   const attributionLines = attributionLinesFor(spec, lang);
   const tableIds = [...new Set([spec.y.tableId, spec.x.tableId])];
+  // One badge per distinct table, with that table's own measured sync date
+  // (like the one-measure chart's badge).
+  const badges = tableIds.map((id) => ({ id, syncedAt: (spec.y.tableId === id ? spec.y : spec.x).syncedAt }));
 
   const values: Record<AxisSide, number[]> = { y: spec.points.map((p) => p.y), x: spec.points.map((p) => p.x) };
   const capable: Record<AxisSide, boolean> = { y: logCapable(spec.y, values.y), x: logCapable(spec.x, values.x) };
-  const shownAxis = (side: AxisSide): ShownAxis => {
+  const width = measuredWidth > 0 ? measuredWidth : 640;
+  const height = scatterHeightForWidth(measuredWidth);
+  const shownAxis = (side: AxisSide, orientation: 'vertical' | 'horizontal'): ShownAxis => {
     const axis = spec[side];
     // A log scale needs every value > 0; never draw one otherwise.
     const log = scales[side] === 'log' && values[side].length > 0 && values[side].every((v) => v > 0);
+    // Approximate plotted length (the card minus the y-axis and margins) —
+    // only the tick-label collision pass reads it, never a drawn number.
+    const lengthPx = orientation === 'horizontal' ? Math.max(120, width - 96 - 28) : Math.max(120, height - 96);
     return {
       side,
       axis,
       values: values[side],
       log,
       title: scatterAxisTitle(axis, lang, log),
-      ticks: extremeTicks(spec.points, side, lang),
+      ticks: scatterTicks(spec.points, side, log, lang, orientation, lengthPx),
       domain: values[side].length > 0 ? domainFor(values[side], log) : [0, 1],
     };
   };
-  const vertical = shownAxis(swapped ? 'x' : 'y');
-  const horizontal = shownAxis(swapped ? 'y' : 'x');
+  const vertical = shownAxis(swapped ? 'x' : 'y', 'vertical');
+  const horizontal = shownAxis(swapped ? 'y' : 'x', 'horizontal');
 
   const rows: ScatterRow[] = spec.points
     .map((p) => ({
@@ -515,7 +569,6 @@ export function ScatterView({
     (r) => labelledCodes.has(r.code) || (r.highlighted && matches.length <= SCATTER_SEARCH_LIST_MAX),
   );
 
-  const width = measuredWidth > 0 ? measuredWidth : 640;
   const titleChars = Math.max(16, Math.floor((width - 8) / AXIS_TITLE_CHAR_PX));
   const verticalTitleLines = wrapWords(vertical.title, titleChars);
   const horizontalTitleLines = wrapWords(horizontal.title, titleChars);
@@ -523,7 +576,6 @@ export function ScatterView({
     96,
     Math.max(24, labelWidthPx(vertical.ticks.reduce((w, tk) => (tk.display.length > w.length ? tk.display : w), ''))),
   );
-  const height = scatterHeightForWidth(measuredWidth);
   const tooltipTrigger = coarsePointer ? 'click' : 'hover';
   const panelId = `${domId}-panel`;
   const frameClass = frameless ? '' : 'mt-3 rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-6';
@@ -577,6 +629,8 @@ export function ScatterView({
             left: 4,
           }}
         >
+          {/* Light gridlines exactly at the ticks (the grid follows the axis
+            * ticks) — the shared grid token every chart uses. */}
           <CartesianGrid {...GRID_LINE_PROPS} />
           <XAxis
             type="number"
@@ -787,8 +841,8 @@ export function ScatterView({
           </p>
         ))}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {tableIds.map((id) => (
-            <SourceBadge key={id} tableId={id} />
+          {badges.map((b) => (
+            <SourceBadge key={b.id} tableId={b.id} syncedAt={b.syncedAt} />
           ))}
           {!embedMode && view === 'chart' ? (
             <div className="flex shrink-0 items-center gap-2" data-slot="chart-footer-actions">

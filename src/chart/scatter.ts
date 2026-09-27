@@ -33,6 +33,15 @@ export interface ScatterAxis {
   defaultScale: AxisScale;
   /** The exact R4 attribution sentence of this axis's table. */
   attributionLine: string;
+  /** The leg's canonical measure key (`result.intent.target.key` for a
+   * canonical target), else null — lets an English renderer name the
+   * measure from the hand-written English labels
+   * (src/answer/respond/english-measure-labels.ts) instead of leaving a
+   * Dutch CBS title in English text (#296 part 2 Task 6 fix round 1). */
+  canonicalKey: string | null;
+  /** The leg's `result.attribution.syncedAt` (our measured last sync) — the
+   * source badge's date, same as a one-measure chart's. */
+  syncedAt: string;
 }
 
 /** One axis's state for a left-out region (#296 part 2): mirrors
@@ -109,6 +118,8 @@ const axisSchema = z.strictObject({
   tableId: z.string(),
   defaultScale: z.enum(['linear', 'log']),
   attributionLine: z.string(),
+  canonicalKey: z.string().nullable(),
+  syncedAt: z.string(),
 });
 
 /** #253's four RegionScope variants (`src/query/types.ts`), mirrored here so
@@ -191,6 +202,10 @@ function axisOf(result: ValidatedResult, cells: ResultCell[]): ScatterAxis {
     tableId: result.attribution.tableId,
     defaultScale: defaultScale(cells.map((c) => c.value as number)),
     attributionLine: buildAttributionLine(result),
+    // Optional chaining on purpose: a hand-built test leg may carry no
+    // intent target at all; a real leg always does (runQuery's own intent).
+    canonicalKey: result.intent?.target?.kind === 'canonical' ? result.intent.target.key : null,
+    syncedAt: result.attribution.syncedAt,
   };
 }
 

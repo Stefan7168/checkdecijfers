@@ -15,6 +15,8 @@ function axis(measureTitle: string, tableId: string, periodLabel = '2024'): Scat
     tableId,
     defaultScale: 'linear',
     attributionLine: `Bron: CBS StatLine, tabel ${tableId}.`,
+    canonicalKey: null,
+    syncedAt: '2026-09-01T00:00:00.000Z',
   };
 }
 
