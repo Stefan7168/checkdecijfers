@@ -1,6 +1,6 @@
 # English chart texts — a display layer for English readers (ADR 058 phase 3, #332)
 
-**Status:** owner GO 2026-09-27 (session 135) on: "show the chart's title, legend, axis dates, source line and notes in
+**Status:** BUILT session 135 (see ADR 058 "Phase 3 as built"). Owner GO 2026-09-27 (session 135) on: "show the chart's title, legend, axis dates, source line and notes in
 English on the English interface, from the English names we already have; no AI call; the stored chart stays Dutch;
 the AI-worded insights and journalist headline stay Dutch for now."
 

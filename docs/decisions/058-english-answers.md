@@ -6,7 +6,7 @@ Phase 1 (regular answers) specified; **built** (sessions 131-132) and merged to 
 [#325](../open-questions.md) was measured) — **LIVE**. Build rulings added two checks (C7 number order, C8 sentence binding) and a fourth
 placeholder kind for digit-bearing official names (⟦G…⟧) — see the spec's §3.4 on the branch and the SDD ledger copy in
 [session-briefs/2026-09-26-session-132-kickoff.md](../session-briefs/2026-09-26-session-132-kickoff.md). **Phase 2 (refusals/clarifications) built session 135 (2026-09-27) — see "Phase 2 as built" at the end**
-([spec](../superpowers/specs/2026-09-27-english-non-answers-design.md), [#332](../open-questions.md)). Phase 3 (chart texts) gets its own spec.
+([spec](../superpowers/specs/2026-09-27-english-non-answers-design.md), [#332](../open-questions.md)). **Phase 3 (chart texts) built the same session — see "Phase 3 as built".**
 
 ## Context
 
@@ -283,3 +283,17 @@ period, region) exist only inside the Dutch sentence.
   argument as `offer`/`guidance` (deterministic, value-free template text).
 - **Web:** `chat.tsx` shows `english.text` and English chips whenever a refusal/clarification message carries them
   (including meta/smalltalk/onboarding replies); the onboarding offer turn overrides the English text alongside the Dutch.
+
+## Phase 3 as built — chart texts (session 135, 2026-09-27, owner GO)
+
+A DISPLAY layer, not a stored field ([spec](../superpowers/specs/2026-09-27-english-chart-texts-design.md)): the stored
+`ChartSpec` stays Dutch (audit, embeds, Dutch site); `toEnglishChartSpec` (`src/chart/english.ts`, pure, deterministic,
+safe to call twice) makes an English display copy — title, unit, dimension labels, legend/region names (with English
+province/municipality suffixes), period labels, number notation of `formattedValue` (the same number, never recomputed),
+provisional note, "no value for …" notes, definition line, source line, table title and the automatic trend headline.
+`web/lib/chart-models.ts`'s `translateSpecForDisplay` (WP218 phase 4's partial, title/legend/period-only translator)
+now delegates to it, and `chart.tsx` renders the notes from the translated copy too. Every chart edit/hidden series/colour
+keys on the series index or period code, never on a label, so saved edits hold across a language switch (tested).
+Honest limits: the AI-worded Insights and journalist headline, and hand-curated chart annotations, stay Dutch; embeds follow
+the chart's own language setting, as before. Rejected alternative: storing an English spec per chart — doubles the stored
+artefact for text that is a pure function of the Dutch one.
