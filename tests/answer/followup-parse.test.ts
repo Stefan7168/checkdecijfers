@@ -63,7 +63,7 @@ describe('buildFollowUpRequest: hash-stability of the 54 intent + 7 clarify fixt
     expect(buildFollowUpSystemPrompt()).toBe(buildSystemPrompt() + FOLLOWUP_MODE_SECTION);
   });
 
-  it('the follow-up user payload serializes exactly {previous_intent:{topicKey,regions,period,derivation}, question}', () => {
+  it('the follow-up user payload serializes exactly {previous_intent:{topicKey,regions,regionScope,period,derivation}, question}', () => {
     const context: ConversationContext = {
       version: 1,
       topicKey: 'population_on_1_january',
@@ -74,11 +74,12 @@ describe('buildFollowUpRequest: hash-stability of the 54 intent + 7 clarify fixt
     const payload = JSON.parse(buildFollowUpUserPayload(context, 'En in Rotterdam?')) as Record<string, unknown>;
     expect(Object.keys(payload).sort()).toEqual(['previous_intent', 'question']);
     const previousIntent = payload.previous_intent as Record<string, unknown>;
-    expect(Object.keys(previousIntent).sort()).toEqual(['derivation', 'period', 'regions', 'topicKey']);
+    expect(Object.keys(previousIntent).sort()).toEqual(['derivation', 'period', 'regionScope', 'regions', 'topicKey']);
     expect(payload.question).toBe('En in Rotterdam?');
     expect(previousIntent).toEqual({
       topicKey: context.topicKey,
       regions: context.regions,
+      regionScope: null,
       period: context.period,
       derivation: context.derivation,
     });
@@ -151,6 +152,7 @@ describe('buildFollowUpRequest: hash-stability of the 54 intent + 7 clarify fixt
     expect(payload.previous_intent).toEqual({
       topicKey: context.topicKey,
       regions: context.regions,
+      regionScope: null,
       period: context.period,
       derivation: context.derivation,
     });

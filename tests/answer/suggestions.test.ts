@@ -714,7 +714,7 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     return {
       kind: 'intent',
       question: 'stub',
-      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      raw: { version: 4, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
       model: 'stub',
       usage: { inputTokens: 0, outputTokens: 0 },
       intent: {
@@ -733,7 +733,7 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     return {
       kind: 'intent',
       question: 'stub',
-      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      raw: { version: 4, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
       model: 'stub',
       usage: { inputTokens: 0, outputTokens: 0 },
       intent: {
@@ -769,7 +769,7 @@ describe('the refusal envelope: the retry chip rides alongside, text is byte-unt
     const stub: Extract<ParseOutcome, { kind: 'intent' }> = {
       kind: 'intent',
       question: 'stub',
-      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      raw: { version: 4, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
       model: 'stub',
       usage: { inputTokens: 0, outputTokens: 0 },
       intent: houseIntent(['GM0363']),

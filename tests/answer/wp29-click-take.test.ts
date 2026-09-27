@@ -100,9 +100,10 @@ class ThrowingClient implements LlmClient {
 
 function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
-    candidates: candidates as never,
+    // Raw-parse v4 (#267): every candidate carries regionScope; null unless a test sets one.
+    candidates: candidates.map((c) => ({ regionScope: null, ...c })) as never,
     unmatchedMeasureTerm: null,
     nearestCanonicalKeys: [],
     note: null,
@@ -112,6 +113,7 @@ function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
 const AMSTERDAM_2024 = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -121,6 +123,7 @@ const AMSTERDAM_2024 = rawDataQuery({
 const ROTTERDAM_2024 = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: [{ name: 'Rotterdam', kind: 'gemeente' }],
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -131,6 +134,7 @@ const ROTTERDAM_2024 = rawDataQuery({
 const REGIONLESS_2024 = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: null,
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -717,7 +721,7 @@ describe('(h) zero takeable survivors on the real path: label-only suggestions, 
     return {
       kind: 'intent',
       question: 'stub',
-      raw: { version: 3, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
+      raw: { version: 4, kind: 'data_query', candidates: [], unmatchedMeasureTerm: null, nearestCanonicalKeys: [], note: null },
       model: 'stub',
       usage: { inputTokens: 0, outputTokens: 0 },
       intent,
@@ -750,6 +754,7 @@ describe('(h) zero takeable survivors on the real path: label-only suggestions, 
             { name: 'Utrecht', kind: 'provincie' },
             { name: 'Nederland', kind: 'land' },
           ],
+          regionScope: null,
           period: { kind: 'year', year: 2024 },
           derivation: 'none',
           confidence: 0.95,

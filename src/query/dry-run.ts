@@ -37,6 +37,11 @@ export type EchoServability =
        * fallback question must cover them all at once (docs/05). */
       axes: ('measure' | 'region' | 'period' | 'derivation')[] | null;
       availability: EchoAvailability;
+      /** #267: the query refusal's structural sub-reason, when it has one — an
+       * honest SCOPE limit ("this measure has no regional breakdown", "several
+       * regions AND several periods"), not a missing period or axis. Present-
+       * only: absent on every other verdict. */
+      subReason?: 'region_scope_on_national_measure' | 'multi_region_multi_period';
     };
 
 /** Gap-free loaded year window for a canonical measure at its pinned
@@ -116,5 +121,6 @@ export async function echoServability(
     kind: outcome.refusal.kind,
     axes: outcome.refusal.axes ?? (outcome.refusal.axis ? [outcome.refusal.axis] : null),
     availability,
+    ...(outcome.refusal.subReason !== undefined ? { subReason: outcome.refusal.subReason } : {}),
   };
 }

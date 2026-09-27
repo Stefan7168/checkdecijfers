@@ -1210,7 +1210,13 @@ to $50): C12 on Sonnet 5, four fixes, 13/14 verified first attempt (`156292fa`) 
 
 ## Regional statistics → region questions (owner pick 2026-09-26, session 134; NEXT, not yet designed)
 
-Only 2 of 26 measures are regional, so ADR 054's region-set query (built, unreachable until [#267](open-questions.md)) has
+**Update session 135 (2026-09-27): the parser step [#267](open-questions.md) is ✅ DONE** — region-class questions ("per
+provincie", "welke gemeente in Utrecht …") now reach ADR 054's region-set query (see ADR 054 "As-built: Task 9"). The
+regional-statistics set itself is still undesigned: CBS had a public outage all session ([#329](open-questions.md)), and the
+owner asked not to design around it on paper. Adding a regional table later still re-records the intent fixtures (vocabulary
+change, #164) — cheap Haiku.
+
+Only 2 of 26 measures are regional, so ADR 054's region-set query has
 almost nothing to answer. Next step: brainstorm → spec for a regional-statistics set from ONE CBS table (candidate
 `70072ned`, re-checked live — phase 0 rejected it for schema-fingerprint churn), zero AI spend; then bundle the parser step
 (#267) into one owner-supervised recording session. Blocked first on [#329](open-questions.md) (CBS data APIs unreachable

@@ -33,6 +33,8 @@ const conversationContextSchema = z.strictObject({
   version: z.literal(1),
   topicKey: z.enum(CANONICAL_KEYS),
   regions: z.array(contextRegionSchema).min(1).max(8).nullable(),
+  // #267: present-only (docs/13) — absent on every context without a class.
+  regionScope: z.enum(['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie']).optional(),
   period: contextPeriodSchema.nullable(),
   derivation: z.enum(['none', 'difference', 'max', 'series']),
 });
@@ -98,6 +100,16 @@ export async function validateConversationContext(
   const context = parsed.data;
   if (context.period?.kind === 'year_range' && context.period.fromYear > context.period.toYear) {
     return null;
+  }
+  // #267: the class and its regions must have the shape the builder emits —
+  // exactly one provincie for gemeenten_in_provincie, none for every other
+  // class. Anything else can only be a forged object: fail closed.
+  if (context.regionScope !== undefined) {
+    const shapeOk =
+      context.regionScope === 'gemeenten_in_provincie'
+        ? context.regions !== null && context.regions.length === 1 && context.regions[0]!.kind === 'provincie'
+        : context.regions === null;
+    if (!shapeOk) return null;
   }
   try {
     if (context.regions !== null) {

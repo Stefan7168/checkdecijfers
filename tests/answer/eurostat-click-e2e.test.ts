@@ -77,6 +77,7 @@ afterEach(() => {
 const candidate: RawCandidate = {
   canonicalKey: UNEMPLOYMENT_KEY,
   regions: [{ name: 'Duitsland', kind: 'onbekend' }],
+  regionScope: null,
   period: { kind: 'year', year: 2021 },
   derivation: 'none',
   confidence: 0.95,
@@ -85,7 +86,7 @@ const candidate: RawCandidate = {
 
 function context(): OutcomeContext {
   const raw: RawParse = {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [candidate],
     unmatchedMeasureTerm: null,

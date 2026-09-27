@@ -429,3 +429,33 @@ row-13/row-15 offer chip described above are **still live and still used**, but 
 cross-product over 500 cells. The refusal's wording was updated accordingly (ADR 055's own doc); this
 ADR's text above is left as the historical record of the bug this addendum fixed, not a current
 description of what refuses today.
+
+
+## As-built: Task 9 — the parser step (session 135, 2026-09-27, owner present) — REACHABLE
+
+Region-class questions now reach this code from real user questions. What shipped:
+
+- **Raw parse v4:** every candidate carries a nullable `regionScope` (`all_provincies` / `all_landsdelen` /
+  `all_gemeenten` / `gemeenten_in_provincie`; `null` = no class — no `'none'` member, one way to say it).
+  `PROMPT_VERSION` 6→7 adds ONE Regions rule, scoped to class phrasings, including "with your normal
+  confidence" for a class on an "alleen landelijk" measure. **No worked example** — a first draft had one and it
+  measurably bled into two unrelated cases (the WP16 bijstand delivery re-run stopped answering 3/3; follow-up
+  `f-merge-topic-switch-national` stopped clarifying 3/3); removing it restored both. See the v7 comment in
+  `src/answer/intent/prompt.ts`.
+- **Mapping (`src/answer/intent/resolve.ts`, `resolveRegionScope`):** places the user NAMED win over a class;
+  "Nederland" is not a named place; `gemeenten_in_provincie` resolves its one place AS a provincie ("gemeenten in
+  Utrecht" → PV26, never gemeente-vs-provincie ambiguous), "gemeenten in Nederland" → all_gemeenten, zero or
+  several places → a region clarification; on a national-only table the class passes through (the provincie form
+  as all_gemeenten) so the query layer's `region_scope_on_national_measure` refusal is the one honest source. A
+  class skips the `max_needs_regions` guard (the class IS the comparison set).
+- **Follow-ups keep the class:** `ConversationContext.regionScope` (present-only; for the provincie form the
+  parent travels as the one region term), carried in the follow-up and clarify `previous_intent` payloads and
+  validated fail-closed (a forged class/regions combination drops the whole context).
+- **Policy:** the region axis compares `regions` AND `regionSet`; and rule 3 (a doubted reading) no longer turns
+  an honest structural scope refusal (`region_scope_on_national_measure`, `multi_region_multi_period` — now on
+  `EchoServability.subReason`) into a misleading "Die precieze periode kan ik niet leveren" period ask: the reading
+  passes on and the query layer's own refusal words the real limit. Found by the new labelled case
+  `rs-werkloosheid-per-provincie` (the model's confidence there is 0.75).
+- **Measured (live Haiku, owner-supervised):** intent 78/78 after one relabel (`os-v02`, see its note), all six
+  new `region_set` cases ×3 stable; follow-up 23/23; clarify 7/7; delivery re-run delivered; ADR 012 thresholds
+  unchanged. Hermetic benchmark 14/14 + 6/6 + 0 fabricated, template fallbacks 3.

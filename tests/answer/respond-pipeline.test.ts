@@ -616,12 +616,13 @@ describe('open-range questions ("sinds 2015") clarify at the envelope level', ()
       // Observed live under raw-parse v2 (WP14); version field tracks the
       // current contract literal — the degenerate year_range shape under test
       // is unchanged by the v3 bump (#77 / ADR 023).
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [
         {
           canonicalKey: 'unemployment_rate_seasonally_adjusted',
           regions: [{ name: 'Nederland', kind: 'land' }],
+          regionScope: null,
           period: { kind: 'year_range', fromYear: 2015, toYear: 2015 },
           derivation: 'series',
           confidence: 0.92,

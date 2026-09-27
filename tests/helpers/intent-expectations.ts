@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { stableStringify } from '../../src/answer/intent/index.ts';
 import type { ClarifyAxis, ParseOutcome } from '../../src/answer/intent/index.ts';
-import type { StructuredIntent } from '../../src/query/index.ts';
+import type { RegionScope, StructuredIntent } from '../../src/query/index.ts';
 import {
   ANSWERABLE_TASKS,
   REFUSAL_TASK_QUESTIONS,
@@ -16,6 +16,9 @@ export interface IntentChecks {
   canonicalKey?: string;
   grain?: 'JJ' | 'KW' | 'MM';
   regions?: string[];
+  /** #267: the region class, or null for "no class" (a guard against the
+   * class rule leaking into questions that name their places). */
+  regionSet?: RegionScope | null;
   derivation?: string;
   impliedRecency?: boolean;
 }
@@ -174,6 +177,12 @@ export function checkExpectation(outcome: ParseOutcome, expect: Expectation): st
         stableStringify(outcome.intent.regions ?? []) !== stableStringify(checks.regions)
       ) {
         problems.push(`expected regions ${checks.regions.join(',')}, got ${(outcome.intent.regions ?? []).join(',')}`);
+      }
+      if (
+        checks.regionSet !== undefined &&
+        stableStringify(outcome.intent.regionSet ?? null) !== stableStringify(checks.regionSet)
+      ) {
+        problems.push(`expected regionSet ${stableStringify(checks.regionSet)}, got ${stableStringify(outcome.intent.regionSet ?? null)}`);
       }
       if (checks.derivation !== undefined && outcome.intent.derivation !== checks.derivation) {
         problems.push(`expected derivation ${checks.derivation}, got ${outcome.intent.derivation}`);

@@ -20,8 +20,12 @@ import type { StructuredIntent } from '../../query/index.ts';
  * v3 (2026-07-05, #77 fix): 'date_range' added — explicit day/month/year
  * boundaries ("van 1 januari 2022 tot en met 31 december 2022"), copied
  * verbatim by the model; deterministic code normalizes them to whole months
- * and picks the grain (ADR 023). StructuredIntent again unchanged. */
-export const RAW_PARSE_VERSION = 3 as const;
+ * and picks the grain (ADR 023). StructuredIntent again unchanged.
+ * v4 (2026-09-27, #267 = ADR 054 task 9): 'regionScope' added to every
+ * candidate — the model CLASSIFIES a region-class phrasing ("per provincie",
+ * "alle gemeenten", "welke gemeente in Utrecht"); resolve.ts maps it onto the
+ * additive StructuredIntent.regionSet. The model never enumerates codes. */
+export const RAW_PARSE_VERSION = 4 as const;
 
 /** Question classification. Everything except data_query exits the pipeline
  * before any intent is built (docs/05 failure table; phrased by WP9). */
@@ -99,11 +103,21 @@ export type PeriodSpec =
 
 export type DerivationHint = 'none' | 'difference' | 'max' | 'series';
 
+/** A region CLASS as the model classifies it (ADR 054 task 9). A NAME only —
+ * the roster behind it is read from CBS's own dimension groups by the query
+ * layer. For 'gemeenten_in_provincie' the province travels as the candidate's
+ * one region term (a plain name, resolved deterministically as a provincie). */
+export type RegionScopeKind = 'all_provincies' | 'all_landsdelen' | 'all_gemeenten' | 'gemeenten_in_provincie';
+
 export interface RawCandidate {
   /** A canonical_measures key — the registry vocabulary (ADR 010). */
   canonicalKey: string;
   /** null when the question names no place at all. */
   regions: RegionTerm[] | null;
+  /** v4: the region class the question asks about, or null for none. Always
+   * present in a model output (the schema requires it); optional here only so
+   * hand-authored candidates that predate v4 stay valid — absent ≡ null. */
+  regionScope?: RegionScopeKind | null;
   period: PeriodSpec;
   derivation: DerivationHint;
   /** 0..1 self-reported confidence — calibrated thresholds in policy.ts

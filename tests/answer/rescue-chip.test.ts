@@ -65,7 +65,7 @@ class ThrowingClient implements LlmClient {
  * bucket, with the topic still recognized in nearestCanonicalKeys. */
 function misfire(kind: RawParse['kind'], nearest: string[]): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind,
     candidates: [],
     unmatchedMeasureTerm: null,
@@ -217,12 +217,13 @@ describe('a rescue pending is not an open clarification round', () => {
     const next = await respondToClarificationReply(db, refusal.pending, 'Hoeveel inwoners had Amsterdam in 2024?', {
       ...options(true),
       intentClient: new CannedClient({
-        version: 3,
+        version: 4,
         kind: 'data_query',
         candidates: [
           {
             canonicalKey: 'population_on_1_january',
             regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+            regionScope: null,
             period: { kind: 'year', year: 2024 },
             derivation: 'none',
             confidence: 0.95,
@@ -313,12 +314,13 @@ describe('flag off', () => {
     const fresh = await respondToClarificationReply(db, stripped, 'Hoeveel inwoners had Amsterdam in 2024?', {
       ...options(),
       intentClient: new CannedClient({
-        version: 3,
+        version: 4,
         kind: 'data_query',
         candidates: [
           {
             canonicalKey: 'population_on_1_january',
             regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+            regionScope: null,
             period: { kind: 'year', year: 2024 },
             derivation: 'none',
             confidence: 0.95,
@@ -353,12 +355,13 @@ describe('flag off', () => {
     const next = await respondToClarificationReply(db, refusal.pending, 'Hoeveel inwoners had Amsterdam in 2024?', {
       ...options(),
       intentClient: new CannedClient({
-        version: 3,
+        version: 4,
         kind: 'data_query',
         candidates: [
           {
             canonicalKey: 'population_on_1_january',
             regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+            regionScope: null,
             period: { kind: 'year', year: 2024 },
             derivation: 'none',
             confidence: 0.95,

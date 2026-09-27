@@ -281,14 +281,19 @@ export function buildUnmatchedClarification(context: OutcomeContext): ParseOutco
   };
 }
 
+/** The whole REGION axis of an intent — named regions AND the #267 region
+ * class — so two readings that differ only in class ("elke provincie" vs.
+ * heel Nederland) are a region difference, never an agreement. */
+function regionAxisOf(intent: StructuredIntent): string {
+  return stableStringify({ regions: intent.regions ?? [], regionSet: intent.regionSet ?? null });
+}
+
 /** Axes on which two resolved readings differ — the user-facing shape of the
  * ambiguity, named in the clarification. */
 export function differingAxes(a: RankedCandidate, b: RankedCandidate): ClarifyAxis[] {
   const axes: ClarifyAxis[] = [];
   if (stableStringify(a.intent.target) !== stableStringify(b.intent.target)) axes.push('measure');
-  if (stableStringify(a.intent.regions ?? []) !== stableStringify(b.intent.regions ?? [])) {
-    axes.push('region');
-  }
+  if (regionAxisOf(a.intent) !== regionAxisOf(b.intent)) axes.push('region');
   if (stableStringify(a.intent.period) !== stableStringify(b.intent.period)) axes.push('period');
   if (a.intent.derivation !== b.intent.derivation) axes.push('derivation');
   return axes.length > 0 ? axes : ['measure'];
@@ -430,9 +435,7 @@ export function mergeExplicitPeriodEnumeration(
   for (const candidate of candidates) {
     if (candidate.intent.derivation !== 'none') return null;
     if (stableStringify(candidate.intent.target) !== stableStringify(first.intent.target)) return null;
-    if (stableStringify(candidate.intent.regions ?? []) !== stableStringify(first.intent.regions ?? [])) {
-      return null;
-    }
+    if (regionAxisOf(candidate.intent) !== regionAxisOf(first.intent)) return null;
     const period = candidate.intent.period;
     if (period.kind !== 'codes' || period.codes.length !== 1) return null;
     const match = /^(\d{4})JJ00$/.exec(period.codes[0]!);
@@ -510,8 +513,19 @@ export async function decide(
   // Rule 3: a lone reading the model itself doubts → confirm, don't guess —
   // but only offer a suggestion that would actually answer when confirmed
   // (#56, ADR 021 decision 4): an unservable one names what IS loaded instead.
-  if (top.confidence < config.answerThreshold) {
-    const verdict = await servability(top.intent);
+  //
+  // #267: EXCEPT when the dry-run ends in an honest structural SCOPE refusal
+  // (the query refusal's subReason — e.g. "werkloosheid per provincie" on a
+  // national-only measure). Confirming the reading cannot change that outcome,
+  // and the echo fallback below would misreport it as a period problem ("Die
+  // precieze periode kan ik niet leveren"), so the reading passes on and the
+  // query layer's own refusal wording says what is really missing. That
+  // wording names the measure it understood, so a misread stays visible, and
+  // it carries no number (principle c).
+  const topVerdict = top.confidence < config.answerThreshold ? await servability(top.intent) : null;
+  const scopeRefusal = topVerdict !== null && !topVerdict.servable && topVerdict.subReason !== undefined;
+  if (topVerdict !== null && !scopeRefusal) {
+    const verdict = topVerdict;
     if (!verdict.servable) return echoUnservableClarification(context, top, verdict);
     const confirm = {
       kind: 'clarification',

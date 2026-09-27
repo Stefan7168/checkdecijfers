@@ -82,7 +82,7 @@ function context(raw?: Partial<RawParse>, question = 'synthetische vraag'): Outc
   return {
     question,
     raw: {
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,
@@ -702,12 +702,13 @@ describe('no-numbers belt-check over every policy-built clarification text (prin
 
 describe('raw-parse schema validation at the call site (R7)', () => {
   const valid = {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [
       {
         canonicalKey: 'cpi_yearly_inflation',
         regions: null,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'none',
         confidence: 0.9,
@@ -794,5 +795,44 @@ describe('fixture request hashing (ADR 012 replay integrity)', () => {
     expect(requestHash(requestA)).toBe(requestHash(requestB));
     expect(requestHash({ ...requestA, question: 'anders' })).not.toBe(requestHash(requestA));
     expect(stableStringify({ b: 1, a: [{ d: 2, c: 3 }] })).toBe('{"a":[{"c":3,"d":2}],"b":1}');
+  });
+});
+
+describe('#267: rule 3 lets an honest structural scope refusal through instead of a misleading period ask', () => {
+  const perProvince: StructuredIntent = {
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'unemployment_rate_seasonally_adjusted' },
+    regionSet: { kind: 'all_provincies' },
+    period: { kind: 'codes', codes: ['2025KW02'] },
+    derivation: 'none',
+  };
+  const doubted = candidate(perProvince, 0.5, 'werkloosheid per provincie in het tweede kwartaal van 2025');
+  const availability = { yearRange: null, freshest: { periodCode: '2026KW01', status: 'Voorlopig' } };
+
+  it('a doubted reading whose dry-run ends in region_scope_on_national_measure passes on as the intent (the query layer words the limit)', async () => {
+    const scopeRefusal: ServabilityCheck = async () => ({
+      servable: false,
+      kind: 'invalid_intent',
+      axes: ['region'],
+      availability,
+      subReason: 'region_scope_on_national_measure',
+    });
+    const outcome = await decide(context(), [doubted], config, scopeRefusal);
+    expect(outcome.kind).toBe('intent');
+    if (outcome.kind !== 'intent') throw new Error('unreachable');
+    expect(outcome.intent).toEqual(perProvince);
+  });
+
+  it('an unservable verdict WITHOUT a structural sub-reason keeps the pre-#267 echo fallback (period ask)', async () => {
+    const periodGap: ServabilityCheck = async () => ({
+      servable: false,
+      kind: 'not_published',
+      axes: ['period'],
+      availability,
+    });
+    const outcome = await decide(context(), [doubted], config, periodGap);
+    expect(outcome.kind).toBe('clarification');
+    if (outcome.kind !== 'clarification') throw new Error('unreachable');
+    expect(outcome.question_nl).toMatch(/Die precieze periode kan ik niet leveren/);
   });
 });

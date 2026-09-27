@@ -408,13 +408,13 @@
        "2026MM06"
       ]
      },
-     "derivation": "difference"
+     "derivation": "none"
     },
     "checks": {
      "impliedRecency": true
     }
    },
-   "note": "Re-labelled 'none' -> 'difference' (session 50, 2026-07-17): after the coverage-sprint #2/#3 vocabulary batch the model STABLY reads the compare-ask as the registered difference derivation (2x record, 0.92 conf). Verified BETTER product behavior before re-labelling: 'difference' is the B13-registered two-period delta (both cells shown + CC BY-marked derived value), never a refusal."
+   "note": "Re-labelled 'difference' -> 'none' (session 135, 2026-09-27, PROMPT_VERSION 7): the model now STABLY (record + eval x3, 4/4) reads this compare-ask as 'none' — which is what the prompt's own Derivations rule has always said ('difference' only when the question asks the SIZE of the change, 'met hoeveel'; this question does not). 'none' serves both periods side by side, no number is lost or invented. History: labelled 'none' originally; relabelled to 'difference' in session 50 when the model stably read it that way (0.92). A genuine near-boundary case (ADR 012 note) — the size-of-change phrasing is pinned separately by os-werkloosheid-delta-5jaar. Previous note: Re-labelled 'none' -> 'difference' (session 50, 2026-07-17): after the coverage-sprint #2/#3 vocabulary batch the model STABLY reads the compare-ask as the registered difference derivation (2x record, 0.92 conf). Verified BETTER product behavior before re-labelling: 'difference' is the B13-registered two-period delta (both cells shown + CC BY-marked derived value), never a refusal."
   },
   {
    "id": "os-inflatie-afgelopen-5jaar",
@@ -905,6 +905,143 @@
     "checks": {
      "canonicalKey": "average_existing_home_sale_price",
      "impliedRecency": true,
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rs-elke-provincie-2025",
+   "category": "region_set",
+   "question": "Hoeveel inwoners had elke provincie op 1 januari 2025?",
+   "note": "#267 / ADR 054 spec question 1: a region class, never a list of codes from the model.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "population_on_1_january"
+     },
+     "regionSet": {
+      "kind": "all_provincies"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rs-utrecht-hoogste-huizenprijs",
+   "category": "region_set",
+   "question": "Welke gemeente in Utrecht had de hoogste huizenprijs in 2024?",
+   "note": "#267 / spec question 2: 'gemeenten in Utrecht' names the PROVINCE (the class disambiguates, no gemeente-vs-provincie clarification); max over the class.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_home_sale_price_by_gemeente"
+     },
+     "regionSet": {
+      "kind": "gemeenten_in_provincie",
+      "parent": "PV26"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2024JJ00"
+      ]
+     },
+     "derivation": "max"
+    }
+   }
+  },
+  {
+   "id": "rs-werkloosheid-per-provincie",
+   "category": "region_set",
+   "question": "Wat was de werkloosheid per provincie in het tweede kwartaal van 2025?",
+   "note": "#267 / spec question 3 (named quarter, so the quarterly-only measure has one exact period): the parse keeps the class on a national-only measure; the query layer then refuses with region_scope_on_national_measure — never a national figure relabelled 'per provincie'.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "unemployment_rate_seasonally_adjusted"
+     },
+     "regionSet": {
+      "kind": "all_provincies"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2025KW02"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rs-groningen-per-gemeente-2016",
+   "category": "region_set",
+   "question": "Wat was de gemiddelde huizenprijs per gemeente in Groningen in 2016?",
+   "note": "#267 / spec question 4: 'Groningen' alone is gemeente-or-provincie ambiguous, but 'per gemeente in Groningen' can only mean the province.",
+   "expect": {
+    "outcome": "intent",
+    "intent": {
+     "schemaVersion": 1,
+     "target": {
+      "kind": "canonical",
+      "key": "average_home_sale_price_by_gemeente"
+     },
+     "regionSet": {
+      "kind": "gemeenten_in_provincie",
+      "parent": "PV20"
+     },
+     "period": {
+      "kind": "codes",
+      "codes": [
+       "2016JJ00"
+      ]
+     },
+     "derivation": "none"
+    }
+   }
+  },
+  {
+   "id": "rs-g4-meeste-inwoners-geen-klasse",
+   "category": "region_set",
+   "question": "Welke van de vier grote steden had in 2024 de meeste inwoners?",
+   "note": "#267 guard (spec question 5's family): the G4 are NAMED places — four gemeenten, no region class. Pins that the class rule does not leak into named-place comparisons.",
+   "expect": {
+    "outcome": "intent",
+    "checks": {
+     "canonicalKey": "population_on_1_january",
+     "regionSet": null,
+     "derivation": "max"
+    }
+   }
+  },
+  {
+   "id": "rs-per-gemeente-amsterdam-geen-klasse",
+   "category": "region_set",
+   "question": "Wat was de huizenprijs per gemeente in Amsterdam in 2023?",
+   "note": "#267 guard: 'per gemeente' is also this key's own everyday term; with a named gemeente it is a plain lookup, never a class.",
+   "expect": {
+    "outcome": "intent",
+    "checks": {
+     "canonicalKey": "average_home_sale_price_by_gemeente",
+     "regions": [
+      "GM0363"
+     ],
+     "regionSet": null,
      "derivation": "none"
     }
    }

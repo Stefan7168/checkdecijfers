@@ -210,6 +210,7 @@ const REFERENCE_DATE = '2026-08-15';
 function candidate(partial: Partial<RawCandidate> & { canonicalKey: string }): RawCandidate {
   return {
     regions: null,
+    regionScope: null,
     period: { kind: 'none' },
     derivation: 'none',
     confidence: 0.95,
@@ -250,6 +251,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       candidate({
         canonicalKey: 'population_on_1_january',
         regions: AMSTERDAM,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
       }),
       false,
@@ -298,6 +300,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       candidate({
         canonicalKey: 'population_on_1_january',
         regions: AMBIGUOUS_UTRECHT,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
       }),
       false,
@@ -315,6 +318,7 @@ describe('the deterministic half of a turn costs a pinned number of statements',
       candidate({
         canonicalKey: 'population_on_1_january',
         regions: AMBIGUOUS_UTRECHT,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
       }),
       false,
@@ -342,6 +346,7 @@ describe('what the flag flip costs, stated as a difference', () => {
     const spec = candidate({
       canonicalKey: 'population_on_1_january',
       regions: AMSTERDAM,
+      regionScope: null,
       period: { kind: 'year', year: 2024 },
     });
     const off = await statementsFor(spec, false);
@@ -463,12 +468,13 @@ describe('#195: a served respondToQuestion turn bumps last_queried_at exactly on
     }
   }
   const AMSTERDAM_2024: RawParse = {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [
       {
         canonicalKey: 'population_on_1_january',
         regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'none',
         confidence: 0.95,

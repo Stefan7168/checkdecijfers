@@ -295,12 +295,13 @@ function fixtureSource(): CbsSource {
 
 function intentStub(year: number): LlmClient {
   const raw: RawParse = {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [
       {
         canonicalKey: onboardedKey(TABLE, MEASURE),
         regions: null,
+        regionScope: null,
         period: { kind: 'year', year },
         derivation: 'none',
         confidence: 0.97,

@@ -168,12 +168,13 @@ describe('Eurostat sibling check (other_source_available)', () => {
 
     function context(question: string, failure: ResolutionFailure): OutcomeContext {
       const raw: RawParse = {
-        version: 3,
+        version: 4,
         kind: 'data_query',
         candidates: [
           {
             canonicalKey: UNEMPLOYMENT_KEY,
             regions: [{ name: 'Duitsland', kind: 'onbekend' }],
+            regionScope: null,
             period: YEAR_2021,
             derivation: 'none',
             confidence: failure.confidence,

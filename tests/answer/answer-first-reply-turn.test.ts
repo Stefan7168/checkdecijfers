@@ -72,7 +72,7 @@ class ThrowingClient implements LlmClient {
  * and the merged intent still carries no period signal at all. */
 function periodlessMerge(): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [
       {
@@ -81,6 +81,7 @@ function periodlessMerge(): RawParse {
         // raw-parse schema and lands in an 'internal' refusal, which would
         // make this test pass for entirely the wrong reason.
         regions: [{ name: 'Utrecht', kind: 'gemeente' }],
+        regionScope: null,
         period: { kind: 'none' },
         derivation: 'none',
         confidence: 0.95,

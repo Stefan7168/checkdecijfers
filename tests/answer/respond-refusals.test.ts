@@ -48,7 +48,7 @@ afterAll(async () => {
 
 function baseRaw(overrides: Partial<ParseOutcome['raw']> = {}): ParseOutcome['raw'] {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [],
     unmatchedMeasureTerm: null,

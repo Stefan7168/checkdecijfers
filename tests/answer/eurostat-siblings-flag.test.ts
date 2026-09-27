@@ -55,6 +55,7 @@ function candidate(): RawCandidate {
   return {
     canonicalKey: UNEMPLOYMENT_KEY,
     regions: [{ name: 'Duitsland', kind: 'onbekend' }],
+    regionScope: null,
     period: YEAR_2021,
     derivation: 'none',
     confidence: 0.9,
@@ -97,12 +98,13 @@ describe('the offer-side gate (decide()) and the click trust boundary agree with
 
   function context(): OutcomeContext {
     const raw: RawParse = {
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [
         {
           canonicalKey: UNEMPLOYMENT_KEY,
           regions: [{ name: 'Duitsland', kind: 'onbekend' }],
+          regionScope: null,
           period: YEAR_2021,
           derivation: 'none',
           confidence: 0.9,

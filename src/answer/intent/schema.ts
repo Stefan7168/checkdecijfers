@@ -27,6 +27,13 @@ const regionTermSchema = z.strictObject({
   kind: z.enum(['land', 'landsdeel', 'provincie', 'gemeente', 'onbekend']),
 });
 
+// v4 (#267, ADR 054 task 9): nullable-not-optional, like every field here.
+// null = the question asks about no region class. No 'none' member: one way
+// to say "no class", not two.
+const regionScopeSchema = z
+  .enum(['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie'])
+  .nullable();
+
 const periodSpecSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('year'), year: z.number() }),
   z.strictObject({ kind: z.literal('quarter'), year: z.number(), quarter: z.number() }),
@@ -67,6 +74,7 @@ const periodSpecSchema = z.discriminatedUnion('kind', [
 const rawCandidateSchema = z.strictObject({
   canonicalKey: canonicalKeySchema,
   regions: z.array(regionTermSchema).nullable(),
+  regionScope: regionScopeSchema,
   period: periodSpecSchema,
   derivation: z.enum(['none', 'difference', 'max', 'series']),
   confidence: z.number(),
@@ -74,7 +82,7 @@ const rawCandidateSchema = z.strictObject({
 });
 
 export const rawParseSchema = z.strictObject({
-  version: z.literal(3),
+  version: z.literal(4),
   kind: z.enum([
     'data_query',
     'forecast_request',
@@ -102,13 +110,14 @@ export function rawParseSchemaWith(extraKeys: readonly string[]) {
   const candidateSchema = z.strictObject({
     canonicalKey: keySchema,
     regions: z.array(regionTermSchema).nullable(),
+    regionScope: regionScopeSchema,
     period: periodSpecSchema,
     derivation: z.enum(['none', 'difference', 'max', 'series']),
     confidence: z.number(),
     reading: z.string(),
   });
   return z.strictObject({
-    version: z.literal(3),
+    version: z.literal(4),
     kind: z.enum([
       'data_query',
       'forecast_request',

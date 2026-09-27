@@ -88,7 +88,7 @@ class ThrowingClient implements LlmClient {
 
 function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: candidates as never,
     unmatchedMeasureTerm: null,
@@ -100,6 +100,7 @@ function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
 const AMSTERDAM_2024 = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -109,6 +110,7 @@ const AMSTERDAM_2024 = rawDataQuery({
 const ROTTERDAM_2024 = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: [{ name: 'Rotterdam', kind: 'gemeente' }],
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -513,6 +515,7 @@ describe('the take: a clicked comparison is a NEW validated result, without any 
           rawDataQuery({
             canonicalKey: 'cpi_yearly_inflation',
             regions: [],
+            regionScope: null,
             period: { kind: 'year', year: 2024 },
             derivation: 'none',
             confidence: 0.95,

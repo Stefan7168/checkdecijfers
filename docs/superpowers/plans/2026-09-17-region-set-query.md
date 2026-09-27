@@ -534,3 +534,16 @@ the five non-audit suites that also call `reconstructionReport`
 `tests/ingestion/eviction.test.ts`) → **116 passed, 5 files**; root `npm run typecheck` clean.
 `npm run audit:verify` (live DB) was NOT run — it needs `.env`; the parent session decides. It is
 expected to pass unchanged: see the report's reasoning, and points 6 and 7 above.
+
+---
+
+## As-built notes (task 9) — session 135, 2026-09-27, owner present
+
+**Task 9 is DONE**; see ADR 054's "As-built: Task 9" section for the full account. Deviations from the plan text:
+(1) the enum has no `'none'` member (null only); (2) no worked example in the prompt (measured bleed, see ADR);
+(3) one extra fix the labelled set surfaced — policy rule 3 now passes honest structural scope refusals through
+(`EchoServability.subReason`); (4) the conversation context carries the class too (the plan did not list it; without
+it "En in 2020?" after a class question silently fell back to the national figure); (5) 6 labelled cases, not 5 —
+spec question 5 (G4 growth) became two named-place guards (`rs-g4-meeste-inwoners-geen-klasse`,
+`rs-per-gemeente-amsterdam-geen-klasse`), and question 3 names a quarter so the quarterly-only measure has one
+exact period. Fixture counts re-recorded: intent 78, follow-up 23, clarify 7, onboarding-delivery 1.

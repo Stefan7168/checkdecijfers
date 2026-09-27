@@ -65,7 +65,7 @@ function stubIntent(question: string, intent: StructuredIntent): Extract<ParseOu
     kind: 'intent',
     question,
     raw: {
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,

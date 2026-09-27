@@ -58,7 +58,7 @@ class CountingSmalltalkClient implements LlmClient {
   async complete(): Promise<LlmResponse> {
     this.calls += 1;
     const raw: RawParse = {
-      version: 3,
+      version: 4,
       kind: 'smalltalk_or_other',
       candidates: [],
       unmatchedMeasureTerm: null,

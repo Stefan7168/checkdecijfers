@@ -18,30 +18,24 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 134 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-27-session-135-kickoff.md](session-briefs/2026-09-27-session-135-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 135 — owner present; verify against `git log` / Actions runs
+before trusting this).**
 
-- **`main` is live and green @ `c6d090e9`** (docs-only after the last code commit; last code `156292fa`, deployed by tip run 36259837787 — every job green incl.
-  deploy, 2026-09-26). Prod 200. No open PRs.
-- **The Anthropic "API cap" is SOLVED:** it was our own organisation Monthly spend limit ($35, Console → Settings → Billing →
-  "Spend limits"). The owner raised it to **$50** (the spend roof; resets on the 1st). ≈$3 spent this session; ≈$11 room
-  left until 10-01. A $100 promo credit (expires 2027-03-25) pays for usage. RUNBOOK "Bill-shock protection".
-- **✅ English answers LIVE since 2026-09-26 ~18:00 UTC** (owner GO; `ENGLISH_ANSWERS_ENABLED=1`). Meaning check C12 on
-  **Sonnet 5** (Haiku missed a dropped hedge); benchmark 13/14 verified first attempt, B10 falls back (≈7%). Live check:
-  audit row 336 verified. Follow-ups: wording [#328](open-questions.md) ("Pronounced bankruptcies"), UI gaps #324.
-- **Live benchmark 2026-09-26: PASS — 14/14 + 6/6 + 0 fabricated**, median 10.7 s; template fallbacks 4 (09-08: 3), all
-  old R9 strictness (3× exact period label '2025 4e kwartaal', 1× "na een daling … herstel" on a rising series), none from #326.
-- **NEXT PRIORITY (owner-chosen): regional statistics → region questions.** Only 2 of 26 measures are regional; ADR 054's
-  region-set query is unreachable until #267 (parser step, real spend). Step 1 = a design (brainstorm → spec) for a
-  regional-statistics set from ONE CBS table (candidate `70072ned` Regionale kerncijfers — rejected in phase 0 for
-  schema-fingerprint churn; re-check live), zero AI spend; the recording session after.
-- **⚠ Blocker for that: [#329](open-questions.md)** — on 2026-09-26 CBS's data APIs reset every connection from the owner's
-  machine (www.cbs.nl fine; last ingest 09-16). Retry first; syncs are manual from this machine.
-- **Decisions still waiting on the owner:** #245 (three test-speed questions), #275 (looks-row mockups). Owner signed-in
-  spot-check of own-data publishing (RUNBOOK ADR 057 step 4). Eurostat E2a owner steps 0/5/6 ([#313](open-questions.md))
-  and the other `:record` scripts are now unblocked (owner-supervised spend).
-- **Unscheduled, no demand signal (cheapest-mechanism rule):** #277, #278, #299; #324; C12 hygiene #327; R9 over-strictness
-  seen in the live benchmark [#330](open-questions.md).
+- **Session 135 shipped #267 (ADR 054 Task 9): region-class questions are now REACHABLE** — "hoeveel inwoners had elke
+  provincie", "welke gemeente in Utrecht had de hoogste huizenprijs", "werkloosheid per provincie" (honest "only national"
+  refusal). Raw parse v4, PROMPT_VERSION 7, 78+23+7+1 fixtures re-recorded; hermetic benchmark 14/14 + 6/6 + 0 fabricated,
+  fallbacks 3; backend 3716 + web 3085 tests green; build green. Deployed by CI on push (check the run).
+- **Spend:** ≈$8–9 of Haiku this session (estimate from token counts at list price) on top of session 134's ≈$3 — the $50
+  monthly roof is nearly reached until it resets 2026-10-01. **No further live LLM runs before 10-01** unless the owner raises it.
+- **CBS outage ([#329](open-questions.md)): CBS-side, not us** — the www.cbs.nl banner says StatLine is down; the API resets
+  from Anthropic's network too. Retry at session start; no ingest possible meanwhile.
+- **NEXT PRIORITY: the owner's language-mix check [#332](open-questions.md)** (asked "when done" in session 135 — English
+  and Dutch mixed in one view), zero spend. Then regional statistics (a table set, after CBS is back — owner: no paper design
+  around the outage), and [#331](open-questions.md) scripts-instead-of-AI (charts first; owner ask).
+- **English answers LIVE since 2026-09-26** (`ENGLISH_ANSWERS_ENABLED=1`); follow-ups #328, #324.
+- **Decisions still waiting on the owner:** #245, #275; own-data publishing spot-check (RUNBOOK ADR 057 step 4); Eurostat E2a
+  steps 0/5/6 ([#313](open-questions.md)).
+- **Unscheduled, no demand signal:** #277, #278, #299; #324; #327; #330.
 ---
 
 ## Phase 0 checklist

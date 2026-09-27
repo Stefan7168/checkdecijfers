@@ -266,7 +266,7 @@ describe('scorer teeth — B20 live-freshness conditional (#216)', () => {
       kind: 'intent',
       question: `Wat was de inflatie in ${periodCode}?`,
       raw: {
-        version: 3,
+        version: 4,
         kind: 'data_query',
         candidates: [],
         unmatchedMeasureTerm: null,

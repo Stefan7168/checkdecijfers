@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-17T20:03:11.373Z",
+  "generatedAt": "2026-09-27T00:27:52.444Z",
   "mode": "record",
   "repeat": 1,
   "referenceDate": "2026-08-15",
@@ -8,8 +8,8 @@
     "total": 23
   },
   "usage": {
-    "inputTokens": 244663,
-    "outputTokens": 2713
+    "inputTokens": 255849,
+    "outputTokens": 2897
   },
   "unstable": [],
   "failures": [],
@@ -250,6 +250,48 @@
       "usage": {
         "inputTokens": 244663,
         "outputTokens": 2713
+      }
+    },
+    {
+      "generatedAt": "2026-09-26T18:40:03.321Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 22,
+        "total": 23
+      },
+      "usage": {
+        "inputTokens": 258816,
+        "outputTokens": 2716
+      }
+    },
+    {
+      "generatedAt": "2026-09-26T18:52:19.694Z",
+      "mode": "live",
+      "repeat": 3,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 22,
+        "total": 23
+      },
+      "usage": {
+        "inputTokens": 776448,
+        "outputTokens": 8186
+      }
+    },
+    {
+      "generatedAt": "2026-09-27T00:27:52.444Z",
+      "mode": "record",
+      "repeat": 1,
+      "referenceDate": "2026-08-15",
+      "totals": {
+        "pass": 23,
+        "total": 23
+      },
+      "usage": {
+        "inputTokens": 255849,
+        "outputTokens": 2897
       }
     }
   ]

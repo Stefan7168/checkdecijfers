@@ -26,7 +26,7 @@ function context(raw?: Partial<RawParse>, question = 'synthetische vraag'): Outc
   return {
     question,
     raw: {
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [],
       unmatchedMeasureTerm: null,

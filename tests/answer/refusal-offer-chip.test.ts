@@ -61,7 +61,7 @@ class ThrowingClient implements LlmClient {
 
 function misfire(kind: RawParse['kind'], nearest: string[]): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind,
     candidates: [],
     unmatchedMeasureTerm: null,

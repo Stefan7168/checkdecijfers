@@ -101,6 +101,27 @@ export async function buildConversationContext(
   if (intent === null) return null;
   if (intent.target.kind !== 'canonical') return null;
 
+  // #267: a region CLASS round-trips as its name (plus, for
+  // gemeenten_in_provincie, the parent provincie as the one region term — the
+  // same shape the parser emits). The parent must label like any other code:
+  // an unlabelable parent nulls the whole context, never a guessed referent.
+  const regionSet = intent.regionSet ?? undefined;
+  if (regionSet !== undefined) {
+    const classRegions =
+      regionSet.kind === 'gemeenten_in_provincie'
+        ? await regionTermsFor(db, intent.target.key, [regionSet.parent])
+        : null;
+    if (regionSet.kind === 'gemeenten_in_provincie' && classRegions === null) return null;
+    return {
+      version: CONTEXT_VERSION,
+      topicKey: intent.target.key,
+      regions: classRegions,
+      regionScope: regionSet.kind,
+      period: contextPeriodFor(intent.period),
+      derivation: intent.derivation,
+    };
+  }
+
   const codes = intent.regions ?? [];
   const regions = codes.length === 0 ? null : await regionTermsFor(db, intent.target.key, codes);
   if (codes.length > 0 && regions === null) return null;

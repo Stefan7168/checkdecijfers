@@ -86,12 +86,13 @@ function bijstandSource(): CbsSource {
  * canonical_measures row. */
 function intentStub(year: number, table: string = TABLE, measure: string = MEASURE): LlmClient {
   const raw: RawParse = {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [
       {
         canonicalKey: onboardedKey(table, measure),
         regions: null,
+        regionScope: null,
         period: { kind: 'year', year },
         derivation: 'none',
         confidence: 0.97,
@@ -328,7 +329,7 @@ describe('runOnboardingJob — failure paths (all terminal + refunded)', () => {
       const unmatchedIntent: LlmClient = {
         async complete(): Promise<LlmResponse> {
           const raw: RawParse = {
-            version: 3,
+            version: 4,
             kind: 'data_query',
             candidates: [],
             unmatchedMeasureTerm: 'iets onbekends',
@@ -477,12 +478,13 @@ describe('#166 — curated-vocab belt: Step 6 never duplicates a curated key, un
    * point: the standard vocabulary carries the table). */
   function curatedIntentStub(year: number): LlmClient {
     const raw: RawParse = {
-      version: 3,
+      version: 4,
       kind: 'data_query',
       candidates: [
         {
           canonicalKey: 'housing_stock_start_of_year',
           regions: null,
+          regionScope: null,
           period: { kind: 'year', year },
           derivation: 'none',
           confidence: 0.97,
@@ -1238,7 +1240,7 @@ function mustNotRunClient(): LlmClient {
  * exactly why ⟨F1⟩'s kind='answer' filter exists). */
 function forecastIntentStub(): LlmClient {
   const raw: RawParse = {
-    version: 3,
+    version: 4,
     kind: 'forecast_request',
     candidates: [],
     unmatchedMeasureTerm: null,

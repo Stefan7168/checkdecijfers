@@ -77,9 +77,10 @@ class ThrowingClient implements LlmClient {
 
 function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
-    candidates: candidates as never,
+    // Raw-parse v4 (#267): every candidate carries regionScope; null unless a test sets one.
+    candidates: candidates.map((c) => ({ regionScope: null, ...c })) as never,
     unmatchedMeasureTerm: null,
     nearestCanonicalKeys: [],
     note: null,
@@ -91,6 +92,7 @@ function rawDataQuery(...candidates: Record<string, unknown>[]): RawParse {
 const AMBIGUOUS_UTRECHT = rawDataQuery({
   canonicalKey: 'population_on_1_january',
   regions: [{ name: 'Utrecht', kind: 'onbekend' }],
+  regionScope: null,
   period: { kind: 'year', year: 2024 },
   derivation: 'none',
   confidence: 0.95,
@@ -134,6 +136,7 @@ describe('flag off: byte-identical to the pre-WP26 clarification', () => {
         {
           canonicalKey: 'population_on_1_january',
           regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+          regionScope: null,
           period: { kind: 'year', year: 2024 },
           derivation: 'none',
           confidence: 0.95,
@@ -142,6 +145,7 @@ describe('flag off: byte-identical to the pre-WP26 clarification', () => {
         {
           canonicalKey: 'population_on_1_january',
           regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+          regionScope: null,
           period: { kind: 'year', year: 2023 },
           derivation: 'none',
           confidence: 0.6,
@@ -182,6 +186,7 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
       rawDataQuery({
         canonicalKey: 'population_on_1_january',
         regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'none',
         // Below the 0.9 answer threshold ⇒ rule 3 confirms instead of answering.
@@ -202,6 +207,7 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
         {
           canonicalKey: 'population_on_1_january',
           regions: [{ name: 'Utrecht', kind: 'gemeente' }],
+          regionScope: null,
           period: { kind: 'year', year: 2024 },
           derivation: 'none',
           confidence: 0.95,
@@ -210,6 +216,7 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
         {
           canonicalKey: 'population_on_1_january',
           regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+          regionScope: null,
           period: { kind: 'year', year: 2024 },
           derivation: 'none',
           confidence: 0.6,
@@ -290,6 +297,7 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
       rawDataQuery({
         canonicalKey: 'population_on_1_january',
         regions: [{ name: 'Utrecht', kind: 'onbekend' }],
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'max',
         confidence: 0.95,
@@ -309,6 +317,7 @@ describe('flag on: every offered option is a proven, resolved reading', () => {
       rawDataQuery({
         canonicalKey: 'population_on_1_january',
         regions: [{ name: 'Amsterdam', kind: 'gemeente' }],
+        regionScope: null,
         period: { kind: 'year', year: 1850 },
         derivation: 'none',
         confidence: 0.7,

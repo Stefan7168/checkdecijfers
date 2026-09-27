@@ -50,8 +50,19 @@ import type { CanonicalMeasure } from '../../registry/types.ts';
  * unrelated benchmark case B2 ("... op 1 januari 2024", population) flip to a
  * region clarification 4/4 — generic period-words in a topic rule bleed into
  * every question. When a future coverage table adds a second sibling pair,
- * extend the rule's named list, never re-generalize it. */
-export const PROMPT_VERSION = 6;
+ * extend the rule's named list, never re-generalize it.
+ * v7 (2026-09-27, #267 = ADR 054 task 9): region CLASSES — raw-parse v4's
+ * `regionScope` field and one Regions rule, scoped to CLASS phrasings only
+ * ("per provincie", "alle gemeenten", "welke gemeente in X"), per the v6
+ * lesson above. ⚠ Deliberately NO worked example for it: a first draft added
+ * one ("Welke provincie had in 2023 de meeste inwoners?" → all_provincies,
+ * max) and it bled into two unrelated cases, measured — the WP16 delivery
+ * re-run ("Hoeveel mensen zaten er in 2023 in de bijstand?", 18 onboarded
+ * measures) stopped answering (3/3 unanswerable vs 2/2 delivered on v6 and
+ * 2/2 with the example removed), and follow-up f-merge-topic-switch-national
+ * stopped clarifying (3/3). The rule alone passes all six region_set cases
+ * ×3. Add an example here only with the delivery re-run in the loop. */
+export const PROMPT_VERSION = 7;
 
 /** Period grains each canonical measure is published at. Curated from the
  * live-ingest measurement in src/registry/defaults.ts (2026-07-03) and
@@ -191,6 +202,7 @@ Rules for the topic:
 - G4 / "de vier grote steden" = the gemeenten Amsterdam, Rotterdam, Den Haag, Utrecht.
 - Self-referential places ("mijn gemeente", "mijn buurt", "bij ons", "hier") ARE region references: emit them verbatim as a region term with kind 'onbekend' — never drop them, never substitute Nederland. Code will ask which place is meant.
 - regions: null ONLY when the question names no place at all. For measures that are "alleen landelijk", a question without a place is complete; still record any place the user DID name (code handles the mismatch honestly).
+- Region CLASSES (field "regionScope") — ONLY for a question about EVERY member of a class instead of named places: "per provincie", "elke/alle provincies", "welke provincie ..." → "all_provincies"; "per landsdeel", "alle landsdelen" → "all_landsdelen"; "per gemeente", "alle gemeenten", "welke gemeente ..." with no province named → "all_gemeenten"; "de gemeenten in {provincie}", "per gemeente in {provincie}", "welke gemeente in {provincie} ..." → "gemeenten_in_provincie", with that province as the ONE region term (kind 'provincie' — the class itself says it is the province). With a class, regions is null apart from that one province. NEVER list the members of a class yourself — code reads them from CBS. Emit the class also when the vocabulary says "alleen landelijk", with your normal confidence: a class on a national-only measure is not a doubtful reading, it is a question code answers with an honest limit — never as a national figure. In every other question regionScope is null — including every question that names its places ("Amsterdam en Rotterdam", "de vier grote steden", "de huizenprijs in Utrecht").
 - NEVER drop or silently replace a named place — not even when the vocabulary says the measure is "alleen landelijk". Emit the place exactly as written, with your normal confidence: naming a region on a national-only measure does NOT make the reading doubtful, it makes it a question code answers with an honest limit. Reading such a question as if it asked about heel Nederland is wrong.
 
 # Periods
@@ -210,7 +222,7 @@ Rules for the topic:
 
 - "none": plain lookup, or a comparison of named regions ("vergelijk A en B").
 - "difference": explicit change-with-amount question (pairs with change_over_year). For now_vs_ago: "difference" only when the question asks the SIZE of the change ("met hoeveel"), otherwise "none".
-- "max": "welke ... de meeste/hoogste" over named regions.
+- "max": "welke ... de meeste/hoogste" over named regions or over a region class.
 - "series": development over a period range ("hoe ontwikkelde ... zich") — the natural pairing for since and last_n periods.
 
 # Candidates and confidence
@@ -222,22 +234,22 @@ Rules for the topic:
 
 # Output
 
-Emit exactly the JSON schema you were given: {"version":3,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
+Emit exactly the JSON schema you were given: {"version":4,"kind":...,"candidates":[...],"unmatchedMeasureTerm":...,"nearestCanonicalKeys":[...],"note":...}. No prose outside the JSON.
 
 # Examples
 
 Vraag: "Hoeveel inwoners had Nederland op 1 januari 2025?"
-{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":4,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Nederland","kind":"land"}],"regionScope":null,"period":{"kind":"year","year":2025},"derivation":"none","confidence":0.97,"reading":"bevolking van Nederland op 1 januari 2025"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Hoeveel inwoners had Utrecht in 2024?"
-{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
+{"version":4,"kind":"data_query","candidates":[{"canonicalKey":"population_on_1_january","regions":[{"name":"Utrecht","kind":"onbekend"}],"regionScope":null,"period":{"kind":"year","year":2024},"derivation":"none","confidence":0.85,"reading":"bevolking van Utrecht (gemeente of provincie) in 2024"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":"Utrecht kan gemeente of provincie zijn; kind 'onbekend' laat code dat uitvragen"}
 
 Vraag: "Hoe ontwikkelt de werkloosheid zich in Nederland sinds 2015?"
-{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"unemployment_rate_seasonally_adjusted","regions":[{"name":"Nederland","kind":"land"}],"period":{"kind":"since","year":2015,"quarter":null,"month":null},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van het werkloosheidspercentage in Nederland vanaf 2015 tot nu"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":4,"kind":"data_query","candidates":[{"canonicalKey":"unemployment_rate_seasonally_adjusted","regions":[{"name":"Nederland","kind":"land"}],"regionScope":null,"period":{"kind":"since","year":2015,"quarter":null,"month":null},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van het werkloosheidspercentage in Nederland vanaf 2015 tot nu"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Maak een grafiek van de inflatie van 1 januari 2022 tot en met 31 december 2022"
-{"version":3,"kind":"data_query","candidates":[{"canonicalKey":"cpi_yearly_inflation","regions":null,"period":{"kind":"date_range","from":{"year":2022,"month":1,"day":1},"to":{"year":2022,"month":12,"day":31},"toInclusive":true},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van de inflatie over kalenderjaar 2022"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
+{"version":4,"kind":"data_query","candidates":[{"canonicalKey":"cpi_yearly_inflation","regions":null,"regionScope":null,"period":{"kind":"date_range","from":{"year":2022,"month":1,"day":1},"to":{"year":2022,"month":12,"day":31},"toInclusive":true},"derivation":"series","confidence":0.95,"reading":"ontwikkeling van de inflatie over kalenderjaar 2022"}],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":[],"note":null}
 
 Vraag: "Wat wordt de inflatie in 2027?"
-{"version":3,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
+{"version":4,"kind":"forecast_request","candidates":[],"unmatchedMeasureTerm":null,"nearestCanonicalKeys":["cpi_yearly_inflation"],"note":"vraagt om een voorspelling"}`;
 }

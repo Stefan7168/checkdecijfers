@@ -10,7 +10,7 @@
 // them, concrete period shapes. Never raw chat history, never previous
 // question/reply text, never model-phrased readings (all three ARE chat
 // history; reopening that surface is exactly what ADR 021 forbids — R2/#41).
-import type { DerivationHint, RegionTerm } from '../intent/types.ts';
+import type { DerivationHint, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 
 export const CONTEXT_VERSION = 1 as const;
 
@@ -37,6 +37,14 @@ export interface ConversationContext {
   /** Region names + kinds as the registry labels them (validated against
    * dimension_labels), or null when the intent carried no regions. */
   regions: RegionTerm[] | null;
+  /** #267 (ADR 054 task 9): the region CLASS the previous turn asked about,
+   * so "En in 2020?" after "welke provincie had de meeste inwoners?" keeps
+   * asking about every provincie instead of silently falling back to the
+   * national figure. PRESENT-ONLY (docs/13): absent on every context whose
+   * intent carried no class, so those contexts keep their exact pre-#267
+   * bytes. For 'gemeenten_in_provincie', `regions` holds exactly that one
+   * provincie; for every other class `regions` is null. */
+  regionScope?: RegionScopeKind;
   /** Null when the resolved period cannot round-trip (multi-code selections,
    * quarter/month ranges — ADR 021 limitation 2): the follow-up then treats
    * the period as unstated, which degrades to an honest period clarification. */

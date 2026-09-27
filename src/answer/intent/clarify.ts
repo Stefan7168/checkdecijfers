@@ -59,7 +59,7 @@ This request is the SECOND turn of a clarification round. The user asked a quest
 Rules for this mode:
 
 - Parse the MERGED request: the original question combined with the reply. The reply answers our clarification — it is not a fresh question.
-- Keep every axis from the original question that the reply does not change (its topic, its period, its regions, its derivation). The reply typically fills in only what was asked.
+- Keep every axis from the original question that the reply does not change (its topic, its period, its regions and region class, its derivation). The reply typically fills in only what was asked.
 - A reply that picks an offered option (verbatim, by prefix, or by reference such as "de eerste") means that option's reading.
 - A short reply is an answer, not a question: "Utrecht" answers a region question; "de gemeente" disambiguates a region kind; "2024" answers a period question.
 - If the merged request STILL leaves an axis unresolved (the reply ignored part of the question, or names a topic that matches no key), report that honestly exactly as in normal mode: unmatched terms in unmatchedMeasureTerm, missing periods as {"kind":"none"}, unknown region kinds as 'onbekend'. NEVER invent the missing axis. Downstream code decides what happens after this round — you never re-ask.
@@ -107,6 +107,7 @@ export function buildClarifyUserPayload(pending: PendingClarification, reply: st
           previous_intent: {
             topicKey: context.topicKey,
             regions: context.regions,
+            regionScope: context.regionScope ?? null,
             period: context.period,
             derivation: context.derivation,
           },

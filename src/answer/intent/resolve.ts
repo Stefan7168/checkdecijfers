@@ -12,7 +12,7 @@
 // ambiguity, unknown names, missing/unresolvable periods.
 import type { Db } from '../../db/types.ts';
 import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
-import type { IntentPeriod, StructuredIntent } from '../../query/index.ts';
+import type { IntentPeriod, RegionScope, StructuredIntent } from '../../query/index.ts';
 import { CBS_SOURCE_KEY, EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import { baseLabel, normalizeRegionName } from '../../sources/region-names.ts';
 import { eurostatGeoCodeForDutchName, isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
@@ -22,6 +22,7 @@ import type {
   RankedCandidate,
   RawCandidate,
   RegionKind,
+  RegionTerm,
   ResolutionFailure,
 } from './types.ts';
 
@@ -278,6 +279,78 @@ async function resolveRegions(
     codes.push(matches[0]!.code);
   }
   return { ok: true, codes };
+}
+
+/** "Nederland" / "heel Nederland" — the country itself, judged on the NAME
+ * (same test as the national-measure branch above). */
+function isCountryTerm(term: RegionTerm): boolean {
+  return /^(heel )?nederland$/.test(normalizeRegionName(term.name));
+}
+
+type ScopeResolution =
+  | { ok: true; scope: RegionScope | undefined }
+  | { ok: false; failure: RegionFailureDetail };
+
+/** #267 (ADR 054 task 9): the model's region-CLASS classification → the query
+ * contract's additive `StructuredIntent.regionSet`. The model only names the
+ * class; the roster is read from CBS's own dimension groups by the query
+ * layer, and the one parent provincie is resolved here like any place name.
+ *
+ *  - no class (null/absent) → `scope: undefined`, the pre-#267 path, unchanged.
+ *  - a class next to places the user NAMED (other than Nederland itself) →
+ *    the named places win: they are what the user wrote, a class is only the
+ *    model's classification of the phrasing.
+ *  - gemeenten_in_provincie → exactly one named place, resolved as a
+ *    provincie (the class itself says it is the province, so "gemeenten in
+ *    Utrecht" is never gemeente-vs-provincie ambiguous). "Gemeenten in
+ *    Nederland" is every gemeente. No place, or several, cannot be read
+ *    without guessing: a region clarification (principle c).
+ *  - on a table without a geo dimension the class passes through (as
+ *    all_gemeenten for the provincie form — a province cannot be resolved on a
+ *    table that has no regions), so the query layer's own
+ *    region_scope_on_national_measure refusal is the single honest source of
+ *    "this measure has no regional breakdown" (ADR 054 D6). */
+async function resolveRegionScope(
+  db: Db,
+  candidate: RawCandidate,
+  canonical: CanonicalRow,
+  geo: TableGeo,
+): Promise<ScopeResolution> {
+  const kind = candidate.regionScope ?? null;
+  if (kind === null) return { ok: true, scope: undefined };
+  const terms = candidate.regions ?? [];
+  const places = terms.filter((t) => !isCountryTerm(t));
+
+  if (kind !== 'gemeenten_in_provincie') {
+    return { ok: true, scope: places.length > 0 ? undefined : { kind } };
+  }
+
+  if (places.length === 0 && terms.length > 0) return { ok: true, scope: { kind: 'all_gemeenten' } };
+  if (places.length !== 1) {
+    return {
+      ok: false,
+      failure: {
+        axis: 'region',
+        reason: 'region_unknown',
+        message:
+          places.length === 0
+            ? 'the question asks about the gemeenten of a provincie but names no provincie'
+            : `the question asks about the gemeenten of one provincie but names ${places.length} places: ${places.map((t) => `"${t.name}"`).join(', ')}`,
+        // The same choice labels as resolveRegions' own region_unknown.
+        options: ['heel Nederland (landelijk cijfer)', 'een specifieke gemeente of provincie — noem de naam'],
+      },
+    };
+  }
+  if (!geo.geoDimension) return { ok: true, scope: { kind: 'all_gemeenten' } };
+
+  const parent = await resolveRegions(
+    db,
+    { ...candidate, regions: [{ name: places[0]!.name, kind: 'provincie' }] },
+    canonical,
+    geo,
+  );
+  if (!parent.ok) return { ok: false, failure: parent.failure };
+  return { ok: true, scope: { kind: 'gemeenten_in_provincie', parent: parent.codes[0]! } };
 }
 
 // ---------------------------------------------------------------------------
@@ -1019,6 +1092,9 @@ async function buildResolvedIntent(
   regionCodes: string[],
   referenceDateIso: string,
   options: ResolveCandidateOptions,
+  /** #267: a region CLASS instead of named regions (mutually exclusive with
+   * `regionCodes`, which is then empty). Absent on every other path. */
+  regionSet?: RegionScope,
 ): Promise<CandidateResolution> {
   const { confidence, fail } = candidateFailure(candidate);
 
@@ -1051,8 +1127,12 @@ async function buildResolvedIntent(
           options: [],
         });
 
+  // A class IS the comparison set: how many members it has at this period is
+  // a data fact the query layer checks after the fetch (ADR 054), never here.
+  const needsNamedRegions = (d: RawCandidate['derivation']): boolean =>
+    d === 'max' && regionSet === undefined && regionCodes.length < 2;
   let derivation = normalizeDerivation(candidate);
-  if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
+  if (needsNamedRegions(derivation)) return await maxNeedsRegions();
 
   const reference = parseReferenceDate(referenceDateIso);
   const periodResolution = await resolvePeriod(
@@ -1096,7 +1176,7 @@ async function buildResolvedIntent(
     // question without its comparison regions keeps the specific resolver
     // clarification instead of the query layer's generic invalid_intent
     // (executing-skeptic catch, 2026-07-05, proven with a before/after probe).
-    if (derivation === 'max' && regionCodes.length < 2) return await maxNeedsRegions();
+    if (needsNamedRegions(derivation)) return await maxNeedsRegions();
   }
 
   // A multi-period derivation over a structurally single-period selection can
@@ -1121,6 +1201,7 @@ async function buildResolvedIntent(
     schemaVersion: INTENT_SCHEMA_VERSION,
     target: { kind: 'canonical', key: canonical.key },
     ...(regionCodes.length > 0 ? { regions: regionCodes } : {}),
+    ...(regionSet !== undefined ? { regionSet } : {}),
     period: periodResolution.period,
     derivation,
   };
@@ -1229,6 +1310,18 @@ export async function resolveCandidate(
   }
 
   const geo = await fetchTableGeo(db, canonical.tableId);
+
+  // #267: a region CLASS ("per provincie", "welke gemeente in Utrecht") —
+  // resolved before, and instead of, the named-region path.
+  const scopeResolution = await resolveRegionScope(db, candidate, canonical, geo);
+  if (!scopeResolution.ok) {
+    const { optionCodes: _unused, ...failure } = scopeResolution.failure;
+    return fail(failure);
+  }
+  if (scopeResolution.scope !== undefined) {
+    return await buildResolvedIntent(db, candidate, canonical, geo, [], referenceDateIso, options, scopeResolution.scope);
+  }
+
   const regionResolution = await resolveRegions(db, candidate, canonical, geo);
   if (!regionResolution.ok) {
     const { optionCodes, ...failure } = regionResolution.failure;

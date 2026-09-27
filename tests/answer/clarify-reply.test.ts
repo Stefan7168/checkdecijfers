@@ -70,7 +70,7 @@ class GarbageClient implements LlmClient {
 
 function rawDataQuery(candidate: Record<string, unknown>): RawParse {
   return {
-    version: 3,
+    version: 4,
     kind: 'data_query',
     candidates: [candidate as never],
     unmatchedMeasureTerm: null,
@@ -101,6 +101,7 @@ describe('R7: a reply never produces a second clarification', () => {
       rawDataQuery({
         canonicalKey: 'population_on_1_january',
         regions: null,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'none',
         confidence: 0.95,
@@ -120,6 +121,7 @@ describe('R7: a reply never produces a second clarification', () => {
       rawDataQuery({
         canonicalKey: 'population_on_1_january',
         regions: null,
+        regionScope: null,
         period: { kind: 'year', year: 2024 },
         derivation: 'none',
         confidence: 0.95,
@@ -139,6 +141,7 @@ describe('clock injection: relative periods resolve against pending.referenceDat
       rawDataQuery({
         canonicalKey: 'cpi_yearly_inflation',
         regions: null,
+        regionScope: null,
         period: { kind: 'relative', unit: 'month', offset: -1 },
         derivation: 'none',
         confidence: 0.95,
@@ -256,6 +259,7 @@ describe('#112: the reply merge accepts onboarded vocabulary keys', () => {
     const raw = rawDataQuery({
       canonicalKey: ONBOARDED_KEY,
       regions: null,
+      regionScope: null,
       period: { kind: 'year', year: 2024 },
       derivation: 'none',
       confidence: 0.95,
@@ -294,6 +298,7 @@ describe('#112: the reply merge accepts onboarded vocabulary keys', () => {
     const raw = rawDataQuery({
       canonicalKey: ONBOARDED_KEY,
       regions: null,
+      regionScope: null,
       period: { kind: 'year', year: 2024 },
       derivation: 'none',
       confidence: 0.95,
