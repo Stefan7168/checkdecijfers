@@ -1172,3 +1172,23 @@ describe('#142: count numbers are exempt only next to their OWN axis noun', () =
     expect(scanBody('het inwonertal van de 2 buurten', populationComparison()).find((t) => t.value === 2)?.kind).toBe('unbacked');
   });
 });
+
+describe('#330: a year that ends a sentence still names its period (R9 single-axis binding)', () => {
+  // The recorded answer drafts that fell back to the template in the live
+  // benchmark (2026-09-26) all ended "... in het 4e kwartaal van 2025." — the
+  // year followed by a sentence-final full stop, which the decimal guard
+  // wrongly treated as part of a number.
+  it('accepts the year followed by a full stop or a comma that is not part of a number', () => {
+    expect(
+      validateAnswerBody('Het werkloosheidspercentage bedroeg 4,0% in het 4e kwartaal van 2025.', unemploymentSingle).problems,
+    ).toEqual([]);
+    expect(
+      validateAnswerBody('In het 4e kwartaal van 2025, zo meldt het CBS, bedroeg het werkloosheidspercentage 4,0%.', unemploymentSingle).problems,
+    ).toEqual([]);
+  });
+
+  it('still refuses a year that is only part of a decimal number', () => {
+    const decimalOnly = validateAnswerBody('Het werkloosheidspercentage bedroeg 4,0% en de index 1,2025.', unemploymentSingle);
+    expect(decimalOnly.problems.some((p) => p.includes("noemt de periode"))).toBe(true);
+  });
+});

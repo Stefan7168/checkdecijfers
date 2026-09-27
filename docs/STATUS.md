@@ -38,8 +38,11 @@ before trusting this).**
   period labels, number notation, notes, source line, trend headline — no AI cost, stored chart unchanged; `main` @
   `3643d71b`, CI run 36304098633 green incl. deploy. ADR 058 "Phase 3 as built". Still Dutch for English readers: the
   AI-worded Insights/journalist headline, hand-curated annotations, the model's reading inside "Did you mean …?".
-- **NEXT PRIORITY: [#331](open-questions.md) scripts instead of AI calls (owner ask; charts first)** — zero spend to
-  investigate. Regional statistics wait for CBS to come back (owner: no paper design around the outage).
+- **#331 measured → not built (no traffic to save on):** reader AI use since July is a few dollars; the chart helper has 2 edits
+  ever; the real cost lever is development runs. Revisit trigger ≥50 chart-helper requests/month ([#331](open-questions.md)).
+- **#330 fixed:** a sentence-final year ("…van 2025.") failed the period check — hermetic template fallbacks 3 → 0.
+- **NEXT PRIORITY:** regional statistics once CBS is back (retry at session start, #329); otherwise the owner decisions
+  (#245, #275) and the next live benchmark after 10-01 (confirms #330 live; the intermediate-dip case stays open).
 - **English answers LIVE since 2026-09-26** (`ENGLISH_ANSWERS_ENABLED=1`); follow-ups #328, #324.
 - **Decisions still waiting on the owner:** #245, #275; own-data publishing spot-check (RUNBOOK ADR 057 step 4); Eurostat E2a
   steps 0/5/6 ([#313](open-questions.md)).

@@ -426,10 +426,17 @@ function faithfulUnemploymentTranslateClient(): LlmClient & { requests: LlmReque
     async complete(req: LlmRequest) {
       requests.push(req);
       const { items } = JSON.parse(req.question) as { items: TranslationItems };
-      const body = items.body.replace(
-        /^Werkloosheidspercentage, seizoengecorrigeerd was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)\.$/,
-        'The unemployment rate, seasonally adjusted, was $2 in $1.',
-      );
+      const body = items.body
+        .replace(
+          /^Werkloosheidspercentage, seizoengecorrigeerd was in (⟦P[a-z]+⟧) (⟦N[a-z]+⟧)\.$/,
+          'The unemployment rate, seasonally adjusted, was $2 in $1.',
+        )
+        // #330 (session 135): with the sentence-final year accepted, the reply
+        // now keeps the MODEL's own Dutch wording instead of the template.
+        .replace(
+          /^Het werkloosheidspercentage bedroeg (⟦N[a-z]+⟧) in het (⟦N[a-z]+⟧)e kwartaal van (⟦N[a-z]+⟧)\.$/,
+          'The unemployment rate was $1 in quarter $2 of $3.',
+        );
       const chips = items.chips.map((chip) =>
         chip
           .replace(
@@ -490,7 +497,7 @@ describe('the reply turn carries English too (answerClarificationReplyAudited)',
 
       const english = reply.response.english!;
       expect(english.status).toBe('verified');
-      expect(english.body).toContain('The unemployment rate, seasonally adjusted, was');
+      expect(english.body).toMatch(/^The unemployment rate(, seasonally adjusted,)? was /);
       expect(english.body).not.toContain('⟦');
       expect(client.requests).toHaveLength(1);
 

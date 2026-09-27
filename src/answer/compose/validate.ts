@@ -822,7 +822,11 @@ function yearOf(cell: ResultCell): number {
 function sentenceMentionsCellPeriod(sentence: string, cell: ResultCell): boolean {
   // Word-boundary match: '1,2024' (a decimal value) must not count as a
   // mention of the year 2024 (adversarial-review finding, 2026-07-03).
-  const year = new RegExp(`(?<![\\d.,])${yearOf(cell)}(?![\\d.,])`);
+  // #330 (session 135): a '.' or ',' next to the year only makes it part of a
+  // number when a DIGIT sits on its other side — a sentence-final "... van
+  // 2025." is a plain mention (the live benchmark's quarter answers all fell
+  // back to the template on exactly that full stop).
+  const year = new RegExp(`(?<!\\d|\\d[.,])${yearOf(cell)}(?!\\d|[.,]\\d)`);
   return year.test(sentence) || sentence.includes(cell.periodLabel);
 }
 
