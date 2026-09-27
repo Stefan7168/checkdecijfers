@@ -3377,7 +3377,7 @@ describe('Chat — ADR 058 phase 2 English refusals/clarifications (Task 6, #332
     expect(screen.queryByRole('button', { name: 'heel Nederland' })).toBeNull();
   });
 
-  it("clicking a clarification's English chip fills the input with the English label, and sending it submits the Dutch label", async () => {
+  it("clicking a clarification's English chip SENDS at once (like the Dutch option chips), submitting the Dutch label", async () => {
     askQuestion.mockResolvedValueOnce(
       outcome({ kind: 'ok', auditId: 41, netCost: 10, response: fakeClarificationResponse(EN_CLARIFICATION) }),
     );
@@ -3386,22 +3386,17 @@ describe('Chat — ADR 058 phase 2 English refusals/clarifications (Task 6, #332
     await submit('Welke gemeente?');
     const chip = await screen.findByRole('button', { name: 'the Netherlands as a whole' });
     fireEvent.click(chip);
-    // #75 fill-don't-send (deliberately reused for a clarification's English
-    // chip too, per the design's own instruction): the click only fills the
-    // input — it does not immediately reply, unlike the Dutch clarification
-    // one-click-send path. (The composer's placeholder becomes the open
-    // clarification's own Dutch question while a round is pending — R7's own
-    // convention — so the textarea is found by role here, not by its usual
-    // placeholder text.)
-    expect(screen.getByRole('textbox')).toHaveValue('the Netherlands as a whole');
-    expect(replyToClarification).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Verstuur' }));
+    // #332 review: a clarification's options are the reply (R7, #211) — one
+    // click sends, in English exactly as in Dutch; the server receives the
+    // Dutch `submit`, so the deterministic click-take resolves it.
     await screen.findByText('Nederland telt 18.044.027 inwoners.');
     expect(replyToClarification).toHaveBeenCalledWith(
       { questionNl: 'Welke gemeente bedoel je?' },
       'heel Nederland',
       expect.any(String),
     );
+    // The user's own bubble shows the English label they clicked.
+    expect(screen.getByText('the Netherlands as a whole', { selector: ':not(button)' })).toBeInTheDocument();
   });
 
   it('a refusal with english shows the English text, not the Dutch one', async () => {

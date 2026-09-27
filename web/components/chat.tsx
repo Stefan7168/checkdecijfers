@@ -1631,12 +1631,10 @@ export function Chat({
                   // 6): an English chip rides an 'answer' message's
                   // EnglishRendering.chips OR a refusal/clarification's
                   // NonAnswerEnglish.chips (englishChips is unified above) —
-                  // either way this ONE branch always falls into the #75
-                  // fill-don't-send convention below, deliberately not the
-                  // Dutch clarification's immediate-send path (the design's
-                  // own instruction: reuse this branch rather than write a
-                  // second one). The label/submit split still ends in the
-                  // Dutch text reaching the server either way (sendText).
+                  // either way this ONE branch. It follows the SAME send rule
+                  // as the Dutch branch below: a clarification's options send
+                  // on click, everything else fills (#75). The label/submit
+                  // split ends in the Dutch text reaching the server (sendText).
                   englishChips.map((englishChip) => (
                     <button
                       key={englishChip.submit}
@@ -1660,7 +1658,18 @@ export function Chat({
                           shown: englishChip.label,
                           ...(message.carrier ?? {}),
                         };
-                        setInput(englishChip.label);
+                        // #332 (session 135 review): a clarification's own
+                        // English chips SEND on click, exactly like the Dutch
+                        // branch below (R7, #211) — sendText binds the chip
+                        // above (shown === text) and posts the Dutch `submit`,
+                        // so the deterministic click-take resolves it with no
+                        // re-parse. Carrier-less (resumed thread) and every
+                        // other kind keep fill-don't-send.
+                        if (message.kind === 'clarification' && message.carrier) {
+                          void sendText(englishChip.label);
+                        } else {
+                          setInput(englishChip.label);
+                        }
                       }}
                       className={PILL}
                     >
