@@ -1221,3 +1221,22 @@ almost nothing to answer. Next step: brainstorm → spec for a regional-statisti
 `70072ned`, re-checked live — phase 0 rejected it for schema-fingerprint churn), zero AI spend; then bundle the parser step
 (#267) into one owner-supervised recording session. Blocked first on [#329](open-questions.md) (CBS data APIs unreachable
 from the owner's machine on 2026-09-26). Kickoff: [session-briefs/2026-09-27-session-135-kickoff.md](session-briefs/2026-09-27-session-135-kickoff.md).
+
+## Two-measure charts — "Plot against…" scatter ([#296](open-questions.md), owner pick session 137, 2026-09-27) — PART 1 ✅ BUILT + MERGED (backend only, invisible)
+
+Owner picked this while CBS was down ([#329](open-questions.md)); design GO in chat (committed UX: auto log scale on a
+≥100× spread, the most extreme places named + a search box, the asked-about figure on the vertical axis + swap, no trend
+line in v1). Spec: [superpowers/specs/2026-09-27-two-measure-scatter-design.md](superpowers/specs/2026-09-27-two-measure-scatter-design.md).
+Plan: [superpowers/plans/2026-09-27-two-measure-scatter.md](superpowers/plans/2026-09-27-two-measure-scatter.md).
+
+- **Part 1 (session 137, `3a0be206`..`89902c11`):** `src/query/pair.ts` — `pairWith` on the intent (present-only,
+  schema version unchanged), `runPairQuery` (two ordinary region-set legs, refuses if either leg refuses or < 3 regions
+  pair), pure `pairRegions` (every region of both legs accounted for exactly once: pair / left out with each side's state /
+  not applicable); `resolveIntent` refuses any paired intent so nothing can answer one of the two measures silently;
+  `src/chart/scatter.ts` — deterministic, zod-validated `ScatterSpec`. Final opus review: 0 Critical, 3 Important, all
+  fixed (full CBS labels so "Bergen (L.)"/"Bergen (NH.)" stay distinct; live embeds of a paired intent fail closed;
+  `PairedResults.intent` carries the full pair intent for the audit row). No AI, no DB change.
+- **Part 2 — NEXT (user-visible):** its own step-level plan first. Answer + audit (take-path branch on `pairWith`,
+  envelope `pairedResult?`/`scatter?`, template text nl/en, left-out line, reconstruction), the chip (`plotAgainst`, click
+  validation accepting `regionSet` + `pairWith` gated on `REGIONAL_KEYS`), the web `ScatterView`, docs (ADR 060).
+  Carry-overs from Part 1's review are in the plan's Part 2 section.

@@ -36,8 +36,10 @@ co-pilot edits of a scatter, saved view state (log/swap/search are not persisted
 - **D2 — Intent: one new present-only field `pairWith?: IntentTarget`.** `INTENT_SCHEMA_VERSION` stays `1`
   (the ADR 054 D1 reasoning: a bump would invalidate live embed tokens and in-flight pendings). The resolver
   accepts `pairWith` ONLY when: `regionSet` is set, exactly one period code, `derivation: 'none'`, and both
-  `target` and `pairWith` are canonical keys in `REGIONAL_KEYS`, different from each other. Anything else refuses
-  `invalid_intent` (sub-reason `pair_not_supported`). `validate-pending.ts` accepts the field under the same rule.
+  `target` and `pairWith` are canonical keys, different from each other. Anything else refuses `invalid_intent`.
+  **As built (Part 1):** the `REGIONAL_KEYS` membership check lives in click validation (`validate-pending.ts`, Part 2),
+  not in `src/query` (which must not import the answer layer, ADR 001) — a non-regional key refuses inside its own leg
+  anyway; the `pair_not_supported` sub-reason is a Part 2 decision.
 - **D3 — Two single-lineage results, not one merged result.** The envelope keeps `result` = the asked-about
   measure's ordinary `region_set` result (vertical axis) and gains **`pairedResult?: ValidatedResult`** = the
   added measure's ordinary `region_set` result over the same scope + period (horizontal axis). Each result keeps
@@ -49,8 +51,9 @@ co-pilot edits of a scatter, saved view state (log/swap/search are not persisted
   `regionCode`. A region gets a dot only when BOTH cells carry a value. Every other region in either roster lands in
   exactly one bucket with its reason, per side: `notApplicable` (CBS `Impossible` — not part of the class at that
   period; not disclosed as "left out"), `withheld` (null with another CBS reason), `missing` (no row / not in the
-  other table's roster). Output: `{ pairs: {regionCode, regionLabel, yResultId, xResultId}[], leftOut: {regionCode,
-  regionLabel, side: 'y'|'x'|'both', reason}[] }`. Stored nowhere — recomputed from the two stored results by
+  other table's roster). Output (as built): `{ pairs: {regionCode, regionLabel, y: ResultCell, x: ResultCell}[], leftOut: {regionCode,
+  regionLabel, y: {state, cell}, x: {state, cell}}[], notApplicable: string[], complete }` — each side's state and cell, a
+  superset of the originally sketched `{side, reason}`. Stored nowhere — recomputed from the two stored results by
   compose, chart build and audit reconstruction alike.
 - **D5 — Same period, same grain.** The pair intent carries the answered result's single period code for both
   measures. A measure without a cell at that exact code is simply not offered (the chip's dry-run fails).

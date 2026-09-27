@@ -31,6 +31,11 @@ before trusting this). Kickoff: [session-briefs/2026-09-27-session-137-kickoff.m
   [#278](open-questions.md), [#324](open-questions.md) gap 3. No AI, no DB change.
 - **Spend:** the $50 monthly roof is nearly used until it resets **2026-10-01** (session 136 spent nothing). No live LLM runs
   before then unless the owner raises the limit (Console → Settings → Billing).
+- **Session 137 (owner present, CBS still down): two-measure charts ([#296](open-questions.md), owner pick).** Design GO'd
+  ("Plot against…" zero-AI chip under a region-set answer → scatter, one dot per region; spec
+  `docs/superpowers/specs/2026-09-27-two-measure-scatter-design.md`). **Part 1 merged** (`89902c11`, backend only, invisible:
+  paired query + ScatterSpec); verify block green (backend 3903, web 3150, benchmark 14/14 + 6/6 + 0 fabricated, fallbacks 0).
+  **Next unblocked item: Part 2** (user-visible) — step-level plan first; carry-overs in the plan file.
 - **NEXT PRIORITY: regional statistics** (owner-chosen): a regional-statistics set from ONE CBS table (candidate `70072ned`),
   design first — **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting and the "Technische
   storing" banner still on www.cbs.nl (curl 000) at 19:17 local on 09-27; retry at session start). If still down: next unblocked item.

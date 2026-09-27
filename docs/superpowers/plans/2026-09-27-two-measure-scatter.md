@@ -943,3 +943,24 @@ plan (`docs/superpowers/plans/<date>-two-measure-scatter-part-2.md`) once Part 1
   copy-answer (`web/lib/copy-answer.ts`), downloads (`web/components/chart-download.tsx`), CSV; i18n in
   `web/lib/i18n/messages.ts`. Real browser check on the dev server.
 - **Task 6 — docs.** ADR 060; notes on ADR 039/054/056; `docs/04-architecture.md`; STATUS; open-questions #296.
+
+### Carry-overs from Part 1's final review (session 137) — Part 2 must handle these
+
+- **Audit intent:** write `PairedResults.intent` (the full pair intent) as the audited intent — `resolvedIntent()`
+  (`src/answer/audit/write.ts:41`) reads `response.result.intent`, which is only the y leg's one-measure intent.
+- **Click validation:** `clickIntentSchema` (`validate-pending.ts`) is a strictObject with NO `regionSet` field today —
+  Part 2 adds a strict `RegionScope` schema plus `pairWith`, gated by `pairIntentProblem` AND `REGIONAL_KEYS` membership
+  (the membership check lives here, not in `src/query`, which must not import the answer layer — ADR 001); mirror it in
+  `isClickTakeableIntent`.
+- **Refusal wording:** a malformed pair refuses generic `invalid_intent` (pages the owner) — decide on a
+  `pair_not_supported` sub-reason (needs its `RefusalReason` pairing in `reconstruct.ts`) or accept it (only a forged click
+  can reach it).
+- **Every intent entry point branches on `pairWith`:** respond take-path, `dry-run.ts`, embed-live (already fails closed),
+  `resolvedIntent`. Skip chart alternates / alternate readings / chips on a scatter answer (they read the y leg's intent).
+- **Left-out line:** build from `LeftOutRegion.y.cell`/`x.cell` `valueAttribute` (CBS's own reason). A region missing on
+  one leg and not applicable on the other lands in `notApplicable` yet suppresses labels — don't claim completeness from
+  `leftOut` alone.
+- **Ties:** a tied extreme labels only the first point — the text must not imply a unique "highest".
+- **Provisional:** `ScatterView`, table view and CSV must mark provisional points with `*` (the spec's note promises it).
+- **English:** the stored spec stays Dutch; derive the English title at render time.
+- **Test gap:** the PV26 hermetic test branches on `pairing.complete` only, not the full three-way label gate — tighten.
