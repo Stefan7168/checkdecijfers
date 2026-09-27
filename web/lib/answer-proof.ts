@@ -151,6 +151,11 @@ export interface AnswerProof {
    * binding-only first_last or an unknown kind all count; the component then
    * shows DERIVED_DATA_MARKING below the steps (review round 2). */
   marked: boolean;
+  /** #296 part 2 Task 7: a scatter answer's SECOND table — the horizontal
+   * axis's leg (`pairedResult`), proved by the same builder; the fields above
+   * are then the vertical axis's. PRESENT-ONLY: absent on every one-measure
+   * answer (byte-identical to before), and never nested deeper than one. */
+  paired?: AnswerProof;
 }
 
 function cellValueText(cell: ResultCell): string {
@@ -376,6 +381,30 @@ function buildNullNotice(result: ValidatedResult): string | null {
   return `${nullCount} van de ${result.cells.length} cellen heeft geen waarde; de reden van CBS staat per cel in de tabel.`;
 }
 
+/** One table's proof: the three depths over ONE validated result. Null
+ * without a real `cells` array (the redacted-envelope belt below). */
+function proofForResult(result: ValidatedResult | undefined): AnswerProof | null {
+  if (!Array.isArray(result?.cells)) return null;
+  const { attribution } = result;
+  const cellsById = new Map(result.cells.map((cell) => [cell.resultId, cell]));
+  const { steps, marked } = buildSteps(result, cellsById);
+  return {
+    tableId: attribution.tableId,
+    tableTitle: attribution.tableTitle,
+    tableVersion: attribution.tableVersion,
+    syncedAt: syncDateLabel(attribution.syncedAt),
+    license: attribution.license,
+    ...(attribution.source !== undefined ? { source: attribution.source } : {}),
+    reading: attribution.definitionLabel ?? result.cells[0]?.measureTitle ?? 'gevraagde waarde',
+    periodSemantics: attribution.periodSemantics,
+    alternates: buildAlternates(result),
+    cells: result.cells.map((cell) => proofCell(cell, attribution.tableId, attribution.source)),
+    steps,
+    nullNotice: buildNullNotice(result),
+    marked,
+  };
+}
+
 /** Built once at receive time (chat.tsx) and at replay time
  * (replay-assemble.ts) from the SAME stored envelope — never re-decided,
  * never re-computed: parity by construction (ADR 033 ⟨A3⟩). Returns null
@@ -392,28 +421,15 @@ function buildNullNotice(result: ValidatedResult): string | null {
  * chart, citation, csv) is unaffected — none of those read this module. */
 export function buildAnswerProof(response: AnswerResponse): AnswerProof | null {
   try {
-    const result = response.result as ValidatedResult | undefined;
-    if (!Array.isArray(result?.cells)) return null;
-
-    const { attribution } = result;
-    const cellsById = new Map(result.cells.map((cell) => [cell.resultId, cell]));
-    const { steps, marked } = buildSteps(result, cellsById);
-
-    return {
-      tableId: attribution.tableId,
-      tableTitle: attribution.tableTitle,
-      tableVersion: attribution.tableVersion,
-      syncedAt: syncDateLabel(attribution.syncedAt),
-      license: attribution.license,
-      ...(attribution.source !== undefined ? { source: attribution.source } : {}),
-      reading: attribution.definitionLabel ?? result.cells[0]?.measureTitle ?? 'gevraagde waarde',
-      periodSemantics: attribution.periodSemantics,
-      alternates: buildAlternates(result),
-      cells: result.cells.map((cell) => proofCell(cell, attribution.tableId, attribution.source)),
-      steps,
-      nullNotice: buildNullNotice(result),
-      marked,
-    };
+    const main = proofForResult(response.result as ValidatedResult | undefined);
+    if (main === null) return null;
+    // #296 part 2 Task 7: a scatter answer's horizontal-axis leg. A present
+    // but unreadable paired leg yields NO proof rather than a one-table
+    // proof of a two-table answer (the same honest degradation as above).
+    const pairedResult = response.pairedResult;
+    if (pairedResult === undefined) return main;
+    const paired = proofForResult(pairedResult);
+    return paired === null ? null : { ...main, paired };
   } catch (error) {
     // #252 fix (session 110 UX audit pass 3, row 2): a missing proof panel
     // is the honest degradation this catch exists for (see the doc comment
@@ -455,6 +471,8 @@ export function toEnglishAnswerProof(proof: AnswerProof): AnswerProof {
       regionLabel: cell.regionLabel !== null ? regionLabelEn(cell.regionLabel) : null,
       periodLabel: translatePeriodLabel(cell.periodLabel),
     })),
+    // #296 part 2 Task 7: the scatter's second table, same display-only swap.
+    ...(proof.paired !== undefined ? { paired: toEnglishAnswerProof(proof.paired) } : {}),
   };
 }
 
@@ -471,7 +489,9 @@ export type RequestUrlsByBatch = Record<number, string[]>;
  * the ids across messages into ONE query instead of one per message, while
  * still deriving the ids from this module's own cell shape. */
 export function batchIdsForProof(proof: AnswerProof): number[] {
-  return [...new Set(proof.cells.map((cell) => cell.batchId))];
+  // #296 part 2 Task 7: a scatter proof's second table has batches of its own.
+  const cells = proof.paired === undefined ? proof.cells : [...proof.cells, ...proof.paired.cells];
+  return [...new Set(cells.map((cell) => cell.batchId))];
 }
 
 /** WP30c D7(b) (ADR 048 Amendment 6): the live, explicit read this module

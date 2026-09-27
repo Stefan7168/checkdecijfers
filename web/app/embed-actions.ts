@@ -32,10 +32,12 @@ export async function createEmbedCode(auditId: number): Promise<CreateEmbedCodeR
     const record = await loadAuditRecord(db, auditId);
     if (record === null) return { ok: false, reason: 'not_found' };
 
+    // #296 part 2 Task 7: a scatter answer (chart null, `scatter` present —
+    // a present-only key, read with `?? null`) is as embeddable as a chart.
     if (
       record.userId !== userId ||
       record.response.kind !== 'answer' ||
-      record.response.chart === null ||
+      (record.response.chart === null && (record.response.scatter ?? null) === null) ||
       isRedacted(record.response)
     ) {
       return { ok: false, reason: 'forbidden' };

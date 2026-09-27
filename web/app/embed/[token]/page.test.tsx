@@ -13,6 +13,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AuditRecord } from '../../../backend/answer/audit/types.ts';
+import { LangProvider } from '../../../lib/i18n/lang-provider.tsx';
+import { scatterBodyEn, scatterLineEn } from '../../../lib/scatter-text-en.ts';
+import { fakeScatterAnswerResponse } from '../../../test/fake-answer.ts';
 
 const { notFound } = vi.hoisted(() => ({
   notFound: vi.fn(() => {
@@ -917,5 +920,90 @@ describe('/embed/[token] — the author\'s edits (session 136)', () => {
     getOwnChartEdits.mockRejectedValueOnce(new Error('db down'));
     render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
     expect(screen.getByRole('heading', { name: /Testreeks/ })).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #296 part 2 Task 7: a scatter answer's embed — ScatterView in embed mode
+// (control-free, the Task 6 ruling), frozen only: no live re-run, no ?form=,
+// no Pro "never stale" pitch (a scatter embed cannot go live).
+// ---------------------------------------------------------------------------
+describe('/embed/[token] — scatter answer (#296)', () => {
+  const Y_STALE =
+    'Let op: de tabel 84639NED (Gemiddeld inkomen) wordt normaal jaarlijks bijgewerkt door CBS, ' +
+    'maar onze laatste synchronisatie was op 2025-01-02 — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+  const response = fakeScatterAnswerResponse({ stalenessWarning: Y_STALE });
+  const scatterRecord = () => answerRecord({ response });
+
+  function setup() {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(scatterRecord());
+  }
+
+  it('nl: ScatterView with body, coverage, labelled definitions, staleness, both attributions and a frozen footer; no controls', async () => {
+    setup();
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search({ live: '1', form: 'bar' }) }));
+    expect(screen.getByTestId('scatter-view')).toBeInTheDocument();
+    expect(screen.getByText(response.answer.body)).toBeInTheDocument();
+    expect(screen.getByText(response.answer.scatterLine!)).toBeInTheDocument();
+    expect(screen.getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(screen.getByText('Definitie (horizontale as): inwoners op 1 januari.')).toBeInTheDocument();
+    expect(screen.getByText(Y_STALE)).toBeInTheDocument();
+    expect(screen.getByText(response.scatter!.y.attributionLine)).toBeInTheDocument();
+    expect(screen.getByText(response.scatter!.x.attributionLine)).toBeInTheDocument();
+    expect(screen.getByText(/Bevroren op 2026-09-10/)).toBeInTheDocument();
+    // Frozen only: no Pro "never stale" pitch, no live re-run, no controls.
+    expect(screen.queryByText(/Nooit meer verouderd/)).toBeNull();
+    expect(hasProPlan).not.toHaveBeenCalled();
+    expect(rerunLive).not.toHaveBeenCalled();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByRole('tab')).toBeNull();
+  });
+
+  it('en: every text line is English — no Dutch sentence on the English embed', async () => {
+    setup();
+    const { container } = render(
+      <LangProvider lang="en">{await EmbedPage({ params: params('42.sig'), searchParams: search({ lang: 'en' }) })}</LangProvider>,
+    );
+    expect(screen.getByText(scatterBodyEn(response.scatter!))).toBeInTheDocument();
+    expect(screen.getByText(scatterLineEn(response.scatter!))).toBeInTheDocument();
+    expect(screen.getByText('Definition (horizontal axis): The population on 1 January.')).toBeInTheDocument();
+    expect(screen.getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/)).toBeInTheDocument();
+    expect(screen.getByText(/Frozen on 2026-09-10/)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Let op|Definitie|Dekking|Bevroren|tegenover|Elke stip|Bron:|gesynchroniseerd/);
+  });
+
+  it('every digit in the scatter embed traces to the spec, the stored lines, or the footer date', async () => {
+    setup();
+    const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    const spec = response.scatter!;
+    scanForUnboundDigits(container, [
+      spec.title,
+      spec.y.attributionLine,
+      spec.x.attributionLine,
+      spec.y.unit,
+      spec.x.unit,
+      spec.y.tableId,
+      spec.x.tableId,
+      spec.y.syncedAt,
+      spec.x.syncedAt,
+      ...spec.points.flatMap((p) => [p.label, p.xFormatted, p.yFormatted]),
+      response.answer.body,
+      response.answer.scatterLine!,
+      response.answer.definitionLine!,
+      response.answer.pairedDefinitionLine!,
+      Y_STALE,
+      'Bevroren op 2026-09-10',
+    ]);
+  });
+
+  it('a redacted scatter row shows the not-available page', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord({ response: { ...response, redacted: true } }));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(screen.getByText('Deze grafiek is niet meer beschikbaar.')).toBeInTheDocument();
+    expect(screen.queryByTestId('scatter-view')).toBeNull();
   });
 });

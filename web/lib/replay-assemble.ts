@@ -35,7 +35,8 @@ import type { AnswerProof, RequestUrlsByBatch } from './answer-proof.ts';
 import { buildCitation } from './citation.ts';
 import type { ChatMessage } from './chat-message.ts';
 import { messageKind } from './chat-message.ts';
-import { buildAnswerCsv } from './csv.ts';
+import { pairedAttributionOf } from './scatter-card.ts';
+import { answerCsvFor } from './scatter-csv.ts';
 import { statCardData } from './stat-card-data.ts';
 // open-questions #324 gap 2: the ONE reader-facing field this module builds
 // that is a fully pre-rendered string, not structural data a component can
@@ -57,6 +58,7 @@ function redactedMessage(): ChatMessage {
     kind: null,
     text: 'Deze vraag is verwijderd.',
     chart: null,
+    scatter: null,
     // Not yet in the structural replay parts (see ChatMessage's own doc
     // comment) — a redacted row has no envelope to derive one from anyway.
     chartAlternates: [],
@@ -90,6 +92,7 @@ function userMessage(text: string): ChatMessage {
     kind: null,
     text,
     chart: null,
+    scatter: null,
     chartAlternates: [],
     cost: null,
     citation: null,
@@ -140,6 +143,15 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
           assumptionLine: part.answerView.assumptionLine,
           regionSetLine: part.answerView.regionSetLine ?? null,
           regionSeriesLine: part.answerView.regionSeriesLine ?? null,
+          // #296: the scatter's coverage line + second definition + second
+          // attribution — present-only, so a one-measure view is unchanged.
+          ...(part.scatter !== null
+            ? {
+                scatterLine: part.answerView.scatterLine ?? null,
+                pairedDefinitionLine: part.answerView.pairedDefinitionLine ?? null,
+                pairedAttribution: pairedAttributionOf(part.scatter),
+              }
+            : {}),
           stalenessWarning: part.answerView.stalenessWarning,
           definitionLine: part.answerView.definitionLine,
           alternatesLine: part.answerView.alternatesLine ?? null,
@@ -162,6 +174,8 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
     // R8: the exact stored text the user saw (Stage A pins finalText === stored).
     text: part.finalText,
     chart: part.chart,
+    // #296: structural like `chart` (Stage A lifts it onto the part).
+    scatter: part.scatter,
     // #254: unlike `chart`, Stage A never lifted this onto its own
     // ReplayAssistantPart field — read it straight off the stored envelope,
     // the SAME `answer` narrowing citation/card/csv already use two lines
@@ -173,7 +187,10 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart, lang: Lang): 
     // citation/card/csv reconstruction.
     citation: answer !== null ? buildCitation(answer) : null,
     card: answer !== null ? statCardData(answer) : null,
-    csv: answer !== null ? buildAnswerCsv(answer, lang) : null,
+    // #296: `answerCsvFor` = buildAnswerCsv for every one-measure answer
+    // (byte-identical), the two-axis scatter CSV for a scatter answer — the
+    // SAME dispatch the live turn calls (chat.tsx).
+    csv: answer !== null ? answerCsvFor(answer, lang) : null,
     proof,
     proofRequestUrls,
     answerView,

@@ -16,7 +16,8 @@ import { buildCitation } from './citation.ts';
 import { buildAnswerCsv } from './csv.ts';
 import { deriveVisuals } from './dock-visuals.ts';
 import { assembleMessages } from './replay-assemble.ts';
-import { fakeAnswerResponse, fakeCell, fakeEnglishRendering } from '../test/fake-answer.ts';
+import { fakeAnswerResponse, fakeCell, fakeEnglishRendering, fakeScatterAnswerResponse } from '../test/fake-answer.ts';
+import { buildScatterCsv } from './scatter-csv.ts';
 
 // WP30c D7(b): assembleMessages now awaits fetchRequestUrlsByBatch(db, ...)
 // per answer message, alongside (never inside) buildAnswerProof — this
@@ -347,5 +348,63 @@ describe('assembleMessages — lang (open-questions #324 gap 2)', () => {
       'subject;region;region code;period;period code;value;unit;status;remark;cell ID\r\n',
     );
     expect(assistantMsg!.csv).toEqual(buildAnswerCsv(response as never, 'en'));
+  });
+});
+
+// #296 part 2 Task 7: a reloaded thread shows the SAME scatter card — the
+// spec, the coverage line, both definitions, the two-table citation/proof and
+// the two-axis CSV, all from the stored envelope through the live builders.
+describe('assembleMessages — scatter answer (#296)', () => {
+  const response = fakeScatterAnswerResponse({ provisionalLeg: 'x' });
+  let assistantMsg: Awaited<ReturnType<typeof assembleMessages>>[number];
+  beforeAll(async () => {
+    [, assistantMsg] = await assembleMessages(
+      replayParts([row({ id: 7, response: response as unknown as ComposedResponse })]),
+      fakeDb,
+      'en',
+    );
+  });
+
+  it('carries the ScatterSpec; chart stays null; no stat card', () => {
+    expect(assistantMsg!.scatter).toEqual(response.scatter);
+    expect(assistantMsg!.chart).toBeNull();
+    expect(assistantMsg!.card).toBeNull();
+  });
+
+  it('the answerView carries the coverage line, both definitions and the second attribution', () => {
+    expect(assistantMsg!.answerView).toMatchObject({
+      body: response.answer.body,
+      scatterLine: response.answer.scatterLine,
+      definitionLine: response.answer.definitionLine,
+      pairedDefinitionLine: response.answer.pairedDefinitionLine,
+      attribution: response.scatter!.y.attributionLine,
+      pairedAttribution: response.scatter!.x.attributionLine,
+    });
+  });
+
+  it('citation, proof and CSV are the live builders over the stored envelope (two tables, both axes)', () => {
+    expect(assistantMsg!.citation).toBe(buildCitation(response));
+    expect(assistantMsg!.citation).toContain('tabel 03759ned');
+    expect(assistantMsg!.proof).toEqual(buildAnswerProof(response));
+    expect(assistantMsg!.proof!.paired!.tableId).toBe('03759ned');
+    expect(assistantMsg!.csv).toEqual(
+      buildScatterCsv(response.scatter!, 'en', {
+        definitionLine: response.answer.definitionLine,
+        pairedDefinitionLine: response.answer.pairedDefinitionLine,
+        stalenessWarning: response.stalenessWarning,
+      }),
+    );
+  });
+
+  it('provisional covers the horizontal leg too', () => {
+    expect(assistantMsg!.provisional).toBe(true);
+  });
+
+  it('docks as a chart-kind tab carrying the scatter', () => {
+    const visuals = deriveVisuals([{ ...assistantMsg!, role: 'assistant' }]);
+    expect(visuals).toHaveLength(1);
+    expect(visuals[0]!.kind).toBe('scatter');
+    expect(visuals[0]!.scatter).toEqual(response.scatter);
+    expect(visuals[0]!.label).toBe('Grafiek 1');
   });
 });

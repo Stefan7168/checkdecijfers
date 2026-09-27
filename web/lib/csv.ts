@@ -62,8 +62,9 @@ export function csvRow(fields: string[]): string {
 }
 
 /** Decimal-comma, ungrouped serialization that can never change the value:
- * pad to the CBS decimals when that is lossless, else the exact JS string. */
-function csvCellNumberNl(value: number, decimals: number): string {
+ * pad to the CBS decimals when that is lossless, else the exact JS string.
+ * Exported for the scatter CSV (scatter-csv.ts, #296) — same dialect. */
+export function csvCellNumberNl(value: number, decimals: number): string {
   const fixed = value.toFixed(decimals);
   const exact = Number(fixed) === value ? fixed : String(value);
   return exact.replace('.', ',');

@@ -30,8 +30,11 @@ function structuralLines(view: AnswerView): string[] {
     view.assumptionLine,
     view.regionSetLine,
     view.regionSeriesLine,
+    // #296: the scatter's coverage line sits in the region-set slot.
+    view.scatterLine ?? null,
     view.stalenessWarning,
     view.definitionLine,
+    view.pairedDefinitionLine ?? null,
     view.alternatesLine,
     view.markingLine,
   ].filter((line): line is string => line !== null && line !== '');
@@ -48,7 +51,10 @@ export function buildAnswerCopy(
 ): { text: string; html: string } {
   const lines = structuralLines(view);
 
-  const textParts = [...lines, view.attribution];
+  // #296: a scatter answer cites its second table's sentence right after
+  // the first (plain in HTML — the deep link is the first table's).
+  const paired = view.pairedAttribution ?? null;
+  const textParts = [...lines, view.attribution, ...(paired !== null ? [paired] : [])];
   if (sourceUrl !== null) textParts.push(sourceUrl);
   const text = textParts.join('\n\n');
 
@@ -58,6 +64,7 @@ export function buildAnswerCopy(
       ? `<p><a href="${escapeHtml(sourceUrl)}">${escapeHtml(view.attribution)}</a></p>`
       : `<p>${escapeHtml(view.attribution)}</p>`;
   htmlParts.push(attributionHtml);
+  if (paired !== null) htmlParts.push(`<p>${escapeHtml(paired)}</p>`);
   const html = htmlParts.join('');
 
   return { text, html };

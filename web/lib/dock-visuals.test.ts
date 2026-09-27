@@ -6,7 +6,11 @@
 // here rather than growing dataset-chat.test.tsx into a second dock-visuals
 // suite.
 import { describe, expect, it } from 'vitest';
-import { datasetMessageHasVisual, deriveDatasetVisuals } from './dock-visuals.ts';
+import { datasetMessageHasVisual, deriveDatasetVisuals, deriveVisuals, messageHasVisual } from './dock-visuals.ts';
+import type { ChatMessage } from './chat-message.ts';
+import { extendsPreviousChart } from './chat-message.ts';
+import type { ChartSpec } from '../backend/chart/types.ts';
+import { fakeScatterSpec } from '../test/fake-answer.ts';
 import type { DatasetChatMessage } from '../backend/attachments/replay.ts';
 import type { ClientChartInstruction, DatasetProfile, UserChartSpec } from '../backend/attachments/types.ts';
 
@@ -128,5 +132,76 @@ describe('deriveDatasetVisuals — userChartEdit (co-pilot phase 2)', () => {
 
   it('leaves userChartEdit null when no dataset/thread context is given', () => {
     expect(deriveDatasetVisuals([chartMessage(7)])[0]!.userChartEdit).toBeNull();
+  });
+});
+
+// #296 part 2 Task 7: a scatter answer docks like a chart (one tab, the
+// running "Grafiek n" count), and is never treated as continuing — or being
+// continued by — a one-measure chart.
+
+function cbsMessage(overrides: Partial<ChatMessage>): ChatMessage {
+  return {
+    role: 'assistant',
+    kind: 'answer',
+    text: 't',
+    chart: null,
+    scatter: null,
+    chartAlternates: [],
+    cost: null,
+    citation: null,
+    card: null,
+    csv: null,
+    proof: null,
+    proofRequestUrls: null,
+    answerView: null,
+    provisional: false,
+    suggestions: [],
+    auditId: 5,
+    webSection: null,
+    carrier: null,
+    insufficientCredits: null,
+    onboardingOffer: null,
+    english: null,
+    nonAnswerEnglish: null,
+    ...overrides,
+  };
+}
+
+const LINE_CHART = {
+  kind: 'line',
+  unit: '%',
+  dims: {},
+  attribution: { tableId: '84639NED' },
+} as unknown as ChartSpec;
+
+describe('deriveVisuals — scatter answers (#296)', () => {
+  it('a scatter message is a visual; it docks as a scatter tab in the chart count, never "extending" anything', () => {
+    const scatter = fakeScatterSpec();
+    const messages = [
+      cbsMessage({ role: 'user', kind: null, text: 'inkomen per provincie' }),
+      cbsMessage({ chart: LINE_CHART, auditId: 1 }),
+      cbsMessage({ role: 'user', kind: null, text: 'zet af tegen bevolking' }),
+      cbsMessage({ scatter, auditId: 2 }),
+      cbsMessage({ role: 'user', kind: null, text: 'weer inkomen' }),
+      cbsMessage({ chart: LINE_CHART, auditId: 3 }),
+    ];
+    expect(messageHasVisual(messages[3]!)).toBe(true);
+    const visuals = deriveVisuals(messages);
+    expect(visuals.map((v) => [v.kind, v.label])).toEqual([
+      ['chart', 'Grafiek 1'],
+      ['scatter', 'Grafiek 2'],
+      ['chart', 'Grafiek 3'],
+    ]);
+    const tab = visuals[1]!;
+    expect(tab.scatter).toBe(scatter);
+    expect(tab.chart).toBeNull();
+    expect(tab.card).toBeNull();
+    expect(tab.auditId).toBe(2);
+    expect(tab.extendsPrevious).toBe(false);
+    // The scatter in between neither continues the first chart nor breaks the
+    // third one's continuation of it.
+    expect(extendsPreviousChart(messages, 3)).toBe(false);
+    expect(extendsPreviousChart(messages, 5)).toBe(true);
+    expect(visuals[2]!.extendsPrevious).toBe(true);
   });
 });

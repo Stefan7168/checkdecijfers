@@ -21,8 +21,8 @@ import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import type { DerivationRecord } from '../backend/query/types.ts';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import type { ValidatedResult } from '../backend/query/types.ts';
-import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
-import { buildAnswerProof, toEnglishAnswerProof } from './answer-proof.ts';
+import { fakeAnswerResponse, fakeCell, fakeScatterAnswerResponse } from '../test/fake-answer.ts';
+import { batchIdsForProof, buildAnswerProof, toEnglishAnswerProof } from './answer-proof.ts';
 import type { AnswerProof } from './answer-proof.ts';
 
 describe('buildAnswerProof', () => {
@@ -736,5 +736,37 @@ describe('toEnglishAnswerProof', () => {
     const once = toEnglishAnswerProof(proof());
     const twice = toEnglishAnswerProof(once);
     expect(twice).toEqual(once);
+  });
+});
+
+// #296 part 2 Task 7: a scatter answer rests on TWO tables — the proof panel
+// shows the paired (horizontal-axis) table's own cells and steps too, built by
+// the SAME builder over `pairedResult`; every other answer is unchanged.
+describe('buildAnswerProof — scatter answer (two tables)', () => {
+  const response = fakeScatterAnswerResponse();
+  const proof = buildAnswerProof(response)!;
+
+  it('the main proof is the vertical-axis leg, the paired proof the horizontal-axis leg, each its own table', () => {
+    const { paired: _paired, ...main } = proof;
+    expect(main).toEqual(buildAnswerProof({ ...response, pairedResult: undefined, scatter: undefined } as AnswerResponse));
+    expect(proof.tableId).toBe('84639NED');
+    expect(proof.paired).toBeDefined();
+    expect(proof.paired!.tableId).toBe('03759ned');
+    expect(proof.paired!.cells.map((c) => c.resultId)).toEqual(response.pairedResult!.cells.map((c) => c.resultId));
+    expect(proof.paired!.paired).toBeUndefined();
+  });
+
+  it('a one-measure answer carries no `paired` key at all (byte-identical to before)', () => {
+    expect('paired' in buildAnswerProof(fakeAnswerResponse({ cells: [fakeCell()] }))!).toBe(false);
+  });
+
+  it('batchIdsForProof covers the paired table\'s batches too', () => {
+    const withBatches = fakeScatterAnswerResponse();
+    withBatches.pairedResult!.cells.forEach((c) => (c.batchId = 99));
+    expect(batchIdsForProof(buildAnswerProof(withBatches)!).sort()).toEqual([1, 99]);
+  });
+
+  it('toEnglishAnswerProof translates the paired table\'s display names too', () => {
+    expect(toEnglishAnswerProof(proof).paired!.cells[0]!.measureTitle).toBe('Population on 1 January');
   });
 });

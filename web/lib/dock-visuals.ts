@@ -20,6 +20,7 @@ import type { DatasetProfile, UserChartSpec } from '../backend/attachments/types
 import type { UserChartEditContext } from '../components/user-chart.tsx';
 import type { ChartDocState } from './chart-commands.ts';
 import type { ChartForm } from './chart-view-state.ts';
+import type { ScatterSpec } from '../backend/chart/scatter.ts';
 import type { PresentationOverrides } from './chart-presentation.ts';
 
 /** One dockable visual. `chart`/`card`/`userChart` carry the payload verbatim
@@ -30,7 +31,9 @@ export interface DockVisual {
    * the index is a stable identity (Chat/DatasetChat compute the same id from
    * the index to wire their reference chip to this tab). */
   id: string;
-  kind: 'chart' | 'card' | 'userChart';
+  /** #296 part 2: 'scatter' = a two-measure scatter answer — rendered by
+   * ScatterView, counted in the SAME running "Grafiek n" as a chart. */
+  kind: 'chart' | 'card' | 'userChart' | 'scatter';
   /** "Grafiek 1" / "Kaart 2" / "Your chart 1" — deterministic, per-kind running
    * count. Dutch/English-independent renderers (tests constructing a
    * DockVisual by hand, and the `userChart` kind, whose "Your chart n" is
@@ -55,6 +58,10 @@ export interface DockVisual {
    * dataset chart has no CBS registry entry to look alternates up in). */
   chartAlternates: ChatMessage['chartAlternates'];
   card: ChatMessage['card'];
+  /** #296 part 2: the scatter a `scatter` visual renders. PRESENT-ONLY (set
+   * on scatter visuals only), so every chart/card/userChart visual — and
+   * every hand-built DockVisual — stays byte-identical. */
+  scatter?: ScatterSpec;
   userChart: UserChartSpec | null;
   /** Task 4 (spec Part B1): the audit_answers row id ChartEmbedButton signs
    * an embed token against — same field, same null-on-non-answer contract as
@@ -109,11 +116,13 @@ export function visualId(index: number): string {
   return `visual-${index}`;
 }
 
-/** Whether a message contributes a dock tab (an assistant answer with a chart
- * or a stat card). Chart takes precedence when — improbably — both are present,
- * keeping it ONE tab per message (ADR 033 D4). */
+/** Whether a message contributes a dock tab (an assistant answer with a chart,
+ * a scatter (#296) or a stat card). Chart takes precedence when — improbably —
+ * more than one is present, keeping it ONE tab per message (ADR 033 D4). */
 export function messageHasVisual(message: ChatMessage): boolean {
-  return message.role === 'assistant' && (message.chart !== null || message.card !== null);
+  return (
+    message.role === 'assistant' && (message.chart !== null || message.scatter !== null || message.card !== null)
+  );
 }
 
 /** The DatasetChat analog of `messageHasVisual`: a chart-kind assistant turn
@@ -177,6 +186,27 @@ export function deriveVisuals(
         initialFormOverride: seed?.form,
         initialPresentation: seed?.presentation,
         extendsPrevious: extendsPreviousChart(messages, index),
+      });
+    } else if (message.scatter !== null) {
+      // #296 part 2: a scatter answer docks in the chart count. Its chart is
+      // null, so the one-measure "extends a previous chart" machinery never
+      // sees it (neither as the continuing chart nor as the continued one);
+      // no seed (a scatter keeps no saved edits — view state only).
+      chartCount += 1;
+      visuals.push({
+        id: visualId(index),
+        kind: 'scatter',
+        label: `Grafiek ${chartCount}`,
+        count: chartCount,
+        question: truncate(lastQuestion),
+        chart: null,
+        chartAlternates: [],
+        card: null,
+        scatter: message.scatter,
+        userChart: null,
+        auditId: message.auditId,
+        userChartEdit: null,
+        extendsPrevious: false,
       });
     } else if (message.card !== null) {
       cardCount += 1;

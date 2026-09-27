@@ -31,8 +31,9 @@ import type { WebSection } from '../backend/websearch/types.ts';
 import { buildAnswerProof } from '../lib/answer-proof.ts';
 import { buildCitation } from '../lib/citation.ts';
 import { buildAnswerCopy, escapeHtml as escapeHtmlForCopy } from '../lib/copy-answer.ts';
-import { buildAnswerCsv } from '../lib/csv.ts';
 import type { AnswerCsv } from '../lib/csv.ts';
+import { pairedAttributionOf, scatterCardText } from '../lib/scatter-card.ts';
+import { answerCsvFor } from '../lib/scatter-csv.ts';
 import type { CoverageDisclosure } from '../lib/coverage-disclosure.ts';
 import { useLang, useT } from '../lib/i18n/lang-provider.tsx';
 import { DownloadCsvButton } from './download-csv-button.tsx';
@@ -76,6 +77,7 @@ import type { DockVisual } from '../lib/dock-visuals.ts';
 import { deriveVisuals, messageHasVisual, visualId } from '../lib/dock-visuals.ts';
 import { AnswerProof } from './answer-proof.tsx';
 import { ChartView } from './chart.tsx';
+import { ScatterView } from './scatter-view.tsx';
 import { CoverageDisclosureView } from './coverage-disclosure.tsx';
 import { FeedbackButtons } from './feedback-buttons.tsx';
 import { AnswerSkeleton } from './loading-skeletons.tsx';
@@ -752,7 +754,7 @@ export function Chat({
 
     setMessages((m) => [
       ...m,
-      { role: 'user', kind: null, text, chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
+      { role: 'user', kind: null, text, chart: null, scatter: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
     ]);
     setInput('');
     setBusy(true);
@@ -867,6 +869,7 @@ export function Chat({
                 kind: 'insufficient_credits' as const,
                 text: gatedMessageText(gated, t),
                 chart: null,
+                scatter: null,
                 chartAlternates: [],
                 cost: null,
                 citation: null,
@@ -890,6 +893,7 @@ export function Chat({
                 kind: 'info' as const,
                 text: gatedMessageText(gated, t),
                 chart: null,
+                scatter: null,
                 chartAlternates: [],
                 cost: null,
                 citation: null,
@@ -966,13 +970,18 @@ export function Chat({
           kind: messageKind(response),
           text: response.text,
           chart: response.kind === 'answer' ? response.chart : null,
+          // #296 part 2 Task 7: a present-only envelope key (A1) — `?? null`.
+          scatter: response.kind === 'answer' ? (response.scatter ?? null) : null,
           chartAlternates: response.kind === 'answer' ? response.chartAlternates : [],
           cost: gated.netCost,
           citation: response.kind === 'answer' ? buildCitation(response) : null,
           card: response.kind === 'answer' ? statCardData(response) : null,
           // open-questions #324 gap 2: English-interface headers, Dutch data
           // values unchanged either way (csv.ts's own scope).
-          csv: response.kind === 'answer' ? buildAnswerCsv(response, lang) : null,
+          // #296: `answerCsvFor` = buildAnswerCsv for every one-measure
+          // answer (unchanged), the two-axis scatter CSV for a scatter —
+          // the SAME dispatch thread replay calls (replay-assemble.ts).
+          csv: response.kind === 'answer' ? answerCsvFor(response, lang) : null,
           proof: response.kind === 'answer' ? buildAnswerProof(response) : null,
           // #252 (was Amendment B5's named residual): this component is
           // 'use client' with no server execution context, so the request_urls
@@ -1001,6 +1010,16 @@ export function Chat({
                   // every answer whose series is complete (the key is simply
                   // absent — A1), same discipline as regionSetLine above.
                   regionSeriesLine: response.answer.regionSeriesLine ?? null,
+                  // #296: a scatter's coverage line, second definition and
+                  // second attribution — present-only, so a one-measure
+                  // answerView is byte-identical to before.
+                  ...(response.scatter !== undefined
+                    ? {
+                        scatterLine: response.answer.scatterLine ?? null,
+                        pairedDefinitionLine: response.answer.pairedDefinitionLine ?? null,
+                        pairedAttribution: pairedAttributionOf(response.scatter),
+                      }
+                    : {}),
                   stalenessWarning: response.stalenessWarning,
                   definitionLine: response.answer.definitionLine,
                   // #39: `?? null` guards the deploy-window skew AND every
@@ -1015,8 +1034,13 @@ export function Chat({
                   syncedAt: response.result.attribution.syncedAt,
                 }
               : null,
+          // #296: a scatter quotes BOTH legs — the paired leg's cells count
+          // too (the same rule replay.ts's computeProvisional applies).
           provisional:
-            response.kind === 'answer' && response.result.cells.some((cell) => cell.provisional),
+            response.kind === 'answer' &&
+            [response.result, ...(response.pairedResult ? [response.pairedResult] : [])].some((result) =>
+              result.cells.some((cell) => cell.provisional),
+            ),
           // WP29 + #134(a): `?? []` guards the deploy-window skew only (an old
           // server process serving a new client bundle omits the field); a
           // current server always sets it. Answers carry follow-up chips;
@@ -1109,14 +1133,14 @@ export function Chat({
       if (result.kind === 'unauthenticated') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
+          { role: 'assistant', kind: 'info', text: t('chat.unauthenticated'), chart: null, scatter: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
         ]);
         return;
       }
       if (result.kind === 'insufficient_credits') {
         setMessages((m) => [
           ...m,
-          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null, english: null, nonAnswerEnglish: null },
+          { role: 'assistant', kind: 'insufficient_credits', text: t('chat.insufficientCredits', { balance: result.balance, required: result.required }), chart: null, scatter: null, chartAlternates: [], cost: null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: { balance: result.balance, required: result.required }, onboardingOffer: null, english: null, nonAnswerEnglish: null },
         ]);
         return;
       }
@@ -1126,7 +1150,7 @@ export function Chat({
       // "asking twice must not cost twice" invariant design §2/§5 always had).
       setMessages((m) => [
         ...m,
-        { role: 'assistant', kind: 'info', text: result.text, chart: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
+        { role: 'assistant', kind: 'info', text: result.text, chart: null, scatter: null, chartAlternates: [], cost: result.kind === 'started' ? result.netCost : null, citation: null, card: null, csv: null, proof: null, proofRequestUrls: null, answerView: null, provisional: false, suggestions: [], auditId: null, webSection: null, carrier: null, insufficientCredits: null, onboardingOffer: null, english: null, nonAnswerEnglish: null },
       ]);
     } catch (err) {
       if (unstable_isUnrecognizedActionError(err)) {
@@ -1285,8 +1309,41 @@ export function Chat({
           // is exactly today's `message.answerView`, unchanged. tableId/
           // source/syncedAt (identifiers, not display prose) stay the Dutch
           // view's, same as the SourceBadge beside it.
+          // #296 part 2 Task 7: a scatter answer's card text, in the reader's
+          // language (scatter-card.ts — the SAME lines the dock, the embed
+          // page and the CSV preamble use). Null on every other message, so
+          // everything below is byte-identical for a one-measure answer.
+          const scatter = message.kind === 'answer' ? message.scatter : null;
+          const scatterText =
+            scatter !== null && answerView !== null
+              ? scatterCardText(
+                  {
+                    scatter,
+                    body: answerView.body,
+                    scatterLine: answerView.scatterLine,
+                    definitionLine: answerView.definitionLine,
+                    pairedDefinitionLine: answerView.pairedDefinitionLine,
+                    stalenessWarning: answerView.stalenessWarning,
+                  },
+                  lang,
+                )
+              : null;
           const copyView: AnswerView | null =
-            answerView !== null
+            answerView !== null && scatterText !== null
+              ? {
+                  // #296: a scatter copies exactly its card's lines — the
+                  // coverage line, both definitions, the staleness lines and
+                  // both attribution sentences, in the reader's language.
+                  ...answerView,
+                  body: scatterText.body,
+                  scatterLine: scatterText.line,
+                  stalenessWarning: scatterText.stalenessLines.length > 0 ? scatterText.stalenessLines.join('\n') : null,
+                  definitionLine: scatterText.definitionLines[0] ?? null,
+                  pairedDefinitionLine: scatterText.definitionLines[1] ?? null,
+                  attribution: scatterText.attributionLines[0]!,
+                  pairedAttribution: scatterText.attributionLines[1] ?? null,
+                }
+              : answerView !== null
               ? {
                   ...answerView,
                   body: cardBody,
@@ -1343,50 +1400,92 @@ export function Chat({
                   <p className="mb-1 text-xs text-muted-foreground">{t('chat.englishFallback')}</p>
                 ) : null}
                 <Card size="sm" className="mb-2 max-w-full">
-                <CardContent className="flex flex-col gap-1">
-                  <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
-                    {cardBody}
-                  </div>
-                  {/* WP26 mechanism B (ADR 024): the defaulted-axis
-                    * disclosure. It sits directly under the body and at
-                    * BODY-adjacent weight, not as muted fine print: it
-                    * qualifies the number the reader just read ("this is the
-                    * national figure") and carries the correction path.
-                    * Burying it would keep the letter of the safelist and
-                    * lose its point. */}
-                  {cardAssumptionLine ? (
-                    <p className="text-sm text-muted-foreground">{cardAssumptionLine}</p>
-                  ) : null}
-                  {/* #253: the region-class coverage disclosure — same
-                    * muted, body-adjacent weight as the assumption line it
-                    * sits directly beside, matching compose.ts's text
-                    * order. */}
-                  {cardRegionSetLine ? (
-                    <p className="text-sm text-muted-foreground">{cardRegionSetLine}</p>
-                  ) : null}
-                  {/* ADR 055 / MS1: the multi-region-series coverage
-                    * disclosure — same slot and weight as the region-set
-                    * line it sits beside (the two can never co-occur),
-                    * matching compose.ts's text order. */}
-                  {cardRegionSeriesLine ? (
-                    <p className="text-sm text-muted-foreground">{cardRegionSeriesLine}</p>
-                  ) : null}
-                  {cardStalenessWarning ? (
-                    <p className="text-sm text-warning">{cardStalenessWarning}</p>
-                  ) : null}
-                  {cardDefinitionLine ? (
-                    <p className="text-xs text-muted-foreground">{cardDefinitionLine}</p>
-                  ) : null}
-                  {/* #39: the alternate-reading disclosure — plain text under
-                    * the definition it qualifies (the clickable affordance is
-                    * #89, deliberately not built here). */}
-                  {cardAlternatesLine ? (
-                    <p className="text-xs text-muted-foreground">{cardAlternatesLine}</p>
-                  ) : null}
-                  {cardMarkingLine ? (
-                    <p className="text-xs text-muted-foreground">{cardMarkingLine}</p>
-                  ) : null}
-                </CardContent>
+                {scatter !== null && scatterText !== null ? (
+                  // #296 part 2 Task 7: a scatter answer. Not docked: the
+                  // card's content IS the ScatterView (frameless, like the
+                  // dock mounts ChartView) — body, coverage line, labelled
+                  // definitions, staleness and both attributions, in the
+                  // reader's language (ScatterView builds its English body/
+                  // line itself; `extraLines` arrive localized). Docked: the
+                  // chart lives in the dock, so the card keeps the same text
+                  // lines here — each line shown exactly once either way.
+                  <CardContent className="flex flex-col gap-1">
+                    {!docked ? (
+                      <ScatterView
+                        spec={scatter}
+                        body={answerView.body}
+                        {...(answerView.scatterLine != null ? { scatterLine: answerView.scatterLine } : {})}
+                        extraLines={scatterText.extraLines}
+                        frameless
+                        embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+                      />
+                    ) : (
+                      <>
+                        <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
+                          {scatterText.body}
+                        </div>
+                        {scatterText.line !== null ? (
+                          <p className="text-sm text-muted-foreground">{scatterText.line}</p>
+                        ) : null}
+                        {scatterText.stalenessLines.map((line, n) => (
+                          <p key={`s${n}`} className="text-sm text-warning">
+                            {line}
+                          </p>
+                        ))}
+                        {scatterText.definitionLines.map((line, n) => (
+                          <p key={`d${n}`} className="text-xs text-muted-foreground">
+                            {line}
+                          </p>
+                        ))}
+                      </>
+                    )}
+                  </CardContent>
+                ) : (
+                  <CardContent className="flex flex-col gap-1">
+                    <div className="max-w-full whitespace-pre-wrap text-sm text-[15px] leading-relaxed text-foreground">
+                      {cardBody}
+                    </div>
+                    {/* WP26 mechanism B (ADR 024): the defaulted-axis
+                      * disclosure. It sits directly under the body and at
+                      * BODY-adjacent weight, not as muted fine print: it
+                      * qualifies the number the reader just read ("this is the
+                      * national figure") and carries the correction path.
+                      * Burying it would keep the letter of the safelist and
+                      * lose its point. */}
+                    {cardAssumptionLine ? (
+                      <p className="text-sm text-muted-foreground">{cardAssumptionLine}</p>
+                    ) : null}
+                    {/* #253: the region-class coverage disclosure — same
+                      * muted, body-adjacent weight as the assumption line it
+                      * sits directly beside, matching compose.ts's text
+                      * order. */}
+                    {cardRegionSetLine ? (
+                      <p className="text-sm text-muted-foreground">{cardRegionSetLine}</p>
+                    ) : null}
+                    {/* ADR 055 / MS1: the multi-region-series coverage
+                      * disclosure — same slot and weight as the region-set
+                      * line it sits beside (the two can never co-occur),
+                      * matching compose.ts's text order. */}
+                    {cardRegionSeriesLine ? (
+                      <p className="text-sm text-muted-foreground">{cardRegionSeriesLine}</p>
+                    ) : null}
+                    {cardStalenessWarning ? (
+                      <p className="text-sm text-warning">{cardStalenessWarning}</p>
+                    ) : null}
+                    {cardDefinitionLine ? (
+                      <p className="text-xs text-muted-foreground">{cardDefinitionLine}</p>
+                    ) : null}
+                    {/* #39: the alternate-reading disclosure — plain text under
+                      * the definition it qualifies (the clickable affordance is
+                      * #89, deliberately not built here). */}
+                    {cardAlternatesLine ? (
+                      <p className="text-xs text-muted-foreground">{cardAlternatesLine}</p>
+                    ) : null}
+                    {cardMarkingLine ? (
+                      <p className="text-xs text-muted-foreground">{cardMarkingLine}</p>
+                    ) : null}
+                  </CardContent>
+                )}
                 <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/40">
                   {/* LEFT: the source — the voorlopig pill (#71), the FULL
                     * R4 attribution sentence (always visible, never
@@ -1396,19 +1495,46 @@ export function Chat({
                     * English when verified; tableId/source/syncedAt (the
                     * SourceBadge's own props) stay the Dutch `answerView`'s
                     * unchanged, per controller ruling 16. */}
-                  <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {message.provisional ? (
-                      <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
-                        {t('chat.provisionalBadge')}
+                  {scatter !== null && scatterText !== null ? (
+                    // #296: not docked, the ScatterView above already shows
+                    // both attributions, both source badges and the
+                    // provisional note — nothing to repeat here. Docked, the
+                    // card shows them itself: both sentences (R4, never
+                    // shortened), one badge per table with its own date.
+                    docked ? (
+                      <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {message.provisional ? (
+                          <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                            {t('chat.provisionalBadge')}
+                          </span>
+                        ) : null}
+                        {scatterText.attributionLines.map((line) => (
+                          <span key={line}>{line}</span>
+                        ))}
+                        {[...new Set([scatter.y.tableId, scatter.x.tableId])].map((tableId) => (
+                          <SourceBadge
+                            key={tableId}
+                            tableId={tableId}
+                            syncedAt={(scatter.y.tableId === tableId ? scatter.y : scatter.x).syncedAt}
+                          />
+                        ))}
                       </span>
-                    ) : null}
-                    <span>{cardAttribution}</span>
-                    <SourceBadge
-                      tableId={answerView.tableId}
-                      source={answerView.source}
-                      syncedAt={answerView.syncedAt}
-                    />
-                  </span>
+                    ) : null
+                  ) : (
+                    <span className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {message.provisional ? (
+                        <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
+                          {t('chat.provisionalBadge')}
+                        </span>
+                      ) : null}
+                      <span>{cardAttribution}</span>
+                      <SourceBadge
+                        tableId={answerView.tableId}
+                        source={answerView.source}
+                        syncedAt={answerView.syncedAt}
+                      />
+                    </span>
+                  )}
                   {/* RIGHT: the actions — feedback FIRST (#128; only real
                     * answers with a stored audit row get them — an answer
                     * whose audit write failed, auditId null, gets none), then
@@ -1460,7 +1586,9 @@ export function Chat({
                         aria-pressed={activeVisualId === visualId(i)}
                       >
                         <PanelRight aria-hidden className="size-3.5" />
-                        {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
+                        {message.chart !== null || message.scatter !== null
+                          ? t('chat.dockedChipChart')
+                          : t('chat.dockedChipCard')}
                       </Button>
                     ) : null}
                     {/* Task 2 (chat polish batch, owner ask): "Copy" copies
@@ -1491,7 +1619,9 @@ export function Chat({
                           copyView.source ?? sourceKeyForTableId(copyView.tableId),
                           copyView.tableId,
                         )}
-                        citation={useEnglishCardContent ? null : message.citation}
+                        // #296: a scatter's English card has no Dutch citation
+                        // appended either (the citation is a Dutch quote).
+                        citation={useEnglishCardContent || (scatter !== null && lang === 'en') ? null : message.citation}
                       />
                     ) : null}
                     {message.csv !== null ? <DownloadCsvButton csv={message.csv} /> : null}
@@ -1624,6 +1754,17 @@ export function Chat({
                 );
               })()
             ) : null}
+            {/* #296 part 2 Task 7: a scatter answer normally renders INSIDE its
+              * answer card (above). Only an envelope too minimal for a card
+              * (no answerView — the deploy-window fallback branch) mounts the
+              * bare ScatterView here, beside the plain-text bubble that
+              * already carries its full stored text. */}
+            {!dockMode && message.scatter !== null && !showsCard ? (
+              <ScatterView
+                spec={message.scatter}
+                embed={message.auditId !== null ? { auditId: message.auditId } : undefined}
+              />
+            ) : null}
             {/* WP135 (ADR 033 D4): the in-flow reference chip standing in for a
               * docked visual — clicking activates its dock tab ("in het paneel").
               * The web section still renders below this (ADR 032). */}
@@ -1647,7 +1788,9 @@ export function Chat({
                     : PILL)
                 }
               >
-                {message.chart !== null ? t('chat.dockedChipChart') : t('chat.dockedChipCard')}
+                {message.chart !== null || message.scatter !== null
+                          ? t('chat.dockedChipChart')
+                          : t('chat.dockedChipCard')}
               </button>
             ) : null}
             {/* ADR 026 addendum (session 101): the confirm-first offer's own

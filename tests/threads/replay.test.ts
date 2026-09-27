@@ -270,6 +270,56 @@ describe('replayParts — R8 + zero-loss answerView (pin 2)', () => {
     expect((aWithout as ReplayAssistantPart).answerView?.regionSeriesLine).toBeNull();
   });
 
+  it('#296: a scatter answer replays its ScatterSpec, its coverage line and both definitions; a one-measure answer carries null', () => {
+    const scatter = { schemaVersion: 1, kind: 'scatter', title: 'Y tegenover x, 2024' };
+    const scatterEnvelope = {
+      ...answerEnvelopeWithView({ question: 'q', finalText: 'a' }),
+      answer: {
+        schemaVersion: 1,
+        source: 'template',
+        body: 'Y tegenover x per provincie, 2024.',
+        scatterLine: 'Dekking: alle 12 provincies hebben beide cijfers.',
+        definitionLine: 'Definitie: y.',
+        pairedDefinitionLine: 'Definitie: x.',
+        markingLine: null,
+        attributionLine: 'Bron: CBS StatLine, tabel Y.',
+        text: 'a',
+      },
+      scatter,
+      pairedResult: { cells: [{ resultId: 'x1', provisional: false }] },
+    };
+    const [, aScatter, , aPlain] = replayParts([
+      mkRow({ id: 1, kind: 'answer', question: 'q', response: scatterEnvelope }),
+      mkRow({ id: 2, kind: 'answer', question: 'q2', response: answerEnvelopeWithView({ question: 'q2', finalText: 'a2' }) }),
+    ]);
+    const part = aScatter as ReplayAssistantPart;
+    expect(part.scatter).toEqual(scatter);
+    expect(part.chart).toBeNull();
+    expect(part.answerView).toMatchObject({
+      scatterLine: 'Dekking: alle 12 provincies hebben beide cijfers.',
+      definitionLine: 'Definitie: y.',
+      pairedDefinitionLine: 'Definitie: x.',
+    });
+    // Present-only keys, absent on a one-measure row -> `?? null`, never undefined.
+    expect((aPlain as ReplayAssistantPart).scatter).toBeNull();
+    expect((aPlain as ReplayAssistantPart).answerView?.scatterLine).toBeNull();
+    expect((aPlain as ReplayAssistantPart).answerView?.pairedDefinitionLine).toBeNull();
+  });
+
+  it('#296: a scatter answer is provisional when EITHER leg has a provisional cell', () => {
+    const envelope = (yProvisional: boolean, xProvisional: boolean) => ({
+      ...answerEnvelopeWithView({ question: 'q', finalText: 'a', provisionalCell: yProvisional }),
+      scatter: { schemaVersion: 1, kind: 'scatter' },
+      pairedResult: { cells: [{ resultId: 'x1', provisional: xProvisional }] },
+    });
+    const parts = replayParts([
+      mkRow({ id: 1, kind: 'answer', question: 'q', response: envelope(false, true) }),
+      mkRow({ id: 2, kind: 'answer', question: 'q', response: envelope(false, false) }),
+    ]);
+    expect((parts[1] as ReplayAssistantPart).provisional).toBe(true);
+    expect((parts[3] as ReplayAssistantPart).provisional).toBe(false);
+  });
+
   it('#134(a): a resumed REFUSAL row replays its retry chip — parity with the live turn (regression: replay dropped refusal suggestions)', () => {
     const answerRow = mkRow({
       id: 1,

@@ -24,18 +24,31 @@ function formatDateNl(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** "CBS StatLine, tabel X, gesynchroniseerd 3 juli 2026" — one table's source. */
+function tableFlags(attribution: AnswerResponse['result']['attribution']): string {
+  // WP30a (ADR 030 D3): the label resolves via the source registry —
+  // absent source (historical envelopes) → 'cbs' (A1), byte-identical.
+  return (
+    `${resolveSource(attribution.source).attributionLabel}, tabel ${attribution.tableId}, ` +
+    `gesynchroniseerd ${formatDateNl(attribution.syncedAt)}`
+  );
+}
+
 export function buildCitation(response: AnswerResponse): string {
-  const attribution = response.result.attribution;
-  const flags: string[] = [
-    // WP30a (ADR 030 D3): the label resolves via the source registry —
-    // absent source (historical envelopes) → 'cbs' (A1), byte-identical.
-    `${resolveSource(attribution.source).attributionLabel}, tabel ${attribution.tableId}`,
-    `gesynchroniseerd ${formatDateNl(attribution.syncedAt)}`,
-  ];
-  if (response.result.cells.some((cell) => cell.provisional)) {
+  // #296 part 2 Task 7: a scatter answer rests on TWO tables (the x leg rides
+  // `pairedResult`, present-only) — both are cited, y first, each with its
+  // own sync date; the honesty flags then cover BOTH legs.
+  const paired = response.pairedResult ?? null;
+  const results = paired === null ? [response.result] : [response.result, paired];
+  const sources = [tableFlags(response.result.attribution)];
+  if (paired !== null && paired.attribution.tableId !== response.result.attribution.tableId) {
+    sources.push(tableFlags(paired.attribution));
+  }
+  const flags: string[] = [sources.join('; ')];
+  if (results.some((result) => result.cells.some((cell) => cell.provisional))) {
     flags.push('voorlopige cijfers');
   }
-  if (isDerivedResult(response.result)) {
+  if (results.some((result) => isDerivedResult(result))) {
     flags.push(DERIVED_DATA_MARKING);
   }
   return `${response.answer.body} (${flags.join(', ')})`;

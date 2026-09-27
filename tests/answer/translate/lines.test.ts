@@ -425,6 +425,45 @@ describe('translateStalenessWarning', () => {
   it('is null for text that matches neither known shape', () => {
     expect(translateStalenessWarning('Something else entirely.')).toBeNull();
   });
+
+  // #296 part 2 Task 7: the scatter's NAMED-table subject
+  // ("de tabel {tableId} ({measureTitle})", staleness.ts namedTableNl).
+  const NAMED_PLAIN =
+    'Let op: de tabel 83625NED (Gemiddelde verkoopprijs (euro)) wordt normaal maandelijks bijgewerkt door CBS, ' +
+    'maar onze laatste synchronisatie was op 2026-08-01 — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+
+  it('named subject: null without a measure-name resolver (the one-measure callers are unchanged)', () => {
+    expect(translateStalenessWarning(NAMED_PLAIN)).toBeNull();
+  });
+
+  it('named subject: names the table and the resolver-supplied English measure name', () => {
+    const seen: Array<[string, string | null]> = [];
+    const en = translateStalenessWarning(NAMED_PLAIN, (tableId, title) => {
+      seen.push([tableId, title]);
+      return 'Average sale price';
+    });
+    expect(seen).toEqual([['83625NED', 'Gemiddelde verkoopprijs (euro)']]);
+    expect(en).toBe(
+      'Note: CBS normally updates table 83625NED (Average sale price) monthly, but our last sync was on 2026-08-01 — ' +
+        'more recent figures may now be available.',
+    );
+    expect(digitRuns(en!)).toEqual(digitRuns(NAMED_PLAIN.replace('(euro)', '')));
+  });
+
+  it('named subject, retained shape, and a table named without a measure title', () => {
+    const dutch =
+      'Let op: de tabel 03759ned wordt normaal jaarlijks bijgewerkt door CBS, ' +
+      'maar een deel van deze cijfers is door CBS sinds 2026-01-15 niet opnieuw bevestigd — ' +
+      'recentere cijfers kunnen inmiddels beschikbaar zijn.';
+    expect(translateStalenessWarning(dutch, () => 'never used')).toBe(
+      'Note: CBS normally updates table 03759ned yearly, but part of these figures has not been reconfirmed ' +
+        'by CBS since 2026-01-15 — more recent figures may now be available.',
+    );
+  });
+
+  it('named subject: null when the resolver has no English name (never a Dutch title in English text)', () => {
+    expect(translateStalenessWarning(NAMED_PLAIN, () => null)).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

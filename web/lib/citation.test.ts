@@ -3,7 +3,7 @@
 // silently drop the source, the provisional flag, or the CC BY marking.
 import { describe, expect, it } from 'vitest';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
-import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
+import { fakeAnswerResponse, fakeCell, fakeScatterAnswerResponse } from '../test/fake-answer.ts';
 import { buildCitation } from './citation.ts';
 
 describe('buildCitation', () => {
@@ -43,5 +43,21 @@ describe('buildCitation', () => {
     const citation = buildCitation(fakeAnswerResponse({ cells: [fakeCell()] }));
     expect(citation).not.toContain('voorlopig');
     expect(citation).not.toContain('bewerking');
+  });
+});
+
+// #296 part 2 Task 7: a scatter answer rests on TWO tables — the quote cites
+// both, each with its own sync date, and flags provisional figures on either leg.
+describe('buildCitation — scatter answer (two tables)', () => {
+  it('cites both tables, vertical axis first, each with its own sync date', () => {
+    const response = fakeScatterAnswerResponse();
+    expect(buildCitation(response)).toBe(
+      `${response.answer.body} (CBS StatLine, tabel 84639NED, gesynchroniseerd 20 september 2026; ` +
+        'CBS StatLine, tabel 03759ned, gesynchroniseerd 21 september 2026)',
+    );
+  });
+
+  it('flags provisional figures when only the horizontal leg has them', () => {
+    expect(buildCitation(fakeScatterAnswerResponse({ provisionalLeg: 'x' }))).toMatch(/, voorlopige cijfers\)$/);
   });
 });

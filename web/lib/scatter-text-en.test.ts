@@ -7,9 +7,12 @@ import { SCATTER_NAMED_LIMIT } from '../backend/chart/scatter-text.ts';
 import {
   scatterAxisTitle,
   scatterBodyEn,
+  scatterDefinitionLineEn,
   scatterDefinitionLinesEn,
   scatterLineEn,
+  scatterStalenessLinesEn,
   scatterTitleEn,
+  SCATTER_STALENESS_FALLBACK_EN,
 } from './scatter-text-en.ts';
 
 function axis(
@@ -238,5 +241,52 @@ describe('scatterAxisTitle', () => {
 
   it('omits an empty unit rather than printing empty brackets', () => {
     expect(scatterAxisTitle(axis('Gemiddeld inkomen', 'Y', ''), 'nl', false)).toBe('Gemiddeld inkomen');
+  });
+});
+
+describe('scatterDefinitionLineEn (#296 part 2 Task 7: one axis at a time)', () => {
+  it('agrees with scatterDefinitionLinesEn, per axis, and is null for an axis without an English label', () => {
+    const s = spec({ x: axis('Bevolking op 1 januari', 'X', 'aantal', '2024', 'population_on_1_january') });
+    expect(scatterDefinitionLineEn(s, 'y')).toBeNull();
+    expect(scatterDefinitionLineEn(s, 'x')).toBe('Definition (horizontal axis): The population on 1 January.');
+  });
+});
+
+describe('scatterStalenessLinesEn (#296 part 2 Task 7: the named-table staleness lines)', () => {
+  const s = spec({
+    y: axis('Gemiddelde verkoopwaarde woningen', '83625NED', 'euro', '2024', 'average_existing_home_sale_price'),
+    x: axis('Bevolking op 1 januari', '03759ned', 'aantal', '2024', 'population_on_1_january'),
+  });
+  const yWarning =
+    'Let op: de tabel 83625NED (Gemiddelde verkoopwaarde woningen) wordt normaal maandelijks bijgewerkt door CBS, ' +
+    'maar onze laatste synchronisatie was op 2026-08-01 — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+  const xWarning =
+    'Let op: de tabel 03759ned (Bevolking op 1 januari) wordt normaal jaarlijks bijgewerkt door CBS, ' +
+    'maar een deel van deze cijfers is door CBS sinds 2026-01-15 niet opnieuw bevestigd — ' +
+    'recentere cijfers kunnen inmiddels beschikbaar zijn.';
+
+  it('translates each line, naming each table by the SAME English measure name the card uses', () => {
+    expect(scatterStalenessLinesEn(s, `${yWarning}\n${xWarning}`)).toEqual([
+      'Note: CBS normally updates table 83625NED (House prices) monthly, but our last sync was on 2026-08-01 — ' +
+        'more recent figures may now be available.',
+      'Note: CBS normally updates table 03759ned (Population on 1 January) yearly, but part of these figures has not ' +
+        'been reconfirmed by CBS since 2026-01-15 — more recent figures may now be available.',
+    ]);
+  });
+
+  it('null warning ⇒ no lines', () => {
+    expect(scatterStalenessLinesEn(s, null)).toEqual([]);
+  });
+
+  it('a line it cannot shape becomes the generic English note, never the Dutch sentence and never dropped', () => {
+    const lines = scatterStalenessLinesEn(s, `${yWarning}\nLet op: iets onverwachts.`);
+    expect(lines).toHaveLength(2);
+    expect(lines[1]).toBe(SCATTER_STALENESS_FALLBACK_EN);
+    for (const line of lines) expect(line).not.toMatch(/Let op|tabel|wordt|Gemiddelde|januari/);
+  });
+
+  it('a table the spec does not know is not named with a guess', () => {
+    const lines = scatterStalenessLinesEn(s, yWarning.replace('83625NED', '99999NED'));
+    expect(lines).toEqual([SCATTER_STALENESS_FALLBACK_EN]);
   });
 });

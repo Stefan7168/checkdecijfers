@@ -295,47 +295,9 @@ export function assembleEnglishText(body: string, lines: EnglishLines, staleness
 }
 
 // ---------------------------------------------------------------------------
-// translateStalenessWarning — mirrors src/answer/respond/staleness.ts
+// translateStalenessWarning — lives in ./staleness-en.ts (a dependency-free
+// leaf, so the web layer can translate a scatter's staleness lines at render
+// time without importing this module's query-barrel graph); re-exported here
+// so every existing import site is unchanged.
 // ---------------------------------------------------------------------------
-
-/** Inverse of staleness.ts's private cadenceWordsNl, for the three cadence
- * prefixes maxAgeDaysForCadence recognizes ('monthly'/'quarterly'/'yearly',
- * the registry's own English cadence text) — an unrecognized Dutch cadence
- * word (a shape checkStaleness itself never produces, but this function is
- * defensive per the task brief) makes the whole warning untranslatable. */
-const CADENCE_EN: Record<string, string> = {
-  maandelijks: 'monthly',
-  'per kwartaal': 'quarterly',
-  jaarlijks: 'yearly',
-};
-
-const STALENESS_PLAIN_RE =
-  /^Let op: deze tabel wordt normaal (.+?) bijgewerkt door CBS, maar onze laatste synchronisatie was op (\d{4}-\d{2}-\d{2}) — recentere cijfers kunnen inmiddels beschikbaar zijn\.$/;
-const STALENESS_RETAINED_RE =
-  /^Let op: deze tabel wordt normaal (.+?) bijgewerkt door CBS, maar een deel van deze cijfers is door CBS sinds (\d{4}-\d{2}-\d{2}) niet opnieuw bevestigd — recentere cijfers kunnen inmiddels beschikbaar zijn\.$/;
-
-/** Translates a `StalenessCheck.warning` string built by
- * src/answer/respond/staleness.ts's `checkStaleness`. Null when `dutch`
- * doesn't match either of the two known shapes, or names a cadence word
- * `CADENCE_EN` has no entry for — never a guess (principle c). */
-export function translateStalenessWarning(dutch: string): string | null {
-  const plain = STALENESS_PLAIN_RE.exec(dutch);
-  if (plain) {
-    const cadenceEn = CADENCE_EN[plain[1]!];
-    if (cadenceEn === undefined) return null;
-    return (
-      `Note: CBS normally updates this table ${cadenceEn}, but our last sync was on ${plain[2]} — ` +
-      `more recent figures may now be available.`
-    );
-  }
-  const retained = STALENESS_RETAINED_RE.exec(dutch);
-  if (retained) {
-    const cadenceEn = CADENCE_EN[retained[1]!];
-    if (cadenceEn === undefined) return null;
-    return (
-      `Note: CBS normally updates this table ${cadenceEn}, but part of these figures has not been reconfirmed ` +
-      `by CBS since ${retained[2]} — more recent figures may now be available.`
-    );
-  }
-  return null;
-}
+export { translateStalenessWarning } from './staleness-en.ts';

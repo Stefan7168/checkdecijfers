@@ -22,6 +22,7 @@ import { useT } from '../lib/i18n/lang-provider.tsx';
 import { cn } from '../lib/utils.ts';
 import { ChartView } from './chart.tsx';
 import { ChartSkeleton } from './loading-skeletons.tsx';
+import { ScatterView } from './scatter-view.tsx';
 import { StatCard } from './stat-card.tsx';
 import { UserChartView } from './user-chart.tsx';
 
@@ -74,7 +75,7 @@ export function VisualDock({
           // (userChart's already-English "Your chart n", or a hand-built
           // DockVisual with no `count`) falls back to the literal `label`.
           const tabLabel =
-            visual.count !== undefined && visual.kind === 'chart'
+            visual.count !== undefined && (visual.kind === 'chart' || visual.kind === 'scatter')
               ? t('dock.chartTab', { n: visual.count })
               : visual.count !== undefined && visual.kind === 'card'
                 ? t('dock.cardTab', { n: visual.count })
@@ -120,6 +121,15 @@ export function VisualDock({
             extendsPrevious={active.extendsPrevious}
             initialFormOverride={active.initialFormOverride}
             initialPresentation={active.initialPresentation}
+          />
+        ) : active.kind === 'scatter' && active.scatter !== undefined ? (
+          // #296 part 2 Task 7: chart only — while docked, the answer's body,
+          // coverage and definition lines stay on the in-flow card (chat.tsx),
+          // so each is shown exactly once.
+          <ScatterView
+            spec={active.scatter}
+            frameless
+            embed={active.auditId !== null ? { auditId: active.auditId } : undefined}
           />
         ) : active.kind === 'userChart' && active.userChart !== null ? (
           <UserChartView spec={active.userChart} edit={active.userChartEdit ?? undefined} />

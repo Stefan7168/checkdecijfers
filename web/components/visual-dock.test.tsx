@@ -11,6 +11,7 @@ import type { ChartSpec } from '../backend/chart/types.ts';
 import type { UserChartSpec } from '../backend/attachments/types.ts';
 import type { DockVisual } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
+import { fakeScatterSpec } from '../test/fake-answer.ts';
 import { VisualDock } from './visual-dock.tsx';
 
 afterEach(cleanup);
@@ -261,5 +262,30 @@ describe('VisualDock — scroll container reserves a stable scrollbar gutter (AD
     const scrollContainer = container.querySelector('.overflow-y-auto.p-4') as HTMLElement | null;
     expect(scrollContainer).not.toBeNull();
     expect(scrollContainer!.className).toContain('[scrollbar-gutter:stable]');
+  });
+});
+
+// #296 part 2 Task 7: a docked scatter answer renders ScatterView (frameless,
+// with Embed for its own audit row) — chart only: while docked, the answer's
+// text lines stay on the in-flow card (chat.tsx), shown once.
+describe('VisualDock — scatter visual (#296)', () => {
+  const scatterVisual = (overrides: Partial<DockVisual> = {}): DockVisual =>
+    chartVisual({ kind: 'scatter', chart: null, scatter: fakeScatterSpec(), count: 1, ...overrides });
+
+  it('renders ScatterView (not ChartView) with its title, Embed and both source badges; no body text', () => {
+    render(<VisualDock visuals={[scatterVisual({ auditId: 9 })]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />);
+    expect(screen.getByTestId('scatter-view')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: fakeScatterSpec().title })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    expect(screen.queryByText(/Elke stip is één provincie/)).toBeNull();
+  });
+
+  it('the tab reads "Grafiek 1" / "Chart 1" like a chart tab', () => {
+    render(
+      <LangProvider lang="en">
+        <VisualDock visuals={[scatterVisual()]} activeVisualId="visual-0" onSelect={vi.fn()} busy={false} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('tab', { name: /^Chart 1/ })).toBeInTheDocument();
   });
 });

@@ -8,6 +8,8 @@
 // cast, guarantees their shape.
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ScatterAxis, ScatterPoint, ScatterSpec } from '../backend/chart/scatter.ts';
+import { scatterBodyNl, scatterLineNl } from '../backend/chart/scatter-text.ts';
 import type { Attribution, ResultCell } from '../backend/query/types.ts';
 // ADR 058 (English answers, Task 8): the optional English rendering a caller
 // can attach to a fixture (verified/fallback rendering tests) — absent by
@@ -151,4 +153,154 @@ export function fakeEnglishRendering(overrides: Partial<EnglishRendering> = {}):
     untranslatedNames: [],
     ...overrides,
   };
+}
+
+// ---------------------------------------------------------------------------
+// #296 part 2 Task 7: a minimal-but-real SCATTER answer — the envelope
+// respond.ts's buildScatterAnswerResponse produces (`chart: null`, `scatter`,
+// `pairedResult`, `answer.scatterLine`/`pairedDefinitionLine`, no `english`).
+// The Dutch body and coverage line come from the REAL builders over the
+// fixture spec, so a test that compares them compares production text.
+// ---------------------------------------------------------------------------
+export const SCATTER_Y_TABLE = '84639NED';
+export const SCATTER_X_TABLE = '03759ned';
+
+export function fakeScatterAxis(overrides: Partial<ScatterAxis> = {}): ScatterAxis {
+  return {
+    measureTitle: 'Gemiddeld inkomen',
+    unit: '1 000 euro',
+    decimals: 1,
+    periodLabel: '2024',
+    tableId: SCATTER_Y_TABLE,
+    defaultScale: 'linear',
+    attributionLine:
+      'Bron: CBS StatLine, tabel 84639NED — Inkomen van huishoudens. Gegevens gesynchroniseerd op 2026-09-20. Periode: 2024. Licentie: CC BY 4.0.',
+    canonicalKey: null,
+    syncedAt: '2026-09-20T04:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function scatterPoint(code: string, label: string, y: number, yF: string, x: number, xF: string, provisional = false): ScatterPoint {
+  return {
+    regionCode: code,
+    label,
+    x,
+    y,
+    xFormatted: xF,
+    yFormatted: yF,
+    xResultId: `${SCATTER_X_TABLE}:M2:${code}:2024JJ00`,
+    yResultId: `${SCATTER_Y_TABLE}:M1:${code}:2024JJ00`,
+    provisional,
+  };
+}
+
+export function fakeScatterSpec(overrides: Partial<ScatterSpec> = {}): ScatterSpec {
+  return {
+    schemaVersion: 1,
+    kind: 'scatter',
+    title: 'Gemiddeld inkomen tegenover bevolking op 1 januari, 2024',
+    y: fakeScatterAxis(),
+    x: fakeScatterAxis({
+      measureTitle: 'Bevolking op 1 januari',
+      unit: 'aantal',
+      decimals: 0,
+      tableId: SCATTER_X_TABLE,
+      attributionLine:
+        'Bron: CBS StatLine, tabel 03759ned — Bevolking op 1 januari. Gegevens gesynchroniseerd op 2026-09-21. Periode: 2024. Licentie: CC BY 4.0.',
+      canonicalKey: 'population_on_1_january',
+      syncedAt: '2026-09-21T04:00:00.000Z',
+    }),
+    points: [
+      scatterPoint('PV20', 'Groningen (PV)', 38.2, '38,2', 596075, '596.075'),
+      scatterPoint('PV21', 'Fryslân', 36.9, '36,9', 659551, '659.551'),
+      scatterPoint('PV27', 'Noord-Holland', 47.5, '47,5', 2952622, '2.952.622'),
+    ],
+    scope: { kind: 'all_provincies' },
+    leftOut: [
+      {
+        regionCode: 'PV29',
+        label: 'Zeeland',
+        y: { state: 'withheld', valueAttribute: 'Secret' },
+        x: { state: 'value', valueAttribute: null },
+      },
+    ],
+    notApplicableCount: 0,
+    labelled: [],
+    provisionalNote: null,
+    license: 'CC BY 4.0',
+    ...overrides,
+  };
+}
+
+/** One leg's ValidatedResult, cells straight from the spec's own points (so
+ * the proof panel, citation and provisional flag read the SAME values the
+ * chart plots). */
+function scatterLeg(spec: ScatterSpec, side: 'y' | 'x', provisional: boolean): Record<string, unknown> {
+  const axis = spec[side];
+  return {
+    ok: true,
+    schemaVersion: 1,
+    shape: 'region_set',
+    cells: spec.points.map((p) =>
+      fakeCell({
+        resultId: side === 'y' ? p.yResultId : p.xResultId,
+        tableId: axis.tableId,
+        measure: side === 'y' ? 'M1' : 'M2',
+        measureTitle: axis.measureTitle,
+        regionCode: p.regionCode,
+        regionLabel: p.label,
+        value: p[side],
+        decimals: axis.decimals,
+        unit: axis.unit,
+        provisional,
+      }),
+    ),
+    derivations: [],
+    attribution: fakeAttribution({
+      tableId: axis.tableId,
+      tableTitle: side === 'y' ? 'Inkomen van huishoudens' : 'Bevolking op 1 januari',
+      syncedAt: axis.syncedAt,
+    }),
+  };
+}
+
+export function fakeScatterAnswerResponse(opts: {
+  spec?: ScatterSpec;
+  stalenessWarning?: string | null;
+  definitionLine?: string | null;
+  pairedDefinitionLine?: string | null;
+  /** Marks every cell of ONE leg provisional (the other stays definitive). */
+  provisionalLeg?: 'y' | 'x';
+} = {}): AnswerResponse {
+  const spec = opts.spec ?? fakeScatterSpec();
+  const body = scatterBodyNl(spec);
+  const scatterLine = scatterLineNl(spec);
+  const definitionLine = opts.definitionLine === undefined ? 'Definitie: gemiddeld besteedbaar inkomen per huishouden.' : opts.definitionLine;
+  const pairedDefinitionLine =
+    opts.pairedDefinitionLine === undefined ? 'Definitie: inwoners op 1 januari.' : opts.pairedDefinitionLine;
+  const stalenessWarning = opts.stalenessWarning ?? null;
+  const text = [body, '', scatterLine, definitionLine, pairedDefinitionLine, spec.y.attributionLine, spec.x.attributionLine]
+    .filter((line): line is string => line !== null)
+    .join('\n');
+  return {
+    kind: 'answer',
+    text: stalenessWarning === null ? text : `${text}\n\n${stalenessWarning}`,
+    chart: null,
+    chartAlternates: [],
+    stalenessWarning,
+    suggestions: [],
+    answer: {
+      body,
+      scatterLine,
+      definitionLine,
+      pairedDefinitionLine,
+      markingLine: null,
+      attributionLine: spec.y.attributionLine,
+      text,
+    },
+    result: scatterLeg(spec, 'y', opts.provisionalLeg === 'y'),
+    pairedResult: scatterLeg(spec, 'x', opts.provisionalLeg === 'x'),
+    scatter: spec,
+  } as unknown as AnswerResponse;
 }

@@ -147,6 +147,64 @@ function CellTable({ proof, technical }: { proof: AnswerProofData; technical: bo
   );
 }
 
+/** The three depths (why / which cells / step by step) for ONE table's
+ * proof — once for a one-measure answer, twice (per axis) for a scatter. */
+function ProofSections({
+  proof,
+  technical,
+  requestUrlsByBatch,
+}: {
+  proof: AnswerProofData;
+  technical: boolean;
+  requestUrlsByBatch: RequestUrlsByBatch | null | undefined;
+}) {
+  const t = useT();
+  return (
+    <>
+      <div className="mb-3">
+        <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.whyHeading')}</h4>
+        <p>{t('answerProof.readingLine', { reading: proof.reading })}</p>
+        {proof.periodSemantics !== null ? (
+          <p>{t('answerProof.periodSemanticsLine', { value: proof.periodSemantics })}</p>
+        ) : null}
+        {proof.alternates.length > 0 ? (
+          <ul className="mt-1 space-y-0.5">
+            {proof.alternates.map((alternate, i) => (
+              <li key={i}>
+                {t('answerProof.notChosenLine', { label: alternate.label })}
+                {technical && alternate.technical !== null ? alternate.technical : ''}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      <div className="mb-3">
+        <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.cellsHeading')}</h4>
+        <CellTable proof={proof} technical={technical} />
+        {/* WP30c D7(b): shown alongside the cell table's own "Batch"
+          * column (same technical-only gate) — the per-batch request
+          * URL(s), when the live lookup found any. */}
+        {technical ? <RequestUrlsSection proof={proof} requestUrlsByBatch={requestUrlsByBatch} /> : null}
+      </div>
+
+      <div>
+        <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.stepsHeading')}</h4>
+        <ol className="list-decimal space-y-0.5 pl-4">
+          {proof.steps.map((step, i) => (
+            <li key={i}>
+              {step.text}
+              {technical && step.technical !== null ? step.technical : ''}
+            </li>
+          ))}
+        </ol>
+        {proof.nullNotice !== null ? <p className="mt-1">{proof.nullNotice}</p> : null}
+        {proof.marked ? <p className="mt-1">{DERIVED_DATA_MARKING}</p> : null}
+      </div>
+    </>
+  );
+}
+
 // Review round 2 (session 74): memoized — `Chat` re-renders every message on
 // each keystroke in the input, and an OPEN panel rebuilt its cell table each
 // time; `message.proof` is a stable reference (built once per message), so
@@ -176,8 +234,8 @@ export const AnswerProof = memo(function AnswerProof({
   // ids) is unaffected, since `toEnglishAnswerProof` only ever changes the
   // three DISPLAY-name fields on each cell, never an id/code.
   const displayProof = lang === 'en' ? toEnglishAnswerProof(proof) : proof;
-  const triggerLabel =
-    displayProof.cells.length === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
+  const cellCount = displayProof.cells.length + (displayProof.paired?.cells.length ?? 0);
+  const triggerLabel = cellCount === 1 ? t('answerProof.triggerSingle') : t('answerProof.triggerPlural');
   // #9 (session 110 UX audit): "Prove these numbers" — the product's own
   // namesake trust action — used to open this panel below the fold with no
   // scroll, leaving only a grey strip visible behind the composer. Guarded
@@ -224,46 +282,24 @@ export const AnswerProof = memo(function AnswerProof({
             {t('answerProof.technicalToggle')}
           </Button>
 
-          <div className="mb-3">
-            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.whyHeading')}</h4>
-            <p>{t('answerProof.readingLine', { reading: displayProof.reading })}</p>
-            {displayProof.periodSemantics !== null ? (
-              <p>{t('answerProof.periodSemanticsLine', { value: displayProof.periodSemantics })}</p>
-            ) : null}
-            {displayProof.alternates.length > 0 ? (
-              <ul className="mt-1 space-y-0.5">
-                {displayProof.alternates.map((alternate, i) => (
-                  <li key={i}>
-                    {t('answerProof.notChosenLine', { label: alternate.label })}
-                    {technical && alternate.technical !== null ? alternate.technical : ''}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-
-          <div className="mb-3">
-            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.cellsHeading')}</h4>
-            <CellTable proof={displayProof} technical={technical} />
-            {/* WP30c D7(b): shown alongside the cell table's own "Batch"
-              * column (same technical-only gate) — the per-batch request
-              * URL(s), when the live lookup found any. */}
-            {technical ? <RequestUrlsSection proof={displayProof} requestUrlsByBatch={requestUrlsByBatch} /> : null}
-          </div>
-
-          <div>
-            <h4 className="mb-1 font-medium text-muted-foreground">{t('answerProof.stepsHeading')}</h4>
-            <ol className="list-decimal space-y-0.5 pl-4">
-              {displayProof.steps.map((step, i) => (
-                <li key={i}>
-                  {step.text}
-                  {technical && step.technical !== null ? step.technical : ''}
-                </li>
-              ))}
-            </ol>
-            {displayProof.nullNotice !== null ? <p className="mt-1">{displayProof.nullNotice}</p> : null}
-            {displayProof.marked ? <p className="mt-1">{DERIVED_DATA_MARKING}</p> : null}
-          </div>
+          {/* #296 part 2 Task 7: a scatter answer's proof covers TWO tables —
+            * the vertical axis's (the fields above) and the horizontal axis's
+            * (`paired`), each under its own heading, each with all three
+            * depths. A one-table proof renders exactly as before. */}
+          {displayProof.paired !== undefined ? (
+            <>
+              <h3 className="mb-2 font-semibold text-foreground">
+                {t('answerProof.axisVertical', { tableId: displayProof.tableId })}
+              </h3>
+              <ProofSections proof={displayProof} technical={technical} requestUrlsByBatch={requestUrlsByBatch} />
+              <h3 className="mb-2 mt-4 font-semibold text-foreground">
+                {t('answerProof.axisHorizontal', { tableId: displayProof.paired.tableId })}
+              </h3>
+              <ProofSections proof={displayProof.paired} technical={technical} requestUrlsByBatch={requestUrlsByBatch} />
+            </>
+          ) : (
+            <ProofSections proof={displayProof} technical={technical} requestUrlsByBatch={requestUrlsByBatch} />
+          )}
         </div>
       ) : null}
     </>

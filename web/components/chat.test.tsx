@@ -19,7 +19,8 @@ import { buildAnswerCsv } from '../lib/csv.ts';
 import { deriveVisuals } from '../lib/dock-visuals.ts';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
-import { fakeAnswerResponse, fakeCell, fakeEnglishRendering } from '../test/fake-answer.ts';
+import { fakeAnswerResponse, fakeCell, fakeEnglishRendering, fakeScatterAnswerResponse } from '../test/fake-answer.ts';
+import { scatterBodyEn, scatterLineEn } from '../lib/scatter-text-en.ts';
 import { Chat, extendsPreviousChart } from './chat.tsx';
 import { ChartView } from './chart.tsx';
 
@@ -259,6 +260,7 @@ function chartMessage(chart: ChartSpec | null, role: ChatMessage['role'] = 'assi
     kind: chart !== null ? 'answer' : null,
     text: 'x',
     chart,
+    scatter: null,
     chartAlternates: [],
     cost: null,
     citation: null,
@@ -1825,6 +1827,7 @@ describe('Chat — WP218 answer card (Option B)', () => {
       kind: 'answer',
       text: 'Nederland telt 18.044.027 inwoners.',
       chart: null,
+      scatter: null,
       chartAlternates: [],
       cost: 20,
       citation: 'Nederland telt 18.044.027 inwoners. (CBS StatLine, tabel 86141NED)',
@@ -2945,6 +2948,7 @@ describe('Chat — WP-D (R2.1/R2.2/R2.3/R7/R11)', () => {
         kind: 'clarification',
         text: 'Welke regio?',
         chart: null,
+        scatter: null,
         chartAlternates: [],
         cost: 10,
         citation: null,
@@ -3574,6 +3578,7 @@ function baseMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
     kind: 'answer',
     text: 'x',
     chart: null,
+    scatter: null,
     chartAlternates: [],
     cost: null,
     citation: null,
@@ -3723,5 +3728,147 @@ describe('Chat — reloaded thread shows the English chip label (open-questions 
       </LangProvider>,
     );
     expect(screen.getByText('Een heel andere, zelf getypte vraag')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #296 part 2 Task 7: a scatter answer's chat card. Not docked: ScatterView
+// (never ChartView) carries the body, the coverage line, both labelled
+// definitions, the staleness lines and both attributions, inside the answer
+// card whose footer keeps every action (feedback, proof, Copy, CSV, cost).
+// Docked: the card keeps the text, the dock gets the chart, the in-flow
+// trigger reads "Grafiek" (it is a chart). English: no Dutch sentence.
+// ---------------------------------------------------------------------------
+describe('Chat — scatter answer card (#296)', () => {
+  const Y_STALE =
+    'Let op: de tabel 84639NED (Gemiddeld inkomen) wordt normaal jaarlijks bijgewerkt door CBS, ' +
+    'maar onze laatste synchronisatie was op 2025-01-02 — recentere cijfers kunnen inmiddels beschikbaar zijn.';
+  const scatterResponse = () => fakeScatterAnswerResponse({ stalenessWarning: Y_STALE });
+  const scatterOutcome = (auditId: number | null = 5) =>
+    outcome({ kind: 'ok', auditId, netCost: 20, response: scatterResponse() as ComposedResponse });
+
+  it('Dutch, not docked: ScatterView (never ChartView) carries every text line once; the footer keeps the actions', async () => {
+    const response = scatterResponse();
+    askQuestion.mockResolvedValue(scatterOutcome());
+    render(<Chat onVisualsChange={() => {}} />);
+    await submit('Zet af tegen bevolking op 1 januari');
+    const view = await screen.findByTestId('scatter-view');
+    expect(vi.mocked(ChartView)).not.toHaveBeenCalled();
+    expect(within(view).getByText(response.answer.body)).toBeInTheDocument();
+    expect(within(view).getByText(response.answer.scatterLine!)).toBeInTheDocument();
+    expect(within(view).getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(within(view).getByText('Definitie (horizontale as): inwoners op 1 januari.')).toBeInTheDocument();
+    expect(within(view).getByText(Y_STALE)).toBeInTheDocument();
+    // Each text line exactly once on the page (the card does not repeat them).
+    expect(screen.getAllByText(response.answer.body)).toHaveLength(1);
+    expect(screen.getAllByText(response.scatter!.y.attributionLine)).toHaveLength(1);
+    expect(screen.getAllByText(response.scatter!.x.attributionLine)).toHaveLength(1);
+    // Embed for this answer's own audit row, and every footer action.
+    expect(screen.getByRole('button', { name: 'Insluiten' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kopieer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /CSV/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bewijs deze cijfers' })).toBeInTheDocument();
+    // The scatter rides the message state; `chart` stays null.
+    const calls = vi.mocked(deriveVisuals).mock.calls;
+    const assistant = (calls[calls.length - 1]?.[0] ?? []).find((m) => m.role === 'assistant');
+    expect(assistant?.scatter).toEqual(response.scatter);
+    expect(assistant?.chart).toBeNull();
+    expect(assistant?.csv?.filename).toBe('checkdecijfers-84639NED-03759ned-2024.csv');
+  });
+
+  it('English: the English body, coverage, definition and staleness lines — no Dutch sentence anywhere on the card', async () => {
+    const response = scatterResponse();
+    askQuestion.mockResolvedValue(scatterOutcome());
+    const { container } = render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    await submitEn('Plot against population');
+    const view = await screen.findByTestId('scatter-view');
+    expect(within(view).getByText(scatterBodyEn(response.scatter!))).toBeInTheDocument();
+    expect(within(view).getByText(scatterLineEn(response.scatter!))).toBeInTheDocument();
+    expect(within(view).getByText('Definition (horizontal axis): The population on 1 January.')).toBeInTheDocument();
+    expect(within(view).getByText(/^Note: CBS normally updates table 84639NED \(Average income\) yearly/)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Let op|Definitie|Dekking|tegenover|Elke stip|hebben beide|Bron:|gesynchroniseerd/);
+  });
+
+  it('English Copy: the English lines, no Dutch citation-flags line appended', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const response = scatterResponse();
+    askQuestion.mockResolvedValue(scatterOutcome());
+    render(
+      <LangProvider lang="en">
+        <Chat />
+      </LangProvider>,
+    );
+    await submitEn('Plot against population');
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const text = writeText.mock.calls[0]![0] as string;
+    expect(text).toContain(scatterBodyEn(response.scatter!));
+    expect(text).toContain(scatterLineEn(response.scatter!));
+    expect(text).not.toMatch(/Let op|Definitie|Dekking|tegenover|gesynchroniseerd/);
+  });
+
+  it('Dutch Copy: body, coverage, both definitions, both attributions, and the two-table citation', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const response = scatterResponse();
+    askQuestion.mockResolvedValue(scatterOutcome());
+    render(<Chat />);
+    await submit('Zet af tegen bevolking op 1 januari');
+    fireEvent.click(await screen.findByRole('button', { name: 'Kopieer' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const text = writeText.mock.calls[0]![0] as string;
+    for (const line of [
+      response.answer.body,
+      response.answer.scatterLine!,
+      'Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.',
+      'Definitie (horizontale as): inwoners op 1 januari.',
+      response.scatter!.y.attributionLine,
+      response.scatter!.x.attributionLine,
+      'tabel 03759ned, gesynchroniseerd 21 september 2026',
+    ]) {
+      expect(text).toContain(line);
+    }
+  });
+
+  it('docked: the in-flow card keeps the text lines and a "Grafiek in het paneel" trigger; no inline ScatterView', async () => {
+    const response = scatterResponse();
+    askQuestion.mockResolvedValue(scatterOutcome());
+    render(<Chat dockMode onVisualsChange={() => {}} />);
+    await submit('Zet af tegen bevolking op 1 januari');
+    expect(await screen.findByText(response.answer.body)).toBeInTheDocument();
+    expect(screen.queryByTestId('scatter-view')).toBeNull();
+    expect(screen.getByText(response.answer.scatterLine!)).toBeInTheDocument();
+    expect(screen.getByText('Definitie (verticale as): gemiddeld besteedbaar inkomen per huishouden.')).toBeInTheDocument();
+    expect(screen.getByText(response.scatter!.y.attributionLine)).toBeInTheDocument();
+    expect(screen.getByText(response.scatter!.x.attributionLine)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grafiek in het paneel →' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kaart in het paneel →' })).toBeNull();
+  });
+
+  it('a one-measure answer after a scatter still renders exactly as before (ChartView, no ScatterView)', async () => {
+    askQuestion.mockResolvedValueOnce(scatterOutcome(5));
+    askQuestion.mockResolvedValueOnce(
+      outcome({
+        kind: 'ok',
+        auditId: 6,
+        netCost: 20,
+        response: { ...fakeAnswerResponse({ body: 'Hier is de grafiek.' }), chart: CHART_SPEC } as ComposedResponse,
+      }),
+    );
+    render(<Chat />);
+    await submit('Zet af tegen bevolking op 1 januari');
+    await screen.findByTestId('scatter-view');
+    await submit('Toon een grafiek');
+    await screen.findByText('Hier is de grafiek.');
+    expect(screen.getAllByTestId('scatter-view')).toHaveLength(1);
+    const chartCalls = vi.mocked(ChartView).mock.calls;
+    expect(chartCalls.length).toBeGreaterThan(0);
+    // Never "continues" the scatter.
+    expect((chartCalls[chartCalls.length - 1]![0] as { extendsPrevious?: boolean }).extendsPrevious).toBe(false);
   });
 });

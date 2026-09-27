@@ -104,3 +104,38 @@ describe('buildAnswerCopy', () => {
     expect(html).not.toContain('<a href');
   });
 });
+
+// #296 part 2 Task 7: a scatter answer copies its coverage line (the
+// region-set slot), BOTH definitions and BOTH attribution sentences.
+describe('buildAnswerCopy — scatter answer', () => {
+  const scatterView = view({
+    body: 'Gemiddeld inkomen tegenover bevolking per provincie, 2024.',
+    scatterLine: 'Dekking: alle 12 provincies hebben beide cijfers.',
+    stalenessWarning: 'Let op: de tabel Y (y) …\nLet op: de tabel X (x) …',
+    definitionLine: 'Definitie (verticale as): y.',
+    pairedDefinitionLine: 'Definitie (horizontale as): x.',
+    attribution: 'Bron: CBS StatLine, tabel Y.',
+    pairedAttribution: 'Bron: CBS StatLine, tabel X.',
+  });
+
+  it('text: body, coverage, staleness, both definitions, both attributions, URL', () => {
+    expect(buildAnswerCopy(scatterView, 'https://opendata.cbs.nl/y').text).toBe(
+      [
+        'Gemiddeld inkomen tegenover bevolking per provincie, 2024.',
+        'Dekking: alle 12 provincies hebben beide cijfers.',
+        'Let op: de tabel Y (y) …\nLet op: de tabel X (x) …',
+        'Definitie (verticale as): y.',
+        'Definitie (horizontale as): x.',
+        'Bron: CBS StatLine, tabel Y.',
+        'Bron: CBS StatLine, tabel X.',
+        'https://opendata.cbs.nl/y',
+      ].join('\n\n'),
+    );
+  });
+
+  it('html: the second attribution is its own paragraph after the linked first one', () => {
+    expect(buildAnswerCopy(scatterView, 'https://opendata.cbs.nl/y').html).toContain(
+      '<p><a href="https://opendata.cbs.nl/y">Bron: CBS StatLine, tabel Y.</a></p><p>Bron: CBS StatLine, tabel X.</p>',
+    );
+  });
+});

@@ -135,6 +135,31 @@ describe('createEmbedCode', () => {
     expect(await createEmbedCode(42)).toEqual({ ok: false, reason: 'forbidden' });
   });
 
+  // #296 part 2 Task 7: a scatter answer is embeddable — its `chart` is null
+  // (a scatter is its own spec), its `scatter` is the chart.
+  it('mints a token for a scatter answer (chart null, scatter present)', async () => {
+    currentUserId.mockResolvedValue('user-1');
+    currentUserEmail.mockResolvedValue('user1@example.com');
+    getDb.mockReturnValue(noSubscriptionDb());
+    loadAuditRecord.mockResolvedValue(
+      baseRecord({ response: { kind: 'answer', chart: null, scatter: { kind: 'scatter' } } }),
+    );
+    const result = await createEmbedCode(42);
+    expect(result.ok).toBe(true);
+  });
+
+  it('still refuses a redacted scatter row, and another user\'s scatter row', async () => {
+    currentUserId.mockResolvedValue('user-1');
+    loadAuditRecord.mockResolvedValue(
+      baseRecord({ response: { kind: 'answer', chart: null, scatter: { kind: 'scatter' }, redacted: true } }),
+    );
+    expect(await createEmbedCode(42)).toEqual({ ok: false, reason: 'forbidden' });
+    loadAuditRecord.mockResolvedValue(
+      baseRecord({ userId: 'user-2', response: { kind: 'answer', chart: null, scatter: { kind: 'scatter' } } }),
+    );
+    expect(await createEmbedCode(42)).toEqual({ ok: false, reason: 'forbidden' });
+  });
+
   it('mints a token and reports pro:false when the caller is not Pro', async () => {
     currentUserId.mockResolvedValue('user-1');
     currentUserEmail.mockResolvedValue('user1@example.com');

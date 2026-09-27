@@ -14,7 +14,7 @@ import { REDACTED_QUESTION_TEXT } from '../answer/audit/retention.ts';
 import { buildConversationContext } from '../answer/context/build.ts';
 import type { ConversationContext } from '../answer/context/types.ts';
 import type { AnswerResponse, ComposedResponse, RefusalResponse } from '../answer/respond/types.ts';
-import type { ChartSpec } from '../chart/index.ts';
+import type { ChartSpec, ScatterSpec } from '../chart/index.ts';
 import type { WebSection } from '../websearch/types.ts';
 import type { ThreadRow } from './index.ts';
 
@@ -38,7 +38,16 @@ export interface ReplayAnswerView {
    * pre-MS1 row and every answer whose series is complete. Same present-only
    * discipline as regionSetLine above (the two can never co-occur). */
   regionSeriesLine: string | null;
+  /** #296 (two-measure scatter): the scatter's coverage disclosure the user
+   * was shown — the scatter sibling of regionSetLine. Replayed from the
+   * STORED envelope, never re-decided. Null on every non-scatter answer
+   * (present-only key, like regionSetLine). */
+  scatterLine: string | null;
   definitionLine: string | null;
+  /** #296: a scatter answer's SECOND definition (the horizontal axis's
+   * measure), directly after `definitionLine` (the vertical axis's). Null on
+   * every non-scatter answer. */
+  pairedDefinitionLine: string | null;
   /** #39: the alternate-reading disclosure the user was shown. Replayed from
    * the STORED envelope, never re-decided. Null on every pre-#39 row and every
    * answer without registry-recorded alternates. */
@@ -67,6 +76,10 @@ export interface ReplayAssistantPart {
   finalText: string;
   answerView: ReplayAnswerView | null;
   chart: ChartSpec | null;
+  /** #296: a scatter answer's own spec (its `chart` is null — a scatter is
+   * its own spec, spec D8), carried structurally exactly like `chart` so the
+   * web side needs no re-derivation. Null on every other response. */
+  scatter: ScatterSpec | null;
   suggestions: string[];
   webSection: WebSection | null;
   provisional: boolean;
@@ -101,7 +114,9 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
     assumptionLine: answer?.assumptionLine ?? null,
     regionSetLine: answer?.regionSetLine ?? null,
     regionSeriesLine: answer?.regionSeriesLine ?? null,
+    scatterLine: answer?.scatterLine ?? null,
     definitionLine: answer?.definitionLine ?? null,
+    pairedDefinitionLine: answer?.pairedDefinitionLine ?? null,
     alternatesLine: answer?.alternatesLine ?? null,
     markingLine: answer?.markingLine ?? null,
     attributionLine,
@@ -111,12 +126,14 @@ function extractAnswerView(response: ComposedResponse): ReplayAnswerView | null 
 
 /** R11 provisional flag — true when ANY quoted cell is provisional (the amber
  * pill), matching web/lib/citation.ts's own check verbatim. Defensive over the
- * stored envelope shape. */
+ * stored envelope shape. #296: a scatter answer quotes BOTH legs, so the
+ * paired (horizontal-axis) leg's cells count too. */
 function computeProvisional(response: ComposedResponse): boolean {
   if (response.kind !== 'answer') return false;
-  const cells = (response as AnswerResponse).result?.cells;
-  if (!Array.isArray(cells)) return false;
-  return cells.some((cell) => (cell as { provisional?: unknown }).provisional === true);
+  const envelope = response as AnswerResponse;
+  return [envelope.result?.cells, envelope.pairedResult?.cells].some(
+    (cells) => Array.isArray(cells) && cells.some((cell) => (cell as { provisional?: unknown }).provisional === true),
+  );
 }
 
 /** The chips a resumed turn may show. Question-shaped chips (the WP29
@@ -174,6 +191,8 @@ function buildAssistantPart(row: ThreadRow): ReplayAssistantPart {
     finalText: row.finalText,
     answerView: extractAnswerView(response),
     chart: response.kind === 'answer' ? ((response as AnswerResponse).chart ?? null) : null,
+    // #296: present-only envelope key (A1) — `?? null` like `chart` above.
+    scatter: response.kind === 'answer' ? ((response as AnswerResponse).scatter ?? null) : null,
     // WP29 + #134(a): answers AND period-coverage refusals carry the structural
     // `suggestions` field — a resumed thread must replay both, mirroring the
     // live read in chat.tsx (dropping the refusal retry chip on resume was a

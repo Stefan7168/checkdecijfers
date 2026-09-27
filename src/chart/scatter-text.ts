@@ -30,8 +30,10 @@ export function lowerFirst(s: string): string {
  * when that side is 'value' (nothing to disclose). 'withheld' resolves
  * through the shared registry wording (R11, same call shape as
  * template.ts's own null-reason renderings) so a Eurostat axis gets
- * Eurostat's own marker text, not CBS's. */
-function sideReason(side: ScatterSideStatus, axis: ScatterAxis): string | null {
+ * Eurostat's own marker text, not CBS's. Exported for the scatter CSV's
+ * "Niet getoond" block (web/lib/scatter-csv.ts) — the same reason text the
+ * coverage line names, never a second wording. */
+export function sideReason(side: ScatterSideStatus, axis: ScatterAxis): string | null {
   switch (side.state) {
     case 'withheld':
       // ScatterSideStatus always carries a real valueAttribute when withheld

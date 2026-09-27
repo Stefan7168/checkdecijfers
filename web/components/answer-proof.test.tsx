@@ -333,3 +333,42 @@ describe('AnswerProof — cell table display names (open-questions #324 gap 2)',
     expect(screen.queryByText('2021 Q1')).toBeNull();
   });
 });
+
+// #296 part 2 Task 7: a scatter answer's proof lists BOTH tables.
+describe('AnswerProof — scatter answer (two tables)', () => {
+  it('shows the paired table\'s reading, cell table and steps under its own heading', () => {
+    const paired = fakeProof({
+      tableId: '03759ned',
+      tableTitle: 'Bevolking op 1 januari',
+      reading: 'Bevolking op 1 januari',
+      cells: [fakeProofCell({ resultId: 'X1', measureTitle: 'Bevolking op 1 januari', valueText: '596.075' })],
+      steps: [{ text: 'Gelezen: 3 cellen uit tabel 03759ned (de tabel hierboven).', technical: null }],
+    });
+    render(<AnswerProof proof={fakeProof({ paired })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs deze cijfers' }));
+    expect(screen.getByText('Horizontale as: tabel 03759ned')).toBeInTheDocument();
+    expect(screen.getByText('Gebruikte lezing: Bevolking op 1 januari.')).toBeInTheDocument();
+    expect(screen.getByText('596.075')).toBeInTheDocument();
+    expect(screen.getByText('Gelezen: 3 cellen uit tabel 03759ned (de tabel hierboven).')).toBeInTheDocument();
+    // The main table is still there, under its own vertical-axis heading.
+    expect(screen.getByText('Verticale as: tabel 86141NED')).toBeInTheDocument();
+    expect(screen.getByText('3,3%')).toBeInTheDocument();
+  });
+
+  it('a one-table proof shows no axis headings', () => {
+    render(<AnswerProof proof={fakeProof()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    expect(screen.queryByText(/Verticale as|Horizontale as/)).toBeNull();
+  });
+
+  it('English chrome for the axis headings', () => {
+    render(
+      <LangProvider lang="en">
+        <AnswerProof proof={fakeProof({ paired: fakeProof({ tableId: '03759ned' }) })} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Prove these numbers' }));
+    expect(screen.getByText('Vertical axis: table 86141NED')).toBeInTheDocument();
+    expect(screen.getByText('Horizontal axis: table 03759ned')).toBeInTheDocument();
+  });
+});

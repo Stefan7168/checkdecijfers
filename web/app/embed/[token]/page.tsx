@@ -64,6 +64,8 @@ import { getUserChartStyle } from '../../../backend/chart/user-styles.ts';
 import type { ChartSpec } from '../../../backend/chart/types.ts';
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
+import { ScatterView } from '../../../components/scatter-view.tsx';
+import { scatterCardSourceOf, scatterCardText } from '../../../lib/scatter-card.ts';
 import { getDb } from '../../../lib/db.ts';
 import { isChartForm, isTabularForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
@@ -198,7 +200,10 @@ export default async function EmbedPage({
   // the ownership check (`record.userId !== userId`) — that check doesn't
   // apply on this public route: the signed token IS the authorization, and
   // there is no "current user" to compare against.
-  if (response.kind !== 'answer' || response.chart === null || isRedacted(response)) {
+  // #296 part 2 Task 7: a scatter answer carries `chart: null` and its own
+  // `scatter` (a present-only key, read with `?? null`) — embeddable too.
+  const scatter = response.kind === 'answer' ? (response.scatter ?? null) : null;
+  if (response.kind !== 'answer' || (response.chart === null && scatter === null) || isRedacted(response)) {
     return (
       <>
         <EmbedResize />
@@ -209,7 +214,38 @@ export default async function EmbedPage({
     );
   }
 
-  const spec = response.chart;
+  // #296 part 2 Task 7: the scatter embed — FROZEN only. No `?live=1` re-run
+  // (rerunLive re-runs a one-measure intent into a ChartSpec; there is no
+  // scatter live path in v1), no `?form=` (a ChartForm override means nothing
+  // to a scatter), no author edit log (a scatter's log/swap/search are view
+  // state, never saved), and therefore no "never go stale — go Pro" pitch
+  // either: this embed cannot go live. ScatterView's embedMode is the Task 6
+  // control-free static view; the text lines are the SAME ones the chat card
+  // shows (scatterCardText), in the embed's own `?lang`.
+  if (scatter !== null) {
+    const card = scatterCardText(scatterCardSourceOf(response), lang);
+    const frozenFooter = (lang === 'en' ? 'Frozen on ' : 'Bevroren op ') + formatEmbedDate(record.createdAt, lang) + ' ·';
+    return (
+      <>
+        <EmbedResize />
+        <main className="p-2">
+          <ScatterView
+            spec={scatter}
+            body={response.answer.body}
+            {...(response.answer.scatterLine != null ? { scatterLine: response.answer.scatterLine } : {})}
+            extraLines={card.extraLines}
+            frameless
+            embedMode
+            embedFooter={frozenFooter}
+          />
+        </main>
+      </>
+    );
+  }
+
+  // Non-null: the gate above let this row through with chart OR scatter, and
+  // the scatter branch has already returned.
+  const spec = response.chart!;
   // Session 101 (open-questions #237(b)/#205): the Pro pitch is visible to
   // every visitor of a frozen embed, not just its creator — "probably right
   // on a frozen embed's own page" per the kickoff brief. No new link: it

@@ -7,6 +7,7 @@
 // reference the type and the reclassifier without pulling the client Chat
 // component into the server bundle.
 import type { ChartSpec } from '../backend/chart/types.ts';
+import type { ScatterSpec } from '../backend/chart/scatter.ts';
 import type { ComposedResponse, PendingClarification } from '../backend/answer/respond/types.ts';
 import type { WebSection } from '../backend/websearch/types.ts';
 // ADR 058 (English answers, Task 8): the English rendering rides straight off
@@ -52,8 +53,16 @@ export interface AnswerView {
    * complete, and on every answer stored before MS1 (A1: the key is simply
    * absent). */
   regionSeriesLine: string | null;
+  /** #296 (two-measure scatter): the scatter's coverage disclosure (the
+   * region-set line's scatter sibling). PRESENT-ONLY like `source` below:
+   * absent/null on every non-scatter answer, so every existing AnswerView
+   * stays byte-identical. */
+  scatterLine?: string | null;
   stalenessWarning: string | null;
   definitionLine: string | null;
+  /** #296: a scatter answer's second definition (the horizontal axis's),
+   * copied directly after `definitionLine`. Present-only, like scatterLine. */
+  pairedDefinitionLine?: string | null;
   /** #39: the alternate-reading disclosure ("Er is ook een andere lezing
    * beschikbaar: …") — deterministic code's own sentence, shown with the
    * definition line. Null when the answer's canonical default has no
@@ -64,6 +73,10 @@ export interface AnswerView {
   /** The full R4 attribution sentence — ALWAYS visible on the chip, never
    * behind a click. */
   attribution: string;
+  /** #296: a scatter answer's second R4 attribution sentence (the
+   * horizontal axis's table) — null/absent when there is none or it is the
+   * identical sentence. Present-only, like scatterLine. */
+  pairedAttribution?: string | null;
   tableId: string;
   /** Source-registry key for the deep link + label (WP30a); absent on
    * answers stored before WP30a → resolves to 'cbs' (A1). */
@@ -88,6 +101,13 @@ export interface ChatMessage {
   kind: 'answer' | 'clarification' | 'refusal' | 'info' | 'insufficient_credits' | null;
   text: string;
   chart: ChartSpec | null;
+  /** #296 part 2 (two-measure scatter): the answer's ScatterSpec —
+   * `response.scatter ?? null` straight off the envelope, live and on replay
+   * alike (⟨A3⟩). A scatter answer's `chart` is null (a scatter is its own
+   * spec, spec D8), so every one-measure chart path (ChartView, "extends a
+   * previous chart", co-pilot seeding) never sees a scatter message. Null on
+   * every other message. */
+  scatter: ScatterSpec | null;
   /** #254 alternate-reading toggle: every registered alternate reading of the
    * answered measure, straight from AnswerResponse.chartAlternates (Task 2) —
    * same null-safety posture as `chart`. [] on user messages, non-answers,

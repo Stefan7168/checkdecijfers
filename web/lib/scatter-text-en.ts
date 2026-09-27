@@ -27,6 +27,7 @@ import { ENGLISH_MEASURE_LABELS, ENGLISH_TOPIC_TERMS } from '../backend/answer/r
 import { hasEnglishName } from '../backend/registry/english-names.ts';
 import type { RegionScope } from '../backend/query/types.ts';
 import { resolveSourceForTable } from '../backend/sources/registry.ts';
+import { translateStalenessWarning } from '../backend/answer/translate/staleness-en.ts';
 import { translateMeasureTitle, translatePeriodLabel, translateUnit } from './i18n/cbs-words.ts';
 import { t, type Lang } from './i18n/messages.ts';
 
@@ -61,15 +62,16 @@ function midSentence(text: string): string {
  * tables have one; else the hand-written English topic term for the leg's
  * canonical key; else the codebase's generic English wording
  * (englishMeasureLabel's 'these figures'). */
-function measureEn(axis: ScatterAxis): string {
+export function measureEn(axis: ScatterAxis): string {
   if (hasEnglishName('measure', axis.measureTitle)) return translateMeasureTitle(axis.measureTitle);
   const topic = axis.canonicalKey === null ? undefined : ENGLISH_TOPIC_TERMS[axis.canonicalKey];
   if (topic !== undefined) return capitalise(topic);
   return capitalise(englishMeasureLabel(axis.canonicalKey ?? ''));
 }
 
-/** The English sibling of `sideReason` (scatter-text.ts). */
-function sideReasonEn(side: ScatterSideStatus, axis: ScatterAxis): string | null {
+/** The English sibling of `sideReason` (scatter-text.ts). Exported for the
+ * scatter CSV's "Not shown" block (scatter-csv.ts). */
+export function sideReasonEn(side: ScatterSideStatus, axis: ScatterAxis): string | null {
   switch (side.state) {
     case 'withheld':
       return `${resolveSourceForTable(axis.tableId).displayName} publishes no value`;
@@ -134,23 +136,54 @@ export function scatterLineEn(spec: ScatterSpec): string {
   return `Coverage: ${coverage}${notApplicableClause}`;
 }
 
-/** The English definition lines for the card (fix round 1): one per axis
- * whose leg has a canonical key with a hand-written English label
- * (ENGLISH_MEASURE_LABELS), vertical (y) first — the English sibling of the
- * Dutch per-axis definition lines, cased like toEnglishChartSpec's own
- * 'Definition: …' line. An axis without one gets no line (never guessed).
- * "vertical"/"horizontal" name the spec's own axes (y/x), i.e. the view as
- * it opens. */
+/** The English definition line for ONE axis (fix round 1; split per axis in
+ * #296 part 2 Task 7 so the card can pair each with its Dutch sibling): the
+ * hand-written English label (ENGLISH_MEASURE_LABELS) for the leg's
+ * canonical key, cased like toEnglishChartSpec's own 'Definition: …' line —
+ * or null when there is none (never guessed). "vertical"/"horizontal" name
+ * the spec's own axes (y/x), i.e. the view as it opens. */
+export function scatterDefinitionLineEn(spec: ScatterSpec, side: 'y' | 'x'): string | null {
+  const axis = spec[side];
+  const label = axis.canonicalKey === null ? undefined : ENGLISH_MEASURE_LABELS[axis.canonicalKey];
+  if (label === undefined) return null;
+  return `Definition (${side === 'y' ? 'vertical axis' : 'horizontal axis'}): ${capitalise(label)}.`;
+}
+
+/** The English definition lines for the card: one per axis that has one,
+ * vertical (y) first — the English sibling of the Dutch per-axis definition
+ * lines. */
 export function scatterDefinitionLinesEn(spec: ScatterSpec): string[] {
-  const lines: string[] = [];
-  for (const [axis, where] of [
-    [spec.y, 'vertical axis'],
-    [spec.x, 'horizontal axis'],
-  ] as const) {
-    const label = axis.canonicalKey === null ? undefined : ENGLISH_MEASURE_LABELS[axis.canonicalKey];
-    if (label !== undefined) lines.push(`Definition (${where}): ${capitalise(label)}.`);
-  }
-  return lines;
+  return (['y', 'x'] as const)
+    .map((side) => scatterDefinitionLineEn(spec, side))
+    .filter((line): line is string => line !== null);
+}
+
+/** Shown in place of a Dutch staleness line the English translator cannot
+ * shape (a form staleness.ts does not produce today): the caveat itself is
+ * never dropped and never shown in Dutch on an English card. No table name,
+ * no date — nothing here is guessed. */
+export const SCATTER_STALENESS_FALLBACK_EN =
+  'Note: one of these tables may not be up to date — more recent figures may now be available.';
+
+/** The English of a scatter answer's stored staleness warning (#296 part 2
+ * Task 4 ruling I2: one line per stale leg, y first, each naming its table —
+ * "Let op: de tabel {tableId} ({measureTitle}) …", joined by "\n"). Each line
+ * goes through the shared translator (staleness-en.ts), with the table's
+ * measure named by the SAME English name the card's axis titles use
+ * (`measureEn`); a line naming a table this spec has no axis for, or any
+ * shape the translator cannot read, becomes SCATTER_STALENESS_FALLBACK_EN. */
+export function scatterStalenessLinesEn(spec: ScatterSpec, warning: string | null): string[] {
+  if (warning === null) return [];
+  const nameMeasure = (tableId: string, measureTitle: string | null): string | null => {
+    const axes = [spec.y, spec.x].filter((axis) => axis.tableId === tableId);
+    // Both axes can come from one table: then the title picks the axis.
+    const axis = axes.find((a) => a.measureTitle === measureTitle) ?? (axes.length === 1 ? axes[0] : undefined);
+    return axis === undefined ? null : measureEn(axis);
+  };
+  return warning
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => translateStalenessWarning(line, nameMeasure) ?? SCATTER_STALENESS_FALLBACK_EN);
 }
 
 /** An axis title as the card shows it: the measure title plus its unit (both
