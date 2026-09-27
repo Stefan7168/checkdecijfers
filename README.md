@@ -13,7 +13,10 @@ slice E2a) are built and staged but switched off behind `EUROSTAT_SIBLINGS_ENABL
 step-6 flip. The interface itself is bilingual (a Dutch/English switch
 in the header); a reader on the English interface gets answers translated into English (ADR 058, LIVE since 2026-09-26),
 numbers masked from the model and filled back in by code, with an independent AI meaning check (ADR 059) before any
-English answer is shown; a failed check shows the checked Dutch answer instead. A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
+English answer is shown; a failed check shows the checked Dutch answer instead. Refusals, clarification questions and
+chart texts are shown in English from hand-written templates and name tables — no AI call (ADR 058 phases 2-3, 2026-09-27).
+Region-wide questions ("per provincie", "welke gemeente in Utrecht had de hoogste …") are answered with one checked
+figure per region and a sorted bar chart ([ADR 054](docs/decisions/054-region-set-query.md), live since 2026-09-27). A chart can be switched between line/area/bar/horizontal-bar/table, and — on a
 chart narrowed to exactly two time points — dumbbell/slope, or a heatmap grid when comparing
 multiple series across multiple periods, each offered only when it stays honest for the data on
 screen ([ADR 056](docs/decisions/056-chart-copilot.md) phase 5; on CBS/Eurostat charts and, since

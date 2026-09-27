@@ -2325,6 +2325,11 @@ app's INNER scroll container — the body is `h-dvh`, so Playwright's `fullPage`
 for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwright.
 
 **Gotchas found while building it.**
+- **(session 135) The llm-stub also has a PREFIX fallback** (same model + system, first 60 characters of the question), and
+  it picks whichever fixture file sorts first — an e2e step that has no fixture of its own passes by file-name luck and
+  breaks when any re-record reshuffles the hash names (CI run 36284080185 went red exactly so). After a prompt change,
+  grep the CI log for `[llm-stub] prefix` / `question-only` lines; give each such step a real labelled case + a one-call
+  recording (see `f-e2e-cbs-copilot-utrecht-erbij` in `benchmark/followup-cases.json`).
 - **Turbopack refuses a symlinked `node_modules`** ("Symlink [project]/web/node_modules is invalid, it points out of the
   filesystem root"). The session-97 worktree recipe (symlink `node_modules`) is fine for vitest/tsc but NOT for
   `next dev`/`next build` in a worktree — use a hard-linked copy instead: `cp -al <main>/web/node_modules <worktree>/web/node_modules`
@@ -2420,3 +2425,13 @@ this change ("Bewaar als mijn standaard"), that saved default pins the OLD geome
 axis lines) on top of the new palette — press "Standaard" or "Vergeet mijn standaard" in the Style panel
 once to see the new look. Rollback is a `git revert` of the branch's commits; stored defaults are unaffected
 either way (the sanitiser drops any key an older build does not know).
+
+## Read-only questions to the live database (added session 135, 2026-09-27)
+
+For a measurement (e.g. "how many AI calls per role", #331), query the live database READ-ONLY through the repo's own
+client — it pins the Supabase CA, so a bare `pg` connection fails with `SELF_SIGNED_CERT_IN_CHAIN`. From the repo root:
+`node --env-file=.env --input-type=module -e "import { connectFromEnv } from './src/db/client.ts'; const { db, pool } = connectFromEnv(); console.log((await db.query('select count(*) from audit_answers')).rows); await pool.end();"`
+Only `select` statements; any DDL or write stays an owner-supervised, migration-file step (CLAUDE.md). Useful tables:
+`audit_answers.llm_calls` (jsonb per call: role, model, tokens), `credit_transactions` (reason), `chart_edits`,
+`dataset_turns`.
+

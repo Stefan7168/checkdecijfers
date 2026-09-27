@@ -45,6 +45,18 @@ on top.
    throwaway harness (every labelled question × click options on/off × reply turns, base worktree vs head) found 29
    differing envelopes; after the fix wave, 374 comparisons, 0 differences. Budget one such run for any "unchanged for
    existing users" claim.
+10. **"Too strict" was a bug — read the rejected drafts before loosening a validator.** #330 was filed (session 134) as R9
+   over-strictness with a planned alias fix. The recorded answer drafts (`tests/fixtures/llm/answer/`) showed 4 of 5
+   ending "… van 2025." — the year guard's decimal lookahead `(?![\d.,])` rejected a sentence-final full stop. A
+   punctuation fix (digit required on the far side) took hermetic template fallbacks 3 → 0 with no loosening of what
+   counts as naming a period. The live audit rows keep only the rejection reasons, not the drafts — the fixtures did.
+11. **Measure the traffic before building a cost saver.** #331 ("scripts instead of AI") pointed at the chart helper; two
+   read-only queries showed 2 chart edits ever and a few dollars of reader AI use since July, versus ≈$8–9 of
+   development runs in this one session. The real saving was process (probe one case before a full re-record), and the
+   visible owner goal (English everywhere) was reached WITHOUT AI calls via templates and name tables.
+12. **A "(Recommended)" GO keeps the session moving; stopping after a finished item does not.** The owner asked "why did
+   you stop" after an item landed and the next needed a GO. Size the next item and put the decision in front of the
+   owner in the same turn, instead of ending on a summary.
 
 ## Session 134 — a "provider restriction" was our own spend limit for 12 days; the first real recording finds what hermetic tests can't
 

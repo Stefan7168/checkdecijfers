@@ -3,9 +3,9 @@
 **Status:** Tasks 1–7 built + merged session 110 (2026-09-17), on top of `main`, each on its own
 worktree branch (`s110/253-region-set-query`, `s110/rs5`, `s110/rs6`, `s110/rs7`). Task 8 (this doc
 + the other docs it lists) is this change. **Task 9 (exposing the capability through the intent
-parser) is NOT built** — it is real-LLM-spend, owner-supervised work, deliberately deferred (see
-"Revisit triggers"). Until Task 9 runs, nothing a real user can type reaches this code: the shape is
-fully built and hermetically tested, but reachable only through a hand-authored `StructuredIntent`.
+parser) BUILT session 135 (2026-09-27, owner present, `c3e79848`) — region-class questions are now
+REACHABLE from real user questions and LIVE;** see "As-built: Task 9" at the end. (Before session 135 the
+shape was reachable only through a hand-authored `StructuredIntent`.)
 
 **Design:** [docs/superpowers/specs/2026-09-17-region-set-query-design.md](../superpowers/specs/2026-09-17-region-set-query-design.md).
 **Plan + as-built notes for every task:** [docs/superpowers/plans/2026-09-17-region-set-query.md](../superpowers/plans/2026-09-17-region-set-query.md).
@@ -297,7 +297,7 @@ only):** `regionSetLine` is assembled into `answer.text` but is not yet read by 
 VIEW that `src/threads/replay.ts`, `web/lib/copy-answer.ts` and `web/components/chat.tsx` render
 field-by-field (each lists `assumptionLine`/`definitionLine`/… explicitly). Invisible today because
 the shape is unreachable until Task 9; a replayed or copied region-set answer would silently drop its
-coverage disclosure the day it becomes reachable.
+coverage disclosure the day it becomes reachable. **(Closed session 110, branch `s110/rsline` — see the plan's task-7 notes; verified before Task 9 went live in session 135.)**
 
 ## Alternatives rejected
 
@@ -345,7 +345,7 @@ coverage disclosure the day it becomes reachable.
 - The query, chart, answer and audit layers can all now answer "one measure, one period, a region
   CLASS" end to end, hermetically tested at every layer (see the plan's per-task "Measured at the
   end of task N" notes for exact suite counts).
-- Nothing a real user can type reaches this code yet — see "Revisit triggers."
+- ~~Nothing a real user can type reaches this code yet~~ — superseded session 135: Task 9 built, reachable and live.
 - Two canonical measures (`population_on_1_january`, `average_home_sale_price_by_gemeente`) have a
   real geo dimension and a registered geo table today, so they are the only measures this capability
   can currently answer a class question about (owner-delegated decision 3: enough to ship).
@@ -458,4 +458,4 @@ Region-class questions now reach this code from real user questions. What shippe
   `rs-werkloosheid-per-provincie` (the model's confidence there is 0.75).
 - **Measured (live Haiku, owner-supervised):** intent 78/78 after one relabel (`os-v02`, see its note), all six
   new `region_set` cases ×3 stable; follow-up 23/23; clarify 7/7; delivery re-run delivered; ADR 012 thresholds
-  unchanged. Hermetic benchmark 14/14 + 6/6 + 0 fabricated, template fallbacks 3.
+  unchanged. Hermetic benchmark 14/14 + 6/6 + 0 fabricated, template fallbacks 3 (→ 0 after the same session's #330 fix).

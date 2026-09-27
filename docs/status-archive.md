@@ -1,5 +1,37 @@
 # STATUS archive — the session log
 
+**Session 135 (2026-09-27, 01:21 → 17:07 local UTC+7 — owner present throughout; five changes shipped LIVE, CBS outage
+diagnosed; wrapped on the owner's "Wrap up the session").**
+
+1. **State verified at start:** `main` = `4a01a956` (docs-only after `156292fa`), CI 36259837787 green, prod 200, no open PRs.
+2. **#329 CBS outage is CBS-side** (`370f272b`): www.cbs.nl carries a "technische storing … Statline onbereikbaar" banner and
+   the v4 API resets from Anthropic's servers too (WebFetch), not just the owner's machine. Still down at wrap (retries
+   through 16:24). Owner steer: no paper design around the outage → pivot to the most valuable unblocked item.
+3. **#267 = ADR 054 Task 9 — region-class questions REACHABLE** (`c3e79848`): raw parse v4 `regionScope`, PROMPT_VERSION 7 (one
+   rule, NO worked example — a draft example measurably broke the WP16 bijstand delivery case 3/3 and a follow-up case;
+   bisected against v6 with `git stash`), `resolveRegionScope`, class carried in the conversation context, policy rule 3
+   passes honest scope refusals through. Live Haiku recordings: intent 78 (one relabel `os-v02` → 'none'), follow-up 23,
+   clarify 7, delivery 1; `intent:eval --repeat=3` stable, six region_set cases ×3. First push red on one e2e step with no
+   fixture of its own (CI 36284080185, nothing deployed) → fixed by a labelled follow-up case + one-call recording
+   (`4889c264`, CI 36284661882 green incl. deploy). Spend ≈$8–9 (estimate from token counts).
+4. **#332 English refusals + clarifications LIVE** (merge `94794ff1`, CI 36301262188 green incl. deploy; owner GO): deterministic
+   English siblings at every Dutch template site (6 SDD tasks on the cheaper tier + session review). Final opus review found
+   4 Important (a `labelEn` leak into stored Dutch parses; English chips ≠ takeable options; meta/onboarding not rendered; a
+   false onboarding claim) + 3 Minor — all fixed (`9dd41dba`); its executed base-vs-head diff then showed 374 comparisons,
+   0 differences. A reviewer scratch test swept into a docs commit was removed before push (`0dafff0b`).
+5. **#332 English chart texts LIVE** (merge `3643d71b`, CI 36304098633 green incl. deploy; owner GO): `toEnglishChartSpec`
+   display layer, stored chart unchanged; edits key on series index/period code, so they hold across languages.
+6. **#331 measured, not built** (`1121de6c`): read-only live queries — 336 answers since 07-03, reader AI use a few dollars,
+   chart helper 2 edits ever; the lever is development spend. Revisit trigger ≥50 chart-helper requests/month.
+7. **#330 was a bug, fixed LIVE** (`b6c59d9e`, CI 36305527635 green incl. deploy): a sentence-final year failed R9's period
+   check (decimal guard). Hermetic template fallbacks 3 → 0; `audit:verify 1 336` unchanged (298/300 + 2 pinned divergences).
+8. **#324 English gaps LIVE** (merge `e586732b`, CI 36311096315 green incl. deploy): reloaded-thread chip bubble, copy, proof
+   panel labels, CSV headers — display-only.
+9. **Recorded:** #331 (owner: scripts over AI), #332 (owner: English/Dutch mix), #328 scoped (B9-only re-record after 10-01).
+   Final measured suites: backend 237 files, 3865 passed + 1 todo (chart branch before merge); with #330 3866 passed + 1
+   failed, that one file fixed and re-run 27/27 green, then CI green; web 163 files / 3129 tests (at `9ee64be0`),
+   hermetic benchmark 14/14 + 6/6 + 0 fabricated, fallbacks 0.
+
 **Session 134 (2026-09-26 → 09-27 local UTC+7 — owner present; the "API cap" root-caused and lifted, English recording
 run done, English answers switched LIVE, live benchmark PASS; wrapped on the owner's "Retry later, wrap up now").**
 

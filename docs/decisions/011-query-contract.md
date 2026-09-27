@@ -112,7 +112,7 @@ answer is not a trend the way a `series` answer is — partiality there is discl
 non-silent by construction, which is a different honesty question than a silently-shortened
 series would raise. See ADR 054 for the full mechanism, the coverage record's four buckets,
 and why `Impossible`-null members do not count as a gap. **Tasks 1–7 of ADR 054 are built
-and merged (session 110, 2026-09-17); Task 9 (parser exposure) is not built — see ADR 054's
+and merged (session 110, 2026-09-17); Task 9 (parser exposure) built and live session 135 (2026-09-27) — see ADR 054's
 own status line.**
 
 ## Addendum (2026-09-17, see ADR 055)

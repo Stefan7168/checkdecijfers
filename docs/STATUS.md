@@ -19,36 +19,25 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 135 — owner present; verify against `git log` / Actions runs
-before trusting this).**
+before trusting this). Kickoff: [session-briefs/2026-09-27-session-136-kickoff.md](session-briefs/2026-09-27-session-136-kickoff.md).**
 
-- **Session 135 shipped #267 (ADR 054 Task 9): region-class questions are now REACHABLE** — "hoeveel inwoners had elke
-  provincie", "welke gemeente in Utrecht had de hoogste huizenprijs", "werkloosheid per provincie" (honest "only national"
-  refusal). Raw parse v4, PROMPT_VERSION 7, 78+23+7+1 fixtures re-recorded; hermetic benchmark 14/14 + 6/6 + 0 fabricated,
-  fallbacks 3; backend 3716 + web 3085 tests green; build green. **LIVE:** `main` @ `4889c264`, CI run 36284661882 green incl.
-  deploy (new prod deployment verified with `vercel ls --prod`). The first push (`c3e79848`, run 36284080185) was red on one e2e
-  step that had no fixture of its own (lessons s135 #6) — fixed by `4889c264`. Not yet exercised by a live signed-in question.
-- **Spend:** ≈$8–9 of Haiku this session (estimate from token counts at list price) on top of session 134's ≈$3 — the $50
-  monthly roof is nearly reached until it resets 2026-10-01. **No further live LLM runs before 10-01** unless the owner raises it.
-- **CBS outage ([#329](open-questions.md)): CBS-side, not us** — the www.cbs.nl banner says StatLine is down; the API resets
-  from Anthropic's network too. Retry at session start; no ingest possible meanwhile.
-- **#332 English refusals + clarifications LIVE** (owner GO, same session): deterministic English templates at every Dutch
-  template site, no AI cost; `main` @ `94794ff1`, CI run 36301262188 green incl. deploy (new prod deployment verified).
-  Independent base-vs-head check: Dutch envelopes byte-identical (374 comparisons, 0 differences). ADR 058 "Phase 2 as built".
-- **#332 English chart texts LIVE too** (owner GO, same session): a display layer (`toEnglishChartSpec`) — titles, legend,
-  period labels, number notation, notes, source line, trend headline — no AI cost, stored chart unchanged; `main` @
-  `3643d71b`, CI run 36304098633 green incl. deploy. ADR 058 "Phase 3 as built". Still Dutch for English readers: the
-  AI-worded Insights/journalist headline, hand-curated annotations, the model's reading inside "Did you mean …?".
-- **#331 measured → not built (no traffic to save on):** reader AI use since July is a few dollars; the chart helper has 2 edits
-  ever; the real cost lever is development runs. Revisit trigger ≥50 chart-helper requests/month ([#331](open-questions.md)).
-- **#330 fixed, LIVE @ `b6c59d9e`** (CI 36305527635 green incl. deploy): a sentence-final year ("…van 2025.") failed the period check — hermetic template fallbacks 3 → 0.
-- **#324 English gaps LIVE @ `e586732b`** (CI 36311096315 green incl. deploy): reloaded threads show the English chip the reader
-  clicked; copy/proof panel/CSV headers in English for English readers (display-only; CSV values unchanged).
-- **NEXT PRIORITY:** regional statistics once CBS is back (retry at session start, #329); otherwise the owner decisions
-  (#245, #275) and the next live benchmark after 10-01 (confirms #330 live; the intermediate-dip case stays open).
-- **English answers LIVE since 2026-09-26** (`ENGLISH_ANSWERS_ENABLED=1`); follow-ups #328, #324.
-- **Decisions still waiting on the owner:** #245, #275; own-data publishing spot-check (RUNBOOK ADR 057 step 4); Eurostat E2a
-  steps 0/5/6 ([#313](open-questions.md)).
-- **Unscheduled, no demand signal:** #277, #278, #299; #324; #327; #330.
+- **`main` is live and green**: last code merge `e586732b` (CI 36311096315 green incl. deploy); docs-only commits after it.
+  Prod 200. No open PRs, no worktrees. Full session log: [status-archive.md](status-archive.md) "Session 135".
+- **Shipped LIVE in session 135:** region-class questions ([#267](open-questions.md), ADR 054 Task 9); English refusals,
+  clarifications and chart texts from templates/name tables, no AI cost ([#332](open-questions.md), ADR 058 phases 2-3);
+  English gaps in replay/copy/proof/CSV ([#324](open-questions.md)); the sentence-final-year bug in the period check
+  ([#330](open-questions.md): hermetic template fallbacks 3 → 0).
+- **Spend:** ≈$8–9 of Haiku in session 135 (estimate) + ≈$3 in 134 — the $50 monthly roof is nearly used until it resets
+  **2026-10-01**. No live LLM runs before then unless the owner raises the limit (Console → Settings → Billing).
+- **NEXT PRIORITY: regional statistics** (owner-chosen): a regional-statistics set from ONE CBS table (candidate `70072ned`),
+  design first — **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting at 16:24 local on 09-27;
+  retry at session start). Region questions now reach ADR 054, so every regional measure added answers class questions.
+- **After 10-01 (small, owner-supervised spend):** the next live benchmark (confirms #330 live; the intermediate-dip R9 case
+  stays open); #328 'Declared bankruptcies' (B9-only re-record, plan in the row).
+- **Waiting on the owner (not urgent):** #245 sub-questions, the homepage styles row (#275, on hold at the owner's
+  request), own-data publishing spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
+- **Not building (measured):** #331 script matcher for the chart helper — 2 chart edits ever; trigger ≥50 requests/month.
+  Unscheduled: #277, #278, #299, #327.
 ---
 
 ## Phase 0 checklist
