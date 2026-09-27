@@ -23,7 +23,7 @@ on top.
    the session cookie from the page (RUNBOOK). A recorded region-class intent fixture gave a free end-to-end click test.
 5. **Split a big feature into two plans when the second half's seams can't be held in one context.** Part 1 (pure backend,
    full code in the plan) went through with zero fix rounds; Part 2 was planned only after three parallel seam maps, with
-   integration tasks on a stronger model — and still needed one fix round each on 4 of 5 tasks.
+   integration tasks on a stronger model — and still needed one fix round on 3 of 5 tasks (4, 6, 7).
 
 ## Session 136 — render the real surface before designing; a "gap" row can already be closed
 
