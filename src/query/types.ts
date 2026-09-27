@@ -73,6 +73,17 @@ export interface StructuredIntent {
    * clarification (src/answer/respond/validate-pending.ts). Readers use
    * `?? undefined`, never a bare truthiness assumption about its presence. */
   regionSet?: RegionScope;
+  /** Two-measure scatter (spec 2026-09-27, #296): the ADDED measure a scatter
+   * plots against `target`, over the same region class and period. Valid only
+   * with a `regionSet`, one period code, derivation 'none' and two different
+   * canonical keys (src/query/pair.ts pairIntentProblem). A paired intent runs
+   * ONLY through runPairQuery — resolveIntent refuses it, so no path can
+   * silently answer one of the two measures.
+   *
+   * ADDITIVE and PRESENT-ONLY (docs/13), exactly like `regionSet`: every
+   * stored intent lacks the key, INTENT_SCHEMA_VERSION is not bumped, readers
+   * use `?? undefined`. */
+  pairWith?: IntentTarget;
   period: IntentPeriod;
   derivation: IntentDerivation;
 }

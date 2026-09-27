@@ -247,6 +247,13 @@ export async function resolveIntent(
     return refuse(intent, 'invalid_intent', `unsupported intent schemaVersion ${intent.schemaVersion}; this query layer speaks version ${INTENT_SCHEMA_VERSION}`);
   }
 
+  // Two-measure scatter (spec 2026-09-27): a paired intent is two queries, run
+  // by src/query/pair.ts runPairQuery. Reaching the single-measure resolver
+  // with one would answer `target` alone and drop the second measure silently.
+  if (intent.pairWith !== undefined) {
+    return refuse(intent, 'invalid_intent', 'a paired (two-measure) intent runs through runPairQuery, never runQuery');
+  }
+
   let parsedPeriods: { code: string; parsed: ParsedPeriod }[];
   if (intent.period.kind === 'codes') {
     if (intent.period.codes.length === 0) {

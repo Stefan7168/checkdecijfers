@@ -10,4 +10,6 @@ export type { ResolvedQuery, ResolveOutcome, QueryOptions } from './resolve.ts';
 export { NATIONAL_REGION_CODE } from './resolve.ts';
 export { resolveRegionSet, REGION_SET_MAX_MEMBERS, NOT_APPLICABLE_ATTRIBUTE } from './region-set.ts';
 export type { RegionSetOutcome } from './region-set.ts';
+export { SCATTER_MIN_PAIRS, pairIntentProblem, legIntents, pairRegions, runPairQuery } from './pair.ts';
+export type { SideState, PairSide, RegionPair, LeftOutRegion, RegionPairing, PairedResults, PairOutcome } from './pair.ts';
 export * from './types.ts';
