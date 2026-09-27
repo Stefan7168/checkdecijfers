@@ -24,7 +24,9 @@ before trusting this).**
 - **Session 135 shipped #267 (ADR 054 Task 9): region-class questions are now REACHABLE** — "hoeveel inwoners had elke
   provincie", "welke gemeente in Utrecht had de hoogste huizenprijs", "werkloosheid per provincie" (honest "only national"
   refusal). Raw parse v4, PROMPT_VERSION 7, 78+23+7+1 fixtures re-recorded; hermetic benchmark 14/14 + 6/6 + 0 fabricated,
-  fallbacks 3; backend 3716 + web 3085 tests green; build green. Deployed by CI on push (check the run).
+  fallbacks 3; backend 3716 + web 3085 tests green; build green. **LIVE:** `main` @ `4889c264`, CI run 36284661882 green incl.
+  deploy (new prod deployment verified with `vercel ls --prod`). The first push (`c3e79848`, run 36284080185) was red on one e2e
+  step that had no fixture of its own (lessons s135 #6) — fixed by `4889c264`. Not yet exercised by a live signed-in question.
 - **Spend:** ≈$8–9 of Haiku this session (estimate from token counts at list price) on top of session 134's ≈$3 — the $50
   monthly roof is nearly reached until it resets 2026-10-01. **No further live LLM runs before 10-01** unless the owner raises it.
 - **CBS outage ([#329](open-questions.md)): CBS-side, not us** — the www.cbs.nl banner says StatLine is down; the API resets
