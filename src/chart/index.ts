@@ -31,3 +31,12 @@ export { INSIGHTS_MAX_FINDINGS, scoreFindings } from './insights.ts';
 export type { FindingKind, ScoredFinding } from './insights.ts';
 export { CHART_SPEC_VERSION } from './types.ts';
 export type { ChartAnnotation, ChartAttribution, ChartPoint, ChartSeries, ChartSpec } from './types.ts';
+export {
+  SCATTER_SPEC_VERSION,
+  SCATTER_MAX_LABELS,
+  LOG_SCALE_MIN_SPREAD,
+  scatterSpecSchema,
+  defaultScale,
+  buildScatterSpec,
+} from './scatter.ts';
+export type { AxisScale, ScatterAxis, ScatterPoint, ScatterSpec } from './scatter.ts';

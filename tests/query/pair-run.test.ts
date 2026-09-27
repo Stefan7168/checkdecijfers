@@ -76,6 +76,18 @@ describe('runPairQuery', () => {
     expect(outcome.ok).toBe(false);
     if (!outcome.ok) expect(outcome.refusal.kind).toBe('invalid_intent');
   });
+
+  it('the provinces pair builds a valid ScatterSpec with 12 points, x on a log scale', async () => {
+    const { buildScatterSpec, scatterSpecSchema } = await import('../../src/chart/index.ts');
+    const outcome = await runPairQuery(db, pair({ kind: 'all_provincies' }));
+    if (!outcome.ok) throw new Error(outcome.refusal.message);
+    const spec = buildScatterSpec(outcome.result, outcome.pairedResult);
+    expect(scatterSpecSchema.safeParse(spec).success).toBe(true);
+    expect(spec.points).toHaveLength(12);
+    expect(spec.labelled.length).toBeGreaterThan(0);
+    // Province populations run from ~400k (Zeeland/Flevoland) to ~3.8M (Zuid-Holland): < 100x → linear.
+    expect(spec.x.defaultScale).toBe('linear');
+  });
 });
 
 describe('runQuery never answers a paired intent', () => {
