@@ -459,3 +459,6 @@ Region-class questions now reach this code from real user questions. What shippe
 - **Measured (live Haiku, owner-supervised):** intent 78/78 after one relabel (`os-v02`, see its note), all six
   new `region_set` cases ×3 stable; follow-up 23/23; clarify 7/7; delivery re-run delivered; ADR 012 thresholds
   unchanged. Hermetic benchmark 14/14 + 6/6 + 0 fabricated, template fallbacks 3 (→ 0 after the same session's #330 fix).
+
+
+**Note (session 137, 2026-09-27):** a region-set answer now offers a zero-AI "Zet af tegen …" chip that pairs it with another regional measure over the same region class and period into a scatter (two ordinary region-set legs joined per region) — ADR [060](060-two-measure-scatter.md).

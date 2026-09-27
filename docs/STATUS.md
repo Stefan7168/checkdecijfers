@@ -18,33 +18,26 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 136 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-27-session-137-kickoff.md](session-briefs/2026-09-27-session-137-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-27/28 local, session 137 — owner present; verify against `git log` / Actions runs
+before trusting this). Kickoff: see the newest file in [session-briefs/](session-briefs/).**
 
-- **`main` is live and green**: last code push `bcdbd405` (CI 36315795992 green incl. deploy) plus the session-136 wrap-up
-  commit (comments + docs). Prod 200. No open PRs, no worktrees. Full session log: [status-archive.md](status-archive.md)
-  "Session 136".
-- **Shipped LIVE in session 136 (owner-picked while CBS is down):** shared charts match what the reader sees (spec
-  `docs/superpowers/specs/2026-09-27-shared-charts-match-design.md`): downloads carry the title + caption; the public embed
-  shows the author's edits and house style, following later edits; reader text goes public only when every number in it is
-  on the chart; notes stay private; 'Totaal' → 'Total' on English charts. Closes [#277](open-questions.md)(b),
-  [#278](open-questions.md), [#324](open-questions.md) gap 3. No AI, no DB change.
-- **Spend:** the $50 monthly roof is nearly used until it resets **2026-10-01** (session 136 spent nothing). No live LLM runs
-  before then unless the owner raises the limit (Console → Settings → Billing).
-- **Session 137 (owner present, CBS still down): two-measure charts ([#296](open-questions.md), owner pick).** Design GO'd
-  ("Plot against…" zero-AI chip under a region-set answer → scatter, one dot per region; spec
-  `docs/superpowers/specs/2026-09-27-two-measure-scatter-design.md`). **Part 1 merged** (`89902c11`, backend only, invisible:
-  paired query + ScatterSpec); verify block green (backend 3903, web 3150, benchmark 14/14 + 6/6 + 0 fabricated, fallbacks 0).
-  **Next unblocked item: Part 2** (user-visible) — step-level plan first; carry-overs in the plan file.
-- **NEXT PRIORITY: regional statistics** (owner-chosen): a regional-statistics set from ONE CBS table (candidate `70072ned`),
-  design first — **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting and the "Technische
-  storing" banner still on www.cbs.nl (curl 000) at 19:17 local on 09-27; retry at session start). If still down: next unblocked item.
-- **After 10-01 (small, owner-supervised spend):** the next live benchmark (confirms #330 live; the intermediate-dip R9 case
-  stays open); #328 'Declared bankruptcies' (B9-only re-record, plan in the row).
-- **Waiting on the owner (not urgent):** #245 sub-questions, the homepage styles row (#275, on hold at the owner's
-  request), own-data publishing spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
-- **Not building (measured):** #331 script matcher for the chart helper — 2 chart edits ever; trigger ≥50 requests/month.
-  Unscheduled, small: #327 (hygiene), #299 (all-municipalities verified whole, low value), #277(a).
+- **`main` is live**: last code push `ad96af3c` (session 137). Prod 200. Full session log: [status-archive.md](status-archive.md).
+- **Shipped LIVE in session 137 (owner pick while CBS is down): two-measure charts** ([#296](open-questions.md), ADR
+  [060](decisions/060-two-measure-scatter.md)). Under a CBS region-set answer a zero-AI chip "Zet af tegen …" answers with an
+  audited scatter chart: one dot per region, auto log scale, named extremes, search, swap, table, left-out regions with CBS
+  reasons, both definitions/sources, Dutch + English (English at render time, no model call). Works in chat, replay, embed,
+  CSV, proof panel. No DB change, no new flag. Only one pair exists (population × home price) until regional statistics land.
+  Verified: backend 3964 + web 3262 tests, benchmark 14/14 + 6/6 + 0 fabricated (fallbacks 0), `audit:verify 1 400` unchanged,
+  real browser pass on the local harness. Follow-ups: [#333](open-questions.md).
+- **Spend:** the $50 monthly roof is nearly used until it resets **2026-10-01** (session 137 spent nothing on AI).
+- **NEXT PRIORITY: regional statistics** (owner-chosen) — a regional-statistics set from ONE CBS table (candidate `70072ned`),
+  design first; **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting connections, "Technische
+  storing" banner on www.cbs.nl at 19:58 local 09-27). Retry at session start. It also multiplies the scatter's pairs.
+- **After 10-01 (small, owner-supervised spend):** the next live benchmark (confirms #330 live); #328 'Declared bankruptcies'.
+- **Waiting on the owner (not urgent):** #245 sub-questions, #275 homepage styles row (on hold), own-data publishing
+  spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
+- **Not building (measured):** #331 script matcher. Unscheduled, small: #327, #299, #277(a), #333.
+
 ---
 
 ## Phase 0 checklist

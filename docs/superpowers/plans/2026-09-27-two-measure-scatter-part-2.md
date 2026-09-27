@@ -291,3 +291,12 @@ Behaviour (each one a test):
   languages, light and dark, phone width; exercise search, log toggle, swap, table, download.
 - Docs: ADR 060 (decision + as-built), ADR 039/054/056 notes, `docs/04-architecture.md` capability row, STATUS,
   open-questions #296, build plan, RUNBOOK if a new procedure appeared.
+
+
+## As-built corrections (session 137)
+
+- CSV numbers are ungrouped decimal-comma values (the WP21 CSV rule), not the grouped display strings this plan said; each row also carries the region code and both cell ids.
+- Definitions and proof headings are labelled by measure name, not by axis (axis labels go wrong after "swap axes").
+- Staleness lines render through `warningLines` (warning style, under the coverage line), not `extraLines`.
+- The plot chip carries a deterministic `labelEn` and is kept out of the English translation items.
+- Full record: ADR [060](../../decisions/060-two-measure-scatter.md).

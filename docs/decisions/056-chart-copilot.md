@@ -937,3 +937,6 @@ language removed so `?lang=` decides); see ADR 041's session-136 note.
 - The command log grows beyond what a JSON column comfortably holds per chart → snapshot + tail.
 - Recharts cannot draw a phase-5 form cleanly → the engine ADR the plan already foresees (Vega-Lite /
   Observable Plot / own SVG; never the competitor's SDK).
+
+
+**Note (session 137, 2026-09-27):** scatter is no longer out of scope product-wide: it shipped as a separate two-measure chart (ADR [060](060-two-measure-scatter.md)), not as a co-pilot form. The co-pilot does not edit a scatter (no chart_edits for it in v1).

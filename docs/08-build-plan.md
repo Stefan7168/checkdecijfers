@@ -1222,7 +1222,7 @@ almost nothing to answer. Next step: brainstorm → spec for a regional-statisti
 (#267) into one owner-supervised recording session. Blocked first on [#329](open-questions.md) (CBS data APIs unreachable
 from the owner's machine on 2026-09-26). Kickoff: [session-briefs/2026-09-27-session-135-kickoff.md](session-briefs/2026-09-27-session-135-kickoff.md).
 
-## Two-measure charts — "Plot against…" scatter ([#296](open-questions.md), owner pick session 137, 2026-09-27) — PART 1 ✅ BUILT + MERGED (backend only, invisible)
+## Two-measure charts — "Plot against…" scatter ([#296](open-questions.md), owner pick session 137, 2026-09-27) — ✅ PARTS 1 + 2 BUILT + MERGED + LIVE (ADR [060](decisions/060-two-measure-scatter.md)); follow-ups [#333](open-questions.md)
 
 Owner picked this while CBS was down ([#329](open-questions.md)); design GO in chat (committed UX: auto log scale on a
 ≥100× spread, the most extreme places named + a search box, the asked-about figure on the vertical axis + swap, no trend
@@ -1236,7 +1236,7 @@ Plan: [superpowers/plans/2026-09-27-two-measure-scatter.md](superpowers/plans/20
   `src/chart/scatter.ts` — deterministic, zod-validated `ScatterSpec`. Final opus review: 0 Critical, 3 Important, all
   fixed (full CBS labels so "Bergen (L.)"/"Bergen (NH.)" stay distinct; live embeds of a paired intent fail closed;
   `PairedResults.intent` carries the full pair intent for the audit row). No AI, no DB change.
-- **Part 2 — NEXT (user-visible):** its own step-level plan first. Answer + audit (take-path branch on `pairWith`,
+- **Part 2 ✅ BUILT + MERGED + LIVE (session 137, `4998c7c9..ad96af3c`, ADR [060](decisions/060-two-measure-scatter.md)):** plan [superpowers/plans/2026-09-27-two-measure-scatter-part-2.md](superpowers/plans/2026-09-27-two-measure-scatter-part-2.md). Was: its own step-level plan first. Answer + audit (take-path branch on `pairWith`,
   envelope `pairedResult?`/`scatter?`, template text nl/en, left-out line, reconstruction), the chip (`plotAgainst`, click
   validation accepting `regionSet` + `pairWith` gated on `REGIONAL_KEYS`), the web `ScatterView`, docs (ADR 060).
   Carry-overs from Part 1's review are in the plan's Part 2 section.

@@ -2340,6 +2340,14 @@ app's INNER scroll container — the body is `h-dvh`, so Playwright's `fullPage`
 for logged-in pages, `PLAYWRIGHT_MODULE` / `CHROMIUM_PATH` for a global Playwright.
 
 **Gotchas found while building it.**
+- **(session 137) Logging the Claude desktop app's built-in browser pane into the harness** (no Playwright cookie injection
+  there): start the harness (`.claude/launch.json` entry `harness`), open `http://localhost:3102`, then run in the page
+  (javascript tool): fetch `http://localhost:9911/auth/v1/token` (POST), base64url-encode the JSON it returns, set
+  `document.cookie = 'sb-localhost-auth-token=base64-' + <that> + '; path=/'` and reload. Fake local session only.
+  **A region-set answer with zero spend:** ask the recorded question "Hoeveel inwoners had elke provincie op 1 januari 2025?"
+  (Dutch interface) — it answers per province and offers the "Zet af tegen gemiddelde verkoopprijs" scatter chip; clicking a
+  chip FILLS the question box, then press Verstuur. English answers fall back to Dutch there (no translate fixture) — the
+  scatter card is English regardless (built at render time).
 - **(session 135) The llm-stub also has a PREFIX fallback** (same model + system, first 60 characters of the question), and
   it picks whichever fixture file sorts first — an e2e step that has no fixture of its own passes by file-name luck and
   breaks when any re-record reshuffles the hash names (CI run 36284080185 went red exactly so). After a prompt change,
