@@ -81,7 +81,7 @@ describe('buildScatterSpec', () => {
     expect(spec.points.map((p) => p.regionCode)).toEqual(['A', 'B', 'C', 'D']);
     const b = spec.points[1];
     expect(b).toMatchObject({ y: 500_000, x: 900_000, xResultId: 'X:M:B:2024JJ00:-', yResultId: 'Y:M:B:2024JJ00:-' });
-    expect(b.label).toBe('B');
+    expect(b.label).toBe('B (PV)');
     expect(b.yFormatted).toBe('500.000');
     expect(b.xFormatted).toBe('900.000');
     expect(spec.title).toBe('Gemiddelde verkoopprijs tegenover bevolking op 1 januari, 2024');
@@ -120,6 +120,21 @@ describe('buildScatterSpec', () => {
   it('validates against its own strict schema', () => {
     expect(scatterSpecSchema.safeParse(buildScatterSpec(y, x)).success).toBe(true);
     expect(scatterSpecSchema.safeParse({ ...buildScatterSpec(y, x), extra: 1 }).success).toBe(false);
+  });
+
+  it('the schema rejects a labelled code that is not the regionCode of any point', () => {
+    const spec = buildScatterSpec(y, x);
+    const bad = { ...spec, labelled: [...spec.labelled, 'NOT-A-POINT'] };
+    const result = scatterSpecSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+  });
+
+  it('throws an explicit error, not a TypeError, when the pair has no cells', () => {
+    const yEmpty = leg('Y', 'Gemiddelde verkoopprijs', {});
+    const xEmpty = leg('X', 'Bevolking op 1 januari', {});
+    expect(() => buildScatterSpec(yEmpty, xEmpty)).toThrow(
+      /buildScatterSpec: Y has no cells — a scatter needs at least one paired region/,
+    );
   });
 
   it('is deterministic', () => {

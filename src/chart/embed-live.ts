@@ -90,6 +90,16 @@ export function parseStoredIntent(raw: unknown): StructuredIntent | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
   const r = raw as Record<string, unknown>;
 
+  // Fail closed on a paired/scatter intent (spec
+  // docs/superpowers/specs/2026-09-27-two-measure-scatter-design.md): a
+  // stored `pairWith` means the audited question was a two-measure scatter,
+  // which this module has no live re-run path for (rerunLive/runQuery here
+  // only ever re-run a single-measure StructuredIntent). Re-running just the
+  // y leg would silently turn a scatter's live embed into a one-measure
+  // chart, so any `pairWith` key — any value other than undefined — refuses
+  // outright and the caller falls back to its frozen chart instead.
+  if (r.pairWith !== undefined) return null;
+
   if (r.schemaVersion !== INTENT_SCHEMA_VERSION) return null;
 
   const target = r.target;

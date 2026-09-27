@@ -38,13 +38,18 @@ describe('runPairQuery', () => {
     expect(outcome.pairedResult.attribution.tableId).toBe('03759ned');
     expect(outcome.pairing.pairs).toHaveLength(12);
     expect(outcome.pairing.complete).toBe(true);
+    // A later audit writer must record the FULL two-measure question, not the
+    // y leg's own one-measure intent (legIntents strips pairWith off before
+    // either leg runs) — so outcome.intent keeps pairWith, outcome.result.intent
+    // (the y leg's own echoed intent, ValidatedResult.intent) does not.
+    expect(outcome.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    expect('pairWith' in outcome.result.intent).toBe(false);
     for (const p of outcome.pairing.pairs) {
       expect(p.y.regionCode).toBe(p.regionCode);
       expect(p.x.regionCode).toBe(p.regionCode);
       expect(p.y.value).not.toBeNull();
       expect(p.x.value).not.toBeNull();
     }
-    expect('pairWith' in outcome.result.intent).toBe(false);
   });
 
   it('gemeenten in PV26: every member of either roster is accounted for exactly once', async () => {
@@ -61,6 +66,20 @@ describe('runPairQuery', () => {
     }
     expect(new Set(accounted)).toEqual(rosterCodes);
     for (const r of leftOut) expect(r.y.state === 'value' && r.x.state === 'value').toBe(false);
+
+    // Label-gate (spec D7): PV26's two tables disagree on roster (54 vs 42
+    // gemeenten, per this file's header comment), so this pairing is the real
+    // fixture case that pins the gate against genuine roster incompleteness —
+    // not the synthetic all-complete provinces case above. Single conditional
+    // expectation keyed on the MEASURED pairing.complete value, since which
+    // branch the real fixture takes is itself the thing being pinned.
+    const { buildScatterSpec } = await import('../../src/chart/index.ts');
+    const spec = buildScatterSpec(outcome.result, outcome.pairedResult);
+    if (outcome.pairing.complete) {
+      expect(spec.labelled.length).toBeGreaterThan(0);
+    } else {
+      expect(spec.labelled).toEqual([]);
+    }
   });
 
   it('refuses when a leg refuses — a period only one table has', async () => {
@@ -77,7 +96,7 @@ describe('runPairQuery', () => {
     if (!outcome.ok) expect(outcome.refusal.kind).toBe('invalid_intent');
   });
 
-  it('the provinces pair builds a valid ScatterSpec with 12 points, x on a log scale', async () => {
+  it('the provinces pair builds a valid ScatterSpec with 12 points, x on a linear scale', async () => {
     const { buildScatterSpec, scatterSpecSchema } = await import('../../src/chart/index.ts');
     const outcome = await runPairQuery(db, pair({ kind: 'all_provincies' }));
     if (!outcome.ok) throw new Error(outcome.refusal.message);

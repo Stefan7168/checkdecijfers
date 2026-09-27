@@ -10,7 +10,7 @@
 // functions of the plotted values — so every surface opens the same view and
 // audit reconstruction rebuilds the spec byte-identically (R8).
 import { z } from 'zod';
-import { baseRegionLabel, buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
+import { buildAttributionLine, formatValueNl } from '../answer/compose/format.ts';
 import { pairRegions } from '../query/index.ts';
 import type { ResultCell, ValidatedResult } from '../query/index.ts';
 import { PROVISIONAL_NOTE } from './build.ts';
@@ -97,6 +97,20 @@ export const scatterSpecSchema = z.strictObject({
   labelled: z.array(z.string()).max(SCATTER_MAX_LABELS),
   provisionalNote: z.string().nullable(),
   license: z.literal('CC BY 4.0'),
+}).superRefine((spec, ctx) => {
+  // Every labelled code must name an actual plotted point — a labelled
+  // region that isn't one of this spec's own points would be a dangling
+  // reference the chart layer couldn't resolve.
+  const regionCodes = new Set(spec.points.map((p) => p.regionCode));
+  spec.labelled.forEach((code, i) => {
+    if (!regionCodes.has(code)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['labelled', i],
+        message: `labelled region code "${code}" is not the regionCode of any point`,
+      });
+    }
+  });
 });
 
 export function defaultScale(values: number[]): AxisScale {
@@ -106,6 +120,9 @@ export function defaultScale(values: number[]): AxisScale {
 
 function axisOf(result: ValidatedResult, cells: ResultCell[]): ScatterAxis {
   const first = cells[0] ?? result.cells[0];
+  if (first === undefined) {
+    throw new Error(`buildScatterSpec: ${result.attribution.tableId} has no cells — a scatter needs at least one paired region`);
+  }
   return {
     measureTitle: first.measureTitle,
     unit: first.unit,
@@ -121,6 +138,12 @@ function lowerFirst(s: string): string {
   return s.length === 0 ? s : s[0].toLowerCase() + s.slice(1);
 }
 
+/** Precondition: `y`/`x` must carry at least one paired region between them —
+ * runPairQuery (src/query/pair.ts) guarantees this itself (it refuses
+ * `no_data` below SCATTER_MIN_PAIRS pairs before a ScatterSpec is ever
+ * built), so this is never reachable from the real query pipeline; it is
+ * enforced here only so a caller that bypasses runPairQuery gets an explicit
+ * error instead of a TypeError on an undefined cell. */
 export function buildScatterSpec(y: ValidatedResult, x: ValidatedResult): ScatterSpec {
   const pairing = pairRegions(y, x);
   const yAxis = axisOf(y, pairing.pairs.map((p) => p.y));
@@ -128,7 +151,10 @@ export function buildScatterSpec(y: ValidatedResult, x: ValidatedResult): Scatte
 
   const points: ScatterPoint[] = pairing.pairs.map((p) => ({
     regionCode: p.regionCode,
-    label: baseRegionLabel(p.regionLabel),
+    // Full CBS region label (like src/chart/build.ts:112's cell.regionLabel),
+    // NOT baseRegionLabel: stripping the CBS qualifier would collide
+    // "Bergen (L.)" and "Bergen (NH.)" onto the same "Bergen" point label.
+    label: p.regionLabel,
     x: p.x.value as number,
     y: p.y.value as number,
     xFormatted: formatValueNl(p.x.value as number, p.x.decimals),

@@ -106,6 +106,19 @@ describe('parseStoredIntent', () => {
     expect(parseStoredIntent(arrayIntent)).toBeNull();
   });
 
+  // Fail-closed guard (spec 2026-09-27-two-measure-scatter-design.md): a
+  // stored intent carrying `pairWith` is a two-measure scatter question,
+  // which this module cannot re-run live (rerunLive only ever re-runs a
+  // single-measure StructuredIntent) — it must refuse rather than silently
+  // re-running just the y leg as a one-measure chart.
+  it('rejects a stored intent that carries pairWith, even an otherwise well-formed one', () => {
+    expect(parseStoredIntent({ ...VALID, pairWith: { kind: 'canonical', key: 'population_on_1_january' } })).toBeNull();
+    // Any value at all — including an explicitly-malformed one — still refuses;
+    // the guard checks presence of the key, not the shape of its value.
+    expect(parseStoredIntent({ ...VALID, pairWith: null })).toBeNull();
+    expect(parseStoredIntent({ ...VALID, pairWith: 'not-a-real-target' })).toBeNull();
+  });
+
   it('rejects a schemaVersion that does not match INTENT_SCHEMA_VERSION', () => {
     expect(parseStoredIntent({ ...VALID, schemaVersion: 2 })).toBeNull();
     expect(parseStoredIntent({ ...VALID, schemaVersion: '1' })).toBeNull();

@@ -116,6 +116,12 @@ export function pairRegions(y: ValidatedResult, x: ValidatedResult): RegionPairi
 
 export interface PairedResults {
   ok: true;
+  /** The FULL pair intent that was asked (with `pairWith`) — NOT `result.intent`,
+   * which is only the y leg's own one-measure intent (legIntents strips
+   * `pairWith` off before either leg runs). A later audit writer must record
+   * this field so the audited question reads as the two-measure scatter that
+   * was actually asked, not as a single-measure query. */
+  intent: StructuredIntent;
   /** The asked-about measure (vertical axis). */
   result: ValidatedResult;
   /** The added measure (horizontal axis). */
@@ -156,5 +162,5 @@ export async function runPairQuery(db: Db, intent: StructuredIntent, options: Qu
   if (pairing.pairs.length < SCATTER_MIN_PAIRS) {
     return refusePair(intent, 'no_data', `only ${pairing.pairs.length} region(s) carry both measures; a scatter needs ${SCATTER_MIN_PAIRS}`);
   }
-  return { ok: true, result: y, pairedResult: x, pairing };
+  return { ok: true, intent, result: y, pairedResult: x, pairing };
 }
