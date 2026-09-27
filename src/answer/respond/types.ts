@@ -21,7 +21,11 @@ import type { ClarifyAxis, ClickOption, ParseOutcome } from '../intent/types.ts'
 // ADR 058 (English answers): a pure-type import from translate/types.ts
 // only (never translate/translate.ts, which imports AnswerResponse FROM
 // here) — keeps this the leaf side of the dependency, no cycle.
-import type { EnglishRendering } from '../translate/types.ts';
+// ADR 058 phase 2 (#332), Task 5: same pure-type-import discipline as
+// EnglishRendering above — NonAnswerEnglish is the refusal/clarification
+// sibling, produced by deterministic templates (refusals.ts/policy.ts),
+// never a translation-model call.
+import type { EnglishRendering, NonAnswerEnglish } from '../translate/types.ts';
 // WP26 mechanism A (ADR 024): the clickable-option payload is DEFINED in
 // intent/types.ts (where clarification outcomes are born) and re-exported here
 // so the web layer and the audit reader import it from the response contract,
@@ -322,6 +326,14 @@ export interface ClarificationResponse extends ResponseBase {
   /** State for the merge on the user's next message. */
   pending: PendingClarification;
   parse: ParseOutcome;
+  /** ADR 058 phase 2 (#332), Task 5: the English sibling of `text` (the
+   * clarifying question itself) + `suggestions`, set ONLY by
+   * `toClarificationResponse` when `respond` ran for an English reader
+   * (`lang === 'en'`) — deterministic templates, never a translation-model
+   * call (contrast `AnswerResponse.english`, ADR 058 Task 6/7). Absent on
+   * every Dutch or lang-less envelope (benchmark, CLI, tests) — byte-
+   * identical to a pre-#332-phase-2 run. */
+  english?: NonAnswerEnglish;
 }
 
 export interface RefusalResponse extends ResponseBase {
@@ -370,6 +382,14 @@ export interface RefusalResponse extends ResponseBase {
    * field; readers treat absence as [] (reconstruct.ts never reads it — the
    * refusal text is the only reconstructed surface). */
   suggestions: string[];
+  /** ADR 058 phase 2 (#332), Task 5: the English sibling of `text`/`offer`/
+   * `guidance` + `suggestions`, set ONLY by `toRefusalResponse`/
+   * `toInternalRefusal` when `respond` ran for an English reader
+   * (`lang === 'en'`) — deterministic templates, never a translation-model
+   * call (contrast `AnswerResponse.english`, ADR 058 Task 6/7). Absent on
+   * every Dutch or lang-less envelope (benchmark, CLI, tests) — byte-
+   * identical to a pre-#332-phase-2 run. */
+  english?: NonAnswerEnglish;
 }
 
 export type ComposedResponse = AnswerResponse | ClarificationResponse | RefusalResponse;

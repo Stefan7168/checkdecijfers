@@ -39,6 +39,15 @@ export interface MetaBodyContext {
   topicsCompact: string;
 }
 
+/** ADR 058 phase 2 (#332), Task 2: the English sibling of MetaBodyContext,
+ * kept as its own type (rather than widening MetaBodyContext itself) so the
+ * existing Dutch call sites — buildBody({ topicsCompact }) — stay untouched
+ * and every existing test keeps compiling unchanged. */
+export interface MetaBodyContextEn {
+  /** loadedTopicsCompactEn() — English topic term of every canonical measure. */
+  topicsCompactEn: string;
+}
+
 export interface MetaTemplate {
   key: MetaTemplateKey;
   /** Matched against the normalized question (NFKC, zero-width stripped,
@@ -53,6 +62,12 @@ export interface MetaTemplate {
    * template ships with its own regression cases. */
   examples: string[];
   buildBody(ctx: MetaBodyContext): string;
+  /** ADR 058 phase 2 (#332), Task 2: the English sibling of buildBody, built
+   * at the same site from the same (English) structured sources — never a
+   * machine translation of the Dutch body string. Required so a new template
+   * cannot ship without its English side (compile-time proof, same reasoning
+   * as BuiltRefusal.en). */
+  buildBodyEn(ctx: MetaBodyContextEn): string;
 }
 
 /** Ordered, first-match-wins. Priority is a reviewed decision (ADR 022 §6,
@@ -80,6 +95,10 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Als een cijfer ontbreekt of nog niet is gepubliceerd, zeg ik dat eerlijk — inclusief de reden die CBS zelf opgeeft, ' +
       'bijvoorbeeld dat het vertrouwelijk is of nog niet beschikbaar. ' +
       'Ik vul nooit zelf een schatting in: liever geen antwoord dan een onbetrouwbaar antwoord.',
+    buildBodyEn: () =>
+      "If a figure is missing or not yet published, I say so honestly — including the reason CBS itself gives, " +
+      "for example that it's confidential or not yet available. " +
+      "I never fill in an estimate myself: I'd rather give no answer than an unreliable one.",
   },
   {
     key: 'reliability',
@@ -105,6 +124,11 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'De berekeningen worden gedaan door vaste programmacode, niet door een taalmodel — het taalmodel formuleert alleen ' +
       'de uitleg, en elke formulering wordt gecontroleerd voordat je die ziet. ' +
       'Kan ik iets niet onderbouwen, dan zeg ik dat liever eerlijk dan dat ik gok.',
+    buildBodyEn: () =>
+      'Every figure I state is traceable to a cell in an official CBS table, with its source and reference date. ' +
+      'The calculations are done by fixed program code, not by a language model — the language model only phrases ' +
+      "the explanation, and every phrasing is checked before you see it. " +
+      "If I can't back something up, I'd rather say so honestly than guess.",
   },
   {
     key: 'freshness',
@@ -130,6 +154,11 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       // reads as CBS's current publication status, not "final".
       'Let op: ook cijfers die CBS als definitief publiceert, kan CBS later nog herzien. ' +
       'Zo\'n herziening nemen wij over bij de eerstvolgende synchronisatie — de peildatum bij het antwoord laat zien van wanneer onze versie is.',
+    buildBodyEn: () =>
+      'Every answer shows a reference date: the date we last synchronized the CBS table, plus the period the figure ' +
+      "covers. That way you can see exactly how current each answer is; if a figure is provisional, that's shown too. " +
+      'Note: even figures CBS publishes as definitive can later be revised by CBS. ' +
+      "We pick up such a revision at our next synchronization — the reference date on the answer shows which version of ours you're seeing.",
   },
   {
     key: 'sources',
@@ -152,6 +181,10 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
       'Al mijn cijfers komen rechtstreeks uit officiële tabellen van CBS StatLine — andere bronnen gebruik ik niet. ' +
       'Die tabellen laden we vooraf in onze eigen database, en bij elk antwoord staat uit welke CBS-tabel het cijfer komt ' +
       'en wanneer wij die tabel voor het laatst met CBS hebben gesynchroniseerd.',
+    buildBodyEn: () =>
+      "All my figures come directly from official CBS StatLine tables — I don't use any other sources. " +
+      'We load those tables into our own database in advance, and every answer states which CBS table the figure ' +
+      'comes from and when we last synchronized that table with CBS.',
   },
   {
     key: 'capabilities',
@@ -170,6 +203,8 @@ export const META_TEMPLATES: readonly MetaTemplate[] = [
     ],
     buildBody: (ctx) =>
       `Ik beantwoord vragen over officiële CBS-cijfers, met bron en peildatum bij elk antwoord. Op dit moment kan ik je helpen met cijfers over: ${ctx.topicsCompact}.`,
+    buildBodyEn: (ctx) =>
+      `I answer questions about official CBS figures, with a source and reference date on every answer. Right now I can help you with figures on: ${ctx.topicsCompactEn}.`,
   },
 ];
 

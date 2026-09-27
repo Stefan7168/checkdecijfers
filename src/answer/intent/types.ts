@@ -189,6 +189,18 @@ export interface ClickOption {
    * is not restored. PRESENT-ONLY (`true` or absent, never `false`): a
    * pre-v2 row simply lacks the key and reads as today. */
   questionShaped?: true;
+  /** ADR 058 phase 2 (#332), Task 4: the English label for this option's chip
+   * — the same {label, submit} contract EnglishRendering.chips (answer path)
+   * already uses: this field is the English SHOWN text, `label` above stays
+   * the Dutch SUBMIT value the take-path matches byte-exactly. A chip whose
+   * `label` IS the model's own free-text reading (top.reading) sets this to
+   * the SAME Dutch string — the design doc's one non-template exception,
+   * mirrored in that outcome's own `untranslated_en`. PRESENT-ONLY, and NEVER
+   * stored: toRefusalResponse/toClarificationResponse (respond/refusals.ts)
+   * strip it before a ClickOption reaches `pending` — the stored click
+   * option, the take-path and every audit row must stay byte-identical to a
+   * pre-Task-4 run. */
+  labelEn?: string;
 }
 
 /** Bounds the dry-run work one clarification may trigger (each option costs a
@@ -310,6 +322,27 @@ export type ParseOutcome =
       question_nl: string;
       /** The offered options; each resolves in the loaded data. */
       options: string[];
+      /** ADR 058 phase 2 (#332), Task 3: the English sibling of `question_nl`,
+       * assembled at the SAME site from the SAME parameters (never a
+       * post-hoc translation of the Dutch string). PRESENT-ONLY: set at
+       * every clarification call site so the field always accompanies a
+       * real clarification outcome, but STRIPPED before the outcome is
+       * stored on an envelope (`toClarificationResponse`/`toRefusalResponse`
+       * in respond/refusals.ts) — the Dutch path (audit rows, replay,
+       * benchmark) must stay byte-identical (design doc: "Byte-identical
+       * Dutch storage"). Not yet read by any envelope (Task 5 attaches it). */
+      question_en?: string;
+      /** Index-aligned English sibling of `options` (same length). Region
+       * labels via `regionLabelEn`, fixed Dutch literals via `FIXED_OPTION_EN`,
+       * period options via `periodCodeToEn`/the same parts the Dutch option
+       * was built from. Present-only/stripped, exactly like `question_en`. */
+      options_en?: string[];
+      /** Dutch fragments kept VERBATIM inside `question_en`/`options_en` — the
+       * intent model's own free-text `reading`, or the user's own unmatched
+       * measure term. The ONE non-template ingredient (design doc). Absent or
+       * [] when nothing needed to stay Dutch. Present-only/stripped, exactly
+       * like `question_en`. */
+      untranslated_en?: string[];
       /** WP26 mechanism A (ADR 024): the subset of `options` that is takeable
        * in one click — each carrying the dry-run-verified intent behind its
        * label. OPTIONAL and additive: absent (flag off, or no option resolved)

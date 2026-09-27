@@ -67,6 +67,9 @@ import type { CanonicalMeasure } from '../../registry/types.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import { periodCodeToNl } from './period-nl.ts';
 import { isClickTakeableIntent } from './validate-pending.ts';
+// ADR 058 phase 2 (#332), Task 4: the English siblings buildRefusalSuggestionsBoth
+// assembles its English chip text from, at the same site as the Dutch text.
+import { englishMeasureLabel, joinAndEn, periodCodeToEn, regionLabelEn } from './english.ts';
 
 /** ADR 029 D1: at most 3 chips shown, fixed generator priority. */
 export const MAX_SUGGESTIONS = 3;
@@ -728,11 +731,27 @@ export type RegionLabeler = (
   codes: string[],
 ) => Promise<RegionTerm[] | null>;
 
-export async function buildRefusalSuggestions(
+/** ADR 058 phase 2 (#332), Task 4: index-aligned Dutch/English retry-chip
+ * labels — the shape `buildRefusalSuggestionsBoth` returns. */
+export interface RefusalSuggestionsBoth {
+  nl: string[];
+  en: string[];
+}
+
+/** ADR 058 phase 2 (#332), Task 4: the bilingual sibling of
+ * `buildRefusalSuggestions` below — IDENTICAL gates, dry-runs and Dutch
+ * output (computed once, not twice), with the English chip text assembled at
+ * the SAME site from the SAME parameters (englishMeasureLabel/regionLabelEn/
+ * periodCodeToEn), never a post-hoc translation of the Dutch string.
+ * `buildRefusalSuggestions` is now a thin Dutch-only wrapper over this, so
+ * its own return value — and therefore every existing call site and test —
+ * is untouched. */
+export async function buildRefusalSuggestionsBoth(
   refusal: QueryRefusal,
   check: ServabilityCheck,
   labelRegions: RegionLabeler,
-): Promise<string[]> {
+): Promise<RefusalSuggestionsBoth> {
+  const empty: RefusalSuggestionsBoth = { nl: [], en: [] };
   try {
     const r = refusal.refusal;
     // Only the period-coverage kinds that know a concrete boundary, and only on
@@ -743,25 +762,28 @@ export async function buildRefusalSuggestions(
     // nearestAlternative solely when the ask is before our earliest served
     // period; a mid-gap not_published carries none → drops below (prose-only).
     if (r.kind !== 'freshness' && r.kind !== 'outside_loaded_slice' && r.kind !== 'not_published') {
-      return [];
+      return empty;
     }
-    if (r.axis !== 'period') return [];
+    if (r.axis !== 'period') return empty;
     // Canonical target only — a registry definitionLabel to name in the chip
     // (mirrors the answer path's label===null skip; drop-never-guess).
     const intent = refusal.intent;
-    if (intent.target.kind !== 'canonical') return [];
+    if (intent.target.kind !== 'canonical') return empty;
     const label = definitionLabelByKey.get(intent.target.key);
-    if (label === undefined) return [];
+    if (label === undefined) return empty;
+    const labelEn = englishMeasureLabel(intent.target.key);
     // #138: regions are labelled from the registry (dimension_labels via the
     // injected closure) — the honest source a cell-less refusal DOES have.
     // Fail-closed: null (any unlabelable code / no geo dimension) or a count
     // mismatch → no chip at all, byte-identical to the region-less-v1 bailout.
     const regions = intent.regions ?? [];
     let regionPhrase = '';
+    let regionPhraseEn = '';
     if (regions.length > 0) {
       const terms = await labelRegions(intent.target.key, regions);
-      if (terms === null || terms.length !== regions.length) return [];
+      if (terms === null || terms.length !== regions.length) return empty;
       regionPhrase = ` in ${joinNl(terms.map((t) => t.name))}`;
+      regionPhraseEn = ` in ${joinAndEn(terms.map((t) => regionLabelEn(t.name)))}`;
     }
     // The boundary the refusal already computed: freshest-available for
     // freshness, the loaded-slice floor (nearestAlternative) for the period
@@ -770,7 +792,7 @@ export async function buildRefusalSuggestions(
       r.kind === 'freshness'
         ? (r.freshness?.freshestAvailable?.periodCode ?? r.nearestAlternative ?? null)
         : (r.nearestAlternative ?? null);
-    if (boundary === null) return [];
+    if (boundary === null) return empty;
 
     // #137 (range-ask retry): when an `outside_loaded_slice` refusal came from a
     // RANGE ask partly below our slice floor, offer the WORKING sub-range
@@ -800,10 +822,16 @@ export async function buildRefusalSuggestions(
           derivation: 'series',
         };
         if ((await check(rangeCandidate)).servable) {
-          return [
-            `Hoe ontwikkelde ${label}${regionPhrase} zich van ${periodCodeToNl(boundary)} ` +
-              `tot en met ${periodCodeToNl(intent.period.to)}?`,
-          ];
+          return {
+            nl: [
+              `Hoe ontwikkelde ${label}${regionPhrase} zich van ${periodCodeToNl(boundary)} ` +
+                `tot en met ${periodCodeToNl(intent.period.to)}?`,
+            ],
+            en: [
+              `How did ${labelEn}${regionPhraseEn} develop from ${periodCodeToEn(boundary)} ` +
+                `to ${periodCodeToEn(intent.period.to)}?`,
+            ],
+          };
         }
       } catch {
         // fall through to the single-period chip
@@ -821,9 +849,20 @@ export async function buildRefusalSuggestions(
     // docs/05 "actually available" rule) — a refusal must never offer a retry
     // it cannot then serve. With regions on the candidate that proof covers
     // the regional cells themselves (#138).
-    if (!(await check(candidate)).servable) return [];
-    return [`Wat was ${label}${regionPhrase} in ${periodCodeToNl(boundary)}?`];
+    if (!(await check(candidate)).servable) return empty;
+    return {
+      nl: [`Wat was ${label}${regionPhrase} in ${periodCodeToNl(boundary)}?`],
+      en: [`What was ${labelEn}${regionPhraseEn} in ${periodCodeToEn(boundary)}?`],
+    };
   } catch {
-    return [];
+    return empty;
   }
+}
+
+export async function buildRefusalSuggestions(
+  refusal: QueryRefusal,
+  check: ServabilityCheck,
+  labelRegions: RegionLabeler,
+): Promise<string[]> {
+  return (await buildRefusalSuggestionsBoth(refusal, check, labelRegions)).nl;
 }

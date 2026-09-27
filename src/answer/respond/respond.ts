@@ -46,12 +46,16 @@ import {
   toInternalRefusal,
   toRefusalResponse,
 } from './refusals.ts';
+// ADR 058 phase 2 (#332), Task 2: the English siblings for the staleness
+// refusal built inline below (this file's only BuiltRefusal that isn't built
+// in refusals.ts itself).
+import { periodCodeToEn, statusSuffixEn } from './english.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
 import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
 import { checkStaleness } from './staleness.ts';
-import { buildAnswerChips, buildRefusalSuggestions } from './suggestions.ts';
+import { buildAnswerChips, buildRefusalSuggestionsBoth } from './suggestions.ts';
 import type {
   AnswerResponse,
   ClarificationResponse,
@@ -125,6 +129,14 @@ export interface RespondOptions
    * see-and-echo ladder byte-identically; true ⇒ the slot rung replaces the
    * two LLM rungs (template floor unchanged). */
   slotPhrasing?: boolean;
+  /** ADR 058 phase 2 (#332), Task 5: the reader's requested language —
+   * mirrors `AuditedRespondOptions.lang` (ADR 058 Task 7), which already
+   * threads it into `attachEnglish` for the ANSWER path; this bag threads
+   * the SAME value into every refusal/clarification envelope constructor
+   * below, so `'en'` also attaches a deterministic-template `english` to a
+   * non-answer response (never a translation-model call — contrast the
+   * answer path). Absent/`'nl'` ⇒ byte-identical to a pre-Task-5 envelope. */
+  lang?: 'nl' | 'en';
 }
 
 /** The target bag, with EVERY key (the optional ones included) required to be
@@ -355,11 +367,12 @@ function clickTakeOutcome(
 function sourceSelectionRefusal(
   question: string,
   selection: SourceSelection | undefined,
+  lang?: 'nl' | 'en',
 ): RefusalResponse | null {
   if (selection === undefined) return null;
   if (selection.sources.includes(CBS_SOURCE_KEY)) return null;
   const built = selection.web ? buildWebOnlyRefusal() : buildNoSourcesRefusal();
-  return toRefusalResponse({ question, built, parse: null, queryRefusal: null });
+  return toRefusalResponse({ question, built, parse: null, queryRefusal: null, lang });
 }
 
 /** Shared downstream half once we have an 'intent' ParseOutcome: query ->
@@ -399,6 +412,10 @@ export async function respondToIntent(
     clickOptionsEnabled?: boolean;
     /** #162: rides through to composeAnswer; absent = the legacy ladder. */
     slotPhrasing?: boolean;
+    /** ADR 058 phase 2 (#332), Task 5: threaded into every
+     * toRefusalResponse/toClarificationResponse call this function makes —
+     * see RespondOptions.lang's own comment. */
+    lang?: 'nl' | 'en';
   },
 ): Promise<ComposedResponse> {
   const queryOptions = { answerFirstEnabled: options.answerFirstEnabled === true };
@@ -415,7 +432,7 @@ export async function respondToIntent(
       // question (R7 / ADR 015; adversarial-review finding, 2026-07-03).
       if (options.finalRound) {
         const stillAmbiguous = await buildStillAmbiguousRefusal(db, built.axes);
-        return toRefusalResponse({ question, built: stillAmbiguous, parse, queryRefusal: outcome });
+        return toRefusalResponse({ question, built: stillAmbiguous, parse, queryRefusal: outcome, lang: options.lang });
       }
       return toClarificationResponse({
         question,
@@ -425,6 +442,21 @@ export async function respondToIntent(
         options: built.options,
         parse,
         conversationContext: options.conversationContext ?? null,
+        // ADR 058 phase 2 (#332), Task 3: threaded now so Task 5 only has to
+        // attach it to the envelope (not yet read here — see
+        // ClarificationEnvelopeInput.english's own comment).
+        english: { question: built.questionEn, options: built.optionsEn, untranslated: [] },
+        // I2 fix (2026-09-27 review): a clarification's English chips must be
+        // EXACTLY the takeable options, like the Dutch envelope's own
+        // `suggestions` (built only from clickOptions, never from the plain
+        // option list). This call site passes no `clickOptions` at all
+        // (buildNeedsClarificationAsClarification never sets one), so the
+        // Dutch envelope carries no `suggestions` key here — the English
+        // sibling must match that with `[]`, not one chip per plain option.
+        englishChips: [],
+        // ADR 058 phase 2 (#332), Task 5: attach `english` only for an
+        // English reader.
+        lang: options.lang,
       });
     }
     // #134(a) (ADR 029, refusal-side variant): a period-coverage refusal
@@ -436,17 +468,22 @@ export async function respondToIntent(
     // FAIL-OPEN belt (mirrors the answer path): a chip hiccup must never turn
     // an honest refusal into an internal error.
     let suggestions: string[] = [];
+    // ADR 058 phase 2 (#332), Task 4: the English sibling of `suggestions`,
+    // index-aligned — built by the SAME call (buildRefusalSuggestionsBoth),
+    // never a second pass over the refusal.
+    let suggestionsEn: string[] = [];
     try {
-      suggestions = await buildRefusalSuggestions(
+      ({ nl: suggestions, en: suggestionsEn } = await buildRefusalSuggestionsBoth(
         outcome,
         (candidate) => echoServability(db, candidate, queryOptions),
         // #138: the honest code→label source for a regional retry chip —
         // registry/dimension_labels via regionTermsFor (context/build.ts),
         // injected so suggestions.ts keeps its never-sees-db confinement.
         (canonicalKey, codes) => regionTermsFor(db, canonicalKey, codes),
-      );
+      ));
     } catch {
       suggestions = [];
+      suggestionsEn = [];
     }
     // Row 13 / row 15 (session 110, ADR 054 addendum + ADR 029 #134(c) note):
     // the two invalid_intent sub-reasons (region_scope_on_national_measure,
@@ -492,6 +529,12 @@ export async function respondToIntent(
       parse,
       queryRefusal: outcome,
       suggestions: chip ? [chip.label] : suggestions,
+      // ADR 058 phase 2 (#332), Task 4: the offer chip's own labelEn takes
+      // priority (it is the ONE chip actually offered whenever it exists —
+      // see `suggestions` above), else the plain retry chips' English array.
+      englishChips: chip
+        ? [{ label: chip.labelEn, submit: chip.label }]
+        : suggestions.map((label, i) => ({ label: suggestionsEn[i] ?? label, submit: label })),
       ...(chip
         ? {
             pending: {
@@ -506,6 +549,9 @@ export async function respondToIntent(
             },
           }
         : {}),
+      // ADR 058 phase 2 (#332), Task 5: attach `english` only for an
+      // English reader.
+      lang: options.lang,
     });
   }
 
@@ -530,11 +576,23 @@ export async function respondToIntent(
     const freshestPeriodLabel = lastCell
       ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
       : '';
+    // ADR 058 phase 2 (#332), Task 2: the English sibling, built at the same
+    // site from the same cell (periodCode/status/tableId) — periodLabel
+    // itself has no English twin on the cell, so periodCodeToEn(periodCode)
+    // is the direct sibling of that Dutch label.
+    const freshestPeriodLabelEn = lastCell
+      ? `${periodCodeToEn(lastCell.periodCode)}${statusSuffixEn(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
+      : '';
     const body =
       `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
       `onze laatste synchronisatie was op ${result.attribution.syncedAt.slice(0, 10)}, ` +
       `en ik wil geen verouderd cijfer als "actueel" laten doorgaan.`;
     const guidance = `Vraag gerust naar het cijfer voor een specifieke, al gedekte periode (bijvoorbeeld ${freshestPeriodLabel}) — dat kan ik direct geven.`;
+    const bodyEn =
+      `These figures are older than expected for a question about the most recent figure — ` +
+      `our last synchronization was on ${result.attribution.syncedAt.slice(0, 10)}, ` +
+      `and I don't want to let an outdated figure pass as "current".`;
+    const guidanceEn = `Feel free to ask for the figure for a specific, already covered period (for example ${freshestPeriodLabelEn}) — I can give that directly.`;
     return toRefusalResponse({
       question,
       built: {
@@ -544,9 +602,16 @@ export async function respondToIntent(
         guidance,
         freshness: null,
         internalNote: null,
+        en: {
+          text: `${bodyEn} ${guidanceEn}`,
+          offer: null,
+          guidance: guidanceEn,
+          untranslated: [],
+        },
       },
       parse,
       queryRefusal: null,
+      lang: options.lang,
     });
   }
 
@@ -641,7 +706,15 @@ export async function respondToIntent(
   return response;
 }
 
-async function respondToParseOutcome(
+// Exported for direct unit testing (M7 fix regression, 2026-09-27 review) —
+// same rationale as respondToIntent's own export comment: this function's
+// 'clarification' branch is otherwise reachable only through a real parser
+// call, and the defensive `parse.question_en ?? parse.question_nl` fallback
+// this fix touches is (like ClarificationEnvelopeInput.english's own
+// identical fallback one layer up) never exercised by any real parser output
+// — every production ParseOutcome sets question_en unconditionally
+// (policy.ts). A hand-built ParseOutcome is the only way to exercise it.
+export async function respondToParseOutcome(
   db: Db,
   question: string,
   parse: ParseOutcome,
@@ -657,6 +730,11 @@ async function respondToParseOutcome(
     answerFirstEnabled?: boolean;
     /** #162: rides through to respondToIntent → composeAnswer. */
     slotPhrasing?: boolean;
+    /** ADR 058 phase 2 (#332), Task 5: threaded into every
+     * toRefusalResponse/toClarificationResponse call this function makes,
+     * and forwarded to respondToIntent for the 'intent' fallthrough — see
+     * RespondOptions.lang's own comment. */
+    lang?: 'nl' | 'en';
   },
 ): Promise<ComposedResponse> {
   if (parse.kind === 'refusal') {
@@ -709,6 +787,8 @@ async function respondToParseOutcome(
       ...(chip
         ? {
             suggestions: [chip.label],
+            // ADR 058 phase 2 (#332), Task 4: the one chip's own English label.
+            englishChips: [{ label: chip.labelEn, submit: chip.label }],
             pending: {
               version: RESPONSE_SCHEMA_VERSION,
               question,
@@ -721,6 +801,7 @@ async function respondToParseOutcome(
             },
           }
         : {}),
+      lang: options.lang,
     });
   }
   if (parse.kind === 'onboarding') {
@@ -738,7 +819,7 @@ async function respondToParseOutcome(
       },
       parse.alreadyPending,
     );
-    return toRefusalResponse({ question, built, parse, queryRefusal: null });
+    return toRefusalResponse({ question, built, parse, queryRefusal: null, lang: options.lang });
   }
   if (parse.kind === 'clarification') {
     // WP15 (review finding 2026-07-04): a clarification of a FOLLOW-UP
@@ -756,6 +837,29 @@ async function respondToParseOutcome(
       // WP26 mechanism A: the dry-run-verified takeable options policy.ts
       // built (absent when the flag is off → pending unchanged).
       ...(parse.clickOptions ? { clickOptions: parse.clickOptions } : {}),
+      // ADR 058 phase 2 (#332), Task 3: threaded now so Task 5 only has to
+      // attach it to the envelope (not yet read here — see
+      // ClarificationEnvelopeInput.english's own comment).
+      english: {
+        // M7 fix (2026-09-27 review): `?? ''` defeated the fallback (an empty
+        // string is still "present", so the empty-bubble-in-English-chat
+        // branch this feeds never fires) — fall back to the Dutch question,
+        // exactly like `toClarificationResponse`'s own defensive `??
+        // input.questionNl` fallback already does one layer up.
+        question: parse.question_en ?? parse.question_nl,
+        options: parse.options_en ?? [],
+        untranslated: parse.untranslated_en ?? [],
+      },
+      // I2 fix (2026-09-27 review): a clarification's English chips must be
+      // EXACTLY the takeable options, like the Dutch envelope's own
+      // `suggestions` (built only from `clickOptions`, via
+      // toClarificationResponse's `clickOptions.map((o) => o.label)` — never
+      // from the plain option list). Previously this built one chip per
+      // Dutch OPTION regardless of whether it was ever takeable, so an
+      // English reader could see chips for options the Dutch reader never
+      // got as `suggestions` at all.
+      englishChips: (parse.clickOptions ?? []).map((o) => ({ label: o.labelEn ?? o.label, submit: o.label })),
+      lang: options.lang,
     });
   }
   return respondToIntent(db, question, parse, options);
@@ -769,7 +873,7 @@ export async function respondToQuestion(
   try {
     // WP129+130 (#129/#130): the source-selection belt runs FIRST — a
     // deselected-CBS turn refuses deterministically without any LLM call.
-    const preParse = sourceSelectionRefusal(question, options.sourceSelection);
+    const preParse = sourceSelectionRefusal(question, options.sourceSelection, options.lang);
     if (preParse !== null) return preParse;
     // ThreadedInto: every ParseQuestionOptions key must be named here — a new
     // intent-side field can't be silently dropped on this path (#176/#191).
@@ -820,7 +924,7 @@ export async function respondToQuestion(
         : await parseFollowUpQuestion(db, context, question, parseOptions);
     return await respondToParseOutcome(db, question, parse, options);
   } catch (error) {
-    return toInternalRefusal(question, internalNoteFor(error));
+    return toInternalRefusal(question, internalNoteFor(error), options.lang);
   }
 }
 
@@ -838,7 +942,7 @@ export async function respondToClarificationReply(
     // WP129+130 (#129/#130): the same belt on the reply turn (the chips persist
     // across turns); the refusal carries the ORIGINAL question, like every
     // reply-turn refusal here.
-    const preParse = sourceSelectionRefusal(pending.question, options.sourceSelection);
+    const preParse = sourceSelectionRefusal(pending.question, options.sourceSelection, options.lang);
     if (preParse !== null) return preParse;
 
     // WP26 mechanism A (ADR 024, take-path A2): the deterministic rung, BEFORE
@@ -932,7 +1036,7 @@ export async function respondToClarificationReply(
       // a smalltalk classification belongs to the REPLY (the abandon rule),
       // so the meta router must match the reply text, not the original.
       const built = await buildParseRefusal(db, parse, reply);
-      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
+      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null, lang: options.lang });
     }
     if (parse.kind === 'onboarding') {
       // WP16 sub-part 2 (ADR 026): unreachable in production — clarifyOptions
@@ -950,18 +1054,18 @@ export async function respondToClarificationReply(
         },
         parse.alreadyPending,
       );
-      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
+      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null, lang: options.lang });
     }
     if (parse.kind === 'clarification') {
       // Final round rule: never ask again. Convert to refusal-with-guidance.
       const built = await buildStillAmbiguousRefusal(db, parse.axes);
-      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null });
+      return toRefusalResponse({ question: pending.question, built, parse, queryRefusal: null, lang: options.lang });
     }
     // finalRound: a query-level needs_clarification after a reply must also
     // become the still-ambiguous refusal, never a second question (R7).
     return await respondToIntent(db, pending.question, parse, { ...options, finalRound: true });
   } catch (error) {
-    return toInternalRefusal(pending.question, internalNoteFor(error));
+    return toInternalRefusal(pending.question, internalNoteFor(error), options.lang);
   }
 }
 

@@ -73,6 +73,20 @@ function optionSchemaFor(intent: z.ZodType) {
     // malformation. The bit only decides whether the label may replay as a
     // plain chip on a resumed thread; it never widens what a take can do.
     questionShaped: z.literal(true).optional(),
+    // ADR 058 phase 2 (#332), Task 4: present-only, decorative display text —
+    // never read to decide servability or the take-path, and in production
+    // never actually present on a client-returned pending at all (respond/
+    // refusals.ts strips it before any pending is stored/sent). Accepted here
+    // (rather than rejected as an unknown key) purely so this trust boundary
+    // stays consistent with `decide()`'s own raw output shape — a producer
+    // that sets it must not have its otherwise-valid option dropped.
+    // M5 fix (2026-09-27 review): accepted-and-then-STRIPPED —
+    // `validateClickOptions` below removes this key from every entry it
+    // returns, so a CLIENT-supplied `labelEn` can shape whether the option
+    // validates but can never itself ride back into `pending`/the audit row
+    // (it is not the pipeline's own template label, so trusting it verbatim
+    // would let an attacker plant arbitrary display text into a stored row).
+    labelEn: z.string().min(1).max(500).optional(),
   });
 }
 
@@ -162,13 +176,26 @@ export function validateClickOptions(raw: unknown, options: ClickValidationOptio
     // for what the CBS path rejects, and only when a sibling pair exists.
     const parsed = clickOptionSchema.safeParse(entry);
     if (parsed.success) {
-      valid.push(parsed.data as ClickOption);
+      // M5 fix: accept-and-strip — `labelEn` may shape validation (see the
+      // schema field's own comment) but is never itself trusted; only the
+      // pipeline's own template-built labelEn (attached AFTER this trust
+      // boundary, per-request, never from client input) may ever reach a
+      // stored pending.
+      valid.push(stripLabelEn(parsed.data as ClickOption));
       continue;
     }
     const sibling = siblingOptionSchema?.safeParse(entry);
-    if (sibling?.success) valid.push(sibling.data as ClickOption);
+    if (sibling?.success) valid.push(stripLabelEn(sibling.data as ClickOption));
   }
   return valid;
+}
+
+/** M5 fix (2026-09-27 review): drops a validated option's `labelEn` — see
+ * `optionSchemaFor`'s field comment for why it is accepted but never trusted
+ * verbatim through this boundary. */
+function stripLabelEn(option: ClickOption): ClickOption {
+  const { labelEn, ...rest } = option;
+  return rest;
 }
 
 /** The pending as the reply turn may use it: every prompt-bound field

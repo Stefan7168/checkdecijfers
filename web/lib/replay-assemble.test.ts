@@ -256,3 +256,68 @@ describe('assembleMessages — ADR 058 English rendering carries onto the replay
     expect(messages[0]!.english).toBeNull();
   });
 });
+
+// ADR 058 phase 2 (#332, Task 6): the refusal/clarification sibling of the
+// block above — a reloaded thread must carry `nonAnswerEnglish` the same
+// way `english` already does for an answer: straight off the stored
+// envelope, never re-derived.
+describe('assembleMessages — #332 refusal/clarification English carries onto the replayed message', () => {
+  const nonAnswerEnglish = {
+    source: 'template' as const,
+    text: 'CBS publishes realized figures, not forecasts.',
+    chips: [],
+    untranslated: [],
+  };
+
+  it('a stored refusal with an English sibling replays with `nonAnswerEnglish` intact', async () => {
+    const response = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+      english: nonAnswerEnglish,
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ kind: 'refusal', response })]), fakeDb);
+    expect(assistantMsg!.nonAnswerEnglish).toEqual(nonAnswerEnglish);
+    // The answer-only field stays null — the two never co-occur.
+    expect(assistantMsg!.english).toBeNull();
+  });
+
+  it('a stored clarification with an English sibling replays with `nonAnswerEnglish` intact', async () => {
+    const response = {
+      kind: 'clarification',
+      text: 'Welke gemeente bedoel je?',
+      pending: { questionNl: 'Welke gemeente bedoel je?' },
+      english: nonAnswerEnglish,
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(
+      replayParts([row({ kind: 'clarification', response })]),
+      fakeDb,
+    );
+    expect(assistantMsg!.nonAnswerEnglish).toEqual(nonAnswerEnglish);
+  });
+
+  it('a stored refusal with no English sibling (Dutch-only turn) replays with `nonAnswerEnglish` null', async () => {
+    const response = {
+      kind: 'refusal',
+      reason: 'forecast',
+      text: 'CBS publiceert gerealiseerde cijfers, geen voorspellingen.',
+    } as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ kind: 'refusal', response })]), fakeDb);
+    expect(assistantMsg!.nonAnswerEnglish).toBeNull();
+  });
+
+  it('a stored ANSWER never carries `nonAnswerEnglish` (it rides `english` instead)', async () => {
+    const response = fakeAnswerResponse({ body: 'Nederland telt 18 inwoners.' }) as unknown as ComposedResponse;
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb);
+    expect(assistantMsg!.nonAnswerEnglish).toBeNull();
+  });
+
+  it('a redacted row carries `nonAnswerEnglish` null (no envelope to derive one from)', async () => {
+    const response = fakeAnswerResponse({ body: 'ooit een antwoord' }) as unknown as ComposedResponse;
+    const messages = await assembleMessages(
+      replayParts([row({ question: REDACTED_QUESTION_TEXT, response })]),
+      fakeDb,
+    );
+    expect(messages[0]!.nonAnswerEnglish).toBeNull();
+  });
+});

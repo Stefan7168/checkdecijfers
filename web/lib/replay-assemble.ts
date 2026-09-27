@@ -72,6 +72,8 @@ function redactedMessage(): ChatMessage {
     onboardingOffer: null,
     // ADR 058: a redacted row has no envelope to derive one from anyway.
     english: null,
+    // ADR 058 phase 2 (#332, Task 6): same posture — no envelope to derive one from.
+    nonAnswerEnglish: null,
   };
 }
 
@@ -98,6 +100,8 @@ function userMessage(text: string): ChatMessage {
     insufficientCredits: null,
     onboardingOffer: null,
     english: null,
+    // ADR 058 phase 2 (#332, Task 6): a user turn never carried one either.
+    nonAnswerEnglish: null,
   };
 }
 
@@ -188,6 +192,11 @@ async function assistantMessage(db: Db, part: ReplayAssistantPart): Promise<Chat
     // above is already pinned to the stored string; this is its sibling
     // structural field, never re-derived).
     english: answer?.english ?? null,
+    // ADR 058 phase 2 (#332, Task 6): the refusal/clarification sibling,
+    // straight off the raw stored envelope (`response`, not `answer` — it
+    // never rides an 'answer' response) — a reloaded English refusal/
+    // clarification is the same one the reader originally saw.
+    nonAnswerEnglish: response.kind === 'answer' ? null : (response.english ?? null),
   };
 }
 

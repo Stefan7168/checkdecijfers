@@ -46,18 +46,10 @@ import { ENGLISH_RENDERING_SCHEMA_VERSION, TRANSLATE_TIMEOUT_MS, type EnglishAtt
  * result happens to use that source, which is exactly the kind of gap that
  * only shows up in production (principle c: never guess, catch it in CI).
  */
-export const CAVEAT_TRANSLATIONS: Readonly<Record<string, string>> = {
-  ' (voorlopig cijfer)': ' (provisional figure)',
-  ' (nader voorlopig cijfer)': ' (revised provisional figure)',
-  ' (schatting)': ' (estimate)',
-  ' (schatting door Eurostat)': ' (estimate by Eurostat)',
-  ' (prognose)': ' (forecast)',
-  ' (methodebreuk)': ' (break in series)',
-  ' (vertrouwelijk)': ' (confidential)',
-  ' (afwijkende definitie)': ' (different definition)',
-  ' (lage betrouwbaarheid)': ' (low reliability)',
-  ' (niet significant)': ' (not significant)',
-};
+// #332: the single copy now lives in src/answer/respond/english.ts (pure, DB-free), shared with the
+// deterministic English refusal/clarification templates; re-exported here so every importer is unchanged.
+import { CAVEAT_TRANSLATIONS } from '../respond/english.ts';
+export { CAVEAT_TRANSLATIONS };
 
 /** Thrown by `caveatsForResult` when a registry `provisionalDisplay` value has
  * no entry in `CAVEAT_TRANSLATIONS` — caught by `translateAnswer` and turned
