@@ -57,14 +57,16 @@
 // without an option — only the comparisons are all-or-nothing. The number of
 // dry-runs per turn does not change: every generator already dry-ran exactly
 // the candidate it now hands out.
-import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE } from '../../query/index.ts';
+import { INTENT_SCHEMA_VERSION, NATIONAL_REGION_CODE, pairIntentProblem } from '../../query/index.ts';
 import type { QueryRefusal, StructuredIntent, ValidatedResult } from '../../query/index.ts';
 import type { ServabilityCheck } from '../intent/policy.ts';
 import type { ClarifyAxis, ClickOption, RegionTerm } from '../intent/types.ts';
 import { baseLabel, stepPeriodCode } from '../intent/resolve.ts';
+import { REGIONAL_KEYS } from '../intent/prompt.ts';
 import { CANONICAL_MEASURES } from '../../registry/defaults.ts';
 import type { CanonicalMeasure } from '../../registry/types.ts';
 import { CBS_SOURCE_KEY, sourceKeyForTableId } from '../../sources/registry.ts';
+import { lowerFirst } from '../../chart/scatter-text.ts';
 import { periodCodeToNl } from './period-nl.ts';
 import { isClickTakeableIntent } from './validate-pending.ts';
 // ADR 058 phase 2 (#332), Task 4: the English siblings buildRefusalSuggestionsBoth
@@ -155,7 +157,15 @@ interface SuggestionContext {
 /** Which generator produced a chip: the ClickOption id prefix (readable in
  * the audit row's take note), and the one property that follows from it —
  * whether the label is a question the ordinary parse handles on its own. */
-type GeneratorKind = 'adjacent' | 'trend' | 'regionTrend' | 'region' | 'topic' | 'compareRegion' | 'comparePeriod';
+type GeneratorKind =
+  | 'adjacent'
+  | 'trend'
+  | 'regionTrend'
+  | 'region'
+  | 'topic'
+  | 'compareRegion'
+  | 'comparePeriod'
+  | 'plotAgainst';
 
 /** A chip candidate — the shape EVERY generator returns since #73 v2: the
  * label, the fully resolved intent the dry-run just proved (the intent a
@@ -176,6 +186,7 @@ const ID_PREFIX: Record<GeneratorKind, string> = {
   topic: 'topic',
   compareRegion: 'cmp',
   comparePeriod: 'cmp',
+  plotAgainst: 'pair',
 };
 
 /** The four WP29 generators write a complete, fully-explicit Dutch QUESTION
@@ -517,6 +528,60 @@ async function comparePeriod(ctx: SuggestionContext): Promise<ChipCandidate | nu
   return null;
 }
 
+/** #296 (two-measure scatter), Task 5, generator 0 — "Zet af tegen …": the
+ * zero-AI scatter follow-up chip on a CBS region-set answer. Offered FIRST in
+ * the click-options generator list (ahead of every other generator, priority
+ * over the whole cap-3 roster) and only when the answer's shape is
+ * `region_set`, its target is canonical and a `REGIONAL_KEYS` member (a
+ * table without a real regional dimension has no sibling to plot against),
+ * and the table is CBS-sourced (E2a §4.5 — mirrors compareRegion's own
+ * source guard; `REGIONAL_KEYS` happens to be CBS-only today, but the guard
+ * is explicit here too rather than leaning on that).
+ *
+ * Reads the answered regionSet/period from the RESOLVED intent
+ * (`ctx.result.intent`), never `ctx.regions`/`ctx.candidateRegions` — a
+ * region_set answer's `regions` is always empty by construction
+ * (StructuredIntent's regions/regionSet are mutually exclusive), so those
+ * fields carry nothing useful here.
+ *
+ * Candidates are every OTHER `REGIONAL_KEYS` member, in registry order
+ * (today exactly one, since `REGIONAL_KEYS` has two entries — the loop keeps
+ * working if a third regional measure is ever registered): the first whose
+ * pair intent is structurally sound (`pairIntentProblem`, pair.ts) AND dry-run
+ * servable (`servableAndTakeable`, the SAME click-time-schema-then-echoServability
+ * gate every comparison chip uses — its pairWith branch, dry-run.ts, proves
+ * >= SCATTER_MIN_PAIRS paired regions without this module ever seeing a
+ * cell) is offered. Label: the pair target's registry `measureTitle`
+ * (falling back to `definitionLabel` when unset), lower-cased at the join
+ * point — the same `lowerFirst` the scatter chart title itself uses
+ * (chart/scatter.ts), so "Zet af tegen bevolking op 1 januari" reads as one
+ * sentence rather than shouting a title mid-clause. */
+async function plotAgainst(ctx: SuggestionContext): Promise<ChipCandidate | null> {
+  if (ctx.result.shape !== 'region_set') return null;
+  const resolved = ctx.result.intent;
+  if (resolved.target.kind !== 'canonical' || !REGIONAL_KEYS.has(resolved.target.key)) return null;
+  if (sourceKeyForTableId(ctx.result.attribution.tableId) !== CBS_SOURCE_KEY) return null;
+  const regionSet = resolved.regionSet;
+  const period = resolved.period;
+  if (regionSet === undefined || period.kind !== 'codes' || period.codes.length !== 1) return null;
+  for (const measure of ctx.registry) {
+    if (!REGIONAL_KEYS.has(measure.key) || measure.key === resolved.target.key) continue;
+    const candidate: StructuredIntent = {
+      schemaVersion: INTENT_SCHEMA_VERSION,
+      target: resolved.target,
+      regionSet,
+      period,
+      derivation: 'none',
+      pairWith: { kind: 'canonical', key: measure.key },
+    };
+    if (pairIntentProblem(candidate) !== null) continue;
+    if (!(await servableAndTakeable(ctx, candidate))) continue;
+    const title = measure.measureTitle || measure.definitionLabel;
+    return { kind: 'plotAgainst', label: `Zet af tegen ${lowerFirst(title)}`, intent: candidate, axis: 'measure' };
+  }
+  return null;
+}
+
 /** What respondToIntent assembles under an answer: the chip labels in display
  * order (at most MAX_SUGGESTIONS) and, for the TAKEABLE chips among them, the
  * ClickOptions a click takes deterministically plus the axes they vary (the
@@ -625,8 +690,12 @@ export async function buildAnswerChips(
       comparedRegions: false,
     };
 
+    // #296 Task 5: plotAgainst runs FIRST — ahead of every other generator —
+    // when it applies (opts.clickOptions only: like the comparisons, its
+    // label is written only for the take-path, never a plain re-parseable
+    // question).
     const generators: Generator[] = opts.clickOptions
-      ? [adjacentPeriod, trend, regionTrend, compareRegion, comparePeriod, regionVariant, sameTopic]
+      ? [plotAgainst, adjacentPeriod, trend, regionTrend, compareRegion, comparePeriod, regionVariant, sameTopic]
       : [adjacentPeriod, trend, regionVariant, sameTopic];
     const suggestions: string[] = [];
     const clickOptions: ClickOption[] = [];

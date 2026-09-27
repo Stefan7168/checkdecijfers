@@ -8,12 +8,14 @@
 // pinned here first.
 import { describe, expect, it } from 'vitest';
 import {
+  isClickTakeableIntent,
   validateClickOptions,
   withValidatedClickOptions,
 } from '../../src/answer/respond/validate-pending.ts';
 import { isRescuePending, isStrippedCarrier } from '../../src/answer/respond/respond.ts';
 import type { PendingClarification } from '../../src/answer/respond/types.ts';
 import type { ClickOption } from '../../src/answer/intent/types.ts';
+import type { StructuredIntent } from '../../src/query/index.ts';
 
 const CHIP_LABEL = 'Toon het cijfer voor consumentenprijsindex (2026, juni).';
 
@@ -182,5 +184,57 @@ describe("a carrier's options are re-aligned to its chips — the deployed gate"
     expect(safe.options).toEqual(['Utrecht (gemeente)', 'Utrecht (provincie)']);
     expect(Object.hasOwn(safe, 'rescueOnly')).toBe(false);
     expect(isStrippedCarrier(safe)).toBe(false);
+  });
+});
+
+// #296 (two-measure scatter), Task 5: the click-time schema widened to accept
+// a `regionSet` + `pairWith` intent — the shape the "Zet af tegen …" chip
+// mints. These pin isClickTakeableIntent's own predicate directly (the
+// producer-side twin of the schema `validateClickOptions` applies at the
+// trust boundary — see that function's own doc comment) rather than through
+// a full pending round-trip, since the schema shape itself is what is under
+// test here.
+describe('isClickTakeableIntent — the #296 pairWith widening', () => {
+  const pairIntent = (overrides: Partial<StructuredIntent> = {}): StructuredIntent => ({
+    schemaVersion: 1,
+    target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+    regionSet: { kind: 'all_provincies' },
+    period: { kind: 'codes', codes: ['2024JJ00'] },
+    derivation: 'none',
+    pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+    ...overrides,
+  });
+
+  it('a well-formed pair intent (regionSet + pairWith, one period, derivation none, two different canonical measures) is click-takeable', () => {
+    expect(isClickTakeableIntent(pairIntent())).toBe(true);
+  });
+
+  it('pairWith naming a non-regional canonical key is not click-takeable — a regionSet intent only makes sense against a table with a real regional dimension', () => {
+    expect(
+      isClickTakeableIntent(pairIntent({ pairWith: { kind: 'canonical', key: 'cpi_yearly_inflation' } })),
+    ).toBe(false);
+  });
+
+  it('pairWith equal to the target is not click-takeable — pairIntentProblem refuses "the same measure twice"', () => {
+    expect(
+      isClickTakeableIntent(
+        pairIntent({ pairWith: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' } }),
+      ),
+    ).toBe(false);
+  });
+
+  it('a regionSet naming gemeenten_in_provincie with a non-province parent is not click-takeable', () => {
+    expect(isClickTakeableIntent(pairIntent({ regionSet: { kind: 'gemeenten_in_provincie', parent: 'GM0363' } }))).toBe(
+      false,
+    );
+  });
+
+  it('a regionSet WITHOUT pairWith is not click-takeable — out of scope for this slice, today\'s reject behaviour is kept', () => {
+    const { pairWith, ...withoutPairWith } = pairIntent();
+    expect(isClickTakeableIntent(withoutPairWith)).toBe(false);
+  });
+
+  it('extra unknown keys on an otherwise well-formed pair intent are not click-takeable — the strict schema rejects them', () => {
+    expect(isClickTakeableIntent({ ...pairIntent(), extra: 'forged' } as unknown as StructuredIntent)).toBe(false);
   });
 });

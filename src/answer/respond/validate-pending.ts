@@ -23,9 +23,10 @@
 // pre-WP26 behavior, never an error the user has to see.
 import { z } from 'zod';
 import { CANONICAL_KEYS } from '../intent/schema.ts';
+import { REGIONAL_KEYS } from '../intent/prompt.ts';
 import { isEurostatCountryOrAggregateCode } from '../../sources/eurostat-geo-names.ts';
 import { eurostatSiblingTargetKeys } from '../../sources/eurostat-siblings.ts';
-import { INTENT_SCHEMA_VERSION } from '../../query/index.ts';
+import { INTENT_SCHEMA_VERSION, pairIntentProblem } from '../../query/index.ts';
 import { MAX_CLICK_OPTIONS } from '../intent/types.ts';
 import type { ClickOption } from '../intent/types.ts';
 import type { StructuredIntent } from '../../query/index.ts';
@@ -40,6 +41,33 @@ const periodCode = z.string().regex(/^\d{4}(JJ00|KW0[1-4]|MM(0[1-9]|1[0-2]))$/);
  * table's real dimension labels and refuses an unknown code (resolve.ts). */
 const regionCode = z.string().regex(/^[A-Za-z]{2}[0-9A-Za-z]{2,8}$/);
 
+/** #296 (two-measure scatter, Task 5): a region CLASS — mirrors
+ * query/types.ts's `RegionScope` exactly (four literal-kind variants).
+ * `parent` is always a CBS province code (that type's own comment), so it
+ * gets the tighter PV-digit shape rather than the general `regionCode`
+ * regex — the same allowlisted-SHAPE discipline as every other field here;
+ * the query layer still checks it against the table's real dimension. */
+const provinceCode = z.string().regex(/^PV\d{2}$/);
+const regionScopeSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('all_provincies') }),
+  z.strictObject({ kind: z.literal('all_landsdelen') }),
+  z.strictObject({ kind: z.literal('all_gemeenten') }),
+  z.strictObject({ kind: z.literal('gemeenten_in_provincie'), parent: provinceCode }),
+]);
+
+/** #296 Task 5: the ADDED measure a scatter pairs against `target` — same
+ * canonical-only shape as `target` itself (an 'explicit' pairWith would be
+ * the same kind of forgery `target` above is refused for). Membership is
+ * `CANONICAL_KEYS` here, same as `target`; the NARROWER "must be a
+ * REGIONAL_KEYS member" rule is a structural fact about a PAIRED intent
+ * specifically (a regionSet only makes sense against a table with a real
+ * regional dimension), so it is checked in `isClickTakeableIntent` below,
+ * next to `pairIntentProblem`, not baked into this shape schema. */
+const pairTargetSchema = z.strictObject({
+  kind: z.literal('canonical'),
+  key: z.enum(CANONICAL_KEYS),
+});
+
 /** The offered intents are always canonical targets: policy.ts builds them
  * from resolved candidates, and resolveCandidate emits no other kind. An
  * 'explicit' target would therefore be a forgery — and the one shape that
@@ -52,6 +80,15 @@ const clickIntentSchema = z.strictObject({
     key: z.enum(CANONICAL_KEYS),
   }),
   regions: z.array(regionCode).min(1).max(8).optional(),
+  // #296 Task 5: ADDITIVE, present-only, both optional — an intent minted
+  // before this task carries neither key, so this widening is byte-neutral
+  // for every pre-existing click option. `regions` and `regionSet` are still
+  // mutually exclusive in practice (StructuredIntent's own contract; a
+  // producer never sets both), but the schema itself does not need to assert
+  // that: `pairIntentProblem` (called from `isClickTakeableIntent` below)
+  // already refuses a `regionSet` intent that also carries explicit regions.
+  regionSet: regionScopeSchema.optional(),
+  pairWith: pairTargetSchema.optional(),
   period: z.discriminatedUnion('kind', [
     z.strictObject({ kind: z.literal('codes'), codes: z.array(periodCode).min(1).max(64) }),
     z.strictObject({ kind: z.literal('range'), from: periodCode, to: periodCode }),
@@ -152,7 +189,29 @@ function siblingKeysFor(options: ClickValidationOptions): ReadonlySet<string> {
  * written for a parse), while a question-shaped candidate that is not takeable
  * is still offered as the plain fill-the-input label it always was. */
 export function isClickTakeableIntent(intent: StructuredIntent, options: ClickValidationOptions = {}): boolean {
-  if (clickIntentSchema.safeParse(intent).success) return true;
+  if (clickIntentSchema.safeParse(intent).success) {
+    // #296 Task 5: a `regionSet` intent WITHOUT `pairWith` is not in scope for
+    // click-take in this slice — today's behaviour (reject) is kept
+    // explicitly, rather than letting the schema's own optionality silently
+    // start accepting it now that `regionSet` is a recognized key.
+    if (intent.regionSet !== undefined && intent.pairWith === undefined) return false;
+    const pair = intent.pairWith;
+    if (pair === undefined) return true;
+    // A paired intent additionally needs pair.ts's own structural rules
+    // (regionSet present, no explicit regions, exactly one period code,
+    // derivation 'none', two DIFFERENT canonical measures) and both keys to
+    // be a REGIONAL_KEYS member — a regionSet intent only makes sense
+    // against a table with a real regional dimension, a fact `pairIntentProblem`
+    // itself does not know (pair.ts is a pure query-layer module with no
+    // dependency on this answer-layer vocabulary).
+    return (
+      intent.target.kind === 'canonical' &&
+      pair.kind === 'canonical' &&
+      pairIntentProblem(intent) === null &&
+      REGIONAL_KEYS.has(intent.target.key) &&
+      REGIONAL_KEYS.has(pair.key)
+    );
+  }
   const siblingKeys = siblingKeysFor(options);
   return siblingKeys.size > 0 && siblingIntentSchema(siblingKeys).safeParse(intent).success;
 }

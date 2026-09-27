@@ -160,6 +160,26 @@ function expectNoValueDigits(chips: string[]): void {
   }
 }
 
+// #296 (two-measure scatter), Task 5: the "Zet af tegen …" plotAgainst
+// generator — a region_set answer over either REGIONAL_KEYS member, all 12
+// provinces, 2024 (both fixture tables carry that period for every province,
+// per tests/query/pair-run.test.ts's own header comment).
+const homePriceAllProvinces: StructuredIntent = {
+  schemaVersion: INTENT_SCHEMA_VERSION,
+  target: { kind: 'canonical', key: 'average_home_sale_price_by_gemeente' },
+  regionSet: { kind: 'all_provincies' },
+  period: { kind: 'codes', codes: ['2024JJ00'] },
+  derivation: 'none',
+};
+
+const populationAllProvinces: StructuredIntent = {
+  schemaVersion: INTENT_SCHEMA_VERSION,
+  target: { kind: 'canonical', key: 'population_on_1_january' },
+  regionSet: { kind: 'all_provincies' },
+  period: { kind: 'codes', codes: ['2024JJ00'] },
+  derivation: 'none',
+};
+
 describe('buildAnswerChips — the comparison generators against the real fixture db + real dry-run', () => {
   it('sub-national single answer (Amsterdam 2024): the region comparison REPLACES the lone national chip and carries a resolved two-region intent', async () => {
     const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363']);
@@ -371,6 +391,87 @@ describe('buildAnswerChips — the gates (stub checks)', () => {
     };
     const chips = await buildAnswerChips(amsterdamIntent, amsterdamResult, check, ON);
     expect(chips).toEqual({ suggestions: [], clickOptions: [], axes: [] });
+  });
+});
+
+// #296 (two-measure scatter), Task 5: the "Zet af tegen …" plotAgainst
+// generator — offered FIRST (ahead of every other generator) on a CBS
+// region_set answer over a REGIONAL_KEYS measure, gated by the pair dry-run
+// (echoServability's pairWith branch, dry-run.ts).
+describe('buildAnswerChips — plotAgainst (stub checks)', () => {
+  it('a region-set answer over average_home_sale_price_by_gemeente offers "Zet af tegen bevolking op 1 januari" FIRST when the pair dry-run serves', async () => {
+    const result = await answered(homePriceAllProvinces);
+    const check: ServabilityCheck = async () => SERVABLE;
+    const chips = await buildAnswerChips(homePriceAllProvinces, result, check, ON);
+    expect(chips.suggestions[0]).toBe('Zet af tegen bevolking op 1 januari');
+    expect(chips.clickOptions[0]).toEqual({
+      id: 'pair-1',
+      label: 'Zet af tegen bevolking op 1 januari',
+      intent: {
+        schemaVersion: INTENT_SCHEMA_VERSION,
+        target: result.intent.target,
+        regionSet: result.intent.regionSet,
+        period: result.intent.period,
+        derivation: 'none',
+        pairWith: { kind: 'canonical', key: 'population_on_1_january' },
+      },
+      impliedRecency: false,
+    });
+    expect(chips.axes[0]).toBe('measure');
+    expectNoValueDigits(chips.suggestions);
+  });
+
+  it('a check that refuses the pair offers no plotAgainst chip', async () => {
+    const result = await answered(homePriceAllProvinces);
+    const check: ServabilityCheck = async (candidate) => (candidate.pairWith !== undefined ? NOT_SERVABLE : SERVABLE);
+    const chips = await buildAnswerChips(homePriceAllProvinces, result, check, ON);
+    expect(chips.suggestions.join(' ')).not.toContain('Zet af tegen');
+    expect(chips.clickOptions.some((o) => o.id.startsWith('pair-'))).toBe(false);
+  });
+
+  it('a region-set answer over population_on_1_january pairs with average_home_sale_price_by_gemeente instead', async () => {
+    const result = await answered(populationAllProvinces);
+    const check: ServabilityCheck = async () => SERVABLE;
+    const chips = await buildAnswerChips(populationAllProvinces, result, check, ON);
+    expect(chips.suggestions[0]).toBe('Zet af tegen gemiddelde verkoopprijs');
+    expect(chips.clickOptions[0]!.intent.pairWith).toEqual({
+      kind: 'canonical',
+      key: 'average_home_sale_price_by_gemeente',
+    });
+  });
+
+  it('a non-region_set answer offers no plotAgainst chip', async () => {
+    const intent = intentOf('population_on_1_january', { kind: 'codes', codes: ['2024JJ00'] }, ['GM0363']);
+    const result = await answered(intent);
+    expect(result.shape).not.toBe('region_set');
+    const check: ServabilityCheck = async () => SERVABLE;
+    const chips = await buildAnswerChips(intent, result, check, ON);
+    expect(chips.clickOptions.some((o) => o.id.startsWith('pair-'))).toBe(false);
+    expect(chips.suggestions.join(' ')).not.toContain('Zet af tegen');
+  });
+
+  it('a non-CBS-sourced region_set answer offers no plotAgainst chip (E2a source guard)', async () => {
+    const result = await answered(homePriceAllProvinces);
+    const nonCbs: ValidatedResult = { ...result, attribution: { ...result.attribution, tableId: 'eurostat:fake' } };
+    const check: ServabilityCheck = async () => SERVABLE;
+    const chips = await buildAnswerChips(homePriceAllProvinces, nonCbs, check, ON);
+    expect(chips.clickOptions.some((o) => o.id.startsWith('pair-'))).toBe(false);
+    expect(chips.suggestions.join(' ')).not.toContain('Zet af tegen');
+  });
+});
+
+describe('buildAnswerChips — plotAgainst against the real fixture db + real dry-run', () => {
+  it('provinces 2024 home price answer offers the "Zet af tegen bevolking op 1 januari" chip, dry-run proven (>= SCATTER_MIN_PAIRS)', async () => {
+    const result = await answered(homePriceAllProvinces);
+    const chips = await buildAnswerChips(homePriceAllProvinces, result, realCheck, ON);
+    expect(chips.suggestions).toContain('Zet af tegen bevolking op 1 januari');
+    const pairOption = chips.clickOptions.find((o) => o.id === 'pair-1');
+    expect(pairOption).toBeDefined();
+    expect(pairOption!.intent.pairWith).toEqual({ kind: 'canonical', key: 'population_on_1_january' });
+    // The producer-side gate (servableAndTakeable) and the click-time trust
+    // boundary must agree: an offered pair chip always survives the reply
+    // turn's own re-validation.
+    expect(validateClickOptions([pairOption])).toEqual([pairOption]);
   });
 });
 

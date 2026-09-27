@@ -11,6 +11,7 @@
 // years are not data values (the #37 policy already lets refusals name them).
 import type { Db } from '../db/types.ts';
 import { freshestForCanonical, runQuery } from './run.ts';
+import { runPairQuery } from './pair.ts';
 import type { QueryOptions } from './resolve.ts';
 import type { RefusalKind, StructuredIntent } from './types.ts';
 
@@ -99,7 +100,23 @@ export async function echoServability(
   // one whose result is simply discarded) must not count as "demand" for the
   // eviction GC, or a table can be kept artificially warm by disambiguation
   // traffic that never once delivered an answer.
-  const outcome = await runQuery(db, intent, { ...options, probe: true });
+  //
+  // #296 (two-measure scatter, Task 5): a `pairWith` intent dry-runs through
+  // runPairQuery instead — runQuery itself refuses any intent carrying
+  // pairWith (pair.ts is the only doorway). On refusal, PairOutcome's
+  // QueryRefusal is the SAME shape runQuery returns (refusePair builds a
+  // plain one), so every line below this branch applies unchanged; a served
+  // pair (PairedResults, `ok: true`) means "servable" exactly like a served
+  // single-measure result, and the pairing/cells never cross this function's
+  // return boundary either — the same confinement this module's header
+  // promises. The chip's "at least SCATTER_MIN_PAIRS paired regions"
+  // requirement is exactly runPairQuery's own gate (pair.ts) — a pairing
+  // with fewer comes back refused `no_data`, so no separate counting is
+  // needed here.
+  const outcome =
+    intent.pairWith !== undefined
+      ? await runPairQuery(db, intent, { ...options, probe: true })
+      : await runQuery(db, intent, { ...options, probe: true });
   if (outcome.ok) return { servable: true };
 
   // Availability lookups are canonical-key based: every parser-produced
