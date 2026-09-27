@@ -30,6 +30,34 @@ export interface EnglishAttempt {
   meaningCheck?: MeaningCheckRecord;
 }
 
+/** ADR 058 phase 2 (#332), Task 5: the English sibling of a REFUSAL or
+ * CLARIFICATION envelope — never a translation model output (unlike
+ * `EnglishRendering` above), always a deterministic template assembled at
+ * the SAME site as its Dutch counterpart (refusals.ts/policy.ts, Tasks 2-4).
+ * `source: 'template'` says so explicitly, so a reader can tell the two
+ * English shapes apart without checking which envelope kind it rode in on.
+ * Present only when respond ran for an English reader (`lang === 'en'`); a
+ * Dutch or lang-less envelope (benchmark, CLI, tests) carries no `english`
+ * key at all — byte-identical to a pre-#332 phase-2 run. */
+export interface NonAnswerEnglish {
+  source: 'template';
+  /** The full English message, assembled exactly like the Dutch `text`
+   * (body, offer, guidance joined the same way for a refusal; the English
+   * question itself for a clarification). */
+  text: string;
+  /** Every chip this envelope offers: `label` shown in English, `submit` the
+   * exact Dutch string that is shown/submitted today — the same {label,
+   * submit} contract EnglishRendering.chips (the answer path) already
+   * uses. */
+  chips: { label: string; submit: string }[];
+  /** Dutch fragments kept verbatim inside `text` — the intent model's own
+   * free-text reading, or the user's own unmatched term (the ONE non-
+   * template ingredient; design doc "Why templates, not the translation
+   * model"). An honest-by-construction list: empty whenever no such
+   * fragment was kept. */
+  untranslated: string[];
+}
+
 export interface EnglishRendering {
   schemaVersion: typeof ENGLISH_RENDERING_SCHEMA_VERSION;
   status: 'verified' | 'fallback';

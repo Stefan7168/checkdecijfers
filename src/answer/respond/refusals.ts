@@ -1291,6 +1291,12 @@ export interface RefusalEnvelopeInput {
    * to attach it to the envelope, gated on `lang === 'en'` — NOT attached
    * here (this input is accepted but unused by this function today). */
   englishChips?: { label: string; submit: string }[];
+  /** ADR 058 phase 2 (#332), Task 5: the reader's requested language,
+   * threaded from `RespondOptions.lang` through every respond.ts call site.
+   * `'en'` ⇒ the envelope gains `english` (built from `built.en` +
+   * `englishChips`); anything else (including absent) ⇒ no `english` key at
+   * all — byte-identical to a pre-Task-5 envelope. */
+  lang?: 'nl' | 'en';
 }
 
 /** ADR 058 phase 2 (#332), Task 3: strips the present-only English
@@ -1354,6 +1360,21 @@ export function toRefusalResponse(input: RefusalEnvelopeInput): RefusalResponse 
     // pre-WP26 field set. Stripped of any ClickOption.labelEn (Task 4) so the
     // stored pending stays byte-identical.
     ...(input.pending ? { pending: withoutPendingClickOptionEnglish(input.pending) } : {}),
+    // ADR 058 phase 2 (#332), Task 5: present ONLY for an English reader —
+    // every other envelope (Dutch, lang-less benchmark/CLI/tests) keeps the
+    // exact pre-Task-5 key set. `built.en` is REQUIRED on BuiltRefusal (Task
+    // 2), so every builder already has this to hand; `englishChips` is []
+    // whenever a call site offers no chip (mirrors `suggestions` above).
+    ...(input.lang === 'en'
+      ? {
+          english: {
+            source: 'template' as const,
+            text: input.built.en.text,
+            chips: input.englishChips ?? [],
+            untranslated: input.built.en.untranslated,
+          },
+        }
+      : {}),
   };
 }
 
@@ -1389,6 +1410,12 @@ export interface ClarificationEnvelopeInput {
    * options_en[i] ?? o, submit: o}))`), but NOT attached to the returned
    * envelope here — Task 5 attaches it to ClarificationResponse.english. */
   englishChips?: { label: string; submit: string }[];
+  /** ADR 058 phase 2 (#332), Task 5: the reader's requested language,
+   * threaded from `RespondOptions.lang` through every respond.ts call site.
+   * `'en'` ⇒ the envelope gains `english` (built from `english.question` +
+   * `englishChips`); anything else (including absent) ⇒ no `english` key at
+   * all — byte-identical to a pre-Task-5 envelope. */
+  lang?: 'nl' | 'en';
 }
 
 export function toClarificationResponse(input: ClarificationEnvelopeInput): ClarificationResponse {
@@ -1426,6 +1453,22 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
     // ADR 058 phase 2 (#332), Task 3: strip question_en/options_en/
     // untranslated_en before storage — see withoutEnglish's own comment.
     parse: withoutEnglish(input.parse),
+    // ADR 058 phase 2 (#332), Task 5: present ONLY for an English reader —
+    // every other envelope (Dutch, lang-less benchmark/CLI/tests) keeps the
+    // exact pre-Task-5 key set. `text` mirrors the Dutch `text` above
+    // (`input.questionNl`), so its English sibling is `input.english`'s own
+    // question — every call site always passes one (respond.ts); the
+    // `?? input.questionNl` fallback is defensive only, never exercised.
+    ...(input.lang === 'en'
+      ? {
+          english: {
+            source: 'template' as const,
+            text: input.english?.question ?? input.questionNl,
+            chips: input.englishChips ?? [],
+            untranslated: input.english?.untranslated ?? [],
+          },
+        }
+      : {}),
   };
 }
 
@@ -1439,7 +1482,11 @@ export function toClarificationResponse(input: ClarificationEnvelopeInput): Clar
 export const INTERNAL_REFUSAL_TEXT_EN =
   "I can't reliably answer this question right now. I'd rather give no answer than an unreliable one.";
 
-export function toInternalRefusal(question: string, internalNote: string): RefusalResponse {
+export function toInternalRefusal(
+  question: string,
+  internalNote: string,
+  lang?: 'nl' | 'en',
+): RefusalResponse {
   const text = 'Ik kan deze vraag nu niet betrouwbaar beantwoorden. Ik geef liever geen antwoord dan een onbetrouwbaar antwoord.';
   return {
     schemaVersion: RESPONSE_SCHEMA_VERSION,
@@ -1455,5 +1502,12 @@ export function toInternalRefusal(question: string, internalNote: string): Refus
     internalNote,
     onboarding: null,
     suggestions: [],
+    // ADR 058 phase 2 (#332), Task 5: same present-only-for-English rule as
+    // toRefusalResponse — INTERNAL_REFUSAL_TEXT_EN is this function's own
+    // fixed English body (Task 2), carrying no chip and no untranslated
+    // fragment (a fail-closed catch-all names nothing user-specific).
+    ...(lang === 'en'
+      ? { english: { source: 'template' as const, text: INTERNAL_REFUSAL_TEXT_EN, chips: [], untranslated: [] } }
+      : {}),
   };
 }

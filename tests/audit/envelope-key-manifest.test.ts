@@ -116,6 +116,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
       why: 'reconstruct reads record.pendingClarification (the REPLY turn\'s copy, checked against reply_text), not this turn\'s offered pending',
     },
     parse: { category: 'ignored', why: 'no intent to promote on a clarification row; the LLM parse is recorded, not re-derived' },
+    english: {
+      category: 'ignored',
+      why: "ADR 058 phase 2 (#332), Task 5: a deterministic-template English sibling of `text`/`suggestions`, present only for an English reader (lang === 'en') — the same argument as `offer`/`guidance` above (value-free template text, no cell value, no reconstructible ground truth beyond what those two already cover). Unlike AnswerResponse.english (a translation-model output with a real re-derivation to run), this is produced from the SAME parameters as the Dutch fields at the SAME site, so there is nothing here for reconstruct to check that checking the Dutch fields does not already cover.",
+    },
   },
   RefusalResponse: {
     kind: { category: 'shape-checked' },
@@ -132,6 +136,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     onboarding: { category: 'shape-checked' }, // presence must match reason === 'onboarding_pending'
     pending: { category: 'ignored', why: 'WP26c rescue state; like the clarification-side pending, the reply turn\'s copy is what reconstruct checks' },
     suggestions: { category: 'ignored', why: 'same produce-time dry-run gate as the answer-side chips; assembled after the audited refusal text' },
+    english: {
+      category: 'ignored',
+      why: "ADR 058 phase 2 (#332), Task 5: a deterministic-template English sibling of `text`/`offer`/`guidance`/`suggestions`, present only for an English reader (lang === 'en') — same argument as `offer`/`guidance` themselves. Unlike AnswerResponse.english (a translation-model output with a real re-derivation to run), this is produced from the SAME parameters as the Dutch fields at the SAME site (refusals.ts's `BuiltRefusal.en`), so there is nothing here for reconstruct to check beyond what checking the Dutch fields already covers.",
+    },
   },
   ComposedAnswer: {
     schemaVersion: { category: 'shape-checked' }, // version pin
@@ -323,8 +331,8 @@ describe('the envelope-key manifest covers the declared types', () => {
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
       AnswerResponse: 10, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`
-      ClarificationResponse: 6,
-      RefusalResponse: 11,
+      ClarificationResponse: 7, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
+      RefusalResponse: 12, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
       ComposedAnswer: 18, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`
       ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
     };
@@ -414,6 +422,13 @@ describe('the envelope-key manifest covers the declared types', () => {
       // `ok` is also the field name of every report/validation flag inside
       // reconstruct.ts — a bare-identifier match cannot tell them apart.
       'ok',
+      // ADR 058 phase 2 (#332), Task 5: reconstruct.ts genuinely reads
+      // `record.response.english`/`response.english` for AnswerResponse
+      // (checkEnglishReconstruction, shape-checked) — a bare-identifier match
+      // cannot tell that occurrence from RefusalResponse.english/
+      // ClarificationResponse.english, which really are ignored (see their
+      // own manifest entries).
+      'english',
     ]);
     const nowRead: string[] = [];
     for (const [name, entries] of Object.entries(MANIFEST)) {

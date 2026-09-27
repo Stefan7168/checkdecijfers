@@ -113,6 +113,12 @@ interface WrapContext {
   conversationContext: ConversationContext | null;
   tracker: LlmCallTracker;
   startedAt: number;
+  /** ADR 058 phase 2 (#332), Task 5: the reader's requested language, so the
+   * fail-closed internal-refusal replacement below (an audit-write failure)
+   * carries the same `english` an ordinary internal refusal would for this
+   * reader — mirrors `options.lang` already threaded into `respondToQuestion`/
+   * `respondToClarificationReply` themselves. */
+  lang?: 'nl' | 'en';
 }
 
 function auditContext(wrap: WrapContext): AuditContext {
@@ -152,7 +158,7 @@ async function persistOrFailClosed(
         (annotated.webSection ?? null) !== null ? { ...annotated, webSection: null } : annotated;
       return { response: stripped, auditId: null };
     }
-    const refusal = toInternalRefusal(wrap.question, note);
+    const refusal = toInternalRefusal(wrap.question, note, wrap.lang);
     try {
       const auditId = await insertAuditRecord(db, buildAuditRow(refusal, auditContext(wrap)));
       return { response: refusal, auditId };
@@ -183,6 +189,7 @@ export async function answerQuestionAudited(
     conversationContext,
     tracker,
     startedAt: performance.now(),
+    lang: options.lang,
   };
   const response = await respondToQuestion(db, question, {
     ...options,
@@ -256,6 +263,7 @@ export async function answerClarificationReplyAudited(
     conversationContext: null,
     tracker,
     startedAt: performance.now(),
+    lang: options.lang,
   };
   const response = await respondToClarificationReply(db, pending, reply, {
     ...options,
