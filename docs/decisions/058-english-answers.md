@@ -5,8 +5,8 @@
 Phase 1 (regular answers) specified; **built** (sessions 131-132) and merged to `main` 2026-09-26 (PR #49, `5954ccb2`); flag switched ON 2026-09-26 (session 134, owner GO, after
 [#325](../open-questions.md) was measured) — **LIVE**. Build rulings added two checks (C7 number order, C8 sentence binding) and a fourth
 placeholder kind for digit-bearing official names (⟦G…⟧) — see the spec's §3.4 on the branch and the SDD ledger copy in
-[session-briefs/2026-09-26-session-132-kickoff.md](../session-briefs/2026-09-26-session-132-kickoff.md). Phases 2 (refusals/clarifications) and 3 (chart texts) get
-their own specs.
+[session-briefs/2026-09-26-session-132-kickoff.md](../session-briefs/2026-09-26-session-132-kickoff.md). **Phase 2 (refusals/clarifications) built session 135 (2026-09-27) — see "Phase 2 as built" at the end**
+([spec](../superpowers/specs/2026-09-27-english-non-answers-design.md), [#332](../open-questions.md)). Phase 3 (chart texts) gets its own spec.
 
 ## Context
 
@@ -255,3 +255,31 @@ No English audit rows existed in production before these changes, so they create
 - English fallback rate above ~10% on real traffic → revisit prompt or move more text to hand-written templates.
 - Measured English-answer spend materially above Dutch → revisit the credit price (assumption, #271).
 - A need to query English answers in SQL → add a column by migration.
+
+## Phase 2 as built — refusals and clarifications (session 135, 2026-09-27, owner GO)
+
+**Decision: hand-written English templates, not the translation model.** Every refusal and clarification text is
+already code-built from a template, so each Dutch template site now also produces its English sibling from the same
+parameters (spec: [2026-09-27-english-non-answers-design.md](../superpowers/specs/2026-09-27-english-non-answers-design.md)).
+No LLM call, no meaning check, zero cost per question (cheapest-mechanism rule; owner ask #331). Alternatives rejected:
+(1) routing refusals through the phase-1 translator — real spend and a new failure mode for text that is already a
+template; (2) re-rendering English afterwards from the stored envelope — impossible, most parameters (measure label,
+period, region) exist only inside the Dutch sentence.
+
+- **Shape:** `RefusalResponse.english?` / `ClarificationResponse.english?: NonAnswerEnglish` (`source: 'template'`,
+  `text`, `chips: {label, submit}[]`, `untranslated`), present ONLY when respond ran with `lang === 'en'`
+  (`RespondOptions.lang`, threaded from `respond-audited`). Dutch and lang-less envelopes, stored `parse`, `pending` and
+  click options are byte-identical to before — measured by an independent base-vs-head envelope diff over the labelled set,
+  click options on and off, reply turns and the rescue take.
+- **Chips:** English label shown, the Dutch label submitted, so every deterministic take path (click options, rescue,
+  retry suggestions) resolves exactly as before; a clarification's English chips are exactly its takeable click options
+  (the Dutch `suggestions`), and they send on one click like the Dutch ones.
+- **Honest limit:** the intent model's free-text reading ("Did you mean: …?") and the user's own unmatched term stay Dutch
+  inside the English sentence, listed in `untranslated`.
+- **Names:** figures use hand-written English labels per canonical key (`src/answer/respond/english-measure-labels.ts`,
+  coverage-tested); periods/status/regions via `src/answer/respond/english.ts`; the status-suffix English is ONE shared
+  copy with the answer translator.
+- **Audit (R8):** `english` on refusal/clarification envelopes is classified `ignored` in the envelope-key manifest, same
+  argument as `offer`/`guidance` (deterministic, value-free template text).
+- **Web:** `chat.tsx` shows `english.text` and English chips whenever a refusal/clarification message carries them
+  (including meta/smalltalk/onboarding replies); the onboarding offer turn overrides the English text alongside the Dutch.

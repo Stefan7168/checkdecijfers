@@ -1,6 +1,6 @@
 # English refusals and clarifications — deterministic templates (ADR 058 phase 2, #332)
 
-**Status:** owner GO 2026-09-27 (session 135) on the plain-English summary: "write English versions of the
+**Status:** BUILT session 135 (Tasks 1-6 + a review fix wave; see ADR 058 "Phase 2 as built"). Owner GO 2026-09-27 (session 135) on the plain-English summary: "write English versions of the
 refusal and clarification texts in code, next to the Dutch ones; no AI call; the Dutch path unchanged; the
 model's own reading stays Dutch inside an English sentence for now; chart texts after this."
 
