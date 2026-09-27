@@ -36,11 +36,11 @@ import {
   translateDimLabel,
   translateMeasureTitle,
   translatePeriodLabel,
-  translateRegion,
   translateTableTitle,
   translateUnit,
 } from '../registry/english-names.ts';
 import { ENGLISH_MEASURE_LABELS } from '../answer/respond/english-measure-labels.ts';
+import { regionLabelEn } from '../answer/respond/english.ts';
 import { toEnglishNumberToken } from '../answer/translate/mask.ts';
 import { PROVISIONAL_NOTE } from './build.ts';
 import type { ChartAnnotation, ChartPoint, ChartSeries, ChartSpec } from './types.ts';
@@ -109,7 +109,7 @@ function translateNullNote(note: string): string {
   const [, where, valueAttribute, sourceName] = match as unknown as [string, string, string, string];
   const regionMatch = WHERE_REGION_RE.exec(where);
   const whereEn = regionMatch
-    ? `${translatePeriodLabel(regionMatch[1]!)} (${translateRegion(regionMatch[2]!)})`
+    ? `${translatePeriodLabel(regionMatch[1]!)} (${regionLabelEn(regionMatch[2]!)})`
     : translatePeriodLabel(where);
   return `No value for ${whereEn}: ${valueAttribute} (${sourceName}).`;
 }
@@ -131,9 +131,9 @@ function translateNullNote(note: string): string {
 const TREND_HEADLINE_RE = /^(.+?) (steeg|daalde|bleef stabiel)( gestaag)? sinds (.+)\.$/;
 
 const TREND_VERB_EN: Readonly<Record<string, string>> = {
-  steeg: 'rose',
-  daalde: 'fell',
-  'bleef stabiel': 'stayed stable',
+  steeg: 'has risen',
+  daalde: 'has fallen',
+  'bleef stabiel': 'has stayed stable',
 };
 
 function translateTrendSubject(subject: string): string {
@@ -175,7 +175,7 @@ function translateTrendHeadline(headline: string): string {
 // ---------------------------------------------------------------------------
 
 function translateSeriesLabel(series: ChartSeries): string {
-  return series.regionCode !== null ? translateRegion(series.label) : translateMeasureTitle(series.label);
+  return series.regionCode !== null ? regionLabelEn(series.label) : translateMeasureTitle(series.label);
 }
 
 function translatePoint(point: ChartPoint): ChartPoint {
@@ -209,7 +209,13 @@ function translateAnnotation(annotation: ChartAnnotation): ChartAnnotation {
  * numeric value, status and structural field is carried over byte-identical;
  * only reader-visible text and number NOTATION (not value) change, and only
  * where a deterministic English form exists. */
+/** Specs this module produced (#332 review): applying the function to its own
+ * output returns it unchanged, so an accidental second call at render can never
+ * flip the number notation back (the notation swap alone is not idempotent). */
+const PRODUCED = new WeakSet<ChartSpec>();
+
 export function toEnglishChartSpec(spec: ChartSpec): ChartSpec {
+  if (PRODUCED.has(spec)) return spec;
   const dimLabels = Object.fromEntries(
     Object.entries(spec.dimLabels).map(([k, v]) => [k, translateDimLabel(v)]),
   );
@@ -247,5 +253,6 @@ export function toEnglishChartSpec(spec: ChartSpec): ChartSpec {
     // input, and it is carried over IDENTICAL (provenance, never translated).
     result.regionScope = spec.regionScope === null ? null : structuredClone(spec.regionScope);
   }
+  PRODUCED.add(result);
   return result;
 }

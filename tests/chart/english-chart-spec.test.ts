@@ -109,7 +109,7 @@ describe('toEnglishChartSpec', () => {
     }
   });
 
-  it('translates a region series label via translateRegion, keeps regionCode identical', () => {
+  it('translates a region series label via regionLabelEn, keeps regionCode identical', () => {
     const cells = [
       makeCell({ regionCode: 'PV26', regionLabel: 'Zuid-Holland', periodCode: '2024JJ00', value: 5 }),
       makeCell({ regionCode: 'PV24', regionLabel: 'Utrecht (PV)', periodCode: '2024JJ00', value: 3 }),
@@ -117,7 +117,7 @@ describe('toEnglishChartSpec', () => {
     const spec = buildChartSpec(makeResult('comparison', cells))!;
     const en = toEnglishChartSpec(spec);
 
-    expect(en.series.map((s) => s.label)).toEqual(['South Holland', 'Utrecht (PV)']);
+    expect(en.series.map((s) => s.label)).toEqual(['South Holland', 'Utrecht (province)']);
     expect(en.series.map((s) => s.regionCode)).toEqual(spec.series.map((s) => s.regionCode));
   });
 
@@ -158,7 +158,7 @@ describe('toEnglishChartSpec', () => {
     expect(spec.nullNotes[0]).toBe('Geen waarde voor 2024 (Utrecht (PV)): Geheim (CBS).');
     const en = toEnglishChartSpec(spec);
     expect(en.nullNotes).toHaveLength(1);
-    expect(en.nullNotes[0]).toBe('No value for 2024 (Utrecht (PV)): Geheim (CBS).');
+    expect(en.nullNotes[0]).toBe('No value for 2024 (Utrecht (province)): Geheim (CBS).');
   });
 
   it('a single-region null cell omits the region clause, same as the Dutch template', () => {
@@ -241,18 +241,18 @@ describe('toEnglishChartSpec', () => {
       return makeResult('series', [first, middle, last], { definitionLabel }, [direction]);
     }
 
-    it('translates a known subject: "steeg gestaag" -> "rose steadily"', () => {
+    it('translates a known subject: "steeg gestaag" -> "has risen steadily"', () => {
       const spec = buildChartSpec(seriesWithDirection('bevolking op 1 januari'))!;
       expect(spec.attribution.trendHeadline).toBe('Bevolking op 1 januari steeg gestaag sinds 2023.');
       const en = toEnglishChartSpec(spec);
-      expect(en.attribution.trendHeadline).toBe('The population on 1 January rose steadily since 2023.');
+      expect(en.attribution.trendHeadline).toBe('The population on 1 January has risen steadily since 2023.');
     });
 
     it('an unrecognised subject keeps the Dutch subject word but still translates period/verb (best-effort, never invented)', () => {
       const spec = buildChartSpec(seriesWithDirection('bevolking'))!;
       expect(spec.attribution.trendHeadline).toBe('Bevolking steeg gestaag sinds 2023.');
       const en = toEnglishChartSpec(spec);
-      expect(en.attribution.trendHeadline).toBe('Bevolking rose steadily since 2023.');
+      expect(en.attribution.trendHeadline).toBe('Bevolking has risen steadily since 2023.');
     });
 
     it('omits trendHeadline (no key at all) when the Dutch spec has none', () => {
@@ -375,5 +375,18 @@ describe('toEnglishChartSpec', () => {
     )!;
     const en = toEnglishChartSpec(spec);
     expect(digitMultiset(en)).toEqual(digitMultiset(spec));
+  });
+
+  it('is safe to apply twice: its own output comes back unchanged (number notation never flips back)', () => {
+    const spec = buildChartSpec(
+      makeResult('series', [
+        makeCell({ periodCode: '2012KW01', periodLabel: '2012 1e kwartaal', value: 1234.5, decimals: 1 }),
+        makeCell({ periodCode: '2012KW02', periodLabel: '2012 2e kwartaal', value: 2345.5, decimals: 1 }),
+      ]),
+    )!;
+    const once = toEnglishChartSpec(spec);
+    const formatted = once.series[0]!.points.map((p) => p.formattedValue);
+    expect(toEnglishChartSpec(once)).toBe(once);
+    expect(once.series[0]!.points.map((p) => p.formattedValue)).toEqual(formatted);
   });
 });
