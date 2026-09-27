@@ -1,6 +1,7 @@
 // Chart module surface (WP8, ADR 007/014): deterministic spec builder +
 // dumb SVG renderer + the runtime schema for stored specs.
 export { buildChartSpec, PROVISIONAL_NOTE } from './build.ts';
+export { PROVISIONAL_NOTE_EN, toEnglishChartSpec } from './english.ts';
 export { buildAlternateReading } from './alternate-reading.ts';
 export type { AlternateReadingCoordinate, AlternateReadingOutcome, AlternateReadingResult } from './alternate-reading.ts';
 export { buildChartAlternates } from './chart-alternates.ts';
