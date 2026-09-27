@@ -11,6 +11,7 @@ import { CLARIFY_PROMPT_VERSION } from '../intent/clarify.ts';
 import { FOLLOWUP_PROMPT_VERSION } from '../intent/followup.ts';
 import { COMPOSE_PROMPT_VERSION } from '../compose/prompt.ts';
 import type { ComposedResponse, PendingClarification } from '../respond/types.ts';
+import { pairIntentOf } from '../respond/scatter-answer.ts';
 import type { ConversationContext } from '../context/types.ts';
 import type { AuditRecord, AuditSourceTag, LlmCallRecord, PromptVersions, TableRef } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
@@ -36,9 +37,15 @@ export function intentHash(intent: StructuredIntent): string {
 
 /** The resolved intent a response rests on, when one exists: answers echo it
  * in the validated result; refusals may carry it via the query refusal or an
- * intent-shaped parse; clarifications by definition have none. */
+ * intent-shaped parse; clarifications by definition have none. A #296
+ * scatter answer rests on the FULL pair intent — the y leg's own intent plus
+ * the x leg's target as `pairWith` — so it never hashes (or caches, or
+ * re-runs as an embed) as the y leg's one-measure question. */
 export function resolvedIntent(response: ComposedResponse): StructuredIntent | null {
-  if (response.kind === 'answer') return response.result.intent;
+  if (response.kind === 'answer') {
+    const paired = response.pairedResult ?? null;
+    return paired === null ? response.result.intent : pairIntentOf(response.result, paired);
+  }
   if (response.kind === 'refusal') {
     if (response.queryRefusal) return response.queryRefusal.intent;
     if (response.parse?.kind === 'intent') return response.parse.intent;
@@ -74,15 +81,14 @@ export type AuditRow = Omit<AuditRecord, 'id' | 'createdAt'>;
 export function buildAuditRow(response: ComposedResponse, context: AuditContext): AuditRow {
   const intent = resolvedIntent(response);
   const isAnswer = response.kind === 'answer';
-  const tables: TableRef[] = isAnswer
-    ? [
-        {
-          tableId: response.result.attribution.tableId,
-          tableVersion: response.result.attribution.tableVersion,
-          syncedAt: response.result.attribution.syncedAt,
-        },
-      ]
-    : [];
+  // #296: a scatter answer rests on TWO results (y leg, then the x leg in
+  // `pairedResult`) — both tables and both legs' cells are promoted.
+  const legs = isAnswer ? [response.result, ...(response.pairedResult ? [response.pairedResult] : [])] : [];
+  const tables: TableRef[] = legs.map((leg) => ({
+    tableId: leg.attribution.tableId,
+    tableVersion: leg.attribution.tableVersion,
+    syncedAt: leg.attribution.syncedAt,
+  }));
   const totals = context.llmCalls.reduce(
     (sum, call) => ({
       inputTokens: sum.inputTokens + call.inputTokens,
@@ -106,7 +112,7 @@ export function buildAuditRow(response: ComposedResponse, context: AuditContext)
     intent,
     intentHash: intent === null ? null : intentHash(intent),
     refusalReason: response.kind === 'refusal' ? response.reason : null,
-    resultIds: isAnswer ? response.result.cells.map((cell) => cell.resultId) : [],
+    resultIds: legs.flatMap((leg) => leg.cells.map((cell) => cell.resultId)),
     tableIds: tables.map((t) => t.tableId),
     tables,
     answerSource: isAnswer ? response.answer.source : null,

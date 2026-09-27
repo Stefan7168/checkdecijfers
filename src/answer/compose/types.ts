@@ -174,6 +174,16 @@ export interface ComposedAnswer {
    * every row stored before ADR 055 carries no key at all — readers MUST use
    * `?? null`. */
   regionSeriesLine?: string | null;
+  /** #296 (two-measure scatter): the scatter's coverage disclosure ("Dekking:
+   * 12 provincies hebben beide cijfers. …") — built by deterministic code
+   * (scatterLineNl, src/chart/scatter-text.ts) from the ScatterSpec, outside
+   * the body, and re-derived byte-identically at audit time (R8). The
+   * scatter sibling of regionSetLine, for the same structural reason: its
+   * digits count REGIONS, not CBS cell values.
+   *
+   * OPTIONAL and present-only: only a scatter answer carries it — readers
+   * MUST use `?? null`. */
+  scatterLine?: string | null;
   /** "Definitie: …" — rendered whenever a canonical default was applied
    * (attribution.definitionLabel), structurally, never left to the LLM. */
   definitionLine: string | null;

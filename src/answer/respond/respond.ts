@@ -14,7 +14,9 @@ import type { Db } from '../../db/types.ts';
 import {
   echoServability,
   freshestForCanonical,
+  runPairQuery,
   runQuery,
+  type PairOutcome,
   type QueryOutcome,
   type ValidatedResult,
 } from '../../query/index.ts';
@@ -55,6 +57,7 @@ import type { SourceSelection } from '../../websearch/types.ts';
 import { buildOfferChip, buildRescueOffer } from './rescue.ts';
 import { harnessParseOutcome, tryHarnessInjectedIntent } from './harness-intent.ts';
 import { checkStaleness } from './staleness.ts';
+import { buildScatterAnswerResponse, checkPairStaleness } from './scatter-answer.ts';
 import { buildAnswerChips, buildRefusalSuggestionsBoth } from './suggestions.ts';
 import type {
   AnswerResponse,
@@ -375,6 +378,62 @@ function sourceSelectionRefusal(
   return toRefusalResponse({ question, built, parse: null, queryRefusal: null, lang });
 }
 
+/** docs/05 staleness row, recency-implying branch: the refusal served when
+ * the question implied "now"/"latest" and `result`'s table is stale. Shared by
+ * the one-measure path and the #296 scatter path (which passes its first
+ * stale leg), so the two can never word it differently. */
+function stalenessRefusal(
+  question: string,
+  parse: Extract<ParseOutcome, { kind: 'intent' }>,
+  result: ValidatedResult,
+  lang: 'nl' | 'en' | undefined,
+): RefusalResponse {
+  // R11 also applies to a period OFFER: when the period we point at carries
+  // a non-definitive CBS status, say so — same marker the freshness refusal
+  // uses (adversarial-review finding, 2026-07-03).
+  const lastCell = result.cells[result.cells.length - 1];
+  const freshestPeriodLabel = lastCell
+    ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
+    : '';
+  // ADR 058 phase 2 (#332), Task 2: the English sibling, built at the same
+  // site from the same cell (periodCode/status/tableId) — periodLabel
+  // itself has no English twin on the cell, so periodCodeToEn(periodCode)
+  // is the direct sibling of that Dutch label.
+  const freshestPeriodLabelEn = lastCell
+    ? `${periodCodeToEn(lastCell.periodCode)}${statusSuffixEn(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
+    : '';
+  const body =
+    `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
+    `onze laatste synchronisatie was op ${result.attribution.syncedAt.slice(0, 10)}, ` +
+    `en ik wil geen verouderd cijfer als "actueel" laten doorgaan.`;
+  const guidance = `Vraag gerust naar het cijfer voor een specifieke, al gedekte periode (bijvoorbeeld ${freshestPeriodLabel}) — dat kan ik direct geven.`;
+  const bodyEn =
+    `These figures are older than expected for a question about the most recent figure — ` +
+    `our last synchronization was on ${result.attribution.syncedAt.slice(0, 10)}, ` +
+    `and I don't want to let an outdated figure pass as "current".`;
+  const guidanceEn = `Feel free to ask for the figure for a specific, already covered period (for example ${freshestPeriodLabelEn}) — I can give that directly.`;
+  return toRefusalResponse({
+    question,
+    built: {
+      reason: 'staleness',
+      text: `${body} ${guidance}`,
+      offer: null,
+      guidance,
+      freshness: null,
+      internalNote: null,
+      en: {
+        text: `${bodyEn} ${guidanceEn}`,
+        offer: null,
+        guidance: guidanceEn,
+        untranslated: [],
+      },
+    },
+    parse,
+    queryRefusal: null,
+    lang,
+  });
+}
+
 /** Shared downstream half once we have an 'intent' ParseOutcome: query ->
  * staleness -> compose+chart, OR the appropriate refusal. Used by both
  * respondToQuestion and respondToClarificationReply so the two entry points
@@ -419,7 +478,14 @@ export async function respondToIntent(
   },
 ): Promise<ComposedResponse> {
   const queryOptions = { answerFirstEnabled: options.answerFirstEnabled === true };
-  const outcome: QueryOutcome = await runQuery(db, parse.intent, queryOptions);
+  // #296 (two-measure scatter): a pair intent (`pairWith`) runs as two
+  // ordinary legs through runPairQuery — runQuery itself refuses one. Its
+  // refusals share QueryRefusal's shape, so they take the block below
+  // unchanged; a served pair branches off to the scatter answer after it.
+  const outcome: QueryOutcome | PairOutcome =
+    parse.intent.pairWith !== undefined
+      ? await runPairQuery(db, parse.intent, queryOptions)
+      : await runQuery(db, parse.intent, queryOptions);
 
   if (!outcome.ok) {
     const built = buildQueryRefusal(outcome);
@@ -555,6 +621,20 @@ export async function respondToIntent(
     });
   }
 
+  // #296: the template-only scatter answer (scatter-answer.ts). No compose
+  // model, no semantic check, no chips. Its Dutch body carries no data value
+  // and is NOT run through validateAnswerBody (a single-result validator);
+  // R1/R8 are held by re-deriving the spec and texts byte-identically in
+  // audit/reconstruct.ts. Staleness runs on BOTH legs: a recency-implying
+  // question refuses on the first stale leg, exactly as below.
+  if ('pairedResult' in outcome) {
+    const pairStaleness = await checkPairStaleness(db, outcome, options.referenceDate);
+    if (pairStaleness.staleLeg !== null && parse.impliedRecency) {
+      return stalenessRefusal(question, parse, pairStaleness.staleLeg, options.lang);
+    }
+    return buildScatterAnswerResponse(question, parse, outcome, pairStaleness.warning);
+  }
+
   // WP26 mechanism B-period (ADR 024): the period axis is resolved by the
   // ANSWER layer (before the query runs), so the query layer cannot know the
   // window was defaulted — it is stamped onto the validated result here, the
@@ -569,50 +649,7 @@ export async function respondToIntent(
   // is stale. Covered historical periods (impliedRecency === false) always
   // warn-and-serve instead (the other branch, below).
   if (staleness.stale && parse.impliedRecency) {
-    // R11 also applies to a period OFFER: when the period we point at carries
-    // a non-definitive CBS status, say so — same marker the freshness refusal
-    // uses (adversarial-review finding, 2026-07-03).
-    const lastCell = result.cells[result.cells.length - 1];
-    const freshestPeriodLabel = lastCell
-      ? `${lastCell.periodLabel}${statusSuffixNl(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
-      : '';
-    // ADR 058 phase 2 (#332), Task 2: the English sibling, built at the same
-    // site from the same cell (periodCode/status/tableId) — periodLabel
-    // itself has no English twin on the cell, so periodCodeToEn(periodCode)
-    // is the direct sibling of that Dutch label.
-    const freshestPeriodLabelEn = lastCell
-      ? `${periodCodeToEn(lastCell.periodCode)}${statusSuffixEn(lastCell.status, sourceKeyForTableId(lastCell.tableId))}`
-      : '';
-    const body =
-      `Deze cijfers zijn ouder dan verwacht voor een vraag naar het meest recente cijfer — ` +
-      `onze laatste synchronisatie was op ${result.attribution.syncedAt.slice(0, 10)}, ` +
-      `en ik wil geen verouderd cijfer als "actueel" laten doorgaan.`;
-    const guidance = `Vraag gerust naar het cijfer voor een specifieke, al gedekte periode (bijvoorbeeld ${freshestPeriodLabel}) — dat kan ik direct geven.`;
-    const bodyEn =
-      `These figures are older than expected for a question about the most recent figure — ` +
-      `our last synchronization was on ${result.attribution.syncedAt.slice(0, 10)}, ` +
-      `and I don't want to let an outdated figure pass as "current".`;
-    const guidanceEn = `Feel free to ask for the figure for a specific, already covered period (for example ${freshestPeriodLabelEn}) — I can give that directly.`;
-    return toRefusalResponse({
-      question,
-      built: {
-        reason: 'staleness',
-        text: `${body} ${guidance}`,
-        offer: null,
-        guidance,
-        freshness: null,
-        internalNote: null,
-        en: {
-          text: `${bodyEn} ${guidanceEn}`,
-          offer: null,
-          guidance: guidanceEn,
-          untranslated: [],
-        },
-      },
-      parse,
-      queryRefusal: null,
-      lang: options.lang,
-    });
+    return stalenessRefusal(question, parse, result, options.lang);
   }
 
   const answer = await composeAnswer(result, {

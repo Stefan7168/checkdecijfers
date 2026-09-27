@@ -13,7 +13,7 @@
 // This envelope is also the WP10 seam: it carries the parse outcome, the query
 // outcome and the composed answer verbatim, so one audit record can
 // reconstruct the full decision path (R8).
-import type { ChartSpec } from '../../chart/index.ts';
+import type { ChartSpec, ScatterSpec } from '../../chart/index.ts';
 import type { FreshnessInfo, QueryRefusal, ValidatedResult } from '../../query/index.ts';
 import type { ComposedAnswer } from '../compose/index.ts';
 import type { ConversationContext } from '../context/types.ts';
@@ -272,6 +272,20 @@ export interface AnswerResponse extends ResponseBase {
   /** Audit seams (R8): the full parse and query outcomes. */
   parse: ParseOutcome;
   result: ValidatedResult;
+  /** #296 (two-measure scatter, spec D3): the ADDED measure's ordinary
+   * single-lineage region-set result — the scatter's horizontal axis — over
+   * the same region class and period as `result` (the asked-about measure,
+   * vertical axis). Each leg keeps its own table and attribution, so every
+   * per-result rule applies to each unchanged. PRESENT-ONLY (docs/13): set
+   * only on a scatter answer, always together with `scatter`; absent on every
+   * other answer and every row stored before #296 — readers use `?? null`. */
+  pairedResult?: ValidatedResult;
+  /** #296 (spec D8): the scatter chart spec, built deterministically from
+   * `result` + `pairedResult` (R6) and re-derived byte-identically at audit
+   * time (R8). On a scatter answer `chart` is null — a scatter is its own
+   * spec, not a ChartForm. Stored Dutch; English is derived at render time.
+   * PRESENT-ONLY, like `pairedResult` (`?? null`). */
+  scatter?: ScatterSpec;
   /** WP29 (#73, ADR 029 D4): servability-gated follow-up chip texts — a
    * STRUCTURAL field assembled post-compose like `chart`, so the R8-audited
    * `text` string is byte-untouched. [] when no candidate survived the

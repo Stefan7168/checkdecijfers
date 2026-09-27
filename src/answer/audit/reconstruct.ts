@@ -22,7 +22,7 @@
 //     against run-time whitelists.
 import { DERIVED_DATA_MARKING, isDerivedResult, RESULT_SCHEMA_VERSION } from '../../query/index.ts';
 import type { ValidatedResult } from '../../query/index.ts';
-import { buildChartSpec, chartSpecSchema } from '../../chart/index.ts';
+import { buildChartSpec, chartSpecSchema, scatterSpecSchema } from '../../chart/index.ts';
 import {
   buildAlternatesLine,
   buildAssumptionLine,
@@ -64,6 +64,9 @@ import { meaningCheckScopeProblems, meaningItems } from '../translate/meaning-ch
 import type { AuditRecord } from './types.ts';
 import { AUDIT_SCHEMA_VERSION } from './types.ts';
 import { intentHash, resolvedIntent } from './write.ts';
+// #296 (two-measure scatter): the SAME pure builder respondToIntent composed
+// the scatter answer with — re-run here over the two stored legs.
+import { composeScatterAnswer } from '../respond/scatter-answer.ts';
 // WP129+130 (ADR 032): the ⟨W3⟩ skip-list is shared with src/websearch/attach.ts
 // (the pure leaf) so reconstruct check (d) can never drift from the owed-check.
 import { WEBSEARCH_SKIP_REASONS } from '../../websearch/types.ts';
@@ -105,6 +108,13 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
   if (response.kind === 'answer' && response.result.schemaVersion !== RESULT_SCHEMA_VERSION) {
     problems.push(
       `result schemaVersion ${response.result.schemaVersion} is not the v${RESULT_SCHEMA_VERSION} this reconstructor handles`,
+    );
+  }
+  // #296: the scatter's x leg is a second stored result, pinned the same way.
+  const pairedResult = response.kind === 'answer' ? (response.pairedResult ?? null) : null;
+  if (pairedResult !== null && pairedResult.schemaVersion !== RESULT_SCHEMA_VERSION) {
+    problems.push(
+      `pairedResult schemaVersion ${pairedResult.schemaVersion} is not the v${RESULT_SCHEMA_VERSION} this reconstructor handles`,
     );
   }
   if (record.finalText !== response.text) {
@@ -191,8 +201,9 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
       );
     }
   }
-  const expectedResultIds =
-    response.kind === 'answer' ? response.result.cells.map((c) => c.resultId) : [];
+  // #296: a scatter answer's promoted columns cover BOTH legs, y first.
+  const legs = response.kind === 'answer' ? [response.result, ...(pairedResult !== null ? [pairedResult] : [])] : [];
+  const expectedResultIds = legs.flatMap((leg) => leg.cells.map((c) => c.resultId));
   if (stableStringify(record.resultIds) !== stableStringify(expectedResultIds)) {
     problems.push('result_ids differ from the stored result cells');
   }
@@ -205,12 +216,12 @@ function checkEnvelopeIntegrity(record: AuditRecord, problems: string[]): void {
     problems.push('chart_emitted differs from the envelope');
   }
   if (response.kind === 'answer') {
-    const a = response.result.attribution;
-    const expectedTables = [{ tableId: a.tableId, tableVersion: a.tableVersion, syncedAt: a.syncedAt }];
+    const attributions = legs.map((leg) => leg.attribution);
+    const expectedTables = attributions.map((a) => ({ tableId: a.tableId, tableVersion: a.tableVersion, syncedAt: a.syncedAt }));
     if (stableStringify(record.tables) !== stableStringify(expectedTables)) {
       problems.push('tables differ from the stored attribution');
     }
-    if (stableStringify(record.tableIds) !== stableStringify([a.tableId])) {
+    if (stableStringify(record.tableIds) !== stableStringify(attributions.map((a) => a.tableId))) {
       problems.push('table_ids differ from the stored attribution');
     }
   } else if (record.tables.length > 0 || record.tableIds.length > 0) {
@@ -629,6 +640,87 @@ function checkAnswerReconstruction(record: AuditRecord, problems: string[]): voi
   }
 }
 
+// #296 (two-measure scatter, spec D10): R8 for the scatter answer. Its body
+// carries no data value and is NOT re-run through validateAnswerBody (a
+// single-result validator — it would read the x leg's measure title against
+// the y leg's cells); instead the WHOLE answer surface is a pure function of
+// the two stored legs (composeScatterAnswer — the builder respond used), so
+// the spec, body, coverage line, attribution and text must all re-derive
+// byte-identically. The one-measure checks (template body re-derivation,
+// buildChartSpec) must NOT run on the y leg: its `region_set` shape would
+// re-derive a one-measure body and chart this answer never showed.
+function checkScatterReconstruction(record: AuditRecord, problems: string[]): void {
+  const response = record.response as AnswerResponse;
+  const answer = response.answer;
+  const pairedResult = response.pairedResult ?? null;
+  const scatter = response.scatter ?? null;
+  if (pairedResult === null || scatter === null) {
+    problems.push('a scatter answer must carry both scatter and pairedResult');
+    return;
+  }
+  if (answer.source !== 'template') {
+    problems.push(`a scatter answer must be template-composed, stored source is '${answer.source}'`);
+  }
+  if (response.chart !== null) {
+    problems.push('a scatter answer must carry no one-measure chart');
+  }
+  let rederived: ReturnType<typeof composeScatterAnswer>;
+  try {
+    rederived = composeScatterAnswer(response.result as ValidatedResult, pairedResult);
+  } catch (error) {
+    problems.push(`scatter answer cannot re-derive from the stored results (${errorMessage(error)})`);
+    return;
+  }
+  if (stableStringify(scatter) !== stableStringify(rederived.scatter)) {
+    problems.push('scatter spec does not re-derive from the stored results');
+  }
+  const parsed = scatterSpecSchema.safeParse(scatter);
+  if (!parsed.success) {
+    problems.push(`stored scatter spec fails schema validation: ${parsed.error.message}`);
+  }
+  if (answer.body !== rederived.answer.body) {
+    problems.push('scatter body does not re-derive from the stored results');
+  }
+  if ((answer.scatterLine ?? null) !== rederived.answer.scatterLine) {
+    problems.push('scatter coverage line does not re-derive from the stored results');
+  }
+  if (answer.attributionLine !== rederived.answer.attributionLine) {
+    problems.push('attribution line does not re-derive from the stored attribution');
+  }
+  if (stableStringify(answer.validation) !== stableStringify(rederived.answer.validation)) {
+    problems.push('scatter validation report differs from the value-free-body report');
+  }
+  // None of the one-measure structural lines, and neither LLM-rung record,
+  // can exist on a template-only scatter answer (`?? null`, A1).
+  const oneMeasureLines = {
+    assumptionLine: answer.assumptionLine ?? null,
+    regionSetLine: answer.regionSetLine ?? null,
+    regionSeriesLine: answer.regionSeriesLine ?? null,
+    definitionLine: answer.definitionLine,
+    alternatesLine: answer.alternatesLine ?? null,
+    markingLine: answer.markingLine,
+  };
+  for (const [key, value] of Object.entries(oneMeasureLines)) {
+    if (value !== null) problems.push(`a scatter answer carries a one-measure ${key}`);
+  }
+  if ((answer.semanticCheck ?? null) !== null || (answer.slotPhrasing ?? null) !== null) {
+    problems.push('a scatter answer carries an LLM-rung record (semanticCheck/slotPhrasing)');
+  }
+  if (answer.text !== rederived.answer.text) {
+    problems.push('answer text does not re-assemble from its stored parts');
+  }
+  const finalText =
+    response.stalenessWarning === null ? answer.text : `${answer.text}\n\n${response.stalenessWarning}`;
+  if (response.text !== finalText) {
+    problems.push('response text does not re-assemble from answer text + staleness warning');
+  }
+  // No translation ever runs on the scatter path (English is derived at
+  // render time), so a stored English rendering is a row lying about itself.
+  if (response.english !== undefined) {
+    problems.push('a scatter answer never carries a translated English rendering');
+  }
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -839,9 +931,15 @@ export function reconstructionReport(record: AuditRecord): ReconstructionReport 
   const problems: string[] = [];
   checkEnvelopeIntegrity(record, problems);
   if (record.response.kind === 'answer') {
-    checkAnswerReconstruction(record, problems);
-    if (record.response.english !== undefined) {
-      checkEnglishReconstruction(record, problems);
+    // #296: either scatter key present routes to the scatter check, which
+    // itself fails a row carrying only one of the two.
+    if (record.response.scatter !== undefined || record.response.pairedResult !== undefined) {
+      checkScatterReconstruction(record, problems);
+    } else {
+      checkAnswerReconstruction(record, problems);
+      if (record.response.english !== undefined) {
+        checkEnglishReconstruction(record, problems);
+      }
     }
   }
   return { ok: problems.length === 0, problems };

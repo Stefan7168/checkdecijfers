@@ -35,6 +35,9 @@ import type { WebSearchClient } from '../../websearch/client.ts';
 // argument as the web attach — the stored row must carry the English
 // rendering verbatim (R8) and latencyMs must honestly include translate time.
 import { attachEnglish } from '../translate/translate.ts';
+// #296: a scatter answer is never translated (no LLM on the scatter path) —
+// its English is derived at render time from the stored spec (web layer).
+import { isScatterAnswer } from '../respond/scatter-answer.ts';
 import type { AuditSourceTag } from './types.ts';
 import {
   maybeAlertInternalRefusal,
@@ -220,7 +223,8 @@ export async function answerQuestionAudited(
   // ADR 058: the English rendering rides the SAME row (R8), attached before
   // the write so latency and llm_calls stay honest. No lang/client (the
   // benchmark, tests, CLI, every Dutch reader) ⇒ the same object back.
-  const withEnglish = await attachEnglish(augmented, {
+  // #296: skipped for a scatter answer — no translate call on that path.
+  const withEnglish = isScatterAnswer(augmented) ? augmented : await attachEnglish(augmented, {
     lang: options.lang,
     client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
     // #325 check C12: the SAME injected client, tracked under its own role
@@ -309,7 +313,8 @@ export async function answerClarificationReplyAudited(
   });
   // ADR 058: same English-attach seam on the reply turn (a reply can settle
   // into an answer too, e.g. a takeable chip) — same A1 no-op absent lang/client.
-  const withEnglish = await attachEnglish(augmented, {
+  // #296: skipped for a scatter answer (the click-take is its doorway).
+  const withEnglish = isScatterAnswer(augmented) ? augmented : await attachEnglish(augmented, {
     lang: options.lang,
     client: options.translateClient ? tracker.wrap('translate', options.translateClient) : undefined,
     // #325 check C12: the SAME injected client, tracked under its own role

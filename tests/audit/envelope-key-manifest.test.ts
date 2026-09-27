@@ -77,6 +77,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     kind: { category: 'shape-checked' },
     answer: { category: 'shape-checked' }, // a container: its own keys are manifested under ComposedAnswer
     chart: { category: 'rederived' }, // buildChartSpec over the stored result + schema re-validation
+    scatter: {
+      category: 'rederived',
+      note: '#296 (two-measure scatter, spec D8/D10): buildScatterSpec over the stored `result` + `pairedResult`, byte-identical (stableStringify), + scatterSpecSchema re-validation — the scatter sibling of `chart`. Present-only: absent on every non-scatter answer; a stored `scatter` without `pairedResult` (or vice versa) is itself a divergence.',
+    },
     chartAlternates: {
       category: 'ignored',
       why: '#254: presentation sugar built independently, best-effort, alongside `chart`; the registry\'s alternates can change after a row is written, so nothing here has a frozen ground truth worth reconstructing against — same produce-time, non-reconstructed treatment as `suggestions`/`pending` (design doc §Audit/R8)',
@@ -89,6 +93,10 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     result: {
       category: 'shape-checked',
       note: 'the substrate everything above re-derives FROM; itself checked via resultIds/tables/intentHash. Since #253 it is also a container whose own keys are manifested below, under ValidatedResult.',
+    },
+    pairedResult: {
+      category: 'shape-checked',
+      note: "#296 (two-measure scatter, spec D3): the x leg, an ordinary single-lineage region-set ValidatedResult — the second substrate the scatter answer re-derives FROM, checked like `result`: its version pin, its cells in the promoted result_ids (after the y leg's), its attribution as the second `tables`/`table_ids` entry, and its intent's target as the audited intent's `pairWith` (resolvedIntent). Present-only; must co-occur with `scatter`.",
     },
     suggestions: {
       category: 'ignored',
@@ -146,10 +154,14 @@ const MANIFEST: Record<string, Record<string, Entry>> = {
     source: { category: 'shape-checked' }, // must equal the promoted answer_source column
     body: {
       category: 'revalidated',
-      note: "R1/R3/R9/R10/R11 re-run against the stored result. ONE shape is stronger: #253's `region_set` body is composed template-only BY SHAPE (never LLM prose), so it is a pure function of the stored result and reconstruct re-derives it BYTE-IDENTICALLY as well — the validator alone would accept a region-set body with a claim quietly dropped, which is precisely the honesty question on that shape (RS1). Everywhere else there is no deterministic ground truth to compare against, which is what this category means.",
+      note: "R1/R3/R9/R10/R11 re-run against the stored result. EXCEPT a #296 scatter body, which carries no data value and is re-derived byte-identically from the re-derived ScatterSpec (scatterBodyNl) instead of scanned — the single-result validator would read the x leg's measure title against the y leg's cells. ONE shape is stronger: #253's `region_set` body is composed template-only BY SHAPE (never LLM prose), so it is a pure function of the stored result and reconstruct re-derives it BYTE-IDENTICALLY as well — the validator alone would accept a region-set body with a claim quietly dropped, which is precisely the honesty question on that shape (RS1). Everywhere else there is no deterministic ground truth to compare against, which is what this category means.",
     },
     assumptionLine: { category: 'rederived' }, // buildAssumptionLine, byte-identical, `?? null` (A1)
     regionSetLine: { category: 'rederived' }, // #253 buildRegionSetLine, byte-identical, `?? null` (A1)
+    scatterLine: {
+      category: 'rederived',
+      note: '#296 (two-measure scatter): scatterLineNl over the re-derived ScatterSpec, byte-identical, `?? null` (A1) — the scatter sibling of regionSetLine (its digits count regions, not cell values, so it lives outside the body). Present-only: only a scatter answer carries it.',
+    },
     regionSeriesLine: {
       category: 'rederived',
       note: 'ADR 055: buildRegionSeriesLine over the stored per-region coverage record, byte-identical, `?? null` (A1). Present-only in a second way its region-set sibling is not — a COMPLETE multi-region series has nothing to disclose, so the key is absent on rows OF THIS VERY SHAPE as well as on every other shape and every pre-ADR-055 row. The `?? null` read is therefore load-bearing twice over, and a stripped line still fails (tests/audit/region-series-r8.test.ts).',
@@ -330,10 +342,10 @@ describe('the envelope-key manifest covers the declared types', () => {
     // catches an interface silently losing a member to an edit.
     const expectedCounts: Record<string, number> = {
       ResponseBase: 5,
-      AnswerResponse: 10, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`
+      AnswerResponse: 12, // #197 step 3: + present-only `pending`; #254: + `chartAlternates`; ADR 058: + present-only `english`; #296: + present-only `pairedResult`, `scatter`
       ClarificationResponse: 7, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
       RefusalResponse: 12, // ADR 058 phase 2 (#332), Task 5: + present-only `english`
-      ComposedAnswer: 18, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`
+      ComposedAnswer: 19, // #253: + present-only `regionSetLine`; ADR 055: + present-only `regionSeriesLine`; #296: + present-only `scatterLine`
       ValidatedResult: 12, // #253: the stored result joined this manifest; ADR 055: + present-only `regionSeries`
     };
     for (const [name, count] of Object.entries(expectedCounts)) {
