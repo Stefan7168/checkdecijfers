@@ -1,4 +1,4 @@
-One route is intentionally public with no session: `/embed/[token]` serves a shared, read-only chart page for third-party embedding (ADR [041](../docs/decisions/041-public-embed-pages.md)) — see `docs/RUNBOOK.md`'s Embed go-live section for its env vars.
+One route is intentionally public with no session: `/embed/[token]` serves a shared, read-only chart page for third-party embedding (ADR [041](../docs/decisions/041-public-embed-pages.md)) — since session 136 it shows the chart as its author styled it (their saved edits and house style, pruned server-side; notes stay private) — see `docs/RUNBOOK.md`'s Embed go-live section for its env vars.
 
 `/embed/own/[publicId]` is its own-data twin: a reader's chart made from their own uploaded file, published as a saved, revocable, pruned snapshot rather than a signed token (ADR [057](../docs/decisions/057-own-data-publish.md)). Built, but behind `OWN_DATA_PUBLISH_ENABLED` (set in Production since 2026-09-25, session 131) — see `docs/RUNBOOK.md`'s "Own-data publishing (ADR 057) — switching it on" section.
 

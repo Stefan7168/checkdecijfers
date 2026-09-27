@@ -6,6 +6,27 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 136 — render the real surface before designing; a "gap" row can already be closed
+
+1. **Render the real page before designing a fix for it.** #324 gap 3 said shared pages and downloads "stay Dutch". A
+   local render of a stored answer's embed with `?lang=en` (≈5 minutes, free, recipe now in RUNBOOK) showed that ADR 058
+   phase 3 had already fixed it; only the bare label 'Totaal' was left. The design shrank from "translate share pages" to a
+   one-line display mapping, and the time went into the gaps that were real (no title in downloads at all; the embed
+   ignoring edits).
+2. **Read the usage before sizing a feature.** A read-only query showed 2 CBS charts ever edited, both the owner's, with
+   templates and chart forms (no titles). That shaped the scope (house style mattered more than titles) and is the
+   evidence the cheapest mechanism (live read, no new table) was enough.
+3. **A "gap" in an open-questions row can be a deliberate design rule.** #278 read like a bug ("exports never include the
+   reader's title"), but ADR 056's provenance split made it so on purpose: reader words next to "Bron: CBS" could carry
+   an unchecked number. The fix kept that rule's purpose by reusing the co-pilot's existing digit guard (`unplottedDigits`)
+   instead of just dropping the exclusion. Read the ADR behind a row before "fixing" it.
+4. **A bare `pg.Client` against Supabase hangs or fails on TLS; use `createPool`.** The first read-only query hung >2 min
+   with no output, then failed with "self-signed certificate in certificate chain". The project pool pins the CA. RUNBOOK
+   now says so.
+5. **Prune on the server anything a public page must not show.** The author's notes live in the same edit log as their
+   styling. Filtering in the client component would still ship the note text to the anonymous visitor's browser. The ADR
+   057 P1 lesson applies to every public surface, not only own data.
+
 ## Session 135 — a prompt EXAMPLE bleeds harder than a rule; check the provider's own status page before blaming the network
 
 1. **A worked example in the intent prompt moved two unrelated cases; the rule text alone moved none.** The v7 draft added

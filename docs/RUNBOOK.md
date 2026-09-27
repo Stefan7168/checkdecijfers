@@ -347,6 +347,21 @@ Playwright MCP (`browser_run_code_unsafe`) — Story mode, the Style panel, down
 `page.waitForEvent('download')`, file uploads via `setInputFiles`, at 1280 and 375 px. Zero API spend.
 Always cache-bust the URL (`?v=<timestamp>`) right after a deploy.
 
+## Seeing a stored answer's public embed page locally (added 2026-09-27, session 136)
+
+Free, read-only, no AI. Useful to check what an embed REALLY shows (language, the author's edits) before designing a change.
+1. Pick an audit id with a chart (read-only query below). 2. Sign a token with a LOCAL-ONLY secret: a scratch
+`npx tsx` script calling `signEmbedToken(<id>, 'local-dev-only-not-a-real-secret')` from `src/chart/embed-token.ts`.
+3. Start the dev server against the live DB with `EMBED_TOKEN_SECRET` set to that same local string (a scratch launcher that
+sets `process.env.EMBED_TOKEN_SECRET` and then imports `scripts/dev-web.mjs`, plus a temporary `.claude/launch.json` entry).
+4. Open `/embed/<token>?lang=en`. The token only works locally; production's secret is never touched. Delete the scratch
+files and the launch entry afterwards.
+
+**Read-only live queries: use the project's own pool, not a bare `pg.Client`.** `createPool` (`src/db/client.ts`) pins
+the Supabase CA; a bare `new pg.Client({ connectionString })` fails with "self-signed certificate in certificate chain"
+(or, without a connect timeout, hangs silently). Pattern: a scratch `npx tsx` script: `createPool(process.env.DATABASE_URL)`,
+`begin read only`, the select, `rollback`.
+
 ## Embed go-live (⏳ status not independently re-verified since PR #9 merged, written 2026-09-10, session 93, autonomous — branch `embed-charts`, PR #9 merged 2026-09-12; "not yet merged" corrected 2026-09-15, session 103)
 
 **Status when this section was written:** the whole feature (a signed per-chart embed token, the Embed button + pop-up dialog, the public `/embed/[token]` route frozen by default, framing headers so it can actually be framed, and a Live re-render code path) was built and tested on branch `embed-charts`. That branch merged to `main` as PR #9 on 2026-09-12 — the code is live in production; whether the go-live STEPS below (the secret, the smoke test) have actually been run since is not re-verified here, don't assume either way from this line alone. ADR [041](decisions/041-public-embed-pages.md) is the full as-built record. **Updated 2026-09-12 (branch `embed-live-creator-lookup`, stacked on `embed-charts`): the owner-email lookup that Live needs is now built — read step 3a below before expecting Live to work.**

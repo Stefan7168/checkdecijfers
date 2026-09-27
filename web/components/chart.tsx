@@ -3308,8 +3308,9 @@ export function ChartView({
   // Task 5 (co-pilot phase 1): the reader's own caption under the chart.
   // Rendered at the same slots as `notesNode`, just before it, and — like
   // the notes — ALWAYS outside chartContainerRef, so a reader's own words
-  // can never be scanned as chart data or baked into a PNG/SVG export.
-  // Unlike the notes it is offered in the table form too: a caption is about
+  // can never be scanned as chart data or baked into the chart image.
+  // (Session 136: a download draws the caption as its own text line only when
+  // it passes the numbers rule — see `exportOwnCaption`.) Unlike the notes it is offered in the table form too: a caption is about
   // the card, not about a clicked chart point.
   // Session 136: on the public embed the author's caption shows read-only —
   // already checked against the numbers rule on the server (prunePublishedLog),
@@ -3445,7 +3446,9 @@ export function ChartView({
             * heading's next element sibling either way (several tests read
             * the header by exactly that relationship). The editor lives
             * here, outside chartContainerRef, like the caption and the
-            * notes: a reader's own words never enter a PNG/SVG export. */}
+            * notes: a reader's own words never enter the chart image (a
+            * download draws the title as its own text line, the reader's only
+            * when it passes the numbers rule — `exportTitle`, session 136). */}
           {titleEditing ? (
             <input
               type="text"

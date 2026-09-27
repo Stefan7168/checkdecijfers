@@ -1,5 +1,35 @@
 # STATUS archive — the session log
 
+**Session 136 (2026-09-27, evening local UTC+7 — owner present throughout; one change shipped LIVE; wrapped on the owner's
+"Wrap up").**
+
+1. **State verified at start:** `main` = `7e25d360` (docs-only after `e586732b`), CI 36311096315 green, prod 200, no open PRs,
+   no worktrees.
+2. **CBS still down (#329):** v4 and v3 APIs reset every connection (curl 000); the "Technische storing CBS-diensten …
+   Statline onbereikbaar" banner still on www.cbs.nl at start and at 19:17 local. Regional statistics stays blocked; per
+   the owner's s135 steer, no paper design around it.
+3. **Owner picked "shared charts match what the reader sees"** from four sized unblocked options. Measured first:
+   rendering stored answer 264's public embed locally with `?lang=en` (local-only token secret, read-only live DB; recipe
+   now in RUNBOOK) showed English ALREADY worked (ADR 058 phase 3) except the bare label 'Totaal'; downloads carried NO
+   title at all; the embed ignored edits. Read-only usage: 2 CBS charts ever edited (both the owner's; templates, forms,
+   one shaded period, one note). Three owner decisions in chat: build A–D; the embed FOLLOWS later edits (no new table);
+   notes and typed labels stay private.
+4. **Spec** `e8d537f2` (`docs/superpowers/specs/2026-09-27-shared-charts-match-design.md`). **Build** `bcdbd405`:
+   `web/lib/chart-publish.ts` (numbers rule via the co-pilot's `unplottedDigits`, NL + EN spec forms; `prunePublishedLog`
+   server-side: drops notes/reading/own-data commands, placeholder labels, removes stored per-chart language);
+   `/embed/[token]` reads the author's `chart_edits` + house style (`publishedLog`/`publishedStyle` on `ChartView`, read-only
+   caption in embed mode); downloads draw title + caption (`ExportTexts` in `chart-download.tsx`; a bare headline string
+   stays byte-identical), with a one-line menu notice when the reader's own text was left out; own-data downloads carry
+   title/caption as typed; 'Totaal' → 'Total' in `src/chart/english.ts` only (answer glossary untouched, no fixture moved).
+   Checked on the real stored chart: the embed now shows the author's last form (bar) and style, "Total", no note.
+5. **Verification:** local block green (typecheck ×2; backend 237 files / 3868 tests; benchmark 14/14 + 6/6 + 0 fabricated,
+   template fallbacks 0; web 164 files / 3150 tests; `next build`); `/code-review` LOW: no findings; CI 36315795992 green incl.
+   deploy; prod 200. Zero AI spend, no DDL, no env change.
+6. **Docs:** ADR 041 + 056 as-built notes (056's old "exports never include the reader's title" paragraph marked
+   superseded), open-questions #277/#278/#324 updated, RUNBOOK (local embed render recipe; use `createPool`, not a bare
+   `pg.Client`), lessons (5), STATUS top block, kickoff `docs/session-briefs/2026-09-27-session-137-kickoff.md`. Wrap-up
+   commit also corrected two stale `chart.tsx` comments (comment-only; full verify block re-run before push).
+
 **Session 135 (2026-09-27, 01:21 → 17:07 local UTC+7 — owner present throughout; five changes shipped LIVE, CBS outage
 diagnosed; wrapped on the owner's "Wrap up the session").**
 

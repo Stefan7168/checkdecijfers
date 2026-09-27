@@ -18,31 +18,28 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 135 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-27-session-136-kickoff.md](session-briefs/2026-09-27-session-136-kickoff.md).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-27 local, session 136 — owner present; verify against `git log` / Actions runs
+before trusting this). Kickoff: [session-briefs/2026-09-27-session-137-kickoff.md](session-briefs/2026-09-27-session-137-kickoff.md).**
 
-- **`main` is live and green**: last code merge `e586732b` (CI 36311096315 green incl. deploy); docs-only commits after it.
-  Prod 200. No open PRs, no worktrees. Full session log: [status-archive.md](status-archive.md) "Session 135".
-- **Session 136 (2026-09-27, owner present): CBS still down (#329), so the owner picked "shared charts match what the reader
-  sees"** (spec `docs/superpowers/specs/2026-09-27-shared-charts-match-design.md`): downloads carry the title + caption;
-  the public embed shows the author's edits and house style, following later edits; reader text goes public only when every
-  number in it is on the chart; notes stay private; 'Totaal' → 'Total' on English charts. Closes #277(b), #278, #324 gap 3.
-  LIVE @ `bcdbd405` (CI 36315795992 green incl. deploy; local block: backend 3868, web 3150, benchmark 14/14 + 6/6 + 0 fabricated).
-- **Shipped LIVE in session 135:** region-class questions ([#267](open-questions.md), ADR 054 Task 9); English refusals,
-  clarifications and chart texts from templates/name tables, no AI cost ([#332](open-questions.md), ADR 058 phases 2-3);
-  English gaps in replay/copy/proof/CSV ([#324](open-questions.md)); the sentence-final-year bug in the period check
-  ([#330](open-questions.md): hermetic template fallbacks 3 → 0).
-- **Spend:** ≈$8–9 of Haiku in session 135 (estimate) + ≈$3 in 134 — the $50 monthly roof is nearly used until it resets
-  **2026-10-01**. No live LLM runs before then unless the owner raises the limit (Console → Settings → Billing).
+- **`main` is live and green**: last code push `bcdbd405` (CI 36315795992 green incl. deploy) plus the session-136 wrap-up
+  commit (comments + docs). Prod 200. No open PRs, no worktrees. Full session log: [status-archive.md](status-archive.md)
+  "Session 136".
+- **Shipped LIVE in session 136 (owner-picked while CBS is down):** shared charts match what the reader sees (spec
+  `docs/superpowers/specs/2026-09-27-shared-charts-match-design.md`): downloads carry the title + caption; the public embed
+  shows the author's edits and house style, following later edits; reader text goes public only when every number in it is
+  on the chart; notes stay private; 'Totaal' → 'Total' on English charts. Closes [#277](open-questions.md)(b),
+  [#278](open-questions.md), [#324](open-questions.md) gap 3. No AI, no DB change.
+- **Spend:** the $50 monthly roof is nearly used until it resets **2026-10-01** (session 136 spent nothing). No live LLM runs
+  before then unless the owner raises the limit (Console → Settings → Billing).
 - **NEXT PRIORITY: regional statistics** (owner-chosen): a regional-statistics set from ONE CBS table (candidate `70072ned`),
-  design first — **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting at 16:24 local on 09-27;
-  retry at session start). Region questions now reach ADR 054, so every regional measure added answers class questions.
+  design first — **blocked by the CBS-side outage [#329](open-questions.md)** (API still resetting and the "Technische
+  storing" banner still on www.cbs.nl (curl 000) at 19:17 local on 09-27; retry at session start). If still down: next unblocked item.
 - **After 10-01 (small, owner-supervised spend):** the next live benchmark (confirms #330 live; the intermediate-dip R9 case
   stays open); #328 'Declared bankruptcies' (B9-only re-record, plan in the row).
 - **Waiting on the owner (not urgent):** #245 sub-questions, the homepage styles row (#275, on hold at the owner's
   request), own-data publishing spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
 - **Not building (measured):** #331 script matcher for the chart helper — 2 chart edits ever; trigger ≥50 requests/month.
-  Unscheduled: #277, #278, #299, #327.
+  Unscheduled, small: #327 (hygiene), #299 (all-municipalities verified whole, low value), #277(a).
 ---
 
 ## Phase 0 checklist

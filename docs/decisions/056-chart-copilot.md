@@ -135,7 +135,7 @@ history against a previous chart's leftover baseline. The redo stack is never pe
 `validateCommand` at replay is silently dropped from the *restored* history but stays in the
 *stored* row until the reader's next edit overwrites it. The journalist headline
 (`chart_headlines`, AI-drafted) is a separate flow and is deliberately not on this undo history.
-The public `/embed/[token]` page does not read `chart_edits` yet — a title/caption/hidden-series
+**(Superseded session 136 for both points below — see "As built — reader text on public surfaces".)** The public `/embed/[token]` page does not read `chart_edits` yet — a title/caption/hidden-series
 edit made signed-in is invisible on that chart's public embed (phase-3 candidate, see
 open-questions #274 addendum below). Exports (PNG/SVG/PDF) never include the reader's title,
 caption, or notes — all three render as DOM siblings outside the export container, the same
