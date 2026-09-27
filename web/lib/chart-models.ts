@@ -13,7 +13,8 @@ import { DEFAULT_PALETTE } from './chart-presentation.ts';
 import { t, type Lang, type MessageKey } from './i18n/messages.ts';
 import { lastPlottedPoint } from './chart-plotted-point.ts';
 import { BAR_LABEL_MAX } from './chart-view-state.ts';
-import { translateMeasureTitle, translatePeriodLabel, translateRegion, translateUnit } from './i18n/cbs-words.ts';
+import { translateUnit } from './i18n/cbs-words.ts';
+import { toEnglishChartSpec } from '../backend/chart/index.ts';
 import { formatValueNl } from '../backend/answer/compose/format.ts';
 import { displayDifferenceUnit, displayValueUnit } from '../backend/answer/compose/template.ts';
 import type { DerivationRecord } from '../../src/query/types.ts';
@@ -620,32 +621,31 @@ export function heatmapCellColor(intensity: number): string {
   return `color-mix(in oklch, var(--heatmap-low), var(--heatmap-high) ${Math.round(intensity * 100)}%)`;
 }
 
-/** WP218 phase 4 (#219, design §4): a verbatim-projection view of `spec` with
- * only its CBS-word DISPLAY TEXT translated (title, unit, series
- * labels/regions, period labels) — the SAME "project, never recompute"
- * contract as `windowSpec` (chart-view-state.ts): every value/
- * formattedValue/resultId/provisional/status/decimals/attribution/
- * annotations field is untouched, and 'nl' returns `spec` itself unchanged
- * (no-op fast path). Every downstream pure function (buildRows,
- * annotationMarkers, valueLabelPlan, tableModel) reads whatever spec it is
- * given verbatim, so feeding this one translated spec into all of them keeps
- * every plotted numeric token bound to a spec string exactly as before —
- * the converters never touch a value, only the label text around it.
- * `provisionalNote`/`nullNotes`/`definitionLine`/`attribution.trendHeadline`
- * are backend prose (documented limitation, design §4) and are NOT touched
- * here — they stay Dutch on an English chart. */
+/** WP218 phase 4 (#219, design §4) → ADR 058 phase 3 (#332): a
+ * verbatim-projection view of `spec` with its CBS-word DISPLAY TEXT
+ * translated — the SAME "project, never recompute" contract as `windowSpec`
+ * (chart-view-state.ts): every value/formattedValue/resultId/provisional/
+ * status/decimals/dims/regionScope field is untouched, and 'nl' returns
+ * `spec` itself unchanged (no-op fast path). Every downstream pure function
+ * (buildRows, annotationMarkers, valueLabelPlan, tableModel) reads whatever
+ * spec it is given verbatim, so feeding this one translated spec into all of
+ * them keeps every plotted numeric token bound to a spec string exactly as
+ * before — the converters never touch a value, only the label text around
+ * it.
+ *
+ * #332 (phase 3): this used to be a WEB-LOCAL, partial translation (title,
+ * unit, series labels/regions, period labels only) that left
+ * `provisionalNote`/`nullNotes`/`definitionLine`/`attribution.trendHeadline`/
+ * `dimLabels` Dutch on an English chart — a documented gap. It now delegates
+ * to the backend's `toEnglishChartSpec` (src/chart/english.ts, ADR 058 phase
+ * 3 Task 1), the ONE converter that also covers those fields plus
+ * `attributionLine` and `attribution.tableTitle`, from the same name tables
+ * this function used to call directly — so there is no second, independent
+ * translation of the same words. `toEnglishChartSpec` is itself idempotent
+ * (a WeakSet guard), so calling this twice on the same spec is safe. */
 export function translateSpecForDisplay(spec: ChartSpec, lang: Lang): ChartSpec {
   if (lang !== 'en') return spec;
-  return {
-    ...spec,
-    title: translateMeasureTitle(spec.title),
-    unit: translateUnit(spec.unit),
-    series: spec.series.map((series) => ({
-      ...series,
-      label: translateRegion(series.label),
-      points: series.points.map((point) => ({ ...point, periodLabel: translatePeriodLabel(point.periodLabel) })),
-    })),
-  };
+  return toEnglishChartSpec(spec);
 }
 
 /**

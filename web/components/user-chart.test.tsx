@@ -2082,6 +2082,32 @@ describe('UserChartView — pie / stacked / 100%-stacked (own-data verified-whol
     expectDisabledWithReason(screen.getByRole('tab', { name: 'Stacked' }), 'Available once the chart shows at least two series.');
   });
 
+  // #332 (ADR 058 phase 3, Task 2): an own-data chart's series/region labels
+  // are the READER'S OWN text (no CBS regionCode, no registry — ADR 037 H2),
+  // never CBS words, so they must never run through the CBS word-list
+  // translator regardless of interface language. 'Nederland' is chosen
+  // deliberately: it IS a real key in that translator (-> 'the Netherlands'
+  // on a CBS chart, see chart.test.tsx), so seeing it untouched here proves
+  // UserChartView never calls that translator at all, not just that this
+  // particular label happens to have no entry.
+  it('an own-data series label stays exactly as the reader typed it under LangProvider lang="en", even a name the CBS translator would rewrite', () => {
+    // Two series (so a legend renders — a single-series chart shows none,
+    // same rule as the CBS chart card) — one of them 'Nederland', a real
+    // key in the CBS word-list translator (-> 'the Netherlands' on a CBS
+    // chart, see chart.test.tsx). Seeing it untouched here proves
+    // UserChartView never calls that translator at all, not just that this
+    // particular label happens to have no entry.
+    const s = twoSeriesSpec();
+    s.series[0]!.label = 'Nederland';
+    render(
+      <LangProvider lang="en">
+        <UserChartView spec={s} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Nederland' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'the Netherlands' })).toBeNull();
+  });
+
   it('switching to Taartdiagram then Undo returns to the prior form through the existing setForm history; Redo brings the pie back', () => {
     const { container } = render(<UserChartView spec={twoSeriesOneMomentSpec()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Staaf' }));

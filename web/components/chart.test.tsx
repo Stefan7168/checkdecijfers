@@ -10,6 +10,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChartSpec } from '../backend/chart/types.ts';
 import type { ChartStyleEvent } from '../backend/chart/user-styles.ts';
 import { setChartUsageSink } from '../lib/chart-usage-client.ts';
+// #332 (ADR 058 phase 3): the SAME converter ChartView itself calls (via
+// `translateSpecForDisplay`, chart-models.ts) — used below to build the
+// EXPECTED (English-notation) digit set for a digit-scan on an English
+// render, since `toEnglishChartSpec` now also swaps `formattedValue`'s
+// notation ('5,0' -> '5.0'), not just word labels.
+import { translateSpecForDisplay } from '../lib/chart-models.ts';
 import { COMPARISON_HBAR_MAX, HBAR_MAX_HEIGHT_PX, HBAR_ROW_PX } from '../lib/chart-view-state.ts';
 import { ChartStyleProvider } from '../lib/chart-style-context.tsx';
 import { LangProvider } from '../lib/i18n/lang-provider.tsx';
@@ -3559,20 +3565,24 @@ describe('templates (ADR 043) — applying a look from the Sjablonen tab', () =>
     const dialog = screen.getByRole('dialog', { name: 'Chart style' });
     expect(within(dialog).getByText('Colours')).toBeInTheDocument();
     expect(container.textContent ?? '').not.toContain('Colours');
+    // #332: the card renders the ENGLISH display copy (English notation
+    // included, e.g. '1.5'), so the expected digit set is harvested from
+    // `translateSpecForDisplay(lineSpec, 'en')`, not the raw Dutch `lineSpec`.
+    const enSpec = translateSpecForDisplay(lineSpec, 'en');
     scanForUnboundDigits(
       dialog,
       [
-        lineSpec.title,
-        lineSpec.unit,
-        lineSpec.attributionLine,
-        lineSpec.attribution.tableId,
-        lineSpec.attribution.syncedAt,
-        lineSpec.definitionLine ?? '',
-        lineSpec.provisionalNote ?? '',
-        ...lineSpec.nullNotes,
-        ...Object.keys(lineSpec.dimLabels),
-        ...Object.values(lineSpec.dimLabels),
-        ...lineSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+        enSpec.title,
+        enSpec.unit,
+        enSpec.attributionLine,
+        enSpec.attribution.tableId,
+        enSpec.attribution.syncedAt,
+        enSpec.definitionLine ?? '',
+        enSpec.provisionalNote ?? '',
+        ...enSpec.nullNotes,
+        ...Object.keys(enSpec.dimLabels),
+        ...Object.values(enSpec.dimLabels),
+        ...enSpec.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
       ].filter(Boolean),
     );
   });
@@ -4087,7 +4097,10 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
         <ChartView spec={s} />
       </LangProvider>,
     );
-    scanForUnboundDigits(container, harvestSpecStrings(s));
+    // #332: formattedValue's own notation is now English too ('5.0'), so the
+    // expected digit set is harvested from the ENGLISH display copy, the
+    // same one the card itself renders from.
+    scanForUnboundDigits(container, harvestSpecStrings(translateSpecForDisplay(s, 'en')));
   });
 
   it('bakes the ENGLISH attribution line into the export markup, matching what the card shows', async () => {
@@ -4155,6 +4168,95 @@ describe('WP218 phase 4 — charts follow the app language, per-chart, via the C
     expect(screen.getByRole('tab', { name: 'Staaf' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Opmaak' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Consumentenvertrouwen' })).toBeInTheDocument();
+  });
+
+  // #332 (ADR 058 phase 3, Task 2): a reader's hidden-series edit is stored
+  // as `s${i}` (seriesMeta's own index key, chart-models.ts's `buildRows` —
+  // see chart-commands.ts's `seriesKeys`), never the series' own display
+  // LABEL — so a language switch, which only ever changes the LABEL text,
+  // can never desync it from what it was hiding. Proven live: hide a series
+  // while Dutch, switch the chart to English via the panel's own language
+  // select (the same control the test above uses), and check the SAME
+  // series — now under its English label — is still hidden.
+  it('a hidden series survives a live language switch — the same s${i} key hides it, only its legend label translates', async () => {
+    const s = englishWordListSpec({
+      series: [
+        ...englishWordListSpec().series,
+        {
+          label: 'Utrecht',
+          regionCode: 'PV26',
+          points: [point({ resultId: 'ut-2021', periodCode: '2021KW01', periodLabel: '2021 1e kwartaal', value: 4, formattedValue: '4,0' })],
+        },
+      ],
+    });
+    render(<ChartView spec={s} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Nederland' }));
+    expect(screen.getByRole('button', { name: 'Nederland' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Opmaak' }));
+    const languageSelect = await screen.findByRole('combobox', { name: 'Taal van de grafiek' });
+    fireEvent.change(languageSelect, { target: { value: 'en' } });
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    // 'Nederland' -> 'the Netherlands' (translateRegion); 'Utrecht' (a
+    // municipality) has no English sibling and stays as-is. Both keep their
+    // PRIOR hidden/shown state under their new label.
+    expect(screen.queryByRole('button', { name: 'Nederland' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'the Netherlands' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Utrecht' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  // #332: the fields `translateSpecForDisplay` used to leave Dutch on an
+  // English chart (documented limitation, WP218 phase 4) — provisionalNote,
+  // nullNotes, definitionLine, attribution.trendHeadline, dimLabels — now
+  // have a deterministic English form via the backend's `toEnglishChartSpec`
+  // (ADR 058 phase 3 Task 1) and show it.
+  it('an English chart shows the translated provisional note, definition line, trend headline and pinned-dimension subtitle', () => {
+    const s = englishWordListSpec({
+      provisionalNote: 'Voorlopige cijfers zijn gemarkeerd met *.',
+      definitionLine: 'Definitie: bevolking op 1 januari.',
+      dims: { Inkomen: 'INK001' },
+      dimLabels: { Inkomen: 'Besteedbaar inkomen' },
+      attribution: {
+        ...englishWordListSpec().attribution,
+        trendHeadline: 'Consumentenvertrouwen steeg gestaag sinds 2021 1e kwartaal.',
+      },
+    });
+    render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('Provisional figures are marked with *.')).toBeInTheDocument();
+    expect(screen.getByText('Definition: The population on 1 January.')).toBeInTheDocument();
+    expect(screen.getByTestId('trend-headline').textContent).toBe(
+      'Consumer confidence has risen steadily since 2021 Q1.',
+    );
+    expect(screen.queryByText('Besteedbaar inkomen')).toBeNull();
+    expect(screen.getByText('Disposable income')).toBeInTheDocument();
+  });
+
+  // #332: `humanizeNullNote`'s own reason enrichment reads a Dutch-only
+  // table (`source.nullReasonLabels`) with no English sibling — mixing it
+  // into an English note would produce a half-Dutch sentence. An English
+  // chart instead shows the backend's own plain (if less embellished)
+  // English translation of the exact Dutch template `nullNote()` (src/
+  // chart/build.ts) produces, never a mixed-language guess.
+  it('an English chart shows the plain translated null note, not the Dutch-only humanized reason', () => {
+    const s = englishWordListSpec({
+      nullNotes: ['Geen waarde voor 2021 1e kwartaal: Geheim (CBS).'],
+    });
+    const nl = render(<ChartView spec={s} />);
+    // Dutch: humanized via nullReasonLabels (never the bare template text).
+    expect(nl.container.textContent).not.toContain('Geen waarde voor 2021 1e kwartaal: Geheim (CBS).');
+    nl.unmount();
+    const en = render(
+      <LangProvider lang="en">
+        <ChartView spec={s} />
+      </LangProvider>,
+    );
+    expect(screen.getByText('No value for 2021 Q1: Geheim (CBS).')).toBeInTheDocument();
   });
 });
 
@@ -5451,7 +5553,9 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    scanForUnboundDigits(en.container, strings);
+    // #332: English notation (e.g. '3.3') needs the English digit set, not
+    // the Dutch `strings` the nl scan above used.
+    scanForUnboundDigits(en.container, harvestSpecStrings(translateSpecForDisplay(s, 'en')));
   });
 
   // Task 3 (design §C2): the frame renders no text of its own — with a
@@ -5475,7 +5579,8 @@ describe('Story mode (session 92): a code-built story under the chart', () => {
         </ChartStyleProvider>
       </LangProvider>,
     );
-    scanForUnboundDigits(en.container, strings);
+    // #332: English notation needs the English digit set.
+    scanForUnboundDigits(en.container, harvestSpecStrings(translateSpecForDisplay(s, 'en')));
   });
 
   it('only the story ring — never the panel text — enters the SVG export', () => {
@@ -5760,7 +5865,18 @@ describe('Story-stage plan Task 5 — Present button opens the Story stage', () 
     );
     fireEvent.click(screen.getByRole('button', { name: 'Insights' }));
     fireEvent.click(screen.getByRole('button', { name: 'Present' }));
-    scanBodyForUnboundDigits(strings);
+    // #332: English notation (e.g. '3.3') needs the English digit set.
+    const sEn = translateSpecForDisplay(s, 'en');
+    const stringsEn = [
+      sEn.title,
+      sEn.unit,
+      sEn.attributionLine,
+      sEn.attribution.tableId,
+      sEn.attribution.syncedAt,
+      sEn.provisionalNote ?? '',
+      ...sEn.series.flatMap((se) => se.points.flatMap((p) => [p.formattedValue ?? '', p.periodLabel])),
+    ].filter(Boolean);
+    scanBodyForUnboundDigits(stringsEn);
   });
 });
 
