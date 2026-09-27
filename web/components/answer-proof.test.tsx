@@ -252,10 +252,13 @@ describe('AnswerProof — keyboard reachability', () => {
 });
 
 // WP218 phase 4 (#219): proves the language switch reaches this surface. The
-// proof's own prose (proof.reading etc.) is backend-composed and stays Dutch
-// regardless of app language (docs/superpowers/specs/2026-09-09-language-
-// switch-design.md §1) — only the static chrome this component itself
-// authors (trigger label, headings, toggle) is asserted here.
+// proof's own prose (proof.reading, steps[].text, nullNotice, alternates[].
+// label) is backend-composed and stays Dutch regardless of app language
+// (docs/superpowers/specs/2026-09-09-language-switch-design.md §1) — the
+// static chrome this component itself authors (trigger label, headings,
+// toggle) is asserted here. open-questions #324 gap 2 (fixed this session):
+// the cell table's region/period/measure DISPLAY NAMES now also translate —
+// see the block below.
 describe('AnswerProof — en', () => {
   it('renders the English chrome under LangProvider lang="en"', () => {
     render(
@@ -267,5 +270,66 @@ describe('AnswerProof — en', () => {
     fireEvent.click(trigger);
     expect(screen.getByRole('region', { name: 'Evidence for this answer' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Technical details' })).toBeInTheDocument();
+  });
+});
+
+// open-questions #324 gap 2: `toEnglishAnswerProof` (web/lib/answer-proof.ts)
+// — a DISPLAY-only swap of the cell table's region/period/measure names,
+// never the Dutch prose (reading/steps/nullNotice/alternates) and never an
+// id/code/raw value, on either language.
+describe('AnswerProof — cell table display names (open-questions #324 gap 2)', () => {
+  function translatableProof(): AnswerProofData {
+    return fakeProof({
+      reading: 'Consumentenvertrouwen',
+      cells: [
+        fakeProofCell({
+          measureTitle: 'Consumentenvertrouwen',
+          regionLabel: 'Noord-Holland',
+          regionCode: 'PV27',
+          periodLabel: '2021 1e kwartaal',
+          periodCode: '2021KW01',
+        }),
+      ],
+    });
+  }
+
+  it('translates region/period/measure DISPLAY names under English', () => {
+    render(
+      <LangProvider lang="en">
+        <AnswerProof proof={translatableProof()} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Prove this number' }));
+    expect(screen.getByText('Consumer confidence')).toBeInTheDocument();
+    expect(screen.getByText('North Holland')).toBeInTheDocument();
+    expect(screen.getByText('2021 Q1')).toBeInTheDocument();
+    // The chrome PREFIX translates ("Reading used:", already bilingual via
+    // messages.ts) but the reading VALUE itself is backend-composed Dutch
+    // prose, untouched — same discipline as the 'en' chrome test above.
+    expect(screen.getByText('Reading used: Consumentenvertrouwen.')).toBeInTheDocument();
+  });
+
+  it('leaves every id/code/raw value verbatim in Technical details, on English too', () => {
+    render(
+      <LangProvider lang="en">
+        <AnswerProof proof={translatableProof()} />
+      </LangProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Prove this number' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Technical details' }));
+    expect(screen.getByText('PV27')).toBeInTheDocument();
+    expect(screen.getByText('2021KW01')).toBeInTheDocument();
+    expect(screen.getByText('86141NED:CPI000000:NL01:2024JJ00')).toBeInTheDocument();
+  });
+
+  it('renders the SAME Dutch names on the Dutch interface, unchanged (no LangProvider — the app default)', () => {
+    render(<AnswerProof proof={translatableProof()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Bewijs dit cijfer' }));
+    expect(screen.getByText('Consumentenvertrouwen')).toBeInTheDocument();
+    expect(screen.getByText('Noord-Holland')).toBeInTheDocument();
+    expect(screen.getByText('2021 1e kwartaal')).toBeInTheDocument();
+    expect(screen.queryByText('Consumer confidence')).toBeNull();
+    expect(screen.queryByText('North Holland')).toBeNull();
+    expect(screen.queryByText('2021 Q1')).toBeNull();
   });
 });

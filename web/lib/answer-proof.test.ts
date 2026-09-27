@@ -22,7 +22,8 @@ import type { DerivationRecord } from '../backend/query/types.ts';
 import { DERIVED_DATA_MARKING } from '../backend/query/types.ts';
 import type { ValidatedResult } from '../backend/query/types.ts';
 import { fakeAnswerResponse, fakeCell } from '../test/fake-answer.ts';
-import { buildAnswerProof } from './answer-proof.ts';
+import { buildAnswerProof, toEnglishAnswerProof } from './answer-proof.ts';
+import type { AnswerProof } from './answer-proof.ts';
 
 describe('buildAnswerProof', () => {
   /** The two-point series the direction / first_last cases share — one
@@ -657,5 +658,83 @@ describe('buildAnswerProof — a thrown error is logged, never silently swallowe
     expect(message).toBe('buildAnswerProof failed, proof panel omitted:');
     expect(typeof detail).toBe('string');
     expect(detail.length).toBeGreaterThan(0);
+  });
+});
+
+// open-questions #324 gap 2: `toEnglishAnswerProof` — a DISPLAY-only swap of
+// the cell table's region/period/measure names, exercised directly as a pure
+// function here (answer-proof.test.tsx exercises it through the component).
+describe('toEnglishAnswerProof', () => {
+  function proof(overrides: Partial<AnswerProof> = {}): AnswerProof {
+    const response = fakeAnswerResponse({
+      shape: 'single',
+      cells: [
+        fakeCell({
+          measureTitle: 'Consumentenvertrouwen',
+          regionLabel: 'Noord-Holland',
+          regionCode: 'PV27',
+          periodLabel: '2021 1e kwartaal',
+          periodCode: '2021KW01',
+        }),
+      ],
+    }) as unknown as AnswerResponse;
+    return { ...buildAnswerProof(response)!, ...overrides };
+  }
+
+  it('translates each cell\'s measureTitle/regionLabel/periodLabel, leaving every other field untouched', () => {
+    const translated = toEnglishAnswerProof(proof());
+    const cell = translated.cells[0]!;
+    expect(cell.measureTitle).toBe('Consumer confidence');
+    expect(cell.regionLabel).toBe('North Holland');
+    expect(cell.periodLabel).toBe('2021 Q1');
+    // Every id/code/raw value is byte-identical to the untranslated proof.
+    const original = proof();
+    expect(cell.resultId).toBe(original.cells[0]!.resultId);
+    expect(cell.regionCode).toBe(original.cells[0]!.regionCode);
+    expect(cell.periodCode).toBe(original.cells[0]!.periodCode);
+    expect(cell.valueText).toBe(original.cells[0]!.valueText);
+    expect(cell.status).toBe(original.cells[0]!.status);
+    // And every top-level field this fixture's own prose composed stays
+    // Dutch, untouched (the design's own "no second English narrative"
+    // scope boundary).
+    expect(translated.reading).toBe(original.reading);
+    expect(translated.steps).toEqual(original.steps);
+    expect(translated.tableTitle).toBe(original.tableTitle);
+  });
+
+  it('leaves an unseeded name unchanged (never guess)', () => {
+    const translated = toEnglishAnswerProof(
+      proof({
+        cells: [
+          {
+            ...proof().cells[0]!,
+            measureTitle: 'Een onbekende titel',
+            regionLabel: 'Een onbekend dorp',
+            periodLabel: '2024*',
+          },
+        ],
+      }),
+    );
+    expect(translated.cells[0]!.measureTitle).toBe('Een onbekende titel');
+    expect(translated.cells[0]!.regionLabel).toBe('Een onbekend dorp');
+    expect(translated.cells[0]!.periodLabel).toBe('2024*');
+  });
+
+  it('passes a region label with a disambiguating qualifier through regionLabelEn (base name AND qualifier both translate)', () => {
+    const translated = toEnglishAnswerProof(
+      proof({ cells: [{ ...proof().cells[0]!, regionLabel: 'Utrecht (gemeente)' }] }),
+    );
+    expect(translated.cells[0]!.regionLabel).toBe('Utrecht (municipality)');
+  });
+
+  it('leaves a null regionLabel null (no cell for it to name)', () => {
+    const translated = toEnglishAnswerProof(proof({ cells: [{ ...proof().cells[0]!, regionLabel: null }] }));
+    expect(translated.cells[0]!.regionLabel).toBeNull();
+  });
+
+  it('is idempotent — calling it twice is the same as calling it once', () => {
+    const once = toEnglishAnswerProof(proof());
+    const twice = toEnglishAnswerProof(once);
+    expect(twice).toEqual(once);
   });
 });

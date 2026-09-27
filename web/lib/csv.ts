@@ -37,6 +37,7 @@ import { buildAttributionLine } from '../backend/answer/compose/format.ts';
 import type { AnswerResponse } from '../backend/answer/respond/types.ts';
 import { DERIVED_DATA_MARKING, isDerivedResult } from '../backend/query/types.ts';
 import type { DerivationRecord, ResultCell } from '../backend/query/types.ts';
+import type { Lang } from './i18n/messages.ts';
 
 export interface AnswerCsv {
   filename: string;
@@ -96,6 +97,37 @@ const DERIVATION_LABEL_NL: Record<ExportableDerivation['kind'], string> = {
   max: 'hoogste waarde',
 };
 
+// open-questions #324 gap 2: column HEADERS only — every DATA value (measure
+// titles, region/period labels, units, statuses, the derivation label text
+// above) stays raw and machine-readable exactly as today, in Dutch, on
+// EITHER language (the task's own scope: "no notation change, no translated
+// codes"). Hand-written literals, not a registry lookup — these are this
+// module's OWN fixed column names, never a CBS-sourced name, so there is
+// nothing here for translateDimLabel/translateMeasureTitle etc. to look up.
+// The per-answer dynamic `dimKeys` columns (a dimension's own KEY name, e.g.
+// 'Geslacht') have no such fixed set and no registered English form of their
+// own (the registry only translates dimension VALUE labels, not KEY names —
+// src/registry/english-names.ts's DIM_LABELS) — they stay Dutch on both
+// languages, a disclosed limit, rather than guessing.
+const HEADER_EN: Readonly<Record<string, string>> = {
+  onderwerp: 'subject',
+  regio: 'region',
+  regiocode: 'region code',
+  periode: 'period',
+  periodecode: 'period code',
+  waarde: 'value',
+  eenheid: 'unit',
+  status: 'status',
+  bijzonderheid: 'remark',
+  'cel-id': 'cell ID',
+  afleiding: 'derivation',
+  'bron-cellen': 'source cells',
+};
+
+function headerRow(lang: Lang, fields: string[]): string {
+  return csvRow(lang === 'en' ? fields.map((field) => HEADER_EN[field] ?? field) : fields);
+}
+
 /** The CBS decimals the answer body displays this derivation at:
  * renderDifference/renderMax use the minuend/winner cell. Defense-in-depth
  * (adversarial review, export-honesty lens): if that exact cell is ever
@@ -116,7 +148,7 @@ function derivationDecimals(
   return null;
 }
 
-export function buildAnswerCsv(response: AnswerResponse): AnswerCsv {
+export function buildAnswerCsv(response: AnswerResponse, lang: Lang = 'nl'): AnswerCsv {
   const { result } = response;
   const derived = exportableDerivations(result.derivations);
   // R5: the marking-line decision uses the shared predicate (any derivation,
@@ -145,7 +177,8 @@ export function buildAnswerCsv(response: AnswerResponse): AnswerCsv {
   // Data table: one row per validated cell, order preserved (the result is
   // already period-ascending, then intent region order).
   const dimKeys = [...new Set(result.cells.flatMap((cell) => Object.keys(cell.dims)))].sort();
-  const header = csvRow([
+  // dimKeys stay Dutch on every language (see HEADER_EN's doc comment above).
+  const header = headerRow(lang, [
     'onderwerp',
     'regio',
     'regiocode',
@@ -180,8 +213,11 @@ export function buildAnswerCsv(response: AnswerResponse): AnswerCsv {
     const cellsById = new Map<string, ResultCell>(result.cells.map((cell) => [cell.resultId, cell]));
     lines.push(
       '',
+      // The section title stays Dutch on every language, same as the
+      // preamble above — it embeds DERIVED_DATA_MARKING, a provenance
+      // sentence, not a plain column name.
       csvRow([`Afgeleide waarden (${DERIVED_DATA_MARKING})`]),
-      csvRow(['afleiding', 'waarde', 'eenheid', 'bron-cellen']),
+      headerRow(lang, ['afleiding', 'waarde', 'eenheid', 'bron-cellen']),
       ...derived.map((derivation) =>
         csvRow([
           DERIVATION_LABEL_NL[derivation.kind],

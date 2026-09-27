@@ -321,3 +321,31 @@ describe('assembleMessages — #332 refusal/clarification English carries onto t
     expect(messages[0]!.nonAnswerEnglish).toBeNull();
   });
 });
+
+// open-questions #324 gap 2: the ONE reader-facing field this module builds
+// that is a fully pre-rendered string — the CSV export — gets its language
+// passed IN (loadMyThread, web/app/actions.ts) rather than resolved here;
+// `lang` defaults to 'nl' so every OTHER test in this file (and every other
+// call site) stays byte-identical without passing it.
+describe('assembleMessages — lang (open-questions #324 gap 2)', () => {
+  const response = fakeAnswerResponse({
+    body: 'De inflatie in 2024 was 3,3%.',
+    shape: 'single',
+    cells: [fakeCell()],
+  }) as unknown as ComposedResponse;
+
+  it('defaults to Dutch CSV headers when `lang` is omitted', async () => {
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb);
+    expect(assistantMsg!.csv!.content).toContain(
+      'onderwerp;regio;regiocode;periode;periodecode;waarde;eenheid;status;bijzonderheid;cel-id\r\n',
+    );
+  });
+
+  it("passes 'en' through to buildAnswerCsv, giving the replayed CSV English column headers", async () => {
+    const [, assistantMsg] = await assembleMessages(replayParts([row({ response })]), fakeDb, 'en');
+    expect(assistantMsg!.csv!.content).toContain(
+      'subject;region;region code;period;period code;value;unit;status;remark;cell ID\r\n',
+    );
+    expect(assistantMsg!.csv).toEqual(buildAnswerCsv(response as never, 'en'));
+  });
+});

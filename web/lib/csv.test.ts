@@ -470,3 +470,74 @@ describe('buildAnswerCsv', () => {
     );
   });
 });
+
+// open-questions #324 gap 2: column HEADERS only, on the English interface —
+// every DATA value (measure titles, region/period labels, units, statuses,
+// the derivation label text) stays raw and Dutch on EITHER language; the
+// task's own scope ("no notation change, no translated codes").
+describe('buildAnswerCsv — lang (open-questions #324 gap 2)', () => {
+  it('omitting `lang` (every pre-existing call site) is byte-identical to `lang: \'nl\'`', () => {
+    const response = fakeAnswerResponse({ shape: 'single', cells: [fakeCell()] });
+    expect(buildAnswerCsv(response)).toEqual(buildAnswerCsv(response, 'nl'));
+  });
+
+  it('translates the main table header row to English, leaving every data value Dutch', () => {
+    const response = fakeAnswerResponse({ shape: 'single', cells: [fakeCell()] });
+    const { content } = buildAnswerCsv(response, 'en');
+    expect(content).toContain(
+      'subject;region;region code;period;period code;value;unit;status;remark;cell ID\r\n' +
+        'Inflatie (CPI);;;2024;2024JJ00;3,3;%;Definitief;;86141NED:CPI000000:NL01:2024JJ00\r\n',
+    );
+    // The preamble sentence (R4/CC BY) and the "file created by" line stay
+    // Dutch on every language — they are provenance prose, not column names.
+    expect(content).toContain('Bestand aangemaakt door checkdecijfers.nl');
+  });
+
+  it('the English and Dutch files differ ONLY in the two header rows — every data row is byte-identical', () => {
+    const cells = [
+      fakeCell({
+        resultId: 'P19',
+        measureTitle: 'Bevolking',
+        regionLabel: 'Nederland',
+        regionCode: 'NL01',
+        periodCode: '2019JJ00',
+        periodLabel: '2019',
+        value: 17282163,
+        decimals: 0,
+        unit: 'aantal',
+      }),
+      fakeCell({
+        resultId: 'P24',
+        measureTitle: 'Bevolking',
+        regionLabel: 'Nederland',
+        regionCode: 'NL01',
+        periodCode: '2024JJ00',
+        periodLabel: '2024',
+        value: 17942942,
+        decimals: 0,
+        unit: 'aantal',
+      }),
+    ];
+    const response = fakeAnswerResponse({
+      shape: 'derived',
+      cells,
+      derivations: [fakeDifference()],
+      attribution: { coveredPeriods: { from: '2019JJ00', to: '2024JJ00' } },
+    });
+    const nl = buildAnswerCsv(response, 'nl').content.split('\r\n');
+    const en = buildAnswerCsv(response, 'en').content.split('\r\n');
+    expect(en.length).toBe(nl.length);
+    const headerLines = new Set([
+      'onderwerp;regio;regiocode;periode;periodecode;waarde;eenheid;status;bijzonderheid;cel-id',
+      'afleiding;waarde;eenheid;bron-cellen',
+    ]);
+    for (let i = 0; i < nl.length; i++) {
+      if (headerLines.has(nl[i]!)) continue; // the two lines allowed to differ
+      expect(en[i]).toBe(nl[i]);
+    }
+    // The derived-values header translates too; its DATA row (the derivation
+    // label itself is a value here, not a header) stays Dutch.
+    expect(en).toContain('derivation;value;unit;source cells');
+    expect(en).toContain('verschil (laatste min eerste periode);660779;aantal;P19, P24');
+  });
+});

@@ -15,6 +15,12 @@ const { currentUserId, getDb } = vi.hoisted(() => ({
 vi.mock('../lib/current-user.ts', () => ({ currentUserId }));
 vi.mock('../lib/db.ts', () => ({ getDb }));
 vi.mock('../lib/error-report.ts', () => ({ reportError: vi.fn().mockResolvedValue(undefined) }));
+// open-questions #324 gap 2: loadMyThread now reads getLang() once (to pass
+// the CSV export's language into assembleMessages) — mocked the same way
+// actions.test.ts already does, so this narrower dispatch-only file doesn't
+// hit the real cookie-reading implementation outside a request context.
+const { getLang } = vi.hoisted(() => ({ getLang: vi.fn<() => Promise<'nl' | 'en'>>().mockResolvedValue('nl') }));
+vi.mock('../lib/i18n/server.ts', () => ({ getLang }));
 
 const threads = vi.hoisted(() => ({
   validateThreadOwnership: vi.fn(),
