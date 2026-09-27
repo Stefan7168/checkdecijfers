@@ -955,6 +955,89 @@ describe('headline in exports', () => {
   });
 });
 
+// Session 136 (#278): the title and the reader's caption in exports. The
+// caller decides what may go out (chart.tsx's numbers rule); this file only
+// lays the texts out — a headline-only string call stays byte-identical.
+describe('title and caption in exports (session 136)', () => {
+  const heightOf = (markup: string): number => Number(markup.match(/^<svg[^>]*\sheight="(\d+(?:\.\d+)?)"/)![1]);
+  const yOf = (host: HTMLElement, attr: string): number[] =>
+    Array.from(host.querySelectorAll(`[${attr}]`)).map((el) => Number(el.getAttribute('y')));
+
+  it('a bare headline string and { headline } produce byte-identical markup', () => {
+    const a = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, 'Werkloosheid stijgt');
+    const b = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, { headline: 'Werkloosheid stijgt' });
+    expect(b.markup).toBe(a.markup);
+  });
+
+  it('draws the title above the chart and the caption between the chart and the source line, growing the height', () => {
+    const plain = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01');
+    const result = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, {
+      title: 'Bevolking op 1 januari',
+      caption: 'Stand op 1 januari',
+    });
+    expect(result.markup).toContain('Bevolking op 1 januari');
+    expect(result.markup).toContain('Stand op 1 januari');
+    expect(heightOf(result.markup)).toBeGreaterThan(heightOf(plain.markup));
+
+    const host = document.createElement('div');
+    host.innerHTML = result.markup;
+    const [titleY] = yOf(host, 'data-title-line');
+    const [captionY] = yOf(host, 'data-caption-line');
+    // The chart content is shifted down below the title block.
+    const shift = host.querySelector('g[transform]')!.getAttribute('transform');
+    const shiftY = Number(shift!.match(/translate\(0, (\d+)\)/)![1]);
+    expect(titleY).toBeLessThan(shiftY);
+    // The caption sits below the chart (shift + 200 tall) and above the footer.
+    const footerY = Math.max(...Array.from(host.querySelectorAll('text')).map((el) => Number(el.getAttribute('y'))));
+    expect(captionY).toBeGreaterThan(shiftY + 200);
+    expect(captionY).toBeLessThan(footerY);
+  });
+
+  it('stacks the title under the headline without overlap', () => {
+    const result = framedSvgMarkup(sampleSvg(), 'CBS · 2026-01-01', undefined, undefined, {
+      headline: 'Werkloosheid stijgt',
+      title: 'Werkloosheid',
+    });
+    const host = document.createElement('div');
+    host.innerHTML = result.markup;
+    const [headlineY] = yOf(host, 'data-headline-line');
+    const [titleY] = yOf(host, 'data-title-line');
+    expect(titleY).toBeGreaterThan(headlineY);
+    const shiftY = Number(host.querySelector('g[transform]')!.getAttribute('transform')!.match(/translate\(0, (\d+)\)/)![1]);
+    expect(titleY).toBeLessThan(shiftY);
+  });
+
+  it('the menu passes title and caption to the SVG download and shows the notice line', async () => {
+    const svg = sampleSvg();
+    const container = document.createElement('div');
+    container.appendChild(svg);
+    const ref = createRef<HTMLDivElement>();
+    (ref as { current: HTMLDivElement | null }).current = container;
+    const blobs: Blob[] = [];
+    const createObjectURL = vi.fn((b: Blob) => {
+      blobs.push(b);
+      return 'blob:x';
+    });
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    render(
+      <ChartDownloadMenu
+        containerRef={ref}
+        attributionText="CBS · 2026-01-01"
+        filenameBase="f"
+        titleText="Bevolking"
+        captionText="Mijn onderschrift"
+        notice="Je eigen titel is weggelaten."
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /download/i }));
+    expect(screen.getByTestId('chart-download-notice').textContent).toBe('Je eigen titel is weggelaten.');
+    fireEvent.click(screen.getByRole('menuitem', { name: /SVG/ }));
+    const markup = await blobs[0]!.text();
+    expect(markup).toContain('data-title-line');
+    expect(markup).toContain('Mijn onderschrift');
+  });
+});
+
 // Session 110 security review: downloadPdf re-parses attributedSvgMarkup's
 // output via `container.innerHTML = markup` (an HTML parser, not a strict
 // XML parser — see that function's own comment on why) rather than

@@ -214,10 +214,20 @@ function translateAnnotation(annotation: ChartAnnotation): ChartAnnotation {
  * flip the number notation back (the notation swap alone is not idempotent). */
 const PRODUCED = new WeakSet<ChartSpec>();
 
+/** Session 136 (#324 gap 3 leftover): the bare word 'Totaal' is deliberately
+ * NOT in the shared name table (english-names.data.ts explains why: CBS's own
+ * English differs per table, e.g. 'Total sex', and that table also feeds the
+ * answer translator's glossary, so an entry there would shift recorded LLM
+ * fixtures). On a CHART the literal 'Total' is a faithful rendering for every
+ * dimension, so this display layer maps it here and only here. */
+function translateChartDimLabel(label: string): string {
+  return label === 'Totaal' ? 'Total' : translateDimLabel(label);
+}
+
 export function toEnglishChartSpec(spec: ChartSpec): ChartSpec {
   if (PRODUCED.has(spec)) return spec;
   const dimLabels = Object.fromEntries(
-    Object.entries(spec.dimLabels).map(([k, v]) => [k, translateDimLabel(v)]),
+    Object.entries(spec.dimLabels).map(([k, v]) => [k, translateChartDimLabel(v)]),
   );
 
   const result: ChartSpec = {

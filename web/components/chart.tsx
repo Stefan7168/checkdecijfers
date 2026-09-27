@@ -116,8 +116,11 @@ import {
   CHART_TITLE_MAX_LENGTH,
   initialDocState,
   newCommandId,
+  type ChartCommand,
   type CommandContext,
 } from '../lib/chart-commands.ts';
+import { replayLog } from '../lib/chart-history.ts';
+import { publishableText } from '../lib/chart-publish.ts';
 import { resolveDerivedOverlays } from '../lib/chart-derived-overlay.ts';
 import { requestChartDerivation } from '../app/chart-derivation-actions.ts';
 // Chart co-pilot phase 5b (verified-whole, Task 4): the on-demand check that
@@ -405,6 +408,8 @@ export function ChartView({
   initialPanel,
   onAskFollowUp,
   extendsPrevious,
+  publishedLog,
+  publishedStyle,
 }: {
   spec: ChartSpec;
   /** #254: every registry-recorded ALTERNATE READING of the same answered
@@ -495,6 +500,18 @@ export function ChartView({
   /** Phase 3: this answer's chart continues the previous card in the thread
    * (same table, unit, kind, dims) — shows the "Grafiek uitgebreid" badge. */
   extendsPrevious?: boolean;
+  /** Session 136 (spec 2026-09-27-shared-charts-match): the AUTHOR's saved
+   * command log, already pruned server-side for a public surface by
+   * `prunePublishedLog` (web/lib/chart-publish.ts — no notes, placeholder
+   * labels, titles/captions only when they pass the numbers rule). Replayed
+   * once into the initial state so the public embed shows the chart as the
+   * author styled it. Only read in `embedMode`. */
+  publishedLog?: ChartCommand[];
+  /** Session 136: the author's house style (sanitised, language removed —
+   * `publishedStyle` in web/lib/chart-publish.ts), used as the base in place
+   * of the anonymous viewer's (absent) account style. Only read in
+   * `embedMode`. */
+  publishedStyle?: PresentationOverrides | null;
 }) {
   // Stage mode (Task 3, ADR 044): a single `inStage` boolean gates every
   // piece of chat-chart chrome below (one `!inStage`/`inStage` check per
@@ -541,7 +558,15 @@ export function ChartView({
     redo,
     seal: sealHistory,
     replace: replaceHistory,
-  } = useChartHistory(initialDocState(initialForm, initialPresentation));
+  } = useChartHistory(
+    embedMode && publishedLog !== undefined && publishedLog.length > 0
+      ? // Replayed against the PRIMARY spec, like every stored log (an embed
+        // republishes the primary answer). A command that no longer validates
+        // — e.g. a zoom period a live re-run no longer has — drops out here,
+        // the same as it does when the author reopens the chart.
+        replayLog(initialDocState(initialForm, initialPresentation), publishedLog, { spec, alternatesCount: alternates.length }).state
+      : initialDocState(initialForm, initialPresentation),
+  );
   // #254: WHICH reading's data the chart draws — the primary `spec` prop, or
   // one of `alternates`. Computed here, above every derivation that reads
   // series/cell VALUES, so one substitution (`viewSpec` below, plus the
@@ -1349,7 +1374,7 @@ export function ChartView({
     initial: initialDocState(initialForm, initialPresentation),
   });
 
-  const base = withAccountDefault(accountStyle);
+  const base = withAccountDefault(embedMode && publishedStyle ? publishedStyle : accountStyle);
   const resolved = resolvePresentation(
     { kind: spec.kind, form: activeForm, seriesCount: spec.series.length, hasProvisional },
     inStage ? stage.overrides : state.presentation,
@@ -1579,6 +1604,19 @@ export function ChartView({
   // shown here and the one `toEnglishChartSpec` would produce can never
   // drift apart.
   const displayAttributionLine = displayActiveSpec.attributionLine;
+  // Session 136 (#278, spec 2026-09-27-shared-charts-match): downloads carry
+  // the title and the caption. A reader-typed one goes out only when every
+  // number in it is on the chart (the numbers rule, web/lib/chart-publish.ts)
+  // — in the app it is the reader's own words, in a file it sits next to
+  // "Bron: CBS". Otherwise the standard title is used / the caption is left
+  // out, and the download menu says so in one line.
+  const exportOwnTitle = publishableText(state.title, activeSpec);
+  const exportOwnCaption = publishableText(state.caption, activeSpec);
+  const exportTitle = exportOwnTitle ?? displayActiveSpec.title;
+  const exportTextLeftOut =
+    (state.title !== null && state.title.trim() !== '' && exportOwnTitle === null) ||
+    (state.caption !== null && state.caption.trim() !== '' && exportOwnCaption === null);
+  const exportNotice = exportTextLeftOut ? t(chartLang, 'chart.download.ownTextLeftOut') : null;
 
   // WP218 (ADR 039) Phase 0: `pres` (canUseLine/activeForm/effectiveKind
   // included) is computed above, ahead of the schemaVersion guard — see the
@@ -3273,7 +3311,16 @@ export function ChartView({
   // can never be scanned as chart data or baked into a PNG/SVG export.
   // Unlike the notes it is offered in the table form too: a caption is about
   // the card, not about a clicked chart point.
-  const captionNode = !embedMode && !inStage ? (
+  // Session 136: on the public embed the author's caption shows read-only —
+  // already checked against the numbers rule on the server (prunePublishedLog),
+  // and still outside chartContainerRef like every reader-typed text.
+  const captionNode = embedMode ? (
+    state.caption !== null && state.caption.trim() !== '' ? (
+      <p data-testid="chart-caption" className="text-sm text-muted-foreground">
+        {state.caption}
+      </p>
+    ) : null
+  ) : !inStage ? (
         <ChartEditableText
           key={chartEpoch}
           value={state.caption}
@@ -4489,6 +4536,9 @@ export function ChartView({
               frame={pres}
               frameImage={frameImage}
               headlineText={chartHeadline}
+              titleText={exportTitle}
+              captionText={exportOwnCaption}
+              notice={exportNotice}
               syncedAt={activeSpec.attribution.syncedAt}
             />
             {embed ? (
@@ -4736,6 +4786,9 @@ export function ChartView({
               frame={pres}
               frameImage={frameImage}
               headlineText={chartHeadline}
+              titleText={exportTitle}
+              captionText={exportOwnCaption}
+              notice={exportNotice}
               syncedAt={activeSpec.attribution.syncedAt}
             />
             {embed ? (

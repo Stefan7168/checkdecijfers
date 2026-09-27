@@ -83,6 +83,22 @@ describe('toEnglishChartSpec', () => {
     expect(en.dims).toEqual(spec.dims);
   });
 
+  it("shows the bare dimension label 'Totaal' as 'Total' (chart display only, #324 gap 3)", () => {
+    const cells = ['2023JJ00', '2024JJ00'].map((periodCode, i) =>
+      makeCell({
+        periodCode,
+        measureTitle: 'Bevolking op 1 januari',
+        unit: 'aantal',
+        decimals: 0,
+        value: 17_811_291 + i,
+        dims: { Geslacht: 'T001038', Leeftijd: '10000' },
+        dimLabels: { Geslacht: 'Totaal mannen en vrouwen', Leeftijd: 'Totaal' },
+      }),
+    );
+    const en = toEnglishChartSpec(buildChartSpec(makeResult('series', cells))!);
+    expect(en.dimLabels).toEqual({ Geslacht: 'Total men and women', Leeftijd: 'Total' });
+  });
+
   it('translates a quarter periodLabel and formattedValue notation, keeps every id/value/code/status field identical', () => {
     const cells = [
       makeCell({ periodCode: '2012KW01', periodLabel: '2012 1e kwartaal', value: 1234.5, decimals: 1 }),

@@ -50,6 +50,15 @@ vi.mock('../../../backend/chart/embed-live.ts', () => ({ rerunLive }));
 const { getChartHeadlinePublic } = vi.hoisted(() => ({ getChartHeadlinePublic: vi.fn(async () => null as string | null) }));
 vi.mock('../../../backend/chart/headline-store.ts', () => ({ getChartHeadlinePublic }));
 
+// Session 136: the author's saved edits + house style. Default: none, so
+// every pre-existing test below renders exactly as before.
+const { getOwnChartEdits, getUserChartStyle } = vi.hoisted(() => ({
+  getOwnChartEdits: vi.fn(async () => null as unknown[] | null),
+  getUserChartStyle: vi.fn(async () => null as { style: unknown; brand: unknown; updatedAt: string } | null),
+}));
+vi.mock('../../../backend/chart/edits-store.ts', () => ({ getOwnChartEdits }));
+vi.mock('../../../backend/chart/user-styles.ts', () => ({ getUserChartStyle }));
+
 import EmbedPage, { metadata } from './page.tsx';
 
 // A full, valid ChartSpec — not the sparse shape a naive fixture would
@@ -832,5 +841,81 @@ describe('/embed/[token] — journalist headline', () => {
     getChartHeadlinePublic.mockResolvedValue(null);
     render(await EmbedPage({ params: params('tok'), searchParams: search() }));
     expect(screen.queryByTestId('chart-headline-text')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Session 136 (spec docs/superpowers/specs/2026-09-27-shared-charts-match-design.md):
+// the embed shows the chart as its AUTHOR styled it — their saved edit log,
+// pruned on the server (no notes, no typed labels, a title/caption only when
+// every number in it is on the chart).
+// ---------------------------------------------------------------------------
+describe('/embed/[token] — the author\'s edits (session 136)', () => {
+  const env = { at: '2026-09-27T00:00:00Z', source: 'panel' };
+
+  function authoredRecord() {
+    return answerRecord({ userId: 'author-1', response: { kind: 'answer', chart: chartSpec() } });
+  }
+
+  it('shows the author\'s title and caption, reading the AUTHOR\'s row', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(authoredRecord());
+    getOwnChartEdits.mockResolvedValueOnce([
+      { ...env, id: 'a', kind: 'setTitle', title: 'Mijn eigen titel' },
+      { ...env, id: 'b', kind: 'setCaption', caption: 'Stand in 2024' },
+    ]);
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(getOwnChartEdits).toHaveBeenCalledWith(expect.anything(), { kind: 'answer', id: 42 }, 'author-1');
+    expect(screen.getByRole('heading', { name: /Mijn eigen titel/ })).toBeTruthy();
+    expect(screen.getByTestId('chart-caption').textContent).toBe('Stand in 2024');
+  });
+
+  it('a title/caption with a number the chart does not show falls back, and the digit scan still holds', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    const record = authoredRecord();
+    loadAuditRecord.mockResolvedValue(record);
+    getOwnChartEdits.mockResolvedValueOnce([
+      { ...env, id: 'a', kind: 'setTitle', title: 'Bijna 50 procent' },
+      { ...env, id: 'b', kind: 'setCaption', caption: 'Was 38,5 in 2020' },
+    ]);
+    const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(container.textContent).not.toContain('Bijna 50');
+    expect(container.textContent).not.toContain('38,5');
+    expect(screen.getByRole('heading', { name: /Testreeks/ })).toBeTruthy();
+    expect(screen.queryByTestId('chart-caption')).toBeNull();
+    scanForUnboundDigits(container, [...harvestSpecStrings(chartSpec()), `Bevroren op ${record.createdAt.slice(0, 10)} ·`]);
+  });
+
+  it('never shows the author\'s notes', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(authoredRecord());
+    getOwnChartEdits.mockResolvedValueOnce([
+      {
+        ...env,
+        id: 'n',
+        kind: 'addNote',
+        note: { id: 'n1', text: 'Privé aantekening', resultId: 'r1', periodLabel: '2024', seriesLabel: 'Nederland' },
+      },
+    ]);
+    const { container } = render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(container.textContent).not.toContain('Privé aantekening');
+  });
+
+  it('an ownerless row reads no edits; a failing read still renders the chart', async () => {
+    process.env.EMBED_TOKEN_SECRET = 's3cr3t';
+    verifyEmbedToken.mockReturnValue(42);
+    loadAuditRecord.mockResolvedValue(answerRecord({ userId: null }));
+    getOwnChartEdits.mockClear();
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(getOwnChartEdits).not.toHaveBeenCalled();
+    cleanup();
+
+    loadAuditRecord.mockResolvedValue(authoredRecord());
+    getOwnChartEdits.mockRejectedValueOnce(new Error('db down'));
+    render(await EmbedPage({ params: params('42.sig'), searchParams: search() }));
+    expect(screen.getByRole('heading', { name: /Testreeks/ })).toBeTruthy();
   });
 });

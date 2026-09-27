@@ -188,3 +188,20 @@ together), `app/embed/[token]/page.test.tsx` 38/38 (unchanged — `EmbedResize` 
 is a no-op outside a real iframe, so the existing suite needed no new assertions to stay green with
 it mounted) — all green; no full suite or `next build` run in this worktree by design (the parent
 session's own verification block covers those).
+
+## As built — the embed shows the author's edits (session 136, 2026-09-27)
+
+Spec: [2026-09-27-shared-charts-match-design.md](../superpowers/specs/2026-09-27-shared-charts-match-design.md); closes
+[open-questions #277](../open-questions.md)(b). **Owner decision (2026-09-27): the embed follows the author's later
+edits.** On every request `/embed/[token]` reads the author's (`record.userId`) `chart_edits` log for this answer and
+their house style (`user_chart_styles`), and passes them to `ChartView` as `publishedLog`/`publishedStyle` (read only
+in `embedMode`). No new table: the cheapest mechanism. Accepted consequence: a later restyle, or a changed house style,
+also changes pages that already embed the chart. This deliberately differs from ADR 057's own-data publications, which
+freeze the look at publish time, because those carry personal data the author may later hide; a CBS embed carries only
+public CBS numbers. The log is pruned on the server before serialisation (`prunePublishedLog`, `web/lib/chart-publish.ts`):
+notes, the reading choice and own-data-only commands are dropped; goal-line and shaded-period labels become a digit-free
+placeholder; a title/caption survives only when every number in it is on the spec the visitor sees (the live re-run's on
+`?live=1`); a stored per-chart language is removed so `?lang=` decides. An explicit `?form=` still wins over the log's
+form. The caption renders read-only in `embedMode`. A read failure degrades to the plain chart. ADR 058's English display
+layer already covered this page before this change (checked on a stored answer); the leftover bare label `Totaal` now
+shows as `Total` on English charts (`src/chart/english.ts` only, not the answer glossary).

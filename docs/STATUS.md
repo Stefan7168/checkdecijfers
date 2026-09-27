@@ -23,6 +23,11 @@ before trusting this). Kickoff: [session-briefs/2026-09-27-session-136-kickoff.m
 
 - **`main` is live and green**: last code merge `e586732b` (CI 36311096315 green incl. deploy); docs-only commits after it.
   Prod 200. No open PRs, no worktrees. Full session log: [status-archive.md](status-archive.md) "Session 135".
+- **Session 136 (2026-09-27, owner present): CBS still down (#329), so the owner picked "shared charts match what the reader
+  sees"** (spec `docs/superpowers/specs/2026-09-27-shared-charts-match-design.md`): downloads carry the title + caption;
+  the public embed shows the author's edits and house style, following later edits; reader text goes public only when every
+  number in it is on the chart; notes stay private; 'Totaal' → 'Total' on English charts. Closes #277(b), #278, #324 gap 3.
+  Local verify block green (backend 3868, web 3150, benchmark 14/14 + 6/6 + 0 fabricated, build).
 - **Shipped LIVE in session 135:** region-class questions ([#267](open-questions.md), ADR 054 Task 9); English refusals,
   clarifications and chart texts from templates/name tables, no AI cost ([#332](open-questions.md), ADR 058 phases 2-3);
   English gaps in replay/copy/proof/CSV ([#324](open-questions.md)); the sentence-final-year bug in the period check

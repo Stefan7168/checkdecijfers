@@ -235,6 +235,32 @@ export function wrapAttributionText(text: string, maxWidth: number): string[] {
   return lines.length > 0 ? lines : [''];
 }
 
+/** Session 136 (spec 2026-09-27-shared-charts-match, #278): the texts baked
+ * into an export around the chart — the journalist headline (Task 8), the
+ * chart's title and the reader's caption. The CALLER decides what may go out
+ * (chart.tsx applies the numbers rule, web/lib/chart-publish.ts); this file
+ * only lays the texts out. A bare string is the pre-session-136 headline-only
+ * shape, kept so every existing caller and test stays byte-identical. */
+export interface ExportTexts {
+  headline?: string | null;
+  title?: string | null;
+  caption?: string | null;
+}
+
+function normalizeExportTexts(texts: ExportTexts | string | null | undefined): ExportTexts {
+  if (texts === null || texts === undefined) return {};
+  return typeof texts === 'string' ? { headline: texts } : texts;
+}
+
+/** Title line: 13px semibold, under the (15px) headline when there is one. */
+const TITLE_FONT_SIZE = 13;
+const TITLE_LINE_HEIGHT = 18;
+/** Caption: 12px regular, between the chart and the source line. */
+const CAPTION_FONT_SIZE = 12;
+const CAPTION_LINE_HEIGHT = 16;
+/** Room above the first caption line and below the last one. */
+const CAPTION_BLOCK_PADDING = 6;
+
 /** Builds the attributed chart clone (paint inlined, white bg rect + footer
  * text baked in) WITHOUT serializing it — the part of the old
  * `attributedSvgMarkup` shared by the unframed and framed paths. */
@@ -252,9 +278,11 @@ function buildAttributedClone(
   // the chart, baked into the export markup itself — same "carries proof
   // once it leaves this page" reasoning as the footer attribution, applied
   // to the headline sentence. Absent/null/empty and the export is byte-
-  // identical to before this parameter existed.
-  headlineText?: string | null,
+  // identical to before this parameter existed. Session 136: also the
+  // chart title and the reader's caption (`ExportTexts`).
+  texts?: ExportTexts | string | null,
 ): { clone: SVGSVGElement; width: number; totalHeight: number } {
+  const { headline: headlineText, title: titleText, caption: captionText } = normalizeExportTexts(texts);
   const { width, totalHeight: baseHeight } = measureSvg(svg);
   // #223: FOOTER_HEIGHT (baked into baseHeight by measureSvg) already fits
   // one line; only lines beyond the first grow the footer, so a short
@@ -282,9 +310,29 @@ function buildAttributedClone(
   const headlineExtraLines = Math.max(0, headlineLines.length - 1);
   // Finding 2: HEADLINE_LINE_HEIGHT, not FOOTER_LINE_HEIGHT — see that
   // constant's own comment.
-  const headlineHeight = headlineLines.length > 0 ? HEADLINE_TOP_MARGIN + headlineExtraLines * HEADLINE_LINE_HEIGHT : 0;
+  // Session 136: the title stacks under the headline in the same top block.
+  // With no headline its first line takes the headline's own first-line slot
+  // (y = 20, inside HEADLINE_TOP_MARGIN); every further line (a wrapped
+  // headline line or any title line) grows the block by its own line height.
+  const titleLines = titleText
+    ? wrapAttributionText(titleText, (width - FOOTER_TEXT_MARGIN_X * 2) * (FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE / TITLE_FONT_SIZE))
+    : [];
+  const titleLineHeights = titleLines.map(() => TITLE_LINE_HEIGHT);
+  const topBlockLineCount = headlineLines.length + titleLines.length;
+  const headlineHeight =
+    topBlockLineCount > 0
+      ? HEADLINE_TOP_MARGIN +
+        headlineExtraLines * HEADLINE_LINE_HEIGHT +
+        (headlineLines.length > 0 ? titleLineHeights.length : titleLineHeights.length - 1) * TITLE_LINE_HEIGHT
+      : 0;
 
-  const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT + headlineHeight;
+  // Session 136: the caption sits between the chart and the source line.
+  const captionLines = captionText
+    ? wrapAttributionText(captionText, (width - FOOTER_TEXT_MARGIN_X * 2) * (FOOTER_FONT_SIZE_FOR_HEADLINE_SCALE / CAPTION_FONT_SIZE))
+    : [];
+  const captionHeight = captionLines.length > 0 ? captionLines.length * CAPTION_LINE_HEIGHT + CAPTION_BLOCK_PADDING : 0;
+
+  const totalHeight = baseHeight + extraLines * FOOTER_LINE_HEIGHT + headlineHeight + captionHeight;
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
   // Resolve paint BEFORE adding the footer nodes, so clone and original still
@@ -363,6 +411,37 @@ function buildAttributedClone(
     text.setAttribute('font-weight', '600');
     text.setAttribute('fill', '#18181b');
     text.setAttribute('data-headline-line', 'true');
+    text.textContent = line;
+    clone.appendChild(text);
+  });
+
+  // Session 136: title lines continue the top block downward.
+  const firstTitleY = headlineLines.length > 0 ? 20 + headlineExtraLines * HEADLINE_LINE_HEIGHT + TITLE_LINE_HEIGHT : 20;
+  titleLines.forEach((line, i) => {
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', String(FOOTER_TEXT_MARGIN_X));
+    text.setAttribute('y', String(firstTitleY + i * TITLE_LINE_HEIGHT));
+    text.setAttribute('font-family', FOOTER_FONT);
+    text.setAttribute('font-size', String(TITLE_FONT_SIZE));
+    text.setAttribute('font-weight', '600');
+    text.setAttribute('fill', '#18181b');
+    text.setAttribute('data-title-line', 'true');
+    text.textContent = line;
+    clone.appendChild(text);
+  });
+
+  // Session 136: caption lines, stacked upward from just above the source
+  // line's first line — the same stack-from-the-bottom idea as the footer.
+  const footerFirstBaseline = totalHeight - 8 - (footerLines.length - 1) * FOOTER_LINE_HEIGHT;
+  captionLines.forEach((line, i) => {
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', String(FOOTER_TEXT_MARGIN_X));
+    const fromBottom = (captionLines.length - 1 - i) * CAPTION_LINE_HEIGHT;
+    text.setAttribute('y', String(footerFirstBaseline - 18 - fromBottom));
+    text.setAttribute('font-family', FOOTER_FONT);
+    text.setAttribute('font-size', String(CAPTION_FONT_SIZE));
+    text.setAttribute('fill', '#3f3f46');
+    text.setAttribute('data-caption-line', 'true');
     text.textContent = line;
     clone.appendChild(text);
   });
@@ -680,7 +759,7 @@ export function framedSvgMarkup(
   // Task 8: forwarded straight to buildAttributedClone — see its own doc
   // comment. Optional and defaults to nothing drawn, so every existing
   // caller (no headline argument) stays byte-identical.
-  headlineText?: string | null,
+  headlineText?: ExportTexts | string | null,
 ): FramedExport {
   const isFramed = frame !== undefined && !(isFramePristine(frame.values) && frame.image === null);
   // Round-2 fix: the clone's own white ground is skipped only when
@@ -717,7 +796,7 @@ export function attributedSvgMarkup(
   resolvePaint: PaintResolver = defaultResolvePaint,
   frame?: FrameExportInput,
   // Task 8: forwarded straight to framedSvgMarkup — see its own doc comment.
-  headlineText?: string | null,
+  headlineText?: ExportTexts | string | null,
 ): string {
   return framedSvgMarkup(svg, attributionText, resolvePaint, frame, headlineText).markup;
 }
@@ -737,7 +816,7 @@ function downloadSvg(
   filenameBase: string,
   onFailure: () => void,
   frame?: FrameExportInput,
-  headlineText?: string | null,
+  headlineText?: ExportTexts | string | null,
 ): void {
   try {
     const markup = attributedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
@@ -760,7 +839,7 @@ function downloadPng(
   filenameBase: string,
   onFailure: () => void,
   frame?: FrameExportInput,
-  headlineText?: string | null,
+  headlineText?: ExportTexts | string | null,
 ): void {
   const { markup, width, height, canvasFill } = framedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
   const svgUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
@@ -853,7 +932,7 @@ async function downloadPdf(
   filenameBase: string,
   onFailure: () => void,
   frame?: FrameExportInput,
-  headlineText?: string | null,
+  headlineText?: ExportTexts | string | null,
 ): Promise<void> {
   try {
     const { markup, width, height } = framedSvgMarkup(svg, attributionText, undefined, frame, headlineText);
@@ -908,6 +987,9 @@ export function ChartDownloadMenu({
   frame,
   frameImage = null,
   headlineText = null,
+  titleText = null,
+  captionText = null,
+  notice = null,
   syncedAt = null,
 }: {
   /** The element WRAPPING the chart's ResponsiveContainer — Recharts renders
@@ -932,6 +1014,14 @@ export function ChartDownloadMenu({
    * keeps today's export byte-identical, and null/undefined both mean "no
    * headline to draw". */
   headlineText?: string | null;
+  /** Session 136 (#278): the chart title and the reader's caption, drawn
+   * above and below the chart in the PNG/SVG/PDF exports (never in the bare
+   * chart-only PNG). Already cleared for export by the caller. */
+  titleText?: string | null;
+  captionText?: string | null;
+  /** Session 136: one line under the menu when the caller left the reader's
+   * own title/caption out of the export (the numbers rule). */
+  notice?: string | null;
   /** #215: the ISO timestamp used to name the "PNG, chart only (transparent)"
    * file — that export bakes in no attribution text, so the filename is how
    * it stays traceable instead (`<filenameBase>-<YYYY-MM-DD>-chart-only.png`,
@@ -941,6 +1031,7 @@ export function ChartDownloadMenu({
   syncedAt?: string | null;
 }) {
   const frameInput: FrameExportInput | undefined = frame === undefined ? undefined : { values: frame, image: frameImage };
+  const exportTexts: ExportTexts = { headline: headlineText, title: titleText, caption: captionText };
   const chartOnlyFilenameBase = `${filenameBase}${(() => {
     const date = syncDateForFilename(syncedAt);
     return date ? `-${date}` : '';
@@ -1022,12 +1113,14 @@ export function ChartDownloadMenu({
         {t(lang, 'chart.download.trigger')}
       </button>
       {open ? (
+        <div className="absolute right-0 z-10 mt-1 rounded-md border border-border bg-card shadow-sm">
         <div
           id={menuId}
           role="menu"
           aria-label={t(lang, 'chart.download.menuLabel')}
+          aria-describedby={notice ? `${menuId}-notice` : undefined}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-card py-1 shadow-sm"
+          className="whitespace-nowrap py-1"
         >
           <button
             ref={firstItemRef}
@@ -1036,7 +1129,7 @@ export function ChartDownloadMenu({
             className={MENU_ITEM_CLASS}
             onClick={() =>
               withLiveSvg((svg) =>
-                downloadPng(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+                downloadPng(svg, attributionText, filenameBase, () => setFailed(true), frameInput, exportTexts),
               )
             }
           >
@@ -1049,7 +1142,7 @@ export function ChartDownloadMenu({
             className={MENU_ITEM_CLASS}
             onClick={() =>
               withLiveSvg((svg) =>
-                downloadSvg(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+                downloadSvg(svg, attributionText, filenameBase, () => setFailed(true), frameInput, exportTexts),
               )
             }
           >
@@ -1062,7 +1155,7 @@ export function ChartDownloadMenu({
             className={MENU_ITEM_CLASS}
             onClick={() =>
               withLiveSvg((svg) =>
-                downloadPdf(svg, attributionText, filenameBase, () => setFailed(true), frameInput, headlineText),
+                downloadPdf(svg, attributionText, filenameBase, () => setFailed(true), frameInput, exportTexts),
               )
             }
           >
@@ -1077,6 +1170,12 @@ export function ChartDownloadMenu({
           >
             {t(lang, 'chart.download.pngTransparent')}
           </button>
+        </div>
+        {notice ? (
+          <p id={`${menuId}-notice`} data-testid="chart-download-notice" className="w-64 border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
+            {notice}
+          </p>
+        ) : null}
         </div>
       ) : null}
       {failed ? (

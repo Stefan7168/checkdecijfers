@@ -2331,6 +2331,12 @@ function UserChartCard({
               lang={chartLang}
               frame={pres}
               frameImage={null}
+              // Session 136 (#278): the title and caption go into the file as
+              // the reader sees them. No numbers rule here: an own-data chart's
+              // numbers are the reader's own data, not a CBS claim (the same
+              // footing ADR 057's public own-data page publishes author text on).
+              titleText={state.title ?? heading}
+              captionText={state.caption}
               syncedAt={activeSpec.provenance.capturedAt}
             />
           ) : null}

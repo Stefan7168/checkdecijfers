@@ -1,8 +1,10 @@
 // Chart co-pilot phase 1 (session 112, ADR 056), Task 5 — in-place title and
 // caption editing on the chart card. Both are the READER's own words, so both
 // go through the command history (undoable, and logged like every other edit)
-// and both render OUTSIDE the export container: an export carries CBS's own
-// measure title, never a reader's rewrite of it.
+// and both render OUTSIDE the export container. Session 136 (#278): a download
+// now carries a title and the caption as SEPARATELY drawn text lines — the
+// reader's own only when every number in it is on the chart (the numbers
+// rule, web/lib/chart-publish.ts), otherwise the spec title and no caption.
 //
 // Mock block copied verbatim from chart-history-ui.test.tsx; the fixture is
 // chart.test.tsx's own `twoSeriesLineSpec` (that file exports no fixtures).
@@ -223,5 +225,80 @@ describe('caption', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
     const svgHost = container.querySelector('.recharts-wrapper')!.closest('[data-chart-container], [data-testid="chart-container"]');
     expect(svgHost?.contains(screen.getByTestId('chart-caption'))).toBe(false);
+  });
+});
+
+describe('title and caption in downloads (session 136, #278)', () => {
+  async function downloadSvgMarkup(): Promise<string> {
+    let captured: Blob | undefined;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn((blob: Blob) => {
+      captured = blob;
+      return 'blob:mock';
+    });
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download als SVG' }));
+    const markup = await captured!.text();
+    delete (URL as unknown as Record<string, unknown>).createObjectURL;
+    delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+    return markup;
+  }
+
+  function setTitle(text: string): void {
+    fireEvent.click(screen.getByRole('button', { name: 'Titel bewerken' }));
+    const input = screen.getByPlaceholderText('Eigen titel') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+  }
+
+  function setCaption(text: string): void {
+    fireEvent.click(screen.getByRole('button', { name: 'Bijschrift toevoegen' }));
+    fireEvent.change(screen.getByPlaceholderText('Bijschrift onder de grafiek'), { target: { value: text } });
+    fireEvent.click(screen.getByRole('button', { name: 'Opslaan' }));
+  }
+
+  it('an untouched chart downloads with its standard title', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    const markup = await downloadSvgMarkup();
+    expect(markup).toMatch(/data-title-line="true"[^>]*>Testreeks</);
+    expect(markup).not.toContain('data-caption-line');
+  });
+
+  it('a reader title and caption whose numbers are on the chart go into the download, with no notice', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    setTitle('Utrecht groeit naar 55 in 2021');
+    setCaption('Eigen bewerking');
+    const markup = await downloadSvgMarkup();
+    expect(markup).toContain('Utrecht groeit naar 55 in 2021');
+    expect(markup).toContain('Eigen bewerking');
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    expect(screen.queryByTestId('chart-download-notice')).toBeNull();
+  });
+
+  it('a reader title or caption with a number the chart does not show stays out, and the menu says so', async () => {
+    render(<ChartView spec={twoSeriesLineSpec()} />);
+    setTitle('Bijna 60 procent');
+    setCaption('Was 38 in 2019');
+    const markup = await downloadSvgMarkup();
+    expect(markup).not.toContain('Bijna 60');
+    expect(markup).not.toContain('Was 38');
+    expect(markup).toMatch(/data-title-line="true"[^>]*>Testreeks</);
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }));
+    expect(screen.getByTestId('chart-download-notice').textContent).toMatch(/getal dat niet in de grafiek staat/);
+  });
+});
+
+describe('embed mode shows the published caption (session 136)', () => {
+  it('renders a published caption read-only and never an editor', () => {
+    render(
+      <ChartView
+        spec={twoSeriesLineSpec()}
+        embedMode
+        embedFooter="x"
+        publishedLog={[{ id: 'c', at: '2026-09-27T00:00:00Z', source: 'panel', kind: 'setCaption', caption: 'Eigen bewerking' }]}
+      />,
+    );
+    expect(screen.getByTestId('chart-caption')).toHaveTextContent('Eigen bewerking');
+    expect(screen.queryByRole('button', { name: 'Bijschrift bewerken' })).toBeNull();
   });
 });

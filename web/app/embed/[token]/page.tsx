@@ -59,11 +59,17 @@ import { isRedacted, loadAuditRecord } from '../../../backend/answer/audit/index
 import { verifyEmbedToken } from '../../../backend/chart/embed-token.ts';
 import { rerunLive } from '../../../backend/chart/embed-live.ts';
 import { getChartHeadlinePublic } from '../../../backend/chart/headline-store.ts';
+import { getOwnChartEdits } from '../../../backend/chart/edits-store.ts';
+import { getUserChartStyle } from '../../../backend/chart/user-styles.ts';
+import type { ChartSpec } from '../../../backend/chart/types.ts';
 import { hasProPlan, lookupUserEmail } from '../../../backend/billing/index.ts';
 import { ChartView } from '../../../components/chart.tsx';
 import { getDb } from '../../../lib/db.ts';
 import { isChartForm, isTabularForm, type ChartForm } from '../../../lib/chart-view-state.ts';
 import { isLang, type Lang } from '../../../lib/i18n/messages.ts';
+import type { ChartCommand } from '../../../lib/chart-commands.ts';
+import type { PresentationOverrides } from '../../../lib/chart-presentation.ts';
+import { prunePublishedLog, publishedStyle } from '../../../lib/chart-publish.ts';
 import { EmbedResize } from './embed-resize.tsx';
 
 // Per-request: the token names a different audit row on every request, so
@@ -122,6 +128,35 @@ export const metadata: Metadata = {
  * date itself). */
 function formatEmbedDate(iso: string, _lang: Lang): string {
   return iso.slice(0, 10);
+}
+
+/** Session 136 (spec docs/superpowers/specs/2026-09-27-shared-charts-match-design.md,
+ * owner decisions 2026-09-27): the embed shows the chart as its AUTHOR styled
+ * it, following their later edits — the author's saved edit log and house
+ * style, read on every request (no new table). Pruned HERE, on the server,
+ * before anything is serialised to the anonymous visitor's browser: no notes,
+ * no typed labels, and a title/caption only when every number in it is on
+ * `shownSpec` — the spec the visitor actually sees (the live re-run's on
+ * `?live=1`). An ownerless row has no author edits. Fails soft to "none":
+ * a read error must never cost the visitor the chart itself. */
+async function loadPublishedEdits(
+  auditId: number,
+  userId: string | null,
+  shownSpec: ChartSpec,
+): Promise<{ log: ChartCommand[] | undefined; style: PresentationOverrides | null }> {
+  if (userId === null) return { log: undefined, style: null };
+  try {
+    const [rawLog, styleRow] = await Promise.all([
+      getOwnChartEdits(getDb(), { kind: 'answer', id: auditId }, userId),
+      getUserChartStyle(getDb(), userId),
+    ]);
+    return {
+      log: prunePublishedLog(rawLog, shownSpec) ?? undefined,
+      style: styleRow === null ? null : publishedStyle(styleRow.style),
+    };
+  } catch {
+    return { log: undefined, style: null };
+  }
 }
 
 export default async function EmbedPage({
@@ -325,6 +360,8 @@ export default async function EmbedPage({
   // stored-row value, which is exactly the frozen render's own alternates —
   // correct in both of those cases since the chart being shown IS the
   // frozen one either way.
+  const published = await loadPublishedEdits(auditId, record.userId, finalSpec);
+
   const chartView = (
     <ChartView
       spec={finalSpec}
@@ -334,6 +371,8 @@ export default async function EmbedPage({
       initialFormOverride={formOverride}
       headlineText={headlineText}
       alternates={finalAlternates}
+      publishedLog={published.log}
+      publishedStyle={published.style}
     />
   );
 

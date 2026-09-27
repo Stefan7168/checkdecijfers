@@ -886,6 +886,10 @@ const nl = {
   'chart.download.pdf': 'Download als PDF',
   'chart.download.pngTransparent': 'PNG, alleen grafiek (transparant, zonder bronregel)',
   'chart.download.failed': 'Downloaden lukte niet in deze browser.',
+  // Session 136 (#278): a download carries the title and caption, but a
+  // reader-typed one only when every number in it is on the chart.
+  'chart.download.ownTextLeftOut':
+    'Je eigen titel of onderschrift noemt een getal dat niet in de grafiek staat. De download gebruikt daarom de standaardtitel en laat het onderschrift weg.',
 
   // chart-small-multiples.tsx.
   'chart.smallMultiplesGroupLabel': 'Kleine grafieken per reeks',
@@ -2174,6 +2178,8 @@ const en: Messages = {
   'chart.download.pdf': 'Download as PDF',
   'chart.download.pngTransparent': 'PNG, chart only (transparent, no source line)',
   'chart.download.failed': 'Download did not work in this browser.',
+  'chart.download.ownTextLeftOut':
+    "Your own title or caption mentions a number that isn't on the chart, so the download uses the standard title and leaves the caption out.",
 
   'chart.smallMultiplesGroupLabel': 'Small multiples per series',
   'chart.smallMultiplesPeriodSpan': 'Period {from} – {to}',

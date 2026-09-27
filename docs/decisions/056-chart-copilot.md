@@ -915,6 +915,21 @@ wave `133176aa`), **merged to `main` as `7694cf5c` (session 124, 2026-09-23) —
   could be deleted rather than tested; `user-chart.tsx`'s growth to 2574 lines, organized but a future
   extraction candidate).
 
+## As built — reader text on public surfaces (session 136, 2026-09-27)
+
+Spec: [2026-09-27-shared-charts-match-design.md](../superpowers/specs/2026-09-27-shared-charts-match-design.md). Owner
+decisions in chat, 2026-09-27. **The provenance split above is refined, not dropped:** a reader-typed title or caption
+still renders outside `chartContainerRef` in the app, unchecked. What changed: downloads (PNG/SVG/PDF) now draw a title
+and the caption as separate text lines baked into the file, and the public embed shows the author's edits. On both public
+surfaces a reader-typed title/caption goes out only when every number in it is on the chart: `unplottedDigits`
+(`src/chart/copilot/text-guard.ts`) judged against the Dutch spec and its English display form
+(`web/lib/chart-publish.ts`, `passesNumbersRule`). Otherwise the standard title is used and the caption is left out;
+the download menu says so in one line (`chart.download.ownTextLeftOut`). Notes and the typed labels of goal lines and
+shaded periods stay private everywhere (ADR 038 stands). Own-data downloads carry the reader's title/caption as typed (no
+CBS claim; the ADR 057 footing). The public embed replays the author's `chart_edits` log, pruned server-side by
+`prunePublishedLog` (notes and own-data-only commands dropped, labels replaced by a placeholder, a stored per-chart
+language removed so `?lang=` decides); see ADR 041's session-136 note.
+
 ## Revisit triggers
 
 - Logged "could not do" chat requests show demand for free arithmetic on own data → widen the derived set.
