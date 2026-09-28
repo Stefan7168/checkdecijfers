@@ -556,6 +556,68 @@ export async function diffCorrections(tx: Db, tableId: string): Promise<Correcti
   }));
 }
 
+/** fetchSlice's scope for markUnseenCellsRetained: only cells whose
+ * coordinates lie inside the requested slice are candidates. */
+export interface RetainedMarkScope {
+  measures: string[];
+  periods: string[];
+  /** Allowed region codes (the GeoDimension's members), or null when the
+   * table has no GeoDimension (region_code is then '' on every cell). */
+  regionCodes: string[] | null;
+  /** Every other requested dimension → allowed codes, matched on dims->>dim. */
+  dimsIn: Record<string, string[]>;
+}
+
+/**
+ * #154: marks cells of this table that are absent from `sync_staging` as
+ * retained — `last_seen_batch_id` = the provable prior batch that last
+ * confirmed them, or (null prior, syncTable's transition fallback) the
+ * cell's own `batch_id`. Only where still NULL, so repeated absence never
+ * creeps the date forward; the observations upsert clears it again when the
+ * cell reappears. Extracted verbatim from syncTable (no scope: every cell of
+ * the table is a candidate); fetchSlice passes a `scope` so only cells inside
+ * the re-fetched request are candidates. Must run inside the transaction that
+ * staged the rows, before upsertStagedObservations.
+ */
+export async function markUnseenCellsRetained(
+  tx: Db,
+  tableId: string,
+  provablePriorId: number | null,
+  scope?: RetainedMarkScope,
+): Promise<void> {
+  const markValueSql = provablePriorId !== null ? '$2::bigint' : 'o.batch_id';
+  const markParams: unknown[] = provablePriorId !== null ? [tableId, provablePriorId] : [tableId];
+  let scopeSql = '';
+  if (scope) {
+    const p = (value: unknown) => {
+      markParams.push(value);
+      return `$${markParams.length}`;
+    };
+    scopeSql = `
+      and o.measure = any(${p(scope.measures)}::text[])
+      and o.period_code = any(${p(scope.periods)}::text[])
+      and (${p(scope.regionCodes)}::text[] is null or o.region_code = any($${markParams.length}::text[]))
+      and not exists (
+        select 1 from jsonb_each(${p(JSON.stringify(scope.dimsIn))}::jsonb) f
+        where not coalesce(jsonb_exists(f.value, o.dims ->> f.key), false)
+      )`;
+  }
+  await tx.query(
+    `update observations o
+        set last_seen_batch_id = ${markValueSql}
+      where o.table_id = $1
+        and o.last_seen_batch_id is null
+        and not exists (
+          select 1 from sync_staging s
+          where s.measure = o.measure
+            and s.period_code = o.period_code
+            and s.region_code = o.region_code
+            and s.dims = o.dims
+        )${scopeSql}`,
+    markParams,
+  );
+}
+
 /**
  * Upserts `sync_staging` into `observations` on the natural key (table_id,
  * measure, period_code, region_code, dims), skipping unchanged cells.
@@ -607,6 +669,37 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     throw new Error(`syncTable: table "${tableId}" is not registered. Call registerTables first.`);
   }
   const registry = parseRegistryRow(registryResult.rows[0]!);
+
+  // Breadth step 2: a slice-cache table (migration 037's ingest_mode; the
+  // column is simply absent on a database without 037, which means 'full')
+  // is filled per question by fetchSlice, never by a whole-table sync. Refuse
+  // before fetching anything (and before the quarantine check, so a
+  // quarantined slice-cache table is never pointed at --rebaseline),
+  // recorded on a batch, without quarantining.
+  if (registryResult.rows[0]!.ingest_mode === 'slice_cache') {
+    const summary =
+      `Table "${tableId}" is a slice-cache table — use fetchSlice, never a whole-table sync. ` +
+      `Nothing was fetched and the table is unchanged.`;
+    const refused = await db.query(
+      `insert into ingestion_batches (table_id, outcome, finished_at, failure_stage, failure_summary)
+       values ($1, 'failed', now(), 'ingest_mode', $2) returning id`,
+      [tableId, summary],
+    );
+    return {
+      tableId,
+      batchId: Number(refused.rows[0]!.id),
+      outcome: 'failed',
+      failureStage: 'ingest_mode',
+      failureSummary: summary,
+      rowCount: 0,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsMissing: 0,
+      corrections: [],
+      rebaselined: false,
+    };
+  }
 
   if (registry.status === 'needs_review' && !options.rebaseline) {
     throw new Error(
@@ -1188,22 +1281,7 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
           [tableId],
         );
         const provablePriorId = priorBatch.rows.length > 0 ? (priorBatch.rows[0]!.id as number) : null;
-        const markValueSql = provablePriorId !== null ? '$2::bigint' : 'o.batch_id';
-        const markParams = provablePriorId !== null ? [tableId, provablePriorId] : [tableId];
-        await tx.query(
-          `update observations o
-              set last_seen_batch_id = ${markValueSql}
-            where o.table_id = $1
-              and o.last_seen_batch_id is null
-              and not exists (
-                select 1 from sync_staging s
-                where s.measure = o.measure
-                  and s.period_code = o.period_code
-                  and s.region_code = o.region_code
-                  and s.dims = o.dims
-              )`,
-          markParams,
-        );
+        await markUnseenCellsRetained(tx, tableId, provablePriorId);
       }
 
       const { rowsInserted, rowsUpdated } = await upsertStagedObservations(tx, tableId, batchId);

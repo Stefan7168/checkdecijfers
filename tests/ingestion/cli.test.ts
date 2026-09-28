@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
+import { registerSchemaOnly } from '../../src/ingestion/slice-cache.ts';
 import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
@@ -178,6 +179,53 @@ describe('#110a — sync --all targets the registered set (cbs_tables), not the 
       // matching fixture source fail their own sync, which is orthogonal to
       // this test's claim.
       void exitCode;
+    } finally {
+      await close();
+    }
+  });
+});
+
+// Breadth step 2: slice-cache tables (migration 037's ingest_mode) are filled
+// per question by fetchSlice; `sync --all` skips them, and an explicit id is
+// refused cleanly by syncTable's own guard.
+describe('breadth step 2 — sync and slice-cache tables', () => {
+  it('sync --all skips a slice-cache table (no batch, no cells) and still syncs the full tables', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    try {
+      await registerTables(db, new FixtureSource(loadDocs('82242NED')), [table('82242NED')]);
+      const reg = await registerSchemaOnly(db, new FixtureSource(loadDocs('83625NED')), '83625NED');
+      expect(reg.ok).toBe(true);
+      await fakeRegisterOtherSeeds(db, ['82242NED', '83625NED']);
+
+      const source = new FixtureSource({ '82242NED': loadDocs('82242NED'), '83625NED': loadDocs('83625NED') });
+      const { output } = await withSpies(() => runCli(['sync', '--all'], { db, source }));
+
+      expect(output).toContain('Skipped 1 slice-cache table(s)');
+      expect(output).toContain('83625NED');
+      const batches = await db.query('select count(*)::int as n from ingestion_batches where table_id = $1', ['83625NED']);
+      expect(Number(batches.rows[0]!.n)).toBe(0);
+      const cells = await db.query('select count(*)::int as n from observations where table_id = $1', ['83625NED']);
+      expect(Number(cells.rows[0]!.n)).toBe(0);
+      const synced = await db.query('select count(*)::int as n from observations where table_id = $1', ['82242NED']);
+      expect(Number(synced.rows[0]!.n)).toBeGreaterThan(0);
+    } finally {
+      await close();
+    }
+  });
+
+  it('an explicit slice-cache id fails cleanly (exit 1, the guard summary), without quarantine', async () => {
+    const { db, close }: { db: Db; close: () => Promise<void> } = await createTestDb();
+    try {
+      const source = new FixtureSource(loadDocs('83625NED'));
+      const reg = await registerSchemaOnly(db, source, '83625NED');
+      expect(reg.ok).toBe(true);
+
+      const { result: exitCode, output } = await withSpies(() => runCli(['sync', '83625NED'], { db, source }));
+
+      expect(exitCode).toBe(1);
+      expect(output).toContain('use fetchSlice, never a whole-table sync');
+      const row = (await db.query('select status, ingest_mode from cbs_tables where id = $1', ['83625NED'])).rows[0];
+      expect(row).toMatchObject({ status: 'active', ingest_mode: 'slice_cache' });
     } finally {
       await close();
     }

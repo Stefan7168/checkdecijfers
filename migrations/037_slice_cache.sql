@@ -20,7 +20,10 @@ create table slice_fetches (
   -- slice stale (ensureSlice refetches)
   cbs_modified timestamptz,
   row_count integer not null,
-  batch_id bigint references ingestion_batches(id),
+  -- on delete cascade: a slice claim without its batch has no provenance, and
+  -- eviction (src/ingestion/eviction.ts) deletes ingestion_batches before
+  -- cbs_tables — without the cascade that delete would hit this FK.
+  batch_id bigint references ingestion_batches(id) on delete cascade,
   fetched_at timestamptz not null default now(),
   unique (table_id, filter_key)
 );
@@ -31,3 +34,16 @@ create index slice_fetches_by_table on slice_fetches (table_id);
 -- rls_auto_enable mechanism locks every table in this schema automatically
 -- (same pattern as ingestion_batches and dimension_labels in migration 001,
 -- and as documented in migration 026).
+
+-- syncTable refuses a slice-cache table (a whole-table sync would bulk-ingest
+-- a table registered precisely because it is too large or wide for that) and
+-- records the refusal on its batch as failure_stage 'ingest_mode'. Extends the
+-- allowed set exactly as 022 last defined it (copied from 022, the latest
+-- redefinition of this constraint).
+alter table ingestion_batches
+  drop constraint ingestion_batches_failure_stage_check;
+alter table ingestion_batches
+  add constraint ingestion_batches_failure_stage_check
+  check (failure_stage in
+    ('fetch', 'schema_fingerprint', 'row_plausibility', 'period_parsing',
+     'dimension_mapping', 'unit_consistency', 'rebaseline_conflict', 'ingest_mode'));

@@ -157,6 +157,31 @@ describe('slice_fetches table — enforces unique(table_id, filter_key) and casc
     });
   });
 
+  it('slice_fetches cascades delete when its ingestion batch is deleted (eviction deletes batches first)', async () => {
+    await withDb(async (db) => {
+      await db.query(
+        `insert into cbs_tables (id, title, platform, expected_dimensions)
+         values ('99999TST', 'Testtabel', 'v4', '[]'::jsonb)`,
+      );
+      const batch = await db.query(
+        `insert into ingestion_batches (table_id, outcome) values ('99999TST', 'succeeded') returning id`,
+      );
+      const batchId = batch.rows[0]!.id;
+      await db.query(
+        `insert into slice_fetches (table_id, filter_key, filter, row_count, batch_id)
+         values ('99999TST', 'key1', '{"dim":"value"}'::jsonb, 100, $1)`,
+        [batchId],
+      );
+
+      // No FK error: the slice claim goes with its batch (a claim without
+      // its batch has no provenance).
+      await db.query(`delete from ingestion_batches where id = $1`, [batchId]);
+
+      const { rows } = await db.query(`select count(*) as cnt from slice_fetches where table_id = '99999TST'`);
+      expect(rows[0]!.cnt).toBe(0);
+    });
+  });
+
   it('slice_fetches allows multiple records for the same table with different filter_keys', async () => {
     await withDb(async (db) => {
       // Insert a test table

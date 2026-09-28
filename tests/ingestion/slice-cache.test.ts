@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
-import { registerTables } from '../../src/ingestion/pipeline.ts';
+import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import {
   fetchSlice,
@@ -577,7 +577,7 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
 
     it('refuses a table registered as full (the whole-table path owns it)', async () => {
       await registerTables(db, new FixtureSource(await loadDocs('83625NED')), [table('83625NED')]);
-      await refused('83625NED', HOUSE_PRICES, 'slice');
+      await refused('83625NED', HOUSE_PRICES, 'is a full-ingest table, not a slice-cache table');
     });
 
     it('refuses a measure not in the stored units', async () => {
@@ -799,6 +799,175 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
       expect(await labelCount('83625NED')).toBe(labelsBefore);
       expect(await observationRows('83625NED')).toHaveLength(0);
     });
+  });
+
+  it('a unit/decimals change during a Modified-triggered refresh -> unit_consistency, nothing written', async () => {
+    const docs = await registered('83625NED');
+    const before = await cbsTablesRow('83625NED');
+    const labelsBefore = await labelCount('83625NED');
+    const changed = structuredClone(docs);
+    (changed.properties as Record<string, unknown>).Modified = '2026-09-01T00:00:00+02:00';
+    const periods = (changed.codes as Record<string, { value: Record<string, unknown>[] }>)['Perioden']!;
+    periods.value.push({ ...periods.value[periods.value.length - 1]!, Identifier: '2026JJ00', Status: 'Voorlopig' });
+    const measure = (changed.measureCodes as { value: Record<string, unknown>[] }).value[0]!;
+    measure.Decimals = 1;
+
+    const result = await fetchSlice(db, new FixtureSource(changed), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'unit_consistency' });
+    const after = await cbsTablesRow('83625NED');
+    expect(after.status).toBe('needs_review');
+    expect(after.schema_cbs_modified).toEqual(before.schema_cbs_modified);
+    expect(after.version).toEqual(before.version);
+    expect(after.units).toEqual(before.units);
+    expect(await labelCount('83625NED')).toBe(labelsBefore);
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+  });
+
+  describe('retained cells (#154, scoped to the request)', () => {
+    function without(docs: Awaited<ReturnType<typeof loadDocs>>, regio: string, period: string) {
+      const clone = structuredClone(docs);
+      const page = clone.observationPages[0] as { value: Record<string, unknown>[] };
+      page.value = page.value.filter((r) => !(r.RegioS === regio && r.Perioden === period));
+      return clone;
+    }
+
+    async function lastSeen(regio: string, period: string) {
+      const rows = (
+        await db.query(
+          'select last_seen_batch_id from observations where table_id = $1 and region_code = $2 and period_code = $3',
+          ['83625NED', regio, period],
+        )
+      ).rows;
+      expect(rows).toHaveLength(1); // the cell is KEPT, never deleted
+      return rows[0]!.last_seen_batch_id == null ? null : Number(rows[0]!.last_seen_batch_id);
+    }
+
+    it('a cell CBS stops returning is kept and marked retained against the previous fetch; reappearance clears it', async () => {
+      const docs = await registered('83625NED');
+      const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+      if (!first.ok) throw new Error('unreachable');
+
+      const second = await fetchSlice(db, new FixtureSource(without(docs, 'NL01', '2025JJ00')), '83625NED', HOUSE_PRICES);
+      expect(second).toMatchObject({ ok: true, rowsStored: 3, missingCells: 1 });
+      expect(await lastSeen('NL01', '2025JJ00')).toBe(first.batchId);
+      for (const [regio, period] of [['NL01', '2024JJ00'], ['GM0363', '2024JJ00'], ['GM0363', '2025JJ00']] as const) {
+        expect(await lastSeen(regio, period)).toBeNull();
+      }
+
+      // Absent again: the date never creeps forward.
+      await fetchSlice(db, new FixtureSource(without(docs, 'NL01', '2025JJ00')), '83625NED', HOUSE_PRICES);
+      expect(await lastSeen('NL01', '2025JJ00')).toBe(first.batchId);
+
+      // CBS publishes it again: the retained marker is cleared.
+      const back = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+      expect(back).toMatchObject({ ok: true, rowsStored: 4 });
+      expect(await lastSeen('NL01', '2025JJ00')).toBeNull();
+    });
+
+    it('never marks cells outside the request, nor without a previous fetch of the same slice', async () => {
+      const docs = await registered('83625NED');
+      // An unrelated slice (other period) and a wider slice both store cells.
+      const other = await fetchSlice(db, new FixtureSource(docs), '83625NED', {
+        measures: ['M001534'],
+        members: { RegioS: ['NL01'] },
+        periods: ['2023JJ00'],
+      });
+      expect(other.ok).toBe(true);
+      expect((await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES)).ok).toBe(true);
+
+      // A NEW, narrower slice (no previous fetch of its own key) that CBS
+      // answers without NL01 2025JJ00: no provable prior -> nothing marked.
+      const narrow: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2025JJ00'] };
+      const gone = without(without(docs, 'NL01', '2025JJ00'), 'NL01', '2023JJ00');
+      expect(await fetchSlice(db, new FixtureSource(gone), '83625NED', narrow)).toMatchObject({ ok: true, rowsStored: 0 });
+      expect(await lastSeen('NL01', '2025JJ00')).toBeNull();
+
+      // Re-fetching the wide slice from the same docs marks ONLY its own
+      // absent cell — NL01 2023JJ00, also absent from these docs but outside
+      // this request, stays unmarked.
+      const wide = await fetchSlice(db, new FixtureSource(gone), '83625NED', HOUSE_PRICES);
+      expect(wide).toMatchObject({ ok: true, rowsStored: 3 });
+      expect(await lastSeen('NL01', '2025JJ00')).not.toBeNull();
+      expect(await lastSeen('NL01', '2023JJ00')).toBeNull();
+    });
+
+    it('scopes non-geographic dimensions through dims (85224NED)', async () => {
+      const docs = await registered('85224NED');
+      const req: SliceRequest = {
+        measures: ['T001143_2'],
+        members: { SeizoenEnWerkdagcorrectie: ['A042501'] },
+        periods: ['2025KW04', '2026KW01'],
+      };
+      const other: SliceRequest = { ...req, members: { SeizoenEnWerkdagcorrectie: ['A050903'] } };
+      const first = await fetchSlice(db, new FixtureSource(docs), '85224NED', req);
+      if (!first.ok) throw new Error('unreachable');
+      expect((await fetchSlice(db, new FixtureSource(docs), '85224NED', other)).ok).toBe(true);
+
+      // Drop 2026KW01 for BOTH corrections; refetch only `req`.
+      const clone = structuredClone(docs);
+      const page = clone.observationPages[0] as { value: Record<string, unknown>[] };
+      page.value = page.value.filter((r) => r.Perioden !== '2026KW01');
+      expect(await fetchSlice(db, new FixtureSource(clone), '85224NED', req)).toMatchObject({ ok: true, rowsStored: 1 });
+
+      const marks = (
+        await db.query(
+          `select dims ->> 'SeizoenEnWerkdagcorrectie' as corr, last_seen_batch_id
+             from observations where table_id = '85224NED' and period_code = '2026KW01' and measure = 'T001143_2'
+            order by 1`,
+        )
+      ).rows.map((r) => [r.corr, r.last_seen_batch_id == null ? null : Number(r.last_seen_batch_id)]);
+      expect(marks).toEqual([
+        ['A042501', first.batchId],
+        ['A050903', null],
+      ]);
+    });
+  });
+
+  it('a fingerprint mismatch while CBS Modified is UNCHANGED still fails loudly and quarantines', async () => {
+    const docs = await registered('83625NED');
+    const redesigned = structuredClone(docs);
+    const measures = redesigned.measureCodes as { value: Record<string, unknown>[] };
+    measures.value.push({ ...measures.value[0]!, Identifier: 'M999999' });
+
+    const result = await fetchSlice(db, new FixtureSource(redesigned), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'schema_fingerprint' });
+    expect((await cbsTablesRow('83625NED')).status).toBe('needs_review');
+    expect(await observationRows('83625NED')).toHaveLength(0);
+  });
+
+  it('CBS serving an OLDER Modified: no refresh, schema_cbs_modified never moves back, slice recorded as of the later date', async () => {
+    const docs = await registered('83625NED');
+    const before = await cbsTablesRow('83625NED');
+    const older = structuredClone(docs);
+    (older.properties as Record<string, unknown>).Modified = '2025-01-01T00:00:00+01:00';
+
+    const result = await fetchSlice(db, new FixtureSource(older), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 4 });
+    const after = await cbsTablesRow('83625NED');
+    expect(after.schema_cbs_modified).toEqual(before.schema_cbs_modified);
+    expect(after.version).toEqual(before.version);
+    const recorded = new Date((await sliceFetchRows('83625NED'))[0]!.cbs_modified as string).getTime();
+    expect(recorded).toBe(new Date('2026-02-17T00:00:00+01:00').getTime());
+  });
+
+  it('syncTable refuses a slice-cache table before fetching anything, recorded, without quarantine', async () => {
+    const docs = await registered('83625NED');
+    const { source, counter } = counting(new FixtureSource(docs));
+
+    const result = await syncTable(db, source, '83625NED');
+
+    expect(result).toMatchObject({ outcome: 'failed', failureStage: 'ingest_mode', rowCount: 0 });
+    expect(result.failureSummary).toContain('slice-cache table — use fetchSlice, never a whole-table sync');
+    expect(counter.calls).toBe(0);
+    expect(await batchRow(result.batchId)).toMatchObject({ outcome: 'failed', failure_stage: 'ingest_mode' });
+    const row = await cbsTablesRow('83625NED');
+    expect(row.status).toBe('active');
+    expect(row.last_sync_at).toBeNull();
+    expect(await observationRows('83625NED')).toHaveLength(0);
   });
 
   it('sliceFilterKey is canonical: sorted keys, sorted and de-duplicated code lists', () => {

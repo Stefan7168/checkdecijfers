@@ -21,6 +21,7 @@ import {
   fetchAllCodeLists,
   insertDimensionLabels,
   labelRowsFromCodeLists,
+  markUnseenCellsRetained,
   stageRows,
   unitsFromMeasures,
   upsertStagedObservations,
@@ -308,8 +309,10 @@ function toTime(value: unknown): number | null {
  * 4. Store, in ONE transaction under the per-table advisory lock syncTable,
  *    eviction and resolveIntent share: optional schema refresh, the
  *    observations upsert (syncTable's own staging + upsert helpers), the batch
- *    marked succeeded, and the `slice_fetches` row upserted. Never marks unseen
- *    cells retained and never touches `last_row_count` — a slice is not a full
+ *    marked succeeded, and the `slice_fetches` row upserted. Cells inside the
+ *    request that CBS no longer returns are marked retained (#154) against
+ *    the previous fetch of this same slice — never the whole table's unseen
+ *    cells — and `last_row_count` is never touched: a slice is not a full
  *    sync.
  *
  * `missingCells` = requested coordinates CBS returned no row for: a real CBS
@@ -483,6 +486,13 @@ export async function fetchSlice(
   }
   const storedModified = registry.schemaCbsModified?.getTime() ?? null;
   const refresh = storedModified === null || fetchedModified > storedModified;
+  // CBS serving an OLDER 'Modified' than the one we already hold (a lagging
+  // mirror, a rollback) never moves anything backwards: no refresh (above),
+  // and the slice is recorded as current as of the later of the two dates.
+  const sliceCbsModified =
+    storedModified !== null && storedModified > fetchedModified
+      ? registry.schemaCbsModified!.toISOString()
+      : schema.modified;
 
   const numericMeasures = schema.measures.filter((m) => m.dataType !== 'String');
   const numericCodes = numericMeasures.map((m) => m.code);
@@ -626,6 +636,30 @@ export async function fetchSlice(
 
       await stageRows(tx, staged);
       const corrections = await diffCorrections(tx, tableId);
+
+      // #154, scoped to this request: a cell inside the requested
+      // coordinates that CBS no longer returns is kept but marked retained,
+      // dated by the previous fetch of this exact slice — the provable prior
+      // that last confirmed it. No previous fetch of this filter_key → no
+      // provable prior → nothing is marked (a cell stored by an overlapping
+      // slice is not claimed by this one's history). A cell that reappears
+      // is cleared by the upsert below.
+      const prior = await tx.query('select batch_id from slice_fetches where table_id = $1 and filter_key = $2', [
+        tableId,
+        filterKey,
+      ]);
+      const priorBatchId = prior.rows[0]?.batch_id == null ? null : Number(prior.rows[0].batch_id);
+      if (priorBatchId !== null) {
+        const geoDim = schema.dimensions.find((d) => d.kind === 'GeoDimension');
+        const dimsIn: Record<string, string[]> = {};
+        for (const dim of nonTimeDims) if (dim !== geoDim?.name) dimsIn[dim] = request.members[dim]!;
+        await markUnseenCellsRetained(tx, tableId, priorBatchId, {
+          measures: request.measures,
+          periods: request.periods,
+          regionCodes: geoDim ? request.members[geoDim.name]! : null,
+          dimsIn,
+        });
+      }
       const { rowsInserted, rowsUpdated } = await upsertStagedObservations(tx, tableId, batchId);
       const rowsUnchanged = staged.length - rowsInserted - rowsUpdated;
 
@@ -657,7 +691,7 @@ export async function fetchSlice(
            row_count = excluded.row_count,
            batch_id = excluded.batch_id,
            fetched_at = now()`,
-        [tableId, filterKey, filterKey, schema.modified, staged.length, batchId],
+        [tableId, filterKey, filterKey, sliceCbsModified, staged.length, batchId],
       );
       return null;
     })
