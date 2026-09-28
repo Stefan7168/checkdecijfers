@@ -42,6 +42,16 @@ export interface CbsCode {
   /** Period status (Definitief/Voorlopig/NaderVoorlopig) — only on Perioden codes. */
   status: string | null;
   index: number | null;
+  /**
+   * CBS 'Description' — verbatim, present ONLY when non-empty after trim (so
+   * every existing parsed-code equality stays unchanged for tables that don't
+   * use it). On a Perioden code with `status: null`, some tables (70072ned)
+   * carry the publication status here as PROSE instead of a machine field
+   * ("Uitkomsten zijn voorlopig over: ...") — read by
+   * `src/ingestion/period-note-status.ts` (Task 3a, R11, #251 hook), never by
+   * anything else.
+   */
+  description?: string;
 }
 
 /**

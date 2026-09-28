@@ -1620,3 +1620,27 @@ describe('ADR 061 — measure allow-list slice (CbsSlice.measures)', () => {
     );
   });
 });
+
+describe('Task 3a — a table WITHOUT a periodNoteStatus config still fails period_parsing exactly as before', () => {
+  it('a statusless period still fails at period_parsing with the existing summary (no periodNoteStatus config on this table)', async () => {
+    const docs = clone(await loadDocs('82235NED'));
+    const periodenCodes = (docs.codes as Record<string, { value: Record<string, unknown>[] }>).Perioden;
+    const entry = periodenCodes.value[0]!;
+    entry.Status = null;
+    const observedPeriod = entry.Identifier as string;
+
+    const source = new FixtureSource(docs);
+    await registerTables(db, source, [table('82235NED')]);
+    const result = await syncTable(db, source, '82235NED');
+
+    expect(result.outcome).toBe('failed');
+    expect(result.failureStage).toBe('period_parsing');
+    expect(result.failureSummary).toContain(observedPeriod);
+    expect(result.failureSummary?.toLowerCase()).toContain('status');
+
+    const count = (
+      await db.query('select count(*)::int as n from observations where table_id = $1', ['82235NED'])
+    ).rows[0];
+    expect(count?.n).toBe(0);
+  });
+});

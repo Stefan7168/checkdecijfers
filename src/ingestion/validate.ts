@@ -229,11 +229,34 @@ export function checkPeriodParsing(
   const statusByCode = new Map<string, string | null>();
   for (const code of fetchedPeriodCodes) statusByCode.set(code.code, code.status);
 
+  // Task 3a (#251 per-cell status hook): a period whose MACHINE status is
+  // null is acceptable iff every row in that period already carries a
+  // per-cell `status` (set by the pipeline BEFORE this check runs, from
+  // either an adapter's own per-cell statuses or, for CBS, a
+  // `periodNoteStatus` prose-note reader — src/ingestion/period-note-status.ts).
+  // A statusless period with even one row lacking a per-cell status is still
+  // the loud failure below: nothing here defaults a missing status.
+  const needsPerCellCheck = new Set<string>();
+  for (const code of distinctCodes) {
+    if (statusByCode.has(code) && statusByCode.get(code) == null) needsPerCellCheck.add(code);
+  }
+  const perCellStatusOk = new Map<string, boolean>();
+  for (const code of needsPerCellCheck) perCellStatusOk.set(code, true);
+  for (const row of rows) {
+    const code = row.coordinates[periodDimensionName];
+    if (code === undefined || !needsPerCellCheck.has(code)) continue;
+    const hasStatus = typeof row.status === 'string' && row.status.trim().length > 0;
+    if (!hasStatus) perCellStatusOk.set(code, false);
+  }
+
   const unpublished: string[] = [];
   const statusless: string[] = [];
   for (const code of distinctCodes) {
-    if (!statusByCode.has(code)) unpublished.push(code);
-    else if (statusByCode.get(code) == null) statusless.push(code);
+    if (!statusByCode.has(code)) {
+      unpublished.push(code);
+    } else if (statusByCode.get(code) == null && !perCellStatusOk.get(code)) {
+      statusless.push(code);
+    }
   }
 
   if (unpublished.length > 0) {

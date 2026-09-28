@@ -8,6 +8,7 @@
 // beyond ingestion's needs (aliases, canonical defaults, period semantics) is
 // the registry work package, not this file.
 import type { CbsSlice } from '../cbs-adapter/types.ts';
+import type { PeriodNoteStatusConfig } from './period-note-status.ts';
 
 export interface Phase0Table {
   id: string;
@@ -26,6 +27,18 @@ export interface Phase0Table {
    * the phantom set still fails the drift check loudly. Without this, a fully
    * healthy full-table ingest quarantines on measures that never had data. */
   excludeMeasures?: string[];
+  /** Task 3a (regional statistics part 1): set ONLY for a table whose Perioden
+   * code list carries `Status: null` on every period and instead states
+   * provisionality in the code's `Description` free text ("Uitkomsten zijn
+   * voorlopig over: ..." / "... nader voorlopig over: ..."). When set,
+   * `syncTable` runs `parsePeriodNotes` (src/ingestion/period-note-status.ts)
+   * against the table's OWN Perioden code list and, on success, writes the
+   * per-cell status it derives onto every observation row via the #251 hook
+   * (`CbsObservationRow.status`) instead of the (absent) per-period status.
+   * Absent for every other table — byte-identical, no row gets `status`. The
+   * first (and, as of this task, only) entry to carry this is 70072ned
+   * (Task 3), NOT added here — this field is the generic mechanism only. */
+  periodNoteStatus?: PeriodNoteStatusConfig;
 }
 
 export const PHASE0_TABLES: Phase0Table[] = [

@@ -104,7 +104,15 @@ export function parseCodes(raw: unknown): CbsCode[] {
       );
     }
     const index = indexRaw === null || indexRaw === undefined ? null : indexRaw;
-    return { code, title, dimensionGroup, status, index };
+    // Task 3a: `description` is set ONLY when CBS's Description is non-empty
+    // after trim, so every existing parsed-code equality (tables that never
+    // use it) stays byte-identical.
+    const descriptionRaw = optionalString(row, 'Description');
+    const description =
+      descriptionRaw !== null && descriptionRaw.trim().length > 0 ? descriptionRaw : undefined;
+    return description !== undefined
+      ? { code, title, dimensionGroup, status, index, description }
+      : { code, title, dimensionGroup, status, index };
   });
 }
 

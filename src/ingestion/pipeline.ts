@@ -6,6 +6,7 @@ import type { Db } from '../db/types.ts';
 import { eurostatDoiFor, verifyEurostatDoi } from '../eurostat-adapter/doi.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import { allowListedMeasures, missingAllowListedCodes } from './measure-allow-list.ts';
+import { parsePeriodNotes } from './period-note-status.ts';
 import { parsePeriodCode } from './periods.ts';
 import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
 import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
@@ -559,6 +560,68 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
       corrections: [],
       rebaselined,
     };
+  }
+
+  // Task 3a: a table whose Perioden statuses are stated in PROSE rather than
+  // a machine `Status` field (70072ned is the first, Task 3) gets its
+  // per-cell status derived here — BEFORE stage 3 (checkPeriodParsing) reads
+  // it via the #251 hook (`CbsObservationRow.status`). Tables without this
+  // config are untouched: byte-identical, no row gets `status`.
+  const periodNoteConfig = SEED_TABLES.find((t) => t.id === tableId)?.periodNoteStatus;
+  if (periodNoteConfig) {
+    const periodDimName = periodDim?.name ?? 'Perioden';
+
+    // CBS's own caveat, which this reader deliberately does NOT parse: a
+    // TOPIC note (a served measure's own Description) can also mark a
+    // measure provisional, separately from the PERIOD note above. Refusing
+    // rather than risking a Definitief mislabel (principle (c)).
+    const topicNoted = servedMeasures.find((m) => m.description.toLowerCase().includes('voorlopig'));
+    if (topicNoted) {
+      const summary =
+        `Measure "${topicNoted.code}"'s CBS description mentions "voorlopig" — a TOPIC note can also mark a ` +
+        `measure provisional, and this reader only reads PERIOD notes; refusing rather than mislabeling it Definitief.`;
+      await failBatch(db, batchId, tableId, 'period_parsing', summary, observationRows.length, fingerprint, true);
+      return {
+        tableId,
+        batchId,
+        outcome: 'failed',
+        failureStage: 'period_parsing',
+        failureSummary: summary,
+        rowCount: observationRows.length,
+        rowsInserted: 0,
+        rowsUpdated: 0,
+        rowsUnchanged: 0,
+        rowsMissing: 0,
+        corrections: [],
+        rebaselined,
+      };
+    }
+
+    const notes = parsePeriodNotes(
+      codeLists[periodDimName] ?? [],
+      periodNoteConfig,
+      servedMeasures.map((m) => m.code),
+    );
+    if (!notes.ok) {
+      await failBatch(db, batchId, tableId, 'period_parsing', notes.summary, observationRows.length, fingerprint, true);
+      return {
+        tableId,
+        batchId,
+        outcome: 'failed',
+        failureStage: 'period_parsing',
+        failureSummary: notes.summary,
+        rowCount: observationRows.length,
+        rowsInserted: 0,
+        rowsUpdated: 0,
+        rowsUnchanged: 0,
+        rowsMissing: 0,
+        corrections: [],
+        rebaselined,
+      };
+    }
+    for (const obsRow of observationRows) {
+      obsRow.status = notes.statusOf(obsRow.coordinates[periodDimName] ?? '', obsRow.measure);
+    }
   }
 
   const stage3 = checkPeriodParsing(
