@@ -34,7 +34,9 @@
 -- Plain Postgres only (ADR 009).
 alter table cbs_tables
   add column ingest_mode text not null default 'full'
-    check (ingest_mode in ('full', 'slice_cache'));
+    check (ingest_mode in ('full', 'slice_cache')),
+  -- slice-cache tables only: CBS 'Modified' of the schema + code lists we hold
+  add column schema_cbs_modified timestamptz;
 
 create table slice_fetches (
   id bigint generated always as identity primary key,
@@ -124,7 +126,13 @@ export function sliceFilterKey(req: SliceRequest): string; // canonical JSON: so
 
 Behaviour (tests on the same fixtures):
 - `request` refusals BEFORE any network call: table not `slice_cache`; a measure not in stored `units`; a dimension missing from `members` or not a stored dimension; any code not in that dimension's stored `dimension_labels`; a period not in stored period labels; the product of list sizes over **2,000 cells** (the cap; name it `SLICE_MAX_CELLS`).
-- Freshness/schema: fetch CBS `Modified`; if it differs from the stored value (keep it on `cbs_tables` — add nothing new: store it in `slice_fetches.cbs_modified` and compare against the table's latest fetch, or re-fetch the schema whenever `Modified` moved), re-fetch the schema and compare the fingerprint over numeric measures; mismatch → `schema_fingerprint` failure + quarantine (`needs_review`), exactly like `syncTable`'s stage 1.
+- Freshness/schema: fetch CBS `Modified`. If it is newer than `cbs_tables.schema_cbs_modified` (set by
+  `registerSchemaOnly`), refresh the schema first: re-fetch schema + code lists, compare the fingerprint over numeric
+  measures — mismatch → `schema_fingerprint` failure + quarantine (`needs_review`), exactly like `syncTable`'s stage 1;
+  match → replace this table's `dimension_labels` with CBS's current code lists (new periods and members are CBS's
+  normal lifecycle for a slice cache; the curated whole-table path keeps its reviewed-acceptance rule) and update
+  `units` + `schema_cbs_modified`, in one transaction. Add a test: a fixture clone with a newer `Modified` and one extra
+  period code → the refresh accepts it and a slice for that period can be fetched.
 - Fetch via `source.fetchObservations(tableId, { measures, dimensionIn: members, periodIn: { dimension: <time dim>, codes: periods } }, dimensionNames)`.
 - Validate with the EXISTING check functions where they apply (reuse from validate.ts, never copy): duplicate cells and reason-less nulls and string values (the `row_plausibility` pieces — call a new exported helper extracted from `checkRowPlausibility` WITHOUT the row-count-tolerance and every-measure-present parts, and keep `checkRowPlausibility`'s own behaviour byte-identical), `checkPeriodParsing`, `checkDimensionMapping` (against stored labels, `acceptNewCodes = false`), `checkUnitConsistency` (fetched measure metadata vs stored units). Any failure → batch `failed` with that stage and summary; a mapping/unit/fingerprint failure quarantines the table; nothing is written to `observations`.
 - Store: upsert the rows into `observations` with the SAME column derivation `syncTable` uses (extract the row-staging logic into a shared helper rather than duplicating it) and the same upsert conflict target, but WITHOUT the "mark unseen cells as retained" step (a slice is not a full sync). Record an `ingestion_batches` row (succeeded, counts) and upsert `slice_fetches (table_id, filter_key)` with `row_count`, `batch_id`, `cbs_modified`. All in one transaction under the same per-table advisory lock `syncTable` takes.
