@@ -138,6 +138,20 @@ describe('namedFromParse', () => {
     );
   });
 
+  it("throws on a 'geen' parse (measureCode null) — the caller must refuse BEFORE any breakdown handling", () => {
+    const { input, fullDims } = emissiesInput('Hoeveel mensen werkten er in de klimaatsector?');
+    const result: TableParseResult = {
+      ...baseResult({
+        EmissiesNaarLucht: { kind: 'not_named' },
+        Klimaatsectoren: { kind: 'not_named' },
+      }),
+      measureCode: null,
+    };
+    expect(() => namedFromParse(result, input, fullDims)).toThrow(
+      /measureCode is null \('geen'\)/,
+    );
+  });
+
   it('throws when the result is missing a choice for an offered dimension (internal consistency)', () => {
     const { input, fullDims } = emissiesInput('Wat was de uitstoot van CO2?');
     const result = baseResult({

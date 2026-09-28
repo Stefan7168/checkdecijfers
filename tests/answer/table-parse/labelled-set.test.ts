@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { CbsCode, CbsTableSchema } from '../../../src/cbs-adapter/types.ts';
 import { buildTableParseSchema } from '../../../src/answer/table-parse/input.ts';
+import { findGrandTotal } from '../../../src/query/breakdowns.ts';
 import {
   buildDryRunRows,
   loadLabelledSet,
@@ -119,11 +120,15 @@ describe('tableparse-labelled-set.json — integrity', () => {
     const andersCount = set.cases.filter((c) => Object.values(c.expect.breakdowns).includes('anders')).length;
     const regionCount = set.cases.filter((c) => c.expect.regions.length > 0).length;
     const grainCases = set.cases.filter((c) => c.id.startsWith('grain-'));
+    const totalCases = set.cases.filter((c) => c.id.startsWith('total-'));
+    const nototalCases = set.cases.filter((c) => c.id.startsWith('nototal-'));
 
     expect(geenCount).toBeGreaterThanOrEqual(4);
     expect(andersCount).toBeGreaterThanOrEqual(3);
     expect(regionCount).toBeGreaterThanOrEqual(2);
     expect(grainCases.length).toBeGreaterThanOrEqual(2);
+    expect(totalCases.length).toBeGreaterThanOrEqual(4);
+    expect(nototalCases.length).toBeGreaterThanOrEqual(3);
 
     // period-grain-unavailable: the case's asked grain must genuinely be
     // ABSENT from that table's own periodGrains, or the case doesn't
@@ -135,6 +140,38 @@ describe('tableparse-labelled-set.json — integrity', () => {
       const grain = grainOf[c.expect.periodKind];
       expect(grain).toBeDefined();
       expect(input.periodGrains).not.toContain(grain);
+    }
+
+    // niet_genoemd → falls to a real total: at least one of the case's
+    // niet_genoemd dimensions must have a GENUINE grand total
+    // (findGrandTotal non-null over the dimension's FULL code list), or the
+    // case doesn't actually test the "falls to total" path its id claims.
+    for (const c of totalCases) {
+      const { codeLists } = loadTableFixture(c.table);
+      const niet_genoemdDims = Object.entries(c.expect.breakdowns)
+        .filter(([, choice]) => choice === 'niet_genoemd')
+        .map(([dim]) => dim);
+      const hasRealTotal = niet_genoemdDims.some((dim) => {
+        const members = (codeLists[dim] ?? []).map((code) => ({ code: code.code, title: code.title }));
+        return findGrandTotal(members) !== null;
+      });
+      expect(hasRealTotal).toBe(true);
+    }
+
+    // two-totals / no-total dimension: at least one of the case's
+    // niet_genoemd dimensions must have NO resolvable grand total
+    // (findGrandTotal null over the dimension's FULL code list), or the case
+    // doesn't actually test the no-total path its id claims.
+    for (const c of nototalCases) {
+      const { codeLists } = loadTableFixture(c.table);
+      const niet_genoemdDims = Object.entries(c.expect.breakdowns)
+        .filter(([, choice]) => choice === 'niet_genoemd')
+        .map(([dim]) => dim);
+      const hasNoTotal = niet_genoemdDims.some((dim) => {
+        const members = (codeLists[dim] ?? []).map((code) => ({ code: code.code, title: code.title }));
+        return findGrandTotal(members) === null;
+      });
+      expect(hasNoTotal).toBe(true);
     }
   });
 });

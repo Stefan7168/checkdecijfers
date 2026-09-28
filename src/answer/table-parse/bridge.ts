@@ -32,6 +32,19 @@
 //                  so a second 'other' dimension elsewhere in the same parse
 //                  is simply never reached this call — a later call (after
 //                  the reader answers) resolves it in turn.
+//
+// Fix round 1 (task review, controller ruling): `parse.measureCode === null`
+// ('geen' — no measure in the table answers the question) is NOT this
+// module's concern at all. A refused measure must be handled by the CALLER
+// (step 5) before it ever reaches namedFromParse — turning a 'geen' parse
+// into a breakdown question would silently imply a measure exists and is
+// just waiting on a dimension answer, which is false and would eventually
+// produce a number for a question the table cannot actually answer
+// (principle c: refuse, never guess/imply). This function therefore throws a
+// plain Error on `measureCode === null`, the same "internal inconsistency,
+// not reader ambiguity" treatment as its other invariant violations — a
+// caller that reaches here with a 'geen' parse has a bug, not a design
+// question to route through step 3.
 import type { BreakdownDimension } from '../../query/breakdowns.ts';
 import type { TableParseSchema } from './input.ts';
 import type { TableParseResult } from './parse.ts';
@@ -42,16 +55,24 @@ export type NamedFromParseResult =
 
 /**
  * Turns a validated table-scoped parse into step 3's `named` input. Throws
- * only on an internal inconsistency (a 'member' choice whose code is not
- * found in `fullDims`'s own list for that dimension) — never on ordinary
- * reader ambiguity, which is what 'other' (-> ask) and the resolver's own
- * no-total-ask path are for.
+ * only on an internal inconsistency — a 'geen' parse (`measureCode === null`,
+ * see the module doc comment above) reaching this function at all, or a
+ * 'member' choice whose code is not found in `fullDims`'s own list for that
+ * dimension — never on ordinary reader ambiguity, which is what 'other'
+ * (-> ask) and the resolver's own no-total-ask path are for.
  */
 export function namedFromParse(
   parse: TableParseResult,
   input: TableParseSchema,
   fullDims: BreakdownDimension[],
 ): NamedFromParseResult {
+  if (parse.measureCode === null) {
+    throw new Error(
+      "namedFromParse: parse.measureCode is null ('geen') — a refused measure must be handled by the " +
+        'caller BEFORE any breakdown handling; a geen parse must never be turned into a breakdown question',
+    );
+  }
+
   const fullByName = new Map(fullDims.map((d) => [d.name, d]));
   const named: Record<string, string> = {};
 
