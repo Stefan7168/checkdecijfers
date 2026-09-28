@@ -406,6 +406,24 @@ async function checkTable(
     // The flag is VERIFIED, not trusted (post-build review): a table whose
     // adapter actually yields observation rows may not dodge the row-level
     // families by declaring itself schemaOnly.
+    //
+    // ADR 061 final-review fix: 70072ned is a second, DIFFERENT use of this
+    // escape hatch. Its fixture is a real, data-carrying capture (26,675
+    // rows over its 12-code measure allow-list) — but this harness has no
+    // measure allow-list and no period-note reader (`src/ingestion/
+    // period-note-status.ts`), so a full (non-schemaOnly) entry cannot pass:
+    // it would try to validate every one of CBS's 248 measure codes against
+    // this table's 12-code registered slice, and every period fails
+    // `checkPeriodParsing` because this table's Perioden entries carry no
+    // machine status at all (R11 status comes from CBS's PROSE period notes
+    // instead, which only `syncTable` reads). Its manifest entry therefore
+    // pairs `schemaOnly: true` with a `slice.periodFloor` set past the
+    // fixture's last captured period (2026JJ00), so the verification above
+    // sees zero rows and only the row-free F0/F4/F5 families run. Full-row
+    // conformance not applicable: the harness does not apply the ADR 061
+    // measure allow-list or period-note status; the full sync of this
+    // fixture is covered by tests/ingestion/ingestion.test.ts (ADR 061
+    // describe).
     let observed = 0;
     for await (const page of adapter.fetchObservations(id, spec.slice)) observed += page.length;
     if (observed > 0) {

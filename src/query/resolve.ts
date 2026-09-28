@@ -558,8 +558,11 @@ export async function resolveIntent(
       // toggle, over the SAME table its primary canonical reading already
       // resolved — see the comment at its call site), and every curated
       // chart definition resolves to a table from the hand-curated pinned
-      // seed set (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`, pinned by
-      // migration `025_table_eviction_lifecycle.sql`), which eviction.ts's own WHERE
+      // seed set (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`) — pinned by
+      // migration `025_table_eviction_lifecycle.sql` for every seed present when it
+      // ran, and by the ingestion CLI at registration time for a seed added
+      // after it (e.g. 70072ned, ADR 061; see SEEDS_ADDED_AFTER_025 in
+      // tests/ingestion/eviction.test.ts) — which eviction.ts's own WHERE
       // clause exempts by construction (`cbs_tables.pinned = false`) — so an
       // explicit target can structurally never race an eviction at all
       // today, and this branch's table_not_registered is never actually

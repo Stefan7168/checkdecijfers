@@ -569,6 +569,49 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   // config are untouched: byte-identical, no row gets `status`.
   const periodNoteConfig = SEED_TABLES.find((t) => t.id === tableId)?.periodNoteStatus;
   if (periodNoteConfig) {
+    // Final-review fix (ADR 061): the periodNoteStatus map above was reviewed
+    // against the SEED's OWN measure allow-list (Phase0Table.slice.measures) —
+    // not against whatever slice this table happens to be registered with
+    // right now. A re-registration with a wider or merely different slice
+    // could silently store an unreviewed figure as Definitief. Refuse before
+    // ANY row gets a status unless the registered slice serves EXACTLY the
+    // seed's set (principle (c): never guess).
+    const seedEntry = SEED_TABLES.find((t) => t.id === tableId);
+    const seedMeasures = new Set(seedEntry?.slice?.measures ?? []);
+    const registryMeasures = new Set(registry.slice?.measures ?? []);
+    const slicesMatch =
+      seedMeasures.size === registryMeasures.size && [...seedMeasures].every((m) => registryMeasures.has(m));
+    if (!slicesMatch) {
+      const missingFromRegistration = [...seedMeasures].filter((m) => !registryMeasures.has(m)).slice(0, 10);
+      const extraInRegistration = [...registryMeasures].filter((m) => !seedMeasures.has(m)).slice(0, 10);
+      const differences = [
+        missingFromRegistration.length > 0
+          ? `missing from the registered slice: ${missingFromRegistration.join(', ')}`
+          : null,
+        extraInRegistration.length > 0 ? `extra in the registered slice: ${extraInRegistration.join(', ')}` : null,
+      ].filter((s): s is string => s !== null);
+      const summary =
+        `This table's period-note status map was reviewed for the seed's measure allow-list ` +
+        `(${seedMeasures.size} codes), but the registered slice serves a different set ` +
+        `(${differences.join('; ')}). Refusing, because an unreviewed figure could be stored as final. ` +
+        `Re-register the table with the seed's slice.`;
+      await failBatch(db, batchId, tableId, 'period_parsing', summary, observationRows.length, fingerprint, true);
+      return {
+        tableId,
+        batchId,
+        outcome: 'failed',
+        failureStage: 'period_parsing',
+        failureSummary: summary,
+        rowCount: observationRows.length,
+        rowsInserted: 0,
+        rowsUpdated: 0,
+        rowsUnchanged: 0,
+        rowsMissing: 0,
+        corrections: [],
+        rebaselined,
+      };
+    }
+
     const periodDimName = periodDim?.name ?? 'Perioden';
 
     // CBS's own caveat, which this reader deliberately does NOT parse: a
@@ -745,12 +788,17 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     // A period without a status fails at stage 3 — never defaulted here
     // (R11: status is required; principle (c): never guess).
     //
-    // #251 (session 109): the OPTIONAL per-CELL override. CBS's adapter never
-    // sets `row.status` (its statuses are per-PERIOD by construction), so for
-    // every CBS row `override` is undefined and this falls through to the
-    // unchanged `periodStatusByCode` lookup below — byte-identical, pinned by
-    // test. A source whose statuses really are per cell (Eurostat's JSON-stat
-    // flags, ADR 048 D6 + its #251 addendum) supplies them here instead.
+    // #251 (session 109): the OPTIONAL per-CELL override. CBS's own adapter
+    // never sets `row.status` from a machine per-period status (its statuses
+    // are per-PERIOD by construction), so for an ordinary CBS row `override`
+    // is undefined and this falls through to the unchanged
+    // `periodStatusByCode` lookup below — byte-identical, pinned by test. Two
+    // things now DO set `row.status` before this point: a source whose
+    // statuses really are per cell (Eurostat's JSON-stat flags, ADR 048 D6 +
+    // its #251 addendum), and, since ADR 061 (Task 3a), the period-note reader
+    // above for a table whose Perioden code list has no machine status at all
+    // (`Phase0Table.periodNoteStatus`, e.g. 70072ned) — both supply it here
+    // instead of leaving every row to fall through to the period lookup.
     const override = row.status;
     if (override !== undefined && override.trim().length === 0) {
       // Setting the field but leaving it blank is an adapter authoring bug,

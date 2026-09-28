@@ -309,8 +309,11 @@ export function periodStepsBack(p: ParsedPeriod, steps: number): ParsedPeriod {
 // that ever constructs an `explicit` target, and `primary.attribution.tableId`
 // here is always a table a curated chart definition's CANONICAL key already
 // resolved to — i.e. always one of the hand-curated, pinned seed tables
-// (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`, pinned by migration
-// `025_table_eviction_lifecycle.sql`), never an on-demand-onboarded
+// (`src/ingestion/registry-seed.ts`'s `SEED_TABLES`) — pinned by migration
+// `025_table_eviction_lifecycle.sql` for every seed present when it ran, and
+// by the ingestion CLI at registration time for a seed added after it (e.g.
+// 70072ned, ADR 061; see SEEDS_ADDED_AFTER_025 in
+// tests/ingestion/eviction.test.ts) — never an on-demand-onboarded
 // (evictable) one.
 // src/query/resolve.ts's explicit-target branch relies on exactly this: an
 // eviction race on an explicit target still refuses `table_not_registered`

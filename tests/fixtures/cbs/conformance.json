@@ -3,6 +3,7 @@
   "tables": [
     { "tableId": "03759ned" },
     { "tableId": "37789ksz" },
+    { "tableId": "70072ned", "schemaOnly": true, "slice": { "periodFloor": "2027JJ00" } },
     { "tableId": "80416ned", "schemaOnly": true },
     { "tableId": "80590ned" },
     { "tableId": "82235NED" },

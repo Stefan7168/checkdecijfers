@@ -1688,6 +1688,55 @@ describe('ADR 061 — measure allow-list slice (CbsSlice.measures)', () => {
     const obs = await db.query('select count(*)::int as n from observations where table_id = $1', ['70072ned']);
     expect(obs.rows[0]!.n).toBe(0);
   });
+
+  it('final-review fix: a registered slice narrower than the seed periodNoteStatus was reviewed against refuses at period_parsing, before any row gets a status', async () => {
+    const seed = SEED_TABLES.find((t) => t.id === '70072ned');
+    if (!seed?.slice?.measures) throw new Error('70072ned seed with a measure allow-list expected');
+    // Register with only the first 11 of the seed's 12 codes — FixtureSource
+    // filters rows by the slice passed at fetch time, which syncTable takes
+    // from THIS registered slice, so the registration below actually fetches
+    // 11 codes, not 12. The seed's own periodNoteStatus map (SEED_TABLES,
+    // read by tableId — unaffected by this test's locally narrowed copy)
+    // still assumes all 12 are served.
+    const narrowed: Phase0Table = {
+      ...seed,
+      slice: { ...seed.slice, measures: seed.slice.measures.slice(0, 11) },
+    };
+    const source = new FixtureSource(await loadDocs('70072ned'));
+    await registerTables(db, source, [narrowed]);
+    const sync = await syncTable(db, source, '70072ned');
+    expect(sync.outcome).toBe('failed');
+    expect(sync.failureStage).toBe('period_parsing');
+    expect(sync.failureSummary).toContain('D000025');
+
+    const row = (await db.query('select status from cbs_tables where id = $1', ['70072ned'])).rows[0]!;
+    expect(row.status).toBe('needs_review');
+    const obs = await db.query('select count(*)::int as n from observations where table_id = $1', ['70072ned']);
+    expect(obs.rows[0]!.n).toBe(0);
+  });
+
+  it('final-review fix: a served measure whose CBS description gains a "voorlopig" topic note refuses at period_parsing, naming the measure', async () => {
+    const seed = SEED_TABLES.find((t) => t.id === '70072ned');
+    if (!seed?.slice?.measures) throw new Error('70072ned seed with a measure allow-list expected');
+    const docs = clone(await loadDocs('70072ned'));
+    // docs.measureCodes is the raw parsed measure-codes.json ({value: [...]}).
+    const measureDocs = (docs.measureCodes as { value: Record<string, unknown>[] }).value;
+    const m000100 = measureDocs.find((m) => m.Identifier === 'M000100');
+    if (!m000100) throw new Error('M000100 not found in the 70072ned measure-codes fixture');
+    m000100.Description = `${m000100.Description as string} (voorlopig cijfer)`;
+
+    const source = new FixtureSource(docs);
+    await registerTables(db, source, [seed]);
+    const sync = await syncTable(db, source, '70072ned');
+    expect(sync.outcome).toBe('failed');
+    expect(sync.failureStage).toBe('period_parsing');
+    expect(sync.failureSummary).toContain('M000100');
+
+    const row = (await db.query('select status from cbs_tables where id = $1', ['70072ned'])).rows[0]!;
+    expect(row.status).toBe('needs_review');
+    const obs = await db.query('select count(*)::int as n from observations where table_id = $1', ['70072ned']);
+    expect(obs.rows[0]!.n).toBe(0);
+  });
 });
 
 describe('Task 3a — a table WITHOUT a periodNoteStatus config still fails period_parsing exactly as before', () => {
