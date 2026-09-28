@@ -1,0 +1,20 @@
+{
+ "tableId": "70072ned",
+ "capturedAt": "2026-09-28T04:43:45.422Z",
+ "source": "https://datasets.cbs.nl/odata/v1/CBS/70072ned",
+ "sliceFilter": "(startswith(RegioS,'NL') or startswith(RegioS,'PV') or startswith(RegioS,'GM')) and Perioden ge '2015JJ00' and (Measure eq 'M000100' or Measure eq 'M003039' or Measure eq '1014800' or Measure eq '2018790' or Measure eq 'A018943_2' or Measure eq 'X092783' or Measure eq 'M000101_3' or Measure eq 'M000114' or Measure eq '1050015_2' or Measure eq 'M000200_2' or Measure eq 'X033647' or Measure eq 'D000025') and Perioden ge '2024JJ00'",
+ "captureOnlySlice": {
+  "periodFloor": "2024JJ00"
+ },
+ "observationRows": 26675,
+ "observationPages": [
+  "observations-page-1.json"
+ ],
+ "files": {
+  "properties": "properties.json",
+  "dimensions": "dimensions.json",
+  "measure-codes": "measure-codes.json",
+  "codes-RegioS": "codes-RegioS.json",
+  "codes-Perioden": "codes-Perioden.json"
+ }
+}

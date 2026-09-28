@@ -32,11 +32,14 @@ alter table cbs_tables
 -- a drift test (tests/ingestion/eviction.test.ts) pins this list against
 -- SEED_TABLES. Casing is exact-as-published and load-bearing (catalog quirk
 -- #1: 03759ned and 80590ned are genuinely lowercase).
+-- '70072ned' added 2026-09-28 (ADR 061, regional statistics part 1): the
+-- drift test (tests/ingestion/eviction.test.ts) pins this list against
+-- SEED_TABLES, so every new coverage table gets added here too.
 update cbs_tables set pinned = true where id in (
   '03759ned', '86141NED', '85224NED', '82235NED', '85773NED', '82242NED',
   '83932NED', '82610NED',
   '83693NED', '85770NED', '85880NED', '85828NED', '85937NED', '85429NED',
-  '85792NED', '80590ned', '83625NED'
+  '85792NED', '80590ned', '83625NED', '70072ned'
 );
 
 -- TTL-clock initialization for every PRE-EXISTING row: query history before

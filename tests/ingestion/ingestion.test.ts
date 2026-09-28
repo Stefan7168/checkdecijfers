@@ -1619,6 +1619,75 @@ describe('ADR 061 — measure allow-list slice (CbsSlice.measures)', () => {
       computeFingerprint(schema.dimensions, schema.measures.map((m) => m.code)),
     );
   });
+
+  it('70072ned fixture: registers + syncs with exactly the 12 allow-listed figures; Amsterdam 2025 cells match CBS', async () => {
+    const seed = SEED_TABLES.find((t) => t.id === '70072ned');
+    if (!seed?.slice?.measures) throw new Error('70072ned seed with a measure allow-list expected');
+    expect(seed.slice.measures).toHaveLength(12);
+    const source = new FixtureSource(await loadDocs('70072ned'));
+    await registerTables(db, source, [seed]);
+    const sync = await syncTable(db, source, '70072ned');
+    expect(sync.outcome).toBe('succeeded');
+
+    const row = (await db.query('select units, status from cbs_tables where id = $1', ['70072ned'])).rows[0]!;
+    expect(row.status).toBe('active');
+    const units = (typeof row.units === 'string' ? JSON.parse(row.units) : row.units) as Record<string, unknown>;
+    expect(Object.keys(units).sort()).toEqual([...seed.slice.measures].sort());
+
+    // Values measured live on 2026-09-28 (v4 API), Amsterdam GM0363, 2025.
+    const cell = async (measure: string) =>
+      (
+        await db.query(
+          `select value from observations where table_id = '70072ned' and measure = $1
+             and region_code = 'GM0363' and period_code = '2025JJ00'`,
+          [measure],
+        )
+      ).rows[0]?.value;
+    expect(Number(await cell('M000100'))).toBe(4968);
+    expect(Number(await cell('M003039'))).toBe(518);
+    expect(Number(await cell('A018943_2'))).toBe(287);
+    expect(Number(await cell('X092783'))).toBe(2.8);
+
+    // Task 3a: statuses read from CBS's period notes (R11).
+    const status = async (measure: string, period: string) =>
+      (
+        await db.query(
+          `select status from observations where table_id = '70072ned' and measure = $1
+             and region_code = 'GM0363' and period_code = $2`,
+          [measure, period],
+        )
+      ).rows[0]?.status;
+    expect(await status('M003039', '2024JJ00')).toBe('NaderVoorlopig');
+    expect(await status('M003039', '2025JJ00')).toBe('Voorlopig');
+    expect(await status('X033647', '2024JJ00')).toBe('NaderVoorlopig');
+    expect(await status('X092783', '2025JJ00')).toBe('Voorlopig');
+    expect(await status('M000200_2', '2026JJ00')).toBe('Voorlopig');
+    expect(await status('M000100', '2025JJ00')).toBe('Definitief');
+    expect(await status('A018943_2', '2025JJ00')).toBe('Definitief');
+  });
+
+  it('70072ned fixture: an unmapped period-note heading fails the sync loudly and quarantines the table', async () => {
+    const seed = SEED_TABLES.find((t) => t.id === '70072ned');
+    if (!seed?.slice?.measures) throw new Error('70072ned seed with a measure allow-list expected');
+    const docs = clone(await loadDocs('70072ned'));
+    // docs.codes['Perioden'] is the raw parsed codes-Perioden.json ({value: [...]}).
+    const periodDoc = docs.codes['Perioden'] as { value: Record<string, unknown>[] };
+    const period2025 = periodDoc.value.find((row) => row.Identifier === '2025JJ00');
+    if (!period2025) throw new Error('2025JJ00 not found in the 70072ned Perioden code list');
+    period2025.Description = "Uitkomsten zijn voorlopig over:\r\nOnbekend nieuw onderwerp\r\n";
+
+    const source = new FixtureSource(docs);
+    await registerTables(db, source, [seed]);
+    const sync = await syncTable(db, source, '70072ned');
+    expect(sync.outcome).toBe('failed');
+    expect(sync.failureStage).toBe('period_parsing');
+    expect(sync.failureSummary?.toLowerCase()).toContain('onbekend nieuw onderwerp');
+
+    const row = (await db.query('select status from cbs_tables where id = $1', ['70072ned'])).rows[0]!;
+    expect(row.status).toBe('needs_review');
+    const obs = await db.query('select count(*)::int as n from observations where table_id = $1', ['70072ned']);
+    expect(obs.rows[0]!.n).toBe(0);
+  });
 });
 
 describe('Task 3a — a table WITHOUT a periodNoteStatus config still fails period_parsing exactly as before', () => {

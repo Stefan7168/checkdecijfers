@@ -192,6 +192,13 @@ export const TABLE_REGISTRY_DEFAULTS: TableRegistryDefaults[] = [
       JJ: 'Jaargemiddelde verkoopprijs over de transacties in het genoemde jaar; jaarlijkse publicatie (nieuw jaar ~februari), revisies alleen bij uitzondering. Opgeheven gemeenten houden rijen met lege waarde en CBS-reden "Impossible" voor jaren na hun opheffing.',
     },
   },
+  {
+    tableId: '70072ned',
+    defaultCoordinates: {},
+    periodSemantics: {
+      JJ: 'Cijfer voor het genoemde jaar; het peilmoment verschilt per cijfer (1 januari, jaargemiddelde of laatste dag van het jaar — zie de definitie van het cijfer). Recente jaren kunnen voorlopig zijn; status altijd meegeven. Opgeheven gemeenten houden rijen met lege waarde en CBS-reden "Impossible" voor jaren na hun opheffing.',
+    },
+  },
 ];
 
 export const CANONICAL_MEASURES: CanonicalMeasure[] = [

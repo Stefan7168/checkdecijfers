@@ -45,6 +45,9 @@ const CAPTURE_SLICES: Record<string, CbsSlice> = {
   '85937NED': { periodFloor: '2020JJ00' },
   '85792NED': { periodFloor: '2020JJ00' },
   '83625NED': { periodFloor: '2015JJ00' },
+  // 70072ned (ADR 061): live ingest keeps 2015+; the FIXTURE keeps 2024+
+  // (2024, 2025, 2026 — the latest year of every listed figure).
+  '70072ned': { periodFloor: '2024JJ00' },
 };
 const MAX_PAGES = 20;
 

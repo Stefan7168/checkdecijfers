@@ -280,6 +280,62 @@ export const COVERAGE_TABLES: Phase0Table[] = [
     updateCadence: 'yearly (new year added ~February)',
     servesTasks: ['CC29', 'CC30', 'CC31'],
   },
+  {
+    // Regional statistics (session 138, 2026-09-28, ADR 061): "Regionale
+    // kerncijfers Nederland" — 6.8M cells, 248 measure codes, RegioS
+    // (GeoDimension) + Perioden only. Sliced to the 12 owner-picked figures,
+    // NL/PV/GM, 2015+ (106,683 cells, measured). The measure allow-list also
+    // scopes the fingerprint: phase 0 rejected this table because CBS revises
+    // its topics constantly. Every listed code was measured single-valued per
+    // (region, year) over the whole slice — the v4 feed REUSES 34 other codes
+    // for several figures (e.g. 1050010_6, household income), which is why
+    // income is not in the list.
+    id: '70072ned',
+    slice: {
+      measures: [
+        'M000100', // Bevolkingsdichtheid
+        'M003039', // Gemiddelde WOZ-waarde van woningen
+        '1014800', // Koopwoningen (%)
+        '2018790', // Hoogstbehaald onderwijsniveau: hbo, wo (%)
+        'A018943_2', // Personenauto's per 1 000 inwoners
+        'X092783', // Afstand tot treinstation
+        'M000101_3', // Bevolkingsgroei, relatief
+        'M000114', // Gemiddelde huishoudensgrootte
+        '1050015_2', // Eenpersoonshuishoudens (%)
+        'M000200_2', // Bedrijfsvestigingen totaal (1 januari, afgerond op 5)
+        'X033647', // Uitkeringsontvangers totaal (incl. AOW)
+        'D000025', // Afstand tot grote supermarkt
+      ],
+      dimensionPrefixes: { RegioS: ['NL', 'PV', 'GM'] },
+      periodFloor: '2015JJ00',
+    },
+    updateCadence: 'irregular, per topic (CBS: "Onregelmatig"); most figures yearly',
+    servesTasks: [],
+    // Task 3a: CBS publishes no machine status for any period of this table;
+    // statuses come from its period notes. Every heading CBS used in any of
+    // the 32 periods (checked 2026-09-28), mapped to the served codes it
+    // covers ([] = reviewed, covers none of ours). An unmapped heading fails
+    // the sync — review it, never default it.
+    periodNoteStatus: {
+      headings: {
+        'bedrijfsvestigingen': ['M000200_2'],
+        'nabijheid voorzieningen': ['X092783', 'D000025'],
+        'sociale zekerheid': ['X033647'],
+        'uitkeringsontvangers': ['X033647'],
+        'wonen - gemiddelde woz waarde van woningen': ['M003039'],
+        'wonen - voorraad woningen': ['1014800'],
+        'inkomen en vermogen': [],
+        'milieu en bodemgebruik - afval van huishoudens': [],
+        'afval van huishoudens': [],
+        'banen van werknemers': [],
+        'onderwijs naar schoolregio': [],
+        'onderwijs naar woonregio - gediplomeerden': [],
+        'onderwijs naar woonregio - leerlingen': [],
+        "gediplomeerden naar woongemeente (schooljaar 2021/'22)": [],
+        "leerlingen/studenten naar woongemeente (schooljaar 2022/'23)": [],
+      },
+    },
+  },
 ];
 
 // Every curated seed table (Phase 0 + coverage sprint) — what `ingest register`
