@@ -802,11 +802,27 @@ describe('validateTableParseOutput — places on a region-coded breakdown dimens
     const { schema, codeLists } = loadFixture('82291NED');
     const question = 'Wat is het percentage volwassenen met hoge bloeddruk in Caribisch Nederland in 2021?';
     const input = buildTableParseSchema(schema, codeLists, question);
-    const ok = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'caribisch nederland', kind: 'landsdeel' }] });
+    const ok = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'caribisch nederland', kind: 'onbekend' }] });
     expect(validateTableParseOutput(ok, input).breakdowns['CaribischNederland']).toEqual({ kind: 'member', code: 'CN01' });
-    const bonaire = jsonWith(input, { CaribischNederland: 'GM9001' }, { regions: [{ name: 'Caribisch Nederland', kind: 'landsdeel' }] });
+    const bonaire = jsonWith(input, { CaribischNederland: 'GM9001' }, { regions: [{ name: 'Caribisch Nederland', kind: 'onbekend' }] });
     expect(() => validateTableParseOutput(bonaire, input)).toThrow(TableParseValidationError);
   });
+
+  // Final-review C1 ruling consequence: a stated kind maps to ONE CBS code
+  // family (landsdeel → LD, land → NL). CN01 is neither, so the model
+  // tagging "Caribisch Nederland" as a landsdeel or a land now refuses
+  // (region unavailable) rather than answering — the ruling's accepted cost
+  // ("extra refusals when a kind word is loose"), never a wrong population.
+  it.each(['landsdeel', 'land'])(
+    '82291NED: "Caribisch Nederland" stated as a %s refuses — CN01 is not an LD/NL code (C1 ruling)',
+    (kind) => {
+      const { schema, codeLists } = loadFixture('82291NED');
+      const question = 'Wat is het percentage volwassenen met hoge bloeddruk in Caribisch Nederland in 2021?';
+      const input = buildTableParseSchema(schema, codeLists, question);
+      const json = jsonWith(input, { CaribischNederland: 'CN01' }, { regions: [{ name: 'Caribisch Nederland', kind }] });
+      expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    },
+  );
 
   it('a table that DOES have regions is not subject to this check (regions are resolved against its geo dimension later)', () => {
     const { schema, codeLists } = loadFixture('03759ned');
@@ -1193,5 +1209,78 @@ describe('validateTableParseOutput — reader-side place normalization (readerPl
     const json = jsonWith(input, { Woonplaats: TABLE_PARSE_NOT_NAMED }, { measureCode: 'M1', regions: [{ name: 'Den Haag', kind: 'gemeente' }] });
     expect(() => validateTableParseOutput(json, input)).toThrow(TableParseValidationError);
     expect(() => validateTableParseOutput(json, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Final-review C1 (breadth step 4b fix wave): the reader's place KIND must
+// constrain, never be discarded. On 85004NED "Utrecht" matches exactly ONE
+// region-coded member — PV26 "Utrecht (PV)", the PROVINCE (there is no
+// Utrecht ES/ET look-alike; ET0902 "Foodvalley Utrecht (ET)" keys
+// differently). Before this fix readerPlaceKey dropped the kind word, so a
+// municipality question was silently answered with the province figure.
+// ---------------------------------------------------------------------------
+
+describe('validateTableParseOutput — the reader\'s place kind constrains the match (C1)', () => {
+  const UTRECHT_QUESTION = 'Hoeveel megawatt aan opgesteld vermogen was er in Utrecht in 2021?';
+
+  it('fixture facts: exactly one offered region-coded member keys as Utrecht, and it is the province PV26', () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const regioS = input.breakdowns.find((b) => b.name === 'RegioS')!;
+    const utrecht = regioS.members.filter((m) => /^(NL|PV|GM|LD|CR|WK|BU|CN|ES|ET)\d/.test(m.code) && /^utrecht( \(|$)/i.test(m.title));
+    expect(utrecht.map((m) => m.code)).toEqual(['PV26']);
+  });
+
+  it.each([
+    [{ name: 'gemeente Utrecht', kind: 'gemeente' }],
+    [{ name: 'Utrecht (gemeente)', kind: 'gemeente' }],
+    [{ name: 'regio Utrecht', kind: 'onbekend' }],
+    [{ name: 'Utrecht', kind: 'gemeente' }],
+  ])('rejects the province PV26 for %o — TableParseRegionUnavailableError, never the province figure', (region) => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    for (const choice of ['PV26', TABLE_PARSE_OTHER, TABLE_PARSE_NOT_NAMED]) {
+      const json = jsonWith(input, { RegioS: choice }, { regions: [region] });
+      expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+    }
+  });
+
+  it("accepts PV26 for {name:'provincie Utrecht', kind:'provincie'} — the only match, and it is a province", () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const json = jsonWith(input, { RegioS: 'PV26' }, { regions: [{ name: 'provincie Utrecht', kind: 'provincie' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV26' });
+  });
+
+  it('accepts PV26 for a bare "Utrecht" with kind onbekend (no kind known → the kind-agnostic rule, as before)', () => {
+    const input = groningenInput(UTRECHT_QUESTION);
+    const json = jsonWith(input, { RegioS: 'PV26' }, { regions: [{ name: 'Utrecht', kind: 'onbekend' }] });
+    expect(validateTableParseOutput(json, input).breakdowns['RegioS']).toEqual({ kind: 'member', code: 'PV26' });
+  });
+
+  it("look-alike Groningen stays 'anders' even with kind 'provincie' — a kind never narrows several look-alikes to one pick", () => {
+    const input = groningenInput();
+    const named = [{ name: 'Groningen', kind: 'provincie' }];
+    const anders = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: named });
+    expect(validateTableParseOutput(anders, input).breakdowns['RegioS']).toEqual({ kind: 'other' });
+    const pv20 = jsonWith(input, { RegioS: 'PV20' }, { regions: named });
+    expect(() => validateTableParseOutput(pv20, input)).toThrow(TableParseValidationError);
+    expect(() => validateTableParseOutput(pv20, input)).not.toThrow(TableParseRegionUnavailableError);
+  });
+
+  it("\"Groningen (gemeente)\" on 85004NED: three look-alikes match, none is a municipality — region unavailable", () => {
+    const input = groningenInput();
+    const json = jsonWith(input, { RegioS: TABLE_PARSE_OTHER }, { regions: [{ name: 'Groningen (gemeente)', kind: 'onbekend' }] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
+  });
+
+  it.each([
+    [{ name: 'provincie Groningen', kind: 'gemeente' }],
+    [{ name: 'Utrecht (PV)', kind: 'gemeente' }],
+    [{ name: 'gemeente Utrecht (PV)', kind: 'onbekend' }],
+  ])('a kind conflict between the sources (%o) throws TableParseRegionUnavailableError', (region) => {
+    const question = region.name.includes('Groningen') ? GRONINGEN_QUESTION : UTRECHT_QUESTION;
+    const input = groningenInput(question);
+    const choice = region.name.includes('Groningen') ? TABLE_PARSE_OTHER : 'PV26';
+    const json = jsonWith(input, { RegioS: choice }, { regions: [region] });
+    expect(() => validateTableParseOutput(json, input)).toThrow(TableParseRegionUnavailableError);
   });
 });

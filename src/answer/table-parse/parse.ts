@@ -55,7 +55,7 @@ import { oneOfToAnyOf } from '../llm/json-schema.ts';
 import { periodSpecSchema, regionScopeSchema, regionTermSchema } from '../intent/schema.ts';
 import type { PeriodSpec, RegionScopeKind, RegionTerm } from '../intent/types.ts';
 import type { IntentDerivation, PeriodGrain } from '../../query/types.ts';
-import { REGION_MEMBER_CODE, memberPlaceKey, readerPlaceKey } from './places.ts';
+import { REGION_MEMBER_CODE, memberPlaceKey, placeKindAllowsCode, readerPlaceKey, readerPlaceKinds } from './places.ts';
 import type { TableParseBreakdown, TableParseMeasure, TableParseSchema } from './input.ts';
 
 /** Cheap tier (same reasoning as MEASURE_FIT_MODEL/TABLE_RERANK_MODEL): a
@@ -452,6 +452,18 @@ export function validateTableParseOutput(
  *   (follow-up ruling). 'niet_genoemd' or a non-matching member would
  *   silently answer about the total or a different place. Each of these is a
  *   plain TableParseValidationError (the output contradicts itself).
+ * - The reader's place KIND (final-review C1, breadth step 4b fix wave —
+ *   readerPlaceKinds: a leading kind word, a trailing "(PV)"/"(gemeente)"
+ *   suffix, or the model's own non-'onbekend' kind) is a code-prefix
+ *   constraint used ONLY to reject, after the kind-agnostic count above:
+ *   sources that disagree ("provincie Groningen" with kind 'gemeente'), a
+ *   known kind that NO matching member fits ("gemeente Utrecht" on 85004NED,
+ *   whose only Utrecht is the province PV26), or a picked matching member
+ *   whose code does not fit the kind → region-unavailable. The kind never
+ *   narrows several look-alike matches to one pick — 'anders' stays the only
+ *   answer there. A place silently answered with a different population
+ *   (the province figure for a municipality question) is the worst failure
+ *   this validator exists to stop.
  */
 function checkRegionsOnRegionlessTable(
   result: TableParseResult,
@@ -468,6 +480,15 @@ function checkRegionsOnRegionlessTable(
 
   for (const region of result.regions) {
     const key = readerPlaceKey(region.name);
+    const kinds = readerPlaceKinds(region.name, region.kind);
+    if (kinds.length > 1) {
+      throw new TableParseRegionUnavailableError(
+        `table-parse named region '${region.name}' (kind '${region.kind}') on table '${input.tableId}' with ` +
+          `conflicting place kinds (${kinds.join(', ')}) — never resolved by picking one`,
+        outputText,
+      );
+    }
+    const kind = kinds[0] ?? null;
     const listing: { dim: TableParseBreakdown; matchCodes: string[] }[] = [];
     for (const dim of input.breakdowns) {
       const matchCodes = dim.members
@@ -482,10 +503,27 @@ function checkRegionsOnRegionlessTable(
         outputText,
       );
     }
+    if (kind !== null && !listing.some(({ matchCodes }) => matchCodes.some((code) => placeKindAllowsCode(kind, code)))) {
+      throw new TableParseRegionUnavailableError(
+        `table-parse named region '${region.name}' as a ${kind} on table '${input.tableId}', but no offered ` +
+          `region-coded member with that name is a ${kind} (matching: ` +
+          `${listing.flatMap(({ matchCodes }) => matchCodes).join(', ')})`,
+        outputText,
+      );
+    }
     for (const { dim, matchCodes } of listing) {
       const choice = result.breakdowns[dim.name]!;
       if (choice.kind === 'other') continue;
-      if (choice.kind === 'member' && matchCodes.length === 1 && choice.code === matchCodes[0]) continue;
+      if (choice.kind === 'member' && matchCodes.length === 1 && choice.code === matchCodes[0]) {
+        if (kind !== null && !placeKindAllowsCode(kind, choice.code)) {
+          throw new TableParseRegionUnavailableError(
+            `table-parse named region '${region.name}' as a ${kind}, but answered dimension '${dim.name}' with ` +
+              `member '${choice.code}', which is not a ${kind}`,
+            outputText,
+          );
+        }
+        continue;
+      }
       const got = choice.kind === 'member' ? `member '${choice.code}'` : `'${TABLE_PARSE_NOT_NAMED}'`;
       const required =
         matchCodes.length === 1
