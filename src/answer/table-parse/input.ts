@@ -1,0 +1,235 @@
+// Breadth step 4, Task 2 — pure input builder for the table-scoped parser
+// (docs/superpowers/plans/2026-09-28-breadth-step-4-table-parser.md, Task 2;
+// spec docs/superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md D2).
+//
+// Turns ONE table's raw CBS metadata (CbsTableSchema + its dimensions' full
+// code lists) into the closed-choice menu Task 3's prompt offers the model:
+// which numeric measures exist, which breakdown dimensions are offered (and
+// with which members, deterministically pre-filtered when a dimension is
+// large), which period grains the table actually publishes, and whether the
+// table has any region axis at all. Pure and synchronous: no db, no
+// ingestion import, no LLM call (principle a) — the caller (Task 3) is the
+// only thing that talks to a model.
+//
+// Dimension routing reuses step 3's OWN classifyDimension/findGrandTotal
+// (src/query/breakdowns.ts) rather than re-deriving a routing rule here:
+// 'time' and 'geo' dimensions are never offered as breakdowns (the period
+// spec and region names cover them); 'margins' dimensions resolve by step
+// 3's own convention and are never offered either; 'geo_like' dimensions set
+// `hasRegions` and are excluded too. Only 'breakdown'-classified dimensions
+// reach the model. Measured 2026-09-28 (task-2-report.md): a region-CODED
+// dimension does not automatically classify as 'geo_like' — the 0.8
+// threshold is a real gate, not a formality (85004NED's RegioS at 16% and
+// 82291NED's CaribischNederland at 75% both fall under it and are offered as
+// ordinary breakdowns instead).
+import type { CbsCode, CbsDimension, CbsTableSchema } from '../../cbs-adapter/types.ts';
+import { classifyDimension, findGrandTotal, type BreakdownDimension, type BreakdownMember } from '../../query/breakdowns.ts';
+import { parsePeriodCode } from '../../ingestion/periods.ts';
+import type { PeriodGrain } from '../../query/types.ts';
+
+/** A breakdown dimension larger than this is pre-filtered deterministically
+ * before it ever reaches the model (Global Constraints, plan doc). */
+export const MEMBER_PROMPT_CAP = 40;
+
+export interface TableParseMeasure {
+  code: string;
+  title: string;
+  unit: string;
+  description: string;
+}
+
+export interface TableParseBreakdown {
+  name: string;
+  /** CBS's own dimension title, or the dimension's `name` when CBS has none
+   * (never invented — same fallback shape as breakdowns.ts's own
+   * dimensionLabel, re-derived here since that helper is module-private). */
+  title: string;
+  /** What the model may pick, in CBS order. */
+  members: { code: string; title: string }[];
+  truncated: boolean;
+  /** How many members the dimension actually has (may exceed members.length
+   * when truncated). */
+  totalMembers: number;
+}
+
+export interface TableParseSchema {
+  tableId: string;
+  title: string;
+  /** Numeric only — a String-typed CBS measure (a code/name/label column) is
+   * never offered (breadth step 2 convention: text measures are never
+   * servable numbers). */
+  measures: TableParseMeasure[];
+  /** classifyDimension === 'breakdown' only, in table (dimensions array)
+   * order. Time, geo, geo_like and margins dimensions never appear here. */
+  breakdowns: TableParseBreakdown[];
+  /** Grains actually present in the time dimension's own codes
+   * (parsePeriodCode), sorted coarsest-first: JJ, KW, MM. A code
+   * parsePeriodCode cannot read is silently ignored here — step 5's period
+   * resolver is the thing that refuses an unreadable period code, not this
+   * builder. */
+  periodGrains: PeriodGrain[];
+  /** True when the table has any 'geo' or 'geo_like' dimension (region terms
+   * are meaningful on this table). */
+  hasRegions: boolean;
+}
+
+/** Coarsest-to-finest — the order `periodGrains` is reported in. */
+const GRAIN_ORDER: PeriodGrain[] = ['JJ', 'KW', 'MM'];
+
+/** Dimension title, falling back to its name when CBS's own title is empty
+ * or whitespace-only — mirrors breakdowns.ts's private `dimensionLabel`
+ * (not exported from there, so re-derived here rather than reaching into
+ * that module's internals). Never invents a DIFFERENT word: the dimension's
+ * own stable `name` is not a guess. */
+function dimensionLabel(d: Pick<CbsDimension, 'name' | 'title'>): string {
+  return d.title.trim().length > 0 ? d.title : d.name;
+}
+
+/** The pre-filter's word normalization (Global Constraints, plan doc):
+ * lowercase, diacritics stripped, split on non-letters/digits, words under 4
+ * letters dropped (a shared short word like "van" or "wat" is not a
+ * meaningful topic match). Used both for the question itself (exported for
+ * tests) and, identically, for each candidate member's title below — a
+ * member matches when it shares at least one such normalized word with the
+ * question. */
+function normalizedWords(text: string): Set<string> {
+  const flattened = text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+  const tokens = flattened.split(/[^a-z0-9]+/).filter((t) => t.length >= 4);
+  return new Set(tokens);
+}
+
+/** Exported for Task 2's own tests (the brief requires it) and reused
+ * verbatim by Task 3's prompt-serialization notes about what was matched. */
+export function questionWords(question: string): Set<string> {
+  return normalizedWords(question);
+}
+
+function sharesWord(title: string, qWords: Set<string>): boolean {
+  for (const word of normalizedWords(title)) {
+    if (qWords.has(word)) return true;
+  }
+  return false;
+}
+
+/**
+ * Builds one breakdown dimension's offered member list. Dimensions with at
+ * most MEMBER_PROMPT_CAP members are offered in full. Larger dimensions are
+ * pre-filtered deterministically: CBS's own grand total (step 3's
+ * findGrandTotal, when one exists) first, then every OTHER member whose
+ * normalized title shares a normalized word with the question, in CBS
+ * order, the combined list capped at MEMBER_PROMPT_CAP. When there is no
+ * grand total and nothing matches, the dimension is still offered
+ * (truncated, with zero members) — the model then has only `niet_genoemd` /
+ * `anders` for it, never a silently guessed member.
+ */
+function buildBreakdown(dim: CbsDimension, codes: CbsCode[], question: string): TableParseBreakdown {
+  const allMembers: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
+  const title = dimensionLabel(dim);
+
+  if (allMembers.length <= MEMBER_PROMPT_CAP) {
+    return {
+      name: dim.name,
+      title,
+      members: allMembers,
+      truncated: false,
+      totalMembers: allMembers.length,
+    };
+  }
+
+  const total = findGrandTotal(allMembers);
+  const qWords = questionWords(question);
+  const selected: BreakdownMember[] = [];
+  if (total) selected.push(total);
+
+  for (const member of allMembers) {
+    if (selected.length >= MEMBER_PROMPT_CAP) break;
+    if (total && member.code === total.code) continue;
+    if (sharesWord(member.title, qWords)) selected.push(member);
+  }
+
+  return {
+    name: dim.name,
+    title,
+    members: selected.slice(0, MEMBER_PROMPT_CAP),
+    truncated: true,
+    totalMembers: allMembers.length,
+  };
+}
+
+/**
+ * Builds the table-scoped parser's input from raw CBS metadata. Throws when
+ * the table has no numeric measure, or no TimeDimension at all — both mean
+ * this table can never be answered through the table-scoped path and must
+ * never be offered to a reader question (measured refuse cases: 83052NED's
+ * `Perioden` is kind `Dimension`, not `TimeDimension`; 86116NED has no
+ * Perioden dimension whatsoever).
+ */
+export function buildTableParseSchema(
+  schema: CbsTableSchema,
+  codeLists: Record<string, CbsCode[]>,
+  question: string,
+): TableParseSchema {
+  const measures: TableParseMeasure[] = schema.measures
+    .filter((m) => m.dataType !== 'String')
+    .map((m) => ({ code: m.code, title: m.title, unit: m.unit, description: m.description }));
+
+  if (measures.length === 0) {
+    throw new Error(
+      `buildTableParseSchema: table '${schema.tableId}' has no numeric measure — never offered`,
+    );
+  }
+
+  const timeDim = schema.dimensions.find((d) => d.kind === 'TimeDimension');
+  if (!timeDim) {
+    throw new Error(
+      `buildTableParseSchema: table '${schema.tableId}' has no TimeDimension — never offered`,
+    );
+  }
+
+  let hasRegions = false;
+  const breakdowns: TableParseBreakdown[] = [];
+
+  for (const dim of schema.dimensions) {
+    const codes = codeLists[dim.name] ?? [];
+    const members: BreakdownMember[] = codes.map((c) => ({ code: c.code, title: c.title }));
+    const asBreakdownDimension: BreakdownDimension = {
+      name: dim.name,
+      title: dim.title,
+      kind: dim.kind,
+      members,
+    };
+    const cls = classifyDimension(asBreakdownDimension);
+
+    if (cls === 'geo' || cls === 'geo_like') {
+      hasRegions = true;
+      continue;
+    }
+    if (cls === 'time' || cls === 'margins') {
+      continue;
+    }
+    // cls === 'breakdown'
+    breakdowns.push(buildBreakdown(dim, codes, question));
+  }
+
+  const timeCodes = codeLists[timeDim.name] ?? [];
+  const grainsPresent = new Set<PeriodGrain>();
+  for (const code of timeCodes) {
+    const parsed = parsePeriodCode(code.code);
+    if (parsed) grainsPresent.add(parsed.grain);
+    // An unreadable code is silently ignored here (see periodGrains doc
+    // comment) — step 5's period resolver refuses it, not this builder.
+  }
+  const periodGrains = GRAIN_ORDER.filter((g) => grainsPresent.has(g));
+
+  return {
+    tableId: schema.tableId,
+    title: schema.title,
+    measures,
+    breakdowns,
+    periodGrains,
+    hasRegions,
+  };
+}
