@@ -59,6 +59,8 @@
     "tablefinder:record": "node --env-file-if-exists=.env scripts/tablefinder-eval.ts --record",
     "measurefit:eval": "node --env-file-if-exists=.env scripts/measurefit-eval.ts",
     "measurefit:record": "node --env-file-if-exists=.env scripts/measurefit-eval.ts --record",
+    "tableparse:eval": "node --env-file-if-exists=.env scripts/tableparse-eval.ts",
+    "tableparse:record": "node --env-file-if-exists=.env scripts/tableparse-eval.ts --record",
     "semantic-check:eval": "node --env-file-if-exists=.env scripts/semantic-check-eval.ts",
     "semantic-check:record": "node --env-file-if-exists=.env scripts/semantic-check-eval.ts --record",
     "translate:eval": "node scripts/translate-eval.ts",
