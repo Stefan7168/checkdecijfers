@@ -10,6 +10,7 @@ import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
 import {
+  ensureSlice,
   fetchSlice,
   registerSchemaOnly,
   sliceFilterKey,
@@ -428,6 +429,23 @@ const HOUSE_PRICES: SliceRequest = {
   periods: ['2024JJ00', '2025JJ00'],
 };
 
+// Hoisted (was local to the 'schema refresh when CBS Modified moves' describe
+// below) so the ensureSlice describe (Task 5) can reuse the exact same fixture
+// mutation — never a second copy of "CBS published a newer Modified with an
+// extra period".
+const NEWER = '2026-09-01T00:00:00+02:00';
+
+function newerWithExtraPeriod(docs: Awaited<ReturnType<typeof loadDocs>>) {
+  const clone = structuredClone(docs);
+  (clone.properties as Record<string, unknown>).Modified = NEWER;
+  const periods = (clone.codes as Record<string, { value: Record<string, unknown>[] }>)['Perioden']!;
+  const last = periods.value[periods.value.length - 1]!;
+  periods.value.push({ ...last, Identifier: '2026JJ00', Title: '2026*', Index: Number(last.Index) + 1, Status: 'Voorlopig' });
+  const page = clone.observationPages[0] as { value: Record<string, unknown>[] };
+  page.value.push({ Id: 999_998, Measure: 'M001534', ValueAttribute: 'None', Value: 461_000, StringValue: null, RegioS: 'NL01', Perioden: '2026JJ00' });
+  return clone;
+}
+
 describe('fetchSlice (breadth step 2, Task 4)', () => {
   it('fetches, validates and stores exactly the requested cells (83625NED, region + time)', async () => {
     const docs = await registered('83625NED');
@@ -732,19 +750,6 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
   });
 
   describe('schema refresh when CBS Modified moves', () => {
-    const NEWER = '2026-09-01T00:00:00+02:00';
-
-    function newerWithExtraPeriod(docs: Awaited<ReturnType<typeof loadDocs>>) {
-      const clone = structuredClone(docs);
-      (clone.properties as Record<string, unknown>).Modified = NEWER;
-      const periods = (clone.codes as Record<string, { value: Record<string, unknown>[] }>)['Perioden']!;
-      const last = periods.value[periods.value.length - 1]!;
-      periods.value.push({ ...last, Identifier: '2026JJ00', Title: '2026*', Index: Number(last.Index) + 1, Status: 'Voorlopig' });
-      const page = clone.observationPages[0] as { value: Record<string, unknown>[] };
-      page.value.push({ Id: 999_998, Measure: 'M001534', ValueAttribute: 'None', Value: 461_000, StringValue: null, RegioS: 'NL01', Perioden: '2026JJ00' });
-      return clone;
-    }
-
     it('accepts a newer Modified with a new period: labels, units and schema_cbs_modified refresh, and the new period becomes fetchable', async () => {
       const docs = await registered('83625NED');
       const before = await cbsTablesRow('83625NED');
@@ -975,5 +980,124 @@ describe('fetchSlice (breadth step 2, Task 4)', () => {
     const b = sliceFilterKey({ measures: ['a', 'b', 'a'], members: { A: ['x'], Z: ['1', '2'] }, periods: ['2024JJ00', '2025JJ00'] });
     expect(a).toBe(b);
     expect(a).toBe('{"measures":["a","b"],"members":{"A":["x"],"Z":["1","2"]},"periods":["2024JJ00","2025JJ00"]}');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ensureSlice (breadth step 2, Task 5)
+// ---------------------------------------------------------------------------
+
+describe('ensureSlice (breadth step 2, Task 5)', () => {
+  it('is a cache hit — no observation fetch, no code-list fetch — when the slice is already stored and CBS Modified is unchanged', async () => {
+    const docs = await registered('83625NED');
+    const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+    if (!first.ok) throw new Error('unreachable');
+
+    const { source, counter } = counting(new FixtureSource(docs));
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({
+      ok: true,
+      cached: true,
+      batchId: first.batchId,
+      rowsStored: first.rowsStored,
+      missingCells: first.missingCells,
+      filterKey: first.filterKey,
+    });
+    // One cheap properties request (the freshness check) and NOTHING else —
+    // no fetchObservations, no fetchCodeList.
+    expect(counter.calls).toBe(1);
+    expect(counter.slices).toEqual([]);
+
+    // Nothing new was written: still exactly the rows the priming fetch stored.
+    expect(await observationRows('83625NED')).toHaveLength(4);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(1);
+  });
+
+  it('refetches (not a cache hit) when CBS Modified has moved since the stored slice_fetches row', async () => {
+    const docs = await registered('83625NED');
+    const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+    if (!first.ok) throw new Error('unreachable');
+
+    const { source, counter } = counting(new FixtureSource(newerWithExtraPeriod(docs)));
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.cached).toBeFalsy();
+    expect(result.rowsStored).toBe(4);
+    expect(counter.slices.length).toBe(1); // a real observations fetch happened
+
+    const row = await cbsTablesRow('83625NED');
+    expect(new Date(row.schema_cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
+  });
+
+  it("fixes the 'newest period' problem: refreshes the schema BEFORE validating, so a period CBS just added is fetchable in ONE call", async () => {
+    const docs = await registered('83625NED');
+    const newer = new FixtureSource(newerWithExtraPeriod(docs));
+    const request2026: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2026JJ00'] };
+
+    // Baseline this fixes: fetchSlice alone still refuses (already pinned
+    // above under 'schema refresh when CBS Modified moves') because it
+    // validates against the STORED (pre-refresh) labels before any network
+    // call.
+    expect(await fetchSlice(db, newer, '83625NED', request2026)).toMatchObject({ ok: false, stage: 'request' });
+
+    const result = await ensureSlice(db, newer, '83625NED', request2026);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 1, missingCells: 0 });
+    const row = await cbsTablesRow('83625NED');
+    expect(new Date(row.schema_cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
+    const cell = (await observationRows('83625NED')).find((r) => r.period_code === '2026JJ00');
+    expect(cell).toMatchObject({ value: 461_000, status: 'Voorlopig', region_code: 'NL01' });
+  });
+
+  it('treats a stored slice as stale when a DIFFERENT slice already advanced schema_cbs_modified, even with no further CBS movement of its own', async () => {
+    const docs = await registered('83625NED');
+    const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
+    if (!first.ok) throw new Error('unreachable');
+
+    const newer = newerWithExtraPeriod(docs);
+    // A known coordinate (already in the stored labels, so it passes
+    // fetchSlice's pre-network validation even before any refresh) fetched
+    // directly against the NEWER docs — a DIFFERENT slice that sees the
+    // newer Modified first and advances the table's schema_cbs_modified.
+    // HOUSE_PRICES's own slice_fetches row (from `first`, above) still
+    // carries the OLD cbs_modified it was fetched under.
+    const otherRequest: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2024JJ00'] };
+    const other = await fetchSlice(db, new FixtureSource(newer), '83625NED', otherRequest);
+    expect(other.ok).toBe(true);
+
+    const { source, counter } = counting(new FixtureSource(newer));
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.cached).toBeFalsy();
+    expect(counter.slices.length).toBe(1); // refetched, not served stale
+  });
+
+  it("defers straight to fetchSlice's own refusal, with no network call, for an unregistered table", async () => {
+    const { source, counter } = counting(new FixtureSource(await loadDocs('83625NED')));
+
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'request' });
+    if (result.ok) throw new Error('unreachable');
+    expect(result.summary).toContain('not registered');
+    expect(counter.calls).toBe(0);
+  });
+
+  it("defers straight to fetchSlice's own refusal, with no network call, for a quarantined table", async () => {
+    await registered('83625NED');
+    await db.query(`update cbs_tables set status = 'needs_review', needs_review_reason = 'test' where id = $1`, ['83625NED']);
+    const { source, counter } = counting(new FixtureSource(await loadDocs('83625NED')));
+
+    const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'request' });
+    if (result.ok) throw new Error('unreachable');
+    expect(result.summary).toContain('quarantined');
+    expect(counter.calls).toBe(0);
   });
 });

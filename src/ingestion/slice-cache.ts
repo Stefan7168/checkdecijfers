@@ -11,7 +11,7 @@
 // (src/ingestion/pipeline.ts, src/ingestion/validate.ts) — never a second
 // copy of the fingerprint, dimension_labels batching, source-key derivation,
 // validation checks, observation column derivation or upsert.
-import type { CbsCode, CbsObservationRow, CbsSource, CbsTableSchema } from '../cbs-adapter/types.ts';
+import type { CbsCode, CbsMeasure, CbsObservationRow, CbsSource, CbsTableSchema } from '../cbs-adapter/types.ts';
 import type { Db } from '../db/types.ts';
 import { computeFingerprint } from './fingerprint.ts';
 import {
@@ -250,12 +250,28 @@ export function sliceFilterKey(req: SliceRequest): string {
   return JSON.stringify(normalizeRequest(req));
 }
 
-interface SliceRegistry {
+export interface SliceRegistry {
   units: RegistryUnits;
   expectedDimensions: { name: string; kind: string }[];
   schemaFingerprint: string | null;
   schemaCbsModified: Date | null;
   version: number;
+}
+
+/** The `cbs_tables` registry row shape both `fetchSlice` and `ensureSlice`
+ * (Task 5) validate a request against — extracted so the parse (jsonb
+ * duality, the pg-vs-PGlite string/object round trip parseJsonbUnits also
+ * handles) exists exactly once. */
+function parseSliceRegistry(row: Record<string, unknown>): SliceRegistry {
+  return {
+    units: parseJsonbUnits(row.units) as RegistryUnits,
+    expectedDimensions: (typeof row.expected_dimensions === 'string'
+      ? JSON.parse(row.expected_dimensions)
+      : (row.expected_dimensions ?? [])) as { name: string; kind: string }[],
+    schemaFingerprint: (row.schema_fingerprint as string | null) ?? null,
+    schemaCbsModified: row.schema_cbs_modified == null ? null : new Date(row.schema_cbs_modified as string | Date),
+    version: Number(row.version),
+  };
 }
 
 /** Thrown inside the write transaction when, under the per-table lock, the
@@ -279,6 +295,132 @@ function toTime(value: unknown): number | null {
   if (value == null) return null;
   const time = new Date(value as string | Date).getTime();
   return Number.isNaN(time) ? null : time;
+}
+
+// ---------------------------------------------------------------------------
+// Schema check + apply (Task 5: shared between fetchSlice's inline refresh
+// and ensureSlice's standalone pre-check, never a second copy of either)
+// ---------------------------------------------------------------------------
+
+export type SchemaCheckResult =
+  | {
+      ok: true;
+      schema: CbsTableSchema;
+      numericMeasures: CbsMeasure[];
+      fingerprint: string;
+      /** true when CBS's current Modified is newer than the registry's
+       * `schema_cbs_modified` — a refresh is needed/was fetched. */
+      refresh: boolean;
+      /** Non-null exactly when `refresh` is true — CBS's current code lists,
+       * fetched so a caller can apply them (`applySchemaRefresh`). */
+      codeLists: Record<string, CbsCode[]> | null;
+    }
+  | { ok: false; stage: FailureStage; summary: string; quarantine: boolean; fingerprint: string | null };
+
+/** Fetches CBS's current schema for a slice-cache table (one properties
+ * request — `knownSchema`, when given, skips even that: the caller already
+ * has it) and decides, against the given registry snapshot, whether a
+ * refresh is needed — running the SAME schema_fingerprint check either way
+ * (a redesign CBS did not announce via Modified must still fail loudly), and
+ * fetching current code lists only when a refresh IS needed. Pure: no DB
+ * writes, no batch bookkeeping — a caller on failure records its own batch
+ * (fetchSlice already has one open; ensureSlice opens its own).
+ *
+ * This is fetchSlice's own step 2 (schema fetch, freshness check,
+ * schema_fingerprint validation, conditional code-list fetch), extracted so
+ * ensureSlice (Task 5) can run exactly the same decision standalone, BEFORE
+ * validating a request against possibly-stale stored labels — never a copy
+ * of this logic. */
+export async function checkSliceSchema(
+  source: CbsSource,
+  tableId: string,
+  registry: SliceRegistry,
+  knownSchema?: CbsTableSchema,
+): Promise<SchemaCheckResult> {
+  const fetchFailureResult = (err: unknown): SchemaCheckResult => ({
+    ok: false,
+    stage: 'fetch',
+    summary: `Fetching a slice of table "${tableId}" from CBS failed: ${err instanceof Error ? err.message : String(err)}.`,
+    quarantine: false,
+    fingerprint: null,
+  });
+
+  let schema: CbsTableSchema;
+  if (knownSchema) {
+    schema = knownSchema;
+  } else {
+    try {
+      schema = await source.fetchTableSchema(tableId);
+    } catch (err) {
+      return fetchFailureResult(err);
+    }
+  }
+
+  const fetchedModified = toTime(schema.modified);
+  if (schema.modified == null || fetchedModified === null) {
+    return {
+      ok: false,
+      stage: 'fetch',
+      summary:
+        `CBS returned no readable 'Modified' date for table "${tableId}" (got ${JSON.stringify(schema.modified)}); ` +
+        `without it the stored slices can never be told apart from stale ones, so nothing is fetched.`,
+      quarantine: false,
+      fingerprint: null,
+    };
+  }
+  const storedModified = registry.schemaCbsModified?.getTime() ?? null;
+  const refresh = storedModified === null || fetchedModified > storedModified;
+
+  const numericMeasures = schema.measures.filter((m) => m.dataType !== 'String');
+  const numericCodes = numericMeasures.map((m) => m.code);
+  const fingerprint = computeFingerprint(schema.dimensions, numericCodes);
+
+  const stage1 = checkSchemaFingerprint(
+    schema.dimensions,
+    numericCodes,
+    registry.expectedDimensions,
+    registry.schemaFingerprint,
+  );
+  if (!stage1.ok) {
+    return { ok: false, stage: stage1.stage, summary: stage1.summary, quarantine: true, fingerprint };
+  }
+
+  let codeLists: Record<string, CbsCode[]> | null = null;
+  if (refresh) {
+    try {
+      codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
+    } catch (err) {
+      return fetchFailureResult(err);
+    }
+  }
+
+  return { ok: true, schema, numericMeasures, fingerprint, refresh, codeLists };
+}
+
+/** Applies an already-fetched, already-fingerprint-checked schema refresh
+ * (`checkSliceSchema`'s `refresh: true` branch) to the registry: units,
+ * `schema_cbs_modified`, a version bump, and a full `dimension_labels`
+ * replace — the exact write fetchSlice's own store step has always made
+ * inline, now shared with ensureSlice's standalone pre-check (Task 5).
+ * Caller's responsibility: run this under the per-table EXCLUSIVE advisory
+ * lock (`pg_advisory_xact_lock(hashtext(tableId))`), in the same transaction
+ * as the registry's own concurrency check — this function only issues the
+ * writes. */
+export async function applySchemaRefresh(
+  tx: Db,
+  tableId: string,
+  schema: CbsTableSchema,
+  numericMeasures: CbsMeasure[],
+  codeLists: Record<string, CbsCode[]>,
+): Promise<void> {
+  await tx.query(
+    `update cbs_tables
+       set units = $2, schema_cbs_modified = $3, version = version + 1, updated_at = now()
+     where id = $1`,
+    [tableId, JSON.stringify(unitsFromMeasures(numericMeasures)), schema.modified],
+  );
+  await tx.query('delete from dimension_labels where table_id = $1', [tableId]);
+  await insertDimensionLabels(tx, tableId, labelRowsFromCodeLists(schema.dimensions, codeLists), 'none');
 }
 
 /**
@@ -325,6 +467,14 @@ export async function fetchSlice(
   source: CbsSource,
   tableId: string,
   req: SliceRequest,
+  /** Task 5 internal seam: ensureSlice, having already fetched CBS's current
+   * schema (and, if newer, already applied that refresh to the registry
+   * BEFORE calling in here), passes it through so this call skips its own
+   * properties request — and, since the registry it reads below is already
+   * current, checkSliceSchema naturally finds nothing left to refresh, so
+   * this call never refreshes what ensureSlice already refreshed. No caller
+   * outside ensureSlice needs this. */
+  opts?: { schema?: CbsTableSchema },
 ): Promise<SliceFetchResult> {
   // --- 1. Request validation (no network) -----------------------------------
   const registryResult = await db.query(
@@ -346,15 +496,7 @@ export async function fetchSlice(
         `No slice is fetched until it has been reviewed.`,
     );
   }
-  const registry: SliceRegistry = {
-    units: parseJsonbUnits(row.units) as RegistryUnits,
-    expectedDimensions: (typeof row.expected_dimensions === 'string'
-      ? JSON.parse(row.expected_dimensions)
-      : (row.expected_dimensions ?? [])) as { name: string; kind: string }[],
-    schemaFingerprint: (row.schema_fingerprint as string | null) ?? null,
-    schemaCbsModified: row.schema_cbs_modified == null ? null : new Date(row.schema_cbs_modified as string | Date),
-    version: Number(row.version),
-  };
+  const registry: SliceRegistry = parseSliceRegistry(row);
   const timeDim = registry.expectedDimensions.find((d) => d.kind === 'TimeDimension');
   if (!timeDim) {
     return refuse(`Table "${tableId}" has no time dimension in its registered layout; it cannot be sliced.`);
@@ -466,52 +608,30 @@ export async function fetchSlice(
       null,
     );
 
-  let schema: CbsTableSchema;
-  try {
-    schema = await source.fetchTableSchema(tableId);
-  } catch (err) {
-    return fetchFailure(err);
-  }
+  // Schema fetch + freshness/fingerprint check + conditional code-list
+  // fetch — checkSliceSchema (extracted above, Task 5): identical work to
+  // what this block always did inline, just also reusable by ensureSlice.
+  // `opts?.schema` is set only when ensureSlice already fetched (and, if
+  // needed, already applied) it — this call then does no network fetch of
+  // its own here, and naturally detects nothing left to refresh.
+  const check = await checkSliceSchema(source, tableId, registry, opts?.schema);
+  if (!check.ok) return fail(check.stage, check.summary, check.quarantine, null, check.fingerprint);
+  const { schema, numericMeasures, fingerprint, codeLists } = check;
 
-  const fetchedModified = toTime(schema.modified);
-  if (schema.modified == null || fetchedModified === null) {
-    return fail(
-      'fetch',
-      `CBS returned no readable 'Modified' date for table "${tableId}" (got ${JSON.stringify(schema.modified)}); ` +
-        `without it the stored slices can never be told apart from stale ones, so nothing is fetched.`,
-      false,
-      null,
-      null,
-    );
-  }
+  // check.ok guarantees schema.modified parsed to a readable instant.
+  const fetchedModified = toTime(schema.modified)!;
   const storedModified = registry.schemaCbsModified?.getTime() ?? null;
-  const refresh = storedModified === null || fetchedModified > storedModified;
   // CBS serving an OLDER 'Modified' than the one we already hold (a lagging
-  // mirror, a rollback) never moves anything backwards: no refresh (above),
-  // and the slice is recorded as current as of the later of the two dates.
+  // mirror, a rollback) never moves anything backwards: no refresh (decided
+  // by checkSliceSchema above), and the slice is recorded as current as of
+  // the later of the two dates.
   const sliceCbsModified =
     storedModified !== null && storedModified > fetchedModified
       ? registry.schemaCbsModified!.toISOString()
       : schema.modified;
 
-  const numericMeasures = schema.measures.filter((m) => m.dataType !== 'String');
-  const numericCodes = numericMeasures.map((m) => m.code);
-  const fingerprint = computeFingerprint(schema.dimensions, numericCodes);
-
-  // Stage 1 runs on every fetch (the schema is read anyway), not only on a
-  // refresh: a redesign CBS did not announce via 'Modified' still fails loudly.
-  const stage1 = checkSchemaFingerprint(
-    schema.dimensions,
-    numericCodes,
-    registry.expectedDimensions,
-    registry.schemaFingerprint,
-  );
-  if (!stage1.ok) return fail(stage1.stage, stage1.summary, true, null, fingerprint);
-
-  let codeLists: Record<string, CbsCode[]> | null = null;
   const observationRows: CbsObservationRow[] = [];
   try {
-    if (refresh) codeLists = await fetchAllCodeLists(source, tableId, schema.dimensions);
     for await (const page of source.fetchObservations(
       tableId,
       {
@@ -624,14 +744,7 @@ export async function fetchSlice(
       }
 
       if (codeLists) {
-        await tx.query(
-          `update cbs_tables
-             set units = $2, schema_cbs_modified = $3, version = version + 1, updated_at = now()
-           where id = $1`,
-          [tableId, JSON.stringify(unitsFromMeasures(numericMeasures)), schema.modified],
-        );
-        await tx.query('delete from dimension_labels where table_id = $1', [tableId]);
-        await insertDimensionLabels(tx, tableId, labelRowsFromCodeLists(schema.dimensions, codeLists), 'none');
+        await applySchemaRefresh(tx, tableId, schema, numericMeasures, codeLists);
       }
 
       await stageRows(tx, staged);
@@ -705,4 +818,146 @@ export async function fetchSlice(
   }
 
   return { ok: true, batchId, rowsStored: staged.length, missingCells, filterKey };
+}
+
+// ---------------------------------------------------------------------------
+// ensureSlice (breadth step 2, Task 5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Skips fetching a slice already stored and fresh: returns
+ * `{ ok: true, cached: true, … }` without any observation fetch when
+ * `slice_fetches` already holds this exact request (`filter_key`) and CBS's
+ * current `Modified` says nothing changed — one cheap properties request
+ * either way, never a full observations fetch on a cache hit. Otherwise
+ * behaves exactly like `fetchSlice` (and, for a table that is not an active
+ * slice-cache table, defers to it immediately with no extra network call, so
+ * it gives the exact same refusal wording for "not registered" / "full
+ * table" / "quarantined").
+ *
+ * The "newest period" problem (controller ruling, Task 5): `fetchSlice`
+ * validates a request against STORED labels BEFORE any network call, so a
+ * period CBS added after this table's last refresh is refused until some
+ * OTHER fetch happens to trigger a refresh first. `ensureSlice` fixes that
+ * by checking CBS's Modified FIRST and, if newer than
+ * `cbs_tables.schema_cbs_modified`, applying the schema refresh (labels,
+ * units, `schema_cbs_modified`) BEFORE validating/fetching the actual
+ * request — via `checkSliceSchema`/`applySchemaRefresh`, the exact steps
+ * `fetchSlice` itself uses, never a copy. The already-fetched schema is then
+ * passed to `fetchSlice` (on a cache miss) so it does not fetch — or
+ * refresh — it again.
+ *
+ * Staleness without a further network call (controller ruling): a stored
+ * `slice_fetches` row whose `cbs_modified` is OLDER than the table's
+ * (possibly just-refreshed) `schema_cbs_modified` is stale — a DIFFERENT
+ * slice already saw a newer CBS version, this one hasn't yet — and is
+ * refetched even though CBS's Modified has not moved again since this
+ * function's own check. Otherwise the row is a cache hit exactly when CBS's
+ * current Modified is not newer than the row's own `cbs_modified`.
+ *
+ * NEVER call this while holding resolveIntent's SHARED per-table advisory
+ * lock (src/query/resolve.ts, `pg_advisory_xact_lock_shared`) — both the
+ * refresh step here and `fetchSlice`'s own write step take the EXCLUSIVE
+ * lock on the same key (`syncTable`'s own bound) and would self-deadlock
+ * against a shared lock already held in the same transaction/session.
+ * Nothing in the request path calls this yet (breadth step 2, Task 5) —
+ * wiring it in is a later step.
+ */
+export async function ensureSlice(
+  db: Db,
+  source: CbsSource,
+  tableId: string,
+  req: SliceRequest,
+): Promise<SliceFetchResult & { cached?: boolean }> {
+  const filterKey = sliceFilterKey(req);
+
+  const registryRow = (
+    await db.query(
+      `select ingest_mode, status, needs_review_reason, units, expected_dimensions,
+              schema_fingerprint, schema_cbs_modified, version
+         from cbs_tables where id = $1`,
+      [tableId],
+    )
+  ).rows[0];
+  // Not a registered, active slice-cache table: no schema check applies here
+  // — fetchSlice's own request validation gives the right refusal, with no
+  // wasted network call for a request that would refuse anyway.
+  if (!registryRow || registryRow.ingest_mode !== 'slice_cache' || registryRow.status !== 'active') {
+    return fetchSlice(db, source, tableId, req);
+  }
+  const registry = parseSliceRegistry(registryRow);
+
+  const check = await checkSliceSchema(source, tableId, registry);
+  if (!check.ok) {
+    const batchInsert = await db.query(
+      `insert into ingestion_batches (table_id, outcome) values ($1, 'running') returning id`,
+      [tableId],
+    );
+    const batchId = Number(batchInsert.rows[0]!.id);
+    await failBatch(db, batchId, tableId, check.stage, check.summary, null, check.fingerprint, check.quarantine);
+    return { ok: false, stage: check.stage, summary: check.summary };
+  }
+
+  const codeLists = check.codeLists;
+  if (check.refresh && codeLists) {
+    await db.withTransaction(async (tx) => {
+      // Same key and bound as fetchSlice's own write lock (and syncTable's
+      // rebaseline lock): EXCLUSIVE against a concurrent fetchSlice/eviction/
+      // rebaseline, and against resolveIntent's SHARED read of this table.
+      await tx.query("set local lock_timeout = '180s'");
+      await tx.query('select pg_advisory_xact_lock(hashtext($1))', [tableId]);
+      const fresh = (
+        await tx.query('select ingest_mode, status, version from cbs_tables where id = $1 for update', [tableId])
+      ).rows[0];
+      const moved =
+        !fresh ||
+        fresh.ingest_mode !== 'slice_cache' ||
+        fresh.status !== 'active' ||
+        Number(fresh.version) !== registry.version;
+      // A concurrent change (another refresh, a quarantine, an eviction) won
+      // the race: skip applying here rather than fighting it. fetchSlice
+      // below re-reads the registry itself and reacts to whatever is
+      // actually there now — no data is lost or duplicated either way, this
+      // call simply did not get to apply the refresh it found.
+      if (moved) return;
+      await applySchemaRefresh(tx, tableId, check.schema, check.numericMeasures, codeLists);
+    });
+  }
+
+  const sliceRow = (
+    await db.query(
+      'select cbs_modified, batch_id, row_count from slice_fetches where table_id = $1 and filter_key = $2',
+      [tableId, filterKey],
+    )
+  ).rows[0];
+
+  if (sliceRow) {
+    const currentSchemaModified = (
+      await db.query('select schema_cbs_modified from cbs_tables where id = $1', [tableId])
+    ).rows[0]?.schema_cbs_modified;
+    const rowModifiedTime = toTime(sliceRow.cbs_modified);
+    const schemaModifiedTime = toTime(currentSchemaModified);
+    // Ruling #2: a row older than the table's CURRENT schema_cbs_modified is
+    // stale even without CBS moving again (a DIFFERENT slice already saw the
+    // newer version); otherwise a cache hit needs CBS's Modified, fetched
+    // just above, to be no newer than what this row already recorded.
+    const stale = rowModifiedTime !== null && schemaModifiedTime !== null && rowModifiedTime < schemaModifiedTime;
+    const cbsModifiedTime = toTime(check.schema.modified);
+    const cbsNewer = rowModifiedTime === null || cbsModifiedTime === null || cbsModifiedTime > rowModifiedTime;
+    if (!stale && !cbsNewer) {
+      const batch = (
+        await db.query('select rows_missing from ingestion_batches where id = $1', [sliceRow.batch_id])
+      ).rows[0];
+      return {
+        ok: true,
+        cached: true,
+        batchId: Number(sliceRow.batch_id),
+        rowsStored: Number(sliceRow.row_count),
+        missingCells: batch?.rows_missing == null ? 0 : Number(batch.rows_missing),
+        filterKey,
+      };
+    }
+  }
+
+  return fetchSlice(db, source, tableId, req, { schema: check.schema });
 }

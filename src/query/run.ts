@@ -152,11 +152,74 @@ async function earliestAvailablePeriod(
   return res.rows[0] ? (res.rows[0].period_code as string) : null;
 }
 
+/** Breadth step 2, Task 5: whether `tableId` is a `slice_cache` table —
+ * probes for migration 037's `ingest_mode` column first (same
+ * information_schema pattern as src/ingestion/eviction.ts's
+ * assertLifecycleColumns and src/chart/edits-store.ts's own deploy-order
+ * probe) so a database the migration has not yet reached behaves exactly as
+ * today: every table reads as the implicit 'full' it has always been. */
+async function isSliceCacheTable(db: Db, tableId: string): Promise<boolean> {
+  const columnCheck = await db.query(
+    `select 1 from information_schema.columns where table_name = 'cbs_tables' and column_name = 'ingest_mode'`,
+  );
+  if (columnCheck.rows.length === 0) return false;
+  const result = await db.query('select ingest_mode from cbs_tables where id = $1', [tableId]);
+  return result.rows[0]?.ingest_mode === 'slice_cache';
+}
+
+/** Breadth step 2, Task 5: does ANY `slice_fetches` row for this table cover
+ * `regionCode`/`missingPeriod` at `q.measure`/`q.dims`? Parses each row's
+ * `filter` — the same normalized `{measures, members, periods}` shape
+ * `src/ingestion/slice-cache.ts`'s `SliceRequest` stores — rather than
+ * re-deriving membership from `observations` (a slice with zero returned
+ * rows, e.g. every cell `Impossible`, must still count as "fetched"). */
+async function insideAnyFetchedSlice(
+  db: Db,
+  q: ResolvedQuery,
+  regionCode: string,
+  missingPeriod: string,
+): Promise<boolean> {
+  const { rows } = await db.query('select filter from slice_fetches where table_id = $1', [q.tableId]);
+  for (const row of rows) {
+    const filter = (typeof row.filter === 'string' ? JSON.parse(row.filter) : row.filter) as {
+      measures?: string[];
+      members?: Record<string, string[]>;
+      periods?: string[];
+    };
+    const measures = filter.measures ?? [];
+    const periods = filter.periods ?? [];
+    const members = filter.members ?? {};
+    if (!measures.includes(q.measure)) continue;
+    if (!periods.includes(missingPeriod)) continue;
+    if (q.geoDimension && !(members[q.geoDimension] ?? []).includes(regionCode)) continue;
+    const dimsMatch = Object.entries(q.dims).every(([dim, value]) => (members[dim] ?? []).includes(value));
+    if (!dimsMatch) continue;
+    return true;
+  }
+  return false;
+}
+
 /** Why is a requested cell missing? Ordered diagnosis producing the refusal
  * kind docs/05's failure table requires: freshness (beyond what we can serve,
  * with the freshest period offered) / not_published (CBS never published it) /
  * no_data (a loud gap we will not paper over). Slice refusals were already
- * handled in resolve. */
+ * handled in resolve.
+ *
+ * Breadth step 2, Task 5: for a `slice_cache` table (probed — a pre-037
+ * database or a `full` table skips this branch entirely and keeps today's
+ * exact behaviour) a missing coordinate gets its OWN diagnosis first,
+ * because that table's `dimension_labels` holds CBS's FULL catalog
+ * (registerSchemaOnly loads every period/code up front) — the `published`
+ * check below would find almost any period "published" regardless of
+ * whether we ever fetched a slice covering it, which would otherwise
+ * misdiagnose an ordinary "not fetched yet" as the loud `no_data` owner
+ * alert. A coordinate OUTSIDE every fetched slice's filter is `not_fetched`
+ * (its own internal/owner-alert kind — never reached by a real reader once
+ * `ensureSlice` always fetches before a query runs, a later step); a
+ * coordinate INSIDE a fetched slice that CBS genuinely returned no cell for
+ * reuses the EXISTING `not_published` wording — from the reader's
+ * perspective "CBS has not published a figure here" is exactly as true as
+ * it is for a full-ingest table's own not_published case. */
 async function diagnoseMissing(
   db: Db,
   q: ResolvedQuery,
@@ -177,6 +240,25 @@ async function diagnoseMissing(
         { axis: 'period', freshness, nearestAlternative: freshness.freshestAvailable.periodCode },
       );
     }
+  }
+
+  if (await isSliceCacheTable(db, q.tableId)) {
+    if (!(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
+      return refuse(
+        q.intent,
+        'not_fetched',
+        `table "${q.tableId}" is slice-cached and no fetched slice covers measure ${q.measure}${where} at period ` +
+          `${missingPeriod} (dims ${JSON.stringify(q.dims)}) — ensureSlice should have fetched it before this query ran`,
+        { axis: 'period' },
+      );
+    }
+    return refuse(
+      q.intent,
+      'not_published',
+      `CBS returned no cell for period ${missingPeriod} for table "${q.tableId}"${where} at ${JSON.stringify(q.dims)}, ` +
+        `inside the fetched slice`,
+      { axis: 'period', freshness },
+    );
   }
 
   const published = await db.query(

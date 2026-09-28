@@ -496,7 +496,17 @@ export type RefusalKind =
   | 'derivation_failed'
   /** Cells that must agree (units across one measure) don't — suspected
    * ingestion corruption; refuse loudly rather than serve. */
-  | 'internal_inconsistency';
+  | 'internal_inconsistency'
+  /** Breadth step 2, Task 5: a slice-cache table's missing coordinate lies
+   * OUTSIDE every `slice_fetches` row's filter — nobody has ever asked CBS
+   * for it, as opposed to `not_published` (asked, inside a fetched slice,
+   * CBS returned no cell). Deliberately its own kind, routed like
+   * `no_data`/`table_not_registered` to the generic 'internal' owner-alert
+   * wording: this should never reach a reader once `ensureSlice` always
+   * fetches before a query runs (a later step) — if it ever does, it means
+   * that wiring was skipped or raced, which is exactly the kind of fault the
+   * 'internal' bucket exists to page the owner about. */
+  | 'not_fetched';
 
 export interface FreshnessInfo {
   /** Freshest period we can serve for these exact coordinates, any status —
