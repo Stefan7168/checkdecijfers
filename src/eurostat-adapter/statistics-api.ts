@@ -172,6 +172,12 @@ export function buildRequestUrl(nativeCode: string, slice: CbsSlice | undefined)
     );
   }
 
+  if (slice.measures && slice.measures.length > 0) {
+    throw new Error(
+      'Eurostat adapter: CbsSlice.measures is a CBS-only allow-list and is not supported for Eurostat datasets.',
+    );
+  }
+
   const params: Array<[string, string]> = [];
   if (slice.dimensionEquals) {
     for (const [dim, code] of Object.entries(slice.dimensionEquals)) {

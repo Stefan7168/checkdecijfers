@@ -5,7 +5,7 @@
 // a hand-built synthetic response — never a network call.
 import { describe, expect, it, vi } from 'vitest';
 import type { CbsSlice } from '../../src/cbs-adapter/types.ts';
-import { StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
+import { buildRequestUrl, StatisticsApiSource } from '../../src/eurostat-adapter/statistics-api.ts';
 import { EU_EFTA_STAND_IN_GEO_CODES } from '../../src/eurostat-adapter/jsonstat.ts';
 
 function jsonResponse(body: unknown, ok = true, status = 200): Response {
@@ -258,6 +258,10 @@ describe('StatisticsApiSource — server-side CbsSlice filtering in the request 
       }
     }).rejects.toThrow(/must never pin 'geo'/);
     expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('buildRequestUrl refuses a measures allow-list (CBS-only slice field) instead of silently ignoring it', () => {
+    expect(() => buildRequestUrl('une_rt_m', { measures: ['X'] })).toThrow(/measures/);
   });
 
   it('a stubbed unfiltered ("no slice") request over the cap throws, but the SAME table with a slice — whose URL the ' +

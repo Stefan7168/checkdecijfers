@@ -4,6 +4,7 @@
 // uses (docs/cbs-adapter/types.ts header comment).
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
+import type { CbsObservationRow } from '../../src/cbs-adapter/types.ts';
 import { FixtureSource, loadFixtureDocs, type FixtureDocs } from '../../src/cbs-adapter/fixture-source.ts';
 import { ODataV4Source } from '../../src/cbs-adapter/odata-v4.ts';
 import { PHASE0_TABLES } from '../../src/ingestion/registry-seed.ts';
@@ -128,6 +129,26 @@ describe('adapter parsing (real captured wire data)', () => {
     const expected = (index.default as { sliceFilter: string }).sliceFilter;
 
     expect(sliceToFilter(table.slice)).toBe(expected);
+  });
+
+  it('sliceToFilter: measures allow-list is appended last — single code without parentheses, several ORed in parentheses', async () => {
+    const { sliceToFilter } = await import('../../src/cbs-adapter/fixture-source.ts');
+    expect(sliceToFilter({ measures: ['M000100'] })).toBe("Measure eq 'M000100'");
+    expect(
+      sliceToFilter({ dimensionPrefixes: { RegioS: ['NL', 'PV'] }, periodFloor: '2015JJ00', measures: ['A', 'B'] }),
+    ).toBe("(startswith(RegioS,'NL') or startswith(RegioS,'PV')) and Perioden ge '2015JJ00' and (Measure eq 'A' or Measure eq 'B')");
+    // empty list = no measure clause at all (never "match nothing")
+    expect(sliceToFilter({ periodFloor: '2015JJ00', measures: [] })).toBe("Perioden ge '2015JJ00'");
+  });
+
+  it('FixtureSource: a measures slice keeps only the listed measure codes', async () => {
+    const docs = await loadFixtureDocs(fixturePath('82235NED'));
+    const source = new FixtureSource(docs);
+    const keep = 'M003003';
+    const rows: CbsObservationRow[] = [];
+    for await (const page of source.fetchObservations('82235NED', { measures: [keep] })) rows.push(...page);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.measure === keep)).toBe(true);
   });
 
   it('FixtureSource: a two-page docs object yields both pages in order with no gaps/duplicates vs the single-page original', async () => {

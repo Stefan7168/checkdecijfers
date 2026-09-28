@@ -56,6 +56,13 @@ export interface CbsSlice {
   dimensionPrefixes?: Record<string, string[]>;
   /** Inclusive period floor, e.g. '2019JJ00' (lexicographic on CBS codes). */
   periodFloor?: string;
+  /** Measure allow-list (exact CBS measure codes). Absent or empty = every
+   * measure. When set, ingestion scopes registration units, the served
+   * measure set and the schema fingerprint to these codes (ADR 061), so a CBS
+   * revision of an UNLISTED code in a wide table (70072ned: 248 codes) no
+   * longer quarantines it, while a change to a listed code still fails loudly.
+   * CBS-only: the Eurostat adapter refuses it. */
+  measures?: string[];
 }
 
 /**

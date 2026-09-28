@@ -37,6 +37,8 @@ const CATALOG_SELECT = 'Identifier,Title,Description,Status,DatasetType,Language
  * - dimensionPrefixes: `startswith(Dim,'prefix')`, ORed per dimension
  *   (parenthesised when more than one prefix), ANDed with everything else.
  * - periodFloor: `Perioden ge 'code'` (lexicographic on CBS period codes).
+ * - measures: `Measure eq 'code'`, ORed, parenthesised when more than one,
+ *   appended LAST so slices without it keep their exact filter string.
  * Returns null when the slice is absent or empty (no $filter needed).
  */
 export function sliceToFilter(slice?: CbsSlice): string | null {
@@ -50,6 +52,11 @@ export function sliceToFilter(slice?: CbsSlice): string | null {
     parts.push(prefixes.length > 1 ? `(${ors})` : ors);
   }
   if (slice.periodFloor) parts.push(`Perioden ge '${slice.periodFloor}'`);
+  const measures = slice.measures ?? [];
+  if (measures.length > 0) {
+    const ors = measures.map((m) => `Measure eq '${m}'`).join(' or ');
+    parts.push(measures.length > 1 ? `(${ors})` : ors);
+  }
   return parts.length ? parts.join(' and ') : null;
 }
 

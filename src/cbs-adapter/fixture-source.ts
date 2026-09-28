@@ -128,13 +128,19 @@ function matchesPeriodFloor(coordinates: Record<string, string>, periodFloor?: s
   return period !== undefined && period >= periodFloor;
 }
 
+function matchesMeasures(measure: string, measures?: string[]): boolean {
+  if (!measures || measures.length === 0) return true;
+  return measures.includes(measure);
+}
+
 /** Applies a CbsSlice client-side, with the same matching semantics as sliceToFilter. */
 function matchesSlice(row: CbsObservationRow, slice?: CbsSlice): boolean {
   if (!slice) return true;
   return (
     matchesEquals(row.coordinates, slice.dimensionEquals) &&
     matchesPrefixes(row.coordinates, slice.dimensionPrefixes) &&
-    matchesPeriodFloor(row.coordinates, slice.periodFloor)
+    matchesPeriodFloor(row.coordinates, slice.periodFloor) &&
+    matchesMeasures(row.measure, slice.measures)
   );
 }
 
