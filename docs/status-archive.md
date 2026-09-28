@@ -1,5 +1,32 @@
 # STATUS archive — the session log
 
+**Session 139 (2026-09-28 → 2026-09-29, local UTC+7 — started by the owner's kickoff paste; no further owner messages;
+ran autonomously through the breadth queue; spent nothing on AI).**
+
+1. **State verified at start:** `main` = `d4fdcc62`, CI 36435220134 green, prod 200; branch `breadth-step-3` had Tasks 1–2.
+2. **Breadth step 3 finished + merged** (`db2e61ad`, CI 36449659109 green incl. deploy). Task 2 review approved; Task 3
+   reach script (`scripts/research/breakdown-reach.ts`) reproduced session 138's Python numbers exactly after the
+   controller reconstructed the undocumented "eligible" definition (tables whose time dimension carries machine period
+   status: 923 tables, 1,785 breakdowns). The final opus review found a real rule false positive — 85004NED "Zonnestroom,
+   totaal" (a solar sub-total in a solar + wind table) — so the rule was tightened (the first member must qualify by a
+   `Totaal…` title or a `T00` code). Re-measured: 1,362 breakdowns resolved; 575 tables no-ask, 348 ask. Also: checked
+   `named` input, `callerDimensions`, title fallback.
+3. **Breadth step 4 built hermetically + merged** (`241e5136`, CI 36463387002 green incl. deploy): `src/answer/table-parse/`
+   (input builder with a deterministic pre-filter, static Dutch prompt, hard-allowlist validator, bridge to step 3),
+   34-case labelled set, eval script with a zero-spend `--dry-run`, metadata-only fixtures for 10 real tables. Reviews
+   caught: the prompt telling the model to drop place names on tables without regions (silent national answer); no
+   "several members fit" answer; identical-title measures; an undisclosed explicit total pick; a mislabelled cancer case;
+   look-alike places (Groningen PV/ES/ET) and non-place members ("Nederland" as birth country).
+4. **Breadth step 4b merged** (`461920e6`, CI 36483049274 green incl. deploy): CBS measure groups carried by the adapter
+   (in memory only; best-effort — a failed fetch flags the table and only the parser refuses it) and shown in the prompt;
+   versions 2; reader-side place normalization in `places.ts` with the place KIND used only to reject (the final review
+   caught that the first version let "gemeente Utrecht" take the province member); seasonally adjusted default for
+   month/quarter questions; RUNBOOK recording procedure. #339 items 1–4 closed.
+5. **Verification** on the step-4b head `be13ff38`: typechecks clean, backend 4,369 passed + 1 todo, benchmark 14/14 + 6/6
+   + 0 fabricated, `next build` OK; web suite 3 chart-UI tests failed under machine load (45–70 s each) and passed 36/36
+   when re-run alone — the branch touches no web files.
+6. **AI spend: none.** The step-4 recording run (~102k input tokens, cheap tier) waits for the owner after 2026-10-01.
+
 **Session 138 (2026-09-28, local UTC+7 — owner present throughout; a direction change mid-session; wrapped on the owner's
 end-of-session signal).**
 

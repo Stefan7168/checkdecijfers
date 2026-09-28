@@ -6,6 +6,31 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
+## Session 139 — a closed-choice parser is only as safe as its weakest escape hatch
+
+1. **Write down how a measurement was counted, not just the result.** Step 3's plan quoted "1,363 of 1,785 eligible
+   breakdowns" but no script or doc said what "eligible" meant; reproducing it took trial runs over the crawl until one
+   definition hit every number (tables whose time dimension carries machine period status). Commit the counting script
+   with the numbers.
+2. **The prompt can defeat the validator.** The validator threw on a place named on a table without regions — and the
+   prompt told the model to leave `regions` empty there, so the throw could never fire and a city question would get the
+   national figure. Review every "leave it empty / adapt it to what's available" instruction against the check it
+   silently bypasses (the same pattern hit periods: "adapt the precision to the list").
+3. **Every "not named" option needs a "not exactly one" sibling.** With only member / not-named, an ambiguous subgroup
+   ("ouderen") or an across-members question had no honest answer, and not-named falls to the grand total. `anders`
+   now covers "not listed, several fit, or asks across members".
+4. **Normalizing is discarding — keep what you strip.** Stripping "gemeente" / "(PV)" from a reader's place name made it
+   match; it also made "gemeente Utrecht" match the province. Anything a normalizer removes that carries meaning must
+   become a constraint (here: the kind may only reject).
+5. **A controller's brief can contradict its own ruling.** The step-4 fix brief allowed a matching member pick among
+   look-alikes while the ledger ruling said "no model-picked region among look-alikes"; the re-review caught it. When a
+   ruling is safety-critical, paste the ruling text into the brief verbatim instead of paraphrasing it.
+6. **Settle every prompt byte before the paid recording.** Measure groups, version bumps, the seasonal default and the
+   place rules all change the request hash; doing them after the first recording would have meant paying twice. The
+   step-4b plan existed only for this.
+7. **Kill a stale verification run before dispatching a code-changing agent on an 8 GB machine** — and expect UI tests to
+   time out when two suites share it; re-run the failing files alone before believing a red.
+
 ## Session 138 — measure before deciding: a wide CBS table, a product sanity check, and the breadth pivot
 
 1. **Probe the data APIs, not the homepage banner.** At session start www.cbs.nl still showed "Technische storing" while

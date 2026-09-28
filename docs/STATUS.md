@@ -18,31 +18,27 @@
 > now removed; any standing decision embedded in it (e.g. KvK staying parked, [#54](open-questions.md))
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
-**▶ NEXT SESSION STARTS HERE (written 2026-09-28 local, session 139 — owner present; verify against `git log` / Actions runs
-before trusting this). Kickoff: [session-briefs/2026-09-28-session-139-kickoff.md](session-briefs/2026-09-28-session-139-kickoff.md)
-(session 139 will leave a newer one).**
+**▶ NEXT SESSION STARTS HERE (written 2026-09-29 local, session 139 — verify against `git log` / Actions runs before
+trusting this). Kickoff: [session-briefs/2026-09-29-session-140-kickoff.md](session-briefs/2026-09-29-session-140-kickoff.md).**
 
-- **`main` is live and green**: last code merge `db2e61ad` (breadth step 3, CI 36449659109 green incl. deploy, prod 200).
+- **`main` is live and green**: last code merge `461920e6` (breadth step 4b, CI 36483049274 green incl. deploy, prod 200).
   Full session log: [status-archive.md](status-archive.md).
-- **⚑ DIRECTION CHANGE (owner sanity check, session 138, [#335](open-questions.md),
-  [brief](session-briefs/2026-09-28-sanity-check.md)): BREADTH FIRST — make any current CBS table answerable in the same
-  chat.** Measured: no external users yet; 21 of 1,277 current CBS tables loaded. Design approved:
-  [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
-  - Step 1 ✅ all current tables measured: reach ≈ 88% (~1,100 tables).
-  - Step 2 ✅ merged — the **slice cache**. Not wired to chat; **migration 037 FILE-ONLY** (owner applies before step 5).
-  - Step 3 ✅ merged — the **breakdown resolver** (`src/query/breakdowns.ts`): CBS's own grand total by a measured rule
-    (tightened in review after a solar-only "Zonnestroom, totaal" false positive), else one button question. Re-measured:
-    1,362 of 1,785 breakdowns resolved; 575 of 923 tables need no follow-up question. Not wired.
-  - **Step 4 IN PROGRESS** — table-scoped parser, plan
-    [step 4](superpowers/plans/2026-09-28-breadth-step-4-table-parser.md): built hermetically now (no AI spend); the
-    recording + calibration run is owner-supervised after 2026-10-01.
-  - Then step 5 (wire into chat; prerequisites [#336](open-questions.md)), step 6 (table-lane benchmark → switch on).
-- **Parked (built, not merged):** regional statistics Part 2 on branch `regional-stats-part2` (ADR [061](decisions/061-regional-statistics-70072ned.md));
-  Part 1 (data layer) is merged. Only the paid re-record, merge and prod load remain — revisit if real users ask for it.
+- **⚑ DIRECTION (owner sanity check, session 138, [#335](open-questions.md)): BREADTH FIRST — make any current CBS table
+  answerable in the same chat.** Design: [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md),
+  ADR [062](decisions/062-breadth-table-lane-slice-cache.md) (as-built sections per step).
+  - Step 1 ✅ measured (reach ≈ 88%). Step 2 ✅ slice cache (migration 037 FILE-ONLY). Step 3 ✅ breakdown resolver
+    (1,362 of 1,785 breakdowns resolved; 575 of 923 tables need no follow-up question). Step 4 + 4b ✅ table-scoped
+    parser, built and reviewed hermetically — **never called the AI yet**. None of it is wired to chat.
+  - **Next (session 140): step 5** — wire the table lane into chat, dark behind a flag: curated miss → table finder →
+    table parse → breakdown resolver → slice fetch job + in-chat progress → audited answer. Design items:
+    [#336](open-questions.md) (slice cache) + [#339](open-questions.md) 5–11 (parser). Needs a plan first.
+  - **After 2026-10-01, owner-supervised:** the step-4 recording run (~102k input tokens, cheap tier —
+    [RUNBOOK](RUNBOOK.md) "Table-parser recording run"); apply migration 037 before step 5 goes live.
+  - Then step 6 (table-lane benchmark → switch on), then invite ~10 journalists (sanity-check move 1).
+- **Parked (built, not merged):** regional statistics Part 2 on branch `regional-stats-part2` (ADR [061](decisions/061-regional-statistics-70072ned.md)).
 - **Spend:** the $50 monthly roof is nearly used until **2026-10-01** (sessions 138–139 spent nothing on AI).
-- **Standing recommendation (sanity check move 1):** put the product in front of ~10 journalists once breadth is live.
-- **Waiting on the owner (not urgent):** apply migration 037 before step 5; #245, #275, own-data publishing spot-check,
-  Eurostat E2a ([#313](open-questions.md)). After 10-01: #328, live benchmark (#330), step-4 recording run.
+- **Waiting on the owner (not urgent):** migration 037; the step-4 recording run; #245, #275, own-data publishing
+  spot-check, Eurostat E2a ([#313](open-questions.md)). After 10-01: #328, live benchmark (#330).
 
 ---
 
