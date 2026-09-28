@@ -30,6 +30,21 @@ every number still a stored, validated CBS cell with source and date; ask or ref
   e-mail. Measured once end-to-end: 88 s. Used 3 times in production.
 - The query layer already accepts `{ kind: 'explicit', tableId, measure, dims }` targets (`src/query/types.ts:28`).
 
+**Step 1 result — all current tables measured (2026-09-28, metadata only, 1,271 of 1,277 reachable;
+`scripts/research/cbs-catalog-crawl.py` + `cbs-catalog-analyze.py`):**
+- Shapes: 7% time-only, 8% region only, 30% one breakdown, 26% two, 28% three or more; 8% carry regions in a dimension
+  not typed `GeoDimension` (detect by `NL/PV/GM/…` member codes).
+- Breakdown dimensions (2,452): 1,665 with exactly one total, 177 with several candidates, 488 with none, 122 `Marges`
+  (value vs. margins) — 896 have more than 12 members (buttons need a short-list).
+- **728 tables (57%) answerable without asking** (every breakdown has one total or a convention); ~31% need a button
+  question when the question doesn't name the breakdown; **151 (12%) have no machine period status** → refused (D7) until
+  a generic reviewed period-note reader exists.
+- 420 tables (33%) exceed 150k cells — no blocker for slice fetching (D4).
+- 430 distinct unit strings; `code`, `naam`, `omschrijving` (224 tables) mark TEXT measures → never answerable as numbers.
+- Period grains beyond JJ/KW/MM (e.g. `SJ`, `HJ`, `X0`, month-like `01`–`12`, `G4`) → the period parser refuses unknown
+  grains (D7); measure which matter before widening.
+- **Reach: ~88% of current tables (~1,100) answerable, most without a follow-up question — vs 21 today.**
+
 ## 3. Decisions
 
 - **D1 — Two lanes.** The 26 curated figures stay the fast lane (today's parser, unchanged prompt). A question the
