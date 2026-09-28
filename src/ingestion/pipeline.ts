@@ -5,6 +5,7 @@ import type { CbsCode, CbsDimension, CbsMeasure, CbsObservationRow, CbsSlice, Cb
 import type { Db } from '../db/types.ts';
 import { eurostatDoiFor, verifyEurostatDoi } from '../eurostat-adapter/doi.ts';
 import { computeFingerprint } from './fingerprint.ts';
+import { allowListedMeasures, missingAllowListedCodes } from './measure-allow-list.ts';
 import { parsePeriodCode } from './periods.ts';
 import { SEED_TABLES, type Phase0Table } from './registry-seed.ts';
 import { EUROSTAT_SOURCE_KEY, sourceKeyForTableId } from '../sources/registry.ts';
@@ -107,7 +108,19 @@ export const registerTables: RegisterTablesFn = async (db, source, tables, optio
     // #167: curated phantom-measure exclusion — registered units carry only
     // the measures that actually publish data (see Phase0Table.excludeMeasures).
     const excluded = new Set(table.excludeMeasures ?? []);
-    const units = unitsFromMeasures(schema.measures.filter((m) => !excluded.has(m.code)));
+    // ADR 061: a measure allow-list scopes what this table serves. A listed
+    // code CBS does not list is a curation error — refuse before any write.
+    const missingListed = missingAllowListedCodes(table.slice, schema.measures.map((m) => m.code));
+    if (missingListed.length > 0) {
+      throw new Error(
+        `Cannot register ${table.id}: its measure allow-list names code(s) CBS does not list: ` +
+          `${missingListed.join(', ')}.`,
+      );
+    }
+    const allow = allowListedMeasures(table.slice);
+    const units = unitsFromMeasures(
+      schema.measures.filter((m) => !excluded.has(m.code) && (allow === null || allow.has(m.code))),
+    );
 
     const sourceKey = sourceKeyForTableId(table.id);
 
@@ -439,10 +452,14 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
   // UNFILTERED, so a CBS change to the phantom set still fails the drift
   // check loudly and forces a re-measure.
   const excludedMeasures = new Set(SEED_TABLES.find((t) => t.id === tableId)?.excludeMeasures ?? []);
+  // ADR 061: the measure allow-list (registry.slice.measures) scopes the
+  // served set, the rows and — below — the schema fingerprint.
+  const allowList = allowListedMeasures(registry.slice);
+  const isServed = (code: string) => !excludedMeasures.has(code) && (allowList === null || allowList.has(code));
   const servedMeasures =
-    excludedMeasures.size === 0 ? schema.measures : schema.measures.filter((m) => !excludedMeasures.has(m.code));
-  if (excludedMeasures.size > 0) {
-    observationRows = observationRows.filter((row) => !excludedMeasures.has(row.measure));
+    excludedMeasures.size === 0 && allowList === null ? schema.measures : schema.measures.filter((m) => isServed(m.code));
+  if (excludedMeasures.size > 0 || allowList !== null) {
+    observationRows = observationRows.filter((row) => isServed(row.measure));
   }
 
   const periodDim = findDimension(schema.dimensions, 'TimeDimension');
@@ -468,13 +485,42 @@ export const syncTable: SyncTableFn = async (db, source, tableId, options = {}) 
     rebaselined = true;
   }
 
-  const fingerprint = computeFingerprint(schema.dimensions, schema.measures.map((m) => m.code));
+  // The fingerprint covers every code CBS lists (so phantom-set drift still
+  // fails loudly, #167) — EXCEPT on an allow-listed table, where it covers
+  // exactly the listed codes: CBS revising one of the other codes of a wide
+  // table is not a change to anything we serve.
+  const fingerprintMeasureCodes = (
+    allowList === null ? schema.measures : schema.measures.filter((m) => allowList.has(m.code))
+  ).map((m) => m.code);
+  const fingerprint = computeFingerprint(schema.dimensions, fingerprintMeasureCodes);
+
+  const missingListed = missingAllowListedCodes(registry.slice, schema.measures.map((m) => m.code));
+  if (missingListed.length > 0) {
+    const summary =
+      `CBS no longer lists measure code(s) ${missingListed.join(', ')}, which this table's allow-list serves. ` +
+      `This is a schema change on a figure we publish; the table is quarantined until it is re-curated.`;
+    await failBatch(db, batchId, tableId, 'schema_fingerprint', summary, observationRows.length, fingerprint, true);
+    return {
+      tableId,
+      batchId,
+      outcome: 'failed',
+      failureStage: 'schema_fingerprint',
+      failureSummary: summary,
+      rowCount: observationRows.length,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsMissing: 0,
+      corrections: [],
+      rebaselined,
+    };
+  }
 
   // --- Run the five ordered checks. First failure -> loud, no writes. -----
 
   const stage1 = checkSchemaFingerprint(
     schema.dimensions,
-    schema.measures.map((m) => m.code),
+    fingerprintMeasureCodes,
     expectedDimensions,
     schemaFingerprintToCompare,
   );

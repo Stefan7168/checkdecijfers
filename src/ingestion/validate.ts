@@ -134,7 +134,8 @@ export function checkRowPlausibility(
       stage: 'row_plausibility',
       summary:
         `${duplicates.length} cell(s) were fetched more than once (identical measure and ` +
-        `coordinates) — this points at a corrupted or overlapping fetch. ` +
+        `coordinates) — either a corrupted or overlapping fetch, or CBS publishing several values ` +
+        `under the same measure code (seen in 70072ned's v4 feed, ADR 061). Refusing rather than picking one. ` +
         `Examples: ${duplicates.slice(0, 3).join('; ')}.`,
     };
   }

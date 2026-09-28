@@ -14,9 +14,10 @@ import {
   loadEurostatFixtureTree,
 } from '../../src/eurostat-adapter/fixture-source.ts';
 import { EUROSTAT_DEFINITIVE_STATUS } from '../../src/eurostat-adapter/jsonstat.ts';
+import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
 import { runCli } from '../../src/ingestion/cli.ts';
 import { registerTables, syncTable } from '../../src/ingestion/pipeline.ts';
-import { PHASE0_TABLES, SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
+import { PHASE0_TABLES, SEED_TABLES, type Phase0Table } from '../../src/ingestion/registry-seed.ts';
 import { isProvisionalStatus, SOURCES } from '../../src/sources/registry.ts';
 import type { CbsObservationRow, CbsSlice, CbsSource } from '../../src/cbs-adapter/types.ts';
 import type { Db } from '../../src/db/types.ts';
@@ -824,6 +825,7 @@ describe('sync semantics', () => {
       expect(result.outcome).toBe('failed');
       expect(result.failureStage).toBe('row_plausibility');
       expect(result.failureSummary?.toLowerCase()).toContain('more than once');
+      expect(result.failureSummary).toContain('same measure code');
 
       const row = (await db.query('select status from cbs_tables where id = $1', ['85224NED'])).rows[0];
       expect(row?.status).toBe('needs_review');
@@ -1543,5 +1545,78 @@ describe('#251 Eurostat per-cell statuses reach observations.status end-to-end',
     for (const row of written) {
       expect(isProvisionalStatus(EUROSTAT_SOURCE, row.status)).toBe(false);
     }
+  });
+});
+
+describe('ADR 061 — measure allow-list slice (CbsSlice.measures)', () => {
+  const KEEP = ['M003003', 'D002936'];
+  function allowListed(): Phase0Table {
+    return { ...table('82235NED'), slice: { measures: KEEP } };
+  }
+
+  it('registers units for ONLY the listed codes and syncs rows for only those', async () => {
+    const source = new FixtureSource(await loadDocs('82235NED'));
+    await registerTables(db, source, [allowListed()]);
+    const sync = await syncTable(db, source, '82235NED');
+    expect(sync.outcome).toBe('succeeded');
+
+    const row = (await db.query('select units, status from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
+    const units = (typeof row.units === 'string' ? JSON.parse(row.units) : row.units) as Record<string, unknown>;
+    expect(Object.keys(units).sort()).toEqual([...KEEP].sort());
+    const measures = await db.query(
+      'select distinct measure from observations where table_id = $1 order by measure',
+      ['82235NED'],
+    );
+    expect(measures.rows.map((r) => r.measure)).toEqual([...KEEP].sort());
+  });
+
+  it('a CBS change to an UNLISTED measure code does not trip the fingerprint', async () => {
+    const docs = await loadDocs('82235NED');
+    await registerTables(db, new FixtureSource(docs), [allowListed()]);
+    expect((await syncTable(db, new FixtureSource(docs), '82235NED')).outcome).toBe('succeeded');
+
+    const changed = clone(docs);
+    const measureDocs = (changed.measureCodes as { value: Record<string, unknown>[] }).value;
+    const extra = structuredClone(measureDocs.find((m) => !KEEP.includes(String(m.Identifier)))!);
+    extra.Identifier = 'M999999';
+    measureDocs.push(extra);
+    const resync = await syncTable(db, new FixtureSource(changed), '82235NED');
+    expect(resync.outcome).toBe('succeeded');
+  });
+
+  it('a LISTED code disappearing from CBS fails schema_fingerprint loudly, naming the code', async () => {
+    const docs = await loadDocs('82235NED');
+    await registerTables(db, new FixtureSource(docs), [allowListed()]);
+    expect((await syncTable(db, new FixtureSource(docs), '82235NED')).outcome).toBe('succeeded');
+
+    const changed = clone(docs);
+    const measureDocs = changed.measureCodes as { value: Record<string, unknown>[] };
+    measureDocs.value = measureDocs.value.filter((m) => m.Identifier !== 'M003003');
+    const resync = await syncTable(db, new FixtureSource(changed), '82235NED');
+    expect(resync.outcome).toBe('failed');
+    expect(resync.failureStage).toBe('schema_fingerprint');
+    expect(resync.failureSummary).toContain('M003003');
+    const row = (await db.query('select status from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
+    expect(row.status).toBe('needs_review');
+  });
+
+  it('registration refuses an allow-list naming a code CBS does not list', async () => {
+    const source = new FixtureSource(await loadDocs('82235NED'));
+    const bad: Phase0Table = { ...table('82235NED'), slice: { measures: ['M003003', 'NOPE123'] } };
+    await expect(registerTables(db, source, [bad])).rejects.toThrow(/NOPE123/);
+    const n = await db.query('select count(*)::int as n from cbs_tables where id = $1', ['82235NED']);
+    expect(n.rows[0]!.n).toBe(0);
+  });
+
+  it('a table WITHOUT an allow-list keeps its all-codes fingerprint (byte-identical to computeFingerprint over every code)', async () => {
+    const docs = await loadDocs('82235NED');
+    const source = new FixtureSource(docs);
+    await registerTables(db, source, [table('82235NED')]);
+    expect((await syncTable(db, source, '82235NED')).outcome).toBe('succeeded');
+    const schema = await source.fetchTableSchema('82235NED');
+    const stored = (await db.query('select schema_fingerprint from cbs_tables where id = $1', ['82235NED'])).rows[0]!;
+    expect(stored.schema_fingerprint).toBe(
+      computeFingerprint(schema.dimensions, schema.measures.map((m) => m.code)),
+    );
   });
 });
