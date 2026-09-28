@@ -111,6 +111,37 @@ export function maskPhrases(text: string, phrases: string[]): string {
   return masked;
 }
 
+/** A unit is FACTOR-SHAPED only when it STARTS with a digit (optionally after
+ * a literal 'x '/'× ' prefix) — '1 000 euro', 'x 1 000', '2015=100'. A unit
+ * that merely CONTAINS a digit later in the phrase — 70072ned's
+ * 'per 1 000 inwoners' (A018943_2, M000101_3) and 'personen per 1 huishouden'
+ * (M000114) DO contain ASCII digits, just not at the start — is a RATE/
+ * descriptive unit, not a multiplicative factor.
+ *
+ * Regional statistics part 2 (ADR 061 part 2, Task 2, fix round 1): shared
+ * by BOTH places that used to classify a unit by a bare `/\d/.test(unit)`
+ * and got this wrong the same way:
+ *  - `displayValueUnit` (template.ts) rendered the nonsensical
+ *    "287 (× per 1 000 inwoners)" — "times per 1 000 inhabitants" claims a
+ *    multiplication CBS never stated.
+ *  - `checkUnitAdjacency`'s factor branch (validate.ts) went the OTHER
+ *    direction: it stayed permissive, accepting a fabricated
+ *    "287 × per 1 000 inwoners" body as a VALID factor-unit rendering
+ *    (`unitMaskPhrases` includes the ×-prefixed variant), when nothing may
+ *    ever legitimately render this rate unit with a '×' — an over-permissive
+ *    validator is exactly as dangerous as an under-permissive one.
+ * Exported once here, from ONE place, so the render side and the validate
+ * side can never again independently misclassify the same unit two
+ * different ways. No canonical measure before this task ever used a
+ * digit-bearing unit outside this factor shape (checked against every
+ * registered measure's Unit across every table's measure-codes.json
+ * fixture) — narrowing both call sites to this shape changes no output for
+ * any unit already in production; it only stops these two NEW rate units
+ * from being misread as factors in either direction. */
+export function isFactorShapedUnit(trimmed: string): boolean {
+  return /^[x×]?\s*\d/.test(trimmed);
+}
+
 /** Unit strings that contain digits must be masked before token scanning,
  * in every spelling the prose may reasonably use. Units without digits need
  * no masking (the tokenizer only sees digits).

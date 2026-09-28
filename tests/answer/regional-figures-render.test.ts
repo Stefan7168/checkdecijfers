@@ -27,7 +27,7 @@ import type { StructuredIntent, ValidatedResult } from '../../src/query/index.ts
 import type { Db } from '../../src/db/types.ts';
 import { createIngestedDb } from '../helpers/ingested-db.ts';
 import { composeAnswer, renderTemplateBody, validateAnswerBody } from '../../src/answer/compose/index.ts';
-import { displayValueUnit } from '../../src/answer/compose/template.ts';
+import { displayValueUnit, provisionalSuffix } from '../../src/answer/compose/template.ts';
 import { baseRegionLabel } from '../../src/answer/compose/validate.ts';
 import { CANONICAL_MEASURES } from '../../src/registry/defaults.ts';
 import type { LlmClient, LlmResponse } from '../../src/answer/llm/client.ts';
@@ -255,22 +255,74 @@ describe('Step 1 — all 12 figures render the ADR 054 region-set shape determin
           const lowest = byId.get(ranking.rankingResultIds[ranking.rankingResultIds.length - 1]!)!;
           expect(body).toContain(baseRegionLabel(winner.regionLabel!));
           expect(body).toContain(baseRegionLabel(lowest.regionLabel!));
-          expect(body).toContain(displayValueUnit(winner.value!, winner.decimals, winner.unit));
-          expect(body).toContain(displayValueUnit(lowest.value!, lowest.decimals, lowest.unit));
-          // R11: a provisional winner/lowest cell states so, in-sentence.
-          if (winner.provisional || lowest.provisional) expect(body).toMatch(/voorlopig/i);
+          // R11 (fix round 1, strengthened): the value+unit AND its own
+          // provisional suffix are checked as ONE contiguous rendering, for
+          // winner and lowest SEPARATELY — not just "voorlopig appears
+          // somewhere in the body" (which a coincidental match elsewhere
+          // could satisfy without actually marking the right cell). Brief's
+          // own pinned examples: average_woz_value 2024 is NaderVoorlopig for
+          // every province (winner AND lowest both provisional, so this
+          // reaches both branches below); population_density 2024 is
+          // Definitief for every province (neither provisional).
+          const winnerRendered = `${displayValueUnit(winner.value!, winner.decimals, winner.unit)}${provisionalSuffix(winner)}`;
+          const lowestRendered = `${displayValueUnit(lowest.value!, lowest.decimals, lowest.unit)}${provisionalSuffix(lowest)}`;
+          expect(body).toContain(winnerRendered);
+          expect(body).toContain(lowestRendered);
+          if (winner.provisional) expect(winnerRendered).toMatch(/voorlopig/i);
+          if (lowest.provisional) expect(lowestRendered).toMatch(/voorlopig/i);
+          if (winner.provisional || lowest.provisional) {
+            expect(body).toMatch(/voorlopig/i);
+          } else {
+            // Neither cell is provisional: R11 marking must be ABSENT, not
+            // merely "not required" — a stray 'voorlopig' here would be a
+            // fabricated marking on a Definitief cell.
+            expect(body).not.toMatch(/voorlopig/i);
+          }
         } else {
           // distance_to_large_supermarket 2024: PV21/PV22 tie at the top
           // (1,4 km both) — deriveMax correctly refuses a shared maximum
           // (src/query/derivations.ts), so RS1 forbids any superlative and
-          // the template falls back to the claim-free per-region listing.
+          // the template falls back to the claim-free per-region listing
+          // (renderRegionSet's floor: EVERY cell gets its own `cellLine`,
+          // not just the first). Checked for ALL 12 listed cells, not only
+          // cells[0] (fix round 1: a bug in cell #2..12's rendering would
+          // have gone unnoticed otherwise).
           expect(body).not.toMatch(/\b(hoogste|laagste|meeste|minste)\b/i);
-          const sample = result.cells[0]!;
-          expect(body).toContain(displayValueUnit(sample.value!, sample.decimals, sample.unit));
+          for (const cell of result.cells) {
+            const rendered = `${displayValueUnit(cell.value!, cell.decimals, cell.unit)}${provisionalSuffix(cell)}`;
+            expect(body).toContain(rendered);
+            if (cell.provisional) expect(rendered).toMatch(/voorlopig/i);
+          }
+          const anyProvisional = result.cells.some((cell) => cell.provisional);
+          if (!anyProvisional) expect(body).not.toMatch(/voorlopig/i);
         }
       });
     });
   }
+
+  // Fix round 1: the brief's own two pinned examples, checked directly
+  // against every province's own CBS status — not just "some provisional
+  // cell somewhere", but the SPECIFIC status the brief names for the WHOLE
+  // 2024 class.
+  it("pins the brief's examples: average_woz_value 2024 is NaderVoorlopig everywhere (marked); population_density 2024 is Definitief everywhere (not marked)", async () => {
+    const woz = await answer(regionSetIntent('average_woz_value'));
+    expect(woz.cells).toHaveLength(12);
+    for (const cell of woz.cells) {
+      expect(cell.status).toBe('NaderVoorlopig');
+      expect(cell.provisional).toBe(true);
+    }
+    const wozBody = renderTemplateBody(woz);
+    expect(wozBody).toMatch(/voorlopig/i);
+
+    const density = await answer(regionSetIntent('population_density'));
+    expect(density.cells).toHaveLength(12);
+    for (const cell of density.cells) {
+      expect(cell.status).toBe('Definitief');
+      expect(cell.provisional).toBe(false);
+    }
+    const densityBody = renderTemplateBody(density);
+    expect(densityBody).not.toMatch(/voorlopig/i);
+  });
 });
 
 describe('Step 2 — one Amsterdam (GM0363) case per figure through the template compose path', () => {

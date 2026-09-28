@@ -271,6 +271,33 @@ describe('displayValueUnit — #115 lever c: long descriptive units set off in p
   });
 });
 
+// Regional statistics part 2 (ADR 061 part 2, Task 2 fix round 1) —
+// regression locks for isFactorShapedUnit (moved to format.ts, shared with
+// validate.ts's checkUnitAdjacency). Every pre-existing unit's output below
+// is reasoned from the OLD `/\d/.test(unit)`-based branch at commit ddc3fd8d
+// (`git show ddc3fd8d:src/answer/compose/template.ts`) — all three start
+// with a digit, so the old AND new classifiers agree and the byte-identical
+// output proves the branch is untouched for units already in production.
+// The two RATE units are the actual fix: they contain a digit but do NOT
+// start with one, so the OLD code wrongly rendered them with a '×' factor
+// prefix (a fabricated multiplication CBS never stated) and the NEW code
+// renders them through the plain word-count rule instead — no prefix.
+describe('isFactorShapedUnit unification (fix round 1): pre-existing factor units unchanged, rate units fixed', () => {
+  it('pre-existing factor units render byte-identically to the pre-branch code (ddc3fd8d)', () => {
+    expect(displayValueUnit(8204, 0, 'x 1 000')).toBe('8.204 (x 1 000)');
+    expect(displayValueUnit(57, 0, '1 000 euro')).toBe('57 (× 1 000 euro)');
+    // An index-base unit with a DIFFERENT reference year than the #143 test
+    // above (2015=100) — same shape, proves the '=' guard is not pinned to
+    // one specific year.
+    expect(displayValueUnit(105.3, 1, '2021=100')).toBe('105,3 (2021=100)');
+  });
+
+  it("a RATE unit that contains a digit but doesn't START with one renders with NO '×' prefix", () => {
+    expect(displayValueUnit(287, 0, 'per 1 000 inwoners')).toBe('287 (per 1 000 inwoners)');
+    expect(displayValueUnit(1.78, 2, 'personen per 1 huishouden')).toBe('1,78 (personen per 1 huishouden)');
+  });
+});
+
 // #143 (session-44 data-integrity hunt, MEDIUM): an index-BASE unit
 // ("2015=100") declares the reference year of an index, it is not a factor —
 // the old digit-unit branch prefixed '×' ("118,3 (× 2015=100)"), implying a

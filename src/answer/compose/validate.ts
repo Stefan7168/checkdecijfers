@@ -13,6 +13,7 @@ import type { DerivationRecord, ResultCell, ValidatedResult } from '../../query/
 import {
   baseRegionLabel,
   findNumericTokens,
+  isFactorShapedUnit,
   maskPhrases,
   type MetadataNumberAnchor,
   metadataNumberAnchors,
@@ -748,7 +749,14 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
     return problems;
   }
 
-  if (/\d/.test(unit)) {
+  // `isFactorShapedUnit`, not a bare `/\d/.test(unit)` (Regional statistics
+  // part 2, ADR 061 part 2, Task 2 fix round 1): the old digit test also
+  // classified a RATE unit that merely contains a digit ('per 1 000
+  // inwoners', 'personen per 1 huishouden') as a factor unit. Sharing the
+  // same classifier `displayValueUnit` renders by means the render side and
+  // the validate side can never again disagree on what counts as a factor
+  // unit; every unit already in production classifies exactly as before.
+  if (isFactorShapedUnit(unit.trim())) {
     // Factor units ('x 1 000', '1 000 euro'): the verbatim factor string must
     // sit next to the value — the ×1.000 misreading guard.
     const variants = unitMaskPhrases(unit);
@@ -769,8 +777,35 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
   // (see that function's own comment). Normalizing the unit here too closes
   // it; every existing unit is plain ASCII, so normalizeForScan is the
   // identity for it and this changes no existing output.
-  if (!containsPhrase(phraseWindow, normalizeForScan(unit.trim()))) {
+  const normalizedUnit = normalizeForScan(unit.trim());
+  if (!containsPhrase(phraseWindow, normalizedUnit)) {
     problems.push(`R10: bij ${label} ontbreekt de eenheid '${unit}'`);
+    return problems;
+  }
+  // Fix round 1 (same task): `containsPhrase` is a SUBSTRING search, so it
+  // is satisfied by "× per 1 000 inwoners" too — the bare phrase is right
+  // there, just preceded by a stray '×'. Reclassifying alone (above) does
+  // not catch that: nothing about routing a rate unit through THIS branch
+  // instead of the factor branch stops a fabricated factor-style prefix from
+  // still matching the bare phrase inside it. A rate/descriptive unit is
+  // NEVER rendered with a 'x '/'×' prefix by `displayValueUnit` (that prefix
+  // is `isFactorShapedUnit`'s own, factor-only, territory) — so a window
+  // carrying one right before this unit's own text is a fabricated
+  // rendering this branch must reject even though the bare phrase matches.
+  // The lookbehind requires 'x' to be its OWN token (not the last letter of
+  // an unrelated word like "complex" sitting next to the unit by
+  // coincidence) — '×' needs no such guard, it is never part of a normal
+  // word. Mirrors exactly the two prefix forms `unitMaskPhrases` itself
+  // treats as the factor convention ('x ' / '× ').
+  const wordPattern = normalizedUnit
+    .split(/\s+/)
+    .map((part) => escapeRegExp(part))
+    .join('[\\s\\u00a0]+');
+  const factorPrefixed = new RegExp(`(?:(?<![\\p{L}\\d])x\\s+|×\\s*)${wordPattern}`, 'iu');
+  if (factorPrefixed.test(phraseWindow)) {
+    problems.push(
+      `R10: bij ${label} staat de eenheid '${unit}' met een '×'-teken ervoor — dat is geen factor-eenheid en mag nooit met '×' gerenderd worden`,
+    );
   }
   return problems;
 }

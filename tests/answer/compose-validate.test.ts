@@ -120,6 +120,67 @@ describe('R10: unit adjacency', () => {
     const solarWrong = validateAnswerBody('In 2024 werd 21.822 kWh zonnestroom opgewekt (voorlopig cijfer).', solarSingle);
     expect(solarWrong.ok).toBe(false);
   });
+
+  // Regional statistics part 2 (ADR 061 part 2, Task 2 fix round 1): the
+  // phraseWindow-extension threshold fix, isolated from the km²/NFKC fix
+  // above by using a plain-ASCII, digit-free 22-char unit (so this test
+  // exercises ONLY the window-sizing branch, not the normalization branch).
+  // `displayValueUnit` renders any 3+-word unit as `${formatted} (${unit})`
+  // — a 2-char ' (' between the value token and the unit's own text — so the
+  // window must reserve room for that wrapper, not just the unit's raw length.
+  describe('a 22-23 char parenthesized unit: adjacency still has a real boundary', () => {
+    const opleiding = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: 'T', measure: 'M', measureTitle: 'Testmaat', region: null,
+          periodCode: '2024JJ00', periodLabel: '2024', value: 42, unit: 'personen per opleiding', decimals: 0,
+        }),
+      ],
+      definitionLabel: 'testdefinitie',
+    });
+
+    it('passes when the unit sits right after its number, in parentheses', () => {
+      const body = 'Het aantal was in 2024 42 (personen per opleiding).';
+      expect(validateAnswerBody(body, opleiding).problems).toEqual([]);
+    });
+
+    it('fails when the SAME unit sits more than UNIT_SUFFIX chars after the number', () => {
+      const filler =
+        ' werd na uitgebreid onderzoek door een onafhankelijk bureau zorgvuldig gecontroleerd en pas later genoteerd als';
+      const body = `Het aantal was in 2024 42${filler} (personen per opleiding).`;
+      const report = validateAnswerBody(body, opleiding);
+      expect(report.ok).toBe(false);
+      expect(report.problems.some((p) => p.includes("ontbreekt de eenheid 'personen per opleiding'"))).toBe(true);
+    });
+  });
+
+  // Item 2 of the fix round: isFactorShapedUnit unification. Before this fix,
+  // checkUnitAdjacency's factor branch classified ANY digit-bearing unit as a
+  // factor (bare `/\d/.test(unit)`) — so a FABRICATED "287 × per 1 000
+  // inwoners" (a rendering `displayValueUnit` itself would never produce,
+  // since a rate unit never gets a '×') was WRONGLY ACCEPTED as a valid
+  // factor-unit rendering (`unitMaskPhrases` includes that ×-prefixed
+  // variant). Sharing `isFactorShapedUnit` with the render side closes this:
+  // the rate unit now takes the plain-adjacency branch, which requires the
+  // LITERAL unit text — the '×'-prefixed form never matches it.
+  it('a fabricated "×" on a RATE unit is now REJECTED (unification tightens the validator)', () => {
+    const cars = makeResult({
+      shape: 'single',
+      cells: [
+        makeCell({
+          table: '70072ned', measure: 'A018943_2', measureTitle: "Personenauto's, relatief", region: null,
+          periodCode: '2024JJ00', periodLabel: '2024', value: 287, unit: 'per 1 000 inwoners', decimals: 0,
+        }),
+      ],
+      definitionLabel: "personenauto's per 1 000 inwoners",
+    });
+    const correct = validateAnswerBody('Het aantal was in 2024 287 (per 1 000 inwoners).', cars);
+    expect(correct.problems).toEqual([]);
+    const fabricated = validateAnswerBody('Het aantal was in 2024 287 × per 1 000 inwoners.', cars);
+    expect(fabricated.ok).toBe(false);
+    expect(fabricated.problems.some((p) => p.includes("een '×'-teken ervoor"))).toBe(true);
+  });
 });
 
 describe('R9: semantic binding', () => {
@@ -890,6 +951,58 @@ describe('#140: metadata numbers are exempt only beside their source anchor (fab
       periodSemantics: "B13's groei-in-2024 leunt hierop.",
     });
     expect(scanBody('want in 2024 was het hoog', guided).find((t) => t.value === 2024)?.kind).toBe('unbacked');
+  });
+});
+
+// Regional statistics part 2 (ADR 061 part 2, Task 2 fix round 1): the SAME
+// #140 fabrication-hole class, for the metadata anchor `metadataNumberAnchors`
+// only started seeing after Task 2's normalizeForScan fix — a superscript
+// digit (U+00B2 '²') that NFKC-folds to a plain '2' inside a definitionLabel.
+// population_density's real label reads "...per km² land..."; after folding
+// that is "...per km2 land...", anchored to before='km'/after='land'. This
+// anchor exists ONLY so the answer's own '1.423 (aantal inwoners per km²)'
+// occurrence (the unit text itself, immediately after the value) grounds
+// correctly — it must NOT become a blanket license for any other '2'
+// anywhere in the body to pass as this metadata echo.
+describe('Regional statistics part 2 fix round 1: the km² NFKC-folded metadata anchor stays context-bound', () => {
+  const populationDensity = makeResult({
+    shape: 'single',
+    cells: [
+      makeCell({
+        table: '70072ned', measure: 'M000100', measureTitle: 'Bevolkingsdichtheid',
+        region: { code: 'PV28', label: 'Zuid-Holland (PV)' }, periodCode: '2024JJ00', periodLabel: '2024',
+        value: 1423, unit: 'aantal inwoners per km²', decimals: 0,
+      }),
+    ],
+    definitionLabel:
+      'bevolkingsdichtheid: inwoners op 1 januari per km² land, per gemeente/provincie (jaarcijfer)',
+  });
+
+  it('the genuine unit occurrence (the value immediately followed by its own km²-bearing unit) validates', () => {
+    const body = 'Bevolkingsdichtheid in Zuid-Holland was in 2024 1.423 (aantal inwoners per km²).';
+    const report = validateAnswerBody(body, populationDensity);
+    expect(report.problems).toEqual([]);
+  });
+
+  it('a made-up "2" nowhere near km/land — not adjacent to the real value or the unit phrase — FAILS R3/R1', () => {
+    const body =
+      'Bevolkingsdichtheid in Zuid-Holland was in 2024 1.423 (aantal inwoners per km²). ' +
+      'Gemiddeld wonen er 2 mensen in een huishouden.';
+    const report = validateAnswerBody(body, populationDensity);
+    expect(report.ok).toBe(false);
+    expect(report.problems.some((p) => p.includes("'2'"))).toBe(true);
+  });
+
+  it('the fabricated "2" classifies as unbacked (context: "er 2 mensen", not "km 2 land")', () => {
+    const token = scanBody('wonen er 2 mensen in een huishouden', populationDensity).find((t) => t.value === 2);
+    expect(token?.kind).toBe('unbacked');
+  });
+
+  it('the km²-folded anchor itself still grounds a GENUINE echo ("...per km2 land...")', () => {
+    // Mirrors the real definitionLabel's own folded text — proves the anchor
+    // was actually built, not merely "no false positive by accident".
+    const token = scanBody('gemeten per km 2 landgebied', populationDensity).find((t) => t.value === 2);
+    expect(token?.kind).toBe('metadata');
   });
 });
 
