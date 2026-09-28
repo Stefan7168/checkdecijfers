@@ -53,6 +53,22 @@ export const ENGLISH_MEASURE_LABELS: Readonly<Record<string, string>> = {
   monthly_unemployment_seasonally_adjusted: 'the monthly seasonally adjusted unemployment rate',
   average_home_sale_price_by_gemeente:
     'the average sale price of existing owner-occupied homes, by municipality/province (annual figure)',
+  // Regional statistics part 2 (ADR 061, session 138): 70072ned's 12 figures.
+  population_density: 'population density: residents on 1 January per km² of land',
+  average_woz_value:
+    'the average WOZ value of homes (the municipal valuation for tax purposes, not the sale price)',
+  owner_occupied_homes_share: 'the share of owner-occupied homes in the housing stock',
+  highly_educated_share:
+    'the share of people whose highest completed education is higher professional or university level (hbo/wo)',
+  passenger_cars_per_1000_residents: 'passenger cars per 1 000 residents',
+  distance_to_train_station: 'the average road distance from all residents to the nearest train station',
+  population_growth_per_1000: 'population growth per 1 000 residents',
+  average_household_size: 'the average household size (persons per private household)',
+  single_person_households_share: 'the share of single-person households among private households',
+  business_establishments: 'the number of business establishments on 1 January (rounded to multiples of five)',
+  benefit_recipients_total:
+    'the number of people receiving a benefit (unemployment, social assistance, disability and state pension)',
+  distance_to_large_supermarket: 'the average road distance from all residents to the nearest large supermarket',
 };
 
 export const ENGLISH_TOPIC_TERMS: Readonly<Record<string, string>> = {
@@ -82,4 +98,16 @@ export const ENGLISH_TOPIC_TERMS: Readonly<Record<string, string>> = {
   house_price_index_regional: 'house price index',
   monthly_unemployment_seasonally_adjusted: 'monthly unemployment',
   average_home_sale_price_by_gemeente: 'house prices by municipality',
+  population_density: 'population density',
+  average_woz_value: 'WOZ home values',
+  owner_occupied_homes_share: 'owner-occupied homes',
+  highly_educated_share: 'highly educated residents',
+  passenger_cars_per_1000_residents: 'car ownership',
+  distance_to_train_station: 'distance to a train station',
+  population_growth_per_1000: 'population growth',
+  average_household_size: 'household size',
+  single_person_households_share: 'single-person households',
+  business_establishments: 'business establishments',
+  benefit_recipients_total: 'benefit recipients',
+  distance_to_large_supermarket: 'distance to a supermarket',
 };

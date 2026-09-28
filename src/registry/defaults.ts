@@ -582,6 +582,132 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     notes:
       'Jaarcijfers 1995-2025, alle Definitief; opgeheven gemeenten houden lege cellen met reden "Impossible" na hun opheffing (R11). De kale term "huizenprijs" blijft bij average_existing_home_sale_price (85773NED) — deze key is de per-gemeente/regionale lezing (#160(b)).',
   },
+  // Regional statistics part 2 (ADR 061, session 138): the 12 owner-picked
+  // figures from 70072ned (Regionale kerncijfers Nederland), all yearly,
+  // NL/PV/GM, no dims. measureTitle is the CBS Title verbatim (confirmed
+  // against tests/fixtures/cbs/70072ned/measure-codes.json).
+  {
+    key: 'population_density',
+    tableId: '70072ned',
+    measure: 'M000100',
+    measureTitle: 'Bevolkingsdichtheid',
+    dims: {},
+    definitionLabel: 'bevolkingsdichtheid: inwoners op 1 januari per km² land, per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['bevolkingsdichtheid', 'inwoners per km2', 'hoe dichtbevolkt'],
+    notes: 'Regionale kerncijfers (70072ned). Niet hetzelfde als het aantal inwoners (population_on_1_january).',
+  },
+  {
+    key: 'average_woz_value',
+    tableId: '70072ned',
+    measure: 'M003039',
+    measureTitle: 'Gemiddelde WOZ-waarde van woningen',
+    dims: {},
+    definitionLabel:
+      'gemiddelde WOZ-waarde van woningen: de door de gemeente vastgestelde waarde voor de belastingen, niet de verkoopprijs; per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['WOZ-waarde', 'gemiddelde WOZ-waarde', 'WOZ'],
+    notes:
+      'De verkoopprijs per gemeente is average_home_sale_price_by_gemeente (83625NED); kies deze key alleen bij WOZ.',
+  },
+  {
+    key: 'owner_occupied_homes_share',
+    tableId: '70072ned',
+    measure: '1014800',
+    measureTitle: 'Koopwoningen',
+    dims: {},
+    definitionLabel: 'aandeel koopwoningen in de woningvoorraad (%), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['koopwoningen', 'percentage koopwoningen', 'aandeel koopwoningen'],
+  },
+  {
+    key: 'highly_educated_share',
+    tableId: '70072ned',
+    measure: '2018790',
+    measureTitle: 'Hbo, wo',
+    dims: {},
+    definitionLabel:
+      'aandeel inwoners met hbo of wo als hoogst behaalde opleiding (%), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['hoogopgeleid', 'hoger opgeleiden', 'hbo of wo'],
+  },
+  {
+    key: 'passenger_cars_per_1000_residents',
+    tableId: '70072ned',
+    measure: 'A018943_2',
+    measureTitle: "Personenauto's, relatief",
+    dims: {},
+    definitionLabel: "personenauto's per 1 000 inwoners, per gemeente/provincie (jaarcijfer)",
+    everydayTerms: ['autobezit', "auto's per inwoner", "personenauto's per inwoner"],
+  },
+  {
+    key: 'distance_to_train_station',
+    tableId: '70072ned',
+    measure: 'X092783',
+    measureTitle: 'Afstand tot treinstation',
+    dims: {},
+    definitionLabel:
+      'gemiddelde afstand over de weg van alle inwoners tot het dichtstbijzijnde treinstation (km), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['afstand tot treinstation', 'afstand tot het station'],
+  },
+  {
+    key: 'population_growth_per_1000',
+    tableId: '70072ned',
+    measure: 'M000101_3',
+    measureTitle: 'Bevolkingsgroei, relatief',
+    dims: {},
+    definitionLabel:
+      'bevolkingsgroei per 1 000 inwoners (per duizend van de beginbevolking op 1 januari), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['bevolkingsgroei', 'groei van de bevolking'],
+  },
+  {
+    key: 'average_household_size',
+    tableId: '70072ned',
+    measure: 'M000114',
+    measureTitle: 'Gemiddelde huishoudensgrootte',
+    dims: {},
+    definitionLabel:
+      'gemiddelde huishoudensgrootte: personen per particulier huishouden, per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['huishoudensgrootte', 'gemiddeld aantal personen per huishouden'],
+  },
+  {
+    key: 'single_person_households_share',
+    tableId: '70072ned',
+    measure: '1050015_2',
+    measureTitle: 'Eenpersoonshuishoudens',
+    dims: {},
+    definitionLabel:
+      'aandeel eenpersoonshuishoudens in alle particuliere huishoudens (%), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['eenpersoonshuishoudens', 'aandeel eenpersoonshuishoudens'],
+  },
+  {
+    key: 'business_establishments',
+    tableId: '70072ned',
+    measure: 'M000200_2',
+    measureTitle: 'Bedrijfsvestigingen totaal',
+    dims: {},
+    definitionLabel: 'aantal bedrijfsvestigingen op 1 januari (afgerond op vijftallen), per gemeente/provincie',
+    everydayTerms: ['bedrijfsvestigingen', 'aantal bedrijven', 'vestigingen van bedrijven'],
+    notes: 'Niet het aantal faillissementen (bankruptcies_businesses).',
+  },
+  {
+    key: 'benefit_recipients_total',
+    tableId: '70072ned',
+    measure: 'X033647',
+    measureTitle: 'Uitkeringsontvangers, totaal',
+    dims: {},
+    definitionLabel:
+      'aantal personen met een uitkering (WW, bijstand, arbeidsongeschiktheid én AOW), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['uitkeringsontvangers', 'mensen met een uitkering'],
+    notes: 'Inclusief AOW: grotendeels gepensioneerden, geen maat voor werkloosheid.',
+  },
+  {
+    key: 'distance_to_large_supermarket',
+    tableId: '70072ned',
+    measure: 'D000025',
+    measureTitle: 'Afstand tot grote supermarkt',
+    dims: {},
+    definitionLabel:
+      'gemiddelde afstand over de weg van alle inwoners tot de dichtstbijzijnde grote supermarkt (km), per gemeente/provincie (jaarcijfer)',
+    everydayTerms: ['afstand tot supermarkt', 'afstand tot de supermarkt'],
+    notes: 'Niet de omzet van supermarkten (supermarket_turnover_yoy).',
+  },
 ];
 
 /** #254 (ADR 052, DRAFT — not yet owner-approved): canonical measures

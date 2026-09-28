@@ -135,6 +135,21 @@ export const HAND_MEASURE_TITLES: Record<string, string> = {
   // way, per that shared wording.
   'Prijsindex verkoopprijzen': 'Price index purchase prices',
   Werkloosheidspercentage: 'Unemployment rate',
+  // Regional statistics part 2 (ADR 061, session 138): 70072ned publishes no
+  // English sibling table, so all 12 of the task's figures are hand-written
+  // here, read from the Dutch title (mirrored, no digit introduced).
+  Bevolkingsdichtheid: 'Population density',
+  'Gemiddelde WOZ-waarde van woningen': 'Average WOZ value of homes',
+  Koopwoningen: 'Owner-occupied homes',
+  'Hbo, wo': 'Higher professional or university education (hbo, wo)',
+  "Personenauto's, relatief": 'Passenger cars, relative',
+  'Afstand tot treinstation': 'Distance to train station',
+  'Bevolkingsgroei, relatief': 'Population growth, relative',
+  'Gemiddelde huishoudensgrootte': 'Average household size',
+  Eenpersoonshuishoudens: 'Single-person households',
+  'Bedrijfsvestigingen totaal': 'Business establishments, total',
+  'Uitkeringsontvangers, totaal': 'Benefit recipients, total',
+  'Afstand tot grote supermarkt': 'Distance to large supermarket',
 };
 export const MEASURE_TITLES: Record<string, string> = { ...CBS_MEASURE_TITLES, ...HAND_MEASURE_TITLES };
 
@@ -236,6 +251,20 @@ export const CURATED: ReadonlySet<string> = new Set([
   'Prijsindex verkoopprijzen',
   'Voorraad woningen; standen en mutaties vanaf 1921',
   'Werkloosheidspercentage',
+  // Regional statistics part 2 (ADR 061, session 138): 70072ned's 12 figures,
+  // all hand-written (no CBS English sibling for this table).
+  'Bevolkingsdichtheid',
+  'Gemiddelde WOZ-waarde van woningen',
+  'Koopwoningen',
+  'Hbo, wo',
+  "Personenauto's, relatief",
+  'Afstand tot treinstation',
+  'Bevolkingsgroei, relatief',
+  'Gemiddelde huishoudensgrootte',
+  'Eenpersoonshuishoudens',
+  'Bedrijfsvestigingen totaal',
+  'Uitkeringsontvangers, totaal',
+  'Afstand tot grote supermarkt',
 ]);
 
 // --- conflicted --------------------------------------------------------------

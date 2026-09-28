@@ -111,13 +111,45 @@ export const AVAILABLE_GRAINS: Record<string, ('JJ' | 'KW' | 'MM')[]> = {
   house_price_index_regional: ['JJ', 'KW'],
   monthly_unemployment_seasonally_adjusted: ['JJ', 'KW', 'MM'],
   average_home_sale_price_by_gemeente: ['JJ'],
+  // Regional statistics part 2 (ADR 061, session 138): the 12 owner-picked
+  // figures from 70072ned are all yearly-only (registry-seed.ts periodFloor
+  // 2015JJ00, no other grain in the slice).
+  population_density: ['JJ'],
+  average_woz_value: ['JJ'],
+  owner_occupied_homes_share: ['JJ'],
+  highly_educated_share: ['JJ'],
+  passenger_cars_per_1000_residents: ['JJ'],
+  distance_to_train_station: ['JJ'],
+  population_growth_per_1000: ['JJ'],
+  average_household_size: ['JJ'],
+  single_person_households_share: ['JJ'],
+  business_establishments: ['JJ'],
+  benefit_recipients_total: ['JJ'],
+  distance_to_large_supermarket: ['JJ'],
 };
 
 /** Measures with a regional dimension: 03759ned (population — national,
- * provinces, municipalities; registry slice) and, since the session-54
- * coverage batch, 83625NED (home sale prices — a REAL GeoDimension with 728
- * gemeenten + provincies + NL01). Everything else is national. */
-export const REGIONAL_KEYS = new Set(['population_on_1_january', 'average_home_sale_price_by_gemeente']);
+ * provinces, municipalities; registry slice), 83625NED (home sale prices — a
+ * REAL GeoDimension with 728 gemeenten + provincies + NL01, session-54
+ * coverage batch), and, since ADR 061 part 2 (session 138), the 12 regional
+ * figures from 70072ned (Regionale kerncijfers, NL/PV/GM). Everything else is
+ * national. */
+export const REGIONAL_KEYS = new Set([
+  'population_on_1_january',
+  'average_home_sale_price_by_gemeente',
+  'population_density',
+  'average_woz_value',
+  'owner_occupied_homes_share',
+  'highly_educated_share',
+  'passenger_cars_per_1000_residents',
+  'distance_to_train_station',
+  'population_growth_per_1000',
+  'average_household_size',
+  'single_person_households_share',
+  'business_establishments',
+  'benefit_recipients_total',
+  'distance_to_large_supermarket',
+]);
 
 const GRAIN_WORDS: Record<string, string> = {
   JJ: 'jaar',
