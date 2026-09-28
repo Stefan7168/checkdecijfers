@@ -14,6 +14,7 @@ import type {
   CbsTableSchema,
 } from './types.ts';
 import {
+  optionalString,
   parseCatalogPage,
   parseCodes,
   parseDimensions,
@@ -219,6 +220,9 @@ export class FixtureSource implements CbsSource {
       title: props.Title,
       dimensions: parseDimensions(docs.dimensions),
       measures: parseMeasures(docs.measureCodes),
+      // breadth step 2, Task 3: mirrors odata-v4.ts — the captured
+      // properties.json carries CBS's own 'Modified' timestamp too.
+      modified: optionalString(docs.properties as Record<string, unknown>, 'Modified'),
     };
   }
 

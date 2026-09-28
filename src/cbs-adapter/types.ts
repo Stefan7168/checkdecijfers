@@ -37,6 +37,16 @@ export interface CbsTableSchema {
   title: string;
   dimensions: CbsDimension[];
   measures: CbsMeasure[];
+  /**
+   * CBS 'Modified' ISO timestamp from the table's own Properties document
+   * (breadth step 2, Task 3: `registerSchemaOnly` stores it as
+   * `cbs_tables.schema_cbs_modified`, the staleness signal a later re-fetch
+   * compares against). The v4 adapter and `FixtureSource` fill it from the
+   * Properties document they already fetch; optional because it predates
+   * Eurostat's own `CbsTableSchema` construction (jsonstat.ts), which has no
+   * equivalent in a JSON-stat dataset response and passes `null` explicitly.
+   */
+  modified?: string | null;
 }
 
 export interface CbsCode {

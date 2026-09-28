@@ -12,6 +12,7 @@ import type {
   CbsTableSchema,
 } from './types.ts';
 import {
+  optionalString,
   parseCatalogPage,
   parseCodes,
   parseDimensions,
@@ -119,6 +120,9 @@ export class ODataV4Source implements CbsSource {
       title: props.Title,
       dimensions: parseDimensions(dimensionsRaw),
       measures: parseMeasures(measuresRaw),
+      // breadth step 2, Task 3: the same Properties document already fetched
+      // above for Title carries CBS's own 'Modified' timestamp.
+      modified: optionalString(properties as Record<string, unknown>, 'Modified'),
     };
   }
 

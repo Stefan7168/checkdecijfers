@@ -27,7 +27,10 @@ function findDimension(dimensions: CbsDimension[], kind: CbsDimension['kind']): 
   return dimensions.find((d) => d.kind === kind);
 }
 
-async function fetchAllCodeLists(
+/** Exported for src/ingestion/slice-cache.ts (breadth step 2, Task 3):
+ * registerSchemaOnly needs the exact same all-dimensions code-list fetch
+ * registerTables uses — reused, never copied. */
+export async function fetchAllCodeLists(
   source: CbsSource,
   tableId: string,
   dimensions: CbsDimension[],
@@ -322,8 +325,9 @@ interface LabelRow {
 }
 
 /** Flattens fetched code lists into label rows, in the same dimension-then-code
- * order the old per-row insert loops used. */
-function labelRowsFromCodeLists(
+ * order the old per-row insert loops used. Exported for src/ingestion/
+ * slice-cache.ts (breadth step 2, Task 3) — reused, never copied. */
+export function labelRowsFromCodeLists(
   dimensions: CbsDimension[],
   codeLists: Record<string, CbsCode[]>,
 ): LabelRow[] {
@@ -355,8 +359,12 @@ function labelRowsFromCodeLists(
  * semantics — it follows a delete, so a conflict there can only be a genuine
  * anomaly (a duplicate code inside one fetched CBS code list) and must stay
  * a loud unique-violation failure, never a silent drop.
+ *
+ * Exported for src/ingestion/slice-cache.ts (breadth step 2, Task 3) —
+ * registerSchemaOnly writes the same dimension_labels shape and reuses this
+ * batched writer instead of a second copy.
  */
-async function insertDimensionLabels(
+export async function insertDimensionLabels(
   tx: Db,
   tableId: string,
   rows: LabelRow[],
