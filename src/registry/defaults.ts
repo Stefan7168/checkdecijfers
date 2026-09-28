@@ -652,8 +652,17 @@ export const CANONICAL_MEASURES: CanonicalMeasure[] = [
     measure: 'M000101_3',
     measureTitle: 'Bevolkingsgroei, relatief',
     dims: {},
+    // Task 2 (ADR 061 part 2, regional-figures-render.test.ts) found this
+    // label breaking R3 wherever a template embeds it verbatim in the
+    // scanned body (`subject()` in src/answer/compose/template.ts, used by
+    // both the single-region and region-set renderers): the original wording
+    // spelled the quantity out ("per duizend"), and R3 forbids a spelled-out
+    // Dutch quantity word anywhere in body text ("hoeveelheden alleen in
+    // cijfers" — validate.ts's QUANTITY_WORD check). Reworded to the digit
+    // form already used earlier in the SAME label ('per 1 000 inwoners') —
+    // meaning unchanged, no CBS data touched.
     definitionLabel:
-      'bevolkingsgroei per 1 000 inwoners (per duizend van de beginbevolking op 1 januari), per gemeente/provincie (jaarcijfer)',
+      'bevolkingsgroei per 1 000 inwoners (per 1 000 van de beginbevolking op 1 januari), per gemeente/provincie (jaarcijfer)',
     everydayTerms: ['bevolkingsgroei', 'groei van de bevolking'],
   },
   {

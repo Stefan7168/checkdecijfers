@@ -54,6 +54,22 @@ export const UNITS: Record<string, string> = {
   procentpunt: 'percentage point',
   promille: 'per mille',
   'gemiddelde saldo van de deelvragen': 'average balance of the sub-questions',
+  // Regional statistics part 2 (ADR 061 part 2, Task 2): two more 70072ned
+  // units, read the same way as every entry above — from
+  // tests/fixtures/cbs/70072ned/measure-codes.json's own `Unit` field
+  // (M000100 'aantal inwoners per km²'; M000114 'personen per 1 huishouden').
+  // 'inwoners'/'personen' translate the same as the standalone 'personen'
+  // entry above ('inhabitants'/'persons', matching 'per 1 000 inhabitants'
+  // just above); the '1' in 'personen per 1 huishouden' is kept as the digit
+  // '1' (never spelled "one"), byte-identical to the Dutch, for the same
+  // digit-invariance reason 'per 1 000 inwoners' is space-grouped above. A
+  // third new unit this task's figures use, 'km', is NOT added here: it
+  // reads identically in English and already passes through the "no match"
+  // default unchanged, exactly like '%' and 'x 1 000' above — checked
+  // against tests/registry/english-names.test.ts's own
+  // "leaves an already-neutral or unrecognised unit unchanged" convention.
+  'aantal inwoners per km²': 'inhabitants per km²',
+  'personen per 1 huishouden': 'persons per 1 household',
 };
 
 // --- regions -------------------------------------------------------------------

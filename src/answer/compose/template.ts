@@ -34,6 +34,26 @@ export function provisionalSuffix(cell: ResultCell): string {
   return resolveSourceForTable(cell.tableId).provisionalDisplay[cell.status] ?? ' (voorlopig cijfer)';
 }
 
+/** A unit is FACTOR-SHAPED only when it STARTS with a digit (optionally after
+ * a literal 'x '/'× ' prefix) — '1 000 euro', 'x 1 000', '2015=100'. Regional
+ * statistics part 2 (ADR 061 part 2, Task 2) found the previous `/\d/.test`
+ * check too loose: a RATE unit that merely CONTAINS a digit later in the
+ * phrase — 70072ned's 'per 1 000 inwoners' (A018943_2, M000101_3) and
+ * 'personen per 1 huishouden' (M000114) — matched it too, and got the same
+ * '× ' scale-multiplication prefix as a real factor unit
+ * (`displayValueUnit(287, 0, 'per 1 000 inwoners')` rendered the nonsensical
+ * "287 (× per 1 000 inwoners)" — "times per 1 000 inhabitants" claims a
+ * multiplication that was never CBS's unit). No canonical measure before
+ * this task ever used a digit-bearing unit outside this factor shape (only
+ * 70072ned's fixture has one — checked against every registered measure's
+ * Unit across every table's measure-codes.json fixture), so narrowing this
+ * check changes no existing output — it only stops two NEW units from being
+ * misread as factors. Both now fall through to the plain word-count rule
+ * below, exactly like any other multi-word descriptive unit. */
+function isFactorShapedUnit(trimmed: string): boolean {
+  return /^[x×]?\s*\d/.test(trimmed);
+}
+
 /** Value + unit, R10-safe: '%' attaches, 'aantal' renders bare, factor units
  * ('x 1 000', '1 000 euro') keep their verbatim factor string — the ×1.000
  * misreading guard. */
@@ -42,7 +62,7 @@ export function displayValueUnit(value: number, decimals: number, unit: string):
   const trimmed = unit.trim();
   if (trimmed === '%') return `${formatted}%`;
   if (/^aantal$/i.test(trimmed)) return formatted;
-  if (/\d/.test(trimmed)) {
+  if (isFactorShapedUnit(trimmed)) {
     // An index-BASE declaration ("2015=100") is a label, never a factor
     // (#143): an '×' prefix would claim a multiplication that isn't real.
     // parseFactorUnit (query/derivations.ts) already excludes '=' units from

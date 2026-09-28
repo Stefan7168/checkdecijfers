@@ -113,10 +113,24 @@ export function maskPhrases(text: string, phrases: string[]): string {
 
 /** Unit strings that contain digits must be masked before token scanning,
  * in every spelling the prose may reasonably use. Units without digits need
- * no masking (the tokenizer only sees digits). */
+ * no masking (the tokenizer only sees digits).
+ *
+ * Normalized through `normalizeForScan` FIRST (Regional statistics part 2,
+ * ADR 061 part 2, Task 2): `scanBody` normalizes the body (NFKC) before
+ * masking, so a unit whose RAW text has no ASCII digit but NFKC-folds to one
+ * — 70072ned's 'aantal inwoners per km²' (M000100), where '²' (U+00B2)
+ * folds to a plain '2' — was invisible to the old raw `/\d/.test(unit)`
+ * check. The mask never got built, the normalized body's stray '2' reached
+ * the numeric-token scanner unmasked, and R3 flagged it as a fabricated,
+ * cell-less number. Building the mask from the SAME normalized form the body
+ * is scanned in fixes both the detection and the phrase the mask matches
+ * against — for every unit already in production (plain ASCII: 'x 1 000',
+ * '1 000 euro', 'per 1 000 inwoners', …) NFKC is the identity, so this is
+ * behavior-neutral there; it only newly catches an NFKC-foldable digit. */
 export function unitMaskPhrases(unit: string): string[] {
-  if (!/\d/.test(unit)) return [];
-  const bare = unit.trim();
+  const normalized = normalizeForScan(unit.trim());
+  if (!/\d/.test(normalized)) return [];
+  const bare = normalized;
   const variants = new Set<string>([bare]);
   // 'x 1 000' / '1 000 euro' style factor units: tolerate ×, dots and a
   // leading 'x ' the CBS string may or may not carry.
@@ -133,10 +147,19 @@ export function unitMaskPhrases(unit: string): string[] {
  * metadata text (period labels, definition labels, measure titles, region
  * labels, period semantics) — R1's structural exemption, matched against the
  * validated result, so a year that belongs to neither data nor metadata still
- * fails. */
+ * fails.
+ *
+ * Normalized through `normalizeForScan` first (Regional statistics part 2,
+ * ADR 061 part 2, Task 2 — same fix as `unitMaskPhrases` above, same root
+ * cause): the BODY this exemption is checked against is always scanned in
+ * its normalized form, so an exemption built from the RAW metadata text
+ * misses any NFKC-foldable digit in it (a definitionLabel's own 'km²' folds
+ * to '2' in the scanned body but never matched anything built from the raw
+ * string). Plain ASCII text — every metadata string already in production —
+ * normalizes to itself, so this is behavior-neutral there. */
 export function numbersInText(text: string | null | undefined): number[] {
   if (!text) return [];
-  return findNumericTokens(text).map((t) => t.value);
+  return findNumericTokens(normalizeForScan(text)).map((t) => t.value);
 }
 
 /** The alphanumeric run nearest a boundary — the last one before `end` of the
@@ -175,10 +198,17 @@ export function metadataNumberAnchors(
   strict = false,
 ): MetadataNumberAnchor[] {
   if (!text) return [];
-  return findNumericTokens(text).map((t) => ({
+  // Normalized first, same reason as `numbersInText` just above: the scanned
+  // body is always normalizeForScan'd, so an anchor's number AND its
+  // before/after context words must come from that same normalized form —
+  // sliced consistently from ONE string, never mixing raw indices into a
+  // normalized one. Identity for the plain-ASCII text every anchor source
+  // used before this task.
+  const normalized = normalizeForScan(text);
+  return findNumericTokens(normalized).map((t) => ({
     value: t.value,
-    before: adjacentAlnum(text.slice(0, t.index), 'before'),
-    after: adjacentAlnum(text.slice(t.index + t.token.length), 'after'),
+    before: adjacentAlnum(normalized.slice(0, t.index), 'before'),
+    after: adjacentAlnum(normalized.slice(t.index + t.token.length), 'after'),
     strict,
   }));
 }

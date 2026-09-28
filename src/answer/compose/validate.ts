@@ -696,8 +696,22 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
   // preserves the actual adjacency rule — the unit must START within
   // UNIT_SUFFIX chars after its value — for every unit length; short units
   // keep the exact pre-existing window (byte-identical behavior).
+  //
+  // The trigger reserves `PARENTHESIZED_UNIT_OVERHEAD` extra characters
+  // (Regional statistics part 2, ADR 061 part 2, Task 2): `displayValueUnit`
+  // renders a 3+-word unit as `${formatted} (${unit})` — a 2-char ' ('
+  // between the value token and the unit's own text. The old bare `>=
+  // UNIT_SUFFIX` trigger didn't budget for that wrapper, so a unit landing
+  // in [UNIT_SUFFIX - PARENTHESIZED_UNIT_OVERHEAD, UNIT_SUFFIX) chars — first
+  // hit by 70072ned's 'aantal inwoners per km²' (M000100), 23 chars — fell
+  // exactly one short of the OLD unextended window and failed R10 even
+  // though the unit was right there in the body. Every unit already in
+  // production is either well under the new, slightly earlier trigger point
+  // or well over it (the #115 case, 34 chars) — this changes no existing
+  // output (proven by the untouched compose-template.test.ts suite).
+  const PARENTHESIZED_UNIT_OVERHEAD = 2;
   const phraseWindow =
-    unit.trim().length >= UNIT_SUFFIX
+    unit.trim().length + PARENTHESIZED_UNIT_OVERHEAD >= UNIT_SUFFIX
       ? body.slice(
           Math.max(0, token.index - UNIT_PREFIX),
           token.index + token.token.length + UNIT_SUFFIX + unit.trim().length,
@@ -744,7 +758,18 @@ function checkUnitAdjacency(body: string, token: ClassifiedToken, unit: string):
     return problems;
   }
 
-  if (!containsPhrase(phraseWindow, unit.trim())) {
+  // `body` (and so `phraseWindow`, sliced from it) is ALREADY
+  // normalizeForScan'd by the caller (R3/R1's canonical scanning form) — but
+  // `unit` here is still the RAW registry/CBS string. For plain ASCII units
+  // that is a no-op difference; for 70072ned's 'aantal inwoners per km²'
+  // (M000100, Regional statistics part 2, ADR 061 part 2, Task 2) it is not:
+  // NFKC folds '²' (U+00B2) to a plain '2', so the window actually reads
+  // '...per km2)', and comparing it against the UN-normalized 'km²' always
+  // missed — the same normalization-form mismatch `unitMaskPhrases` had
+  // (see that function's own comment). Normalizing the unit here too closes
+  // it; every existing unit is plain ASCII, so normalizeForScan is the
+  // identity for it and this changes no existing output.
+  if (!containsPhrase(phraseWindow, normalizeForScan(unit.trim()))) {
     problems.push(`R10: bij ${label} ontbreekt de eenheid '${unit}'`);
   }
   return problems;
