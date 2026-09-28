@@ -19,34 +19,28 @@
 > already lives independently in [open-questions.md](open-questions.md) and was not lost.
 
 **▶ NEXT SESSION STARTS HERE (written 2026-09-28 local, session 138 — owner present; verify against `git log` / Actions runs
-before trusting this). Previous kickoff: [session-briefs/2026-09-28-session-138-kickoff.md](session-briefs/2026-09-28-session-138-kickoff.md).**
+before trusting this). Kickoff: [session-briefs/2026-09-28-session-139-kickoff.md](session-briefs/2026-09-28-session-139-kickoff.md).**
 
-- **`main` is live and green**: breadth step 2 merged `19edcaee` (CI 36430678653 green incl. deploy, prod 200). Earlier: `5b06152e` (Part 1 code `65c9cbb1..4e2804ca` + docs), CI 36384113836 green incl. deploy, prod 200.
-- **CBS is back** ([#329](open-questions.md) resolved 2026-09-28): both data APIs answer 200.
-- **Regional statistics, Part 1 BUILT (session 138, ADR [061](decisions/061-regional-statistics-70072ned.md))** — owner picked
-  12 figures from `70072ned` (density, WOZ value, % owner-occupied, % hbo/wo, cars per 1,000, distance to station, growth,
-  household size, % single-person, businesses, benefit recipients incl. AOW, distance to supermarket). Data layer only:
-  a measure allow-list slice (fingerprint scoped to the 12) and per-cell status read from CBS's period notes (CBS publishes
-  no machine status for this table — found mid-build). Proven with a full live-data sync into a throwaway DB: 106,683 cells,
-  every check passed. **Nothing reader-visible; prod NOT loaded on purpose** (the coverage box and `/llms.txt` would list it).
-  Household income excluded (CBS's v4 feed reuses its code). Residuals: [#334](open-questions.md).
-- **⚑ OWNER SANITY CHECK (session 138, [#335](open-questions.md), [brief](session-briefs/2026-09-28-sanity-check.md)): NEXT PRIORITY IS
-  NOW BREADTH — make any CBS table answerable quickly** (the on-demand fetch as the normal path). Measured: no external users
-  yet, 21 of 4,858 CBS tables loaded (1,277 current). **Design APPROVED** —
-  [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md). **Step 1 ✅ measured** (reach ~88% ≈ 1,100 tables).
-  **Step 2 ✅ built — the slice cache** (ADR [062](decisions/062-breadth-table-lane-slice-cache.md)): fetch, check and store only a
-  question's cells; not wired to chat yet; migration 037 FILE-ONLY (owner applies before step 5). Next: step 3 (breakdown
-  resolver) + step 4 (table-scoped parser; small spend after 2026-10-01); step-5 prerequisites [#336](open-questions.md). Regional statistics Part 2 below is **PARKED** on branch
-  `regional-stats-part2` (built + reviewed; only the paid re-record, merge and prod load remain).
-- **(Parked) regional statistics Part 2** (after the spend roof resets **2026-10-01**, owner present): write its plan,
-  add the 12 canonical figures + `REGIONAL_KEYS` + English labels + a scatter partner per figure, re-record the
-  intent/clarify/followup fixtures (cheap tier, small spend), merge + deploy, then prod `sync 70072ned` + `registry:apply`
-  (RUNBOOK "Regional statistics table `70072ned`"), then the live benchmark (also confirms #330).
-- **Spend:** the $50 monthly roof is nearly used until 2026-10-01 (session 138 spent nothing on AI).
-- **Also after 10-01 (small, owner-supervised):** #328 'Declared bankruptcies'.
-- **Waiting on the owner (not urgent):** #245 sub-questions, #275 homepage styles row (on hold), own-data publishing
-  spot-check (RUNBOOK ADR 057 step 4), Eurostat E2a steps 0/5/6 ([#313](open-questions.md)).
-- **Not building (measured):** #331 script matcher. Unscheduled, small: #327, #299, #277(a), #333.
+- **`main` is live and green**: last code merge `19edcaee` (breadth step 2, CI 36430678653 green incl. deploy, prod 200).
+  Full session log: [status-archive.md](status-archive.md).
+- **⚑ DIRECTION CHANGE (owner sanity check, session 138, [#335](open-questions.md),
+  [brief](session-briefs/2026-09-28-sanity-check.md)): BREADTH FIRST — make any current CBS table answerable in the same
+  chat.** Measured: no external users yet; 21 of 1,277 current CBS tables loaded. Design approved:
+  [spec](superpowers/specs/2026-09-28-breadth-any-cbs-table-design.md), ADR [062](decisions/062-breadth-table-lane-slice-cache.md).
+  - Step 1 ✅ all current tables measured: reach ≈ 88% (~1,100 tables); 576 answer with no follow-up question.
+  - Step 2 ✅ merged — the **slice cache** (fetch, check, store only a question's cells; dated per slice). Not wired to chat;
+    **migration 037 FILE-ONLY** (owner applies before step 5).
+  - **Step 3 IN PROGRESS** on branch `breadth-step-3` (plan
+    [step 3](superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md)): the breakdown resolver (CBS grand total by a
+    measured rule, else a button question). See the kickoff for exactly where it stopped.
+  - Then step 4 (table-scoped parser — small spend after 2026-10-01), step 5 (wire into chat; prerequisites
+    [#336](open-questions.md)), step 6 (table-lane benchmark → switch on).
+- **Parked (built, not merged):** regional statistics Part 2 on branch `regional-stats-part2` (ADR [061](decisions/061-regional-statistics-70072ned.md));
+  Part 1 (data layer) is merged. Only the paid re-record, merge and prod load remain — revisit if real users ask for it.
+- **Spend:** the $50 monthly roof is nearly used until **2026-10-01** (session 138 spent nothing on AI).
+- **Standing recommendation (sanity check move 1):** put the product in front of ~10 journalists once breadth is live.
+- **Waiting on the owner (not urgent):** apply migration 037 before step 5; #245, #275, own-data publishing spot-check,
+  Eurostat E2a ([#313](open-questions.md)). After 10-01: #328, live benchmark (#330).
 
 ---
 

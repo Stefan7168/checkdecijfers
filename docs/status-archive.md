@@ -1,5 +1,33 @@
 # STATUS archive — the session log
 
+**Session 138 (2026-09-28, local UTC+7 — owner present throughout; a direction change mid-session; wrapped on the owner's
+end-of-session signal).**
+
+1. **State verified at start:** `main` = `57522b51`, CI 36340666368 green, prod 200. **CBS back:** both OData APIs 200 (the
+   www.cbs.nl banner still showed "Technische storing" — not a reliable signal); #329 resolved.
+2. **Regional statistics (owner pick: 12 figures from `70072ned`).** Measured live: 6.8 M cells / 248 codes; **the v4 feed
+   reuses 34 measure codes** for several figures (income excluded); **every period has `Status: null`** (status only in
+   prose notes). Built Part 1 (data layer) via SDD: measure allow-list slice (fingerprint scoped), status read from CBS's
+   period notes (fail-closed heading map, ADR 061), seed + fixture; one process catch — an implementer edited applied
+   migration 025, reverted, drift test fixed. Final review found a coverage-page leak → **prod load deferred**; proven
+   instead by a full live-data sync into a throwaway DB (106,683 cells, all checks). Merged `5b06152e` (CI 36384113836
+   green). Part 2 (answerable figures, English labels, scatter partners, labelled cases) built + reviewed on branch
+   `regional-stats-part2` — **parked**, not merged.
+3. **Owner sanity check** ("too niche… what should this app actually do?"). Measured: 336 audit rows since 2026-07-02 from
+   2 accounts (no external users); 21 of 1,277 current tables loaded; on-demand onboarding used 3×. Recommendation (launch
+   to real users; breadth over depth; stop polish). **Owner chose breadth** (#335, brief `session-briefs/2026-09-28-sanity-check.md`).
+4. **Breadth design approved** (spec `2026-09-28-breadth-any-cbs-table-design.md`, ADR 062): two lanes, table-scoped parse,
+   CBS total by default else buttons, fetch only the question's slice, same chat, normal price. **Step 1** measured all
+   1,277 current tables (reach ≈ 88%). **Step 2 (slice cache)** built via SDD (6 tasks incl. an added 5b, opus reviews on
+   the invariant-heavy ones, fix rounds on T3/T4/T5/T5b, final review 2 Important — a withdrawn cell could be dated by a
+   newer overlapping slice; the ensureSlice refresh skipped the unit check — both fixed). Verify: backend 4,083 + web
+   3,262, benchmark 14/14 + 6/6 + 0 fabricated, `audit:verify 1 400` unchanged (298/364 clean, 2 pinned, 36 redacted).
+   Merged `19edcaee`, CI 36430678653 green incl. deploy, prod 200. Migration 037 FILE-ONLY.
+5. **Step 3 (breakdown resolver) started:** total rule measured over 2,330 breakdown dimensions (first member only; traps
+   like "Type: Paar, totaal" and non-first `T00` refused); plan `2026-09-28-breadth-step-3-breakdown-resolver.md`; branch
+   `breadth-step-3` — see the session-139 kickoff for exact progress.
+6. **AI spend: none.**
+
 **Session 137 (2026-09-27 → 2026-09-28, local UTC+7 — owner present throughout; one feature shipped LIVE in two parts;
 wrapped on the owner's "Wrap up").**
 

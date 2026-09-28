@@ -6,7 +6,7 @@ place for lessons already captured elsewhere: check [STATUS.md](STATUS.md),
 [decisions/](decisions/), and [CLAUDE.md](../CLAUDE.md) conventions first. Newest entries
 on top.
 
-## Session 138 — a wide CBS table breaks assumptions the metadata never warns about; measure, then write the plan
+## Session 138 — measure before deciding: a wide CBS table, a product sanity check, and the breadth pivot
 
 1. **Probe the data APIs, not the homepage banner.** At session start www.cbs.nl still showed "Technische storing" while
    both OData APIs answered 200 and served a full 106,683-cell sync. The #329 retry check should be the `curl` on
@@ -30,6 +30,20 @@ on top.
 6. **A live-data sync into a throwaway PGlite is a zero-risk live proof.** `registerTables` + `syncTable` with the real
    `ODataV4Source` into `createTestDb()` ran every validation stage on the real 106,683 cells without touching prod —
    use it before any new-table prod load.
+7. **Measure usage before choosing the next feature.** One read-only query of `audit_answers` showed 2 accounts ever and
+   ~90 real questions, and one of `cbs_catalog` showed 21 of 1,277 current tables loaded — facts that reframed a day of
+   depth work in minutes. When the owner asks "is this the right thing", query the logs first, then recommend.
+8. **Size the real constraint with a metadata crawl before designing.** The assumed blocker for on-demand tables was
+   price/latency; a 1,277-table metadata crawl (no cells, ~20 min) showed the real one: only 7% of tables have no breakdowns.
+   Saving the crawl script (`scripts/research/`) made the later total-rule measurement a 10-second re-run.
+9. **Heuristics over CBS text need an adversarial pass on the real data.** The obvious "exactly one Totaal" rule looked
+   fine at 69% but hid 26 sub-total picks ("Type: Paar, totaal") and `T00` codes that are not the grand total; a looser
+   variant took "Nederlands (totaal)" for all nationalities. Sampling each rule's picks in each shape class is what exposed them.
+10. **Rulings recorded in the ledger held up across 5 fix rounds.** Every controller ruling (e.g. "a table without CBS
+    Modified is refused", "leave `last_sync_at` null, date per slice") was written with its cost-if-wrong; reviewers could
+    then check the code against a stated intent, and two later findings refined rulings instead of re-litigating them.
+11. **Tell implementers "no git stash" explicitly.** Two implementers used `git stash` for before/after comparisons in a
+    checkout that holds an owner stash; nothing was lost, but the rule belongs in every brief (use `git show <sha>:<path>`).
 
 ## Session 137 — per-task reviews miss what only a rendered screen or a cross-task view shows
 

@@ -1215,7 +1215,8 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
 - **Step 1 ✅** all 1,277 current tables measured (metadata only): reach ≈ 88%; 57% need no follow-up question.
 - **Step 2 ✅** slice cache (plan [step 2](superpowers/plans/2026-09-28-breadth-step-2-slice-cache.md)): `registerSchemaOnly`,
   `fetchSlice`, `ensureSlice`, slice-cache answering with per-slice confirmation dates; migration 037 FILE-ONLY; not wired.
-- **Next:** step 3 breakdown resolver (totals + conventions + button question), step 4 table-scoped parser (small spend
+- **Step 3 IN PROGRESS** (session 138): branch `breadth-step-3`, plan [step 3](superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md) — Task 1 ✅ reviewed, Task 2 built (review pending), Task 3 (reach check + merge) open.
+- **Next:** finish step 3 (breakdown resolver: totals + conventions + button question), step 4 table-scoped parser (small spend
   after 2026-10-01), step 5 orchestration + chat progress (prerequisites [#336](open-questions.md); owner applies 037),
   step 6 table-lane benchmark → flag flip.
 
