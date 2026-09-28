@@ -1216,7 +1216,8 @@ Owner sanity check (session 138, [brief](session-briefs/2026-09-28-sanity-check.
 - **Step 2 ✅** slice cache (plan [step 2](superpowers/plans/2026-09-28-breadth-step-2-slice-cache.md)): `registerSchemaOnly`,
   `fetchSlice`, `ensureSlice`, slice-cache answering with per-slice confirmation dates; migration 037 FILE-ONLY; not wired.
 - **Step 3 ✅** breakdown resolver (plan [step 3](superpowers/plans/2026-09-28-breadth-step-3-breakdown-resolver.md), session 139): `src/query/breakdowns.ts` — CBS grand total by a measured rule (tightened in review), else one button question; 1,362 of 1,785 breakdowns resolved, 575 of 923 tables need no follow-up question; not wired.
-- **Next:** step 4 table-scoped parser (small spend
+- **Step 4 IN PROGRESS** (session 139): plan [step 4](superpowers/plans/2026-09-28-breadth-step-4-table-parser.md) — built hermetically; recording after 2026-10-01.
+- **Next:** finish step 4 table-scoped parser (small spend
   after 2026-10-01), step 5 orchestration + chat progress (prerequisites [#336](open-questions.md); owner applies 037),
   step 6 table-lane benchmark → flag flip.
 
