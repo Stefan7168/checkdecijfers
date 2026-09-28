@@ -1,4 +1,4 @@
-// registerSchemaOnly (breadth step 2, Task 3): schema-only registration for
+// registerSchemaOnly (breadth step 2, Task 3) and fetchSlice (Task 4): schema-only registration for
 // slice-cache tables — metadata, code lists, numeric-measure units and
 // fingerprint, ZERO observation rows. Uses the same PGlite/FixtureSource
 // pattern as tests/ingestion/ingestion.test.ts so this exercises real
@@ -9,7 +9,14 @@ import { FixtureSource, loadFixtureDocs } from '../../src/cbs-adapter/fixture-so
 import { computeFingerprint } from '../../src/ingestion/fingerprint.ts';
 import { registerTables } from '../../src/ingestion/pipeline.ts';
 import { SEED_TABLES } from '../../src/ingestion/registry-seed.ts';
-import { registerSchemaOnly } from '../../src/ingestion/slice-cache.ts';
+import {
+  fetchSlice,
+  registerSchemaOnly,
+  sliceFilterKey,
+  SLICE_MAX_CELLS,
+  type SliceRequest,
+} from '../../src/ingestion/slice-cache.ts';
+import type { CbsObservationRow, CbsSlice, CbsSource } from '../../src/cbs-adapter/types.ts';
 import type { Db } from '../../src/db/types.ts';
 import { createTestDb } from '../helpers/pglite-db.ts';
 
@@ -315,5 +322,489 @@ describe('registerSchemaOnly (breadth step 2, Task 3)', () => {
     // Nothing about the full registration changed.
     const rowAfter = await cbsTablesRow('83625NED');
     expect(rowAfter).toEqual(fullRow);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchSlice (breadth step 2, Task 4)
+// ---------------------------------------------------------------------------
+
+/** Wraps a source and counts EVERY call (request refusals must make none),
+ * recording the slice + dimension names handed to fetchObservations. */
+function counting(inner: CbsSource) {
+  const counter = { calls: 0, slices: [] as (CbsSlice | undefined)[], dimensionNames: [] as (string[] | undefined)[] };
+  const source: CbsSource = {
+    fetchTableSchema: (t, s) => {
+      counter.calls++;
+      return inner.fetchTableSchema(t, s);
+    },
+    fetchCodeList: (t, d, s) => {
+      counter.calls++;
+      return inner.fetchCodeList(t, d, s);
+    },
+    fetchObservations: (t, s, n) => {
+      counter.calls++;
+      counter.slices.push(s);
+      counter.dimensionNames.push(n);
+      return inner.fetchObservations(t, s, n);
+    },
+    fetchObservationCount: (t) => {
+      counter.calls++;
+      return inner.fetchObservationCount(t);
+    },
+    fetchCatalog: () => {
+      counter.calls++;
+      return inner.fetchCatalog();
+    },
+  };
+  return { source, counter };
+}
+
+/** A source whose observations are replaced by `rows(inner rows)` — for
+ * crafting CBS responses the fixtures do not contain. */
+function withObservations(
+  inner: CbsSource,
+  transform: (rows: CbsObservationRow[]) => CbsObservationRow[],
+  ignoreSlice = false,
+): CbsSource {
+  return {
+    fetchTableSchema: (t, s) => inner.fetchTableSchema(t, s),
+    fetchCodeList: (t, d, s) => inner.fetchCodeList(t, d, s),
+    async *fetchObservations(t, s, n) {
+      const all: CbsObservationRow[] = [];
+      for await (const page of inner.fetchObservations(t, ignoreSlice ? undefined : s, n)) all.push(...page);
+      yield transform(all);
+    },
+    fetchObservationCount: (t) => inner.fetchObservationCount(t),
+    fetchCatalog: () => inner.fetchCatalog(),
+  };
+}
+
+async function observationRows(tableId: string) {
+  const result = await db.query(
+    `select measure, region_code, period_code, period_grain, period_year, dims, value, unit, decimals,
+            status, value_attribute, batch_id
+       from observations where table_id = $1 order by region_code, period_code, measure`,
+    [tableId],
+  );
+  return result.rows.map((r) => ({
+    measure: r.measure as string,
+    region_code: r.region_code as string,
+    period_code: r.period_code as string,
+    period_grain: r.period_grain as string,
+    period_year: r.period_year as number,
+    dims: parseJsonb<Record<string, string>>(r.dims),
+    value: r.value == null ? null : Number(r.value),
+    unit: r.unit as string,
+    decimals: r.decimals as number,
+    status: r.status as string,
+    value_attribute: r.value_attribute as string,
+    batch_id: r.batch_id,
+  }));
+}
+
+async function sliceFetchRows(tableId: string) {
+  return (await db.query('select * from slice_fetches where table_id = $1 order by id', [tableId])).rows;
+}
+
+async function batchRow(id: number) {
+  return (await db.query('select * from ingestion_batches where id = $1', [id])).rows[0]!;
+}
+
+async function batchCount(tableId: string): Promise<number> {
+  return Number((await db.query('select count(*)::int as n from ingestion_batches where table_id = $1', [tableId])).rows[0]!.n);
+}
+
+async function registered(tableId: string, docs?: Awaited<ReturnType<typeof loadDocs>>) {
+  const d = docs ?? (await loadDocs(tableId));
+  const reg = await registerSchemaOnly(db, new FixtureSource(d), tableId);
+  if (!reg.ok) throw new Error(`registration failed: ${reg.summary}`);
+  return d;
+}
+
+const HOUSE_PRICES: SliceRequest = {
+  measures: ['M001534'],
+  members: { RegioS: ['NL01', 'GM0363'] },
+  periods: ['2024JJ00', '2025JJ00'],
+};
+
+describe('fetchSlice (breadth step 2, Task 4)', () => {
+  it('fetches, validates and stores exactly the requested cells (83625NED, region + time)', async () => {
+    const docs = await registered('83625NED');
+    const { source, counter } = counting(new FixtureSource(docs));
+
+    const result = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 4, missingCells: 0, filterKey: sliceFilterKey(HOUSE_PRICES) });
+    if (!result.ok) throw new Error('unreachable');
+
+    // The exact narrow filter reached the source, with the validated dimension names.
+    expect(counter.slices).toEqual([
+      {
+        measures: ['M001534'],
+        dimensionIn: { RegioS: ['GM0363', 'NL01'] },
+        periodIn: { dimension: 'Perioden', codes: ['2024JJ00', '2025JJ00'] },
+      },
+    ]);
+    expect([...(counter.dimensionNames[0] ?? [])].sort()).toEqual(['Perioden', 'RegioS']);
+
+    // Values equal the fixture's own cells, stored with syncTable's column derivation.
+    const expected = new Map<string, number>();
+    const page = docs.observationPages[0] as { value: { Measure: string; RegioS: string; Perioden: string; Value: number }[] };
+    for (const r of page.value) expected.set(`${r.RegioS}|${r.Perioden}|${r.Measure}`, r.Value);
+    const rows = await observationRows('83625NED');
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(row.value).toBe(expected.get(`${row.region_code}|${row.period_code}|${row.measure}`));
+      expect(row).toMatchObject({ unit: 'euro', decimals: 0, status: 'Definitief', period_grain: 'JJ', dims: {}, value_attribute: 'None' });
+      expect(Number(row.batch_id)).toBe(result.batchId);
+    }
+    expect(rows.map((r) => `${r.region_code}|${r.period_code}`)).toEqual([
+      'GM0363|2024JJ00',
+      'GM0363|2025JJ00',
+      'NL01|2024JJ00',
+      'NL01|2025JJ00',
+    ]);
+
+    const batch = await batchRow(result.batchId);
+    expect(batch).toMatchObject({ outcome: 'succeeded', row_count: 4, rows_inserted: 4, rows_updated: 0, rows_unchanged: 0, rows_missing: 0 });
+
+    const fetches = await sliceFetchRows('83625NED');
+    expect(fetches).toHaveLength(1);
+    expect(fetches[0]).toMatchObject({ filter_key: result.filterKey, row_count: 4 });
+    expect(Number(fetches[0]!.batch_id)).toBe(result.batchId);
+    expect(parseJsonb(fetches[0]!.filter)).toEqual(JSON.parse(result.filterKey));
+    expect(new Date(fetches[0]!.cbs_modified as string).getTime()).toBe(new Date('2026-02-17T00:00:00+01:00').getTime());
+
+    // A slice is not a full sync: no row-count history is touched.
+    const table = await cbsTablesRow('83625NED');
+    expect(table.last_row_count).toBeNull();
+    expect(table.status).toBe('active');
+  });
+
+  it('counts requested cells CBS has no row for as missingCells (recorded, not an error)', async () => {
+    // The fixture capture starts at 2015: 1995JJ00 is a published period with no cell here.
+    const docs = await registered('83625NED');
+    const req: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['1995JJ00', '2015JJ00'] };
+
+    const result = await fetchSlice(db, new FixtureSource(docs), '83625NED', req);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 1, missingCells: 1 });
+    if (!result.ok) throw new Error('unreachable');
+    expect((await batchRow(result.batchId)).rows_missing).toBe(1);
+    expect((await sliceFetchRows('83625NED'))[0]).toMatchObject({ row_count: 1 });
+  });
+
+  it('is idempotent: the same request twice changes nothing and keeps one slice_fetches row', async () => {
+    const docs = await registered('83625NED');
+    const source = new FixtureSource(docs);
+
+    const first = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+    const before = await observationRows('83625NED');
+    // Same request, different list order: same canonical key.
+    const second = await fetchSlice(db, source, '83625NED', {
+      measures: ['M001534'],
+      members: { RegioS: ['GM0363', 'NL01'] },
+      periods: ['2025JJ00', '2024JJ00'],
+    });
+
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) throw new Error('unreachable');
+    expect(second.filterKey).toBe(first.filterKey);
+    expect(await batchRow(second.batchId)).toMatchObject({ outcome: 'succeeded', rows_inserted: 0, rows_updated: 0, rows_unchanged: 4 });
+    expect(await observationRows('83625NED')).toEqual(before); // batch_id included: the second upsert wrote nothing
+
+    const fetches = await sliceFetchRows('83625NED');
+    expect(fetches).toHaveLength(1);
+    expect(Number(fetches[0]!.batch_id)).toBe(second.batchId);
+  });
+
+  it('stores breakdown dimensions in dims (85224NED)', async () => {
+    const docs = await registered('85224NED');
+    const req: SliceRequest = {
+      measures: ['T001143_2'],
+      members: { SeizoenEnWerkdagcorrectie: ['A042501'] },
+      periods: ['2026KW01'],
+    };
+
+    const result = await fetchSlice(db, new FixtureSource(docs), '85224NED', req);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 1, missingCells: 0 });
+    const rows = await observationRows('85224NED');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      region_code: '',
+      period_code: '2026KW01',
+      period_grain: 'KW',
+      dims: { SeizoenEnWerkdagcorrectie: 'A042501' },
+      status: 'Definitief',
+    });
+  });
+
+  it('stores each cell with its period publication status (R11): provisional stays provisional', async () => {
+    // 82610NED: 2024JJ00/2025JJ00 are NaderVoorlopig, 2023JJ00 Definitief.
+    const docs = await registered('82610NED');
+    const req: SliceRequest = { measures: ['M002416_1'], members: { BronTechniek: ['T001028'] }, periods: ['2023JJ00', '2025JJ00'] };
+
+    const result = await fetchSlice(db, new FixtureSource(docs), '82610NED', req);
+
+    expect(result).toMatchObject({ ok: true, rowsStored: 2 });
+    const rows = await observationRows('82610NED');
+    expect(rows.map((r) => [r.period_code, r.status])).toEqual([
+      ['2023JJ00', 'Definitief'],
+      ['2025JJ00', 'NaderVoorlopig'],
+    ]);
+  });
+
+  describe('request refusals happen before any network call', () => {
+    async function refused(tableId: string, req: SliceRequest, fragment: string) {
+      const { source, counter } = counting(new FixtureSource(await loadDocs(tableId)));
+      const batchesBefore = await batchCount(tableId).catch(() => 0);
+      const result = await fetchSlice(db, source, tableId, req);
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.stage).toBe('request');
+      expect(result.summary).toContain(fragment);
+      expect(counter.calls).toBe(0);
+      expect(await batchCount(tableId).catch(() => 0)).toBe(batchesBefore);
+      expect((await db.query('select count(*)::int as n from observations')).rows[0]!.n).toBe(0);
+      return result;
+    }
+
+    it('refuses an unregistered table', async () => {
+      await refused('83625NED', HOUSE_PRICES, 'not registered');
+    });
+
+    it('refuses a table registered as full (the whole-table path owns it)', async () => {
+      await registerTables(db, new FixtureSource(await loadDocs('83625NED')), [table('83625NED')]);
+      await refused('83625NED', HOUSE_PRICES, 'slice');
+    });
+
+    it('refuses a measure not in the stored units', async () => {
+      await registered('83625NED');
+      await refused('83625NED', { ...HOUSE_PRICES, measures: ['M001534', 'M999999'] }, 'M999999');
+      await refused('83625NED', { ...HOUSE_PRICES, measures: [] }, 'measure');
+      await refused('83625NED', { ...HOUSE_PRICES, measures: ['constructor'] }, 'constructor');
+    });
+
+    it('refuses a missing dimension, an unknown dimension, and the time dimension in members', async () => {
+      await registered('83625NED');
+      await refused('83625NED', { ...HOUSE_PRICES, members: {} }, 'RegioS');
+      await refused('83625NED', { ...HOUSE_PRICES, members: { RegioS: ['NL01'], Geslacht: ['T001038'] } }, 'Geslacht');
+      await refused('83625NED', { ...HOUSE_PRICES, members: { RegioS: ['NL01'], Perioden: ['2025JJ00'] } }, 'Perioden');
+      await refused('83625NED', { ...HOUSE_PRICES, members: { RegioS: [] } }, 'RegioS');
+    });
+
+    it('refuses a member code or period not in the stored labels', async () => {
+      await registered('83625NED');
+      await refused('83625NED', { ...HOUSE_PRICES, members: { RegioS: ['NL01', 'GM9999'] } }, 'GM9999');
+      await refused('83625NED', { ...HOUSE_PRICES, periods: ['2030JJ00'] }, '2030JJ00');
+      await refused('83625NED', { ...HOUSE_PRICES, periods: [] }, 'period');
+    });
+
+    it(`refuses a request over SLICE_MAX_CELLS (${SLICE_MAX_CELLS}) cells`, async () => {
+      expect(SLICE_MAX_CELLS).toBe(2000);
+      const docs = await registered('83625NED');
+      const regions = (docs.codes.RegioS as { value: { Identifier: string }[] }).value.slice(0, 100).map((c) => c.Identifier);
+      const periods = (docs.codes.Perioden as { value: { Identifier: string }[] }).value.slice(10).map((c) => c.Identifier);
+      expect(regions.length * periods.length).toBe(2100);
+      await refused('83625NED', { measures: ['M001534'], members: { RegioS: regions }, periods }, '2100');
+    });
+
+    it('refuses a quarantined (needs_review) table', async () => {
+      await registered('83625NED');
+      await db.query(`update cbs_tables set status = 'needs_review', needs_review_reason = 'test' where id = $1`, ['83625NED']);
+      await refused('83625NED', HOUSE_PRICES, 'quarantined');
+    });
+  });
+
+  it('a crafted duplicate row -> row_plausibility failure, batch failed, 0 rows stored, no slice_fetches row', async () => {
+    const docs = await registered('83625NED');
+    const corrupt = structuredClone(docs);
+    const page = corrupt.observationPages[0] as { value: Record<string, unknown>[] };
+    const cell = page.value.find((r) => r.RegioS === 'NL01' && r.Perioden === '2025JJ00')!;
+    page.value.push({ ...cell, Id: 999_999 });
+
+    const result = await fetchSlice(db, new FixtureSource(corrupt), '83625NED', HOUSE_PRICES);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error('unreachable');
+    expect(result.stage).toBe('row_plausibility');
+    expect(result.summary).toContain('more than once');
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+    const batches = (await db.query('select * from ingestion_batches where table_id = $1', ['83625NED'])).rows;
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toMatchObject({ outcome: 'failed', failure_stage: 'row_plausibility', failure_summary: result.summary });
+  });
+
+  it('a period without publication status -> period_parsing failure, nothing stored (R11: never guessed)', async () => {
+    const docs = await loadDocs('83625NED');
+    const noStatus = structuredClone(docs);
+    const periods = (noStatus.codes as Record<string, { value: { Identifier: string; Status: string | null }[] }>)['Perioden']!;
+    periods.value.find((p) => p.Identifier === '2025JJ00')!.Status = null;
+    await registered('83625NED', noStatus);
+
+    const result = await fetchSlice(db, new FixtureSource(noStatus), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'period_parsing' });
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+  });
+
+  it('a row with a code not in the stored labels -> dimension_mapping failure + quarantine', async () => {
+    const docs = await registered('83625NED');
+    const source = withObservations(new FixtureSource(docs), (rows) => [
+      ...rows,
+      { ...rows[0]!, coordinates: { ...rows[0]!.coordinates, RegioS: 'GM9999' } },
+    ]);
+
+    const result = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'dimension_mapping' });
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect((await cbsTablesRow('83625NED')).status).toBe('needs_review');
+  });
+
+  it('rows outside the requested coordinates -> row_plausibility failure, nothing stored', async () => {
+    const docs = await registered('83625NED');
+    const source = withObservations(new FixtureSource(docs), (rows) => rows, /* ignoreSlice */ true);
+
+    const result = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'row_plausibility' });
+    if (result.ok) throw new Error('unreachable');
+    expect(result.summary).toContain('outside');
+    expect(await observationRows('83625NED')).toHaveLength(0);
+  });
+
+  it('a unit change -> unit_consistency failure + quarantine, nothing stored', async () => {
+    const docs = await registered('83625NED');
+    const changed = structuredClone(docs);
+    (changed.measureCodes as { value: { Unit: string }[] }).value[0]!.Unit = 'x 1 000 euro';
+
+    const result = await fetchSlice(db, new FixtureSource(changed), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'unit_consistency' });
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    const row = await cbsTablesRow('83625NED');
+    expect(row.status).toBe('needs_review');
+    expect(row.needs_review_reason).toContain('x 1 000 euro');
+  });
+
+  it('a fetch error -> fetch failure recorded on the batch, table NOT quarantined', async () => {
+    const docs = await registered('83625NED');
+    const source = withObservations(new FixtureSource(docs), () => {
+      throw new Error('socket hang up');
+    });
+
+    const result = await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'fetch' });
+    if (result.ok) throw new Error('unreachable');
+    expect(result.summary).toContain('socket hang up');
+    expect((await cbsTablesRow('83625NED')).status).toBe('active');
+    const batches = (await db.query('select outcome, failure_stage from ingestion_batches where table_id = $1', ['83625NED'])).rows;
+    expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'fetch' }]);
+  });
+
+  it('a registry change while the fetch validates -> aborted under the lock, batch failed, nothing written', async () => {
+    const docs = await registered('83625NED');
+    // A concurrent schema refresh (version bump) lands between fetchSlice's
+    // unlocked registry read and its locked write transaction.
+    const source = withObservations(new FixtureSource(docs), (rows) => rows);
+    const racing: CbsSource = {
+      ...source,
+      async *fetchObservations(t, s, n) {
+        await db.query('update cbs_tables set version = version + 1 where id = $1', [t]);
+        yield* source.fetchObservations(t, s, n);
+      },
+    };
+
+    const result = await fetchSlice(db, racing, '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'rebaseline_conflict' });
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+    expect((await cbsTablesRow('83625NED')).status).toBe('active'); // not suspect data: no quarantine
+    const batches = (await db.query('select outcome, failure_stage from ingestion_batches where table_id = $1', ['83625NED'])).rows;
+    expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'rebaseline_conflict' }]);
+  });
+
+  describe('schema refresh when CBS Modified moves', () => {
+    const NEWER = '2026-09-01T00:00:00+02:00';
+
+    function newerWithExtraPeriod(docs: Awaited<ReturnType<typeof loadDocs>>) {
+      const clone = structuredClone(docs);
+      (clone.properties as Record<string, unknown>).Modified = NEWER;
+      const periods = (clone.codes as Record<string, { value: Record<string, unknown>[] }>)['Perioden']!;
+      const last = periods.value[periods.value.length - 1]!;
+      periods.value.push({ ...last, Identifier: '2026JJ00', Title: '2026*', Index: Number(last.Index) + 1, Status: 'Voorlopig' });
+      const page = clone.observationPages[0] as { value: Record<string, unknown>[] };
+      page.value.push({ Id: 999_998, Measure: 'M001534', ValueAttribute: 'None', Value: 461_000, StringValue: null, RegioS: 'NL01', Perioden: '2026JJ00' });
+      return clone;
+    }
+
+    it('accepts a newer Modified with a new period: labels, units and schema_cbs_modified refresh, and the new period becomes fetchable', async () => {
+      const docs = await registered('83625NED');
+      const before = await cbsTablesRow('83625NED');
+      const newer = new FixtureSource(newerWithExtraPeriod(docs));
+      const request2026: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2026JJ00'] };
+
+      // Before any refresh the new period is not in the stored labels: refused, nothing sent to CBS.
+      expect(await fetchSlice(db, newer, '83625NED', request2026)).toMatchObject({ ok: false, stage: 'request' });
+
+      // Any slice fetch sees the newer Modified and refreshes the schema in the same transaction.
+      const first = await fetchSlice(db, newer, '83625NED', HOUSE_PRICES);
+      expect(first).toMatchObject({ ok: true, rowsStored: 4 });
+      const after = await cbsTablesRow('83625NED');
+      expect(new Date(after.schema_cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
+      expect(Number(after.version)).toBe(Number(before.version) + 1);
+      expect(after.schema_fingerprint).toBe(before.schema_fingerprint);
+      const label = (
+        await db.query(`select status from dimension_labels where table_id = $1 and dimension = 'Perioden' and code = '2026JJ00'`, ['83625NED'])
+      ).rows;
+      expect(label).toEqual([{ status: 'Voorlopig' }]);
+      expect(new Date((await sliceFetchRows('83625NED'))[0]!.cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
+
+      const second = await fetchSlice(db, newer, '83625NED', request2026);
+      expect(second).toMatchObject({ ok: true, rowsStored: 1, missingCells: 0 });
+      const cell = (await observationRows('83625NED')).find((r) => r.period_code === '2026JJ00');
+      expect(cell).toMatchObject({ value: 461_000, status: 'Voorlopig', region_code: 'NL01' });
+    });
+
+    it('does not re-fetch code lists when Modified is unchanged', async () => {
+      const docs = await registered('83625NED');
+      const { source, counter } = counting(new FixtureSource(docs));
+      await fetchSlice(db, source, '83625NED', HOUSE_PRICES);
+      // One schema read (for Modified, dimensions, measures) + one observations read.
+      expect(counter.calls).toBe(2);
+    });
+
+    it('a newer Modified whose fingerprint no longer matches -> schema_fingerprint failure + quarantine, no refresh', async () => {
+      const docs = await registered('83625NED');
+      const labelsBefore = await labelCount('83625NED');
+      const before = await cbsTablesRow('83625NED');
+      const redesigned = newerWithExtraPeriod(docs);
+      const measures = redesigned.measureCodes as { value: Record<string, unknown>[] };
+      measures.value.push({ ...measures.value[0]!, Identifier: 'M999999' });
+
+      const result = await fetchSlice(db, new FixtureSource(redesigned), '83625NED', HOUSE_PRICES);
+
+      expect(result).toMatchObject({ ok: false, stage: 'schema_fingerprint' });
+      const after = await cbsTablesRow('83625NED');
+      expect(after.status).toBe('needs_review');
+      expect(after.schema_cbs_modified).toEqual(before.schema_cbs_modified);
+      expect(after.version).toEqual(before.version);
+      expect(await labelCount('83625NED')).toBe(labelsBefore);
+      expect(await observationRows('83625NED')).toHaveLength(0);
+    });
+  });
+
+  it('sliceFilterKey is canonical: sorted keys, sorted and de-duplicated code lists', () => {
+    const a = sliceFilterKey({ measures: ['b', 'a'], members: { Z: ['2', '1'], A: ['x'] }, periods: ['2025JJ00', '2024JJ00'] });
+    const b = sliceFilterKey({ measures: ['a', 'b', 'a'], members: { A: ['x'], Z: ['1', '2'] }, periods: ['2024JJ00', '2025JJ00'] });
+    expect(a).toBe(b);
+    expect(a).toBe('{"measures":["a","b"],"members":{"A":["x"],"Z":["1","2"]},"periods":["2024JJ00","2025JJ00"]}');
   });
 });
