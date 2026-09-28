@@ -22,7 +22,7 @@ export const CANONICAL_KEYS = keys as [string, ...string[]];
 
 const canonicalKeySchema = z.enum(CANONICAL_KEYS);
 
-const regionTermSchema = z.strictObject({
+export const regionTermSchema = z.strictObject({
   name: z.string(),
   kind: z.enum(['land', 'landsdeel', 'provincie', 'gemeente', 'onbekend']),
 });
@@ -34,7 +34,7 @@ const regionScopeSchema = z
   .enum(['all_provincies', 'all_landsdelen', 'all_gemeenten', 'gemeenten_in_provincie'])
   .nullable();
 
-const periodSpecSchema = z.discriminatedUnion('kind', [
+export const periodSpecSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('year'), year: z.number() }),
   z.strictObject({ kind: z.literal('quarter'), year: z.number(), quarter: z.number() }),
   z.strictObject({ kind: z.literal('month'), year: z.number(), month: z.number() }),
