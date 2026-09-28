@@ -207,19 +207,27 @@ async function insideAnyFetchedSlice(
  *
  * Breadth step 2, Task 5: for a `slice_cache` table (probed — a pre-037
  * database or a `full` table skips this branch entirely and keeps today's
- * exact behaviour) a missing coordinate gets its OWN diagnosis first,
- * because that table's `dimension_labels` holds CBS's FULL catalog
- * (registerSchemaOnly loads every period/code up front) — the `published`
- * check below would find almost any period "published" regardless of
- * whether we ever fetched a slice covering it, which would otherwise
- * misdiagnose an ordinary "not fetched yet" as the loud `no_data` owner
- * alert. A coordinate OUTSIDE every fetched slice's filter is `not_fetched`
- * (its own internal/owner-alert kind — never reached by a real reader once
- * `ensureSlice` always fetches before a query runs, a later step); a
- * coordinate INSIDE a fetched slice that CBS genuinely returned no cell for
- * reuses the EXISTING `not_published` wording — from the reader's
- * perspective "CBS has not published a figure here" is exactly as true as
- * it is for a full-ingest table's own not_published case. */
+ * exact behaviour) a missing coordinate gets its OWN diagnosis, split around
+ * the freshness check rather than entirely before or after it:
+ *  - OUTSIDE every fetched slice's filter -> `not_fetched` (its own
+ *    internal/owner-alert kind), checked BEFORE freshness (fix round 1,
+ *    finding 1): freshness compares against the freshest FETCHED cell, which
+ *    for a slice-cache table is not a real fact about what CBS publishes — a
+ *    never-fetched coordinate newer than that freshest fetch would otherwise
+ *    get the reader-facing `freshness` wording ("not available yet … the
+ *    freshest we can serve is Y"), a false claim about CBS. Never reached by
+ *    a real reader once `ensureSlice` always fetches before a query runs (a
+ *    later step).
+ *  - INSIDE a fetched slice, still goes through freshness first (unchanged
+ *    ordering, same as a full table — that slice's own freshest fetched cell
+ *    IS a real freshness fact), and if CBS genuinely returned no cell for it,
+ *    reuses the EXISTING `not_published` wording: `dimension_labels` holds
+ *    CBS's FULL catalog for a slice-cache table (registerSchemaOnly loads
+ *    every period/code up front), so the `published` check further below
+ *    would find almost any period "published" regardless of whether a slice
+ *    covering it was ever fetched — which would otherwise misdiagnose this
+ *    as the loud `no_data` owner alert instead of the honest, already-worded
+ *    not_published. */
 async function diagnoseMissing(
   db: Db,
   q: ResolvedQuery,
@@ -227,8 +235,40 @@ async function diagnoseMissing(
   missingPeriod: string,
 ): Promise<QueryRefusal> {
   const where = regionCode ? ` for region ${regionCode}` : '';
-  const freshness = await fetchFreshness(db, q, regionCode);
   const requestedKey = periodKey(parsePeriodCode(missingPeriod)!);
+
+  // Fix round 1 (IMPORTANT finding 1): "outside every fetched slice" MUST be
+  // checked BEFORE the freshness block below, not after. freshness compares
+  // the requested period against the freshest FETCHED cell — for a
+  // slice-cache table that is "the freshest of whatever we happened to
+  // fetch", not "the freshest CBS actually publishes". A never-fetched
+  // coordinate newer than that freshest fetched cell would otherwise read as
+  // the reader-facing `freshness` refusal ("not available yet … the freshest
+  // we can serve is Y"), which is a FALSE claim about CBS (we simply never
+  // asked). A coordinate INSIDE a fetched slice has no such problem — its
+  // "freshest fetched" IS a real freshness fact for that slice — so it still
+  // goes through freshness -> not_published below, exactly like a full table.
+  //
+  // Narrow eviction race (finding 6): isSliceCacheTable and
+  // insideAnyFetchedSlice are two separate statements; a table evicted
+  // between them (cbs_tables + its slice_fetches rows deleted, same
+  // FK-cascade eviction.ts already relies on) reads as `not_fetched` here
+  // instead of the `table_evicted` the `published` branch below would give a
+  // full table racing the same eviction — an accepted, narrow misdiagnosis
+  // (same class of race the #196 comments elsewhere in this file describe),
+  // not fixed here.
+  const isSliceCache = await isSliceCacheTable(db, q.tableId);
+  if (isSliceCache && !(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
+    return refuse(
+      q.intent,
+      'not_fetched',
+      `table "${q.tableId}" is slice-cached and no fetched slice covers measure ${q.measure}${where} at period ` +
+        `${missingPeriod} (dims ${JSON.stringify(q.dims)}) — ensureSlice should have fetched it before this query ran`,
+      { axis: 'period' },
+    );
+  }
+
+  const freshness = await fetchFreshness(db, q, regionCode);
 
   if (freshness.freshestAvailable) {
     const freshestKey = periodKey(parsePeriodCode(freshness.freshestAvailable.periodCode)!);
@@ -242,16 +282,11 @@ async function diagnoseMissing(
     }
   }
 
-  if (await isSliceCacheTable(db, q.tableId)) {
-    if (!(await insideAnyFetchedSlice(db, q, regionCode, missingPeriod))) {
-      return refuse(
-        q.intent,
-        'not_fetched',
-        `table "${q.tableId}" is slice-cached and no fetched slice covers measure ${q.measure}${where} at period ` +
-          `${missingPeriod} (dims ${JSON.stringify(q.dims)}) — ensureSlice should have fetched it before this query ran`,
-        { axis: 'period' },
-      );
-    }
+  if (isSliceCache) {
+    // Reached only when insideAnyFetchedSlice was true above (the outside
+    // case already returned) — CBS genuinely returned no cell for this
+    // coordinate, inside a slice we DID fetch. Reuses the EXISTING
+    // not_published wording/kind, same as a full table's own case below.
     return refuse(
       q.intent,
       'not_published',

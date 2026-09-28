@@ -1014,10 +1014,11 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     expect(await sliceFetchRows('83625NED')).toHaveLength(1);
   });
 
-  it('refetches (not a cache hit) when CBS Modified has moved since the stored slice_fetches row', async () => {
+  it('refetches (not a cache hit) when CBS Modified has moved since the stored slice_fetches row — and refreshes ONCE, not twice', async () => {
     const docs = await registered('83625NED');
     const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
     if (!first.ok) throw new Error('unreachable');
+    const before = await cbsTablesRow('83625NED');
 
     const { source, counter } = counting(new FixtureSource(newerWithExtraPeriod(docs)));
     const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
@@ -1030,18 +1031,30 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
 
     const row = await cbsTablesRow('83625NED');
     expect(new Date(row.schema_cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
+    // Fix round 1 (finding 4), "no double refresh" pinned: ensureSlice's own
+    // pre-check applies the refresh; fetchSlice below it (called with the
+    // already-fetched schema) must then find nothing left to refresh.
+    // version rises by exactly 1 (not 2 — one per refresh, never one per
+    // call), and exactly 1 schema request + 2 code-list requests (RegioS,
+    // Perioden — the refresh ensureSlice's OWN check performs) + 1
+    // observations request = 4 calls total, never doubled.
+    expect(Number(row.version)).toBe(Number(before.version) + 1);
+    expect(counter.calls).toBe(4);
   });
 
-  it("fixes the 'newest period' problem: refreshes the schema BEFORE validating, so a period CBS just added is fetchable in ONE call", async () => {
+  it("fixes the 'newest period' problem: refreshes the schema BEFORE validating, so a period CBS just added is fetchable in ONE call — and refreshes ONCE, not twice", async () => {
     const docs = await registered('83625NED');
-    const newer = new FixtureSource(newerWithExtraPeriod(docs));
+    const before = await cbsTablesRow('83625NED');
+    const { source: newer, counter } = counting(new FixtureSource(newerWithExtraPeriod(docs)));
     const request2026: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2026JJ00'] };
 
     // Baseline this fixes: fetchSlice alone still refuses (already pinned
     // above under 'schema refresh when CBS Modified moves') because it
     // validates against the STORED (pre-refresh) labels before any network
-    // call.
+    // call. A request-stage refusal makes NO network call at all, so this
+    // baseline call does not pollute the counts checked below.
     expect(await fetchSlice(db, newer, '83625NED', request2026)).toMatchObject({ ok: false, stage: 'request' });
+    expect(counter.calls).toBe(0);
 
     const result = await ensureSlice(db, newer, '83625NED', request2026);
 
@@ -1050,9 +1063,17 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     expect(new Date(row.schema_cbs_modified as string).getTime()).toBe(new Date(NEWER).getTime());
     const cell = (await observationRows('83625NED')).find((r) => r.period_code === '2026JJ00');
     expect(cell).toMatchObject({ value: 461_000, status: 'Voorlopig', region_code: 'NL01' });
+    // Fix round 1 (finding 4), "no double refresh" pinned: version rises by
+    // exactly 1 (ensureSlice's own pre-check refresh; fetchSlice below it
+    // finds nothing left to refresh, since it receives the already-fetched
+    // schema AND reads the already-current registry). Exactly 1 schema
+    // request + 2 code-list requests (RegioS, Perioden) + 1 observations
+    // request = 4 calls total, never doubled.
+    expect(Number(row.version)).toBe(Number(before.version) + 1);
+    expect(counter.calls).toBe(4);
   });
 
-  it('treats a stored slice as stale when a DIFFERENT slice already advanced schema_cbs_modified, even with no further CBS movement of its own', async () => {
+  it('treats a stored slice as stale when a DIFFERENT slice already advanced schema_cbs_modified, even with NO further CBS movement of its own (isolates the stale clause from cbsNewer)', async () => {
     const docs = await registered('83625NED');
     const first = await fetchSlice(db, new FixtureSource(docs), '83625NED', HOUSE_PRICES);
     if (!first.ok) throw new Error('unreachable');
@@ -1068,13 +1089,26 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     const other = await fetchSlice(db, new FixtureSource(newer), '83625NED', otherRequest);
     expect(other.ok).toBe(true);
 
-    const { source, counter } = counting(new FixtureSource(newer));
+    // Fix round 1 (finding 3): the ORIGINAL, OLD-Modified docs here — NOT
+    // `newer` — so CBS's current Modified (as ensureSlice sees it) is
+    // EQUAL to HOUSE_PRICES's own stored cbs_modified, making `cbsNewer`
+    // false on its own. Only the `stale` clause (this row's cbs_modified is
+    // older than the table's CURRENT schema_cbs_modified, which `other`
+    // already advanced) can explain a refetch here — the previous version of
+    // this test used `newer` for BOTH slices, which made `cbsNewer` true on
+    // its own and never actually exercised the `stale` clause at all.
+    const { source, counter } = counting(new FixtureSource(docs));
     const result = await ensureSlice(db, source, '83625NED', HOUSE_PRICES);
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
     expect(result.cached).toBeFalsy();
     expect(counter.slices.length).toBe(1); // refetched, not served stale
+    // No refresh attempted here (schema_cbs_modified is already current from
+    // `other`'s fetch, and the OLD docs' Modified is not newer than that) —
+    // one schema call (the freshness check) + one observations call, no
+    // fetchCodeList call.
+    expect(counter.calls).toBe(2);
   });
 
   it("defers straight to fetchSlice's own refusal, with no network call, for an unregistered table", async () => {
@@ -1099,5 +1133,30 @@ describe('ensureSlice (breadth step 2, Task 5)', () => {
     if (result.ok) throw new Error('unreachable');
     expect(result.summary).toContain('quarantined');
     expect(counter.calls).toBe(0);
+  });
+
+  it("fix round 1 (finding 5) — ensureSlice's OWN schema check fails (fingerprint mismatch): its own failed batch row + quarantine, nothing stored", async () => {
+    const docs = await registered('83625NED');
+    // Same shape as fetchSlice's own 'a fingerprint mismatch while CBS
+    // Modified is UNCHANGED still fails loudly and quarantines' test above —
+    // here exercised through ensureSlice, whose checkSliceSchema call runs
+    // this SAME stage1 check unconditionally (on every call, not only a
+    // refresh), and which must record its OWN batch (fetchSlice never even
+    // gets called: check.ok is false, so ensureSlice returns directly).
+    const redesigned = structuredClone(docs);
+    const measures = redesigned.measureCodes as { value: Record<string, unknown>[] };
+    measures.value.push({ ...measures.value[0]!, Identifier: 'M999999' });
+
+    const result = await ensureSlice(db, new FixtureSource(redesigned), '83625NED', HOUSE_PRICES);
+
+    expect(result).toMatchObject({ ok: false, stage: 'schema_fingerprint' });
+    const row = await cbsTablesRow('83625NED');
+    expect(row.status).toBe('needs_review');
+    expect(await observationRows('83625NED')).toHaveLength(0);
+    expect(await sliceFetchRows('83625NED')).toHaveLength(0);
+    const batches = (
+      await db.query('select outcome, failure_stage from ingestion_batches where table_id = $1', ['83625NED'])
+    ).rows;
+    expect(batches).toEqual([{ outcome: 'failed', failure_stage: 'schema_fingerprint' }]);
   });
 });

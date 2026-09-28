@@ -54,12 +54,15 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     const reg = await registerSchemaOnly(db, source, '83625NED');
     if (!reg.ok) throw new Error(`registration failed: ${reg.summary}`);
 
-    // ONE fetched slice: NL01, 2015JJ00 (has a cell) + 2025JJ00 (has a cell).
-    // Everything else (an interior period never named in this filter) is
-    // "never fetched"; a period genuinely absent from a fetched slice's own
-    // observations (case (a) below) is exercised via 1995JJ00 in its own
-    // narrower slice, mirroring the ingestion test's own missingCells case.
-    const wide: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2015JJ00', '2025JJ00'] };
+    // ONE fetched slice: NL01, 2015JJ00 only (has a cell — it is deliberately
+    // the ONLY, and therefore the FRESHEST, period this db ever fetched for
+    // this coordinate). A later period we never fetched (2020JJ00, the (b)
+    // test below) is therefore also NEWER than the freshest fetched cell —
+    // exactly the case fix round 1 (finding 1) closes: diagnoseMissing must
+    // recognize "never fetched" BEFORE it ever compares against freshness,
+    // or this would misdiagnose as `freshness` ("not available yet … the
+    // freshest we can serve is 2015JJ00"), a false claim about CBS.
+    const wide: SliceRequest = { measures: ['M001534'], members: { RegioS: ['NL01'] }, periods: ['2015JJ00'] };
     const wideResult = await fetchSlice(db, new FixtureSource(docs), '83625NED', wide);
     if (!wideResult.ok) throw new Error(`priming fetch failed: ${wideResult.summary}`);
 
@@ -87,11 +90,13 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     expect(outcome.refusal.kind).toBe('not_published');
   });
 
-  it('(b) outside every fetched slice -> the NEW not_fetched internal refusal', async () => {
-    // 2020JJ00 sits between the two periods the wide slice fetched (2015,
-    // 2025) — below the freshest period we hold (2025JJ00), so the EARLIER
-    // freshness check does not short-circuit — but it was never itself named
-    // in any slice_fetches filter.
+  it('(b) outside every fetched slice, and NEWER than the freshest fetched cell -> not_fetched, never the misleading freshness refusal', async () => {
+    // 2020JJ00 was never named in any slice_fetches filter, AND it is newer
+    // than 2015JJ00 (the freshest — and only — period this db ever fetched).
+    // Fix round 1 (finding 1): before the reorder, freshness ran first and
+    // this case wrongly read as "not available yet … freshest we can serve
+    // is 2015JJ00" — a false claim, since CBS may well publish 2020JJ00 and
+    // we simply never asked. The fix checks not_fetched BEFORE freshness.
     const outcome = await runQuery(db, houseIntent('2020JJ00'));
 
     expect(outcome.ok).toBe(false);
@@ -100,6 +105,18 @@ describe('diagnoseMissing on a slice_cache table (breadth step 2, Task 5)', () =
     expect(outcome.refusal.message).toContain('2020JJ00');
     expect(outcome.refusal.message.toLowerCase()).toContain('ensureslice');
   });
+
+  // Fix round 1 (minor finding 2): a slice-cache table cannot yet be
+  // SERVED through runQuery at all — cbs_tables.last_sync_at stays null for
+  // a slice_cache table (neither registerSchemaOnly nor fetchSlice sets it),
+  // and run.ts's own consistency guard refuses ANY result with
+  // internal_inconsistency when that is null. A test asserting
+  // `runQuery(...).ok === true` for a served coordinate (e.g. 2015JJ00,
+  // which IS inside a fetched slice with a real cell) was written and
+  // removed during Task 5 for exactly this reason — restored here as a
+  // marker so Task 5b (dating semantics for slice-cache tables) turns it
+  // real instead of the gap going unrecorded.
+  it.todo('answering from slice-cache tables — breadth step 2 Task 5b (dating semantics)');
 });
 
 describe("a full-ingest table's not_published stays exactly as today (ruling: unchanged for ingest_mode = 'full')", () => {
