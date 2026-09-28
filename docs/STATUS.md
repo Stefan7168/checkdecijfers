@@ -30,7 +30,11 @@ before trusting this). Previous kickoff: [session-briefs/2026-09-28-session-138-
   no machine status for this table — found mid-build). Proven with a full live-data sync into a throwaway DB: 106,683 cells,
   every check passed. **Nothing reader-visible; prod NOT loaded on purpose** (the coverage box and `/llms.txt` would list it).
   Household income excluded (CBS's v4 feed reuses its code). Residuals: [#334](open-questions.md).
-- **NEXT PRIORITY: regional statistics Part 2** (after the spend roof resets **2026-10-01**, owner present): write its plan,
+- **⚑ OWNER SANITY CHECK (session 138, [#335](open-questions.md), [brief](session-briefs/2026-09-28-sanity-check.md)): NEXT PRIORITY IS
+  NOW BREADTH — make any CBS table answerable quickly** (the on-demand fetch as the normal path). Measured: no external users
+  yet, 21 of 4,858 CBS tables loaded. Design in progress. Regional statistics Part 2 below is **PARKED** on branch
+  `regional-stats-part2` (built + reviewed; only the paid re-record, merge and prod load remain).
+- **(Parked) regional statistics Part 2** (after the spend roof resets **2026-10-01**, owner present): write its plan,
   add the 12 canonical figures + `REGIONAL_KEYS` + English labels + a scatter partner per figure, re-record the
   intent/clarify/followup fixtures (cheap tier, small spend), merge + deploy, then prod `sync 70072ned` + `registry:apply`
   (RUNBOOK "Regional statistics table `70072ned`"), then the live benchmark (also confirms #330).
